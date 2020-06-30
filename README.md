@@ -5,4 +5,4 @@ Components for a Polkadot Ethereum Bridge
 
 ### Parachain
 
-See [Contribution guidelines for this project](parachain/README.md)
+See [parachain/README.md](parachain/README.md)
