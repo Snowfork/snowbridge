@@ -2,7 +2,7 @@
 pragma solidity ^0.6.2;
 
 import "../node_modules/@openzeppelin/contracts/math/SafeMath.sol";
-import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./BankToken.sol";
 
 contract Bank {
     using SafeMath for uint256;
@@ -39,7 +39,6 @@ contract Bank {
         emit Deposit(msg.sender, _recipient, address(0), "ETH", msg.value, nonce);
     }
 
-
     function depositERC20(
         bytes memory _recipient,
         address _token,
@@ -48,12 +47,12 @@ contract Bank {
         public
     {
        require(
-            ERC20(_token).transferFrom(msg.sender, address(this), _amount),
+            BankToken(_token).transferFrom(msg.sender, address(this), _amount),
             "Contract token allowances insufficient to complete this lock request"
         );
 
         // Set symbol to the ERC20 token's symbol
-        string memory symbol = ERC20(_token).symbol();
+        string memory symbol = BankToken(_token).symbol();
         // Increment locked ERC20 token counter by this amount
         lockedTokens[_token] = lockedTokens[_token].add(_amount);
         // Increment global nonce
