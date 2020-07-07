@@ -23,7 +23,6 @@ decl_storage! {
 
 decl_event!(
 	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId {
-
 		SomethingStored(u32, AccountId),
 	}
 );
@@ -44,23 +43,13 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 50]
-		pub fn send_message(origin, app_id: u32, message: Vec<u8>) -> dispatch::DispatchResult {
+		pub fn verify_message(origin, app_id: u32, message: Vec<u8>) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			Something::put(something);
 
 			Ok(())
 		}
-
-		pub fn verify_callback(origin, foo: u32) -> dispatch::DispatchResult {
-			let who = ensure_signed(origin)?;
-
-			Something::put(something);
-
-			Ok(())
-		}
-
-
 
 	}
 }
