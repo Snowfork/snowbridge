@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.1.0",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "chai-bignumber": "^3.0.0",
+    "truffle": "^5.1.32",
+    "web3": "^1.2.9",
+    "web3-utils": "^1.2.9"
+  }
+}
