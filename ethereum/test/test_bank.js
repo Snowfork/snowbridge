@@ -1,5 +1,5 @@
 const Bank = artifacts.require("Bank");
-const BankToken = artifacts.require("BankToken");
+const TestToken = artifacts.require("TestToken");
 
 const Web3Utils = require("web3-utils");
 const BigNumber = web3.BigNumber;
@@ -38,7 +38,7 @@ contract("Bank", function (accounts) {
 
     it("should support Ethereum deposits", async function () {
       // Load initial contract state
-      const beforeLockedEth = Number(await this.bank.lockedEthereum());
+      const beforeLockedEth = Number(await this.bank.totalETH());
       const beforeNonce = Number(await this.bank.nonce());
 
       // Prepare transaction parameters
@@ -46,7 +46,7 @@ contract("Bank", function (accounts) {
       const weiAmount = web3.utils.toWei("0.25", "ether");
       
       // Deposit Ethereum to the contract and get the logs of the transaction
-      const { logs } = await this.bank.depositETH(
+      const { logs } = await this.bank.sendETH(
         recipient,
         {from: userOne, value: weiAmount}
       ).should.be.fulfilled;
@@ -57,7 +57,7 @@ contract("Bank", function (accounts) {
       );
       eventDeposit.args._sender.should.be.equal(userOne);
       eventDeposit.args._recipient.should.be.equal(recipient);
-      eventDeposit.args._token.should.be.equal(NULL_ADDRESS);
+      eventDeposit.args._tokenAddr.should.be.equal(NULL_ADDRESS);
       eventDeposit.args._symbol.should.be.equal("ETH");
       Number(eventDeposit.args._amount).should.be.bignumber.equal(Number(weiAmount));
       Number(eventDeposit.args._nonce).should.be.equal(beforeNonce+1);
@@ -68,7 +68,7 @@ contract("Bank", function (accounts) {
       contractBalance.should.be.bignumber.equal(Web3Utils.fromWei(weiAmount, "ether"));
 
       // Confirm contract's locked Ethereum counter has increased by amount locked
-      const afterLockedEth = await this.bank.lockedEthereum();
+      const afterLockedEth = await this.bank.totalETH();
       Number(afterLockedEth).should.be.bignumber.equal(beforeLockedEth+Number(weiAmount));
 
       // Confirm contract's nonce has been incremented
@@ -79,7 +79,7 @@ contract("Bank", function (accounts) {
     // Set up an ERC20 token for testing token deposits
     before(async function () {
       this.symbol = "TEST";
-      this.token = await BankToken.new(100000, "Test Token", this.symbol);
+      this.token = await TestToken.new(100000, "Test Token", this.symbol);
 
       // Load user account with 'TEST' ERC20 tokens
       await this.token.transfer(userOne, 1000, {
@@ -89,9 +89,9 @@ contract("Bank", function (accounts) {
 
     it("should support ERC20 deposits", async function () {
       // Load initial state
-      const beforeLockedERC20 = Number(await this.bank.lockedTokens(this.token.address));
+      const beforeLockedERC20 = Number(await this.bank.totalTokens(this.token.address));
       const beforeNonce = Number(await this.bank.nonce());
-      const beforeBankTokenBalance = Number(await this.token.balanceOf(this.bank.address));
+      const beforeTestTokenBalance = Number(await this.token.balanceOf(this.bank.address));
       const beforeUserBalance = Number(await this.token.balanceOf(userOne));
 
       // Prepare transaction parameters
@@ -104,7 +104,7 @@ contract("Bank", function (accounts) {
       }).should.be.fulfilled;
 
       // Deposit ERC20 tokens to the contract and get the logs of the transaction
-      const { logs } = await this.bank.depositERC20(
+      const { logs } = await this.bank.sendERC20(
         recipient,
         this.token.address,
         amount,
@@ -120,21 +120,21 @@ contract("Bank", function (accounts) {
       );
       eventDeposit.args._sender.should.be.equal(userOne);
       eventDeposit.args._recipient.should.be.equal(recipient);
-      eventDeposit.args._token.should.be.equal(this.token.address);
+      eventDeposit.args._tokenAddr.should.be.equal(this.token.address);
       eventDeposit.args._symbol.should.be.equal(this.symbol);
       Number(eventDeposit.args._amount).should.be.bignumber.equal(Number(amount));
       Number(eventDeposit.args._nonce).should.be.equal(beforeNonce+1);
 
       //Get the user and Bank token balance after deposit
-      const afterBankTokenBalance = Number(await this.token.balanceOf(this.bank.address));
+      const afterTestTokenBalance = Number(await this.token.balanceOf(this.bank.address));
       const afterUserBalance = Number(await this.token.balanceOf(userOne));
 
       //Confirm that the contract's token balance has increased
-      afterBankTokenBalance.should.be.bignumber.equal(beforeBankTokenBalance + amount);
+      afterTestTokenBalance.should.be.bignumber.equal(beforeTestTokenBalance + amount);
       afterUserBalance.should.be.bignumber.equal(beforeUserBalance - amount);
 
       // Confirm contract's locked ERC20 counter has increased by amount locked
-      const afterLockedERC20 = await this.bank.lockedTokens(this.token.address);
+      const afterLockedERC20 = await this.bank.totalTokens(this.token.address);
       Number(afterLockedERC20).should.be.bignumber.equal(beforeLockedERC20+amount);
 
       // Confirm contract's nonce has been incremented
