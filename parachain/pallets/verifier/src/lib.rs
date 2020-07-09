@@ -40,7 +40,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 0]
-		pub fn verify_messae(origin, app_id: u32, message: Vec<u8>) -> dispatch::DispatchResult {
+		pub fn verify_message_old(origin, app_id: u32, message: Vec<u8>) -> dispatch::DispatchResult {
 			let who = ensure_root(origin)?;
 
 

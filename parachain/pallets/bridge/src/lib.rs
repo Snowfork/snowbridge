@@ -20,6 +20,7 @@ decl_storage! {
 
 decl_event!(
 	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId {
+		Foo(AccountId),
 	}
 );
 
@@ -40,7 +41,7 @@ decl_module! {
 		pub fn send_message(origin, app_id: AppID, message: Message) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			T::Verifier.verify(message)?;
+			let _ = T::Verifier::verify(app_id, message)?;
 
 			Ok(())
 		}
