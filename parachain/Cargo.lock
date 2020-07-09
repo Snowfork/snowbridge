@@ -588,6 +588,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+]
+
+[[package]]
 name = "const-random"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3016,6 +3023,7 @@ dependencies = [
 name = "pallet-bridge"
 version = "0.1.1"
 dependencies = [
+ "common",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -3150,6 +3158,19 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-verifier"
+version = "0.1.1"
+dependencies = [
+ "common",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]

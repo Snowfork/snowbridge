@@ -1,13 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch};
-use frame_system::{self as system, ensure_signed};
+use frame_system::{self as system, ensure_signed, ensure_root};
 
-#[cfg(test)]
-mod mock;
+use common::{AppID, Message, Verifier};
 
-#[cfg(test)]
-mod tests;
 
 pub trait Trait: system::Trait {
 
@@ -42,14 +39,32 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = 50]
-		pub fn verify_message(origin, app_id: u32, message: Vec<u8>) -> dispatch::DispatchResult {
-			let who = ensure_signed(origin)?;
+		#[weight = 0]
+		pub fn verify_messae(origin, app_id: u32, message: Vec<u8>) -> dispatch::DispatchResult {
+			let who = ensure_root(origin)?;
 
-			Something::put(something);
 
 			Ok(())
 		}
 
+
 	}
+}
+
+impl<T: Trait> Module<T> {
+
+	fn verify_message(app_id: AppID, message: Message) -> dispatch::DispatchResult {
+		Ok(())
+	}
+}
+
+impl<T: Trait> Verifier for Module<T> {
+
+	fn verify(app_id: AppID, message: Message) -> dispatch::DispatchResult {
+		
+		let _ = Self::verify_message(app_id, message)?;
+
+		Ok(())
+	}
+
 }

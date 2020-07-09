@@ -5,5 +5,7 @@ panic = 'unwind'
 members = [
     'node',
     'pallets/bridge',
+    'pallets/verifier',
     'runtime',
+    'common'
 ]

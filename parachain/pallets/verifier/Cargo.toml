@@ -44,10 +44,14 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'v2.0.0-rc4'
 version = '2.0.0-rc4'
 
+[dependencies.common]
+path = "../../common"
+
 [features]
 default = ['std']
 std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
+    'common/std'
 ]
