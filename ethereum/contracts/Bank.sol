@@ -2,7 +2,7 @@
 pragma solidity ^0.6.2;
 
 import "../node_modules/@openzeppelin/contracts/math/SafeMath.sol";
-import "../node_modules/@openzeppelin/contracts/token/erc20/ERC20.sol";
+import "../node_modules/@openzeppelin/contracts/token/erc20/IERC20.sol";
 
 contract Bank {
     using SafeMath for uint256;
@@ -41,7 +41,7 @@ contract Bank {
         public
     {
        require(
-            ERC20(_tokenAddr).transferFrom(msg.sender, address(this), _amount),
+            IERC20(_tokenAddr).transferFrom(msg.sender, address(this), _amount),
             "Contract token allowances insufficient to complete this lock request"
         );
 
