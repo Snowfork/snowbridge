@@ -76,23 +76,3 @@ contract('Gas expenditures', function (accounts) {
         }); 
     });
 });
-
-// const base58Lib = await Base58.new();
-// await Bank.link("Base58", base58Lib.address);
-// this.bank = await Bank.new();
-
-
-// GAS COST BEFORE CHANGES
-// Gas costs (BEFORE CHANGES)
-// sendETH gas: 69612
-// ✓ sendETH gas usage (56ms)
-// sendERC20 gas: 100957
-// ✓ sendERC20 gas usage (149ms)
-
-
-// Contract: Gas expenditures
-// Gas costs
-//     sendETH gas: 71275
-//   ✓ sendETH gas usage (78ms)
-//     sendERC20 gas: 96857
-//   ✓ sendERC20 gas usage (140ms)
