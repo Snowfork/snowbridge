@@ -19,7 +19,7 @@ contract("Bank", function (accounts) {
   const POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
   // TODO: implement on contract base58 conversion as recipient's encoded bytes vary in length
   const POLKADOT_ADDRESS2 = "1FRMM8PEiWXYax7rpS6X4XZX1aAAxSWx1CrKTyrVYhV24fg"
-  
+
   const ADDRESS_BYTE_LENGTH = 40;
   const RECIPIENT_BYTE_LENGTH = 96;
   const UINT256_BYTE_LENGTH = 64;
@@ -59,14 +59,15 @@ contract("Bank", function (accounts) {
         {from: userOne, value: weiAmount}
       ).should.be.fulfilled;
       
-      // Confirm Deposit event emitted with expected values
-      const eventDeposit = logs.find(
-          e => e.event === "Deposit"
+      // Confirm app event emitted with expected values
+      const appEvent = logs.find(
+          e => e.event === "AppEvent"
       );
-      eventDeposit.args._targetAppID.should.be.equal(targetAppID);
+      appEvent.args._targetAppID.should.be.equal(targetAppID);
+      appEvent.args._name.should.be.equal("sendETH");
 
       // Clean data by removing '0x' prefix
-      const data = eventDeposit.args._data.slice(2, eventDeposit.args._data.length);
+      const data = appEvent.args._data.slice(2, appEvent.args._data.length);
 
       // Sender's Ethereum address
       const expectedSender = userOne.toLowerCase().slice(2, userOne.length);
@@ -154,14 +155,15 @@ contract("Bank", function (accounts) {
         }
       ).should.be.fulfilled;
 
-      // Confirm Deposit event emitted with expected values
-      const eventDeposit = logs.find(
-          e => e.event === "Deposit"
+      // Confirm app event emitted with expected values
+      const appEvent = logs.find(
+          e => e.event === "AppEvent"
       );
-      eventDeposit.args._targetAppID.should.be.equal(targetAppID);
+      appEvent.args._targetAppID.should.be.equal(targetAppID);
+      appEvent.args._name.should.be.equal("sendERC20");
 
       // Clean data by removing '0x' prefix
-      const data = eventDeposit.args._data.slice(2, eventDeposit.args._data.length);
+      const data = appEvent.args._data.slice(2, appEvent.args._data.length);
 
       // Sender's Ethereum address
       let start = 0;
