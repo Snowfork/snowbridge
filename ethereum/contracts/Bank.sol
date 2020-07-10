@@ -11,14 +11,7 @@ contract Bank {
     uint256 public totalETH;
     mapping(address => uint256) public totalTokens;
 
-    event Deposit(
-        address _sender,    // Despositor's address on Ethereum
-        bytes _recipient,   // Intended recipient's address on Polkadot
-        address _tokenAddr, // Token address, empty for Ethereum deposits
-        string _symbol,     // Asset's symbol
-        uint256 _amount,    // Amount of Ethereum/tokens deposited
-        uint256 _nonce      // Global nonce
-    );
+    event Deposit(bytes _data);
 
     constructor() public {
         nonce = 0;
@@ -36,7 +29,8 @@ contract Bank {
         // Increment global nonce
         nonce = nonce.add(1);
 
-        emit Deposit(msg.sender, _recipient, address(0), "ETH", msg.value, nonce);
+        bytes memory data = encodeSendData(msg.sender, _recipient, address(0), msg.value, nonce);
+        emit Deposit(data);
     }
 
     function sendERC20(
@@ -51,13 +45,26 @@ contract Bank {
             "Contract token allowances insufficient to complete this lock request"
         );
 
-        // Set symbol to the ERC20 token's symbol
-        string memory symbol = ERC20(_tokenAddr).symbol();
         // Increment locked ERC20 token counter by this amount
         totalTokens[_tokenAddr] = totalTokens[_tokenAddr].add(_amount);
         // Increment global nonce
         nonce = nonce.add(1);
 
-        emit Deposit(msg.sender, _recipient, _tokenAddr, symbol, _amount, nonce);
+        bytes memory data = encodeSendData(msg.sender, _recipient, _tokenAddr,_amount, nonce);
+        emit Deposit(data);
+    }
+
+    function encodeSendData(
+        address _sender,
+        bytes memory _recipient,
+        address _tokenAddr,
+        uint256 _amount,
+        uint256 _nonce
+    )
+        internal
+        pure
+        returns(bytes memory)
+    {
+        return abi.encodePacked(_sender, _recipient, _tokenAddr, _amount, _nonce);
     }
 }
