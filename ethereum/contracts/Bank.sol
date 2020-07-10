@@ -11,13 +11,14 @@ contract Bank {
     uint256 public totalETH;
     mapping(address => uint256) public totalTokens;
 
-    event Deposit(bytes _data);
+    event Deposit(bytes _targetAppID, bytes _data);
 
     constructor() public {
         nonce = 0;
     }
 
     function sendETH(
+        bytes memory _targetAppID,
         bytes memory _recipient
     )
         public payable
@@ -30,10 +31,11 @@ contract Bank {
         nonce = nonce.add(1);
 
         bytes memory data = encodeSendData(msg.sender, _recipient, address(0), msg.value, nonce);
-        emit Deposit(data);
+        emit Deposit(_targetAppID, data);
     }
 
     function sendERC20(
+        bytes memory _targetAppID,
         bytes memory _recipient,
         address _tokenAddr,
         uint256 _amount
@@ -51,7 +53,7 @@ contract Bank {
         nonce = nonce.add(1);
 
         bytes memory data = encodeSendData(msg.sender, _recipient, _tokenAddr,_amount, nonce);
-        emit Deposit(data);
+        emit Deposit(_targetAppID, data);
     }
 
     function encodeSendData(

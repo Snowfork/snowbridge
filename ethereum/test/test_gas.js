@@ -24,11 +24,13 @@ contract('Gas expenditures', function (accounts) {
 
         it('sendETH gas usage', async function () {
             // Prepare transaction parameters
+            const targetAppID = web3.utils.utf8ToHex("targetapp123");
             const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
             const weiAmount = web3.utils.toWei("0.25", "ether");
 
             // Deposit Ethereum to the contract
             const result = await this.bank.sendETH(
+                targetAppID,
                 recipient,
                 {from: userOne, value: weiAmount}
             ).should.be.fulfilled;
@@ -49,6 +51,7 @@ contract('Gas expenditures', function (accounts) {
 
         it('sendERC20 gas usage', async function () {
             // Prepare transaction parameters
+            const targetAppID = web3.utils.utf8ToHex("targetapp123");
             const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
             const amount = 100;
 
@@ -59,6 +62,7 @@ contract('Gas expenditures', function (accounts) {
 
             // Deposit ERC20 tokens to the contract
             const result = await this.bank.sendERC20(
+                targetAppID,
                 recipient,
                 this.token.address,
                 amount,

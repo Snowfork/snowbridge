@@ -17,6 +17,9 @@ contract("Bank", function (accounts) {
   // Constants
   const NULL_ADDRESS = "0x0000000000000000000000000000000000000000";
   const POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
+  // TODO: implement on contract base58 conversion as recipient's encoded bytes vary in length
+  const POLKADOT_ADDRESS2 = "1FRMM8PEiWXYax7rpS6X4XZX1aAAxSWx1CrKTyrVYhV24fg"
+  
   const ADDRESS_BYTE_LENGTH = 40;
   const RECIPIENT_BYTE_LENGTH = 96;
   const UINT256_BYTE_LENGTH = 64;
@@ -45,11 +48,13 @@ contract("Bank", function (accounts) {
       const beforeNonce = Number(await this.bank.nonce());
 
       // Prepare transaction parameters
+      const targetAppID = web3.utils.utf8ToHex("targetapp123");
       const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
       const weiAmount = web3.utils.toWei("0.25", "ether");
       
       // Deposit Ethereum to the contract and get the logs of the transaction
       const { logs } = await this.bank.sendETH(
+        targetAppID,
         recipient,
         {from: userOne, value: weiAmount}
       ).should.be.fulfilled;
@@ -58,6 +63,8 @@ contract("Bank", function (accounts) {
       const eventDeposit = logs.find(
           e => e.event === "Deposit"
       );
+      eventDeposit.args._targetAppID.should.be.equal(targetAppID);
+
       // Clean data by removing '0x' prefix
       const data = eventDeposit.args._data.slice(2, eventDeposit.args._data.length);
 
@@ -126,6 +133,7 @@ contract("Bank", function (accounts) {
       const beforeUserBalance = Number(await this.token.balanceOf(userOne));
 
       // Prepare transaction parameters
+      const targetAppID = web3.utils.utf8ToHex("tokendexapp987");
       const amount = 100;
       const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
       
@@ -136,6 +144,7 @@ contract("Bank", function (accounts) {
 
       // Deposit ERC20 tokens to the contract and get the logs of the transaction
       const { logs } = await this.bank.sendERC20(
+        targetAppID,
         recipient,
         this.token.address,
         amount,
@@ -149,6 +158,8 @@ contract("Bank", function (accounts) {
       const eventDeposit = logs.find(
           e => e.event === "Deposit"
       );
+      eventDeposit.args._targetAppID.should.be.equal(targetAppID);
+
       // Clean data by removing '0x' prefix
       const data = eventDeposit.args._data.slice(2, eventDeposit.args._data.length);
 
