@@ -2,29 +2,23 @@
 pragma solidity ^0.6.2;
 
 import "../node_modules/@openzeppelin/contracts/math/SafeMath.sol";
-import "./BankToken.sol";
+import "../node_modules/@openzeppelin/contracts/token/erc20/IERC20.sol";
 
 contract Bank {
     using SafeMath for uint256;
 
     uint256 public nonce;
-    uint256 public lockedEthereum;
-    mapping(address => uint256) public lockedTokens;
+    uint256 public totalETH;
+    mapping(address => uint256) public totalTokens;
 
-    event Deposit(
-        address _sender,  // Despositor's address on Ethereum
-        bytes _recipient, // Intended recipient's address on Polkadot
-        address _token,   // Token address, empty for Ethereum deposits
-        string _symbol,   // Asset's symbol
-        uint256 _amount,  // Amount of Ethereum/tokens deposited
-        uint256 _nonce    // Global nonce
-    );
+    event AppEvent(bytes _targetAppID, string _name, bytes _data);
 
     constructor() public {
         nonce = 0;
     }
 
-    function depositETH(
+    function sendETH(
+        bytes memory _targetAppID,
         bytes memory _recipient
     )
         public payable
@@ -32,32 +26,47 @@ contract Bank {
         require(msg.value > 0, "Value of transaction must be positive");
 
         // Increment locked Ethereum counter by this amount
-        lockedEthereum = lockedEthereum.add(msg.value);
+        totalETH = totalETH.add(msg.value);
         // Increment global nonce
         nonce = nonce.add(1);
 
-        emit Deposit(msg.sender, _recipient, address(0), "ETH", msg.value, nonce);
+        bytes memory data = encodeSendData(msg.sender, _recipient, address(0), msg.value, nonce);
+        emit AppEvent(_targetAppID, "sendETH", data);
     }
 
-    function depositERC20(
+    function sendERC20(
+        bytes memory _targetAppID,
         bytes memory _recipient,
-        address _token,
+        address _tokenAddr,
         uint256 _amount
     )
         public
     {
        require(
-            BankToken(_token).transferFrom(msg.sender, address(this), _amount),
+            IERC20(_tokenAddr).transferFrom(msg.sender, address(this), _amount),
             "Contract token allowances insufficient to complete this lock request"
         );
 
-        // Set symbol to the ERC20 token's symbol
-        string memory symbol = BankToken(_token).symbol();
         // Increment locked ERC20 token counter by this amount
-        lockedTokens[_token] = lockedTokens[_token].add(_amount);
+        totalTokens[_tokenAddr] = totalTokens[_tokenAddr].add(_amount);
         // Increment global nonce
         nonce = nonce.add(1);
 
-        emit Deposit(msg.sender, _recipient, _token, symbol, _amount, nonce);
+        bytes memory data = encodeSendData(msg.sender, _recipient, _tokenAddr,_amount, nonce);
+        emit AppEvent(_targetAppID, "sendERC20", data);
+    }
+
+    function encodeSendData(
+        address _sender,
+        bytes memory _recipient,
+        address _tokenAddr,
+        uint256 _amount,
+        uint256 _nonce
+    )
+        internal
+        pure
+        returns(bytes memory)
+    {
+        return abi.encodePacked(_sender, _recipient, _tokenAddr, _amount, _nonce);
     }
 }
