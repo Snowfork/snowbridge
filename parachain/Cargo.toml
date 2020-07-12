@@ -5,7 +5,9 @@ panic = 'unwind'
 members = [
     'node',
     'pallets/bridge',
-    'pallets/verifier',
+    'pallets/broker',
+    'pallets/dummy-verifier',
+    'pallets/dummy-app',
     'runtime',
     'common'
 ]

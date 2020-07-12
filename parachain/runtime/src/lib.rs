@@ -252,9 +252,43 @@ impl sudo::Trait for Runtime {
 	type Call = Call;
 }
 
+parameter_types! {
+    pub const MaximumSchedulerWeight: Weight = MaximumBlockWeight::get();
+}
+
+impl scheduler::Trait for Runtime {
+    type Event = Event;
+    type Origin = Origin;
+    type Call = Call;
+    type MaximumWeight = MaximumSchedulerWeight;
+}
+
+// Our pallets
+
 impl bridge::Trait for Runtime {
 	type Event = Event;
+	type Broker = broker::Module<Runtime>;
 }
+
+impl broker::Trait for Runtime {
+	type Event = Event;
+
+	type DummyVerifier = dummy_verifier::Module<Runtime>;
+	type DummyApp1 = dummy_app::Module<Runtime>;
+	type DummyApp2 = dummy_app::Module<Runtime>;
+}
+
+impl dummy_verifier::Trait for Runtime {
+	type Event = Event;
+
+	type Proposal = Call;
+	type Scheduler = scheduler::Module<Runtime>;
+}
+
+impl dummy_app::Trait for Runtime {
+	type Event = Event;
+}
+
 
 construct_runtime!(
 	pub enum Runtime where
@@ -270,7 +304,11 @@ construct_runtime!(
 		Balances: balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: transaction_payment::{Module, Storage},
 		Sudo: sudo::{Module, Call, Config<T>, Storage, Event<T>},
+		Scheduler: scheduler::{Module, Call, Storage, Event<T>},
 		Bridge: bridge::{Module, Call, Storage, Event<T>},
+		Broker: broker::{Module, Call, Storage, Event},
+		DummyVerifier: dummy_verifier::{Module, Call, Storage, Event},
+		DummyApp: dummy_app::{Module, Call, Storage, Event},
 	}
 );
 
