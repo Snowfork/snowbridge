@@ -1,4 +1,4 @@
-package verifier
+package prover
 
 import (
 	"github.com/ethereum/go-ethereum/common"
@@ -6,8 +6,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// Verifier can verify transactions via a SPV Proof or Threshold Vote
-type Verifier interface {
+// Prover can verify transactions via a SPV Proof or Threshold Vote
+type Prover interface {
 	ProofVerifier
 	ThresholdVerifier
 
