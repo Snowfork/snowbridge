@@ -1,7 +1,7 @@
 
 # Polkadot Etherem Parachain
 
-A Polkadot parachain for bridging Ethereum.
+A Polkadot parachain for bridging arbitrary Ethereum applications.
 
 ## Local Development
 
@@ -35,11 +35,13 @@ Initialize your Wasm Build environment:
 
 ### Build
 
-Once you have prepared your local development environment, you can build the node template. Use this
-command to build the [Wasm](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution)
+Use this command to build the [Wasm](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution)
 and [native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
 
+Note: The WASM build is currently disabled to dependency issue
+
 ```bash
+export SKIP_WASM_BUILD=1
 cargo build --release
 ```
 
@@ -50,13 +52,13 @@ cargo build --release
 Purge any existing developer chain state:
 
 ```bash
-./target/release/node-template purge-chain --dev
+./target/release/artemis-node purge-chain --dev
 ```
 
 Start a development chain with:
 
 ```bash
-./target/release/node-template --dev
+./target/release/artemis-node --dev
 ```
 
 Detailed logs may be shown by running the node with the following environment variables set:
@@ -84,10 +86,10 @@ by appending your own. A few useful ones are as follow.
 
 ```bash
 # Run Substrate node without re-compiling
-./scripts/docker_run.sh ./target/release/node-template --dev --ws-external
+./scripts/docker_run.sh ./target/release/artemis-node --dev --ws-external
 
 # Purge the local dev chain
-./scripts/docker_run.sh ./target/release/node-template purge-chain --dev
+./scripts/docker_run.sh ./target/release/artemis-node purge-chain --dev
 
 # Check whether the code is compilable
 ./scripts/docker_run.sh cargo check
