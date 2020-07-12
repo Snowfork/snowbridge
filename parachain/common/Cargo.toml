@@ -1,8 +1,8 @@
 [package]
-name = "common"
-version = "0.1.0"
-authors = ["Vincent Geddes <vincent.geddes@hey.com>"]
-edition = "2018"
+name = 'common'
+version = '0.1.1'
+authors = ['Snowfork <contact@snowfork.com>']
+edition = '2018'
 
 [dependencies.frame-support]
 default-features = false
