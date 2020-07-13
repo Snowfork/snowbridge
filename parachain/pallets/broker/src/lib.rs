@@ -58,6 +58,11 @@ impl<T: Trait> Module<T> {
 	// Dispatch verified message to a target application
 	fn dispatch(app_id: AppID, message: Message) -> DispatchResult {
 
+		// Note: We'll want to move over to using dispatch based on hardcoded constants,
+		//   This will ensure we have low and non-varying runtime overhead.
+		//
+		// See https://github.com/Snowfork/polkadot-ethereum/issues/10
+
 		match app_id {
 			_ if T::DummyApp1::is_handler_for(app_id) => {
 				T::DummyApp1::handle(app_id, message)?;
