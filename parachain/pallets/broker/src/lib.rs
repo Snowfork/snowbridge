@@ -39,21 +39,12 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// Submit message to broker for processing
-		//
-		// The message will be routed to a verifier
-		#[weight = 0]
-		pub fn submit(origin, app_id: AppID, message: Message) -> DispatchResult {
-			let _ = ensure_signed(origin)?;
-			T::DummyVerifier::verify(app_id, message)?;
-			Ok(())
-		}
-
 		// Accept a message that has been previously verified
 		//
 		// Called by a verifier
 		#[weight = 0]
 		pub fn accept(origin, app_id: AppID, message: Message) -> DispatchResult {
+			// we'll check the origin here to ensure it originates from a verifier
 			ensure_root(origin)?;
 			Self::dispatch(app_id, message)?;
 			Ok(())
@@ -84,6 +75,9 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Broker for Module<T> {
 
+	// Submit message to broker for processing
+	//
+	// The message will be routed to a verifier
 	fn submit(app_id: AppID, message: Message) -> DispatchResult {
 		T::DummyVerifier::verify(app_id, message)?;
 		Ok(())
