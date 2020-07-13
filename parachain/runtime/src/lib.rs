@@ -294,7 +294,7 @@ impl balances::Trait<balances::Instance2> for Runtime {
 	type Event = Event;
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = System;
+	type AccountStore = System; // TODO: Need a separate account store
 }
 
 impl polkaeth_app::Trait for Runtime {
