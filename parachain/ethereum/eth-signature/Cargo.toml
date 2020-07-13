@@ -1,0 +1,8 @@
+[package]
+name = "eth-signature"
+version = "0.1.0"
+authors = ["Snowfork <contact@snowfork.com>"]
+edition = "2018"
+
+[dependencies]
+primitive-types = { version = "0.7.2", default-features = false, features = ["codec", "rlp"] }

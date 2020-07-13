@@ -978,6 +978,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "eth-signature"
+version = "0.1.0"
+dependencies = [
+ "primitive-types",
+]
+
+[[package]]
 name = "exit-future"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1829,6 +1836,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1be51a921b067b0eaca2fad532d9400041561aa922221cc65f95a85641c6bf53"
 dependencies = [
  "parity-scale-codec",
+]
+
+[[package]]
+name = "impl-rlp"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f7a72f11830b52333f36e3b09a288333888bf54380fd0ac0790a3c31ab0f3c5"
+dependencies = [
+ "rlp",
 ]
 
 [[package]]
@@ -3539,6 +3555,7 @@ checksum = "c55c21c64d0eaa4d7ed885d959ef2d62d9e488c27c0e02d9aa5ce6c877b7d5f8"
 dependencies = [
  "fixed-hash",
  "impl-codec",
+ "impl-rlp",
  "impl-serde 0.3.1",
  "uint",
 ]
@@ -4094,6 +4111,15 @@ name = "rle-decode-fast"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cabe4fa914dec5870285fa7f71f602645da47c486e68486d2b4ceb4a343e90ac"
+
+[[package]]
+name = "rlp"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a7d3f9bed94764eac15b8f14af59fac420c236adaff743b7bcc88e265cb4345"
+dependencies = [
+ "rustc-hex",
+]
 
 [[package]]
 name = "rocksdb"
