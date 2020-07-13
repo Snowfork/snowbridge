@@ -39,9 +39,12 @@ func Initialize(cfg *types.Config, chainCfg *types.ChainConfig, sysErr chan<- er
 	}
 	kp, _ := kpI.(*ethKey.Keypair)
 
+	// Incorporate a more robust logger...
+	logger := log.Logger
+	
 	stop := make(chan int)
+
 	core := &EthCore{kp, ch logger}
-	logger := log.Logger // Incorporate a more robust logger...
 
 	// Streamer and Router
 	streamer := NewEthStreamer(core, cfg, logger, stop, sysErr)

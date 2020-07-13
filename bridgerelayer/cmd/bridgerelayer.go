@@ -7,11 +7,13 @@ import (
 	"strings"
 	"syscall"
 
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
+
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/ethereum"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/substrate"
 )
 
 var cfgFile string
@@ -62,8 +64,13 @@ func RunInitRelayerCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Start EthChain's streamer and router
 	go ethChain.Streamer.Start()
+	go ethChain.Router.Start()
+
+	// Start SubstrateChain's streamer and router
 	go substrateChain.Streamer.Start()
+	go substrateChain.Router.Start()
 
 	// Exit signal enables graceful shutdown
 	exitSignal := make(chan os.Signal, 1)
