@@ -228,3 +228,10 @@ default-features = false
 package = 'pallet-dummy-app'
 path = '../pallets/dummy-app'
 version = '0.1.1'
+
+[dependencies.polkaeth-app]
+default-features = false
+package = 'polkaeth-app'
+path = '../pallets/polkaeth-app'
+version = '0.1.1'
+

@@ -9,6 +9,7 @@ members = [
     'pallets/broker',
     'pallets/dummy-verifier',
     'pallets/dummy-app',
+    'pallets/polkaeth-app',
     'runtime',
     'common'
 ]

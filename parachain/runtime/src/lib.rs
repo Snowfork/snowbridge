@@ -289,6 +289,18 @@ impl dummy_app::Trait for Runtime {
 	type Event = Event;
 }
 
+impl balances::Trait<balances::Instance2> for Runtime {
+	type Balance = u128; // We'll need to consider using a BigNum (u256) for PolkaETH
+	type Event = Event;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+}
+
+impl polkaeth_app::Trait for Runtime {
+	type Event = Event;
+	type Currency = balances::Module<Runtime, balances::Instance2>;
+}
 
 construct_runtime!(
 	pub enum Runtime where
@@ -302,6 +314,7 @@ construct_runtime!(
 		Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
 		Grandpa: grandpa::{Module, Call, Storage, Config, Event},
 		Balances: balances::{Module, Call, Storage, Config<T>, Event<T>},
+		Balances2: balances::<Instance2>::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: transaction_payment::{Module, Storage},
 		Sudo: sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		Scheduler: scheduler::{Module, Call, Storage, Event<T>},
@@ -309,6 +322,7 @@ construct_runtime!(
 		Broker: broker::{Module, Call, Storage, Event},
 		DummyVerifier: dummy_verifier::{Module, Call, Storage, Event},
 		DummyApp: dummy_app::{Module, Call, Storage, Event},
+		PolkaETH: polkaeth_app::{Module, Call, Storage, Event<T>},
 	}
 );
 
