@@ -1,7 +1,10 @@
 package ethereum
 
 import (
+	"log"
+
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains"
+	ethKey "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase/ethereum"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
 )
 
@@ -16,8 +19,15 @@ type EthChain struct {
 	Stop     chan<- int
 }
 
+type EthCore struct {
+	chains.Core
+	KeyPair ethKey.KeyPair
+
+	// Include universal logger...
+}
+
 // Initialize ...
-func Initialize(chainCfg *types.ChainConfig, sysErr chan<- error) (*EthChain, error) {
+func Initialize(cfg *types.Config, chainCfg *types.ChainConfig, sysErr chan<- error) (*EthChain, error) {
 	cfg, err := parseChainConfig(chainCfg)
 	if err != nil {
 		return nil, err
@@ -27,47 +37,37 @@ func Initialize(chainCfg *types.ChainConfig, sysErr chan<- error) (*EthChain, er
 	if err != nil {
 		return nil, err
 	}
-	kp, _ := kpI.(*secp256k1.Keypair)
+	kp, _ := kpI.(*ethKey.Keypair)
 
 	stop := make(chan int)
-	conn := connection.NewConnection(cfg.endpoint, cfg.http, kp, logger, cfg.gasLimit, cfg.maxGasPrice)
-	err = conn.Connect()
-	if err != nil {
-		return nil, err
-	}
+	core := &EthCore{kp, ch logger}
+	logger := log.Logger // Incorporate a more robust logger...
 
-	if chainCfg.LatestBlock {
-		curr, err := conn.LatestBlock()
-		if err != nil {
-			return nil, err
-		}
-		cfg.startBlock = curr
-	}
+	// Streamer and Router
+	streamer := NewEthStreamer(core, cfg, logger, stop, sysErr)
+	router := NewEthRouter(core, cfg, logger, stop, sysErr)
 
-	streamer := NewEthereumStreamer(conn, cfg, logger, bs, stop, sysErr)
-	router := NewEthereumRouter(conn, cfg, logger, stop, sysErr)
-
-	return &Chain{
-		cfg:      chainCfg,
-		conn:     conn,
-		writer:   writer,
-		listener: listener,
-		stop:     stop,
+	return &EthChain{
+		Config:   cfg,
+		Core:     core,
+		Streamer: streamer,
+		Router:   router,
+		Stop:     stop,
 	}, nil
 }
 
 // Start ...
-func (c *Chain) Start() error {
-	err := c.listener.start()
+func (ec *EthChain) Start() error {
+	err := ec.Streamer.start()
 	if err != nil {
 		return err
 	}
 
-	err = c.writer.start()
+	err = ec.Router.start()
 	if err != nil {
 		return err
 	}
 
-	c.writer.log.Debug("Successfully started chain")
+	log.Debug("Successfully started chain")
 	return nil
 }

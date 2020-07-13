@@ -29,14 +29,13 @@ func NewEthStreamer(websocketURL string, stop <-chan int, sysErr chan<- error) E
 
 // Start ...
 func (es *EthStreamer) Start() error {
-
 	client, err := ethclient.Dial(el.WebsocketURL)
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
 
-	err = SubscribeBlocks()
+	err = es.SubscribeBlocks()
 	if err != nil {
 		return err
 	}

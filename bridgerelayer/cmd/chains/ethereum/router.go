@@ -31,7 +31,7 @@ func (er *EthereumRouter) BuildPacket(tx ethtypes.Transaction, block ethtypes.Bl
 	receipt.EncodeRLP(&receiptBuf)
 
 	// Transaction data
-	txData := types.NewTransactionData(chainID.Bytes(), block.Hash().Bytes(),
+	txData := types.NewEthTxData(chainID.Bytes(), block.Hash().Bytes(),
 		tx.Hash().Bytes(), tx.Data(), receiptBuf.Bytes())
 
 	// Message
