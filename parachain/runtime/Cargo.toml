@@ -36,6 +36,7 @@ std = [
     'system/std',
     'timestamp/std',
     'transaction-payment/std',
+    'balances/std',
     'bridge/std',
 ]
 [dependencies.aura]
@@ -175,12 +176,6 @@ package = 'frame-system'
 tag = 'v2.0.0-rc4'
 version = '2.0.0-rc4'
 
-[dependencies.bridge]
-default-features = false
-package = 'pallet-bridge'
-path = '../pallets/bridge'
-version = '0.1.1'
-
 [dependencies.timestamp]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -200,3 +195,36 @@ git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-wasm-builder-runner'
 tag = 'v2.0.0-rc4'
 version = '1.0.5'
+
+[dependencies.scheduler]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'pallet-scheduler'
+tag = 'v2.0.0-rc4'
+version = '2.0.0-rc4'
+
+# Our Pallets
+
+[dependencies.bridge]
+default-features = false
+package = 'pallet-bridge'
+path = '../pallets/bridge'
+version = '0.1.1'
+
+[dependencies.broker]
+default-features = false
+package = 'pallet-broker'
+path = '../pallets/broker'
+version = '0.1.1'
+
+[dependencies.dummy-verifier]
+default-features = false
+package = 'pallet-dummy-verifier'
+path = '../pallets/dummy-verifier'
+version = '0.1.1'
+
+[dependencies.dummy-app]
+default-features = false
+package = 'pallet-dummy-app'
+path = '../pallets/dummy-app'
+version = '0.1.1'

@@ -153,8 +153,12 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-bridge",
+ "pallet-broker",
+ "pallet-dummy-app",
+ "pallet-dummy-verifier",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
+ "pallet-scheduler",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -585,6 +589,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddfc5b9aa5d4507acaf872de71051dfd0e309860e88966e1051e462a077aac4f"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "common"
+version = "0.1.1"
+dependencies = [
+ "frame-support",
 ]
 
 [[package]]
@@ -3016,8 +3027,50 @@ dependencies = [
 name = "pallet-bridge"
 version = "0.1.1"
 dependencies = [
+ "common",
  "frame-support",
  "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-broker"
+version = "0.1.1"
+dependencies = [
+ "common",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-dummy-app"
+version = "0.1.1"
+dependencies = [
+ "common",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-dummy-verifier"
+version = "0.1.1"
+dependencies = [
+ "common",
+ "frame-support",
+ "frame-system",
+ "pallet-broker",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
@@ -3069,6 +3122,19 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "safe-mix",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-scheduler"
+version = "2.0.0-rc4"
+source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1f21a579c478fe5d4f51e1fa71f7db9fd4"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
