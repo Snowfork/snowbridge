@@ -1,7 +1,7 @@
 
 # Polkadot Etherem Parachain
 
-A Polkadot parachain for bridging arbitrary Ethereum applications.
+A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 
 ## Local Development
 

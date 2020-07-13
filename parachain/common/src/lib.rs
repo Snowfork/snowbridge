@@ -3,7 +3,7 @@ use frame_support::dispatch::DispatchResult;
 
 /// Selector for target application
 ///
-/// This is an opaque byte string that can only be decoded by verifiers and
+/// This is an opaque byte identifier that can only be decoded by verifiers and
 /// target applications.
 ///
 /// For example it could contain an Ethereum contract address.
@@ -27,7 +27,7 @@ pub trait Broker {
 
 }
 
-/// The dummy verifier module implements this trait
+/// The verifier module implements this trait
 pub trait Verifier {
 
     fn verify(app_id: AppID, message: Message) -> DispatchResult;
