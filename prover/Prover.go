@@ -23,7 +23,7 @@ type ProofVerifier interface {
 	BuildProof(block types.Block, tx types.Transaction) SpvProof
 
 	// VerifyProof verifies a SPV proof by proving commitment to its root (not to block hash)
-	VerifyProof(SpvProof) bool
+	VerifyProof(merklePath []byte, proof SpvProof) bool
 }
 
 // LightClientProof supports cryptographic verification
