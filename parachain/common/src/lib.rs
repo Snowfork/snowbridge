@@ -9,8 +9,11 @@ use frame_support::dispatch::DispatchResult;
 /// For example it could contain an Ethereum contract address.
 pub type AppID = [u8; 32];
 
-/// RLP-encoded message
+/// Message from relayer
 pub type Message = Vec<u8>;
+
+// Blake256 hash of message
+pub type MessageHash = [u8; 32];
 
 
 /// The bridge module implements this trait
