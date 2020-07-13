@@ -19,11 +19,11 @@ type EthChain struct {
 	Stop     chan<- int
 }
 
+// EthCore holds core EthChain information including credentials
 type EthCore struct {
 	chains.Core
 	KeyPair ethKey.KeyPair
-
-	// Include universal logger...
+	Logger  *log.Logger // Should be passed in from bridgerelayer as a universal logger...
 }
 
 // Initialize ...
@@ -33,20 +33,21 @@ func Initialize(cfg *types.Config, chainCfg *types.ChainConfig, sysErr chan<- er
 		return nil, err
 	}
 
+	core := *EthCore
+
 	kpI, err := keystore.KeypairFromAddress(cfg.from, keystore.EthChain, cfg.keystorePath, chainCfg.Insecure)
 	if err != nil {
 		return nil, err
 	}
 	kp, _ := kpI.(*ethKey.Keypair)
+	core.KeyPair = kp
 
 	// Incorporate a more robust logger...
 	logger := log.Logger
-	
-	stop := make(chan int)
-
-	core := &EthCore{kp, ch logger}
+	core.Logger = logger
 
 	// Streamer and Router
+	stop := make(chan int)
 	streamer := NewEthStreamer(core, cfg, logger, stop, sysErr)
 	router := NewEthRouter(core, cfg, logger, stop, sysErr)
 
@@ -71,6 +72,6 @@ func (ec *EthChain) Start() error {
 		return err
 	}
 
-	log.Debug("Successfully started chain")
+	ec.Core.Logger.Debug("Successfully started chain")
 	return nil
 }
