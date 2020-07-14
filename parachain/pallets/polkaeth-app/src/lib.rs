@@ -12,9 +12,11 @@ use frame_support::{decl_module, decl_storage, decl_event, decl_error,
 
 use frame_system::{self as system, ensure_signed };
 
-use sp_std::prelude::*;
 
-type PolkaETH<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
+pub type PolkaETH<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
+
+
+use sp_std::prelude::*;
 
 use common::{AppID, Message, Application};
 
@@ -61,9 +63,15 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 10_000]
-		fn transfer(origin, to: T::AccountId, amount: PolkaETH<T>) -> DispatchResult {
+		fn transfer(origin, to: T::AccountId, amount: PolkaETH<T>, allow_death: bool) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			T::Currency::transfer(&who, &to, amount, ExistenceRequirement::KeepAlive)?;
+
+			let er = match allow_death {
+				true => ExistenceRequirement::AllowDeath,
+				false => ExistenceRequirement::KeepAlive,
+			};
+
+			T::Currency::transfer(&who, &to, amount, er)?;
 
 			Self::deposit_event(RawEvent::Transfer(who, to, amount));
 			Ok(())
@@ -73,11 +81,11 @@ decl_module! {
 		/// The parachain will mint PolkaETH for users who have locked up ETH in a bridge smart contract.
 		///
 		#[weight = 10_000]
-		fn mint(origin, amount: PolkaETH<T>) -> DispatchResult {
-			// TODO: Ensure only our broker and verifier modules can call this dispatchable.
+		fn mint(origin, to: T::AccountId,  amount: PolkaETH<T>) -> DispatchResult {
+			// TODO: verify origin
 			let who = ensure_signed(origin)?;
 
-			let _ = T::Currency::deposit_creating(&who, amount);
+			let _ = T::Currency::deposit_creating(&to, amount);
 
 			Self::deposit_event(RawEvent::Minted(who, amount));
 
@@ -88,13 +96,20 @@ decl_module! {
 		/// To initiate a transfer of PolkaETH to ETH, account holders must burn PolkaETH.
 		///
 		#[weight = 10_000]
-		fn burn(origin, amount: PolkaETH<T>) -> DispatchResult {
+		fn burn(origin, amount: PolkaETH<T>, allow_death: bool) -> DispatchResult {
+			// TODO: verify origin
 			let who = ensure_signed(origin)?;
 
+			// TODO: Add our own reason, the existing ones don't seem to match our needs.
 			let mut reasons = WithdrawReasons::none();
 			reasons.set(WithdrawReason::Transfer);
 
-			let _ = T::Currency::withdraw(&who, amount, reasons, ExistenceRequirement::KeepAlive)?;
+			let er = match allow_death {
+				true => ExistenceRequirement::AllowDeath,
+				false => ExistenceRequirement::KeepAlive,
+			};
+
+			let _ = T::Currency::withdraw(&who, amount, reasons, er)?;
 
 			Self::deposit_event(RawEvent::Burned(who, amount));
 
