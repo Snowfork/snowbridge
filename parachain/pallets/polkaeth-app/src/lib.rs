@@ -5,23 +5,22 @@
 /// Resources:
 ///   https://blog.polymath.network/substrate-deep-dive-imbalances-8dfa89cc1d1
 ///
-
-use frame_support::{decl_module, decl_storage, decl_event, decl_error,
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
-	traits::{Currency, ExistenceRequirement, WithdrawReasons, WithdrawReason}};
+	traits::{Currency, ExistenceRequirement, WithdrawReason, WithdrawReasons},
+};
 
-use frame_system::{self as system, ensure_signed };
+use frame_system::{self as system, ensure_signed};
 
-
-pub type PolkaETH<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
-
+pub type PolkaETH<T> =
+	<<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 
 use sp_std::prelude::*;
 
-use common::{AppID, Message, Application};
+use common::{AppID, Application, Message};
 
 pub trait Trait: system::Trait {
-
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	type Currency: Currency<Self::AccountId>;
@@ -38,7 +37,8 @@ decl_storage! {
 }
 
 decl_event!(
-	pub enum Event<T> where
+	pub enum Event<T>
+	where
 		AccountId = <T as system::Trait>::AccountId,
 		PolkaETH = PolkaETH<T>,
 	{
@@ -120,7 +120,6 @@ decl_module! {
 }
 
 impl<T: Trait> Application for Module<T> {
-
 	/// ETH doesnt have a contract address so, we just make our AppID 32 zero bytes.
 	fn is_handler_for(app_id: AppID) -> bool {
 		app_id == [0; 32]
@@ -130,5 +129,4 @@ impl<T: Trait> Application for Module<T> {
 		// We'll most likely want to call Mint() here.
 		Ok(())
 	}
-
 }
