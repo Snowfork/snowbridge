@@ -5,16 +5,16 @@ import (
 	"context"
 	"log"
 
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
 )
 
 // EthRouter ...
-type EthRouter struct {
-	types.Router
-}
+type EthRouter struct{}
 
 // BuildPacket ...
-func (er *EthereumRouter) BuildPacket(tx ethtypes.Transaction, block ethtypes.Block) (Packet, error) {
+func (er *EthRouter) BuildPacket(tx ethTypes.Transaction, block ethTypes.Block) (types.Packet, error) {
 	chainID, err := client.NetworkID(context.Background())
 	if err != nil {
 		log.Fatal(err)
@@ -46,6 +46,6 @@ func (er *EthereumRouter) BuildPacket(tx ethtypes.Transaction, block ethtypes.Bl
 }
 
 // SendPacket ...
-func (er *EthereumRouter) SendPacket(packet Packet) error {
+func (er *EthRouter) SendPacket(packet types.Packet) error {
 	// Send packet to bridge...
 }

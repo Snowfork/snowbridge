@@ -7,12 +7,12 @@ import (
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains"
 )
 
 // EthStreamer ...
 type EthStreamer struct {
-	types.Streamer
+	chains.Streamer
 	WebsocketURL string
 	stop         <-chan int
 	sysErr       chan<- error

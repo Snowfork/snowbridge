@@ -30,8 +30,8 @@ func initRelayerCmd() *cobra.Command {
 	initRelayerCmd := &cobra.Command{
 		Use:     "init [polkadotRpcURL] [ethereumRpcUrl]",
 		Short:   "Validate credentials and initialize subscriptions to both chains",
-		Args:    cobra.ExactArgs(4),
-		Example: "bridgerelayer init wss://rpc.polkadot.io wss://mainnet.infura.io/ws/v3",
+		Args:    cobra.ExactArgs(2),
+		Example: "bridgerelayer init wss://rpc.polkadot.io wss://mainnet.infura.io/ws/v3/${INFURA_PROJECT_URL}",
 		RunE:    RunInitRelayerCmd,
 	}
 
@@ -46,8 +46,8 @@ func RunInitRelayerCmd(cmd *cobra.Command, args []string) error {
 	}
 	polkadotRpcUrl := args[0]
 
-	if len(strings.Trim(args[0], "")) == 0 {
-		return errors.Errorf("invalid [ethereum-rpc-url]: %s", args[0])
+	if len(strings.Trim(args[1], "")) == 0 {
+		return errors.Errorf("invalid [ethereum-rpc-url]: %s", args[1])
 	}
 	ethereumRpcUrl := args[1]
 
