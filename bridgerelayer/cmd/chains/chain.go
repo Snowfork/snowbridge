@@ -1,7 +1,7 @@
 package chains
 
 import (
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/keybase"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
 )
 
