@@ -7,6 +7,10 @@ Note: the bridgerelayer is currently in a boilerplate/architectural design state
 ## Setup
 
 ```bash
+export GO111MODULE=on
+export GOPROXY=direct
+export GOSUMDB=off
+
 make install
 ```
 
