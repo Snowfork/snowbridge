@@ -1,19 +1,12 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
 
 use frame_support::dispatch::DispatchResult;
 
-/// Selector for target application
-///
-/// This is an opaque byte identifier that can only be decoded by verifiers and
-/// target applications.
-///
-/// For example it could contain an Ethereum contract address.
-pub type AppID = [u8; 32];
+pub mod types;
+pub mod registry;
 
-/// Message from relayer
-pub type Message = Vec<u8>;
-
-// Blake256 hash of message
-pub type MessageHash = [u8; 32];
+pub use types::{AppID, Message, MessageHash};
 
 
 /// The bridge module implements this trait
