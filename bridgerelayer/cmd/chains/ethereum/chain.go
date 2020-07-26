@@ -1,77 +1,43 @@
 package ethereum
 
 import (
-	"log"
-
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains"
-	ethKey "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase/ethereum"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
 )
 
-var _ types.Chain = &EthChain{}
+// var _ chains.Chain = &EthChain{}
 
-// EthChain ...
+// EthChain streams the Ethereum blockchain and routes tx data packets
 type EthChain struct {
-	Config   *chains.ChainConfig // The config of the chain
-	Core     *chains.Core        // The chains connection
-	Streamer *chains.Streamer    // The streamer of this chain
-	Router   *chains.Router      // The router of this chain
-	Stop     chan<- int
+	Streamer Streamer // The streamer of this chain
+	Router   Router   // The router of this chain
+	// Keybase    Keybase
 }
 
-// EthCore holds core EthChain information including credentials
-type EthCore struct {
-	chains.Core
-	KeyPair ethKey.KeyPair
-	Logger  *log.Logger // Should be passed in from bridgerelayer as a universal logger...
-}
-
-// Initialize ...
-func Initialize(cfg *types.Config, chainCfg *types.ChainConfig, sysErr chan<- error) (*EthChain, error) {
-	cfg, err := parseChainConfig(chainCfg)
-	if err != nil {
-		return nil, err
-	}
-
-	core := *EthCore
-
-	kpI, err := keystore.KeypairFromAddress(cfg.from, keystore.EthChain, cfg.keystorePath, chainCfg.Insecure)
-	if err != nil {
-		return nil, err
-	}
-	kp, _ := kpI.(*ethKey.Keypair)
-	core.KeyPair = kp
-
-	// Incorporate a more robust logger...
-	logger := log.Logger
-	core.Logger = logger
-
-	// Streamer and Router
-	stop := make(chan int)
-	streamer := NewEthStreamer(core, cfg, logger, stop, sysErr)
-	router := NewEthRouter(core, cfg, logger, stop, sysErr)
-
-	return &EthChain{
-		Config:   cfg,
-		Core:     core,
+// NewEthChain initializes a new instance of EthChain
+func NewEthChain(streamer Streamer, router Router) EthChain {
+	return EthChain{
 		Streamer: streamer,
 		Router:   router,
-		Stop:     stop,
-	}, nil
+	}
 }
 
-// Start ...
-func (ec *EthChain) Start() error {
-	err := ec.Streamer.start()
-	if err != nil {
-		return err
-	}
+// Start starts the chain's Streamer and Router
+func (ec EthChain) Start() error {
+	errors := make(chan error, 0)
+	events := make(chan types.EventData, 0)
 
-	err = ec.Router.start()
-	if err != nil {
-		return err
-	}
+	go ec.Streamer.Start(events, errors)
 
-	ec.Core.Logger.Debug("Successfully started chain")
-	return nil
+	for {
+		select {
+		case err := <-errors:
+			log.Error(err)
+		case event := <-events:
+			err := ec.Router.Route(event)
+			if err != nil {
+				log.Error(err)
+			}
+		}
+	}
 }

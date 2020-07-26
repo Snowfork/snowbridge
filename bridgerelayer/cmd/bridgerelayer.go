@@ -3,9 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -13,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/ethereum"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/substrate"
+	// "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/substrate"
 )
 
 var cfgFile string
@@ -28,10 +26,11 @@ var rootCmd = &cobra.Command{
 func initRelayerCmd() *cobra.Command {
 	//nolint:lll
 	initRelayerCmd := &cobra.Command{
-		Use:     "init [polkadotRpcURL] [ethereumRpcUrl]",
-		Short:   "Validate credentials and initialize subscriptions to both chains",
-		Args:    cobra.ExactArgs(2),
-		Example: "bridgerelayer init wss://rpc.polkadot.io wss://mainnet.infura.io/ws/v3/${INFURA_PROJECT_URL}",
+		Use:   "init [polkadotRpcURL] [ethereumRpcUrl]",
+		Short: "Validate credentials and initialize subscriptions to both chains",
+		Args:  cobra.ExactArgs(2),
+		// Example: "bridgerelayer init wss://rpc.polkadot.io wss://mainnet.infura.io/ws/v3/${INFURA_PROJECT_URL}",
+		Example: "bridgerelayer init not_implemented ws://localhost:7545/",
 		RunE:    RunInitRelayerCmd,
 	}
 
@@ -44,38 +43,27 @@ func RunInitRelayerCmd(cmd *cobra.Command, args []string) error {
 	if len(strings.Trim(args[0], "")) == 0 {
 		return errors.Errorf("invalid [polkadot-rpc-url]: %s", args[0])
 	}
-	polkadotRpcUrl := args[0]
+	polkadotRPCURL := args[0]
 
 	if len(strings.Trim(args[1], "")) == 0 {
 		return errors.Errorf("invalid [ethereum-rpc-url]: %s", args[1])
 	}
-	ethereumRpcUrl := args[1]
+	ethereumRPCURL := args[1]
 
-	// Init universial logger...
-	// logger := _
+	// Initialize Ethereum chain
+	ethStreamer := ethereum.NewStreamer(ethereumRPCURL)
+	ethRouter := ethereum.NewRouter()
+	ethChain := ethereum.NewEthChain(ethStreamer, ethRouter)
 
-	ethChain, err := ethereum.NewEthereumChain()
-	if err != nil {
-		return err
-	}
+	// Initialize Substrate chain
+	// subStreamer := substrate.NewStreamer(polkadotRPCURL)
+	// subRouter := substrate.NewRouter()
+	// subChain := substrate.NewSubChain(subStreamer, subRouter)
+	_ = polkadotRPCURL
 
-	substrateChain, err := substrate.NewSubstrateChain()
-	if err != nil {
-		return err
-	}
-
-	// Start EthChain's streamer and router
-	go ethChain.Streamer.Start()
-	go ethChain.Router.Start()
-
-	// Start SubstrateChain's streamer and router
-	go substrateChain.Streamer.Start()
-	go substrateChain.Router.Start()
-
-	// Exit signal enables graceful shutdown
-	exitSignal := make(chan os.Signal, 1)
-	signal.Notify(exitSignal, syscall.SIGINT, syscall.SIGTERM)
-	<-exitSignal
+	// Start chains
+	ethChain.Start()
+	// subChain.Start()
 
 	return nil
 }

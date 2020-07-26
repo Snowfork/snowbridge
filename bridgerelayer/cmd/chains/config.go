@@ -62,36 +62,36 @@ func (c *Config) ToJSON(file string) *os.File {
 }
 
 func (c *Config) validate() error {
-	for _, chain := range c.Chains {
-		if chain.Type == "" {
-			return fmt.Errorf("required field chain.Type empty for chain %s", chain.Id)
-		}
-		if chain.Endpoint == "" {
-			return fmt.Errorf("required field chain.Endpoint empty for chain %s", chain.Id)
-		}
-		if chain.Name == "" {
-			return fmt.Errorf("required field chain.Name empty for chain %s", chain.Id)
-		}
-		if chain.Id == "" {
-			return fmt.Errorf("required field chain.Id empty for chain %s", chain.Id)
-		}
-		if chain.From == "" {
-			return fmt.Errorf("required field chain.From empty for chain %s", chain.Id)
-		}
-	}
+	// for _, chain := range c.Chains {
+	// if chain.Type == "" {
+	// 	return fmt.Errorf("required field chain.Type empty for chain %s", chain.Id)
+	// }
+	// if chain.Endpoint == "" {
+	// 	return fmt.Errorf("required field chain.Endpoint empty for chain %s", chain.Id)
+	// }
+	// if chain.Name == "" {
+	// 	return fmt.Errorf("required field chain.Name empty for chain %s", chain.Id)
+	// }
+	// if chain.Id == "" {
+	// 	return fmt.Errorf("required field chain.Id empty for chain %s", chain.Id)
+	// }
+	// if chain.From == "" {
+	// 	return fmt.Errorf("required field chain.From empty for chain %s", chain.Id)
+	// }
+	// }
 	return nil
 }
 
 // TODO: getConfig implementation
-func getConfig(ctx *cli.Context) (*Config, error) {
-	var cfg Config
+// func getConfig(ctx *cli.Context) (*Config, error) {
+// 	var cfg Config
 
-	// 1. Load config...
-	// 2. Validate config...
-	// 3. Load keypair from flag path...
+// 	// 1. Load config...
+// 	// 2. Validate config...
+// 	// 3. Load keypair from flag path...
 
-	return &cfg, nil
-}
+// 	return &cfg, nil
+// }
 
 func loadConfig(file string, config *Config) error {
 	ext := filepath.Ext(file)

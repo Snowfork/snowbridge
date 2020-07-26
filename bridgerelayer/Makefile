@@ -1,2 +1,2 @@
 install:
-	go install ./
+	go install -mod=readonly ./
