@@ -1,9 +1,12 @@
+#![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{decl_module, decl_storage, decl_event, decl_error,
 	dispatch::{DispatchResult, Dispatchable}};
 use frame_support::{Parameter, traits::schedule::Anon as ScheduleAnon};
 use frame_system::{self as system, ensure_signed, ensure_root};
+
+use sp_std::prelude::*;
 
 use pallet_broker::{self as broker};
 

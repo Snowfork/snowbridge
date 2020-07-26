@@ -1,12 +1,14 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_std::prelude::*;
 use frame_support::dispatch::DispatchResult;
 
 pub mod types;
 pub mod registry;
 
-pub use types::{AppID, Message, MessageHash};
+pub use types::{AppID, Message};
 
 
 /// The bridge module implements this trait
@@ -32,9 +34,6 @@ pub trait Verifier {
 
 /// The dummy app module implements this trait
 pub trait Application {
-
-    /// Checks whether this app is a handler for messages submitted with `app_id`.
-    fn is_handler_for(app_id: AppID) -> bool;
 
     /// Handle a message
     fn handle(app_id: AppID, message: Message) -> DispatchResult;

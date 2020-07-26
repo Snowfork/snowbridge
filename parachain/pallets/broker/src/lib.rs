@@ -1,7 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(unused_variables)]
 
 use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch::DispatchResult};
 use frame_system::{self as system, ensure_signed, ensure_root};
+
+use sp_std::prelude::*;
 
 use common::{AppID, Message, Verifier, Broker, Application, registry::{REGISTRY, AppName}};
 

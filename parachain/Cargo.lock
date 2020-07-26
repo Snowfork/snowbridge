@@ -154,7 +154,6 @@ dependencies = [
  "pallet-balances",
  "pallet-bridge",
  "pallet-broker",
- "pallet-dummy-app",
  "pallet-dummy-verifier",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
@@ -597,6 +596,7 @@ name = "common"
 version = "0.1.1"
 dependencies = [
  "frame-support",
+ "sp-std",
 ]
 
 [[package]]
@@ -3065,19 +3065,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
-]
-
-[[package]]
-name = "pallet-dummy-app"
-version = "0.1.1"
-dependencies = [
- "common",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -3092,6 +3080,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
