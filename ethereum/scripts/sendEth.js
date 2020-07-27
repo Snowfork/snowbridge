@@ -3,7 +3,7 @@ module.exports = async () => {
     const Web3 = require("web3");
   
     // Contract abstraction
-    const truffleContract = require("truffle-contract");
+    const truffleContract = require("@truffle/contract");
     const contract = truffleContract(
       require("../build/contracts/Bank.json")
     );
