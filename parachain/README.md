@@ -20,6 +20,14 @@ A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 
 Follow these steps to prepare your local environment for Substrate development :hammer_and_wrench:
 
+### Requirements
+
+The project is currently being developed and is working with the following version of Rust:
+```
+stable-x86_64-unknown-linux-gnu (default)
+rustc 1.45.0 (5c1f21c3b 2020-07-13)
+```
+
 ### Simple Method
 
 You can install all the required dependencies with a single command (be patient, this can take up
