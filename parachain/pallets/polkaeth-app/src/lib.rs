@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 ///
 /// Skeleton implementation for a PolkaETH token
@@ -10,6 +11,8 @@ use frame_support::{
 	dispatch::DispatchResult,
 	traits::{Currency, ExistenceRequirement, WithdrawReason, WithdrawReasons},
 };
+
+use sp_std::prelude::*;
 
 use frame_system::{self as system, ensure_signed};
 
@@ -120,10 +123,6 @@ decl_module! {
 }
 
 impl<T: Trait> Application for Module<T> {
-	/// ETH doesnt have a contract address so, we just make our AppID 32 zero bytes.
-	fn is_handler_for(app_id: AppID) -> bool {
-		app_id == [0; 32]
-	}
 
 	fn handle(app_id: AppID, message: Message) -> DispatchResult {
 		// We'll most likely want to call Mint() here.

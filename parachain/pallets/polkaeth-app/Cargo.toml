@@ -51,15 +51,18 @@ version = '2.0.0-rc4'
 
 [dependencies.serde]
 package = 'serde'
+optional = true
 version = '1.0.101'
 features = ["derive"]
 
 [dependencies.common]
+default-features = false
 path = "../../common"
 
 [features]
 default = ['std']
 std = [
+    'serde',
     'codec/std',
     'frame-support/std',
     'frame-system/std',

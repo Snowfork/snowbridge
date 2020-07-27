@@ -38,6 +38,9 @@ std = [
     'transaction-payment/std',
     'balances/std',
     'bridge/std',
+    'broker/std',
+    'dummy-verifier/std',
+    'polkaeth-app/std',
 ]
 [dependencies.aura]
 default-features = false
@@ -221,12 +224,6 @@ version = '0.1.1'
 default-features = false
 package = 'pallet-dummy-verifier'
 path = '../pallets/dummy-verifier'
-version = '0.1.1'
-
-[dependencies.dummy-app]
-default-features = false
-package = 'pallet-dummy-app'
-path = '../pallets/dummy-app'
 version = '0.1.1'
 
 [dependencies.polkaeth-app]
