@@ -2,7 +2,6 @@ package prover
 
 import (
 	"crypto/ecdsa"
-	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -37,24 +36,4 @@ func GenerateProof(data []byte, pk *ecdsa.PrivateKey) (Proof, error) {
 
 	proof := NewProof(hash.Bytes(), signature)
 	return proof, nil
-}
-
-// MarshalJSON marshals the Proof
-func (p Proof) MarshalJSON() ([]byte, error) {
-	byteArray, err := json.Marshal(p)
-	if err != nil {
-		return []byte{}, err
-	}
-	return byteArray, nil
-}
-
-// UnmarshalJSON unmarshals the Proof
-func (p *Proof) UnmarshalJSON(data []byte) error {
-	var proof Proof
-	err := json.Unmarshal(data, &proof)
-	if err != nil {
-		return err
-	}
-	*p = proof
-	return nil
 }
