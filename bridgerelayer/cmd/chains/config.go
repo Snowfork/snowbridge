@@ -9,22 +9,22 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-const DefaultConfigPath = "./config.json"
+const DefaultConfigPath = "./test_config.json"
 const DefaultKeystorePath = "./keys"
 
 // Config ...
 type Config struct {
-	Chains       []ChainConfig `toml:"chains" json:"chains"`
-	KeystorePath string        `toml:"keystore_path,omitempty" json:"keystorePath,omitempty"`
+	Chains []ChainConfig `toml:"chains" json:"chains"`
+	// KeystorePath string        `toml:"keystore_path,omitempty" json:"keystorePath,omitempty"`
 }
 
 // ChainConfig is parsed directly from the config file and is used to construct the Chain
 type ChainConfig struct {
-	Name     string            `toml:"name" json:"name"`
-	ID       string            `toml:"id" json:"id"`             // ChainID
-	Endpoint string            `toml:"endpoint" json:"endpoint"` // url for rpc endpoint
-	Address  string            `toml:"address" json:"address"`   // address of key to use
-	Opts     map[string]string `toml:"opts" json:"opts"`
+	Type       string `toml:"type" json:"type"`
+	ID         string `toml:"id" json:"id"`                   // Chain ID
+	Endpoint   string `toml:"endpoint" json:"endpoint"`       // url for rpc endpoint
+	Operator   string `toml:"operator" json:"operator"`       // operator's address
+	PrivateKey string `toml:"private_key" json:"private_key"` // operator's private key
 }
 
 // NewConfig ...
@@ -62,36 +62,40 @@ func (c *Config) ToJSON(file string) *os.File {
 }
 
 func (c *Config) validate() error {
-	// for _, chain := range c.Chains {
-	// if chain.Type == "" {
-	// 	return fmt.Errorf("required field chain.Type empty for chain %s", chain.Id)
-	// }
-	// if chain.Endpoint == "" {
-	// 	return fmt.Errorf("required field chain.Endpoint empty for chain %s", chain.Id)
-	// }
-	// if chain.Name == "" {
-	// 	return fmt.Errorf("required field chain.Name empty for chain %s", chain.Id)
-	// }
-	// if chain.Id == "" {
-	// 	return fmt.Errorf("required field chain.Id empty for chain %s", chain.Id)
-	// }
-	// if chain.From == "" {
-	// 	return fmt.Errorf("required field chain.From empty for chain %s", chain.Id)
-	// }
-	// }
+	for _, chain := range c.Chains {
+		if chain.Type == "" {
+			return fmt.Errorf("required field chain.Type empty for chain %s", chain.ID)
+		}
+		if chain.Endpoint == "" {
+			return fmt.Errorf("required field chain.Endpoint empty for chain %s", chain.ID)
+		}
+		if chain.Operator == "" {
+			return fmt.Errorf("required field chain.Operator empty for chain %s", chain.ID)
+		}
+		if chain.PrivateKey == "" {
+			return fmt.Errorf("required field chain.PrivateKey empty for chain %s", chain.ID)
+		}
+	}
 	return nil
 }
 
-// TODO: getConfig implementation
-// func getConfig(ctx *cli.Context) (*Config, error) {
-// 	var cfg Config
+func GetConfig() (*Config, error) {
+	var config Config
 
-// 	// 1. Load config...
-// 	// 2. Validate config...
-// 	// 3. Load keypair from flag path...
+	err := loadConfig(DefaultConfigPath, &config)
+	if err != nil {
+		return nil, err
+	}
 
-// 	return &cfg, nil
-// }
+	// TODO: private key loaded from keypath file
+
+	err = config.validate()
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
 
 func loadConfig(file string, config *Config) error {
 	ext := filepath.Ext(file)

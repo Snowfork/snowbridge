@@ -1,19 +1,16 @@
 package chains
 
-import "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
+import (
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
+)
 
-// Chain ...
+// Chain is a connection to a blockchain network
 type Chain struct {
-	Streamer Streamer // The streamer of this chain
-	Router   Router   // The router of the chain
-	// Keybase Keybase
+	Config   ChainConfig // The config of this chain
+	Streamer Streamer    // The streamer of this chain
+	Router   Router      // The router of the chain
 	// stop     chan<- int
 }
-
-// // Core contains important information for each chain, including credentials
-// // type Core interface {
-// // 	Keypair() *keybase.Keypair
-// // }
 
 // Streamer streams transactions from a blockchain and passes them to the router
 type Streamer interface {
