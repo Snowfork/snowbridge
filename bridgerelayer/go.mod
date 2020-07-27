@@ -10,6 +10,7 @@ require (
 	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.2.0
+	github.com/snowfork/polkadot-ethereum v0.0.0-20200727051857-f2828fba3b44
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.0
 	github.com/urfave/cli v1.22.1

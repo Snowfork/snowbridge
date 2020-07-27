@@ -3,14 +3,15 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
+
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains"
 
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/ethereum"
+	eKeys "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase/ethereum"
 	// "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/substrate"
 )
 
@@ -26,11 +27,10 @@ var rootCmd = &cobra.Command{
 func initRelayerCmd() *cobra.Command {
 	//nolint:lll
 	initRelayerCmd := &cobra.Command{
-		Use:   "init [polkadotRpcURL] [ethereumRpcUrl]",
-		Short: "Validate credentials and initialize subscriptions to both chains",
-		Args:  cobra.ExactArgs(2),
-		// Example: "bridgerelayer init wss://rpc.polkadot.io wss://mainnet.infura.io/ws/v3/${INFURA_PROJECT_URL}",
-		Example: "bridgerelayer init not_implemented ws://localhost:7545/",
+		Use:     "init",
+		Short:   "Validate credentials and initialize subscriptions to both chains",
+		Args:    cobra.ExactArgs(0),
+		Example: "bridgerelayer init",
 		RunE:    RunInitRelayerCmd,
 	}
 
@@ -39,27 +39,38 @@ func initRelayerCmd() *cobra.Command {
 
 // RunInitRelayerCmd executes initRelayerCmd
 func RunInitRelayerCmd(cmd *cobra.Command, args []string) error {
-	// Validate and parse arguments
-	if len(strings.Trim(args[0], "")) == 0 {
-		return errors.Errorf("invalid [polkadot-rpc-url]: %s", args[0])
+	// Load config
+	config, err := chains.GetConfig()
+	if err != nil {
+		return err
 	}
-	polkadotRPCURL := args[0]
+	c := *config
 
-	if len(strings.Trim(args[1], "")) == 0 {
-		return errors.Errorf("invalid [ethereum-rpc-url]: %s", args[1])
+	// Set up individual chain configs
+	var ethConfig chains.ChainConfig
+	var subConfig chains.ChainConfig
+	for _, chainConfig := range c.Chains {
+		switch chainConfig.Type {
+		case "ethereum":
+			ethConfig = chainConfig
+		case "substrate":
+			subConfig = chainConfig
+		default:
+			return fmt.Errorf("invalid chain config type: %s", chainConfig.Type)
+		}
 	}
-	ethereumRPCURL := args[1]
 
 	// Initialize Ethereum chain
-	ethStreamer := ethereum.NewStreamer(ethereumRPCURL)
-	ethRouter := ethereum.NewRouter()
-	ethChain := ethereum.NewEthChain(ethStreamer, ethRouter)
+	ethStreamer := ethereum.NewStreamer(ethConfig.Endpoint)
+	ethKeybase, err := eKeys.NewKeypairFromString(ethConfig.PrivateKey)
+	if err != nil {
+		return err
+	}
+	ethRouter := ethereum.NewRouter(ethKeybase)
+	ethChain := ethereum.NewEthChain(ethConfig, ethStreamer, ethRouter)
 
 	// Initialize Substrate chain
-	// subStreamer := substrate.NewStreamer(polkadotRPCURL)
-	// subRouter := substrate.NewRouter()
-	// subChain := substrate.NewSubChain(subStreamer, subRouter)
-	_ = polkadotRPCURL
+	_ = subConfig
 
 	// Start chains
 	ethChain.Start()

@@ -7,15 +7,21 @@ import (
 	ctypes "github.com/ethereum/go-ethereum/core/types"
 	log "github.com/sirupsen/logrus"
 
+	keybase "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase/ethereum"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
+	"github.com/snowfork/polkadot-ethereum/prover"
 )
 
 // Router packages raw event data as Packets and relays them to the bridge
-type Router struct{}
+type Router struct {
+	keybase *keybase.Keypair
+}
 
 // NewRouter initializes a new instance of Router
-func NewRouter() Router {
-	return Router{}
+func NewRouter(keybase *keybase.Keypair) Router {
+	return Router{
+		keybase: keybase,
+	}
 }
 
 // Route packages tx data as a packet and relays it to the bridge
@@ -43,15 +49,20 @@ func (er Router) buildPacket(id common.Address, eLog ctypes.Log) (types.Packet, 
 	var buff bytes.Buffer
 	err := eLog.EncodeRLP(&buff)
 	if err != nil {
-		log.Info(err)
+		return types.Packet{}, err
 	}
 
-	verificationData := []byte("TODO: get via SignatureProver component")
-	message := types.NewMessage(buff.Bytes(), verificationData)
+	// Generate a proof by signing a hash of the encoded data
+	proof, err := prover.GenerateProof(buff.Bytes(), er.keybase.PrivateKey())
+	if err != nil {
+		return types.Packet{}, err
+	}
+
+	// Construct and wrap message
+	message := types.NewMessage(buff.Bytes(), proof)
 	wrappedMessage := types.NewUnverified(message)
 
 	packet := types.NewPacket(appID, wrappedMessage)
-
 	return packet, nil
 }
 
