@@ -3,17 +3,16 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"strings"
-	"syscall"
+
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains"
 
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/ethereum"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/substrate"
+	eKeys "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase/ethereum"
+	// "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/substrate"
 )
 
 var cfgFile string
@@ -28,10 +27,10 @@ var rootCmd = &cobra.Command{
 func initRelayerCmd() *cobra.Command {
 	//nolint:lll
 	initRelayerCmd := &cobra.Command{
-		Use:     "init [polkadotRpcURL] [ethereumRpcUrl]",
+		Use:     "init",
 		Short:   "Validate credentials and initialize subscriptions to both chains",
-		Args:    cobra.ExactArgs(2),
-		Example: "bridgerelayer init wss://rpc.polkadot.io wss://mainnet.infura.io/ws/v3/${INFURA_PROJECT_URL}",
+		Args:    cobra.ExactArgs(0),
+		Example: "bridgerelayer init",
 		RunE:    RunInitRelayerCmd,
 	}
 
@@ -40,42 +39,42 @@ func initRelayerCmd() *cobra.Command {
 
 // RunInitRelayerCmd executes initRelayerCmd
 func RunInitRelayerCmd(cmd *cobra.Command, args []string) error {
-	// Validate and parse arguments
-	if len(strings.Trim(args[0], "")) == 0 {
-		return errors.Errorf("invalid [polkadot-rpc-url]: %s", args[0])
-	}
-	polkadotRpcUrl := args[0]
-
-	if len(strings.Trim(args[1], "")) == 0 {
-		return errors.Errorf("invalid [ethereum-rpc-url]: %s", args[1])
-	}
-	ethereumRpcUrl := args[1]
-
-	// Init universial logger...
-	// logger := _
-
-	ethChain, err := ethereum.NewEthereumChain()
+	// Load config
+	config, err := chains.GetConfig()
 	if err != nil {
 		return err
 	}
+	c := *config
 
-	substrateChain, err := substrate.NewSubstrateChain()
+	// Set up individual chain configs
+	var ethConfig chains.ChainConfig
+	var subConfig chains.ChainConfig
+	for _, chainConfig := range c.Chains {
+		switch chainConfig.Type {
+		case "ethereum":
+			ethConfig = chainConfig
+		case "substrate":
+			subConfig = chainConfig
+		default:
+			return fmt.Errorf("invalid chain config type: %s", chainConfig.Type)
+		}
+	}
+
+	// Initialize Ethereum chain
+	ethStreamer := ethereum.NewStreamer(ethConfig.Endpoint)
+	ethKeybase, err := eKeys.NewKeypairFromString(ethConfig.PrivateKey)
 	if err != nil {
 		return err
 	}
+	ethRouter := ethereum.NewRouter(ethKeybase)
+	ethChain := ethereum.NewEthChain(ethConfig, ethStreamer, ethRouter)
 
-	// Start EthChain's streamer and router
-	go ethChain.Streamer.Start()
-	go ethChain.Router.Start()
+	// Initialize Substrate chain
+	_ = subConfig
 
-	// Start SubstrateChain's streamer and router
-	go substrateChain.Streamer.Start()
-	go substrateChain.Router.Start()
-
-	// Exit signal enables graceful shutdown
-	exitSignal := make(chan os.Signal, 1)
-	signal.Notify(exitSignal, syscall.SIGINT, syscall.SIGTERM)
-	<-exitSignal
+	// Start chains
+	ethChain.Start()
+	// subChain.Start()
 
 	return nil
 }

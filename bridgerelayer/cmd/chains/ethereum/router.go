@@ -2,50 +2,75 @@ package ethereum
 
 import (
 	"bytes"
-	"context"
-	"log"
 
-	ethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/common"
+	ctypes "github.com/ethereum/go-ethereum/core/types"
+	log "github.com/sirupsen/logrus"
 
+	keybase "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase/ethereum"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
+	"github.com/snowfork/polkadot-ethereum/prover"
 )
 
-// EthRouter ...
-type EthRouter struct{}
+// Router packages raw event data as Packets and relays them to the bridge
+type Router struct {
+	keybase *keybase.Keypair
+}
 
-// BuildPacket ...
-func (er *EthRouter) BuildPacket(tx ethTypes.Transaction, block ethTypes.Block) (types.Packet, error) {
-	chainID, err := client.NetworkID(context.Background())
+// NewRouter initializes a new instance of Router
+func NewRouter(keybase *keybase.Keypair) Router {
+	return Router{
+		keybase: keybase,
+	}
+}
+
+// Route packages tx data as a packet and relays it to the bridge
+func (er Router) Route(eventData types.EventData) error {
+	packet, err := er.buildPacket(eventData.Contract, eventData.Data)
 	if err != nil {
-		log.Fatal(err)
+		return err
+	}
+
+	err = er.sendPacket(packet)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// BuildPacket builds a data packet from tx data
+func (er Router) buildPacket(id common.Address, eLog ctypes.Log) (types.Packet, error) {
+	appAddress := id.Bytes()
+	var appID [32]byte
+	copy(appID[:], appAddress)
+
+	// RLP encode event log's Address, Topics, and Data
+	var buff bytes.Buffer
+	err := eLog.EncodeRLP(&buff)
+	if err != nil {
 		return types.Packet{}, err
 	}
 
-	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	// Generate a proof by signing a hash of the encoded data
+	proof, err := prover.GenerateProof(buff.Bytes(), er.keybase.PrivateKey())
 	if err != nil {
-		log.Fatal(err)
 		return types.Packet{}, err
 	}
 
-	var receiptBuf bytes.Buffer
-	receipt.EncodeRLP(&receiptBuf)
+	// Construct and wrap message
+	message := types.NewMessage(buff.Bytes(), proof)
+	wrappedMessage := types.NewUnverified(message)
 
-	// Transaction data
-	txData := types.NewEthTxData(chainID.Bytes(), block.Hash().Bytes(),
-		tx.Hash().Bytes(), tx.Data(), receiptBuf.Bytes())
-
-	// Message
-	message := types.NewMessage(txData, []byte{})
-
-	// Packet
-	var appID types.AppID
-	copy(appID[:], tx.To().Bytes())
-	packet := types.NewPacket(appID, message)
-
+	packet := types.NewPacket(appID, wrappedMessage)
 	return packet, nil
 }
 
-// SendPacket ...
-func (er *EthRouter) SendPacket(packet types.Packet) error {
-	// Send packet to bridge...
+// SendPacket sends a tx data packet to the bridge
+func (er Router) sendPacket(packet types.Packet) error {
+	log.Info("Sending packet:\n", packet)
+
+	// Bridge.Send(packet.AppID, packet.Message)
+
+	return nil
 }
