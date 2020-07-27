@@ -52,6 +52,7 @@ Use this command to build the [Wasm](https://substrate.dev/docs/en/knowledgebase
 and [native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
 
 Note: The WASM build is currently disabled to dependency issue
+Note: Make sure `clang` and `llvm` are installed, as they are required to build. 
 
 ```bash
 export SKIP_WASM_BUILD=1
