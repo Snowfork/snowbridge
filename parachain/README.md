@@ -1,5 +1,5 @@
 
-# Polkadot Etherem Parachain
+# Polkadot Ethereum Parachain
 
 A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 
