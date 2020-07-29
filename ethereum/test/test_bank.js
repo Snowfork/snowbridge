@@ -20,9 +20,8 @@ contract("Bank", function (accounts) {
   // TODO: implement on contract base58 conversion as recipient's encoded bytes vary in length
   const POLKADOT_ADDRESS2 = "1FRMM8PEiWXYax7rpS6X4XZX1aAAxSWx1CrKTyrVYhV24fg"
 
-  const ADDRESS_BYTE_LENGTH = 40;
-  const RECIPIENT_BYTE_LENGTH = 96;
-  const UINT256_BYTE_LENGTH = 64;
+  const RECIPIENT_BYTE_LENGTH = 128;
+  const BYTES32_LENGTH = 64;
 
   describe("Bank contract deployment", function () {
     beforeEach(async function () {
@@ -65,42 +64,50 @@ contract("Bank", function (accounts) {
       );
       appEvent.args._targetAppID.should.be.equal(targetAppID);
       appEvent.args._name.should.be.equal("sendETH");
-
+      
       // Clean data by removing '0x' prefix
       const data = appEvent.args._data.slice(2, appEvent.args._data.length);
 
       // Sender's Ethereum address
-      const expectedSender = userOne.toLowerCase().slice(2, userOne.length);
+      const expectedSender = Web3Utils.padLeft(userOne.toLowerCase().slice(2, userOne.length), BYTES32_LENGTH);
       let start = 0;
-      let end = ADDRESS_BYTE_LENGTH;
+      let end = BYTES32_LENGTH;
       data.slice(start, end).should.be.equal(expectedSender);
 
-      // Recipient's Polkadot address
-      const expectedRecipient = recipient.slice(2, recipient.length);
+      // Move forward one byte slice
       start = end;
-      end = end + RECIPIENT_BYTE_LENGTH;
-      data.slice(start, end).should.be.equal(expectedRecipient);
+      end = end + BYTES32_LENGTH;
 
       // ERC20 token address
-      const expectedTokenAddr = NULL_ADDRESS.slice(2, NULL_ADDRESS.length);
+      const expectedTokenAddr = Web3Utils.padLeft(NULL_ADDRESS.slice(2, NULL_ADDRESS.length), BYTES32_LENGTH);;
       start = end;
-      end = end + ADDRESS_BYTE_LENGTH;
+      end = end + BYTES32_LENGTH;
       data.slice(start, end).should.be.equal(expectedTokenAddr);
 
       // Uint256 amount
       const encodedAmount = Web3Utils.padLeft(Web3Utils.numberToHex(weiAmount), 64);
       const expectedAmount = encodedAmount.slice(2, encodedAmount.length);
       start = end;
-      end = end + UINT256_BYTE_LENGTH;
+      end = end + BYTES32_LENGTH;
       data.slice(start, end).should.be.equal(expectedAmount);
 
       // Uint256 nonce
       const encodedNonce = Web3Utils.padLeft(Web3Utils.numberToHex(beforeNonce+1), 64);
       const expectedNonce = encodedNonce.slice(2, encodedNonce.length);
       start = end;
-      end = end + UINT256_BYTE_LENGTH;
+      end = end + BYTES32_LENGTH;
       data.slice(start, end).should.be.equal(expectedNonce);
+
+      // Move forward one byte slice
+      start = end;
+      end = end + BYTES32_LENGTH;
       
+      // Recipient's Polkadot address
+      const expectedRecipient =  Web3Utils.padRight(recipient.slice(2, recipient.length), RECIPIENT_BYTE_LENGTH);
+      start = end;
+      end = end + RECIPIENT_BYTE_LENGTH;
+      data.slice(start, end).should.be.equal(expectedRecipient);
+
       // Confirm contract's Ethereum balance has increased
       const contractBalanceWei = await web3.eth.getBalance(this.bank.address);
       const contractBalance = Web3Utils.fromWei(contractBalanceWei, "ether");
@@ -167,36 +174,44 @@ contract("Bank", function (accounts) {
 
       // Sender's Ethereum address
       let start = 0;
-      let end = ADDRESS_BYTE_LENGTH;
-      const expectedSender = userOne.toLowerCase().slice(2, userOne.length);
+      let end = BYTES32_LENGTH;
+      const expectedSender = Web3Utils.padLeft(userOne.toLowerCase().slice(2, userOne.length), BYTES32_LENGTH);
       data.slice(start, end).should.be.equal(expectedSender);
 
-      // Recipient's Polkadot address
-      const expectedRecipient = recipient.slice(2, recipient.length);
+      // Move forward one byte slice
       start = end;
-      end = end + RECIPIENT_BYTE_LENGTH;
-      data.slice(start, end).should.be.equal(expectedRecipient);
+      end = end + BYTES32_LENGTH;
 
       // ERC20 token address
-      const expectedTokenAddr = this.token.address.toLowerCase().slice(2, this.token.address.length);
+      const expectedTokenAddr =  Web3Utils.padLeft(this.token.address.toLowerCase().slice(2, this.token.address.length), BYTES32_LENGTH);
       start = end;
-      end = end + ADDRESS_BYTE_LENGTH;
+      end = end + BYTES32_LENGTH;
       data.slice(start, end).should.be.equal(expectedTokenAddr);
 
       // Uint256 amount
       const encodedAmount = Web3Utils.padLeft(Web3Utils.numberToHex(amount), 64);
       const expectedAmount = encodedAmount.slice(2, encodedAmount.length);
       start = end;
-      end = end + UINT256_BYTE_LENGTH;
+      end = end + BYTES32_LENGTH;
       data.slice(start, end).should.be.equal(expectedAmount);
 
       // Uint256 nonce
       const encodedNonce = Web3Utils.padLeft(Web3Utils.numberToHex(beforeNonce+1), 64);
       const expectedNonce = encodedNonce.slice(2, encodedNonce.length);
       start = end;
-      end = end + UINT256_BYTE_LENGTH;
+      end = end + BYTES32_LENGTH;
       data.slice(start, end).should.be.equal(expectedNonce);
 
+      // Move forward one byte slice
+      start = end;
+      end = end + BYTES32_LENGTH;
+
+      // Recipient's Polkadot address
+      const expectedRecipient = Web3Utils.padRight(recipient.slice(2, recipient.length), RECIPIENT_BYTE_LENGTH);
+      start = end;
+      end = end + RECIPIENT_BYTE_LENGTH;
+      data.slice(start, end).should.be.equal(expectedRecipient);
+   
       //Get the user and Bank token balance after deposit
       const afterTestTokenBalance = Number(await this.token.balanceOf(this.bank.address));
       const afterUserBalance = Number(await this.token.balanceOf(userOne));
