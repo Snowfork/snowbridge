@@ -4,7 +4,7 @@
 use frame_support::{decl_module, decl_storage, decl_event, decl_error,
 	dispatch::{DispatchResult, Dispatchable}};
 use frame_support::{Parameter, traits::schedule::Anon as ScheduleAnon};
-use frame_system::{self as system, ensure_signed, ensure_root};
+use frame_system::{self as system};
 
 use sp_std::prelude::*;
 

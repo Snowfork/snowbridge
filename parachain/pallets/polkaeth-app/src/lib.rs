@@ -19,8 +19,6 @@ use frame_system::{self as system, ensure_signed};
 pub type PolkaETH<T> =
 	<<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 
-use sp_std::prelude::*;
-
 use common::{AppID, Application, Message};
 
 pub trait Trait: system::Trait {
