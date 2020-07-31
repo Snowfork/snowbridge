@@ -14,7 +14,8 @@ pub use types::{AppID, Message};
 /// The bridge module implements this trait
 pub trait Bridge {
 
-    fn deposit_event(app_id: AppID, name: Vec<u8>, data: Vec<u8>);
+    // just a dummy stand-in until we flesh out this trait some more
+    fn dummy();
 
 }
 

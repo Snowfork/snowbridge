@@ -29,7 +29,6 @@ decl_event!(
 		Hash = <T as frame_system::Trait>::Hash,
 	{
 		MessageReceived(AccountId, AppID, Hash),
-		AppEvent(AppID, Vec<u8>, Vec<u8>),
 	}
 );
 
@@ -60,7 +59,7 @@ decl_module! {
 
 impl<T: Trait> Bridge for Module<T> {
 
-	fn deposit_event(app_id: AppID, name: Vec<u8>, data: Vec<u8>) {
-		Self::deposit_event(RawEvent::AppEvent(app_id, name, data));
+	fn dummy() {
+		()
 	}
 }
