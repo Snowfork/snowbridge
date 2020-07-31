@@ -1,25 +1,25 @@
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 ///
-/// Skeleton implementation for a PolkaETH token
+/// Implementation for a PolkaETH token
 ///
-/// Resources:
-///   https://blog.polymath.network/substrate-deep-dive-imbalances-8dfa89cc1d1
-///
+use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
 	traits::{Currency, ExistenceRequirement, WithdrawReason, WithdrawReasons},
 };
-
 use sp_std::prelude::*;
+use common::{AppID, Application, Message};
 
-use frame_system::{self as system, ensure_signed};
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
 
 pub type PolkaETH<T> =
 	<<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
-
-use common::{AppID, Application, Message};
 
 pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -88,7 +88,7 @@ decl_module! {
 
 			let _ = T::Currency::deposit_creating(&to, amount);
 
-			Self::deposit_event(RawEvent::Minted(who, amount));
+			Self::deposit_event(RawEvent::Minted(to, amount));
 
 			Ok(())
 		}
