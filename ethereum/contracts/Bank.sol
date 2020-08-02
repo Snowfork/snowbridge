@@ -67,6 +67,6 @@ contract Bank {
         pure
         returns(bytes memory)
     {
-        return abi.encodePacked(_sender, _recipient, _tokenAddr, _amount, _nonce);
+        return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
     }
 }
