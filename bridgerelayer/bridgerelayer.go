@@ -1,18 +1,18 @@
-package cmd
+package main
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/ethereum"
-	eKeys "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase/ethereum"
-	// "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/substrate"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
+	eKeys "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/ethereum"
+	// "github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/substrate"
 )
 
 var cfgFile string

@@ -7,7 +7,7 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase"
 )
 
 var _ keybase.Keypair = &Keypair{}

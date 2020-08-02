@@ -1,7 +1,7 @@
 package substrate
 
 // import (
-// 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
+// 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 // )
 
 // // SubstrateRouter ...

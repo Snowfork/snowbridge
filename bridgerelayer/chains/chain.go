@@ -1,7 +1,7 @@
 package chains
 
 import (
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
 // Chain is a connection to a blockchain network
