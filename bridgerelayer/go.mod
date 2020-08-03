@@ -8,6 +8,7 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416
+	github.com/pierrec/xxHash v0.1.5 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.2.0
 	github.com/snowfork/polkadot-ethereum v0.0.0-20200727051857-f2828fba3b44

@@ -2,9 +2,9 @@ package ethereum
 
 import (
 	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
 // var _ chains.Chain = &EthChain{}

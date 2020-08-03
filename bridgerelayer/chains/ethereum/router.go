@@ -7,8 +7,8 @@ import (
 	ctypes "github.com/ethereum/go-ethereum/core/types"
 	log "github.com/sirupsen/logrus"
 
-	keybase "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase/ethereum"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
+	keybase "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/ethereum"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 	"github.com/snowfork/polkadot-ethereum/prover"
 )
 
@@ -60,7 +60,7 @@ func (er Router) buildPacket(id common.Address, eLog ctypes.Log) (types.Packet, 
 
 	// Construct and wrap message
 	message := types.NewMessage(buff.Bytes(), proof)
-	wrappedMessage := types.NewUnverified(message)
+	wrappedMessage := types.NewLightClientProof(message)
 
 	packet := types.NewPacket(appID, wrappedMessage)
 	return packet, nil

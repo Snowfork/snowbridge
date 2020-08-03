@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains/ethereum/registry"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/types"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum/registry"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
 // Streamer streams the Ethereum blockchain for application events

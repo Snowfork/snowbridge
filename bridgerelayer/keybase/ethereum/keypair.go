@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	secp256k1 "github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase"
 )
 
 var _ keybase.Keypair = &Keypair{}

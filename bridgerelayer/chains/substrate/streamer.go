@@ -5,7 +5,7 @@ package substrate
 // 	"fmt"
 // 	"time"
 
-// 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains"
+// 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains"
 // )
 
 // type SubstrateStreamer struct {

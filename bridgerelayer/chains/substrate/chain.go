@@ -6,8 +6,8 @@ package substrate
 // 	gsrpc "github.com/centrifuge/go-substrate-rpc-client"
 // 	gsrpcTypes "github.com/centrifuge/go-substrate-rpc-client/types"
 
-// 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/chains"
-// 	subKeyPair "github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd/keybase/substrate"
+// 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains"
+// 	subKeyPair "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/substrate"
 // )
 
 // var _ types.Chain = &SubstrateChain{}
