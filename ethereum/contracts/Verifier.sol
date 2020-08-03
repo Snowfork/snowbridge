@@ -35,7 +35,7 @@ contract Verifier {
      * @return address recovered from the given hash and signature
      */
     function recover(bytes32 _hash, bytes memory _signature)
-        internal
+        public
         pure
         returns (address)
     {
@@ -53,9 +53,9 @@ contract Verifier {
         // currently is to use assembly.
         // solium-disable-next-line security/no-inline-assembly
         assembly {
-            r := mload(add(_signature, 32))
-            s := mload(add(_signature, 64))
-            v := byte(0, mload(add(_signature, 96)))
+            r := mload(add(_signature, 0x20))
+            s := mload(add(_signature, 0x40))
+            v := byte(0, mload(add(_signature, 0x60)))
         }
 
         // Version of signature should be 27 or 28, but 0 and 1 are also possible versions
