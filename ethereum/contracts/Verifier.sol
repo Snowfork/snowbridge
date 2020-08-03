@@ -39,14 +39,14 @@ contract Verifier {
         pure
         returns (address)
     {
+        // Check the signature length
+        if (_signature.length != 65) {
+            revert("Verifier: invalid signature length");
+        }
+
         bytes32 r;
         bytes32 s;
         uint8 v;
-
-        // Check the signature length
-        if (_signature.length != 65) {
-            return (address(0));
-        }
 
         // Divide the signature in r, s and v variables
         // ecrecover takes the signature parameters, and the only way to get them
@@ -63,12 +63,13 @@ contract Verifier {
             v += 27;
         }
 
-        // If the version is correct return the signer address
         if (v != 27 && v != 28) {
-            return (address(0));
-        } else {
-            // solium-disable-next-line arg-overflow
-            return ecrecover(_hash, v, r, s);
+            revert("Verifier: invalid signature 'v' value");
         }
+
+        address signer = ecrecover(_hash, v, r, s);
+        require(signer != address(0), "Verifier: invalid signature");
+
+        return signer;
     }
 }
