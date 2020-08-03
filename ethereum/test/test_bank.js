@@ -50,14 +50,14 @@ contract("Bank", function (accounts) {
       const targetAppID = web3.utils.utf8ToHex("targetapp123");
       const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
       const weiAmount = web3.utils.toWei("0.25", "ether");
-      
+
       // Deposit Ethereum to the contract and get the logs of the transaction
       const { logs } = await this.bank.sendETH(
         targetAppID,
         recipient,
         {from: userOne, value: weiAmount}
       ).should.be.fulfilled;
-      
+
       // Confirm app event emitted with expected values
       const appEvent = logs.find(
           e => e.event === "AppEvent"
@@ -98,6 +98,7 @@ contract("Bank", function (accounts) {
       end = end + BYTES32_LENGTH;
       data.slice(start, end).should.be.equal(expectedNonce);
 
+<<<<<<< HEAD
       // Move forward one byte slice
       start = end;
       end = end + BYTES32_LENGTH;
@@ -108,6 +109,8 @@ contract("Bank", function (accounts) {
       end = end + RECIPIENT_BYTE_LENGTH;
       data.slice(start, end).should.be.equal(expectedRecipient);
 
+=======
+>>>>>>> 54c1a9a... add newlines
       // Confirm contract's Ethereum balance has increased
       const contractBalanceWei = await web3.eth.getBalance(this.bank.address);
       const contractBalance = Web3Utils.fromWei(contractBalanceWei, "ether");
@@ -144,7 +147,7 @@ contract("Bank", function (accounts) {
       const targetAppID = web3.utils.utf8ToHex("tokendexapp987");
       const amount = 100;
       const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
-      
+
       // Approve tokens to contract
       await this.token.approve(this.bank.address, amount, {
         from: userOne

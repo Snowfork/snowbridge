@@ -2,7 +2,6 @@ const Bank = artifacts.require("Bank");
 const TestToken = artifacts.require("TestToken");
 const Verifier = artifacts.require("Verifier");
 
-
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
     await deployer.deploy(Bank);

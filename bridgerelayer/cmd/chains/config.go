@@ -15,7 +15,6 @@ const DefaultKeystorePath = "./keys"
 // Config ...
 type Config struct {
 	Chains []ChainConfig `toml:"chains" json:"chains"`
-	// KeystorePath string        `toml:"keystore_path,omitempty" json:"keystorePath,omitempty"`
 }
 
 // ChainConfig is parsed directly from the config file and is used to construct the Chain
@@ -86,8 +85,6 @@ func GetConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: private key loaded from keypath file
 
 	err = config.validate()
 	if err != nil {
