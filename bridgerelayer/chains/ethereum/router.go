@@ -60,7 +60,7 @@ func (er Router) buildPacket(id common.Address, eLog ctypes.Log) (types.Packet, 
 
 	// Construct and wrap message
 	message := types.NewMessage(buff.Bytes(), proof)
-	wrappedMessage := types.NewUnverified(message)
+	wrappedMessage := types.NewLightClientProof(message)
 
 	packet := types.NewPacket(appID, wrappedMessage)
 	return packet, nil
