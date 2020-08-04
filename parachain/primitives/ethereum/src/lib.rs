@@ -1,5 +1,5 @@
 mod log;
-mod message;
+mod event;
 
 pub use crate::{
 	log::Log,
