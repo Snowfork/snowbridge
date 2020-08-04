@@ -8,13 +8,14 @@ module.exports = async () => {
       require("../build/contracts/Bank.json")
     );
 
-    // Default testing params
-    const TARGET_APP_ID = Web3.utils.utf8ToHex(
-      "target application's unique substrate identifier"
+
+    const RECIPIENT = Buffer.from(
+       "8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48", "hex"
     );
-    const RECIPIENT = Web3.utils.utf8ToHex(
-        "1FRMM8PEiWXYax7rpS6X4XZX1aAAxSWx1CrKTyrVYhV24fg"
-      );
+
+    //const RECIPIENT = Web3.utils.hexToBytes("0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48")
+
+  
     const AMOUNT = 10;
 
     let provider = new Web3.providers.HttpProvider("http://localhost:7545");
@@ -30,7 +31,7 @@ module.exports = async () => {
       console.log("Connecting to contract....");
       const { logs } = await contract.deployed().then(function (instance) {
         console.log("Connected to contract, sending...");
-        return instance.sendETH(TARGET_APP_ID, RECIPIENT, {
+        return instance.sendETH(RECIPIENT, {
           from: accounts[0],
           value: AMOUNT,
           gas: 300000 // 300,000 Gwei
@@ -44,8 +45,7 @@ module.exports = async () => {
   
       // Parse event fields
       const appEvent = {
-        target_app_ID: event.args._targetAppID,
-        name: event.args._name,
+        name: event.args._tag,
         data: event.args._data,
       };
   
