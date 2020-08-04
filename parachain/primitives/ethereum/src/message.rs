@@ -163,7 +163,7 @@ impl Message {
 			Token::Uint(value) => value.low_u64(),
 			_ => return Err(DecodeError::InvalidPayload)
         };
-        
+
         Ok(Payload {
             sender,
             recipient,
@@ -181,24 +181,33 @@ mod tests {
 	use std::fs::File;
 	use std::io::BufReader;
     use super::*;
-    use hex::ToHex;
+    use hex::FromHex;
     use std::path::PathBuf;
 
     fn fixture_path() -> PathBuf {
         [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "log.rlp"].iter().collect()
     }
 
+    fn recipient(hexaddr: &str) -> [u8; 32] {
+        let mut buf: [u8; 32] = [0; 32];
+        let bytes: Vec<u8> = hexaddr.from_hex().unwrap();
+        buf.clone_from_slice(&bytes);
+        buf
+    }
+
     #[test]
     fn test_decode() {        
-		//let mut reader = BufReader::new(File::open("/tmp/log.rlp").unwrap());
         let mut reader = BufReader::new(File::open(fixture_path()).unwrap());
 		let mut data: Vec<u8> = Vec::new();
 		reader.read_to_end(&mut data).unwrap();
 
 		let log: Log = rlp::decode(&data).unwrap();
-        let msg = Message::decode(log).unwrap();
-
-        println!("{:?}", msg);
-       // assert_eq!(Message::decode(log).unwrap(), ());
+        assert_eq!(Message::decode(log).unwrap(),
+            Message::SendETH {
+                sender: "cffeaaf7681c89285d65cfbe808b80e502696573".parse().unwrap(),
+                recipient: recipient("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"),
+                amount: 10.into(), nonce: 7
+            }
+        );
     }
 }
