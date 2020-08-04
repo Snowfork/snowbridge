@@ -14,7 +14,7 @@ impl rlp::Decodable for Log {
     /// didn't seem to generate the correct code for parsing our logs.
 	fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
 		let mut iter = rlp.iter();
-        
+
         let address: H160 = match iter.next() {
             Some(data) => data.as_val()?,
             None => return Err(rlp::DecoderError::Custom("Expected log address"))
@@ -29,7 +29,7 @@ impl rlp::Decodable for Log {
             Some(data) => data.data()?.to_vec(),
             None => return Err(rlp::DecoderError::Custom("Expected log data"))
         };
-    
+
 		Ok(Self {
 			address, topics, data
 		})

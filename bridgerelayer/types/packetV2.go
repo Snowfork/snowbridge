@@ -1,6 +1,6 @@
 package types
 
 type PacketV2 struct {
-	Data []byte
+	Data      []byte
 	Signature []byte
 }
