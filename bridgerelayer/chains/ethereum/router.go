@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"bytes"
+	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	ctypes "github.com/ethereum/go-ethereum/core/types"
@@ -9,6 +10,7 @@ import (
 
 	keybase "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/ethereum"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/substrate"
 	"github.com/snowfork/polkadot-ethereum/prover"
 )
 
@@ -51,6 +53,10 @@ func (er Router) buildPacket(id common.Address, eLog ctypes.Log) (types.Packet, 
 	if err != nil {
 		return types.Packet{}, err
 	}
+	f, err := os.Create("/tmp/log.rlp")
+	buff.WriteTo(f)
+	f.Close()
+
 
 	// Generate a proof by signing a hash of the encoded data
 	proof, err := prover.GenerateProof(buff.Bytes(), er.keybase.PrivateKey())
@@ -70,7 +76,11 @@ func (er Router) buildPacket(id common.Address, eLog ctypes.Log) (types.Packet, 
 func (er Router) sendPacket(packet types.Packet) error {
 	log.Info("Sending packet:\n", packet)
 
-	// Bridge.Send(packet.AppID, packet.Message)
+	client, err := substrate.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	client.SubmitExtrinsic(packet)
 
 	return nil
 }
