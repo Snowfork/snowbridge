@@ -7,4 +7,3 @@ pub use crate::{
 	log::Log,
 	event::Event,
 };
-

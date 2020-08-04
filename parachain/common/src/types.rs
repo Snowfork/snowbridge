@@ -15,33 +15,32 @@ pub type Message = Vec<u8>;
 /// Signed message decoded from raw message
 #[derive(Debug, PartialEq, Encode, Decode)]
 pub struct SignedMessage {
-    pub data: Vec<u8>,
-    pub signature: Vec<u8>
+	pub data: Vec<u8>,
+	pub signature: Vec<u8>
 }
 
 #[cfg(test)]
 mod tests {
 
-    use std::io::prelude::*;
+	use std::io::prelude::*;
 	use std::fs::File;
-    use std::io::BufReader;
-    use std::path::PathBuf;    
+	use std::io::BufReader;
+	use std::path::PathBuf;
 
-    use super::*;
+	use super::*;
 
-    fn fixture_path() -> PathBuf {
-        [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "packet.scale"].iter().collect()
-    }
+	fn fixture_path() -> PathBuf {
+		[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "packet.scale"].iter().collect()
+	}
 
-    #[test]
-    fn decode_packet() {
-        let mut reader = BufReader::new(File::open(fixture_path()).unwrap());
+	#[test]
+	fn decode_packet() {
+		let mut reader = BufReader::new(File::open(fixture_path()).unwrap());
 		let mut data: Vec<u8> = Vec::new();
 		reader.read_to_end(&mut data).unwrap();
 
-        assert_eq!(Packet::decode(&mut data.as_slice()).is_ok(), true);
-    }
+		assert_eq!(Packet::decode(&mut data.as_slice()).is_ok(), true);
+	}
 
 
 }
-

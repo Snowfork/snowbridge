@@ -14,29 +14,29 @@ pub use types::{AppID, Message, SignedMessage};
 /// The bridge module implements this trait
 pub trait Bridge {
 
-    // just a dummy stand-in until we flesh out this trait some more
-    fn dummy();
+	// just a dummy stand-in until we flesh out this trait some more
+	fn dummy();
 
 }
 
 /// The broker module implements this trait
 pub trait Broker {
 
-    fn submit(app_id: AppID, message: Message) -> DispatchResult;
+	fn submit(app_id: AppID, message: Message) -> DispatchResult;
 
 }
 
 /// The verifier module implements this trait
 pub trait Verifier {
 
-    fn verify(app_id: AppID, message: Message) -> DispatchResult;
+	fn verify(app_id: AppID, message: Message) -> DispatchResult;
 
 }
 
 /// The dummy app module implements this trait
 pub trait Application {
 
-    /// Handle a message
-    fn handle(app_id: AppID, message: Message) -> DispatchResult;
+	/// Handle a message
+	fn handle(app_id: AppID, message: Message) -> DispatchResult;
 
 }
