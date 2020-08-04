@@ -1,9 +1,9 @@
 use ethereum_types::{H160, U256};
-use ethabi::{Event, Param, ParamKind, Token};
+use ethabi::{Event as ABIEvent, Param, ParamKind, Token};
 
 use crate::log::Log;
 
-static EVENT_ABI: &'static Event = &Event {
+static EVENT_ABI: &'static ABIEvent = &ABIEvent {
 	signature: "AppEvent(uint256,bytes)",
 	inputs: &[
 		Param { kind: ParamKind::Uint(256), indexed: false },
@@ -69,7 +69,7 @@ struct Payload {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Message {
+pub enum Event {
 	SendETH {
 		sender: H160,
 		recipient: [u8; 32],
@@ -85,7 +85,7 @@ pub enum Message {
 	}
 }
 
-impl Message {
+impl Event {
 
 	pub fn decode(log: Log) -> Result<Self, DecodeError> {
 		let tokens = EVENT_ABI.decode(log.topics, log.data)?;
@@ -106,7 +106,7 @@ impl Message {
 
 		match tag {
 			TAG_SENDETH => {
-				Ok(Message::SendETH {
+				Ok(Event::SendETH {
 					sender: payload.sender,
 					recipient: payload.recipient,
 					amount: payload.amount,
@@ -114,7 +114,7 @@ impl Message {
 				})
 			},
 			TAG_SENDERC20 => {
-				Ok(Message::SendERC20 {
+				Ok(Event::SendERC20 {
 					sender: payload.sender,
 					recipient: payload.recipient,
 					token: payload.token,
@@ -188,7 +188,7 @@ mod tests {
         [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "log.rlp"].iter().collect()
     }
 
-    fn recipient(hexaddr: &str) -> [u8; 32] {
+    fn to_account_id(hexaddr: &str) -> [u8; 32] {
         let mut buf: [u8; 32] = [0; 32];
         let bytes: Vec<u8> = hexaddr.from_hex().unwrap();
         buf.clone_from_slice(&bytes);
@@ -202,10 +202,10 @@ mod tests {
 		reader.read_to_end(&mut data).unwrap();
 
 		let log: Log = rlp::decode(&data).unwrap();
-        assert_eq!(Message::decode(log).unwrap(),
-            Message::SendETH {
+        assert_eq!(Event::decode(log).unwrap(),
+            Event::SendETH {
                 sender: "cffeaaf7681c89285d65cfbe808b80e502696573".parse().unwrap(),
-                recipient: recipient("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"),
+                recipient: to_account_id("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"),
                 amount: 10.into(), nonce: 7
             }
         );

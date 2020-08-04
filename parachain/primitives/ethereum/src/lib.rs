@@ -3,7 +3,7 @@ mod message;
 
 pub use crate::{
 	log::Log,
-	message::Message,
+	event::Event,
 };
 
 pub use ethereum_types::{H160, U256};
