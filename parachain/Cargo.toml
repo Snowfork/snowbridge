@@ -4,6 +4,7 @@ panic = 'unwind'
 [workspace]
 members = [
     'ethereum/eth-signature',
+    'primitives/ethereum',
     'node',
     'pallets/bridge',
     'pallets/broker',

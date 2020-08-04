@@ -115,6 +115,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
+name = "artemis-ethereum"
+version = "0.1.0"
+dependencies = [
+ "ethabi-decode",
+ "ethereum",
+ "ethereum-types",
+ "libsecp256k1",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-node"
 version = "0.1.1"
 dependencies = [
@@ -983,6 +1000,52 @@ name = "eth-signature"
 version = "0.1.0"
 dependencies = [
  "primitive-types",
+]
+
+[[package]]
+name = "ethabi-decode"
+version = "1.2.0"
+source = "git+https://github.com/Snowfork/ethabi-decode#93fde6887a28624d5e2928f9296fed9aeda1ca55"
+dependencies = [
+ "ethereum-types",
+ "tiny-keccak 1.5.0",
+]
+
+[[package]]
+name = "ethbloom"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71a6567e6fd35589fea0c63b94b4cf2e55573e413901bdbe60ab15cf0e25e5df"
+dependencies = [
+ "crunchy",
+ "fixed-hash",
+ "impl-rlp",
+ "tiny-keccak 2.0.2",
+]
+
+[[package]]
+name = "ethereum"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3db51ea54d923ebaa92660b4e1adb90af11960e7ab2e981118107036442237e7"
+dependencies = [
+ "ethereum-types",
+ "rlp",
+ "rlp-derive",
+ "sha3",
+]
+
+[[package]]
+name = "ethereum-types"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "473aecff686bd8e7b9db0165cbbb53562376b39bf35b427f0c60446a9e1634b0"
+dependencies = [
+ "ethbloom",
+ "fixed-hash",
+ "impl-rlp",
+ "primitive-types",
+ "uint",
 ]
 
 [[package]]
@@ -4128,6 +4191,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlp-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e33d7b2abe0c340d8797fe2907d3f20d3b5ea5908683618bfe80df7f621f672a"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.7",
+ "syn 1.0.31",
+]
+
+[[package]]
 name = "rocksdb"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5490,7 +5564,7 @@ dependencies = [
  "sp-storage",
  "substrate-bip39",
  "tiny-bip39",
- "tiny-keccak",
+ "tiny-keccak 2.0.2",
  "twox-hash",
  "wasmi",
  "zeroize",
@@ -6247,6 +6321,15 @@ dependencies = [
 
 [[package]]
 name = "tiny-keccak"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d8a021c69bb74a44ccedb824a046447e2c84a01df9e5c20779750acb38e11b2"
+dependencies = [
+ "crunchy",
+]
+
+[[package]]
+name = "tiny-keccak"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
@@ -6619,7 +6702,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.7.3",
+ "rand 0.3.23",
 ]
 
 [[package]]
