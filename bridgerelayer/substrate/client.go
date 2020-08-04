@@ -2,6 +2,7 @@ package substrate
 
 import (
 	"fmt"
+	"io/ioutil"
 
 	gsrpc "github.com/Snowfork/go-substrate-rpc-client"
 	"github.com/Snowfork/go-substrate-rpc-client/config"
@@ -38,7 +39,7 @@ func NewClient() (*Client, error) {
 }
 
 // SubmitExtrinsic submits a packet
-func (client *Client) SubmitExtrinsic(packet etypes.Packet) (bool, error) {
+func (client *Client) SubmitExtrinsic(appID [32]byte, packet etypes.PacketV2) (bool, error) {
 
 	from, err := signature.KeyringPairFromSecret("//Alice", "")
 	if err != nil {
@@ -50,8 +51,20 @@ func (client *Client) SubmitExtrinsic(packet etypes.Packet) (bool, error) {
 		return false, err
 	}
 
-	appid := types.NewBytes32(packet.AppID)
-	message := types.NewBytes(packet.Message.(etypes.Unverified).Contents)
+	appid := types.NewBytes32(appID)
+
+	payload, err := types.EncodeToBytes(packet)
+	if err != nil {
+		return false, err
+	}
+
+	// used for debugging
+	_err := ioutil.WriteFile("/tmp/packet.scale", payload, 0644)
+	if _err != nil {
+		return false, _err
+	}
+
+	message := types.NewBytes(payload)
 
 	c, err := types.NewCall(meta, "Bridge.send", appid, message)
 	if err != nil {

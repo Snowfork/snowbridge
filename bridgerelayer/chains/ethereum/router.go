@@ -2,7 +2,6 @@ package ethereum
 
 import (
 	"bytes"
-	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	ctypes "github.com/ethereum/go-ethereum/core/types"
@@ -28,12 +27,17 @@ func NewRouter(keybase *keybase.Keypair) Router {
 
 // Route packages tx data as a packet and relays it to the bridge
 func (er Router) Route(eventData types.EventData) error {
+
+	appAddress := eventData.Contract.Bytes()
+	var appID [32]byte
+	copy(appID[:], appAddress)
+
 	packet, err := er.buildPacket(eventData.Contract, eventData.Data)
 	if err != nil {
 		return err
 	}
 
-	err = er.sendPacket(packet)
+	err = er.sendPacket(appID, packet)
 	if err != nil {
 		return err
 	}
@@ -42,45 +46,36 @@ func (er Router) Route(eventData types.EventData) error {
 }
 
 // BuildPacket builds a data packet from tx data
-func (er Router) buildPacket(id common.Address, eLog ctypes.Log) (types.Packet, error) {
-	appAddress := id.Bytes()
-	var appID [32]byte
-	copy(appID[:], appAddress)
-
+func (er Router) buildPacket(id common.Address, eLog ctypes.Log) (types.PacketV2, error) {
 	// RLP encode event log's Address, Topics, and Data
 	var buff bytes.Buffer
 	err := eLog.EncodeRLP(&buff)
 	if err != nil {
-		return types.Packet{}, err
+		return types.PacketV2{}, err
 	}
-	f, err := os.Create("/tmp/log.rlp")
-	buff.WriteTo(f)
-	f.Close()
-
 
 	// Generate a proof by signing a hash of the encoded data
 	proof, err := prover.GenerateProof(buff.Bytes(), er.keybase.PrivateKey())
 	if err != nil {
-		return types.Packet{}, err
+		return types.PacketV2{}, err
 	}
 
-	// Construct and wrap message
-	message := types.NewMessage(buff.Bytes(), proof)
-	wrappedMessage := types.NewLightClientProof(message)
-
-	packet := types.NewPacket(appID, wrappedMessage)
+	packet := types.PacketV2{
+		Data: buff.Bytes(),
+		Signature: proof.Signature,
+	}
 	return packet, nil
 }
 
 // SendPacket sends a tx data packet to the bridge
-func (er Router) sendPacket(packet types.Packet) error {
+func (er Router) sendPacket(appID [32]byte, packet types.PacketV2) error {
 	log.Info("Sending packet:\n", packet)
 
 	client, err := substrate.NewClient()
 	if err != nil {
 		panic(err)
 	}
-	client.SubmitExtrinsic(packet)
+	client.SubmitExtrinsic(appID, packet)
 
 	return nil
 }
