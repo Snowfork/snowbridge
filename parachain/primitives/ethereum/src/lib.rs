@@ -2,6 +2,7 @@
 
 mod log;
 mod event;
+mod signature;
 
 pub use crate::{
 	log::Log,

@@ -89,7 +89,7 @@ impl Event {
 
 	pub fn decode_from_rlp(data: Vec<u8>) -> Result<Self, DecodeError> {
 		let log: Log = rlp::decode(&data)?;
-		Ok(vent::decode(log)?)
+		Ok(Event::decode(log)?)
 	}
 
 	pub fn decode(log: Log) -> Result<Self, DecodeError> {

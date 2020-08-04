@@ -2,7 +2,7 @@
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::prelude::*;
+//use sp_std::prelude::*;
 use frame_support::dispatch::DispatchResult;
 
 pub mod types;

@@ -996,13 +996,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eth-signature"
-version = "0.1.0"
-dependencies = [
- "primitive-types",
-]
-
-[[package]]
 name = "ethabi-decode"
 version = "1.2.1"
 source = "git+https://github.com/Snowfork/ethabi-decode#bc27a387521300049588ba3fd5ed54b3ebde538e"
