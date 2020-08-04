@@ -2,7 +2,7 @@
 use crate::types::AppID;
 
 pub enum AppName {
-    PolkaETH
+    PolkaETH,
 }
 
 pub struct Entry {

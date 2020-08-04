@@ -87,6 +87,11 @@ pub enum Event {
 
 impl Event {
 
+	pub fn decode_from_rlp(data: Vec<u8>) -> Result<Self, DecodeError> {
+		let log: Log = rlp::decode(&data)?;
+		Ok(vent::decode(log)?)
+	}
+
 	pub fn decode(log: Log) -> Result<Self, DecodeError> {
 		let tokens = EVENT_ABI.decode(log.topics, log.data)?;
 	

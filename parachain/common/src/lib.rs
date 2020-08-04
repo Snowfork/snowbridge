@@ -8,7 +8,7 @@ use frame_support::dispatch::DispatchResult;
 pub mod types;
 pub mod registry;
 
-pub use types::{AppID, Message};
+pub use types::{AppID, Message, SignedMessage};
 
 
 /// The bridge module implements this trait

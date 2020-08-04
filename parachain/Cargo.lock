@@ -119,7 +119,6 @@ name = "artemis-ethereum"
 version = "0.1.0"
 dependencies = [
  "ethabi-decode",
- "ethereum",
  "ethereum-types",
  "libsecp256k1",
  "parity-scale-codec",
@@ -613,6 +612,7 @@ name = "common"
 version = "0.1.1"
 dependencies = [
  "frame-support",
+ "parity-scale-codec",
  "sp-std",
 ]
 
@@ -1004,8 +1004,8 @@ dependencies = [
 
 [[package]]
 name = "ethabi-decode"
-version = "1.2.0"
-source = "git+https://github.com/Snowfork/ethabi-decode#93fde6887a28624d5e2928f9296fed9aeda1ca55"
+version = "1.2.1"
+source = "git+https://github.com/Snowfork/ethabi-decode#bc27a387521300049588ba3fd5ed54b3ebde538e"
 dependencies = [
  "ethereum-types",
  "tiny-keccak 1.5.0",
@@ -1021,18 +1021,6 @@ dependencies = [
  "fixed-hash",
  "impl-rlp",
  "tiny-keccak 2.0.2",
-]
-
-[[package]]
-name = "ethereum"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3db51ea54d923ebaa92660b4e1adb90af11960e7ab2e981118107036442237e7"
-dependencies = [
- "ethereum-types",
- "rlp",
- "rlp-derive",
- "sha3",
 ]
 
 [[package]]
@@ -3354,9 +3342,9 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec"
-version = "1.3.1"
+version = "1.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a74f02beb35d47e0706155c9eac554b50c671e0d868fe8296bcdf44a9a4847bf"
+checksum = "34d38aeaffc032ec69faa476b3caaca8d4dd7f3f798137ff30359e5c7869ceb6"
 dependencies = [
  "arrayvec 0.5.1",
  "bitvec",
@@ -3367,9 +3355,9 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec-derive"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a0ec292e92e8ec7c58e576adacc1e3f399c597c8f263c42f18420abe58e7245"
+checksum = "cd20ff7e0399b274a5f5bb37b712fccb5b3a64b9128200d1c3cc40fe709cb073"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -3598,6 +3586,7 @@ checksum = "feb3b2b1033b8a60b4da6ee470325f887758c95d5320f52f9ce0df055a55940e"
 name = "polkaeth-app"
 version = "0.1.1"
 dependencies = [
+ "artemis-ethereum",
  "common",
  "frame-support",
  "frame-system",
@@ -3606,6 +3595,7 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-io",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]
@@ -4188,17 +4178,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a7d3f9bed94764eac15b8f14af59fac420c236adaff743b7bcc88e265cb4345"
 dependencies = [
  "rustc-hex",
-]
-
-[[package]]
-name = "rlp-derive"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e33d7b2abe0c340d8797fe2907d3f20d3b5ea5908683618bfe80df7f621f672a"
-dependencies = [
- "proc-macro2",
- "quote 1.0.7",
- "syn 1.0.31",
 ]
 
 [[package]]

@@ -5,10 +5,12 @@ use sp_core::H256;
 use frame_support::traits::StorageMapShim;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup}, testing::Header, Perbill,
+	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
 use frame_system as system;
 use balances;
+
+use sp_keyring::AccountKeyring as Keyring;
 
 impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
@@ -26,7 +28,10 @@ impl_outer_event! {
     }
 }
 
-pub type AccountId = u64;
+pub type Signature = MultiSignature;
+
+pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+// pub type AccountId = u64;
 pub type Balance = u128;
 
 #[derive(Clone, Eq, PartialEq)]
@@ -92,18 +97,18 @@ impl Trait for MockRuntime {
 pub type PolkaETHModule = Module<MockRuntime>;
 pub type BalancesPolkaETH = balances::Module<MockRuntime>;
 
-pub const ALICE: AccountId = 1;
-pub const BOB: AccountId = 2;
-pub const CAROL: AccountId = 3;
+// pub const ALICE: AccountId = 1;
+// pub const BOB: AccountId = 2;
+// pub const CAROL: AccountId = 3;
 
 pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
 
 	balances::GenesisConfig::<MockRuntime> {
 		balances: vec![
-			(ALICE, 1000),
-			(BOB, 1000),
-			(CAROL, 1000),
+			(Keyring::Alice.into(), 1000),
+			(Keyring::Bob.into(), 1000),
+			(Keyring::Charlie.into(), 1000),
 		],
 	}
 	.assimilate_storage(&mut storage)

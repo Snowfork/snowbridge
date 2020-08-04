@@ -49,6 +49,12 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'v2.0.0-rc4'
 version = '2.0.0-rc4'
 
+[dev-dependencies.sp-keyring]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc4'
+version = '2.0.0-rc4'
+
 [dependencies.serde]
 package = 'serde'
 optional = true
@@ -58,6 +64,11 @@ features = ["derive"]
 [dependencies.common]
 default-features = false
 path = "../../common"
+
+[dependencies.artemis-ethereum]
+default-features = false
+path = "../../primitives/ethereum"
+
 
 [dependencies.balances]
 default-features = false
@@ -78,6 +89,7 @@ std = [
     'sp-std/std',
     'sp-io/std',
     'sp-runtime/std',
-    'common/std'
+    'common/std',
+    'artemis-ethereum/std'
 ]
 

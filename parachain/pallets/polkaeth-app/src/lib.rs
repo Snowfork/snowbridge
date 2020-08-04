@@ -10,7 +10,10 @@ use frame_support::{
 	traits::{Currency, ExistenceRequirement, WithdrawReason, WithdrawReasons},
 };
 use sp_std::prelude::*;
-use common::{AppID, Application, Message};
+use common::{AppID, Application, Message, SignedMessage};
+use codec::Decode;
+
+use artemis_ethereum::Event as EthEvent;
 
 #[cfg(test)]
 mod mock;
@@ -120,10 +123,28 @@ decl_module! {
 	}
 }
 
+impl<T: Trait> Module<T> {
+
+	fn do_mint(who: T::AccountID, to: T::AccountId,  amount: PolkaETH<T>) -> DispatchResult {
+		let _ = T::Currency::deposit_creating(&to, amount);
+		Self::deposit_event(RawEvent::Minted(to, amount));
+		Ok(())
+	}
+}
+
 impl<T: Trait> Application for Module<T> {
 
 	fn handle(app_id: AppID, message: Message) -> DispatchResult {
-		// We'll most likely want to call Mint() here.
+		let sm = SignedMessage::decode(&mut message.as_slice()).unwrap();
+		let ethev = EthEvent::decode_from_rlp(sm.data).unwrap();
+		match ethev {
+			EthEvent::SendETH { sender, recipient, amount, nonce} => {
+				let to: T::AccountID = recipient.into();
+				Self::do_mint(sender, to, amount.as_u128())
+			}
+			_ => {}
+		}
+
 		Ok(())
 	}
 }
