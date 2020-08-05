@@ -31,7 +31,6 @@ impl_outer_event! {
 pub type Signature = MultiSignature;
 
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-// pub type AccountId = u64;
 pub type Balance = u128;
 
 #[derive(Clone, Eq, PartialEq)]
@@ -96,10 +95,6 @@ impl Trait for MockRuntime {
 
 pub type PolkaETHModule = Module<MockRuntime>;
 pub type BalancesPolkaETH = balances::Module<MockRuntime>;
-
-// pub const ALICE: AccountId = 1;
-// pub const BOB: AccountId = 2;
-// pub const CAROL: AccountId = 3;
 
 pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();

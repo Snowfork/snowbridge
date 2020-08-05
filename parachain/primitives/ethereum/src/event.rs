@@ -5,7 +5,9 @@ use sp_std::prelude::*;
 
 use crate::log::Log;
 
-
+// TODO: We should move these ABI specs to the
+//   application registry in the common::registry module.
+//   This would allow us to have distinct ABIs for each application.      
 static EVENT_ABI: &'static ABIEvent = &ABIEvent {
 	signature: "AppEvent(uint256,bytes)",
 	inputs: &[

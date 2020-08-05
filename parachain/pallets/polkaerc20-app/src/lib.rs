@@ -98,12 +98,12 @@ impl<T: Trait> Application for Module<T> {
 		// TODO: Rather implement From<DecodeError> for DispatchError
 		let sm = match SignedMessage::decode(&mut message.as_slice()) {
 			Ok(sm) => sm,
-			Err(_) => return Err(DispatchError::Other("Failed to decode message"))
+			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
 		};
 		
 		let event = match EthEvent::decode_from_rlp(sm.data) {
 			Ok(event) => event,
-			Err(_) => return Err(DispatchError::Other("Failed to decode message"))
+			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
 		};
 			
 		match event {
