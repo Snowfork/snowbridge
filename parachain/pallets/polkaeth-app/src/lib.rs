@@ -84,17 +84,6 @@ decl_module! {
 		}
 
 		///
-		/// The parachain will mint PolkaETH for users who have locked up ETH in a bridge smart contract.
-		///
-		#[weight = 10_000]
-		fn mint(origin, to: T::AccountId,  amount: PolkaETH<T>) -> DispatchResult {
-			// TODO: verify origin
-			let who = ensure_signed(origin)?;
-			Self::do_mint(to, amount);
-			Ok(())
-		}
-
-		///
 		/// To initiate a transfer of PolkaETH to ETH, account holders must burn PolkaETH.
 		///
 		#[weight = 10_000]
@@ -133,6 +122,7 @@ impl<T: Trait> Module<T> {
 		input.try_into().ok()
 	}
 
+	/// The parachain will mint PolkaETH for users who have locked up ETH in a bridge smart contract.
 	fn do_mint(to: T::AccountId,  amount: PolkaETH<T>) {
 		let _ = T::Currency::deposit_creating(&to, amount);
 		Self::deposit_event(RawEvent::Minted(to, amount));
@@ -143,7 +133,8 @@ impl<T: Trait> Application for Module<T> {
 
 	fn handle(app_id: AppID, message: Message) -> DispatchResult {
 
-		// TODO: Rather implement From<DecodeError> for DispatchError
+		// TODO: For error handling, rather implement the trait
+		//   From<DecodeError> for DispatchError
 		let sm = match SignedMessage::decode(&mut message.as_slice()) {
 			Ok(sm) => sm,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
@@ -158,8 +149,13 @@ impl<T: Trait> Application for Module<T> {
 			EthEvent::SendETH { sender, recipient, amount, nonce} => {
 				let to = Self::make_account_id(&recipient);
 				let amt = Self::u128_to_balance(amount.as_u128());
-				if let Some(value) = amt {
-					Self::do_mint(to, value);
+				match Self::u128_to_balance(amount.as_u128()) {
+					Some(amount) => {
+						Self::do_mint(to, amount);
+					},
+					None => {
+						return Err(DispatchError::Other("Failed to decode event"))
+					}
 				}
 			}
 			_ => {

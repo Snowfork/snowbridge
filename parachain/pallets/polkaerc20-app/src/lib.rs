@@ -88,7 +88,7 @@ impl<T: Trait> Module<T> {
 		input.try_into().ok()
 	}
 
-	pub fn do_mint(token_addr: H160, to: &T::AccountId, amount: T::Balance) -> DispatchResult {
+	fn do_mint(token_addr: H160, to: &T::AccountId, amount: T::Balance) -> DispatchResult {
 		<FreeBalance<T>>::insert(&token_addr, to, amount);
 		Self::deposit_event(RawEvent::Minted(token_addr, to.clone(), amount));
 		Ok(())
@@ -116,8 +116,13 @@ impl<T: Trait> Application for Module<T> {
 			EthEvent::SendERC20 { sender, recipient, token, amount, nonce} => {
 				let to = Self::make_account_id(&recipient);
 				let amt = Self::u128_to_balance(amount.as_u128());
-				if let Some(value) = amt {
-					Self::do_mint(token, &to, value)?;
+				match Self::u128_to_balance(amount.as_u128()) {
+					Some(amount) => {
+						Self::do_mint(token, &to, amount)?;
+					},
+					None => {
+						return Err(DispatchError::Other("Failed to decode event"))
+					}
 				}
 			}
 			_ => {
