@@ -40,6 +40,11 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as PolkaERC20Map {		
+		// Free balances are represent as a doublemap: (TokenAddr, AccountId) -> Balance
+		//
+		// The choice of hashers was influenced by pallet-generic-asset, where free balances
+		// are also represented using a StorageDouble with twox_64_concat and blake2_128_concat
+		// hashers. So I'm assuming its a safe choice.
 		pub FreeBalance: double_map hasher(twox_64_concat) H160, hasher(blake2_128_concat) T::AccountId => T::Balance;		
 	}
 }
@@ -95,7 +100,8 @@ impl<T: Trait> Application for Module<T> {
 
 	fn handle(app_id: AppID, message: Message) -> DispatchResult {
 
-		// TODO: Rather implement From<DecodeError> for DispatchError
+		// TODO: For error handling, rather implement the trait
+		//   From<DecodeError> for DispatchError
 		let sm = match SignedMessage::decode(&mut message.as_slice()) {
 			Ok(sm) => sm,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
