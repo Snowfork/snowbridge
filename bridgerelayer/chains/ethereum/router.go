@@ -16,13 +16,19 @@ import (
 // Router packages raw event data as Packets and relays them to the bridge
 type Router struct {
 	keybase *keybase.Keypair
+	sc      *substrate.Client
 }
 
 // NewRouter initializes a new instance of Router
-func NewRouter(keybase *keybase.Keypair) Router {
-	return Router{
-		keybase: keybase,
+func NewRouter(keybase *keybase.Keypair) (*Router, error) {
+	sc, err := substrate.NewClient()
+	if err != nil {
+		return nil, err
 	}
+	return &Router{
+		keybase: keybase,
+		sc: sc,
+	}, nil
 }
 
 // Route packages tx data as a packet and relays it to the bridge
@@ -70,12 +76,6 @@ func (er Router) buildPacket(id common.Address, eLog ctypes.Log) (types.PacketV2
 // SendPacket sends a tx data packet to the bridge
 func (er Router) sendPacket(appID [32]byte, packet types.PacketV2) error {
 	log.Info("Sending packet:\n", packet)
-
-	client, err := substrate.NewClient()
-	if err != nil {
-		panic(err)
-	}
-	client.SubmitExtrinsic(appID, packet)
-
+	er.sc.SubmitPacket(appID, packet)
 	return nil
 }

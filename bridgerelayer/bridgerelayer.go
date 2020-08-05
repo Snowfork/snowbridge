@@ -66,8 +66,11 @@ func RunInitRelayerCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ethRouter := ethereum.NewRouter(ethKeybase)
-	ethChain := ethereum.NewEthChain(ethConfig, ethStreamer, ethRouter)
+	ethRouter, err := ethereum.NewRouter(ethKeybase)
+	if err != nil {
+		return err
+	}
+	ethChain := ethereum.NewEthChain(ethConfig, ethStreamer, *ethRouter)
 
 	// Initialize Substrate chain
 	_ = subConfig
