@@ -58,7 +58,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	// Dispatch verified message to a target application
+	// Dispatch verified message to a target application (Work-in-Progress)
 	//
 	// NOTE: Right now this broadcasts the message to all apps.
 	//       In milestone 4 we'll make use of the AppID to target

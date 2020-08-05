@@ -25,15 +25,3 @@ fn it_burns() {
 		assert_eq!(BalancesPolkaETH::free_balance(alice), 500);
 	});
 }
-
-#[test]
-fn it_handles_message() {
-	new_tester().execute_with(|| {
-		let origin = Origin::signed(Keyring::Alice.into());
-		assert_ok!(PolkaETHModule::burn(origin, 500, true));
-
-		let alice: AccountId = Keyring::Alice.into();
-	
-		assert_eq!(BalancesPolkaETH::free_balance(alice), 500);
-	});
-}

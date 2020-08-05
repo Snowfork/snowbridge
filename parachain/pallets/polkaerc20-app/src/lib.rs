@@ -73,6 +73,8 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
+	/// Make an AccountID from the recipient address encoded
+	/// in the ethereum event.
 	fn make_account_id(data: &[u8]) -> T::AccountId {
 		T::AccountId::decode(&mut &data[..]).unwrap_or_default()
 	}
@@ -92,10 +94,19 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Application for Module<T> {
 
 	fn handle(app_id: AppID, message: Message) -> DispatchResult {
-		let sm = SignedMessage::decode(&mut message.as_slice()).unwrap();
-		let ethev = EthEvent::decode_from_rlp(sm.data);
-		// FIXME: Handle this error cleanly (dont panic)
-		match ethev.unwrap() {
+
+		// TODO: Rather implement From<DecodeError> for DispatchError
+		let sm = match SignedMessage::decode(&mut message.as_slice()) {
+			Ok(sm) => sm,
+			Err(_) => return Err(DispatchError::Other("Failed to decode message"))
+		};
+		
+		let event = match EthEvent::decode_from_rlp(sm.data) {
+			Ok(event) => event,
+			Err(_) => return Err(DispatchError::Other("Failed to decode message"))
+		};
+			
+		match event {
 			EthEvent::SendERC20 { sender, recipient, token, amount, nonce} => {
 				let to = Self::make_account_id(&recipient);
 				let amt = Self::u128_to_balance(amount.as_u128());
