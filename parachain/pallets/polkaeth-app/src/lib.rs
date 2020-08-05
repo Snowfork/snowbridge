@@ -133,8 +133,6 @@ impl<T: Trait> Application for Module<T> {
 
 	fn handle(app_id: AppID, message: Message) -> DispatchResult {
 
-		// TODO: For error handling, rather implement the trait
-		//   From<DecodeError> for DispatchError
 		let sm = match SignedMessage::decode(&mut message.as_slice()) {
 			Ok(sm) => sm,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))

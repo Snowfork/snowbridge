@@ -7,6 +7,9 @@ edition = "2018"
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+[dependencies]
+hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
@@ -87,6 +90,7 @@ version = '2.0.0-rc4'
 [features]
 default = ['std']
 std = [
+    'hex/std',
     'serde',
     'codec/std',
     'frame-support/std',

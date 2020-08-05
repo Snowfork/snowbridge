@@ -21,10 +21,10 @@ use codec::{Decode, EncodeLike};
 use sp_core::H160;
 use sp_std::{fmt::Debug};
 
-use sp_std::convert::TryInto;
+use sp_std::convert::{Into, TryInto};
 use sp_std::if_std;
 
-use artemis_ethereum::Event as EthEvent;
+use artemis_ethereum::{self as ethereum};
 
 #[cfg(test)]
 mod mock;
@@ -61,7 +61,8 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-
+		/// Free balance got overflowed after minting.
+		FreeMintingOverflow,
 	}
 }
 
@@ -78,10 +79,8 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	/// Make an AccountID from the recipient address encoded
-	/// in the ethereum event.
-	fn make_account_id(data: &[u8]) -> T::AccountId {
-		T::AccountId::decode(&mut &data[..]).unwrap_or_default()
+	fn bytes_to_account_id(data: &[u8]) -> Option<T::AccountId> {
+		T::AccountId::decode(&mut &data[..]).ok()
 	}
 
 	fn u128_to_balance(input: u128) -> Option<T::Balance>  {
@@ -89,9 +88,37 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn do_mint(token_addr: H160, to: &T::AccountId, amount: T::Balance) -> DispatchResult {
-		<FreeBalance<T>>::insert(&token_addr, to, amount);
+		let original_free_balance = <FreeBalance<T>>::get(&token_addr, to);
+		let value = original_free_balance.checked_add(&amount)
+			.ok_or(Error::<T>::FreeMintingOverflow)?;
+		<FreeBalance<T>>::insert(&token_addr, to, value);
 		Self::deposit_event(RawEvent::Minted(token_addr, to.clone(), amount));
 		Ok(())
+	}
+
+	fn handle_event(event: ethereum::Event) -> DispatchResult {
+		match event {
+			ethereum::Event::SendERC20 { sender, recipient, token, amount, nonce} => {
+				let account = match Self::bytes_to_account_id(&recipient) {
+					Some(account) => account,
+					None => {
+						return Err(DispatchError::Other("Invalid sender account"))
+					}
+				};
+				let balance = match Self::u128_to_balance(amount.as_u128()) {
+					Some(balance) => balance,
+					None => {
+						return Err(DispatchError::Other("Invalid amount"))
+					}
+				};
+				Self::do_mint(token, &account, balance)
+			}
+			_ => {
+				// Ignore all other ethereum events. In the next milestone the 
+				// application will only receive messages it is registered to handle
+				Ok(())
+			}
+		}
 	}
 
 }
@@ -99,40 +126,16 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Application for Module<T> {
 
 	fn handle(app_id: AppID, message: Message) -> DispatchResult {
-
-		// TODO: For error handling, rather implement the trait
-		//   From<DecodeError> for DispatchError
 		let sm = match SignedMessage::decode(&mut message.as_slice()) {
 			Ok(sm) => sm,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
 		};
 		
-		let event = match EthEvent::decode_from_rlp(sm.data) {
+		let event = match ethereum::Event::decode_from_rlp(sm.data) {
 			Ok(event) => event,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
 		};
-			
-		match event {
-			EthEvent::SendERC20 { sender, recipient, token, amount, nonce} => {
-				let to = Self::make_account_id(&recipient);
-				let amt = Self::u128_to_balance(amount.as_u128());
-				match Self::u128_to_balance(amount.as_u128()) {
-					Some(amount) => {
-						Self::do_mint(token, &to, amount)?;
-					},
-					None => {
-						return Err(DispatchError::Other("Failed to decode event"))
-					}
-				}
-			}
-			_ => {
-				// Ignore all other ethereum events.
-				// In the next development milestone the application
-				// will only receive messages it can specifically handle.
-			}
-		}
 
-		Ok(())
+		Self::handle_event(event)
 	}
 }
-
