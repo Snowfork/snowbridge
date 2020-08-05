@@ -21,7 +21,7 @@ use codec::{Decode, EncodeLike};
 use sp_core::H160;
 use sp_std::{fmt::Debug};
 
-use sp_std::convert::{Into, TryInto};
+use sp_std::convert::{TryInto};
 use sp_std::if_std;
 
 use artemis_ethereum::{self as ethereum};

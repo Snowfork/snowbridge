@@ -15,7 +15,7 @@ use codec::Decode;
 
 use sp_std::convert::TryInto;
 
-use artemis_ethereum::Event as EthEvent;
+use artemis_ethereum::{self as ethereum};
 
 #[cfg(test)]
 mod mock;
@@ -112,10 +112,8 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	/// Make an AccountID from the recipient address encoded
-	/// in the ethereum event.
-	fn make_account_id(data: &[u8]) -> T::AccountId {
-		T::AccountId::decode(&mut &data[..]).unwrap_or_default()
+	fn bytes_to_account_id(data: &[u8]) -> Option<T::AccountId> {
+		T::AccountId::decode(&mut &data[..]).ok()
 	}
 
 	fn u128_to_balance(input: u128) -> Option<PolkaETH<T>>  {
@@ -127,42 +125,48 @@ impl<T: Trait> Module<T> {
 		let _ = T::Currency::deposit_creating(&to, amount);
 		Self::deposit_event(RawEvent::Minted(to, amount));
 	}
+
+	fn handle_event(event: ethereum::Event) -> DispatchResult {
+		match event {
+			ethereum::Event::SendETH { sender, recipient, amount, nonce} => {
+				let account = match Self::bytes_to_account_id(&recipient) {
+					Some(account) => account,
+					None => {
+						return Err(DispatchError::Other("Invalid sender account"))
+					}
+				};
+				let balance = match Self::u128_to_balance(amount.as_u128()) {
+					Some(balance) => balance,
+					None => {
+						return Err(DispatchError::Other("Invalid amount"))
+					}
+				};
+				Self::do_mint(account, balance);
+				Ok(())
+			}
+			_ => {
+				// Ignore all other ethereum events. In the next milestone the 
+				// application will only receive messages it is registered to handle
+				Ok(())
+			}
+		}
+	}
 }
 
 impl<T: Trait> Application for Module<T> {
 
 	fn handle(app_id: AppID, message: Message) -> DispatchResult {
-
 		let sm = match SignedMessage::decode(&mut message.as_slice()) {
 			Ok(sm) => sm,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
 		};
 		
-		let event = match EthEvent::decode_from_rlp(sm.data) {
+		let event = match ethereum::Event::decode_from_rlp(sm.data) {
 			Ok(event) => event,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
 		};
 
-		match event {
-			EthEvent::SendETH { sender, recipient, amount, nonce} => {
-				let to = Self::make_account_id(&recipient);
-				let amt = Self::u128_to_balance(amount.as_u128());
-				match Self::u128_to_balance(amount.as_u128()) {
-					Some(amount) => {
-						Self::do_mint(to, amount);
-					},
-					None => {
-						return Err(DispatchError::Other("Failed to decode event"))
-					}
-				}
-			}
-			_ => {
-				// Ignore all other ethereum events.
-				// In the next development milestone the application
-				// will only receive messages it can specifically handle.
-			}
-		}
-
-		Ok(())
+		Self::handle_event(event)
 	}
+
 }
