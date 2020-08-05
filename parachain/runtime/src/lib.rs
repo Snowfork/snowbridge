@@ -275,6 +275,7 @@ impl broker::Trait for Runtime {
 
 	type DummyVerifier = dummy_verifier::Module<Runtime>;
 	type PolkaETH = polkaeth_app::Module<Runtime>;
+	type PolkaERC20 = polkaerc20_app::Module<Runtime>;
 }
 
 impl dummy_verifier::Trait for Runtime {
@@ -304,6 +305,11 @@ impl polkaeth_app::Trait for Runtime {
 	type Currency = balances::Module<Runtime, balances::Instance2>;
 }
 
+impl polkaerc20_app::Trait for Runtime {
+	type Event = Event;
+	type Balance = u128;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -324,6 +330,7 @@ construct_runtime!(
 		Broker: broker::{Module, Call, Storage, Event},
 		DummyVerifier: dummy_verifier::{Module, Call, Storage, Event},
 		AppPolkaETH: polkaeth_app::{Module, Call, Storage, Event<T>},
+		AppPolkaERC20: polkaerc20_app::{Module, Call, Storage, Event<T>},
 	}
 );
 

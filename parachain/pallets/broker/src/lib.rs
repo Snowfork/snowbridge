@@ -16,6 +16,7 @@ pub trait Trait: system::Trait {
 
 	type DummyVerifier: Verifier;
 	type PolkaETH: Application;
+	type PolkaERC20: Application;
 }
 
 decl_storage! {
@@ -56,22 +57,43 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+
 	// Dispatch verified message to a target application
+	//
+	// NOTE: Right now this broadcasts the message to all apps.
+	//       In milestone 4 we'll make use of the AppID to target
+	//       specific apps.
 	fn dispatch(app_id: AppID, message: Message) -> DispatchResult {
 		for entry in REGISTRY.iter() {
-			if app_id != entry.id {
-				continue;
-			}
 			return match entry.symbol {
 				AppName::PolkaETH => {
 					T::PolkaETH::handle(app_id, message)?;
 					Ok(())
 				}
+				AppName::PolkaERC20 => {
+					T::PolkaERC20::handle(app_id, message)?;
+					Ok(())
+				}
 			};
 		}
-
 		Err(<Error<T>>::HandlerNotFound.into())
 	}
+
+	// Dispatch verified message to a target application
+	// fn dispatch(app_id: AppID, message: Message) -> DispatchResult {
+	// 	for entry in REGISTRY.iter() {
+	// 		if app_id != entry.id {
+	// 			continue;
+	// 		}
+	// 		return match entry.symbol {
+	// 			AppName::PolkaETH => {
+	// 				T::PolkaETH::handle(app_id, message)?;
+	// 				Ok(())
+	// 			}
+	// 		};
+	// 	}
+	// 	Err(<Error<T>>::HandlerNotFound.into())
+	// }
 }
 
 impl<T: Trait> Broker for Module<T> {

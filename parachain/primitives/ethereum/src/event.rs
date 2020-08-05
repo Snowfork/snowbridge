@@ -1,7 +1,10 @@
 use ethereum_types::{H160, U256};
 use ethabi::{Event as ABIEvent, Param, ParamKind, Token};
 
+use sp_std::prelude::*;
+
 use crate::log::Log;
+
 
 static EVENT_ABI: &'static ABIEvent = &ABIEvent {
 	signature: "AppEvent(uint256,bytes)",

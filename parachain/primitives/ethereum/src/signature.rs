@@ -1,5 +1,6 @@
-use ethereum_types::H160;
 
-pub fn verify(message: Vec<u8>, signature: Vec<u8>) -> bool {
+use sp_std::prelude::*;
+
+pub fn verify(_message: Vec<u8>, _signature: Vec<u8>) -> bool {
 	true
 }

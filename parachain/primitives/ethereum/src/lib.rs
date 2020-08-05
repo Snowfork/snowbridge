@@ -1,8 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod log;
-mod event;
-mod signature;
+pub mod log;
+pub mod event;
+pub mod signature;
 
 pub use crate::{
 	log::Log,

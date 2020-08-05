@@ -13,6 +13,8 @@ use sp_std::prelude::*;
 use common::{AppID, Application, Message, SignedMessage};
 use codec::Decode;
 
+use sp_std::convert::TryInto;
+
 use artemis_ethereum::Event as EthEvent;
 
 #[cfg(test)]
@@ -88,11 +90,7 @@ decl_module! {
 		fn mint(origin, to: T::AccountId,  amount: PolkaETH<T>) -> DispatchResult {
 			// TODO: verify origin
 			let who = ensure_signed(origin)?;
-
-			let _ = T::Currency::deposit_creating(&to, amount);
-
-			Self::deposit_event(RawEvent::Minted(to, amount));
-
+			Self::do_mint(to, amount);
 			Ok(())
 		}
 
@@ -125,10 +123,17 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	fn do_mint(who: T::AccountID, to: T::AccountId,  amount: PolkaETH<T>) -> DispatchResult {
+	fn make_account_id(data: &[u8]) -> T::AccountId {
+		T::AccountId::decode(&mut &data[..]).unwrap_or_default()
+	}
+
+	fn u128_to_balance(input: u128) -> Option<PolkaETH<T>>  {
+		input.try_into().ok()
+	}
+
+	fn do_mint(to: T::AccountId,  amount: PolkaETH<T>) {
 		let _ = T::Currency::deposit_creating(&to, amount);
 		Self::deposit_event(RawEvent::Minted(to, amount));
-		Ok(())
 	}
 }
 
@@ -139,10 +144,17 @@ impl<T: Trait> Application for Module<T> {
 		let ethev = EthEvent::decode_from_rlp(sm.data).unwrap();
 		match ethev {
 			EthEvent::SendETH { sender, recipient, amount, nonce} => {
-				let to: T::AccountID = recipient.into();
-				Self::do_mint(sender, to, amount.as_u128())
+				let to = Self::make_account_id(&recipient);
+				let amt = Self::u128_to_balance(amount.as_u128());
+				if let Some(value) = amt {
+					Self::do_mint(to, value);
+				}
 			}
-			_ => {}
+			_ => {
+				// Ignore all other ethereum events.
+				// In the next development milestone the application
+				// will only receive messages it can specifically handle.
+			}
 		}
 
 		Ok(())
