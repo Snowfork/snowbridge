@@ -16,7 +16,7 @@ use sp_runtime::traits::{
 	Zero, Bounded, AtLeast32BitUnsigned,
 };
 use sp_std::prelude::*;
-use common::{AppID, Application, Message, SignedMessage};
+use common::{AppID, Application, Message};
 use codec::{Decode, EncodeLike};
 use sp_core::H160;
 use sp_std::{fmt::Debug};
@@ -24,7 +24,7 @@ use sp_std::{fmt::Debug};
 use sp_std::convert::{TryInto};
 use sp_std::if_std;
 
-use artemis_ethereum::{self as ethereum};
+use artemis_ethereum::{self as ethereum, SignedMessage};
 
 #[cfg(test)]
 mod mock;

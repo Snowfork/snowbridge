@@ -10,12 +10,12 @@ use frame_support::{
 	traits::{Currency, ExistenceRequirement, WithdrawReason, WithdrawReasons},
 };
 use sp_std::prelude::*;
-use common::{AppID, Application, Message, SignedMessage};
+use common::{AppID, Application, Message};
 use codec::Decode;
 
 use sp_std::convert::TryInto;
 
-use artemis_ethereum::{self as ethereum};
+use artemis_ethereum::{self as ethereum, SignedMessage};
 
 #[cfg(test)]
 mod mock;

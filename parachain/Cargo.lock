@@ -125,6 +125,7 @@ dependencies = [
  "rlp",
  "rustc-hex",
  "serde",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -614,6 +615,7 @@ version = "0.1.1"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
+ "rustc-hex",
  "sp-std",
 ]
 
