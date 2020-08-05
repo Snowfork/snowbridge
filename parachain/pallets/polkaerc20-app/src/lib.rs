@@ -22,6 +22,7 @@ use sp_core::H160;
 use sp_std::{fmt::Debug};
 
 use sp_std::convert::TryInto;
+use sp_std::if_std;
 
 use artemis_ethereum::Event as EthEvent;
 
@@ -47,9 +48,9 @@ decl_event!(
 	pub enum Event<T>
 	where
 		AccountId = <T as system::Trait>::AccountId,
-		Amount = <T as Trait>::Balance,
+		BalanceERC20 = <T as Trait>::Balance,
 	{
-		Minted(H160, AccountId, Amount),
+		Minted(H160, AccountId, BalanceERC20),
 	}
 );
 
@@ -92,8 +93,9 @@ impl<T: Trait> Application for Module<T> {
 
 	fn handle(app_id: AppID, message: Message) -> DispatchResult {
 		let sm = SignedMessage::decode(&mut message.as_slice()).unwrap();
-		let ethev = EthEvent::decode_from_rlp(sm.data).unwrap();
-		match ethev {
+		let ethev = EthEvent::decode_from_rlp(sm.data);
+		// FIXME: Handle this error cleanly (dont panic)
+		match ethev.unwrap() {
 			EthEvent::SendERC20 { sender, recipient, token, amount, nonce} => {
 				let to = Self::make_account_id(&recipient);
 				let amt = Self::u128_to_balance(amount.as_u128());
