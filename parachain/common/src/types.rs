@@ -39,7 +39,7 @@ mod tests {
 		let mut data: Vec<u8> = Vec::new();
 		reader.read_to_end(&mut data).unwrap();
 
-		assert_eq!(Packet::decode(&mut data.as_slice()).is_ok(), true);
+		assert_eq!(SignedMessage::decode(&mut data.as_slice()).is_ok(), true);
 	}
 
 
