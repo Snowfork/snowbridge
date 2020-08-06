@@ -2,8 +2,6 @@ on:
   push:
     paths:
       'parachain/**'
-  pull_request:
-    types: [opened, synchronize, reopened]
 
 name: Parachain
 
@@ -15,11 +13,36 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
+      - name: Cache Cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-nightly-cargo-registry-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-nightly-cargo-registry-
+
+      - name: Cache Cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-nightly-cargo-index-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-nightly-cargo-index-
+
+      - name: Cache Cargo build
+        uses: actions/cache@v1
+        with:
+          path: target/debug
+          key: ${{ runner.os }}-nightly-debug-target-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-nightly-debug-target-
+
       - name: Install nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
+          target: wasm32-unknown-unknown
           override: true
 
       - name: Run cargo check
