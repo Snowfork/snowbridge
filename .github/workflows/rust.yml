@@ -32,7 +32,7 @@ jobs:
       - name: Cache Cargo build
         uses: actions/cache@v1
         with:
-          path: target/debug
+          path: parachain/target/debug
           key: ${{ runner.os }}-nightly-debug-target-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-nightly-debug-target-
