@@ -125,7 +125,11 @@ contract("Bank", function (accounts) {
 
       // Prepare transaction parameters
       const amount = 100;
+<<<<<<< HEAD
       const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
+=======
+      const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
+>>>>>>> vg-relay-substrate-3
 
       // Approve tokens to contract
       await this.token.approve(this.bank.address, amount, {

@@ -125,6 +125,7 @@ dependencies = [
  "rlp",
  "rustc-hex",
  "serde",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -614,6 +615,7 @@ version = "0.1.1"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
+ "rustc-hex",
  "sp-std",
 ]
 
@@ -3145,19 +3147,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-generic-asset"
-version = "2.0.0-rc4"
-source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1f21a579c478fe5d4f51e1fa71f7db9fd4"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "serde",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-grandpa"
 version = "2.0.0-rc4"
 source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1f21a579c478fe5d4f51e1fa71f7db9fd4"
@@ -3597,8 +3586,6 @@ dependencies = [
  "common",
  "frame-support",
  "frame-system",
- "pallet-balances",
- "pallet-generic-asset",
  "parity-scale-codec",
  "rustc-hex",
  "serde",

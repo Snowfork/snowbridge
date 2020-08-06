@@ -1,4 +1,3 @@
-#![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 ///
 /// Implementation for a PolkaETH token
@@ -10,12 +9,12 @@ use frame_support::{
 	traits::{Currency, ExistenceRequirement, WithdrawReason, WithdrawReasons},
 };
 use sp_std::prelude::*;
-use common::{AppID, Application, Message, SignedMessage};
+use common::{AppID, Application, Message};
 use codec::Decode;
 
 use sp_std::convert::TryInto;
 
-use artemis_ethereum::{self as ethereum};
+use artemis_ethereum::{self as ethereum, SignedMessage};
 
 #[cfg(test)]
 mod mock;
@@ -128,7 +127,7 @@ impl<T: Trait> Module<T> {
 
 	fn handle_event(event: ethereum::Event) -> DispatchResult {
 		match event {
-			ethereum::Event::SendETH { sender, recipient, amount, nonce} => {
+			ethereum::Event::SendETH { recipient, amount, ..} => {
 				let account = match Self::bytes_to_account_id(&recipient) {
 					Some(account) => account,
 					None => {
@@ -145,7 +144,7 @@ impl<T: Trait> Module<T> {
 				Ok(())
 			}
 			_ => {
-				// Ignore all other ethereum events. In the next milestone the 
+				// Ignore all other ethereum events. In the next milestone the
 				// application will only receive messages it is registered to handle
 				Ok(())
 			}
@@ -155,12 +154,12 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Application for Module<T> {
 
-	fn handle(app_id: AppID, message: Message) -> DispatchResult {
+	fn handle(_app_id: AppID, message: Message) -> DispatchResult {
 		let sm = match SignedMessage::decode(&mut message.as_slice()) {
 			Ok(sm) => sm,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
 		};
-		
+
 		let event = match ethereum::Event::decode_from_rlp(sm.data) {
 			Ok(event) => event,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))

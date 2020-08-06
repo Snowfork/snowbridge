@@ -7,6 +7,9 @@ edition = '2018'
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false }
 
+[dev-dependencies]
+hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+
 [dependencies.frame-support]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'

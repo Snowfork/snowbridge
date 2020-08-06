@@ -24,6 +24,12 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'v2.0.0-rc4'
 version = '2.0.0-rc4'
 
+[dependencies.sp-core]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc4'
+version = '2.0.0-rc4'
+
 [dependencies.sp-io]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -45,6 +51,7 @@ std = [
 	"ethereum-types/std",
 	"codec/std",
 	"rlp/std",
+	"sp-core/std",
 	"sp-std/std",
 	"sp-io/std",
 	"sp-runtime/std",

@@ -59,14 +59,6 @@ Initialize your Wasm Build environment:
 Use this command to build the [Wasm](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution)
 and [native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
 
-Note: The WASM build is currently disabled to dependency issue
-Note: Make sure `clang` and `llvm` are installed, as they are required to build. 
-
-```bash
-export SKIP_WASM_BUILD=1
-cargo build --release
-```
-
 ## Run
 
 ### Single Node Development Chain
@@ -115,18 +107,6 @@ by appending your own. A few useful ones are as follow.
 
 # Check whether the code is compilable
 ./scripts/docker_run.sh cargo check
-```
-
-# Interacting with the chain
-
-With the chain running locally, you can interact with it using https://polkadot.js.org/apps/.
-
-Before submitting extrinsics, make sure the API client is aware of types specific to our implementation. To do this, visit https://polkadot.js.org/apps/#/settings/developer and paste in the following blob:
-```json
-{
-  "Address": "AccountId",
-  "LookupSource": "AccountId"
-}
 ```
 
 See https://polkadot.js.org/api/start/FAQ.html#i-cannot-send-transactions-from-my-node-template-based-chain for more details.
