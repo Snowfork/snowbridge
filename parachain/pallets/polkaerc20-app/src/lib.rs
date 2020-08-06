@@ -1,29 +1,22 @@
-#![allow(unused_variables)]
-#![allow(dead_code)]
-#![allow(unused_imports)]
 #![cfg_attr(not(feature = "std"), no_std)]
 ///
 /// Implementation for PolkaERC20 token assets
 ///
-use frame_system::{self as system, ensure_signed};
+use sp_std::prelude::*;
+use sp_std::{fmt::Debug, convert::TryInto};
+use sp_core::H160;
+use sp_runtime::traits::{
+	CheckedAdd, MaybeSerializeDeserialize, Member,  AtLeast32BitUnsigned};
+use frame_system::{self as system};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, Parameter,
 	dispatch::{DispatchResult, DispatchError},
+	storage::StorageDoubleMap
 };
-use frame_support::storage::{StorageDoubleMap};
-use sp_runtime::traits::{
-	CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, Saturating, AtLeast32Bit,
-	Zero, Bounded, AtLeast32BitUnsigned,
-};
-use sp_std::prelude::*;
+
+use codec::{Decode};
+
 use common::{AppID, Application, Message};
-use codec::{Decode, EncodeLike};
-use sp_core::H160;
-use sp_std::{fmt::Debug};
-
-use sp_std::convert::{TryInto};
-use sp_std::if_std;
-
 use artemis_ethereum::{self as ethereum, SignedMessage};
 
 #[cfg(test)]
@@ -39,13 +32,13 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as PolkaERC20Map {		
+	trait Store for Module<T: Trait> as PolkaERC20Map {
 		// Free balances are represent as a doublemap: (TokenAddr, AccountId) -> Balance
 		//
 		// The choice of hashers was influenced by pallet-generic-asset, where free balances
 		// are also represented using a StorageDouble with twox_64_concat and blake2_128_concat
 		// hashers. So I'm assuming its a safe choice.
-		pub FreeBalance: double_map hasher(twox_64_concat) H160, hasher(blake2_128_concat) T::AccountId => T::Balance;		
+		pub FreeBalance: double_map hasher(twox_64_concat) H160, hasher(blake2_128_concat) T::AccountId => T::Balance;
 	}
 }
 
@@ -98,7 +91,7 @@ impl<T: Trait> Module<T> {
 
 	fn handle_event(event: ethereum::Event) -> DispatchResult {
 		match event {
-			ethereum::Event::SendERC20 { sender, recipient, token, amount, nonce} => {
+			ethereum::Event::SendERC20 { recipient, token, amount, ..} => {
 				let account = match Self::bytes_to_account_id(&recipient) {
 					Some(account) => account,
 					None => {
@@ -114,7 +107,7 @@ impl<T: Trait> Module<T> {
 				Self::do_mint(token, &account, balance)
 			}
 			_ => {
-				// Ignore all other ethereum events. In the next milestone the 
+				// Ignore all other ethereum events. In the next milestone the
 				// application will only receive messages it is registered to handle
 				Ok(())
 			}
@@ -125,12 +118,12 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Application for Module<T> {
 
-	fn handle(app_id: AppID, message: Message) -> DispatchResult {
+	fn handle(_app_id: AppID, message: Message) -> DispatchResult {
 		let sm = match SignedMessage::decode(&mut message.as_slice()) {
 			Ok(sm) => sm,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
 		};
-		
+
 		let event = match ethereum::Event::decode_from_rlp(sm.data) {
 			Ok(event) => event,
 			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
