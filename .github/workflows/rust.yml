@@ -1,4 +1,4 @@
-name: Parachain
+name: Check
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   check:
-    name: Check
+    name: check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
