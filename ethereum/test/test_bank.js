@@ -17,10 +17,6 @@ contract("Bank", function (accounts) {
   // Constants
   const NULL_ADDRESS = "0x0000000000000000000000000000000000000000";
   const POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
-  // TODO: implement on contract base58 conversion as recipient's encoded bytes vary in length
-  const POLKADOT_ADDRESS2 = "1FRMM8PEiWXYax7rpS6X4XZX1aAAxSWx1CrKTyrVYhV24fg"
-
-  const RECIPIENT_BYTE_LENGTH = 128;
   const BYTES32_LENGTH = 64;
 
   describe("Bank contract deployment", function () {
@@ -47,13 +43,11 @@ contract("Bank", function (accounts) {
       const beforeNonce = Number(await this.bank.nonce());
 
       // Prepare transaction parameters
-      const targetAppID = web3.utils.utf8ToHex("targetapp123");
-      const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
+      const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
       const weiAmount = web3.utils.toWei("0.25", "ether");
 
       // Deposit Ethereum to the contract and get the logs of the transaction
       const { logs } = await this.bank.sendETH(
-        targetAppID,
         recipient,
         {from: userOne, value: weiAmount}
       ).should.be.fulfilled;
@@ -62,8 +56,7 @@ contract("Bank", function (accounts) {
       const appEvent = logs.find(
           e => e.event === "AppEvent"
       );
-      appEvent.args._targetAppID.should.be.equal(targetAppID);
-      appEvent.args._name.should.be.equal("sendETH");
+      Number(appEvent.args._tag).should.be.bignumber.equal(0);
 
       // Clean data by removing '0x' prefix
       const data = appEvent.args._data.slice(2, appEvent.args._data.length);
@@ -98,16 +91,6 @@ contract("Bank", function (accounts) {
       end = end + BYTES32_LENGTH;
       data.slice(start, end).should.be.equal(expectedNonce);
 
-      // Move forward one byte slice
-      start = end;
-      end = end + BYTES32_LENGTH;
-
-      // Recipient's Polkadot address
-      const expectedRecipient =  Web3Utils.padRight(recipient.slice(2, recipient.length), RECIPIENT_BYTE_LENGTH);
-      start = end;
-      end = end + RECIPIENT_BYTE_LENGTH;
-      data.slice(start, end).should.be.equal(expectedRecipient);
-
       // Confirm contract's Ethereum balance has increased
       const contractBalanceWei = await web3.eth.getBalance(this.bank.address);
       const contractBalance = Web3Utils.fromWei(contractBalanceWei, "ether");
@@ -141,9 +124,12 @@ contract("Bank", function (accounts) {
       const beforeUserBalance = Number(await this.token.balanceOf(userOne));
 
       // Prepare transaction parameters
-      const targetAppID = web3.utils.utf8ToHex("tokendexapp987");
       const amount = 100;
+<<<<<<< HEAD
+      const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
+=======
       const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
+>>>>>>> vg-relay-substrate-3
 
       // Approve tokens to contract
       await this.token.approve(this.bank.address, amount, {
@@ -152,7 +138,6 @@ contract("Bank", function (accounts) {
 
       // Deposit ERC20 tokens to the contract and get the logs of the transaction
       const { logs } = await this.bank.sendERC20(
-        targetAppID,
         recipient,
         this.token.address,
         amount,
@@ -166,8 +151,7 @@ contract("Bank", function (accounts) {
       const appEvent = logs.find(
           e => e.event === "AppEvent"
       );
-      appEvent.args._targetAppID.should.be.equal(targetAppID);
-      appEvent.args._name.should.be.equal("sendERC20");
+      Number(appEvent.args._tag).should.be.bignumber.equal("1");
 
       // Clean data by removing '0x' prefix
       const data = appEvent.args._data.slice(2, appEvent.args._data.length);
@@ -201,16 +185,6 @@ contract("Bank", function (accounts) {
       start = end;
       end = end + BYTES32_LENGTH;
       data.slice(start, end).should.be.equal(expectedNonce);
-
-      // Move forward one byte slice
-      start = end;
-      end = end + BYTES32_LENGTH;
-
-      // Recipient's Polkadot address
-      const expectedRecipient = Web3Utils.padRight(recipient.slice(2, recipient.length), RECIPIENT_BYTE_LENGTH);
-      start = end;
-      end = end + RECIPIENT_BYTE_LENGTH;
-      data.slice(start, end).should.be.equal(expectedRecipient);
 
       //Get the user and Bank token balance after deposit
       const afterTestTokenBalance = Number(await this.token.balanceOf(this.bank.address));
