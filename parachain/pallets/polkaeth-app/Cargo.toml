@@ -7,6 +7,9 @@ edition = "2018"
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+[dependencies]
+hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
@@ -49,24 +52,48 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'v2.0.0-rc4'
 version = '2.0.0-rc4'
 
+[dev-dependencies.sp-keyring]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc4'
+version = '2.0.0-rc4'
+
 [dependencies.serde]
 package = 'serde'
+optional = true
 version = '1.0.101'
 features = ["derive"]
 
 [dependencies.common]
+default-features = false
 path = "../../common"
+
+[dependencies.artemis-ethereum]
+default-features = false
+path = "../../primitives/ethereum"
+
+
+[dependencies.balances]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'pallet-balances'
+tag = 'v2.0.0-rc4'
+version = '2.0.0-rc4'
 
 [features]
 default = ['std']
 std = [
+    'hex/std',
+    'serde',
     'codec/std',
     'frame-support/std',
     'frame-system/std',
+    'balances/std',
     'sp-core/std',
     'sp-std/std',
     'sp-io/std',
     'sp-runtime/std',
-    'common/std'
+    'common/std',
+    'artemis-ethereum/std'
 ]
 

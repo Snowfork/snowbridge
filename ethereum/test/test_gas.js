@@ -24,16 +24,14 @@ contract('Gas expenditures', function (accounts) {
 
         it('sendETH gas usage', async function () {
             // Prepare transaction parameters
-            const targetAppID = web3.utils.utf8ToHex("targetapp123");
-            const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
+            const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
             const weiAmount = web3.utils.toWei("0.25", "ether");
 
             // Deposit Ethereum to the contract
             const result = await this.bank.sendETH(
-                targetAppID,
                 recipient,
                 {from: userOne, value: weiAmount}
-            ).should.be.fulfilled;
+              ).should.be.fulfilled;
 
             console.log('\tsendETH gas: ' + result.receipt.gasUsed);
         });
@@ -42,7 +40,7 @@ contract('Gas expenditures', function (accounts) {
         before(async function () {
             this.symbol = "TEST";
             this.token = await TestToken.new(100000, "Test Token", this.symbol);
-    
+
             // Load user account with 'TEST' ERC20 tokens
             await this.token.transfer(userOne, 1000, {
             from: owner
@@ -51,8 +49,7 @@ contract('Gas expenditures', function (accounts) {
 
         it('sendERC20 gas usage', async function () {
             // Prepare transaction parameters
-            const targetAppID = web3.utils.utf8ToHex("targetapp123");
-            const recipient = web3.utils.utf8ToHex(POLKADOT_ADDRESS);
+            const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
             const amount = 100;
 
             // Approve tokens to contract
@@ -62,17 +59,16 @@ contract('Gas expenditures', function (accounts) {
 
             // Deposit ERC20 tokens to the contract
             const result = await this.bank.sendERC20(
-                targetAppID,
                 recipient,
                 this.token.address,
                 amount,
                 {
-                    from: userOne,
-                    value: 0
+                  from: userOne,
+                  value: 0
                 }
-            ).should.be.fulfilled;
-        
+              ).should.be.fulfilled;
+
             console.log('\tsendERC20 gas: ' + result.receipt.gasUsed);
-        }); 
+        });
     });
 });

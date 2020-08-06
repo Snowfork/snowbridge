@@ -6,7 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use sp_std::prelude::*;
+use frame_support::traits::StorageMapShim;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
@@ -19,6 +19,9 @@ use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use grandpa::fg_primitives;
+
+use sp_std::prelude::*;
+
 use sp_version::RuntimeVersion;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -37,9 +40,6 @@ pub use frame_support::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
 };
-
-/// Import bridge pallet
-pub use bridge;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -274,8 +274,8 @@ impl broker::Trait for Runtime {
 	type Event = Event;
 
 	type DummyVerifier = dummy_verifier::Module<Runtime>;
-	type DummyApp1 = dummy_app::Module<Runtime>;
-	type DummyApp2 = dummy_app::Module<Runtime>;
+	type PolkaETH = polkaeth_app::Module<Runtime>;
+	type PolkaERC20 = polkaerc20_app::Module<Runtime>;
 }
 
 impl dummy_verifier::Trait for Runtime {
@@ -285,21 +285,29 @@ impl dummy_verifier::Trait for Runtime {
 	type Scheduler = scheduler::Module<Runtime>;
 }
 
-impl dummy_app::Trait for Runtime {
-	type Event = Event;
-}
-
 impl balances::Trait<balances::Instance2> for Runtime {
-	type Balance = u128; // We'll need to consider using a BigNum (u256) for PolkaETH
+	type Balance = u128; // We'll need to use a BigNum (U256) for PolkaETH
 	type Event = Event;
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = System; // TODO: Need a separate account store
+	type AccountStore = StorageMapShim<
+		balances::Account<Runtime, balances::Instance2>,
+		system::CallOnCreatedAccount<Runtime>,
+		system::CallKillAccount<Runtime>,
+		AccountId,
+		balances::AccountData<Balance>,
+	>;
+
 }
 
 impl polkaeth_app::Trait for Runtime {
 	type Event = Event;
 	type Currency = balances::Module<Runtime, balances::Instance2>;
+}
+
+impl polkaerc20_app::Trait for Runtime {
+	type Event = Event;
+	type Balance = u128;
 }
 
 construct_runtime!(
@@ -314,15 +322,15 @@ construct_runtime!(
 		Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
 		Grandpa: grandpa::{Module, Call, Storage, Config, Event},
 		Balances: balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Balances2: balances::<Instance2>::{Module, Call, Storage, Config<T>, Event<T>},
+		BalancesPolkaETH: balances::<Instance2>::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: transaction_payment::{Module, Storage},
 		Sudo: sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		Scheduler: scheduler::{Module, Call, Storage, Event<T>},
 		Bridge: bridge::{Module, Call, Storage, Event<T>},
 		Broker: broker::{Module, Call, Storage, Event},
 		DummyVerifier: dummy_verifier::{Module, Call, Storage, Event},
-		DummyApp: dummy_app::{Module, Call, Storage, Event},
-		PolkaETH: polkaeth_app::{Module, Call, Storage, Event<T>},
+		AppPolkaETH: polkaeth_app::{Module, Call, Storage, Event<T>},
+		AppPolkaERC20: polkaerc20_app::{Module, Call, Storage, Event<T>},
 	}
 );
 

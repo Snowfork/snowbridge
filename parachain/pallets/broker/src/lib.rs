@@ -1,18 +1,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(unused_variables)]
 
-use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch::DispatchResult};
-use frame_system::{self as system, ensure_signed, ensure_root};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult};
+use frame_system::{self as system, ensure_root};
 
-use common::{AppID, Message, Verifier, Broker, Application};
+use sp_std::prelude::*;
+
+use common::{
+	registry::{AppName, REGISTRY},
+	AppID, Application, Broker, Message, Verifier,
+};
 
 pub trait Trait: system::Trait {
-
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
 	type DummyVerifier: Verifier;
-	type DummyApp1: Application;
-	type DummyApp2: Application;
-
+	type PolkaETH: Application;
+	type PolkaERC20: Application;
 }
 
 decl_storage! {
@@ -22,8 +26,7 @@ decl_storage! {
 }
 
 decl_event!(
-	pub enum Event {
-	}
+	pub enum Event {}
 );
 
 decl_error! {
@@ -44,7 +47,7 @@ decl_module! {
 		// Called by a verifier
 		#[weight = 0]
 		pub fn accept(origin, app_id: AppID, message: Message) -> DispatchResult {
-			// we'll check the origin here to ensure it originates from a verifier
+			// TODO: we'll check the origin here to ensure it originates from a verifier
 			ensure_root(origin)?;
 			Self::dispatch(app_id, message)?;
 			Ok(())
@@ -55,31 +58,27 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	// Dispatch verified message to a target application
+	// Dispatch verified message to a target application (Work-in-Progress)
+	//
+	// NOTE: Right now this broadcasts the message to all apps.
+	//       In milestone 4 we'll make use of the AppID to target
+	//       specific apps only.
 	fn dispatch(app_id: AppID, message: Message) -> DispatchResult {
-
-		// Note: We'll want to move over to using dispatch based on hardcoded constants,
-		//   This will ensure we have low and non-varying runtime overhead.
-		//
-		// See https://github.com/Snowfork/polkadot-ethereum/issues/10
-
-		match app_id {
-			_ if T::DummyApp1::is_handler_for(app_id) => {
-				T::DummyApp1::handle(app_id, message)?;
-			}
-			_ if T::DummyApp2::is_handler_for(app_id) => {
-				T::DummyApp2::handle(app_id, message)?;
-			}
-			_ => return Err(<Error<T>>::HandlerNotFound.into())
+		for entry in REGISTRY.iter() {
+			match entry.symbol {
+				AppName::PolkaETH => {
+					T::PolkaETH::handle(app_id.clone(), message.clone())?;
+				}
+				AppName::PolkaERC20 => {
+					T::PolkaERC20::handle(app_id.clone(), message.clone())?;
+				}
+			};
 		}
-
 		Ok(())
 	}
 }
 
-
 impl<T: Trait> Broker for Module<T> {
-
 	// Submit message to broker for processing
 	//
 	// The message will be routed to a verifier
@@ -87,5 +86,4 @@ impl<T: Trait> Broker for Module<T> {
 		T::DummyVerifier::verify(app_id, message)?;
 		Ok(())
 	}
-
 }

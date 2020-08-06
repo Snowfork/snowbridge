@@ -5,9 +5,9 @@ use frame_system::{self as system, ensure_signed};
 
 use sp_std::prelude::*;
 
-use sp_core::hashing::blake2_256;
+use sp_runtime::traits::Hash;
 
-use common::{AppID, Message, MessageHash, Broker, Bridge};
+use common::{AppID, Message, Broker, Bridge};
 
 pub trait Trait: system::Trait {
 
@@ -23,9 +23,12 @@ decl_storage! {
 }
 
 decl_event!(
-	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId {
-		MessageReceived(AccountId, AppID, MessageHash),
-		AppEvent(AppID, Vec<u8>, Vec<u8>),
+	pub enum Event<T>
+	where
+		AccountId = <T as system::Trait>::AccountId,
+		Hash = <T as frame_system::Trait>::Hash,
+	{
+		MessageReceived(AccountId, AppID, Hash),
 	}
 );
 
@@ -46,7 +49,8 @@ decl_module! {
 		pub fn send(origin, app_id: AppID, message: Message) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 			T::Broker::submit(app_id, message.clone())?;
-			Self::deposit_event(RawEvent::MessageReceived(who, app_id, blake2_256(message.as_ref())));
+			
+			Self::deposit_event(RawEvent::MessageReceived(who, app_id, T::Hashing::hash(message.as_ref())));
 			Ok(())
 		}
 
@@ -55,7 +59,7 @@ decl_module! {
 
 impl<T: Trait> Bridge for Module<T> {
 
-	fn deposit_event(app_id: AppID, name: Vec<u8>, data: Vec<u8>) {
-		Self::deposit_event(RawEvent::AppEvent(app_id, name, data));
+	fn dummy() {
+		()
 	}
 }

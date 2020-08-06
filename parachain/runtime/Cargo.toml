@@ -38,7 +38,12 @@ std = [
     'transaction-payment/std',
     'balances/std',
     'bridge/std',
+    'broker/std',
+    'dummy-verifier/std',
+    'polkaeth-app/std',
+    'polkaerc20-app/std',
 ]
+
 [dependencies.aura]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -223,15 +228,15 @@ package = 'pallet-dummy-verifier'
 path = '../pallets/dummy-verifier'
 version = '0.1.1'
 
-[dependencies.dummy-app]
-default-features = false
-package = 'pallet-dummy-app'
-path = '../pallets/dummy-app'
-version = '0.1.1'
-
 [dependencies.polkaeth-app]
 default-features = false
 package = 'polkaeth-app'
 path = '../pallets/polkaeth-app'
+version = '0.1.1'
+
+[dependencies.polkaerc20-app]
+default-features = false
+package = 'polkaerc20-app'
+path = '../pallets/polkaerc20-app'
 version = '0.1.1'
 

@@ -3,13 +3,13 @@ panic = 'unwind'
 
 [workspace]
 members = [
-    'ethereum/eth-signature',
-    'node',
+    'common',
+    'primitives/ethereum',
     'pallets/bridge',
     'pallets/broker',
     'pallets/dummy-verifier',
-    'pallets/dummy-app',
     'pallets/polkaeth-app',
+    'pallets/polkaerc20-app',
+    'node',
     'runtime',
-    'common'
 ]

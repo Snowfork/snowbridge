@@ -1,5 +1,5 @@
 
-# Polkadot Etherem Parachain
+# Polkadot Ethereum Parachain
 
 A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 
@@ -19,6 +19,14 @@ A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 ## Local Development
 
 Follow these steps to prepare your local environment for Substrate development :hammer_and_wrench:
+
+### Requirements
+
+The project is currently being developed and is working with the following version of Rust:
+```
+stable-x86_64-unknown-linux-gnu (default)
+rustc 1.45.0 (5c1f21c3b 2020-07-13)
+```
 
 ### Simple Method
 
@@ -50,13 +58,6 @@ Initialize your Wasm Build environment:
 
 Use this command to build the [Wasm](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution)
 and [native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
-
-Note: The WASM build is currently disabled to dependency issue
-
-```bash
-export SKIP_WASM_BUILD=1
-cargo build --release
-```
 
 ## Run
 
@@ -106,18 +107,6 @@ by appending your own. A few useful ones are as follow.
 
 # Check whether the code is compilable
 ./scripts/docker_run.sh cargo check
-```
-
-# Interacting with the chain
-
-With the chain running locally, you can interact with it using https://polkadot.js.org/apps/.
-
-Before submitting extrinsics, make sure the API client is aware of types specific to our implementation. To do this, visit https://polkadot.js.org/apps/#/settings/developer and paste in the following blob:
-```json
-{
-  "Address": "AccountId",
-  "LookupSource": "AccountId"
-}
 ```
 
 See https://polkadot.js.org/api/start/FAQ.html#i-cannot-send-transactions-from-my-node-template-based-chain for more details.

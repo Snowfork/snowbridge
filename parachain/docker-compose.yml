@@ -2,16 +2,16 @@ version: "3.2"
 
 services:
   dev:
-    container_name: node-template
+    container_name: artemis-node
     image: paritytech/ci-linux:production
-    working_dir: /var/www/node-template
+    working_dir: /var/www/artemis-node
     ports:
       - "9944:9944"
     environment:
-      - CARGO_HOME=/var/www/node-template/.cargo
+      - CARGO_HOME=/var/www/artemis-node/.cargo
     volumes:
-      - .:/var/www/node-template
+      - .:/var/www/artemis-node
       - type: bind
         source: ./.local
         target: /root/.local
-    command: bash -c "cargo build --release && ./target/release/node-template --dev --ws-external"
+    command: bash -c "cargo build --release && ./target/release/artemis-node --dev --ws-external"
