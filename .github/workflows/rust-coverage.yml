@@ -1,10 +1,10 @@
 name: Coverage
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   check:
-    name: Check
+    name: Coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -14,32 +14,39 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('parachain/Cargo.lock') }}
+          key: ${{ runner.os }}-coverage-cargo-registry-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-registry-
+            ${{ runner.os }}-coverage-cargo-registry-
 
       - name: Cache cargo index
         uses: actions/cache@v1
         with:
           path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('parachain/Cargo.lock') }}
+          key: ${{ runner.os }}-coverage-cargo-index-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-index-
+            ${{ runner.os }}-coverage-cargo-index-
 
       - name: Cache cargo build
         uses: actions/cache@v1
         with:
           path: parachain/target/debug
-          key: ${{ runner.os }}-debug-target-${{ hashFiles('parachain/Cargo.lock') }}
+          key: ${{ runner.os }}-coverage-debug-target-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-debug-target-
+            ${{ runner.os }}-coverage-debug-target-
 
       - name: Install nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
+          default: true
           target: wasm32-unknown-unknown
+
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-tarpaulin
+          version: latest
+          use-tool-cache: true
 
       - name: Generate code coverage
         run: >
