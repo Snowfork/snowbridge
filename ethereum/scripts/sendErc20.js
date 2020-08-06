@@ -56,7 +56,6 @@ module.exports = async () => {
 
   // 2. Send ERC20 tokens to Bank
   try {
-
     const tokenContractAddress = await tokenContract.deployed().then(function(instance) {
       return instance.address;
     });
