@@ -1,7 +1,12 @@
 on:
   push:
     paths:
-      'parachain/**'
+      - 'parachain/**'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'parachain/**'
 
 name: Parachain
 
