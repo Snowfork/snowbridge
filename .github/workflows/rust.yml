@@ -6,9 +6,6 @@ jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: parachain
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -24,3 +21,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
+        working-directory: parachain
