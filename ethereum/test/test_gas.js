@@ -42,7 +42,7 @@ contract('Gas expenditures', function (accounts) {
         before(async function () {
             this.symbol = "TEST";
             this.token = await TestToken.new(100000, "Test Token", this.symbol);
-    
+
             // Load user account with 'TEST' ERC20 tokens
             await this.token.transfer(userOne, 1000, {
             from: owner
@@ -71,8 +71,8 @@ contract('Gas expenditures', function (accounts) {
                     value: 0
                 }
             ).should.be.fulfilled;
-        
+
             console.log('\tsendERC20 gas: ' + result.receipt.gasUsed);
-        }); 
+        });
     });
 });
