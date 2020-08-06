@@ -49,12 +49,12 @@ jobs:
           use-tool-cache: true
 
       - name: Generate code coverage
-        run: >
+        run: >-
           cargo +nightly tarpaulin
-            --manifest-path parachain/Cargo.toml
-            --verbose --workspace --all-features
-            --exclude artemis-node,artemis-runtime
-            --exclude-files 'node/src/command.rs,*/mock.rs,*/test.rs'
+          --manifest-path parachain/Cargo.toml
+          --verbose --workspace --all-features
+          --exclude artemis-node,artemis-runtime
+          --exclude-files 'node/src/command.rs,*/mock.rs,*/test.rs'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v1
