@@ -61,5 +61,4 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: lcov.info
-          flag-name: Unit
           base-path: ${GITHUB_WORKSPACE}/parachain
