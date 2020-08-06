@@ -1,6 +1,6 @@
 # Polkadot Ethereum Parachain
-[![Coverage Status](https://coveralls.io/repos/github/Snowfork/polkadot-ethereum/badge.svg?branch=github-actions-rust)](https://coveralls.io/github/Snowfork/polkadot-ethereum?branch=github-actions-rust)
-![Build](https://github.com/Snowfork/polkadot-ethereum/workflows/Parachain/badge.svg)
+![Check](https://github.com/Snowfork/polkadot-ethereum/workflows/Check/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/Snowfork/polkadot-ethereum/badge.svg)](https://coveralls.io/github/Snowfork/polkadot-ethereum)
 
 A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 
