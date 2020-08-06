@@ -1,6 +1,11 @@
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      'parachain/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
 
-name: Quickstart
+name: Parachain
 
 jobs:
   check:
@@ -21,4 +26,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-        working-directory: parachain
+          args: --manifest-path parachain/Cargo.toml
