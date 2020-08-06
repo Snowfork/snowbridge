@@ -55,6 +55,7 @@ jobs:
           --verbose --workspace --all-features
           --exclude artemis-node,artemis-runtime
           --exclude-files 'node/src/command.rs,*/mock.rs,*/test.rs'
+          --out Lcov
 
       - name: Coveralls
         uses: coverallsapp/github-action@master
