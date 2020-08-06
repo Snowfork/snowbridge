@@ -51,6 +51,7 @@ jobs:
       - name: Generate code coverage
         run: >
           cargo +nightly tarpaulin
+            --manifest-path parachain/Cargo.toml
             --verbose --workspace --all-features
             --exclude artemis-node,artemis-runtime
             --exclude-files 'node/src/command.rs,*/mock.rs,*/test.rs'
