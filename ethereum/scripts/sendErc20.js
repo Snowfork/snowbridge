@@ -1,7 +1,7 @@
 module.exports = async () => {
   // Imports
   const Web3 = require("web3");
-  const truffleContract = require("truffle-contract");
+  const truffleContract = require("@truffle/contract");
   const tokenContract = truffleContract(
     require("../build/contracts/TestToken.json")
   );
@@ -9,13 +9,10 @@ module.exports = async () => {
     require("../build/contracts/Bank.json")
   );
 
-  // Default testing params
-  const TARGET_APP_ID = Web3.utils.utf8ToHex(
-    "target application's unique substrate identifier"
+  const RECIPIENT = Buffer.from(
+    "8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48", "hex"
   );
-  const RECIPIENT = Web3.utils.utf8ToHex(
-    "1FRMM8PEiWXYax7rpS6X4XZX1aAAxSWx1CrKTyrVYhV24fg"
-  );
+
   const TOKEN_AMOUNT = 100;
 
   // Set up provider and contracts
@@ -65,7 +62,7 @@ module.exports = async () => {
 
     const { logs } = await bankContract.deployed().then(function (instance) {
       console.log("\n2. Connected to Bank contract, sending TestTokens...");
-      return instance.sendERC20(TARGET_APP_ID, RECIPIENT, tokenContractAddress, TOKEN_AMOUNT, {
+      return instance.sendERC20(RECIPIENT, tokenContractAddress, TOKEN_AMOUNT, {
         from: accounts[0],
         value: 0,
         gas: 300000 // 300,000 Gwei
@@ -79,7 +76,6 @@ module.exports = async () => {
 
     // Parse event fields
     const appEvent = {
-      target_app_ID: event.args._targetAppID,
       name: event.args._name,
       data: event.args._data,
     };

@@ -11,15 +11,17 @@ contract Bank {
     uint256 public totalETH;
     mapping(address => uint256) public totalTokens;
 
-    event AppEvent(bytes _targetAppID, string _name, bytes _data);
+
+    enum AppEventTags { SendETH, SendERC20 }
+
+    event AppEvent(uint _tag, bytes _data);
 
     constructor() public {
         nonce = 0;
     }
 
     function sendETH(
-        bytes memory _targetAppID,
-        bytes memory _recipient
+        bytes32 _recipient
     )
         public payable
     {
@@ -31,12 +33,11 @@ contract Bank {
         nonce = nonce.add(1);
 
         bytes memory data = encodeSendData(msg.sender, _recipient, address(0), msg.value, nonce);
-        emit AppEvent(_targetAppID, "sendETH", data);
+        emit AppEvent(uint(AppEventTags.SendETH), data);
     }
 
     function sendERC20(
-        bytes memory _targetAppID,
-        bytes memory _recipient,
+        bytes32 _recipient,
         address _tokenAddr,
         uint256 _amount
     )
@@ -53,12 +54,12 @@ contract Bank {
         nonce = nonce.add(1);
 
         bytes memory data = encodeSendData(msg.sender, _recipient, _tokenAddr,_amount, nonce);
-        emit AppEvent(_targetAppID, "sendERC20", data);
+        emit AppEvent(uint(AppEventTags.SendERC20), data);
     }
 
     function encodeSendData(
         address _sender,
-        bytes memory _recipient,
+        bytes32 _recipient,
         address _tokenAddr,
         uint256 _amount,
         uint256 _nonce

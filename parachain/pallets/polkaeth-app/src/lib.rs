@@ -1,4 +1,3 @@
-#![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 ///
 /// Implementation for a PolkaETH token
@@ -6,11 +5,16 @@
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::DispatchResult,
+	dispatch::{DispatchResult, DispatchError},
 	traits::{Currency, ExistenceRequirement, WithdrawReason, WithdrawReasons},
 };
 use sp_std::prelude::*;
 use common::{AppID, Application, Message};
+use codec::Decode;
+
+use sp_std::convert::TryInto;
+
+use artemis_ethereum::{self as ethereum, SignedMessage};
 
 #[cfg(test)]
 mod mock;
@@ -79,21 +83,6 @@ decl_module! {
 		}
 
 		///
-		/// The parachain will mint PolkaETH for users who have locked up ETH in a bridge smart contract.
-		///
-		#[weight = 10_000]
-		fn mint(origin, to: T::AccountId,  amount: PolkaETH<T>) -> DispatchResult {
-			// TODO: verify origin
-			let who = ensure_signed(origin)?;
-
-			let _ = T::Currency::deposit_creating(&to, amount);
-
-			Self::deposit_event(RawEvent::Minted(to, amount));
-
-			Ok(())
-		}
-
-		///
 		/// To initiate a transfer of PolkaETH to ETH, account holders must burn PolkaETH.
 		///
 		#[weight = 10_000]
@@ -120,10 +109,63 @@ decl_module! {
 	}
 }
 
+impl<T: Trait> Module<T> {
+
+	fn bytes_to_account_id(data: &[u8]) -> Option<T::AccountId> {
+		T::AccountId::decode(&mut &data[..]).ok()
+	}
+
+	fn u128_to_balance(input: u128) -> Option<PolkaETH<T>>  {
+		input.try_into().ok()
+	}
+
+	/// The parachain will mint PolkaETH for users who have locked up ETH in a bridge smart contract.
+	fn do_mint(to: T::AccountId,  amount: PolkaETH<T>) {
+		let _ = T::Currency::deposit_creating(&to, amount);
+		Self::deposit_event(RawEvent::Minted(to, amount));
+	}
+
+	fn handle_event(event: ethereum::Event) -> DispatchResult {
+		match event {
+			ethereum::Event::SendETH { recipient, amount, ..} => {
+				let account = match Self::bytes_to_account_id(&recipient) {
+					Some(account) => account,
+					None => {
+						return Err(DispatchError::Other("Invalid sender account"))
+					}
+				};
+				let balance = match Self::u128_to_balance(amount.as_u128()) {
+					Some(balance) => balance,
+					None => {
+						return Err(DispatchError::Other("Invalid amount"))
+					}
+				};
+				Self::do_mint(account, balance);
+				Ok(())
+			}
+			_ => {
+				// Ignore all other ethereum events. In the next milestone the
+				// application will only receive messages it is registered to handle
+				Ok(())
+			}
+		}
+	}
+}
+
 impl<T: Trait> Application for Module<T> {
 
-	fn handle(app_id: AppID, message: Message) -> DispatchResult {
-		// We'll most likely want to call Mint() here.
-		Ok(())
+	fn handle(_app_id: AppID, message: Message) -> DispatchResult {
+		let sm = match SignedMessage::decode(&mut message.as_slice()) {
+			Ok(sm) => sm,
+			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
+		};
+
+		let event = match ethereum::Event::decode_from_rlp(sm.data) {
+			Ok(event) => event,
+			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
+		};
+
+		Self::handle_event(event)
 	}
+
 }

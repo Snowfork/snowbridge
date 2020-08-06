@@ -1,5 +1,5 @@
 [package]
-name = "polkaeth-app"
+name = "polkaerc20-app"
 version = "0.1.1"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
@@ -72,14 +72,6 @@ path = "../../common"
 default-features = false
 path = "../../primitives/ethereum"
 
-
-[dependencies.balances]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-package = 'pallet-balances'
-tag = 'v2.0.0-rc4'
-version = '2.0.0-rc4'
-
 [features]
 default = ['std']
 std = [
@@ -88,7 +80,6 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'balances/std',
     'sp-core/std',
     'sp-std/std',
     'sp-io/std',
@@ -96,4 +87,3 @@ std = [
     'common/std',
     'artemis-ethereum/std'
 ]
-
