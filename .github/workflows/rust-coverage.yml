@@ -1,0 +1,62 @@
+name: Coverage
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  check:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-coverage-cargo-registry-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-coverage-cargo-registry-
+
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-coverage-cargo-index-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-coverage-cargo-index-
+
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: parachain/target/debug
+          key: ${{ runner.os }}-coverage-debug-target-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-coverage-debug-target-
+
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          default: true
+          target: wasm32-unknown-unknown
+
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-tarpaulin
+          version: latest
+          use-tool-cache: true
+
+      - name: Generate code coverage
+        run: >-
+          cargo +nightly tarpaulin
+          --manifest-path parachain/Cargo.toml
+          --verbose --workspace --all-features
+          --exclude artemis-node,artemis-runtime
+          --exclude-files 'node/src/command.rs,*/mock.rs,*/test.rs'
+          --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
+

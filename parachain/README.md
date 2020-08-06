@@ -1,5 +1,6 @@
-
 # Polkadot Ethereum Parachain
+[![Coverage Status](https://coveralls.io/repos/github/Snowfork/polkadot-ethereum/badge.svg?branch=github-actions-rust)](https://coveralls.io/github/Snowfork/polkadot-ethereum?branch=github-actions-rust)
+![Build](https://github.com/Snowfork/polkadot-ethereum/workflows/Parachain/badge.svg)
 
 A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 
@@ -109,4 +110,3 @@ by appending your own. A few useful ones are as follow.
 ./scripts/docker_run.sh cargo check
 ```
 
-See https://polkadot.js.org/api/start/FAQ.html#i-cannot-send-transactions-from-my-node-template-based-chain for more details.
