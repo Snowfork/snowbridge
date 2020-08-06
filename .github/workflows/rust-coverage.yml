@@ -56,7 +56,10 @@ jobs:
           --exclude artemis-node,artemis-runtime
           --exclude-files 'node/src/command.rs,*/mock.rs,*/test.rs'
 
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
         with:
-          fail_ci_if_error: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: lcov.info
+          flag-name: Unit
+          base-path: ${GITHUB_WORKSPACE}/parachain
