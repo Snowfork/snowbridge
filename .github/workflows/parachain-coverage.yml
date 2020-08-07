@@ -6,6 +6,7 @@ on:
       - main
 
 jobs:
+
   check:
     name: coverage
     runs-on: ubuntu-latest
