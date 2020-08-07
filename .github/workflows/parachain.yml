@@ -38,8 +38,6 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
