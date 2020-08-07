@@ -3,67 +3,59 @@ name: Check
 on:
   push:
     paths:
-      - 'parachain/**'
+      - 'parachain/common/**'
+      - 'parachain/node/**'
+      - 'parachain/pallets/**'
+      - 'parachain/primitives/**'
+      - 'parachain/runtime/**'
     branches:
       - main
   pull_request:
     paths:
-      - 'parachain/**'
+      - 'parachain/common/**'
+      - 'parachain/node/**'
+      - 'parachain/pallets/**'
+      - 'parachain/primitives/**'
+      - 'parachain/runtime/**'
 
 jobs:
   check:
     name: check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Cache cargo registry
-        uses: actions/cache@v1
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('parachain/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-registry-
-
-      - name: Cache cargo index
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('parachain/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-index-
-
-      - name: Cache cargo build
-        uses: actions/cache@v1
+            ${{ runner.os }}-cargo-
+      - uses: actions/cache@v1
         with:
           path: parachain/target/debug
-          key: ${{ runner.os }}-debug-target-${{ hashFiles('parachain/Cargo.lock') }}
+          key: ${{ runner.os }}-debug-build-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-debug-target-
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+            ${{ runner.os }}-debug-build-
+      - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
-
-      - name: Install nightly toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
           components: clippy
           target: wasm32-unknown-unknown
-
-      - name: Run cargo check
-        uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1
         with:
           command: check
           args: --manifest-path parachain/Cargo.toml
-
-      - uses: actions-rs/clippy-check@v1
+      - uses: actions-rs/cargo@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          toolchain: nightly
-          args: --manifest-path parachain/Cargo.toml --all-features
+          command: test
+          args: --manifest-path parachain/Cargo.toml
+      - uses: actions/upload-artifact@v2
+        with:
+          path: world.txt
