@@ -1,4 +1,4 @@
-name: Check
+name: parachain
 
 on:
   push:
@@ -19,9 +19,17 @@ on:
       - 'parachain/runtime/**'
 
 jobs:
-  check:
-    name: check
+  cancel-previous:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: styfle/cancel-workflow-action@0.4.1
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+  build-test-check:
+    runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: 1
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v1
@@ -32,30 +40,27 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - uses: actions/cache@v1
-        with:
-          path: parachain/target/debug
-          key: ${{ runner.os }}-debug-build-${{ hashFiles('parachain/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-debug-build-
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
           components: clippy
           target: wasm32-unknown-unknown
-      - uses: actions-rs/cargo@v1
+      - name: build
+        uses: actions-rs/cargo@v1
         with:
           command: check
           args: --manifest-path parachain/Cargo.toml
-      - uses: actions-rs/cargo@v1
+      - name: test
+        uses: actions-rs/cargo@v1
         with:
           command: test
           args: --manifest-path parachain/Cargo.toml
-      - uses: actions/upload-artifact@v2
+      - name: check-clippy
+        uses: actions-rs/clippy-check@v1
         with:
-          path: world.txt
+          token: ${{ secrets.GITHUB_TOKEN }}
+          toolchain: nightly
+          args: --manifest-path parachain/Cargo.toml --all-features
+        env:
+          BUILD_DUMMY_WASM_BINARY: 1
