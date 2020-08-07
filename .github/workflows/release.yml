@@ -17,6 +17,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
+      - uses: actions/cache@v1
+        with:
+          path: parachain/target/release
+          key: ${{ runner.os }}-release-target-${{ hashFiles('parachain/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
