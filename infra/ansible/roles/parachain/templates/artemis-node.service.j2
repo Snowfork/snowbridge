@@ -1,0 +1,20 @@
+[Unit]
+Description=Alice substrate Service
+
+[Service]
+
+ExecStart={{ base_path }}/substrate/target/release/node-template \
+  --base-path /alice \
+  --chain local \
+  --alice \
+  --port {{ alice_port }} \
+  --ws-port {{ alice_ws_port }} \
+  --rpc-port {{ alice_rpc_port }} \
+
+Restart=always
+
+StandardOutput=append:/var/log/substrate/alice.output.log
+StandardError=append:/var/log/substrate/alice.error.log
+
+[Install]
+WantedBy=multi-user.target
