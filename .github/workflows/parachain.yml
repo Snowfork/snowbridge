@@ -69,7 +69,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0
           ref: ${{ github.head_ref }}
       - uses: actions/cache@v1
         with:
