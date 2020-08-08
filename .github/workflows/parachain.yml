@@ -3,22 +3,18 @@ name: parachain
 on:
   push:
     paths:
-      - 'parachain/Cargo.*'
-      - 'parachain/common/**'
-      - 'parachain/node/**'
-      - 'parachain/pallets/**'
-      - 'parachain/primitives/**'
-      - 'parachain/runtime/**'
+      - 'parachain/**'
+      - '!parachain/README.md'
+      - '!parachain/LICENSE'
+      - '!parachain/docker-compose.yml'
     branches:
       - main
   pull_request:
     paths:
-      - 'parachain/Cargo.*'
-      - 'parachain/common/**'
-      - 'parachain/node/**'
-      - 'parachain/pallets/**'
-      - 'parachain/primitives/**'
-      - 'parachain/runtime/**'
+      - 'parachain/**'
+      - '!parachain/README.md'
+      - '!parachain/LICENSE'
+      - '!parachain/docker-compose.yml'
 
 jobs:
   cancel-previous:
@@ -80,6 +76,8 @@ jobs:
       RUSTFLAGS: -C debuginfo=1
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - uses: actions/cache@v1
         with:
           path: |
