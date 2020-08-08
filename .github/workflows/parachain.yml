@@ -60,6 +60,7 @@ jobs:
       - run: sccache -s
 
   test:
+    needs: check
     runs-on: ubuntu-latest
     env:
       CARGO_INCREMENTAL: 0
@@ -67,6 +68,9 @@ jobs:
       RUST_BACKTRACE: 1
       RUSTFLAGS: -C debuginfo=1
     steps:
+      - if: github.ref == 'refs/heads/main'
+        uses: actions/checkout@v2
+      - if: github.ref != 'refs/heads/main'
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.head_ref }}
