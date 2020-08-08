@@ -67,10 +67,10 @@ impl<T: Trait> Module<T> {
 		for entry in REGISTRY.iter() {
 			match entry.symbol {
 				AppName::PolkaETH => {
-					T::PolkaETH::handle(app_id.clone(), message.clone())?;
+					T::PolkaETH::handle(app_id, message.clone())?;
 				}
 				AppName::PolkaERC20 => {
-					T::PolkaERC20::handle(app_id.clone(), message.clone())?;
+					T::PolkaERC20::handle(app_id, message.clone())?;
 				}
 			};
 		}

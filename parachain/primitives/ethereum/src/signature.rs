@@ -6,7 +6,7 @@ pub fn verify(message: &[u8], public_key: &[u8], signature: &[u8]) -> Result<boo
 	let m = Message::parse(&hash);
 	let p = PublicKey::parse_slice(public_key, None)?;
 	let s = Signature::parse_slice(&signature[0..64])?;
-	return Ok(secp256k1::verify(&m, &s, &p));
+	Ok(secp256k1::verify(&m, &s, &p))
 }
 
 #[cfg(test)]

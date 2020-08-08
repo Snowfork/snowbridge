@@ -175,7 +175,7 @@ pub fn new_full(config: Configuration) -> Result<impl AbstractService, ServiceEr
 			config: grandpa_config,
 			link: grandpa_link,
 			network: service.network(),
-			inherent_data_providers: inherent_data_providers.clone(),
+			inherent_data_providers,
 			telemetry_on_connect: Some(service.telemetry_on_connect_stream()),
 			voting_rule: sc_finality_grandpa::VotingRulesBuilder::default().build(),
 			prometheus_registry: service.prometheus_registry(),
@@ -213,7 +213,7 @@ pub fn new_light(config: Configuration) -> Result<impl AbstractService, ServiceE
 
 			let pool_api = sc_transaction_pool::LightChainApi::new(
 				builder.client().clone(),
-				fetcher.clone(),
+				fetcher,
 			);
 			let pool = sc_transaction_pool::BasicPool::with_revalidation_type(
 				builder.config().transaction_pool.clone(),

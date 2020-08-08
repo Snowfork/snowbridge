@@ -8,7 +8,7 @@ use crate::log::Log;
 // TODO: We should move these ABI specs to the
 //   application registry in the common::registry module.
 //   This would allow us to have distinct ABIs for each application.      
-static EVENT_ABI: &'static ABIEvent = &ABIEvent {
+static EVENT_ABI: &ABIEvent = &ABIEvent {
 	signature: "AppEvent(uint256,bytes)",
 	inputs: &[
 		Param { kind: ParamKind::Uint(256), indexed: false },
@@ -17,7 +17,7 @@ static EVENT_ABI: &'static ABIEvent = &ABIEvent {
 	anonymous: false
 };
 
-static PAYLOAD_ABI: &'static [ParamKind] = &[
+static PAYLOAD_ABI: &[ParamKind] = &[
 	// sender address
 	ParamKind::Address,
 	// recipient address (Substrate)
@@ -115,26 +115,23 @@ impl Event {
 		};
 
 		match tag {
-			TAG_SENDETH => {
+			TAG_SENDETH =>
 				Ok(Event::SendETH {
 					sender: payload.sender,
 					recipient: payload.recipient,
 					amount: payload.amount,
 					nonce: payload.nonce,
-				})
-			},
-			TAG_SENDERC20 => {
+				}),
+			TAG_SENDERC20 =>
 				Ok(Event::SendERC20 {
 					sender: payload.sender,
 					recipient: payload.recipient,
 					token: payload.token,
 					amount: payload.amount,
 					nonce: payload.nonce,
-				})
-			}
-			_ => { return Err(DecodeError::InvalidPayload) }
+				}),
+			_ => Err(DecodeError::InvalidPayload)
 		}
-
 	}
 
 	fn decode_payload(data: &[u8]) -> Result<Payload, DecodeError> {
@@ -154,7 +151,7 @@ impl Event {
 				}
 				let mut dst: [u8; 32] = [0; 32];
 				dst.copy_from_slice(&bytes);
-				dst.clone()
+				dst
 			}
 			_ => return Err(DecodeError::InvalidPayload)
 		};
