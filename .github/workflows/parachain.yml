@@ -3,6 +3,7 @@ name: parachain
 on:
   push:
     paths:
+      - 'parachain/Cargo.*'
       - 'parachain/common/**'
       - 'parachain/node/**'
       - 'parachain/pallets/**'
@@ -12,6 +13,7 @@ on:
       - main
   pull_request:
     paths:
+      - 'parachain/Cargo.*'
       - 'parachain/common/**'
       - 'parachain/node/**'
       - 'parachain/pallets/**'
@@ -26,10 +28,13 @@ jobs:
       - uses: styfle/cancel-workflow-action@0.4.1
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
-  build-test-check:
+  check:
     runs-on: ubuntu-latest
     env:
+      CARGO_INCREMENTAL: 0
+      RUSTC_WRAPPER: sccache
       RUST_BACKTRACE: 1
+      RUSTFLAGS: -C debuginfo=1
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v1
@@ -38,19 +43,75 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - uses: actions/cache@v1
+        with:
+          path: |
+            ~/.cache/sccache
+          key: ${{ runner.os }}-scacche-check-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-scacche-check-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
-          components: clippy
           target: wasm32-unknown-unknown
-      - name: build
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: sccache
+          version: latest
+          use-tool-cache: true
+      - run: sccache -s
+      - name: cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
           args: --manifest-path parachain/Cargo.toml
-      - name: test
+      - run: sccache -s
+
+  test:
+    needs: check
+    runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTC_WRAPPER: sccache
+      RUST_BACKTRACE: 1
+      RUSTFLAGS: -C debuginfo=1
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
+      - uses: actions/cache@v1
+        with:
+          path: |
+            ~/.cache/sccache
+          key: ${{ runner.os }}-scacche-test-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-scacche-test-
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: sccache
+          version: latest
+          use-tool-cache: true
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-tarpaulin
+          version: latest
+          use-tool-cache: true
+      - run: sccache -s
+      - name: cargo test
         uses: actions-rs/cargo@v1
         with:
-          command: test
-          args: --manifest-path parachain/Cargo.toml
+          command: tarpaulin
+          args: >-
+            --manifest-path parachain/Cargo.toml
+            --verbose --workspace
+            --exclude artemis-node,artemis-runtime
+            --exclude-files 'node/src/command.rs,*/mock.rs,*/test.rs'
+            --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
+      - run: sccache -s

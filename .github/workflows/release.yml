@@ -9,6 +9,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTC_WRAPPER: sccache
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v1
@@ -19,6 +22,13 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
       - uses: actions/cache@v1
         with:
+          path: |
+            ~/.cache/sccache
+          key: ${{ runner.os }}-scacche-build-release-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-scacche-build-release
+      - uses: actions/cache@v1
+        with:
           path: parachain/target/release
           key: ${{ runner.os }}-release-target-${{ hashFiles('parachain/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
@@ -26,6 +36,12 @@ jobs:
           profile: minimal
           toolchain: nightly
           target: wasm32-unknown-unknown
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: sccache
+          version: latest
+          use-tool-cache: true
+      - run: sccache -s
       - name: build
         uses: actions-rs/cargo@v1
         with:
@@ -35,3 +51,4 @@ jobs:
         with:
           name: artemis-node
           path: parachain/target/release/artemis-node
+      - run: sccache -s
