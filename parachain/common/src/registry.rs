@@ -11,7 +11,7 @@ pub struct Entry {
 	pub id: AppID,
 }
 
-pub static REGISTRY: &'static [Entry] = &[
+pub static REGISTRY: &[Entry] = &[
 	Entry {
 		symbol: AppName::PolkaETH,
 		// AppID is currently unused, so set it to zeroes.

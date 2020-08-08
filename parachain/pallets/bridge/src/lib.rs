@@ -59,7 +59,5 @@ decl_module! {
 
 impl<T: Trait> Bridge for Module<T> {
 
-	fn dummy() {
-		()
-	}
+	fn dummy() {}
 }

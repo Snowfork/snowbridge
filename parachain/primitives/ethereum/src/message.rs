@@ -5,7 +5,7 @@ use hex::FromHex;
 use crate::signature;
 
 // NOTE: For this current milestone, we're using a hardcoded public key
-pub const PUBLIC_KEY: &'static str = concat!(
+pub const PUBLIC_KEY: &str = concat!(
 	"43ee8c1f93b3df3f6af36ca73270797d6feca8a16e290cffedc8f53d66d6150027772f574a5804d2",
 	"b4b66245610f506bf4652e7f89c817b5083aad44b1f79676"
 );
