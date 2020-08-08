@@ -75,7 +75,6 @@ jobs:
       RUST_BACKTRACE: 1
       RUSTFLAGS: -C debuginfo=1
     steps:
-      - run: echo ::debug:: FOO BAR
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.head_ref }}
