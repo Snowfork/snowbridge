@@ -17,13 +17,6 @@ on:
       - '!parachain/docker-compose.yml'
 
 jobs:
-  cancel-previous:
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - uses: styfle/cancel-workflow-action@0.4.1
-        with:
-          access_token: ${{ secrets.GITHUB_TOKEN }}
   check:
     runs-on: ubuntu-latest
     env:
@@ -77,6 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
+          fetch-depth: 0
           ref: ${{ github.head_ref }}
       - uses: actions/cache@v1
         with:
