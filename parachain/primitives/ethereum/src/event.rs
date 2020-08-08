@@ -97,7 +97,6 @@ impl Event {
 		Ok(Event::decode(log)?)
 	}
 
-
 	pub fn decode(log: Log) -> Result<Self, DecodeError> {
 		let tokens = EVENT_ABI.decode(log.topics, log.data)?;
 

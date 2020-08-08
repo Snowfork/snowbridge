@@ -54,11 +54,3 @@ jobs:
         with:
           command: test
           args: --manifest-path parachain/Cargo.toml
-      - name: check-clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          toolchain: nightly
-          args: --manifest-path parachain/Cargo.toml --all-features
-        env:
-          BUILD_DUMMY_WASM_BINARY: 1
