@@ -39,8 +39,6 @@ jobs:
           path: |
             ~/.cache/sccache
           key: ${{ runner.os }}-scacche-check-${{ hashFiles('parachain/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-scacche-check-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -84,8 +82,6 @@ jobs:
           path: |
             ~/.cache/sccache
           key: ${{ runner.os }}-scacche-test-${{ hashFiles('parachain/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-scacche-test-
       - uses: actions-rs/install@v0.1
         with:
           crate: sccache
