@@ -68,9 +68,6 @@ jobs:
       RUST_BACKTRACE: 1
       RUSTFLAGS: -C debuginfo=1
     steps:
-      - if: github.ref == 'refs/heads/main'
-        uses: actions/checkout@v2
-      - if: github.ref != 'refs/heads/main'
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.head_ref }}
@@ -80,6 +77,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
       - uses: actions/cache@v1
         with:
           path: |

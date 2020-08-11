@@ -12,6 +12,7 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUSTC_WRAPPER: sccache
+      RUST_BACKTRACE: 1
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v1
@@ -20,17 +21,15 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
       - uses: actions/cache@v1
         with:
           path: |
             ~/.cache/sccache
-          key: ${{ runner.os }}-scacche-build-release-${{ hashFiles('parachain/Cargo.lock') }}
+          key: ${{ runner.os }}-sccache-build-release-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-scacche-build-release
-      - uses: actions/cache@v1
-        with:
-          path: parachain/target/release
-          key: ${{ runner.os }}-release-target-${{ hashFiles('parachain/Cargo.lock') }}
+            ${{ runner.os }}-sccache-build-release-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
