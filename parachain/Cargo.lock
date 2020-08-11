@@ -115,6 +115,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
+name = "artemis-core"
+version = "0.1.1"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "rustc-hex",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-ethereum"
 version = "0.1.0"
 dependencies = [
@@ -607,16 +617,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddfc5b9aa5d4507acaf872de71051dfd0e309860e88966e1051e462a077aac4f"
 dependencies = [
  "bitflags",
-]
-
-[[package]]
-name = "common"
-version = "0.1.1"
-dependencies = [
- "frame-support",
- "parity-scale-codec",
- "rustc-hex",
- "sp-std",
 ]
 
 [[package]]
@@ -3091,7 +3091,7 @@ dependencies = [
 name = "pallet-bridge"
 version = "0.1.1"
 dependencies = [
- "common",
+ "artemis-core",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -3105,7 +3105,7 @@ dependencies = [
 name = "pallet-broker"
 version = "0.1.1"
 dependencies = [
- "common",
+ "artemis-core",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -3119,7 +3119,7 @@ dependencies = [
 name = "pallet-dummy-verifier"
 version = "0.1.1"
 dependencies = [
- "common",
+ "artemis-core",
  "frame-support",
  "frame-system",
  "pallet-broker",
@@ -3582,8 +3582,8 @@ checksum = "feb3b2b1033b8a60b4da6ee470325f887758c95d5320f52f9ce0df055a55940e"
 name = "polkaerc20-app"
 version = "0.1.1"
 dependencies = [
+ "artemis-core",
  "artemis-ethereum",
- "common",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -3600,8 +3600,8 @@ dependencies = [
 name = "polkaeth-app"
 version = "0.1.1"
 dependencies = [
+ "artemis-core",
  "artemis-ethereum",
- "common",
  "frame-support",
  "frame-system",
  "pallet-balances",

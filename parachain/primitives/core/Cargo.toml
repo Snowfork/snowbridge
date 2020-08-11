@@ -1,5 +1,5 @@
 [package]
-name = 'common'
+name = 'artemis-core'
 version = '0.1.1'
 authors = ['Snowfork <contact@snowfork.com>']
 edition = '2018'

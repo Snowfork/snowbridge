@@ -7,7 +7,7 @@ use sp_std::prelude::*;
 
 use sp_runtime::traits::Hash;
 
-use common::{AppID, Message, Broker, Bridge};
+use artemis_core::{AppID, Message, Broker, Bridge};
 
 pub trait Trait: system::Trait {
 
