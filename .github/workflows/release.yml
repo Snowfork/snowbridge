@@ -1,0 +1,53 @@
+name: release
+
+on:
+  push:
+    tags:
+      - v0.*
+      - v1.*
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTC_WRAPPER: sccache
+      RUST_BACKTRACE: 1
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - uses: actions/cache@v1
+        with:
+          path: |
+            ~/.cache/sccache
+          key: ${{ runner.os }}-sccache-build-release-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-build-release-
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: sccache
+          version: latest
+          use-tool-cache: true
+      - run: sccache -s
+      - name: build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --manifest-path parachain/Cargo.toml --release
+      - uses: actions/upload-artifact@v1
+        with:
+          name: artemis-node
+          path: parachain/target/release/artemis-node
+      - run: sccache -s
