@@ -9,7 +9,7 @@ use frame_support::{
 	traits::{Currency, ExistenceRequirement, WithdrawReason, WithdrawReasons},
 };
 use sp_std::prelude::*;
-use common::{AppID, Application, Message};
+use artemis_core::{AppID, Application, Message};
 use codec::Decode;
 
 use sp_std::convert::TryInto;

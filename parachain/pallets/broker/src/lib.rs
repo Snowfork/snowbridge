@@ -6,7 +6,7 @@ use frame_system::{self as system, ensure_root};
 
 use sp_std::prelude::*;
 
-use common::{
+use artemis_core::{
 	registry::{AppName, REGISTRY},
 	AppID, Application, Broker, Message, Verifier,
 };

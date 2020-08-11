@@ -16,7 +16,7 @@ use frame_support::{
 
 use codec::{Decode};
 
-use common::{AppID, Application, Message};
+use artemis_core::{AppID, Application, Message};
 use artemis_ethereum::{self as ethereum, SignedMessage};
 
 #[cfg(test)]

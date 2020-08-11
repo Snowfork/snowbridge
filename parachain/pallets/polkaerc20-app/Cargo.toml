@@ -64,9 +64,9 @@ optional = true
 version = '1.0.101'
 features = ["derive"]
 
-[dependencies.common]
+[dependencies.artemis-core]
 default-features = false
-path = "../../common"
+path = "../../primitives/core"
 
 [dependencies.artemis-ethereum]
 default-features = false
@@ -84,6 +84,6 @@ std = [
     'sp-std/std',
     'sp-io/std',
     'sp-runtime/std',
-    'common/std',
+    'artemis-core/std',
     'artemis-ethereum/std'
 ]
