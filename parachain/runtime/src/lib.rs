@@ -7,7 +7,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use frame_support::traits::StorageMapShim;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
@@ -275,8 +274,8 @@ impl broker::Trait for Runtime {
 	type Event = Event;
 
 	type DummyVerifier = dummy_verifier::Module<Runtime>;
-	type PolkaETH = polkaeth_app::Module<Runtime>;
-	type PolkaERC20 = polkaerc20_app::Module<Runtime>;
+	type AppETH = eth_app::Module<Runtime>;
+	type AppERC20 = erc20_app::Module<Runtime>;
 }
 
 impl dummy_verifier::Trait for Runtime {
@@ -292,10 +291,12 @@ impl generic_asset::Trait for Runtime {
 
 impl eth_app::Trait for Runtime {
 	type Event = Event;
+	type Bridge = bridge::Module<Runtime>;
 }
 
 impl erc20_app::Trait for Runtime {
 	type Event = Event;
+	type Bridge = bridge::Module<Runtime>;
 }
 
 construct_runtime!(
@@ -316,9 +317,9 @@ construct_runtime!(
 		Bridge: bridge::{Module, Call, Storage, Event<T>},
 		Broker: broker::{Module, Call, Storage, Event},
 		DummyVerifier: dummy_verifier::{Module, Call, Storage, Event},
-		GenericAsset: generic_asset::{Module, Call, Storage, Event<T>}
-		ETH: polkaeth_app::{Module, Call, Storage, Event},
-		ERC20: polkaerc20_app::{Module, Call, Storage, Event},
+		GenericAsset: generic_asset::{Module, Call, Storage, Event<T>},
+		ETH: eth_app::{Module, Call, Storage, Event},
+		ERC20: erc20_app::{Module, Call, Storage, Event},
 	}
 );
 
