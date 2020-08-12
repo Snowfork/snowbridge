@@ -1,9 +1,19 @@
-use crate::{mock::*};
+use crate::mock::{new_tester, AccountId, Origin, MockEvent, System, GenericAsset, ETH};
+use crate::{APP_ID, RelayEvent};
 use frame_support::{assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use hex::FromHex;
+use sp_core::H160;
+
+use codec::Encode;
 
 use artemis_ethereum::Event;
+
+use pallet_bridge as bridge;
+
+fn last_event() -> MockEvent {
+	System::events().pop().expect("Event expected").event
+}
 
 fn to_account_id(hexaddr: &str) -> [u8; 32] {
 	let mut buf: [u8; 32] = [0; 32];
@@ -13,45 +23,36 @@ fn to_account_id(hexaddr: &str) -> [u8; 32] {
 }
 
 #[test]
-fn it_mints() {
-	new_tester().execute_with(|| {
-		PolkaETHModule::do_mint(Keyring::Bob.into(), 42);
-
-		let bob: AccountId = Keyring::Bob.into();
-
-		assert_eq!(BalancesPolkaETH::free_balance(bob), 1042);
-	});
-}
-
-#[test]
-fn it_burns() {
-	new_tester().execute_with(|| {
-		let origin = Origin::signed(Keyring::Alice.into());
-		assert_ok!(PolkaETHModule::burn(origin, 500, true));
-
-		let alice: AccountId = Keyring::Alice.into();
-
-		assert_eq!(BalancesPolkaETH::free_balance(alice), 500);
-	});
-}
-
-
-#[test]
-fn it_handles_ethereum_event() {
+fn mints_after_handling_ethereum_event() {
 	new_tester().execute_with(|| {
 		let bob: AccountId = Keyring::Bob.into();
-
-		assert_eq!(BalancesPolkaETH::free_balance(bob.clone()), 1000);
 
 		let event = Event::SendETH {
 			sender: "cffeaaf7681c89285d65cfbe808b80e502696573".parse().unwrap(),
 			recipient: to_account_id("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"),
-			amount: 1000.into(),
+			amount: 10.into(),
 			nonce: 1
 		};
 
+		assert_ok!(ETH::handle_event(event));
+		assert_eq!(GenericAsset::free_balance(H160::zero(), &bob), 10.into());
+	});
+}
 
-		assert_ok!(PolkaETHModule::handle_event(event));
-		assert_eq!(BalancesPolkaETH::free_balance(bob.clone()), 2000);
+#[test]
+fn burn_should_emit_bridge_event() {
+	new_tester().execute_with(|| {
+		let token_addr = H160::zero();
+		let bob: AccountId = Keyring::Bob.into();
+		GenericAsset::do_mint(token_addr, &bob, 500.into()).unwrap();
+
+		assert_ok!(ETH::burn(
+			Origin::signed(bob.clone()),
+			20.into()));
+
+		let relay_event: RelayEvent<AccountId> = RelayEvent::Burned(bob.clone(), 20.into());
+
+		assert_eq!(MockEvent::bridge(bridge::RawEvent::Relayed(*APP_ID, relay_event.encode())), last_event());
+
 	});
 }

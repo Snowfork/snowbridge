@@ -72,6 +72,13 @@ path = "../../primitives/core"
 default-features = false
 path = "../../primitives/ethereum"
 
+[dependencies.artemis-generic-asset]
+default-features = false
+path = "../../pallets/generic-asset"
+
+[dependencies.pallet-bridge]
+default-features = false
+path = "../../pallets/bridge"
 
 [dependencies.balances]
 default-features = false

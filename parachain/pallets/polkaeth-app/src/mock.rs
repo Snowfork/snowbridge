@@ -2,15 +2,16 @@
 
 use crate::{Module, Trait};
 use sp_core::H256;
-use frame_support::traits::StorageMapShim;
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
+use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight, dispatch::DispatchResult};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
 use frame_system as system;
-use balances;
 
-use sp_keyring::AccountKeyring as Keyring;
+use artemis_generic_asset as generic_asset;
+use pallet_bridge as bridge;
+
+use artemis_core::{Broker, AppID, Message};
 
 impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
@@ -21,17 +22,17 @@ mod test_events {
 }
 
 impl_outer_event! {
-    pub enum TestEvent for MockRuntime {
-        system<T>,
-        test_events<T>,
-        balances<T>,
+    pub enum MockEvent for MockRuntime {
+		system<T>,
+		bridge<T>,
+		generic_asset<T>,
+        test_events,
     }
 }
 
 pub type Signature = MultiSignature;
 
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-pub type Balance = u128;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct MockRuntime;
@@ -54,7 +55,7 @@ impl system::Trait for MockRuntime {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = ();
+	type Event = MockEvent;
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
@@ -70,44 +71,36 @@ impl system::Trait for MockRuntime {
 	type OnKilledAccount = ();
 }
 
-parameter_types! {
-	pub const ExistentialDeposit: u128 = 500;
+impl generic_asset::Trait for MockRuntime {
+	type Event = MockEvent;
 }
 
-impl balances::Trait for MockRuntime {
-	type Balance = Balance;
-	type Event = ();
-	type DustRemoval = ();
-	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = StorageMapShim<
-		balances::Account<MockRuntime>,
-		system::CallOnCreatedAccount<MockRuntime>,
-		system::CallKillAccount<MockRuntime>,
-		AccountId,
-		balances::AccountData<Balance>,
-	>;
+
+pub struct MockBroker;
+impl Broker for MockBroker {
+	fn submit(_app_id: AppID, _message: Message) -> DispatchResult {
+		Ok(())
+	}
+}
+
+impl bridge::Trait for MockRuntime {
+	type Event = MockEvent;
+	type Broker = MockBroker;
 }
 
 impl Trait for MockRuntime {
-	type Event = ();
-	type Currency = balances::Module<MockRuntime>;
+	type Event = MockEvent;
+	type Bridge = bridge::Module<MockRuntime>;
 }
 
-pub type PolkaETHModule = Module<MockRuntime>;
-pub type BalancesPolkaETH = balances::Module<MockRuntime>;
+pub type System = system::Module<MockRuntime>;
+pub type GenericAsset = generic_asset::Module<MockRuntime>;
+pub type ETH = Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let mut storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
-
-	balances::GenesisConfig::<MockRuntime> {
-		balances: vec![
-			(Keyring::Alice.into(), 1000),
-			(Keyring::Bob.into(), 1000),
-			(Keyring::Charlie.into(), 1000),
-		],
-	}
-	.assimilate_storage(&mut storage)
-	.unwrap();
-
-	storage.into()
+	let storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+	let mut ext: sp_io::TestExternalities = storage.into();
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }
+

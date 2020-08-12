@@ -1,12 +1,19 @@
-use crate::{mock::*};
+use crate::mock::{new_tester, MockEvent, System, AccountId, Origin, GenericAsset, ERC20};
+use crate::{APP_ID, RelayEvent};
 use frame_support::{assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
-use frame_support::storage::StorageDoubleMap;
 use hex::FromHex;
 
+use codec::Encode;
+
 use artemis_ethereum::Event;
-use crate::FreeBalance;
+
+use pallet_bridge as bridge;
+
+fn last_event() -> MockEvent {
+	System::events().pop().expect("Event expected").event
+}
 
 fn to_account_id(hexaddr: &str) -> [u8; 32] {
 	let mut buf: [u8; 32] = [0; 32];
@@ -16,22 +23,9 @@ fn to_account_id(hexaddr: &str) -> [u8; 32] {
 }
 
 #[test]
-fn it_mints() {
+fn mints_after_handling_ethereum_event() {
 	new_tester().execute_with(|| {
-		let token_addr = H160::zero();
-		let alice: AccountId = Keyring::Alice.into();
-		assert_ok!(PolkaERC20::do_mint(token_addr, &alice, 500));
-		assert_eq!(FreeBalance::<MockRuntime>::get(&token_addr, &alice), 500);
-
-		assert_ok!(PolkaERC20::do_mint(token_addr, &alice, 20));
-		assert_eq!(FreeBalance::<MockRuntime>::get(&token_addr, &alice), 520);
-	});
-}
-
-#[test]
-fn it_handles_ethereum_event() {
-	new_tester().execute_with(|| {
-		let token_addr = H160::zero();
+		let token_addr = H160::repeat_byte(1);
 
 		let event = Event::SendERC20 {
 			sender: "cffeaaf7681c89285d65cfbe808b80e502696573".parse().unwrap(),
@@ -43,7 +37,26 @@ fn it_handles_ethereum_event() {
 
 		let bob: AccountId = Keyring::Bob.into();
 
-		assert_ok!(PolkaERC20::handle_event(event));
-		assert_eq!(FreeBalance::<MockRuntime>::get(&token_addr, &bob), 10);
+		assert_ok!(ERC20::handle_event(event));
+		assert_eq!(GenericAsset::free_balance(token_addr, &bob), 10.into());
+	});
+}
+
+#[test]
+fn burn_should_emit_bridge_event() {
+	new_tester().execute_with(|| {
+		let token_addr = H160::repeat_byte(1);
+		let bob: AccountId = Keyring::Bob.into();
+		GenericAsset::do_mint(token_addr, &bob, 500.into()).unwrap();
+
+		assert_ok!(ERC20::burn(
+			Origin::signed(bob.clone()),
+			token_addr,
+			20.into()));
+
+		let app_event: RelayEvent<AccountId> = RelayEvent::Burned(token_addr, bob.clone(), 20.into());
+
+		assert_eq!(MockEvent::bridge(bridge::RawEvent::Relayed(*APP_ID, app_event.encode())), last_event());
+
 	});
 }

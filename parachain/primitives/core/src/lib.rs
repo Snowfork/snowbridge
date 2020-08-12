@@ -4,6 +4,7 @@
 
 //use sp_std::prelude::*;
 use frame_support::dispatch::DispatchResult;
+use codec::Encode;
 
 pub mod types;
 pub mod registry;
@@ -12,10 +13,9 @@ pub use types::{AppID, Message};
 
 
 /// The bridge module implements this trait
-pub trait Bridge {
+pub trait RelayEventEmitter<K> where K: Encode {
 
-	// just a dummy stand-in until we flesh out this trait some more
-	fn dummy();
+	fn emit(app_id: &AppID, data: K);
 
 }
 

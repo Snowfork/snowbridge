@@ -40,8 +40,9 @@ std = [
     'bridge/std',
     'broker/std',
     'dummy-verifier/std',
-    'polkaeth-app/std',
-    'polkaerc20-app/std',
+    'generic-asset/std',
+    'eth-app/std',
+    'erc20-app/std',
 ]
 
 [dependencies.aura]
@@ -228,13 +229,19 @@ package = 'pallet-dummy-verifier'
 path = '../pallets/dummy-verifier'
 version = '0.1.1'
 
-[dependencies.polkaeth-app]
+[dependencies.generic-asset]
+default-features = false
+package = 'artemis-generic-asset'
+path = '../pallets/generic-asset'
+version = '0.1.1'
+
+[dependencies.eth-app]
 default-features = false
 package = 'polkaeth-app'
 path = '../pallets/polkaeth-app'
 version = '0.1.1'
 
-[dependencies.polkaerc20-app]
+[dependencies.erc20-app]
 default-features = false
 package = 'polkaerc20-app'
 path = '../pallets/polkaerc20-app'

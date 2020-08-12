@@ -121,6 +121,7 @@ dependencies = [
  "frame-support",
  "parity-scale-codec",
  "rustc-hex",
+ "sp-core",
  "sp-std",
 ]
 
@@ -137,6 +138,24 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "artemis-generic-asset"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "artemis-ethereum",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "rustc-hex",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]
@@ -174,6 +193,7 @@ dependencies = [
 name = "artemis-runtime"
 version = "0.1.1"
 dependencies = [
+ "artemis-generic-asset",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -3584,8 +3604,10 @@ version = "0.1.1"
 dependencies = [
  "artemis-core",
  "artemis-ethereum",
+ "artemis-generic-asset",
  "frame-support",
  "frame-system",
+ "pallet-bridge",
  "parity-scale-codec",
  "rustc-hex",
  "serde",
@@ -3602,9 +3624,11 @@ version = "0.1.1"
 dependencies = [
  "artemis-core",
  "artemis-ethereum",
+ "artemis-generic-asset",
  "frame-support",
  "frame-system",
  "pallet-balances",
+ "pallet-bridge",
  "parity-scale-codec",
  "rustc-hex",
  "serde",

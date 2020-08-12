@@ -1,49 +1,66 @@
-use crate::{mock::*};
+
+
+use crate::mock::{new_tester, AccountId, GenericAsset, System, MockRuntime, TestEvent};
+
 use frame_support::{assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
 use frame_support::storage::StorageDoubleMap;
-use hex::FromHex;
 
-use artemis_ethereum::Event;
-use crate::FreeBalance;
+use crate::{Account, TotalIssuance};
 
-fn to_account_id(hexaddr: &str) -> [u8; 32] {
-	let mut buf: [u8; 32] = [0; 32];
-	let bytes: Vec<u8> = hexaddr.from_hex().unwrap();
-	buf.clone_from_slice(&bytes);
-	buf
+use super::*;
+
+fn last_event() -> TestEvent {
+	System::events().pop().expect("Event expected").event
 }
 
 #[test]
-fn it_mints() {
+fn mint_should_increase_balance_and_total_issuance() {
 	new_tester().execute_with(|| {
 		let token_addr = H160::zero();
 		let alice: AccountId = Keyring::Alice.into();
-		assert_ok!(PolkaERC20::do_mint(token_addr, &alice, 500));
-		assert_eq!(FreeBalance::<MockRuntime>::get(&token_addr, &alice), 500);
+		assert_ok!(GenericAsset::do_mint(token_addr, &alice, 500.into()));
+		assert_eq!(Account::<MockRuntime>::get(&token_addr, &alice).free, 500.into());
+		assert_eq!(TotalIssuance::get(&token_addr), 500.into());
 
-		assert_ok!(PolkaERC20::do_mint(token_addr, &alice, 20));
-		assert_eq!(FreeBalance::<MockRuntime>::get(&token_addr, &alice), 520);
+		assert_ok!(GenericAsset::do_mint(token_addr, &alice, 20.into()));
+		assert_eq!(Account::<MockRuntime>::get(&token_addr, &alice).free, 520.into());
+		assert_eq!(TotalIssuance::get(&token_addr), 520.into());
 	});
 }
 
 #[test]
-fn it_handles_ethereum_event() {
+fn mint_should_raise_event() {
 	new_tester().execute_with(|| {
 		let token_addr = H160::zero();
+		let alice: AccountId = Keyring::Alice.into();
+		GenericAsset::do_mint(token_addr, &alice, 500.into()).unwrap();
+		assert_eq!(TestEvent::generic_asset(RawEvent::Minted(token_addr, alice, 500.into())), last_event());
+	});
+}
 
-		let event = Event::SendERC20 {
-			sender: "cffeaaf7681c89285d65cfbe808b80e502696573".parse().unwrap(),
-			recipient: to_account_id("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"),
-			token: token_addr,
-			amount: 10.into(),
-			nonce: 1
-		};
+#[test]
+fn burn_should_decrease_balance_and_total_issuance() {
+	new_tester().execute_with(|| {
+		let token_addr = H160::zero();
+		let alice: AccountId = Keyring::Alice.into();
+		GenericAsset::do_mint(token_addr, &alice, 500.into()).unwrap();
 
-		let bob: AccountId = Keyring::Bob.into();
+		assert_ok!(GenericAsset::do_burn(token_addr, &alice, 20.into()));
+		assert_eq!(Account::<MockRuntime>::get(&token_addr, &alice).free, 480.into());
+		assert_eq!(TotalIssuance::get(&token_addr), 480.into());
+	});
+}
 
-		assert_ok!(PolkaERC20::handle_event(event));
-		assert_eq!(FreeBalance::<MockRuntime>::get(&token_addr, &bob), 10);
+#[test]
+fn burn_should_raise_event() {
+	new_tester().execute_with(|| {
+		let token_addr = H160::zero();
+		let alice: AccountId = Keyring::Alice.into();
+		GenericAsset::do_mint(token_addr, &alice, 500.into()).unwrap();
+
+		GenericAsset::do_burn(token_addr, &alice, 20.into()).unwrap();
+		assert_eq!(TestEvent::generic_asset(RawEvent::Burned(token_addr, alice, 20.into())), last_event());
 	});
 }
