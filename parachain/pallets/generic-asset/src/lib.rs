@@ -71,11 +71,11 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		/// Transfer some liquid free balance to another account.
+		/// Transfer some free balance to another account.
 		#[weight = 0]
 		pub fn transfer(origin, asset_id: AssetId, to: T::AccountId, amount: U256) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			Self::do_transfer(asset_id, &origin, &to, amount)?;
+			let who = ensure_signed(origin)?;
+			Self::do_transfer(asset_id, &who, &to, amount)?;
 			Ok(())
 		}
 
@@ -134,6 +134,7 @@ impl<T: Trait> Module<T> {
 		<Account<T>>::try_mutate(asset_id, from, |from_account| -> DispatchResult {
 			<Account<T>>::try_mutate(asset_id, to, |to_account| -> DispatchResult {
 				from_account.free = from_account.free.checked_sub(amount).ok_or(Error::<T>::InsufficientBalance)?;
+				// In theory we'll never hit overflow here since Sum(Account.free) == TotalIssuance.
 				to_account.free = to_account.free.checked_add(amount).ok_or(Error::<T>::FreeTransferOverflow)?;
 				Ok(())
 			})

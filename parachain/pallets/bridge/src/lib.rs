@@ -9,7 +9,7 @@ use codec::Encode;
 
 use sp_runtime::traits::Hash;
 
-use artemis_core::{AppID, Message, Broker, RelayEventEmitter};
+use artemis_core::{AppID, Message, Broker, TransferEventEmitter};
 
 pub trait Trait: system::Trait {
 
@@ -31,7 +31,7 @@ decl_event!(
 		Hash = <T as frame_system::Trait>::Hash,
 	{
 		Received(AccountId, AppID, Hash),
-		Relayed(AppID, Vec<u8>),
+		Transfer(AppID, Vec<u8>),
 	}
 );
 
@@ -52,18 +52,17 @@ decl_module! {
 		pub fn send(origin, app_id: AppID, message: Message) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 			T::Broker::submit(app_id, message.clone())?;
-			
+
 			Self::deposit_event(RawEvent::Received(who, app_id, T::Hashing::hash(message.as_ref())));
 			Ok(())
 		}
-
 	}
 }
 
-impl<T: Trait, K> RelayEventEmitter<K> for Module<T>
+impl<T: Trait, K> TransferEventEmitter<K> for Module<T>
 	where T: Trait, K: Encode
 {
 	fn emit(app_id: &AppID, data: K) {
-		Self::deposit_event(RawEvent::Relayed(*app_id, data.encode()));
+		Self::deposit_event(RawEvent::Transfer(*app_id, data.encode()));
 	}
 }

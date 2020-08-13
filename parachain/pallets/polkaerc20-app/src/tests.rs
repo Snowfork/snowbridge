@@ -1,5 +1,5 @@
 use crate::mock::{new_tester, MockEvent, System, AccountId, Origin, GenericAsset, ERC20};
-use crate::{APP_ID, RelayEvent};
+use crate::{APP_ID, TransferEvent};
 use frame_support::{assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
@@ -54,9 +54,9 @@ fn burn_should_emit_bridge_event() {
 			token_addr,
 			20.into()));
 
-		let app_event: RelayEvent<AccountId> = RelayEvent::Burned(token_addr, bob.clone(), 20.into());
+		let app_event: TransferEvent<AccountId> = TransferEvent::Burned(token_addr, bob.clone(), 20.into());
 
-		assert_eq!(MockEvent::bridge(bridge::RawEvent::Relayed(*APP_ID, app_event.encode())), last_event());
+		assert_eq!(MockEvent::bridge(bridge::RawEvent::Transfer(*APP_ID, app_event.encode())), last_event());
 
 	});
 }

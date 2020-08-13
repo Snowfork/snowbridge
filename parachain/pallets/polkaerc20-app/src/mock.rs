@@ -96,7 +96,6 @@ impl Trait for MockRuntime {
 
 pub type System = system::Module<MockRuntime>;
 pub type GenericAsset = generic_asset::Module<MockRuntime>;
-pub type Bridge = bridge::Module<MockRuntime>;
 pub type ERC20 = Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {

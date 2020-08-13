@@ -13,7 +13,7 @@ pub use types::{AppID, Message};
 
 
 /// The bridge module implements this trait
-pub trait RelayEventEmitter<K> where K: Encode {
+pub trait TransferEventEmitter<K> where K: Encode {
 
 	fn emit(app_id: &AppID, data: K);
 
