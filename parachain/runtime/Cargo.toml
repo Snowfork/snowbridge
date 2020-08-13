@@ -40,7 +40,7 @@ std = [
     'bridge/std',
     'broker/std',
     'dummy-verifier/std',
-    'generic-asset/std',
+    'asset/std',
     'eth-app/std',
     'erc20-app/std',
 ]
@@ -229,10 +229,10 @@ package = 'pallet-dummy-verifier'
 path = '../pallets/dummy-verifier'
 version = '0.1.1'
 
-[dependencies.generic-asset]
+[dependencies.asset]
 default-features = false
-package = 'artemis-generic-asset'
-path = '../pallets/generic-asset'
+package = 'artemis-asset'
+path = '../pallets/asset'
 version = '0.1.1'
 
 [dependencies.eth-app]

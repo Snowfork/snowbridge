@@ -1,7 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-///
-/// Implementation for PolkaERC20 token assets
-///
+
 use sp_std::prelude::*;
 use sp_core::{H160, U256, RuntimeDebug};
 use frame_system::{self as system, ensure_signed};
@@ -30,7 +28,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as GenericAsset {
+	trait Store for Module<T: Trait> as Asset {
 		pub TotalIssuance: map        hasher(blake2_128_concat) AssetId => U256;
 		pub Account:       double_map hasher(blake2_128_concat) AssetId, hasher(blake2_128_concat) T::AccountId => AccountData;
 	}

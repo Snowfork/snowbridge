@@ -285,7 +285,7 @@ impl dummy_verifier::Trait for Runtime {
 	type Scheduler = scheduler::Module<Runtime>;
 }
 
-impl generic_asset::Trait for Runtime {
+impl asset::Trait for Runtime {
 	type Event = Event;
 }
 
@@ -317,7 +317,7 @@ construct_runtime!(
 		Bridge: bridge::{Module, Call, Storage, Event<T>},
 		Broker: broker::{Module, Call, Storage, Event},
 		DummyVerifier: dummy_verifier::{Module, Call, Storage, Event},
-		GenericAsset: generic_asset::{Module, Call, Storage, Event<T>},
+		Asset: asset::{Module, Call, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Storage, Event},
 		ERC20: erc20_app::{Module, Call, Storage, Event},
 	}

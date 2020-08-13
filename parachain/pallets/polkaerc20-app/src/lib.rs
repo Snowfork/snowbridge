@@ -14,7 +14,7 @@ use codec::{Encode, Decode};
 
 use artemis_core::{AppID, Application, TransferEventEmitter, Message};
 use artemis_ethereum::{self as ethereum, SignedMessage};
-use artemis_generic_asset as generic_asset;
+use artemis_asset as asset;
 
 #[cfg(test)]
 mod mock;
@@ -29,7 +29,7 @@ pub enum TransferEvent<AccountId> {
 	Burned(H160, AccountId, U256)
 }
 
-pub trait Trait: system::Trait + generic_asset::Trait {
+pub trait Trait: system::Trait + asset::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 	type Bridge: TransferEventEmitter<TransferEvent<Self::AccountId>>;
 }
@@ -57,7 +57,7 @@ decl_module! {
 		#[weight = 0]
 		pub fn burn(origin, token_id: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			<generic_asset::Module<T>>::do_burn(token_id, &who, amount)?;
+			<asset::Module<T>>::do_burn(token_id, &who, amount)?;
 			T::Bridge::emit(APP_ID, TransferEvent::<T::AccountId>::Burned(token_id, who, amount));
 			Ok(())
 		}
@@ -84,7 +84,7 @@ impl<T: Trait> Module<T> {
 						return Err(DispatchError::Other("Invalid sender account"))
 					}
 				};
-				<generic_asset::Module<T>>::do_mint(token, &account, amount)?;
+				<asset::Module<T>>::do_mint(token, &account, amount)?;
 				Ok(())
 			}
 			_ => {

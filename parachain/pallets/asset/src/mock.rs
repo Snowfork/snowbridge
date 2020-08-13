@@ -71,7 +71,7 @@ impl Trait for MockRuntime {
 	type Event = TestEvent;
 }
 
-pub type GenericAsset = Module<MockRuntime>;
+pub type Asset = Module<MockRuntime>;
 pub type System = system::Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {

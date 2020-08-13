@@ -115,6 +115,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
+name = "artemis-asset"
+version = "0.1.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "rustc-hex",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-core"
 version = "0.1.1"
 dependencies = [
@@ -138,24 +154,6 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "artemis-generic-asset"
-version = "0.1.1"
-dependencies = [
- "artemis-core",
- "artemis-ethereum",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "rustc-hex",
- "serde",
- "sp-core",
- "sp-io",
- "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]
@@ -193,7 +191,7 @@ dependencies = [
 name = "artemis-runtime"
 version = "0.1.1"
 dependencies = [
- "artemis-generic-asset",
+ "artemis-asset",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -3602,9 +3600,9 @@ checksum = "feb3b2b1033b8a60b4da6ee470325f887758c95d5320f52f9ce0df055a55940e"
 name = "polkaerc20-app"
 version = "0.1.1"
 dependencies = [
+ "artemis-asset",
  "artemis-core",
  "artemis-ethereum",
- "artemis-generic-asset",
  "frame-support",
  "frame-system",
  "pallet-bridge",
@@ -3622,9 +3620,9 @@ dependencies = [
 name = "polkaeth-app"
 version = "0.1.1"
 dependencies = [
+ "artemis-asset",
  "artemis-core",
  "artemis-ethereum",
- "artemis-generic-asset",
  "frame-support",
  "frame-system",
  "pallet-balances",

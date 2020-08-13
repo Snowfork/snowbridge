@@ -8,7 +8,7 @@ use sp_runtime::{
 };
 use frame_system as system;
 
-use artemis_generic_asset as generic_asset;
+use artemis_asset as asset;
 use pallet_bridge as bridge;
 
 use artemis_core::{Broker, AppID, Message};
@@ -94,7 +94,7 @@ impl Trait for MockRuntime {
 }
 
 pub type System = system::Module<MockRuntime>;
-pub type GenericAsset = generic_asset::Module<MockRuntime>;
+pub type Asset = asset::Module<MockRuntime>;
 pub type ETH = Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {

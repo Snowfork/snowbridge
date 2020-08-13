@@ -1,5 +1,5 @@
 [package]
-name = "artemis-generic-asset"
+name = "artemis-asset"
 version = "0.1.1"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
@@ -64,14 +64,6 @@ optional = true
 version = '1.0.101'
 features = ["derive"]
 
-[dependencies.artemis-core]
-default-features = false
-path = "../../primitives/core"
-
-[dependencies.artemis-ethereum]
-default-features = false
-path = "../../primitives/ethereum"
-
 [features]
 default = ['std']
 std = [
@@ -84,6 +76,4 @@ std = [
     'sp-std/std',
     'sp-io/std',
     'sp-runtime/std',
-    'artemis-core/std',
-    'artemis-ethereum/std'
 ]

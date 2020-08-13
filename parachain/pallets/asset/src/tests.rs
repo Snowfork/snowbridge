@@ -1,6 +1,6 @@
 
 
-use crate::mock::{new_tester, AccountId, GenericAsset, Origin, System, MockRuntime, TestEvent};
+use crate::mock::{new_tester, AccountId, Asset, Origin, System, MockRuntime, TestEvent};
 
 use frame_support::{assert_ok, assert_noop};
 use sp_keyring::AccountKeyring as Keyring;
@@ -29,11 +29,11 @@ fn mint_should_increase_balance_and_total_issuance() {
 	new_tester().execute_with(|| {
 		let asset_id = H160::zero();
 		let alice: AccountId = Keyring::Alice.into();
-		assert_ok!(GenericAsset::do_mint(asset_id, &alice, 500.into()));
+		assert_ok!(Asset::do_mint(asset_id, &alice, 500.into()));
 		assert_eq!(Account::<MockRuntime>::get(&asset_id, &alice).free, 500.into());
 		assert_eq!(TotalIssuance::get(&asset_id), 500.into());
 
-		assert_ok!(GenericAsset::do_mint(asset_id, &alice, 20.into()));
+		assert_ok!(Asset::do_mint(asset_id, &alice, 20.into()));
 		assert_eq!(Account::<MockRuntime>::get(&asset_id, &alice).free, 520.into());
 		assert_eq!(TotalIssuance::get(&asset_id), 520.into());
 	});
@@ -44,7 +44,7 @@ fn mint_should_raise_event() {
 	new_tester().execute_with(|| {
 		let asset_id = H160::zero();
 		let alice: AccountId = Keyring::Alice.into();
-		assert_ok!(GenericAsset::do_mint(asset_id, &alice, 500.into()));
+		assert_ok!(Asset::do_mint(asset_id, &alice, 500.into()));
 		assert_eq!(TestEvent::generic_asset(RawEvent::Minted(asset_id, alice, 500.into())), last_event());
 	});
 }
@@ -57,7 +57,7 @@ fn mint_should_raise_total_overflow_error() {
 		TotalIssuance::insert(&asset_id, U256::MAX);
 
 		assert_noop!(
-			GenericAsset::do_mint(asset_id, &alice, U256::one()),
+			Asset::do_mint(asset_id, &alice, U256::one()),
 			Error::<MockRuntime>::TotalMintingOverflow
 		);
 
@@ -73,7 +73,7 @@ fn mint_should_raise_free_overflow_error() {
 		Account::<MockRuntime>::insert(&asset_id, &alice, &account);
 
 		assert_noop!(
-			GenericAsset::do_mint(asset_id, &alice, U256::one()),
+			Asset::do_mint(asset_id, &alice, U256::one()),
 			Error::<MockRuntime>::FreeMintingOverflow
 		);
 
@@ -87,7 +87,7 @@ fn burn_should_decrease_balance_and_total_issuance() {
 		let alice: AccountId = Keyring::Alice.into();
 		set_balance(&asset_id, &alice, 500);
 
-		assert_ok!(GenericAsset::do_burn(asset_id, &alice, 20.into()));
+		assert_ok!(Asset::do_burn(asset_id, &alice, 20.into()));
 		assert_eq!(Account::<MockRuntime>::get(&asset_id, &alice).free, 480.into());
 		assert_eq!(TotalIssuance::get(&asset_id), 480.into());
 	});
@@ -100,7 +100,7 @@ fn burn_should_raise_event() {
 		let alice: AccountId = Keyring::Alice.into();
 		set_balance(&asset_id, &alice, 500);
 
-		assert_ok!(GenericAsset::do_burn(asset_id, &alice, 20.into()));
+		assert_ok!(Asset::do_burn(asset_id, &alice, 20.into()));
 		assert_eq!(TestEvent::generic_asset(RawEvent::Burned(asset_id, alice, 20.into())), last_event());
 	});
 }
@@ -113,7 +113,7 @@ fn burn_should_raise_total_underflow_error() {
 		TotalIssuance::insert(&asset_id, U256::one());
 
 		assert_noop!(
-			GenericAsset::do_burn(asset_id, &alice, 10.into()),
+			Asset::do_burn(asset_id, &alice, 10.into()),
 			Error::<MockRuntime>::TotalBurningUnderflow
 		);
 
@@ -129,7 +129,7 @@ fn burn_should_raise_free_underflow_error() {
 		Account::<MockRuntime>::insert(&asset_id, &alice, &account);
 
 		assert_noop!(
-			GenericAsset::do_burn(asset_id, &alice, 10.into()),
+			Asset::do_burn(asset_id, &alice, 10.into()),
 			Error::<MockRuntime>::TotalBurningUnderflow
 		);
 
@@ -144,9 +144,9 @@ fn transfer_free_balance() {
 		let alice: AccountId = Keyring::Alice.into();
 		let bob: AccountId = Keyring::Bob.into();
 
-		assert_ok!(GenericAsset::do_mint(asset_id, &alice, 500.into()));
-		assert_ok!(GenericAsset::do_mint(asset_id, &bob, 500.into()));
-		assert_ok!(GenericAsset::transfer(Origin::signed(alice.clone()), asset_id, bob.clone(), 250.into()));
+		assert_ok!(Asset::do_mint(asset_id, &alice, 500.into()));
+		assert_ok!(Asset::do_mint(asset_id, &bob, 500.into()));
+		assert_ok!(Asset::transfer(Origin::signed(alice.clone()), asset_id, bob.clone(), 250.into()));
 
 		assert_eq!(Account::<MockRuntime>::get(&asset_id, &alice).free, 250.into());
 		assert_eq!(Account::<MockRuntime>::get(&asset_id, &bob).free, 750.into());
@@ -162,11 +162,11 @@ fn transfer_should_raise_insufficient_balance() {
 		let alice: AccountId = Keyring::Alice.into();
 		let bob: AccountId = Keyring::Bob.into();
 
-		assert_ok!(GenericAsset::do_mint(asset_id, &alice, 500.into()));
-		assert_ok!(GenericAsset::do_mint(asset_id, &bob, 500.into()));
+		assert_ok!(Asset::do_mint(asset_id, &alice, 500.into()));
+		assert_ok!(Asset::do_mint(asset_id, &bob, 500.into()));
 
 		assert_noop!(
-			GenericAsset::transfer(Origin::signed(alice.clone()), asset_id, bob.clone(), 1000.into()),
+			Asset::transfer(Origin::signed(alice.clone()), asset_id, bob.clone(), 1000.into()),
 			Error::<MockRuntime>::InsufficientBalance,
 		);
 
@@ -189,7 +189,7 @@ fn transfer_should_raise_overflow() {
 		Account::<MockRuntime>::insert(&asset_id, &bob, &account);
 
 		assert_noop!(
-			GenericAsset::transfer(Origin::signed(alice.clone()), asset_id, bob.clone(), 1.into()),
+			Asset::transfer(Origin::signed(alice.clone()), asset_id, bob.clone(), 1.into()),
 			Error::<MockRuntime>::FreeTransferOverflow,
 		);
 

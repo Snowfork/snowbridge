@@ -1,4 +1,4 @@
-use crate::mock::{new_tester, MockEvent, System, AccountId, Origin, GenericAsset, ERC20};
+use crate::mock::{new_tester, MockEvent, System, AccountId, Origin, Asset, ERC20};
 use crate::{APP_ID, TransferEvent};
 use frame_support::{assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
@@ -38,7 +38,7 @@ fn mints_after_handling_ethereum_event() {
 		let bob: AccountId = Keyring::Bob.into();
 
 		assert_ok!(ERC20::handle_event(event));
-		assert_eq!(GenericAsset::free_balance(token_addr, &bob), 10.into());
+		assert_eq!(Asset::free_balance(token_addr, &bob), 10.into());
 	});
 }
 
@@ -47,7 +47,7 @@ fn burn_should_emit_bridge_event() {
 	new_tester().execute_with(|| {
 		let token_addr = H160::repeat_byte(1);
 		let bob: AccountId = Keyring::Bob.into();
-		GenericAsset::do_mint(token_addr, &bob, 500.into()).unwrap();
+		Asset::do_mint(token_addr, &bob, 500.into()).unwrap();
 
 		assert_ok!(ERC20::burn(
 			Origin::signed(bob.clone()),
