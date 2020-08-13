@@ -70,6 +70,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		/// Transfer some free balance to another account.
+		// TODO: Calculate weight
 		#[weight = 0]
 		pub fn transfer(origin, asset_id: AssetId, to: T::AccountId, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;

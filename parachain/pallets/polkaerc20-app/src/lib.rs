@@ -43,7 +43,9 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {}
+	pub enum Error for Module<T: Trait> {
+		InvalidTokenID
+	}
 }
 
 decl_module! {
@@ -54,9 +56,17 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		// Users should burn their holdings to release funds on the Ethereum side
+		// TODO: Calculate weights
 		#[weight = 0]
 		pub fn burn(origin, token_id: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+
+			// The token_id 0 is reserved for ETH
+			if token_id == H160::zero() {
+				return Err(Error::<T>::InvalidTokenID.into())
+			}
+
 			<asset::Module<T>>::do_burn(token_id, &who, amount)?;
 			T::Bridge::emit(APP_ID, TransferEvent::<T::AccountId>::Burned(token_id, who, amount));
 			Ok(())

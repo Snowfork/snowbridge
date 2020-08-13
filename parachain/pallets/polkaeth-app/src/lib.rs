@@ -54,6 +54,8 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		// Users should burn their holdings to release funds on the Ethereum side
+		// TODO: Calculate weights
 		#[weight = 0]
 		pub fn burn(origin, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
