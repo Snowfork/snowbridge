@@ -5,11 +5,9 @@ use frame_system::{self as system, ensure_signed};
 
 use sp_std::prelude::*;
 
-use codec::Encode;
-
 use sp_runtime::traits::Hash;
 
-use artemis_core::{AppID, Message, Broker, TransferEventEmitter};
+use artemis_core::{AppID, Message, Broker};
 
 pub trait Trait: system::Trait {
 
@@ -19,7 +17,6 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-
 	trait Store for Module<T: Trait> as BridgeModule {
 	}
 }
@@ -31,7 +28,6 @@ decl_event!(
 		Hash = <T as frame_system::Trait>::Hash,
 	{
 		Received(AccountId, AppID, Hash),
-		Transfer(AppID, Vec<u8>),
 	}
 );
 
@@ -56,13 +52,5 @@ decl_module! {
 			Self::deposit_event(RawEvent::Received(who, app_id, T::Hashing::hash(message.as_ref())));
 			Ok(())
 		}
-	}
-}
-
-impl<T: Trait, K> TransferEventEmitter<K> for Module<T>
-	where T: Trait, K: Encode
-{
-	fn emit(app_id: &AppID, data: K) {
-		Self::deposit_event(RawEvent::Transfer(*app_id, data.encode()));
 	}
 }

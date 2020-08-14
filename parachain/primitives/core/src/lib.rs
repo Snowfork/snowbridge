@@ -4,20 +4,11 @@
 
 //use sp_std::prelude::*;
 use frame_support::dispatch::DispatchResult;
-use codec::Encode;
 
 pub mod types;
 pub mod registry;
 
 pub use types::{AppID, Message};
-
-
-/// The bridge module implements this trait
-pub trait TransferEventEmitter<K> where K: Encode {
-
-	fn emit(app_id: &AppID, data: K);
-
-}
 
 /// The broker module implements this trait
 pub trait Broker {

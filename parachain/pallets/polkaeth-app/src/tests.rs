@@ -1,15 +1,13 @@
 use crate::mock::{new_tester, AccountId, Origin, MockEvent, System, Asset, ETH};
-use crate::{APP_ID, TransferEvent};
 use frame_support::{assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use hex::FromHex;
 use sp_core::H160;
 
-use codec::Encode;
+use crate::RawEvent;
 
-use artemis_ethereum::Event;
+use artemis_ethereum::Event as EthereumEvent;
 
-use pallet_bridge as bridge;
 
 fn last_event() -> MockEvent {
 	System::events().pop().expect("Event expected").event
@@ -27,7 +25,7 @@ fn mints_after_handling_ethereum_event() {
 	new_tester().execute_with(|| {
 		let bob: AccountId = Keyring::Bob.into();
 
-		let event = Event::SendETH {
+		let event = EthereumEvent::SendETH {
 			sender: "cffeaaf7681c89285d65cfbe808b80e502696573".parse().unwrap(),
 			recipient: to_account_id("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"),
 			amount: 10.into(),
@@ -50,9 +48,10 @@ fn burn_should_emit_bridge_event() {
 			Origin::signed(bob.clone()),
 			20.into()));
 
-		let relay_event: TransferEvent<AccountId> = TransferEvent::Burned(bob.clone(), 20.into());
-
-		assert_eq!(MockEvent::bridge(bridge::RawEvent::Transfer(*APP_ID, relay_event.encode())), last_event());
+		assert_eq!(
+			MockEvent::test_events(RawEvent::Transfer(bob, 20.into())),
+			last_event()
+		);
 
 	});
 }

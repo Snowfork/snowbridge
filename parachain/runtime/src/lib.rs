@@ -291,12 +291,10 @@ impl asset::Trait for Runtime {
 
 impl eth_app::Trait for Runtime {
 	type Event = Event;
-	type Bridge = bridge::Module<Runtime>;
 }
 
 impl erc20_app::Trait for Runtime {
 	type Event = Event;
-	type Bridge = bridge::Module<Runtime>;
 }
 
 construct_runtime!(
@@ -318,8 +316,8 @@ construct_runtime!(
 		Broker: broker::{Module, Call, Storage, Event},
 		DummyVerifier: dummy_verifier::{Module, Call, Storage, Event},
 		Asset: asset::{Module, Call, Storage, Event<T>},
-		ETH: eth_app::{Module, Call, Storage, Event},
-		ERC20: erc20_app::{Module, Call, Storage, Event},
+		ETH: eth_app::{Module, Call, Storage, Event<T>},
+		ERC20: erc20_app::{Module, Call, Storage, Event<T>},
 	}
 );
 

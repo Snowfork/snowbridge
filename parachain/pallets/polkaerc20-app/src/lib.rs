@@ -3,16 +3,16 @@
 /// Implementation for PolkaERC20 token assets
 ///
 use sp_std::prelude::*;
-use sp_core::{H160, U256, RuntimeDebug};
+use sp_core::{H160, U256};
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::{DispatchResult, DispatchError},
 };
 
-use codec::{Encode, Decode};
+use codec::{Decode};
 
-use artemis_core::{AppID, Application, TransferEventEmitter, Message};
+use artemis_core::{AppID, Application, Message};
 use artemis_ethereum::{self as ethereum, SignedMessage};
 use artemis_asset as asset;
 
@@ -22,16 +22,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub const APP_ID: &[u8; 32] = &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
-pub enum TransferEvent<AccountId> {
-	Burned(H160, AccountId, U256)
-}
-
 pub trait Trait: system::Trait + asset::Trait {
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
-	type Bridge: TransferEventEmitter<TransferEvent<Self::AccountId>>;
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
 decl_storage! {
@@ -39,12 +31,18 @@ decl_storage! {
 }
 
 decl_event!(
-	pub enum Event {}
+	pub enum Event<T>
+	where
+		AccountId = <T as system::Trait>::AccountId,
+		TokenId = H160,
+	{
+		Transfer(TokenId, AccountId, U256),
+	}
 );
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		InvalidTokenID
+		InvalidTokenId
 	}
 }
 
@@ -62,13 +60,13 @@ decl_module! {
 		pub fn burn(origin, token_id: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			// The token_id 0 is reserved for ETH
+			// The token_id 0 is reserved for the PolkaETH app
 			if token_id == H160::zero() {
-				return Err(Error::<T>::InvalidTokenID.into())
+				return Err(Error::<T>::InvalidTokenId.into())
 			}
 
 			<asset::Module<T>>::do_burn(token_id, &who, amount)?;
-			T::Bridge::emit(APP_ID, TransferEvent::<T::AccountId>::Burned(token_id, who, amount));
+			Self::deposit_event(RawEvent::Transfer(token_id, who.clone(), amount));
 			Ok(())
 		}
 

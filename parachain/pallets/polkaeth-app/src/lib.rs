@@ -8,10 +8,10 @@ use frame_support::{
 	dispatch::{DispatchResult, DispatchError},
 };
 use sp_std::prelude::*;
-use sp_core::{H160, U256, RuntimeDebug};
+use sp_core::{H160, U256};
 
-use artemis_core::{AppID, Application, TransferEventEmitter, Message};
-use codec::{Encode, Decode};
+use artemis_core::{AppID, Application, Message};
+use codec::{Decode};
 
 use artemis_ethereum::{self as ethereum, SignedMessage};
 use artemis_asset as asset;
@@ -22,16 +22,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub const APP_ID: &[u8; 32] = &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
-pub enum TransferEvent<AccountId> {
-	Burned(AccountId, U256)
-}
-
 pub trait Trait: system::Trait + asset::Trait {
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
-	type Bridge: TransferEventEmitter<TransferEvent<Self::AccountId>>;
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
 decl_storage! {
@@ -39,7 +31,12 @@ decl_storage! {
 }
 
 decl_event!(
-	pub enum Event {}
+	pub enum Event<T>
+	where
+		AccountId = <T as system::Trait>::AccountId
+	{
+		Transfer(AccountId, U256),
+	}
 );
 
 decl_error! {
@@ -60,7 +57,7 @@ decl_module! {
 		pub fn burn(origin, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			<asset::Module<T>>::do_burn(H160::zero(), &who, amount)?;
-			T::Bridge::emit(APP_ID, TransferEvent::<T::AccountId>::Burned(who, amount));
+			Self::deposit_event(RawEvent::Transfer(who.clone(), amount));
 			Ok(())
 		}
 

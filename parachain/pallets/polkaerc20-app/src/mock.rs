@@ -2,7 +2,7 @@
 
 use crate::{Module, Trait};
 use sp_core::H256;
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight, dispatch::DispatchResult};
+use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
@@ -10,10 +10,6 @@ use sp_std::convert::{From};
 use frame_system as system;
 
 use artemis_asset as asset;
-use pallet_bridge as bridge;
-
-use artemis_core::{Broker, AppID, Message};
-
 
 impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
@@ -26,9 +22,8 @@ mod test_events {
 impl_outer_event! {
     pub enum MockEvent for MockRuntime {
 		system<T>,
-		bridge<T>,
 		asset<T>,
-        test_events,
+        test_events<T>,
     }
 }
 
@@ -77,21 +72,8 @@ impl asset::Trait for MockRuntime {
 	type Event = MockEvent;
 }
 
-pub struct MockBroker;
-impl Broker for MockBroker {
-	fn submit(_app_id: AppID, _message: Message) -> DispatchResult {
-		Ok(())
-	}
-}
-
-impl bridge::Trait for MockRuntime {
-	type Event = MockEvent;
-	type Broker = MockBroker;
-}
-
 impl Trait for MockRuntime {
 	type Event = MockEvent;
-	type Bridge = bridge::Module<MockRuntime>;
 }
 
 pub type System = system::Module<MockRuntime>;
