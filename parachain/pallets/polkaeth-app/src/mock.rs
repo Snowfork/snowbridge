@@ -25,7 +25,7 @@ impl_outer_event! {
     pub enum MockEvent for MockRuntime {
 		system<T>,
 		bridge<T>,
-		generic_asset<T>,
+		asset<T>,
         test_events,
     }
 }
@@ -71,7 +71,7 @@ impl system::Trait for MockRuntime {
 	type OnKilledAccount = ();
 }
 
-impl generic_asset::Trait for MockRuntime {
+impl asset::Trait for MockRuntime {
 	type Event = MockEvent;
 }
 

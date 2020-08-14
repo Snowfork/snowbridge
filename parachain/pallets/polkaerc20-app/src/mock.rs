@@ -9,7 +9,7 @@ use sp_runtime::{
 use sp_std::convert::{From};
 use frame_system as system;
 
-use artemis_generic_asset as asset;
+use artemis_asset as asset;
 use pallet_bridge as bridge;
 
 use artemis_core::{Broker, AppID, Message};
@@ -27,7 +27,7 @@ impl_outer_event! {
     pub enum MockEvent for MockRuntime {
 		system<T>,
 		bridge<T>,
-		generic_asset<T>,
+		asset<T>,
         test_events,
     }
 }
@@ -73,7 +73,7 @@ impl system::Trait for MockRuntime {
 	type OnKilledAccount = ();
 }
 
-impl generic_asset::Trait for MockRuntime {
+impl asset::Trait for MockRuntime {
 	type Event = MockEvent;
 }
 
