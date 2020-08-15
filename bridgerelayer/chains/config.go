@@ -21,10 +21,11 @@ type Config struct {
 // ChainConfig is parsed directly from the config file and is used to construct the Chain
 type ChainConfig struct {
 	Type       string `toml:"type" json:"type"`
-	ID         string `toml:"id" json:"id"`                   // Chain ID
+	ID         string `toml:"id" json:"id"`                   // chain ID
 	Endpoint   string `toml:"endpoint" json:"endpoint"`       // url for rpc endpoint
 	Operator   string `toml:"operator" json:"operator"`       // operator's address
 	PrivateKey string `toml:"private_key" json:"private_key"` // operator's private key
+	Verifier   string `toml:"verifier" json:"verifier"`       // ID of verification app
 }
 
 // NewConfig ...
@@ -74,6 +75,9 @@ func (c *Config) validate() error {
 		}
 		if chain.PrivateKey == "" {
 			return fmt.Errorf("required field chain.PrivateKey empty for chain %s", chain.ID)
+		}
+		if chain.Verifier == "" {
+			return fmt.Errorf("required field chain.Verifier empty for chain %s", chain.ID)
 		}
 	}
 	return nil

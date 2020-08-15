@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains"
-
+	"github.com/ethereum/go-ethereum/common"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
 	eKeys "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/ethereum"
 	// "github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/substrate"
@@ -62,14 +62,17 @@ func RunInitRelayerCmd(cmd *cobra.Command, args []string) error {
 
 	// Initialize Ethereum chain
 	ethStreamer := ethereum.NewStreamer(ethConfig.Endpoint)
+
 	ethKeybase, err := eKeys.NewKeypairFromString(ethConfig.PrivateKey)
 	if err != nil {
 		return err
 	}
-	ethRouter, err := ethereum.NewRouter(ethKeybase)
+
+	ethRouter, err := ethereum.NewRouter(ethConfig.Endpoint, ethKeybase, common.HexToAddress(ethConfig.Verifier))
 	if err != nil {
 		return err
 	}
+
 	ethChain := ethereum.NewEthChain(ethConfig, ethStreamer, *ethRouter)
 
 	// Initialize Substrate chain
