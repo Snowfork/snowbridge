@@ -76,9 +76,6 @@ contract Bank {
     function submit(bytes calldata data)
         external
     {
-        // TODO: decode bytes into (message, signature)
-        // require that signature is from operator
-
         // TODO: decode message bytes into (tag, recipient, amount) or (tag, recipient, token, amount)
          uint256 tag = 0;                        // placeholder
          address payable recipient = address(0); // placeholder
