@@ -8,18 +8,11 @@ require("chai")
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
-contract("Scale", function (accounts) {
-  const char = "a";
-  const charEncoded = [0x04, 0x61];
-  // SCALE PREFIX: unsigned integer 1: 0x04
-  // UTF ENCODING FOR "a": \x61
+function toHexBytes(uint) {
+  return "0x" + uint.split(" ").join("");
+}
 
-  const recipientAddress = "c230f38ff05860753840e0d7cbc66128ad308b67";
-  const scaleEncodedRecipientAddress = Buffer.from("50c230f38ff05860753840e0d7cbc66128ad308b67", "hex");
-  console.log("scaleEncodedRecipientAddress:", scaleEncodedRecipientAddress)
-
-  const uint64Amount = 1000000000000000000000;
-  const uint64ScaleEncodedAmount = "0x0000a0dec5adc9353600000000000000"
+contract("Scale", function () {
 
   describe("Scale contract deployment", function () {
     beforeEach(async function () {
@@ -31,32 +24,61 @@ contract("Scale", function (accounts) {
 
     });
 
-    // it("should decode a scale-encoded byte array", async function () {
-    //     const char = "a";
-    //     const charEncoded = [0x04, 0x61];
+    describe("decoding compact uints", async function () {
 
-    //     const { logs } = await this.scale.decodeBytes(charEncoded);
-    //     const logData = logs.find(
-    //         e => e.event === "LogData"
-    //     );
-    //     console.log("LogData data:", logData.args._data)
+      it("case 0", async function () {
+        const tests = [
+          {encoded: toHexBytes("00"), decoded: 0},
+          {encoded: toHexBytes("fc"), decoded: 63},
+        ];
 
-    //     console.log("decodedBytes:", decodedBytes);
-
-    //     char.should.be.equal(decodedBytes);
-    //   });
-
-
-    it("should decode a scale-encoded Ethereum address", async function () {
-        const decodedBytes = await this.scale.decodeBytes(scaleEncodedRecipientAddress);
-
-        console.log("decodedBytes:", decodedBytes);
-
-        char.should.be.equal(decodedBytes);
+        for(test of tests) {
+          const output = Number(await this.scale.decodeUintCompact.call(test.encoded));
+          output.should.be.bignumber.equal(test.decoded);
+        }
       });
 
+      it("case 1", async function () {
+        const tests = [
+          {encoded: toHexBytes("01 01"), decoded: 64},
+          {encoded: toHexBytes("fd ff"), decoded: 16383},
+        ];
+
+        for(test of tests) {
+          const output = Number(await this.scale.decodeUintCompact.call(test.encoded));
+          output.should.be.bignumber.equal(test.decoded);
+        }
+      });
+
+      it("case 2", async function () {
+        const tests = [
+          {encoded: toHexBytes("02 00 01 00"), decoded: 16384},
+          {encoded: toHexBytes("fe ff ff ff"), decoded: 1073741823},
+        ];
+
+        for(test of tests) {
+          const output = Number(await this.scale.decodeUintCompact.call(test.encoded));
+          output.should.be.bignumber.equal(test.decoded);
+        }
+      });
+
+      // it("case 3", async function () {
+      //   const tests = [
+      //     {encoded: toHexBytes("03 00 00 00 40"), decoded: 1073741824},
+      //     // {encoded: toHexBytes("03 ff ff ff ff"), decoded:  1<<32 - 1},
+      //     // {encoded: toHexBytes("07 00 00 00 00 01"), decoded: 1 << 32},
+      //     // {encoded: toHexBytes("0b 00 00 00 00 00 01"), decoded: 1 << 40},
+      //     // {encoded: toHexBytes("0f ff ff ff ff ff ff ff"), decoded: 1 << 48},
+      //     // {encoded: toHexBytes("0f 00 00 00 00 00 00 01"), decoded: 1<<56 - 1},
+      //     // {encoded: toHexBytes("13 00 00 00 00 00 00 00 01"), decoded:  1 << 56},
+      //   ];
+
+      //   for(test of tests) {
+      //     const output = Number(await this.scale.decodeUintCompact.call(test.encoded));
+      //     output.should.be.bignumber.equal(test.decoded);
+      //   }
+      // });
+
+    });
   });
 });
-
-// 1. let { ApiPromise } = require('@polkadot/api');
-// 2. var api = async function() { return await ApiPromise.create(); }
