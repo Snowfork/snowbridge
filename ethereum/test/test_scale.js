@@ -1,6 +1,5 @@
 const Scale = artifacts.require("Scale");
 
-const Web3Utils = require("web3-utils");
 const BigNumber = web3.BigNumber;
 
 require("chai")
@@ -21,12 +20,11 @@ contract("Scale", function () {
 
     it("should deploy and initialize the contract", async function () {
       this.scale.should.exist;
-
     });
 
     describe("decoding compact uints", async function () {
 
-      it("case 0", async function () {
+      it("case 0: [0, 63]", async function () {
         const tests = [
           {encoded: toHexBytes("00"), decoded: 0},
           {encoded: toHexBytes("fc"), decoded: 63},
@@ -38,7 +36,7 @@ contract("Scale", function () {
         }
       });
 
-      it("case 1", async function () {
+      it("case 1: [64, 16383]", async function () {
         const tests = [
           {encoded: toHexBytes("01 01"), decoded: 64},
           {encoded: toHexBytes("fd ff"), decoded: 16383},
@@ -50,7 +48,7 @@ contract("Scale", function () {
         }
       });
 
-      it("case 2", async function () {
+      it("case 2: [16384, 1073741823]", async function () {
         const tests = [
           {encoded: toHexBytes("02 00 01 00"), decoded: 16384},
           {encoded: toHexBytes("fe ff ff ff"), decoded: 1073741823},
@@ -62,23 +60,22 @@ contract("Scale", function () {
         }
       });
 
-      // it("case 3", async function () {
-      //   const tests = [
-      //     {encoded: toHexBytes("03 00 00 00 40"), decoded: 1073741824},
-      //     // {encoded: toHexBytes("03 ff ff ff ff"), decoded:  1<<32 - 1},
-      //     // {encoded: toHexBytes("07 00 00 00 00 01"), decoded: 1 << 32},
-      //     // {encoded: toHexBytes("0b 00 00 00 00 00 01"), decoded: 1 << 40},
-      //     // {encoded: toHexBytes("0f ff ff ff ff ff ff ff"), decoded: 1 << 48},
-      //     // {encoded: toHexBytes("0f 00 00 00 00 00 00 01"), decoded: 1<<56 - 1},
-      //     // {encoded: toHexBytes("13 00 00 00 00 00 00 00 01"), decoded:  1 << 56},
-      //   ];
+      it("case 3: [1073741823, 4503599627370496]", async function () {
+        const tests = [
+          {encoded: toHexBytes("03 00 00 00 40"), decoded: 1073741824},
+          // {encoded: toHexBytes("03 ff ff ff ff"), decoded:  1<<32 - 1}, // TODO: slightly off
+          // {encoded: toHexBytes("07 00 00 00 00 01"), decoded: 1 << 32},
+          // {encoded: toHexBytes("0b 00 00 00 00 00 01"), decoded: 1 << 40},
+          // {encoded: toHexBytes("0f ff ff ff ff ff ff ff"), decoded: 1 << 48},
+          // {encoded: toHexBytes("0f 00 00 00 00 00 00 01"), decoded: 1<<56 - 1},
+          // {encoded: toHexBytes("13 00 00 00 00 00 00 00 01"), decoded:  1 << 56},
+        ];
 
-      //   for(test of tests) {
-      //     const output = Number(await this.scale.decodeUintCompact.call(test.encoded));
-      //     output.should.be.bignumber.equal(test.decoded);
-      //   }
-      // });
-
+        for(test of tests) {
+          const output = Number(await this.scale.decodeUintCompact.call(test.encoded));
+          output.should.be.bignumber.equal(test.decoded);
+        }
+      });
     });
   });
 });

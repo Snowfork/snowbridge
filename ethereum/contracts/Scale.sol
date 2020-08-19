@@ -3,6 +3,7 @@ pragma solidity >=0.6.2;
 
 contract Scale {
 
+    // Read a byte at a specific index and return it as type uint8
     function readByteAtIndex(bytes memory data, uint8 index)
         public
         pure
@@ -11,94 +12,30 @@ contract Scale {
         return uint8(data[index]);
     }
 
-    // Converts uint8 into bytes memory with length 4
-    function uint8ToBytes(uint8 x)
+    // Reverse uint8[] array in place
+    function reverse(uint8[] memory arr)
         public
         pure
-        returns (bytes memory b)
+        returns(uint8[] memory)
     {
-        b = new bytes(4);
-        assembly { mstore(add(b, 4), x) }
-    }
-
-    // Converts uint64 input into bytes[4+input]
-    function uint64ToBytes(uint64 x)
-        public
-        pure
-        returns (bytes memory b)
-    {
-        uint256 len = x + 4;
-        b = new bytes(len);
-        assembly { mstore(add(b, len), x) }
-    }
-
-    function toByte4(bytes memory _b)
-        public
-        pure
-        returns (bytes4 _result)
-    {
-        assembly {
-            _result := mload(add(_b, 0x4))
+        for (uint i = 0; i < arr.length/2; i++) {
+            uint8 current = arr[i];
+            uint256 otherIndex = arr.length - i - 1;
+            arr[i] = arr[otherIndex];
+            arr[otherIndex] = current;
         }
+        return arr;
     }
 
-    function toBytesMemory(bytes1 _b)
-        public
-        pure
-        returns (bytes memory _result)
-    {
-        assembly {
-            _result := mload(add(_b, 0x1))
-        }
-    }
-
-    // Inspired by https://golang.org/src/encoding/binary/binary.go
-    function littleEndianUint32(uint32 b32) //(bytes memory b)
-        public
-        pure
-        returns (uint32)
-    {
-        // TODO: this attempt to reverse bytes to build little endian isn't gonna work.
-        // bytes memory leBytes = reverse(toBytesMemory(beBytes));
-        // uint32 b32 = uint32(toByte4(leBytes));
-
-        // Build little endian
-        // bytes memory output = new bytes(4);
-        // output[0] = byte(b32);
-        // output[1] = byte(b32 >> 8);
-        // output[2] = byte(b32 >> 16);
-        // output[3] = byte(b32 >> 24);
-
-        uint32 second = b32 >> 8;
-        uint32 third = b32 >> 16;
-        uint32 forth = b32 >> 24;
-
-        uint32 firstXOR = b32 | second << 8;
-        uint32 secondXOR = firstXOR | third << 16;
-        uint32 thirdXOR = secondXOR | forth << 24;
-	    return thirdXOR;
-    }
-
-    function reverse(bytes memory input)
-        public
-        pure
-        returns(bytes memory)
-    {
-        bytes memory reversed = new bytes(input.length);
-        for(uint i = 0; i < input.length; i++) {
-            reversed[input.length - i - 1] = input[i];
-        }
-        return reversed;
-    }
-
-    function bytesToUint256(bytes memory b)
+    // Convert an uint8[] array to uint256
+    function uint8ArrayToUint256(uint8[] memory arr)
         public
         pure
         returns (uint256)
     {
         uint256 number;
-        for(uint i=0;i<b.length;i++){
-            number = number +  uint(uint8(b[i]))*(2**(8*(b.length-(i+1))));
+        for(uint i = 0; i < arr.length; i++){
+            number = number+uint(arr[i])*(2**(8*(arr.length-(i+1))));
         }
         return number;
     }
@@ -109,32 +46,41 @@ contract Scale {
         pure
         returns (uint256)
     {
-        uint8 b = readByteAtIndex(data, 0);         // read the first byte
-        uint8 mode = b & 3;                         // bitwise operation
+        uint8 b = readByteAtIndex(data, 0);           // read the first byte
+        uint8 mode = b & 3;                           // bitwise operation
 
         if(mode == 0) {
-            return b >> 2;                          // right shift to remove mode bits
+            return b >> 2;                           // right shift to remove mode bits
         } else if(mode == 1) {
-            uint8 bb = readByteAtIndex(data, 1);    // read the second byte
-            uint64 r = bb;                          // convert to uint64
-            r <<= 6;                                // multiply by * 2^6
-            r += b >> 2;                            // right shift to remove mode bits
+            uint8 bb = readByteAtIndex(data, 1);      // read the second byte
+            uint64 r = bb;                            // convert to uint64
+            r <<= 6;                                  // multiply by * 2^6
+            r += b >> 2;                              // right shift to remove mode bits
             return r;
         } else if(mode == 2) {
-		    uint32 r = littleEndianUint32(b); // set the buffer in little endian order
-    		r >>= 2;                                // remove the last 2 mode bits
-    		return r;
-        } else if(mode == 3) {
-            uint64 l = b >> 2;                      // TODO: uint64 or uint256?
-            require(l <= 63,                        // Max upper bound of 536 is (67 - 4)
-                    "Not supported: l>63 encountered when decoding a compact-encoded uint");
-			bytes memory buf = uint64ToBytes(l);    // convert to bytes
-			bytes memory reverseBuf = reverse(buf); // reverse byte array
-			return bytesToUint256(reverseBuf);      // convert reversed bytes to uint256
+            uint8 b2 = readByteAtIndex(data, 1);      // read the next 3 bytes
+            uint8 b3 = readByteAtIndex(data, 2);
+            uint8 b4 = readByteAtIndex(data, 3);
 
+            uint32 x1 = uint32(b) | uint32(b2) << 8;  // convert to little endian
+            uint32 x2 = x1 | uint32(b3) << 16;
+            uint32 x3 = x2 | uint32(b4) << 24;
+
+            x3 >>= 2;                                 // remove the last 2 mode bits
+            return uint256(x3);
+        } else if(mode == 3) {
+            uint8 l = b >> 2;                         // remove mode bits
+            require(l <= 63,                          // Max upper bound of 536 is (67 - 4)
+                    "Not supported: l>63 encountered when decoding a compact-encoded uint");
+            uint8[] memory buf = new uint8[](l+4);
+            for(uint8 i = 1; i < l+4+1; i++) {        // read bytes from data[1:l+4]
+                uint8 bNext = readByteAtIndex(data, i);
+                buf[i-1] = bNext;
+            }
+            uint8[] memory reverseBuf = reverse(buf); // reverse byte array
+            return uint8ArrayToUint256(reverseBuf);   // convert reversed bytes to uint256
         } else {
             revert("Code should be unreachable");
         }
     }
-
 }
