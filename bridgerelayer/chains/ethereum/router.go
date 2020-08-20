@@ -101,10 +101,12 @@ func (er Router) Submit(appID []byte, data []byte) error {
 	message := data[0:50]    // placeholder
 	signature := data[50:80] // placeholder
 
+	// isOperator is a boolean indicating if the message was signed by the operator
 	isOperator, err := er.verifySignature(message, signature)
 	if err != nil {
 		return err
 	}
+	// Check that the message signer's address matches the operator's address stored on contract
 	if !isOperator {
 		return fmt.Errorf("invalid operator signature %s for message %s", signature, message)
 	}
@@ -121,6 +123,7 @@ func (er Router) Submit(appID []byte, data []byte) error {
 		return err
 	}
 
+	// Calculate the method ID of our function using crypto.sha3
 	submitFnSignature := []byte("submit(bytes)")
 	hash := sha3.NewLegacyKeccak256()
 	hash.Write(submitFnSignature)
