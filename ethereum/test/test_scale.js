@@ -78,4 +78,70 @@ contract("Scale", function () {
       });
     });
   });
+
+    describe("Gas costs", async function () {
+
+      beforeEach(async function () {
+        this.scale = await Scale.new();
+      });
+
+      it("compact uints: [0, 63]", async function () {
+        const tests = [
+          {encoded: toHexBytes("00"), decoded: 0},
+          {encoded: toHexBytes("fc"), decoded: 63},
+        ];
+
+        let totalGas = 0;
+        for(test of tests) {
+          const gasCost = await this.scale.decodeUintCompact.estimateGas(test.encoded);
+          totalGas += Number(gasCost);
+        }
+        totalGas = totalGas / tests.length;
+        console.log('\tDecoding [0, 63] average gas: ' + totalGas);
+      });
+
+      it("compact uints: [64, 16383]", async function () {
+        const tests = [
+          {encoded: toHexBytes("01 01"), decoded: 64},
+          {encoded: toHexBytes("fd ff"), decoded: 16383},
+        ];
+
+        let totalGas = 0;
+        for(test of tests) {
+          const gasCost = await this.scale.decodeUintCompact.estimateGas(test.encoded);
+          totalGas += Number(gasCost);
+        }
+        totalGas = totalGas / tests.length;
+        console.log('\tDecoding [64, 16383] average gas: ' + totalGas);
+      });
+
+      it("compact uints: [16384, 1073741823]", async function () {
+        const tests = [
+          {encoded: toHexBytes("02 00 01 00"), decoded: 16384},
+          {encoded: toHexBytes("fe ff ff ff"), decoded: 1073741823},
+        ];
+
+        let totalGas = 0;
+        for(test of tests) {
+          const gasCost = await this.scale.decodeUintCompact.estimateGas(test.encoded);
+          totalGas += Number(gasCost);
+        }
+        totalGas = totalGas / tests.length;
+        console.log('\tDecoding [16384, 1073741823] average gas: ' + totalGas);
+      });
+
+      it("compact uints: [1073741823, 4503599627370496]", async function () {
+        const tests = [
+          {encoded: toHexBytes("03 00 00 00 40"), decoded: 1073741824},
+        ];
+
+        let totalGas = 0;
+        for(test of tests) {
+          const gasCost = await this.scale.decodeUintCompact.estimateGas(test.encoded);
+          totalGas += Number(gasCost);
+        }
+        totalGas = totalGas / tests.length;
+        console.log('\tDecoding [1073741823, 4503599627370496] average gas: ' + totalGas);
+      });
+    });
 });
