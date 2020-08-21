@@ -1,7 +1,5 @@
 // Mock runtime
 
-use super::*;
-
 use crate::{Module, Trait};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
@@ -10,6 +8,8 @@ use sp_runtime::{
 };
 use sp_std::convert::{From};
 use frame_system as system;
+
+use artemis_asset as asset;
 
 impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
@@ -20,8 +20,9 @@ mod test_events {
 }
 
 impl_outer_event! {
-    pub enum TestEvent for MockRuntime {
-        system<T>,
+    pub enum MockEvent for MockRuntime {
+		system<T>,
+		asset<T>,
         test_events<T>,
     }
 }
@@ -51,7 +52,7 @@ impl system::Trait for MockRuntime {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = ();
+	type Event = MockEvent;
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
@@ -67,19 +68,21 @@ impl system::Trait for MockRuntime {
 	type OnKilledAccount = ();
 }
 
-parameter_types! {
-	pub const ExistentialDeposit: u128 = 500;
+impl asset::Trait for MockRuntime {
+	type Event = MockEvent;
 }
-
 
 impl Trait for MockRuntime {
-	type Event = ();
-	type Balance = u128;
+	type Event = MockEvent;
 }
 
-pub type PolkaERC20 = Module<MockRuntime>;
+pub type System = system::Module<MockRuntime>;
+pub type Asset = asset::Module<MockRuntime>;
+pub type ERC20 = Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {
 	let storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
-	storage.into()
+	let mut ext: sp_io::TestExternalities = storage.into();
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }

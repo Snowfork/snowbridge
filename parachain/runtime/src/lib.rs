@@ -7,7 +7,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use frame_support::traits::StorageMapShim;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
@@ -275,8 +274,8 @@ impl broker::Trait for Runtime {
 	type Event = Event;
 
 	type DummyVerifier = dummy_verifier::Module<Runtime>;
-	type PolkaETH = polkaeth_app::Module<Runtime>;
-	type PolkaERC20 = polkaerc20_app::Module<Runtime>;
+	type AppETH = eth_app::Module<Runtime>;
+	type AppERC20 = erc20_app::Module<Runtime>;
 }
 
 impl dummy_verifier::Trait for Runtime {
@@ -286,29 +285,16 @@ impl dummy_verifier::Trait for Runtime {
 	type Scheduler = scheduler::Module<Runtime>;
 }
 
-impl balances::Trait<balances::Instance2> for Runtime {
-	type Balance = u128; // We'll need to use a BigNum (U256) for PolkaETH
+impl asset::Trait for Runtime {
 	type Event = Event;
-	type DustRemoval = ();
-	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = StorageMapShim<
-		balances::Account<Runtime, balances::Instance2>,
-		system::CallOnCreatedAccount<Runtime>,
-		system::CallKillAccount<Runtime>,
-		AccountId,
-		balances::AccountData<Balance>,
-	>;
-
 }
 
-impl polkaeth_app::Trait for Runtime {
+impl eth_app::Trait for Runtime {
 	type Event = Event;
-	type Currency = balances::Module<Runtime, balances::Instance2>;
 }
 
-impl polkaerc20_app::Trait for Runtime {
+impl erc20_app::Trait for Runtime {
 	type Event = Event;
-	type Balance = u128;
 }
 
 construct_runtime!(
@@ -323,15 +309,15 @@ construct_runtime!(
 		Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
 		Grandpa: grandpa::{Module, Call, Storage, Config, Event},
 		Balances: balances::{Module, Call, Storage, Config<T>, Event<T>},
-		BalancesPolkaETH: balances::<Instance2>::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: transaction_payment::{Module, Storage},
 		Sudo: sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		Scheduler: scheduler::{Module, Call, Storage, Event<T>},
 		Bridge: bridge::{Module, Call, Storage, Event<T>},
 		Broker: broker::{Module, Call, Storage, Event},
 		DummyVerifier: dummy_verifier::{Module, Call, Storage, Event},
-		AppPolkaETH: polkaeth_app::{Module, Call, Storage, Event<T>},
-		AppPolkaERC20: polkaerc20_app::{Module, Call, Storage, Event<T>},
+		Asset: asset::{Module, Call, Storage, Event<T>},
+		ETH: eth_app::{Module, Call, Storage, Event<T>},
+		ERC20: erc20_app::{Module, Call, Storage, Event<T>},
 	}
 );
 

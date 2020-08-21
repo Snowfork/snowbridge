@@ -7,7 +7,7 @@ use sp_std::prelude::*;
 
 use sp_runtime::traits::Hash;
 
-use artemis_core::{AppID, Message, Broker, Bridge};
+use artemis_core::{AppID, Message, Broker};
 
 pub trait Trait: system::Trait {
 
@@ -17,7 +17,6 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-
 	trait Store for Module<T: Trait> as BridgeModule {
 	}
 }
@@ -28,7 +27,7 @@ decl_event!(
 		AccountId = <T as system::Trait>::AccountId,
 		Hash = <T as frame_system::Trait>::Hash,
 	{
-		MessageReceived(AccountId, AppID, Hash),
+		Received(AccountId, AppID, Hash),
 	}
 );
 
@@ -49,15 +48,9 @@ decl_module! {
 		pub fn send(origin, app_id: AppID, message: Message) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 			T::Broker::submit(app_id, message.clone())?;
-			
-			Self::deposit_event(RawEvent::MessageReceived(who, app_id, T::Hashing::hash(message.as_ref())));
+
+			Self::deposit_event(RawEvent::Received(who, app_id, T::Hashing::hash(message.as_ref())));
 			Ok(())
 		}
-
 	}
-}
-
-impl<T: Trait> Bridge for Module<T> {
-
-	fn dummy() {}
 }

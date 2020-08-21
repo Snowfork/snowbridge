@@ -10,15 +10,6 @@ pub mod registry;
 
 pub use types::{AppID, Message};
 
-
-/// The bridge module implements this trait
-pub trait Bridge {
-
-	// just a dummy stand-in until we flesh out this trait some more
-	fn dummy();
-
-}
-
 /// The broker module implements this trait
 pub trait Broker {
 
