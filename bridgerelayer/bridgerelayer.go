@@ -5,11 +5,9 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
 	eKeys "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/ethereum"
 	// "github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/substrate"
@@ -23,60 +21,35 @@ var rootCmd = &cobra.Command{
 	SilenceUsage: true,
 }
 
-//	initRelayerCmd
-func initRelayerCmd() *cobra.Command {
+func runCmd() *cobra.Command {
 	//nolint:lll
-	initRelayerCmd := &cobra.Command{
-		Use:     "init",
-		Short:   "Validate credentials and initialize subscriptions to both chains",
+	cmd := &cobra.Command{
+		Use:     "run",
+		Short:   "Relaye messages between chains",
 		Args:    cobra.ExactArgs(0),
-		Example: "bridgerelayer init",
-		RunE:    RunInitRelayerCmd,
+		Example: "bridgerelayer run",
+		RunE:    runFunc,
 	}
 
-	return initRelayerCmd
+	return cmd
 }
 
-// RunInitRelayerCmd executes initRelayerCmd
-func RunInitRelayerCmd(cmd *cobra.Command, args []string) error {
-	// Load config
-	config, err := chains.GetConfig()
-	if err != nil {
-		return err
-	}
-	c := *config
-
-	// Set up individual chain configs
-	var ethConfig chains.ChainConfig
-	var subConfig chains.ChainConfig
-	for _, chainConfig := range c.Chains {
-		switch chainConfig.Type {
-		case "ethereum":
-			ethConfig = chainConfig
-		case "substrate":
-			subConfig = chainConfig
-		default:
-			return fmt.Errorf("invalid chain config type: %s", chainConfig.Type)
-		}
-	}
+func runFunc(cmd *cobra.Command, args []string) error {
 
 	// Initialize Ethereum chain
-	ethStreamer := ethereum.NewStreamer(ethConfig.Endpoint)
+	ethStreamer := ethereum.NewStreamer(viper.GetString("ethereum.endpoint"))
 
-	ethKeybase, err := eKeys.NewKeypairFromString(ethConfig.PrivateKey)
+	ethKeybase, err := eKeys.NewKeypairFromString(viper.GetString("ethereum.private_key"))
 	if err != nil {
 		return err
 	}
 
-	ethRouter, err := ethereum.NewRouter(ethConfig.Endpoint, ethKeybase, common.HexToAddress(ethConfig.Verifier))
+	ethRouter, err := ethereum.NewRouter(viper.GetString("ethereum.endpoint"), ethKeybase, common.HexToAddress(viper.GetString("ethereum.verifier")))
 	if err != nil {
 		return err
 	}
 
-	ethChain := ethereum.NewEthChain(ethConfig, ethStreamer, *ethRouter)
-
-	// Initialize Substrate chain
-	_ = subConfig
+	ethChain := ethereum.NewEthChain(ethStreamer, *ethRouter)
 
 	// Start chains
 	ethChain.Start()
@@ -86,45 +59,27 @@ func RunInitRelayerCmd(cmd *cobra.Command, args []string) error {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(loadConfig)
 
-	// Persistent flags
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.bridgerelayer.yaml)")
-
-	// Construct Root Command
-	rootCmd.AddCommand(
-		initRelayerCmd(),
-	)
+	rootCmd.AddCommand(runCmd())
 }
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+func loadConfig() {
 
-		// Search config in home directory with name ".bridgerelayer" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".bridgerelayer")
+	viper.AddConfigPath("$HOME/.config/artemis-relayer")
+	viper.SetConfigName("config")
+	viper.SetConfigType("toml")
+	viper.AutomaticEnv()
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("fatal error config file: %s", err))
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	fmt.Println("Using config file:", viper.ConfigFileUsed())
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+// Execute adds all child commands to the root command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
