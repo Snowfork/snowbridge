@@ -57,10 +57,7 @@ func runFunc(cmd *cobra.Command, args []string) error {
 	}
 
 	ethChain := ethereum.NewEthChain(ethStreamer, *ethRouter)
-
-	// Start chains
 	ethChain.Start()
-	// subChain.Start()
 
 	return nil
 }

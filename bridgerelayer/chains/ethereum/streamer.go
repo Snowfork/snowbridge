@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum/registry"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
@@ -32,7 +31,7 @@ func NewStreamer(websocketURL string, registryPath string) Streamer {
 
 // Start initializes filtered subscriptions to each registered application
 func (es Streamer) Start(logs chan<- types.EventData, errs chan<- error) {
-	apps := registry.LoadApplications(es.RegistryPath)
+	apps := LoadApplications(es.RegistryPath)
 
 	es.logs = logs
 	es.errs = errs
