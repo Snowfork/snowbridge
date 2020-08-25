@@ -6,7 +6,7 @@ use frame_system::{self as system, ensure_root};
 
 use sp_std::prelude::*;
 
-use common::{
+use artemis_core::{
 	registry::{AppName, REGISTRY},
 	AppID, Application, Broker, Message, Verifier,
 };
@@ -15,8 +15,8 @@ pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
 	type DummyVerifier: Verifier;
-	type PolkaETH: Application;
-	type PolkaERC20: Application;
+	type AppETH: Application;
+	type AppERC20: Application;
 }
 
 decl_storage! {
@@ -67,10 +67,10 @@ impl<T: Trait> Module<T> {
 		for entry in REGISTRY.iter() {
 			match entry.symbol {
 				AppName::PolkaETH => {
-					T::PolkaETH::handle(app_id, message.clone())?;
+					T::AppETH::handle(app_id, message.clone())?;
 				}
 				AppName::PolkaERC20 => {
-					T::PolkaERC20::handle(app_id, message.clone())?;
+					T::AppERC20::handle(app_id, message.clone())?;
 				}
 			};
 		}

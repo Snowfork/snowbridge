@@ -5,14 +5,16 @@
       "id": "5777",
       "endpoint": "ws://localhost:7545/",
       "operator": "0x115f6e2004d7b4ccd6b9d5ab34e30909e0f612cd",
-      "private_key": "794e8f209245ae5136fb13c88aa287b4e12a2ba03f73023564857071d8f0e3d8"
+      "private_key": "794e8f209245ae5136fb13c88aa287b4e12a2ba03f73023564857071d8f0e3d8",
+      "verifier": "0x8E7da79fd36d89a381CcFA2412D34E057bFFAdDe"
     },
     {
       "type": "substrate",
       "id:": "2",
       "endpoint": "wss://rpc.polkadot.io",
       "operator": "x",
-      "private_key": "x"
+      "private_key": "x",
+      "verifier": "x"
     }
   ]
 }

@@ -64,13 +64,21 @@ optional = true
 version = '1.0.101'
 features = ["derive"]
 
-[dependencies.common]
+[dependencies.artemis-core]
 default-features = false
-path = "../../common"
+path = "../../primitives/core"
 
 [dependencies.artemis-ethereum]
 default-features = false
 path = "../../primitives/ethereum"
+
+[dependencies.artemis-asset]
+default-features = false
+path = "../../pallets/asset"
+
+[dependencies.pallet-bridge]
+default-features = false
+path = "../../pallets/bridge"
 
 [features]
 default = ['std']
@@ -84,6 +92,6 @@ std = [
     'sp-std/std',
     'sp-io/std',
     'sp-runtime/std',
-    'common/std',
+    'artemis-core/std',
     'artemis-ethereum/std'
 ]

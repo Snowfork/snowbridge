@@ -19,7 +19,8 @@ contract EthereumApp {
     function sendETH(
         bytes32 _recipient
     )
-        public payable
+        public
+        payable
     {
         require(msg.value > 0, "Value of transaction must be positive");
 

@@ -10,7 +10,7 @@ use sp_std::prelude::*;
 
 use pallet_broker::{self as broker};
 
-use common::{AppID, Message, Verifier};
+use artemis_core::{AppID, Message, Verifier};
 
 
 pub trait Trait: system::Trait + broker::Trait {

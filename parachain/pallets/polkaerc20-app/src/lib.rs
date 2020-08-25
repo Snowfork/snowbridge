@@ -3,21 +3,18 @@
 /// Implementation for PolkaERC20 token assets
 ///
 use sp_std::prelude::*;
-use sp_std::{fmt::Debug, convert::TryInto};
-use sp_core::H160;
-use sp_runtime::traits::{
-	CheckedAdd, MaybeSerializeDeserialize, Member,  AtLeast32BitUnsigned};
-use frame_system::{self as system};
+use sp_core::{H160, U256};
+use frame_system::{self as system, ensure_signed};
 use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage, Parameter,
+	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::{DispatchResult, DispatchError},
-	storage::StorageDoubleMap
 };
 
 use codec::{Decode};
 
-use common::{AppID, Application, Message};
+use artemis_core::{AppID, Application, Message};
 use artemis_ethereum::{self as ethereum, SignedMessage};
+use artemis_asset as asset;
 
 #[cfg(test)]
 mod mock;
@@ -25,37 +22,27 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + asset::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-
-	type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + Debug + MaybeSerializeDeserialize;
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as PolkaERC20Map {
-		// Free balances are represent as a doublemap: (TokenAddr, AccountId) -> Balance
-		//
-		// The choice of hashers was influenced by pallet-generic-asset, where free balances
-		// are also represented using a StorageDouble with twox_64_concat and blake2_128_concat
-		// hashers. So I'm assuming its a safe choice.
-		pub FreeBalance: double_map hasher(twox_64_concat) H160, hasher(blake2_128_concat) T::AccountId => T::Balance;
-	}
+	trait Store for Module<T: Trait> as Erc20Module {}
 }
 
 decl_event!(
 	pub enum Event<T>
 	where
 		AccountId = <T as system::Trait>::AccountId,
-		BalanceERC20 = <T as Trait>::Balance,
+		TokenId = H160,
 	{
-		Minted(H160, AccountId, BalanceERC20),
+		Transfer(TokenId, AccountId, U256),
 	}
 );
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		/// Free balance got overflowed after minting.
-		FreeMintingOverflow,
+		InvalidTokenId
 	}
 }
 
@@ -67,6 +54,22 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		// Users should burn their holdings to release funds on the Ethereum side
+		// TODO: Calculate weights
+		#[weight = 0]
+		pub fn burn(origin, token_id: H160, amount: U256) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			// The token_id 0 is reserved for the PolkaETH app
+			if token_id == H160::zero() {
+				return Err(Error::<T>::InvalidTokenId.into())
+			}
+
+			<asset::Module<T>>::do_burn(token_id, &who, amount)?;
+			Self::deposit_event(RawEvent::Transfer(token_id, who.clone(), amount));
+			Ok(())
+		}
+
 	}
 }
 
@@ -76,35 +79,21 @@ impl<T: Trait> Module<T> {
 		T::AccountId::decode(&mut &data[..]).ok()
 	}
 
-	fn u128_to_balance(input: u128) -> Option<T::Balance>  {
-		input.try_into().ok()
-	}
-
-	fn do_mint(token_addr: H160, to: &T::AccountId, amount: T::Balance) -> DispatchResult {
-		let original_free_balance = <FreeBalance<T>>::get(&token_addr, to);
-		let value = original_free_balance.checked_add(&amount)
-			.ok_or(Error::<T>::FreeMintingOverflow)?;
-		<FreeBalance<T>>::insert(&token_addr, to, value);
-		Self::deposit_event(RawEvent::Minted(token_addr, to.clone(), amount));
-		Ok(())
-	}
-
 	fn handle_event(event: ethereum::Event) -> DispatchResult {
+
 		match event {
 			ethereum::Event::SendERC20 { recipient, token, amount, ..} => {
+				if token.is_zero() {
+					return Err(DispatchError::Other("Invalid token address"))
+				}
 				let account = match Self::bytes_to_account_id(&recipient) {
 					Some(account) => account,
 					None => {
 						return Err(DispatchError::Other("Invalid sender account"))
 					}
 				};
-				let balance = match Self::u128_to_balance(amount.as_u128()) {
-					Some(balance) => balance,
-					None => {
-						return Err(DispatchError::Other("Invalid amount"))
-					}
-				};
-				Self::do_mint(token, &account, balance)
+				<asset::Module<T>>::do_mint(token, &account, amount)?;
+				Ok(())
 			}
 			_ => {
 				// Ignore all other ethereum events. In the next milestone the

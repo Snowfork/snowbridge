@@ -51,9 +51,9 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'v2.0.0-rc4'
 version = '2.0.0-rc4'
 
-[dependencies.common]
+[dependencies.artemis-core]
 default-features = false
-path = "../../common"
+path = "../../primitives/core"
 
 [features]
 default = ['std']
@@ -65,5 +65,5 @@ std = [
     'sp-io/std',
     'sp-runtime/std',
     'sp-std/std',
-    'common/std'
+    'artemis-core/std'
 ]
