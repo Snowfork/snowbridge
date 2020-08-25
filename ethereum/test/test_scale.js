@@ -150,6 +150,7 @@ contract("Scale", function () {
     it("uint256", async function () {
       const tests = [
         {encoded: "0x1d000000000000000000000000000000", decoded: 29},
+        {encoded: "0x3412", decoded: 4660},
         {encoded: "0x201f1e1d1c1b1a1817161514131211100f0e0d0c0b0a09080706050403020100", decoded: 1780731860627700044960722568376592200742329637303199754547880948779589408},
       ];
 

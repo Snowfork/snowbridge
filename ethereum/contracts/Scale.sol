@@ -12,34 +12,6 @@ contract Scale {
         return uint8(data[index]);
     }
 
-    // Reverse uint8[] array in place
-    function reverse(uint8[] memory arr)
-        internal
-        pure
-        returns(uint8[] memory)
-    {
-        for (uint i = 0; i < arr.length/2; i++) {
-            uint8 current = arr[i];
-            uint256 otherIndex = arr.length - i - 1;
-            arr[i] = arr[otherIndex];
-            arr[otherIndex] = current;
-        }
-        return arr;
-    }
-
-    // Convert an uint8[] array to uint256
-    function uint8ArrayToUint256(uint8[] memory arr)
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 number;
-        for(uint i = 0; i < arr.length; i++){
-            number = number+uint(arr[i])*(2**(8*(arr.length-(i+1))));
-        }
-        return number;
-    }
-
       // Convert bytes (big endian) to little endian format
     function bytesToLittleEndian(bytes memory arr)
         internal
@@ -68,6 +40,7 @@ contract Scale {
         return arr;
     }
 
+    // Decoes a SCALE encoded uint256
     function decodeUint256(bytes memory data)
         public
         pure
@@ -109,14 +82,6 @@ contract Scale {
         } else if(mode == 3) {                        // [1073741824, 4503599627370496]
             uint8 l = b >> 2;                         // remove mode bits
             require(l > 32, "Not supported: number cannot be greater than 32 bytes");
-            uint8[] memory buf = new uint8[](l+4);
-            for(uint8 i = 1; i < l+4+1; i++) {        // read bytes from data[1:l+4]
-                uint8 bNext = readByteAtIndex(data, i);
-                buf[i-1] = bNext;
-            }
-
-            uint8[] memory reverseBuf = reverse(buf); // reverse byte array
-            return uint8ArrayToUint256(reverseBuf);   // convert reversed bytes to uint256
         } else {
             revert("Code should be unreachable");
         }
