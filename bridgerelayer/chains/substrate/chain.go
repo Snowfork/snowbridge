@@ -1,107 +1,85 @@
 package substrate
 
 import (
-	"log"
+	"github.com/spf13/viper"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client"
-	"github.com/snowfork/go-substrate-rpc-client/signature"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/types"
-
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains"
 	subKeyPair "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/substrate"
 )
 
-var _ types.Chain = &SubstrateChain{}
-
-// SubstrateChain ...
-type SubstrateChain struct {
-	Core     *chains.Core     // The chains connection
-	Streamer *chains.Streamer // The streamer of this chain
-	Router   *chains.Router   // The router of this chain
-	Stop     chan<- int
-}
-
-// SubstrateCore holds core SubstrateChain information including credentials
-type SubstrateCore struct {
-	chains.Core
-	KeyPair     subKeyPair.KeyPair
+// Core holds core SubstrateChain information including credentials
+type Core struct {
+	KeyPair     *subKeyPair.Keypair
 	API         *gsrpc.SubstrateAPI
 	MetaData    gsrpcTypes.Metadata
 	GenesisHash gsrpcTypes.Hash
-	Logger      *log.Logger
+	StartBlock  uint64
 }
 
-func Initialize(cfg *types.Config, apiURL string, sysErr chan<- error) (*SubstrateChain, error) {
+// Chain ...
+type Chain struct {
+	Streamer *Streamer // The streamer of this chain
+	Router   *Router   // The router of this chain
+}
 
-	core := *SubstrateCore
+// NewChain ...
+func NewChain() (*Chain, error) {
 
-	krp, err := signature.KeyringPairFromSecret("//Alice", "")
+	core := Core{}
+
+	krp, err := subKeyPair.NewKeypairFromSeed("//Alice")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	core.KeyPair = krp
 
-	krp := kp.(*subKeyPair.Keypair).AsKeyringPair()
-	core.KeyPair = krp
-
 	// Initialize API
-	api, err := gsrpc.NewSubstrateAPI(apiURL)
+	api, err := gsrpc.NewSubstrateAPI(viper.GetString("substrate.endpoint"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	core.API = api
 
 	// Fetch metadata
 	meta, err := api.RPC.State.GetMetadataLatest()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	core.MetaData = *meta
 
 	// Fetch genesis hash
-	genesisHash, err := c.api.RPC.Chain.GetBlockHash(0)
+	genesisHash, err := api.RPC.Chain.GetBlockHash(0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	core.GenesisHash = genesisHash
-
-	// Incorporate a more robust logger...
-	logger := log.Logger
-	core.Logger = logger
 
 	// Fetch header
 	currBlock, err := api.RPC.Chain.GetHeaderLatest()
 	if err != nil {
 		return nil, err
 	}
-	startBlock := uint64(currBlock.Number)
+	core.StartBlock = uint64(currBlock.Number)
 
-	// Streamer and Router
-	stop := make(chan int)
-	streamer := NewSubstrateStreamer(core, cfg.ChainID, startBlock, bs, stop, sysErr)
-	router := NewSubstrateRouter(core, stop, sysErr)
+	streamer := NewStreamer(
+		&core,
+		viper.GetString("substrate.endpoint"),
+		viper.GetUint("substrate.block-retry-limit"),
+		viper.GetUint("substrate.block-retry-interval"),
+	)
+	router := Router{Core: &core}
 
-	return &SubstrateChain{
-		Config:   cfg,
-		Core:     core,
+	return &Chain{
 		Streamer: streamer,
-		Router:   router,
-		Stop:     stop,
+		Router:   &router,
 	}, nil
 }
 
 // Start ...
-func (sc *SubstrateChain) Start() error {
-	err := sc.Streamer.start()
-	if err != nil {
-		return err
-	}
+func (sc *Chain) Start() error {
 
-	err = sc.Router.start()
-	if err != nil {
-		return err
-	}
+	go sc.Streamer.Start()
 
-	sc.Core.Logger.Debug("Successfully started chain")
 	return nil
 }

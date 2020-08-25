@@ -6,8 +6,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
-// var _ chains.Chain = &EthChain{}
-
 // EthChain streams the Ethereum blockchain and routes tx data packets
 type EthChain struct {
 	Streamer Streamer // The streamer of this chain
@@ -22,7 +20,6 @@ func NewEthChain(streamer Streamer, router Router) EthChain {
 	}
 }
 
-// Start starts the chain's Streamer and Router
 func (ec EthChain) Start() error {
 	errors := make(chan error, 0)
 	events := make(chan types.EventData, 0)

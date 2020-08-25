@@ -9,11 +9,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	log "github.com/sirupsen/logrus"
+
 	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
 	eKeys "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/ethereum"
-	// "github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/substrate"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/substrate"
 )
 
 func runCmd() *cobra.Command {
@@ -40,24 +42,35 @@ func registryPath() string {
 	return path.Join(home, configDir, "ethereum")
 }
 
-func runFunc(cmd *cobra.Command, args []string) error {
+func runFunc(_ *cobra.Command, _ []string) error {
 
 	// Load ethereum ABIs
-
 	ethStreamer := ethereum.NewStreamer(viper.GetString("ethereum.endpoint"), registryPath())
-
 	ethKeybase, err := eKeys.NewKeypairFromString(viper.GetString("ethereum.private_key"))
 	if err != nil {
 		return err
 	}
-
 	ethRouter, err := ethereum.NewRouter(viper.GetString("ethereum.endpoint"), ethKeybase, common.HexToAddress(viper.GetString("ethereum.verifier")))
 	if err != nil {
 		return err
 	}
 
 	ethChain := ethereum.NewEthChain(ethStreamer, *ethRouter)
-	ethChain.Start()
+	go ethChain.Start()
 
-	return nil
+	subChain, err := substrate.NewChain()
+	if err != nil {
+		return err
+	}
+
+	log.Info("foo")
+	go subChain.Start()
+
+	for {
+		select {
+		default:
+		}
+	}
+
+	return nil //revive:disable-line
 }

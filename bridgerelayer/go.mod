@@ -14,7 +14,7 @@ require (
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/rs/xhandler v0.0.0-20170707052532-1eb70cf1520d // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/snowfork/go-substrate-rpc-client v2.0.0-alpha.5.0.20200825164513-bcc6e60eed31+incompatible
+	github.com/snowfork/go-substrate-rpc-client v2.0.0-alpha.5.0.20200825232545-6ce83bfb166e+incompatible
 	github.com/snowfork/polkadot-ethereum v0.0.0-20200727051857-f2828fba3b44
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.0
