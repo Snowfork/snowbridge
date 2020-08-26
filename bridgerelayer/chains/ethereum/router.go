@@ -3,8 +3,10 @@ package ethereum
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"math/big"
+
+	"github.com/spf13/viper"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	ctypes "github.com/ethereum/go-ethereum/core/types"
@@ -96,19 +98,16 @@ func (er Router) sendPacket(appID [32]byte, packet types.PacketV2) error {
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (er Router) Submit(appID []byte, data []byte) error {
-	// TODO: break down data into (message, signature)
-	message := data[0:50]    // placeholder
-	signature := data[50:80] // placeholder
+func (er Router) Submit(appName string, data []byte) error {
 
-	// isOperator is a boolean indicating if the message was signed by the operator
-	isOperator, err := er.verifySignature(message, signature)
+	// Get address of ethereum app
+	appHexAddr := viper.GetString(strings.Join([]string{"ethereum", appName}, "."))
+	appAddress := common.HexToAddress(appHexAddr)
+
+	// Generate a proof by signing a hash of the encoded data
+	proof, err := prover.GenerateProof(data, er.keybase.PrivateKey())
 	if err != nil {
 		return err
-	}
-	// Check that the message signer's address matches the operator's address stored on contract
-	if !isOperator {
-		return fmt.Errorf("invalid operator signature %s for message %s", signature, message)
 	}
 
 	nonce, err := er.ec.PendingNonceAt(context.Background(), er.keybase.CommonAddress())
@@ -124,7 +123,7 @@ func (er Router) Submit(appID []byte, data []byte) error {
 	}
 
 	// Calculate the method ID of our function using crypto.sha3
-	submitFnSignature := []byte("submit(bytes)")
+	submitFnSignature := []byte("submit(data,sig)")
 	hash := sha3.NewLegacyKeccak256()
 	hash.Write(submitFnSignature)
 	methodID := hash.Sum(nil)[:4]
@@ -132,8 +131,8 @@ func (er Router) Submit(appID []byte, data []byte) error {
 	var txData []byte
 	txData = append(txData, methodID...)
 	txData = append(txData, data...) // TODO: consider padding bytes with common.LeftPadBytes(data.Bytes(), 32)
+	txData = append(txData, proof.Signature...)
 
-	appAddress := common.BytesToAddress(appID)
 	tx := ctypes.NewTransaction(nonce, appAddress, value, gasLimit, gasPrice, data)
 	signedTx, err := ctypes.SignTx(tx, ctypes.HomesteadSigner{}, er.keybase.PrivateKey())
 	if err != nil {
@@ -147,11 +146,4 @@ func (er Router) Submit(appID []byte, data []byte) error {
 
 	log.Info("tx sent: ", signedTx.Hash().Hex())
 	return nil
-}
-
-// TODO: implement function
-func (er Router) verifySignature(message []byte, signature []byte) (bool, error) {
-	// 1. call verify(message, signature) on contract address er.verifier
-	// 2. get result
-	return true, nil
 }

@@ -41,6 +41,7 @@ type EventErc20Transfer struct {
 	Phase		types.Phase
 	TokenID    	types.H160
 	AccountID  	types.AccountID
+	Recipient   types.H160
 	Amount		types.U256
 	Topics    	[]types.Hash
 }
@@ -48,6 +49,7 @@ type EventErc20Transfer struct {
 type EventEthTransfer struct {
 	Phase		types.Phase
 	AccountID  	types.AccountID
+	Recipient   types.H160
 	Amount		types.U256
 	Topics    	[]types.Hash
 }

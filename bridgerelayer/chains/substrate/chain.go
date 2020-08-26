@@ -3,9 +3,13 @@ package substrate
 import (
 	"github.com/spf13/viper"
 
+	"sync"
+
 	gsrpc "github.com/snowfork/go-substrate-rpc-client"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/types"
 	subKeyPair "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/substrate"
+
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
 )
 
 // Core holds core SubstrateChain information including credentials
@@ -24,7 +28,7 @@ type Chain struct {
 }
 
 // NewChain ...
-func NewChain() (*Chain, error) {
+func NewChain(er *ethereum.Router) (*Chain, error) {
 
 	core := Core{}
 
@@ -64,6 +68,7 @@ func NewChain() (*Chain, error) {
 
 	streamer := NewStreamer(
 		&core,
+		er,
 		viper.GetString("substrate.endpoint"),
 		viper.GetUint("substrate.block-retry-limit"),
 		viper.GetUint("substrate.block-retry-interval"),
@@ -77,7 +82,8 @@ func NewChain() (*Chain, error) {
 }
 
 // Start ...
-func (sc *Chain) Start() error {
+func (sc *Chain) Start(wg *sync.WaitGroup) error {
+	defer wg.Done()
 
 	go sc.Streamer.Start()
 

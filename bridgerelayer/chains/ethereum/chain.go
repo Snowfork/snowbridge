@@ -3,6 +3,8 @@ package ethereum
 import (
 	log "github.com/sirupsen/logrus"
 
+	"sync"
+
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
@@ -20,7 +22,9 @@ func NewEthChain(streamer Streamer, router Router) EthChain {
 	}
 }
 
-func (ec EthChain) Start() error {
+func (ec EthChain) Start(wg *sync.WaitGroup) error {
+	defer wg.Done()
+
 	errors := make(chan error, 0)
 	events := make(chan types.EventData, 0)
 

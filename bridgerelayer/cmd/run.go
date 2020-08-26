@@ -5,11 +5,11 @@ import (
 	"os"
 	"path"
 
+	"sync"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	log "github.com/sirupsen/logrus"
 
 	homedir "github.com/mitchellh/go-homedir"
 
@@ -44,6 +44,8 @@ func registryPath() string {
 
 func runFunc(_ *cobra.Command, _ []string) error {
 
+	var wg sync.WaitGroup
+
 	// Load ethereum ABIs
 	ethStreamer := ethereum.NewStreamer(viper.GetString("ethereum.endpoint"), registryPath())
 	ethKeybase, err := eKeys.NewKeypairFromString(viper.GetString("ethereum.private_key"))
@@ -56,21 +58,20 @@ func runFunc(_ *cobra.Command, _ []string) error {
 	}
 
 	ethChain := ethereum.NewEthChain(ethStreamer, *ethRouter)
-	go ethChain.Start()
 
-	subChain, err := substrate.NewChain()
+
+	subChain, err := substrate.NewChain(ethRouter)
 	if err != nil {
 		return err
 	}
 
-	log.Info("foo")
-	go subChain.Start()
+	// start workers
+	wg.Add(1)
+	go ethChain.Start(&wg)
+	wg.Add(1)
+	go subChain.Start(&wg)
 
-	for {
-		select {
-		default:
-		}
-	}
+	wg.Wait()
 
-	return nil //revive:disable-line
+	return nil
 }

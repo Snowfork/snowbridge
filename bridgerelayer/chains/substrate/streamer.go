@@ -3,24 +3,29 @@ package substrate
 import (
 	"fmt"
 	"time"
+	"bytes"
 
 	log "github.com/sirupsen/logrus"
 	types "github.com/snowfork/go-substrate-rpc-client/types"
+	"github.com/snowfork/go-substrate-rpc-client/scale"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
 
 )
 
 // Streamer streams Substrate events
 type Streamer struct {
 	Core         *Core
+	EthRouter    *ethereum.Router
 	WebsocketURL string
 	BlockRetryLimit uint
 	BlockRetryInterval time.Duration
 }
 
 // NewStreamer returns a new substrate transaction streamer
-func NewStreamer(core *Core, websocketURL string, blockRetryLimit uint, blockRetryInterval uint) *Streamer {
+func NewStreamer(core *Core, er *ethereum.Router, websocketURL string, blockRetryLimit uint, blockRetryInterval uint) *Streamer {
 	return &Streamer{
 		Core:         core,
+		EthRouter:    er,
 		WebsocketURL: websocketURL,
 		BlockRetryLimit: blockRetryLimit,
 		BlockRetryInterval: time.Duration(blockRetryInterval) * time.Second,
@@ -79,7 +84,10 @@ func (ss *Streamer) SubscribeBlocks(blockRetryLimit int) error {
 
 			// Sleep if the block we want comes after the most recently finalized block
 			if currentBlock > uint64(finalizedHeader.Number) {
-				log.Info("Block not yet finalized", "target", currentBlock, "latest", finalizedHeader.Number)
+				log.WithFields(log.Fields{
+					"target": currentBlock,
+					"latest": finalizedHeader.Number,
+				}).Info("Block not yet finalized")
 				time.Sleep(ss.BlockRetryInterval)
 				continue
 			}
@@ -124,6 +132,46 @@ func (ss *Streamer) SubscribeBlocks(blockRetryLimit int) error {
 	}
 }
 
+type Message struct {
+	Sender		types.AccountID
+	Recipient 	types.H160
+	TokenAddr   types.H160
+	Amount		types.U256
+}
+
+
 func (ss *Streamer) handleEvents(events *Events) {
-	fmt.Println(events)
+	for _, evt := range events.ERC20_Transfer {
+		log.Debug("Handling ERC20 transfer event")
+
+		msg := Message{
+			Sender: evt.AccountID,
+			Recipient: evt.Recipient,
+			TokenAddr: evt.TokenID,
+			Amount: evt.Amount,
+		}
+
+		buf := bytes.NewBuffer(nil)
+		encoder := scale.NewEncoder(buf)
+		encoder.Encode(msg)
+
+		ss.EthRouter.Submit("erc20", buf.Bytes())
+	}
+
+	for _, evt := range events.ETH_Transfer {
+		log.Debug("Handling ETH transfer event")
+
+		msg := Message{
+			Sender: evt.AccountID,
+			Recipient: evt.Recipient,
+			TokenAddr: [20]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			Amount: evt.Amount,
+		}
+
+		buf := bytes.NewBuffer(nil)
+		encoder := scale.NewEncoder(buf)
+		encoder.Encode(msg)
+
+		ss.EthRouter.Submit("eth", buf.Bytes())
+	}
 }
