@@ -126,7 +126,7 @@ func (er Router) Submit(appName string, data []byte) error {
 	}
 
 	// Calculate the method ID of our function using crypto.sha3
-	submitFnSignature := []byte("submit(data,sig)")
+	submitFnSignature := []byte("submit(bytes,bytes)")
 	hash := sha3.NewLegacyKeccak256()
 	hash.Write(submitFnSignature)
 	methodID := hash.Sum(nil)[:4]
