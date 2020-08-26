@@ -1,0 +1,14 @@
+[ethereum]
+endpoint = "ws://localhost:7545/"
+operator = "0xcffeaaf7681c89285d65cfbe808b80e502696573"
+private_key = "598e9b38cbe35d4dbf1b6a488e193200373471a9b74d816cbb97b3b257163c88"
+verifier = "0x8E7da79fd36d89a381CcFA2412D34E057bFFAdDe"
+
+[ethereum.apps]
+eth = "0x1234"
+erc20 = "0x1234"
+
+[substrate]
+endpoint = "ws://127.0.0.1:9944/"
+block-retry-limit = 3
+block-retry-interval = 10
