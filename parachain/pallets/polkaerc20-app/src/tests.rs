@@ -43,16 +43,18 @@ fn mints_after_handling_ethereum_event() {
 fn burn_should_emit_bridge_event() {
 	new_tester().execute_with(|| {
 		let token_id = H160::repeat_byte(1);
+		let recipient = H160::repeat_byte(2);
 		let bob: AccountId = Keyring::Bob.into();
 		Asset::do_mint(token_id, &bob, 500.into()).unwrap();
 
 		assert_ok!(ERC20::burn(
 			Origin::signed(bob.clone()),
 			token_id,
+			recipient,
 			20.into()));
 
 		assert_eq!(
-			MockEvent::test_events(RawEvent::Transfer(token_id, bob, 20.into())),
+			MockEvent::test_events(RawEvent::Transfer(token_id, bob, recipient, 20.into())),
 			last_event()
 		);
 

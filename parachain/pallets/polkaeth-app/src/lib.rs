@@ -35,7 +35,7 @@ decl_event!(
 	where
 		AccountId = <T as system::Trait>::AccountId
 	{
-		Transfer(AccountId, U256),
+		Transfer(AccountId, H160, U256),
 	}
 );
 
@@ -54,10 +54,10 @@ decl_module! {
 		// Users should burn their holdings to release funds on the Ethereum side
 		// TODO: Calculate weights
 		#[weight = 0]
-		pub fn burn(origin, amount: U256) -> DispatchResult {
+		pub fn burn(origin, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			<asset::Module<T>>::do_burn(H160::zero(), &who, amount)?;
-			Self::deposit_event(RawEvent::Transfer(who.clone(), amount));
+			Self::deposit_event(RawEvent::Transfer(who.clone(), recipient, amount));
 			Ok(())
 		}
 

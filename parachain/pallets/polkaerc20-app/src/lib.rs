@@ -36,7 +36,7 @@ decl_event!(
 		AccountId = <T as system::Trait>::AccountId,
 		TokenId = H160,
 	{
-		Transfer(TokenId, AccountId, U256),
+		Transfer(TokenId, AccountId, H160, U256),
 	}
 );
 
@@ -57,7 +57,7 @@ decl_module! {
 		// Users should burn their holdings to release funds on the Ethereum side
 		// TODO: Calculate weights
 		#[weight = 0]
-		pub fn burn(origin, token_id: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, token_id: H160, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			// The token_id 0 is reserved for the PolkaETH app
@@ -66,7 +66,7 @@ decl_module! {
 			}
 
 			<asset::Module<T>>::do_burn(token_id, &who, amount)?;
-			Self::deposit_event(RawEvent::Transfer(token_id, who.clone(), amount));
+			Self::deposit_event(RawEvent::Transfer(token_id, who.clone(), recipient, amount));
 			Ok(())
 		}
 
