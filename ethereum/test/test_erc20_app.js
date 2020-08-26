@@ -1,4 +1,5 @@
 const ERC20App = artifacts.require("ERC20App");
+const Decoder = artifacts.require("Decoder");
 const TestToken = artifacts.require("TestToken");
 
 const Web3Utils = require("web3-utils");
@@ -20,6 +21,9 @@ contract("ERC20App", function (accounts) {
 
   describe("initialization and deployment", function () {
     beforeEach(async function () {
+      const decoder = await Decoder.new();
+      await ERC20App.detectNetwork(); // TODO: remove
+      await ERC20App.link('Decoder', decoder.address);
       this.erc20App = await ERC20App.new();
     });
 
@@ -79,6 +83,8 @@ contract("ERC20App", function (accounts) {
           e => e.event === "AppEvent"
       );
 
+      Number(appEvent.args._tag).should.be.bignumber.equal(1);
+
       // Clean data by removing '0x' prefix
       const data = appEvent.args._data.slice(2, appEvent.args._data.length);
 
@@ -129,4 +135,80 @@ contract("ERC20App", function (accounts) {
       nonce.should.be.bignumber.equal(beforeNonce+1);
     });
   });
+
+  describe("unlocks", function () {
+
+    before(async function () {
+        this.erc20App = await ERC20App.new();
+
+        // Set up an ERC20 token for testing token deposits
+        this.symbol = "TEST";
+        this.token = await TestToken.new(100000, "Test Token", this.symbol);
+
+        // Load user account with 'TEST' ERC20 tokens
+        await this.token.transfer(userOne, 10000, {
+            from: owner
+        }).should.be.fulfilled;
+
+        // Prepare transaction parameters
+        const lockAmount = 5000;
+        const substrateRecipient = Buffer.from(POLKADOT_ADDRESS, "hex");
+
+        // Approve tokens to contract
+        await this.token.approve(this.erc20App.address, lockAmount, {
+          from: userOne
+        }).should.be.fulfilled;
+
+        // Send ERC20 tokens to a substrate recipient
+        await this.erc20App.sendERC20(
+          substrateRecipient,
+          this.token.address,
+          lockAmount,
+          {
+            from: userOne,
+            value: 0
+          }
+        ).should.be.fulfilled;
+    });
+
+    it("should support ERC20 unlocks", async function () {
+      // Encoded data
+      const encodedData = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dcffeaaf7681c89285d65cfbe808b80e502696573dda6327139485221633a1fcd65f4ac932e60a2e13412000000000000000000000000000000000000000000000000000000000000";
+      // Decoded data
+      const decodedSender = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
+      const decodedRecipient = "0xCfFEAAf7681c89285D65CfbE808b80e502696573";
+      const decodedTokenAddr = this.token.address;
+      const decodedAmount = 4660;
+
+      // Load initial state
+      const beforeTotalERC20 = Number(await this.erc20App.totalTokens(this.token.address));
+      const beforeTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
+      const beforeUserBalance = Number(await this.token.balanceOf(decodedRecipient));
+
+     const { logs } = await this.erc20App.unlockERC20(encodedData).should.be.fulfilled;
+
+      // Confirm unlock event emitted with expected values
+      const unlockEvent = logs.find(
+          e => e.event === "Unlock"
+      );
+
+      unlockEvent.args._sender.should.be.equal(decodedSender);
+      unlockEvent.args._recipient.should.be.equal(decodedRecipient);
+      unlockEvent.args._token.should.be.equal(decodedTokenAddr);
+      Number(unlockEvent.args._amount).should.be.bignumber.equal(decodedAmount);
+
+      // Get the user and ERC20App token balance after unlock
+      const afterTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
+      const afterUserBalance = Number(await this.token.balanceOf(decodedRecipient));
+
+      // Confirm that the user's token balance has increased
+      afterTestTokenBalance.should.be.bignumber.equal(beforeTestTokenBalance - decodedAmount);
+      afterUserBalance.should.be.bignumber.equal(beforeUserBalance + decodedAmount);
+
+      // Confirm contract's locked ERC20 counter has decreased by amount locked
+      const afterTotalERC20 = await this.erc20App.totalTokens(this.token.address);
+      Number(afterTotalERC20).should.be.bignumber.equal(beforeTotalERC20 - decodedAmount);
+    });
+  });
+
 });
