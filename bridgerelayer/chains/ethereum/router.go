@@ -100,9 +100,12 @@ func (er Router) sendPacket(appID [32]byte, packet types.PacketV2) error {
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (er Router) Submit(appName string, data []byte) error {
 
+	log.Info("Submitting ", appName, " message to Ethereum")
+
 	// Get address of ethereum app
-	appHexAddr := viper.GetString(strings.Join([]string{"ethereum", appName}, "."))
+	appHexAddr := viper.GetString(strings.Join([]string{"ethereum", "apps", appName}, "."))
 	appAddress := common.HexToAddress(appHexAddr)
+	log.Info("App Address: ", appHexAddr)
 
 	// Generate a proof by signing a hash of the encoded data
 	proof, err := prover.GenerateProof(data, er.keybase.PrivateKey())

@@ -59,7 +59,6 @@ func runFunc(_ *cobra.Command, _ []string) error {
 
 	ethChain := ethereum.NewEthChain(ethStreamer, *ethRouter)
 
-
 	subChain, err := substrate.NewChain(ethRouter)
 	if err != nil {
 		return err
