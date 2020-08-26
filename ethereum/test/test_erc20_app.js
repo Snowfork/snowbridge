@@ -1,5 +1,4 @@
 const ERC20App = artifacts.require("ERC20App");
-const Decoder = artifacts.require("Decoder");
 const TestToken = artifacts.require("TestToken");
 
 const Web3Utils = require("web3-utils");
@@ -21,9 +20,6 @@ contract("ERC20App", function (accounts) {
 
   describe("initialization and deployment", function () {
     beforeEach(async function () {
-      const decoder = await Decoder.new();
-      await ERC20App.detectNetwork(); // TODO: remove
-      await ERC20App.link('Decoder', decoder.address);
       this.erc20App = await ERC20App.new();
     });
 
