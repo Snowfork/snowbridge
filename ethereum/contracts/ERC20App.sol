@@ -3,15 +3,19 @@ pragma solidity >=0.6.2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./Decoder.sol";
 
 contract ERC20App {
     using SafeMath for uint256;
+    using Decoder for bytes;
 
     uint256 public nonce;
     mapping(address => uint256) public totalTokens;
 
-    event AppEvent(bytes _data);
-    event Unlock(address _recipient, address _token, uint256 _amount);
+    enum AppEventTags { SendETH, SendERC20 }
+
+    event AppEvent(uint _tag, bytes _data);
+    event Unlock(bytes _sender, address _recipient, address _token, uint256 _amount);
 
     constructor() public {
         nonce = 0;
@@ -35,7 +39,7 @@ contract ERC20App {
         nonce = nonce.add(1);
 
         bytes memory data = encodeSendData(msg.sender, _recipient, _tokenAddr,_amount, nonce);
-        emit AppEvent(data);
+        emit AppEvent(uint(AppEventTags.SendERC20), data);
     }
 
     function encodeSendData(
@@ -52,19 +56,27 @@ contract ERC20App {
         return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
     }
 
-    function submit(bytes memory data)
+    function unlockERC20(bytes memory _data)
         public
+        returns (uint256)
     {
-        // TODO: decode message bytes into (tag, recipient, token, amount)
-         uint256 tag = 0;                        // placeholder
-         address payable recipient = address(0); // placeholder
-         address token = address(0);             // placeholder
-         uint256 amount = 1;                     // placeholder
+        require(_data.length == 104, "Data must contain 104 bytes for a successful decoding");
 
-         unlockERC20(recipient, token, amount);
+        // Decode sender bytes
+        bytes memory sender = _data.slice(0, 32);
+        // Decode recipient address
+        address recipient = _data.sliceAddress(32);
+        // Decode token address
+        address tokenAddr = _data.sliceAddress(32 + 20);
+        // Deocde amount int256
+        bytes memory amountBytes = _data.slice(32 + 40, 32);
+        uint256 amount = amountBytes.decodeUint256();
+
+        sendTokens(recipient, tokenAddr, amount);
+        emit Unlock(sender, recipient, tokenAddr, amount);
     }
 
-    function unlockERC20(
+    function sendTokens(
         address _recipient,
         address _token,
         uint256 _amount
@@ -76,6 +88,5 @@ contract ERC20App {
 
         totalTokens[_token] = totalTokens[_token].sub(_amount);
         require(IERC20(_token).transfer(_recipient, _amount), "ERC20 token transfer failed");
-        emit Unlock(_recipient, _token, _amount);
     }
 }
