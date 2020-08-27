@@ -4,6 +4,22 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/types"
 )
 
+type EventSchedulerScheduled struct {
+	Phase		types.Phase
+	BlockNumber types.BlockNumber
+	Index       types.U32
+	Topics    	[]types.Hash
+}
+
+type EventSchedulerDispatched struct {
+	Phase		types.Phase
+	BlockNumber types.BlockNumber
+	Index       types.U32
+	MaybeID     types.OptionBytes8
+	Result      types.DispatchResult
+	Topics    	[]types.Hash
+}
+
 type EventBridgeReceived struct {
 	Phase		types.Phase
 	AccountID  	types.AccountID
@@ -56,11 +72,13 @@ type EventEthTransfer struct {
 
 type Events struct {
 	types.EventRecords
-	Bridge_Received		[]EventBridgeReceived	//revive:disable-line
-	Asset_Burned		[]EventAssetBurned		//revive:disable-line
-	Asset_Minted		[]EventAssetMinted		//revive:disable-line
-	Asset_Transferred	[]EventAssetTransferred	//revive:disable-line
-	ETH_Transfer		[]EventEthTransfer		//revive:disable-line
-	ERC20_Transfer		[]EventErc20Transfer	//revive:disable-line
+	Scheduler_Scheduled		[]EventSchedulerScheduled	//revive:disable-line
+	Scheduler_Dispatched	[]EventSchedulerDispatched	//revive:disable-line
+	Bridge_Received			[]EventBridgeReceived	//revive:disable-line
+	Asset_Burned			[]EventAssetBurned		//revive:disable-line
+	Asset_Minted			[]EventAssetMinted		//revive:disable-line
+	Asset_Transferred		[]EventAssetTransferred	//revive:disable-line
+	ETH_Transfer			[]EventEthTransfer		//revive:disable-line
+	ERC20_Transfer			[]EventErc20Transfer	//revive:disable-line
 }
 

@@ -26,6 +26,8 @@ module.exports = async () => {
     const web3 = new Web3(provider);
     contract.setProvider(web3.currentProvider);
 
+    const AMOUNT = web3.utils.toWei("10");
+
     try {
       // Get current accounts
       const accounts = await web3.eth.getAccounts();
