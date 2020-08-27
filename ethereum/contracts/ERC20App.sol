@@ -56,7 +56,7 @@ contract ERC20App {
         return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
     }
 
-    function unlockERC20(bytes memory _data)
+    function submit(bytes memory _data, bytes memory _signature)
         public
         returns (uint256)
     {

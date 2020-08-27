@@ -52,7 +52,7 @@ contract EthereumApp {
     }
 
 
-    function unlockETH(bytes memory _data)
+    function submit(bytes memory _data, bytes memory _signature)
         public
     {
         require(_data.length == 84, "Data must contain 84 bytes for a successful decoding");

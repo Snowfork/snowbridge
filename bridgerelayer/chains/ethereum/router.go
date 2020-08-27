@@ -1,6 +1,7 @@
 package ethereum
 
 import (
+	"fmt"
 	"bytes"
 	"context"
 	"math/big"
@@ -12,13 +13,39 @@ import (
 	ctypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/sha3"
 
 	keybase "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/ethereum"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/substrate"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 	"github.com/snowfork/polkadot-ethereum/prover"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
 )
+
+
+
+const RawABI = `
+[
+	{
+		"inputs": [
+			  {
+				"internalType": "bytes",
+				"name": "data",
+				"type": "bytes"
+			  },
+			  {
+				"internalType": "bytes",
+				"name": "signature",
+				"type": "bytes"
+			  }
+		],
+		"name": "submit",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	  }
+]
+`
 
 // Router packages raw event data as Packets and relays them to the bridge
 type Router struct {
@@ -26,6 +53,7 @@ type Router struct {
 	sc       *substrate.Client
 	ec       *ethclient.Client
 	verifier common.Address
+	contractABI abi.ABI
 }
 
 // NewRouter initializes a new instance of Router
@@ -40,11 +68,17 @@ func NewRouter(websocketURL string, keybase *keybase.Keypair, verifier common.Ad
 		return nil, err
 	}
 
+	contractABI, err := abi.JSON(strings.NewReader(fmt.Sprintf(`%s`, string(RawABI))))
+	if err != nil {
+		return nil, err
+	}
+
 	return &Router{
 		keybase:  keybase,
 		sc:       substrateClient,
 		ec:       ethereumClient,
 		verifier: verifier,
+		contractABI: contractABI,
 	}, nil
 }
 
@@ -125,18 +159,8 @@ func (er Router) Submit(appName string, data []byte) error {
 		return err
 	}
 
-	// Calculate the method ID of our function using crypto.sha3
-	submitFnSignature := []byte("submit(bytes,bytes)")
-	hash := sha3.NewLegacyKeccak256()
-	hash.Write(submitFnSignature)
-	methodID := hash.Sum(nil)[:4]
-
-	var txData []byte
-	txData = append(txData, methodID...)
-	txData = append(txData, data...) // TODO: consider padding bytes with common.LeftPadBytes(data.Bytes(), 32)
-	txData = append(txData, proof.Signature...)
-
-	tx := ctypes.NewTransaction(nonce, appAddress, value, gasLimit, gasPrice, data)
+	txData, _ := er.contractABI.Pack("submit", data, proof.Signature)
+	tx := ctypes.NewTransaction(nonce, appAddress, value, gasLimit, gasPrice, txData)
 	signedTx, err := ctypes.SignTx(tx, ctypes.HomesteadSigner{}, er.keybase.PrivateKey())
 	if err != nil {
 		return err
