@@ -6,7 +6,6 @@ import (
 
 // Chain is a connection to a blockchain network
 type Chain struct {
-	Config   ChainConfig // The config of this chain
 	Streamer Streamer    // The streamer of this chain
 	Router   Router      // The router of the chain
 	// stop     chan<- int

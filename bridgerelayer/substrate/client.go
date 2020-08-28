@@ -1,10 +1,10 @@
 package substrate
 
 import (
-	gsrpc "github.com/Snowfork/go-substrate-rpc-client"
-	"github.com/Snowfork/go-substrate-rpc-client/config"
-	"github.com/Snowfork/go-substrate-rpc-client/signature"
-	"github.com/Snowfork/go-substrate-rpc-client/types"
+	gsrpc "github.com/snowfork/go-substrate-rpc-client"
+	"github.com/snowfork/go-substrate-rpc-client/config"
+	"github.com/snowfork/go-substrate-rpc-client/signature"
+	"github.com/snowfork/go-substrate-rpc-client/types"
 
 	etypes "github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )

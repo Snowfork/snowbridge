@@ -10,26 +10,29 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum/registry"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
 // Streamer streams the Ethereum blockchain for application events
 type Streamer struct {
 	WebsocketURL string
+	RegistryPath string
 	logs         chan<- types.EventData
 	errs         chan<- error
 }
 
 // NewStreamer initializes a new instance of Streamer
-func NewStreamer(websocketURL string) Streamer {
+func NewStreamer(websocketURL string, registryPath string) Streamer {
 	return Streamer{
 		WebsocketURL: websocketURL,
+		RegistryPath: registryPath,
 	}
 }
 
 // Start initializes filtered subscriptions to each registered application
 func (es Streamer) Start(logs chan<- types.EventData, errs chan<- error) {
+	apps := LoadApplications(es.RegistryPath)
+
 	es.logs = logs
 	es.errs = errs
 
@@ -46,7 +49,6 @@ func (es Streamer) Start(logs chan<- types.EventData, errs chan<- error) {
 
 	// Start application subscriptions
 	appEvents := make(chan ctypes.Log)
-	apps := registry.LoadApplications()
 	for _, app := range apps {
 		query := es.buildSubscriptionFilter(app)
 

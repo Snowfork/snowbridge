@@ -15,6 +15,10 @@ limitations under the License.
 */
 package main
 
+import (
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd"
+)
+
 func main() {
-	Execute()
+	cmd.Execute()
 }

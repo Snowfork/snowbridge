@@ -26,7 +26,7 @@ func GenerateKeypair() (*Keypair, error) {
 }
 
 func NewKeypairFromSeed(seed string) (*Keypair, error) {
-	kp, err := signature.KeyringPairFromSecret(seed)
+	kp, err := signature.KeyringPairFromSecret(seed, "")
 	return &Keypair{&kp}, err
 }
 

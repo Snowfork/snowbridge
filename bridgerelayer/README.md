@@ -16,7 +16,15 @@ make install
 
 For testing, start a local Ethereum network and deploy the Bank contract by following the set up instructions [here](../ethereum/README.md).
 
-A sample configuration file is provided at test_config.json. Update the operator and private key fields with valid values from your local Ethereum network.
+
+## Configuration
+
+Configuration is read from `~/.config/artemis-relayer/config.toml`. A sample configuration file is provided at `config.toml.sample`.
+
+* Update the `ethereum.operator and `ethereum.private_key` fields with valid values from your local Ethereum network.
+* Update the `ethereum.apps.eth` and `ethereum.apps.erc20` fields with valid application contract addresses.
+
+The ABIs for ethereum applications are stored in the `~/.config/artemis-relayer/ethereum` directory.
 
 ## Usage
 
@@ -25,13 +33,13 @@ A sample configuration file is provided at test_config.json. Update the operator
 bridgerelayer -h
 
 # Start the relayer
-bridgerelayer init
+bridgerelayer run
 ```
 
 You should see a message similar to
 ```bash
-INFO[0000] Connected to Ethereum chain ID 5777          
-INFO[0000] Subscribed to app 0xC4cE93a5699c68241fc2fB503Fb0f21724A624BB 
+INFO[0000] Connected to Ethereum chain ID 5777
+INFO[0000] Subscribed to app 0xC4cE93a5699c68241fc2fB503Fb0f21724A624BB
 ```
 
 You can send a `sendEth` transaction to the Bank contract with default values via the sendEth script located in polkadot-ethereum/ethereum/scripts/sendEth.js
@@ -41,7 +49,7 @@ You can send a `sendEth` transaction to the Bank contract with default values vi
 truffle exec sendEth.js
 
 # You should see the transaction in the bridgerelayer
-INFO[0007] Witnessed tx 0x22c26a2d423bcc9622daba9410f5bdee1d047ec2e8be5c112a01b64224dbea5e on app 0xC4cE93a5699c68241fc2fB503Fb0f21724A624BB 
+INFO[0007] Witnessed tx 0x22c26a2d423bcc9622daba9410f5bdee1d047ec2e8be5c112a01b64224dbea5e on app 0xC4cE93a5699c68241fc2fB503Fb0f21724A624BB
 ```
 
 Currently, the relayer logs the packet instead of sending it directly to the bridge. It should look similar to
