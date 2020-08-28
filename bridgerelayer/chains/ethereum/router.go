@@ -159,7 +159,11 @@ func (er Router) Submit(appName string, data []byte) error {
 		return err
 	}
 
-	txData, _ := er.contractABI.Pack("submit", data, proof.Signature)
+	txData, err := er.contractABI.Pack("submit", data, proof.Signature)
+	if err != nil {
+		return err
+	}
+
 	tx := ctypes.NewTransaction(nonce, appAddress, value, gasLimit, gasPrice, txData)
 	signedTx, err := ctypes.SignTx(tx, ctypes.HomesteadSigner{}, er.keybase.PrivateKey())
 	if err != nil {

@@ -118,13 +118,13 @@ func (ss *Streamer) SubscribeBlocks(blockRetryLimit int) error {
 
 			events := Events{}
 			err = records.DecodeEventRecords(&ss.Core.MetaData, &events)
-			log.Info("DecodeEvents")
-			if err != nil {
-				log.Error("Error decoding event", err)
-				return err
-			}
 
-			ss.handleEvents(&events)
+			// TODO: DecodeEventRecords will fail if the chain emits events from pallet_scheduler.
+			// We'll need to decode those events properly by adding the necessary support in ./events.go.
+			// For now we just ignore the error since pallet_scheduler events aren't important for us.
+			if err == nil {
+				ss.handleEvents(&events)
+			}
 
 			currentBlock++
 			retry = int(ss.BlockRetryLimit)
@@ -132,19 +132,26 @@ func (ss *Streamer) SubscribeBlocks(blockRetryLimit int) error {
 	}
 }
 
-type Message struct {
+// These are the data packages we submit to the Ethereum contracts
+type Erc20Message struct {
 	Sender		types.AccountID
 	Recipient 	types.H160
 	TokenAddr   types.H160
 	Amount		types.U256
 }
 
+type EthMessage struct {
+	Sender		types.AccountID
+	Recipient 	types.H160
+	Amount		types.U256
+}
 
+// TODO: Refactor this code!
 func (ss *Streamer) handleEvents(events *Events) {
 	for _, evt := range events.ERC20_Transfer {
 		log.Debug("Handling ERC20 transfer event")
 
-		msg := Message{
+		msg := Erc20Message{
 			Sender: evt.AccountID,
 			Recipient: evt.Recipient,
 			TokenAddr: evt.TokenID,
@@ -155,16 +162,18 @@ func (ss *Streamer) handleEvents(events *Events) {
 		encoder := scale.NewEncoder(buf)
 		encoder.Encode(msg)
 
-		ss.EthRouter.Submit("erc20", buf.Bytes())
+		err := ss.EthRouter.Submit("erc20", buf.Bytes())
+		if err != nil {
+			log.Error("Error submitting Tx: ", err)
+		}
 	}
 
 	for _, evt := range events.ETH_Transfer {
 		log.Debug("Handling ETH transfer event")
 
-		msg := Message{
+		msg := EthMessage{
 			Sender: evt.AccountID,
 			Recipient: evt.Recipient,
-			TokenAddr: [20]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Amount: evt.Amount,
 		}
 
@@ -172,6 +181,9 @@ func (ss *Streamer) handleEvents(events *Events) {
 		encoder := scale.NewEncoder(buf)
 		encoder.Encode(msg)
 
-		ss.EthRouter.Submit("eth", buf.Bytes())
+		err := ss.EthRouter.Submit("eth", buf.Bytes())
+		if err != nil {
+			log.Error("Error submitting Tx: ", err)
+		}
 	}
 }
