@@ -16,6 +16,7 @@ Types
 A general overview on the secp256k1 can be found here: https://en.bitcoin.it/wiki/Secp256k1
 A general overview on the sr25519 type can be found here: https://wiki.polkadot.network/docs/en/learn-cryptography
 */
+
 package keybase
 
 type KeyType = string
