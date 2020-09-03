@@ -1,11 +1,14 @@
+// Copyright 2020 ChainSafe Systems
+// SPDX-License-Identifier: LGPL-3.0-only
+
 package substrate
 
 import (
 	"crypto/rand"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/snowfork/go-substrate-rpc-client/signature"
 	"github.com/snowfork/go-substrate-rpc-client/types"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase"
 )
