@@ -13,24 +13,24 @@ import (
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
-// Streamer streams the Ethereum blockchain for application events
-type Streamer struct {
-	WebsocketURL string
+// Listener streams the Ethereum blockchain for application events
+type Listener struct {
+	conn         Connection
 	RegistryPath string
 	logs         chan<- types.EventData
 	errs         chan<- error
 }
 
-// NewStreamer initializes a new instance of Streamer
-func NewStreamer(websocketURL string, registryPath string) Streamer {
-	return Streamer{
+// NewListener initializes a new instance of Listener
+func NewListener(conn Connection, registryPath string) (*Listener, error) {
+	return &Listener{
 		WebsocketURL: websocketURL,
 		RegistryPath: registryPath,
-	}
+	}, nil
 }
 
 // Start initializes filtered subscriptions to each registered application
-func (es Streamer) Start(logs chan<- types.EventData, errs chan<- error) {
+func (es Listener) Start(logs chan<- types.EventData, errs chan<- error) {
 	apps := LoadApplications(es.RegistryPath)
 
 	es.logs = logs
@@ -73,7 +73,7 @@ func (es Streamer) Start(logs chan<- types.EventData, errs chan<- error) {
 	}
 }
 
-func (es Streamer) buildSubscriptionFilter(app types.Application) ethereum.FilterQuery {
+func (es Listener) buildSubscriptionFilter(app types.Application) ethereum.FilterQuery {
 	contractAddress := common.HexToAddress(app.ID)
 	appEventSignature := app.ABI.Events[types.EventName].ID.Hex()
 	appEventTopic := common.HexToHash(appEventSignature)
@@ -83,7 +83,6 @@ func (es Streamer) buildSubscriptionFilter(app types.Application) ethereum.Filte
 		Topics:    [][]common.Hash{{appEventTopic}},
 	}
 }
-
 
 // Route packages tx data as a packet and relays it to the bridge
 func (er Router) Route(eventData types.EventData) error {
