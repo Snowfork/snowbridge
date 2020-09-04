@@ -15,12 +15,12 @@ import (
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
 	conn *Connection
-	apps []Application
-	stop chan<- int
+	apps []types.Application
+	stop <-chan int
 }
 
 // NewListener initializes a new instance of Listener
-func NewListener(conn Connection, stop chan<- int) (*Listener, error) {
+func NewListener(conn *Connection, stop <-chan int) (*Listener, error) {
 	apps := LoadApplications(viper.GetString("ethereum.registry-path"))
 
 	return &Listener{
@@ -30,52 +30,56 @@ func NewListener(conn Connection, stop chan<- int) (*Listener, error) {
 	}, nil
 }
 
-// Start initializes filtered subscriptions to each registered application
-func (li Listener) Start() {
-	appEvents := make(chan ctypes.Log)
-	for _, app := range apps {
-		query := li.buildQuery(app)
+func (li *Listener) Start() error {
+	go func() {
+		li.pollEvents()
+	}()
 
-		// Start the contract subscription
-		_, err := conn.client.SubscribeFilterLogs(context.Background(), query, appEvents)
+	return nil
+}
+
+func (li *Listener) pollEvents() {
+	log.Info("Polling started")
+	events := make(chan ctypes.Log)
+	for _, app := range li.apps {
+		query := makeQuery(app)
+		_, err := li.conn.client.SubscribeFilterLogs(context.Background(), query, events)
 		if err != nil {
-			log.WithFields(
-				log.Fields{
-					"appID": app.ID,
-				},
-			).Error("Failed to subscribe to application events")
+			log.WithFields(log.Fields{
+				"address": app.ID,
+			}).Error("Failed to subscribe to application events")
 		} else {
-			log.WithFields(
-				log.Fields{
-					"appID": app.ID,
-				},
-			).Info("Subscribed to application events")
+			log.WithFields(log.Fields{
+				"address": app.ID,
+			}).Info("Subscribed to application events")
 		}
 	}
 
 	for {
 		select {
-		case log := <-appEvents:
+		case <-li.stop:
+			log.Info("Polling stopped")
+			return
+		case event := <-events:
 			log.WithFields(
 				log.Fields{
-					"contractAddress": log.Address.Hex(),
-					"txHash":          log.TxHash.Hex(),
-					"blockNumber":     log.BlockNumber,
+					"address":     event.Address.Hex(),
+					"txHash":      event.TxHash.Hex(),
+					"blockNumber": event.BlockNumber,
 				},
-			).Info("Witnessed transaction for application contract")
-			eventData := types.NewEventData(log.Address, log)
+			).Info("Witnessed transaction for application")
 		}
 	}
 }
 
-func (li Listener) buildQuery(app types.Application) ethereum.FilterQuery {
-	contractAddress := common.HexToAddress(app.ID)
-	appEventSignature := app.ABI.Events[types.EventName].ID.Hex()
-	appEventTopic := common.HexToHash(appEventSignature)
+func makeQuery(app types.Application) ethereum.FilterQuery {
+	address := common.HexToAddress(app.ID)
+	signature := app.ABI.Events[types.EventName].ID.Hex()
+	topic := common.HexToHash(signature)
 
 	return ethereum.FilterQuery{
-		Addresses: []common.Address{contractAddress},
-		Topics:    [][]common.Hash{{appEventTopic}},
+		Addresses: []common.Address{address},
+		Topics:    [][]common.Hash{{topic}},
 	}
 }
 

@@ -8,8 +8,6 @@ import (
 	gsrpc "github.com/snowfork/go-substrate-rpc-client"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/types"
 	subKeyPair "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/substrate"
-
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
 )
 
 // Core holds core SubstrateChain information including credentials
@@ -27,7 +25,7 @@ type Chain struct {
 }
 
 // NewChain ...
-func NewChain(er *ethereum.Router) (*Chain, error) {
+func NewChain() (*Chain, error) {
 
 	core := Core{}
 

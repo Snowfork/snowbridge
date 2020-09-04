@@ -5,24 +5,28 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
+
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
 )
 
 // Connection ...
 type Connection struct {
-	client *ethclient.Client
+	endpoint string
+	kp       *secp256k1.Keypair
+	client   *ethclient.Client
 }
 
 // NewConnection ...
-func NewConnection() *Connection {
-	return &Connection{}
+func NewConnection(endpoint string, kp *secp256k1.Keypair) *Connection {
+	return &Connection{
+		endpoint: endpoint,
+		kp:       kp,
+	}
 }
 
 func (conn *Connection) Connect() error {
 
-	endpoint := viper.GetString("ethereum.endpoint")
-
-	client, err := ethclient.Dial(endpoint)
+	client, err := ethclient.Dial(conn.endpoint)
 	if err != nil {
 		return err
 	}
@@ -32,12 +36,19 @@ func (conn *Connection) Connect() error {
 		return err
 	}
 
-	log.WithFields(
-		log.Fields{
-			"endpoint": endpoint,
-			"chainID":  chainID,
-		},
-	).Info("Connected to Ethereum chain")
+	log.WithFields(log.Fields{
+		"endpoint": conn.endpoint,
+		"chainID":  chainID,
+	}).Info("Connected to Ethereum chain")
 
 	conn.client = client
+
+	return nil
+}
+
+// Close terminates the client connection and stops any running routines
+func (conn *Connection) Close() {
+	if conn.client != nil {
+		conn.client.Close()
+	}
 }
