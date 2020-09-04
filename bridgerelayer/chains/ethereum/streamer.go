@@ -83,3 +83,24 @@ func (es Streamer) buildSubscriptionFilter(app types.Application) ethereum.Filte
 		Topics:    [][]common.Hash{{appEventTopic}},
 	}
 }
+
+
+// Route packages tx data as a packet and relays it to the bridge
+func (er Router) Route(eventData types.EventData) error {
+
+	appAddress := eventData.Contract.Bytes()
+	var appID [32]byte
+	copy(appID[:], appAddress)
+
+	packet, err := er.buildPacket(eventData.Contract, eventData.Data)
+	if err != nil {
+		return err
+	}
+
+	err = er.sendPacket(appID, packet)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -7,9 +7,12 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	homedir "github.com/mitchellh/go-homedir"
+
 )
 
-const configDir = ".config/artemis-relayer"
+const userConfigDir = ".config/artemis-relayer"
 
 var rootCmd = &cobra.Command{
 	Use:          "bridgerelayer",
@@ -22,16 +25,33 @@ func init() {
 	rootCmd.AddCommand(runCmd())
 }
 
-func loadConfig() {
 
-	viper.AddConfigPath(path.Join("$HOME", configDir))
+func homeDir() string {
+	home, err := homedir.Dir()
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+	return home
+}
+
+
+func loadConfig() {
+	viper.AddConfigPath(path.Join(home, userConfigDir))
+	viper.AddConfigPath(".")
+
 	viper.SetConfigName("config")
 	viper.SetConfigType("toml")
+
+	viper.SetEnvPrefix("ARTEMIS_RELAYER")
 	viper.AutomaticEnv()
+
+	viper.SetDefault("ethereum.registry-path", path.Join(home, userConfigDir, "ethereum"))
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(fmt.Errorf("fatal error config file: %s", err))
+		fmt.Println("Fatal error reading config file: ", err))
+		os.Exit(1)
 	}
 
 	fmt.Println("Using config file:", viper.ConfigFileUsed())

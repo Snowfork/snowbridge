@@ -24,7 +24,6 @@ type Core struct {
 // Chain ...
 type Chain struct {
 	Streamer *Streamer // The streamer of this chain
-	Router   *Router   // The router of this chain
 }
 
 // NewChain ...

@@ -1,33 +1,32 @@
 package substrate
 
 import (
+	"bytes"
 	"fmt"
 	"time"
-	"bytes"
 
 	log "github.com/sirupsen/logrus"
-	types "github.com/snowfork/go-substrate-rpc-client/types"
 	"github.com/snowfork/go-substrate-rpc-client/scale"
+	types "github.com/snowfork/go-substrate-rpc-client/types"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
-
 )
 
 // Streamer streams Substrate events
 type Streamer struct {
-	Core         *Core
-	EthRouter    *ethereum.Router
-	WebsocketURL string
-	BlockRetryLimit uint
+	Core               *Core
+	EthRouter          *ethereum.Router
+	WebsocketURL       string
+	BlockRetryLimit    uint
 	BlockRetryInterval time.Duration
 }
 
 // NewStreamer returns a new substrate transaction streamer
 func NewStreamer(core *Core, er *ethereum.Router, websocketURL string, blockRetryLimit uint, blockRetryInterval uint) *Streamer {
 	return &Streamer{
-		Core:         core,
-		EthRouter:    er,
-		WebsocketURL: websocketURL,
-		BlockRetryLimit: blockRetryLimit,
+		Core:               core,
+		EthRouter:          er,
+		WebsocketURL:       websocketURL,
+		BlockRetryLimit:    blockRetryLimit,
 		BlockRetryInterval: time.Duration(blockRetryInterval) * time.Second,
 	}
 }
@@ -134,16 +133,16 @@ func (ss *Streamer) SubscribeBlocks(blockRetryLimit int) error {
 
 // These are the data packages we submit to the Ethereum contracts
 type Erc20Message struct {
-	Sender		types.AccountID
-	Recipient 	types.H160
-	TokenAddr   types.H160
-	Amount		types.U256
+	Sender    types.AccountID
+	Recipient types.H160
+	TokenAddr types.H160
+	Amount    types.U256
 }
 
 type EthMessage struct {
-	Sender		types.AccountID
-	Recipient 	types.H160
-	Amount		types.U256
+	Sender    types.AccountID
+	Recipient types.H160
+	Amount    types.U256
 }
 
 // TODO: Refactor this code!
@@ -152,10 +151,10 @@ func (ss *Streamer) handleEvents(events *Events) {
 		log.Debug("Handling ERC20 transfer event")
 
 		msg := Erc20Message{
-			Sender: evt.AccountID,
+			Sender:    evt.AccountID,
 			Recipient: evt.Recipient,
 			TokenAddr: evt.TokenID,
-			Amount: evt.Amount,
+			Amount:    evt.Amount,
 		}
 
 		buf := bytes.NewBuffer(nil)
@@ -172,9 +171,9 @@ func (ss *Streamer) handleEvents(events *Events) {
 		log.Debug("Handling ETH transfer event")
 
 		msg := EthMessage{
-			Sender: evt.AccountID,
+			Sender:    evt.AccountID,
 			Recipient: evt.Recipient,
-			Amount: evt.Amount,
+			Amount:    evt.Amount,
 		}
 
 		buf := bytes.NewBuffer(nil)
