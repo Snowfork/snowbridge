@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/viper"
 
-	"fmt"
 	"context"
+	"fmt"
 	"math/big"
 
 	"strings"
@@ -20,14 +20,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	ethKeys "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/ethereum"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/substrate"
 	"github.com/snowfork/polkadot-ethereum/prover"
 
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
-
 )
-
 
 const RawABI = `
 [
@@ -52,13 +48,12 @@ const RawABI = `
 ]
 `
 
-
 // EthChain streams the Ethereum blockchain and routes tx data packets
 type Chain struct {
-	Streamer Streamer
-	keybase  *ethKeys.Keypair
-	client   *ethclient.Client
-	verifier common.Address
+	Streamer    Streamer
+	keybase     *ethKeys.Keypair
+	client      *ethclient.Client
+	verifier    common.Address
 	contractABI abi.ABI
 }
 
@@ -84,10 +79,10 @@ func NewChain(websocketURL string, keybase *ethKeys.Keypair, verifier common.Add
 	}
 
 	return Chain{
-		Streamer: streamer,
-		keybase:  keybase,
-		client:   client,
-		verifier: verifier,
+		Streamer:    streamer,
+		keybase:     keybase,
+		client:      client,
+		verifier:    verifier,
 		contractABI: contractABI,
 	}, nil
 }

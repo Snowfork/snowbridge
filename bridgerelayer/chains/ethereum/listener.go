@@ -2,78 +2,73 @@ package ethereum
 
 import (
 	"context"
-	"fmt"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	ctypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
-	conn         Connection
-	RegistryPath string
-	logs         chan<- types.EventData
-	errs         chan<- error
+	conn *Connection
+	apps []Application
+	stop chan<- int
 }
 
 // NewListener initializes a new instance of Listener
-func NewListener(conn Connection, registryPath string) (*Listener, error) {
+func NewListener(conn Connection, stop chan<- int) (*Listener, error) {
+	apps := LoadApplications(viper.GetString("ethereum.registry-path"))
+
 	return &Listener{
-		WebsocketURL: websocketURL,
-		RegistryPath: registryPath,
+		conn,
+		apps,
+		stop,
 	}, nil
 }
 
 // Start initializes filtered subscriptions to each registered application
-func (es Listener) Start(logs chan<- types.EventData, errs chan<- error) {
-	apps := LoadApplications(es.RegistryPath)
-
-	es.logs = logs
-	es.errs = errs
-
-	client, err := ethclient.Dial(es.WebsocketURL)
-	if err != nil {
-		es.errs <- err
-	}
-
-	chainID, err := client.NetworkID(context.Background())
-	if err != nil {
-		es.errs <- err
-	}
-	log.Info(fmt.Sprintf("Connected to Ethereum chain ID %s\n", chainID))
-
-	// Start application subscriptions
+func (li Listener) Start() {
 	appEvents := make(chan ctypes.Log)
 	for _, app := range apps {
-		query := es.buildSubscriptionFilter(app)
+		query := li.buildQuery(app)
 
 		// Start the contract subscription
-		_, err := client.SubscribeFilterLogs(context.Background(), query, appEvents)
+		_, err := conn.client.SubscribeFilterLogs(context.Background(), query, appEvents)
 		if err != nil {
-			log.Info(fmt.Sprintf("Failed to subscribe to app %s\n", app.ID))
+			log.WithFields(
+				log.Fields{
+					"appID": app.ID,
+				},
+			).Error("Failed to subscribe to application events")
 		} else {
-			log.Info(fmt.Sprintf("Subscribed to app %s\n", app.ID))
+			log.WithFields(
+				log.Fields{
+					"appID": app.ID,
+				},
+			).Info("Subscribed to application events")
 		}
 	}
 
 	for {
 		select {
-		// case err := <-sub.Err(): // TODO: capture subscription errors
-		// 	es.errs <- err
-		case vLog := <-appEvents:
-			log.Info(fmt.Sprintf("Witnessed tx %s on app %s\n", vLog.TxHash.Hex(), vLog.Address.Hex()))
-			eventData := types.NewEventData(vLog.Address, vLog)
-			es.logs <- eventData
+		case log := <-appEvents:
+			log.WithFields(
+				log.Fields{
+					"contractAddress": log.Address.Hex(),
+					"txHash":          log.TxHash.Hex(),
+					"blockNumber":     log.BlockNumber,
+				},
+			).Info("Witnessed transaction for application contract")
+			eventData := types.NewEventData(log.Address, log)
 		}
 	}
 }
 
-func (es Listener) buildSubscriptionFilter(app types.Application) ethereum.FilterQuery {
+func (li Listener) buildQuery(app types.Application) ethereum.FilterQuery {
 	contractAddress := common.HexToAddress(app.ID)
 	appEventSignature := app.ABI.Events[types.EventName].ID.Hex()
 	appEventTopic := common.HexToHash(appEventSignature)
@@ -85,21 +80,21 @@ func (es Listener) buildSubscriptionFilter(app types.Application) ethereum.Filte
 }
 
 // Route packages tx data as a packet and relays it to the bridge
-func (er Router) Route(eventData types.EventData) error {
+// func (er Router) Route(eventData types.EventData) error {
 
-	appAddress := eventData.Contract.Bytes()
-	var appID [32]byte
-	copy(appID[:], appAddress)
+// 	appAddress := eventData.Contract.Bytes()
+// 	var appID [32]byte
+// 	copy(appID[:], appAddress)
 
-	packet, err := er.buildPacket(eventData.Contract, eventData.Data)
-	if err != nil {
-		return err
-	}
+// 	packet, err := er.buildPacket(eventData.Contract, eventData.Data)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	err = er.sendPacket(appID, packet)
-	if err != nil {
-		return err
-	}
+// 	err = er.sendPacket(appID, packet)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }

@@ -1,20 +1,43 @@
 package ethereum
 
 import (
+	"context"
+
 	"github.com/ethereum/go-ethereum/ethclient"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
+// Connection ...
 type Connection struct {
-	client   *ethclient.Client
+	client *ethclient.Client
 }
 
-func NewConnection() (*Connection, err) {
+// NewConnection ...
+func NewConnection() *Connection {
+	return &Connection{}
+}
 
-	client, err := ethclient.Dial(viper.GetString("ethereum.endpoint"))
+func (conn *Connection) Connect() error {
+
+	endpoint := viper.GetString("ethereum.endpoint")
+
+	client, err := ethclient.Dial(endpoint)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &Connection { client }, nil
-}
+	chainID, err := conn.client.NetworkID(context.Background())
+	if err != nil {
+		return err
+	}
 
+	log.WithFields(
+		log.Fields{
+			"endpoint": endpoint,
+			"chainID":  chainID,
+		},
+	).Info("Connected to Ethereum chain")
+
+	conn.client = client
+}
