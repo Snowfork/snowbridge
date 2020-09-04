@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/viper"
 
 	homedir "github.com/mitchellh/go-homedir"
-
 )
 
 const userConfigDir = ".config/artemis-relayer"
@@ -25,7 +24,6 @@ func init() {
 	rootCmd.AddCommand(runCmd())
 }
 
-
 func homeDir() string {
 	home, err := homedir.Dir()
 	if err != nil {
@@ -35,8 +33,10 @@ func homeDir() string {
 	return home
 }
 
-
 func loadConfig() {
+
+	home := homeDir()
+
 	viper.AddConfigPath(path.Join(home, userConfigDir))
 	viper.AddConfigPath(".")
 
@@ -50,7 +50,7 @@ func loadConfig() {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		fmt.Println("Fatal error reading config file: ", err))
+		fmt.Println("Fatal error reading config file: ", err)
 		os.Exit(1)
 	}
 

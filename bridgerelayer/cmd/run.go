@@ -1,18 +1,9 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-	"path"
-
-	"sync"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/substrate"
+	"github.com/spf13/cobra"
 )
 
 func runCmd() *cobra.Command {

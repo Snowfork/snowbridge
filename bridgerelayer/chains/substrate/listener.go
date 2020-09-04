@@ -2,60 +2,62 @@ package substrate
 
 import (
 	"bytes"
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/scale"
 	types "github.com/snowfork/go-substrate-rpc-client/types"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
 )
 
-// Streamer streams Substrate events
-type Streamer struct {
-	Core               *Core
-	EthRouter          *ethereum.Router
-	WebsocketURL       string
-	BlockRetryLimit    uint
-	BlockRetryInterval time.Duration
+// Listener streams Substrate events
+type Listener struct {
+	conn               *Connection
+	blockRetryLimit    uint
+	blockRetryInterval time.Duration
+	stop               <-chan int
 }
 
-// NewStreamer returns a new substrate transaction streamer
-func NewStreamer(core *Core, er *ethereum.Router, websocketURL string, blockRetryLimit uint, blockRetryInterval uint) *Streamer {
-	return &Streamer{
-		Core:               core,
-		EthRouter:          er,
-		WebsocketURL:       websocketURL,
-		BlockRetryLimit:    blockRetryLimit,
-		BlockRetryInterval: time.Duration(blockRetryInterval) * time.Second,
+// NewListener returns a new substrate transaction streamer
+func NewListener(conn *Connection, blockRetryLimit uint, blockRetryInterval uint, stop <-chan int) *Listener {
+	return &Listener{
+		conn:               conn,
+		blockRetryLimit:    blockRetryLimit,
+		blockRetryInterval: time.Duration(blockRetryInterval) * time.Second,
+		stop:               stop,
 	}
 }
 
-// Start the streamer
-func (ss *Streamer) Start() error {
-	// Check whether latest is less than starting block
-	header, err := ss.Core.API.RPC.Chain.GetHeaderLatest()
-	if err != nil {
-		return err
-	}
-	if uint64(header.Number) < ss.Core.StartBlock {
-		return fmt.Errorf("starting block (%d) is greater than latest known block (%d)", ss.Core.StartBlock, header.Number)
-	}
+// Start the listener
+func (li *Listener) Start() error {
 
-	err = ss.SubscribeBlocks(int(ss.BlockRetryLimit))
-	if err != nil {
-		return err
-	}
+	go func() {
+		err := li.pollBlocks()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Error("Error while polling substrate blocks")
+		}
+	}()
 
 	return nil
 }
 
-// SubscribeBlocks ...
-func (ss *Streamer) SubscribeBlocks(blockRetryLimit int) error {
-	var currentBlock = ss.Core.StartBlock
-	var retry = blockRetryLimit
+func (li *Listener) pollBlocks() error {
+
+	// Get current block
+	block, err := li.conn.api.RPC.Chain.GetHeaderLatest()
+	if err != nil {
+		return err
+	}
+
+	currentBlock := uint64(block.Number)
+	retry := int(li.blockRetryLimit)
+
 	for {
 		select {
+		case <-li.stop:
+			log.Info("Polling stopped")
+			return nil
 		default:
 			// No more retries, go to next block
 			if retry == 0 {
@@ -64,20 +66,20 @@ func (ss *Streamer) SubscribeBlocks(blockRetryLimit int) error {
 			}
 
 			// Get block hash
-			finalizedHash, err := ss.Core.API.RPC.Chain.GetFinalizedHead()
+			finalizedHash, err := li.conn.api.RPC.Chain.GetFinalizedHead()
 			if err != nil {
 				log.Error("Failed to fetch head hash", err)
 				retry--
-				time.Sleep(ss.BlockRetryInterval)
+				time.Sleep(li.blockRetryInterval)
 				continue
 			}
 
 			// Get block header
-			finalizedHeader, err := ss.Core.API.RPC.Chain.GetHeader(finalizedHash)
+			finalizedHeader, err := li.conn.api.RPC.Chain.GetHeader(finalizedHash)
 			if err != nil {
 				log.Error("Failed to fetch finalized header", err)
 				retry--
-				time.Sleep(ss.BlockRetryInterval)
+				time.Sleep(li.blockRetryInterval)
 				continue
 			}
 
@@ -87,46 +89,43 @@ func (ss *Streamer) SubscribeBlocks(blockRetryLimit int) error {
 					"target": currentBlock,
 					"latest": finalizedHeader.Number,
 				}).Info("Block not yet finalized")
-				time.Sleep(ss.BlockRetryInterval)
+				time.Sleep(li.blockRetryInterval)
 				continue
 			}
 
 			// Get hash for latest block, sleep and retry if not ready
-			hash, err := ss.Core.API.RPC.Chain.GetBlockHash(currentBlock)
+			hash, err := li.conn.api.RPC.Chain.GetBlockHash(currentBlock)
 			if err != nil && err.Error() == "required result to be 32 bytes, but got 0" {
-				time.Sleep(ss.BlockRetryInterval)
+				time.Sleep(li.blockRetryInterval)
 				continue
 			} else if err != nil {
 				log.Error("Failed to query latest block", "block", currentBlock, "err", err)
 				retry--
-				time.Sleep(ss.BlockRetryInterval)
+				time.Sleep(li.blockRetryInterval)
 				continue
 			}
 
 			log.Info("Fetching block for events", "hash", hash.Hex())
-			key, err := types.CreateStorageKey(&ss.Core.MetaData, "System", "Events", nil, nil)
+			key, err := types.CreateStorageKey(&li.conn.metadata, "System", "Events", nil, nil)
 			if err != nil {
 				return err
 			}
 
 			var records types.EventRecordsRaw
-			_, err = ss.Core.API.RPC.State.GetStorage(key, &records, hash)
+			_, err = li.conn.api.RPC.State.GetStorage(key, &records, hash)
 			if err != nil {
 				return err
 			}
 
 			events := Events{}
-			err = records.DecodeEventRecords(&ss.Core.MetaData, &events)
+			err = records.DecodeEventRecords(&li.conn.metadata, &events)
 
-			// TODO: DecodeEventRecords will fail if the chain emits events from pallet_scheduler.
-			// We'll need to decode those events properly by adding the necessary support in ./events.go.
-			// For now we just ignore the error since pallet_scheduler events aren't important for us.
 			if err == nil {
-				ss.handleEvents(&events)
+				li.handleEvents(&events)
 			}
 
 			currentBlock++
-			retry = int(ss.BlockRetryLimit)
+			retry = int(li.blockRetryLimit)
 		}
 	}
 }
@@ -145,8 +144,7 @@ type EthMessage struct {
 	Amount    types.U256
 }
 
-// TODO: Refactor this code!
-func (ss *Streamer) handleEvents(events *Events) {
+func (li *Listener) handleEvents(events *Events) {
 	for _, evt := range events.ERC20_Transfer {
 		log.Debug("Handling ERC20 transfer event")
 
@@ -161,10 +159,7 @@ func (ss *Streamer) handleEvents(events *Events) {
 		encoder := scale.NewEncoder(buf)
 		encoder.Encode(msg)
 
-		err := ss.EthRouter.Submit("erc20", buf.Bytes())
-		if err != nil {
-			log.Error("Error submitting Tx: ", err)
-		}
+		// err := ss.EthRouter.Submit("erc20", buf.Bytes())
 	}
 
 	for _, evt := range events.ETH_Transfer {
@@ -180,9 +175,6 @@ func (ss *Streamer) handleEvents(events *Events) {
 		encoder := scale.NewEncoder(buf)
 		encoder.Encode(msg)
 
-		err := ss.EthRouter.Submit("eth", buf.Bytes())
-		if err != nil {
-			log.Error("Error submitting Tx: ", err)
-		}
+		// err := ss.EthRouter.Submit("eth", buf.Bytes())
 	}
 }

@@ -1,88 +1,75 @@
 package substrate
 
 import (
+	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/sr25519"
 	"github.com/spf13/viper"
-
-	"sync"
-
-	gsrpc "github.com/snowfork/go-substrate-rpc-client"
-	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/types"
-	subKeyPair "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/substrate"
 )
-
-// Core holds core SubstrateChain information including credentials
-type Core struct {
-	KeyPair     *subKeyPair.Keypair
-	API         *gsrpc.SubstrateAPI
-	MetaData    gsrpcTypes.Metadata
-	GenesisHash gsrpcTypes.Hash
-	StartBlock  uint64
-}
 
 // Chain ...
 type Chain struct {
-	Streamer *Streamer // The streamer of this chain
+	listener *Listener
+	writer   *Writer
+	conn     *Connection
+	stop     chan<- int
 }
 
 // NewChain ...
 func NewChain() (*Chain, error) {
 
-	core := Core{}
+	endpoint := viper.GetString("substrate.endpoint")
+	blockRetryLimit := viper.GetUint("substrate.block-retry-limit")
+	blockRetryInterval := viper.GetUint("substrate.block-retry-interval")
 
-	krp, err := subKeyPair.NewKeypairFromSeed("//Alice")
+	kp, err := sr25519.NewKeypairFromSeed("//Alice", "")
 	if err != nil {
 		return nil, err
 	}
-	core.KeyPair = krp
 
-	// Initialize API
-	api, err := gsrpc.NewSubstrateAPI(viper.GetString("substrate.endpoint"))
-	if err != nil {
-		return nil, err
-	}
-	core.API = api
+	stop := make(chan int, 0)
 
-	// Fetch metadata
-	meta, err := api.RPC.State.GetMetadataLatest()
-	if err != nil {
-		return nil, err
-	}
-	core.MetaData = *meta
+	conn := NewConnection(endpoint, kp.AsKeyringPair(), stop)
 
-	// Fetch genesis hash
-	genesisHash, err := api.RPC.Chain.GetBlockHash(0)
-	if err != nil {
-		return nil, err
-	}
-	core.GenesisHash = genesisHash
-
-	// Fetch header
-	currBlock, err := api.RPC.Chain.GetHeaderLatest()
-	if err != nil {
-		return nil, err
-	}
-	core.StartBlock = uint64(currBlock.Number)
-
-	streamer := NewStreamer(
-		&core,
-		er,
-		viper.GetString("substrate.endpoint"),
-		viper.GetUint("substrate.block-retry-limit"),
-		viper.GetUint("substrate.block-retry-interval"),
+	listener := NewListener(
+		conn,
+		blockRetryLimit,
+		blockRetryInterval,
+		stop,
 	)
-	router := Router{Core: &core}
+
+	writer, err := NewWriter(conn, stop)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Chain{
-		Streamer: streamer,
-		Router:   &router,
+		listener: listener,
+		writer:   writer,
+		stop:     stop,
 	}, nil
 }
 
-// Start ...
-func (sc *Chain) Start(wg *sync.WaitGroup) error {
-	defer wg.Done()
+func (ch *Chain) Start() error {
 
-	go sc.Streamer.Start()
+	err := ch.listener.Start()
+	if err != nil {
+		return err
+	}
+
+	err = ch.writer.Start()
+	if err != nil {
+		return err
+	}
+
+	log.Info("Successfully started substrate chain")
 
 	return nil
+}
+
+// Stop signals to any running routines to exit
+func (ch *Chain) Stop() {
+	close(ch.stop)
+	if ch.conn != nil {
+		ch.conn.Close()
+	}
 }
