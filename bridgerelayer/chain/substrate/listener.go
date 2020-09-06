@@ -8,6 +8,8 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/scale"
 	types "github.com/snowfork/go-substrate-rpc-client/types"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
+
 )
 
 // Listener streams Substrate events
@@ -15,12 +17,12 @@ type Listener struct {
 	conn               *Connection
 	blockRetryLimit    uint
 	blockRetryInterval time.Duration
-	messages           chan<- chain.Message
+	messages           chan<- core.Message
 	stop               <-chan int
 }
 
 // NewListener returns a new substrate transaction streamer
-func NewListener(conn *Connection, messages chan<- chain.Message, blockRetryLimit uint, blockRetryInterval uint, stop <-chan int) *Listener {
+func NewListener(conn *Connection, messages chan<- core.Message, blockRetryLimit uint, blockRetryInterval uint, stop <-chan int) *Listener {
 	return &Listener{
 		conn:               conn,
 		blockRetryLimit:    blockRetryLimit,
@@ -173,7 +175,7 @@ func (li *Listener) handleEvents(events *Events) {
 		encoder := scale.NewEncoder(buf)
 		encoder.Encode(msg)
 
-		li.messages <- chain.Message{AppID: chain.Erc20AppID, Payload: buf.Bytes()}
+		li.messages <- core.Message{AppID: chain.Erc20AppID, Payload: buf.Bytes()}
 	}
 
 	for _, evt := range events.ETH_Transfer {
@@ -189,6 +191,6 @@ func (li *Listener) handleEvents(events *Events) {
 		encoder := scale.NewEncoder(buf)
 		encoder.Encode(msg)
 
-		li.messages <- chain.Message{AppID: chain.EthAppID, Payload: buf.Bytes()}
+		li.messages <- core.Message{AppID: chain.EthAppID, Payload: buf.Bytes()}
 	}
 }

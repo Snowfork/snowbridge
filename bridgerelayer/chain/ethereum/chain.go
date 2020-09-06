@@ -1,7 +1,8 @@
 package ethereum
 
 import (
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
+
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
 	"github.com/spf13/viper"
 )
@@ -16,8 +17,8 @@ type Chain struct {
 
 const Name = "Ethereum"
 
-// NewEthChain initializes a new instance of EthChain
-func NewChain(ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
+// NewChain initializes a new instance of EthChain
+func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Chain, error) {
 
 	kp, err := secp256k1.NewKeypairFromString(viper.GetString("ethereum.private_key"))
 	if err != nil {

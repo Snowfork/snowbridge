@@ -13,13 +13,15 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
+
 	"github.com/snowfork/polkadot-ethereum/prover"
 )
 
 type Writer struct {
 	conn *Connection
 	abi  abi.ABI
-	messages <-chan chain.Message
+	messages <-chan core.Message
 	stop <-chan int
 }
 
@@ -46,7 +48,7 @@ const RawABI = `
 ]
 `
 
-func NewWriter(conn *Connection, messages <-chan chain.Message, stop <-chan int) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan core.Message, stop <-chan int) (*Writer, error) {
 	contractABI, err := abi.JSON(strings.NewReader(fmt.Sprintf(`%s`, string(RawABI))))
 	if err != nil {
 		return nil, err
@@ -102,7 +104,7 @@ func (wr *Writer) lookupAppAddress(appid [32]byte) common.Address {
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *Writer) write(msg *chain.Message) error {
+func (wr *Writer) write(msg *core.Message) error {
 
 	address := wr.lookupAppAddress(msg.AppID)
 

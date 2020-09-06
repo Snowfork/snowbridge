@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/substrate"
 
@@ -24,8 +23,8 @@ func runCmd() *cobra.Command {
 
 func runFunc(_ *cobra.Command, _ []string) error {
 
-	ethMessages := make(chan chain.Message, 1)
-	subMessages := make(chan chain.Message, 1)
+	ethMessages := make(chan core.Message, 1)
+	subMessages := make(chan core.Message, 1)
 
 	ethChain, err := ethereum.NewChain(ethMessages, subMessages)
 	if err != nil {

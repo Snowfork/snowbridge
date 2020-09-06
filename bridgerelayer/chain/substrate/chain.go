@@ -1,7 +1,7 @@
 package substrate
 
 import (
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/sr25519"
 	"github.com/spf13/viper"
 )
@@ -17,7 +17,7 @@ type Chain struct {
 const Name = "Substrate"
 
 // NewChain ...
-func NewChain(ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
+func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Chain, error) {
 
 	endpoint := viper.GetString("substrate.endpoint")
 	blockRetryLimit := viper.GetUint("substrate.block-retry-limit")

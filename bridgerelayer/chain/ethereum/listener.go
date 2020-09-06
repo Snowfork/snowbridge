@@ -9,20 +9,19 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
-
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
 )
 
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
 	conn    *Connection
 	apps    []Application
-	messages chan<- chain.Message
+	messages chan<- core.Message
 	stop    <-chan int
 }
 
 // NewListener initializes a new instance of Listener
-func NewListener(conn *Connection, messages chan<- chain.Message, stop <-chan int) (*Listener, error) {
+func NewListener(conn *Connection, messages chan<- core.Message, stop <-chan int) (*Listener, error) {
 	apps := LoadApplications(viper.GetString("ethereum.registry-path"))
 
 	return &Listener{

@@ -6,11 +6,6 @@ type Chain interface {
 	Stop()
 }
 
-type Message struct {
-	AppID  	[32]byte
-	Payload []byte
-}
-
 // TODO: These are interim standins/hacks which will be removed once
 // https://github.com/Snowfork/polkadot-ethereum/issues/61 lands.
 var Erc20AppID = [32]byte{

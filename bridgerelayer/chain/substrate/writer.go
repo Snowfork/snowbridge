@@ -5,16 +5,17 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/snowfork/go-substrate-rpc-client/types"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
+
 )
 
 type Writer struct {
 	conn *Connection
-	messages <-chan chain.Message
+	messages <-chan core.Message
 	stop <-chan int
 }
 
-func NewWriter(conn *Connection, messages <-chan chain.Message, stop <-chan int) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan core.Message, stop <-chan int) (*Writer, error) {
 	return &Writer{
 		conn: conn,
 		messages: messages,
@@ -50,7 +51,7 @@ func (wr *Writer) writeLoop() {
 }
 
 // SubmitPacket submits a packet, it returns true
-func (wr *Writer) Write(msg *chain.Message) error {
+func (wr *Writer) Write(msg *core.Message) error {
 
 	appid := types.NewBytes32(msg.AppID)
 	message := types.NewBytes(msg.Payload)
