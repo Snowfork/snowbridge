@@ -1,7 +1,10 @@
 package cmd
 
 import (
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/substrate"
+
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
 	"github.com/spf13/cobra"
 )
@@ -26,12 +29,12 @@ func runFunc(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	//	subChain, err := substrate.NewChain()
-	//	if err != nil {
-	//		return err
-	//	}
+	subChain, err := substrate.NewChain()
+	if err != nil {
+		return err
+	}
 
-	chains := []core.Chain{ethChain}
+	chains := []chain.Chain{ethChain, subChain}
 
 	relay := core.NewRelay(chains)
 
