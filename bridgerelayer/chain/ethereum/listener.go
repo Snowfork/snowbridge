@@ -9,14 +9,16 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
-	conn *Connection
-	apps []types.Application
-	stop <-chan int
+	conn    *Connection
+	channel chain.Channel
+	apps    []types.Application
+	stop    <-chan int
 }
 
 // NewListener initializes a new instance of Listener
@@ -24,9 +26,9 @@ func NewListener(conn *Connection, stop <-chan int) (*Listener, error) {
 	apps := LoadApplications(viper.GetString("ethereum.registry-path"))
 
 	return &Listener{
-		conn,
-		apps,
-		stop,
+		conn: conn,
+		apps: apps,
+		stop: stop,
 	}, nil
 }
 
@@ -81,6 +83,10 @@ func makeQuery(app types.Application) ethereum.FilterQuery {
 		Addresses: []common.Address{address},
 		Topics:    [][]common.Hash{{topic}},
 	}
+}
+
+func (li *Listener) setChannel(ch chain.Channel) {
+	li.channel = ch
 }
 
 // Route packages tx data as a packet and relays it to the bridge

@@ -34,6 +34,9 @@ func runFunc(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	ethChain.SetChannel(subChain)
+	subChain.SetChannel(ethChain)
+
 	chains := []chain.Chain{ethChain, subChain}
 
 	relay := core.NewRelay(chains)

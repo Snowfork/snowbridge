@@ -1,6 +1,7 @@
 package ethereum
 
 import (
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
 	"github.com/spf13/viper"
 )
@@ -75,4 +76,12 @@ func (ch *Chain) Stop() {
 
 func (ch *Chain) Name() string {
 	return Name
+}
+
+func (ch *Chain) SetChannel(chl chain.Channel) {
+	ch.listener.setChannel(chl)
+}
+
+func (ch *Chain) Send(msg *chain.Message) {
+	ch.writer.Resolve(msg)
 }

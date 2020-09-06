@@ -7,11 +7,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/scale"
 	types "github.com/snowfork/go-substrate-rpc-client/types"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+
 )
 
 // Listener streams Substrate events
 type Listener struct {
 	conn               *Connection
+	channel            chain.Channel
 	blockRetryLimit    uint
 	blockRetryInterval time.Duration
 	stop               <-chan int
@@ -177,4 +180,8 @@ func (li *Listener) handleEvents(events *Events) {
 
 		// err := ss.EthRouter.Submit("eth", buf.Bytes())
 	}
+}
+
+func (li *Listener) setChannel(ch chain.Channel) {
+	li.channel = ch
 }

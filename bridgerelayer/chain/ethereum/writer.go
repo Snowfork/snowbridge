@@ -14,6 +14,9 @@ import (
 	ctypes "github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+
 )
 
 type Writer struct {
@@ -63,8 +66,12 @@ func (wr *Writer) Start() error {
 	return nil
 }
 
+func (wr *Writer) Resolve(_ *chain.Message) {
+
+}
+
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *Writer) Write(appName string, data []byte) error {
+func (wr *Writer) write(appName string, data []byte) error {
 
 	// Get address of ethereum app
 	appHexAddr := viper.GetString(strings.Join([]string{"ethereum", "apps", appName}, "."))

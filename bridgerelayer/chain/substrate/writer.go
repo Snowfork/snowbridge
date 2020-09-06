@@ -1,6 +1,9 @@
 package substrate
 
-import "github.com/ethereum/go-ethereum/log"
+import (
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+)
 
 type Writer struct {
 	conn *Connection
@@ -19,7 +22,11 @@ func (wr *Writer) Start() error {
 	return nil
 }
 
+func (wr *Writer) Resolve(_ *chain.Message) {
+
+}
+
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *Writer) Write(_ string, _ []byte) error {
+func (wr *Writer) write(_ string, _ []byte) error {
 	return nil
 }
