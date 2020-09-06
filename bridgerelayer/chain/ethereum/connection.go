@@ -31,7 +31,7 @@ func (conn *Connection) Connect() error {
 		return err
 	}
 
-	chainID, err := conn.client.NetworkID(context.Background())
+	chainID, err := client.NetworkID(context.Background())
 	if err != nil {
 		return err
 	}

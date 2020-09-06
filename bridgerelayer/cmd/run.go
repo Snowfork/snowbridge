@@ -24,14 +24,15 @@ func runCmd() *cobra.Command {
 
 func runFunc(_ *cobra.Command, _ []string) error {
 
-	messages := make(chan chain.Message)
+	ethMessages := make(chan chain.Message, 1)
+	subMessages := make(chan chain.Message, 1)
 
-	ethChain, err := ethereum.NewChain(messages)
+	ethChain, err := ethereum.NewChain(ethMessages, subMessages)
 	if err != nil {
 		return err
 	}
 
-	subChain, err := substrate.NewChain(messages)
+	subChain, err := substrate.NewChain(ethMessages, subMessages)
 	if err != nil {
 		return err
 	}

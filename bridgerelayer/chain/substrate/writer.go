@@ -1,6 +1,7 @@
 package substrate
 
 import (
+	"encoding/hex"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/snowfork/go-substrate-rpc-client/types"
@@ -40,8 +41,9 @@ func (wr *Writer) writeLoop() {
 			err := wr.Write(&msg)
 			if err != nil {
 				log.WithFields(log.Fields{
+					"appid": hex.EncodeToString(msg.AppID[:]),
 					"error": err,
-				}).Error("Error submitting message to substrate")
+				}).Error("Failure submitting message to substrate")
 			}
 		}
 	}
@@ -106,6 +108,10 @@ func (wr *Writer) Write(msg *chain.Message) error {
 	if err != nil {
 		return err
 	}
+
+	log.WithFields(log.Fields{
+		"appid": hex.EncodeToString(msg.AppID[:]),
+	}).Info("Submitted message to Substrate")
 
 	return nil
 }
