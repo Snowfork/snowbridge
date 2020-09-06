@@ -60,5 +60,5 @@ func (co *Connection) Connect() error {
 
 // Close terminates the client connection and stops any running routines
 func (co *Connection) Close() {
-	// TODO: Fix bug in GSRPC preventing on-demand closing of connections
+	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
 }

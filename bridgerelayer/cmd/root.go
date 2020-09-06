@@ -15,7 +15,7 @@ const userConfigDir = ".config/artemis-relayer"
 
 var rootCmd = &cobra.Command{
 	Use:          "bridgerelayer",
-	Short:        "Streams transactions from Ethereum and Polkadot and relays tx information to the opposite chain",
+	Short:        "Relays data between Ethereum and Polkadot",
 	SilenceUsage: true,
 }
 

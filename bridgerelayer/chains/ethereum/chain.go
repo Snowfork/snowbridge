@@ -1,7 +1,6 @@
 package ethereum
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
 	"github.com/spf13/viper"
 )
@@ -13,6 +12,8 @@ type Chain struct {
 	conn     *Connection
 	stop     chan<- int
 }
+
+const Name = "Ethereum"
 
 // NewEthChain initializes a new instance of EthChain
 func NewChain() (*Chain, error) {
@@ -46,7 +47,12 @@ func NewChain() (*Chain, error) {
 
 func (ch *Chain) Start() error {
 
-	err := ch.listener.Start()
+	err := ch.conn.Connect()
+	if err != nil {
+		return err
+	}
+
+	err = ch.listener.Start()
 	if err != nil {
 		return err
 	}
@@ -55,8 +61,6 @@ func (ch *Chain) Start() error {
 	if err != nil {
 		return err
 	}
-
-	log.Info("Successfully Started ethereum chain")
 
 	return nil
 }
@@ -67,4 +71,8 @@ func (ch *Chain) Stop() {
 	if ch.conn != nil {
 		ch.conn.Close()
 	}
+}
+
+func (ch *Chain) Name() string {
+	return Name
 }

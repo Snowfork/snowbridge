@@ -383,6 +383,7 @@ github.com/snowfork/polkadot-ethereum v0.0.0-20200727051857-f2828fba3b44/go.mod 
 github.com/snowfork/polkadot-ethereum v0.0.0-20200731131625-cda9367cce20 h1:wKvD1nvIauwFREiI5Uf2W0qnpJ4aZN/9CeiUzfD6kNU=
 github.com/snowfork/polkadot-ethereum v0.0.0-20200803115144-578f721d7eb2 h1:lHzBT7ci53YTQa8OM/i1jl3jvAs6TLX8AlPyi5qcxEo=
 github.com/snowfork/polkadot-ethereum v0.1.1-alpha h1:cnIYtOsAEzwjTyJUgedXFhY2C7oNL7OcIPMw6pMPjJE=
+github.com/snowfork/polkadot-ethereum v0.2.1-alpha h1:o/HeqHe99/8OZdCgfj+tJW+6AmO7GWCOCNsTpMRcYVY=
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spaolacci/murmur3 v1.0.1-0.20190317074736-539464a789e9/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
