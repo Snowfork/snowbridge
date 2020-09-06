@@ -8,24 +8,24 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/scale"
 	types "github.com/snowfork/go-substrate-rpc-client/types"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
-
 )
 
 // Listener streams Substrate events
 type Listener struct {
 	conn               *Connection
-	channel            chain.Channel
 	blockRetryLimit    uint
 	blockRetryInterval time.Duration
+	messages           chan<- chain.Message
 	stop               <-chan int
 }
 
 // NewListener returns a new substrate transaction streamer
-func NewListener(conn *Connection, blockRetryLimit uint, blockRetryInterval uint, stop <-chan int) *Listener {
+func NewListener(conn *Connection, messages chan<- chain.Message, blockRetryLimit uint, blockRetryInterval uint, stop <-chan int) *Listener {
 	return &Listener{
 		conn:               conn,
 		blockRetryLimit:    blockRetryLimit,
 		blockRetryInterval: time.Duration(blockRetryInterval) * time.Second,
+		messages:           messages,
 		stop:               stop,
 	}
 }
@@ -71,7 +71,9 @@ func (li *Listener) pollBlocks() error {
 			// Get block hash
 			finalizedHash, err := li.conn.api.RPC.Chain.GetFinalizedHead()
 			if err != nil {
-				log.Error("Failed to fetch head hash", err)
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Error("Failed to fetch head hash")
 				retry--
 				time.Sleep(li.blockRetryInterval)
 				continue
@@ -80,7 +82,9 @@ func (li *Listener) pollBlocks() error {
 			// Get block header
 			finalizedHeader, err := li.conn.api.RPC.Chain.GetHeader(finalizedHash)
 			if err != nil {
-				log.Error("Failed to fetch finalized header", err)
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Error("Failed to fetch finalized header")
 				retry--
 				time.Sleep(li.blockRetryInterval)
 				continue
@@ -91,7 +95,7 @@ func (li *Listener) pollBlocks() error {
 				log.WithFields(log.Fields{
 					"target": currentBlock,
 					"latest": finalizedHeader.Number,
-				}).Info("Block not yet finalized")
+				}).Debug("Block not yet finalized")
 				time.Sleep(li.blockRetryInterval)
 				continue
 			}
@@ -102,13 +106,20 @@ func (li *Listener) pollBlocks() error {
 				time.Sleep(li.blockRetryInterval)
 				continue
 			} else if err != nil {
-				log.Error("Failed to query latest block", "block", currentBlock, "err", err)
+				log.WithFields(log.Fields{
+					"error": err,
+					"block": currentBlock,
+				}).Error("Failed to query latest block")
 				retry--
 				time.Sleep(li.blockRetryInterval)
 				continue
 			}
 
-			log.Info("Fetching block for events", "hash", hash.Hex())
+			log.WithFields(log.Fields{
+				"block": currentBlock,
+				"hash": hash.Hex(),
+			}).Debug("Fetching events for block")
+
 			key, err := types.CreateStorageKey(&li.conn.metadata, "System", "Events", nil, nil)
 			if err != nil {
 				return err
@@ -162,7 +173,7 @@ func (li *Listener) handleEvents(events *Events) {
 		encoder := scale.NewEncoder(buf)
 		encoder.Encode(msg)
 
-		// err := ss.EthRouter.Submit("erc20", buf.Bytes())
+		li.messages <- chain.Message{AppID: chain.Erc20AppID, Payload: buf.Bytes()}
 	}
 
 	for _, evt := range events.ETH_Transfer {
@@ -178,10 +189,6 @@ func (li *Listener) handleEvents(events *Events) {
 		encoder := scale.NewEncoder(buf)
 		encoder.Encode(msg)
 
-		// err := ss.EthRouter.Submit("eth", buf.Bytes())
+		li.messages <- chain.Message{AppID: chain.EthAppID, Payload: buf.Bytes()}
 	}
-}
-
-func (li *Listener) setChannel(ch chain.Channel) {
-	li.channel = ch
 }

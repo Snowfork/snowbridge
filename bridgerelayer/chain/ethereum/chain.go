@@ -17,7 +17,7 @@ type Chain struct {
 const Name = "Ethereum"
 
 // NewEthChain initializes a new instance of EthChain
-func NewChain() (*Chain, error) {
+func NewChain(messages chan chain.Message) (*Chain, error) {
 
 	kp, err := secp256k1.NewKeypairFromString(viper.GetString("ethereum.private_key"))
 	if err != nil {
@@ -28,12 +28,12 @@ func NewChain() (*Chain, error) {
 
 	stop := make(chan int, 0)
 
-	listener, err := NewListener(conn, stop)
+	listener, err := NewListener(conn, messages, stop)
 	if err != nil {
 		return nil, err
 	}
 
-	writer, err := NewWriter(conn, stop)
+	writer, err := NewWriter(conn, messages, stop)
 	if err != nil {
 		return nil, err
 	}
@@ -76,12 +76,4 @@ func (ch *Chain) Stop() {
 
 func (ch *Chain) Name() string {
 	return Name
-}
-
-func (ch *Chain) SetChannel(chl chain.Channel) {
-	ch.listener.setChannel(chl)
-}
-
-func (ch *Chain) Send(msg *chain.Message) {
-	ch.writer.Resolve(msg)
 }

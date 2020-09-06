@@ -14,8 +14,10 @@ type Relay struct {
 	chains []chain.Chain
 }
 
-func NewRelay(chains []chain.Chain) *Relay {
-	return &Relay{chains}
+func NewRelay(ethChain chain.Chain, subChain chain.Chain) *Relay {
+	return &Relay{
+		chains: []chain.Chain{ethChain, subChain},
+	}
 }
 
 func (re *Relay) Start() {
@@ -25,7 +27,7 @@ func (re *Relay) Start() {
 		if err != nil {
 			log.WithFields(log.Fields{
 				"chain": chain.Name(),
-				"err":   err,
+				"error":   err,
 			}).Error("Failed to start chain")
 			return
 		}

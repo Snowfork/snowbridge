@@ -24,22 +24,19 @@ func runCmd() *cobra.Command {
 
 func runFunc(_ *cobra.Command, _ []string) error {
 
-	ethChain, err := ethereum.NewChain()
+	messages := make(chan chain.Message)
+
+	ethChain, err := ethereum.NewChain(messages)
 	if err != nil {
 		return err
 	}
 
-	subChain, err := substrate.NewChain()
+	subChain, err := substrate.NewChain(messages)
 	if err != nil {
 		return err
 	}
 
-	ethChain.SetChannel(subChain)
-	subChain.SetChannel(ethChain)
-
-	chains := []chain.Chain{ethChain, subChain}
-
-	relay := core.NewRelay(chains)
+	relay := core.NewRelay(ethChain, subChain)
 
 	relay.Start()
 

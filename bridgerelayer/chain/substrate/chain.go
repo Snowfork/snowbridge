@@ -17,7 +17,7 @@ type Chain struct {
 const Name = "Substrate"
 
 // NewChain ...
-func NewChain() (*Chain, error) {
+func NewChain(messages chan chain.Message) (*Chain, error) {
 
 	endpoint := viper.GetString("substrate.endpoint")
 	blockRetryLimit := viper.GetUint("substrate.block-retry-limit")
@@ -34,12 +34,13 @@ func NewChain() (*Chain, error) {
 
 	listener := NewListener(
 		conn,
+		messages,
 		blockRetryLimit,
 		blockRetryInterval,
 		stop,
 	)
 
-	writer, err := NewWriter(conn, stop)
+	writer, err := NewWriter(conn, messages, stop)
 	if err != nil {
 		return nil, err
 	}
@@ -81,13 +82,4 @@ func (ch *Chain) Stop() {
 
 func (ch *Chain) Name() string {
 	return Name
-}
-
-
-func (ch *Chain) SetChannel(chl chain.Channel) {
-	ch.listener.setChannel(chl)
-}
-
-func (ch *Chain) Send(msg *chain.Message) {
-	ch.writer.Resolve(msg)
 }

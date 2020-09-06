@@ -1,50 +1,57 @@
 package substrate
 
 import (
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/snowfork/go-substrate-rpc-client/types"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
-
-	etypes "github.com/snowfork/polkadot-ethereum/bridgerelayer/types"
 )
 
 type Writer struct {
 	conn *Connection
+	messages <-chan chain.Message
 	stop <-chan int
 }
 
-func NewWriter(conn *Connection, stop <-chan int) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan chain.Message, stop <-chan int) (*Writer, error) {
 	return &Writer{
 		conn: conn,
+		messages: messages,
 		stop: stop,
 	}, nil
 }
 
 func (wr *Writer) Start() error {
 	log.Debug("Starting writer")
+
+	go func() {
+		wr.writeLoop()
+	}()
+
 	return nil
 }
 
-func (wr *Writer) Resolve(_ *chain.Message) {
-
-}
-
-// Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *Writer) write(_ string, _ []byte) error {
-	return nil
+func (wr *Writer) writeLoop() {
+	for {
+		select {
+		case <-wr.stop:
+			return
+		case msg := <-wr.messages:
+			err := wr.Write(&msg)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Error("Error submitting message to substrate")
+			}
+		}
+	}
 }
 
 // SubmitPacket submits a packet, it returns true
-func (wr *Writer) SubmitPacket(appID [32]byte, packet etypes.PacketV2) error {
+func (wr *Writer) Write(msg *chain.Message) error {
 
-	appid := types.NewBytes32(appID)
-
-	payload, err := types.EncodeToBytes(packet)
-	if err != nil {
-		return err
-	}
-
-	message := types.NewBytes(payload)
+	appid := types.NewBytes32(msg.AppID)
+	message := types.NewBytes(msg.Payload)
 
 	c, err := types.NewCall(&wr.conn.metadata, "Bridge.send", appid, message)
 	if err != nil {
