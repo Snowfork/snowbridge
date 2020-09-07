@@ -1,7 +1,10 @@
 package substrate
 
 import (
+	"context"
 	"fmt"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/sr25519"
@@ -13,7 +16,6 @@ type Chain struct {
 	listener *Listener
 	writer   *Writer
 	conn     *Connection
-	stop     chan<- int
 }
 
 const Name = "Substrate"
@@ -44,19 +46,16 @@ func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Ch
 		return nil, err
 	}
 
-	stop := make(chan int, 0)
-
-	conn := NewConnection(endpoint, kp.AsKeyringPair(), stop)
+	conn := NewConnection(endpoint, kp.AsKeyringPair())
 
 	listener := NewListener(
 		conn,
 		subMessages,
 		blockRetryLimit,
 		blockRetryInterval,
-		stop,
 	)
 
-	writer, err := NewWriter(conn, ethMessages, stop)
+	writer, err := NewWriter(conn, ethMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -65,23 +64,22 @@ func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Ch
 		conn:     conn,
 		listener: listener,
 		writer:   writer,
-		stop:     stop,
 	}, nil
 }
 
-func (ch *Chain) Start() error {
+func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group) error {
 
-	err := ch.conn.Connect()
+	err := ch.conn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = ch.listener.Start()
+	err = ch.listener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	err = ch.writer.Start()
+	err = ch.writer.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
@@ -89,9 +87,7 @@ func (ch *Chain) Start() error {
 	return nil
 }
 
-// Stop signals to any running routines to exit
 func (ch *Chain) Stop() {
-	close(ch.stop)
 	if ch.conn != nil {
 		ch.conn.Close()
 	}

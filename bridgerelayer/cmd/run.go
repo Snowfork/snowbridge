@@ -23,7 +23,10 @@ func runCmd() *cobra.Command {
 
 func runFunc(_ *cobra.Command, _ []string) error {
 
+	// channel for messages from ethereum
 	ethMessages := make(chan core.Message, 1)
+
+	// channel for messages from substrate
 	subMessages := make(chan core.Message, 1)
 
 	ethChain, err := ethereum.NewChain(ethMessages, subMessages)
@@ -37,7 +40,6 @@ func runFunc(_ *cobra.Command, _ []string) error {
 	}
 
 	relay := core.NewRelay(ethChain, subChain)
-
 	relay.Start()
 
 	return nil

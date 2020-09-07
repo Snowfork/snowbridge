@@ -3,6 +3,8 @@ package ethereum
 import (
 	"context"
 
+	"golang.org/x/sync/errgroup"
+
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
@@ -14,33 +16,32 @@ import (
 
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
-	conn    *Connection
-	apps    []Application
+	conn     *Connection
+	apps     []Application
 	messages chan<- core.Message
-	stop    <-chan int
 }
 
 // NewListener initializes a new instance of Listener
-func NewListener(conn *Connection, messages chan<- core.Message, stop <-chan int) (*Listener, error) {
+func NewListener(conn *Connection, messages chan<- core.Message) (*Listener, error) {
 	apps := LoadApplications(viper.GetString("ethereum.registry-path"))
 
 	return &Listener{
-		conn: conn,
-		apps: apps,
+		conn:     conn,
+		apps:     apps,
 		messages: messages,
-		stop: stop,
 	}, nil
 }
 
-func (li *Listener) Start() error {
-	go func() {
-		li.pollEvents()
-	}()
+func (li *Listener) Start(cxt context.Context, eg *errgroup.Group) error {
+
+	eg.Go(func() error {
+		return li.pollEvents(cxt)
+	})
 
 	return nil
 }
 
-func (li *Listener) pollEvents() {
+func (li *Listener) pollEvents(ctx context.Context) error {
 	log.Info("Polling started")
 	events := make(chan etypes.Log)
 	for _, app := range li.apps {
@@ -59,9 +60,8 @@ func (li *Listener) pollEvents() {
 
 	for {
 		select {
-		case <-li.stop:
-			log.Info("Polling stopped")
-			return
+		case <-ctx.Done():
+			return ctx.Err()
 		case event := <-events:
 			log.WithFields(
 				log.Fields{

@@ -24,14 +24,14 @@ func NewConnection(endpoint string, kp *secp256k1.Keypair) *Connection {
 	}
 }
 
-func (conn *Connection) Connect() error {
+func (conn *Connection) Connect(ctx context.Context) error {
 
 	client, err := ethclient.Dial(conn.endpoint)
 	if err != nil {
 		return err
 	}
 
-	chainID, err := client.NetworkID(context.Background())
+	chainID, err := client.NetworkID(ctx)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (conn *Connection) Connect() error {
 	return nil
 }
 
-// Close terminates the client connection and stops any running routines
+// Close terminates the client connection
 func (conn *Connection) Close() {
 	if conn.client != nil {
 		conn.client.Close()

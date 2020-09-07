@@ -1,8 +1,9 @@
 package substrate
 
 import (
+	"context"
+
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client"
 	"github.com/snowfork/go-substrate-rpc-client/signature"
@@ -16,22 +17,20 @@ type Connection struct {
 	api         *gsrpc.SubstrateAPI
 	metadata    types.Metadata
 	genesisHash types.Hash
-	stop        <-chan int
 }
 
 // NewConnection ...
-func NewConnection(endpoint string, kp *signature.KeyringPair, stop <-chan int) *Connection {
+func NewConnection(endpoint string, kp *signature.KeyringPair) *Connection {
 	return &Connection{
 		endpoint: endpoint,
 		kp:       kp,
-		stop:     stop,
 	}
 }
 
-func (co *Connection) Connect() error {
+func (co *Connection) Connect(_ context.Context) error {
 
 	// Initialize API
-	api, err := gsrpc.NewSubstrateAPI(viper.GetString("substrate.endpoint"))
+	api, err := gsrpc.NewSubstrateAPI(co.endpoint)
 	if err != nil {
 		return err
 	}
@@ -58,7 +57,6 @@ func (co *Connection) Connect() error {
 	return nil
 }
 
-// Close terminates the client connection and stops any running routines
 func (co *Connection) Close() {
 	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
 }

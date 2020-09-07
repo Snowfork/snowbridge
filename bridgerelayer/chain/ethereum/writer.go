@@ -6,11 +6,13 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
@@ -19,10 +21,9 @@ import (
 )
 
 type Writer struct {
-	conn *Connection
-	abi  abi.ABI
+	conn     *Connection
+	abi      abi.ABI
 	messages <-chan core.Message
-	stop <-chan int
 }
 
 const RawABI = `
@@ -48,35 +49,31 @@ const RawABI = `
 ]
 `
 
-func NewWriter(conn *Connection, messages <-chan core.Message, stop <-chan int) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan core.Message) (*Writer, error) {
 	contractABI, err := abi.JSON(strings.NewReader(fmt.Sprintf(`%s`, string(RawABI))))
 	if err != nil {
 		return nil, err
 	}
 
 	return &Writer{
-		conn: conn,
-		abi:  contractABI,
+		conn:     conn,
+		abi:      contractABI,
 		messages: messages,
-		stop: stop,
 	}, nil
 }
 
-func (wr *Writer) Start() error {
-	log.Debug("Starting writer")
-
-	go func() {
-		wr.writeLoop()
-	}()
-
+func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
+	eg.Go(func() error {
+		return wr.writeLoop(ctx)
+	})
 	return nil
 }
 
-func (wr *Writer) writeLoop() {
+func (wr *Writer) writeLoop(ctx context.Context) error {
 	for {
 		select {
-		case <-wr.stop:
-			return
+		case <-ctx.Done():
+			return ctx.Err()
 		case msg := <-wr.messages:
 			err := wr.write(&msg)
 			if err != nil {

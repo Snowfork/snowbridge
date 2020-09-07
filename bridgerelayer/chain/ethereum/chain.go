@@ -1,9 +1,11 @@
 package ethereum
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
 	"github.com/spf13/viper"
@@ -42,14 +44,12 @@ func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Ch
 
 	conn := NewConnection(endpoint, kp)
 
-	stop := make(chan int, 0)
-
-	listener, err := NewListener(conn, ethMessages, stop)
+	listener, err := NewListener(conn, ethMessages)
 	if err != nil {
 		return nil, err
 	}
 
-	writer, err := NewWriter(conn, subMessages, stop)
+	writer, err := NewWriter(conn, subMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -58,23 +58,22 @@ func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Ch
 		listener: listener,
 		writer:   writer,
 		conn:     conn,
-		stop:     stop,
 	}, nil
 }
 
-func (ch *Chain) Start() error {
+func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group) error {
 
-	err := ch.conn.Connect()
+	err := ch.conn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = ch.listener.Start()
+	err = ch.listener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	err = ch.writer.Start()
+	err = ch.writer.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
@@ -84,7 +83,6 @@ func (ch *Chain) Start() error {
 
 // Stop signals to any running routines to exit
 func (ch *Chain) Stop() {
-	close(ch.stop)
 	if ch.conn != nil {
 		ch.conn.Close()
 	}

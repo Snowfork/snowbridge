@@ -1,43 +1,41 @@
 package substrate
 
 import (
+	"context"
 	"encoding/hex"
+
 	log "github.com/sirupsen/logrus"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/go-substrate-rpc-client/types"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
-
 )
 
 type Writer struct {
-	conn *Connection
+	conn     *Connection
 	messages <-chan core.Message
-	stop <-chan int
 }
 
-func NewWriter(conn *Connection, messages <-chan core.Message, stop <-chan int) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan core.Message) (*Writer, error) {
 	return &Writer{
-		conn: conn,
+		conn:     conn,
 		messages: messages,
-		stop: stop,
 	}, nil
 }
 
-func (wr *Writer) Start() error {
-	log.Debug("Starting writer")
-
-	go func() {
-		wr.writeLoop()
-	}()
-
+func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
+	eg.Go(func() error {
+		return wr.writeLoop(ctx)
+	})
 	return nil
 }
 
-func (wr *Writer) writeLoop() {
+func (wr *Writer) writeLoop(ctx context.Context) error {
 	for {
 		select {
-		case <-wr.stop:
-			return
+		case <-ctx.Done():
+			return ctx.Err()
 		case msg := <-wr.messages:
 			err := wr.Write(&msg)
 			if err != nil {

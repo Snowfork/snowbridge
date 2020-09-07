@@ -1,8 +1,14 @@
 package chain
 
+import (
+	"context"
+
+	"golang.org/x/sync/errgroup"
+)
+
 type Chain interface {
 	Name() string
-	Start() error
+	Start(ctx context.Context, eg *errgroup.Group) error
 	Stop()
 }
 
