@@ -7,7 +7,7 @@ module.exports = async () => {
         return
     }
 
-    let provider = new Web3.providers.HttpProvider("http://localhost:7545");
+    let provider = new Web3.providers.HttpProvider("http://localhost:9545");
     const web3 = new Web3(provider);
 
     var receipt = await web3.eth.getTransactionReceipt(txHash);

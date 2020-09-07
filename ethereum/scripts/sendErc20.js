@@ -24,7 +24,7 @@ module.exports = async () => {
   const recipient = Buffer.from(polkadotRecipient, "hex");
 
   // Set up provider and contracts
-  let provider = new Web3.providers.HttpProvider("http://localhost:7545");
+  let provider = new Web3.providers.HttpProvider("http://localhost:9545");
   const web3 = new Web3(provider);
 
   erc20AppContract.setProvider(web3.currentProvider);
