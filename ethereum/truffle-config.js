@@ -1,15 +1,14 @@
 module.exports = {
   networks: {
-    vincent_develop: {
-      host: "172.29.96.1",
+    development: {
+      host: "127.0.0.1",
       port: 7545,
-      network_id: "5777"
-    },
+      network_id: "*"
+    }
   },
   mocha: {
     useColors: true
   },
-  // Configure your compilers
   compilers: {
     solc: {
       version: "0.6.2",
