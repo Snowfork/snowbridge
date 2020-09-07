@@ -57,7 +57,9 @@ impl<T: Trait> Module<T> {
 
 		let call: Box<<T as Trait>::Call> = Box::new(broker::Call::accept(app_id, message).into());
 
-		call.dispatch(RawOrigin::Root.into()).map(|_| ()).map_err(|e| e.error)
+		let _ = call.dispatch(RawOrigin::Root.into()).map(|_| ()).map_err(|e| e.error);
+
+		Ok(())
 	}
 
 }
