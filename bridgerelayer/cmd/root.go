@@ -43,9 +43,6 @@ func loadConfig() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("toml")
 
-	viper.SetEnvPrefix("ARTEMIS_RELAYER")
-	viper.AutomaticEnv()
-
 	viper.SetDefault("ethereum.registry-path", path.Join(home, userConfigDir, "ethereum"))
 
 	err := viper.ReadInConfig()
@@ -53,6 +50,9 @@ func loadConfig() {
 		fmt.Println("Fatal error reading config file: ", err)
 		os.Exit(1)
 	}
+
+	viper.BindEnv("ethereum.private-key", "ARTEMIS_RELAY_ETHEREUM_KEY")
+	viper.BindEnv("substrate.private-key", "ARTEMIS_RELAY_SUBSTRATE_KEY")
 
 	fmt.Println("Using config file:", viper.ConfigFileUsed())
 }

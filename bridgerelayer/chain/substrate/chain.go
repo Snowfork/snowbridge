@@ -1,6 +1,8 @@
 package substrate
 
 import (
+	"fmt"
+
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/sr25519"
 	"github.com/spf13/viper"
@@ -19,11 +21,25 @@ const Name = "Substrate"
 // NewChain ...
 func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Chain, error) {
 
+	// Validate and load configuration
+	keys := []string{
+		"substrate.endpoint",
+		"substrate.private-key",
+		"substrate.block-retry-limit",
+		"substrate.block-retry-interval",
+	}
+	for _, key := range keys {
+		if !viper.IsSet(key) {
+			return nil, fmt.Errorf("Config key %q not set", key)
+		}
+	}
 	endpoint := viper.GetString("substrate.endpoint")
+	secret := viper.GetString("substrate.private-key")
 	blockRetryLimit := viper.GetUint("substrate.block-retry-limit")
 	blockRetryInterval := viper.GetUint("substrate.block-retry-interval")
 
-	kp, err := sr25519.NewKeypairFromSeed("//Alice", "")
+	// Generate keypair from secret
+	kp, err := sr25519.NewKeypairFromSeed(secret, "")
 	if err != nil {
 		return nil, err
 	}

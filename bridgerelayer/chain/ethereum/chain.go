@@ -1,6 +1,8 @@
 package ethereum
 
 import (
+	"fmt"
+
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
@@ -20,12 +22,25 @@ const Name = "Ethereum"
 // NewChain initializes a new instance of EthChain
 func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Chain, error) {
 
-	kp, err := secp256k1.NewKeypairFromString(viper.GetString("ethereum.private_key"))
+	// Validate and load configuration
+	keys := []string{
+		"ethereum.endpoint",
+		"ethereum.private-key",
+	}
+	for _, key := range keys {
+		if !viper.IsSet(key) {
+			return nil, fmt.Errorf("Config key %q not set", key)
+		}
+	}
+	endpoint := viper.GetString("ethereum.endpoint")
+	privateKey := viper.GetString("ethereum.private-key")
+
+	kp, err := secp256k1.NewKeypairFromString(privateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	conn := NewConnection(viper.GetString("ethereum.endpoint"), kp)
+	conn := NewConnection(endpoint, kp)
 
 	stop := make(chan int, 0)
 
