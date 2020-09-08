@@ -49,7 +49,7 @@ func (li *Listener) pollEvents(ctx context.Context) error {
 	events := make(chan etypes.Log)
 	for _, app := range li.apps {
 		query := makeQuery(app)
-		_, err := li.conn.client.SubscribeFilterLogs(context.Background(), query, events)
+		_, err := li.conn.client.SubscribeFilterLogs(ctx, query, events)
 		if err != nil {
 			li.log.WithFields(logrus.Fields{
 				"address": app.ID,

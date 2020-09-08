@@ -114,14 +114,14 @@ func (wr *Writer) write(ctx context.Context, msg *chain.Message) error {
 		return err
 	}
 
-	nonce, err := wr.conn.client.PendingNonceAt(context.Background(), wr.conn.kp.CommonAddress())
+	nonce, err := wr.conn.client.PendingNonceAt(ctx, wr.conn.kp.CommonAddress())
 	if err != nil {
 		return err
 	}
 
 	value := big.NewInt(0)      // in wei (0 eth)
 	gasLimit := uint64(2000000) // in units
-	gasPrice, err := wr.conn.client.SuggestGasPrice(context.Background())
+	gasPrice, err := wr.conn.client.SuggestGasPrice(ctx)
 	if err != nil {
 		return err
 	}
