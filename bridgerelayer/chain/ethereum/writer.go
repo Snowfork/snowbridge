@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
@@ -77,7 +76,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case msg := <-wr.messages:
-			err := wr.write(&msg)
+			err := wr.write(ctx, &msg)
 			if err != nil {
 				wr.log.WithError(err).Error("Error submitting message to ethereum")
 			}
@@ -101,7 +100,7 @@ func (wr *Writer) lookupAppAddress(appid [32]byte) common.Address {
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *Writer) write(msg *chain.Message) error {
+func (wr *Writer) write(ctx context.Context, msg *chain.Message) error {
 
 	address := wr.lookupAppAddress(msg.AppID)
 
@@ -138,20 +137,19 @@ func (wr *Writer) write(msg *chain.Message) error {
 		return err
 	}
 
-	err = wr.conn.client.SendTransaction(context.Background(), signedTx)
+	err = wr.conn.client.SendTransaction(ctx, signedTx)
 	if err != nil {
-		wr.log.WithFields(log.Fields{
+		wr.log.WithError(err).WithFields(logrus.Fields{
 			"txHash":          signedTx.Hash().Hex(),
 			"contractAddress": address.Hex(),
 			"nonce":           nonce,
 			"gasLimit":        gasLimit,
 			"gasPrice":        gasPrice,
-			"error":           err,
 		}).Error("Failed to submit transaction")
 		return err
 	}
 
-	wr.log.WithFields(log.Fields{
+	wr.log.WithFields(logrus.Fields{
 		"txHash":          signedTx.Hash().Hex(),
 		"contractAddress": address.Hex(),
 	}).Info("Transaction submitted")
