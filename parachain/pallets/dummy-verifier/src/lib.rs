@@ -53,11 +53,12 @@ decl_module! {
 impl<T: Trait> Module<T> {
 
 	// No-op verifier that sends verified message back to broker.
-	fn schedule_approval(app_id: AppID, message: Message) -> DispatchResult {
+	fn do_verify(app_id: AppID, message: Message) -> DispatchResult {
 
 		let call: Box<<T as Trait>::Call> = Box::new(broker::Call::accept(app_id, message).into());
 
-		// we purposely swallow the error here
+		// we purposely swallow the result/error since the *dummy* verifier has a fire and forget
+		// approach when submitting messages back to the broker.
 		let _ = call.dispatch(RawOrigin::Root.into());
 
 		Ok(())
@@ -70,7 +71,7 @@ impl<T: Trait> Verifier for Module<T> {
 	// verify a message
 	fn verify(app_id: AppID, message: Message) -> DispatchResult {
 
-		Self::schedule_approval(app_id, message)?;
+		Self::do_verify(app_id, message)?;
 
 		Ok(())
 	}
