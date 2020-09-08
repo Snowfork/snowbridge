@@ -3,14 +3,12 @@ package ethereum
 import (
 	"context"
 
-	"golang.org/x/sync/errgroup"
-
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	etypes "github.com/ethereum/go-ethereum/core/types"
+	geth "github.com/ethereum/go-ethereum"
+	gethCommon "github.com/ethereum/go-ethereum/common"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
-
 	"github.com/spf13/viper"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 )
@@ -46,7 +44,7 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group) error {
 
 func (li *Listener) pollEvents(ctx context.Context) error {
 	li.log.Info("Polling started")
-	events := make(chan etypes.Log)
+	events := make(chan gethTypes.Log)
 	for _, app := range li.apps {
 		query := makeQuery(app)
 		_, err := li.conn.client.SubscribeFilterLogs(ctx, query, events)
@@ -86,13 +84,13 @@ func (li *Listener) pollEvents(ctx context.Context) error {
 	}
 }
 
-func makeQuery(app Application) ethereum.FilterQuery {
-	address := common.HexToAddress(app.ID)
+func makeQuery(app Application) geth.FilterQuery {
+	address := gethCommon.HexToAddress(app.ID)
 	signature := app.ABI.Events[EventName].ID.Hex()
-	topic := common.HexToHash(signature)
+	topic := gethCommon.HexToHash(signature)
 
-	return ethereum.FilterQuery{
-		Addresses: []common.Address{address},
-		Topics:    [][]common.Hash{{topic}},
+	return geth.FilterQuery{
+		Addresses: []gethCommon.Address{address},
+		Topics:    [][]gethCommon.Hash{{topic}},
 	}
 }
