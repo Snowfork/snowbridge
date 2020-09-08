@@ -281,8 +281,7 @@ impl broker::Trait for Runtime {
 impl dummy_verifier::Trait for Runtime {
 	type Event = Event;
 
-	type Proposal = Call;
-	type Scheduler = scheduler::Module<Runtime>;
+	type Call = Call;
 }
 
 impl asset::Trait for Runtime {
