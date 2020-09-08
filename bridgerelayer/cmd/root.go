@@ -21,6 +21,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	cobra.OnInitialize(loadConfig)
+
 	rootCmd.AddCommand(runCmd())
 }
 
@@ -60,7 +61,6 @@ func loadConfig() {
 // Execute adds all child commands to the root command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }

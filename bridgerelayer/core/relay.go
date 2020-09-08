@@ -2,11 +2,14 @@ package core
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/substrate"
 	"golang.org/x/sync/errgroup"
 
 	log "github.com/sirupsen/logrus"
@@ -16,25 +19,50 @@ type Relay struct {
 	chains []chain.Chain
 }
 
-func NewRelay(ethChain chain.Chain, subChain chain.Chain) *Relay {
+func NewRelay() (*Relay, error) {
+
+	// channel for messages from ethereum
+	ethMessages := make(chan chain.Message, 1)
+
+	// channel for messages from substrate
+	subMessages := make(chan chain.Message, 1)
+
+	ethChain, err := ethereum.NewChain(ethMessages, subMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	subChain, err := substrate.NewChain(ethMessages, subMessages)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Relay{
 		chains: []chain.Chain{ethChain, subChain},
-	}
+	}, nil
 }
 
 func (re *Relay) Start() {
 
-	// Ensure clean termination upon SIGINT, SIGTERM
 	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
+	eg, ctx := errgroup.WithContext(ctx)
+
+	// Ensure clean termination upon SIGINT, SIGTERM
+	eg.Go(func() error {
 		notify := make(chan os.Signal, 1)
 		signal.Notify(notify, syscall.SIGINT, syscall.SIGTERM)
-		<-notify
-		log.Info("Received signal and terminating cleanly")
-		cancel()
-	}()
 
-	eg, ctx := errgroup.WithContext(ctx)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case sig := <-notify:
+			log.WithField("signal", sig.String()).Info("Received signal")
+			cancel()
+
+		}
+
+		return nil
+	})
 
 	for _, chain := range re.chains {
 		err := chain.Start(ctx, eg)
@@ -50,10 +78,8 @@ func (re *Relay) Start() {
 
 	// Wait until a fatal error or signal is raised
 	if err := eg.Wait(); err != nil {
-		if err != context.Canceled {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Error("Encountered a fatal error")
+		if !errors.Is(err, context.Canceled) {
+			log.WithField("error", err).Error("Encountered an unrecoverable failure")
 		}
 	}
 

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/ethclient"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
 )
@@ -14,19 +14,21 @@ type Connection struct {
 	endpoint string
 	kp       *secp256k1.Keypair
 	client   *ethclient.Client
+	log      *logrus.Entry
 }
 
 // NewConnection ...
-func NewConnection(endpoint string, kp *secp256k1.Keypair) *Connection {
+func NewConnection(endpoint string, kp *secp256k1.Keypair, log *logrus.Entry) *Connection {
 	return &Connection{
 		endpoint: endpoint,
 		kp:       kp,
+		log:      log,
 	}
 }
 
-func (conn *Connection) Connect(ctx context.Context) error {
+func (co *Connection) Connect(ctx context.Context) error {
 
-	client, err := ethclient.Dial(conn.endpoint)
+	client, err := ethclient.Dial(co.endpoint)
 	if err != nil {
 		return err
 	}
@@ -36,19 +38,19 @@ func (conn *Connection) Connect(ctx context.Context) error {
 		return err
 	}
 
-	log.WithFields(log.Fields{
-		"endpoint": conn.endpoint,
+	co.log.WithFields(logrus.Fields{
+		"endpoint": co.endpoint,
 		"chainID":  chainID,
-	}).Info("Connected to Ethereum chain")
+	}).Info("Connected to chain")
 
-	conn.client = client
+	co.client = client
 
 	return nil
 }
 
 // Close terminates the client connection
-func (conn *Connection) Close() {
-	if conn.client != nil {
-		conn.client.Close()
+func (co *Connection) Close() {
+	if co.client != nil {
+		co.client.Close()
 	}
 }

@@ -11,11 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
 
 	"github.com/snowfork/polkadot-ethereum/prover"
 )
@@ -23,7 +23,8 @@ import (
 type Writer struct {
 	conn     *Connection
 	abi      abi.ABI
-	messages <-chan core.Message
+	messages <-chan chain.Message
+	log      *logrus.Entry
 }
 
 const RawABI = `
@@ -49,7 +50,7 @@ const RawABI = `
 ]
 `
 
-func NewWriter(conn *Connection, messages <-chan core.Message) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan chain.Message, log *logrus.Entry) (*Writer, error) {
 	contractABI, err := abi.JSON(strings.NewReader(fmt.Sprintf(`%s`, string(RawABI))))
 	if err != nil {
 		return nil, err
@@ -59,6 +60,7 @@ func NewWriter(conn *Connection, messages <-chan core.Message) (*Writer, error) 
 		conn:     conn,
 		abi:      contractABI,
 		messages: messages,
+		log:      log,
 	}, nil
 }
 
@@ -77,9 +79,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		case msg := <-wr.messages:
 			err := wr.write(&msg)
 			if err != nil {
-				log.WithFields(log.Fields{
-					"error": err,
-				}).Error("Error submitting message to ethereum")
+				wr.log.WithError(err).Error("Error submitting message to ethereum")
 			}
 		}
 	}
@@ -101,14 +101,13 @@ func (wr *Writer) lookupAppAddress(appid [32]byte) common.Address {
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *Writer) write(msg *core.Message) error {
+func (wr *Writer) write(msg *chain.Message) error {
 
 	address := wr.lookupAppAddress(msg.AppID)
 
-	log.WithFields(log.Fields{
+	wr.log.WithFields(logrus.Fields{
 		"contractAddress": address.Hex(),
-	})
-	log.Info("Submitting message to Ethereum")
+	}).Info("Submitting message to Ethereum")
 
 	// Generate a proof by signing a hash of the encoded data
 	proof, err := prover.GenerateProof(msg.Payload, wr.conn.kp.PrivateKey())
@@ -141,17 +140,18 @@ func (wr *Writer) write(msg *core.Message) error {
 
 	err = wr.conn.client.SendTransaction(context.Background(), signedTx)
 	if err != nil {
-		log.WithFields(log.Fields{
+		wr.log.WithFields(log.Fields{
 			"txHash":          signedTx.Hash().Hex(),
 			"contractAddress": address.Hex(),
 			"nonce":           nonce,
 			"gasLimit":        gasLimit,
 			"gasPrice":        gasPrice,
+			"error":           err,
 		}).Error("Failed to submit transaction")
 		return err
 	}
 
-	log.WithFields(log.Fields{
+	wr.log.WithFields(log.Fields{
 		"txHash":          signedTx.Hash().Hex(),
 		"contractAddress": address.Hex(),
 	}).Info("Transaction submitted")

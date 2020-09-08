@@ -3,7 +3,7 @@ package substrate
 import (
 	"context"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client"
 	"github.com/snowfork/go-substrate-rpc-client/signature"
@@ -17,13 +17,15 @@ type Connection struct {
 	api         *gsrpc.SubstrateAPI
 	metadata    types.Metadata
 	genesisHash types.Hash
+	log         *logrus.Entry
 }
 
 // NewConnection ...
-func NewConnection(endpoint string, kp *signature.KeyringPair) *Connection {
+func NewConnection(endpoint string, kp *signature.KeyringPair, log *logrus.Entry) *Connection {
 	return &Connection{
 		endpoint: endpoint,
 		kp:       kp,
+		log:      log,
 	}
 }
 
@@ -50,9 +52,10 @@ func (co *Connection) Connect(_ context.Context) error {
 	}
 	co.genesisHash = genesisHash
 
-	log.WithFields(log.Fields{
-		"endpoint": co.endpoint,
-	}).Info("Connected to Substrate chain")
+	co.log.WithFields(logrus.Fields{
+		"endpoint":    co.endpoint,
+		"metaVersion": meta.Version,
+	}).Info("Connected to chain")
 
 	return nil
 }

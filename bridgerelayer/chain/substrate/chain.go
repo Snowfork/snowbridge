@@ -6,7 +6,8 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
+	"github.com/sirupsen/logrus"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/sr25519"
 	"github.com/spf13/viper"
 )
@@ -21,7 +22,9 @@ type Chain struct {
 const Name = "Substrate"
 
 // NewChain ...
-func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Chain, error) {
+func NewChain(ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
+
+	log := logrus.WithField("chain", Name)
 
 	// Validate and load configuration
 	keys := []string{
@@ -46,16 +49,17 @@ func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Ch
 		return nil, err
 	}
 
-	conn := NewConnection(endpoint, kp.AsKeyringPair())
+	conn := NewConnection(endpoint, kp.AsKeyringPair(), log)
 
 	listener := NewListener(
 		conn,
 		subMessages,
 		blockRetryLimit,
 		blockRetryInterval,
+		log,
 	)
 
-	writer, err := NewWriter(conn, ethMessages)
+	writer, err := NewWriter(conn, ethMessages, log)
 	if err != nil {
 		return nil, err
 	}

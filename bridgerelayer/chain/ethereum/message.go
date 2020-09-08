@@ -4,10 +4,10 @@ import (
 	"bytes"
 
 	etypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
-	"github.com/snowfork/polkadot-ethereum/prover"
 	"github.com/snowfork/go-substrate-rpc-client/types"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
+	"github.com/snowfork/polkadot-ethereum/prover"
 )
 
 type Payload struct {
@@ -15,7 +15,7 @@ type Payload struct {
 	Signature []byte
 }
 
-func MakeMessageFromEvent(event etypes.Log, kp *secp256k1.Keypair) (*core.Message, error) {
+func MakeMessageFromEvent(event etypes.Log, kp *secp256k1.Keypair) (*chain.Message, error) {
 
 	var appID [32]byte
 	copy(appID[:], event.Address.Bytes())
@@ -39,7 +39,7 @@ func MakeMessageFromEvent(event etypes.Log, kp *secp256k1.Keypair) (*core.Messag
 		return nil, err
 	}
 
-	msg := core.Message{AppID: appID, Payload: payload}
+	msg := chain.Message{AppID: appID, Payload: payload}
 
 	return &msg, nil
 }

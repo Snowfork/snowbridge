@@ -8,27 +8,30 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
+
 	"github.com/spf13/viper"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 )
 
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
 	conn     *Connection
 	apps     []Application
-	messages chan<- core.Message
+	messages chan<- chain.Message
+	log      *logrus.Entry
 }
 
 // NewListener initializes a new instance of Listener
-func NewListener(conn *Connection, messages chan<- core.Message) (*Listener, error) {
+func NewListener(conn *Connection, messages chan<- chain.Message, log *logrus.Entry) (*Listener, error) {
 	apps := LoadApplications(viper.GetString("ethereum.registry-path"))
 
 	return &Listener{
 		conn:     conn,
 		apps:     apps,
 		messages: messages,
+		log:      log,
 	}, nil
 }
 
@@ -42,17 +45,17 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group) error {
 }
 
 func (li *Listener) pollEvents(ctx context.Context) error {
-	log.Info("Polling started")
+	li.log.Info("Polling started")
 	events := make(chan etypes.Log)
 	for _, app := range li.apps {
 		query := makeQuery(app)
 		_, err := li.conn.client.SubscribeFilterLogs(context.Background(), query, events)
 		if err != nil {
-			log.WithFields(log.Fields{
+			li.log.WithFields(logrus.Fields{
 				"address": app.ID,
 			}).Error("Failed to subscribe to application events")
 		} else {
-			log.WithFields(log.Fields{
+			li.log.WithFields(logrus.Fields{
 				"address": app.ID,
 			}).Info("Subscribed to application events")
 		}
@@ -63,17 +66,15 @@ func (li *Listener) pollEvents(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case event := <-events:
-			log.WithFields(
-				log.Fields{
-					"address":     event.Address.Hex(),
-					"txHash":      event.TxHash.Hex(),
-					"blockNumber": event.BlockNumber,
-				},
-			).Info("Witnessed transaction for application")
+			li.log.WithFields(logrus.Fields{
+				"address":     event.Address.Hex(),
+				"txHash":      event.TxHash.Hex(),
+				"blockNumber": event.BlockNumber,
+			}).Info("Witnessed transaction for application")
 
 			msg, err := MakeMessageFromEvent(event, li.conn.kp)
 			if err != nil {
-				log.WithFields(log.Fields{
+				li.log.WithFields(logrus.Fields{
 					"address":     event.Address.Hex(),
 					"txHash":      event.TxHash.Hex(),
 					"blockNumber": event.BlockNumber,

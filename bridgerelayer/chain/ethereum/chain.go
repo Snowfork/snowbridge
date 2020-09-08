@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/sirupsen/logrus"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
 	"github.com/spf13/viper"
 )
@@ -16,13 +17,14 @@ type Chain struct {
 	listener *Listener
 	writer   *Writer
 	conn     *Connection
-	stop     chan<- int
 }
 
 const Name = "Ethereum"
 
 // NewChain initializes a new instance of EthChain
-func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Chain, error) {
+func NewChain(ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
+
+	log := logrus.WithField("chain", Name)
 
 	// Validate and load configuration
 	keys := []string{
@@ -42,14 +44,14 @@ func NewChain(ethMessages chan core.Message, subMessages chan core.Message) (*Ch
 		return nil, err
 	}
 
-	conn := NewConnection(endpoint, kp)
+	conn := NewConnection(endpoint, kp, log)
 
-	listener, err := NewListener(conn, ethMessages)
+	listener, err := NewListener(conn, ethMessages, log)
 	if err != nil {
 		return nil, err
 	}
 
-	writer, err := NewWriter(conn, subMessages)
+	writer, err := NewWriter(conn, subMessages, log)
 	if err != nil {
 		return nil, err
 	}

@@ -4,23 +4,25 @@ import (
 	"context"
 	"encoding/hex"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/go-substrate-rpc-client/types"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 )
 
 type Writer struct {
 	conn     *Connection
-	messages <-chan core.Message
+	messages <-chan chain.Message
+	log      *logrus.Entry
 }
 
-func NewWriter(conn *Connection, messages <-chan core.Message) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan chain.Message, log *logrus.Entry) (*Writer, error) {
 	return &Writer{
 		conn:     conn,
 		messages: messages,
+		log:      log,
 	}, nil
 }
 
@@ -39,7 +41,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		case msg := <-wr.messages:
 			err := wr.Write(&msg)
 			if err != nil {
-				log.WithFields(log.Fields{
+				wr.log.WithFields(logrus.Fields{
 					"appid": hex.EncodeToString(msg.AppID[:]),
 					"error": err,
 				}).Error("Failure submitting message to substrate")
@@ -49,7 +51,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 }
 
 // SubmitPacket submits a packet, it returns true
-func (wr *Writer) Write(msg *core.Message) error {
+func (wr *Writer) Write(msg *chain.Message) error {
 
 	appid := types.NewBytes32(msg.AppID)
 	message := types.NewBytes(msg.Payload)
@@ -108,7 +110,7 @@ func (wr *Writer) Write(msg *core.Message) error {
 		return err
 	}
 
-	log.WithFields(log.Fields{
+	wr.log.WithFields(logrus.Fields{
 		"appid": hex.EncodeToString(msg.AppID[:]),
 	}).Info("Submitted message to Substrate")
 

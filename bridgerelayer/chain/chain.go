@@ -6,6 +6,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type Message struct {
+	AppID   [32]byte
+	Payload []byte
+}
+
 type Chain interface {
 	Name() string
 	Start(ctx context.Context, eg *errgroup.Group) error

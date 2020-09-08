@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/substrate"
-
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
 	"github.com/spf13/cobra"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func runCmd() *cobra.Command {
@@ -23,23 +22,14 @@ func runCmd() *cobra.Command {
 
 func runFunc(_ *cobra.Command, _ []string) error {
 
-	// channel for messages from ethereum
-	ethMessages := make(chan core.Message, 1)
+	log.SetLevel(log.DebugLevel)
 
-	// channel for messages from substrate
-	subMessages := make(chan core.Message, 1)
-
-	ethChain, err := ethereum.NewChain(ethMessages, subMessages)
+	relay, err := core.NewRelay()
 	if err != nil {
+		log.WithField("error", err).Error("Failed to initialize relayer")
 		return err
 	}
 
-	subChain, err := substrate.NewChain(ethMessages, subMessages)
-	if err != nil {
-		return err
-	}
-
-	relay := core.NewRelay(ethChain, subChain)
 	relay.Start()
 
 	return nil
