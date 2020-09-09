@@ -14,8 +14,8 @@ import (
 const userConfigDir = ".config/artemis-relayer"
 
 var rootCmd = &cobra.Command{
-	Use:          "bridgerelayer",
-	Short:        "Relays data between Ethereum and Polkadot",
+	Use:          "artemis-relay",
+	Short:        "Artemis Relay is a bridge between Ethereum and Polkadot",
 	SilenceUsage: true,
 }
 

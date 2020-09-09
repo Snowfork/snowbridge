@@ -11,9 +11,9 @@ func runCmd() *cobra.Command {
 	//nolint:lll
 	cmd := &cobra.Command{
 		Use:     "run",
-		Short:   "Relay messages between chains",
+		Short:   "Start the relay service",
 		Args:    cobra.ExactArgs(0),
-		Example: "bridgerelayer run",
+		Example: "artemis-relay run",
 		RunE:    runFunc,
 	}
 
