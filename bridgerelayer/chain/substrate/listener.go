@@ -45,12 +45,16 @@ func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 func (li *Listener) pollBlocks(ctx context.Context) error {
 
+	storageKey, err := types.CreateStorageKey(&li.conn.metadata, "System", "Events", nil, nil)
+	if err != nil {
+		return err
+	}
+
 	// Get current block
 	block, err := li.conn.api.RPC.Chain.GetHeaderLatest()
 	if err != nil {
 		return err
 	}
-
 	currentBlock := uint64(block.Number)
 
 	for {
@@ -59,10 +63,12 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 			return ctx.Err()
 		default:
 
+			li.log.WithField("block", currentBlock).Debug("Processing block")
+
 			// Get block hash
 			finalizedHash, err := li.conn.api.RPC.Chain.GetFinalizedHead()
 			if err != nil {
-				li.log.WithError(err).Error("Failed to fetch head hash")
+				li.log.WithError(err).Error("Failed to fetch finalized head")
 				sleep(ctx, li.blockRetryInterval)
 				continue
 			}
@@ -70,7 +76,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 			// Get block header
 			finalizedHeader, err := li.conn.api.RPC.Chain.GetHeader(finalizedHash)
 			if err != nil {
-				li.log.WithError(err).Error("Failed to fetch finalized header")
+				li.log.WithError(err).Error("Failed to fetch header for finalized head")
 				sleep(ctx, li.blockRetryInterval)
 				continue
 			}
@@ -91,24 +97,17 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				li.log.WithFields(logrus.Fields{
 					"error": err,
 					"block": currentBlock,
-				}).Error("Failed to query latest block hash")
+				}).Error("Failed to fetch block hash")
 				sleep(ctx, li.blockRetryInterval)
 				continue
 			}
 
-			li.log.WithFields(logrus.Fields{
-				"block": currentBlock,
-			}).Debug("Fetching events for block")
-
-			key, err := types.CreateStorageKey(&li.conn.metadata, "System", "Events", nil, nil)
-			if err != nil {
-				return err
-			}
-
 			var records types.EventRecordsRaw
-			_, err = li.conn.api.RPC.State.GetStorage(key, &records, hash)
+			_, err = li.conn.api.RPC.State.GetStorage(storageKey, &records, hash)
 			if err != nil {
-				return err
+				li.log.WithError(err).Error("Failed to fetch events for block")
+				sleep(ctx, li.blockRetryInterval)
+				continue
 			}
 
 			events := Events{}
@@ -118,9 +117,10 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					"error": err,
 					"block": currentBlock,
 				}).Error("Failed to decode events for block")
-			} else {
-				li.handleEvents(&events)
+				return err
 			}
+
+			li.handleEvents(&events)
 
 			currentBlock++
 		}
