@@ -1,7 +1,7 @@
 // Copyright 2020 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package ethereum_test
+package substrate_test
 
 import (
 	"context"
@@ -9,14 +9,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/substrate"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/sr25519"
 )
 
 func TestConnect(t *testing.T) {
 	log := logrus.NewEntry(logrus.New())
 
-	conn := ethereum.NewConnection("ws://localhost:9545",  secp256k1.Alice(), log)
+	conn := substrate.NewConnection("ws://127.0.0.1:9944/", sr25519.Alice().AsKeyringPair(), log)
 	err := conn.Connect(context.Background())
 	if err != nil {
 		t.Fatal(err)

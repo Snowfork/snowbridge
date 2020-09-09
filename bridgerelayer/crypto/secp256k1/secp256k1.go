@@ -103,18 +103,3 @@ func (kp *Keypair) PublicKey() string {
 func (kp *Keypair) PrivateKey() *ecdsa.PrivateKey {
 	return kp.private
 }
-
-func AliceKP() *Keypair {
-	bz := padWithZeros([]byte("Alice"), PrivateKeyLength)
-	kp, err := NewKeypairFromPrivateKey(bz)
-	if err != nil {
-		panic(err)
-	}
-	return kp
-}
-
-// padWithZeros adds on extra 0 bytes to make a byte array of a specified length
-func padWithZeros(key []byte, targetLength int) []byte {
-	res := make([]byte, targetLength-len(key))
-	return append(res, key...)
-}
