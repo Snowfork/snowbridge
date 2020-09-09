@@ -52,7 +52,6 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 
 // SubmitPacket submits a packet, it returns true
 func (wr *Writer) Write(_ context.Context, msg *chain.Message) error {
-
 	appid := types.NewBytes32(msg.AppID)
 	message := types.NewBytes(msg.Payload)
 

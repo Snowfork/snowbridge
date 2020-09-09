@@ -33,7 +33,7 @@ func NewChain(ethMessages chan chain.Message, subMessages chan chain.Message) (*
 	}
 	for _, key := range keys {
 		if !viper.IsSet(key) {
-			return nil, fmt.Errorf("Config key %q not set", key)
+			return nil, fmt.Errorf("config key %q not set", key)
 		}
 	}
 	endpoint := viper.GetString("ethereum.endpoint")

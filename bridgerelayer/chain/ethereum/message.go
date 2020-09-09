@@ -16,7 +16,6 @@ type Payload struct {
 }
 
 func MakeMessageFromEvent(event etypes.Log, kp *secp256k1.Keypair) (*chain.Message, error) {
-
 	var appID [32]byte
 	copy(appID[:], event.Address.Bytes())
 

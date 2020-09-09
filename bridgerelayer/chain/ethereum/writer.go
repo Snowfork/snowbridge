@@ -101,7 +101,6 @@ func (wr *Writer) lookupAppAddress(appid [32]byte) common.Address {
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (wr *Writer) Write(ctx context.Context, msg *chain.Message) error {
-
 	address := wr.lookupAppAddress(msg.AppID)
 
 	wr.log.WithFields(logrus.Fields{

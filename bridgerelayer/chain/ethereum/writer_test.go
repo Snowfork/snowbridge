@@ -1,8 +1,8 @@
 package ethereum_test
 
 import (
-	"os"
 	"context"
+	"os"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -64,7 +64,7 @@ func TestWrite(t *testing.T) {
 
 	// its OK to send a dummy message since the writer shouldn't care
 	// whether the parachain processes the message or discards it.
-	msg := chain.Message{AppID: chain.EthAppID, Payload: []byte{0,1,2}}
+	msg := chain.Message{AppID: chain.EthAppID, Payload: []byte{0, 1, 2}}
 
 	err = writer.Write(ctx, &msg)
 	if err != nil {

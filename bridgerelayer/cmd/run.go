@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path"
-	"log"
 
-	"github.com/spf13/cobra"
-	"github.com/sirupsen/logrus"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
@@ -55,7 +55,7 @@ func loadConfig() {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		fmt.Println("Fatal error reading config file: ", err)
+		fmt.Println("fatal error reading config file: ", err)
 		os.Exit(1)
 	}
 
@@ -69,13 +69,13 @@ func setupLogging() {
 	logrus.SetLevel(logrus.DebugLevel)
 	// Some of our dependencies such as GSRPC use the stdlib logger. So we need to
 	// funnel those log messages into logrus.
-    log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
+	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 }
 
 func homeDir() string {
 	home, err := homedir.Dir()
 	if err != nil {
-		fmt.Println("Error: ", err)
+		fmt.Println("error: ", err)
 		os.Exit(1)
 	}
 	return home
