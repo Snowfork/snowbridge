@@ -22,7 +22,7 @@ module.exports = async () => {
     }
     const recipient = Buffer.from(polkadotRecipient, "hex");
 
-    let provider = new Web3.providers.HttpProvider("http://localhost:7545");
+    let provider = new Web3.providers.HttpProvider("http://localhost:9545");
     const web3 = new Web3(provider);
     contract.setProvider(web3.currentProvider);
 
