@@ -84,7 +84,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 			// Sleep if the block we want comes after the most recently finalized block
 			if currentBlock > uint64(finalizedHeader.Number) {
 				li.log.WithFields(logrus.Fields{
-					"target": currentBlock,
+					"block":  currentBlock,
 					"latest": finalizedHeader.Number,
 				}).Debug("Block not yet finalized")
 				sleep(ctx, li.blockRetryInterval)
@@ -136,7 +136,7 @@ func sleep(ctx context.Context, delay time.Duration) {
 
 func (li *Listener) handleEvents(events *Events) {
 	for _, evt := range events.ERC20_Transfer {
-		li.log.Info("Handling Transfer event")
+		li.log.Info("Handling transfer event")
 
 		buf := bytes.NewBuffer(nil)
 		encoder := scale.NewEncoder(buf)
@@ -149,7 +149,7 @@ func (li *Listener) handleEvents(events *Events) {
 	}
 
 	for _, evt := range events.ETH_Transfer {
-		li.log.Info("Handling Transfer event")
+		li.log.Info("Handling transfer event")
 
 		buf := bytes.NewBuffer(nil)
 		encoder := scale.NewEncoder(buf)

@@ -9,6 +9,7 @@ require (
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/ethereum/go-ethereum v1.9.20
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/magefile/mage v1.10.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416
 	github.com/pierrec/xxHash v0.1.5 // indirect
