@@ -42,7 +42,7 @@ contract Broker {
      * @param _data address _data expected type: Message { AppID [32]byte, Payload []byte }
      * @param _signature address _signature expected type: Signature []byte
      */
-    function route(bytes memory _data, bytes memory _signature)
+    function submit(bytes memory _data, bytes memory _signature)
         public
     {
         require(_data.length > 32, "Data must contain an application ID and a message");
