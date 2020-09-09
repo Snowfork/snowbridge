@@ -1,6 +1,3 @@
-// Copyright 2020 ChainSafe Systems
-// SPDX-License-Identifier: LGPL-3.0-only
-
 package ethereum_test
 
 import (
@@ -21,5 +18,5 @@ func TestConnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn.Close()
+	defer conn.Close()
 }

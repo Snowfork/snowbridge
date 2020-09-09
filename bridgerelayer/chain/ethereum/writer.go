@@ -76,7 +76,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case msg := <-wr.messages:
-			err := wr.write(ctx, &msg)
+			err := wr.Write(ctx, &msg)
 			if err != nil {
 				wr.log.WithError(err).Error("Error submitting message to ethereum")
 			}
@@ -100,7 +100,7 @@ func (wr *Writer) lookupAppAddress(appid [32]byte) common.Address {
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *Writer) write(ctx context.Context, msg *chain.Message) error {
+func (wr *Writer) Write(ctx context.Context, msg *chain.Message) error {
 
 	address := wr.lookupAppAddress(msg.AppID)
 

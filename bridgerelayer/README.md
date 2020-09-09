@@ -22,21 +22,45 @@ For testing, start a local Ethereum network and deploy the Bank contract by foll
 
 ## Configuration
 
-Configuration is read from `~/.config/artemis-relayer/config.toml`. A sample configuration file is provided at `config.toml.sample`.
+Configuration is read from `~/.config/artemis-relay/config.toml`.
 
-* Update the `ethereum.operator and `ethereum.private_key` fields with valid values from your local Ethereum network.
-* Update the `ethereum.apps.eth` and `ethereum.apps.erc20` fields with valid application contract addresses.
+Here is an example config.toml:
+```toml
+[ethereum]
+endpoint = "ws://localhost:7545/"
+
+[ethereum.apps]
+# contract address of ETH app
+eth = "0xdeadbeef"
+# contract address of ERC20 app
+erc20 = "0xdeadbeef"
+
+[substrate]
+endpoint = "ws://127.0.0.1:9944/"
+block-retry-limit = 3
+block-retry-interval = 10
+```
 
 The ABIs for ethereum applications are stored in the `~/.config/artemis-relayer/ethereum` directory.
+
+### Secrets
+
+The relayer requires secret keys for submitting transactions to both chains. It reads these keys from the environment.
+
+Example:
+```
+export ARTEMIS_RELAY_ETHEREUM_KEY=603a72b0c0a65d9728353714d74291ea439c6816
+export ARTEMIS_RELAY_SUBSTRATE_KEY=//Alice
+```
 
 ## Usage
 
 ```bash
 # Check that the binary was successfully installed
-bridgerelayer -h
+artemis-relay --help
 
 # Start the relayer
-bridgerelayer run
+artemis-relay run
 ```
 
 You should see a message similar to
