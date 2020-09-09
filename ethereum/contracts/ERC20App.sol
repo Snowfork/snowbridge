@@ -4,8 +4,9 @@ pragma solidity >=0.6.2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Decoder.sol";
+import "./Application.sol";
 
-contract ERC20App {
+contract ERC20App is Application {
     using SafeMath for uint256;
     using Decoder for bytes;
 
@@ -56,9 +57,9 @@ contract ERC20App {
         return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
     }
 
-    function submit(bytes memory _data, bytes memory _signature)
+    function submit(bytes memory _data)
         public
-        returns (uint256)
+        override
     {
         require(_data.length == 104, "Data must contain 104 bytes for a successful decoding");
 

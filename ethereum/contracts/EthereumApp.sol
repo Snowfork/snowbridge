@@ -3,8 +3,9 @@ pragma solidity >=0.6.2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Decoder.sol";
+import "./Application.sol";
 
-contract EthereumApp {
+contract EthereumApp is Application {
     using SafeMath for uint256;
     using Decoder for bytes;
 
@@ -51,9 +52,9 @@ contract EthereumApp {
         return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
     }
 
-
-    function submit(bytes memory _data, bytes memory _signature)
+    function submit(bytes memory _data)
         public
+        override
     {
         require(_data.length == 84, "Data must contain 84 bytes for a successful decoding");
 
