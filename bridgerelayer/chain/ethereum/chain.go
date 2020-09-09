@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// EthChain streams the Ethereum blockchain and routes tx data packets
+// Chain streams the Ethereum blockchain and routes tx data packets
 type Chain struct {
 	listener *Listener
 	writer   *Writer
