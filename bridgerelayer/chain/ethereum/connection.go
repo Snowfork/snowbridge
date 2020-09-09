@@ -27,7 +27,6 @@ func NewConnection(endpoint string, kp *secp256k1.Keypair, log *logrus.Entry) *C
 }
 
 func (co *Connection) Connect(ctx context.Context) error {
-
 	client, err := ethclient.Dial(co.endpoint)
 	if err != nil {
 		return err

@@ -42,7 +42,6 @@ func RunFn(_ *cobra.Command, _ []string) error {
 }
 
 func loadConfig() {
-
 	home := homeDir()
 
 	viper.AddConfigPath(path.Join(home, ".config", "artemis-relay"))

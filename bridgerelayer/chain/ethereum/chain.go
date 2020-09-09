@@ -23,7 +23,6 @@ const Name = "Ethereum"
 
 // NewChain initializes a new instance of EthChain
 func NewChain(ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
-
 	log := logrus.WithField("chain", Name)
 
 	// Validate and load configuration
@@ -64,7 +63,6 @@ func NewChain(ethMessages chan chain.Message, subMessages chan chain.Message) (*
 }
 
 func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group) error {
-
 	err := ch.conn.Connect(ctx)
 	if err != nil {
 		return err

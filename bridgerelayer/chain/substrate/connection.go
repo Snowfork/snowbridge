@@ -30,7 +30,6 @@ func NewConnection(endpoint string, kp *signature.KeyringPair, log *logrus.Entry
 }
 
 func (co *Connection) Connect(_ context.Context) error {
-
 	// Initialize API
 	api, err := gsrpc.NewSubstrateAPI(co.endpoint)
 	if err != nil {

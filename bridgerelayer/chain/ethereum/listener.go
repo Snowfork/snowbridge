@@ -34,7 +34,6 @@ func NewListener(conn *Connection, messages chan<- chain.Message, log *logrus.En
 }
 
 func (li *Listener) Start(cxt context.Context, eg *errgroup.Group) error {
-
 	eg.Go(func() error {
 		return li.pollEvents(cxt)
 	})

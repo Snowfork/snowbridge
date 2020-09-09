@@ -35,7 +35,6 @@ func NewListener(conn *Connection, messages chan<- chain.Message, blockRetryLimi
 
 // Start the listener
 func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
-
 	eg.Go(func() error {
 		return li.pollBlocks(ctx)
 	})
@@ -44,7 +43,6 @@ func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (li *Listener) pollBlocks(ctx context.Context) error {
-
 	storageKey, err := types.CreateStorageKey(&li.conn.metadata, "System", "Events", nil, nil)
 	if err != nil {
 		return err
