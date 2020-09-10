@@ -1,4 +1,4 @@
-const EthereumApp = artifacts.require("EthereumApp");
+const ETHApp = artifacts.require("ETHApp");
 
 const Web3Utils = require("web3-utils");
 const BigNumber = web3.BigNumber;
@@ -20,33 +20,33 @@ contract("Bank", function (accounts) {
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      this.ethereumApp = await EthereumApp.new();
+      this.ethApp = await ETHApp.new();
     });
 
-    it("should deploy and initialize the EthereumApp contract", async function () {
-      this.ethereumApp.should.exist;
+    it("should deploy and initialize the ETHApp contract", async function () {
+      this.ethApp.should.exist;
 
-      const nonce = Number(await this.ethereumApp.nonce());
+      const nonce = Number(await this.ethApp.nonce());
       nonce.should.be.bignumber.equal(0);
     });
   });
 
   describe("deposits", function () {
     beforeEach(async function () {
-      this.ethereumApp = await EthereumApp.new();
+      this.ethApp = await ETHApp.new();
     });
 
     it("should support Ethereum deposits", async function () {
       // Load initial contract state
-      const beforeTotalETH = Number(await this.ethereumApp.totalETH());
-      const beforeNonce = Number(await this.ethereumApp.nonce());
+      const beforeTotalETH = Number(await this.ethApp.totalETH());
+      const beforeNonce = Number(await this.ethApp.nonce());
 
       // Prepare transaction parameters
       const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
       const weiAmount = web3.utils.toWei("0.25", "ether");
 
       // Deposit Ethereum to the contract and get the logs of the transaction
-      const { logs } = await this.ethereumApp.sendETH(
+      const { logs } = await this.ethApp.sendETH(
         recipient,
         {from: userOne, value: weiAmount}
       ).should.be.fulfilled;
@@ -90,16 +90,16 @@ contract("Bank", function (accounts) {
       data.slice(start, end).should.be.equal(expectedNonce);
 
       // Confirm contract's Ethereum balance has increased
-      const contractBalanceWei = await web3.eth.getBalance(this.ethereumApp.address);
+      const contractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
       const contractBalance = Web3Utils.fromWei(contractBalanceWei, "ether");
       contractBalance.should.be.bignumber.equal(Web3Utils.fromWei(weiAmount, "ether"));
 
       // Confirm contract's locked Ethereum counter has increased by amount locked
-      const afterTotalETH = await this.ethereumApp.totalETH();
+      const afterTotalETH = await this.ethApp.totalETH();
       Number(afterTotalETH).should.be.bignumber.equal(beforeTotalETH+Number(weiAmount));
 
       // Confirm contract's nonce has been incremented
-      const nonce = Number(await this.ethereumApp.nonce());
+      const nonce = Number(await this.ethApp.nonce());
       nonce.should.be.bignumber.equal(beforeNonce+1);
     });
   });
@@ -108,14 +108,14 @@ contract("Bank", function (accounts) {
   describe("unlocks", function () {
 
     before(async function () {
-        this.ethereumApp = await EthereumApp.new();
+        this.ethApp = await ETHApp.new();
 
         // Prepare transaction parameters
         const lockAmountWei = 5000;
         const substrateRecipient = Buffer.from(POLKADOT_ADDRESS, "hex");
 
         // Send ERC20 tokens to a substrate recipient
-        await this.ethereumApp.sendETH(
+        await this.ethApp.sendETH(
           substrateRecipient,
           {
             from: userOne,
@@ -133,11 +133,11 @@ contract("Bank", function (accounts) {
       const decodedAmount = 4660;
 
       // Load initial state
-      const beforeTotalETH = Number(await this.ethereumApp.totalETH());
-      const beforeContractBalanceWei = await web3.eth.getBalance(this.ethereumApp.address);
+      const beforeTotalETH = Number(await this.ethApp.totalETH());
+      const beforeContractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
       const beforeUserBalanceWei = await web3.eth.getBalance(decodedRecipient);
 
-     const { logs } = await this.ethereumApp.unlockETH(encodedData).should.be.fulfilled;
+     const { logs } = await this.ethApp.unlockETH(encodedData).should.be.fulfilled;
 
       // Confirm unlock event emitted with expected values
       const unlockEvent = logs.find(
@@ -148,8 +148,8 @@ contract("Bank", function (accounts) {
       unlockEvent.args._recipient.should.be.equal(decodedRecipient);
       Number(unlockEvent.args._amount).should.be.bignumber.equal(decodedAmount);
 
-      // Get the user and EthereumApp's Ethereum balance after unlock
-      const afterContractBalanceWei = await web3.eth.getBalance(this.ethereumApp.address);
+      // Get the user and ETHApp's Ethereum balance after unlock
+      const afterContractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
       const afterUserBalanceWei = await web3.eth.getBalance(decodedRecipient);
 
       // Confirm user's balance increased and contract's Ethereum balance has decreased
@@ -157,7 +157,7 @@ contract("Bank", function (accounts) {
       afterContractBalanceWei.should.be.bignumber.equal(beforeContractBalanceWei - decodedAmount);
 
       // Confirm contract's locked Ethereum counter has decreased by amount unlocked
-      const afterTotalETH = await this.ethereumApp.totalETH();
+      const afterTotalETH = await this.ethApp.totalETH();
       Number(afterTotalETH).should.be.bignumber.equal(beforeTotalETH-Number(decodedAmount));
     });
   });
