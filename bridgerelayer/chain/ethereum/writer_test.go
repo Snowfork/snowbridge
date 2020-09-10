@@ -72,6 +72,6 @@ func TestWrite(t *testing.T) {
 	}
 
 	assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
-	assert.Equal(t, "Submitted message to Substrate", hook.LastEntry().Message)
+	assert.Equal(t, "Transaction submitted", hook.LastEntry().Message)
 
 }
