@@ -14,7 +14,10 @@ func Test() error {
 	return sh.Run("go", "test", "./...")
 }
 
+func Lint() error {
+	return sh.Run("revive", "-config", "revive.toml", "./...")
+}
+
 func Install() error {
 	return sh.Run("go", "build", "-o", "$GOPATH/bin/artemis-relay", "main.go")
 }
-

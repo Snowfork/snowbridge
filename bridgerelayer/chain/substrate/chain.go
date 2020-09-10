@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Chain ...
 type Chain struct {
 	listener *Listener
 	writer   *Writer
@@ -21,7 +20,6 @@ type Chain struct {
 
 const Name = "Substrate"
 
-// NewChain ...
 func NewChain(ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
 

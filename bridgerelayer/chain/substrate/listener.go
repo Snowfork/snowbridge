@@ -13,7 +13,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 )
 
-// Listener streams Substrate events
 type Listener struct {
 	conn               *Connection
 	blockRetryLimit    uint
@@ -22,7 +21,6 @@ type Listener struct {
 	log                *logrus.Entry
 }
 
-// NewListener returns a new substrate transaction streamer
 func NewListener(conn *Connection, messages chan<- chain.Message, blockRetryLimit uint, blockRetryInterval uint, log *logrus.Entry) *Listener {
 	return &Listener{
 		conn:               conn,
@@ -33,7 +31,6 @@ func NewListener(conn *Connection, messages chan<- chain.Message, blockRetryLimi
 	}
 }
 
-// Start the listener
 func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
 		return li.pollBlocks(ctx)

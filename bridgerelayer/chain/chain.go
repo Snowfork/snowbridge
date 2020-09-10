@@ -19,6 +19,7 @@ type Chain interface {
 
 // TODO: These are interim standins/hacks which will be removed once
 // https://github.com/Snowfork/polkadot-ethereum/issues/61 lands.
+
 var Erc20AppID = [32]byte{
 	1, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0,

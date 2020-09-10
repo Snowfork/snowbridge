@@ -10,7 +10,6 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/types"
 )
 
-// Connection ...
 type Connection struct {
 	endpoint    string
 	kp          *signature.KeyringPair
@@ -20,7 +19,6 @@ type Connection struct {
 	log         *logrus.Entry
 }
 
-// NewConnection ...
 func NewConnection(endpoint string, kp *signature.KeyringPair, log *logrus.Entry) *Connection {
 	return &Connection{
 		endpoint: endpoint,

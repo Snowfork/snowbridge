@@ -34,7 +34,7 @@ func NewKeypairFromPrivateKey(priv []byte) (*Keypair, error) {
 	}, nil
 }
 
-// NewKeypairFromPrivateKey parses a string for a hex private key. Must be at least
+// NewKeypairFromString parses a string for a hex private key. Must be at least
 // PrivateKeyLength long.
 func NewKeypairFromString(priv string) (*Keypair, error) {
 	pk, err := secp256k1.HexToECDSA(priv)

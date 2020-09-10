@@ -81,7 +81,6 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-// Stop signals to any running routines to exit
 func (ch *Chain) Stop() {
 	if ch.conn != nil {
 		ch.conn.Close()

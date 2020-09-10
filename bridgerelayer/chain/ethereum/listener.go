@@ -21,7 +21,6 @@ type Listener struct {
 	log      *logrus.Entry
 }
 
-// NewListener initializes a new instance of Listener
 func NewListener(conn *Connection, messages chan<- chain.Message, log *logrus.Entry) (*Listener, error) {
 	apps := LoadApplications(viper.GetString("ethereum.registry-path"))
 

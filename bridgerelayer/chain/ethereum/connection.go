@@ -9,7 +9,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
 )
 
-// Connection ...
 type Connection struct {
 	endpoint string
 	kp       *secp256k1.Keypair
@@ -17,7 +16,6 @@ type Connection struct {
 	log      *logrus.Entry
 }
 
-// NewConnection ...
 func NewConnection(endpoint string, kp *secp256k1.Keypair, log *logrus.Entry) *Connection {
 	return &Connection{
 		endpoint: endpoint,
@@ -47,7 +45,6 @@ func (co *Connection) Connect(ctx context.Context) error {
 	return nil
 }
 
-// Close terminates the client connection
 func (co *Connection) Close() {
 	if co.client != nil {
 		co.client.Close()
