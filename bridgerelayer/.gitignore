@@ -1,2 +1,3 @@
 /bridgerelayer
-.envrc
+/.envrc
+build/

@@ -1,76 +1,84 @@
+// Copyright 2020 Snowfork
+// SPDX-License-Identifier: LGPL-3.0-only
+
 package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path"
 
-	"sync"
-
-	"github.com/ethereum/go-ethereum/common"
+	homedir "github.com/mitchellh/go-homedir"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	homedir "github.com/mitchellh/go-homedir"
-
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/ethereum"
-	eKeys "github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase/ethereum"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chains/substrate"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/core"
 )
 
 func runCmd() *cobra.Command {
-	//nolint:lll
 	cmd := &cobra.Command{
 		Use:     "run",
-		Short:   "Relay messages between chains",
+		Short:   "Start the relay service",
 		Args:    cobra.ExactArgs(0),
-		Example: "bridgerelayer run",
-		RunE:    runFunc,
+		Example: "artemis-relay run",
+		RunE:    RunFn,
 	}
-
 	return cmd
 }
 
-func registryPath() string {
+func RunFn(_ *cobra.Command, _ []string) error {
 
-	home, err := homedir.Dir()
+	loadConfig()
+	setupLogging()
+
+	relay, err := core.NewRelay()
 	if err != nil {
-		fmt.Println("Error:", err)
+		logrus.WithField("error", err).Error("Failed to initialize relayer")
+		return err
+	}
+
+	relay.Start()
+
+	return nil
+}
+
+func loadConfig() {
+	home := homeDir()
+
+	viper.AddConfigPath(path.Join(home, ".config", "artemis-relay"))
+	viper.AddConfigPath(".")
+
+	viper.SetConfigName("config")
+	viper.SetConfigType("toml")
+
+	viper.SetDefault("ethereum.registry-path", path.Join(home, ".config", "artemis-relay", "ethereum"))
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		fmt.Println("fatal error reading config file: ", err)
 		os.Exit(1)
 	}
 
-	return path.Join(home, configDir, "ethereum")
+	viper.BindEnv("ethereum.private-key", "ARTEMIS_RELAY_ETHEREUM_KEY")
+	viper.BindEnv("substrate.private-key", "ARTEMIS_RELAY_SUBSTRATE_KEY")
+
+	fmt.Println("Using config file:", viper.ConfigFileUsed())
 }
 
-func runFunc(_ *cobra.Command, _ []string) error {
+func setupLogging() {
+	logrus.SetLevel(logrus.DebugLevel)
+	// Some of our dependencies such as GSRPC use the stdlib logger. So we need to
+	// funnel those log messages into logrus.
+	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
+}
 
-	var wg sync.WaitGroup
-
-	// Load ethereum ABIs
-	ethStreamer := ethereum.NewStreamer(viper.GetString("ethereum.endpoint"), registryPath())
-	ethKeybase, err := eKeys.NewKeypairFromString(viper.GetString("ethereum.private_key"))
+func homeDir() string {
+	home, err := homedir.Dir()
 	if err != nil {
-		return err
+		fmt.Println("error: ", err)
+		os.Exit(1)
 	}
-	ethRouter, err := ethereum.NewRouter(viper.GetString("ethereum.endpoint"), ethKeybase, common.HexToAddress(viper.GetString("ethereum.verifier")))
-	if err != nil {
-		return err
-	}
-
-	ethChain := ethereum.NewEthChain(ethStreamer, *ethRouter)
-
-	subChain, err := substrate.NewChain(ethRouter)
-	if err != nil {
-		return err
-	}
-
-	// start workers
-	wg.Add(1)
-	go ethChain.Start(&wg)
-	wg.Add(1)
-	go subChain.Start(&wg)
-
-	wg.Wait()
-
-	return nil
+	return home
 }

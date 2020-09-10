@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 /*
-The crypto package is used to provide functionality to several keypair types.
+Package crypto is used to provide functionality to several keypair types.
 The current supported types are secp256k1 and sr25519.
 
 Keypairs
@@ -16,13 +16,12 @@ Types
 A general overview on the secp256k1 can be found here: https://en.bitcoin.it/wiki/Secp256k1
 A general overview on the sr25519 type can be found here: https://wiki.polkadot.network/docs/en/learn-cryptography
 */
-
-package keybase
+package crypto
 
 type KeyType = string
 
-const SubstrateKeyType KeyType = "sr25519"
-const EthereumKeyType KeyType = "secp256k1"
+const Sr25519Type KeyType = "sr25519"
+const Secp256k1Type KeyType = "secp256k1"
 
 type Keypair interface {
 	// Encode is used to write the key to a file

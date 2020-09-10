@@ -1,7 +1,7 @@
 // Copyright 2020 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package substrate
+package sr25519
 
 import (
 	"crypto/rand"
@@ -9,27 +9,26 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/snowfork/go-substrate-rpc-client/signature"
 	"github.com/snowfork/go-substrate-rpc-client/types"
-
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto"
 )
 
-var _ keybase.Keypair = &Keypair{}
+var _ crypto.Keypair = &Keypair{}
 
 type Keypair struct {
 	keyringPair *signature.KeyringPair
 }
 
-func GenerateKeypair() (*Keypair, error) {
+func GenerateKeypair(network string) (*Keypair, error) {
 	data := make([]byte, 32)
 	_, err := rand.Read(data)
 	if err != nil {
 		return nil, err
 	}
-	return NewKeypairFromSeed("//" + hexutil.Encode(data))
+	return NewKeypairFromSeed("//"+hexutil.Encode(data), network)
 }
 
-func NewKeypairFromSeed(seed string) (*Keypair, error) {
-	kp, err := signature.KeyringPairFromSecret(seed, "")
+func NewKeypairFromSeed(seed, network string) (*Keypair, error) {
+	kp, err := signature.KeyringPairFromSecret(seed, network)
 	return &Keypair{&kp}, err
 }
 

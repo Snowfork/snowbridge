@@ -1,4 +1,7 @@
-package types
+// Copyright 2020 Snowfork
+// SPDX-License-Identifier: LGPL-3.0-only
+
+package ethereum
 
 import (
 	"github.com/ethereum/go-ethereum/common"

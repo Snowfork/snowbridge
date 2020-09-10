@@ -1,19 +1,19 @@
 // Copyright 2020 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package ethereum
+package secp256k1
 
 import (
 	"crypto/ecdsa"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	secp256k1 "github.com/ethereum/go-ethereum/crypto"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/keybase"
+	secp256k1 "github.com/ethereum/go-ethereum/crypto"
 )
 
-var _ keybase.Keypair = &Keypair{}
+var _ crypto.Keypair = &Keypair{}
 
 const PrivateKeyLength = 32
 
@@ -34,7 +34,7 @@ func NewKeypairFromPrivateKey(priv []byte) (*Keypair, error) {
 	}, nil
 }
 
-// NewKeypairFromPrivateKey parses a string for a hex private key. Must be at least
+// NewKeypairFromString parses a string for a hex private key. Must be at least
 // PrivateKeyLength long.
 func NewKeypairFromString(priv string) (*Keypair, error) {
 	pk, err := secp256k1.HexToECDSA(priv)
