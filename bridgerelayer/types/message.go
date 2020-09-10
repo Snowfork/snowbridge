@@ -1,3 +1,6 @@
+// Copyright 2020 Snowfork
+// SPDX-License-Identifier: LGPL-3.0-only
+
 package types
 
 // Message contains RLP-encoded transaction data and transaction verification data

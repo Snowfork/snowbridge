@@ -1,3 +1,6 @@
+// Copyright 2020 Snowfork
+// SPDX-License-Identifier: LGPL-3.0-only
+
 package secp256k1
 
 // Keypairs for use in tests
@@ -10,7 +13,6 @@ func Alice() *Keypair {
 	}
 	return kp
 }
-
 
 func Bob() *Keypair {
 	bz := padWithZeros([]byte("Bob"), PrivateKeyLength)
