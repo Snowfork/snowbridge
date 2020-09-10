@@ -57,20 +57,20 @@ contract ERC20App is Application {
         return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
     }
 
-    function submit(bytes memory _data)
+    function handle(bytes memory _message)
         public
         override
     {
-        require(_data.length == 104, "Data must contain 104 bytes for a successful decoding");
+        require(_message.length == 104, "Message must contain 104 bytes for a successful decoding");
 
         // Decode sender bytes
-        bytes memory sender = _data.slice(0, 32);
+        bytes memory sender = _message.slice(0, 32);
         // Decode recipient address
-        address recipient = _data.sliceAddress(32);
+        address recipient = _message.sliceAddress(32);
         // Decode token address
-        address tokenAddr = _data.sliceAddress(32 + 20);
+        address tokenAddr = _message.sliceAddress(32 + 20);
         // Deocde amount int256
-        bytes memory amountBytes = _data.slice(32 + 40, 32);
+        bytes memory amountBytes = _message.slice(32 + 40, 32);
         uint256 amount = amountBytes.decodeUint256();
 
         sendTokens(recipient, tokenAddr, amount);

@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Decoder.sol";
 import "./Application.sol";
 
-contract EthereumApp is Application {
+contract ETHApp is Application {
     using SafeMath for uint256;
     using Decoder for bytes;
 
@@ -52,18 +52,18 @@ contract EthereumApp is Application {
         return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
     }
 
-    function submit(bytes memory _data)
+    function handle(bytes memory _message)
         public
         override
     {
-        require(_data.length == 84, "Data must contain 84 bytes for a successful decoding");
+        require(_message.length == 84, "Message must contain 84 bytes for a successful decoding");
 
         // Decode sender bytes
-        bytes memory sender = _data.slice(0, 32);
+        bytes memory sender = _message.slice(0, 32);
         // Decode recipient address
-        address payable recipient = _data.sliceAddress(32);
+        address payable recipient = _message.sliceAddress(32);
         // Deocde amount int256
-        bytes memory amountBytes = _data.slice(32 + 20, 32);
+        bytes memory amountBytes = _message.slice(32 + 20, 32);
         uint256 amount = amountBytes.decodeUint256();
 
         sendETH(recipient, amount);
