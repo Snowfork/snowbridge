@@ -7,22 +7,30 @@ Note: the bridgerelayer is currently in a boilerplate/architectural design state
 Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe/ChainBridge). This relayer service
 is inspired by their design and incorporates some of their code.
 
-## Setup
+## Development
 
-```bash
-export GO111MODULE=on
-export GOPROXY=direct
-export GOSUMDB=off
+This project requires the following tools for day to day development:
 
-make install
+* [Mage](https://magefile.org/): Used for build tasks
+* [Revive](https://github.com/mgechev/revive): Used for linting instead of golint
+
+Please install them first.
+
+Run `mage` to see a list of available tasks (building, testing, linting, etc).
+
+To enable revive for linting in VS-code, add the following to your config:
+```json
+{
+    "go.lintTool": "revive",
+    "go.lintFlags": [
+        "-config=${workspaceFolder}/revive.toml"
+    ],
+}
 ```
-
-For testing, start a local Ethereum network and deploy the Bank contract by following the set up instructions [here](../ethereum/README.md).
-
 
 ## Configuration
 
-Configuration is read from `~/.config/artemis-relay/config.toml`.
+Before running the relay, it needs to be configured first. Configuration is read from `~/.config/artemis-relay/config.toml`.
 
 Here is an example config.toml:
 ```toml
@@ -51,6 +59,14 @@ Example:
 ```
 export ARTEMIS_RELAY_ETHEREUM_KEY=603a72b0c0a65d9728353714d74291ea439c6816
 export ARTEMIS_RELAY_SUBSTRATE_KEY=//Alice
+```
+
+## Running the relay locally
+
+For testing, start a local Ethereum network and deploy the Bank contract by following the set up instructions [here](../ethereum/README.md).
+
+```
+build/artemis-relay run
 ```
 
 ## Usage
