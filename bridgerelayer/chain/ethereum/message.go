@@ -9,16 +9,15 @@ import (
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/snowfork/go-substrate-rpc-client/types"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
-	"github.com/snowfork/polkadot-ethereum/prover"
 )
 
 type Payload struct {
-	Data      []byte
-	Signature []byte
+	Data        []byte
+	TxHash      [32]byte
+	BlockNumber uint64
 }
 
-func MakeMessageFromEvent(event etypes.Log, kp *secp256k1.Keypair) (*chain.Message, error) {
+func MakeMessageFromEvent(event etypes.Log) (*chain.Message, error) {
 	var appID [32]byte
 	copy(appID[:], event.Address.Bytes())
 
@@ -29,13 +28,7 @@ func MakeMessageFromEvent(event etypes.Log, kp *secp256k1.Keypair) (*chain.Messa
 		return nil, err
 	}
 
-	// Generate a proof by signing a hash of the encoded data
-	proof, err := prover.GenerateProof(buf.Bytes(), kp.PrivateKey())
-	if err != nil {
-		return nil, err
-	}
-
-	p := Payload{Data: buf.Bytes(), Signature: proof.Signature}
+	p := Payload{Data: buf.Bytes(), TxHash: event.TxHash, BlockNumber: event.BlockNumber}
 	payload, err := types.EncodeToBytes(p)
 	if err != nil {
 		return nil, err

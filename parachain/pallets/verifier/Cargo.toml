@@ -1,6 +1,6 @@
 [package]
-name = 'pallet-dummy-verifier'
-description = 'Artemis Dummy Verifier Pallet'
+name = 'pallet-verifier'
+description = 'Artemis Verifier Pallet'
 version = '0.1.1'
 edition = '2018'
 authors = ['Snowfork <contact@snowfork.com>']
@@ -59,6 +59,10 @@ path = "../../primitives/core"
 default-features = false
 path = "../broker"
 
+[dependencies.artemis-ethereum]
+default-features = false
+path = "../../primitives/ethereum"
+
 
 [features]
 default = ['std']
@@ -70,5 +74,6 @@ std = [
     'sp-io/std',
     'sp-runtime/std',
     'sp-std/std',
-    'artemis-core/std'
+    'artemis-core/std',
+    'artemis-ethereum/std',
 ]

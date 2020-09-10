@@ -39,7 +39,7 @@ std = [
     'balances/std',
     'bridge/std',
     'broker/std',
-    'dummy-verifier/std',
+    'verifier/std',
     'asset/std',
     'eth-app/std',
     'erc20-app/std',
@@ -223,10 +223,10 @@ package = 'pallet-broker'
 path = '../pallets/broker'
 version = '0.1.1'
 
-[dependencies.dummy-verifier]
+[dependencies.verifier]
 default-features = false
-package = 'pallet-dummy-verifier'
-path = '../pallets/dummy-verifier'
+package = 'pallet-verifier'
+path = '../pallets/verifier'
 version = '0.1.1'
 
 [dependencies.asset]

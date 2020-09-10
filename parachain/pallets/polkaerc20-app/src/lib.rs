@@ -10,11 +10,13 @@ use frame_support::{
 	dispatch::{DispatchResult, DispatchError},
 };
 
-use codec::{Decode};
+use codec::Decode;
 
-use artemis_core::{AppID, Application, Message};
-use artemis_ethereum::{self as ethereum, SignedMessage};
+use artemis_core::{Application, VerifiedMessage};
 use artemis_asset as asset;
+
+mod payload;
+use payload::Payload;
 
 #[cfg(test)]
 mod mock;
@@ -60,7 +62,7 @@ decl_module! {
 		pub fn burn(origin, token_id: H160, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			// The token_id 0 is reserved for the PolkaETH app
+			// The token_id 0 is reserved for the ETH app
 			if token_id == H160::zero() {
 				return Err(Error::<T>::InvalidTokenId.into())
 			}
@@ -79,45 +81,27 @@ impl<T: Trait> Module<T> {
 		T::AccountId::decode(&mut &data[..]).ok()
 	}
 
-	fn handle_event(event: ethereum::Event) -> DispatchResult {
-
-		match event {
-			ethereum::Event::SendERC20 { recipient, token, amount, ..} => {
-				if token.is_zero() {
-					return Err(DispatchError::Other("Invalid token address"))
-				}
-				let account = match Self::bytes_to_account_id(&recipient) {
-					Some(account) => account,
-					None => {
-						return Err(DispatchError::Other("Invalid sender account"))
-					}
-				};
-				<asset::Module<T>>::do_mint(token, &account, amount)?;
-				Ok(())
-			}
-			_ => {
-				// Ignore all other ethereum events. In the next milestone the
-				// application will only receive messages it is registered to handle
-				Ok(())
-			}
+	fn handle_event(payload: Payload) -> DispatchResult {
+		if payload.token_addr.is_zero() {
+			return Err(DispatchError::Other("Invalid token address"))
 		}
+
+		let account = Self::bytes_to_account_id(&payload.recipient_addr)
+			.ok_or(DispatchError::Other("Invalid recipient account"))?;
+
+		<asset::Module<T>>::do_mint(payload.token_addr, &account, payload.amount)?;
+
+		Ok(())
 	}
 
 }
 
 impl<T: Trait> Application for Module<T> {
 
-	fn handle(_app_id: AppID, message: Message) -> DispatchResult {
-		let sm = match SignedMessage::decode(&mut message.as_slice()) {
-			Ok(sm) => sm,
-			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
-		};
+	fn handle(message: VerifiedMessage) -> DispatchResult {
+		let payload = Payload::decode(message)
+			.map_err(|_| DispatchError::Other("Failed to decode ethereum log"))?;
 
-		let event = match ethereum::Event::decode_from_rlp(sm.data) {
-			Ok(event) => event,
-			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
-		};
-
-		Self::handle_event(event)
+		Self::handle_event(payload)
 	}
 }

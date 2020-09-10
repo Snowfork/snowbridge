@@ -74,7 +74,7 @@ func (li *Listener) pollEvents(ctx context.Context) error {
 				"blockNumber": event.BlockNumber,
 			}).Info("Witnessed transaction for application")
 
-			msg, err := MakeMessageFromEvent(event, li.conn.kp)
+			msg, err := MakeMessageFromEvent(event)
 			if err != nil {
 				li.log.WithFields(logrus.Fields{
 					"address":     event.Address.Hex(),

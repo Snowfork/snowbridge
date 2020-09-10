@@ -9,6 +9,7 @@ targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+rlp = { version = "0.4", default-features = false }
 
 [dependencies.codec]
 default-features = false
@@ -64,6 +65,12 @@ optional = true
 version = '1.0.101'
 features = ["derive"]
 
+[dependencies.ethabi]
+package = "ethabi-decode"
+default-features = false
+git = 'https://github.com/Snowfork/ethabi-decode'
+version = '1.2.1'
+
 [dependencies.artemis-core]
 default-features = false
 path = "../../primitives/core"
@@ -101,6 +108,8 @@ std = [
     'sp-io/std',
     'sp-runtime/std',
     'artemis-core/std',
-    'artemis-ethereum/std'
+    'artemis-ethereum/std',
+    'ethabi/std',
+    'rlp/std'
 ]
 

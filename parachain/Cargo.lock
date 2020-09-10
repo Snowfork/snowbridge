@@ -199,13 +199,13 @@ dependencies = [
  "pallet-balances",
  "pallet-bridge",
  "pallet-broker",
- "pallet-dummy-verifier",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
+ "pallet-verifier",
  "parity-scale-codec",
  "polkaerc20-app",
  "polkaeth-app",
@@ -3134,21 +3134,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-dummy-verifier"
-version = "0.1.1"
-dependencies = [
- "artemis-core",
- "frame-support",
- "frame-system",
- "pallet-broker",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-finality-tracker"
 version = "2.0.0-rc4"
 source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1f21a579c478fe5d4f51e1fa71f7db9fd4"
@@ -3285,6 +3270,22 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-api",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-verifier"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "artemis-ethereum",
+ "frame-support",
+ "frame-system",
+ "pallet-broker",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
@@ -3603,10 +3604,12 @@ dependencies = [
  "artemis-asset",
  "artemis-core",
  "artemis-ethereum",
+ "ethabi-decode",
  "frame-support",
  "frame-system",
  "pallet-bridge",
  "parity-scale-codec",
+ "rlp",
  "rustc-hex",
  "serde",
  "sp-core",
@@ -3623,11 +3626,13 @@ dependencies = [
  "artemis-asset",
  "artemis-core",
  "artemis-ethereum",
+ "ethabi-decode",
  "frame-support",
  "frame-system",
  "pallet-balances",
  "pallet-bridge",
  "parity-scale-codec",
+ "rlp",
  "rustc-hex",
  "serde",
  "sp-core",

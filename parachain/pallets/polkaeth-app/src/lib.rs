@@ -10,11 +10,13 @@ use frame_support::{
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
-use artemis_core::{AppID, Application, Message};
-use codec::{Decode};
+use artemis_core::{Application, VerifiedMessage};
+use codec::Decode;
 
-use artemis_ethereum::{self as ethereum, SignedMessage};
 use artemis_asset as asset;
+
+mod payload;
+use payload::Payload;
 
 #[cfg(test)]
 mod mock;
@@ -70,41 +72,22 @@ impl<T: Trait> Module<T> {
 		T::AccountId::decode(&mut &data[..]).ok()
 	}
 
-	fn handle_event(event: ethereum::Event) -> DispatchResult {
-		match event {
-			ethereum::Event::SendETH { recipient, amount, ..} => {
-				let account = match Self::bytes_to_account_id(&recipient) {
-					Some(account) => account,
-					None => {
-						return Err(DispatchError::Other("Invalid sender account"))
-					}
-				};
-				<asset::Module<T>>::do_mint(H160::zero(), &account, amount)?;
-				Ok(())
-			}
-			_ => {
-				// Ignore all other ethereum events. In the next milestone the
-				// application will only receive messages it is registered to handle
-				Ok(())
-			}
-		}
+	fn handle_event(payload: Payload) -> DispatchResult {
+		let account = Self::bytes_to_account_id(&payload.recipient_addr)
+			.ok_or(DispatchError::Other("Invalid recipient account"))?;
+
+		<asset::Module<T>>::do_mint(H160::zero(), &account, payload.amount)?;
+
+		Ok(())
 	}
 }
 
 impl<T: Trait> Application for Module<T> {
 
-	fn handle(_app_id: AppID, message: Message) -> DispatchResult {
-		let sm = match SignedMessage::decode(&mut message.as_slice()) {
-			Ok(sm) => sm,
-			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
-		};
+	fn handle(message: VerifiedMessage) -> DispatchResult {
+		let payload = Payload::decode(message)
+			.map_err(|_| DispatchError::Other("Failed to decode ethereum log"))?;
 
-		let event = match ethereum::Event::decode_from_rlp(sm.data) {
-			Ok(event) => event,
-			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
-		};
-
-		Self::handle_event(event)
+		Self::handle_event(payload)
 	}
-
 }

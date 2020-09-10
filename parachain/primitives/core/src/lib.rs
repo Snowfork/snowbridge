@@ -2,32 +2,28 @@
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-//use sp_std::prelude::*;
 use frame_support::dispatch::DispatchResult;
 
 pub mod types;
 pub mod registry;
 
-pub use types::{AppID, Message};
+pub use types::{AppID, Message, VerificationInput, VerifiedMessage};
 
 /// The broker module implements this trait
-pub trait Broker {
+pub trait Broker<AccountId> {
 
-	fn submit(app_id: AppID, message: Message) -> DispatchResult;
-
+	fn submit(sender: AccountId, app_id: AppID, message: Message) -> DispatchResult;
 }
 
-/// The verifier module implements this trait
-pub trait Verifier {
+/// Verifier modules should implements this trait
+pub trait Verifier<AccountId> {
 
-	fn verify(app_id: AppID, message: Message) -> DispatchResult;
-
+	fn verify(sender: AccountId, app_id: AppID, message: Message) -> DispatchResult;
 }
 
-/// The dummy app module implements this trait
+/// Application modules should implement this trait
 pub trait Application {
 
 	/// Handle a message
-	fn handle(app_id: AppID, message: Message) -> DispatchResult;
-
+	fn handle(message: VerifiedMessage) -> DispatchResult;
 }

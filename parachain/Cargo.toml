@@ -8,7 +8,7 @@ members = [
     'pallets/bridge',
     'pallets/broker',
     'pallets/asset',
-    'pallets/dummy-verifier',
+    'pallets/verifier',
     'pallets/polkaeth-app',
     'pallets/polkaerc20-app',
     'node',
