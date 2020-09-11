@@ -55,10 +55,6 @@ version = '2.0.0-rc4'
 default-features = false
 path = "../../primitives/core"
 
-[dependencies.pallet-broker]
-default-features = false
-path = "../broker"
-
 [dependencies.artemis-ethereum]
 default-features = false
 path = "../../primitives/ethereum"

@@ -1,20 +1,16 @@
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_system as system;
 use frame_support::{decl_module, decl_storage, decl_event, decl_error,
-	dispatch::{DispatchResult, Dispatchable}};
-use frame_support::{Parameter, weights::GetDispatchInfo, dispatch::PostDispatchInfo};
-use frame_system::{self as system, RawOrigin};
+	dispatch::DispatchResult};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use pallet_broker as broker;
+use artemis_core::{AppID, Message, Verifier, VerificationInput};
 
-use artemis_core::{AppID, Broker, Message, Verifier, VerificationInput};
-
-pub trait Trait: system::Trait + broker::Trait {
+pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
-	type Broker: Broker<<Self as system::Trait>::AccountId>;
 }
 
 decl_storage! {

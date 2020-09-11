@@ -198,7 +198,6 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-bridge",
- "pallet-broker",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
@@ -3120,20 +3119,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-broker"
-version = "0.1.1"
-dependencies = [
- "artemis-core",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-finality-tracker"
 version = "2.0.0-rc4"
 source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1f21a579c478fe5d4f51e1fa71f7db9fd4"
@@ -3282,7 +3267,6 @@ dependencies = [
  "artemis-ethereum",
  "frame-support",
  "frame-system",
- "pallet-broker",
  "parity-scale-codec",
  "serde",
  "sp-core",

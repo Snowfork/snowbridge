@@ -2,7 +2,7 @@
 #![allow(unused_variables)]
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult};
-use frame_system as system;
+use frame_system::{self as system, ensure_signed};
 
 use sp_std::prelude::*;
 
@@ -42,7 +42,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 0]
-		pub fn submit(origin, app_id: AppID, message: Message) -> dispatch::DispatchResult {
+		pub fn submit(origin, app_id: AppID, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Verifier::verify(who, app_id, &message)?;
