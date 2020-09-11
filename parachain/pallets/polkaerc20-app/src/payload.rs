@@ -1,6 +1,5 @@
 use sp_std::prelude::*;
 use ethabi::{Event as ABIEvent, Param, ParamKind, Token};
-use artemis_core::Message;
 use artemis_ethereum::{DecodeError, log::Log, H160, U256};
 
 static EVENT_ABI: &ABIEvent = &ABIEvent {
@@ -94,10 +93,7 @@ impl Payload {
 
 #[cfg(test)]
 mod tests {
-	use std::io::prelude::*;
-	use std::io::BufReader;
 	use super::*;
-	use hex::FromHex;
 	use hex_literal::hex;
 
 	const LOG_DATA: [u8; 317] = hex!("
@@ -116,13 +112,7 @@ mod tests {
 
 	#[test]
 	fn test_decode() {
-		let mut reader = BufReader::new(File::open(fixture_path()).unwrap());
-		let mut data: Vec<u8> = Vec::new();
-		reader.read_to_end(&mut data).unwrap();
-
-
-		let log: Log = rlp::decode(&data).unwrap();
-		assert_eq!(Payload::decode(log).unwrap(),
+		assert_eq!(Payload::decode(LOG_DATA.to_vec()).unwrap(),
 			Payload {
 				sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 				recipient_addr: hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],

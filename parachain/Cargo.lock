@@ -3623,6 +3623,7 @@ dependencies = [
  "ethabi-decode",
  "frame-support",
  "frame-system",
+ "hex-literal 0.3.1",
  "pallet-balances",
  "pallet-bridge",
  "parity-scale-codec",
