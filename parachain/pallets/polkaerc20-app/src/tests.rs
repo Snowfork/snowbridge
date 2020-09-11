@@ -2,7 +2,7 @@ use crate::mock::{new_tester, MockEvent, System, AccountId, Origin, Asset, ERC20
 use frame_support::{assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
-use hex::FromHex;
+use hex_literal::hex;
 
 use crate::RawEvent;
 
@@ -12,21 +12,14 @@ fn last_event() -> MockEvent {
 	System::events().pop().expect("Event expected").event
 }
 
-fn to_account_id(hexaddr: &str) -> [u8; 32] {
-	let mut buf: [u8; 32] = [0; 32];
-	let bytes: Vec<u8> = hexaddr.from_hex().unwrap();
-	buf.clone_from_slice(&bytes);
-	buf
-}
-
 #[test]
 fn mints_after_handling_ethereum_event() {
 	new_tester().execute_with(|| {
 		let token_addr = H160::repeat_byte(1);
 
 		let event = Payload {
-			sender_addr: "cffeaaf7681c89285d65cfbe808b80e502696573".parse().unwrap(),
-			recipient_addr: to_account_id("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"),
+			sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
+			recipient_addr: hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],
 			token_addr: token_addr,
 			amount: 10.into(),
 		};

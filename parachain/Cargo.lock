@@ -147,6 +147,7 @@ version = "0.1.0"
 dependencies = [
  "ethabi-decode",
  "ethereum-types",
+ "hex-literal 0.3.1",
  "libsecp256k1",
  "parity-scale-codec",
  "rlp",
