@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.2;
 
-import "./Verifier.sol";
 import "./Decoder.sol";
 import "./Application.sol";
 
 contract Broker {
     using Decoder for bytes;
 
+    uint64 public mostRecentBlock;
+    mapping(uint64 => uint64) public mostRecentBlockEvent;
     mapping(address => bool) public applications;
-    Verifier public verifier;
 
-    constructor(address verifierAddr, address[] memory apps) public {
-        verifier = new Verifier(verifierAddr);
+
+    constructor(address[] memory apps) public {
+        mostRecentBlock = 0;
         for(uint256 i = 0; i < apps.length; i++) {
             if(verifyApp(apps[i])) {
                 applications[apps[i]] = true;
@@ -22,22 +23,29 @@ contract Broker {
 
     /**
      * @dev routes the message to the specified application ID after verifying the operator's signature
-     * @param _data address _data expected type: Message { AppID [32]byte, Payload []byte }
-     * @param _signature address _signature expected type: Signature []byte
+     * @param _message address _message expected type: Message { AppID [32]byte, Payload []byte }
+     * @param _verification bytes _verification expected type: Verification { BlockNumber int64, EventID int64 }
      */
-    function handle(bytes memory _data, bytes memory _signature)
+    function handle(bytes memory _message, bytes memory _verification)
         public
     {
-        require(_data.length > 32, "Data must contain an application ID and a message");
+        uint64 blockNumber = uint64(_verification.slice(0, 8).decodeUint256());
+        require(blockNumber > mostRecentBlock, "Blocks must be processed chronologically");
 
-        address appID = _data.sliceAddress(32);
-        require(applications[appID], "App ID not found. Has the application been registered?");
+        uint64 eventID = uint64(_verification.slice(8, 16).decodeUint256());
+        require(eventID > mostRecentBlockEvent[blockNumber], "Events must be processed chronologically");
 
-        bytes memory message = _data.slice(32, _data.length-1);
-        require(verifier.verifyBytes(message, _signature), "Invalid operator signature");
+        address appID = _message.sliceAddress(32);
+        require(applications[appID], "App ID not found. Only registered application are supported");
 
+        bytes memory payload = _message.slice(32, _message.length-1);
         Application app = Application(appID);
-        app.handle(_data);
+        app.handle(payload);
+
+        mostRecentBlockEvent[blockNumber] = eventID;
+        if(blockNumber > mostRecentBlock) {
+            mostRecentBlock = blockNumber;
+        }
     }
 
     /**
