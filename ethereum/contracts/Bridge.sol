@@ -30,7 +30,7 @@ contract Bridge {
         public
     {
         uint64 blockNumber = uint64(_verification.slice(0, 8).decodeUint256());
-        require(blockNumber > mostRecentBlock, "Blocks must be processed chronologically");
+        require(blockNumber >= mostRecentBlock, "Blocks must be processed chronologically");
 
         uint64 eventID = uint64(_verification.slice(8, 16).decodeUint256());
         require(eventID > mostRecentBlockEvent[blockNumber], "Events must be processed chronologically");
