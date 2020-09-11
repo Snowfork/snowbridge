@@ -1,5 +1,6 @@
 const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
+const Bridge = artifacts.require("Bridge");
 const TestToken = artifacts.require("TestToken");
 
 module.exports = function(deployer, network, accounts) {
@@ -9,6 +10,6 @@ module.exports = function(deployer, network, accounts) {
 
     await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
 
-    await deployer.deploy(Broker, [ETHApp, ERC20App]);
+    await deployer.deploy(Bridge, [ETHApp, ERC20App]);
   })
 };

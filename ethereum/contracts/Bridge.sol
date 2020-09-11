@@ -4,7 +4,7 @@ pragma solidity >=0.6.2;
 import "./Decoder.sol";
 import "./Application.sol";
 
-contract Broker {
+contract Bridge {
     using Decoder for bytes;
 
     uint64 public mostRecentBlock;
