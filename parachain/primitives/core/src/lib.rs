@@ -9,13 +9,7 @@ pub mod registry;
 
 pub use types::{AppID, Message, VerificationInput, VerifiedMessage};
 
-/// The broker module implements this trait
-pub trait Broker<AccountId> {
-
-	fn submit(sender: AccountId, app_id: AppID, message: Message) -> DispatchResult;
-}
-
-/// Verifier modules should implements this trait
+/// Verifier modules should implement this trait
 pub trait Verifier<AccountId> {
 
 	fn verify(sender: AccountId, app_id: AppID, message: &Message) -> DispatchResult;

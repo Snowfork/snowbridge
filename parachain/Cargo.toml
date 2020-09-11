@@ -6,7 +6,6 @@ members = [
     'primitives/core',
     'primitives/ethereum',
     'pallets/bridge',
-    'pallets/broker',
     'pallets/asset',
     'pallets/verifier',
     'pallets/polkaeth-app',

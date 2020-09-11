@@ -8,7 +8,7 @@ use sp_std::prelude::*;
 
 use artemis_core::{
 	registry::{AppName, REGISTRY},
-	AppID, Application, Broker, Message, Verifier,
+	AppID, Application, Message, Verifier,
 };
 
 pub trait Trait: system::Trait {
@@ -19,7 +19,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as BrokerModule {
+	trait Store for Module<T: Trait> as BridgeModule {
 
 	}
 }
@@ -40,6 +40,15 @@ decl_module! {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
+
+		#[weight = 0]
+		pub fn submit(origin, app_id: AppID, message: Message) -> dispatch::DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			T::Verifier::verify(who, app_id, &message)?;
+
+			Self::dispatch(app_id, message)
+		}
 
 	}
 }
@@ -62,12 +71,3 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> Broker<T::AccountId> for Module<T> {
-
-	// Submit message to broker for processing
-	fn submit(sender: T::AccountId, app_id: AppID, message: Message) -> DispatchResult {
-		T::Verifier::verify(sender, app_id, &message)?;
-		Self::dispatch(app_id, message)
-	}
-
-}
