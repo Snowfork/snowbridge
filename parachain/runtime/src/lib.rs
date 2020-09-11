@@ -247,11 +247,6 @@ impl transaction_payment::Trait for Runtime {
 	type FeeMultiplierUpdate = ();
 }
 
-impl sudo::Trait for Runtime {
-	type Event = Event;
-	type Call = Call;
-}
-
 parameter_types! {
     pub const MaximumSchedulerWeight: Weight = MaximumBlockWeight::get();
 }
@@ -280,7 +275,7 @@ impl broker::Trait for Runtime {
 
 impl verifier::Trait for Runtime {
 	type Event = Event;
-	type Call = Call;
+	type Broker = broker::Module<Runtime>;
 }
 
 impl asset::Trait for Runtime {
@@ -308,11 +303,10 @@ construct_runtime!(
 		Grandpa: grandpa::{Module, Call, Storage, Config, Event},
 		Balances: balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: transaction_payment::{Module, Storage},
-		Sudo: sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		Scheduler: scheduler::{Module, Call, Storage, Event<T>},
 		Bridge: bridge::{Module, Call, Storage, Event<T>},
 		Broker: broker::{Module, Call, Storage, Event},
-		Verifier: verifier::{Module, Call, Storage, Event},
+		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
 		Asset: asset::{Module, Call, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Storage, Event<T>},

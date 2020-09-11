@@ -18,12 +18,12 @@ pub trait Broker<AccountId> {
 /// Verifier modules should implements this trait
 pub trait Verifier<AccountId> {
 
-	fn verify(sender: AccountId, app_id: AppID, message: Message) -> DispatchResult;
+	fn verify(sender: AccountId, app_id: AppID, message: &Message) -> DispatchResult;
 }
 
 /// Application modules should implement this trait
 pub trait Application {
 
 	/// Handle a message
-	fn handle(message: VerifiedMessage) -> DispatchResult;
+	fn handle(message: Message) -> DispatchResult;
 }

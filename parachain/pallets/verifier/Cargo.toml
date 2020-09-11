@@ -63,10 +63,17 @@ path = "../broker"
 default-features = false
 path = "../../primitives/ethereum"
 
+[dependencies.serde]
+package = 'serde'
+optional = true
+version = '1.0.101'
+features = ["derive"]
+
 
 [features]
 default = ['std']
 std = [
+    'serde/std',
     'codec/std',
     'frame-support/std',
     'frame-system/std',

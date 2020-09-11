@@ -17,7 +17,8 @@ pub enum VerificationInput {
 	Basic {
 		tx_hash: H256,
 		block_number: u64,
-	}
+	},
+	None
 }
 
 #[derive(Debug, PartialEq, Clone, Encode, Decode)]

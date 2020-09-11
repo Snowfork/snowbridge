@@ -1,6 +1,6 @@
 use sp_std::prelude::*;
 use ethabi::{Event as ABIEvent, Param, ParamKind, Token};
-use artemis_core::VerifiedMessage;
+use artemis_core::Message;
 use artemis_ethereum::{DecodeError, log::Log, H160, U256};
 
 static EVENT_ABI: &ABIEvent = &ABIEvent {
@@ -33,7 +33,7 @@ pub struct Payload {
 
 impl Payload {
 
-	pub fn decode(message: VerifiedMessage) -> Result<Self, DecodeError> {
+	pub fn decode(message: Message) -> Result<Self, DecodeError> {
 		// Decode ethereum Log event from RLP-encoded data
 		let log: Log = rlp::decode(&message.payload)?;
 		let tokens = EVENT_ABI.decode(log.topics, log.data)?;

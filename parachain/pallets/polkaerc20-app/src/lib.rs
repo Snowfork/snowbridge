@@ -12,7 +12,7 @@ use frame_support::{
 
 use codec::Decode;
 
-use artemis_core::{Application, VerifiedMessage};
+use artemis_core::{Application, Message};
 use artemis_asset as asset;
 
 mod payload;
@@ -98,7 +98,7 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Application for Module<T> {
 
-	fn handle(message: VerifiedMessage) -> DispatchResult {
+	fn handle(message: Message) -> DispatchResult {
 		let payload = Payload::decode(message)
 			.map_err(|_| DispatchError::Other("Failed to decode ethereum log"))?;
 

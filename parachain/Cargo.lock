@@ -3284,6 +3284,7 @@ dependencies = [
  "frame-system",
  "pallet-broker",
  "parity-scale-codec",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
