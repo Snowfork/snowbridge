@@ -1,5 +1,4 @@
 use sp_std::vec::Vec;
-use sp_core::H256;
 
 use codec::{Encode, Decode};
 
@@ -15,8 +14,8 @@ pub struct Message {
 #[derive(Debug, PartialEq, Copy, Clone, Encode, Decode)]
 pub enum VerificationInput {
 	Basic {
-		tx_hash: H256,
 		block_number: u64,
+		event_index: u32,
 	},
 	None
 }
