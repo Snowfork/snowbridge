@@ -90,7 +90,7 @@ func (li *Listener) pollEvents(ctx context.Context) error {
 
 func makeQuery(app Application) geth.FilterQuery {
 	address := gethCommon.HexToAddress(app.ID)
-	signature := app.ABI.Events[EventName].ID.Hex()
+	signature := app.ABI.Events["AppEvent"].ID.Hex()
 	topic := gethCommon.HexToHash(signature)
 
 	return geth.FilterQuery{
