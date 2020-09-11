@@ -7,14 +7,64 @@ import (
 	"bytes"
 
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/snowfork/go-substrate-rpc-client/scale"
 	"github.com/snowfork/go-substrate-rpc-client/types"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 )
 
-type Payload struct {
-	Data        []byte
-	TxHash      [32]byte
+type Message struct {
+	Data              []byte
+	VerificationInput VerificationInput
+}
+
+type VerificationInput struct {
+	IsBasic bool
+	AsBasic VerificationBasic
+	IsNone  bool
+}
+
+type VerificationBasic struct {
 	BlockNumber uint64
+	EventIndex  uint32
+}
+
+func (v VerificationInput) Encode(encoder scale.Encoder) error {
+	var err error
+	if v.IsBasic {
+		err = encoder.PushByte(0)
+		if err != nil {
+			return err
+		}
+		err = encoder.Encode(v.AsBasic)
+		if err != nil {
+			return err
+		}
+	} else if v.IsNone {
+		err = encoder.PushByte(1)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v *VerificationInput) Decode(decoder scale.Decoder) error {
+	tag, err := decoder.ReadOneByte()
+	if err != nil {
+		return err
+	}
+
+	if tag == 0 {
+		v.IsBasic = true
+		err = decoder.Decode(&v.AsBasic)
+		if err != nil {
+			return err
+		}
+	} else if tag == 1 {
+		v.IsNone = true
+	}
+
+	return nil
 }
 
 func MakeMessageFromEvent(event etypes.Log) (*chain.Message, error) {
@@ -28,8 +78,17 @@ func MakeMessageFromEvent(event etypes.Log) (*chain.Message, error) {
 		return nil, err
 	}
 
-	p := Payload{Data: buf.Bytes(), TxHash: event.TxHash, BlockNumber: event.BlockNumber}
-	payload, err := types.EncodeToBytes(p)
+	message := Message{
+		Data: buf.Bytes(),
+		VerificationInput: VerificationInput{
+			IsBasic: true,
+			AsBasic: VerificationBasic{
+				BlockNumber: event.BlockNumber,
+				EventIndex:  uint32(event.Index),
+			},
+		},
+	}
+	payload, err := types.EncodeToBytes(message)
 	if err != nil {
 		return nil, err
 	}

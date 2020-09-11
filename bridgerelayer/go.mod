@@ -3,6 +3,7 @@ module github.com/snowfork/polkadot-ethereum/bridgerelayer
 go 1.13
 
 require (
+	github.com/Snowfork/go-substrate-rpc-client v1.1.0
 	github.com/aristanetworks/goarista v0.0.0-20200812190859-4cb0e71f3c0e // indirect
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect

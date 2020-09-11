@@ -7,6 +7,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
 use frame_system as system;
+use sp_keyring::AccountKeyring as Keyring;
 
 impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
@@ -73,8 +74,12 @@ pub type Verifier = Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {
 	let storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+
+	GenesisConfig::<MockRuntime> {
+		relay_key: Keyring::Ferdie.into()
+	}.assimilate_storage(&mut storage).unwrap();
+
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
-
