@@ -9,11 +9,20 @@ repository = 'https://github.com/Snowfork/polkadot-ethereum'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+[dependencies]
+hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
 package = 'parity-scale-codec'
 version = '1.3.1'
+
+[dev-dependencies.sp-keyring]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc4'
+version = '2.0.0-rc4'
 
 [dependencies.frame-support]
 default-features = false

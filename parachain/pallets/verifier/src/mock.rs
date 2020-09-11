@@ -1,6 +1,6 @@
 // Mock runtime
 
-use crate::{Module, Trait};
+use crate::{Module, GenesisConfig, Trait};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
@@ -20,7 +20,7 @@ mod test_events {
 impl_outer_event! {
     pub enum MockEvent for MockRuntime {
 		system<T>,
-        test_events<T>,
+        test_events,
     }
 }
 
@@ -73,10 +73,10 @@ pub type System = system::Module<MockRuntime>;
 pub type Verifier = Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+	let mut storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
 
 	GenesisConfig::<MockRuntime> {
-		relay_key: Keyring::Ferdie.into()
+		key: Keyring::Ferdie.into()
 	}.assimilate_storage(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();

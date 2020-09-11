@@ -85,7 +85,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Application for Module<T> {
 
 	fn handle(message: Message) -> DispatchResult {
-		let payload = Payload::decode(message)
+		let payload = Payload::decode(message.payload)
 			.map_err(|_| DispatchError::Other("Failed to decode ethereum log"))?;
 
 		Self::handle_event(payload)

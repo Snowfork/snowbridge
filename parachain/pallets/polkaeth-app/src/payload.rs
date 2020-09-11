@@ -33,9 +33,9 @@ pub struct Payload {
 
 impl Payload {
 
-	pub fn decode(message: Message) -> Result<Self, DecodeError> {
+	pub fn decode(payload: Vec<u8>) -> Result<Self, DecodeError> {
 		// Decode ethereum Log event from RLP-encoded data
-		let log: Log = rlp::decode(&message.payload)?;
+		let log: Log = rlp::decode(&payload)?;
 		let tokens = EVENT_ABI.decode(log.topics, log.data)?;
 		let mut tokens_iter = tokens.iter();
 
@@ -92,9 +92,8 @@ mod tests {
 	use hex::FromHex;
 	use std::path::PathBuf;
 
-	fn fixture_path() -> PathBuf {
-		[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "log.rlp"].iter().collect()
-	}
+
+
 
 	fn to_account_id(hexaddr: &str) -> [u8; 32] {
 		let mut buf: [u8; 32] = [0; 32];

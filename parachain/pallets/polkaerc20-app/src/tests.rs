@@ -6,7 +6,7 @@ use hex::FromHex;
 
 use crate::RawEvent;
 
-use artemis_ethereum::Event as EthereumEvent;
+use crate::payload::Payload;
 
 fn last_event() -> MockEvent {
 	System::events().pop().expect("Event expected").event
@@ -24,12 +24,11 @@ fn mints_after_handling_ethereum_event() {
 	new_tester().execute_with(|| {
 		let token_addr = H160::repeat_byte(1);
 
-		let event = EthereumEvent::SendERC20 {
-			sender: "cffeaaf7681c89285d65cfbe808b80e502696573".parse().unwrap(),
-			recipient: to_account_id("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"),
-			token: token_addr,
+		let event = Payload {
+			sender_addr: "cffeaaf7681c89285d65cfbe808b80e502696573".parse().unwrap(),
+			recipient_addr: to_account_id("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"),
+			token_addr: token_addr,
 			amount: 10.into(),
-			nonce: 1
 		};
 
 		let bob: AccountId = Keyring::Bob.into();

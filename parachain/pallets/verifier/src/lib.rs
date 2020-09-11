@@ -4,6 +4,7 @@
 use frame_system as system;
 use frame_support::{decl_module, decl_storage, decl_event, decl_error,
 	dispatch::DispatchResult};
+use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
 use artemis_core::{AppID, Message, Verifier, VerificationInput};
@@ -21,7 +22,7 @@ pub trait Trait: system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as VerifierModule {
 		RelayKey get(fn key) config(): T::AccountId;
-		pub LatestBlockEvent: (u64, u32);
+		pub VerifiedPayloads: map hasher(blake2_128_concat) T::Hash => ();
 	}
 }
 
@@ -51,22 +52,20 @@ impl<T: Trait> Module<T> {
 	fn do_verify(sender: T::AccountId, app_id: AppID, message: &Message) -> DispatchResult {
 		Self::verify_sender(sender)?;
 
+		// Hash all inputs together to produce a unique key for the message
 		let (block_no, event_idx) = match message.verification {
 			VerificationInput::Basic { block_number, event_index } => (block_number, event_index),
 			VerificationInput::None => return Err(Error::<T>::NotSupported.into())
 		};
+		let key_input = (app_id, message.payload.clone(), block_no, event_idx);
+		let key = T::Hashing::hash_of(&key_input);
 
-		let (latest_block_no, latest_event_idx) = <LatestBlockEvent>::get();
-
-		if block_no < latest_block_no {
+		// Verify that the message has not been seen before (replay protection)
+		if <VerifiedPayloads<T>>::contains_key(key) {
 			return Err(Error::<T>::Invalid.into())
+		} else {
+			<VerifiedPayloads<T>>::insert(key, ());
 		}
-
-		if event_idx < latest_event_idx {
-			return Err(Error::<T>::Invalid.into())
-		}
-
-		<LatestBlockEvent>::set((block_no, event_idx));
 
 		Ok(())
 	}
