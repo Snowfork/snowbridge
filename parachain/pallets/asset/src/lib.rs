@@ -16,7 +16,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-type AssetId = H160;
+pub type AssetId = H160;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug)]
 pub struct AccountData {
@@ -38,6 +38,7 @@ decl_event!(
 	pub enum Event<T>
 	where
 		AccountId = <T as system::Trait>::AccountId,
+		AssetId = H160
 	{
 		Burned(AssetId, AccountId, U256),
 		Minted(AssetId, AccountId, U256),
@@ -72,7 +73,7 @@ decl_module! {
 		/// Transfer some free balance to another account.
 		// TODO: Calculate weight
 		#[weight = 0]
-		pub fn transfer(origin, asset_id: AssetId, to: T::AccountId, amount: U256) -> DispatchResult {
+		pub fn transfer(origin, asset_id: H160, to: T::AccountId, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_transfer(asset_id, &who, &to, amount)?;
 			Ok(())

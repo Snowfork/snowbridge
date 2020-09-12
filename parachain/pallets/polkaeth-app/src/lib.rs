@@ -11,8 +11,6 @@ use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
 use artemis_core::{Application, Message};
-use codec::Decode;
-
 use artemis_asset as asset;
 
 mod payload;
@@ -70,17 +68,8 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	fn bytes_to_account_id(data: &[u8]) -> Option<T::AccountId> {
-		T::AccountId::decode(&mut &data[..]).ok()
-	}
-
-	fn handle_event(payload: Payload) -> DispatchResult {
-		let account = Self::bytes_to_account_id(&payload.recipient_addr)
-			.ok_or(DispatchError::Other("Invalid recipient account"))?;
-
-		<asset::Module<T>>::do_mint(H160::zero(), &account, payload.amount)?;
-
-		Ok(())
+	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
+		<asset::Module<T>>::do_mint(H160::zero(), &payload.recipient_addr, payload.amount)
 	}
 }
 

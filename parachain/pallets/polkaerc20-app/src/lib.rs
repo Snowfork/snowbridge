@@ -10,8 +10,6 @@ use frame_support::{
 	dispatch::{DispatchResult, DispatchError},
 };
 
-use codec::Decode;
-
 use artemis_core::{Application, Message};
 use artemis_asset as asset;
 
@@ -77,19 +75,12 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	fn bytes_to_account_id(data: &[u8]) -> Option<T::AccountId> {
-		T::AccountId::decode(&mut &data[..]).ok()
-	}
-
-	fn handle_event(payload: Payload) -> DispatchResult {
+	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
 		if payload.token_addr.is_zero() {
 			return Err(DispatchError::Other("Invalid token address"))
 		}
 
-		let account = Self::bytes_to_account_id(&payload.recipient_addr)
-			.ok_or(DispatchError::Other("Invalid recipient account"))?;
-
-		<asset::Module<T>>::do_mint(payload.token_addr, &account, payload.amount)?;
+		<asset::Module<T>>::do_mint(payload.token_addr, &payload.recipient_addr, payload.amount)?;
 
 		Ok(())
 	}
@@ -99,7 +90,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Application for Module<T> {
 
 	fn handle(message: Message) -> DispatchResult {
-		let payload = Payload::decode(message.payload)
+		let payload = Payload::decode(message.payload.clone())
 			.map_err(|_| DispatchError::Other("Failed to decode ethereum log"))?;
 
 		Self::handle_event(payload)

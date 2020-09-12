@@ -25,7 +25,8 @@ decl_storage! {
 }
 
 decl_event!(
-	pub enum Event {}
+	pub enum Event {
+	}
 );
 
 decl_error! {
@@ -58,15 +59,17 @@ impl<T: Trait> Module<T> {
 	// Dispatch verified message to a target application
 	fn dispatch(app_id: AppID, message: Message) -> DispatchResult {
 		for entry in REGISTRY.iter() {
-			match (entry.name, entry.id) {
-				(AppName::ETH, app_id) => {
+			match entry.name {
+				AppName::ETH if app_id == entry.id => {
 					return T::AppETH::handle(message.clone());
 				}
-				(AppName::ERC20, app_id) => {
+				AppName::ERC20 if app_id == entry.id => {
 					return T::AppERC20::handle(message.clone());
 				}
+				_ => continue
 			};
 		}
+
 		Err(Error::<T>::HandlerNotFound.into())
 	}
 }

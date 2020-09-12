@@ -11,7 +11,7 @@ import (
 
 type Message struct {
 	AppID   [20]byte
-	Payload []byte
+	Payload interface{}
 }
 
 type Chain interface {

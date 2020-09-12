@@ -13,7 +13,7 @@ contract EthereumApp {
 
     enum AppEventTags { SendETH, SendERC20 }
 
-    event AppEvent(uint _tag, bytes _data);
+    event Transfer(address _sender, bytes32 _recipient, uint256 _amount);
     event Unlock(bytes _sender, address _recipient, uint256 _amount);
 
     constructor() public {
@@ -33,24 +33,8 @@ contract EthereumApp {
         // Increment global nonce
         nonce = nonce.add(1);
 
-        bytes memory data = encodeSendData(msg.sender, _recipient, address(0), msg.value, nonce);
-        emit AppEvent(uint(AppEventTags.SendETH), data);
+        emit Transfer(msg.sender, _recipient, msg.value);
     }
-
-    function encodeSendData(
-        address _sender,
-        bytes32 _recipient,
-        address _tokenAddr,
-        uint256 _amount,
-        uint256 _nonce
-    )
-        internal
-        pure
-        returns(bytes memory)
-    {
-        return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
-    }
-
 
     function submit(bytes memory _data, bytes memory _signature)
         public

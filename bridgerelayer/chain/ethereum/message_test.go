@@ -2,6 +2,7 @@ package ethereum_test
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/snowfork/go-substrate-rpc-client/scale"
@@ -39,6 +40,8 @@ func TestMessage_EncodeDecode(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println("length: ", len(encoded))
 
 	var decoded ethereum.Message
 	err = decodeFromBytes(encoded, &decoded)

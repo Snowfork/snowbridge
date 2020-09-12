@@ -20,7 +20,19 @@ pub enum VerificationInput {
 	None
 }
 
-#[derive(Debug, PartialEq, Clone, Encode, Decode)]
-pub struct VerifiedMessage {
-	pub payload: Vec<u8>,
-}
+
+// #[cfg(test)]
+// mod tests {
+// 	use super::*;
+// 	use hex_literal::hex;
+
+// 	#[test]
+// 	fn test_encode() {
+
+// 		let msg = Message {
+// 			payload: [0, 1, 2].to_vec(),
+// 			verification: VerificationInput::Basic { block_number: }
+// 		}
+
+// 	}
+// }

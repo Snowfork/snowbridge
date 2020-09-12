@@ -1,36 +1,26 @@
-use sp_std::prelude::*;
 use ethabi::{Event as ABIEvent, Param, ParamKind, Token};
 use artemis_ethereum::{DecodeError, log::Log, H160, U256};
 
+use sp_std::prelude::*;
+
 static EVENT_ABI: &ABIEvent = &ABIEvent {
-	signature: "AppEvent(uint256,bytes)",
+	signature: "Transfer(address,bytes32,uint256)",
 	inputs: &[
+		Param { kind: ParamKind::Address, indexed: false },
+		Param { kind: ParamKind::FixedBytes(32), indexed: false },
 		Param { kind: ParamKind::Uint(256), indexed: false },
-		Param { kind: ParamKind::Bytes, indexed: false },
 	],
 	anonymous: false
 };
 
-static PAYLOAD_ABI: &[ParamKind] = &[
-	// sender address (Ethereum)
-	ParamKind::Address,
-	// recipient address (Substrate)
-	ParamKind::FixedBytes(32),
-	// Amount
-	ParamKind::Uint(256),
-	// Nonce
-	ParamKind::Uint(256),
-];
-
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Payload {
+pub struct Payload<AccountId: codec::Decode> {
 	pub sender_addr: H160,
-	pub recipient_addr: [u8; 32],
+	pub recipient_addr: AccountId,
 	pub amount: U256,
 }
 
-impl Payload {
+impl<AccountId: codec::Decode> Payload<AccountId> {
 
 	pub fn decode(payload: Vec<u8>) -> Result<Self, DecodeError> {
 		// Decode ethereum Log event from RLP-encoded data
@@ -38,37 +28,19 @@ impl Payload {
 		let tokens = EVENT_ABI.decode(log.topics, log.data)?;
 		let mut tokens_iter = tokens.iter();
 
-		// extract ABI-encoded message payload
-		let abi_data = match tokens_iter.next().ok_or(DecodeError::InvalidPayload)? {
-			Token::Bytes(data) => data,
+		let sender_addr = match tokens_iter.next().ok_or(DecodeError::InvalidPayload)? {
+			Token::Address(sender) => *sender,
 			_ => return Err(DecodeError::InvalidPayload)
 		};
 
-		// Tokenize ABI-encoded payload
-		let tokens = ethabi::decode(PAYLOAD_ABI, &abi_data)?;
-		let mut iter = tokens.iter();
-
-		// Sender address (Ethereum)
-		let sender_addr = match iter.next().ok_or(DecodeError::InvalidPayload)? {
-			Token::Address(address) => *address,
-			_ => return Err(DecodeError::InvalidPayload)
-		};
-
-		// Recipient address (Substrate)
-		let recipient_addr: [u8; 32] = match iter.next().ok_or(DecodeError::InvalidPayload)? {
-			Token::FixedBytes(bytes) => {
-				if bytes.len() != 32 {
-					return Err(DecodeError::InvalidPayload)
-				}
-				let mut dst: [u8; 32] = [0; 32];
-				dst.copy_from_slice(&bytes);
-				dst
+		let recipient_addr = match tokens_iter.next().ok_or(DecodeError::InvalidPayload)? {
+			Token::FixedBytes(data) => {
+				AccountId::decode(&mut data.as_slice()).map_err(|_| DecodeError::InvalidPayload)?
 			}
 			_ => return Err(DecodeError::InvalidPayload)
 		};
 
-		// Amount (U256)
-		let amount = match iter.next().ok_or(DecodeError::InvalidPayload)? {
+		let amount = match tokens_iter.next().ok_or(DecodeError::InvalidPayload)? {
 			Token::Uint(amount) => *amount,
 			_ => return Err(DecodeError::InvalidPayload)
 		};
@@ -86,18 +58,13 @@ mod tests {
 	use super::*;
 	use hex_literal::hex;
 
-	const LOG_DATA: [u8; 317] = hex!("
-		f9013a940d27b0069241c03575669fed1badcbccdc0dd4d1e1a06bafbf13
-		bfcea5e4ce5cd1a03b246069acefcd0bada5ef4e1a059b37a08c2399b901
-		000000000000000000000000000000000000000000000000000000000000
-		000000000000000000000000000000000000000000000000000000000000
-		000000004000000000000000000000000000000000000000000000000000
-		000000000000a0000000000000000000000000cffeaaf7681c89285d65cf
-		be808b80e5026965738eaf04151687736326c9fea17e25fc5287613693c9
-		12909cb226aa4794f26a4800000000000000000000000000000000000000
-		000000000000000000000000000000000000000000000000000000000000
-		00000000000000000000000000000a000000000000000000000000000000
-		0000000000000000000000000000000007
+	const LOG_DATA: [u8; 155] = hex!("
+		f899940d27b0069241c03575669fed1badcbccdc0dd4d1e1a0ae82749358
+		218d8026f6cc57a7ab3aa05aa7bcf840f758ab26d553048fb1d467b86000
+		0000000000000000000000cffeaaf7681c89285d65cfbe808b80e5026965
+		73d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a5
+		6da27d00000000000000000000000000000000000000000000000000038d
+		7ea4c68000
 	");
 
 	#[test]
@@ -105,8 +72,8 @@ mod tests {
 		assert_eq!(Payload::decode(LOG_DATA.to_vec()).unwrap(),
 			Payload {
 				sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
-				recipient_addr: hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],
-				amount: 10.into()
+				recipient_addr: hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
+				amount: U256::from_dec_str("1000000000000000").unwrap(),
 			}
 		);
 	}

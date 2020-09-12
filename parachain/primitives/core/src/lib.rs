@@ -7,7 +7,7 @@ use frame_support::dispatch::DispatchResult;
 pub mod types;
 pub mod registry;
 
-pub use types::{AppID, Message, VerificationInput, VerifiedMessage};
+pub use types::{AppID, Message, VerificationInput};
 
 /// Verifier modules should implement this trait
 pub trait Verifier<AccountId> {

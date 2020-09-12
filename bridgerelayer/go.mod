@@ -6,6 +6,7 @@ require (
 	github.com/Snowfork/go-substrate-rpc-client v1.1.0
 	github.com/aristanetworks/goarista v0.0.0-20200812190859-4cb0e71f3c0e // indirect
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
+	github.com/centrifuge/go-substrate-rpc-client v1.1.0 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/ethereum/go-ethereum v1.9.20
 	github.com/magefile/mage v1.10.0

@@ -6,6 +6,7 @@ package substrate
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 
@@ -55,9 +56,8 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 
 // Write submits a transaction to the chain
 func (wr *Writer) Write(_ context.Context, msg *chain.Message) error {
-	message := types.NewBytes(msg.Payload)
 
-	c, err := types.NewCall(&wr.conn.metadata, "Bridge.send", msg.AppID, message)
+	c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", msg.AppID, msg.Payload)
 	if err != nil {
 		return err
 	}
@@ -83,8 +83,11 @@ func (wr *Writer) Write(_ context.Context, msg *chain.Message) error {
 
 	var accountInfo types.AccountInfo
 	ok, err := wr.conn.api.RPC.State.GetStorageLatest(key, &accountInfo)
-	if err != nil || !ok {
+	if err != nil {
 		return err
+	}
+	if !ok {
+		return fmt.Errorf("no account info found for %s", wr.conn.kp.URI)
 	}
 
 	nonce := uint32(accountInfo.Nonce)
