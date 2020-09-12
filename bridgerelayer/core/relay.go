@@ -147,9 +147,11 @@ func loadConfig() (*Config, error) {
 	}
 	config.Sub.PrivateKey = value
 
+	// Copy over Ethereum application addresses to the Substrate config
 	config.Sub.Targets = make(map[string][20]byte)
-	config.Sub.Targets["eth"] = common.HexToAddress(config.Eth.Apps["eth"].Address)
-	config.Sub.Targets["erc20"] = common.HexToAddress(config.Eth.Apps["erc20"].Address)
+	for k, v := range config.Eth.Apps {
+		config.Sub.Targets[k] = common.HexToAddress(v.Address)
+	}
 
 	return &config, nil
 }

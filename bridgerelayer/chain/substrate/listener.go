@@ -131,6 +131,7 @@ func sleep(ctx context.Context, delay time.Duration) {
 	}
 }
 
+// Process transfer events in the block
 func (li *Listener) handleEvents(blockNumber uint64, events *Events) {
 	for _, evt := range events.ERC20_Transfer {
 		li.log.Info("Handling transfer event")
