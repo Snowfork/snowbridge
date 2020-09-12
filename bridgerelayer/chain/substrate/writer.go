@@ -55,10 +55,9 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 
 // Write submits a transaction to the chain
 func (wr *Writer) Write(_ context.Context, msg *chain.Message) error {
-	appid := types.NewBytes32(msg.AppID)
 	message := types.NewBytes(msg.Payload)
 
-	c, err := types.NewCall(&wr.conn.metadata, "Bridge.send", appid, message)
+	c, err := types.NewCall(&wr.conn.metadata, "Bridge.send", msg.AppID, message)
 	if err != nil {
 		return err
 	}

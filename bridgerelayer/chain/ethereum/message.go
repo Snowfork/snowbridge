@@ -68,9 +68,6 @@ func (v *VerificationInput) Decode(decoder scale.Decoder) error {
 }
 
 func MakeMessageFromEvent(event etypes.Log) (*chain.Message, error) {
-	var appID [32]byte
-	copy(appID[:], event.Address.Bytes())
-
 	// RLP encode event log's Address, Topics, and Data
 	var buf bytes.Buffer
 	err := event.EncodeRLP(&buf)
@@ -93,7 +90,7 @@ func MakeMessageFromEvent(event etypes.Log) (*chain.Message, error) {
 		return nil, err
 	}
 
-	msg := chain.Message{AppID: appID, Payload: payload}
+	msg := chain.Message{AppID: event.Address, Payload: payload}
 
 	return &msg, nil
 }

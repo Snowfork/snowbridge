@@ -34,6 +34,7 @@ func NewChain(config *Config, ethMessages chan chain.Message, subMessages chan c
 	conn := NewConnection(config.Endpoint, kp.AsKeyringPair(), log)
 
 	listener := NewListener(
+		config,
 		conn,
 		subMessages,
 		log,

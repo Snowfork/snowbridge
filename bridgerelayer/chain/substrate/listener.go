@@ -17,13 +17,15 @@ import (
 )
 
 type Listener struct {
+	config   *Config
 	conn     *Connection
 	messages chan<- chain.Message
 	log      *logrus.Entry
 }
 
-func NewListener(conn *Connection, messages chan<- chain.Message, log *logrus.Entry) *Listener {
+func NewListener(config *Config, conn *Connection, messages chan<- chain.Message, log *logrus.Entry) *Listener {
 	return &Listener{
+		config:   config,
 		conn:     conn,
 		messages: messages,
 		log:      log,
@@ -115,7 +117,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				return err
 			}
 
-			li.handleEvents(&events)
+			li.handleEvents(currentBlock, &events)
 
 			currentBlock++
 		}
@@ -129,7 +131,7 @@ func sleep(ctx context.Context, delay time.Duration) {
 	}
 }
 
-func (li *Listener) handleEvents(events *Events) {
+func (li *Listener) handleEvents(blockNumber uint64, events *Events) {
 	for _, evt := range events.ERC20_Transfer {
 		li.log.Info("Handling transfer event")
 
@@ -139,8 +141,11 @@ func (li *Listener) handleEvents(events *Events) {
 		encoder.Encode(evt.Recipient)
 		encoder.Encode(evt.TokenID)
 		encoder.Encode(evt.Amount)
+		encoder.Encode(blockNumber)
 
-		li.messages <- chain.Message{AppID: chain.Erc20AppID, Payload: buf.Bytes()}
+		targetAppID := li.config.Targets["eth"]
+
+		li.messages <- chain.Message{AppID: targetAppID, Payload: buf.Bytes()}
 	}
 
 	for _, evt := range events.ETH_Transfer {
@@ -151,7 +156,10 @@ func (li *Listener) handleEvents(events *Events) {
 		encoder.Encode(evt.AccountID)
 		encoder.Encode(evt.Recipient)
 		encoder.Encode(evt.Amount)
+		encoder.Encode(blockNumber)
 
-		li.messages <- chain.Message{AppID: chain.EthAppID, Payload: buf.Bytes()}
+		targetAppID := li.config.Targets["erc20"]
+
+		li.messages <- chain.Message{AppID: targetAppID, Payload: buf.Bytes()}
 	}
 }

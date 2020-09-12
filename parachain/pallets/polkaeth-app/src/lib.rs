@@ -29,7 +29,9 @@ pub trait Trait: system::Trait + asset::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Erc20Module {}
+	trait Store for Module<T: Trait> as Erc20Module {
+
+	}
 }
 
 decl_event!(

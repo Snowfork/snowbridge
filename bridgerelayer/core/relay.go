@@ -19,6 +19,8 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -145,7 +147,9 @@ func loadConfig() (*Config, error) {
 	}
 	config.Sub.PrivateKey = value
 
-	fmt.Println("foo ", config)
+	config.Sub.Targets = make(map[string][20]byte)
+	config.Sub.Targets["eth"] = common.HexToAddress(config.Eth.Apps["eth"].Address)
+	config.Sub.Targets["erc20"] = common.HexToAddress(config.Eth.Apps["erc20"].Address)
 
 	return &config, nil
 }

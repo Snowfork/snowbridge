@@ -5,7 +5,6 @@ package ethereum
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"strings"
 
@@ -15,11 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
-
-	"github.com/snowfork/polkadot-ethereum/prover"
 )
 
 type Writer struct {
@@ -33,16 +29,16 @@ const RawABI = `
 [
 	{
 		"inputs": [
-			  {
+			{
+				"internalType": "address",
+				"name": "appId",
+				"type": "address"
+			},
+			{
 				"internalType": "bytes",
-				"name": "data",
+				"name": "message",
 				"type": "bytes"
-			  },
-			  {
-				"internalType": "bytes",
-				"name": "signature",
-				"type": "bytes"
-			  }
+			}
 		],
 		"name": "submit",
 		"outputs": [],
@@ -53,7 +49,8 @@ const RawABI = `
 `
 
 func NewWriter(conn *Connection, messages <-chan chain.Message, log *logrus.Entry) (*Writer, error) {
-	contractABI, err := abi.JSON(strings.NewReader(fmt.Sprintf(`%s`, string(RawABI))))
+	contractABI, err := abi.JSON(strings.NewReader(RawABI))
+
 	if err != nil {
 		return nil, err
 	}
@@ -87,34 +84,14 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 	}
 }
 
-// TODO: this is an interim standin until https://github.com/Snowfork/polkadot-ethereum/issues/61 lands
-func (wr *Writer) lookupAppAddress(appid [32]byte) common.Address {
-	var appName string
-	if appid == chain.EthAppID {
-		appName = "eth"
-	} else if appid == chain.Erc20AppID {
-		appName = "erc20"
-	} else {
-		panic("should not reach here")
-	}
-
-	hexaddr := viper.GetString(strings.Join([]string{"ethereum", "apps", appName}, "."))
-	return common.HexToAddress(hexaddr)
-}
-
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (wr *Writer) Write(ctx context.Context, msg *chain.Message) error {
-	address := wr.lookupAppAddress(msg.AppID)
+
+	address := common.Address(msg.AppID)
 
 	wr.log.WithFields(logrus.Fields{
 		"contractAddress": address.Hex(),
 	}).Info("Submitting message to Ethereum")
-
-	// Generate a proof by signing a hash of the encoded data
-	proof, err := prover.GenerateProof(msg.Payload, wr.conn.kp.PrivateKey())
-	if err != nil {
-		return err
-	}
 
 	nonce, err := wr.conn.client.PendingNonceAt(ctx, wr.conn.kp.CommonAddress())
 	if err != nil {
@@ -128,7 +105,7 @@ func (wr *Writer) Write(ctx context.Context, msg *chain.Message) error {
 		return err
 	}
 
-	txData, err := wr.abi.Pack("submit", msg.Payload, proof.Signature)
+	txData, err := wr.abi.Pack("submit", msg.Payload)
 	if err != nil {
 		return err
 	}

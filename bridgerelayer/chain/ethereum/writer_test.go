@@ -33,6 +33,8 @@ func getKeypairFromEnv() *secp256k1.Keypair {
 	return kp
 }
 
+var AppID = [20]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
 func TestWrite(t *testing.T) {
 	kp := getKeypairFromEnv()
 	if kp == nil {
@@ -65,9 +67,7 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// its OK to send a dummy message since the writer shouldn't care
-	// whether the parachain processes the message or discards it.
-	msg := chain.Message{AppID: chain.EthAppID, Payload: []byte{0, 1, 2}}
+	msg := chain.Message{AppID: AppID, Payload: []byte{0, 1, 2}}
 
 	err = writer.Write(ctx, &msg)
 	if err != nil {
