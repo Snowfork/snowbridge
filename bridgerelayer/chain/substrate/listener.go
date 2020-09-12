@@ -17,20 +17,16 @@ import (
 )
 
 type Listener struct {
-	conn               *Connection
-	blockRetryLimit    uint
-	blockRetryInterval time.Duration
-	messages           chan<- chain.Message
-	log                *logrus.Entry
+	conn     *Connection
+	messages chan<- chain.Message
+	log      *logrus.Entry
 }
 
-func NewListener(conn *Connection, messages chan<- chain.Message, blockRetryLimit uint, blockRetryInterval uint, log *logrus.Entry) *Listener {
+func NewListener(conn *Connection, messages chan<- chain.Message, log *logrus.Entry) *Listener {
 	return &Listener{
-		conn:               conn,
-		blockRetryLimit:    blockRetryLimit,
-		blockRetryInterval: time.Duration(blockRetryInterval) * time.Second,
-		messages:           messages,
-		log:                log,
+		conn:     conn,
+		messages: messages,
+		log:      log,
 	}
 }
 
@@ -55,6 +51,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 	}
 	currentBlock := uint64(block.Number)
 
+	retryInterval := time.Duration(10) * time.Second
 	for {
 		select {
 		case <-ctx.Done():
@@ -67,7 +64,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 			finalizedHash, err := li.conn.api.RPC.Chain.GetFinalizedHead()
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch finalized head")
-				sleep(ctx, li.blockRetryInterval)
+				sleep(ctx, retryInterval)
 				continue
 			}
 
@@ -75,7 +72,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 			finalizedHeader, err := li.conn.api.RPC.Chain.GetHeader(finalizedHash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch header for finalized head")
-				sleep(ctx, li.blockRetryInterval)
+				sleep(ctx, retryInterval)
 				continue
 			}
 
@@ -85,7 +82,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					"block":  currentBlock,
 					"latest": finalizedHeader.Number,
 				}).Debug("Block not yet finalized")
-				sleep(ctx, li.blockRetryInterval)
+				sleep(ctx, retryInterval)
 				continue
 			}
 
@@ -96,7 +93,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					"error": err,
 					"block": currentBlock,
 				}).Error("Failed to fetch block hash")
-				sleep(ctx, li.blockRetryInterval)
+				sleep(ctx, retryInterval)
 				continue
 			}
 
@@ -104,7 +101,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 			_, err = li.conn.api.RPC.State.GetStorage(storageKey, &records, hash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch events for block")
-				sleep(ctx, li.blockRetryInterval)
+				sleep(ctx, retryInterval)
 				continue
 			}
 
