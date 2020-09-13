@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/sirupsen/logrus"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/snowfork/go-substrate-rpc-client/scale"
 	"github.com/snowfork/go-substrate-rpc-client/types"
 )
-
-type EventID [2]uint8
 
 type Event struct {
 	ID     [2]uint8
@@ -131,37 +129,48 @@ type ERC20Transfer struct {
 	Amount    types.U256
 }
 
-type Registry map[[2]string]reflect.Type
-
-func NewRegistry() Registry {
-
-	registry := make(Registry)
-
-	registry[[2]string{"System", "ExtrinsicSuccess"}] = reflect.TypeOf(SystemExtrinsicSuccess{})
-	registry[[2]string{"System", "ExtrinsicFailed"}] = reflect.TypeOf(SystemExtrinsicFailed{})
-	registry[[2]string{"System", "CodeUpdated"}] = reflect.TypeOf(SystemCodeUpdated{})
-	registry[[2]string{"System", "NewAccount"}] = reflect.TypeOf(SystemNewAccount{})
-	registry[[2]string{"System", "KilledAccount"}] = reflect.TypeOf(SystemKilledAccount{})
-	registry[[2]string{"Grandpa", "NewAuthorities"}] = reflect.TypeOf(GrandpaNewAuthorities{})
-	registry[[2]string{"Grandpa", "Paused"}] = reflect.TypeOf(GrandpaPaused{})
-	registry[[2]string{"Grandpa", "Resumed"}] = reflect.TypeOf(GrandpaResumed{})
-	registry[[2]string{"Balances", "Endowed"}] = reflect.TypeOf(BalancesEndowed{})
-	registry[[2]string{"Balances", "DustLost"}] = reflect.TypeOf(BalancesDustLost{})
-	registry[[2]string{"Balances", "Transfer"}] = reflect.TypeOf(BalancesTransfer{})
-	registry[[2]string{"Balances", "BalanceSet"}] = reflect.TypeOf(BalancesBalanceSet{})
-	registry[[2]string{"Balances", "Deposit"}] = reflect.TypeOf(BalancesDeposit{})
-	registry[[2]string{"Balances", "Reserved"}] = reflect.TypeOf(BalancesReserved{})
-	registry[[2]string{"Balances", "Unreserved"}] = reflect.TypeOf(BalancesUnreserved{})
-	registry[[2]string{"Asset", "Burned"}] = reflect.TypeOf(AssetBurned{})
-	registry[[2]string{"Asset", "Minted"}] = reflect.TypeOf(AssetMinted{})
-	registry[[2]string{"Asset", "Transferred"}] = reflect.TypeOf(AssetTransferred{})
-	registry[[2]string{"ETH", "Transfer"}] = reflect.TypeOf(ETHTransfer{})
-	registry[[2]string{"ERC20", "Transfer"}] = reflect.TypeOf(ERC20Transfer{})
-
-	return registry
+type EventDecoderError struct {
 }
 
-func DecodeEvents(registry Registry, meta *types.Metadata, records []byte, log *logrus.Entry) ([]Event, error) {
+type TypeMap map[[2]string]reflect.Type
+
+type EventDecoder struct {
+	meta  *types.Metadata
+	Types TypeMap
+}
+
+func NewEventDecoder(meta *types.Metadata) *EventDecoder {
+
+	tm := make(TypeMap)
+
+	tm[[2]string{"System", "ExtrinsicSuccess"}] = reflect.TypeOf(SystemExtrinsicSuccess{})
+	tm[[2]string{"System", "ExtrinsicFailed"}] = reflect.TypeOf(SystemExtrinsicFailed{})
+	tm[[2]string{"System", "CodeUpdated"}] = reflect.TypeOf(SystemCodeUpdated{})
+	tm[[2]string{"System", "NewAccount"}] = reflect.TypeOf(SystemNewAccount{})
+	tm[[2]string{"System", "KilledAccount"}] = reflect.TypeOf(SystemKilledAccount{})
+	tm[[2]string{"Grandpa", "NewAuthorities"}] = reflect.TypeOf(GrandpaNewAuthorities{})
+	tm[[2]string{"Grandpa", "Paused"}] = reflect.TypeOf(GrandpaPaused{})
+	tm[[2]string{"Grandpa", "Resumed"}] = reflect.TypeOf(GrandpaResumed{})
+	tm[[2]string{"Balances", "Endowed"}] = reflect.TypeOf(BalancesEndowed{})
+	tm[[2]string{"Balances", "DustLost"}] = reflect.TypeOf(BalancesDustLost{})
+	tm[[2]string{"Balances", "Transfer"}] = reflect.TypeOf(BalancesTransfer{})
+	tm[[2]string{"Balances", "BalanceSet"}] = reflect.TypeOf(BalancesBalanceSet{})
+	tm[[2]string{"Balances", "Deposit"}] = reflect.TypeOf(BalancesDeposit{})
+	tm[[2]string{"Balances", "Reserved"}] = reflect.TypeOf(BalancesReserved{})
+	tm[[2]string{"Balances", "Unreserved"}] = reflect.TypeOf(BalancesUnreserved{})
+	tm[[2]string{"Asset", "Burned"}] = reflect.TypeOf(AssetBurned{})
+	tm[[2]string{"Asset", "Minted"}] = reflect.TypeOf(AssetMinted{})
+	tm[[2]string{"Asset", "Transferred"}] = reflect.TypeOf(AssetTransferred{})
+	tm[[2]string{"ETH", "Transfer"}] = reflect.TypeOf(ETHTransfer{})
+	tm[[2]string{"ERC20", "Transfer"}] = reflect.TypeOf(ERC20Transfer{})
+
+	return &EventDecoder{
+		meta:  meta,
+		Types: tm,
+	}
+}
+
+func (ed *EventDecoder) Decode(records []byte) ([]Event, error) {
 
 	decoder := scale.NewDecoder(bytes.NewReader(records))
 
@@ -170,8 +179,6 @@ func DecodeEvents(registry Registry, meta *types.Metadata, records []byte, log *
 	if err != nil {
 		return nil, err
 	}
-
-	log.Debug(fmt.Sprintf("found %v events", length))
 
 	events := []Event{}
 
@@ -193,18 +200,16 @@ func DecodeEvents(registry Registry, meta *types.Metadata, records []byte, log *
 			return nil, fmt.Errorf("unable to decode EventID for event #%v: %v", i, err)
 		}
 
-		log.Trace(fmt.Sprintf("event #%v has EventID %v", i, id))
-
 		// Ask metadata for method and event name
-		moduleName, eventName, err := meta.FindEventNamesForEventID(id)
+		moduleName, eventName, err := ed.meta.FindEventNamesForEventID(id)
 		if err != nil {
 			return nil, fmt.Errorf("unable to find event with EventID %v in metadata for event #%v: %s", id, i, err)
 		}
 
 		key := [2]string{string(moduleName), string(eventName)}
-		holderType, ok := registry[key]
+		holderType, ok := ed.Types[key]
 		if !ok {
-			return nil, fmt.Errorf("Event is not registered")
+			return nil, fmt.Errorf("event #%v (%s.%s) is not decodable", i, moduleName, eventName)
 		}
 
 		holder := reflect.New(holderType)
@@ -214,8 +219,10 @@ func DecodeEvents(registry Registry, meta *types.Metadata, records []byte, log *
 		for j := 0; j < numFields; j++ {
 			err = decoder.Decode(holder.Elem().FieldByIndex([]int{j}).Addr().Interface())
 			if err != nil {
-				return nil, fmt.Errorf("unable to decode field %v event #%v with EventID %v, field %v_%v: %v", j, i, id, moduleName,
-					eventName, err)
+				return nil, fmt.Errorf(
+					"unable to decode field %v of event #%v with EventID %v, field %v_%v: %v", j, i, id, moduleName,
+					eventName, err,
+				)
 			}
 		}
 

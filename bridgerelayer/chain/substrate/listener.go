@@ -19,7 +19,7 @@ import (
 )
 
 type Listener struct {
-	typeRegistry Registry
+	eventDecoder *EventDecoder
 	config       *Config
 	conn         *Connection
 	messages     chan<- chain.Message
@@ -28,7 +28,7 @@ type Listener struct {
 
 func NewListener(config *Config, conn *Connection, messages chan<- chain.Message, log *logrus.Entry) *Listener {
 	return &Listener{
-		typeRegistry: NewRegistry(),
+		eventDecoder: NewEventDecoder(&conn.metadata),
 		config:       config,
 		conn:         conn,
 		messages:     messages,
@@ -113,7 +113,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 
 			li.log.WithField("record", hex.EncodeToString(records)).Trace("Fetched event record")
 
-			events, err := DecodeEvents(li.typeRegistry, &li.conn.metadata, records, li.log)
+			events, err := li.eventDecoder.Decode(records)
 			if err != nil {
 				li.log.WithFields(logrus.Fields{
 					"error": err,

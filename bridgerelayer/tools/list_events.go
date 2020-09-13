@@ -54,6 +54,7 @@ func listEvents(m *types.Metadata) []Event {
 		if !mod.HasEvents {
 			continue
 		}
+		fmt.Printf("i: %v\n ", i)
 		for j, ev := range mod.Events {
 			event := Event{
 				ID:         [2]uint8{uint8(i), uint8(j)},
@@ -90,14 +91,13 @@ func main() {
 
 	for i, ev := range events {
 		fmt.Printf("%s %s\n", ev.ModuleName, ev.Name)
-		fmt.Printf("%#v\n", ev.ID)
 		fmt.Printf("%v\n", ev.Fields)
 		if i+1 < len(events) {
 			fmt.Println()
 		}
 	}
 
-	format := "registry[%#v] = reflect.TypeOf(%s%s{})\n"
+	format := "tm[%#v] = reflect.TypeOf(%s%s{})\n"
 
 	for _, ev := range events {
 		fmt.Printf(format, [2]string{ev.ModuleName, ev.Name}, ev.ModuleName, ev.Name)

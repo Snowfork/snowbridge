@@ -1,28 +1,25 @@
 package substrate
 
 import (
-	"encoding/hex"
 	"math/big"
 	"testing"
 
 	"github.com/snowfork/go-substrate-rpc-client/types"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/sirupsen/logrus/hooks/test"
 )
 
-func Test_DecodeEvents(t *testing.T) {
-	logger, _ := test.NewNullLogger()
-	log := logger.WithField("chain", "Substrate")
+func TestDecodeEvents(t *testing.T) {
+	decoder := NewEventDecoder(MetadataExemplary)
 
-	records, err := hex.DecodeString("0c0000000000000080e36a090000000002000000010000000202d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a4800805f2bd9fbb40100000000000000000000010000000000c0769f0b00000000000000")
-	if err != nil {
-		t.Error(err)
-	}
+	records := types.MustHexDecodeString(
+		"0c0000000000000080e36a090000000002000000010000000202d43593c7" +
+			"15fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d8eaf" +
+			"04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48" +
+			"00805f2bd9fbb40100000000000000000000010000000000c0769f0b0000" +
+			"0000000000",
+	)
 
-	registry := NewRegistry()
-	events, err := DecodeEvents(registry, MetadataExemplary, records, log)
-
+	events, err := decoder.Decode(records)
 	if err != nil {
 		t.Error(err)
 	}
