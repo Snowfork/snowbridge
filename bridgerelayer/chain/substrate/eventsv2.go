@@ -133,7 +133,7 @@ type ERC20Transfer struct {
 
 type Registry map[[2]string]reflect.Type
 
-func NewRegistry() (Registry, error) {
+func NewRegistry() Registry {
 
 	registry := make(Registry)
 
@@ -158,7 +158,7 @@ func NewRegistry() (Registry, error) {
 	registry[[2]string{"ETH", "Transfer"}] = reflect.TypeOf(ETHTransfer{})
 	registry[[2]string{"ERC20", "Transfer"}] = reflect.TypeOf(ERC20Transfer{})
 
-	return registry, nil
+	return registry
 }
 
 func DecodeEvents(registry Registry, meta *types.Metadata, records []byte, log *logrus.Entry) ([]Event, error) {
@@ -177,7 +177,7 @@ func DecodeEvents(registry Registry, meta *types.Metadata, records []byte, log *
 
 	// iterate over events
 	for i := uint64(0); i < length.Uint64(); i++ {
-		log.Debug(fmt.Sprintf("decoding event #%v", i))
+		log.Trace(fmt.Sprintf("decoding event #%v", i))
 
 		// Decode phase
 		phase := types.Phase{}
@@ -193,7 +193,7 @@ func DecodeEvents(registry Registry, meta *types.Metadata, records []byte, log *
 			return nil, fmt.Errorf("unable to decode EventID for event #%v: %v", i, err)
 		}
 
-		log.Debug(fmt.Sprintf("event #%v has EventID %v", i, id))
+		log.Trace(fmt.Sprintf("event #%v has EventID %v", i, id))
 
 		// Ask metadata for method and event name
 		moduleName, eventName, err := meta.FindEventNamesForEventID(id)

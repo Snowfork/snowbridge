@@ -20,11 +20,7 @@ func Test_DecodeEvents(t *testing.T) {
 		t.Error(err)
 	}
 
-	registry, err := NewRegistry()
-	if err != nil {
-		t.Error(err)
-	}
-
+	registry := NewRegistry()
 	events, err := DecodeEvents(registry, MetadataExemplary, records, log)
 
 	if err != nil {

@@ -81,7 +81,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("%#v", m)
 
 	if !m.IsMetadataV11 {
 		panic("Unsupported metadata version")

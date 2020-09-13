@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -18,18 +19,20 @@ import (
 )
 
 type Listener struct {
-	config   *Config
-	conn     *Connection
-	messages chan<- chain.Message
-	log      *logrus.Entry
+	typeRegistry Registry
+	config       *Config
+	conn         *Connection
+	messages     chan<- chain.Message
+	log          *logrus.Entry
 }
 
 func NewListener(config *Config, conn *Connection, messages chan<- chain.Message, log *logrus.Entry) *Listener {
 	return &Listener{
-		config:   config,
-		conn:     conn,
-		messages: messages,
-		log:      log,
+		typeRegistry: NewRegistry(),
+		config:       config,
+		conn:         conn,
+		messages:     messages,
+		log:          log,
 	}
 }
 
@@ -84,7 +87,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				li.log.WithFields(logrus.Fields{
 					"block":  currentBlock,
 					"latest": finalizedHeader.Number,
-				}).Debug("Block not yet finalized")
+				}).Trace("Block not yet finalized")
 				sleep(ctx, retryInterval)
 				continue
 			}
@@ -108,10 +111,9 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				continue
 			}
 
-			li.log.WithField("record", hex.EncodeToString(records)).Info("Fetched event record")
+			li.log.WithField("record", hex.EncodeToString(records)).Trace("Fetched event record")
 
-			events := Events{}
-			err = records.DecodeEventRecords(&li.conn.metadata, &events)
+			events, err := DecodeEvents(li.typeRegistry, &li.conn.metadata, records, li.log)
 			if err != nil {
 				li.log.WithFields(logrus.Fields{
 					"error": err,
@@ -120,7 +122,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				return err
 			}
 
-			li.handleEvents(currentBlock, &events)
+			li.handleEvents(currentBlock, events)
 
 			currentBlock++
 		}
@@ -135,35 +137,41 @@ func sleep(ctx context.Context, delay time.Duration) {
 }
 
 // Process transfer events in the block
-func (li *Listener) handleEvents(blockNumber uint64, events *Events) {
-	for _, evt := range events.ERC20_Transfer {
-		li.log.Info("Handling transfer event")
+func (li *Listener) handleEvents(blockNumber uint64, events []Event) {
 
-		buf := bytes.NewBuffer(nil)
-		encoder := scale.NewEncoder(buf)
-		encoder.Encode(evt.AccountID)
-		encoder.Encode(evt.Recipient)
-		encoder.Encode(evt.TokenID)
-		encoder.Encode(evt.Amount)
-		encoder.Encode(blockNumber)
+	for i, event := range events {
 
-		targetAppID := li.config.Targets["eth"]
+		li.log.WithFields(logrus.Fields{
+			"blockNumber": blockNumber,
+			"name":        fmt.Sprintf("%s.%s", event.Name[0], event.Name[1]),
+		}).Debug("Witnessed event")
 
-		li.messages <- chain.Message{AppID: targetAppID, Payload: buf.Bytes()}
-	}
+		switch fields := event.Fields.(type) {
+		case ETHTransfer:
+			buf := bytes.NewBuffer(nil)
+			encoder := scale.NewEncoder(buf)
+			encoder.Encode(fields.AccountID)
+			encoder.Encode(fields.Recipient)
+			encoder.Encode(fields.Amount)
+			encoder.Encode(uint64(blockNumber))
+			encoder.Encode(uint64(i))
 
-	for _, evt := range events.ETH_Transfer {
-		li.log.Info("Handling transfer event")
+			targetAppID := li.config.Targets["eth"]
 
-		buf := bytes.NewBuffer(nil)
-		encoder := scale.NewEncoder(buf)
-		encoder.Encode(evt.AccountID)
-		encoder.Encode(evt.Recipient)
-		encoder.Encode(evt.Amount)
-		encoder.Encode(blockNumber)
+			li.messages <- chain.Message{AppID: targetAppID, Payload: buf.Bytes()}
+		case ERC20Transfer:
+			buf := bytes.NewBuffer(nil)
+			encoder := scale.NewEncoder(buf)
+			encoder.Encode(fields.AccountID)
+			encoder.Encode(fields.Recipient)
+			encoder.Encode(fields.TokenID)
+			encoder.Encode(fields.Amount)
+			encoder.Encode(uint64(blockNumber))
+			encoder.Encode(uint64(i))
 
-		targetAppID := li.config.Targets["erc20"]
+			targetAppID := li.config.Targets["erc20"]
 
-		li.messages <- chain.Message{AppID: targetAppID, Payload: buf.Bytes()}
+			li.messages <- chain.Message{AppID: targetAppID, Payload: buf.Bytes()}
+		}
 	}
 }

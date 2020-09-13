@@ -7,8 +7,11 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
-func Build() error {
-	mg.Deps(BuildTools)
+func Build() {
+	mg.Deps(BuildMain, BuildTools)
+}
+
+func BuildMain() error {
 	return sh.Run("go", "build", "-o", "build/artemis-relay", "main.go")
 }
 
