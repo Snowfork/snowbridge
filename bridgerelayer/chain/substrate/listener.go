@@ -6,6 +6,7 @@ package substrate
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -106,6 +107,8 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				sleep(ctx, retryInterval)
 				continue
 			}
+
+			li.log.WithField("record", hex.EncodeToString(records)).Info("Fetched event record")
 
 			events := Events{}
 			err = records.DecodeEventRecords(&li.conn.metadata, &events)
