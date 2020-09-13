@@ -7,8 +7,8 @@ use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 
 use artemis_core::{
-	registry::{AppName, REGISTRY},
-	AppID, Application, Message, Verifier,
+	registry::{App, lookup_app},
+	AppId, Application, Message, Verifier,
 };
 
 pub trait Trait: system::Trait {
@@ -42,13 +42,13 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		/// Submit `message` for dispatch to an application identified by `app_id`.
 		#[weight = 0]
-		pub fn submit(origin, app_id: AppID, message: Message) -> DispatchResult {
+		pub fn submit(origin, app_id: AppId, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-
-			T::Verifier::verify(who, app_id, &message)?;
-
-			Self::dispatch(app_id, message)
+			let app = lookup_app(app_id).ok_or(Error::<T>::HandlerNotFound)?;
+			Self::verify(who, app_id, &message)?;
+			Self::dispatch(app, message)
 		}
 
 	}
@@ -56,21 +56,18 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	// Dispatch verified message to a target application
-	fn dispatch(app_id: AppID, message: Message) -> DispatchResult {
-		for entry in REGISTRY.iter() {
-			match entry.name {
-				AppName::ETH if app_id == entry.id => {
-					return T::AppETH::handle(message.clone());
-				}
-				AppName::ERC20 if app_id == entry.id => {
-					return T::AppERC20::handle(message.clone());
-				}
-				_ => continue
-			};
-		}
-
-		Err(Error::<T>::HandlerNotFound.into())
+	// verify message
+	fn verify(sender: T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
+		T::Verifier::verify(sender, app_id, &message)
 	}
+
+	/// Dispatch `message` to application `app`.
+	fn dispatch(app: App, message: Message) -> DispatchResult {
+		match app {
+			App::ETH => T::AppETH::handle(message),
+			App::ERC20 => T::AppERC20::handle(message)
+		}
+	}
+
 }
 

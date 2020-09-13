@@ -38,11 +38,10 @@ decl_event!(
 	pub enum Event<T>
 	where
 		AccountId = <T as system::Trait>::AccountId,
-		AssetId = H160
 	{
-		Burned(AssetId, AccountId, U256),
-		Minted(AssetId, AccountId, U256),
-		Transferred(AssetId, AccountId, AccountId, U256),
+		Burned(H160, AccountId, U256),
+		Minted(H160, AccountId, U256),
+		Transferred(H160, AccountId, AccountId, U256),
 	}
 );
 

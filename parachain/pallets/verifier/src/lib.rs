@@ -7,7 +7,7 @@ use frame_support::{decl_module, decl_storage, decl_event, decl_error,
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use artemis_core::{AppID, Message, Verifier, VerificationInput};
+use artemis_core::{AppId, Message, Verifier, VerificationInput};
 
 #[cfg(test)]
 mod mock;
@@ -49,7 +49,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	fn do_verify(sender: T::AccountId, app_id: AppID, message: &Message) -> DispatchResult {
+	fn do_verify(sender: T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
 		Self::verify_sender(sender)?;
 
 		// Hash all inputs together to produce a unique key for the message
@@ -80,7 +80,7 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Verifier<T::AccountId> for Module<T> {
-	fn verify(sender: T::AccountId, app_id: AppID, message: &Message) -> DispatchResult {
+	fn verify(sender: T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
 		Self::do_verify(sender, app_id, message)?;
 		Ok(())
 	}

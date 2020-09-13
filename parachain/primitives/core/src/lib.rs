@@ -7,12 +7,12 @@ use frame_support::dispatch::DispatchResult;
 pub mod types;
 pub mod registry;
 
-pub use types::{AppID, Message, VerificationInput};
+pub use types::{AppId, Message, VerificationInput};
 
 /// Verifier modules should implement this trait
 pub trait Verifier<AccountId> {
 
-	fn verify(sender: AccountId, app_id: AppID, message: &Message) -> DispatchResult;
+	fn verify(sender: AccountId, app_id: AppId, message: &Message) -> DispatchResult;
 }
 
 /// Application modules should implement this trait
