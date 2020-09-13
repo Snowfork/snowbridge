@@ -3,10 +3,8 @@ module github.com/snowfork/polkadot-ethereum/bridgerelayer
 go 1.13
 
 require (
-	github.com/Snowfork/go-substrate-rpc-client v1.1.0
 	github.com/aristanetworks/goarista v0.0.0-20200812190859-4cb0e71f3c0e // indirect
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
-	github.com/centrifuge/go-substrate-rpc-client v1.1.0 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/ethereum/go-ethereum v1.9.20
 	github.com/magefile/mage v1.10.0
@@ -16,7 +14,6 @@ require (
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/snowfork/go-substrate-rpc-client v2.0.0-alpha.5.0.20200825232545-6ce83bfb166e+incompatible
-	github.com/snowfork/polkadot-ethereum v0.0.0-20200727051857-f2828fba3b44
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.4.0
