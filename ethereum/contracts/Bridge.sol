@@ -7,6 +7,9 @@ import "./Application.sol";
 contract Bridge {
     using Decoder for bytes;
 
+    // 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 is returned for accounts without code
+    bytes32 NON_CONTRACT_ACCOUNT_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+
     uint64 public mostRecentBlock;
     mapping(uint64 => uint64) public mostRecentBlockEvent;
     mapping(address => bool) public applications;
@@ -57,18 +60,12 @@ contract Bridge {
         view
         returns(bool)
     {
-        if(applications[_appID]){
-            return false;
-        }
+        require(!applications[_appID], "Application is already registered");
 
-        // 0x0 is the value returned for not-yet created accounts.
-        // 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 is returned for accounts without code.
-        bytes32 accountHash = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
         bytes32 codehash;
         assembly { codehash := extcodehash(_appID) }
-        if(codehash != 0x0 && codehash != accountHash) {
-            return false;
-        }
+        require(codehash != 0x0, "There's no account for this address on the network");
+        require(codehash != NON_CONTRACT_ACCOUNT_HASH, "Only contract accounts can be registered as applications");
 
         return true;
     }
