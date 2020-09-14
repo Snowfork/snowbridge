@@ -17,11 +17,11 @@ struct Entry {
 static APP_REGISTRY: &[Entry] = &[
 	Entry {
 		app: App::ETH,
-		id: [13, 39, 176, 6, 146, 65, 192, 53, 117, 102, 159, 237, 27, 173, 203, 204, 220, 13, 212, 209],
+		id: include!(concat!(env!("OUT_DIR"), "/eth_app_id.rs")),
 	},
 	Entry {
 		app: App::ERC20,
-		id: [143, 225, 177, 35, 63, 112, 50, 206, 248, 207, 197, 234, 175, 65, 29, 255, 170, 119, 160, 124],
+		id: include!(concat!(env!("OUT_DIR"), "/erc20_app_id.rs")),
 	}
 ];
 

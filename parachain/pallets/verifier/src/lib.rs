@@ -1,3 +1,19 @@
+//! # Verifier
+//!
+//! The verifier module provides functionality for message verification.
+//!
+//! ## Overview
+//!
+//! This verifier performs the following verification routines on a message:
+//! - Ensuring that the message sender is trusted
+//! - Ensuring that messages are not replayed
+//!
+//! This verifier is intended to be swapped out for an Ethereum light-client solution at some point.
+//!
+//! ## Interface
+//!
+//! The verifier implements the [`Verifier`] trait and conforms to its interface.
+//!
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -21,7 +37,10 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as VerifierModule {
+		/// The trusted [`AccountId`] of the external relayer service.
 		RelayKey get(fn key) config(): T::AccountId;
+
+		/// Hashes of previously seen messages. Used to implement replay protection.
 		pub VerifiedPayloads: map hasher(blake2_128_concat) T::Hash => ();
 	}
 }
@@ -34,7 +53,9 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
+		/// Verification scheme is not supported.
 		NotSupported,
+		/// The message failed verification.
 		Invalid
 	}
 }
@@ -49,6 +70,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
+	/// Verify a message
 	fn do_verify(sender: T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
 		Self::verify_sender(sender)?;
 
