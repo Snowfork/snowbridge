@@ -39,7 +39,7 @@ contract ERC20App {
         emit Transfer(msg.sender, _recipient, _tokenAddr, _amount);
     }
 
-    function submit(bytes memory _data, bytes memory _signature)
+    function submit(address _appId, bytes memory _data)
         public
         returns (uint256)
     {
@@ -54,6 +54,8 @@ contract ERC20App {
         // Deocde amount int256
         bytes memory amountBytes = _data.slice(32 + 40, 32);
         uint256 amount = amountBytes.decodeUint256();
+        // Decode block_number (uint64) from _data
+        // Decode event_index (uint64) from _data
 
         sendTokens(recipient, tokenAddr, amount);
         emit Unlock(sender, recipient, tokenAddr, amount);

@@ -36,8 +36,9 @@ contract EthereumApp {
         emit Transfer(msg.sender, _recipient, msg.value);
     }
 
-    function submit(bytes memory _data, bytes memory _signature)
+    function submit(address _appId, bytes memory _data)
         public
+        returns (uint256)
     {
         require(_data.length == 84, "Data must contain 84 bytes for a successful decoding");
 
@@ -48,6 +49,8 @@ contract EthereumApp {
         // Deocde amount int256
         bytes memory amountBytes = _data.slice(32 + 20, 32);
         uint256 amount = amountBytes.decodeUint256();
+        // Decode block_number (uint64) from _data
+        // Decode event_index (uint64) from _data
 
         sendETH(recipient, amount);
         emit Unlock(sender, recipient, amount);
