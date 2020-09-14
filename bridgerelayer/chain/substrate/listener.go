@@ -6,6 +6,8 @@ package substrate
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
+	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -17,20 +19,20 @@ import (
 )
 
 type Listener struct {
-	conn               *Connection
-	blockRetryLimit    uint
-	blockRetryInterval time.Duration
-	messages           chan<- chain.Message
-	log                *logrus.Entry
+	eventDecoder *EventDecoder
+	config       *Config
+	conn         *Connection
+	messages     chan<- chain.Message
+	log          *logrus.Entry
 }
 
-func NewListener(conn *Connection, messages chan<- chain.Message, blockRetryLimit uint, blockRetryInterval uint, log *logrus.Entry) *Listener {
+func NewListener(config *Config, conn *Connection, messages chan<- chain.Message, log *logrus.Entry) *Listener {
 	return &Listener{
-		conn:               conn,
-		blockRetryLimit:    blockRetryLimit,
-		blockRetryInterval: time.Duration(blockRetryInterval) * time.Second,
-		messages:           messages,
-		log:                log,
+		eventDecoder: NewEventDecoder(&conn.metadata),
+		config:       config,
+		conn:         conn,
+		messages:     messages,
+		log:          log,
 	}
 }
 
@@ -55,6 +57,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 	}
 	currentBlock := uint64(block.Number)
 
+	retryInterval := time.Duration(10) * time.Second
 	for {
 		select {
 		case <-ctx.Done():
@@ -67,7 +70,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 			finalizedHash, err := li.conn.api.RPC.Chain.GetFinalizedHead()
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch finalized head")
-				sleep(ctx, li.blockRetryInterval)
+				sleep(ctx, retryInterval)
 				continue
 			}
 
@@ -75,7 +78,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 			finalizedHeader, err := li.conn.api.RPC.Chain.GetHeader(finalizedHash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch header for finalized head")
-				sleep(ctx, li.blockRetryInterval)
+				sleep(ctx, retryInterval)
 				continue
 			}
 
@@ -84,8 +87,8 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				li.log.WithFields(logrus.Fields{
 					"block":  currentBlock,
 					"latest": finalizedHeader.Number,
-				}).Debug("Block not yet finalized")
-				sleep(ctx, li.blockRetryInterval)
+				}).Trace("Block not yet finalized")
+				sleep(ctx, retryInterval)
 				continue
 			}
 
@@ -96,7 +99,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					"error": err,
 					"block": currentBlock,
 				}).Error("Failed to fetch block hash")
-				sleep(ctx, li.blockRetryInterval)
+				sleep(ctx, retryInterval)
 				continue
 			}
 
@@ -104,12 +107,13 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 			_, err = li.conn.api.RPC.State.GetStorage(storageKey, &records, hash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch events for block")
-				sleep(ctx, li.blockRetryInterval)
+				sleep(ctx, retryInterval)
 				continue
 			}
 
-			events := Events{}
-			err = records.DecodeEventRecords(&li.conn.metadata, &events)
+			li.log.WithField("record", hex.EncodeToString(records)).Trace("Fetched event record")
+
+			events, err := li.eventDecoder.Decode(records)
 			if err != nil {
 				li.log.WithFields(logrus.Fields{
 					"error": err,
@@ -118,7 +122,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				return err
 			}
 
-			li.handleEvents(&events)
+			li.handleEvents(currentBlock, events)
 
 			currentBlock++
 		}
@@ -132,29 +136,42 @@ func sleep(ctx context.Context, delay time.Duration) {
 	}
 }
 
-func (li *Listener) handleEvents(events *Events) {
-	for _, evt := range events.ERC20_Transfer {
-		li.log.Info("Handling transfer event")
+// Process transfer events in the block
+func (li *Listener) handleEvents(blockNumber uint64, events []Event) {
 
-		buf := bytes.NewBuffer(nil)
-		encoder := scale.NewEncoder(buf)
-		encoder.Encode(evt.AccountID)
-		encoder.Encode(evt.Recipient)
-		encoder.Encode(evt.TokenID)
-		encoder.Encode(evt.Amount)
+	for i, event := range events {
 
-		li.messages <- chain.Message{AppID: chain.Erc20AppID, Payload: buf.Bytes()}
-	}
+		li.log.WithFields(logrus.Fields{
+			"blockNumber": blockNumber,
+			"name":        fmt.Sprintf("%s.%s", event.Name[0], event.Name[1]),
+		}).Debug("Witnessed event")
 
-	for _, evt := range events.ETH_Transfer {
-		li.log.Info("Handling transfer event")
+		switch fields := event.Fields.(type) {
+		case ETHTransfer:
+			buf := bytes.NewBuffer(nil)
+			encoder := scale.NewEncoder(buf)
+			encoder.Encode(fields.AccountID)
+			encoder.Encode(fields.Recipient)
+			encoder.Encode(fields.Amount)
+			encoder.Encode(uint64(blockNumber))
+			encoder.Encode(uint64(i))
 
-		buf := bytes.NewBuffer(nil)
-		encoder := scale.NewEncoder(buf)
-		encoder.Encode(evt.AccountID)
-		encoder.Encode(evt.Recipient)
-		encoder.Encode(evt.Amount)
+			targetAppID := li.config.Targets["eth"]
 
-		li.messages <- chain.Message{AppID: chain.EthAppID, Payload: buf.Bytes()}
+			li.messages <- chain.Message{AppID: targetAppID, Payload: buf.Bytes()}
+		case ERC20Transfer:
+			buf := bytes.NewBuffer(nil)
+			encoder := scale.NewEncoder(buf)
+			encoder.Encode(fields.AccountID)
+			encoder.Encode(fields.Recipient)
+			encoder.Encode(fields.TokenID)
+			encoder.Encode(fields.Amount)
+			encoder.Encode(uint64(blockNumber))
+			encoder.Encode(uint64(i))
+
+			targetAppID := li.config.Targets["erc20"]
+
+			li.messages <- chain.Message{AppID: targetAppID, Payload: buf.Bytes()}
+		}
 	}
 }

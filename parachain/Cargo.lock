@@ -147,6 +147,7 @@ version = "0.1.0"
 dependencies = [
  "ethabi-decode",
  "ethereum-types",
+ "hex-literal 0.3.1",
  "libsecp256k1",
  "parity-scale-codec",
  "rlp",
@@ -198,14 +199,13 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-bridge",
- "pallet-broker",
- "pallet-dummy-verifier",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
+ "pallet-verifier",
  "parity-scale-codec",
  "polkaerc20-app",
  "polkaeth-app",
@@ -1713,6 +1713,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hex-literal"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5af1f635ef1bc545d78392b136bfe1c9809e029023c84a3638a864a10b8819c8"
+
+[[package]]
 name = "hex-literal-impl"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3120,35 +3126,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-broker"
-version = "0.1.1"
-dependencies = [
- "artemis-core",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-dummy-verifier"
-version = "0.1.1"
-dependencies = [
- "artemis-core",
- "frame-support",
- "frame-system",
- "pallet-broker",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-finality-tracker"
 version = "2.0.0-rc4"
 source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc4#00768a1f21a579c478fe5d4f51e1fa71f7db9fd4"
@@ -3285,6 +3262,24 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-api",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-verifier"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "artemis-ethereum",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "rustc-hex",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]
@@ -3603,10 +3598,13 @@ dependencies = [
  "artemis-asset",
  "artemis-core",
  "artemis-ethereum",
+ "ethabi-decode",
  "frame-support",
  "frame-system",
+ "hex-literal 0.3.1",
  "pallet-bridge",
  "parity-scale-codec",
+ "rlp",
  "rustc-hex",
  "serde",
  "sp-core",
@@ -3623,11 +3621,14 @@ dependencies = [
  "artemis-asset",
  "artemis-core",
  "artemis-ethereum",
+ "ethabi-decode",
  "frame-support",
  "frame-system",
+ "hex-literal 0.3.1",
  "pallet-balances",
  "pallet-bridge",
  "parity-scale-codec",
+ "rlp",
  "rustc-hex",
  "serde",
  "sp-core",
@@ -4443,7 +4444,7 @@ dependencies = [
  "fnv",
  "futures 0.3.5",
  "hash-db",
- "hex-literal",
+ "hex-literal 0.2.1",
  "kvdb",
  "lazy_static",
  "log",

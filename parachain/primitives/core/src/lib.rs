@@ -1,33 +1,33 @@
+//! # Core
+//!
+//! Common traits and types
+
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-//use sp_std::prelude::*;
 use frame_support::dispatch::DispatchResult;
+
+use sp_std::vec::Vec;
 
 pub mod types;
 pub mod registry;
 
-pub use types::{AppID, Message};
+pub use types::{AppId, Message, VerificationInput};
 
-/// The broker module implements this trait
-pub trait Broker {
+/// A trait for verifying messages.
+///
+/// This trait should be implemented by runtime modules that wish to provide message verification functionality.
+pub trait Verifier<AccountId> {
 
-	fn submit(app_id: AppID, message: Message) -> DispatchResult;
-
+	fn verify(sender: AccountId, app_id: AppId, message: &Message) -> DispatchResult;
 }
 
-/// The verifier module implements this trait
-pub trait Verifier {
-
-	fn verify(app_id: AppID, message: Message) -> DispatchResult;
-
-}
-
-/// The dummy app module implements this trait
+/// A trait for handling message payloads.
+///
+/// This trait should be implemented by runtime modules that wish to handle message payloads.
 pub trait Application {
 
-	/// Handle a message
-	fn handle(app_id: AppID, message: Message) -> DispatchResult;
-
+	/// Handle a message payload
+	fn handle(payload: Vec<u8>) -> DispatchResult;
 }

@@ -1,20 +1,37 @@
+//! # ERC20
+//!
+//! An application that implements bridged ERC20 token assets.
+//!
+//! ## Overview
+//!
+//! ETH balances are stored in the tightly-coupled [`asset`] runtime module. When an account holder burns
+//! some of their balance, a `Transfer` event is emitted. An external relayer will listen for this event
+//! and relay it to the other chain.
+//!
+//! ## Interface
+//!
+//! This application implements the [`Application`] trait and conforms to its interface.
+//!
+//! ### Dispatchable Calls
+//!
+//! - `burn`: Burn an ERC20 token balance.
+//!
+
 #![cfg_attr(not(feature = "std"), no_std)]
-///
-/// Implementation for PolkaERC20 token assets
-///
+
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::{DispatchResult, DispatchError},
+	dispatch::DispatchResult,
 };
 
-use codec::{Decode};
-
-use artemis_core::{AppID, Application, Message};
-use artemis_ethereum::{self as ethereum, SignedMessage};
+use artemis_core::Application;
 use artemis_asset as asset;
+
+mod payload;
+use payload::Payload;
 
 #[cfg(test)]
 mod mock;
@@ -31,18 +48,23 @@ decl_storage! {
 }
 
 decl_event!(
+    /// Events for the ERC20 module.
 	pub enum Event<T>
 	where
 		AccountId = <T as system::Trait>::AccountId,
 		TokenId = H160,
 	{
+		/// Signal a cross-chain transfer.
 		Transfer(TokenId, AccountId, H160, U256),
 	}
 );
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		InvalidTokenId
+		/// Token address is invalid.
+		InvalidTokenId,
+		/// The submitted payload could not be decoded.
+		InvalidPayload,
 	}
 }
 
@@ -54,13 +76,12 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// Users should burn their holdings to release funds on the Ethereum side
-		// TODO: Calculate weights
+		/// Burn an ERC20 token balance
 		#[weight = 0]
 		pub fn burn(origin, token_id: H160, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			// The token_id 0 is reserved for the PolkaETH app
+			// The token_id 0 is reserved for the ETH app
 			if token_id == H160::zero() {
 				return Err(Error::<T>::InvalidTokenId.into())
 			}
@@ -75,49 +96,23 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	fn bytes_to_account_id(data: &[u8]) -> Option<T::AccountId> {
-		T::AccountId::decode(&mut &data[..]).ok()
-	}
-
-	fn handle_event(event: ethereum::Event) -> DispatchResult {
-
-		match event {
-			ethereum::Event::SendERC20 { recipient, token, amount, ..} => {
-				if token.is_zero() {
-					return Err(DispatchError::Other("Invalid token address"))
-				}
-				let account = match Self::bytes_to_account_id(&recipient) {
-					Some(account) => account,
-					None => {
-						return Err(DispatchError::Other("Invalid sender account"))
-					}
-				};
-				<asset::Module<T>>::do_mint(token, &account, amount)?;
-				Ok(())
-			}
-			_ => {
-				// Ignore all other ethereum events. In the next milestone the
-				// application will only receive messages it is registered to handle
-				Ok(())
-			}
+	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
+		if payload.token_addr.is_zero() {
+			return Err(Error::<T>::InvalidTokenId.into())
 		}
+
+		<asset::Module<T>>::do_mint(payload.token_addr, &payload.recipient_addr, payload.amount)?;
+
+		Ok(())
 	}
 
 }
 
 impl<T: Trait> Application for Module<T> {
+	fn handle(payload: Vec<u8>) -> DispatchResult {
+		let payload_decoded = Payload::decode(payload)
+			.map_err(|_| Error::<T>::InvalidPayload)?;
 
-	fn handle(_app_id: AppID, message: Message) -> DispatchResult {
-		let sm = match SignedMessage::decode(&mut message.as_slice()) {
-			Ok(sm) => sm,
-			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
-		};
-
-		let event = match ethereum::Event::decode_from_rlp(sm.data) {
-			Ok(event) => event,
-			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
-		};
-
-		Self::handle_event(event)
+		Self::handle_event(payload_decoded)
 	}
 }

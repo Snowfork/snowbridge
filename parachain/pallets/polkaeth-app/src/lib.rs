@@ -1,20 +1,36 @@
+//! # ETH
+//!
+//! An application that implements a bridged ETH asset.
+//!
+//! ## Overview
+//!
+//! ETH balances are stored in the tightly-coupled [`asset`] runtime module. When an account holder burns
+//! some of their balance, a `Transfer` event is emitted. An external relayer will listen for this event
+//! and relay it to the other chain.
+//!
+//! ## Interface
+//!
+//! This application implements the [`Application`] trait and conforms to its interface
+//!
+//! ### Dispatchable Calls
+//!
+//! - `burn`: Burn an ETH balance.
+//!
 #![cfg_attr(not(feature = "std"), no_std)]
-///
-/// Implementation for a PolkaETH token
-///
+
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::{DispatchResult, DispatchError},
+	dispatch::DispatchResult,
 };
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
-use artemis_core::{AppID, Application, Message};
-use codec::{Decode};
-
-use artemis_ethereum::{self as ethereum, SignedMessage};
+use artemis_core::Application;
 use artemis_asset as asset;
+
+mod payload;
+use payload::Payload;
 
 #[cfg(test)]
 mod mock;
@@ -27,20 +43,27 @@ pub trait Trait: system::Trait + asset::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Erc20Module {}
+	trait Store for Module<T: Trait> as Erc20Module {
+
+	}
 }
 
 decl_event!(
+    /// Events for the ETH module.
 	pub enum Event<T>
 	where
 		AccountId = <T as system::Trait>::AccountId
 	{
+		/// Signal a cross-chain transfer.
 		Transfer(AccountId, H160, U256),
 	}
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {}
+	pub enum Error for Module<T: Trait> {
+		/// The submitted payload could not be decoded.
+		InvalidPayload,
+	}
 }
 
 decl_module! {
@@ -66,45 +89,16 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	fn bytes_to_account_id(data: &[u8]) -> Option<T::AccountId> {
-		T::AccountId::decode(&mut &data[..]).ok()
-	}
-
-	fn handle_event(event: ethereum::Event) -> DispatchResult {
-		match event {
-			ethereum::Event::SendETH { recipient, amount, ..} => {
-				let account = match Self::bytes_to_account_id(&recipient) {
-					Some(account) => account,
-					None => {
-						return Err(DispatchError::Other("Invalid sender account"))
-					}
-				};
-				<asset::Module<T>>::do_mint(H160::zero(), &account, amount)?;
-				Ok(())
-			}
-			_ => {
-				// Ignore all other ethereum events. In the next milestone the
-				// application will only receive messages it is registered to handle
-				Ok(())
-			}
-		}
+	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
+		<asset::Module<T>>::do_mint(H160::zero(), &payload.recipient_addr, payload.amount)
 	}
 }
 
 impl<T: Trait> Application for Module<T> {
+	fn handle(payload: Vec<u8>) -> DispatchResult {
+		let payload_decoded = Payload::decode(payload)
+			.map_err(|_| Error::<T>::InvalidPayload)?;
 
-	fn handle(_app_id: AppID, message: Message) -> DispatchResult {
-		let sm = match SignedMessage::decode(&mut message.as_slice()) {
-			Ok(sm) => sm,
-			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
-		};
-
-		let event = match ethereum::Event::decode_from_rlp(sm.data) {
-			Ok(event) => event,
-			Err(_) => return Err(DispatchError::Other("Failed to decode event"))
-		};
-
-		Self::handle_event(event)
+		Self::handle_event(payload_decoded)
 	}
-
 }

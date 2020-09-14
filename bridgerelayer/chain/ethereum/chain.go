@@ -5,18 +5,17 @@ package ethereum
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
-	"github.com/spf13/viper"
 )
 
 // Chain streams the Ethereum blockchain and routes tx data packets
 type Chain struct {
+	config   *Config
 	listener *Listener
 	writer   *Writer
 	conn     *Connection
@@ -25,30 +24,22 @@ type Chain struct {
 const Name = "Ethereum"
 
 // NewChain initializes a new instance of EthChain
-func NewChain(ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
+func NewChain(config *Config, ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
 
-	// Validate and load configuration
-	keys := []string{
-		"ethereum.endpoint",
-		"ethereum.private-key",
-	}
-	for _, key := range keys {
-		if !viper.IsSet(key) {
-			return nil, fmt.Errorf("config key %q not set", key)
-		}
-	}
-	endpoint := viper.GetString("ethereum.endpoint")
-	privateKey := viper.GetString("ethereum.private-key")
-
-	kp, err := secp256k1.NewKeypairFromString(privateKey)
+	contracts, err := LoadContracts(config)
 	if err != nil {
 		return nil, err
 	}
 
-	conn := NewConnection(endpoint, kp, log)
+	kp, err := secp256k1.NewKeypairFromString(config.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
 
-	listener, err := NewListener(conn, ethMessages, log)
+	conn := NewConnection(config.Endpoint, kp, log)
+
+	listener, err := NewListener(conn, ethMessages, contracts, log)
 	if err != nil {
 		return nil, err
 	}
@@ -59,6 +50,7 @@ func NewChain(ethMessages chan chain.Message, subMessages chan chain.Message) (*
 	}
 
 	return &Chain{
+		config:   config,
 		listener: listener,
 		writer:   writer,
 		conn:     conn,

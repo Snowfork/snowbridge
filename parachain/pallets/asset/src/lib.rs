@@ -1,3 +1,32 @@
+//! # Asset
+//!
+//! The asset module provides functionality for handling asset balances.
+//!
+//! ## Overview
+//!
+//! This module is used by the ETH and ERC20 pallets to store account balances for an arbitrary number of assets.
+//!
+//! Each asset is identified by a unique `H160` hash. This is useful for tracking ERC20 tokens which on Ethereum are identified by a 20-byte contract address.
+//!
+//! For various reasons, we built our own asset pallet instead of reusing existing work:
+//! - `assets`: Too high-level and limited for our needs
+//! - `generic-asset`: Its enforced permissions system implies trusted operations. But our system is designed to be trustless.
+//! - `balances`: Only stores balances for a single asset. Our ERC20 pallet supports multiple different ERC20 assets.
+//!
+//! Additionally, we need to store balances using `U256`, which seemed difficult or impossible to plug into the above pallets.
+//!
+//! ## Interface
+//!
+//! ### Dispatchable Calls
+//!
+//! - `transfer`: Transferring a balance between accounts.
+//!
+//! ### Public Functions
+//!
+//! - `do_mint`: Mint to an account's free balance.
+//! - `do_burn`: Burn an account's free balance.
+//!
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_std::prelude::*;
@@ -16,7 +45,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-type AssetId = H160;
+pub type AssetId = H160;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug)]
 pub struct AccountData {
@@ -39,9 +68,9 @@ decl_event!(
 	where
 		AccountId = <T as system::Trait>::AccountId,
 	{
-		Burned(AssetId, AccountId, U256),
-		Minted(AssetId, AccountId, U256),
-		Transferred(AssetId, AccountId, AccountId, U256),
+		Burned(H160, AccountId, U256),
+		Minted(H160, AccountId, U256),
+		Transferred(H160, AccountId, AccountId, U256),
 	}
 );
 
@@ -72,7 +101,7 @@ decl_module! {
 		/// Transfer some free balance to another account.
 		// TODO: Calculate weight
 		#[weight = 0]
-		pub fn transfer(origin, asset_id: AssetId, to: T::AccountId, amount: U256) -> DispatchResult {
+		pub fn transfer(origin, asset_id: H160, to: T::AccountId, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_transfer(asset_id, &who, &to, amount)?;
 			Ok(())
@@ -121,7 +150,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	pub fn do_transfer(
+	fn do_transfer(
 		asset_id: AssetId,
 		from: &T::AccountId,
 		to: &T::AccountId,

@@ -68,7 +68,7 @@ features = ["derive"]
 default = ['std']
 std = [
     'hex/std',
-    'serde',
+    'serde/std',
     'codec/std',
     'frame-support/std',
     'frame-system/std',

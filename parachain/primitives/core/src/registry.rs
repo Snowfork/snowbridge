@@ -1,25 +1,36 @@
 
-use crate::types::AppID;
+use crate::types::AppId;
 
-pub enum AppName {
-	PolkaETH,
-	PolkaERC20,
+/// Short identifer for an application.
+#[derive(Copy, Clone)]
+pub enum App {
+	ETH,
+	ERC20,
 }
 
-pub struct Entry {
-	pub symbol: AppName,
-	pub id: AppID,
+#[derive(Copy, Clone)]
+struct Entry {
+	pub app: App,
+	pub id: AppId,
 }
 
-pub static REGISTRY: &[Entry] = &[
+static APP_REGISTRY: &[Entry] = &[
 	Entry {
-		symbol: AppName::PolkaETH,
-		// AppID is currently unused, so set it to zeroes.
-		id: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		app: App::ETH,
+		id: include!(concat!(env!("OUT_DIR"), "/eth_app_id.rs")),
 	},
 	Entry {
-		symbol: AppName::PolkaERC20,
-		// AppID is currently unused, so set it to zeroes.
-		id: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		app: App::ERC20,
+		id: include!(concat!(env!("OUT_DIR"), "/erc20_app_id.rs")),
 	}
 ];
+
+/// Looks up an application in the registry identified by `app_id`.
+pub fn lookup_app(app_id: AppId) -> Option<App> {
+	for entry in APP_REGISTRY.iter() {
+		if app_id == entry.id {
+			return Some(entry.app)
+		}
+	}
+	None
+}

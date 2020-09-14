@@ -3,11 +3,20 @@
 package main
 
 import (
+	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 )
 
-func Build() error {
+func Build() {
+	mg.Deps(BuildMain, BuildTools)
+}
+
+func BuildMain() error {
 	return sh.Run("go", "build", "-o", "build/artemis-relay", "main.go")
+}
+
+func BuildTools() error {
+	return sh.Run("go", "build", "-o", "build/list-events", "tools/list_events.go")
 }
 
 func Test() error {

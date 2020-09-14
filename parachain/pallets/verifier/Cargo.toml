@@ -1,6 +1,6 @@
 [package]
-name = 'pallet-dummy-verifier'
-description = 'Artemis Dummy Verifier Pallet'
+name = 'pallet-verifier'
+description = 'Artemis Verifier Pallet'
 version = '0.1.1'
 edition = '2018'
 authors = ['Snowfork <contact@snowfork.com>']
@@ -9,11 +9,20 @@ repository = 'https://github.com/Snowfork/polkadot-ethereum'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+[dependencies]
+hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
 package = 'parity-scale-codec'
 version = '1.3.1'
+
+[dev-dependencies.sp-keyring]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc4'
+version = '2.0.0-rc4'
 
 [dependencies.frame-support]
 default-features = false
@@ -55,14 +64,21 @@ version = '2.0.0-rc4'
 default-features = false
 path = "../../primitives/core"
 
-[dependencies.pallet-broker]
+[dependencies.artemis-ethereum]
 default-features = false
-path = "../broker"
+path = "../../primitives/ethereum"
+
+[dependencies.serde]
+package = 'serde'
+optional = true
+version = '1.0.101'
+features = ["derive"]
 
 
 [features]
 default = ['std']
 std = [
+    'serde/std',
     'codec/std',
     'frame-support/std',
     'frame-system/std',
@@ -70,5 +86,6 @@ std = [
     'sp-io/std',
     'sp-runtime/std',
     'sp-std/std',
-    'artemis-core/std'
+    'artemis-core/std',
+    'artemis-ethereum/std',
 ]

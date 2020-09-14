@@ -57,8 +57,8 @@ The relayer requires secret keys for submitting transactions to both chains. It 
 
 Example:
 ```
-export ARTEMIS_RELAY_ETHEREUM_KEY=603a72b0c0a65d9728353714d74291ea439c6816
-export ARTEMIS_RELAY_SUBSTRATE_KEY=//Alice
+export ARTEMIS_ETHEREUM_KEY=603a72b0c0a65d9728353714d74291ea439c6816
+export ARTEMIS_SUBSTRATE_KEY=//Alice
 ```
 
 ## Running the relay locally

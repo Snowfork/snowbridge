@@ -6,20 +6,31 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/substrate"
+	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type Relay struct {
 	chains []chain.Chain
+}
+
+type Config struct {
+	Eth ethereum.Config  `mapstructure:"ethereum"`
+	Sub substrate.Config `mapstructure:"substrate"`
 }
 
 func NewRelay() (*Relay, error) {
@@ -30,12 +41,17 @@ func NewRelay() (*Relay, error) {
 	// channel for messages from substrate
 	subMessages := make(chan chain.Message, 1)
 
-	ethChain, err := ethereum.NewChain(ethMessages, subMessages)
+	config, err := loadConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	subChain, err := substrate.NewChain(ethMessages, subMessages)
+	ethChain, err := ethereum.NewChain(&config.Eth, ethMessages, subMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	subChain, err := substrate.NewChain(&config.Sub, ethMessages, subMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -90,4 +106,52 @@ func (re *Relay) Start() {
 	for _, chain := range re.chains {
 		chain.Stop()
 	}
+}
+
+func loadConfig() (*Config, error) {
+	home, err := homedir.Dir()
+	if err != nil {
+		return nil, err
+	}
+
+	viper.AddConfigPath(path.Join(home, ".config", "artemis-relay"))
+	viper.AddConfigPath(".")
+
+	viper.SetConfigName("config")
+	viper.SetConfigType("toml")
+
+	err = viper.ReadInConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	var config Config
+	err = viper.Unmarshal(&config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load secrets from environment variables
+	var value string
+	var ok bool
+
+	value, ok = os.LookupEnv("ARTEMIS_ETHEREUM_KEY")
+	if !ok {
+		return nil, fmt.Errorf("environment variable not set: ARTEMIS_ETHEREUM_KEY")
+	}
+	config.Eth.PrivateKey = value
+
+	value, ok = os.LookupEnv("ARTEMIS_SUBSTRATE_KEY")
+	if !ok {
+		return nil, fmt.Errorf("environment variable not set: ARTEMIS_SUBSTRATE_KEY")
+	}
+	config.Sub.PrivateKey = value
+
+	// Copy over Ethereum application addresses to the Substrate config
+	config.Sub.Targets = make(map[string][20]byte)
+	for k, v := range config.Eth.Apps {
+		config.Sub.Targets[k] = common.HexToAddress(v.Address)
+	}
+
+	return &config, nil
 }
