@@ -26,7 +26,7 @@ contract Bridge {
      * @param _message address _message expected type: Message { AppID [32]byte, Payload []byte }
      * @param _hash bytes _hash is a unique hash of the event (app_id, payload, blockNum, eventId)
      */
-    function handle(bytes memory _message, bytes32 _hash)
+    function submit(bytes memory _message, bytes32 _hash)
         public
     {
         address appID = _message.sliceAddress(32);
@@ -37,7 +37,7 @@ contract Bridge {
 
         bytes memory payload = _message.slice(32, _message.length-1);
         Application app = Application(appID);
-        app.submit(payload);
+        app.handle(payload);
     }
 
     /**

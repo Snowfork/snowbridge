@@ -35,7 +35,7 @@ contract ETHApp is Application {
         emit Transfer(msg.sender, _recipient, msg.value);
     }
 
-    function submit(bytes memory _data)
+    function handle(bytes memory _data)
         public
         override
     {

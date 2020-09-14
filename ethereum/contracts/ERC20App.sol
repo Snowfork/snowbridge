@@ -38,7 +38,7 @@ contract ERC20App is Application {
         emit Transfer(msg.sender, _recipient, _tokenAddr, _amount);
     }
 
-    function submit(bytes memory _data)
+    function handle(bytes memory _data)
         public
         override
     {
