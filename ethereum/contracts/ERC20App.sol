@@ -12,7 +12,9 @@ contract ERC20App {
     uint256 public nonce;
     mapping(address => uint256) public totalTokens;
 
-    event Transfer(address _sender, bytes32 _recipient, address _token, uint256 _amount);
+    enum AppEventTags { SendETH, SendERC20 }
+
+    event AppEvent(uint _tag, bytes _data);
     event Unlock(bytes _sender, address _recipient, address _token, uint256 _amount);
 
     constructor() public {
@@ -36,10 +38,25 @@ contract ERC20App {
         // Increment global nonce
         nonce = nonce.add(1);
 
-        emit Transfer(msg.sender, _recipient, _tokenAddr, _amount);
+        bytes memory data = encodeSendData(msg.sender, _recipient, _tokenAddr,_amount, nonce);
+        emit AppEvent(uint(AppEventTags.SendERC20), data);
     }
 
-    function submit(address _appId, bytes memory _data)
+    function encodeSendData(
+        address _sender,
+        bytes32 _recipient,
+        address _tokenAddr,
+        uint256 _amount,
+        uint256 _nonce
+    )
+        internal
+        pure
+        returns(bytes memory)
+    {
+        return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
+    }
+
+    function submit(bytes memory _data, bytes memory _signature)
         public
         returns (uint256)
     {
@@ -54,8 +71,6 @@ contract ERC20App {
         // Deocde amount int256
         bytes memory amountBytes = _data.slice(32 + 40, 32);
         uint256 amount = amountBytes.decodeUint256();
-        // Decode block_number (uint64) from _data
-        // Decode event_index (uint64) from _data
 
         sendTokens(recipient, tokenAddr, amount);
         emit Unlock(sender, recipient, tokenAddr, amount);
