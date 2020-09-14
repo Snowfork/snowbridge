@@ -10,6 +10,8 @@ contract ERC20App is Application {
     using SafeMath for uint256;
     using Decoder for bytes;
 
+    uint32 MESSAGE_LENGTH = 104;
+
     uint256 public nonce;
     mapping(address => uint256) public totalTokens;
 
@@ -61,7 +63,7 @@ contract ERC20App is Application {
         public
         override
     {
-        require(_message.length == 104, "Message must contain 104 bytes for a successful decoding");
+        require(_message.length == MESSAGE_LENGTH, "Message must contain 104 bytes for a successful decoding");
 
         // Decode sender bytes
         bytes memory sender = _message.slice(0, 32);

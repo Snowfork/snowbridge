@@ -9,6 +9,8 @@ contract ETHApp is Application {
     using SafeMath for uint256;
     using Decoder for bytes;
 
+    uint64 MESSAGE_LENGTH = 84;
+
     uint256 public nonce;
     uint256 public totalETH;
 
@@ -56,7 +58,7 @@ contract ETHApp is Application {
         public
         override
     {
-        require(_message.length == 84, "Message must contain 84 bytes for a successful decoding");
+        require(_message.length == MESSAGE_LENGTH, "Message must contain 84 bytes for a successful decoding");
 
         // Decode sender bytes
         bytes memory sender = _message.slice(0, 32);
