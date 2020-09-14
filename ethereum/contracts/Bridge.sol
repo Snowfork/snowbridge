@@ -37,7 +37,7 @@ contract Bridge {
 
         bytes memory payload = _message.slice(32, _message.length-1);
         Application app = Application(appID);
-        app.handle(payload);
+        app.submit(payload);
     }
 
     /**

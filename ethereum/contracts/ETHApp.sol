@@ -14,18 +14,14 @@ contract ETHApp is Application {
     uint256 public nonce;
     uint256 public totalETH;
 
-    enum AppEventTags { SendETH, SendERC20 }
-
-    event AppEvent(uint _tag, bytes _data);
+    event Transfer(address _sender, bytes32 _recipient, uint256 _amount);
     event Unlock(bytes _sender, address _recipient, uint256 _amount);
 
     constructor() public {
         nonce = 0;
     }
 
-    function sendETH(
-        bytes32 _recipient
-    )
+    function sendETH(bytes32 _recipient)
         public
         payable
     {
@@ -36,46 +32,28 @@ contract ETHApp is Application {
         // Increment global nonce
         nonce = nonce.add(1);
 
-        bytes memory data = encodeSendData(msg.sender, _recipient, address(0), msg.value, nonce);
-        emit AppEvent(uint(AppEventTags.SendETH), data);
+        emit Transfer(msg.sender, _recipient, msg.value);
     }
 
-    function encodeSendData(
-        address _sender,
-        bytes32 _recipient,
-        address _tokenAddr,
-        uint256 _amount,
-        uint256 _nonce
-    )
-        internal
-        pure
-        returns(bytes memory)
-    {
-        return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
-    }
-
-    function handle(bytes memory _message)
+    function submit(bytes memory _data)
         public
         override
     {
-        require(_message.length == MESSAGE_LENGTH, "Message must contain 84 bytes for a successful decoding");
+        require(_data.length == MESSAGE_LENGTH, "Data must contain 84 bytes for a successful decoding");
 
         // Decode sender bytes
-        bytes memory sender = _message.slice(0, 32);
+        bytes memory sender = _data.slice(0, 32);
         // Decode recipient address
-        address payable recipient = _message.sliceAddress(32);
+        address payable recipient = _data.sliceAddress(32);
         // Deocde amount int256
-        bytes memory amountBytes = _message.slice(32 + 20, 32);
+        bytes memory amountBytes = _data.slice(32 + 20, 32);
         uint256 amount = amountBytes.decodeUint256();
 
-        sendETH(recipient, amount);
+        unlockETH(recipient, amount);
         emit Unlock(sender, recipient, amount);
     }
 
-    function sendETH(
-        address payable _recipient,
-        uint256 _amount
-    )
+    function unlockETH(address payable _recipient, uint256 _amount)
         internal
     {
         require(_amount > 0, "Must unlock a positive amount");

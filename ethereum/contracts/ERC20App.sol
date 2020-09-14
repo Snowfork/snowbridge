@@ -15,20 +15,14 @@ contract ERC20App is Application {
     uint256 public nonce;
     mapping(address => uint256) public totalTokens;
 
-    enum AppEventTags { SendETH, SendERC20 }
-
-    event AppEvent(uint _tag, bytes _data);
+    event Transfer(address _sender, bytes32 _recipient, address _token, uint256 _amount);
     event Unlock(bytes _sender, address _recipient, address _token, uint256 _amount);
 
     constructor() public {
         nonce = 0;
     }
 
-    function sendERC20(
-        bytes32 _recipient,
-        address _tokenAddr,
-        uint256 _amount
-    )
+    function sendERC20(bytes32 _recipient, address _tokenAddr, uint256 _amount)
         public
     {
        require(
@@ -41,49 +35,30 @@ contract ERC20App is Application {
         // Increment global nonce
         nonce = nonce.add(1);
 
-        bytes memory data = encodeSendData(msg.sender, _recipient, _tokenAddr,_amount, nonce);
-        emit AppEvent(uint(AppEventTags.SendERC20), data);
+        emit Transfer(msg.sender, _recipient, _tokenAddr, _amount);
     }
 
-    function encodeSendData(
-        address _sender,
-        bytes32 _recipient,
-        address _tokenAddr,
-        uint256 _amount,
-        uint256 _nonce
-    )
-        internal
-        pure
-        returns(bytes memory)
-    {
-        return abi.encode(_sender, _recipient, _tokenAddr, _amount, _nonce);
-    }
-
-    function handle(bytes memory _message)
+    function submit(bytes memory _data)
         public
         override
     {
-        require(_message.length == MESSAGE_LENGTH, "Message must contain 104 bytes for a successful decoding");
+        require(_data.length == MESSAGE_LENGTH, "Message must contain 104 bytes for a successful decoding");
 
         // Decode sender bytes
-        bytes memory sender = _message.slice(0, 32);
+        bytes memory sender = _data.slice(0, 32);
         // Decode recipient address
-        address recipient = _message.sliceAddress(32);
+        address recipient = _data.sliceAddress(32);
         // Decode token address
-        address tokenAddr = _message.sliceAddress(32 + 20);
+        address tokenAddr = _data.sliceAddress(32 + 20);
         // Deocde amount int256
-        bytes memory amountBytes = _message.slice(32 + 40, 32);
+        bytes memory amountBytes = _data.slice(32 + 40, 32);
         uint256 amount = amountBytes.decodeUint256();
 
         sendTokens(recipient, tokenAddr, amount);
         emit Unlock(sender, recipient, tokenAddr, amount);
     }
 
-    function sendTokens(
-        address _recipient,
-        address _token,
-        uint256 _amount
-    )
+    function sendTokens(address _recipient, address _token, uint256 _amount)
         internal
     {
         require(_amount > 0, "Must unlock a positive amount");
