@@ -1,6 +1,17 @@
 ---
-# Feel free to add content and custom Front Matter to this file.
-# To modify the layout, see https://jekyllrb.com/docs/themes/#overriding-theme-defaults
-
-layout: home
+layout: default
+title: Home
+nav_order: 1
+permalink: /
 ---
+
+# P&#8644;E Bridge
+{: .fs-9 }
+
+[View it on GitHub](https://github.com/Snowfork/polkadot-ethereum){: .btn .fs-5 .mb-4 .mb-md-0 }
+
+---
+
+## Getting started
+
+Foo bar
