@@ -3,6 +3,7 @@ pragma solidity >=0.6.2;
 
 import "./Decoder.sol";
 import "./Application.sol";
+import "./Verifier.sol";
 
 contract Bridge {
     using Decoder for bytes;
@@ -12,31 +13,35 @@ contract Bridge {
 
     mapping(bytes32 => bool) public eventHashes;
     mapping(address => bool) public applications;
+    Verifier verifier;
 
-    constructor(address[] memory apps) public {
-        for(uint256 i = 0; i < apps.length; i++) {
-            if(verifyApp(apps[i])) {
-                applications[apps[i]] = true;
+    constructor(address _verfierAddr, address[] memory _apps) public {
+        verifier = Verifier(_verfierAddr);
+        for(uint256 i = 0; i < _apps.length; i++) {
+            if(verifyApp(_apps[i])) {
+                applications[_apps[i]] = true;
             }
         }
     }
 
     /**
      * @dev routes the message to the specified application ID after verifying the operator's signature
-     * @param _message address _message expected type: Message { AppID [32]byte, Payload []byte }
-     * @param _hash bytes _hash is a unique hash of the event (app_id, payload, blockNum, eventId)
+     * @param _appId address _appId
+     * @param _message bytes _message contains information to be passed to the application
      */
-    function submit(bytes memory _message, bytes32 _hash)
+    function submit(address _appId, bytes memory _message)
         public
     {
-        address appID = _message.sliceAddress(32);
-        require(applications[appID], "App ID not found. Only registered application are supported");
+        require(verifier.verifyOperator(), "Tx origin must be the Bridge operator");
+        require(applications[_appId], "App ID not found. Only registered application are supported");
 
-        require(!eventHashes[_hash], "Event has already been processed");
-        eventHashes[_hash] = true;
+        bytes32 hashed = keccak256(_message);
+        require(!eventHashes[hashed], "Event has already been processed");
+        eventHashes[hashed] = true;
 
+        // TODO: slice correct data
         bytes memory payload = _message.slice(32, _message.length-1);
-        Application app = Application(appID);
+        Application app = Application(_appId);
         app.handle(payload);
     }
 

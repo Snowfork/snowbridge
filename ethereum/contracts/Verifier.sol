@@ -9,8 +9,22 @@ contract Verifier {
      * @dev constructor sets the operator's address
      * @param _operator address of the contract's operator
      */
-    constructor(address _operator) public {
+    constructor(address _operator)
+    public
+    {
         operator = _operator;
+    }
+
+    /**
+     * @dev verifies the operator as the original tx sender
+     * @return bool indicating if operator is the original sender
+     */
+    function verifyOperator()
+        public
+        view
+        returns (bool)
+    {
+       return tx.origin == operator;
     }
 
     /**
