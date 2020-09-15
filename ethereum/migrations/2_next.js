@@ -1,16 +1,22 @@
-const EthereumApp = artifacts.require("EthereumApp");
-const ERC20App = artifacts.require("ERC20App");
-const Decoder = artifacts.require("Decoder");
-const TestToken = artifacts.require("TestToken");
 const Verifier = artifacts.require("Verifier");
+const ETHApp = artifacts.require("ETHApp");
+const ERC20App = artifacts.require("ERC20App");
+const Bridge = artifacts.require("Bridge");
+const TestToken = artifacts.require("TestToken");
 
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
-    await deployer.deploy(EthereumApp);
+    // Deploy Verifier
+    await deployer.deploy(Verifier);
+
+    // Deploy Applications
+    await deployer.deploy(ETHApp);
     await deployer.deploy(ERC20App);
 
-    await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
+    // Deploy Bridge
+    await deployer.deploy(Bridge, Verifier, [ETHApp, ERC20App]);
 
-    await deployer.deploy(Verifier, accounts[0]);
+    // Deploy TEST ERC20 token for testing
+    await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
   })
 };
