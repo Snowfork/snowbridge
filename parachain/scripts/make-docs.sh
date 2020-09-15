@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Build docs
-cargo +nightly doc --workspace --no-deps --lib --exclude artemis-runtime --exclude artemis-node
+cargo +nightly doc --workspace --lib --exclude artemis-runtime --exclude artemis-node
 
 # Copy over index.html
 cp doc/index.html target/doc/
@@ -18,3 +18,5 @@ if (el.href != "index.html") {
     el.href = "../index.html";
 }
 EOF
+
+(cd target/doc; zip -r ../docs.zip .)
