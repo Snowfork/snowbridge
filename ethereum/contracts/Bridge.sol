@@ -39,8 +39,8 @@ contract Bridge {
         require(!eventHashes[hashed], "Event has already been processed");
         eventHashes[hashed] = true;
 
-        // TODO: slice correct data
-        bytes memory payload = _message.slice(32, _message.length-1);
+        // Slice payload, dropping the 14-byte verification data
+        bytes memory payload = _message.slice(0, _message.length-15);
         Application app = Application(_appId);
         app.handle(payload);
     }
