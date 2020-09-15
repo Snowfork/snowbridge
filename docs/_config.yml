@@ -13,6 +13,9 @@ aux_links:
 
 footer_content: "Copyright &copy; 2020 Snowfork"
 
+kramdown:
+  highlighter: rouge
+
 compress_html:
   clippings: all
   comments: all
@@ -20,3 +23,16 @@ compress_html:
   startings: []
   blanklines: false
   profile: false
+
+exclude:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - README.md
