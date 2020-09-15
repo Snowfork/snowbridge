@@ -1,0 +1,22 @@
+title: P&#8644;E Bridge
+email: contact@snowfork.com
+description: Polkadot Ethereum Bridge
+baseurl: ""
+url: ""
+
+theme: just-the-docs
+
+
+aux_links:
+  "GitHub":
+    - "https://github.com/Snowfork/polkadot-ethereum"
+
+footer_content: "Copyright &copy; 2020 Snowfork"
+
+compress_html:
+  clippings: all
+  comments: all
+  endings: all
+  startings: []
+  blanklines: false
+  profile: false
