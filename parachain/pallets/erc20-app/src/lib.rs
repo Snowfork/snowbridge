@@ -28,7 +28,7 @@ use frame_support::{
 };
 
 use artemis_core::{Application, BridgedAssetId};
-use artemis_bridged_asset as asset;
+use artemis_asset as asset;
 
 mod payload;
 use payload::Payload;

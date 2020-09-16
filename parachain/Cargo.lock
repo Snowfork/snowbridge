@@ -115,7 +115,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
-name = "artemis-bridged-asset"
+name = "artemis-asset"
 version = "0.1.1"
 dependencies = [
  "artemis-core",
@@ -146,7 +146,7 @@ dependencies = [
 name = "artemis-erc20-app"
 version = "0.1.1"
 dependencies = [
- "artemis-bridged-asset",
+ "artemis-asset",
  "artemis-core",
  "artemis-ethereum",
  "ethabi-decode",
@@ -168,7 +168,7 @@ dependencies = [
 name = "artemis-eth-app"
 version = "0.1.1"
 dependencies = [
- "artemis-bridged-asset",
+ "artemis-asset",
  "artemis-core",
  "artemis-ethereum",
  "ethabi-decode",
@@ -237,7 +237,7 @@ dependencies = [
 name = "artemis-runtime"
 version = "0.1.1"
 dependencies = [
- "artemis-bridged-asset",
+ "artemis-asset",
  "artemis-erc20-app",
  "artemis-eth-app",
  "frame-executive",

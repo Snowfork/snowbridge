@@ -39,7 +39,7 @@ std = [
     'balances/std',
     'bridge/std',
     'verifier/std',
-    'bridged-asset/std',
+    'asset/std',
     'eth-app/std',
     'erc20-app/std',
 ]
@@ -222,10 +222,10 @@ package = 'pallet-verifier'
 path = '../pallets/verifier'
 version = '0.1.1'
 
-[dependencies.bridged-asset]
+[dependencies.asset]
 default-features = false
-package = 'artemis-bridged-asset'
-path = '../pallets/bridged-asset'
+package = 'artemis-asset'
+path = '../pallets/asset'
 version = '0.1.1'
 
 [dependencies.eth-app]

@@ -80,9 +80,9 @@ path = "../../primitives/core"
 default-features = false
 path = "../../primitives/ethereum"
 
-[dependencies.artemis-bridged-asset]
+[dependencies.artemis-asset]
 default-features = false
-path = "../../pallets/bridged-asset"
+path = "../../pallets/asset"
 
 
 [features]
@@ -99,7 +99,7 @@ std = [
     'sp-runtime/std',
     'artemis-core/std',
     'artemis-ethereum/std',
-    'artemis-bridged-asset/std',
+    'artemis-asset/std',
     'ethabi/std',
     'rlp/std'
 ]

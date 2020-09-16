@@ -271,7 +271,7 @@ impl verifier::Trait for Runtime {
 	type Event = Event;
 }
 
-impl bridged_asset::Trait for Runtime {
+impl asset::Trait for Runtime {
 	type Event = Event;
 }
 
@@ -299,7 +299,7 @@ construct_runtime!(
 		Scheduler: scheduler::{Module, Call, Storage, Event<T>},
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
-		BridgedAsset: bridged_asset::{Module, Call, Storage, Event<T>},
+		Asset: asset::{Module, Call, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Storage, Event<T>},
 	}
