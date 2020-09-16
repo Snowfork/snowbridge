@@ -54,7 +54,7 @@ contract Bridge {
         view
         returns(bool)
     {
-        require(applications[_appID], "Application is already registered");
+        require(!applications[_appID], "Application is already registered");
 
         bytes32 codehash;
         assembly { codehash := extcodehash(_appID) }
