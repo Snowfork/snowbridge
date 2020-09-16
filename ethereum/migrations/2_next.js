@@ -9,7 +9,6 @@ module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
     // Deploy Verifier and get deployed address
     const verifier = await deployer.deploy(Verifier, accounts[0]);
-    // const verifierAddr = await Verifier.address;
 
     // Link libraries to applications
     await deployer.deploy(Decoder);
@@ -17,9 +16,6 @@ module.exports = function(deployer, network, accounts) {
     // Deploy applications
     const ethApp = await deployer.deploy(ETHApp);
     const erc20App = await deployer.deploy(ERC20App);
-
-    console.log("ethApp.address:", ethApp.address)
-    console.log("erc20App.address:", erc20App.address)
 
     // Deploy Bridge
     await deployer.deploy(Bridge, verifier.address, [ethApp.address, erc20App.address]);
