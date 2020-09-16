@@ -8,8 +8,8 @@ members = [
     'pallets/bridge',
     'pallets/bridged-asset',
     'pallets/verifier',
-    'pallets/polkaeth-app',
-    'pallets/polkaerc20-app',
+    'pallets/eth-app',
+    'pallets/erc20-app',
     'node',
     'runtime',
 ]

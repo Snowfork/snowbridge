@@ -52,6 +52,8 @@ pub struct AccountData {
 	pub free: U256
 }
 
+type BridgedAccountData = AccountData;
+
 pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -59,7 +61,7 @@ pub trait Trait: system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as Asset {
 		pub TotalIssuance: map        hasher(blake2_128_concat) BridgedAssetId => U256;
-		pub Account:       double_map hasher(blake2_128_concat) BridgedAssetId, hasher(blake2_128_concat) T::AccountId => AccountData;
+		pub Account:       double_map hasher(blake2_128_concat) BridgedAssetId, hasher(blake2_128_concat) T::AccountId => BridgedAccountData;
 	}
 }
 

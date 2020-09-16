@@ -1,5 +1,5 @@
 [package]
-name = "polkaerc20-app"
+name = "artemis-erc20-app"
 version = "0.1.1"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
