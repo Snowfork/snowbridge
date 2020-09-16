@@ -27,8 +27,8 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 
-use artemis_core::Application;
-use artemis_asset as asset;
+use artemis_core::{Application, BridgedAssetId};
+use artemis_bridged_asset as asset;
 
 mod payload;
 use payload::Payload;
@@ -52,17 +52,16 @@ decl_event!(
 	pub enum Event<T>
 	where
 		AccountId = <T as system::Trait>::AccountId,
-		TokenId = H160,
 	{
 		/// Signal a cross-chain transfer.
-		Transfer(TokenId, AccountId, H160, U256),
+		Transfer(BridgedAssetId, AccountId, H160, U256),
 	}
 );
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		/// Token address is invalid.
-		InvalidTokenId,
+		/// Asset ID is invalid.
+		InvalidAssetId,
 		/// The submitted payload could not be decoded.
 		InvalidPayload,
 	}
@@ -78,16 +77,16 @@ decl_module! {
 
 		/// Burn an ERC20 token balance
 		#[weight = 0]
-		pub fn burn(origin, token_id: H160, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, asset_id: BridgedAssetId, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			// The token_id 0 is reserved for the ETH app
-			if token_id == H160::zero() {
-				return Err(Error::<T>::InvalidTokenId.into())
+			// The asset_id 0 is reserved for the ETH app
+			if asset_id == H160::zero() {
+				return Err(Error::<T>::InvalidAssetId.into())
 			}
 
-			<asset::Module<T>>::do_burn(token_id, &who, amount)?;
-			Self::deposit_event(RawEvent::Transfer(token_id, who.clone(), recipient, amount));
+			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
+			Self::deposit_event(RawEvent::Transfer(asset_id, who.clone(), recipient, amount));
 			Ok(())
 		}
 
@@ -98,7 +97,7 @@ impl<T: Trait> Module<T> {
 
 	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
 		if payload.token_addr.is_zero() {
-			return Err(Error::<T>::InvalidTokenId.into())
+			return Err(Error::<T>::InvalidAssetId.into())
 		}
 
 		<asset::Module<T>>::do_mint(payload.token_addr, &payload.recipient_addr, payload.amount)?;

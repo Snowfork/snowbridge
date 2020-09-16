@@ -115,9 +115,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
-name = "artemis-asset"
+name = "artemis-bridged-asset"
 version = "0.1.1"
 dependencies = [
+ "artemis-core",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -192,7 +193,7 @@ dependencies = [
 name = "artemis-runtime"
 version = "0.1.1"
 dependencies = [
- "artemis-asset",
+ "artemis-bridged-asset",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -3595,14 +3596,13 @@ checksum = "feb3b2b1033b8a60b4da6ee470325f887758c95d5320f52f9ce0df055a55940e"
 name = "polkaerc20-app"
 version = "0.1.1"
 dependencies = [
- "artemis-asset",
+ "artemis-bridged-asset",
  "artemis-core",
  "artemis-ethereum",
  "ethabi-decode",
  "frame-support",
  "frame-system",
  "hex-literal 0.3.1",
- "pallet-bridge",
  "parity-scale-codec",
  "rlp",
  "rustc-hex",
@@ -3618,15 +3618,13 @@ dependencies = [
 name = "polkaeth-app"
 version = "0.1.1"
 dependencies = [
- "artemis-asset",
+ "artemis-bridged-asset",
  "artemis-core",
  "artemis-ethereum",
  "ethabi-decode",
  "frame-support",
  "frame-system",
  "hex-literal 0.3.1",
- "pallet-balances",
- "pallet-bridge",
  "parity-scale-codec",
  "rlp",
  "rustc-hex",

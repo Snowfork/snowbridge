@@ -6,11 +6,10 @@ members = [
     'primitives/core',
     'primitives/ethereum',
     'pallets/bridge',
-    'pallets/asset',
+    'pallets/bridged-asset',
     'pallets/verifier',
     'pallets/polkaeth-app',
     'pallets/polkaerc20-app',
     'node',
     'runtime',
 ]
-
