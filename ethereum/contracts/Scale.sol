@@ -3,52 +3,17 @@ pragma solidity >=0.6.2;
 
 contract Scale {
 
-    // Read a byte at a specific index and return it as type uint8
-    function readByteAtIndex(bytes memory data, uint8 index)
-        internal
-        pure
-        returns (uint8)
-    {
-        return uint8(data[index]);
-    }
-
-      // Convert bytes (big endian) to little endian format
-    function bytesToLittleEndian(bytes memory arr)
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 number;
-        for(uint i = 0; i < arr.length; i++){
-            number = number + uint(uint8(arr[i])) * (2 ** (8 * (arr.length - (i + 1))));
-        }
-        return number;
-    }
-
-     // Reverse an array of bytes in place
-    function reverseBytes(bytes memory arr)
-        internal
-        pure
-        returns(bytes memory)
-    {
-        for (uint i = 0; i < arr.length/2; i++) {
-            bytes1 current = arr[i];
-            uint256 otherIndex = arr.length - i - 1;
-            arr[i] = arr[otherIndex];
-            arr[otherIndex] = current;
-        }
-        return arr;
-    }
-
-    // Decoes a SCALE encoded uint256
+    // Decodes a SCALE encoded uint256 by converting bytes (bid endian) to little endian format
     function decodeUint256(bytes memory data)
         public
         pure
         returns (uint256)
     {
-        bytes memory reversed = reverseBytes(data);
-        uint256 lEndian = bytesToLittleEndian(reversed);
-        return lEndian;
+        uint256 number;
+        for(uint i = data.length; i > 0; i--) {
+            number = number + uint(uint8(data[i-1])) * (2 ** (8 * (i-1)));
+        }
+        return number;
     }
 
     // Decodes a SCALE encoded compact unsigned integer
@@ -85,5 +50,14 @@ contract Scale {
         } else {
             revert("Code should be unreachable");
         }
+    }
+
+    // Read a byte at a specific index and return it as type uint8
+    function readByteAtIndex(bytes memory data, uint8 index)
+        internal
+        pure
+        returns (uint8)
+    {
+        return uint8(data[index]);
     }
 }
