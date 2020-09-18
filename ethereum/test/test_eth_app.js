@@ -14,7 +14,6 @@ contract("Bank", function (accounts) {
   const userOne = accounts[1];
 
   // Constants
-  const NULL_ADDRESS = "0x0000000000000000000000000000000000000000";
   const POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
   const BYTES32_LENGTH = 64;
 
@@ -53,41 +52,13 @@ contract("Bank", function (accounts) {
 
       // Confirm app event emitted with expected values
       const appEvent = logs.find(
-          e => e.event === "AppEvent"
+          e => e.event === "AppTransfer"
       );
 
-      // Clean data by removing '0x' prefix
-      const data = appEvent.args._data.slice(2, appEvent.args._data.length);
-
-      // Sender's Ethereum address
-      const expectedSender = Web3Utils.padLeft(userOne.toLowerCase().slice(2, userOne.length), BYTES32_LENGTH);
-      let start = 0;
-      let end = BYTES32_LENGTH;
-      data.slice(start, end).should.be.equal(expectedSender);
-
-      // Move forward one byte slice
-      start = end;
-      end = end + BYTES32_LENGTH;
-
-      // ERC20 token address
-      const expectedTokenAddr = Web3Utils.padLeft(NULL_ADDRESS.slice(2, NULL_ADDRESS.length), BYTES32_LENGTH);;
-      start = end;
-      end = end + BYTES32_LENGTH;
-      data.slice(start, end).should.be.equal(expectedTokenAddr);
-
-      // Uint256 amount
-      const encodedAmount = Web3Utils.padLeft(Web3Utils.numberToHex(weiAmount), 64);
-      const expectedAmount = encodedAmount.slice(2, encodedAmount.length);
-      start = end;
-      end = end + BYTES32_LENGTH;
-      data.slice(start, end).should.be.equal(expectedAmount);
-
-      // Uint256 nonce
-      const encodedNonce = Web3Utils.padLeft(Web3Utils.numberToHex(beforeNonce+1), 64);
-      const expectedNonce = encodedNonce.slice(2, encodedNonce.length);
-      start = end;
-      end = end + BYTES32_LENGTH;
-      data.slice(start, end).should.be.equal(expectedNonce);
+      appEvent.args._sender.should.be.equal(userOne);
+      const expectedRecipient = Web3Utils.padRight(Web3Utils.toHex(recipient).toLowerCase(), BYTES32_LENGTH);
+      appEvent.args._recipient.should.be.equal(expectedRecipient);
+      Number(appEvent.args._amount).should.be.bignumber.equal(weiAmount);
 
       // Confirm contract's Ethereum balance has increased
       const contractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
@@ -105,7 +76,7 @@ contract("Bank", function (accounts) {
   });
 
 
-  describe("unlocks", function () {
+  describe("handle received messages", function () {
 
     before(async function () {
         this.ethApp = await ETHApp.new();
@@ -114,7 +85,7 @@ contract("Bank", function (accounts) {
         const lockAmountWei = 5000;
         const substrateRecipient = Buffer.from(POLKADOT_ADDRESS, "hex");
 
-        // Send ERC20 tokens to a substrate recipient
+        // Send to a substrate recipient to load contract with unlockable ETH
         await this.ethApp.sendETH(
           substrateRecipient,
           {
@@ -137,7 +108,7 @@ contract("Bank", function (accounts) {
       const beforeContractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
       const beforeUserBalanceWei = await web3.eth.getBalance(decodedRecipient);
 
-     const { logs } = await this.ethApp.unlockETH(encodedData).should.be.fulfilled;
+     const { logs } = await this.ethApp.handle(encodedData).should.be.fulfilled;
 
       // Confirm unlock event emitted with expected values
       const unlockEvent = logs.find(

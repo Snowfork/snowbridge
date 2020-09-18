@@ -76,43 +76,15 @@ contract("ERC20App", function (accounts) {
 
       // Confirm app event emitted with expected values
       const appEvent = logs.find(
-          e => e.event === "AppEvent"
+          e => e.event === "AppTransfer"
       );
 
-      Number(appEvent.args._tag).should.be.bignumber.equal(1);
-
-      // Clean data by removing '0x' prefix
-      const data = appEvent.args._data.slice(2, appEvent.args._data.length);
-
-      // Sender's Ethereum address
-      let start = 0;
-      let end = BYTES32_LENGTH;
-      const expectedSender = Web3Utils.padLeft(userOne.toLowerCase().slice(2, userOne.length), BYTES32_LENGTH);
-      data.slice(start, end).should.be.equal(expectedSender);
-
-      // Move forward one byte slice
-      start = end;
-      end = end + BYTES32_LENGTH;
-
-      // ERC20 token address
-      const expectedTokenAddr =  Web3Utils.padLeft(this.token.address.toLowerCase().slice(2, this.token.address.length), BYTES32_LENGTH);
-      start = end;
-      end = end + BYTES32_LENGTH;
-      data.slice(start, end).should.be.equal(expectedTokenAddr);
-
-      // Uint256 amount
-      const encodedAmount = Web3Utils.padLeft(Web3Utils.numberToHex(amount), 64);
-      const expectedAmount = encodedAmount.slice(2, encodedAmount.length);
-      start = end;
-      end = end + BYTES32_LENGTH;
-      data.slice(start, end).should.be.equal(expectedAmount);
-
-      // Uint256 nonce
-      const encodedNonce = Web3Utils.padLeft(Web3Utils.numberToHex(beforeNonce+1), 64);
-      const expectedNonce = encodedNonce.slice(2, encodedNonce.length);
-      start = end;
-      end = end + BYTES32_LENGTH;
-      data.slice(start, end).should.be.equal(expectedNonce);
+      // Check event fields
+      appEvent.args._sender.should.be.equal(userOne);
+      const expectedRecipient = Web3Utils.padRight(Web3Utils.toHex(recipient).toLowerCase(), BYTES32_LENGTH);
+      appEvent.args._recipient.should.be.equal(expectedRecipient);
+      appEvent.args._token.should.be.equal(this.token.address);
+      Number(appEvent.args._amount).should.be.bignumber.equal(amount);
 
       //Get the user and ERC20App token balance after deposit
       const afterTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
@@ -132,7 +104,7 @@ contract("ERC20App", function (accounts) {
     });
   });
 
-  describe("unlocks", function () {
+  describe("handle received messages", function () {
 
     before(async function () {
         this.erc20App = await ERC20App.new();
@@ -148,16 +120,16 @@ contract("ERC20App", function (accounts) {
 
         // Prepare transaction parameters
         const lockAmount = 5000;
-        const substrateRecipient = Buffer.from(POLKADOT_ADDRESS, "hex");
+        const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
 
         // Approve tokens to contract
         await this.token.approve(this.erc20App.address, lockAmount, {
           from: userOne
         }).should.be.fulfilled;
 
-        // Send ERC20 tokens to a substrate recipient
+        // Deposit ERC20 tokens to the contract (so the app has funds to be unlocked)
         await this.erc20App.sendERC20(
-          substrateRecipient,
+          recipient,
           this.token.address,
           lockAmount,
           {
@@ -169,7 +141,7 @@ contract("ERC20App", function (accounts) {
 
     it("should support ERC20 unlocks", async function () {
       // Encoded data
-      const encodedData = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dcffeaaf7681c89285d65cfbe808b80e502696573dda6327139485221633a1fcd65f4ac932e60a2e13412000000000000000000000000000000000000000000000000000000000000";
+      const encodedData = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dcffeaaf7681c89285d65cfbe808b80e502696573eec918d74c746167564401103096D45BbD494B743412000000000000000000000000000000000000000000000000000000000000"
       // Decoded data
       const decodedSender = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
       const decodedRecipient = "0xCfFEAAf7681c89285D65CfbE808b80e502696573";
@@ -181,7 +153,7 @@ contract("ERC20App", function (accounts) {
       const beforeTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
       const beforeUserBalance = Number(await this.token.balanceOf(decodedRecipient));
 
-     const { logs } = await this.erc20App.unlockERC20(encodedData).should.be.fulfilled;
+     const { logs } = await this.erc20App.handle(encodedData).should.be.fulfilled;
 
       // Confirm unlock event emitted with expected values
       const unlockEvent = logs.find(

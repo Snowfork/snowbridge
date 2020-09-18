@@ -15,7 +15,7 @@ contract ERC20App is Application {
     uint256 public nonce;
     mapping(address => uint256) public totalTokens;
 
-    event Transfer(address _sender, bytes32 _recipient, address _token, uint256 _amount);
+    event AppTransfer(address _sender, bytes32 _recipient, address _token, uint256 _amount);
     event Unlock(bytes _sender, address _recipient, address _token, uint256 _amount);
 
     constructor() public {
@@ -35,7 +35,7 @@ contract ERC20App is Application {
         // Increment global nonce
         nonce = nonce.add(1);
 
-        emit Transfer(msg.sender, _recipient, _tokenAddr, _amount);
+        emit AppTransfer(msg.sender, _recipient, _tokenAddr, _amount);
     }
 
     function handle(bytes memory _data)
