@@ -80,7 +80,7 @@ module.exports = async () => {
     console.log("TestTokens succesfully sent to ERC20App:")
 
     // Get event logs
-    const event = logs.find(e => e.event === "AppEvent");
+    const event = logs.find(e => e.event === "AppTransfer");
 
     // Parse event fields
     const appEvent = {

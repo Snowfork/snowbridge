@@ -14,7 +14,7 @@ contract ETHApp is Application {
     uint256 public nonce;
     uint256 public totalETH;
 
-    event Transfer(address _sender, bytes32 _recipient, uint256 _amount);
+    event AppTransfer(address _sender, bytes32 _recipient, uint256 _amount);
     event Unlock(bytes _sender, address _recipient, uint256 _amount);
 
     constructor() public {
@@ -32,7 +32,7 @@ contract ETHApp is Application {
         // Increment global nonce
         nonce = nonce.add(1);
 
-        emit Transfer(msg.sender, _recipient, msg.value);
+        emit AppTransfer(msg.sender, _recipient, msg.value);
     }
 
     function handle(bytes memory _data)

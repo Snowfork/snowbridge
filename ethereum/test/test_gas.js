@@ -1,4 +1,5 @@
-const Bank = artifacts.require('Bank');
+const ETHApp = artifacts.require('ETHApp');
+const ERC20App = artifacts.require('ERC20App');
 const TestToken = artifacts.require('TestToken');
 
 const BigNumber = web3.BigNumber;
@@ -19,7 +20,8 @@ contract('Gas expenditures', function (accounts) {
     describe('Gas costs', function(){
 
         beforeEach(async function () {
-            this.bank = await Bank.new();
+          this.ethApp = await ETHApp.new();
+          this.erc20App = await ERC20App.new();
         });
 
         it('sendETH gas usage', async function () {
@@ -28,7 +30,7 @@ contract('Gas expenditures', function (accounts) {
             const weiAmount = web3.utils.toWei("0.25", "ether");
 
             // Deposit Ethereum to the contract
-            const result = await this.bank.sendETH(
+            const result = await this.ethApp.sendETH(
                 recipient,
                 {from: userOne, value: weiAmount}
               ).should.be.fulfilled;
@@ -53,12 +55,12 @@ contract('Gas expenditures', function (accounts) {
             const amount = 100;
 
             // Approve tokens to contract
-            await this.token.approve(this.bank.address, amount, {
+            await this.token.approve(this.erc20App.address, amount, {
                 from: userOne
             }).should.be.fulfilled;
 
             // Deposit ERC20 tokens to the contract
-            const result = await this.bank.sendERC20(
+            const result = await this.erc20App.sendERC20(
                 recipient,
                 this.token.address,
                 amount,
