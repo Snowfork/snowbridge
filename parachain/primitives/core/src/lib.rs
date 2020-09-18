@@ -13,7 +13,12 @@ use sp_std::vec::Vec;
 pub mod types;
 pub mod registry;
 
-pub use types::{AppId, Message, VerificationInput};
+pub use types::{
+	AppId,
+	Message,
+	VerificationInput,
+	BridgedAssetId
+};
 
 /// A trait for verifying messages.
 ///

@@ -1,6 +1,6 @@
-//! # ERC20
+//! # ETH
 //!
-//! An application that implements bridged ERC20 token assets.
+//! An application that implements a bridged ETH asset.
 //!
 //! ## Overview
 //!
@@ -10,24 +10,23 @@
 //!
 //! ## Interface
 //!
-//! This application implements the [`Application`] trait and conforms to its interface.
+//! This application implements the [`Application`] trait and conforms to its interface
 //!
 //! ### Dispatchable Calls
 //!
-//! - `burn`: Burn an ERC20 token balance.
+//! - `burn`: Burn an ETH balance.
 //!
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::prelude::*;
-use sp_core::{H160, U256};
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
 };
+use sp_std::prelude::*;
+use sp_core::{H160, U256};
 
-use artemis_core::Application;
+use artemis_core::{Application, BridgedAssetId};
 use artemis_asset as asset;
 
 mod payload;
@@ -44,25 +43,24 @@ pub trait Trait: system::Trait + asset::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Erc20Module {}
+	trait Store for Module<T: Trait> as Erc20Module {
+
+	}
 }
 
 decl_event!(
-    /// Events for the ERC20 module.
+    /// Events for the ETH module.
 	pub enum Event<T>
 	where
-		AccountId = <T as system::Trait>::AccountId,
-		TokenId = H160,
+		AccountId = <T as system::Trait>::AccountId
 	{
 		/// Signal a cross-chain transfer.
-		Transfer(TokenId, AccountId, H160, U256),
+		Transfer(AccountId, H160, U256),
 	}
 );
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		/// Token address is invalid.
-		InvalidTokenId,
 		/// The submitted payload could not be decoded.
 		InvalidPayload,
 	}
@@ -76,18 +74,14 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		/// Burn an ERC20 token balance
+		// Users should burn their holdings to release funds on the Ethereum side
+		// TODO: Calculate weights
 		#[weight = 0]
-		pub fn burn(origin, token_id: H160, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-
-			// The token_id 0 is reserved for the ETH app
-			if token_id == H160::zero() {
-				return Err(Error::<T>::InvalidTokenId.into())
-			}
-
-			<asset::Module<T>>::do_burn(token_id, &who, amount)?;
-			Self::deposit_event(RawEvent::Transfer(token_id, who.clone(), recipient, amount));
+			let asset_id: BridgedAssetId = H160::zero();
+			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
+			Self::deposit_event(RawEvent::Transfer(who.clone(), recipient, amount));
 			Ok(())
 		}
 
@@ -97,15 +91,9 @@ decl_module! {
 impl<T: Trait> Module<T> {
 
 	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
-		if payload.token_addr.is_zero() {
-			return Err(Error::<T>::InvalidTokenId.into())
-		}
-
-		<asset::Module<T>>::do_mint(payload.token_addr, &payload.recipient_addr, payload.amount)?;
-
-		Ok(())
+		let asset_id: BridgedAssetId = H160::zero();
+		<asset::Module<T>>::do_mint(asset_id, &payload.recipient_addr, payload.amount)
 	}
-
 }
 
 impl<T: Trait> Application for Module<T> {

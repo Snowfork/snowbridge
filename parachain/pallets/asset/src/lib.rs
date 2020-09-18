@@ -1,10 +1,10 @@
 //! # Asset
 //!
-//! The asset module provides functionality for handling asset balances.
+//! The asset module provides functionality for handling bridged asset balances.
 //!
 //! ## Overview
 //!
-//! This module is used by the ETH and ERC20 pallets to store account balances for an arbitrary number of assets.
+//! This module is used by the ETH and ERC20 pallets to store account balances for bridged assets.
 //!
 //! Each asset is identified by a unique `H160` hash. This is useful for tracking ERC20 tokens which on Ethereum are identified by a 20-byte contract address.
 //!
@@ -30,7 +30,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_std::prelude::*;
-use sp_core::{H160, U256, RuntimeDebug};
+use sp_core::{U256, RuntimeDebug};
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
@@ -39,18 +39,20 @@ use frame_support::{
 
 use codec::{Encode, Decode};
 
+use artemis_core::BridgedAssetId;
+
 #[cfg(test)]
 mod mock;
 
 #[cfg(test)]
 mod tests;
 
-pub type AssetId = H160;
-
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug)]
 pub struct AccountData {
 	pub free: U256
 }
+
+type AssetAccountData = AccountData;
 
 pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -58,8 +60,8 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Asset {
-		pub TotalIssuance: map        hasher(blake2_128_concat) AssetId => U256;
-		pub Account:       double_map hasher(blake2_128_concat) AssetId, hasher(blake2_128_concat) T::AccountId => AccountData;
+		pub TotalIssuance: map        hasher(blake2_128_concat) BridgedAssetId => U256;
+		pub Account:       double_map hasher(blake2_128_concat) BridgedAssetId, hasher(blake2_128_concat) T::AccountId => AssetAccountData;
 	}
 }
 
@@ -68,9 +70,9 @@ decl_event!(
 	where
 		AccountId = <T as system::Trait>::AccountId,
 	{
-		Burned(H160, AccountId, U256),
-		Minted(H160, AccountId, U256),
-		Transferred(H160, AccountId, AccountId, U256),
+		Burned(BridgedAssetId, AccountId, U256),
+		Minted(BridgedAssetId, AccountId, U256),
+		Transferred(BridgedAssetId, AccountId, AccountId, U256),
 	}
 );
 
@@ -101,7 +103,7 @@ decl_module! {
 		/// Transfer some free balance to another account.
 		// TODO: Calculate weight
 		#[weight = 0]
-		pub fn transfer(origin, asset_id: H160, to: T::AccountId, amount: U256) -> DispatchResult {
+		pub fn transfer(origin, asset_id: BridgedAssetId, to: T::AccountId, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_transfer(asset_id, &who, &to, amount)?;
 			Ok(())
@@ -112,11 +114,11 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	pub fn free_balance(asset_id: AssetId, who: &T::AccountId) -> U256 {
+	pub fn free_balance(asset_id: BridgedAssetId, who: &T::AccountId) -> U256 {
 		<Account<T>>::get(asset_id, who).free
 	}
 
-	pub fn do_mint(asset_id: AssetId, who: &T::AccountId, amount: U256) -> DispatchResult  {
+	pub fn do_mint(asset_id: BridgedAssetId, who: &T::AccountId, amount: U256) -> DispatchResult  {
 		if amount.is_zero() {
 			return Ok(())
 		}
@@ -133,7 +135,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	pub fn do_burn(asset_id: AssetId, who: &T::AccountId, amount: U256) -> DispatchResult  {
+	pub fn do_burn(asset_id: BridgedAssetId, who: &T::AccountId, amount: U256) -> DispatchResult  {
 		if amount.is_zero() {
 			return Ok(())
 		}
@@ -151,7 +153,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn do_transfer(
-		asset_id: AssetId,
+		asset_id: BridgedAssetId,
 		from: &T::AccountId,
 		to: &T::AccountId,
 		amount: U256)
