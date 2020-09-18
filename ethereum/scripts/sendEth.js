@@ -48,7 +48,7 @@ module.exports = async () => {
       console.log("Sent eth...");
 
       // Get event logs
-      const event = logs.find(e => e.event === "Transfer");
+      const event = logs.find(e => e.event === "AppTransfer");
 
       console.log(event.args);
     } catch (error) {
