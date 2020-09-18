@@ -100,6 +100,11 @@ contract Verifier {
             v := byte(0, mload(add(_signature, 0x60)))
         }
 
+        // Prevent malleable signatures, see https://www.di.ens.fr/~stern/data/St101.pdf
+        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
+            revert("ECDSA: invalid signature 's' value");
+        }
+
         // Version of signature should be 27 or 28, but 0 and 1 are also possible versions
         if (v < 27) {
             v += 27;
