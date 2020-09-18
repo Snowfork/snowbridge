@@ -1,8 +1,6 @@
-# Bridgerelayer
+# Relay
 
 Relayer service that streams transactions from blockchain networks, packages data into messages, and sends the packets to the correlated bridge component.
-
-Note: the bridgerelayer is currently in a boilerplate/architectural design state, it's not functional yet.
 
 Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe/ChainBridge). This relayer service
 is inspired by their design and incorporates some of their code.
