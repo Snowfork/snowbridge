@@ -16,7 +16,7 @@ See [ethereum/README.md](ethereum/README.md)
 ### Relayer
 This folder includes our Relayer daemon that will be run by relayers to watch and relay 2-way messages.
 
-See [bridgerelayer/README.md](bridgerelayer/README.md)
+See [relay/README.md](relay/README.md)
 
 ### Prover
 This folder includes our Prover daemon that will create proofs later used to verify cross-chain state.
