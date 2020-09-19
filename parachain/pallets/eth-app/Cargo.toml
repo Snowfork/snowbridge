@@ -1,5 +1,5 @@
 [package]
-name = "polkaerc20-app"
+name = "artemis-eth-app"
 version = "0.1.1"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
@@ -9,8 +9,8 @@ targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
-rlp = { version = "0.4", default-features = false }
 hex-literal = { version = "0.3.1", default-features = false }
+rlp = { version = "0.4", default-features = false }
 
 [dependencies.codec]
 default-features = false
@@ -84,9 +84,6 @@ path = "../../primitives/ethereum"
 default-features = false
 path = "../../pallets/asset"
 
-[dependencies.pallet-bridge]
-default-features = false
-path = "../../pallets/bridge"
 
 [features]
 default = ['std']
@@ -102,6 +99,7 @@ std = [
     'sp-runtime/std',
     'artemis-core/std',
     'artemis-ethereum/std',
+    'artemis-asset/std',
     'ethabi/std',
     'rlp/std'
 ]

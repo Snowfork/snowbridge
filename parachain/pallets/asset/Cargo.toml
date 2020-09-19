@@ -64,6 +64,10 @@ optional = true
 version = '1.0.101'
 features = ["derive"]
 
+[dependencies.artemis-core]
+default-features = false
+path = "../../primitives/core"
+
 [features]
 default = ['std']
 std = [
@@ -76,4 +80,5 @@ std = [
     'sp-std/std',
     'sp-io/std',
     'sp-runtime/std',
+    'artemis-core/std'
 ]
