@@ -4,7 +4,7 @@ use artemis_ethereum::{DecodeError, log::Log, H160, U256};
 use sp_std::prelude::*;
 
 static EVENT_ABI: &ABIEvent = &ABIEvent {
-	signature: "Transfer(address,bytes32,uint256)",
+	signature: "AppTransfer(address,bytes32,uint256)",
 	inputs: &[
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::FixedBytes(32), indexed: false },

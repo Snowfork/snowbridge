@@ -39,7 +39,7 @@ Here is an example config.toml:
 endpoint = "ws://localhost:9545/"
 
 [ethereum.bridge]
-address = "0x95aF4D3B8938063486fE23C8D8867deD6aee5646"
+address = "0x17f7C1e314180D8b8588CA50cF09A0e0847c77F6"
 abi = "~/.config/artemis-relay/ethereum/Bridge.json"
 
 [ethereum.apps]

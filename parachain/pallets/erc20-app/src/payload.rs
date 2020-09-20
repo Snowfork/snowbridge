@@ -3,7 +3,7 @@ use ethabi::{Event as ABIEvent, Param, ParamKind, Token};
 use artemis_ethereum::{DecodeError, log::Log, H160, U256};
 
 static EVENT_ABI: &ABIEvent = &ABIEvent {
-	signature: "Transfer(address,bytes32,address,uint256)",
+	signature: "AppTransfer(address,bytes32,address,uint256)",
 	inputs: &[
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::FixedBytes(32), indexed: false },
