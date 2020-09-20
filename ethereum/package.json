@@ -3,9 +3,11 @@
   "dependencies": {
     "@openzeppelin/contracts": "^3.1.0",
     "@truffle/contract": "^4.0.31",
+    "@truffle/hdwallet-provider": "^1.1.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "chai-bignumber": "^3.0.0",
+    "dotenv": "^8.2.0",
     "solc": "^0.6.12",
     "truffle": "^5.1.32",
     "web3": "^1.2.9",
