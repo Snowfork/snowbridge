@@ -118,11 +118,11 @@ export ETH_APP_ID=<CONTRACT_ADDR>
 export ERC20_APP_ID=<CONTRACT_ADDR>
 ```
 
-Example (note addresses do not have '0x' prefix):
+Example:
 
 ```bash
-export ETH_APP_ID=0d27b0069241c03575669fed1badcbccdc0dd4d1
-export ERC20_APP_ID=8fe1b1233f7032cef8cfc5eaaf411dffaa77a07c
+export ETH_APP_ID=0x0d27b0069241c03575669fed1badcbccdc0dd4d1
+export ERC20_APP_ID=0x8fe1b1233f7032cef8cfc5eaaf411dffaa77a07c
 ```
 
 Now rebuild the chain using the steps in [Build](#build).

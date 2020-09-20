@@ -13,7 +13,6 @@ struct StringError {
     error: &'static str
 }
 
-
 impl StringError {
     fn new(error: &'static str) -> Self {
         return StringError { error }
@@ -41,7 +40,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for appid_env in appid_envs.into_iter() {
         let app_id: Vec<u8> = match env::var(appid_env).ok() {
             Some(value) => {
-                let app_id: Vec<u8> = value.as_str().from_hex().map_err(|_| Box::new(StringError::new("Cannot decode address")))?;
+                let stripped = match value.strip_prefix("0x") {
+                    Some(rest) => rest,
+                    None => return Err(Box::new(StringError::new("Invalid Ethereum address")))
+                };
+                let app_id: Vec<u8> = stripped.from_hex().map_err(|_| Box::new(StringError::new("Cannot decode address")))?;
                 if app_id.len() != 20 {
                     return Err(Box::new(StringError::new("Invalid Ethereum address")));
                 }
