@@ -27,7 +27,12 @@ const Name = "Ethereum"
 func NewChain(config *Config, ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
 
-	contracts, err := LoadContracts(config)
+	bridgeContract, err := LoadBridgeContract(config)
+	if err != nil {
+		return nil, err
+	}
+
+	appContracts, err := LoadAppContracts(config)
 	if err != nil {
 		return nil, err
 	}
@@ -39,12 +44,12 @@ func NewChain(config *Config, ethMessages chan chain.Message, subMessages chan c
 
 	conn := NewConnection(config.Endpoint, kp, log)
 
-	listener, err := NewListener(conn, ethMessages, contracts, log)
+	listener, err := NewListener(conn, ethMessages, appContracts, log)
 	if err != nil {
 		return nil, err
 	}
 
-	writer, err := NewWriter(conn, subMessages, log)
+	writer, err := NewWriter(conn, subMessages, bridgeContract, log)
 	if err != nil {
 		return nil, err
 	}
