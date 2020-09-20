@@ -118,6 +118,7 @@ checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 name = "artemis-asset"
 version = "0.1.1"
 dependencies = [
+ "artemis-core",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -138,6 +139,50 @@ dependencies = [
  "parity-scale-codec",
  "rustc-hex",
  "sp-core",
+ "sp-std",
+]
+
+[[package]]
+name = "artemis-erc20-app"
+version = "0.1.1"
+dependencies = [
+ "artemis-asset",
+ "artemis-core",
+ "artemis-ethereum",
+ "ethabi-decode",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.1",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "artemis-eth-app"
+version = "0.1.1"
+dependencies = [
+ "artemis-asset",
+ "artemis-core",
+ "artemis-ethereum",
+ "ethabi-decode",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.1",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -193,6 +238,8 @@ name = "artemis-runtime"
 version = "0.1.1"
 dependencies = [
  "artemis-asset",
+ "artemis-erc20-app",
+ "artemis-eth-app",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -207,8 +254,6 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-verifier",
  "parity-scale-codec",
- "polkaerc20-app",
- "polkaeth-app",
  "serde",
  "sp-api",
  "sp-block-builder",
@@ -3590,53 +3635,6 @@ name = "platforms"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "feb3b2b1033b8a60b4da6ee470325f887758c95d5320f52f9ce0df055a55940e"
-
-[[package]]
-name = "polkaerc20-app"
-version = "0.1.1"
-dependencies = [
- "artemis-asset",
- "artemis-core",
- "artemis-ethereum",
- "ethabi-decode",
- "frame-support",
- "frame-system",
- "hex-literal 0.3.1",
- "pallet-bridge",
- "parity-scale-codec",
- "rlp",
- "rustc-hex",
- "serde",
- "sp-core",
- "sp-io",
- "sp-keyring",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "polkaeth-app"
-version = "0.1.1"
-dependencies = [
- "artemis-asset",
- "artemis-core",
- "artemis-ethereum",
- "ethabi-decode",
- "frame-support",
- "frame-system",
- "hex-literal 0.3.1",
- "pallet-balances",
- "pallet-bridge",
- "parity-scale-codec",
- "rlp",
- "rustc-hex",
- "serde",
- "sp-core",
- "sp-io",
- "sp-keyring",
- "sp-runtime",
- "sp-std",
-]
 
 [[package]]
 name = "ppv-lite86"

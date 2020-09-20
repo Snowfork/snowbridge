@@ -230,13 +230,13 @@ version = '0.1.1'
 
 [dependencies.eth-app]
 default-features = false
-package = 'polkaeth-app'
-path = '../pallets/polkaeth-app'
+package = 'artemis-eth-app'
+path = '../pallets/eth-app'
 version = '0.1.1'
 
 [dependencies.erc20-app]
 default-features = false
-package = 'polkaerc20-app'
-path = '../pallets/polkaerc20-app'
+package = 'artemis-erc20-app'
+path = '../pallets/erc20-app'
 version = '0.1.1'
 

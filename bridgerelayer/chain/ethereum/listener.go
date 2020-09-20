@@ -87,7 +87,7 @@ func (li *Listener) pollEvents(ctx context.Context) error {
 }
 
 func makeQuery(contract Contract) geth.FilterQuery {
-	signature := contract.ABI.Events["Transfer"].ID.Hex()
+	signature := contract.ABI.Events["AppTransfer"].ID.Hex()
 	topic := gethCommon.HexToHash(signature)
 
 	return geth.FilterQuery{

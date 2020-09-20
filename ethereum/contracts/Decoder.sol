@@ -3,32 +3,17 @@ pragma solidity >=0.6.2;
 
 library Decoder {
 
-    // Decoes a SCALE encoded uint256
-    function decodeUint256(bytes memory data) internal pure returns (uint256) {
-        bytes memory reversed = reverseBytes(data);
-        uint256 lEndian = bytesToLittleEndian(reversed);
-        return lEndian;
-    }
-
-    // Convert bytes (big endian) to little endian format
-    function bytesToLittleEndian(bytes memory arr) internal pure returns (uint256) {
+    // Decodes a SCALE encoded uint256 by converting bytes (bid endian) to little endian format
+    function decodeUint256(bytes memory data)
+        public
+        pure
+        returns (uint256)
+    {
         uint256 number;
-        for(uint i = 0; i < arr.length; i++){
-            number = number + uint(uint8(arr[i])) * (2 ** (8 * (arr.length - (i + 1))));
+        for(uint i = data.length; i > 0; i--) {
+            number = number + uint(uint8(data[i-1])) * (2 ** (8 * (i-1)));
         }
         return number;
-    }
-
-     // Reverse an array of bytes in place
-    function reverseBytes(bytes memory arr) internal pure returns (bytes memory)
-    {
-        for (uint i = 0; i < arr.length/2; i++) {
-            bytes1 current = arr[i];
-            uint256 otherIndex = arr.length - i - 1;
-            arr[i] = arr[otherIndex];
-            arr[otherIndex] = current;
-        }
-        return arr;
     }
 
     // Slice a section from a byte array.
@@ -73,6 +58,7 @@ library Decoder {
         return temp;
     }
 
+    // Slice 20 bytes and cast to an address
     function sliceAddress(bytes memory _bytes, uint256 _start) internal pure returns (address payable) {
         require(_bytes.length >= (_start + 20), "Read out of bounds");
 

@@ -1,6 +1,12 @@
+// Example usage:
+// truffle exec sendErc20.js [amount] [token-contract-address] [polkadot-recipient]
+// truffle exec sendErc20.js [amount] [token-contract-address] [polkadot-recipient] --network ropsten
+
 module.exports = async () => {
   // Imports
+  require("dotenv").config();
   const Web3 = require("web3");
+  const HDWalletProvider = require("@truffle/hdwallet-provider");
   const truffleContract = require("@truffle/contract");
   const tokenContract = truffleContract(
     require("../build/contracts/TestToken.json")
@@ -16,7 +22,13 @@ module.exports = async () => {
       return
   }
 
-  const polkadotRecipient = process.argv[5].toString();
+  const tokenContractAddress = process.argv[5].toString();
+  if (!tokenContractAddress) {
+      console.log("Must provide a valid token contract address")
+      return
+  }
+
+  const polkadotRecipient = process.argv[6].toString();
   if (!polkadotRecipient) {
     console.log("Must provide a Polkadot recipient")
     return
@@ -24,9 +36,18 @@ module.exports = async () => {
   const recipient = Buffer.from(polkadotRecipient, "hex");
 
   // Set up provider and contracts
-  let provider = new Web3.providers.HttpProvider("http://localhost:9545");
-  const web3 = new Web3(provider);
+  let provider;
+  const NETWORK_ROPSTEN = process.argv[7] === "--network" && process.argv[8] === "ropsten";
+  if (NETWORK_ROPSTEN) {
+      provider = new HDWalletProvider(
+          process.env.MNEMONIC,
+          "https://ropsten.infura.io/v3/".concat(process.env.INFURA_PROJECT_ID)
+      );
+  } else {
+      provider = new Web3.providers.HttpProvider(process.env.LOCAL_PROVIDER);
+  }
 
+  const web3 = new Web3(provider);
   erc20AppContract.setProvider(web3.currentProvider);
   tokenContract.setProvider(web3.currentProvider);
 
@@ -64,10 +85,6 @@ module.exports = async () => {
 
   // 2. Send ERC20 tokens to ERC20App
   try {
-    const tokenContractAddress = await tokenContract.deployed().then(function(instance) {
-      return instance.address;
-    });
-
     const { logs } = await erc20AppContract.deployed().then(function (instance) {
       console.log("\n2. Connected to ERC20App contract, sending TestTokens...");
       return instance.sendERC20(recipient, tokenContractAddress, amount, {
@@ -80,7 +97,7 @@ module.exports = async () => {
     console.log("TestTokens succesfully sent to ERC20App:")
 
     // Get event logs
-    const event = logs.find(e => e.event === "AppEvent");
+    const event = logs.find(e => e.event === "AppTransfer");
 
     // Parse event fields
     const appEvent = {

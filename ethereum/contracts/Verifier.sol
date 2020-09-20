@@ -9,8 +9,50 @@ contract Verifier {
      * @dev constructor sets the operator's address
      * @param _operator address of the contract's operator
      */
-    constructor(address _operator) public {
+    constructor(address _operator)
+    public
+    {
         operator = _operator;
+    }
+
+    /**
+     * @dev verifies the operator as the original tx sender
+     * @return bool indicating if operator is the original sender
+     */
+    function verifyOperator()
+        public
+        view
+        returns (bool)
+    {
+       return tx.origin == operator;
+    }
+
+    /**
+     * @dev recreates the hashed prefixed message signed on the client from raw message bytes
+     * @param _rawMessage bytes _rawMessage is the raw message
+     * @param _signature bytes _signature is the operator's signature upon the hashed, prefixed message
+     * @return bool indicating if operator is the signer
+     */
+    function verifyBytes(bytes memory _rawMessage, bytes memory _signature)
+        public
+        view
+        returns (bool)
+    {
+        // This recreates the message hash that was signed on the client
+        bytes32 signedHash = prefixed(keccak256(_rawMessage));
+        // Verify that this signature is by the operator on the message hash
+        return verify(signedHash, _signature);
+    }
+
+    /**
+     * @dev Builds a prefixed hash to mimic the behavior of eth_sign
+     * @param _hashedMessage bytes32 is the unprefixed hashed message
+     * @return bytes32 the prefixed hashed message
+     */
+    function prefixed(bytes32 _hashedMessage) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", _hashedMessage)
+        );
     }
 
     /**
@@ -56,6 +98,11 @@ contract Verifier {
             r := mload(add(_signature, 0x20))
             s := mload(add(_signature, 0x40))
             v := byte(0, mload(add(_signature, 0x60)))
+        }
+
+        // Prevent malleable signatures, see https://www.di.ens.fr/~stern/data/St101.pdf
+        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
+            revert("ECDSA: invalid signature 's' value");
         }
 
         // Version of signature should be 27 or 28, but 0 and 1 are also possible versions
