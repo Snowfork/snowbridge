@@ -30,26 +30,25 @@ To enable revive for linting in VS-code, add the following to your config:
 
 ## Configuration
 
-Before running the relay, it needs to be configured first. Configuration is read from `~/.config/artemis-relay/config.toml`.
+Before running the relay, it needs to be configured first. Configuration is read from `~/.config/artemis-relay/config.toml` or the directory in which the relayer binary is located.
 
 Here is an example config.toml:
 ```toml
 [ethereum]
-endpoint = "ws://localhost:7545/"
+endpoint = "ws://localhost:9545/"
 
 [ethereum.apps]
-# contract address of ETH app
-eth = "0xdeadbeef"
-# contract address of ERC20 app
-erc20 = "0xdeadbeef"
+[ethereum.apps.eth]
+address = "0x95aF4D3B8938063486fE23C8D8867deD6aee5646"
+abi = "~/.config/artemis-relay/ethereum/ETH.json"
+
+[ethereum.apps.erc20]
+address = "0xb664F267fa8775563E2aD1cED44a0996198F7eE0"
+abi = "~/.config/artemis-relay/ethereum/ERC20.json"
 
 [substrate]
 endpoint = "ws://127.0.0.1:9944/"
-block-retry-limit = 3
-block-retry-interval = 10
 ```
-
-The ABIs for ethereum applications are stored in the `~/.config/artemis-relayer/ethereum` directory.
 
 ### Secrets
 
