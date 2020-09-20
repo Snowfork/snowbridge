@@ -5,7 +5,7 @@ This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge
 ## Contracts
 
 - Bank: supports Ethereum and ERC20 deposits
-- BankToken: enables ERC20 token testing 
+- BankToken: enables ERC20 token testing
 
 See Future Work section for core components in development
 
@@ -13,7 +13,7 @@ See Future Work section for core components in development
 
 Install dependencies
 ```bash
-npm install
+yarn install
 ```
 
 Start truffle environment containing a local Ethereum network
