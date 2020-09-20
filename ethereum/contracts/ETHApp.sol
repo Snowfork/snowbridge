@@ -9,16 +9,15 @@ contract ETHApp is Application {
     using SafeMath for uint256;
     using Decoder for bytes;
 
-    uint64 MESSAGE_LENGTH = 84;
+    uint64 constant PAYLOAD_LENGTH = 84;
 
-    uint256 public nonce;
     uint256 public totalETH;
 
     event AppTransfer(address _sender, bytes32 _recipient, uint256 _amount);
     event Unlock(bytes _sender, address _recipient, uint256 _amount);
 
     constructor() public {
-        nonce = 0;
+        totalETH = 0;
     }
 
     function sendETH(bytes32 _recipient)
@@ -29,8 +28,6 @@ contract ETHApp is Application {
 
         // Increment locked Ethereum counter by this amount
         totalETH = totalETH.add(msg.value);
-        // Increment global nonce
-        nonce = nonce.add(1);
 
         emit AppTransfer(msg.sender, _recipient, msg.value);
     }
@@ -39,7 +36,7 @@ contract ETHApp is Application {
         public
         override
     {
-        require(_data.length == MESSAGE_LENGTH, "Data must contain 84 bytes for a successful decoding");
+        require(_data.length == PAYLOAD_LENGTH, "Invalid payload");
 
         // Decode sender bytes
         bytes memory sender = _data.slice(0, 32);
