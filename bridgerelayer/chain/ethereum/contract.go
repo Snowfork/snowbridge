@@ -17,7 +17,28 @@ type Contract struct {
 	ABI     *abi.ABI
 }
 
-func LoadContracts(config *Config) ([]Contract, error) {
+func LoadBridgeContract(config *Config) (*Contract, error) {
+
+	address := common.HexToAddress(config.Bridge.Address)
+
+	abiPath, err := homedir.Expand(config.Bridge.AbiPath)
+	if err != nil {
+		return nil, err
+	}
+
+	abi, err := loadContractABI(abiPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Contract{
+		Name:    "Bridge",
+		Address: address,
+		ABI:     abi,
+	}, nil
+}
+
+func LoadAppContracts(config *Config) ([]Contract, error) {
 	contracts := []Contract{}
 	for name, app := range config.Apps {
 		address := common.HexToAddress(app.Address)

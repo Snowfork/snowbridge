@@ -4,7 +4,7 @@ use artemis_ethereum::{DecodeError, log::Log, H160, U256};
 use sp_std::prelude::*;
 
 static EVENT_ABI: &ABIEvent = &ABIEvent {
-	signature: "Transfer(address,bytes32,uint256)",
+	signature: "AppTransfer(address,bytes32,uint256)",
 	inputs: &[
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::FixedBytes(32), indexed: false },
@@ -59,8 +59,8 @@ mod tests {
 	use hex_literal::hex;
 
 	const LOG_DATA: [u8; 155] = hex!("
-		f899940d27b0069241c03575669fed1badcbccdc0dd4d1e1a0ae82749358
-		218d8026f6cc57a7ab3aa05aa7bcf840f758ab26d553048fb1d467b86000
+		f899947c5c2fb581612f040ebf9e74f94c9eac8681a95fe1a0691df88ac0
+		2f64f3b39fb1b52b940a2730e41ae20f39eec131634df2f8edce77b86000
 		0000000000000000000000cffeaaf7681c89285d65cfbe808b80e5026965
 		73d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a5
 		6da27d00000000000000000000000000000000000000000000000000038d

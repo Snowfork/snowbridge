@@ -107,19 +107,22 @@ It is necessary to inject these addresses into the build environment so that our
 Rust code for message dispatch.
 
 Our parachain currently supports the following applications:
+
 * ETH: A bridged ETH asset
 * ERC20: Bridged ERC20 token assets
 
 Correspondingly, the following environment variables need to be set:
+
 ```bash
 export ETH_APP_ID=<CONTRACT_ADDR>
 export ERC20_APP_ID=<CONTRACT_ADDR>
 ```
 
-Example (note addresses do not have '0x' prefix):
+Example:
+
 ```bash
-export ETH_APP_ID=0d27b0069241c03575669fed1badcbccdc0dd4d1
-export ERC20_APP_ID=8fe1b1233f7032cef8cfc5eaaf411dffaa77a07c
+export ETH_APP_ID=0x0d27b0069241c03575669fed1badcbccdc0dd4d1
+export ERC20_APP_ID=0x8fe1b1233f7032cef8cfc5eaaf411dffaa77a07c
 ```
 
 Now rebuild the chain using the steps in [Build](#build).
@@ -133,5 +136,3 @@ It is not required to change anything here for local development and testing.
 The parachain depends on a external relayer service to forward messages to and from Ethereum. The relayer service is trusted by the parachain. Its identity should be injected into the [GenesisConfig](https://snowfork.github.io/artemis-rust-docs/pallet_verifier/struct.GenesisConfig.html#structfield.key) for the [Verifier](https://snowfork.github.io/artemis-rust-docs/pallet_verifier/index.html) pallet.
 
 The node's baked-in chain spec uses `//Relay` as the relayer's account seed. For reference, see [chain_spec.rs](https://github.com/Snowfork/polkadot-ethereum/blob/main/parachain/node/src/chain_spec.rs#L50).
-
-

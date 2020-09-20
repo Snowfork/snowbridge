@@ -1,12 +1,13 @@
 package ethereum
 
 type Config struct {
-	Endpoint   string                 `mapstructure:"endpoint"`
-	PrivateKey string                 `mapstructure:"private-key"`
-	Apps       map[string]Application `mapstructure:"apps"`
+	Endpoint   string                  `mapstructure:"endpoint"`
+	PrivateKey string                  `mapstructure:"private-key"`
+	Bridge     ContractInfo            `mapstructure:"bridge"`
+	Apps       map[string]ContractInfo `mapstructure:"apps"`
 }
 
-type Application struct {
+type ContractInfo struct {
 	Address string `mapstructure:"address"`
 	AbiPath string `mapstructure:"abi"`
 }

@@ -10,17 +10,12 @@ contract ERC20App is Application {
     using SafeMath for uint256;
     using Decoder for bytes;
 
-    uint32 MESSAGE_LENGTH = 104;
+    uint64 constant PAYLOAD_LENGTH = 104;
 
-    uint256 public nonce;
     mapping(address => uint256) public totalTokens;
 
     event AppTransfer(address _sender, bytes32 _recipient, address _token, uint256 _amount);
     event Unlock(bytes _sender, address _recipient, address _token, uint256 _amount);
-
-    constructor() public {
-        nonce = 0;
-    }
 
     function sendERC20(bytes32 _recipient, address _tokenAddr, uint256 _amount)
         public
@@ -32,8 +27,6 @@ contract ERC20App is Application {
 
         // Increment locked ERC20 token counter by this amount
         totalTokens[_tokenAddr] = totalTokens[_tokenAddr].add(_amount);
-        // Increment global nonce
-        nonce = nonce.add(1);
 
         emit AppTransfer(msg.sender, _recipient, _tokenAddr, _amount);
     }
@@ -42,7 +35,7 @@ contract ERC20App is Application {
         public
         override
     {
-        require(_data.length == MESSAGE_LENGTH, "Message must contain 104 bytes for a successful decoding");
+        require(_data.length >= PAYLOAD_LENGTH, "Invalid Payload");
 
         // Decode sender bytes
         bytes memory sender = _data.slice(0, 32);
@@ -50,8 +43,9 @@ contract ERC20App is Application {
         address recipient = _data.sliceAddress(32);
         // Decode token address
         address tokenAddr = _data.sliceAddress(32 + 20);
-        // Deocde amount int256
+        // Decode amount int256
         bytes memory amountBytes = _data.slice(32 + 40, 32);
+
         uint256 amount = amountBytes.decodeUint256();
 
         sendTokens(recipient, tokenAddr, amount);

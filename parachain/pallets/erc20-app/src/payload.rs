@@ -3,7 +3,7 @@ use ethabi::{Event as ABIEvent, Param, ParamKind, Token};
 use artemis_ethereum::{DecodeError, log::Log, H160, U256};
 
 static EVENT_ABI: &ABIEvent = &ABIEvent {
-	signature: "Transfer(address,bytes32,address,uint256)",
+	signature: "AppTransfer(address,bytes32,address,uint256)",
 	inputs: &[
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::FixedBytes(32), indexed: false },
@@ -67,12 +67,12 @@ mod tests {
 	use hex_literal::hex;
 
 	const LOG_DATA: [u8; 187] = hex!("
-		f8b9948fe1b1233f7032cef8cfc5eaaf411dffaa77a07ce1a016aa057ef2
-		cf0031961212128fed55fffeefd816288d34930e2c5989e030c617b88000
+		f8b994c3a1ca063da8d4d3b2c697316ea6e69ccd263a44e1a0be9215fdb4
+		23dfc80cce917dc48fa52d3e247875e3d7cea229d3f28661ad0f60b88000
 		0000000000000000000000cffeaaf7681c89285d65cfbe808b80e5026965
 		73d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a5
-		6da27d000000000000000000000000b4eec9929471cd15d5eea258af8587
-		fe7605285d00000000000000000000000000000000000000000000000000
+		6da27d000000000000000000000000f465670390f5214ed43d5027f31ed3
+		3764f0448700000000000000000000000000000000000000000000000000
 		00000000000002
 	");
 
@@ -82,7 +82,7 @@ mod tests {
 			Payload {
 				sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 				recipient_addr: hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
-				token_addr: hex!["b4eec9929471cd15d5eea258af8587fe7605285d"].into(),
+				token_addr: hex!["f465670390f5214ed43d5027f31ed33764f04487"].into(),
 				amount: 2.into()
 			}
 		);

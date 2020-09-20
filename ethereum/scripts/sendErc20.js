@@ -33,7 +33,7 @@ module.exports = async () => {
     console.log("Must provide a Polkadot recipient")
     return
   }
-  const recipient = Buffer.from(polkadotRecipient, "hex");
+  const recipient = Buffer.from(polkadotRecipient.replace(/^0x/, ""), "hex");
 
   // Set up provider and contracts
   let provider;

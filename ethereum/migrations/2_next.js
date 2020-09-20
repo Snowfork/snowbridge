@@ -13,6 +13,7 @@ module.exports = function(deployer, network, accounts) {
     // Link libraries to applications
     await deployer.deploy(Decoder);
     deployer.link(Decoder, [ETHApp, ERC20App]);
+
     // Deploy applications
     const ethApp = await deployer.deploy(ETHApp);
     const erc20App = await deployer.deploy(ERC20App);
