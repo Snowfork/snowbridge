@@ -10,7 +10,7 @@ module.exports = async () => {
   // Contract abstraction
   const truffleContract = require("@truffle/contract");
   const contract = truffleContract(
-    require("../build/contracts/EthereumApp.json")
+    require("../build/contracts/ETHApp.json")
   );
 
   // Parameters
@@ -25,7 +25,7 @@ module.exports = async () => {
     console.log("Must provide a Polkadot recipient")
     return
   }
-  const recipient = Buffer.from(polkadotRecipient, "hex");
+  const recipient = Buffer.from(polkadotRecipient.replace(/^0x/, ""), "hex");
 
   // Set up provider and contracts
   let provider;
@@ -50,20 +50,18 @@ module.exports = async () => {
 
     // Send lock transaction
     console.log("Connecting to contract....");
-    const { logs } = await contract.deployed().then(function (instance) {
-      console.log("Connected to contract, sending...");
-      return instance.sendETH(recipient, {
+    const instance = await contract.deployed()
+    const { logs } = await instance.sendETH(recipient, {
         from: accounts[0],
         value: weiAmount,
         gas: 300000 // 300,000 Gwei
-      });
     });
 
     console.log("Sent eth...");
 
     // Get event logs
     const event = logs.find(e => e.event === "AppTransfer");
-    
+
     console.log(event.args);
   } catch (error) {
     console.error({ error });
