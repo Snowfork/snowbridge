@@ -1,6 +1,7 @@
 {
   "license": "Apache-2.0",
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
     "@openzeppelin/contracts": "^3.1.0",
     "@truffle/contract": "^4.0.31",
     "@truffle/hdwallet-provider": "^1.1.0",
@@ -10,6 +11,7 @@
     "dotenv": "^8.2.0",
     "solc": "^0.6.12",
     "truffle": "^5.1.32",
+    "unique-filename": "^1.1.1",
     "web3": "^1.2.9",
     "web3-utils": "^1.2.9"
   },
