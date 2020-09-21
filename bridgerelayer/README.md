@@ -113,14 +113,15 @@ mage build
 
 ## Run
 
+Run the relayer with the config generated in [Configuration](#configuration).
+
 ```bash
-build/artemis-relay run --config /path/to/config.toml
+build/artemis-relay run --config /tmp/relay-config.toml
 ```
 
 ## Tests
 
 This will run both unit and integration tests. Please ensure that both the ethereum and substrate chains are running as described in [Service Dependencies](#service-dependencies).
-
 
 ```bash
 mage test
