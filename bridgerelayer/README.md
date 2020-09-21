@@ -7,7 +7,7 @@ is inspired by their design and incorporates some of their code.
 
 - [Requirements](#requirements)
   - [Development](#development)
-  - [Service Dependencies](#service-dependencies)
+  - [Dependencies](#dependencies)
 - [Configuration](#configuration)
   - [Secrets](#secrets)
 - [Build](#build)
@@ -37,13 +37,12 @@ To enable revive for linting in VS-code, add the following to your config:
 }
 ```
 
-### Service Dependencies
+### Dependencies
 
 The relayer depends on the following:
 
 * A running parachain
 * An ethereum chain with our contracts deployed
-
 
 Open a new terminal, and start the parachain
 ```
@@ -51,17 +50,7 @@ cd ../parachain
 target/release/artemis-node --dev
 ```
 
-Open a new terminal, and start a local truffle chain
-```
-cd ../ethereum
-truffle develop
-```
-
-Deploy the contracts
-```
-cd ../ethereum
-truffle deploy
-```
+To ensure the ethereum contracts are deployed, follow the [Setup](../ethereum/README.md#set-up) guide.
 
 ## Configuration
 
