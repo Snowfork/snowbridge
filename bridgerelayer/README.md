@@ -71,6 +71,9 @@ To autogenerate a valid config file, run:
 
 ```bash
 scripts/make-config.sh > /tmp/relay-config.toml
+
+# verify that the config looks like valid TOML
+cat /tmp/relay-config.toml
 ```
 
 Or, manually create a config file using the template below:

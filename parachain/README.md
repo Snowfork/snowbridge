@@ -76,6 +76,10 @@ Rust code for message dispatch.
 Autmatically:
 ```bash
 exec $(scripts/make-build-config.sh)
+
+# verify that the environment variables are set
+echo $ETH_APP_ID
+echo $ERC20_APP_ID
 ```
 
 Or manually (replace example addresses with your own):
