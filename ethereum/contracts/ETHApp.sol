@@ -36,7 +36,7 @@ contract ETHApp is Application {
         public
         override
     {
-        require(_data.length == PAYLOAD_LENGTH, "Invalid payload");
+        require(_data.length >= PAYLOAD_LENGTH, "Invalid payload");
 
         // Decode sender bytes
         bytes memory sender = _data.slice(0, 32);
