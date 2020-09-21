@@ -43,24 +43,11 @@ curl https://getsubstrate.io -sSf | bash -s -- --fast
 Find manual setup instructions at the
 [Substrate Developer Hub](https://substrate.dev/docs/en/knowledgebase/getting-started/#manual-installation).
 
-
 ### Dependencies
 
 Before building the parachain, ensure our smart contracts are deployed on your local truffle chain.
 
-Open a new terminal, and start a local truffle chain:
-
-```bash
-cd ../ethereum
-truffle develop
-```
-
-Deploy the contracts:
-
-```bash
-cd ../ethereum
-truffle deploy
-```
+Follow the [Setup](../ethereum/README.md#set-up) guide to do this.
 
 ### Configuration
 
@@ -75,7 +62,7 @@ Rust code for message dispatch.
 
 Autmatically:
 ```bash
-exec $(scripts/make-build-config.sh)
+eval $(scripts/make-build-config.sh)
 
 # verify that the environment variables are set
 echo $ETH_APP_ID

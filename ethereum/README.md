@@ -2,14 +2,13 @@
 
 This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge.
 
-## Contracts
-
-- Bank: supports Ethereum and ERC20 deposits
-- BankToken: enables ERC20 token testing
-
-See Future Work section for core components in development
-
 ## Set up
+
+Create a `.env` file using the following template:
+
+```bash
+cp .env.example .env
+```
 
 Install dependencies
 
