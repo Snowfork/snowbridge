@@ -14,6 +14,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
+	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/substrate"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/sr25519"
 )
@@ -47,9 +48,18 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	msg := chain.Message{AppID: AppID, Payload: []byte{0, 1, 2}}
+	message := ethereum.Message{
+		Data: []byte{0, 1, 2},
+		VerificationInput: ethereum.VerificationInput{
+			IsBasic: true,
+			AsBasic: ethereum.VerificationBasic{
+				BlockNumber: 47,
+				EventIndex:  uint32(2),
+			},
+		},
+	}
 
-	err = writer.Write(ctx, &msg)
+	err = writer.Write(ctx, &chain.Message{AppID: AppID, Payload: message})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,10 +9,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path"
 	"syscall"
 
-	"github.com/mitchellh/go-homedir"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/substrate"
@@ -109,24 +107,8 @@ func (re *Relay) Start() {
 }
 
 func loadConfig() (*Config, error) {
-	home, err := homedir.Dir()
-	if err != nil {
-		return nil, err
-	}
-
-	viper.AddConfigPath(path.Join(home, ".config", "artemis-relay"))
-	viper.AddConfigPath(".")
-
-	viper.SetConfigName("config")
-	viper.SetConfigType("toml")
-
-	err = viper.ReadInConfig()
-	if err != nil {
-		return nil, err
-	}
-
 	var config Config
-	err = viper.Unmarshal(&config)
+	err := viper.Unmarshal(&config)
 	if err != nil {
 		return nil, err
 	}
