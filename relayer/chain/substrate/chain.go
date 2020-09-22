@@ -1,19 +1,18 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package ethereum
+package substrate
 
 import (
 	"context"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/secp256k1"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
 )
 
-// Chain streams the Ethereum blockchain and routes tx data packets
 type Chain struct {
 	config   *Config
 	listener *Listener
@@ -21,44 +20,36 @@ type Chain struct {
 	conn     *Connection
 }
 
-const Name = "Ethereum"
+const Name = "Substrate"
 
-// NewChain initializes a new instance of EthChain
 func NewChain(config *Config, ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
 
-	bridgeContract, err := LoadBridgeContract(config)
+	// Generate keypair from secret
+	kp, err := sr25519.NewKeypairFromSeed(config.PrivateKey, "")
 	if err != nil {
 		return nil, err
 	}
 
-	appContracts, err := LoadAppContracts(config)
-	if err != nil {
-		return nil, err
-	}
+	conn := NewConnection(config.Endpoint, kp.AsKeyringPair(), log)
 
-	kp, err := secp256k1.NewKeypairFromString(config.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
+	listener := NewListener(
+		config,
+		conn,
+		subMessages,
+		log,
+	)
 
-	conn := NewConnection(config.Endpoint, kp, log)
-
-	listener, err := NewListener(conn, ethMessages, appContracts, log)
-	if err != nil {
-		return nil, err
-	}
-
-	writer, err := NewWriter(conn, subMessages, bridgeContract, log)
+	writer, err := NewWriter(conn, ethMessages, log)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Chain{
 		config:   config,
+		conn:     conn,
 		listener: listener,
 		writer:   writer,
-		conn:     conn,
 	}, nil
 }
 
