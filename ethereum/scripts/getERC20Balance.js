@@ -3,7 +3,7 @@
 // truffle exec getERC20Balance.js [user-address] [token-address] --network ropsten
 
 module.exports = async () => {
-    require("dotenv").config();
+    require('dotenv').config({ path: require('find-config')('.env') })
     const Web3 = require("web3");
     const HDWalletProvider = require("@truffle/hdwallet-provider");
     const BigNumber = require("bignumber.js")

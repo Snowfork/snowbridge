@@ -1,62 +1,89 @@
-# Polkadot-Ethereum Bridge Contracts
+# Ethereum Contracts
 
 This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge.
 
+- Bridge.sol: application registry and routing of messages from Substrate
+- Application.sol: an abstract contract that must be implemented by any Bridge application
+    - ETHApp.sol: application for cross-chain ETH transfers between Ethereum and Substrate
+    - ERC20App.sol: application for cross-chain ERC20 transfers between Ethereum and Substrate
+- Decoder.sol: a library for decoding SCALE encoded data
+- Verifier.sol: verifies tx origin and signatures
+- Scale.sol: implements decoding of SCALE encoded compact uints; not currently used, included to support future work on generalized data relay
+
 ## Set up
 
-Create a `.env` file using the following template:
+After starting the blockchain and deploying the contracts, the Bridge's Ethereum component is ready for usage.
 
-```bash
-cp .env.example .env
-```
-
-Install dependencies
+Install dependencies with yarn:
 
 ```bash
 yarn install
 ```
 
-Start truffle environment containing a local Ethereum network
+Set up `.env` file. Note that deploying to ropsten network requires modifying the INFURA_PROJECT_ID and MNEMONIC environment variables.
+
+```bash
+cp .env.example .env
+```
+
+Start truffle environment containing a local Ethereum network:
 
 ```bash
 truffle develop
 ```
 
-Contract compilation
+Open a fresh terminal window and deploy the contracts:
 
 ```bash
-truffle compile
-```
-
-Migrate contracts to network
-
-```bash
-truffle migrate --reset --all
+truffle migrate --all
 ```
 
 ## Testing
 
-Make sure the truffle environment is running
+Make sure the truffle environment is running, then run tests
 
 ```bash
+# Start testing environment if it's not already running
 truffle develop
-```
 
-In another terminal, run tests
+# In a new terminal, test application gas expenditures
+truffle test test/test_gas.js
 
-```bash
+# Run all tests
 truffle test
 ```
 
-Test gas expenditures
+## Scripts
 
-```bash
-truffle test test/test_gas.js
+
+The project includes several scripts for Bridge interaction:
+
+`getTx.js` gets information about a transaction
+
+``` bash
+truffle exec scripts/getTx.js [tx-hash]
 ```
 
-## Future Work
+`getEthBalance.js` gets an address' ETH balance
 
-- Polkadot Transaction Verifier
-- Arbitrary State Parser
-- Arbitrary State Submission
-- Polkadot Signature Prover
+``` bash
+truffle exec scripts/getEthBalance.js [ethereum-address]
+```
+
+`getERC20balance.js` gets an address' ERC20 token balance
+
+``` bash
+truffle exec scripts/getERC20Balance.js [ethereum-address] [token-contract-address]
+```
+
+`sendEth.js` deposits ETH into the ETHApp, initiating a cross-chain transfer to Substrate
+
+``` bash
+truffle exec scripts/sendEth.js [amount] [polkadot-recipient]
+```
+
+`sendERC20.js` deposits ERC20 tokens into the ERC20App, initiating a cross-chain transfer to Substrate
+
+``` bash
+truffle exec scripts/sendERC20.js [amount] [token-contract-address] [polkadot-recipient]
+```
