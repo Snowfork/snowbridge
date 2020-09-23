@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  ganache:
+    image: trufflesuite/ganache-cli
+    command: >
+      --port=8545 --blockTime=0
+      --db /opt/ganache-db
+      --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove'
+    ports:
+      - "8545:8545"
+    volumes:
+      - type: volume
+        source: ganache-db
+        target: /opt/ganache-db
+        volume:
+          nocopy: true
+
+volumes:
+    ganache-db:
+
