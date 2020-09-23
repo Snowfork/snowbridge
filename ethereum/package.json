@@ -9,6 +9,7 @@
     "chai-as-promised": "^7.1.1",
     "chai-bignumber": "^3.0.0",
     "dotenv": "^8.2.0",
+    "find-config": "^1.0.0",
     "solc": "^0.6.12",
     "truffle": "^5.1.32",
     "unique-filename": "^1.1.1",

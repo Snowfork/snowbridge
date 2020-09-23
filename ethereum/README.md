@@ -1,4 +1,4 @@
-# Polkadot-Ethereum Bridge Contracts
+# Ethereum Contracts
 
 This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge.
 
@@ -8,21 +8,33 @@ This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge
     - ERC20App.sol: application for cross-chain ERC20 transfers between Ethereum and Substrate
 - Decoder.sol: a library for decoding SCALE encoded data
 - Verifier.sol: verifies tx origin and signatures
-- Scale.sol: implements decoding of SCALE encoded compact uints; not currently used, will support future work on generalized data relay
+- Scale.sol: implements decoding of SCALE encoded compact uints; not currently used, included to support future work on generalized data relay
 
 ## Set up
 
-After starting the blockchain and deploying the contracts, the Bridge's Ethereum component is ready for usage. To generate configuration information required for configuring the Parachain and Relayer components, run the set up scripts described in scripts section below.
+After starting the blockchain and deploying the contracts, the Bridge's Ethereum component is ready for usage.
+
+Install dependencies with yarn:
 
 ```bash
-# Install dependencies
 yarn install
 ```
 
-Start truffle environment with a local Ethereum network and deploy the contracts
+Set up `.env` file. Note that deploying to ropsten network requires modifying the INFURA_PROJECT_ID and MNEMONIC environment variables.
+
+```bash
+cp .env.example .env
+```
+
+Start truffle environment containing a local Ethereum network:
 
 ```bash
 truffle develop
+```
+
+Open a fresh terminal window and deploy the contracts:
+
+```bash
 truffle migrate --all
 ```
 
@@ -34,7 +46,7 @@ Make sure the truffle environment is running, then run tests
 # Start testing environment if it's not already running
 truffle develop
 
-# Test application gas expenditures
+# In a new terminal, test application gas expenditures
 truffle test test/test_gas.js
 
 # Run all tests
@@ -43,11 +55,6 @@ truffle test
 
 ## Scripts
 
-To run the scripts, create an `.env` file using the example template.
-
-```bash
-cp scripts/.env.example scripts/.env
-```
 
 The project includes several scripts for Bridge interaction:
 
@@ -79,24 +86,4 @@ truffle exec scripts/sendEth.js [amount] [polkadot-recipient]
 
 ``` bash
 truffle exec scripts/sendERC20.js [amount] [token-contract-address] [polkadot-recipient]
-```
-
-Several additional scripts support the set up of other components:
-
-`dumpABI.js` outputs the ABI of the Bridge, ETHApp, and ERC20App contracts
-
-``` bash
-truffle exec scripts/dumpABI.js
-```
-
-`dumpParachainConfig.js`  outputs information required by the Parachain component
-
-``` bash
-truffle exec scripts/dumpParachainConfig.js
-```
-
-`dumpRelayerConfig.js`  outputs information required by the Relayer component
-
-``` bash
-truffle exec scripts/dumpRelayerConfig.js
 ```
