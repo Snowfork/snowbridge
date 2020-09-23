@@ -14,7 +14,7 @@ require (
 	github.com/pierrec/xxHash v0.1.5 // indirect
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
-	github.com/snowfork/go-substrate-rpc-client v2.0.0-alpha.5.0.20200825232545-6ce83bfb166e+incompatible
+	github.com/snowfork/go-substrate-rpc-client v2.0.0-rc4+incompatible
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.4.0

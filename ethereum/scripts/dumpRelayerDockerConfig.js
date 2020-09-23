@@ -10,15 +10,16 @@ const Bridge = artifacts.require("Bridge")
 const ETHApp = artifacts.require("ETHApp")
 const ERC20App = artifacts.require("ERC20App")
 
-const dump = (bridge, ethApp, erc20App) => {
+const CONFIG_DIR = "../test/build/relayer-config"
 
-    temp.track();
 
-    let cfgdir = "../build/tmp/relayer-config"
+const dump = async (bridge, ethApp, erc20App) => {
 
-    let bridgeAbiFile = path.join(cfgdir, "Bridge.json")
-    let ethAbiFile = path.join(cfgdir, "ETHApp.json")
-    let erc20AbiFile = path.join(cfgdir, "ERC20App.json")
+    await fs.promises.mkdir(CONFIG_DIR, { recursive: true });
+
+    let bridgeAbiFile = path.join(CONFIG_DIR, "Bridge.json")
+    let ethAbiFile = path.join(CONFIG_DIR, "ETHApp.json")
+    let erc20AbiFile = path.join(CONFIG_DIR, "ERC20App.json")
 
     fs.writeFileSync(bridgeAbiFile, JSON.stringify(bridge.abi, null, 2))
     fs.writeFileSync(ethAbiFile, JSON.stringify(ethApp.abi, null, 2))
@@ -46,7 +47,7 @@ const dump = (bridge, ethApp, erc20App) => {
             endpoint: "ws://parachain:9944/"
         }
     }
-    fs.writeFileSync(path.join(cfgdir, "config.toml"), TOML.stringify(config))
+    fs.writeFileSync(path.join(CONFIG_DIR, "config.toml"), TOML.stringify(config))
 }
 
 
@@ -56,7 +57,7 @@ module.exports = async (callback) => {
         let ethApp = await ETHApp.deployed()
         let erc20App = await ERC20App.deployed()
 
-        dump(bridge, ethApp, erc20App)
+        await dump(bridge, ethApp, erc20App)
 
     } catch (error) {
         callback(error)

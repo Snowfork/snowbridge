@@ -1,7 +1,8 @@
 FROM golang:1.14
 WORKDIR /opt/relayer
 ADD . .
-RUN go build -v -o build/artemis-relay main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -v -o build/artemis-relay main.go
 
-ENTRYPOINT ["/opt/relayer/build/artemis-relay"]
-CMD ["run"]
+FROM parity/subkey:2.0.0-rc4
+COPY --from=0 /opt/relayer/build/artemis-relay /usr/local/bin/
+ENTRYPOINT ["/usr/local/bin/artemis-relay"]
