@@ -11,9 +11,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/substrate"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 

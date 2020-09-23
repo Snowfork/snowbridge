@@ -13,10 +13,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/chain/substrate"
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/crypto/sr25519"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate"
+	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
 )
 
 var AppID = [20]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
