@@ -1,4 +1,4 @@
-module github.com/snowfork/polkadot-ethereum/bridgerelayer
+module github.com/snowfork/polkadot-ethereum/relayer
 
 go 1.13
 

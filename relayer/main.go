@@ -16,7 +16,7 @@ limitations under the License.
 package main
 
 import (
-	"github.com/snowfork/polkadot-ethereum/bridgerelayer/cmd"
+	"github.com/snowfork/polkadot-ethereum/relayer/cmd"
 )
 
 func main() {
