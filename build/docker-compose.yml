@@ -16,6 +16,17 @@ services:
         volume:
           nocopy: true
 
+  relayer:
+    image: relayer
+    command: run --config /opt/config/config.toml
+    volumes:
+      - type: bind
+        source: ./tmp/relayer-config
+        target: /opt/relayer/config/
+
+  parachain:
+    image: parachain
+
 volumes:
     ganache-db:
 
