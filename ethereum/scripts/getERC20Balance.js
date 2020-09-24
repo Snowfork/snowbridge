@@ -1,18 +1,12 @@
 // Example usage:
-// truffle exec getERC20Balance.js [user-address] [token-address]
-// truffle exec getERC20Balance.js [user-address] [token-address] --network ropsten
+// truffle exec getERC20Balance.js [user-address]
+// truffle exec getERC20Balance.js [user-address] --network ropsten
+
+const BigNumber = require("bignumber.js")
+const TestToken = artifacts.require("TestToken")
 
 module.exports = async () => {
-    require('dotenv').config({ path: require('find-config')('.env') })
-    const Web3 = require("web3");
-    const HDWalletProvider = require("@truffle/hdwallet-provider");
-    const BigNumber = require("bignumber.js")
-
     try {
-        // Contract abstraction
-        const truffleContract = require("@truffle/contract");
-        const contract = truffleContract(require("../build/contracts/TestToken.json"));
-
         const account = process.argv[4].toString();
         const token = process.argv[5].toString();
 
@@ -25,21 +19,7 @@ module.exports = async () => {
             return
         }
 
-        let provider;
-        const NETWORK_ROPSTEN = process.argv[6] === "--network" && process.argv[7] === "ropsten";
-        if (NETWORK_ROPSTEN) {
-            provider = new HDWalletProvider(
-                process.env.MNEMONIC,
-                "https://ropsten.infura.io/v3/".concat(process.env.INFURA_PROJECT_ID)
-            );
-        } else {
-            provider = new Web3.providers.HttpProvider(process.env.LOCAL_PROVIDER);
-        }
-
-        const web3 = new Web3(provider);
-        contract.setProvider(web3.currentProvider);
-
-        const tokenInstance = await contract.at(token);
+        const tokenInstance = await TestToken.deployed();
 
         const symbol = await tokenInstance.symbol()
         const balance = new BigNumber(await tokenInstance.balanceOf(account));

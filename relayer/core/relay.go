@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
@@ -121,7 +122,7 @@ func loadConfig() (*Config, error) {
 	if !ok {
 		return nil, fmt.Errorf("environment variable not set: ARTEMIS_ETHEREUM_KEY")
 	}
-	config.Eth.PrivateKey = value
+	config.Eth.PrivateKey = strings.TrimPrefix(value, "0x")
 
 	value, ok = os.LookupEnv("ARTEMIS_SUBSTRATE_KEY")
 	if !ok {

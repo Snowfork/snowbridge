@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+
+  # Ethereum
+  ganache:
+    image: trufflesuite/ganache-cli
+    command: >
+      --port=8545 --blockTime=0
+      --db /opt/ganache-db
+      --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove'
+    ports:
+      - "8545:8545"
+    volumes:
+      - type: volume
+        source: ganache-db
+        target: /opt/ganache-db
+        volume:
+          nocopy: true
+
+  # Parachain
+  parachain:
+    image: paritytech/ci-linux:production
+    working_dir: /var/www/artemis-node
+    ports:
+      - "9944:9944"
+    environment:
+      - CARGO_HOME=/var/www/artemis-node/.cargo
+    env_file: ./build/parachain.env
+    volumes:
+      - ../parachain:/var/www/artemis-node
+      - type: bind
+        source: ./build/parachain-state/
+        target: /root/.local
+    command: bash -c "cargo build --release && ./target/release/artemis-node --dev --ws-external"
+
+  # Relayer
+  relayer:
+    build:
+      context: ../relayer
+    command: run --config /opt/config/config.toml
+    environment:
+      ARTEMIS_ETHEREUM_KEY: "0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
+      ARTEMIS_SUBSTRATE_KEY: "//Relay"
+    volumes:
+      - type: bind
+        source: ./build/relayer-config
+        target: /opt/config
+
+
+volumes:
+    ganache-db:
+

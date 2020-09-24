@@ -1,17 +1,25 @@
-const uniqueFilename = require('unique-filename');
 const TOML = require('@iarna/toml');
-const fs = require('fs');
+const temp = require('temp');
+const fs  = require('fs');
 const os = require('os');
+const util = require('util');
+const path = require('path');
+const exec = require('child_process').exec;
 
 const Bridge = artifacts.require("Bridge")
 const ETHApp = artifacts.require("ETHApp")
 const ERC20App = artifacts.require("ERC20App")
 
-const dump = (bridge, ethApp, erc20App) => {
+const CONFIG_DIR = "../test/build/relayer-config"
 
-    const bridgeAbiFile = uniqueFilename(os.tmpdir(), "Bridge")
-    const ethAbiFile = uniqueFilename(os.tmpdir(), "ETHApp")
-    const erc20AbiFile = uniqueFilename(os.tmpdir(), "ERC20App")
+
+const dump = async (bridge, ethApp, erc20App) => {
+
+    await fs.promises.mkdir(CONFIG_DIR, { recursive: true });
+
+    let bridgeAbiFile = path.join(CONFIG_DIR, "Bridge.json")
+    let ethAbiFile = path.join(CONFIG_DIR, "ETHApp.json")
+    let erc20AbiFile = path.join(CONFIG_DIR, "ERC20App.json")
 
     fs.writeFileSync(bridgeAbiFile, JSON.stringify(bridge.abi, null, 2))
     fs.writeFileSync(ethAbiFile, JSON.stringify(ethApp.abi, null, 2))
@@ -19,27 +27,27 @@ const dump = (bridge, ethApp, erc20App) => {
 
     const config = {
         ethereum: {
-            endpoint: "ws://localhost:9545/",
+            endpoint: "ws://ganache:8545/",
             bridge: {
                 address: bridge.address,
-                abi: bridgeAbiFile,
+                abi: "/opt/config/Bridge.json",
             },
             apps:{
                 eth:{
                     address: ethApp.address,
-                    abi: ethAbiFile,
+                    abi: "/opt/config/ETHApp.json",
                 },
                 erc20:{
                     address: erc20App.address,
-                    abi: erc20AbiFile,
+                    abi: "/opt/config/ERC20App.json",
                 }
             }
         },
         substrate: {
-            endpoint: "ws://127.0.0.1:9944/"
+            endpoint: "ws://parachain:9944/"
         }
     }
-    console.log(TOML.stringify(config))
+    fs.writeFileSync(path.join(CONFIG_DIR, "config.toml"), TOML.stringify(config))
 }
 
 
@@ -49,7 +57,7 @@ module.exports = async (callback) => {
         let ethApp = await ETHApp.deployed()
         let erc20App = await ERC20App.deployed()
 
-        dump(bridge, ethApp, erc20App)
+        await dump(bridge, ethApp, erc20App)
 
     } catch (error) {
         callback(error)
