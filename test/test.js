@@ -1,5 +1,5 @@
 const EthClient = require('./src/ethclient').EthClient;
-const { sleep } = require('./src/helpers');
+const { sleep, fetchDeployedAddrs } = require('./src/helpers');
 const Web3Utils = require("web3-utils");
 
 const BigNumber = require('bignumber.js');
@@ -12,15 +12,19 @@ describe('Bridge', function () {
 
   var ethClient;
   const endpoint = "http://localhost:9545";
-  const ethAppAddress = "0x8E7da79fd36d89a381CcFA2412D34E057bFFAdDe";
-  const erc20AppAddress = "0xD4216c26e961c4e631E9eEe4DdB8df2BfB4be3c7";
-  const testTokenContractAddress = "0x0823eFE0D0c6bd134a48cBd562fE4460aBE6e92c";
-
   const gasPrice = 200000000000; //From truffle config
   const polkadotRecipient = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK";
 
+
+  before(async function () {
+    var addrs = await fetchDeployedAddrs();
+    this.ethAppAddress = addrs.ethApp;
+    this.erc20AppAddress = addrs.erc20App;
+    this.tokenAddress = addrs.token;
+  });
+
   beforeEach(async function () {
-    ethClient = new EthClient(endpoint, ethAppAddress, erc20AppAddress);
+    ethClient = new EthClient(endpoint, this.ethAppAddress, this.erc20AppAddress);
     await ethClient.initWallet();
   });
 
@@ -42,26 +46,26 @@ describe('Bridge', function () {
 
     it('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
       const amount = 500;
-      const beforeBalanceEthereum = Number(await ethClient.getErc20Balance(testTokenContractAddress));
-      // const beforeBalanceSubstrate = Number(await subClient.getBalance(polkadotRecipient, testTokenContractAddress));
+      const beforeBalanceEthereum = Number(await ethClient.getErc20Balance(this.tokenAddress));
+      // const beforeBalanceSubstrate = Number(await subClient.getBalance(polkadotRecipient, this.tokenAddress));
 
-      await ethClient.approveERC20(amount, testTokenContractAddress);
-      const res = await ethClient.sendERC20(amount, testTokenContractAddress, polkadotRecipient);
+      await ethClient.approveERC20(amount, this.tokenAddress);
+      const res = await ethClient.sendERC20(amount, this.tokenAddress, polkadotRecipient);
 
       const event = res.events && res.events.AppTransfer;
 
       event.returnValues._sender.should.be.equal(await ethClient.getWallet());
       // event._recipient.should.be.equal(polkadotRecipient);
-      event.returnValues._token.should.be.equal(testTokenContractAddress);
+      event.returnValues._token.should.be.equal(this.tokenAddress);
       Number(event.returnValues._amount).should.be.bignumber.equal(amount);
 
       // Wait 10 seconds for the Relayer to process the transfer
       // await sleep(10000);
 
-      const afterBalanceEthereum = Number(await ethClient.getErc20Balance(testTokenContractAddress));
+      const afterBalanceEthereum = Number(await ethClient.getErc20Balance(this.tokenAddress));
       afterBalanceEthereum.should.be.bignumber.equal(beforeBalanceEthereum - amount);
 
-      // const afterBalanceSubstrate = Number(await subClient.getBalance(polkadotRecipient, testTokenContractAddress));
+      // const afterBalanceSubstrate = Number(await subClient.getBalance(polkadotRecipient, this.tokenAddress));
       // afterBalanceSubstrate.should.be.bignumber.equal(beforeBalanceSubstrate + amount);
     });
 
@@ -91,19 +95,19 @@ describe('Bridge', function () {
       const amount = 500;
       const ethereumRecipient = await ethClient.getWallet();
 
-      const beforeBalanceERC20= Number(await ethClient.getErc20Balance(testTokenContractAddress));
-      // const beforeBalanceSubstrate = Number(await subClient.getErc20Balance(polkadotRecipient, testTokenContractAddress));
+      const beforeBalanceERC20= Number(await ethClient.getErc20Balance(this.tokenAddress));
+      // const beforeBalanceSubstrate = Number(await subClient.getErc20Balance(polkadotRecipient, this.tokenAddress));
 
-      // const res = await subClient.burnETH(amount, testTokenContractAddress, ethereumRecipient);
+      // const res = await subClient.burnETH(amount, this.tokenAddress, ethereumRecipient);
       // TODO: check event emitted and event fields
 
       // Wait 10 seconds for the Relayer to process the transfer
       // await sleep(10000);
 
-      const afterBalanceERC20 = Number(await ethClient.getErc20Balance(testTokenContractAddress));
+      const afterBalanceERC20 = Number(await ethClient.getErc20Balance(this.tokenAddress));
       afterBalanceERC20.should.be.bignumber.equal(beforeBalanceERC20 + amount);
 
-      // const afterBalanceSubstrate = Number(await subClient.getErc20Balance(polkadotRecipient, testTokenContractAddress));
+      // const afterBalanceSubstrate = Number(await subClient.getErc20Balance(polkadotRecipient, this.tokenAddress));
       // afterBalanceSubstrate.should.be.bignumber.equal(beforeBalanceSubstrate - amount);
     });
   });
