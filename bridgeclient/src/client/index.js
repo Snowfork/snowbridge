@@ -1,9 +1,8 @@
 const Web3 = require('web3');
 
-const config = require("../../config.js");
-const ETHApp = require('../contracts/ETHApp.json');
-const ERC20App = require('../contracts/ERC20App.json');
-const ERC20 = require('../contracts/ERC20.json');
+const ETHApp = require('../../../ethereum/build/contracts/ETHApp.json');
+const ERC20App = require('../../../ethereum/build/contracts/ERC20App.json');
+const ERC20 = require('../../../ethereum/build/contracts/ERC20.json');
 
 /**
  * The bridge client
@@ -11,22 +10,30 @@ const ERC20 = require('../contracts/ERC20.json');
 class BridgeClient {
     /**
      * @param {String} endpoint Ethereum endpoint url
+     * @param {String} ethAppAddress contract address of the deployed ETH Bridge application
+     * @param {String} erc20AppAddress contract address of the deployed ERC20 Bridge application
      */
-    constructor(endpoint) {
+    constructor(endpoint, ethAppAddress, erc20AppAddress) {
       if(!endpoint) {
         throw new Error('network endpoint cannot be undefined');
+      }
+      if(!ethAppAddress) {
+        throw new Error('ETH application contract address cannot be undefined');
+      }
+      if(!erc20AppAddress) {
+        throw new Error('ERC20 application contract address cannot be undefined');
       }
       var web3 = new Web3(new Web3.providers.HttpProvider(endpoint));
       this.web3 = web3;
 
-      this.loadApplicationContracts();
+      this.loadApplicationContracts(ethAppAddress, erc20AppAddress);
     }
 
-    loadApplicationContracts() {
-      const appETH = new this.web3.eth.Contract(ETHApp.abi, config.APP_ETH_CONTRACT_ADDRESS);
+    loadApplicationContracts(ethAppAddress, erc20AppAddress) {
+      const appETH = new this.web3.eth.Contract(ETHApp.abi, ethAppAddress);
       this.appETH = appETH;
 
-      const appERC20 = new this.web3.eth.Contract(ERC20App.abi, config.APP_ERC20_CONTRACT_ADDRESS);
+      const appERC20 = new this.web3.eth.Contract(ERC20App.abi, erc20AppAddress);
       this.appERC20 = appERC20;
     };
 

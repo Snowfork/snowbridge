@@ -1,8 +1,12 @@
 const BridgeClient = require('./src/client').BridgeClient;
 
+// BridgeClient instantiation variables
+const endpoint = "http://localhost:9545";
+const ethAppAddress = "0x0823eFE0D0c6bd134a48cBd562fE4460aBE6e92c";
+const erc20AppAddress = "0x5040BA3Cf968de7273201d7C119bB8D8F03BDcBc";
+
 const main = async() => {
-    const endpoint = "http://localhost:9545";
-    const bridgeClient = new BridgeClient(endpoint);
+    const bridgeClient = new BridgeClient(endpoint, ethAppAddress, erc20AppAddress);
     await bridgeClient.initWallet();
 
     const testTokenContractAddress = "0xB69271c677cFeC73bD61b0AA39158E9262397a38";
