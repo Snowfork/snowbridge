@@ -8,19 +8,12 @@ const TestToken = artifacts.require("TestToken")
 module.exports = async () => {
     try {
         const account = process.argv[4].toString();
-        const token = process.argv[5].toString();
-
         if (!account) {
             console.log("Please provide an Ethereum address to check balance")
             return
         }
-        if (!token) {
-            console.log("Please provide an ERC20 token address")
-            return
-        }
 
         const tokenInstance = await TestToken.deployed();
-
         const symbol = await tokenInstance.symbol()
         const balance = new BigNumber(await tokenInstance.balanceOf(account));
 
