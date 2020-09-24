@@ -5,9 +5,9 @@ const ERC20App = require('../../../ethereum/build/contracts/ERC20App.json');
 const ERC20 = require('../../../ethereum/build/contracts/ERC20.json');
 
 /**
- * The bridge client
+ * The Ethereum client for Bridge interaction
  */
-class BridgeClient {
+class EthClient {
     /**
      * @param {String} endpoint Ethereum endpoint url
      * @param {String} ethAppAddress contract address of the deployed ETH Bridge application
@@ -48,6 +48,10 @@ class BridgeClient {
     async initWallet() {
       const accs = await this.web3.eth.getAccounts();
       this.web3.eth.defaultAccount = accs[0];
+    };
+
+    async getWallet() {
+      return this.web3.eth.defaultAccount;
     };
 
     /**
@@ -154,4 +158,4 @@ class BridgeClient {
     }
 }
 
-module.exports.BridgeClient = BridgeClient;
+module.exports.EthClient = EthClient;
