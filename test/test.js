@@ -1,8 +1,10 @@
 const EthClient = require('./src/ethclient').EthClient;
+const SubClient = require('./src/subclient').SubClient;
+
 const { sleep } = require('./src/helpers');
 const Web3Utils = require("web3-utils");
-
 const BigNumber = require('bignumber.js');
+
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
@@ -11,32 +13,48 @@ require("chai")
 describe('Bridge', function () {
 
   var ethClient;
-  const endpoint = "http://localhost:9545";
-  const ethAppAddress = "0x8E7da79fd36d89a381CcFA2412D34E057bFFAdDe";
-  const erc20AppAddress = "0xD4216c26e961c4e631E9eEe4DdB8df2BfB4be3c7";
-  const testTokenContractAddress = "0x0823eFE0D0c6bd134a48cBd562fE4460aBE6e92c";
+  var subClient;
+  const endpoint = "http://localhost:8545";
+  const ethAppAddress = "0x4283d8996E5a7F4BEa58c6052b1471a2a9524C87";
+  const erc20AppAddress = "0x3f839E70117C64744930De8567Ae7A5363487cA3";
+  const testTokenContractAddress = "0xA588C09D2fE853714d93347F5138FFAA3F7Bdf06";
 
-  const gasPrice = 200000000000; //From truffle config
-  const polkadotRecipient = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK";
+  const gasPrice = BigNumber("200000000000"); //From truffle config
+  const polkadotRecipient = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
 
   beforeEach(async function () {
     ethClient = new EthClient(endpoint, ethAppAddress, erc20AppAddress);
+    subClient = new SubClient("ws://localhost:9944");
+    await subClient.connect();
     await ethClient.initWallet();
   });
 
   describe('#bridge()', function () {
-    it('should transfer ETH from Ethereum to Substrate', async function () {
-      const beforeEthBalance = Number(await ethClient.getEthBalance());
-      const amountEth = 1;
-      const receipt = await ethClient.sendEth(String(amountEth), polkadotRecipient).should.be.fulfilled;
 
-      const gasCost = gasPrice * Number(receipt.gasUsed);
-      const gasCostEth = Number(Web3Utils.fromWei(String(gasCost/1000), 'ether'))
+    it('should transfer ETH from Ethereum to Substrate', async () => {
+      let beforeEthBalance = await ethClient.getEthBalance();
+      let beforeSubAccountData = await subClient.queryAssetAccountData("0x00", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY");
+      let beforeSubBalance = BigNumber(beforeSubAccountData.free.toBigInt())
 
-      // Factor in gas expenditures and compare results to 3 decimal places due to fluxuation
-      const afterEthBalance = Number(await ethClient.getEthBalance());
-      const expectedEthBalance = beforeEthBalance - amountEth - gasCostEth;
-      afterEthBalance.toFixed(3).should.be.bignumber.equal(expectedEthBalance.toFixed(3));
+      console.log(`Before: eth=${beforeEthBalance.toFixed()} sub=${beforeSubBalance.toFixed()}`);
+
+      let amountEth = BigNumber('10000000000000000'); // 0.01 ETH
+      let receipt = await ethClient.sendEth(amountEth, polkadotRecipient).should.be.fulfilled;
+      let tx = await ethClient.web3.eth.getTransaction(receipt.transactionHash);
+
+      await sleep(5000)
+
+      let afterSubAccountData = await subClient.queryAssetAccountData("0x00", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY");
+      let afterSubBalance = BigNumber(afterSubAccountData.free.toBigInt())
+
+      const gasCost = BigNumber(tx.gasPrice).times(receipt.gasUsed);
+      const afterEthBalance = await ethClient.getEthBalance();
+
+      console.log(`After: eth=${afterEthBalance.toFixed()} sub=${afterSubBalance.toFixed()}`);
+
+      (beforeEthBalance.minus(afterEthBalance)).should.be.bignumber.equal(amountEth.plus(gasCost));
+
+      (afterSubBalance.minus(beforeSubBalance)).should.be.bignumber.equal(amountEth);
 
     });
 

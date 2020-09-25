@@ -1,4 +1,5 @@
 const Web3 = require('web3');
+const BigNumber = require('bignumber.js');
 
 const ETHApp = require('../../../ethereum/build/contracts/ETHApp.json');
 const ERC20App = require('../../../ethereum/build/contracts/ERC20App.json');
@@ -70,8 +71,7 @@ class EthClient {
      * @param {String} account optional address to query, defaults to current wallet
      */
     async getEthBalance(account = this.web3.eth.defaultAccount) {
-      const ethBalance = await this.web3.eth.getBalance(account);
-      return this.web3.utils.fromWei(ethBalance, 'ether')
+      return new BigNumber(await this.web3.eth.getBalance(account));
     }
 
     /**
@@ -96,7 +96,7 @@ class EthClient {
 
     /**
      * Sends ETH from Ethereum to Substrate
-     * @param {String} amount the amount of Ethereum to be sent to Substrate
+     * @param {String} amount the amount of ETH to be sent to Substrate
      * @param {String} polkadotRecipient the recipient's address on polkadot
      */
     async sendEth(amount, polkadotRecipient) {
@@ -106,12 +106,12 @@ class EthClient {
       if (!polkadotRecipient) {
         throw new Error('polkadot recipient cannot be undefined');
       }
-      const recipientBytes = Buffer.from(polkadotRecipient, 'hex');
+      const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
       return await this.appETH.methods.sendETH(recipientBytes).send({
         from: this.web3.eth.defaultAccount,
         gas: 500000,
-        value: this.web3.utils.toWei(amount, 'ether')
+        value: this.web3.utils.toBN(amount)
       });
     }
 
@@ -150,7 +150,7 @@ class EthClient {
       if (!polkadotRecipient) {
         throw new Error('polkadot recipient cannot be undefined');
       }
-      const recipientBytes = Buffer.from(polkadotRecipient, 'hex');
+      const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
       return await this.appERC20.methods.sendERC20(recipientBytes, tokenContractAddress, amount).send({
         from: this.web3.eth.defaultAccount
