@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Build docs
-cargo +nightly doc --workspace --lib --exclude artemis-runtime --exclude artemis-node
+cargo +nightly doc --release --workspace --lib --exclude artemis-runtime --exclude artemis-node
 
 # Copy over index.html
 cp doc/index.html target/doc/

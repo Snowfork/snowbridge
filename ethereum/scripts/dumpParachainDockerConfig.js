@@ -1,5 +1,4 @@
-const fs  = require('fs');
-const path = require('path');
+const fs = require('fs');
 
 const ETHApp = artifacts.require("ETHApp")
 const ERC20App = artifacts.require("ERC20App")

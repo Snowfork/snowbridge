@@ -42,7 +42,7 @@ contract ETHApp is Application {
         bytes memory sender = _data.slice(0, 32);
         // Decode recipient address
         address payable recipient = _data.sliceAddress(32);
-        // Deocde amount int256
+        // Decode amount int256
         bytes memory amountBytes = _data.slice(32 + 20, 32);
         uint256 amount = amountBytes.decodeUint256();
 
