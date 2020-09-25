@@ -51,7 +51,7 @@ class EthClient {
       this.web3.eth.defaultAccount = accs[0];
     };
 
-    async getWallet() {
+    getWallet() {
       return this.web3.eth.defaultAccount;
     };
 
@@ -71,7 +71,7 @@ class EthClient {
      * @param {String} account optional address to query, defaults to current wallet
      */
     async getEthBalance(account = this.web3.eth.defaultAccount) {
-      return new BigNumber(await this.web3.eth.getBalance(account));
+      return BigNumber(await this.web3.eth.getBalance(account));
     }
 
     /**
@@ -81,7 +81,7 @@ class EthClient {
      */
     async getErc20Balance(tokenContractAddress, account = this.web3.eth.defaultAccount) {
       const erc20Instance = this.loadERC20Contract(tokenContractAddress);
-      return await erc20Instance.methods.balanceOf(account).call();
+      return BigNumber(await erc20Instance.methods.balanceOf(account).call());
     }
 
     /**
@@ -91,7 +91,7 @@ class EthClient {
      */
     async getErc20Allowance(tokenContractAddress, account = this.web3.eth.defaultAccount) {
       const erc20Instance = this.loadERC20Contract(tokenContractAddress);
-      return await erc20Instance.methods.allowance(account, this.appERC20._address).call();
+      return BigNumber(await erc20Instance.methods.allowance(account, this.appERC20._address).call());
     }
 
     /**
@@ -115,7 +115,6 @@ class EthClient {
       });
 
       let tx = await this.web3.eth.getTransaction(receipt.transactionHash);
-
       let gasCost = BigNumber(tx.gasPrice).times(receipt.gasUsed);
 
       return { receipt, tx, gasCost }
@@ -135,9 +134,10 @@ class EthClient {
       }
 
       const erc20Instance = this.loadERC20Contract(tokenContractAddress);
-      return await erc20Instance.methods.approve(this.appERC20._address, amount).send({
+      return erc20Instance.methods.approve(this.appERC20._address, this.web3.utils.toBN(amount)).send({
         from: this.web3.eth.defaultAccount
       });
+
     }
 
     /**
@@ -158,7 +158,7 @@ class EthClient {
       }
       const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
-      return await this.appERC20.methods.sendERC20(recipientBytes, tokenContractAddress, amount).send({
+      return await this.appERC20.methods.sendERC20(recipientBytes, tokenContractAddress, this.web3.utils.toBN(amount)).send({
         from: this.web3.eth.defaultAccount
       });
     }

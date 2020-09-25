@@ -5,10 +5,9 @@ const { sleep } = require('./src/helpers');
 const Web3Utils = require("web3-utils");
 const BigNumber = require('bignumber.js');
 
-require("chai")
+const { expect } = require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
-  .should();
 
 describe('Bridge', function () {
 
@@ -33,87 +32,67 @@ describe('Bridge', function () {
 
   describe('#bridge()', function () {
 
-    it('should transfer ETH from Ethereum to Substrate', async () => {
+    it('should transfer ETH from Ethereum to Substrate', async function() {
       let amount = BigNumber('10000000000000000'); // 0.01 ETH
 
       let beforeEthBalance = await ethClient.getEthBalance();
       let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, ETH_ASSET_ID);
 
-      let { gasCost } = await ethClient.sendEth(amount, polkadotRecipient).should.be.fulfilled;
+      let { gasCost } = await ethClient.sendEth(amount, polkadotRecipient);
       await sleep(5000);
 
       let afterEthBalance = await ethClient.getEthBalance();
       let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, ETH_ASSET_ID);
 
-      beforeEthBalance.minus(afterEthBalance).should.be.bignumber.equal(amount.plus(gasCost));
-      afterSubBalance.minus(beforeSubBalance).should.be.bignumber.equal(amount);
+      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
+      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
+
+      // conservation of value
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost))
     });
 
     it('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
-      const amount = 500;
-      const beforeBalanceEthereum = Number(await ethClient.getErc20Balance(testTokenContractAddress));
-      // const beforeBalanceSubstrate = Number(await subClient.getBalance(polkadotRecipient, testTokenContractAddress));
+      let amount = BigNumber('1000');
+
+      let beforeEthBalance = await ethClient.getErc20Balance(testTokenContractAddress);
+      let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, testTokenContractAddress);
 
       await ethClient.approveERC20(amount, testTokenContractAddress);
-      const res = await ethClient.sendERC20(amount, testTokenContractAddress, polkadotRecipient);
+      await ethClient.sendERC20(amount, testTokenContractAddress, polkadotRecipient);
+      await sleep(5000);
 
-      const event = res.events && res.events.AppTransfer;
+      let afterEthBalance = await ethClient.getErc20Balance(testTokenContractAddress);
+      let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, testTokenContractAddress);
 
-      event.returnValues._sender.should.be.equal(await ethClient.getWallet());
-      // event._recipient.should.be.equal(polkadotRecipient);
-      event.returnValues._token.should.be.equal(testTokenContractAddress);
-      Number(event.returnValues._amount).should.be.bignumber.equal(amount);
+      expect(afterEthBalance).to.be.bignumber.equal(beforeEthBalance.minus(amount));
+      expect(afterSubBalance).to.be.bignumber.equal(beforeSubBalance.plus(amount));
 
-      // Wait 10 seconds for the Relayer to process the transfer
-      // await sleep(10000);
-
-      const afterBalanceEthereum = Number(await ethClient.getErc20Balance(testTokenContractAddress));
-      afterBalanceEthereum.should.be.bignumber.equal(beforeBalanceEthereum - amount);
-
-      // const afterBalanceSubstrate = Number(await subClient.getBalance(polkadotRecipient, testTokenContractAddress));
-      // afterBalanceSubstrate.should.be.bignumber.equal(beforeBalanceSubstrate + amount);
+      // conservation of value
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance))
     });
 
 
     it('should transfer ETH from Substrate to Ethereum', async function () {
-      const ethAmount = 0.25;
-      const weiAmount = Web3Utils.toWei(String(ethAmount), "ether");
-      const ethereumRecipient = await ethClient.getWallet();
 
-      const beforeBalanceEthereum = Number(await ethClient.getEthBalance());
-      // const beforeBalanceSubstrate = Number(await subClient.getBalance(polkadotRecipient));
+      let amount = BigNumber('10000000000000000'); // 0.01 ETH
+      const recipient = ethClient.getWallet()
 
-      // const res = await ethClient.burnETH(weiAmount, ethereumRecipient);
-      // TODO: check event emitted and event fields
+      let beforeEthBalance = await ethClient.getEthBalance();
+      let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, "0x00");
 
-      // Wait 10 seconds for the Relayer to process the transfer
-      // await sleep(10000);
+      await subClient.burnETH(subClient.alice, recipient, amount.toFixed())
+      await sleep(30000);
 
-      const afterBalanceEthereum = Number(await ethClient.getEthBalance());
-      afterBalanceEthereum.should.be.bignumber.equal(beforeBalanceEthereum - ethAmount);
+      let afterEthBalance = await ethClient.getEthBalance();
+      let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, "0x00");
 
-      // const afterBalanceSubstrate = Number(await subClient.getBalance(polkadotRecipient));
-      // afterBalanceSubstrate.should.be.bignumber.equal(beforeBalanceSubstrate + ethAmount);
-    });
+      console.log(beforeEthBalance.toFixed(), " ", afterEthBalance.toFixed());
+      console.log(beforeSubBalance.toFixed(), " ", afterSubBalance.toFixed());
 
-    it('should transfer ERC20 tokens from Substrate to Ethereum', async function () {
-      const amount = 500;
-      const ethereumRecipient = await ethClient.getWallet();
+      expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amount);
 
-      const beforeBalanceERC20= Number(await ethClient.getErc20Balance(testTokenContractAddress));
-      // const beforeBalanceSubstrate = Number(await subClient.getErc20Balance(polkadotRecipient, testTokenContractAddress));
 
-      // const res = await subClient.burnETH(amount, testTokenContractAddress, ethereumRecipient);
-      // TODO: check event emitted and event fields
+    })
 
-      // Wait 10 seconds for the Relayer to process the transfer
-      // await sleep(10000);
-
-      const afterBalanceERC20 = Number(await ethClient.getErc20Balance(testTokenContractAddress));
-      afterBalanceERC20.should.be.bignumber.equal(beforeBalanceERC20 + amount);
-
-      // const afterBalanceSubstrate = Number(await subClient.getErc20Balance(polkadotRecipient, testTokenContractAddress));
-      // afterBalanceSubstrate.should.be.bignumber.equal(beforeBalanceSubstrate - amount);
-    });
   });
 });

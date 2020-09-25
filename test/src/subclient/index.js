@@ -1,11 +1,13 @@
 let { ApiPromise, WsProvider } = require('@polkadot/api');
+let { Keyring } = require('@polkadot/api');
 const { default: BigNumber } = require('bignumber.js');
 
 class SubClient {
 
     constructor(endpoint) {
-        this.endpoint = endpoint
-        this.api = null
+        this.endpoint = endpoint;
+        this.api = null;
+        this.keyring = null;
     }
 
     async connect() {
@@ -37,6 +39,10 @@ class SubClient {
                 }
             }
         })
+
+        this.keyring = new Keyring({ type: 'sr25519' });
+        this.alice = this.keyring.addFromUri('//Alice', { name: 'Alice' });
+
     }
 
     async queryAccountBalance(accountId, assetId) {
@@ -46,6 +52,11 @@ class SubClient {
         }
         return null
     }
+
+    async burnETH(account, recipient, amount) {
+        const txHash = await this.api.tx.eth.burn(recipient, amount).signAndSend(account);
+    }
+
 
 }
 

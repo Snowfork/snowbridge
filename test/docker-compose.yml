@@ -38,6 +38,9 @@ services:
   relayer:
     build:
       context: ../relayer
+    depends_on:
+      - ganache
+      - parachain
     command: run --config /opt/config/config.toml
     environment:
       ARTEMIS_ETHEREUM_KEY: "0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
