@@ -12,13 +12,13 @@ module.exports = async () => {
         const erc20AppInstance = await ERC20App.deployed()
         const tokenInstance = await TestToken.deployed();
 
-        const jsonStr = "{" +
-            "\"ethApp\":\"" + eth20AppInstance.address + "\"," +
-            "\"erc20App\":\"" + erc20AppInstance.address + "\"," +
-            "\"token\":\"" + tokenInstance.address + "\"" +
-            "}"
+        const apps = {
+            ethApp: eth20AppInstance.address,
+            erc20App: erc20AppInstance.address,
+            token: tokenInstance.address
+        }
 
-        return console.log(jsonStr);
+        return console.log(JSON.stringify(apps));
     } catch (error) {
         return console.error({error})
     }

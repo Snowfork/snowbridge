@@ -7,7 +7,6 @@ function sleep(ms) {
 async function fetchDeployedAddrs() {
     const cmd = "cd ../ethereum && truffle exec scripts/fetchDeployedAddrs.js"
     const appsStr = await execShellCommand(cmd);
-
     var regExp = /\{([^)]+)\}/;
     var matches = regExp.exec(appsStr);
     return JSON.parse("{" + matches[1] + "}");
