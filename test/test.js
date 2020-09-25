@@ -33,24 +33,19 @@ describe('Bridge', function () {
 
     it('should transfer ETH from Ethereum to Substrate', async () => {
 
-      // Amount to transfer
       let amount = BigNumber('10000000000000000'); // 0.01 ETH
 
       let beforeEthBalance = await ethClient.getEthBalance();
       let beforeSubBalance = await subClient.queryAccountBalance("0x00", polkadotRecipientSS58);
 
       let { gasCost } = await ethClient.sendEth(amount, polkadotRecipient).should.be.fulfilled;
-
-      // Sleep to allow relaying
       await sleep(5000)
 
       let afterEthBalance = await ethClient.getEthBalance();
       let afterSubBalance = await subClient.queryAccountBalance("0x00", polkadotRecipientSS58);
 
-      (beforeEthBalance.minus(afterEthBalance)).should.be.bignumber.equal(amount.plus(gasCost));
-
-      (afterSubBalance.minus(beforeSubBalance)).should.be.bignumber.equal(amount);
-
+      beforeEthBalance.minus(afterEthBalance).should.be.bignumber.equal(amount.plus(gasCost));
+      afterSubBalance.minus(beforeSubBalance).should.be.bignumber.equal(amount);
     });
 
     it('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
