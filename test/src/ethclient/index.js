@@ -24,7 +24,7 @@ class EthClient {
       if(!erc20AppAddress) {
         throw new Error('ERC20 application contract address cannot be undefined');
       }
-      var web3 = new Web3(new Web3.providers.HttpProvider(endpoint));
+      var web3 = new Web3(new Web3.providers.WebsocketProvider(endpoint));
       this.web3 = web3;
 
       this.loadApplicationContracts(ethAppAddress, erc20AppAddress);
@@ -108,11 +108,17 @@ class EthClient {
       }
       const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
-      return await this.appETH.methods.sendETH(recipientBytes).send({
+      let receipt = await this.appETH.methods.sendETH(recipientBytes).send({
         from: this.web3.eth.defaultAccount,
         gas: 500000,
         value: this.web3.utils.toBN(amount)
       });
+
+      let tx = await this.web3.eth.getTransaction(receipt.transactionHash);
+
+      let gasCost = BigNumber(tx.gasPrice).times(receipt.gasUsed);
+
+      return { receipt, tx, gasCost }
     }
 
     /**

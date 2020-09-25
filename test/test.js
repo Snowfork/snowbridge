@@ -14,13 +14,13 @@ describe('Bridge', function () {
 
   var ethClient;
   var subClient;
-  const endpoint = "http://localhost:8545";
+  const endpoint = "ws://localhost:8545";
   const ethAppAddress = "0x4283d8996E5a7F4BEa58c6052b1471a2a9524C87";
   const erc20AppAddress = "0x3f839E70117C64744930De8567Ae7A5363487cA3";
   const testTokenContractAddress = "0xA588C09D2fE853714d93347F5138FFAA3F7Bdf06";
 
-  const gasPrice = BigNumber("200000000000"); //From truffle config
   const polkadotRecipient = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
+  const polkadotRecipientSS58 = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
 
   beforeEach(async function () {
     ethClient = new EthClient(endpoint, ethAppAddress, erc20AppAddress);
@@ -32,29 +32,24 @@ describe('Bridge', function () {
   describe('#bridge()', function () {
 
     it('should transfer ETH from Ethereum to Substrate', async () => {
+
+      // Amount to transfer
+      let amount = BigNumber('10000000000000000'); // 0.01 ETH
+
       let beforeEthBalance = await ethClient.getEthBalance();
-      let beforeSubAccountData = await subClient.queryAssetAccountData("0x00", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY");
-      let beforeSubBalance = BigNumber(beforeSubAccountData.free.toBigInt())
+      let beforeSubBalance = await subClient.queryAccountBalance("0x00", polkadotRecipientSS58);
 
-      console.log(`Before: eth=${beforeEthBalance.toFixed()} sub=${beforeSubBalance.toFixed()}`);
+      let { gasCost } = await ethClient.sendEth(amount, polkadotRecipient).should.be.fulfilled;
 
-      let amountEth = BigNumber('10000000000000000'); // 0.01 ETH
-      let receipt = await ethClient.sendEth(amountEth, polkadotRecipient).should.be.fulfilled;
-      let tx = await ethClient.web3.eth.getTransaction(receipt.transactionHash);
-
+      // Sleep to allow relaying
       await sleep(5000)
 
-      let afterSubAccountData = await subClient.queryAssetAccountData("0x00", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY");
-      let afterSubBalance = BigNumber(afterSubAccountData.free.toBigInt())
+      let afterEthBalance = await ethClient.getEthBalance();
+      let afterSubBalance = await subClient.queryAccountBalance("0x00", polkadotRecipientSS58);
 
-      const gasCost = BigNumber(tx.gasPrice).times(receipt.gasUsed);
-      const afterEthBalance = await ethClient.getEthBalance();
+      (beforeEthBalance.minus(afterEthBalance)).should.be.bignumber.equal(amount.plus(gasCost));
 
-      console.log(`After: eth=${afterEthBalance.toFixed()} sub=${afterSubBalance.toFixed()}`);
-
-      (beforeEthBalance.minus(afterEthBalance)).should.be.bignumber.equal(amountEth.plus(gasCost));
-
-      (afterSubBalance.minus(beforeSubBalance)).should.be.bignumber.equal(amountEth);
+      (afterSubBalance.minus(beforeSubBalance)).should.be.bignumber.equal(amount);
 
     });
 

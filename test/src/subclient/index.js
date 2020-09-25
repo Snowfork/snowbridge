@@ -1,4 +1,5 @@
 let { ApiPromise, WsProvider } = require('@polkadot/api');
+const { default: BigNumber } = require('bignumber.js');
 
 class SubClient {
 
@@ -38,8 +39,12 @@ class SubClient {
         })
     }
 
-    async queryAssetAccountData(assetId, accountId) {
-        return this.api.query.asset.account(assetId, accountId);
+    async queryAccountBalance(assetId, accountId) {
+        let accountData = await this.api.query.asset.account(assetId, accountId);
+        if (accountData && accountData.free) {
+            return BigNumber(accountData.free.toBigInt())
+        }
+        return null
     }
 
 }
