@@ -22,6 +22,8 @@ describe('Bridge', function () {
   const polkadotRecipient = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
   const polkadotRecipientSS58 = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
 
+  const ETH_ASSET_ID = "0x00"
+
   beforeEach(async function () {
     ethClient = new EthClient(endpoint, ethAppAddress, erc20AppAddress);
     subClient = new SubClient("ws://localhost:9944");
@@ -32,17 +34,16 @@ describe('Bridge', function () {
   describe('#bridge()', function () {
 
     it('should transfer ETH from Ethereum to Substrate', async () => {
-
       let amount = BigNumber('10000000000000000'); // 0.01 ETH
 
       let beforeEthBalance = await ethClient.getEthBalance();
-      let beforeSubBalance = await subClient.queryAccountBalance("0x00", polkadotRecipientSS58);
+      let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, ETH_ASSET_ID);
 
       let { gasCost } = await ethClient.sendEth(amount, polkadotRecipient).should.be.fulfilled;
-      await sleep(5000)
+      await sleep(5000);
 
       let afterEthBalance = await ethClient.getEthBalance();
-      let afterSubBalance = await subClient.queryAccountBalance("0x00", polkadotRecipientSS58);
+      let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, ETH_ASSET_ID);
 
       beforeEthBalance.minus(afterEthBalance).should.be.bignumber.equal(amount.plus(gasCost));
       afterSubBalance.minus(beforeSubBalance).should.be.bignumber.equal(amount);

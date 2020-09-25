@@ -39,7 +39,7 @@ class SubClient {
         })
     }
 
-    async queryAccountBalance(assetId, accountId) {
+    async queryAccountBalance(accountId, assetId) {
         let accountData = await this.api.query.asset.account(assetId, accountId);
         if (accountData && accountData.free) {
             return BigNumber(accountData.free.toBigInt())
