@@ -14,6 +14,13 @@ This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge
 
 After starting the blockchain and deploying the contracts, the Bridge's Ethereum component is ready for usage.
 
+
+Install truffle:
+
+```bash
+yarn global add truffle
+```
+
 Install dependencies with yarn:
 
 ```bash
