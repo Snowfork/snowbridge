@@ -1,5 +1,8 @@
 #!/bin/bash
 
+mkdir build
+touch build/parachain.env
+
 # Start Ganache
 docker-compose up -d -- ganache
 tools/wait-for-it.sh localhost:8545 -- echo "Ganache is up"

@@ -2,6 +2,17 @@
 
 The E2E tests ran against a dockerized services.
 
+## Requirements
+
+1. Development environment for Rust and Substrate. See parachain [requirements](../parachain/README.md#requirements).
+2. Development environment for Ethereum smart contracts.
+
+   ```bash
+   yarn global add truffle
+   (cd ../ethereum && yarn install)
+    ```
+3. Docker and docker-compose
+
 ## Setup
 
 Currently, setting up the dockerized environment is partially automated. Full automation requires further work to ensure services start up successfully in the correct dependency order.
@@ -13,6 +24,9 @@ yarn install
 
 Run the following commands one by one:
 ```bash
+mkdir build
+touch build/parachain.env
+
 # Start ganache service
 docker-compose up -d -- ganache
 
