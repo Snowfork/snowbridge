@@ -6,8 +6,10 @@ services:
   ganache:
     image: trufflesuite/ganache-cli
     command: >
-      --port=8545 --blockTime=0
-      --db /opt/ganache-db
+      --port=8545
+      --blockTime=0
+      --db=/opt/ganache-db
+      --networkId=344
       --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove'
     ports:
       - "8545:8545"

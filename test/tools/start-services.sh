@@ -9,9 +9,10 @@ pushd ../ethereum
 # Deploy contracts
 truffle deploy --network ganache
 
-# Generate configuration for relayer and parachain
+# Generate configuration for relayer, parachain, and tests
 truffle exec scripts/dumpRelayerDockerConfig.js --network ganache
 truffle exec scripts/dumpParachainDockerConfig.js --network ganache
+truffle exec scripts/dumpAddresses.js --network ganache
 popd
 
 # Start Parachain

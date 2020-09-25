@@ -57,6 +57,10 @@ class SubClient {
         const txHash = await this.api.tx.eth.burn(recipient, amount).signAndSend(account);
     }
 
+    async burnERC20(account, assetId, recipient, amount) {
+        const txHash = await this.api.tx.erc20.burn(assetId, recipient, amount).signAndSend(account);
+    }
+
 
 }
 
