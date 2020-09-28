@@ -8,7 +8,7 @@ require("chai")
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
-contract("Bank", function (accounts) {
+contract("EthApp", function (accounts) {
   // Accounts
   const owner = accounts[0];
   const userOne = accounts[1];
@@ -24,9 +24,6 @@ contract("Bank", function (accounts) {
 
     it("should deploy and initialize the ETHApp contract", async function () {
       this.ethApp.should.exist;
-
-      const nonce = Number(await this.ethApp.nonce());
-      nonce.should.be.bignumber.equal(0);
     });
   });
 
@@ -38,7 +35,6 @@ contract("Bank", function (accounts) {
     it("should support Ethereum deposits", async function () {
       // Load initial contract state
       const beforeTotalETH = Number(await this.ethApp.totalETH());
-      const beforeNonce = Number(await this.ethApp.nonce());
 
       // Prepare transaction parameters
       const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
@@ -68,10 +64,6 @@ contract("Bank", function (accounts) {
       // Confirm contract's locked Ethereum counter has increased by amount locked
       const afterTotalETH = await this.ethApp.totalETH();
       Number(afterTotalETH).should.be.bignumber.equal(beforeTotalETH+Number(weiAmount));
-
-      // Confirm contract's nonce has been incremented
-      const nonce = Number(await this.ethApp.nonce());
-      nonce.should.be.bignumber.equal(beforeNonce+1);
     });
   });
 
@@ -80,6 +72,7 @@ contract("Bank", function (accounts) {
 
     before(async function () {
         this.ethApp = await ETHApp.new();
+        await this.ethApp.register(owner);
 
         // Prepare transaction parameters
         const lockAmountWei = 5000;

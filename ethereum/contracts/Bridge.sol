@@ -18,9 +18,7 @@ contract Bridge {
     constructor(address _verfierAddr, address[] memory _apps) public {
         verifier = Verifier(_verfierAddr);
         for(uint256 i = 0; i < _apps.length; i++) {
-            if(verifyApp(_apps[i])) {
-                applications[_apps[i]] = true;
-            }
+            registerApp(_apps[i]);
         }
     }
 
@@ -46,13 +44,11 @@ contract Bridge {
     }
 
     /**
-     * @dev verifies new applications
-     * @param _appID address _appID is the application's contract address to be verified
+     * @dev registers a new application onto the bridge
+     * @param _appID address _appID is the application's contract address to be registered
      */
-    function verifyApp(address _appID)
+    function registerApp(address _appID)
         internal
-        view
-        returns(bool)
     {
         require(!applications[_appID], "Application is already registered");
 
@@ -61,6 +57,8 @@ contract Bridge {
         require(codehash != 0x0, "There's no account for this address on the network");
         require(codehash != NON_CONTRACT_ACCOUNT_HASH, "Only contract accounts can be registered as applications");
 
-        return true;
+        Application app = Application(_appID);
+        require(app.register(address(this)), "Application failed registration");
+        applications[_appID] = true;
     }
 }

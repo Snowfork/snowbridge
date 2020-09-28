@@ -11,6 +11,7 @@ contract ETHApp is Application {
 
     uint64 constant PAYLOAD_LENGTH = 84;
 
+    address public bridge;
     uint256 public totalETH;
 
     event AppTransfer(address _sender, bytes32 _recipient, uint256 _amount);
@@ -18,6 +19,12 @@ contract ETHApp is Application {
 
     constructor() public {
         totalETH = 0;
+    }
+
+    function register(address _bridge) public override returns(bool) {
+        require(bridge == address(0), "Bridge has already been registered");
+        bridge = _bridge;
+        return true;
     }
 
     function sendETH(bytes32 _recipient)
@@ -36,6 +43,7 @@ contract ETHApp is Application {
         public
         override
     {
+        require(msg.sender == bridge);
         require(_data.length >= PAYLOAD_LENGTH, "Invalid payload");
 
         // Decode sender bytes
