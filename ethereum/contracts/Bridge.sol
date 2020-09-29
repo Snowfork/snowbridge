@@ -58,7 +58,7 @@ contract Bridge {
         require(codehash != NON_CONTRACT_ACCOUNT_HASH, "Only contract accounts can be registered as applications");
 
         Application app = Application(_appID);
-        require(app.register(address(this)), "Application failed registration");
+        app.register(address(this));
         applications[_appID] = true;
     }
 }

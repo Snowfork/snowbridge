@@ -11,5 +11,5 @@ abstract contract Application {
     /**
      * @dev Registers the Bridge contract on the application
      */
-    function register(address _bridge) public virtual returns(bool);
+    function register(address _bridge) public virtual;
 }

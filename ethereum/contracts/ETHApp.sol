@@ -21,10 +21,9 @@ contract ETHApp is Application {
         totalETH = 0;
     }
 
-    function register(address _bridge) public override returns(bool) {
+    function register(address _bridge) public override {
         require(bridge == address(0), "Bridge has already been registered");
         bridge = _bridge;
-        return true;
     }
 
     function sendETH(bytes32 _recipient)

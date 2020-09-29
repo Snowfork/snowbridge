@@ -18,10 +18,9 @@ contract ERC20App is Application {
     event AppTransfer(address _sender, bytes32 _recipient, address _token, uint256 _amount);
     event Unlock(bytes _sender, address _recipient, address _token, uint256 _amount);
 
-    function register(address _bridge) public override returns(bool) {
+    function register(address _bridge) public override {
         require(bridge == address(0), "Bridge has already been registered");
         bridge = _bridge;
-        return true;
     }
 
     function sendERC20(bytes32 _recipient, address _tokenAddr, uint256 _amount)
