@@ -25,9 +25,6 @@ contract("ERC20App", function (accounts) {
 
     it("should deploy and initialize the ERC20App contract", async function () {
       this.erc20App.should.exist;
-
-      const nonce = Number(await this.erc20App.nonce());
-      nonce.should.be.bignumber.equal(0);
     });
   });
 
@@ -50,7 +47,6 @@ contract("ERC20App", function (accounts) {
     it("should support ERC20 deposits", async function () {
       // Load initial state
       const beforeTotalERC20 = Number(await this.erc20App.totalTokens(this.token.address));
-      const beforeNonce = Number(await this.erc20App.nonce());
       const beforeTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
       const beforeUserBalance = Number(await this.token.balanceOf(userOne));
 
@@ -97,10 +93,6 @@ contract("ERC20App", function (accounts) {
       // Confirm contract's locked ERC20 counter has increased by amount locked
       const afterTotalERC20 = await this.erc20App.totalTokens(this.token.address);
       Number(afterTotalERC20).should.be.bignumber.equal(beforeTotalERC20+amount);
-
-      // Confirm contract's nonce has been incremented
-      const nonce = Number(await this.erc20App.nonce());
-      nonce.should.be.bignumber.equal(beforeNonce+1);
     });
   });
 
@@ -108,6 +100,7 @@ contract("ERC20App", function (accounts) {
 
     before(async function () {
         this.erc20App = await ERC20App.new();
+        await this.erc20App.register(owner);
 
         // Set up an ERC20 token for testing token deposits
         this.symbol = "TEST";
@@ -119,7 +112,7 @@ contract("ERC20App", function (accounts) {
         }).should.be.fulfilled;
 
         // Prepare transaction parameters
-        const lockAmount = 5000;
+        const lockAmount = 10000;
         const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
 
         // Approve tokens to contract
@@ -141,7 +134,8 @@ contract("ERC20App", function (accounts) {
 
     it("should support ERC20 unlocks", async function () {
       // Encoded data
-      const encodedData = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dcffeaaf7681c89285d65cfbe808b80e502696573eec918d74c746167564401103096D45BbD494B743412000000000000000000000000000000000000000000000000000000000000"
+      const encodedTokenAddress = this.token.address.slice(2, this.token.address.length);
+      const encodedData = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dcffeaaf7681c89285d65cfbe808b80e502696573" + encodedTokenAddress + "3412000000000000000000000000000000000000000000000000000000000000"
       // Decoded data
       const decodedSender = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
       const decodedRecipient = "0xCfFEAAf7681c89285D65CfbE808b80e502696573";

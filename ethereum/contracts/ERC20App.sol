@@ -12,10 +12,16 @@ contract ERC20App is Application {
 
     uint64 constant PAYLOAD_LENGTH = 104;
 
+    address public bridge;
     mapping(address => uint256) public totalTokens;
 
     event AppTransfer(address _sender, bytes32 _recipient, address _token, uint256 _amount);
     event Unlock(bytes _sender, address _recipient, address _token, uint256 _amount);
+
+    function register(address _bridge) public override {
+        require(bridge == address(0), "Bridge has already been registered");
+        bridge = _bridge;
+    }
 
     function sendERC20(bytes32 _recipient, address _tokenAddr, uint256 _amount)
         public
@@ -35,6 +41,7 @@ contract ERC20App is Application {
         public
         override
     {
+        require(msg.sender == bridge);
         require(_data.length >= PAYLOAD_LENGTH, "Invalid Payload");
 
         // Decode sender bytes
@@ -56,7 +63,7 @@ contract ERC20App is Application {
         internal
     {
         require(_amount > 0, "Must unlock a positive amount");
-        require(totalTokens[_token] > _amount, "ERC20 token balances insufficient to fulfill the unlock request");
+        require(_amount <= totalTokens[_token], "ERC20 token balances insufficient to fulfill the unlock request");
 
         totalTokens[_token] = totalTokens[_token].sub(_amount);
         require(IERC20(_token).transfer(_recipient, _amount), "ERC20 token transfer failed");
