@@ -18,5 +18,10 @@ This folder includes our Relayer daemon that will be run by relayers to watch an
 
 See [relayer/README.md](relayer/README.md)
 
+### Tests
+This folder includes our end to end tests, that pull together all the above services and set them up easily through scripts for automated E2E tests.
+
+See [test/README.md](test/README.md)
+
 ### Usage
-To test out and use the bridge, see each of the above READMEs in order and run through their steps. The full functionality can then also be demo'd using our substrate-ui fork, with extra demo steps described [here](https://github.com/Snowfork/substrate-ui/tree/stable-base/packages/app-polkadot-ethereum-bridge)
+To test out and use the bridge, see each of the above READMEs in order and run through their steps, or just look through the test guide if that's all you need. The full functionality can then also be demo'd using our substrate-ui fork, with extra demo steps described [here](https://github.com/Snowfork/substrate-ui/tree/stable-base/packages/app-polkadot-ethereum-bridge)
