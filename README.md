@@ -31,3 +31,7 @@ See [test/README.md](test/README.md)
 ## Usage
 
 To test out and use the bridge, see each of the above READMEs in order and run through their steps, or just look through the test guide if that's all you need. The full functionality can then also be demonstrated using our [fork](https://github.com/Snowfork/substrate-ui) of the Polkadot-JS web application. Extra demo steps described [here](https://github.com/Snowfork/substrate-ui/tree/stable-base/packages/app-polkadot-ethereum-bridge).
+
+## Security
+
+The security policy and procedures can be found in SECURITY.md.

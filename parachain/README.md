@@ -4,6 +4,7 @@
 
 A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 
+- [Documentation](#documentation)
 - [Development](#development)
   - [Requirements](#requirements)
     - [Simple Method](#simple-method)
@@ -15,6 +16,10 @@ A Polkadot parachain for bridging arbitrary data from and to Ethereum.
   - [Build](#build)
   - [Run](#run)
 - [Development with Docker](#development-with-docker)
+
+## Documentation
+
+See our [Rustdocs](https://sad-curie-a48c3f.netlify.app/) for an overview of the crates, APIs, and types that make up our parachain.
 
 ## Development
 
