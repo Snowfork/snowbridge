@@ -24,7 +24,7 @@ yarn install
 
 Run the following commands one by one:
 ```bash
-mkdir build
+mkdir build && cd build && mkdir parachain-state && cd ..
 touch build/parachain.env
 
 # Start ganache service
