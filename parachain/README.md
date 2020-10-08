@@ -15,7 +15,7 @@ A Polkadot parachain for bridging arbitrary data from and to Ethereum.
     - [Relayer Key](#relayer-key)
   - [Build](#build)
   - [Run](#run)
-- [Development with Docker](#development-with-docker)
+- [Interacting with the chain](#interacting-with-the-chain)
 
 ## Documentation
 
@@ -66,6 +66,7 @@ It is necessary to inject these addresses into the build environment so that our
 Rust code for message dispatch.
 
 Autmatically:
+
 ```bash
 eval $(scripts/make-build-config.sh)
 
@@ -75,13 +76,13 @@ echo $ERC20_APP_ID
 ```
 
 Or manually (replace example addresses with your own):
+
 ```bash
 export ETH_APP_ID=0x0d27b0069241c03575669fed1badcbccdc0dd4d1
 export ERC20_APP_ID=0x8fe1b1233f7032cef8cfc5eaaf411dffaa77a07c
 ```
 
 Tip: Use [direnv](https://direnv.net/) to persist these variables in your development environment.
-
 
 #### Relayer Key
 
@@ -90,7 +91,6 @@ _It is not required to change anything here for local development and testing._
 The parachain depends on a external relayer service to forward messages to and from Ethereum. The relayer service is trusted by the parachain. Its identity should be injected into the [GenesisConfig](https://snowfork.github.io/artemis-rust-docs/pallet_verifier/struct.GenesisConfig.html#structfield.key) for the [Verifier](https://snowfork.github.io/artemis-rust-docs/pallet_verifier/index.html) pallet.
 
 The node's baked-in chain spec uses `//Relay` as the relayer's account seed. For reference, see [chain_spec.rs](https://github.com/Snowfork/polkadot-ethereum/blob/main/parachain/node/src/chain_spec.rs#L50).
-
 
 ### Build
 
@@ -122,28 +122,37 @@ Or, start a dev chain with detailed logging:
 RUST_LOG=debug RUST_BACKTRACE=1 target/release/artemis-node -lruntime=debug --dev
 ```
 
-## Development with Docker
+## Interacting with the chain
 
-First, install [Docker](https://docs.docker.com/get-docker/) and
-[Docker Compose](https://docs.docker.com/compose/install/).
+You can interact with a development chain using our [webapp](https://xenodochial-goldstine-1ba19f.netlify.app). Its an instance of the Polkadot-JS webapp with the necessary configuration to interact with our development chain.
 
-Then run the following command to start a single node development chain.
+### Custom Types
 
-```bash
-./scripts/docker_run.sh
-```
+For interacting with our chain using the Polkadot-JS API, you'll need to supply these custom types:
 
-This command will firstly compile your code, and then start a local development network. You can
-also replace the default command (`cargo build --release && ./target/release/node-template --dev --ws-external`)
-by appending your own. A few useful ones are as follow.
-
-```bash
-# Run Substrate node without re-compiling
-./scripts/docker_run.sh ./target/release/artemis-node --dev --ws-external
-
-# Purge the local dev chain
-./scripts/docker_run.sh ./target/release/artemis-node purge-chain --dev
-
-# Check whether the code is compilable
-./scripts/docker_run.sh cargo check
+```json
+{
+  "Address": "AccountId",
+  "LookupSource": "AccountId",
+  "AppId": "[u8; 20]",
+  "Message": {
+    "payload": "Vec<u8>",
+    "verification": "VerificationInput"
+  },
+  "VerificationInput": {
+    "_enum": {
+      "Basic": "VerificationBasic",
+      "None": null
+    }
+  },
+  "VerificationBasic": {
+    "blockNumber": "u64",
+    "eventIndex": "u32"
+  },
+  "TokenId": "H160",
+  "BridgedAssetId": "H160",
+  "AssetAccountData": {
+    "free": "U256"
+  }
+}
 ```
