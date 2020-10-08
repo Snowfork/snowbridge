@@ -1,6 +1,6 @@
 # E2E tests
 
-The E2E tests ran against a dockerized services.
+The E2E tests run against dockerized services.
 
 ## Requirements
 
@@ -11,27 +11,31 @@ The E2E tests ran against a dockerized services.
    yarn global add truffle
    (cd ../ethereum && yarn install)
     ```
+
 3. Docker and docker-compose
 
 ## Setup
 
-Currently, setting up the dockerized environment is partially automated. Full automation requires further work to ensure services start up successfully in the correct dependency order.
+Currently, setting up the dockerized environment is partially automated. Full automation requires further work due to some intricacies in our configuration and build process.
 
 Download dependencies:
-```
+
+```bash
 yarn install
 ```
 
 Run the following commands one by one:
+
 ```bash
 mkdir build
+mkdir build/parachain-state
 touch build/parachain.env
 
 # Start ganache service
 docker-compose up -d -- ganache
 
 # Ensure ganache starts up successfully
-docker-compose logs -f ganache
+docker-compose logs ganache | tail -n 20
 
 # change to Ethereum contracts dir
 pushd ../ethereum
@@ -51,13 +55,13 @@ popd
 docker-compose up -d -- parachain
 
 # Wait until parachain compiles and starts up successfully
-docker-compose logs -f parachain
+docker-compose logs parachain | tail -n 20
 
 # Start Relayer
 docker-compose up -d -- relayer
 
 # Wait until relayer starts up successfully
-docker-compose logs -f relayer
+docker-compose logs relayer | tail -n 20
 ```
 
 ## Run Tests
@@ -65,4 +69,3 @@ docker-compose logs -f relayer
 ```bash
 yarn test
 ```
-
