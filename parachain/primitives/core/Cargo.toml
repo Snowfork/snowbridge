@@ -16,20 +16,20 @@ hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 [dependencies.frame-support]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'v2.0.0-rc4'
-version = '2.0.0-rc4'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
 
 [dependencies.sp-std]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'v2.0.0-rc4'
-version = '2.0.0-rc4'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
 
 [dependencies.sp-core]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'v2.0.0-rc4'
-version = '2.0.0-rc4'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
 
 [features]
 default = ['std']
