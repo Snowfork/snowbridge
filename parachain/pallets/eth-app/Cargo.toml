@@ -21,44 +21,37 @@ version = "1.3.4"
 [dependencies.frame-support]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [dependencies.frame-system]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [dependencies.sp-core]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [dependencies.sp-std]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [dependencies.sp-runtime]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [dev-dependencies.sp-keyring]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [dependencies.serde]
 package = "serde"

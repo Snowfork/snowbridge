@@ -10,10 +10,10 @@ ethbloom = { version = "0.8", default-features = false }
 ethereum-types = { version = "0.9.2", default-features = false }
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 hex-literal = { version = "0.3.1", default-features = false }
+serde = { version = "1.0", optional = true }
+rlp = { version = "0.4", default-features = false }
 libsecp256k1 = { version = "0.3", default-features = false }
 parity-bytes = { version = "0.1", default-features = false }
-rlp = { version = "0.4", default-features = false }
-serde = { version = "1.0", optional = true }
 serde-big-array = { version = "0.2", optional = true }
 
 [dependencies.ethabi]
@@ -25,26 +25,22 @@ version = "1.2.1"
 [dependencies.sp-std]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [dependencies.sp-core]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [dependencies.sp-runtime]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "rococo-branch"
 
 [features]
 default = ["std"]
