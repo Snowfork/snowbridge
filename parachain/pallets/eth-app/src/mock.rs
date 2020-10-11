@@ -65,6 +65,7 @@ impl system::Trait for MockRuntime {
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
 }
 
 impl asset::Trait for MockRuntime {
