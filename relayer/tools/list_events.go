@@ -54,7 +54,6 @@ func listEvents(m *types.Metadata) []Event {
 		if !mod.HasEvents {
 			continue
 		}
-		fmt.Printf("i: %v\n ", i)
 		for j, ev := range mod.Events {
 			event := Event{
 				ID:         [2]uint8{uint8(i), uint8(j)},
