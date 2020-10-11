@@ -6,8 +6,8 @@ import (
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/snowfork/go-substrate-rpc-client/scale"
-	"github.com/snowfork/go-substrate-rpc-client/types"
+	"github.com/centrifuge/go-substrate-rpc-client/scale"
+	"github.com/centrifuge/go-substrate-rpc-client/types"
 )
 
 type Event struct {

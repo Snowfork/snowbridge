@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/snowfork/go-substrate-rpc-client/scale"
+	"github.com/centrifuge/go-substrate-rpc-client/scale"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
 )

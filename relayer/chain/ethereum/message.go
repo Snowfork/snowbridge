@@ -9,7 +9,7 @@ import (
 
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/scale"
+	"github.com/centrifuge/go-substrate-rpc-client/scale"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 )
 
