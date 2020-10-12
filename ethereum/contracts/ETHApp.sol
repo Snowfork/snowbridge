@@ -61,7 +61,11 @@ contract ETHApp is Application {
         internal
     {
         require(_amount > 0, "Must unlock a positive amount");
-        require(totalETH > _amount, "ETH token balances insufficient to fulfill the unlock request");
+
+        // If amount is greater than available balances, set amount to max available
+        if(totalETH < _amount) {
+            _amount = totalETH;
+        }
 
         totalETH = totalETH.sub(_amount);
         _recipient.transfer(_amount);
