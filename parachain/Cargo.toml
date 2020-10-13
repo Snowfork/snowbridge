@@ -10,6 +10,8 @@ members = [
     'pallets/verifier',
     'pallets/eth-app',
     'pallets/erc20-app',
+    'pallets/parachain-info',
+    'pallets/token-dealer',
     'node',
     'runtime',
 ]
