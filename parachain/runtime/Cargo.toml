@@ -116,27 +116,27 @@ branch = "rococo-branch"
 [dependencies.cumulus-runtime]
 default-features = false
 git = "https://github.com/paritytech/cumulus"
-rev = "4e7f138c828bcf118df1c988a400d4dac8e904d9"
+rev = "8a445a425086fc927f946a72b245e829fba200d0"
 
 [dependencies.cumulus-parachain-upgrade]
 default-features = false
 git = "https://github.com/paritytech/cumulus"
-rev = "4e7f138c828bcf118df1c988a400d4dac8e904d9"
+rev = "8a445a425086fc927f946a72b245e829fba200d0"
 
 [dependencies.cumulus-message-broker]
 default-features = false
 git = "https://github.com/paritytech/cumulus"
-rev = "4e7f138c828bcf118df1c988a400d4dac8e904d9"
+rev = "8a445a425086fc927f946a72b245e829fba200d0"
 
 [dependencies.cumulus-upward-message]
 default-features = false
 git = "https://github.com/paritytech/cumulus"
-rev = "4e7f138c828bcf118df1c988a400d4dac8e904d9"
+rev = "8a445a425086fc927f946a72b245e829fba200d0"
 
 [dependencies.cumulus-primitives]
 default-features = false
 git = "https://github.com/paritytech/cumulus"
-rev = "4e7f138c828bcf118df1c988a400d4dac8e904d9"
+rev = "8a445a425086fc927f946a72b245e829fba200d0"
 
 
 [build-dependencies.wasm-builder-runner]
