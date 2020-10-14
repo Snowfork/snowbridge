@@ -16,32 +16,32 @@ libsecp256k1 = { version = "0.3", default-features = false }
 [dependencies.ethabi]
 package = "ethabi-decode"
 default-features = false
-git = 'https://github.com/Snowfork/ethabi-decode'
-version = '1.2.1'
+git = "https://github.com/Snowfork/ethabi-decode"
+version = "1.2.1"
 
 [dependencies.sp-std]
 default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'v2.0.0-rc6'
-version = '2.0.0-rc6'
+git = "https://github.com/paritytech/substrate.git"
+tag = "v2.0.0-rc6"
+version = "2.0.0-rc6"
 
 [dependencies.sp-core]
 default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'v2.0.0-rc6'
-version = '2.0.0-rc6'
+git = "https://github.com/paritytech/substrate.git"
+tag = "v2.0.0-rc6"
+version = "2.0.0-rc6"
 
 [dependencies.sp-io]
 default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'v2.0.0-rc6'
-version = '2.0.0-rc6'
+git = "https://github.com/paritytech/substrate.git"
+tag = "v2.0.0-rc6"
+version = "2.0.0-rc6"
 
 [dependencies.sp-runtime]
 default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'v2.0.0-rc6'
-version = '2.0.0-rc6'
+git = "https://github.com/paritytech/substrate.git"
+tag = "v2.0.0-rc6"
+version = "2.0.0-rc6"
 
 [features]
 default = ["std"]
