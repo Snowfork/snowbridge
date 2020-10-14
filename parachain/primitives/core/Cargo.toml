@@ -1,0 +1,41 @@
+[package]
+name = "artemis-core"
+version = "0.1.1"
+authors = ["Snowfork <contact@snowfork.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false }
+
+[dev-dependencies]
+hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+
+[build-dependencies]
+hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+
+[dependencies.frame-support]
+default-features = false
+git = "https://github.com/paritytech/substrate.git"
+tag = "v2.0.0-rc6"
+version = "2.0.0-rc6"
+
+[dependencies.sp-std]
+default-features = false
+git = "https://github.com/paritytech/substrate.git"
+tag = "v2.0.0-rc6"
+version = "2.0.0-rc6"
+
+[dependencies.sp-core]
+default-features = false
+git = "https://github.com/paritytech/substrate.git"
+tag = "v2.0.0-rc6"
+version = "2.0.0-rc6"
+
+[features]
+default = ["std"]
+std = [
+    "frame-support/std",
+    "sp-std/std",
+    "sp-core/std",
+    "codec/std"
+]

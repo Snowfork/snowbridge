@@ -1,15 +1,15 @@
 [profile.release]
-panic = 'unwind'
+panic = "unwind"
 
 [workspace]
 members = [
-    'common',
-    'primitives/ethereum',
-    'pallets/bridge',
-    'pallets/broker',
-    'pallets/dummy-verifier',
-    'pallets/polkaeth-app',
-    'pallets/polkaerc20-app',
-    'node',
-    'runtime',
+    "primitives/core",
+    "primitives/ethereum",
+    "pallets/bridge",
+    "pallets/asset",
+    "pallets/verifier",
+    "pallets/eth-app",
+    "pallets/erc20-app",
+    "node",
+    "runtime",
 ]
