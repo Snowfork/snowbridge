@@ -20,7 +20,7 @@
 ## Sending eth accross:
  - Copy your PLAY account address from your polkadot-js extension or http://localhost:3000/#/accounts
  - Work out your public key in hex format *(sorry, our dapp only supports hex format, this will be fixed)*: In a terminal run ```subkey inspect <the address you just copied>```
- - Copy the Public key in hex without the 0f prefix *(eg: 0x2c8829e0ca67b23ed41c44c21b98c5ce916aab0e5a2a01f4576c9a6bf8331e4e -> **2c8829e0ca67b23ed41c44c21b98c5ce916aab0e5a2a01f4576c9a6bf8331e4e**)*
+ - Copy the Public key in hex without the 0x prefix *(eg: 0x2c8829e0ca67b23ed41c44c21b98c5ce916aab0e5a2a01f4576c9a6bf8331e4e -> **2c8829e0ca67b23ed41c44c21b98c5ce916aab0e5a2a01f4576c9a6bf8331e4e**)*
  - Go to the bridge app http://localhost:3000/#/app-ethereum-bridge
  - Send 1 ETH to the unprefixed hex address (Make sure it is sent from your new test Metamask account to the localhost:8545 server)
  - See the metamask transaction succeed
