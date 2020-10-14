@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/centrifuge/go-substrate-rpc-client/scale"
+	"github.com/centrifuge/go-substrate-rpc-client/types"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/snowfork/go-substrate-rpc-client/scale"
-	"github.com/snowfork/go-substrate-rpc-client/types"
 )
 
 type Event struct {
@@ -42,7 +42,7 @@ type SystemKilledAccount struct {
 // Grandpa
 
 type GrandpaNewAuthorities struct {
-	NewAuthorities []struct {
+	AuthorityList []struct {
 		AuthorityID     types.AuthorityID
 		AuthorityWeight types.U64
 	}

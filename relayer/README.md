@@ -20,14 +20,15 @@ is inspired by their design and incorporates some of their code.
 
 This project requires the following tools for day to day development:
 
-* [Mage](https://magefile.org/): Used for build tasks
-* [Revive](https://github.com/mgechev/revive): Used for linting instead of golint
+- [Mage](https://magefile.org/): Used for build tasks
+- [Revive](https://github.com/mgechev/revive): Used for linting instead of golint
 
 Please install them first.
 
 Run `mage` to see a list of available tasks (building, testing, linting, etc).
 
 To enable revive for linting in VS-code, add the following to your config:
+
 ```json
 {
     "go.lintTool": "revive",
@@ -41,11 +42,12 @@ To enable revive for linting in VS-code, add the following to your config:
 
 The relayer depends on the following:
 
-* A running parachain
-* An ethereum chain with our contracts deployed
+- A running parachain
+- An ethereum chain with our contracts deployed
 
 Open a new terminal, and start the parachain
-```
+
+```bash
 cd ../parachain
 target/release/artemis-node --dev
 ```
@@ -66,6 +68,7 @@ cat /tmp/relay-config.toml
 ```
 
 Or, manually create a config file using the template below:
+
 ```toml
 [ethereum]
 endpoint = "ws://localhost:9545/"
@@ -88,12 +91,12 @@ endpoint = "ws://127.0.0.1:9944/"
 
 ### Secrets
 
-The relayer requires secret keys for submitting transactions to both chains. It reads these keys from the environment.
+The relayer requires secret keys for submitting transactions to both chains. It reads these keys from environment variables.
 
 Example:
 
-```
-export ARTEMIS_ETHEREUM_KEY=603a72b0c0a65d9728353714d74291ea439c6816
+```bash
+export ARTEMIS_ETHEREUM_KEY=75fa57baca6ee656752e2daf522e75ded86d3ad24d660701aaa78e24b207f550
 export ARTEMIS_SUBSTRATE_KEY=//Relay
 ```
 

@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/go-substrate-rpc-client/types"
+	"github.com/centrifuge/go-substrate-rpc-client/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 )
 
@@ -93,13 +93,13 @@ func (wr *Writer) Write(_ context.Context, msg *chain.Message) error {
 	nonce := uint32(accountInfo.Nonce)
 
 	o := types.SignatureOptions{
-		BlockHash:   genesisHash,
-		Era:         era,
-		GenesisHash: genesisHash,
-		Nonce:       types.NewUCompactFromUInt(uint64(nonce)),
-		SpecVersion: rv.SpecVersion,
-		TxVersion:   1,
-		Tip:         types.NewUCompactFromUInt(0),
+		BlockHash:          genesisHash,
+		Era:                era,
+		GenesisHash:        genesisHash,
+		Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
+		SpecVersion:        rv.SpecVersion,
+		Tip:                types.NewUCompactFromUInt(0),
+		TransactionVersion: 1,
 	}
 
 	extI := ext

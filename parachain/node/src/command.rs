@@ -1,45 +1,47 @@
 use crate::chain_spec;
 use crate::cli::Cli;
 use crate::service;
-use sc_cli::SubstrateCli;
+use sc_cli::{SubstrateCli, RuntimeVersion, Role, ChainSpec};
+use sc_service::PartialComponents;
+use crate::service::new_partial;
 
 impl SubstrateCli for Cli {
-	fn impl_name() -> &'static str {
-		"Artemis Node"
+	fn impl_name() -> String {
+		"Artemis Node".into()
 	}
 
-	fn impl_version() -> &'static str {
-		env!("SUBSTRATE_CLI_IMPL_VERSION")
+	fn impl_version() -> String {
+		env!("SUBSTRATE_CLI_IMPL_VERSION").into()
 	}
 
-	fn description() -> &'static str {
-		env!("CARGO_PKG_DESCRIPTION")
+	fn description() -> String {
+		env!("CARGO_PKG_DESCRIPTION").into()
 	}
 
-	fn author() -> &'static str {
-		env!("CARGO_PKG_AUTHORS")
+	fn author() -> String {
+		env!("CARGO_PKG_AUTHORS").into()
 	}
 
-	fn support_url() -> &'static str {
-		"http://www.snowfork.com/"
+	fn support_url() -> String {
+		"http://www.snowfork.com/".into()
 	}
 
 	fn copyright_start_year() -> i32 {
 		2017
 	}
 
-	fn executable_name() -> &'static str {
-		env!("CARGO_PKG_NAME")
-	}
-
 	fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
 		Ok(match id {
-			"dev" => Box::new(chain_spec::development_config()),
-			"" | "local" => Box::new(chain_spec::local_testnet_config()),
+			"dev" => Box::new(chain_spec::development_config()?),
+			"" | "local" => Box::new(chain_spec::local_testnet_config()?),
 			path => Box::new(chain_spec::ChainSpec::from_json_file(
 				std::path::PathBuf::from(path),
 			)?),
 		})
+	}
+
+	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+		&artemis_runtime::VERSION
 	}
 }
 
@@ -47,18 +49,21 @@ impl SubstrateCli for Cli {
 pub fn run() -> sc_cli::Result<()> {
 	let cli = Cli::from_args();
 
-	match &cli.subcommand {
-		Some(subcommand) => {
+	match cli.subcommand {
+		Some(ref subcommand) => {
 			let runner = cli.create_runner(subcommand)?;
-			runner.run_subcommand(subcommand, |config| Ok(new_full_start!(config).0))
+			runner.run_subcommand(subcommand, |config| {
+				let PartialComponents { client, backend, task_manager, import_queue, .. }
+					= new_partial(&config)?;
+				Ok((client, backend, import_queue, task_manager))
+			})
 		}
 		None => {
 			let runner = cli.create_runner(&cli.run)?;
-			runner.run_node(
-				service::new_light,
-				service::new_full,
-				artemis_runtime::VERSION
-			)
+			runner.run_node_until_exit(|config| match config.role {
+				Role::Light => service::new_light(config),
+				_ => service::new_full(config),
+			})
 		}
 	}
 }

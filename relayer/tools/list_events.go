@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	gsrpc "github.com/snowfork/go-substrate-rpc-client"
+	gsrpc "github.com/centrifuge/go-substrate-rpc-client"
 
-	"github.com/snowfork/go-substrate-rpc-client/types"
+	"github.com/centrifuge/go-substrate-rpc-client/types"
 )
 
 type Events []Event
@@ -54,7 +54,6 @@ func listEvents(m *types.Metadata) []Event {
 		if !mod.HasEvents {
 			continue
 		}
-		fmt.Printf("i: %v\n ", i)
 		for j, ev := range mod.Events {
 			event := Event{
 				ID:         [2]uint8{uint8(i), uint8(j)},

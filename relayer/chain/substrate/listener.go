@@ -13,8 +13,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/scale"
-	types "github.com/snowfork/go-substrate-rpc-client/types"
+	"github.com/centrifuge/go-substrate-rpc-client/scale"
+	types "github.com/centrifuge/go-substrate-rpc-client/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 )
 
