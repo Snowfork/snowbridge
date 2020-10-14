@@ -1,0 +1,8 @@
+---
+- name: Create service file
+  template:
+    src: artemis-node.service.j2
+    dest: /etc/systemd/system/artemis-node.service
+    owner: root
+    group: root
+    mode: 0644
