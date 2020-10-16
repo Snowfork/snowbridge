@@ -1,0 +1,75 @@
+- hosts: localhost
+  gather_facts: False
+  vars:
+    nodes:
+      - name: rococo-parachain-node-1
+        zone: euw1-az1
+      - name: rococo-parachain-node-2
+        zone: euw1-az2
+    keypair: rococo-keypair
+
+  tasks:
+    - name: Create base security group
+      amazon.aws.ec2_group:
+        name: rococo-default-sg
+        description: Node Security Group
+        profile: "{{ aws_profile }}"
+        rules:
+          - proto: icmp
+            from_port: 8
+            to_port: -1
+            rule_desc: ICMP Echo Request
+          - proto: tcp
+            ports: 22
+            cidr_ip: 0.0.0.0/0
+            rule_desc: SSH
+        tags:
+          Environment: rococo
+      register: rococo_default_sg
+
+    - name: Create node security group
+      amazon.aws.ec2_group:
+        name: rococo-parachain-node-sg
+        description: Node Security Group
+        profile: "{{ aws_profile }}"
+        rules:
+          - proto: tcp
+            ports: 30333
+            group_name: rococo-parachain-node-sg
+            rule_desc: Substrate P2P
+          - proto: tcp
+            ports: 9933
+            cidr_ip: 0.0.0.0/0
+            rule_desc: Substrate RPC
+          - proto: tcp
+            ports: 9944
+            cidr_ip: 0.0.0.0/0
+            rule_desc: Substrate WS
+        tags:
+          Environment: rococo
+      register: rococo_parachain_node_sg
+
+    - name: create instance
+      community.aws.ec2_instance:
+        key_name: rococo-keypair
+        image_id: ami-01aa664a17515f5bb
+        instance_type: m5a.large
+        security_groups:
+          - "{{ rococo_default_sg.group_id }}"
+          - "{{ rococo_parachain_node_sg.group_id }}"
+        availability_zone: "{{ item.zone }}"
+        profile: "{{ aws_profile }}"
+        network:
+          assign_public_ip: true
+        volumes:
+          - device_name: /dev/sda1
+            ebs:
+              volume_size: 128
+              delete_on_termination: true
+        ebs_optimized: yes
+        wait: no
+        name: "{{ item.name }}"
+        tags:
+          Environment: rococo
+          Role: parachain-node
+      loop: "{{ nodes }}"

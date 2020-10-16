@@ -1,0 +1,6 @@
+plugin: amazon.aws.aws_ec2
+aws_profile: snowfork
+keyed_groups:
+  - key: tags.Role
+    prefix: role
+    parent_group: "rococo"
