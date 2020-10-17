@@ -1,5 +1,6 @@
 - hosts: localhost
   gather_facts: False
+  connection: local
   vars:
     relay_chain_nodes:
       - name: rococo-relay-chain-node-1
@@ -28,6 +29,10 @@
             ports: 22
             cidr_ip: 0.0.0.0/0
             rule_desc: SSH
+          - proto: tcp
+            ports: 80
+            cidr_ip: 0.0.0.0/0
+            rule_desc: Certbot
         tags:
           Environment: rococo
       register: rococo_base_sg
@@ -80,6 +85,8 @@
           Role: relay-chain-node
       loop: "{{ relay_chain_nodes }}"
 
+    - debug:
+        msg: "{{ relay_chain_nodes }}"
 
     - name: create instances for parachain
       community.aws.ec2_instance:

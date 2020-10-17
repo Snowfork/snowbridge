@@ -18,7 +18,6 @@
     - debug:
         msg: System {{ nodes }}
 
-
     - name: Install packages
       apt:
         pkg:
