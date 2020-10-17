@@ -1,0 +1,75 @@
+- hosts: role_relay_chain_node
+
+  vars:
+    nodes:
+      alice:
+        name: rococo-relay-chain-node-1
+        peer_id: 12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
+        node_key: ac86396c43f8083b41c02fcbcfde161baf42e56e4ff7bc5bb38144825860fe50
+      bob:
+        name: rococo-relay-chain-node-2
+        peer_id: 12D3KooWQG7CJoa3kc8xscs2EqckqyhMPUuAXxRLBiZBEcSsSzBB
+        node_key: 4956fe8dc4e559fa40d118e0f71c6803a4e421b8a7447a0d857f744cde740993
+        bootnodes:
+          - "/ip4/{{ hostvars[groups['role_relay_chain_node'][0]].private_ip_address }}/tcp/30333/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL"
+
+  tasks:
+
+    - debug:
+        msg: System {{ nodes }}
+
+
+    - name: Install packages
+      apt:
+        pkg:
+          - python3-pip
+        update_cache: yes
+
+    - name: Install boto3
+      pip:
+        name: boto3
+
+    - name: Make directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        recurse: yes
+      loop:
+        - /opt/artemis/bin
+        - /opt/artemis/data
+
+    - name: Download subkey
+      get_url:
+        url: https://snowfork-232374692033.s3-eu-west-1.amazonaws.com/subkey
+        dest: /usr/local/bin/subkey
+        mode: "0755"
+
+    - name: Download relay binary
+      get_url:
+        url: https://snowfork-232374692033.s3-eu-west-1.amazonaws.com/polkadot
+        dest: /opt/artemis/bin/polkadot
+        mode: "0755"
+
+    - name: Download Spec
+      get_url:
+        url: https://snowfork-232374692033.s3-eu-west-1.amazonaws.com/rococo.json
+        dest: /opt/artemis/rococo.json
+        mode: "0644"
+
+    - name: Create service file for alice
+      template:
+        src: polkadot-alice.service.j2
+        dest: /etc/systemd/system/polkadot.service
+        owner: root
+        group: root
+        mode: 0644
+      when: groups["role_relay_chain_node"].index(inventory_hostname) == 0
+
+    - name: Create service file for bob
+      template:
+        src: polkadot-bob.service.j2
+        dest: /etc/systemd/system/polkadot.service
+        owner: root
+        group: root
+        mode: 0644
+      when: groups["role_relay_chain_node"].index(inventory_hostname) == 1

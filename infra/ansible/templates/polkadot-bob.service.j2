@@ -1,0 +1,19 @@
+[Unit]
+Description=Polkadot Node
+
+[Service]
+ExecStart=/opt/artemis/bin/polkadot \
+         --name foo \
+         --chain /opt/artemis/rococo.json \
+         --base-path /opt/artemis/data \
+         --ws-external \
+         --rpc-external \
+         --rpc-cors=all \
+         --bob \
+         --node-key {{ nodes.bob.node_key }} \
+         --bootnodes {{ nodes.bob.bootnodes[0] }}
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

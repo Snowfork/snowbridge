@@ -1,7 +1,12 @@
 - hosts: localhost
   gather_facts: False
   vars:
-    nodes:
+    relay_chain_nodes:
+      - name: rococo-relay-chain-node-1
+        zone: euw1-az1
+      - name: rococo-relay-chain-node-2
+        zone: euw1-az2
+    parachain_nodes:
       - name: rococo-parachain-node-1
         zone: euw1-az1
       - name: rococo-parachain-node-2
@@ -11,7 +16,7 @@
   tasks:
     - name: Create base security group
       amazon.aws.ec2_group:
-        name: rococo-default-sg
+        name: rococo-base-sg
         description: Node Security Group
         profile: "{{ aws_profile }}"
         rules:
@@ -25,17 +30,17 @@
             rule_desc: SSH
         tags:
           Environment: rococo
-      register: rococo_default_sg
+      register: rococo_base_sg
 
-    - name: Create node security group
+    - name: Create substrate security group
       amazon.aws.ec2_group:
-        name: rococo-parachain-node-sg
+        name: rococo-substrate-sg
         description: Node Security Group
         profile: "{{ aws_profile }}"
         rules:
           - proto: tcp
             ports: 30333
-            group_name: rococo-parachain-node-sg
+            group_name: rococo-substrate-sg
             rule_desc: Substrate P2P
           - proto: tcp
             ports: 9933
@@ -47,16 +52,17 @@
             rule_desc: Substrate WS
         tags:
           Environment: rococo
-      register: rococo_parachain_node_sg
+      register: rococo_substrate_sg
 
-    - name: create instance
+
+    - name: Create instances for relay chain
       community.aws.ec2_instance:
         key_name: rococo-keypair
         image_id: ami-01aa664a17515f5bb
-        instance_type: m5a.large
+        instance_type: t3a.medium
         security_groups:
-          - "{{ rococo_default_sg.group_id }}"
-          - "{{ rococo_parachain_node_sg.group_id }}"
+          - "{{ rococo_base_sg.group_id }}"
+          - "{{ rococo_substrate_sg.group_id }}"
         availability_zone: "{{ item.zone }}"
         profile: "{{ aws_profile }}"
         network:
@@ -64,7 +70,33 @@
         volumes:
           - device_name: /dev/sda1
             ebs:
-              volume_size: 128
+              volume_size: 64
+              delete_on_termination: true
+        ebs_optimized: yes
+        wait: no
+        name: "{{ item.name }}"
+        tags:
+          Environment: rococo
+          Role: relay-chain-node
+      loop: "{{ relay_chain_nodes }}"
+
+
+    - name: create instances for parachain
+      community.aws.ec2_instance:
+        key_name: rococo-keypair
+        image_id: ami-01aa664a17515f5bb
+        instance_type: t3a.medium
+        security_groups:
+          - "{{ rococo_base_sg.group_id }}"
+          - "{{ rococo_substrate_sg.group_id }}"
+        availability_zone: "{{ item.zone }}"
+        profile: "{{ aws_profile }}"
+        network:
+          assign_public_ip: true
+        volumes:
+          - device_name: /dev/sda1
+            ebs:
+              volume_size: 64
               delete_on_termination: true
         ebs_optimized: yes
         wait: no
@@ -72,4 +104,4 @@
         tags:
           Environment: rococo
           Role: parachain-node
-      loop: "{{ nodes }}"
+      loop: "{{ parachain_nodes }}"
