@@ -292,6 +292,7 @@ dependencies = [
  "rlp",
  "rustc-hex",
  "serde",
+ "serde-big-array",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -5955,6 +5956,16 @@ version = "1.0.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96fe57af81d28386a513cbc6858332abc6117cfdb5999647c6444b8f43a370a5"
 dependencies = [
+ "serde_derive",
+]
+
+[[package]]
+name = "serde-big-array"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "883eee5198ea51720eab8be52a36cf6c0164ac90eea0ed95b649d5e35382404e"
+dependencies = [
+ "serde",
  "serde_derive",
 ]
 
