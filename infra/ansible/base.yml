@@ -1,5 +1,4 @@
-- hosts: role_parachain_node
-
+- hosts: rococo
   tasks:
     - name: Install packages
       apt:

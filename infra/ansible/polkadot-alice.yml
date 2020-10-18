@@ -1,4 +1,4 @@
-- hosts: role_relay_chain_node[0]
+- hosts: relaychain-node-0
 
   vars:
     nodes:

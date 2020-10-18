@@ -7,11 +7,21 @@ cache_connection: /tmp/aws_inventory
 cache_prefix: aws_ec2
 
 aws_profile: snowfork
+
+filters:
+  tag:Environment: rococo
+
+hostnames:
+  - tag:Name
+  - dns-name
+  - private-ip-address
+
+strict: False
 keyed_groups:
   - key: tags.Role
-    prefix: role
-    parent_group: "rococo"
+    prefix: ''
+    separator: ''
+    parent_group: rococo
 
-  - key: name
-    prefix: tag
-    parent_group: "rococo"
+compose:
+  ansible_host: public_ip_address

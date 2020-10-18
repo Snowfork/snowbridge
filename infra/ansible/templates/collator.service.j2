@@ -8,15 +8,14 @@ ExecStart=/opt/artemis/bin/artemis-collator \
     --rpc-cors=all \
     --validator \
     --parachain-id 1000 \
-    {% if groups['role_parachain_node'].index(inventory_hostname) == 0 %}
-    --node-key {{ nodes.parachain_node_0.node_key }} \
-    {% endif %}
-    {% if groups['role_parachain_node'].index(inventory_hostname) != 0 %}
+    {% if inventory_hostname == 'parachain-node-0' %}
+    --node-key {{ hostvars['parachain-node-0'].node_key }} \
+    {% else %}
     --bootnodes {{ parachain_bootnodes }} \
     {% endif %}
     -- \
     --chain /opt/artemis/rococo.json \
-    --bootnodes {{ relay_chain_bootnodes }}
+    --bootnodes {{ relaychain_bootnodes }}
 
 Restart=always
 
