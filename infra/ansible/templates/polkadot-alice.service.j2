@@ -3,7 +3,7 @@ Description=Polkadot Node
 
 [Service]
 ExecStart=/opt/artemis/bin/polkadot \
-         --name foo \
+         --name {{ nodes.alice.name }} \
          --chain /opt/artemis/rococo.json \
          --base-path /opt/artemis/data \
          --ws-external \

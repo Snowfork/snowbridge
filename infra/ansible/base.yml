@@ -1,9 +1,6 @@
-- hosts: rococo
+- hosts: role_parachain_node
 
   tasks:
-    - debug:
-        msg: System {{ nodes }}
-
     - name: Install packages
       apt:
         pkg:
@@ -33,6 +30,12 @@
       get_url:
         url: https://snowfork-232374692033.s3-eu-west-1.amazonaws.com/polkadot
         dest: /opt/artemis/bin/polkadot
+        mode: "0755"
+
+    - name: Download collator binary
+      get_url:
+        url: https://snowfork-232374692033.s3-eu-west-1.amazonaws.com/artemis-collator
+        dest: /opt/artemis/bin/artemis-collator
         mode: "0755"
 
     - name: Download Spec

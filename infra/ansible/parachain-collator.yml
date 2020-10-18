@@ -1,0 +1,37 @@
+- hosts: role_parachain_node
+  vars:
+    nodes:
+      alice:
+        name: rococo-relay-chain-node-1
+        peer_id: 12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
+        node_key: ac86396c43f8083b41c02fcbcfde161baf42e56e4ff7bc5bb38144825860fe50
+      parachain_node_0:
+        peer_id: 12D3KooWHogdPVt2aqpxArRQA3N1XTxysvpqLmiZCSSLUQKNcZTB
+        node_key: cd30688a81934f28af2d30ea4e5c4254827fc1bfb882c69bfc65c053b79b3c2e
+
+  tasks:
+    - name: Create service file
+      template:
+        src: artemis-collator.service.j2
+        dest: /etc/systemd/system/artemis-collator.service
+        owner: root
+        group: root
+        mode: 0644
+      vars:
+        node_name: "node-{{ groups['role_parachain_node'].index(inventory_hostname) }}"
+        relay_chain_bootnodes: "/ip4/{{ hostvars[groups['role_relay_chain_node'][0]].private_ip_address }}/tcp/30333/p2p/{{ nodes.alice.peer_id }}"
+        parachain_bootnodes: "/ip4/{{ hostvars[groups['role_parachain_node'][0]].private_ip_address }}/tcp/30333/p2p/{{ nodes.parachain_node_0.peer_id }}"
+      notify: Restart collator
+
+    - name: Make sure service is running
+      systemd:
+        name: artemis-collator
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart collator
+      systemd:
+        name: artemis-collator
+        state: restarted
+        daemon_reload: yes
