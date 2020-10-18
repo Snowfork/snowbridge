@@ -3,11 +3,11 @@
   vars:
     nodes:
       alice:
-        name: rococo-relay-chain-node-1
+        name: rococo-relay-chain-node-0
         peer_id: 12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
         node_key: ac86396c43f8083b41c02fcbcfde161baf42e56e4ff7bc5bb38144825860fe50
       bob:
-        name: rococo-relay-chain-node-2
+        name: rococo-relay-chain-node-1
         peer_id: 12D3KooWQG7CJoa3kc8xscs2EqckqyhMPUuAXxRLBiZBEcSsSzBB
         node_key: 4956fe8dc4e559fa40d118e0f71c6803a4e421b8a7447a0d857f744cde740993
         bootnodes:

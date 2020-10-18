@@ -6,11 +6,8 @@ ExecStart=/opt/artemis/bin/polkadot \
          --name {{ nodes.bob.name }} \
          --chain /opt/artemis/rococo.json \
          --base-path /opt/artemis/data \
-         --ws-external \
-         --rpc-external \
          --rpc-cors=all \
          --bob \
-         --node-key {{ nodes.bob.node_key }} \
          --bootnodes {{ nodes.bob.bootnodes[0] }}
 
 Restart=always

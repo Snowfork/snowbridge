@@ -1,0 +1,24 @@
+[Unit]
+Description=Collator Node
+
+[Service]
+ExecStart=/opt/artemis/bin/artemis-collator \
+    --name {{ node_name }} \
+    --base-path /opt/artemis/data \
+    --rpc-cors=all \
+    --validator \
+    --parachain-id 1000 \
+    {% if groups['role_parachain_node'].index(inventory_hostname) == 0 %}
+    --node-key {{ nodes.parachain_node_0.node_key }} \
+    {% endif %}
+    {% if groups['role_parachain_node'].index(inventory_hostname) != 0 %}
+    --bootnodes {{ parachain_bootnodes }} \
+    {% endif %}
+    -- \
+    --chain /opt/artemis/rococo.json \
+    --bootnodes {{ relay_chain_bootnodes }}
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
