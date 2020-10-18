@@ -1,22 +1,11 @@
-- hosts: relaychain-node-0
-
+- hosts: relaychain
   vars:
-    nodes:
-      alice:
-        name: relay-chain-node-0
-        peer_id: 12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
-        node_key: ac86396c43f8083b41c02fcbcfde161baf42e56e4ff7bc5bb38144825860fe50
-      bob:
-        name: relay-chain-node-1
-        peer_id: 12D3KooWQG7CJoa3kc8xscs2EqckqyhMPUuAXxRLBiZBEcSsSzBB
-        node_key: 4956fe8dc4e559fa40d118e0f71c6803a4e421b8a7447a0d857f744cde740993
-        bootnodes:
-          - "/ip4/{{ hostvars[groups['role_relay_chain_node'][0]].private_ip_address }}/tcp/30333/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL"
+    bootnode: "/ip4/{{ hostvars['relaychain-node-0'].private_ip_address }}/tcp/30333/p2p/{{ hostvars['relaychain-node-0'].peer_id }}"
 
   tasks:
     - name: Create service file for alice
       template:
-        src: polkadot-alice.service.j2
+        src: polkadot.service.j2
         dest: /etc/systemd/system/polkadot.service
         owner: root
         group: root
@@ -29,6 +18,17 @@
         state: started
         enabled: yes
 
+  handlers:
+    - name: Restart polkadot
+      systemd:
+        name: polkadot
+        state: restarted
+        daemon_reload: yes
+
+- hosts: relaychain-node-0
+  vars:
+    rpc_dns_name: rococo-rpc.snowfork.network
+  tasks:
     - name: Create nginx config
       template:
         src: nginx.conf.j2
@@ -39,12 +39,6 @@
       notify: Restart nginx
 
   handlers:
-    - name: Restart polkadot
-      systemd:
-        name: polkadot
-        state: restarted
-        daemon_reload: yes
-
     - name: Restart nginx
       systemd:
         name: nginx

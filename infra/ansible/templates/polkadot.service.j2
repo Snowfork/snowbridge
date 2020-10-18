@@ -3,16 +3,15 @@ Description=Polkadot Node
 
 [Service]
 ExecStart=/opt/artemis/bin/polkadot \
-    --name {{ nodes.alice.name }} \
     --chain /opt/artemis/rococo.json \
     --base-path /opt/artemis/data \
     --rpc-cors=all \
     {% if inventory_hostname == 'relaychain-node-0' %}
     --alice \
-    --node-key {{ hostvars['relaychain-node-0'].node_key }} \
+    --node-key {{ hostvars['relaychain-node-0'].node_key }}
     {% elif inventory_hostname == 'relaychain-node-1' %}
     --bob \
-    --bootnodes {{ parachain_bootnodes }} \
+    --bootnodes {{ bootnode }}
     {% endif %}
 
 

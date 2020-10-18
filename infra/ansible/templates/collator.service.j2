@@ -3,7 +3,6 @@ Description=Collator Node
 
 [Service]
 ExecStart=/opt/artemis/bin/artemis-collator \
-    --name {{ node_name }} \
     --base-path /opt/artemis/data \
     --rpc-cors=all \
     --validator \
