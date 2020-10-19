@@ -29,7 +29,7 @@
 
 - hosts: parachain-node-0
   vars:
-    rpc_dns_name: peb-rpc.snowfork.network
+    rpc_dns_name: parachain-rpc.snowfork.network
 
   tasks:
     - name: Create nginx config
