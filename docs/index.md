@@ -15,6 +15,13 @@ A system for bridging arbitrary data from and to Ethereum.
 
 ---
 
-## Getting started
+## Getting Started
 
-Foo bar
+Visit our [Polkadot Portal](https://xenodochial-goldstine-1ba19f.netlify.app), and select the test net _Ethereum Bridge PC1_ from the side menu.
+
+## Resources
+
+* [Rust Documentation](https://sad-curie-a48c3f.netlify.app)
+
+
+

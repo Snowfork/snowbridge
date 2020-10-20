@@ -1,10 +1,9 @@
 ---
 layout: default
 title: About
-nav_order: 3
-permalink: /about/
+nav_order: 4
 ---
 
 # About
 
-foo bar baz
+_work in progress_
