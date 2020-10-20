@@ -79,3 +79,5 @@ This kind of path can modelled using various XCMP primitives:
 Our parachain stores asset amounts using numbers with 256-bits of precision, while XCMP v0 only supports 128-bit numbers. We chose 256-bits because it matches Ethereum's numeric precision, and this prevents any chance of overflow occurring.
 
 The simplest solution is keep our 256-bit precision, but perform checked conversion to 128-bits when required. This caps individual transfers to roughly 3.402 × 10<sup>29</sup> wei (3.402 × 10<sup>20</sup> eth), which is still a very huge amount.
+
+The wider Substrate/Polkadot ecosystem seems to have settled on 128-bit precision, so it would be good to support that.
