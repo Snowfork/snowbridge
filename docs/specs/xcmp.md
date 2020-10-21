@@ -59,7 +59,7 @@ Effects:
 
 To support cross-parachain transfers, the consensus system needs to be able to identify the relative location of bridged ethereum assets held within our parachain.
 
-These assets are all stored in our custom multi-asset [pallet](https://sad-curie-a48c3f.netlify.app/artemis_asset/index.html), and are individually identified by 20-byte identifiers. These identifiers will usually but not always correspond to a contract address on the Ethereum side.
+These assets are all stored in our custom multi-asset [pallet](https://sad-curie-a48c3f.netlify.app/artemis_asset/index.html), and are individually identified by 20-byte identifiers. These identifiers can be used within [XCMP's MultiAssets](https://github.com/paritytech/xcm-format/blob/master/README.md#multiasset-universal-asset-identifiers). They will usually but not always correspond to a contract address on the Ethereum side.
 
 Given this structure, the relative location for an asset can be determined using:
 1. The index of our [asset](https://sad-curie-a48c3f.netlify.app/artemis_asset/index.html) pallet in the runtime.
