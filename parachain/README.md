@@ -154,7 +154,7 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
   "AssetAccountData": {
     "free": "U256"
   },
-  "EthHeader": {
+  "EthereumHeader": {
     "parentHash": "H256",
     "timestamp": "u64",
     "number": "u64",
