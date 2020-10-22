@@ -153,6 +153,25 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
   "BridgedAssetId": "H160",
   "AssetAccountData": {
     "free": "U256"
+  },
+  "EthereumHeader": {
+    "parentHash": "H256",
+    "timestamp": "u64",
+    "number": "u64",
+    "author": "H160",
+    "transactionsRoot": "H256",
+    "ommersHash": "H256",
+    "extraData": "Vec<u8>",
+    "stateRoot": "H256",
+    "receiptsRoot": "H256",
+    "logBloom": "Bloom",
+    "gasUsed": "U256",
+    "gasLimit": "U256",
+    "difficulty": "U256",
+    "seal": "Vec<Vec<u8>>"
+  },
+  "Bloom": {
+    "_": "[u8; 256]"
   }
 }
 ```
