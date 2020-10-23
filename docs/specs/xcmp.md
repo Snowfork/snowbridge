@@ -7,13 +7,14 @@ nav_order: 2
 
 # XCMP Interface <!-- omit in toc -->
 
-_NOTE: work in progress_
+_NOTE: draft_
 
 - [Introduction](#introduction)
 - [Scenarios](#scenarios)
 - [Asset Identification](#asset-identification)
 - [Future Extensions](#future-extensions)
   - [Transfer from parachain to Ethereum](#transfer-from-parachain-to-ethereum)
+  - [App Registration](#app-registration)
 - [Other Issues](#other-issues)
   - [Numeric precision](#numeric-precision)
 
@@ -27,6 +28,8 @@ Other parachains wanting to participate in asset transfers will need to hold sov
 - Our parachain does not need not trust the participants
 
 ## Scenarios
+
+We can implement support for the following scenarios using current XCMP message types.
 
 ### Alice transfers 21 PolkaETH to Bob on another chain <!-- omit in toc -->
 
@@ -87,9 +90,13 @@ This kind of path can modelled using various XCMP primitives:
 
 ## Future Extensions
 
+### Transfer from parachain to Ethereum
+
 We could also use XCMP to trigger a transfer of assets from our parachain to Ethereum, and vice versa. Since our parachain and our smart contracts on Ethereum have to trust each other, we could the [Teleportation](https://github.com/paritytech/xcm-format#transfer-via-teleport) mechanism described in the XCMP spec.
 
-### Transfer from parachain to Ethereum
+We'll probably want to use a custom message type in the long-term though.
+
+Example message sequence:
 
 ```
 WithdrawAsset {
@@ -106,6 +113,22 @@ WithdrawAsset {
       ]
     }
   ]
+}
+```
+
+### App Registration
+
+This is one example of a custom XCMP message.
+
+Our parachain has individual apps that control the minting of burning of bridged Ethereum assets. However these apps need to be configured with the address of the smart contracts acting as banks on the Ethereum side. Finally, the apps need to be registered with our bridge module.
+
+Example message:
+
+```
+RegisterApp {
+  pallet_index: The index of the app module within the runtime
+  contract_address: The address of the app's peer on the Ethereum side.
+  effects: *
 }
 ```
 
