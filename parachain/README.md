@@ -16,10 +16,11 @@ A Polkadot parachain for bridging arbitrary data from and to Ethereum.
   - [Build](#build)
   - [Run](#run)
 - [Interacting with the chain](#interacting-with-the-chain)
+  - [Custom Types](#custom-types)
 
 ## Documentation
 
-See our [Rustdocs](https://sad-curie-a48c3f.netlify.app/) for an overview of the crates, APIs, and types that make up our parachain.
+See our [Rustdocs](https://polkaeth-rustdocs.netlify.app) for an overview of the crates, APIs, and types that make up our parachain.
 
 ## Development
 
@@ -124,7 +125,7 @@ RUST_LOG=debug RUST_BACKTRACE=1 target/release/artemis-node -lruntime=debug --de
 
 ## Interacting with the chain
 
-You can interact with a development chain using our [webapp](https://xenodochial-goldstine-1ba19f.netlify.app). Its an instance of the Polkadot-JS webapp with the necessary configuration to interact with our development chain.
+You can interact with a development chain using our [webapp](https://polkaeth-substrate.netlify.app). Its an instance of the Polkadot-JS webapp with the necessary configuration to interact with our development chain.
 
 ### Custom Types
 

@@ -1,10 +1,10 @@
 ---
 layout: default
 title: Specification
-nav_order: 2
-permalink: /spec/
+nav_order: 3
+has_children: true
 ---
 
 # Specification
 
-foo bar baz
+_work in progress_

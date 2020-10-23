@@ -1,9 +1,9 @@
 ---
 layout: default
-title: About
-nav_order: 4
+title: Usage
+nav_order: 2
 ---
 
-# About
+# Usage
 
 _work in progress_

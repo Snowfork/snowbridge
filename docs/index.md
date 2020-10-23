@@ -15,6 +15,13 @@ A system for bridging arbitrary data from and to Ethereum.
 
 ---
 
-## Getting started
+## Getting Started
 
-Foo bar
+Visit our [Substrate App](https://polkaeth-substrate.netlify.app), and select the _Ethereum Bridge PC1_  test net from the side menu.
+
+## Resources
+
+- [Rust Documentation](https://polkaeth-rustdocs.netlify.app)
+
+
+
