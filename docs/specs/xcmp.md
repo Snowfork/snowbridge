@@ -14,7 +14,7 @@ _NOTE: draft_
 - [Asset Identification](#asset-identification)
 - [Future Extensions](#future-extensions)
   - [Transfer from parachain to Ethereum](#transfer-from-parachain-to-ethereum)
-  - [App Registration](#app-registration)
+  - [Bridge Messaging](#bridge-messaging)
 - [Other Issues](#other-issues)
   - [Numeric precision](#numeric-precision)
 
@@ -116,17 +116,39 @@ WithdrawAsset {
 }
 ```
 
-### App Registration
+### Bridge Messaging
 
-This is one example of a custom XCMP message.
+Our bridge will support arbitrary messaging between Ethereum smart contracts and parachain apps. We'll need XCMP messages to facilitate this communication. As XCMP is still quite immature and untested, the below ideas are still WIP and likely to change but should provide a starting point for thinking through an initial implementation and early experiments.
 
-Our parachain has individual apps that control the minting of burning of bridged Ethereum assets. However these apps need to be configured with the address of the smart contracts acting as banks on the Ethereum side. Finally, the apps need to be registered with our bridge module.
+XCMP messages are asynchronous and sent in a fire-and-forget manner. Messages sent from Parachains to Ethereum will need to specify a target contract for delivery. Parachains will need to register to be notified of messages coming from Ethereum, and will be notified when relevant messages come through for them.
 
-Example message:
+At the application layer, parachain apps and ethereum smart contracts that interact are responsible for being aware of and trusting each other and for determining the payload and interface of their own messages. The bridge just facilitates transfer, verification and routing of these messages to the requested target application. Our ETHApp and ERC20App are examples of pairs of substrate+solidity applications that trust each other and specify a shared interface - although they're implemented as pallets, one could imagine them working similarily as seperate parachains.
 
+Example XCM sent to our parachain for sending a message to Ethereum:
 ```
-RegisterApp {
+SendMessageToContract {
   pallet_index: The index of the app module within the runtime
+  contract_address: The address of the app's peer on the Ethereum side.
+  payload: The payload of the message to be sent to the app's peer on the Ethereum side.
+  effects: *
+}
+```
+
+Example XCM sent to our parachain for registering to be notified about messages coming from Ethereum:
+```
+RegisterAppForNotification {
+  pallet_index: The index of the app module within the runtime
+  contract_address: The address of the app's peer on the Ethereum side.
+  effects: *
+}
+```
+
+Example XCM sent from our parachain to notify a listening parachain:
+```
+NewMessageFromEthereum {
+  pallet_index: The index of the app module within the runtime
+  payload: The payload of the message coming from the app's peer on the Ethereum side.
+  nonce: ...
   contract_address: The address of the app's peer on the Ethereum side.
   effects: *
 }
