@@ -20,7 +20,10 @@ _NOTE: work in progress_
 
 Our parachain will support cross-parachain token transfers using [XCMP](https://github.com/paritytech/xcm-format/blob/master/README.md).
 
-Other parachains wanting to participate in asset transfers will need to hold sovereign reserves in our parachain.
+Other parachains wanting to participate in asset transfers will need to hold sovereign reserves in our parachain. This implies a unilateral trust model where:
+
+- Participating parachains must trust our parachain in its role as the reserve chain
+- Our parachain does not need not trust the participants
 
 ## Scenarios
 
@@ -34,7 +37,7 @@ Parties:
 
 Effects:
 1. H will withdraw 21 PolkaETH from Alice's local account.
-2. The sovereign account of D will be credited with 21 PolkaETH.
+2. The sovereign account of D on H will be credited with 21 PolkaETH.
 3. D will mint 21 PolkaETH into Bob's account.
 
 ### Alice transfers 21 PolkaETH to Bob on our chain <!-- omit in toc -->
