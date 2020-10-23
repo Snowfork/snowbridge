@@ -13,6 +13,7 @@ _NOTE: work in progress_
 - [Scenarios](#scenarios)
 - [Asset Identification](#asset-identification)
 - [Future Extensions](#future-extensions)
+  - [Transfer from parachain to Ethereum](#transfer-from-parachain-to-ethereum)
 - [Other Issues](#other-issues)
   - [Numeric precision](#numeric-precision)
 
@@ -86,11 +87,26 @@ This kind of path can modelled using various XCMP primitives:
 
 ## Future Extensions
 
-We could also use XCMP to trigger a transfer of assets from our parachain back to Ethereum. This would be an alternative to users calling the `ETHApp.burn` or `ERC20App.burn` dispatchables via an extrinsic, and would be more general in nature.
+We could also use XCMP to trigger a transfer of assets from our parachain to Ethereum, and vice versa. Since our parachain and our smart contracts on Ethereum have to trust each other, we could the [Teleportation](https://github.com/paritytech/xcm-format#transfer-via-teleport) mechanism described in the XCMP spec.
 
-The destination location of the asset in Ethereum can be modelled in XCMP:
-```text
-<chain>/AccountKey20
+### Transfer from parachain to Ethereum
+
+```
+WithdrawAsset {
+  assets: Assets to withdraw
+  effects: [
+    InitiateTeleport {
+      assets: *
+      dest: Destination ethereum network
+      effects [
+        DepositAsset {
+          assets: *
+          dest: AccountKey20
+        }
+      ]
+    }
+  ]
+}
 ```
 
 ## Other Issues
