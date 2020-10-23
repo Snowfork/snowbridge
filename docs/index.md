@@ -17,11 +17,11 @@ A system for bridging arbitrary data from and to Ethereum.
 
 ## Getting Started
 
-Visit our [Polkadot Portal](https://xenodochial-goldstine-1ba19f.netlify.app), and select the test net _Ethereum Bridge PC1_ from the side menu.
+Visit our [Substrate App](https://polkaeth-substrate.netlify.app), and select the _Ethereum Bridge PC1_  test net from the side menu.
 
 ## Resources
 
-* [Rust Documentation](https://sad-curie-a48c3f.netlify.app)
+- [Rust Documentation](https://polkaeth-rustdocs.netlify.app)
 
 
 
