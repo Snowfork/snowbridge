@@ -11,28 +11,51 @@ _NOTE: work in progress_
 
 - [Introduction](#introduction)
 - [Scenarios](#scenarios)
-  - [Alice transfers 21 PolkaETH to Bob on another chain](#alice-transfers-21-polkaeth-to-bob-on-another-chain)
-  - [Alice attempts to exchange 42 DOT for 21 PolkaETH](#alice-attempts-to-exchange-42-dot-for-21-polkaeth)
 - [Asset Identification](#asset-identification)
-- [Outstanding Issues](#outstanding-issues)
+- [Future Extensions](#future-extensions)
+- [Other Issues](#other-issues)
   - [Numeric precision](#numeric-precision)
 
 ## Introduction
 
 Our parachain will support cross-parachain token transfers using [XCMP](https://github.com/paritytech/xcm-format/blob/master/README.md).
 
-Since our parachain endeavours to be trustless, only reserve-backed transfers will be supported. Participating chains will need to agree on a parent chain to hold sovereign (reserve) accounts.
+Other parachains wanting to participate in asset transfers will need to hold sovereign reserves in our parachain.
 
 ## Scenarios
 
-### Alice transfers 21 PolkaETH to Bob on another chain
+### Alice transfers 21 PolkaETH to Bob on another chain <!-- omit in toc -->
 
-This transfer is modelled on [Transfer via reserve](https://github.com/paritytech/xcm-format/blob/master/README.md#transfer-via-reserve).
+This transfer is based on [Transfer via reserve](https://github.com/paritytech/xcm-format/blob/master/README.md#transfer-via-reserve), except that our parachain is acting as both the home chain and reserve chain.
 
 Parties:
 - H: Home chain (Polkadot-Ethereum Bridge)
 - D: Destination chain
-- R: Reserve chain
+
+Effects:
+1. H will withdraw 21 PolkaETH from Alice's local account.
+2. The sovereign account of D will be credited with 21 PolkaETH.
+3. D will mint 21 PolkaETH into Bob's account.
+
+### Alice transfers 21 PolkaETH to Bob on our chain <!-- omit in toc -->
+
+Parties:
+- H: Home chain
+- D: Destination chain (Polkadot-Ethereum Bridge)
+
+Effects:
+1. H will withdraw 21 PolkaETH from Alice's local account.
+2. The sovereign account of H on D will be credited with 21 PolkaETH.
+3. D will mint 21 PolkaETH into Bob's account.
+
+### Alice transfers 21 PolkaETH on chain X to Bob on chain Y <!-- omit in toc -->
+
+In this scenario, our parachain is acting solely as the reserve chain for two other chains participating in a transfer.
+
+Parties:
+- H: Home chain
+- D: Destination chain
+- R: Reserve Chain (Polkadot-Ethereum Bridge)
 
 Effects:
 1. H will withdraw 21 PolkaETH from Alice's local account.
@@ -40,24 +63,10 @@ Effects:
 3. The sovereign account of D on R will be credited with 21 PolkaETH.
 4. D will mint 21 PolkaETH into Bob's account.
 
-### Alice attempts to exchange 42 DOT for 21 PolkaETH
-
-Alice holds 42 DOT on her home chain and wants to exchange it for 21 PolkaETH held on our parachain.
-
-Parties:
-- H: Home chain
-- D: Destination chain (Polkadot-Ethereum Bridge)
-
-H will need to have reserve holdings of DOT & PolkaETH on D.
-
-Effects:
-1. H will withdraw 42 DOT from Alice's local account.
-2. D will perform the exchange, depositing 21 PolkaETH into Alice's local account.
-3. H can take further action depending on the outcome of (2).
 
 ## Asset Identification
 
-To support cross-parachain transfers, the consensus system needs to be able to identify the relative location of bridged ethereum assets held within our parachain.
+To support transfers into our chain, the consensus system needs to be able to identify the relative location of bridged ethereum assets held within our parachain.
 
 These assets are all stored in our custom multi-asset [pallet](https://sad-curie-a48c3f.netlify.app/artemis_asset/index.html), and are individually identified by 20-byte identifiers. These identifiers can be used within [XCMP's MultiAssets](https://github.com/paritytech/xcm-format/blob/master/README.md#multiasset-universal-asset-identifiers). They will usually but not always correspond to a contract address on the Ethereum side.
 
@@ -69,10 +78,19 @@ Given this structure, the relative location for an asset can be determined using
 This kind of path can modelled using various XCMP primitives:
 
 ```text
-/ConcreteFungible/<parachain>/PalletInstance(<id>)/AccountId32/AccountKey20
+<chain>/ConcreteFungible/<parachain>/PalletIndex(<index>)/AccountId32/AccountKey20
 ```
 
-## Outstanding Issues
+## Future Extensions
+
+We could also use XCMP to trigger a transfer of assets from our parachain back to Ethereum. This would be an alternative to users calling the `ETHApp.burn` or `ERC20App.burn` dispatchables via an extrinsic, and would be more general in nature.
+
+The destination location of the asset in Ethereum can be modelled in XCMP:
+```text
+<chain>/AccountKey20
+```
+
+## Other Issues
 
 ### Numeric precision
 
