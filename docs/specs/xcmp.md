@@ -25,7 +25,7 @@ Our parachain will support cross-parachain token transfers using [XCMP](https://
 Other parachains wanting to participate in asset transfers will need to hold sovereign reserves in our parachain. This implies a unilateral trust model where:
 
 - Participating parachains must trust our parachain in its role as the reserve chain
-- Our parachain does not need not trust the participants
+- Our parachain does not need to trust the participants
 
 ## Scenarios
 
