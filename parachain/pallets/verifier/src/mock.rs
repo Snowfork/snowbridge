@@ -1,6 +1,6 @@
 // Mock runtime
 
-use crate::{Module, GenesisConfig, Trait};
+use crate::{Module, EthereumHeader, GenesisConfig, Trait};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
@@ -73,11 +73,27 @@ impl Trait for MockRuntime {
 pub type System = system::Module<MockRuntime>;
 pub type Verifier = Module<MockRuntime>;
 
+pub fn genesis_ethereum_header() -> EthereumHeader {
+	Default::default()
+}
+
+pub fn genesis_ethereum_block_hash() -> H256 {
+	genesis_ethereum_header().compute_hash()
+}
+
+pub fn child_of_genesis_ethereum_header() -> EthereumHeader {
+	let mut child: EthereumHeader = Default::default();
+	child.parent_hash = genesis_ethereum_block_hash();
+	child	
+}
+
 pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
 
 	GenesisConfig::<MockRuntime> {
-		key: Keyring::Ferdie.into()
+		key: Keyring::Ferdie.into(),
+		initial_header: genesis_ethereum_header(),
+		initial_difficulty: 0.into(),
 	}.assimilate_storage(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();

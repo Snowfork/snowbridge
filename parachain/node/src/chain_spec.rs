@@ -155,6 +155,8 @@ fn testnet_genesis(
 		}),
 		verifier: Some(VerifierConfig {
 			key: relay_key,
+			initial_header: Default::default(),
+			initial_difficulty: 0.into(),
 		}),
 	}
 }
