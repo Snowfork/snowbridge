@@ -1,11 +1,6 @@
 - hosts: localhost
   gather_facts: False
   vars:
-    relay_chain_nodes:
-      - name: relaychain-node-0
-        zone: euw1-az1
-      - name: relaychain-node-1
-        zone: euw1-az2
     parachain_nodes:
       - name: parachain-node-0
         zone: euw1-az1
@@ -60,34 +55,7 @@
           Environment: rococo
       register: rococo_substrate_sg
 
-    - name: Create instances for relay chain
-      community.aws.ec2_instance:
-        key_name: rococo-keypair
-        image_id: "{{ image_id }}"
-        instance_type: "{{ instance_type }}"
-        security_groups:
-          - "{{ rococo_base_sg.group_id }}"
-          - "{{ rococo_substrate_sg.group_id }}"
-        availability_zone: "{{ item.zone }}"
-        network:
-          assign_public_ip: true
-        volumes:
-          - device_name: /dev/sda1
-            ebs:
-              volume_size: 64
-              delete_on_termination: true
-        ebs_optimized: yes
-        wait: no
-        name: "{{ item.name }}"
-        tags:
-          Environment: rococo
-          Role: relaychain
-      loop: "{{ relay_chain_nodes }}"
-
-    - debug:
-        msg: "{{ relay_chain_nodes }}"
-
-    - name: create instances for parachain
+    - name: Provision parachain nodes
       community.aws.ec2_instance:
         key_name: rococo-keypair
         image_id: "{{ image_id }}"
