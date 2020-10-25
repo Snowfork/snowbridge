@@ -2,23 +2,26 @@
   gather_facts: False
   vars:
     relay_chain_nodes:
-      - name: rococo-relay-chain-node-1
+      - name: relaychain-node-0
         zone: euw1-az1
-      - name: rococo-relay-chain-node-2
+      - name: relaychain-node-1
         zone: euw1-az2
     parachain_nodes:
-      - name: rococo-parachain-node-1
+      - name: parachain-node-0
         zone: euw1-az1
-      - name: rococo-parachain-node-2
+      - name: parachain-node-1
         zone: euw1-az2
+      - name: parachain-node-2
+        zone: euw1-az3
     keypair: rococo-keypair
+    image_id: ami-01aa664a17515f5bb
+    instance_type: t3a.medium
 
   tasks:
     - name: Create base security group
       amazon.aws.ec2_group:
         name: rococo-base-sg
         description: Node Security Group
-        profile: "{{ aws_profile }}"
         rules:
           - proto: icmp
             from_port: 8
@@ -40,7 +43,6 @@
       amazon.aws.ec2_group:
         name: rococo-substrate-sg
         description: Node Security Group
-        profile: "{{ aws_profile }}"
         rules:
           - proto: tcp
             ports: 30333
@@ -61,13 +63,12 @@
     - name: Create instances for relay chain
       community.aws.ec2_instance:
         key_name: rococo-keypair
-        image_id: ami-01aa664a17515f5bb
-        instance_type: t3a.medium
+        image_id: "{{ image_id }}"
+        instance_type: "{{ instance_type }}"
         security_groups:
           - "{{ rococo_base_sg.group_id }}"
           - "{{ rococo_substrate_sg.group_id }}"
         availability_zone: "{{ item.zone }}"
-        profile: "{{ aws_profile }}"
         network:
           assign_public_ip: true
         volumes:
@@ -80,7 +81,7 @@
         name: "{{ item.name }}"
         tags:
           Environment: rococo
-          Role: relay-chain-node
+          Role: relaychain
       loop: "{{ relay_chain_nodes }}"
 
     - debug:
@@ -89,13 +90,13 @@
     - name: create instances for parachain
       community.aws.ec2_instance:
         key_name: rococo-keypair
-        image_id: ami-01aa664a17515f5bb
-        instance_type: t3a.medium
+        image_id: "{{ image_id }}"
+        instance_type: "{{ instance_type }}"
+        instance_role: "arn:aws:iam::232374692033:role/SnowforkEC2InstanceRococo"
         security_groups:
           - "{{ rococo_base_sg.group_id }}"
           - "{{ rococo_substrate_sg.group_id }}"
         availability_zone: "{{ item.zone }}"
-        profile: "{{ aws_profile }}"
         network:
           assign_public_ip: true
         volumes:
@@ -108,5 +109,5 @@
         name: "{{ item.name }}"
         tags:
           Environment: rococo
-          Role: parachain-node
+          Role: parachain
       loop: "{{ parachain_nodes }}"

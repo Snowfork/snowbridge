@@ -10,7 +10,7 @@ ExecStart=/opt/artemis/bin/artemis-collator \
     {% if inventory_hostname == 'parachain-node-0' %}
     --node-key {{ hostvars['parachain-node-0'].node_key }} \
     {% else %}
-    --bootnodes {{ parachain_bootnodes }} \
+    --bootnodes {{ bootnodes }} \
     {% endif %}
     -- \
     --chain /opt/artemis/rococo.json \

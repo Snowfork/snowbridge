@@ -1,0 +1,58 @@
+- hosts: parachain
+  serial: 1
+  order: sorted
+  vars:
+    relaychain_bootnodes: "/ip4/{{ hostvars['relaychain-node-0'].private_ip_address }}/tcp/30333/p2p/{{ hostvars['relaychain-node-0'].peer_id }}"
+    bootnodes: "/ip4/{{ hostvars['parachain-node-0'].private_ip_address }}/tcp/30333/p2p/{{ hostvars['parachain-node-0'].peer_id }}"
+
+  tasks:
+    - name: Basic preparation
+      import_tasks: tasks/base.yml
+
+    - name: Download subkey
+      amazon.aws.aws_s3:
+        bucket: snowfork-rococo
+        object: subkey
+        dest: /usr/local/bin/subkey
+        mode: get
+
+    - name: Download collator
+      amazon.aws.aws_s3:
+        bucket: snowfork-rococo
+        object: artemis-collator
+        dest: /usr/local/bin/artemis-collator
+        mode: get
+
+    - name: Make collator executable
+      file:
+        path: /usr/local/bin/artemis-collator
+        mode: "0755"
+
+    - name: Download chainspec
+      amazon.aws.aws_s3:
+        bucket: snowfork-rococo
+        object: rococo.json
+        dest: /etc/rococo.json
+        mode: get
+
+    - name: Create service file
+      template:
+        src: collator.service.j2
+        dest: /etc/systemd/system/collator.service
+        owner: root
+        group: root
+        mode: 0644
+      notify: Restart collator
+
+    - name: Make sure service is running
+      systemd:
+        name: collator
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart collator
+      systemd:
+        name: collator
+        state: restarted
+        daemon_reload: yes
