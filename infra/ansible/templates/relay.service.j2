@@ -1,0 +1,13 @@
+[Unit]
+Description=Artemis Relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Environment=ARTEMIS_ETHEREUM_KEY={{ keys.ethereum }}
+Environment=ARTEMIS_SUBSTRATE_KEY={{ keys.substrate }}
+ExecStart=/usr/local/bin/artemis-relay run --config /etc/artemis-relay/config.toml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

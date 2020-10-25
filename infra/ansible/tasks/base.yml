@@ -8,12 +8,3 @@
 - name: Install boto3
   pip:
     name: boto3
-
-- name: Make directories
-  file:
-    path: "{{ item }}"
-    state: directory
-    recurse: yes
-    loop:
-      - /opt/artemis/bin
-      - /opt/artemis/data

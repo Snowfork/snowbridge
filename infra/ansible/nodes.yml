@@ -9,12 +9,24 @@
     - name: Basic preparation
       import_tasks: tasks/base.yml
 
-    - name: Download subkey
-      amazon.aws.aws_s3:
-        bucket: snowfork-rococo
-        object: subkey
-        dest: /usr/local/bin/subkey
-        mode: get
+    - name: Set hostname
+      hostname:
+        name: "{{ inventory_hostname }}"
+
+    - name: Create user
+      user:
+        name: artemis-collator
+        system: yes
+        home: /var/lib/artemis-collator
+        create_home: no
+        shell: /usr/sbin/nologin
+
+    - name: Make data directory
+      file:
+        path: /var/lib/artemis-collator
+        state: directory
+        owner: artemis-collator
+        group: artemis-collator
 
     - name: Download collator
       amazon.aws.aws_s3:
@@ -38,7 +50,7 @@
     - name: Create service file
       template:
         src: collator.service.j2
-        dest: /etc/systemd/system/collator.service
+        dest: /etc/systemd/system/artemis-collator.service
         owner: root
         group: root
         mode: 0644
@@ -46,13 +58,17 @@
 
     - name: Make sure service is running
       systemd:
-        name: collator
+        name: artemis-collator
         state: started
         enabled: yes
+
+    - name: Pause for 10 seconds
+      pause:
+        seconds: 10
 
   handlers:
     - name: Restart collator
       systemd:
-        name: collator
+        name: artemis-collator
         state: restarted
         daemon_reload: yes
