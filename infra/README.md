@@ -79,13 +79,13 @@ Create or update EC2 resources:
 ansible-playbook aws.yml
 ```
 
-Create our update the parachain:
+Create or update the parachain:
 
 ```bash
 ansible-playbook parachain.yml
 ```
 
-Create our update the relay:
+Create or update the relay:
 
 ```bash
 ansible-playbook relay.yml
