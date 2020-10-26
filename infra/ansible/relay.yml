@@ -1,0 +1,83 @@
+- hosts: relay
+  vars:
+    apps:
+      eth:
+        address: "0x19a04AaE0c7F929d8BC0B7f69D106310f168B500"
+        abi: /etc/artemis-relay/ETHApp.json
+      erc20:
+        address: "0xF1becfDcA540605451553b4d5f80ACF17C7A490A"
+        abi: /etc/artemis-relay/ERC20App.json
+      bridge:
+        address: "0x7f138Fd13e80D8141DAf9CA1d3808e3164974655"
+        abi: /etc/artemis-relay/Bridge.json
+    endpoints:
+      ethereum: wss://ropsten.infura.io/ws/v3/e8b4790b8e4049cca3c04f738cfa25f2
+      substrate: wss://parachain-rpc.snowfork.network
+  vars_files:
+    - vars/keys.yml
+
+  tasks:
+    - name: Basic preparation
+      import_tasks: tasks/base.yml
+
+    - name: Create config dir
+      file:
+        path: /etc/artemis-relay
+        state: directory
+
+    - name: Download artifacts
+      amazon.aws.aws_s3:
+        bucket: snowfork-rococo
+        object: "{{ item.object }}"
+        dest: "{{ item.dest }}"
+        mode: get
+      loop:
+        - object: artemis-relay
+          dest: /usr/local/bin/artemis-relay
+        - object: subkey
+          dest: /usr/local/bin/subkey
+        - object: ETHApp.json
+          dest: "{{ apps.eth.abi }}"
+        - object: ERC20App.json
+          dest: "{{ apps.erc20.abi }}"
+        - object: Bridge.json
+          dest: "{{ apps.bridge.abi }}"
+
+    - name: Make binaries executable
+      file:
+        path: "{{ item }}"
+        mode: 0755
+      loop:
+        - /usr/local/bin/artemis-relay
+        - /usr/local/bin/subkey
+
+    - name: Generate configuration
+      template:
+        src: relay-config.toml.j2
+        dest: /etc/artemis-relay/config.toml
+        owner: root
+        group: root
+        mode: 0644
+      notify: Restart relay
+
+    - name: Create service file
+      template:
+        src: relay.service.j2
+        dest: /etc/systemd/system/artemis-relay.service
+        owner: root
+        group: root
+        mode: 0644
+      notify: Restart relay
+
+    - name: Enable relay service
+      systemd:
+        name: artemis-relay
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart relay
+      systemd:
+        name: artemis-relay
+        state: restarted
+        daemon_reload: yes

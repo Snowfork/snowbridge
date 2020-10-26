@@ -2,7 +2,7 @@ plugin: amazon.aws.aws_ec2
 
 cache: yes
 cache_plugin: ansible.builtin.jsonfile
-cache_timeout: 1800
+cache_timeout: 3600
 cache_connection: /tmp/aws_inventory
 cache_prefix: aws_ec2
 
