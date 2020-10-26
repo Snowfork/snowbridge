@@ -6,4 +6,5 @@ nav_order: 4
 
 # About
 
-_work in progress_
+Coming soon
+{: .label .label-yellow }
