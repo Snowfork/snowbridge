@@ -7,4 +7,5 @@ has_children: true
 
 # Specification
 
-_work in progress_
+Draft
+{: .label .label-yellow }
