@@ -8,6 +8,7 @@ members = [
     "pallets/bridge",
     "pallets/asset",
     "pallets/verifier",
+    "pallets/verifier-lightclient",
     "pallets/eth-app",
     "pallets/erc20-app",
     "node",

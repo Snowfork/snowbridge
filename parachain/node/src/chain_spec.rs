@@ -1,7 +1,7 @@
 use sp_core::{Pair, Public, sr25519};
 use artemis_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
-	SystemConfig, VerifierConfig, WASM_BINARY, Signature
+	SystemConfig, VerifierConfig, VerifierLightclientConfig, WASM_BINARY, Signature
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -155,6 +155,10 @@ fn testnet_genesis(
 		}),
 		verifier: Some(VerifierConfig {
 			key: relay_key,
+		}),
+		verifier_lightclient: Some(VerifierLightclientConfig {
+			initial_header: Default::default(),
+			initial_difficulty: 0.into(),
 		}),
 	}
 }

@@ -39,6 +39,7 @@ std = [
     "sp-version/std",
     "bridge/std",
     "verifier/std",
+    "verifier-lightclient/std",
     "asset/std",
     "eth-app/std",
     "erc20-app/std",
@@ -211,6 +212,12 @@ version = "0.1.1"
 default-features = false
 package = "pallet-verifier"
 path = "../pallets/verifier"
+version = "0.1.1"
+
+[dependencies.verifier-lightclient]
+default-features = false
+package = "pallet-verifier-lightclient"
+path = "../pallets/verifier-lightclient"
 version = "0.1.1"
 
 [dependencies.asset]

@@ -355,6 +355,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-verifier",
+ "pallet-verifier-lightclient",
  "parity-scale-codec",
  "serde",
  "sp-api",
@@ -4017,6 +4018,24 @@ dependencies = [
 
 [[package]]
 name = "pallet-verifier"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "artemis-ethereum",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "rustc-hex",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-verifier-lightclient"
 version = "0.1.1"
 dependencies = [
  "artemis-core",

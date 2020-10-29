@@ -264,6 +264,10 @@ impl verifier::Trait for Runtime {
 	type Event = Event;
 }
 
+impl verifier_lightclient::Trait for Runtime {
+	type Event = Event;
+}
+
 impl asset::Trait for Runtime {
 	type Event = Event;
 }
@@ -291,6 +295,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
+		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
 		Asset: asset::{Module, Call, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Storage, Event<T>},
