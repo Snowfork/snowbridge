@@ -6,7 +6,7 @@ use frame_support::{assert_err, assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::DispatchError;
 
-use crate::{EthereumHeader, BestBlock, Headers, HeadersByNumber};
+use crate::{Error, EthereumHeader, BestBlock, Headers, HeadersByNumber};
 
 #[test]
 fn it_tracks_highest_difficulty_ethereum_chain() {
@@ -59,7 +59,7 @@ fn it_imports_ethereum_header_only_once() {
 		assert_ok!(Verifier::import_header(Origin::signed(ferdie.clone()), child));
 		assert_err!(
 			Verifier::import_header(Origin::signed(ferdie.clone()), child_for_reimport),
-			"Header can only be imported once",
+			Error::<MockRuntime>::DuplicateHeader,
 		);
 	});
 }
@@ -85,7 +85,7 @@ fn it_rejects_ethereum_header_before_parent() {
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		assert_err!(
 			Verifier::import_header(Origin::signed(ferdie), child_of_child),
-			"Parent header must be imported first",
+			Error::<MockRuntime>::MissingParentHeader,
 		);
 	});
 }

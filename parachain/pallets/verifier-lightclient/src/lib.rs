@@ -87,6 +87,10 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
+		/// Header's parent has not been imported.
+        MissingParentHeader,
+        /// Header has already been imported.
+        DuplicateHeader,
 	}
 }
 
@@ -107,16 +111,16 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 	// Validate an Ethereum header for import
-	fn validate_header_to_import(header: &EthereumHeader) -> Result<(), &'static str> {
+	fn validate_header_to_import(header: &EthereumHeader) -> DispatchResult {
 		ensure!(
 			Headers::<T>::contains_key(header.parent_hash),
-			"Parent header must be imported first",
+			Error::<T>::MissingParentHeader,
 		);
 
 		let hash = header.compute_hash();
 		ensure!(
 			!Headers::<T>::contains_key(hash),
-			"Header can only be imported once",
+			Error::<T>::DuplicateHeader,
 		);
 
 		// TODO check PoW
