@@ -88,9 +88,9 @@ decl_event!(
 decl_error! {
 	pub enum Error for Module<T: Trait> {
 		/// Header's parent has not been imported.
-        MissingParentHeader,
-        /// Header has already been imported.
-        DuplicateHeader,
+		MissingParentHeader,
+		/// Header has already been imported.
+		DuplicateHeader,
 	}
 }
 
