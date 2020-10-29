@@ -100,6 +100,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 		
+		// TODO: Calculate weight
 		#[weight = 0]
 		pub fn import_header(origin, header: EthereumHeader) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
