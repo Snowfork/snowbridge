@@ -1,4 +1,4 @@
-use crate::mock::{new_tester, AccountId, Origin, MockEvent, MockRuntime, System, Asset, ETH};
+use crate::mock::{new_tester, AccountId, Origin, MockEvent, MockRuntime, System, Assets, ETH};
 use frame_support::{assert_ok};
 use frame_system as system;
 use sp_keyring::AccountKeyring as Keyring;
@@ -6,6 +6,8 @@ use sp_core::H160;
 use hex_literal::hex;
 use codec::Decode;
 use crate::RawEvent;
+
+pub use artemis_core::assets::MultiAsset;
 
 use crate::payload::Payload;
 
@@ -30,17 +32,15 @@ fn mints_after_handling_ethereum_event() {
 		};
 
 		assert_ok!(ETH::handle_event(event));
-		assert_eq!(Asset::free_balance(H160::zero(), &bob), 10.into());
-	});
+		assert_eq!(Assets::balances(H160::zero(), &bob), 10.into());	});
 }
 
 #[test]
 fn burn_should_emit_bridge_event() {
 	new_tester().execute_with(|| {
-		let token_addr = H160::zero();
 		let recipient = H160::repeat_byte(2);
 		let bob: AccountId = Keyring::Bob.into();
-		Asset::do_mint(token_addr, &bob, 500.into()).unwrap();
+		<Assets as MultiAsset<<MockRuntime as system::Trait>::AccountId>>::deposit(H160::zero(), &bob, 500.into()).unwrap();
 
 		assert_ok!(ETH::burn(
 			Origin::signed(bob.clone()),

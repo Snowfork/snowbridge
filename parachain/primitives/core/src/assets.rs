@@ -9,28 +9,31 @@ use sp_std::{
 };
 
 use frame_support::dispatch::DispatchError;
-use sp_core::U256;
+use sp_core::{H160, U256};
 
-pub trait MultiAsset<AccountId, AssetId> where
-	AssetId: Copy + MaybeSerializeDeserialize + Ord
+pub type AssetId = H160;
+
+pub trait MultiAsset<AccountId>
 {
-	fn total_issuance(asset_id: AssetId) -> U256;
+	type AssetId: Copy + MaybeSerializeDeserialize + Ord;
 
-	fn balance(asset_id: AssetId, who: &AccountId) -> U256;
+	fn total_issuance(asset_id: Self::AssetId) -> U256;
+
+	fn balance(asset_id: Self::AssetId, who: &AccountId) -> U256;
 
 	fn transfer(
-		asset_id: AssetId,
+		asset_id: Self::AssetId,
 		from: &AccountId,
 		to: &AccountId,
 		amount: U256) -> DispatchResult;
 
 	fn withdraw(
-		asset_id: AssetId,
+		asset_id: Self::AssetId,
 		who: &AccountId,
 		amount: U256) -> DispatchResult;
 
 	fn deposit(
-		asset_id: AssetId,
+		asset_id: Self::AssetId,
 		who: &AccountId,
 		amount: U256) -> DispatchResult;
 }

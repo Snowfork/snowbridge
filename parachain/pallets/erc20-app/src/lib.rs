@@ -27,8 +27,7 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 
-use artemis_core::{Application, BridgedAssetId};
-use artemis_asset as asset;
+use artemis_core::{Application, assets::{AssetId, MultiAsset}};
 
 mod payload;
 use payload::Payload;
@@ -39,8 +38,10 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: system::Trait + asset::Trait {
+pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+	type Assets: MultiAsset<<Self as system::Trait>::AccountId, AssetId = H160>;
 }
 
 decl_storage! {
@@ -52,9 +53,9 @@ decl_event!(
 	pub enum Event<T>
 	where
 		AccountId = <T as system::Trait>::AccountId,
+		EthereumAddress = H160
 	{
-		/// Signal a cross-chain transfer.
-		Transfer(BridgedAssetId, AccountId, H160, U256),
+		Transfer(AssetId, AccountId, EthereumAddress, U256),
 	}
 );
 
@@ -77,7 +78,7 @@ decl_module! {
 
 		/// Burn an ERC20 token balance
 		#[weight = 0]
-		pub fn burn(origin, asset_id: BridgedAssetId, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, asset_id: AssetId, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			// The asset_id 0 is reserved for the ETH app
@@ -85,7 +86,7 @@ decl_module! {
 				return Err(Error::<T>::InvalidAssetId.into())
 			}
 
-			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
+			T::Assets::withdraw(asset_id.into(), &who, amount)?;
 			Self::deposit_event(RawEvent::Transfer(asset_id, who.clone(), recipient, amount));
 			Ok(())
 		}
@@ -99,9 +100,7 @@ impl<T: Trait> Module<T> {
 		if payload.token_addr.is_zero() {
 			return Err(Error::<T>::InvalidAssetId.into())
 		}
-
-		<asset::Module<T>>::do_mint(payload.token_addr, &payload.recipient_addr, payload.amount)?;
-
+		T::Assets::deposit(payload.token_addr.into(), &payload.recipient_addr, payload.amount)?;
 		Ok(())
 	}
 

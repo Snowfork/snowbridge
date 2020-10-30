@@ -38,7 +38,7 @@ use frame_support::{
 	Parameter
 };
 
-use sp_core::U256;
+use sp_core::{U256};
 use sp_runtime::traits::{MaybeSerializeDeserialize, Member};
 
 use artemis_core::assets::{MultiAsset, Asset};
@@ -99,7 +99,7 @@ decl_module! {
 						asset_id: T::AssetId,
 						amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			<Self as MultiAsset<_, _>>::transfer(asset_id, &who, &dest, amount)
+			<Self as MultiAsset<_>>::transfer(asset_id, &who, &dest, amount)
 		}
 
 	}
@@ -109,17 +109,19 @@ impl<T: Trait> Module<T> {
 
 }
 
-impl<T: Trait> MultiAsset<T::AccountId, T::AssetId> for Module<T> {
+impl<T: Trait> MultiAsset<T::AccountId> for Module<T> {
 
-	fn total_issuance(asset_id: T::AssetId) -> U256 {
+	type AssetId = T::AssetId;
+
+	fn total_issuance(asset_id: Self::AssetId) -> U256 {
 		Module::<T>::total_issuance(asset_id)
 	}
 
-	fn balance(asset_id: T::AssetId, who: &T::AccountId) -> U256 {
+	fn balance(asset_id: Self::AssetId, who: &T::AccountId) -> U256 {
 		Module::<T>::balances(asset_id, who)
 	}
 
-	fn deposit(asset_id: T::AssetId, who: &T::AccountId, amount: U256) -> DispatchResult  {
+	fn deposit(asset_id: Self::AssetId, who: &T::AccountId, amount: U256) -> DispatchResult  {
 		if amount.is_zero() {
 			return Ok(())
 		}
@@ -134,7 +136,7 @@ impl<T: Trait> MultiAsset<T::AccountId, T::AssetId> for Module<T> {
 		})
 	}
 
-	fn withdraw(asset_id: T::AssetId, who: &T::AccountId, amount: U256) -> DispatchResult  {
+	fn withdraw(asset_id: Self::AssetId, who: &T::AccountId, amount: U256) -> DispatchResult  {
 		if amount.is_zero() {
 			return Ok(())
 		}
@@ -150,7 +152,7 @@ impl<T: Trait> MultiAsset<T::AccountId, T::AssetId> for Module<T> {
 	}
 
 	fn transfer(
-		asset_id: T::AssetId,
+		asset_id: Self::AssetId,
 		from: &T::AccountId,
 		to: &T::AccountId,
 		amount: U256)
@@ -218,7 +220,7 @@ where
 		dest: &T::AccountId,
 		amount: U256,
 	) -> DispatchResult {
-		<Module<T> as MultiAsset<_, _>>::transfer(GetAssetId::get(), source, dest, amount)
+		<Module<T> as MultiAsset<_>>::transfer(GetAssetId::get(), source, dest, amount)
 	}
 
 	fn deposit(

@@ -1,14 +1,14 @@
 // Mock runtime
 
 use crate::{Module, Trait};
-use sp_core::H256;
+use sp_core::{H160, H256};
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
 use frame_system as system;
 
-use artemis_asset as asset;
+use artemis_assets as assets;
 
 impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
@@ -21,7 +21,7 @@ mod test_events {
 impl_outer_event! {
     pub enum MockEvent for MockRuntime {
 		system<T>,
-		asset<T>,
+		assets<T>,
         test_events<T>,
     }
 }
@@ -68,16 +68,18 @@ impl system::Trait for MockRuntime {
 	type SystemWeightInfo = ();
 }
 
-impl asset::Trait for MockRuntime {
+impl assets::Trait for MockRuntime {
 	type Event = MockEvent;
+	type AssetId = H160;
 }
 
 impl Trait for MockRuntime {
 	type Event = MockEvent;
+	type Assets = assets::Module<MockRuntime>;
 }
 
 pub type System = system::Module<MockRuntime>;
-pub type Asset = asset::Module<MockRuntime>;
+pub type Assets = assets::Module<MockRuntime>;
 pub type ETH = Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {
@@ -86,4 +88,3 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
-

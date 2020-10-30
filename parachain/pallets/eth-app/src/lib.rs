@@ -26,9 +26,7 @@ use frame_support::{
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
-use artemis_core::{Application, BridgedAssetId};
-use artemis_asset as asset;
-
+use artemis_core::{Application, assets::MultiAsset};
 mod payload;
 use payload::Payload;
 
@@ -38,8 +36,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: system::Trait + asset::Trait {
+pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Assets: MultiAsset<<Self as system::Trait>::AccountId, AssetId = H160>;
 }
 
 decl_storage! {
@@ -52,10 +51,11 @@ decl_event!(
     /// Events for the ETH module.
 	pub enum Event<T>
 	where
-		AccountId = <T as system::Trait>::AccountId
+		AccountId = <T as system::Trait>::AccountId,
+		EthereumAddress = H160
 	{
 		/// Signal a cross-chain transfer.
-		Transfer(AccountId, H160, U256),
+		Transfer(AccountId, EthereumAddress, U256),
 	}
 );
 
@@ -75,12 +75,10 @@ decl_module! {
 		fn deposit_event() = default;
 
 		// Users should burn their holdings to release funds on the Ethereum side
-		// TODO: Calculate weights
 		#[weight = 0]
 		pub fn burn(origin, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let asset_id: BridgedAssetId = H160::zero();
-			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
+			T::Assets::withdraw(H160::zero(), &who, amount)?;
 			Self::deposit_event(RawEvent::Transfer(who.clone(), recipient, amount));
 			Ok(())
 		}
@@ -91,8 +89,8 @@ decl_module! {
 impl<T: Trait> Module<T> {
 
 	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
-		let asset_id: BridgedAssetId = H160::zero();
-		<asset::Module<T>>::do_mint(asset_id, &payload.recipient_addr, payload.amount)
+		T::Assets::deposit(H160::zero(), &payload.recipient_addr, payload.amount)?;
+		Ok(())
 	}
 }
 
