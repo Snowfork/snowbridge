@@ -157,7 +157,7 @@ package = "pallet-verifier"
 path = "../pallets/verifier"
 version = "0.1.1"
 
-[dependencies.asset]
+[dependencies.assets]
 default-features = false
 package = "artemis-assets"
 path = "../pallets/assets"
@@ -218,7 +218,7 @@ std = [
     "parachain-info/std",
     "bridge/std",
     "verifier/std",
-    "asset/std",
+    "assets/std",
     "eth-app/std",
     "erc20-app/std",
 ]

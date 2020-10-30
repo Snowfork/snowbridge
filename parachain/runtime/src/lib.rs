@@ -227,16 +227,19 @@ impl verifier::Trait for Runtime {
 	type Event = Event;
 }
 
-impl asset::Trait for Runtime {
+impl assets::Trait for Runtime {
 	type Event = Event;
+	type AssetId = sp_core::H160;
 }
 
 impl eth_app::Trait for Runtime {
 	type Event = Event;
+	type Assets = assets::Module<Runtime>;
 }
 
 impl erc20_app::Trait for Runtime {
 	type Event = Event;
+	type Assets = assets::Module<Runtime>;
 }
 
 construct_runtime! {
@@ -253,7 +256,7 @@ construct_runtime! {
 		ParachainInfo: parachain_info::{Module, Storage, Config},
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
-		Asset: asset::{Module, Call, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Storage, Event<T>},
 	}
