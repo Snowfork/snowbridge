@@ -1,6 +1,6 @@
 //! # Asset
 //!
-//! The asset module provides functionality for handling bridged asset balances.
+//! The asset module provides functionality for handling account balances.
 //!
 //! ## Overview
 //!

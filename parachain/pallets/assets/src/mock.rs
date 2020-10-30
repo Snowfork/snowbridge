@@ -3,7 +3,7 @@
 use super::*;
 
 use crate::{Module, Trait};
-use sp_core::H256;
+use sp_core::{H160, H256};
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
@@ -15,14 +15,14 @@ impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
 }
 
-mod generic_asset {
+mod assets {
     pub use crate::Event;
 }
 
 impl_outer_event! {
     pub enum TestEvent for MockRuntime {
         system<T>,
-        generic_asset<T>,
+        assets<T>,
     }
 }
 
@@ -70,9 +70,10 @@ impl system::Trait for MockRuntime {
 
 impl Trait for MockRuntime {
 	type Event = TestEvent;
+	type AssetId = H160;
 }
 
-pub type Asset = Module<MockRuntime>;
+pub type Assets = Module<MockRuntime>;
 pub type System = system::Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {
