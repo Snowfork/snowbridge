@@ -6,7 +6,7 @@ members = [
     "primitives/core",
     "primitives/ethereum",
     "pallets/bridge",
-    "pallets/asset",
+    "pallets/assets",
     "pallets/verifier",
     "pallets/eth-app",
     "pallets/erc20-app",

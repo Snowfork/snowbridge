@@ -28,6 +28,12 @@ default-features = false
 git = "https://github.com/paritytech/substrate.git"
 branch = "rococo-branch"
 
+[dependencies.sp-runtime]
+default-features = false
+git = "https://github.com/paritytech/substrate.git"
+branch = "rococo-branch"
+
+
 [features]
 default = ["std"]
 std = [

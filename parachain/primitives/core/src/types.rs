@@ -1,7 +1,6 @@
 //! Types for representing messages
 
 use sp_std::vec::Vec;
-use sp_core::H160;
 
 use codec::{Encode, Decode};
 
@@ -40,5 +39,3 @@ pub enum VerificationInput {
 	None
 }
 
-/// ID for Bridged Assets
-pub type BridgedAssetId = H160;
