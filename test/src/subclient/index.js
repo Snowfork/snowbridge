@@ -36,13 +36,32 @@ class SubClient {
                 BridgedAssetId: 'H160',
                 AssetAccountData: {
                     free: 'U256'
+                },
+                EthereumHeader: {
+                    parentHash: 'H256',
+                    timestamp: 'u64',
+                    number: 'u64',
+                    author: 'H160',
+                    transactionsRoot: 'H256',
+                    ommersHash: 'H256',
+                    extraData: 'Vec<u8>',
+                    stateRoot: 'H256',
+                    receiptsRoot: 'H256',
+                    logsBloom: 'Bloom',
+                    gasUsed: 'U256',
+                    gasLimit: 'U256',
+                    difficulty: 'U256',
+                    seal: 'Vec<Vec<u8>>'
+                },
+                Bloom: {
+                    _: '[u8; 256]'
                 }
             }
         })
 
         this.keyring = new Keyring({ type: 'sr25519' });
         this.alice = this.keyring.addFromUri('//Alice', { name: 'Alice' });
-
+        this.relay = this.keyring.addFromUri('//Relay', { name: 'Relay' });
     }
 
     async queryAccountBalance(accountId, assetId) {
@@ -61,7 +80,9 @@ class SubClient {
         const txHash = await this.api.tx.erc20.burn(assetId, recipient, amount).signAndSend(account);
     }
 
-
+    async importEthHeader(account, orderedFields) {
+        const txHash = await this.api.tx.verifier.importHeader(orderedFields).signAndSend(account);
+    }
 }
 
 module.exports.SubClient = SubClient;

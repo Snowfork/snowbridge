@@ -136,6 +136,7 @@ tag = "v2.0.0-rc6"
 version = "2.0.0-rc6"
 
 [dependencies]
+hex-literal = "0.3"
 jsonrpc-core = "14.0.3"
 structopt = "0.3.8"
 

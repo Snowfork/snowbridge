@@ -41,6 +41,9 @@ pub use frame_support::{
 	},
 };
 
+pub use verifier_lightclient::EthereumHeader;
+
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
