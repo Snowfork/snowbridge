@@ -23,7 +23,7 @@ use sp_version::RuntimeVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, parameter_types,
-	traits::Randomness,
+	traits::{Randomness, Get},
 	weights::{constants::WEIGHT_PER_SECOND, IdentityFee, Weight},
 	StorageValue,
 };
@@ -33,7 +33,16 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Permill, Perbill};
 
-pub use cumulus_token_dealer;
+use polkadot_parachain::primitives::Sibling;
+use xcm::v0::{Junction, MultiLocation, NetworkId};
+use xcm_builder::{
+	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
+};
+use xcm_executor::{traits::NativeAsset, Config, XcmExecutor};
+
+use artemis_xcm_support::Transactor;
+
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -206,13 +215,67 @@ impl pallet_transaction_payment::Trait for Runtime {
 	type FeeMultiplierUpdate = ();
 }
 
+// Cumulus and XCMP
+
 impl cumulus_parachain_upgrade::Trait for Runtime {
 	type Event = Event;
 	type OnValidationFunctionParams = ();
 }
 
 
+impl cumulus_message_broker::Trait for Runtime {
+	type Event = Event;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type ParachainId = ParachainInfo;
+	type SendDownward = ();
+}
+
 impl parachain_info::Trait for Runtime {}
+
+parameter_types! {
+	pub const PolkadotNetworkId: NetworkId = NetworkId::Polkadot;
+}
+
+parameter_types! {
+	pub ArtemisNetwork: NetworkId = NetworkId::Named("artemis".into());
+	pub RelayChainOrigin: Origin = cumulus_message_broker::Origin::Relay.into();
+	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
+		id: ParachainInfo::get().into(),
+	});
+}
+
+pub type LocationConverter = (
+	ParentIsDefault<AccountId>,
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	AccountId32Aliases<ArtemisNetwork, AccountId>,
+);
+
+pub type LocalAssetTransactor = Transactor<Balances, Assets, AccountId>;
+
+pub type LocalOriginConverter = (
+	SovereignSignedViaLocation<LocationConverter, Origin>,
+	RelayChainAsNative<RelayChainOrigin, Origin>,
+	SiblingParachainAsNative<cumulus_message_broker::Origin, Origin>,
+	SignedAccountId32AsNative<ArtemisNetwork, Origin>,
+);
+
+pub struct XcmConfig;
+impl Config for XcmConfig {
+	type Call = Call;
+	type XcmSender = MessageBroker;
+	type AssetTransactor = LocalAssetTransactor;
+	type OriginConverter = LocalOriginConverter;
+	type IsReserve = NativeAsset;
+	type IsTeleporter = ();
+	type LocationInverter = LocationInverter<Ancestry>;
+}
+
+impl pallet_xcm_handler::Trait for Runtime {
+	type Event = Event;
+	type AccountIdConverter = LocationConverter;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+}
+
 
 // Our pallets
 
@@ -248,12 +311,19 @@ construct_runtime! {
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
+		// Substrate modules
 		System: frame_system::{Module, Call, Storage, Config, Event<T>},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
+
+		// Parachain modules
 		ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
+		MessageBroker: cumulus_message_broker::{Module, Call, Inherent, Event<T>, Origin},
 		ParachainInfo: parachain_info::{Module, Storage, Config},
+		XcmHandler: pallet_xcm_handler::{Module, Call, Event},
+
+		// Artemis modules
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
 		Assets: assets::{Module, Call, Storage, Event<T>},

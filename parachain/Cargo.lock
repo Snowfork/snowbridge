@@ -12,11 +12,11 @@ dependencies = [
 
 [[package]]
 name = "addr2line"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b6a2d3371669ab3ca9797670853d61402b03d0b4b9ebf33d677dfa720203072"
+checksum = "7c0929d69e78dd9bf5408269919fcbcaeb2e35e5d43e5815517cdc6a8e11a423"
 dependencies = [
- "gimli 0.22.0",
+ "gimli 0.23.0",
 ]
 
 [[package]]
@@ -117,7 +117,7 @@ checksum = "4f823d037a7ec6ea2197046bafd4ae150e6bc36f9ca347404f46a46823fa84f2"
 dependencies = [
  "approx",
  "num-complex",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -150,7 +150,7 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0e60b75072ecd4168020818c0107f2857bb6c4e64252d8d3983f6263b40a5c3"
 dependencies = [
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -222,8 +222,6 @@ dependencies = [
  "polkadot-primitives",
  "polkadot-runtime-common",
  "polkadot-service",
- "polkadot-test-runtime",
- "polkadot-test-runtime-client",
  "polkadot-test-service",
  "rand 0.7.3",
  "sc-basic-authorship",
@@ -253,8 +251,6 @@ dependencies = [
  "sp-trie",
  "structopt",
  "substrate-build-script-utils",
- "substrate-test-client",
- "substrate-test-runtime-client",
  "tokio 0.2.22",
  "trie-root 0.15.2",
 ]
@@ -343,12 +339,11 @@ dependencies = [
  "artemis-assets",
  "artemis-erc20-app",
  "artemis-eth-app",
+ "artemis-xcm-support",
  "cumulus-message-broker",
  "cumulus-parachain-upgrade",
  "cumulus-primitives",
  "cumulus-runtime",
- "cumulus-token-dealer",
- "cumulus-upward-message",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -358,8 +353,10 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-verifier",
+ "pallet-xcm-handler",
  "parachain-info",
  "parity-scale-codec",
+ "polkadot-parachain",
  "serde",
  "sp-api",
  "sp-block-builder",
@@ -372,7 +369,10 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-wasm-builder-runner",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -571,15 +571,15 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "backtrace"
-version = "0.3.53"
+version = "0.3.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "707b586e0e2f247cbde68cdd2c3ce69ea7b7be43e1c5b426e37c9319c4b9838e"
+checksum = "2baad346b2d4e94a24347adeee9c7a93f412ee94b9cc26e5b59dea23848e9f28"
 dependencies = [
  "addr2line",
  "cfg-if 1.0.0",
  "libc",
  "miniz_oxide",
- "object 0.21.1",
+ "object 0.22.0",
  "rustc-demangle",
 ]
 
@@ -883,7 +883,7 @@ checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
 dependencies = [
  "libc",
  "num-integer",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
  "time",
  "winapi 0.3.9",
 ]
@@ -1229,7 +1229,7 @@ dependencies = [
 [[package]]
 name = "cumulus-collator"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?rev=8a445a425086fc927f946a72b245e829fba200d0#8a445a425086fc927f946a72b245e829fba200d0"
+source = "git+https://github.com/paritytech/cumulus?branch=gav-xcmp#23ca78747a65cc1ead5b9134f65bd56e841dad7c"
 dependencies = [
  "cumulus-consensus",
  "cumulus-network",
@@ -1257,7 +1257,7 @@ dependencies = [
 [[package]]
 name = "cumulus-consensus"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?rev=8a445a425086fc927f946a72b245e829fba200d0#8a445a425086fc927f946a72b245e829fba200d0"
+source = "git+https://github.com/paritytech/cumulus?branch=gav-xcmp#23ca78747a65cc1ead5b9134f65bd56e841dad7c"
 dependencies = [
  "futures 0.3.7",
  "log 0.4.11",
@@ -1279,10 +1279,9 @@ dependencies = [
 [[package]]
 name = "cumulus-message-broker"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?rev=8a445a425086fc927f946a72b245e829fba200d0#8a445a425086fc927f946a72b245e829fba200d0"
+source = "git+https://github.com/paritytech/cumulus?branch=gav-xcmp#23ca78747a65cc1ead5b9134f65bd56e841dad7c"
 dependencies = [
  "cumulus-primitives",
- "cumulus-upward-message",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -1290,12 +1289,13 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xcm",
 ]
 
 [[package]]
 name = "cumulus-network"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?rev=8a445a425086fc927f946a72b245e829fba200d0#8a445a425086fc927f946a72b245e829fba200d0"
+source = "git+https://github.com/paritytech/cumulus?branch=gav-xcmp#23ca78747a65cc1ead5b9134f65bd56e841dad7c"
 dependencies = [
  "cumulus-primitives",
  "futures 0.3.7",
@@ -1317,7 +1317,7 @@ dependencies = [
 [[package]]
 name = "cumulus-parachain-upgrade"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?rev=8a445a425086fc927f946a72b245e829fba200d0#8a445a425086fc927f946a72b245e829fba200d0"
+source = "git+https://github.com/paritytech/cumulus?branch=gav-xcmp#23ca78747a65cc1ead5b9134f65bd56e841dad7c"
 dependencies = [
  "cumulus-primitives",
  "cumulus-runtime",
@@ -1338,7 +1338,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?rev=8a445a425086fc927f946a72b245e829fba200d0#8a445a425086fc927f946a72b245e829fba200d0"
+source = "git+https://github.com/paritytech/cumulus?branch=gav-xcmp#23ca78747a65cc1ead5b9134f65bd56e841dad7c"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
@@ -1348,12 +1348,13 @@ dependencies = [
  "sp-inherents",
  "sp-runtime",
  "sp-std",
+ "xcm",
 ]
 
 [[package]]
 name = "cumulus-runtime"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?rev=8a445a425086fc927f946a72b245e829fba200d0#8a445a425086fc927f946a72b245e829fba200d0"
+source = "git+https://github.com/paritytech/cumulus?branch=gav-xcmp#23ca78747a65cc1ead5b9134f65bd56e841dad7c"
 dependencies = [
  "cumulus-primitives",
  "frame-executive",
@@ -1372,7 +1373,7 @@ dependencies = [
 [[package]]
 name = "cumulus-service"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?rev=8a445a425086fc927f946a72b245e829fba200d0#8a445a425086fc927f946a72b245e829fba200d0"
+source = "git+https://github.com/paritytech/cumulus?branch=gav-xcmp#23ca78747a65cc1ead5b9134f65bd56e841dad7c"
 dependencies = [
  "cumulus-collator",
  "cumulus-consensus",
@@ -1389,32 +1390,6 @@ dependencies = [
  "sp-core",
  "sp-inherents",
  "sp-runtime",
-]
-
-[[package]]
-name = "cumulus-token-dealer"
-version = "0.1.0"
-dependencies = [
- "cumulus-primitives",
- "cumulus-upward-message",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "polkadot-parachain",
-]
-
-[[package]]
-name = "cumulus-upward-message"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?rev=8a445a425086fc927f946a72b245e829fba200d0#8a445a425086fc927f946a72b245e829fba200d0"
-dependencies = [
- "kusama-runtime",
- "polkadot-core-primitives",
- "polkadot-parachain",
- "polkadot-runtime",
- "rococo-runtime",
- "sp-std",
- "westend-runtime",
 ]
 
 [[package]]
@@ -1847,7 +1822,7 @@ dependencies = [
  "futures 0.3.7",
  "futures-timer 2.0.2",
  "log 0.4.11",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "parking_lot 0.9.0",
 ]
@@ -2373,9 +2348,9 @@ dependencies = [
 
 [[package]]
 name = "gimli"
-version = "0.22.0"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aaf91faf136cb47367fa430cd46e37a788775e7fa104f8b4bcb3861dc389b724"
+checksum = "f6503fe142514ca4799d4c26297c4248239fe8838d827db6bd6065c6ed29a6ce"
 
 [[package]]
 name = "glob"
@@ -2790,7 +2765,7 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
 dependencies = [
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -3007,7 +2982,7 @@ dependencies = [
 [[package]]
 name = "kusama-runtime"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "bitvec",
  "frame-executive",
@@ -3067,7 +3042,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "static_assertions",
- "substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-wasm-builder-runner",
 ]
 
 [[package]]
@@ -3610,9 +3585,9 @@ checksum = "60302e4db3a61da70c0cb7991976248362f30319e88850c487b9b95bbf059e00"
 
 [[package]]
 name = "memchr"
-version = "2.3.3"
+version = "2.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3728d817d99e5ac407411fa471ff9800a778d88a24685968b36824eaf4bee400"
+checksum = "0ee1c47aaa256ecabcaea351eae4a9b01ef39ed810004e298d2511ed284b1525"
 
 [[package]]
 name = "memmap"
@@ -3810,7 +3785,7 @@ dependencies = [
  "matrixmultiply",
  "num-complex",
  "num-rational",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
  "rand 0.6.5",
  "typenum",
 ]
@@ -3855,7 +3830,7 @@ dependencies = [
  "byteorder",
  "enum-primitive-derive",
  "libc",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
  "thiserror",
 ]
 
@@ -3925,7 +3900,7 @@ checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
 dependencies = [
  "autocfg 1.0.1",
  "num-integer",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -3935,17 +3910,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6b19411a9719e753aff12e5187b74d60d3dc449ec3f4dc21e3989c3f554bc95"
 dependencies = [
  "autocfg 1.0.1",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
 name = "num-integer"
-version = "0.1.43"
+version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d59457e662d541ba17869cf51cf177c0b5f0cbf476c66bdc90bf1edac4f875b"
+checksum = "d2cc698a63b549a70bc047073d2949cce27cd1c7b0a4a862d08a8031bc2801db"
 dependencies = [
  "autocfg 1.0.1",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -3957,7 +3932,7 @@ dependencies = [
  "autocfg 1.0.1",
  "num-bigint",
  "num-integer",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -3966,14 +3941,14 @@ version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92e5113e9fd4cc14ded8e499429f396a20f98c772a47cc8622a736e1ec843c31"
 dependencies = [
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
 ]
 
 [[package]]
 name = "num-traits"
-version = "0.2.12"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac267bcc07f48ee5f8935ab0d24f316fb722d7a1292e2913f0cc196b29ffd611"
+checksum = "9a64b1ec5cda2586e284722486d802acf1f7dbdc623e2bfc57e65ca1cd099290"
 dependencies = [
  "autocfg 1.0.1",
  "libm",
@@ -4008,9 +3983,9 @@ dependencies = [
 
 [[package]]
 name = "object"
-version = "0.21.1"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37fd5004feb2ce328a52b0b3d01dbf4ffff72583493900ed15f22d4111c51693"
+checksum = "8d3b63360ec3cb337817c2dbd47ab4a0f170d285d8e5a2064600f3def1402397"
 
 [[package]]
 name = "once_cell"
@@ -4587,8 +4562,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-xcm-handler"
+version = "0.8.22"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
 name = "parachain-info"
 version = "0.1.0"
+source = "git+https://github.com/paritytech/cumulus?branch=gav-xcmp#23ca78747a65cc1ead5b9134f65bd56e841dad7c"
 dependencies = [
  "cumulus-primitives",
  "frame-support",
@@ -4953,7 +4942,7 @@ checksum = "feb3b2b1033b8a60b4da6ee470325f887758c95d5320f52f9ce0df055a55940e"
 [[package]]
 name = "polkadot-availability-store"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "derive_more 0.99.11",
  "exit-future 0.2.0",
@@ -4980,7 +4969,7 @@ dependencies = [
 [[package]]
 name = "polkadot-cli"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "frame-benchmarking-cli",
  "futures 0.3.7",
@@ -5003,7 +4992,7 @@ dependencies = [
 [[package]]
 name = "polkadot-collator"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "futures 0.3.7",
  "futures-timer 2.0.2",
@@ -5030,7 +5019,7 @@ dependencies = [
 [[package]]
 name = "polkadot-core-primitives"
 version = "0.7.30"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "parity-scale-codec",
  "sp-core",
@@ -5041,7 +5030,7 @@ dependencies = [
 [[package]]
 name = "polkadot-erasure-coding"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "derive_more 0.15.0",
  "parity-scale-codec",
@@ -5054,7 +5043,7 @@ dependencies = [
 [[package]]
 name = "polkadot-network"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "arrayvec 0.4.12",
  "bytes 0.5.6",
@@ -5083,7 +5072,7 @@ dependencies = [
 [[package]]
 name = "polkadot-parachain"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "derive_more 0.99.11",
  "futures 0.3.7",
@@ -5097,14 +5086,16 @@ dependencies = [
  "sp-core",
  "sp-externalities",
  "sp-io",
+ "sp-runtime",
  "sp-std",
  "sp-wasm-interface",
+ "xcm",
 ]
 
 [[package]]
 name = "polkadot-primitives"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "bitvec",
  "frame-system",
@@ -5127,7 +5118,7 @@ dependencies = [
 [[package]]
 name = "polkadot-rpc"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "jsonrpc-core",
  "pallet-transaction-payment-rpc",
@@ -5154,7 +5145,7 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "bitvec",
  "frame-executive",
@@ -5213,13 +5204,13 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "static_assertions",
- "substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-wasm-builder-runner",
 ]
 
 [[package]]
 name = "polkadot-runtime-common"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "bitvec",
  "frame-support",
@@ -5234,6 +5225,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-vesting",
  "parity-scale-codec",
+ "polkadot-parachain",
  "polkadot-primitives",
  "polkadot-runtime-parachains",
  "rustc-hex",
@@ -5248,12 +5240,13 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "static_assertions",
+ "xcm",
 ]
 
 [[package]]
 name = "polkadot-runtime-parachains"
 version = "0.8.0"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "bitvec",
  "frame-support",
@@ -5284,7 +5277,7 @@ dependencies = [
 [[package]]
 name = "polkadot-service"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "frame-benchmarking",
  "frame-system-rpc-runtime-api",
@@ -5344,7 +5337,7 @@ dependencies = [
 [[package]]
 name = "polkadot-statement-table"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "parity-scale-codec",
  "polkadot-primitives",
@@ -5354,7 +5347,7 @@ dependencies = [
 [[package]]
 name = "polkadot-test-runtime"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "bitvec",
  "frame-executive",
@@ -5402,37 +5395,13 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "polkadot-test-runtime-client"
-version = "2.0.0"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
-dependencies = [
- "futures 0.3.7",
- "pallet-timestamp",
- "parity-scale-codec",
- "polkadot-primitives",
- "polkadot-runtime-common",
- "polkadot-test-runtime",
- "polkadot-test-service",
- "sc-block-builder",
- "sc-client-api",
- "sc-consensus",
- "sc-light",
- "sc-service",
- "sp-api",
- "sp-blockchain",
- "sp-core",
- "sp-runtime",
- "substrate-test-client",
+ "substrate-wasm-builder-runner",
 ]
 
 [[package]]
 name = "polkadot-test-service"
 version = "0.8.2"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "frame-benchmarking",
  "frame-system",
@@ -5441,7 +5410,6 @@ dependencies = [
  "hex",
  "log 0.4.11",
  "pallet-staking",
- "pallet-sudo",
  "pallet-transaction-payment",
  "polkadot-availability-store",
  "polkadot-network",
@@ -5480,7 +5448,7 @@ dependencies = [
 [[package]]
 name = "polkadot-validation"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "ansi_term 0.12.1",
  "bitvec",
@@ -6054,18 +6022,18 @@ dependencies = [
 
 [[package]]
 name = "ref-cast"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "745c1787167ddae5569661d5ffb8b25ae5fedbf46717eaa92d652221cec72623"
+checksum = "e17626b2f4bcf35b84bf379072a66e28cfe5c3c6ae58b38e4914bb8891dabece"
 dependencies = [
  "ref-cast-impl",
 ]
 
 [[package]]
 name = "ref-cast-impl"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d21b475ab879ef0e315ad99067fa25778c3b0377f57f1b00207448dac1a3144"
+checksum = "0c523ccaed8ac4b0288948849a350b37d3035827413c458b6a40ddb614bb4f72"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
@@ -6192,7 +6160,7 @@ dependencies = [
 [[package]]
 name = "rococo-runtime"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "bitvec",
  "frame-executive",
@@ -6255,7 +6223,10 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "static_assertions",
- "substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-wasm-builder-runner",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -6590,7 +6561,7 @@ dependencies = [
  "merlin",
  "num-bigint",
  "num-rational",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "parking_lot 0.10.2",
  "pdqselect",
@@ -7498,11 +7469,10 @@ checksum = "7fdf1b9db47230893d76faad238fd6097fd6d6a9245cd7a4d90dbd639536bbd2"
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.2.1"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3e12110bc539e657a646068aaf5eb5b63af9d0c1f7b29c97113fad80e15f035"
+checksum = "ce32ea0c6c56d5eacaeb814fbed9960547021d3edd010ded1425f180536b20ab"
 dependencies = [
- "arc-swap",
  "libc",
 ]
 
@@ -7680,7 +7650,7 @@ version = "2.0.0-rc5"
 source = "git+https://github.com/paritytech/substrate.git?branch=rococo-branch#83544d41abcc0e3d3cbbd6aa510e04dc50863e5c"
 dependencies = [
  "integer-sqrt",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "serde",
  "sp-debug-derive",
@@ -7775,20 +7745,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sp-consensus-aura"
-version = "0.8.0-rc5"
-source = "git+https://github.com/paritytech/substrate.git?branch=rococo-branch#83544d41abcc0e3d3cbbd6aa510e04dc50863e5c"
-dependencies = [
- "parity-scale-codec",
- "sp-api",
- "sp-application-crypto",
- "sp-inherents",
- "sp-runtime",
- "sp-std",
- "sp-timestamp",
-]
-
-[[package]]
 name = "sp-consensus-babe"
 version = "0.8.0-rc5"
 source = "git+https://github.com/paritytech/substrate.git?branch=rococo-branch#83544d41abcc0e3d3cbbd6aa510e04dc50863e5c"
@@ -7848,7 +7804,7 @@ dependencies = [
  "libsecp256k1",
  "log 0.4.11",
  "merlin",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "parity-util-mem",
  "parking_lot 0.10.2",
@@ -8112,7 +8068,7 @@ dependencies = [
  "hash-db",
  "itertools 0.9.0",
  "log 0.4.11",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "parking_lot 0.10.2",
  "rand 0.7.3",
@@ -8410,72 +8366,6 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
 ]
-
-[[package]]
-name = "substrate-test-runtime"
-version = "2.0.0-rc5"
-source = "git+https://github.com/paritytech/substrate.git?branch=rococo-branch#83544d41abcc0e3d3cbbd6aa510e04dc50863e5c"
-dependencies = [
- "cfg-if 0.1.10",
- "frame-executive",
- "frame-support",
- "frame-system",
- "frame-system-rpc-runtime-api",
- "log 0.4.11",
- "memory-db",
- "pallet-babe",
- "pallet-timestamp",
- "parity-scale-codec",
- "parity-util-mem",
- "sc-service",
- "serde",
- "sp-api",
- "sp-application-crypto",
- "sp-block-builder",
- "sp-consensus-aura",
- "sp-consensus-babe",
- "sp-core",
- "sp-finality-grandpa",
- "sp-inherents",
- "sp-io",
- "sp-keyring",
- "sp-offchain",
- "sp-runtime",
- "sp-runtime-interface",
- "sp-session",
- "sp-std",
- "sp-transaction-pool",
- "sp-trie",
- "sp-version",
- "substrate-wasm-builder-runner 1.0.6 (git+https://github.com/paritytech/substrate.git?branch=rococo-branch)",
- "trie-db",
-]
-
-[[package]]
-name = "substrate-test-runtime-client"
-version = "2.0.0-rc5"
-source = "git+https://github.com/paritytech/substrate.git?branch=rococo-branch#83544d41abcc0e3d3cbbd6aa510e04dc50863e5c"
-dependencies = [
- "futures 0.3.7",
- "parity-scale-codec",
- "sc-block-builder",
- "sc-client-api",
- "sc-consensus",
- "sc-light",
- "sc-service",
- "sp-api",
- "sp-blockchain",
- "sp-consensus",
- "sp-core",
- "sp-runtime",
- "substrate-test-client",
- "substrate-test-runtime",
-]
-
-[[package]]
-name = "substrate-wasm-builder-runner"
-version = "1.0.6"
-source = "git+https://github.com/paritytech/substrate.git?branch=rococo-branch#83544d41abcc0e3d3cbbd6aa510e04dc50863e5c"
 
 [[package]]
 name = "substrate-wasm-builder-runner"
@@ -9441,7 +9331,7 @@ dependencies = [
  "libc",
  "memory_units",
  "num-rational",
- "num-traits 0.2.12",
+ "num-traits 0.2.14",
  "parity-wasm",
  "wasmi-validation",
 ]
@@ -9665,7 +9555,7 @@ dependencies = [
 [[package]]
 name = "westend-runtime"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-branch#9d2324b24a8e616b67a96b862e048e75b0ec211b"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
 dependencies = [
  "bitvec",
  "frame-executive",
@@ -9728,7 +9618,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "static_assertions",
- "substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-wasm-builder-runner",
 ]
 
 [[package]]
@@ -9841,6 +9731,24 @@ dependencies = [
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "xcm-builder"
+version = "0.8.22"
+source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "polkadot-parachain",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]

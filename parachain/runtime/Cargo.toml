@@ -113,30 +113,64 @@ git = "https://github.com/paritytech/substrate.git"
 branch = "rococo-branch"
 
 
+# Cumulus / XCMP
+
 [dependencies.cumulus-runtime]
 default-features = false
 git = "https://github.com/paritytech/cumulus"
-rev = "8a445a425086fc927f946a72b245e829fba200d0"
+branch = "gav-xcmp"
 
 [dependencies.cumulus-parachain-upgrade]
 default-features = false
 git = "https://github.com/paritytech/cumulus"
-rev = "8a445a425086fc927f946a72b245e829fba200d0"
+branch = "gav-xcmp"
 
 [dependencies.cumulus-message-broker]
 default-features = false
 git = "https://github.com/paritytech/cumulus"
-rev = "8a445a425086fc927f946a72b245e829fba200d0"
+branch = "gav-xcmp"
 
-[dependencies.cumulus-upward-message]
-default-features = false
+[dependencies.parachain-info]
 git = "https://github.com/paritytech/cumulus"
-rev = "8a445a425086fc927f946a72b245e829fba200d0"
+branch = "gav-xcmp"
+default-features = false
 
 [dependencies.cumulus-primitives]
 default-features = false
 git = "https://github.com/paritytech/cumulus"
-rev = "8a445a425086fc927f946a72b245e829fba200d0"
+branch = "gav-xcmp"
+
+
+[dependencies.polkadot-parachain]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "gav-xcmp"
+
+# [dependencies.rococo-runtime]
+# default-features = false
+# git = "https://github.com/paritytech/polkadot"
+# branch = "gav-xcmp"
+
+[dependencies.xcm]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "gav-xcmp"
+
+[dependencies.xcm-executor]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "gav-xcmp"
+
+[dependencies.xcm-builder]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "gav-xcmp"
+
+[dependencies.pallet-xcm-handler]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "gav-xcmp"
+
 
 
 [build-dependencies.wasm-builder-runner]
@@ -144,6 +178,10 @@ package = "substrate-wasm-builder-runner"
 version = "1.0.6"
 
 # Our Pallets
+
+[dependencies.artemis-xcm-support]
+default-features = false
+path = "../primitives/xcm-support"
 
 [dependencies.bridge]
 default-features = false
@@ -175,15 +213,6 @@ package = "artemis-erc20-app"
 path = "../pallets/erc20-app"
 version = "0.1.1"
 
-[dependencies.parachain-info]
-default-features = false
-path = "../pallets/parachain-info"
-version = "0.1.0"
-
-[dependencies.cumulus-token-dealer]
-default-features = false
-path = "../pallets/token-dealer"
-
 
 [features]
 default = ["std"]
@@ -212,10 +241,15 @@ std = [
 	"cumulus-runtime/std",
 	"cumulus-parachain-upgrade/std",
 	"cumulus-message-broker/std",
-	"cumulus-upward-message/std",
+#	"cumulus-upward-message/std",
 	"cumulus-primitives/std",
-	"cumulus-token-dealer/std",
     "parachain-info/std",
+	"polkadot-parachain/std",
+	"xcm/std",
+	"xcm-executor/std",
+	"xcm-builder/std",
+	"pallet-xcm-handler/std",
+    "artemis-xcm-support/std",
     "bridge/std",
     "verifier/std",
     "assets/std",
@@ -223,6 +257,6 @@ std = [
     "erc20-app/std",
 ]
 
-runtime-wasm = [
-	"cumulus-upward-message/runtime-wasm",
-]
+#runtime-wasm = [
+#	"cumulus-upward-message/runtime-wasm",
+#]

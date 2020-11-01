@@ -1,3 +1,4 @@
+#![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_core::H160;
 use sp_std::{
@@ -14,7 +15,7 @@ use xcm::v0::{
 	Result as XcmResult,
 };
 
-use artemis_core::assets::MultiAsset as OurMultiAsset;
+use artemis_core::assets::MultiAsset as ArtemisMultiAsset;
 
 use xcm_executor::traits::TransactAsset;
 
@@ -25,7 +26,7 @@ pub struct Transactor<LocalCurrency, BridgedAssets, AccountId>(
 impl<LocalCurrency, BridgedAssets, AccountId> TransactAsset for Transactor<LocalCurrency, BridgedAssets, AccountId>
 where
 	LocalCurrency: Currency<AccountId>,
-	BridgedAssets: OurMultiAsset<AccountId, AssetId = H160>,
+	BridgedAssets: ArtemisMultiAsset<AccountId, AssetId = H160>,
 	AccountId: sp_std::fmt::Debug
 {
 	fn deposit_asset(asset: &MultiAsset, _who: &MultiLocation) -> XcmResult {
