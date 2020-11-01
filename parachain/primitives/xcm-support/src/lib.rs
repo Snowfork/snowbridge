@@ -1,84 +1,48 @@
 
-use codec::FullCodec;
 use sp_core::H160;
-use sp_runtime::{
-	traits::{CheckedConversion, Convert, MaybeSerializeDeserialize, SaturatedConversion},
-	DispatchResult,
-};
 use sp_std::{
-	cmp::{Eq, PartialEq},
-	collections::btree_set::BTreeSet,
-	convert::{TryFrom, TryInto},
-	fmt::Debug,
 	marker::PhantomData,
 	prelude::*,
-	result,
 };
+
+use frame_support::traits::Currency;
 
 use xcm::v0::{
 	Error, Junction,
-	MultiAsset as XMultiAsset,
-	MultiLocation as XMultiLocation,
-	Result
+	MultiAsset,
+	MultiLocation,
+	Result as XcmResult,
 };
 
-use artemis_core::assets::MultiAsset;
+use artemis_core::assets::MultiAsset as OurMultiAsset;
 
-use xcm_executor::traits::{FilterAssetLocation, LocationConversion, MatchesFungible, NativeAsset, TransactAsset};
+use xcm_executor::traits::TransactAsset;
 
-use frame_support::{debug, traits::Get};
-
-
-pub struct MultiAssetAdapter<PalletMultiAsset, Matcher, AccountIdConverter, AccountId, AssetId>(
-	PhantomData<(
-		PalletMultiAsset,
-		Matcher,
-		AccountIdConverter,
-		AccountId,
-		AssetId,
-	)>,
+pub struct Transactor<LocalCurrency, BridgedAssets, AccountId>(
+	PhantomData<(LocalCurrency, BridgedAssets, AccountId)>,
 );
 
-impl<
-		PalletMultiAsset: artemis_core::assets::MultiAsset<AccountId, AssetId = H160>,
-		Matcher: MatchesFungible<MultiCurrency::Balance>,
-		AccountIdConverter: LocationConversion<AccountId>,
-		AccountId: sp_std::fmt::Debug,
-		CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug,
-	> TransactAsset
-	for MultiCurrencyAdapter<MultiCurrency, Matcher, AccountIdConverter, AccountId, CurrencyIdConverter, CurrencyId>
+impl<LocalCurrency, BridgedAssets, AccountId> TransactAsset for Transactor<LocalCurrency, BridgedAssets, AccountId>
+where
+	LocalCurrency: Currency<AccountId>,
+	BridgedAssets: OurMultiAsset<AccountId, AssetId = H160>,
+	AccountId: sp_std::fmt::Debug
 {
-	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> Result {
-		debug::info!("------------------------------------------------");
-		debug::info!(">>> trying deposit. asset: {:?}, location: {:?}", asset, location);
-		let who = AccountIdConverter::from_location(location).ok_or(())?;
-		debug::info!("who: {:?}", who);
-		let currency_id = CurrencyIdConverter::from_asset(asset).ok_or(())?;
-		debug::info!("currency_id: {:?}", currency_id);
-		let amount = Matcher::matches_fungible(&asset).ok_or(())?.saturated_into();
-		debug::info!("amount: {:?}", amount);
-		let balance_amount = amount.try_into().map_err(|_| ())?;
-		debug::info!("balance amount: {:?}", balance_amount);
-		MultiCurrency::deposit(currency_id, &who, balance_amount).map_err(|_| ())?;
-		debug::info!(">>> success deposit.");
-		debug::info!("------------------------------------------------");
+	fn deposit_asset(asset: &MultiAsset, _who: &MultiLocation) -> XcmResult {
+		if let MultiAsset::ConcreteFungible { id, .. } = asset {
+			match id {
+				MultiLocation::X1(Junction::Parent) => {},
+				MultiLocation::X3(
+					Junction::Parent,
+					Junction::Parachain { .. },
+					Junction::PalletInstance { id: 4 }) => {},
+				_ => {}
+			}
+		}
 		Ok(())
 	}
 
-	fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> result::Result<MultiAsset, Error> {
-		debug::info!("------------------------------------------------");
-		debug::info!(">>> trying withdraw. asset: {:?}, location: {:?}", asset, location);
-		let who = AccountIdConverter::from_location(location).ok_or(())?;
-		debug::info!("who: {:?}", who);
-		let currency_id = CurrencyIdConverter::from_asset(asset).ok_or(())?;
-		debug::info!("currency_id: {:?}", currency_id);
-		let amount = Matcher::matches_fungible(&asset).ok_or(())?.saturated_into();
-		debug::info!("amount: {:?}", amount);
-		let balance_amount = amount.try_into().map_err(|_| ())?;
-		debug::info!("balance amount: {:?}", balance_amount);
-		MultiCurrency::withdraw(currency_id, &who, balance_amount).map_err(|_| ())?;
-		debug::info!(">>> success withdraw.");
-		debug::info!("------------------------------------------------");
+	fn withdraw_asset(asset: &MultiAsset, _who: &MultiLocation) -> Result<MultiAsset, Error> {
 		Ok(asset.clone())
 	}
 }
