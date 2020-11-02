@@ -339,6 +339,7 @@ dependencies = [
  "artemis-assets",
  "artemis-erc20-app",
  "artemis-eth-app",
+ "artemis-token-dealer",
  "artemis-xcm-support",
  "cumulus-message-broker",
  "cumulus-parachain-upgrade",
@@ -353,7 +354,6 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-verifier",
- "pallet-xcm-handler",
  "parachain-info",
  "parity-scale-codec",
  "polkadot-parachain",
@@ -372,6 +372,26 @@ dependencies = [
  "substrate-wasm-builder-runner",
  "xcm",
  "xcm-builder",
+ "xcm-executor",
+]
+
+[[package]]
+name = "artemis-token-dealer"
+version = "0.1.1"
+dependencies = [
+ "artemis-xcm-support",
+ "clear_on_drop",
+ "cumulus-primitives",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "polkadot-core-primitives",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
  "xcm-executor",
 ]
 
@@ -912,6 +932,15 @@ dependencies = [
  "textwrap",
  "unicode-width",
  "vec_map",
+]
+
+[[package]]
+name = "clear_on_drop"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9cc5db465b294c3fa986d5bbb0f3017cd850bff6dd6c52f9ccff8b4d21b7b08"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
@@ -4559,19 +4588,6 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "pallet-xcm-handler"
-version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=gav-xcmp#33ecb02d0ce2b700208c1f83dcc402ee68fb1a94"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "sp-std",
- "xcm",
- "xcm-executor",
 ]
 
 [[package]]

@@ -7,6 +7,7 @@ use sp_std::{
 };
 
 use frame_support::traits::Currency;
+use frame_support::dispatch::DispatchResult;
 
 use xcm::v0::{
 	Error, Junction,
@@ -46,4 +47,10 @@ where
 	fn withdraw_asset(asset: &MultiAsset, _who: &MultiLocation) -> Result<MultiAsset, Error> {
 		Ok(asset.clone())
 	}
+}
+
+pub trait XcmHandler {
+	type Origin;
+	type Xcm;
+	fn execute(origin: Self::Origin, xcm: Self::Xcm) -> DispatchResult;
 }

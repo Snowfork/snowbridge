@@ -11,9 +11,9 @@ use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT, IdentifyAccount, IdentityLookup, Saturating, Verify},
+	traits::{BlakeTwo256, Convert, Block as BlockT, IdentifyAccount, IdentityLookup, Saturating, Verify},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, MultiSignature,
+	ApplyExtrinsicResult, MultiSignature
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -40,6 +40,7 @@ use xcm_builder::{
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
 };
 use xcm_executor::{traits::NativeAsset, Config, XcmExecutor};
+use cumulus_primitives::relay_chain::Balance as RelayChainBalance;
 
 use artemis_xcm_support::Transactor;
 
@@ -222,7 +223,6 @@ impl cumulus_parachain_upgrade::Trait for Runtime {
 	type OnValidationFunctionParams = ();
 }
 
-
 impl cumulus_message_broker::Trait for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
@@ -232,8 +232,40 @@ impl cumulus_message_broker::Trait for Runtime {
 
 impl parachain_info::Trait for Runtime {}
 
+pub struct RelayToNative;
+impl Convert<RelayChainBalance, Balance> for RelayToNative {
+	fn convert(val: u128) -> Balance {
+		val
+	}
+}
+
+pub struct NativeToRelay;
+impl Convert<Balance, RelayChainBalance> for NativeToRelay {
+	fn convert(val: u128) -> Balance {
+		val
+	}
+}
+
 parameter_types! {
 	pub const PolkadotNetworkId: NetworkId = NetworkId::Polkadot;
+}
+
+pub struct AccountId32Converter;
+impl Convert<AccountId, [u8; 32]> for AccountId32Converter {
+	fn convert(account_id: AccountId) -> [u8; 32] {
+		account_id.into()
+	}
+}
+
+impl artemis_token_dealer::Trait for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type ToRelayChainBalance = NativeToRelay;
+	type AccountIdConverter = LocationConverter;
+	type AccountId32Converter = AccountId32Converter;
+	type RelayChainNetworkId = PolkadotNetworkId;
+	type ParaId = ParachainInfo;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
 parameter_types! {
@@ -269,13 +301,6 @@ impl Config for XcmConfig {
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 }
-
-impl pallet_xcm_handler::Trait for Runtime {
-	type Event = Event;
-	type AccountIdConverter = LocationConverter;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-}
-
 
 // Our pallets
 
@@ -318,10 +343,10 @@ construct_runtime! {
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 
 		// Parachain modules
+		ParachainInfo: parachain_info::{Module, Storage, Config},
 		ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
 		MessageBroker: cumulus_message_broker::{Module, Call, Inherent, Event<T>, Origin},
-		ParachainInfo: parachain_info::{Module, Storage, Config},
-		XcmHandler: pallet_xcm_handler::{Module, Call, Event},
+		TokenDealer: artemis_token_dealer::{Module, Storage, Call, Event<T>},
 
 		// Artemis modules
 		Bridge: bridge::{Module, Call, Storage, Event},

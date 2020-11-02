@@ -11,6 +11,7 @@ members = [
     "pallets/verifier",
     "pallets/eth-app",
     "pallets/erc20-app",
+    "pallets/token-dealer",
     "node",
     "runtime",
 ]
