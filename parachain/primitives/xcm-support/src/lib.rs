@@ -4,10 +4,10 @@ use sp_core::H160;
 use sp_std::{
 	marker::PhantomData,
 	prelude::*,
+	if_std,
 };
 
 use frame_support::traits::Currency;
-use frame_support::dispatch::DispatchResult;
 
 use xcm::v0::{
 	Error, Junction,
@@ -45,12 +45,11 @@ where
 	}
 
 	fn withdraw_asset(asset: &MultiAsset, _who: &MultiLocation) -> Result<MultiAsset, Error> {
+		if_std! {
+			println!("asset: {:?}", asset);
+			println!("who: {:?}", _who);
+		}
+
 		Ok(asset.clone())
 	}
-}
-
-pub trait XcmHandler {
-	type Origin;
-	type Xcm;
-	fn execute(origin: Self::Origin, xcm: Self::Xcm) -> DispatchResult;
 }

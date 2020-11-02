@@ -18,9 +18,7 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "roc
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "rococo-branch", default-features = false }
 
 artemis-xcm-support = { path = "../../primitives/xcm-support", default-features = false }
-
 cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp", default-features = false }
-
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp", default-features = false }
 
 [dependencies.xcm-executor]
@@ -31,6 +29,41 @@ branch = "gav-xcmp"
 [dev-dependencies]
 clear_on_drop = { version = "0.2.4", features = ["no_cc"] }	# https://github.com/paritytech/substrate/issues/4179
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp" }
+
+
+[dev-dependencies.sp-keyring]
+default-features = false
+git = "https://github.com/paritytech/substrate.git"
+branch = "rococo-branch"
+
+[dev-dependencies.artemis-assets]
+default-features = false
+path = "../../pallets/assets"
+
+[dev-dependencies.cumulus-message-broker]
+default-features = false
+git = "https://github.com/paritytech/cumulus"
+branch = "gav-xcmp"
+
+[dev-dependencies.parachain-info]
+git = "https://github.com/paritytech/cumulus"
+branch = "gav-xcmp"
+default-features = false
+
+[dev-dependencies.polkadot-parachain]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "gav-xcmp"
+
+[dev-dependencies.xcm-builder]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "gav-xcmp"
+
+[dev-dependencies.pallet-balances]
+default-features = false
+git = "https://github.com/paritytech/substrate.git"
+branch = "rococo-branch"
 
 [features]
 default = ["std"]
@@ -46,4 +79,7 @@ std = [
 	"xcm/std",
 	'artemis-xcm-support/std',
 	"cumulus-primitives/std",
+
+	# dev-dependencies
+	"cumulus-message-broker/std"
 ]

@@ -22,9 +22,13 @@ use xcm::VersionedXcm;
 
 use xcm_executor::traits::LocationConversion;
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 #[derive(Encode, Decode, Eq, PartialEq, Clone, Copy, RuntimeDebug)]
-
-
 pub enum CurrencyId {
 	DOT,
 	ETH,
@@ -47,13 +51,6 @@ pub struct XCurrencyId {
 	pub chain_id: ChainId,
 	/// The identity of the currency.
 	pub currency_id: CurrencyId
-}
-
-#[cfg(test)]
-impl XCurrencyId {
-	pub fn new(chain_id: ChainId, currency_id: Vec<u8>) -> Self {
-		XCurrencyId { chain_id, currency_id }
-	}
 }
 
 impl Into<MultiLocation> for XCurrencyId {

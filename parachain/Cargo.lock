@@ -379,19 +379,26 @@ dependencies = [
 name = "artemis-token-dealer"
 version = "0.1.1"
 dependencies = [
+ "artemis-assets",
  "artemis-xcm-support",
  "clear_on_drop",
+ "cumulus-message-broker",
  "cumulus-primitives",
  "frame-support",
  "frame-system",
+ "pallet-balances",
+ "parachain-info",
  "parity-scale-codec",
  "polkadot-core-primitives",
+ "polkadot-parachain",
  "serde",
  "sp-core",
  "sp-io",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-builder",
  "xcm-executor",
 ]
 
