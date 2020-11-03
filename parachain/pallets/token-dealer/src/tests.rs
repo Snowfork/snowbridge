@@ -2,16 +2,16 @@ use crate::mock::{new_tester, AccountId, Origin, TokenDealer};
 use frame_support::{assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 
-use crate::{XCurrencyId, CurrencyId, ChainId};
+use crate::{XAssetId, AssetId, ChainId};
 
 use xcm::v0::NetworkId;
 
 #[test]
 fn it_executes_message() {
 
-	let x_currency_id = XCurrencyId {
-		chain_id: ChainId::ParaChain(100.into()),
-		currency_id: CurrencyId::ETH
+	let x_asset_id = XAssetId {
+		reserve_chain_id: ChainId::ParaChain(100.into()),
+		asset_id: CurrencyId::ETH
 	};
 
 	let network_id = NetworkId::Any;
@@ -23,7 +23,7 @@ fn it_executes_message() {
 		assert_ok!(
 			TokenDealer::transfer_to_parachain(
 				Origin::signed(alice.clone()),
-				x_currency_id,
+				x_asset_id,
 				200.into(),
 				bob,
 				network_id,
