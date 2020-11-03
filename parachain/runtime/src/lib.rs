@@ -282,7 +282,7 @@ pub type LocationConverter = (
 	AccountId32Aliases<ArtemisNetwork, AccountId>,
 );
 
-pub type LocalAssetTransactor = Transactor<Balances, Assets, AccountId>;
+pub type LocalAssetTransactor = Transactor<Balances, Assets, LocationConverter, AccountId>;
 
 pub type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,

@@ -172,7 +172,7 @@ pub struct XcmConfig;
 impl Config for XcmConfig {
 	type Call = Call;
 	type XcmSender = MessageBroker;
-	type AssetTransactor = Transactor<Balances, Assets, AccountId>;
+	type AssetTransactor = Transactor<Balances, Assets, LocationConverter, AccountId>;
 	type OriginConverter = LocalOriginConverter;
 	type IsReserve = NativeAsset;
 	type IsTeleporter = ();
