@@ -135,7 +135,7 @@ decl_module! {
 			Ok(())
 		}
 
-		/// Transfer assets to parachain.
+		/// Transfer bridged ethereum assets to a sibling parachain.
 		#[weight = 10]
 		pub fn transfer_to_parachain(
 			origin,
