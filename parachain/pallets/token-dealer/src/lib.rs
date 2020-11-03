@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage,
-	dispatch::{DispatchResult, DispatchError},
+	dispatch::DispatchResult,
 	traits::Get, Parameter
 };
 use frame_system::ensure_signed;
@@ -13,7 +13,6 @@ use sp_runtime::{
 use sp_std::convert::TryInto;
 use sp_core::H160;
 use sp_std::prelude::*;
-
 use sp_std::vec;
 
 use cumulus_primitives::{relay_chain::Balance as RelayChainBalance, ParaId};
@@ -28,11 +27,17 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-#[derive(Encode, Decode, Eq, PartialEq, Clone, Copy, RuntimeDebug)]
+#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
 pub struct XDestination<AccountId> {
 	para_id: ParaId,
 	network: NetworkId,
 	account: AccountId,
+}
+
+#[derive(Encode, Decode, Eq, PartialEq, Clone, Copy, RuntimeDebug)]
+pub enum ChainId {
+	Parent,
+	Sibling(ParaId)
 }
 
 #[derive(Encode, Decode, Eq, PartialEq, Clone, Copy, RuntimeDebug)]
@@ -52,12 +57,12 @@ pub struct XAssetId {
 
 impl Into<MultiLocation> for XAssetId {
 	fn into(self) -> MultiLocation {
-		match self.asset_id {
-			AssetId::DOT => MultiLocation::X1(Junction::Parent),
-			AssetId::ETH => MultiLocation::X1(Junction::Parent),
-			AssetId::ERC20(addr) => {
-				MultiLocation::X1(Junction::AccountKey20(addr.into()))
-			}
+		match self.asset {
+			AssetId::ETH => MultiLocation::X1(Junction::GeneralIndex { id: 1 }),
+			AssetId::ERC20(key) =>
+				MultiLocation::X2(
+					Junction::GeneralIndex { id: 1 },
+					Junction::GeneralKey(key.as_fixed_bytes().to_vec())),
 		}
 	}
 }
@@ -116,9 +121,9 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		fn deposit_event() = default;
 
-		/// Transfer relay chain tokens to relay chain.
+		/// Transfer DOT to relay chain.
 		#[weight = 10]
-		pub fn transfer_to_relaychain(origin, dest: T::AccountId, amount: T::Balance) {
+		pub fn transfer_to_relaychain(origin, dest: T::AccountId, amount: T::Balance) -> DispatchResult {
 
 			let who = ensure_signed(origin.clone())?;
 			let xcm = Self::make_xcm_upward_transfer(&dest, amount);
@@ -128,29 +133,47 @@ decl_module! {
 			Self::deposit_event(Event::<T>::TransferredToRelayChain(who, dest, amount));
 
 			Ok(())
-
 		}
 
 		/// Transfer assets to parachain.
 		#[weight = 10]
-		pub fn transfer_to_parachain(origin, x_asset_id: XAssetId, dest: XDestination<T::AccountId>, amount: T::Balance) -> DispatchResult {
+		pub fn transfer_to_parachain(
+			origin,
+			asset: XAssetId,
+			para_id: ParaId,
+			network: NetworkId,
+			account: T::AccountId,
+			amount: T::Balance
+		) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
 
 			if para_id == T::ParaId::get() {
 				return Ok(());
 			}
 
-			let xcm = match x_asset_id.chain {
-				ChainId::Sibling(para_id) if T::ParaId::get() == para_id =>
-					Self::make_xcm_lateral_transfer_native(x_asset_id.into(), dest, amount),
-				ChainId::Sibling(para_id) =>
-					Self::make_xcm_lateral_transfer_foreign(para_id, x_asset_id.into(), dest, amount),
-			}
+			let location: MultiLocation = asset.clone().into();
+
+			let xcm = if asset.reserve_chain == T::ParaId::get() {
+				Self::make_xcm_lateral_transfer_native(
+					location,
+					para_id,
+					&network,
+					&account,
+					amount)
+			} else {
+				Self::make_xcm_lateral_transfer_foreign(
+					asset.reserve_chain,
+					location,
+					para_id,
+					&network,
+					&account,
+					amount)
+			};
 
 			Self::execute(&who, xcm.into())?;
 
 			Self::deposit_event(
-				Event::<T>::TransferredToParachain(x_asset_id, who, dest.para_id, dest.account_id, dest.network, amount),
+				Event::<T>::TransferredToParachain(asset, who, para_id, account, network, amount),
 			);
 
 			Ok(())
@@ -172,27 +195,29 @@ impl<T: Trait> Module<T> {
 
 	fn make_xcm_upward_transfer(dest: &T::AccountId, amount: T::Balance) -> Xcm {
 		Xcm::WithdrawAsset {
-				assets: vec![MultiAsset::ConcreteFungible {
-						id: MultiLocation::X1(Junction::Parent),
-						amount: T::ToRelayChainBalance::convert(amount).into(),
+			assets: vec![MultiAsset::ConcreteFungible {
+				id: MultiLocation::X1(Junction::Parent),
+				amount: T::ToRelayChainBalance::convert(amount).into(),
+			}],
+			effects: vec![Order::InitiateReserveWithdraw {
+				assets: vec![MultiAsset::All],
+				reserve: MultiLocation::X1(Junction::Parent),
+				effects: vec![Order::DepositAsset {
+					assets: vec![MultiAsset::All],
+					dest: MultiLocation::X1(Junction::AccountId32 {
+						network: T::RelayChainNetworkId::get(),
+						id: T::AccountId32Converter::convert(dest.clone()),
+					}),
 				}],
-				effects: vec![Order::InitiateReserveWithdraw {
-						assets: vec![MultiAsset::All],
-						reserve: MultiLocation::X1(Junction::Parent),
-						effects: vec![Order::DepositAsset {
-								assets: vec![MultiAsset::All],
-								dest: MultiLocation::X1(Junction::AccountId32 {
-										network: T::RelayChainNetworkId::get(),
-										id: T::AccountId32Convert::convert(dest.account_id.clone()),
-								}),
-						}],
-				}],
+			}],
 		}
 	}
 
 	fn make_xcm_lateral_transfer_native(
 		location: MultiLocation,
-		dest: &XDestination<T::AccountId>,
+		para_id: ParaId,
+		network: &NetworkId,
+		account: &T::AccountId,
 		amount: T::Balance,
 	) -> Xcm {
 		Xcm::WithdrawAsset {
@@ -202,12 +227,12 @@ impl<T: Trait> Module<T> {
 			}],
 			effects: vec![Order::DepositReserveAsset {
 				assets: vec![MultiAsset::All],
-				dest: MultiLocation::X2(Junction::Parent, Junction::Parachain { id: dest.para_id.into() }),
+				dest: MultiLocation::X2(Junction::Parent, Junction::Parachain { id: para_id.into() }),
 				effects: vec![Order::DepositAsset {
 					assets: vec![MultiAsset::All],
 					dest: MultiLocation::X1(Junction::AccountId32 {
-						network: dest.network,
-						id: T::AccountId32Converter::convert(dest.account_id.clone()),
+						network: network.clone(),
+						id: T::AccountId32Converter::convert(account.clone()),
 					}),
 				}],
 			}],
@@ -217,24 +242,26 @@ impl<T: Trait> Module<T> {
 	fn make_xcm_lateral_transfer_foreign(
 		reserve_chain: ParaId,
 		location: MultiLocation,
-		dest: &XDestination<T::AccountId>,
+		para_id: ParaId,
+		network: &NetworkId,
+		account: &T::AccountId,
 		amount: T::Balance,
 	) -> Xcm {
 		let deposit_to_dest = Order::DepositAsset {
 			assets: vec![MultiAsset::All],
 			dest: MultiLocation::X1(Junction::AccountId32 {
-				network: dest.network,
-				id: T::AccountId32Converter::convert(dest.account_id.clone()),
+				network: network.clone(),
+				id: T::AccountId32Converter::convert(account.clone()),
 			}),
 		};
 		// If transfer to reserve chain, deposit to `dest` on reserve chain,
 		// else deposit reserve asset.
-		let reserve_chain_order = if dest.para_id == reserve_chain {
+		let reserve_chain_order = if para_id == reserve_chain {
 			deposit_to_dest
 		} else {
 			Order::DepositReserveAsset {
 				assets: vec![MultiAsset::All],
-				dest: MultiLocation::X2(Junction::Parent, Junction::Parachain { id: dest.para_id.into() }),
+				dest: MultiLocation::X2(Junction::Parent, Junction::Parachain { id: para_id.into() }),
 				effects: vec![deposit_to_dest],
 			}
 		};

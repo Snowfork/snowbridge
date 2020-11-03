@@ -48,14 +48,12 @@ where
 		if let MultiAsset::ConcreteFungible { id, .. } = asset {
 			match id {
 				MultiLocation::X1(Junction::Parent) => {},
-				MultiLocation::X3(
-					Junction::Parent,
-					Junction::Parachain { .. },
-					Junction::PalletInstance { id: 4 }) => {},
+				MultiLocation::X1(Junction::PalletInstance { id: 2 }) => {},
 				_ => {}
 			}
 		}
 		Ok(())
+
 	}
 
 	// withdraw asset from who's account
