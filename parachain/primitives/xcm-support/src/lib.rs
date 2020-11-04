@@ -5,20 +5,30 @@ use sp_std::{
 	marker::PhantomData,
 	prelude::*,
 	if_std,
+	convert::TryFrom
 };
 
 use frame_support::traits::Currency;
 
 use xcm::v0::{
-	Error, Junction,
+	Junction,
 	MultiAsset,
 	MultiLocation,
 	Result as XcmResult,
+	Error as XcmError,
 };
 
 use artemis_core::assets::MultiAsset as ArtemisMultiAsset;
 
 use xcm_executor::traits::{LocationConversion, TransactAsset};
+
+
+pub trait TransactorConfig {
+	type LocalCurrency: Currency<Self::AccountId>;
+	type BridgedAssets: ArtemisMultiAsset<Self::AccountId, AssetId = H160>;
+	type AccountIdConverter: LocationConversion<Self::AccountId>;
+	type AccountId: sp_std::fmt::Debug;
+}
 
 pub struct Transactor<LocalCurrency, BridgedAssets, AccountIdConverter, AccountId>(
 	PhantomData<(LocalCurrency, BridgedAssets, AccountIdConverter, AccountId)>,
@@ -31,47 +41,44 @@ where
 	AccountIdConverter: LocationConversion<AccountId>,
 	AccountId: sp_std::fmt::Debug
 {
-	// deposit asset into who's account
-	// Need to use AccountConverter helpers to convert MultiLocation into a AccountId
 	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
-		if_std! {
-			println!("DEPOSIT:");
-			println!("asset: {:?}", asset);
-			println!("location: {:?}", location);
-		}
-
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
-		if_std! {
-			println!("who: {:?}", who);
-		}
-
-		if let MultiAsset::ConcreteFungible { id, .. } = asset {
+		if let MultiAsset::ConcreteFungible { id, amount } = asset {
 			match id {
 				MultiLocation::X1(Junction::Parent) => {
-					// Deposit DOT
-					if_std! { println!("deposit DOT"); }
+					if_std! { println!("Deposit DOT"); }
+					let value = <<LocalCurrency as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(*amount)
+						.map_err(|_| ())?;
+
+					let _ = LocalCurrency::deposit_creating(&who, value);
+					Ok(())
 				},
 				MultiLocation::X1(Junction::GeneralIndex { id: 1 }) => {
-					// Deposit ETH
-					if_std! { println!("deposit ETH"); }
+					if_std! { println!("Deposit ETH"); }
+					let bridged_asset_id = H160::zero();
+					let value = (*amount).into();
+					BridgedAssets::deposit(bridged_asset_id, &who, value).map_err(|_| XcmError::Undefined)
 				},
 				MultiLocation::X2(
 					Junction::GeneralIndex { id: 1 },
-					Junction::GeneralKey(_key)) => {
-					// Deposit ERC20
-					if_std! { println!("deposit ERC20"); }
+					Junction::GeneralKey(key)) => {
+					if_std! { println!("Deposit ERC20"); }
+
+					let bridged_asset_id = Self::convert_to_address(key.as_slice()).ok_or(())?;
+					let value = (*amount).into();
+					BridgedAssets::deposit(bridged_asset_id, &who, value).map_err(|_| XcmError::Undefined)
 				},
 				_ => {
-					// Handle unknown asset
+					Err(XcmError::Undefined)
 				}
 			}
+		} else {
+			Err(XcmError::Undefined)
 		}
-		Ok(())
-
 	}
 
 	// withdraw asset from who's account
-	fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<MultiAsset, Error> {
+	fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<MultiAsset, XcmError> {
 		if_std! {
 			println!("WITHDRAW:");
 			println!("asset: {:?}", asset);
@@ -107,4 +114,20 @@ where
 
 		Ok(asset.clone())
 	}
+}
+
+impl<LocalCurrency, BridgedAssets, AccountIdConverter, AccountId> Transactor<LocalCurrency, BridgedAssets, AccountIdConverter, AccountId> {
+
+
+	fn convert_to_address(slice: &[u8]) -> Option<H160>{
+		let mut buf: [u8; 20] = [0; 20];
+		if slice.len() != buf.len() {
+			return None
+		}
+		buf.copy_from_slice(slice);
+    	Some(buf.into())
+	}
+
+
+
 }
