@@ -15,6 +15,7 @@ use xcm::v0::{
 	Junction,
 	MultiAsset,
 	MultiLocation,
+	NetworkId,
 	Result as XcmResult,
 	Error as XcmError,
 };
@@ -37,27 +38,22 @@ impl<
 	for Transactor<LocalCurrency, BridgedAssets, AccountIdConverter, AccountId>
 {
 	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
+		if_std!{ println!("{:?}", location) }
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
 		if let MultiAsset::ConcreteFungible { id, amount } = asset {
 			match id {
-				MultiLocation::X1(Junction::Parent) => {
+				MultiLocation::X1(Junction::PalletInstance { id: 2 }) => {
 					let value = <<LocalCurrency as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(*amount)
 						.map_err(|_| ())?;
 
 					let _ = LocalCurrency::deposit_creating(&who, value);
 					Ok(())
 				},
-				MultiLocation::X1(Junction::GeneralIndex { id: 1 }) => {
-					let bridged_asset_id = H160::zero();
-					let value: U256 = (*amount).into();
-					Self::deposit_bridged_asset(bridged_asset_id, &who, value)
-				},
 				MultiLocation::X2(
-					Junction::GeneralIndex { id: 1 },
-					Junction::GeneralKey(key)) => {
-					let bridged_asset_id = Self::convert_to_address(key.as_slice()).ok_or(())?;
+					Junction::PalletInstance { id: 11 },
+					Junction::AccountKey20 { network: NetworkId::Any, key }) => {
 					let value: U256 = (*amount).into();
-					Self::deposit_bridged_asset(bridged_asset_id, &who, value)
+					Self::deposit_bridged_asset(key.into(), &who, value)
 				},
 				_ => {
 					Err(XcmError::Undefined)
@@ -69,10 +65,12 @@ impl<
 	}
 
 	fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<MultiAsset, XcmError> {
+		if_std!{ println!("{:?}", location) }
+
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
 		if let MultiAsset::ConcreteFungible { id, amount } = asset {
 			match id {
-				MultiLocation::X1(Junction::Parent) => {
+				MultiLocation::X1(Junction::PalletInstance { id: 2 }) => {
 					let value = <<LocalCurrency as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(*amount)
 						.map_err(|_| ())?;
 
@@ -80,19 +78,11 @@ impl<
 						.map_err(|_| XcmError::Undefined)?;
 					Ok(asset.clone())
 				},
-				MultiLocation::X1(Junction::GeneralIndex { id: 1 }) => {
-					let bridged_asset_id = H160::zero();
-					let value: U256 = (*amount).into();
-					Self::withdraw_bridged_asset(bridged_asset_id, &who, value)?;
-					Ok(asset.clone())
-				},
 				MultiLocation::X2(
-					Junction::GeneralIndex { id: 1 },
-					Junction::GeneralKey(key)) => {
-
-					let bridged_asset_id = Self::convert_to_address(key.as_slice()).ok_or(())?;
+					Junction::PalletInstance { id: 11 },
+					Junction::AccountKey20 { network: NetworkId::Any, key }) => {
 					let value: U256 = (*amount).into();
-					Self::withdraw_bridged_asset(bridged_asset_id, &who, value)?;
+					Self::withdraw_bridged_asset(key.into(), &who, value)?;
 					Ok(asset.clone())
 				},
 				_ => {
@@ -112,16 +102,6 @@ impl<
 	AccountId: sp_std::fmt::Debug
 	> Transactor<LocalCurrency, BridgedAssets, AccountIdConverter, AccountId>
 {
-
-	fn convert_to_address(slice: &[u8]) -> Option<H160>{
-		let mut buf: [u8; 20] = [0; 20];
-		if slice.len() != buf.len() {
-			return None
-		}
-		buf.copy_from_slice(slice);
-		Some(buf.into())
-	}
-
 	fn deposit_bridged_asset(asset_id: H160, who: &AccountId, amount: U256) -> XcmResult {
 		BridgedAssets::deposit(asset_id, who, amount).map_err(|_| XcmError::Undefined)
 	}

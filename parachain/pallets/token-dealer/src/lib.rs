@@ -11,7 +11,6 @@ use sp_runtime::{
 	RuntimeDebug,
 };
 use sp_std::convert::TryInto;
-use sp_core::H160;
 use sp_std::prelude::*;
 use sp_std::vec;
 
@@ -27,10 +26,12 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+const ASSETS_PALLET_INDEX: u8 = 11;
+
 #[derive(Encode, Decode, Eq, PartialEq, Clone, Copy, RuntimeDebug)]
 pub enum AssetId {
 	ETH,
-	ERC20(H160)
+	ERC20([u8; 20])
 }
 
 /// Identity of a cross-chain asset.
@@ -45,12 +46,15 @@ pub struct XAssetId {
 impl Into<MultiLocation> for XAssetId {
 	fn into(self) -> MultiLocation {
 		match self.asset {
-			AssetId::ETH => MultiLocation::X1(Junction::GeneralIndex { id: 1 }),
+			AssetId::ETH =>
+				MultiLocation::X2(
+					Junction::PalletInstance { id: ASSETS_PALLET_INDEX },
+					Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] }),
 			AssetId::ERC20(key) =>
 				MultiLocation::X2(
-					Junction::GeneralIndex { id: 1 },
-					Junction::GeneralKey(key.as_fixed_bytes().to_vec())),
-		}
+					Junction::PalletInstance { id: ASSETS_PALLET_INDEX },
+					Junction::AccountKey20 { network: NetworkId::Any, key }),
+			}
 	}
 }
 
