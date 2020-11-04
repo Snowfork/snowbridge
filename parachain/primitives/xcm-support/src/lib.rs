@@ -119,7 +119,7 @@ impl<
 			return None
 		}
 		buf.copy_from_slice(slice);
-    	Some(buf.into())
+		Some(buf.into())
 	}
 
 	fn deposit_bridged_asset(asset_id: H160, who: &AccountId, amount: U256) -> XcmResult {
