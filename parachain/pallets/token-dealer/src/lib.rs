@@ -33,7 +33,7 @@ pub enum AssetId {
 	ERC20(H160)
 }
 
-/// Identity of cross chain currency.
+/// Identity of a cross-chain asset.
 #[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
 pub struct XAssetId {
 	/// The reserve chain of the asset.
@@ -67,15 +67,13 @@ pub trait Trait: frame_system::Trait {
 
 	type RelayChainNetworkId: Get<NetworkId>;
 
-	/// Parachain ID.
 	type ParaId: Get<ParaId>;
 
-	/// The interpreter.
 	type XcmExecutor: ExecuteXcm;
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as XTokens {}
+	trait Store for Module<T: Trait> as TokenDealer {}
 }
 
 decl_event! {
