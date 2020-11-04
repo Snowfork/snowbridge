@@ -61,8 +61,6 @@ pub trait Trait: frame_system::Trait {
 
 	type ToRelayChainBalance: Convert<Self::Balance, RelayChainBalance>;
 
-	/// Utility for converting from the signed origin (of type `Self::AccountId`) into a sensible
-	/// `MultiLocation` ready for passing to the XCM interpreter.
 	type AccountIdConverter: LocationConversion<Self::AccountId>;
 
 	type AccountId32Converter: Convert<Self::AccountId, [u8; 32]>;

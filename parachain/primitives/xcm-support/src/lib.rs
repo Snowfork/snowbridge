@@ -59,7 +59,7 @@ where
 	// withdraw asset from who's account
 	fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<MultiAsset, Error> {
 		if_std! {
-			println!("DEPOSIT:");
+			println!("WITHDRAW:");
 			println!("asset: {:?}", asset);
 			println!("location: {:?}", location);
 		}
