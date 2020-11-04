@@ -2,7 +2,7 @@ use crate::mock::{new_tester, AccountId, Origin, TokenDealer};
 use frame_support::{assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 
-use crate::{XAssetId, AssetId, ChainId};
+use crate::{XAssetId, AssetId};
 
 use xcm::v0::NetworkId;
 
@@ -10,8 +10,8 @@ use xcm::v0::NetworkId;
 fn it_executes_message() {
 
 	let x_asset_id = XAssetId {
-		reserve_chain_id: ChainId::ParaChain(100.into()),
-		asset_id: CurrencyId::ETH
+		reserve_chain: 100.into(),
+		asset: AssetId::ETH
 	};
 
 	let network_id = NetworkId::Any;
@@ -25,8 +25,8 @@ fn it_executes_message() {
 				Origin::signed(alice.clone()),
 				x_asset_id,
 				200.into(),
-				bob,
 				network_id,
+				bob,
 				100
 			)
 		);
