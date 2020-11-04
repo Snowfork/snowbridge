@@ -83,21 +83,20 @@ where
 			println!("who: {:?}", who);
 		}
 
-
 		if let MultiAsset::ConcreteFungible { id, .. } = asset {
 			match id {
 				MultiLocation::X1(Junction::Parent) => {
-					// Deposit DOT
+					// Withdraw DOT
 					if_std! { println!("withdraw DOT"); }
 				},
 				MultiLocation::X1(Junction::GeneralIndex { id: 1 }) => {
-					// Deposit ETH
+					// Withdraw ETH
 					if_std! { println!("withdraw ETH"); }
 				},
 				MultiLocation::X2(
 					Junction::GeneralIndex { id: 1 },
 					Junction::GeneralKey(_key)) => {
-					// Deposit ERC20
+					// Withdraw ERC20
 					if_std! { println!("withdraw ERC20"); }
 				},
 				_ => {
