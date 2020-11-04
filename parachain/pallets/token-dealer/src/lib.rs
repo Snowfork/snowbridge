@@ -27,19 +27,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
-pub struct XDestination<AccountId> {
-	para_id: ParaId,
-	network: NetworkId,
-	account: AccountId,
-}
-
-#[derive(Encode, Decode, Eq, PartialEq, Clone, Copy, RuntimeDebug)]
-pub enum ChainId {
-	Parent,
-	Sibling(ParaId)
-}
-
 #[derive(Encode, Decode, Eq, PartialEq, Clone, Copy, RuntimeDebug)]
 pub enum AssetId {
 	ETH,
@@ -254,8 +241,7 @@ impl<T: Trait> Module<T> {
 				id: T::AccountId32Converter::convert(account.clone()),
 			}),
 		};
-		// If transfer to reserve chain, deposit to `dest` on reserve chain,
-		// else deposit reserve asset.
+
 		let reserve_chain_order = if para_id == reserve_chain {
 			deposit_to_dest
 		} else {
