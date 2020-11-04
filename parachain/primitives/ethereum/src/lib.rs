@@ -5,6 +5,7 @@ use parity_bytes::Bytes;
 use rlp::RlpStream;
 use sp_io::hashing::keccak_256;
 use sp_runtime::RuntimeDebug;
+use sp_std::convert::TryInto;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
@@ -13,9 +14,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use serde_big_array::big_array;
 
+pub mod ethashproof;
 pub mod log;
 
-pub use ethereum_types::{Address, H160, H256, U256};
+pub use ethereum_types::{Address, H64, H160, H256, U256};
 pub use log::Log;
 
 #[derive(Debug)]
@@ -90,6 +92,23 @@ impl Header {
 	/// Compute hash of this header (keccak of the RLP with seal).
 	pub fn compute_hash(&self) -> H256 {
 		keccak_256(&self.rlp(true)).into()
+	}
+
+	/// Compute hash of the truncated header i.e. excluding seal.
+	pub fn compute_partial_hash(&self) -> H256 {
+		keccak_256(&self.rlp(false)).into()
+	}
+
+	pub fn mix_hash(&self) -> H256 {
+		let mix_hash: Bytes = rlp::decode(&self.seal[0]).unwrap();
+		let mix_hash: Box<[u8; 32]> = mix_hash.into_boxed_slice().try_into().unwrap();
+		(*mix_hash).into()
+	}
+
+	pub fn nonce(&self) -> H64 {
+		let nonce: Bytes = rlp::decode(&self.seal[1]).unwrap();
+		let nonce: Box<[u8; 8]> = nonce.into_boxed_slice().try_into().unwrap();
+		(*nonce).into()
 	}
 
 	/// Returns header RLP with or without seals.

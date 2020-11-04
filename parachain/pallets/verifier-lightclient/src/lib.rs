@@ -13,6 +13,7 @@ use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
 use artemis_ethereum::{HeaderId as EthereumHeaderId, H256, U256};
+use artemis_ethereum::ethashproof::EthashProver;
 
 pub use artemis_ethereum::Header as EthereumHeader;
 
@@ -46,6 +47,8 @@ decl_storage! {
 		Headers: map hasher(identity) H256 => Option<StoredHeader<T::AccountId>>;
 		/// Map of imported header hashes by number.
 		HeadersByNumber: map hasher(blake2_128_concat) u64 => Option<Vec<H256>>;
+		/// Flag to turn on PoW verification.
+		VerifyPoW get(fn verify_pow) config(): bool;
 	}
 
 	add_extra_genesis {
@@ -91,6 +94,8 @@ decl_error! {
 		MissingParentHeader,
 		/// Header has already been imported.
 		DuplicateHeader,
+		/// One or more header fields are invalid.
+		InvalidHeader,
 	}
 }
 
@@ -124,7 +129,39 @@ impl<T: Trait> Module<T> {
 			Error::<T>::DuplicateHeader,
 		);
 
-		// TODO check PoW
+		if !VerifyPoW::get() {
+			return Ok(());
+		}
+
+		// Adapted from https://github.com/near/rainbow-bridge/blob/3fcdfbc6c0011f0e1507956a81c820616fb963b4/contracts/near/eth-client/src/lib.rs#L363
+		// See YellowPaper formula (50) in section 4.3.4
+		let parent = Headers::<T>::get(header.parent_hash).unwrap().header;
+		ensure!(
+			header.gas_used <= header.gas_limit
+			&& header.gas_limit < parent.gas_limit * 1025 / 1024
+			&& header.gas_limit > parent.gas_limit * 1023 / 1024
+			&& header.gas_limit >= 5000.into()
+			&& header.timestamp > parent.timestamp
+			&& header.number == parent.number + 1
+			&& header.extra_data.len() <= 32,
+			Error::<T>::InvalidHeader,
+		);
+
+		// Simplified difficulty check to conform adjusting difficulty bomb
+		// TODO implement singleton prover
+		let mut prover = EthashProver::with_hashimoto_light(10);
+		let (mix_hash, result) = prover.hashimoto_light(
+			header.compute_partial_hash(),
+			header.nonce(),
+			header.number,
+		);
+		ensure!(
+			mix_hash == header.mix_hash()
+			&& U256::from(result.0) < ethash::cross_boundary(header.difficulty)
+			&& header.difficulty < header.difficulty * 101 / 100
+			&& header.difficulty > header.difficulty * 99 / 100,
+			Error::<T>::InvalidHeader,
+		);
 
 		Ok(())
 	}

@@ -18,6 +18,11 @@ features = ["derive"]
 package = "parity-scale-codec"
 version = "1.3.4"
 
+[dependencies.ethash]
+default-features = false
+git = "https://github.com/nearprotocol/rust-ethash"
+branch = "upgrade-eth-types"
+
 [dev-dependencies.sp-keyring]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"

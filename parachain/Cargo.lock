@@ -285,12 +285,14 @@ name = "artemis-ethereum"
 version = "0.1.0"
 dependencies = [
  "ethabi-decode",
+ "ethash",
  "ethbloom 0.8.1",
  "ethereum-types",
  "hex-literal 0.3.1",
  "libsecp256k1",
  "parity-bytes",
  "parity-scale-codec",
+ "rand 0.7.3",
  "rlp",
  "rustc-hex",
  "serde",
@@ -299,6 +301,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "tiny-keccak 2.0.2",
 ]
 
 [[package]]
@@ -1419,6 +1422,18 @@ source = "git+https://github.com/Snowfork/ethabi-decode#bc27a387521300049588ba3f
 dependencies = [
  "ethereum-types",
  "tiny-keccak 1.5.0",
+]
+
+[[package]]
+name = "ethash"
+version = "0.4.0"
+source = "git+https://github.com/nearprotocol/rust-ethash?branch=upgrade-eth-types#d1dd3efad109498189c03957dc1cf80b4f410632"
+dependencies = [
+ "byteorder 1.3.4",
+ "ethereum-types",
+ "primitive-types",
+ "rlp",
+ "sha3 0.8.2",
 ]
 
 [[package]]
@@ -4040,6 +4055,7 @@ version = "0.1.1"
 dependencies = [
  "artemis-core",
  "artemis-ethereum",
+ "ethash",
  "frame-support",
  "frame-system",
  "parity-scale-codec",

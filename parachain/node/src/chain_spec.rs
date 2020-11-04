@@ -159,6 +159,7 @@ fn testnet_genesis(
 		verifier_lightclient: Some(VerifierLightclientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: 0.into(),
+			verify_pow: false,
 		}),
 	}
 }

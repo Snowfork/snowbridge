@@ -92,6 +92,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	GenesisConfig {
 		initial_header: genesis_ethereum_header(),
 		initial_difficulty: 0.into(),
+		verify_pow: false,
 	}.assimilate_storage::<MockRuntime>(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
