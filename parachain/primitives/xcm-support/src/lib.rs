@@ -47,9 +47,23 @@ where
 
 		if let MultiAsset::ConcreteFungible { id, .. } = asset {
 			match id {
-				MultiLocation::X1(Junction::Parent) => {},
-				MultiLocation::X1(Junction::PalletInstance { id: 2 }) => {},
-				_ => {}
+				MultiLocation::X1(Junction::Parent) => {
+					// Deposit DOT
+					if_std! { println!("deposit DOT"); }
+				},
+				MultiLocation::X1(Junction::GeneralIndex { id: 1 }) => {
+					// Deposit ETH
+					if_std! { println!("deposit ETH"); }
+				},
+				MultiLocation::X2(
+					Junction::GeneralIndex { id: 1 },
+					Junction::GeneralKey(_key)) => {
+					// Deposit ERC20
+					if_std! { println!("deposit ERC20"); }
+				},
+				_ => {
+					// Handle unknown asset
+				}
 			}
 		}
 		Ok(())
@@ -67,6 +81,29 @@ where
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
 		if_std! {
 			println!("who: {:?}", who);
+		}
+
+
+		if let MultiAsset::ConcreteFungible { id, .. } = asset {
+			match id {
+				MultiLocation::X1(Junction::Parent) => {
+					// Deposit DOT
+					if_std! { println!("withdraw DOT"); }
+				},
+				MultiLocation::X1(Junction::GeneralIndex { id: 1 }) => {
+					// Deposit ETH
+					if_std! { println!("withdraw ETH"); }
+				},
+				MultiLocation::X2(
+					Junction::GeneralIndex { id: 1 },
+					Junction::GeneralKey(_key)) => {
+					// Deposit ERC20
+					if_std! { println!("withdraw ERC20"); }
+				},
+				_ => {
+					// Handle unknown asset
+				}
+			}
 		}
 
 		Ok(asset.clone())
