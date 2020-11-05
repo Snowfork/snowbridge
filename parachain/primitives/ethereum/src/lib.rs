@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use serde_big_array::big_array;
 
+pub mod ethashdata;
 pub mod ethashproof;
 pub mod log;
 

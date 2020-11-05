@@ -297,6 +297,7 @@ dependencies = [
  "rustc-hex",
  "serde",
  "serde-big-array",
+ "serde_json",
  "sp-core",
  "sp-io",
  "sp-runtime",
