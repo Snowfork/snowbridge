@@ -13,7 +13,7 @@ use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
 use artemis_ethereum::{HeaderId as EthereumHeaderId, H256, U256};
-use artemis_ethereum::ethashproof::EthashProver;
+use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
 
 pub use artemis_ethereum::Header as EthereumHeader;
 
@@ -107,9 +107,9 @@ decl_module! {
 		
 		// TODO: Calculate weight
 		#[weight = 0]
-		pub fn import_header(origin, header: EthereumHeader) -> DispatchResult {
+		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
-			Self::validate_header_to_import(&header)?;
+			Self::validate_header_to_import(&header, &proof)?;
 			Self::import_validated_header(&sender, &header)
 		}
 	}
@@ -117,7 +117,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 	// Validate an Ethereum header for import
-	fn validate_header_to_import(header: &EthereumHeader) -> DispatchResult {
+	fn validate_header_to_import(header: &EthereumHeader, proof: &[EthashProofData]) -> DispatchResult {
 		ensure!(
 			Headers::<T>::contains_key(header.parent_hash),
 			Error::<T>::MissingParentHeader,
@@ -148,12 +148,11 @@ impl<T: Trait> Module<T> {
 		);
 
 		// Simplified difficulty check to conform adjusting difficulty bomb
-		// TODO implement singleton prover
-		let mut prover = EthashProver::with_hashimoto_light(10);
-		let (mix_hash, result) = prover.hashimoto_light(
+		let (mix_hash, result) = EthashProver::new().hashimoto_merkle(
 			header.compute_partial_hash(),
 			header.nonce(),
 			header.number,
+			proof,
 		);
 		ensure!(
 			mix_hash == header.mix_hash()

@@ -284,6 +284,7 @@ dependencies = [
 name = "artemis-ethereum"
 version = "0.1.0"
 dependencies = [
+ "artemis-testutils",
  "ethabi-decode",
  "ethash",
  "ethbloom 0.8.1",
@@ -374,6 +375,16 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "substrate-wasm-builder-runner",
+]
+
+[[package]]
+name = "artemis-testutils"
+version = "0.1.0"
+dependencies = [
+ "ethereum-types",
+ "rustc-hex",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1457,6 +1468,7 @@ checksum = "71a6567e6fd35589fea0c63b94b4cf2e55573e413901bdbe60ab15cf0e25e5df"
 dependencies = [
  "crunchy",
  "fixed-hash 0.6.1",
+ "impl-codec",
  "impl-rlp",
  "tiny-keccak 2.0.2",
 ]
@@ -1469,6 +1481,7 @@ checksum = "473aecff686bd8e7b9db0165cbbb53562376b39bf35b427f0c60446a9e1634b0"
 dependencies = [
  "ethbloom 0.9.2",
  "fixed-hash 0.6.1",
+ "impl-codec",
  "impl-rlp",
  "primitive-types",
  "uint",
@@ -4056,12 +4069,14 @@ version = "0.1.1"
 dependencies = [
  "artemis-core",
  "artemis-ethereum",
+ "artemis-testutils",
  "ethash",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "rustc-hex",
  "serde",
+ "serde_json",
  "sp-core",
  "sp-io",
  "sp-keyring",

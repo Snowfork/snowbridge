@@ -1,6 +1,8 @@
 // Mock runtime
+#![cfg(test)]
 
-use crate::{Module, EthereumHeader, GenesisConfig, Trait};
+use artemis_testutils::BlockWithProofs;
+use crate::{Module, EthashProofData, EthereumHeader, GenesisConfig, Trait};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
@@ -86,14 +88,31 @@ pub fn child_of_genesis_ethereum_header() -> EthereumHeader {
 	child	
 }
 
-pub fn new_tester() -> sp_io::TestExternalities {
-	let mut storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+pub fn ethereum_header_from_file(block_num: u64) -> EthereumHeader {
+	let filename = format!("./src/testdata/{}.json", block_num);
+	serde_json::from_reader(
+		std::fs::File::open(std::path::Path::new(&filename)).unwrap()
+	).unwrap()
+}
 
-	GenesisConfig {
+pub fn ethereum_header_proof_from_file(block_num: u64) -> Vec<EthashProofData> {
+	let filename = format!("./src/testdata/{}_proof.json", block_num);
+	BlockWithProofs::from_file(&filename)
+		.to_double_node_with_merkle_proof_vec(EthashProofData::from_values)
+}
+
+pub fn new_tester() -> sp_io::TestExternalities {
+	new_tester_with_config(GenesisConfig {
 		initial_header: genesis_ethereum_header(),
 		initial_difficulty: 0.into(),
 		verify_pow: false,
-	}.assimilate_storage::<MockRuntime>(&mut storage).unwrap();
+	})
+}
+
+pub fn new_tester_with_config(config: GenesisConfig) -> sp_io::TestExternalities {
+	let mut storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+
+	config.assimilate_storage::<MockRuntime>(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
