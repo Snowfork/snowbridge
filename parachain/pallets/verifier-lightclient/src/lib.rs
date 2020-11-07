@@ -135,7 +135,9 @@ impl<T: Trait> Module<T> {
 
 		// Adapted from https://github.com/near/rainbow-bridge/blob/3fcdfbc6c0011f0e1507956a81c820616fb963b4/contracts/near/eth-client/src/lib.rs#L363
 		// See YellowPaper formula (50) in section 4.3.4
-		let parent = Headers::<T>::get(header.parent_hash).unwrap().header;
+		let parent = Headers::<T>::get(header.parent_hash)
+			.ok_or(Error::<T>::MissingParentHeader)?
+			.header;
 		ensure!(
 			header.gas_used <= header.gas_limit
 			&& header.gas_limit < parent.gas_limit * 1025 / 1024

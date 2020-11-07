@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use crate::mock::{
 	child_of_genesis_ethereum_header, ethereum_header_from_file,
 	ethereum_header_proof_from_file, new_tester, new_tester_with_config,

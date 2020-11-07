@@ -216,6 +216,11 @@ mod tests {
     use artemis_testutils::BlockWithProofs;
     use hex_literal::hex;
     use rand::Rng;
+    use std::path::PathBuf;
+
+    fn fixture_path(name: &str) -> PathBuf {
+        [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", name].iter().collect()
+    }
 
     #[test]
     fn cache_removes_oldest_at_capacity() {
@@ -259,7 +264,7 @@ mod tests {
     #[test]
     fn hashimoto_merkle_is_correct_block_3() {
         // https://etherscan.io/block/3
-        let block_with_proofs = BlockWithProofs::from_file("./src/testdata/3.json");
+        let block_with_proofs = BlockWithProofs::from_file(&fixture_path("3.json"));
         let header_partial_hash: H256 = hex!("481f55e00fd23652cb45ffba86a08b8d497f3b18cc2c0f14cbeb178b4c386e10").into();
         let header_number: u64 = 3;
         let header_nonce: H64 = hex!("2e9344e0cbde83ce").into();
@@ -277,7 +282,7 @@ mod tests {
     #[test]
     fn hashimoto_merkle_is_correct_block_11090290() {
         // https://etherscan.io/block/11090290
-        let block_with_proofs = BlockWithProofs::from_file("./src/testdata/11090290.json");
+        let block_with_proofs = BlockWithProofs::from_file(&fixture_path("11090290.json"));
         let header_partial_hash: H256 = hex!("932c22685fd0fb6a1b5f6b70d2ebf4bfd9f3b4f15eb706450a9b050ec0f151c9").into();
         let header_number: u64 = 11090290;
         let header_nonce: H64 = hex!("6935bbe7b63c4f8e").into();

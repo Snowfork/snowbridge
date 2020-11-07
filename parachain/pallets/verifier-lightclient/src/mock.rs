@@ -1,6 +1,4 @@
 // Mock runtime
-#![cfg(test)]
-
 use artemis_testutils::BlockWithProofs;
 use crate::{Module, EthashProofData, EthereumHeader, GenesisConfig, Trait};
 use sp_core::H256;
@@ -9,6 +7,8 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
 use frame_system as system;
+use std::fs::File;
+use std::path::PathBuf;
 
 impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
@@ -88,16 +88,18 @@ pub fn child_of_genesis_ethereum_header() -> EthereumHeader {
 	child	
 }
 
+fn fixture_path(name: &str) -> PathBuf {
+	[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", name].iter().collect()
+}
+
 pub fn ethereum_header_from_file(block_num: u64) -> EthereumHeader {
-	let filename = format!("./src/testdata/{}.json", block_num);
-	serde_json::from_reader(
-		std::fs::File::open(std::path::Path::new(&filename)).unwrap()
-	).unwrap()
+	let filepath = fixture_path(&format!("{}.json", block_num));
+	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
 pub fn ethereum_header_proof_from_file(block_num: u64) -> Vec<EthashProofData> {
-	let filename = format!("./src/testdata/{}_proof.json", block_num);
-	BlockWithProofs::from_file(&filename)
+	let filepath = fixture_path(&format!("{}_proof.json", block_num));
+	BlockWithProofs::from_file(&filepath)
 		.to_double_node_with_merkle_proof_vec(EthashProofData::from_values)
 }
 
