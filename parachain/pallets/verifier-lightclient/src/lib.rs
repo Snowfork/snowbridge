@@ -150,14 +150,16 @@ impl<T: Trait> Module<T> {
 		);
 
 		// Simplified difficulty check to conform adjusting difficulty bomb
+		let header_mix_hash = header.mix_hash().ok_or(Error::<T>::InvalidHeader)?;
+		let header_nonce = header.nonce().ok_or(Error::<T>::InvalidHeader)?;
 		let (mix_hash, result) = EthashProver::new().hashimoto_merkle(
 			header.compute_partial_hash(),
-			header.nonce(),
+			header_nonce,
 			header.number,
 			proof,
-		);
+		).map_err(|e| Error::<T>::InvalidHeader)?;
 		ensure!(
-			mix_hash == header.mix_hash()
+			mix_hash == header_mix_hash
 			&& U256::from(result.0) < ethash::cross_boundary(header.difficulty)
 			&& header.difficulty < header.difficulty * 101 / 100
 			&& header.difficulty > header.difficulty * 99 / 100,

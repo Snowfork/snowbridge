@@ -111,7 +111,7 @@ impl BlockWithProofs {
 
     pub fn to_double_node_with_merkle_proof_vec<T>(
         &self,
-        mapper: fn(Vec<H512>, Vec<H128>) -> T,
+        mapper: fn([H512; 2], Vec<H128>) -> T,
     ) -> Vec<T> {
         let h512s = Self::combine_dag_h256_to_h512(self.elements.clone());
         h512s
@@ -120,7 +120,7 @@ impl BlockWithProofs {
             .enumerate()
             .filter(|(i, _)| i % 2 == 0)
             .map(|(i, (a, b))| mapper(
-                vec![*a, *b],
+                [*a, *b],
                 self.merkle_proofs
                     [i / 2 * self.proof_length as usize..(i / 2 + 1) * self.proof_length as usize]
                     .to_vec(),

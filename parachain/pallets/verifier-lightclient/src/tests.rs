@@ -129,7 +129,6 @@ fn it_validates_proof_of_work() {
 		let header1 = ethereum_header_from_file(11090291);
 		let header1_proof = ethereum_header_proof_from_file(11090291);
 		let header2 = ethereum_header_from_file(11090292);
-		let header2_proof = ethereum_header_proof_from_file(11090292);
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		assert_ok!(Verifier::import_header(
@@ -137,10 +136,13 @@ fn it_validates_proof_of_work() {
 			header1,
 			header1_proof,
 		));
-		assert_ok!(Verifier::import_header(
-			Origin::signed(ferdie),
-			header2,
-			header2_proof,
-		));
+		assert_err!(
+			Verifier::import_header(
+				Origin::signed(ferdie),
+				header2,
+				Default::default(),
+			),
+			Error::<MockRuntime>::InvalidHeader,
+		);
 	});
 }

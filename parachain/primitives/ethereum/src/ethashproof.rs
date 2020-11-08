@@ -9,17 +9,24 @@ use tiny_keccak::{Hasher, Keccak};
 
 pub use crate::ethashdata::{DAGS_MERKLE_ROOTS, DAGS_START_EPOCH};
 
+/// Ethash Params. See https://eth.wiki/en/concepts/ethash/ethash
 /// Blocks per epoch
 const EPOCH_LENGTH: u64 = 30000;
+/// Width of mix 
+const MIX_BYTES: usize = 128;
+/// Hash length in bytes
+const HASH_BYTES: usize = 64;
+/// Numver of accesses in hashimoto loop
+const ACCESSES: usize = 64;
 
 #[derive(Default, Clone, Encode, Decode, PartialEq, RuntimeDebug)]
 pub struct DoubleNodeWithMerkleProof {
-    pub dag_nodes: Vec<H512>, // [H512; 2]
+    pub dag_nodes: [H512; 2],
     pub proof: Vec<H128>,
 }
 
 impl DoubleNodeWithMerkleProof {
-    pub fn from_values(dag_nodes: Vec<H512>, proof: Vec<H128>) -> Self {
+    pub fn from_values(dag_nodes: [H512; 2], proof: Vec<H128>) -> Self {
         Self {
             dag_nodes: dag_nodes,
             proof: proof,
@@ -39,7 +46,7 @@ impl DoubleNodeWithMerkleProof {
         Self::truncate_to_h128(sha2_256(&data).into())
     }
 
-    pub fn apply_merkle_proof(&self, index: u64) -> H128 {
+    pub fn apply_merkle_proof(&self, index: u64) -> Result<H128, &'static str> {
         let mut data = [0u8; 128];
         data[..64].copy_from_slice(&(self.dag_nodes[0].0));
         data[64..].copy_from_slice(&(self.dag_nodes[1].0));
@@ -47,13 +54,14 @@ impl DoubleNodeWithMerkleProof {
         let mut leaf = Self::truncate_to_h128(sha2_256(&data).into());
 
         for i in 0..self.proof.len() {
-            if (index >> i as u64) % 2 == 0 {
+            let index_shifted = index.checked_shr(i as u32).ok_or("Failed to shift index")?;
+            if index_shifted % 2 == 0 {
                 leaf = Self::hash_h128(leaf, self.proof[i]);
             } else {
                 leaf = Self::hash_h128(self.proof[i], leaf);
             }
         }
-        leaf
+        Ok(leaf)
     }
 }
 
@@ -139,8 +147,9 @@ impl EthashProver {
         }
     }
 
-    fn dag_merkle_root(&self, epoch: u64) -> H128 {
-        DAGS_MERKLE_ROOTS[(epoch - DAGS_START_EPOCH) as usize].into()
+    fn dag_merkle_root(&self, epoch: u64) -> Option<H128> {
+        DAGS_MERKLE_ROOTS.get((epoch - DAGS_START_EPOCH) as usize)
+            .map(|x| H128::from(x))
     }
 
     // Adapted fro https://github.com/near/rainbow-bridge/blob/3fcdfbc6c0011f0e1507956a81c820616fb963b4/contracts/near/eth-client/src/lib.rs#L363
@@ -150,15 +159,24 @@ impl EthashProver {
         nonce: H64,
         header_number: u64,
         nodes: &[DoubleNodeWithMerkleProof],
-    ) -> (H256, H256) {
+    ) -> Result<(H256, H256), &'static str> {
+        // Check that we have the expected number of nodes with proofs
+        const MIXHASHES: usize = MIX_BYTES / HASH_BYTES;
+        if nodes.len() != MIXHASHES * ACCESSES / 2 {
+            return Err("Incorrect number of nodes");
+        }
+    
+        let epoch = header_number / EPOCH_LENGTH;
+        // Reuse single Merkle root across all the proofs
+        let merkle_root = self.dag_merkle_root(epoch).ok_or("Invalid epoch")?;
+        let full_size = ethash::get_full_size(epoch as usize);
+
         // Boxed index since ethash::hashimoto gets Fn, but not FnMut
         let index = RefCell::new(0);
-        let epoch = header_number / EPOCH_LENGTH;
-        let full_size = ethash::get_full_size(epoch as usize);
-        // Reuse single Merkle root across all the proofs
-        let merkle_root = self.dag_merkle_root(epoch);
+        // Flag for whether the proof is valid
+        let success = RefCell::new(true);
 
-        ethash::hashimoto_with_hasher(
+        let results = ethash::hashimoto_with_hasher(
             header_hash,
             nonce,
             full_size,
@@ -170,7 +188,13 @@ impl EthashProver {
                 let node = &nodes[idx / 2];
                 if idx % 2 == 0 {
                     // Divide by 2 to adjust offset for 64-byte words instead of 128-byte
-                    assert_eq!(merkle_root, node.apply_merkle_proof((offset / 2) as u64));
+                    if let Ok(computed_root) = node.apply_merkle_proof((offset / 2) as u64) {
+                        if merkle_root != computed_root {
+                            success.replace(false);
+                        }
+                    } else {
+                        success.replace(false);
+                    }
                 };
 
                 // Reverse each 32 bytes for ETHASH compatibility
@@ -181,7 +205,12 @@ impl EthashProver {
             },
             keccak_256,
             keccak_512,
-        )
+        );
+
+        match success.into_inner() {
+            true => Ok(results),
+            false => Err("Invalid merkle proof"),
+        }
     }
 
     pub fn hashimoto_light(
@@ -275,7 +304,7 @@ mod tests {
             header_nonce,
             header_number,
             &(block_with_proofs.to_double_node_with_merkle_proof_vec(DoubleNodeWithMerkleProof::from_values)),
-        );
+        ).unwrap();
         assert_eq!(header_mix_hash, mix_hash);
     }
 
@@ -293,7 +322,32 @@ mod tests {
             header_nonce,
             header_number,
             &(block_with_proofs.to_double_node_with_merkle_proof_vec(DoubleNodeWithMerkleProof::from_values)),
-        );
+        ).unwrap();
         assert_eq!(header_mix_hash, mix_hash);
+    }
+
+    #[test]
+    fn hashimoto_merkle_returns_err_for_invalid_data() {
+        let block_with_proofs = BlockWithProofs::from_file(&fixture_path("3.json"));
+        let header_partial_hash: H256 = hex!("481f55e00fd23652cb45ffba86a08b8d497f3b18cc2c0f14cbeb178b4c386e10").into();
+        let header_number: u64 = 3;
+        let header_nonce: H64 = hex!("2e9344e0cbde83ce").into();
+        let mut proofs = block_with_proofs
+            .to_double_node_with_merkle_proof_vec(DoubleNodeWithMerkleProof::from_values);
+        let prover = EthashProver::new();
+    
+        assert_eq!(
+            prover.hashimoto_merkle(header_partial_hash, header_nonce, 30000000, &proofs),
+            Err("Invalid epoch"),
+        );
+        assert_eq!(
+            prover.hashimoto_merkle(header_partial_hash, header_nonce, header_number, Default::default()),
+            Err("Incorrect number of nodes"),
+        );
+        proofs[0].proof[0] = H128::zero();
+        assert_eq!(
+            prover.hashimoto_merkle(header_partial_hash, header_nonce, header_number, &proofs),
+            Err("Invalid merkle proof"),
+        );
     }
 }
