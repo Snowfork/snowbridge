@@ -103,20 +103,20 @@ impl Header {
 		let bytes: Bytes = self.decoded_seal_field(0, 32)?;
 		let size = bytes.len();
 		let mut mix_hash = [0u8; 32];	
-        for i in 0..size {
-            mix_hash[31 - i] = bytes[size - 1 - i];
-        }
-        Some(mix_hash.into())
+		for i in 0..size {
+			mix_hash[31 - i] = bytes[size - 1 - i];
+		}
+		Some(mix_hash.into())
 	}
 
 	pub fn nonce(&self) -> Option<H64> {
 		let bytes: Bytes = self.decoded_seal_field(1, 8)?;
 		let size = bytes.len();
 		let mut nonce = [0u8; 8];
-        for i in 0..size {
-            nonce[7 - i] = bytes[size - 1 - i];
-        }
-        Some(nonce.into())
+		for i in 0..size {
+			nonce[7 - i] = bytes[size - 1 - i];
+		}
+		Some(nonce.into())
 	}
 
 	fn decoded_seal_field(&self, index: usize, max_len: usize) -> Option<Bytes> {
