@@ -129,6 +129,16 @@ impl EthashCache {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Error {
+    // Epoch doesn't map to the range in DAGS_MERKLE_ROOTS
+    EpochOutOfRange,
+    // The merkle proof could not be verified
+    InvalidMerkleProof,
+    // The number of nodes with proof don't match the expected number of DAG nodes
+    UnexpectedNumberOfNodes,
+}
+
 pub struct EthashProver {
     /// A LRU cache of DAG caches
     dags_cache: Option<EthashCache>,
@@ -159,16 +169,16 @@ impl EthashProver {
         nonce: H64,
         header_number: u64,
         nodes: &[DoubleNodeWithMerkleProof],
-    ) -> Result<(H256, H256), &'static str> {
+    ) -> Result<(H256, H256), Error> {
         // Check that we have the expected number of nodes with proofs
         const MIXHASHES: usize = MIX_BYTES / HASH_BYTES;
         if nodes.len() != MIXHASHES * ACCESSES / 2 {
-            return Err("Incorrect number of nodes");
+            return Err(Error::UnexpectedNumberOfNodes);
         }
     
         let epoch = header_number / EPOCH_LENGTH;
         // Reuse single Merkle root across all the proofs
-        let merkle_root = self.dag_merkle_root(epoch).ok_or("Invalid epoch")?;
+        let merkle_root = self.dag_merkle_root(epoch).ok_or(Error::EpochOutOfRange)?;
         let full_size = ethash::get_full_size(epoch as usize);
 
         // Boxed index since ethash::hashimoto gets Fn, but not FnMut
@@ -209,7 +219,7 @@ impl EthashProver {
 
         match success.into_inner() {
             true => Ok(results),
-            false => Err("Invalid merkle proof"),
+            false => Err(Error::InvalidMerkleProof),
         }
     }
 
@@ -338,16 +348,16 @@ mod tests {
     
         assert_eq!(
             prover.hashimoto_merkle(header_partial_hash, header_nonce, 30000000, &proofs),
-            Err("Invalid epoch"),
+            Err(Error::EpochOutOfRange),
         );
         assert_eq!(
             prover.hashimoto_merkle(header_partial_hash, header_nonce, header_number, Default::default()),
-            Err("Incorrect number of nodes"),
+            Err(Error::UnexpectedNumberOfNodes),
         );
         proofs[0].proof[0] = H128::zero();
         assert_eq!(
             prover.hashimoto_merkle(header_partial_hash, header_nonce, header_number, &proofs),
-            Err("Invalid merkle proof"),
+            Err(Error::InvalidMerkleProof),
         );
     }
 }

@@ -157,7 +157,7 @@ impl<T: Trait> Module<T> {
 			header_nonce,
 			header.number,
 			proof,
-		).map_err(|e| Error::<T>::InvalidHeader)?;
+		).map_err(|_| Error::<T>::InvalidHeader)?;
 		ensure!(
 			mix_hash == header_mix_hash
 			&& U256::from(result.0) < ethash::cross_boundary(header.difficulty)
