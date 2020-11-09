@@ -13,9 +13,11 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use serde_big_array::big_array;
 
+pub mod ethashdata;
+pub mod ethashproof;
 pub mod log;
 
-pub use ethereum_types::{Address, H160, H256, U256};
+pub use ethereum_types::{Address, H64, H160, H256, U256};
 pub use log::Log;
 
 #[derive(Debug)]
@@ -90,6 +92,39 @@ impl Header {
 	/// Compute hash of this header (keccak of the RLP with seal).
 	pub fn compute_hash(&self) -> H256 {
 		keccak_256(&self.rlp(true)).into()
+	}
+
+	/// Compute hash of the truncated header i.e. excluding seal.
+	pub fn compute_partial_hash(&self) -> H256 {
+		keccak_256(&self.rlp(false)).into()
+	}
+
+	pub fn mix_hash(&self) -> Option<H256> {
+		let bytes: Bytes = self.decoded_seal_field(0, 32)?;
+		let size = bytes.len();
+		let mut mix_hash = [0u8; 32];	
+		for i in 0..size {
+			mix_hash[31 - i] = bytes[size - 1 - i];
+		}
+		Some(mix_hash.into())
+	}
+
+	pub fn nonce(&self) -> Option<H64> {
+		let bytes: Bytes = self.decoded_seal_field(1, 8)?;
+		let size = bytes.len();
+		let mut nonce = [0u8; 8];
+		for i in 0..size {
+			nonce[7 - i] = bytes[size - 1 - i];
+		}
+		Some(nonce.into())
+	}
+
+	fn decoded_seal_field(&self, index: usize, max_len: usize) -> Option<Bytes> {
+		let bytes: Bytes = rlp::decode(self.seal.get(index)?).ok()?;
+		if bytes.len() > max_len {
+			return None;
+		}
+		Some(bytes)
 	}
 
 	/// Returns header RLP with or without seals.
@@ -217,4 +252,33 @@ mod tests {
 		);
 	}
 
+	#[test]
+	fn header_pow_seal_fields_extracted_correctly() {
+		let nonce: H64 = hex!("6935bbe7b63c4f8e").into();
+		let mix_hash: H256 = hex!("be3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").into();
+		let mut header: Header = Default::default();
+		header.seal = vec![
+			rlp::encode(&mix_hash.0.to_vec()),
+			rlp::encode(&nonce.0.to_vec()),
+		];
+		assert_eq!(header.nonce().unwrap(), nonce);
+		assert_eq!(header.mix_hash().unwrap(), mix_hash);
+	}
+
+	#[test]
+	fn header_pow_seal_fields_return_none_for_invalid_values() {
+		let nonce = hex!("696935bbe7b63c4f8e").to_vec();
+		let mix_hash = hex!("bebe3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").to_vec();
+		let mut header: Header = Default::default();
+		header.seal = vec![
+			rlp::encode(&mix_hash),
+			rlp::encode(&nonce),
+		];
+		assert_eq!(header.nonce(), None);
+		assert_eq!(header.mix_hash(), None);
+
+		header.seal = Vec::new();
+		assert_eq!(header.nonce(), None);
+		assert_eq!(header.mix_hash(), None);
+	}
 }

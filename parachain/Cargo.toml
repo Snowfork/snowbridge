@@ -5,6 +5,7 @@ panic = "unwind"
 members = [
     "primitives/core",
     "primitives/ethereum",
+    "primitives/testutils",
     "pallets/bridge",
     "pallets/asset",
     "pallets/verifier",
