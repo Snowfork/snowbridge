@@ -12,7 +12,6 @@ use xcm::v0::{MultiLocation, Junction, NetworkId};
 
 const SIBLING_LOCATION: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 200 });
 
-
 #[test]
 fn transfer_dot_to_relay_chain() {
 	new_tester().execute_with(|| {
@@ -38,8 +37,6 @@ fn transfer_dot_to_relay_chain() {
 
 	})
 }
-
-
 
 // Transferring native ETH should cause the following effects locally:
 // * withdrawal from local account

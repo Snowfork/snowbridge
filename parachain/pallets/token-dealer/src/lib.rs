@@ -28,13 +28,14 @@ mod tests;
 
 const ASSETS_PALLET_INDEX: u8 = 11;
 
+/// Identifier for a bridged ethereum asset supported by the parachain
 #[derive(Encode, Decode, Eq, PartialEq, Clone, Copy, RuntimeDebug)]
 pub enum AssetId {
 	ETH,
 	ERC20([u8; 20])
 }
 
-/// Identity of a cross-chain asset.
+/// Global identifier for a bridged ethereum asset (Within a polkadot consensus system)
 #[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
 pub struct XAssetId {
 	/// The reserve chain of the asset.
@@ -78,7 +79,7 @@ decl_event! {
 		<T as frame_system::Trait>::AccountId,
 		<T as Trait>::Balance,
 	{
-		/// Transferred to relay chain. [src, dest, amount]
+		/// Transferred DOT to relay chain. [src, dest, amount]
 		TransferredToRelayChain(AccountId, AccountId, Balance),
 
 		/// Transferred to parachain. [x_asset_id, src, para_id, dest, dest_network, amount]
@@ -115,6 +116,16 @@ decl_module! {
 		}
 
 		/// Transfer bridged ethereum assets to a sibling parachain.
+		///
+		/// Bridged assets can be either native or foreign to the sending parachain.
+		///
+		/// # Arguments
+		///
+		/// * `asset`: Global identifier for a bridged asset
+		/// * `para_id`: Destination parachain
+		/// * `network`: Network for destination account
+		/// * `account`: Destination account
+		/// * `amount`: Amount to transfer
 		#[weight = 10]
 		pub fn transfer_bridged_asset_to_parachain(
 			origin,
@@ -162,6 +173,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
+	// Execute the XCM message
 	fn execute(who: &T::AccountId, xcm: VersionedXcm) -> DispatchResult {
 		let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
 			.map_err(|_| Error::<T>::BadLocation)?;
@@ -173,6 +185,7 @@ impl<T: Trait> Module<T> {
 			.map_err(|_| Error::<T>::ExecutionFailed.into())
 	}
 
+	// Transfer DOT upwards to relay chain
 	fn make_xcm_upward_transfer(dest: &T::AccountId, amount: T::Balance) -> Xcm {
 		Xcm::WithdrawAsset {
 			assets: vec![MultiAsset::ConcreteFungible {
@@ -193,6 +206,7 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
+	// Transfer bridged assets which are native to this parachain
 	fn make_xcm_lateral_transfer_native(
 		location: MultiLocation,
 		para_id: ParaId,
@@ -219,6 +233,7 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
+	// Transfer bridged assets which are foreign to this parachain
 	fn make_xcm_lateral_transfer_foreign(
 		reserve_chain: ParaId,
 		location: MultiLocation,

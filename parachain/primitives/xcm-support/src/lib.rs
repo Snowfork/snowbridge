@@ -1,3 +1,8 @@
+//! # XCMP Support
+//!
+//! Includes an implementation for the `TransactAsset` trait, thus enabling
+//! withdrawals and deposits to assets via XCMP message execution.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_core::{H160, U256};
