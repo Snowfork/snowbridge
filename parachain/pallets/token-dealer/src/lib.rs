@@ -101,10 +101,9 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		fn deposit_event() = default;
 
-		/// Transfer DOT to relay chain.
+		/// Transfer DOT upwards to relay chain.
 		#[weight = 10]
-		pub fn transfer_to_relaychain(origin, dest: T::AccountId, amount: T::Balance) -> DispatchResult {
-
+		pub fn transfer_dot_to_relaychain(origin, dest: T::AccountId, amount: T::Balance) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
 			let xcm = Self::make_xcm_upward_transfer(&dest, amount);
 
@@ -117,7 +116,7 @@ decl_module! {
 
 		/// Transfer bridged ethereum assets to a sibling parachain.
 		#[weight = 10]
-		pub fn transfer_to_parachain(
+		pub fn transfer_bridged_asset_to_parachain(
 			origin,
 			asset: XAssetId,
 			para_id: ParaId,
@@ -171,7 +170,7 @@ impl<T: Trait> Module<T> {
 			.map_err(|_| Error::<T>::BadVersion)?;
 
 		T::XcmExecutor::execute_xcm(xcm_origin, xcm)
-		.map_err(|_| Error::<T>::ExecutionFailed.into())
+			.map_err(|_| Error::<T>::ExecutionFailed.into())
 	}
 
 	fn make_xcm_upward_transfer(dest: &T::AccountId, amount: T::Balance) -> Xcm {

@@ -21,17 +21,17 @@ use xcm::v0::{
 use artemis_core::assets::MultiAsset as ArtemisMultiAsset;
 use xcm_executor::traits::{LocationConversion, TransactAsset};
 
-pub struct Transactor<LocalCurrency, BridgedAssets, AccountIdConverter, AccountId>(
-	PhantomData<(LocalCurrency, BridgedAssets, AccountIdConverter, AccountId)>,
+pub struct Transactor<DOT, BridgedAssets, AccountIdConverter, AccountId>(
+	PhantomData<(DOT, BridgedAssets, AccountIdConverter, AccountId)>,
 );
 
 impl<
-	LocalCurrency: Currency<AccountId>,
+	DOT: Currency<AccountId>,
 	BridgedAssets: ArtemisMultiAsset<AccountId, AssetId = H160>,
 	AccountIdConverter: LocationConversion<AccountId>,
 	AccountId: sp_std::fmt::Debug
 	> TransactAsset
-	for Transactor<LocalCurrency, BridgedAssets, AccountIdConverter, AccountId>
+	for Transactor<DOT, BridgedAssets, AccountIdConverter, AccountId>
 {
 	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
@@ -54,20 +54,20 @@ impl<
 
 
 impl<
-       LocalCurrency: Currency<AccountId>,
+       DOT: Currency<AccountId>,
        BridgedAssets: ArtemisMultiAsset<AccountId, AssetId = H160>,
        AccountIdConverter: LocationConversion<AccountId>,
        AccountId: sp_std::fmt::Debug
-       > Transactor<LocalCurrency, BridgedAssets, AccountIdConverter, AccountId>
+       > Transactor<DOT, BridgedAssets, AccountIdConverter, AccountId>
 {
 	fn deposit(id: &MultiLocation, who: &AccountId, amount: u128) -> XcmResult {
 		match id {
 			// Deposit DOT
-			MultiLocation::X1(Junction::PalletInstance { id: 2 }) => {
-				let value = <<LocalCurrency as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(amount)
+			MultiLocation::X1(Junction::Parent) => {
+				let value = <<DOT as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(amount)
 					.map_err(|_| ())?;
 
-				let _ = LocalCurrency::deposit_creating(&who, value);
+				let _ = DOT::deposit_creating(&who, value);
 				Ok(())
 			},
 			// Deposit ETH, ERC20
@@ -87,11 +87,11 @@ impl<
 	fn withdraw(id: &MultiLocation, who: &AccountId, amount: u128) -> XcmResult {
 		match id {
 			// Withdraw DOT
-			MultiLocation::X1(Junction::PalletInstance { id: 2 }) => {
-				let value = <<LocalCurrency as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(amount)
+			MultiLocation::X1(Junction::Parent) => {
+				let value = <<DOT as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(amount)
 					.map_err(|_| ())?;
 
-				let _ = LocalCurrency::withdraw(&who, value, WithdrawReasons::none(), ExistenceRequirement::KeepAlive)
+				let _ = DOT::withdraw(&who, value, WithdrawReasons::none(), ExistenceRequirement::KeepAlive)
 					.map_err(|_| XcmError::Undefined)?;
 				Ok(())
 			},

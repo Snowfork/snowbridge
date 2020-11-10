@@ -31,7 +31,7 @@ impl_outer_origin! {
 
 impl_outer_dispatch! {
 	pub enum Call for MockRuntime where origin: Origin {
-		pallet_balances::Balances,
+		pallet_balances::DOT,
 		cumulus_message_broker::MessageBroker,
 	}
 }
@@ -172,7 +172,7 @@ pub struct XcmConfig;
 impl Config for XcmConfig {
 	type Call = Call;
 	type XcmSender = MessageBroker;
-	type AssetTransactor = Transactor<Balances, Assets, LocationConverter, AccountId>;
+	type AssetTransactor = Transactor<DOT, Assets, LocationConverter, AccountId>;
 	type OriginConverter = LocalOriginConverter;
 	type IsReserve = NativeAsset;
 	type IsTeleporter = ();
@@ -192,7 +192,7 @@ impl Trait for MockRuntime {
 }
 
 pub type System = system::Module<MockRuntime>;
-pub type Balances = pallet_balances::Module<MockRuntime>;
+pub type DOT = pallet_balances::Module<MockRuntime>;
 pub type Assets = artemis_assets::Module<MockRuntime>;
 pub type MessageBroker = cumulus_message_broker::Module<MockRuntime>;
 
