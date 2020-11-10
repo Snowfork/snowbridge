@@ -33,7 +33,6 @@ use sp_std::prelude::*;
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
-	traits::{Imbalance},
 	dispatch::{DispatchResult, DispatchError},
 	Parameter
 };
@@ -42,10 +41,7 @@ use sp_core::{U256};
 use sp_runtime::traits::{MaybeSerializeDeserialize, Member};
 
 use artemis_core::assets::{MultiAsset, Asset};
-use sp_std::{marker, result};
-
-mod imbalances;
-pub use crate::imbalances::{NegativeImbalance, PositiveImbalance};
+use sp_std::marker;
 
 #[cfg(test)]
 mod mock;
@@ -63,6 +59,16 @@ decl_storage! {
 	trait Store for Module<T: Trait> as Asset {
 		pub TotalIssuance get(fn total_issuance): map hasher(blake2_128_concat) T::AssetId => U256;
 		pub Balances get(fn balances): double_map hasher(blake2_128_concat) T::AssetId, hasher(blake2_128_concat) T::AccountId => U256;
+	}
+	add_extra_genesis {
+		config(balances): Vec<(T::AssetId, T::AccountId, U256)>;
+		build(|config: &GenesisConfig<T>| {
+			for &(ref asset_id, ref who, amount) in config.balances.iter() {
+				let total_issuance = TotalIssuance::<T>::get(asset_id);
+				TotalIssuance::<T>::insert(asset_id, total_issuance + amount);
+				Balances::<T>::insert(asset_id, who, amount);
+			}
+		});
 	}
 }
 
@@ -178,8 +184,6 @@ where
 	T: Trait,
 	GetAssetId: frame_support::traits::Get<T::AssetId>,
 {
-	type PositiveImbalance = PositiveImbalance<T, GetAssetId>;
-	type NegativeImbalance = NegativeImbalance<T, GetAssetId>;
 
 	fn total_issuance() -> U256 {
 		Module::<T>::total_issuance(GetAssetId::get())
@@ -189,30 +193,18 @@ where
 		Module::<T>::balances(GetAssetId::get(), who)
 	}
 
-	fn burn(mut amount: U256) -> Self::PositiveImbalance {
-		if amount.is_zero() {
-			return PositiveImbalance::zero();
-		}
-		<TotalIssuance<T>>::mutate(GetAssetId::get(), |issued| {
-			*issued = issued.checked_sub(amount).unwrap_or_else(|| {
-				amount = *issued;
-				U256::zero()
-			});
-		});
-		PositiveImbalance::new(amount)
+	fn deposit(
+		who: &T::AccountId,
+		amount: U256,
+	) -> DispatchResult {
+		<Module<T> as MultiAsset<_>>::deposit(GetAssetId::get(), who, amount)
 	}
 
-	fn issue(mut amount: U256) -> Self::NegativeImbalance {
-		if amount.is_zero() {
-			return NegativeImbalance::zero();
-		}
-		<TotalIssuance<T>>::mutate(GetAssetId::get(), |issued| {
-			*issued = issued.checked_add(amount).unwrap_or_else(|| {
-				amount = U256::max_value() - *issued;
-				U256::max_value()
-			})
-		});
-		NegativeImbalance::new(amount)
+	fn withdraw(
+		who: &T::AccountId,
+		amount: U256,
+	) -> DispatchResult {
+		<Module<T> as MultiAsset<_>>::withdraw(GetAssetId::get(), who, amount)
 	}
 
 	fn transfer(
@@ -221,38 +213,5 @@ where
 		amount: U256,
 	) -> DispatchResult {
 		<Module<T> as MultiAsset<_>>::transfer(GetAssetId::get(), source, dest, amount)
-	}
-
-	fn deposit(
-		who: &T::AccountId,
-		value: U256,
-	) -> result::Result<Self::PositiveImbalance, DispatchError> {
-		if value.is_zero() {
-			return Ok(Self::PositiveImbalance::zero());
-		}
-		let asset_id = GetAssetId::get();
-		let balance = <Balances<T>>::get(asset_id, who)
-			.checked_add(value)
-			.ok_or(Error::<T>::BalanceOverflow)?;
-		<Balances<T>>::insert(asset_id, who, balance);
-
-		Ok(Self::PositiveImbalance::new(value))
-	}
-
-	fn withdraw(
-		who: &T::AccountId,
-		value: U256,
-	) -> result::Result<Self::NegativeImbalance, DispatchError> {
-		if value.is_zero() {
-			return Ok(Self::NegativeImbalance::zero());
-		}
-		let asset_id = GetAssetId::get();
-		let balance = <Balances<T>>::get(asset_id, who)
-			.checked_sub(value)
-			.ok_or(Error::<T>::InsufficientBalance)?;
-
-		<Balances<T>>::insert(asset_id, who, balance);
-
-		Ok(Self::NegativeImbalance::new(value))
 	}
 }

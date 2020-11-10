@@ -269,7 +269,7 @@ impl artemis_token_dealer::Trait for Runtime {
 }
 
 parameter_types! {
-	pub ArtemisNetwork: NetworkId = NetworkId::Named("artemis".into());
+	pub DotNetwork: NetworkId = NetworkId::Polkadot;
 	pub RelayChainOrigin: Origin = cumulus_message_broker::Origin::Relay.into();
 	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
 		id: ParachainInfo::get().into(),
@@ -279,7 +279,7 @@ parameter_types! {
 pub type LocationConverter = (
 	ParentIsDefault<AccountId>,
 	SiblingParachainConvertsVia<Sibling, AccountId>,
-	AccountId32Aliases<ArtemisNetwork, AccountId>,
+	AccountId32Aliases<DotNetwork, AccountId>,
 );
 
 pub type LocalAssetTransactor = Transactor<Balances, Assets, LocationConverter, AccountId>;
@@ -288,7 +288,7 @@ pub type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
 	RelayChainAsNative<RelayChainOrigin, Origin>,
 	SiblingParachainAsNative<cumulus_message_broker::Origin, Origin>,
-	SignedAccountId32AsNative<ArtemisNetwork, Origin>,
+	SignedAccountId32AsNative<DotNetwork, Origin>,
 );
 
 pub struct XcmConfig;
@@ -351,7 +351,7 @@ construct_runtime! {
 		// Artemis modules
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
-		Assets: assets::{Module, Call, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Config<T>, Event<T>},
 		ETH: eth_app::{Module, Call, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Storage, Event<T>},
 	}

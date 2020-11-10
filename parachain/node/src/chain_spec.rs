@@ -1,7 +1,7 @@
 use cumulus_primitives::ParaId;
 use artemis_runtime::{
 	AccountId, BalancesConfig, GenesisConfig, Signature, SystemConfig,
-	ParachainInfoConfig, VerifierConfig, WASM_BINARY,
+	ParachainInfoConfig, AssetsConfig, VerifierConfig, WASM_BINARY,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
@@ -141,6 +141,9 @@ fn testnet_genesis(
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
+		}),
+		assets: Some(AssetsConfig {
+			balances: vec![],
 		}),
 		verifier: Some(VerifierConfig {
 			key: relay_key,

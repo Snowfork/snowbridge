@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage,
 	dispatch::DispatchResult,
-	traits::Get, Parameter
+	traits::Get, Parameter,
 };
 use frame_system::ensure_signed;
 use sp_runtime::{
@@ -60,19 +60,12 @@ impl Into<MultiLocation> for XAssetId {
 
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-
 	type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Into<u128>;
-
 	type ToRelayChainBalance: Convert<Self::Balance, RelayChainBalance>;
-
 	type AccountIdConverter: LocationConversion<Self::AccountId>;
-
 	type AccountId32Converter: Convert<Self::AccountId, [u8; 32]>;
-
 	type RelayChainNetworkId: Get<NetworkId>;
-
 	type ParaId: Get<ParaId>;
-
 	type XcmExecutor: ExecuteXcm;
 }
 
@@ -177,7 +170,8 @@ impl<T: Trait> Module<T> {
 		let xcm: Xcm = xcm.try_into()
 			.map_err(|_| Error::<T>::BadVersion)?;
 
-		T::XcmExecutor::execute_xcm(xcm_origin, xcm).map_err(|_| Error::<T>::ExecutionFailed.into())
+		T::XcmExecutor::execute_xcm(xcm_origin, xcm)
+		.map_err(|_| Error::<T>::ExecutionFailed.into())
 	}
 
 	fn make_xcm_upward_transfer(dest: &T::AccountId, amount: T::Balance) -> Xcm {

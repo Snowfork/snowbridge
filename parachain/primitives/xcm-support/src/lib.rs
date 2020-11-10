@@ -4,12 +4,10 @@ use sp_core::{H160, U256};
 use sp_std::{
 	marker::PhantomData,
 	prelude::*,
-	if_std,
 	convert::TryFrom
 };
 
 use frame_support::traits::{Currency, WithdrawReasons, ExistenceRequirement};
-
 
 use xcm::v0::{
 	Junction,
@@ -112,4 +110,3 @@ impl<
 	}
 
 }
-
