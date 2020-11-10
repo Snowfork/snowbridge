@@ -1,6 +1,6 @@
 // Mock runtime
 use artemis_testutils::BlockWithProofs;
-use crate::{Module, EthashProofData, EthereumHeader, GenesisConfig, Trait};
+use crate::{Module, EthashConfiguration, EthashProofData, EthereumHeader, GenesisConfig, Trait};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
@@ -32,11 +32,16 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 #[derive(Clone, Eq, PartialEq)]
 pub struct MockRuntime;
 
+#[derive(Clone, Eq, PartialEq)]
+pub struct MockRuntimeWithPoW;
+
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MaximumBlockWeight: Weight = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+	pub EthashDisabledConfiguration: EthashConfiguration = EthashConfiguration { verify_pow: false };
+	pub EthashEnabledConfiguration: EthashConfiguration = EthashConfiguration::default();
 }
 
 impl system::Trait for MockRuntime {
@@ -67,12 +72,48 @@ impl system::Trait for MockRuntime {
 	type SystemWeightInfo = ();
 }
 
-impl Trait for MockRuntime {
+impl system::Trait for MockRuntimeWithPoW {
+	type BaseCallFilter = ();
+	type Origin = Origin;
+	type Call = ();
+	type Index = u64;
+	type BlockNumber = u64;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type AccountId = AccountId;
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type Header = Header;
 	type Event = MockEvent;
+	type BlockHashCount = BlockHashCount;
+	type MaximumBlockWeight = MaximumBlockWeight;
+	type DbWeight = ();
+	type BlockExecutionWeight = ();
+	type ExtrinsicBaseWeight = ();
+	type MaximumExtrinsicWeight = MaximumBlockWeight;
+	type MaximumBlockLength = MaximumBlockLength;
+	type AvailableBlockRatio = AvailableBlockRatio;
+	type Version = ();
+	type ModuleToIndex = ();
+	type AccountData = ();
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
 }
 
-pub type System = system::Module<MockRuntime>;
+
+impl Trait for MockRuntime {
+	type Event = MockEvent;
+	type EthashConfiguration = EthashDisabledConfiguration;
+}
+
+impl Trait for MockRuntimeWithPoW {
+	type Event = MockEvent;
+	type EthashConfiguration = EthashEnabledConfiguration;
+}
+
 pub type Verifier = Module<MockRuntime>;
+
+pub type VerifierWithPoW = Module<MockRuntimeWithPoW>;
 
 pub fn genesis_ethereum_header() -> EthereumHeader {
 	Default::default()
@@ -104,19 +145,18 @@ pub fn ethereum_header_proof_from_file(block_num: u64) -> Vec<EthashProofData> {
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	new_tester_with_config(GenesisConfig {
+	new_tester_with_config::<MockRuntime>(GenesisConfig {
 		initial_header: genesis_ethereum_header(),
 		initial_difficulty: 0.into(),
-		verify_pow: false,
 	})
 }
 
-pub fn new_tester_with_config(config: GenesisConfig) -> sp_io::TestExternalities {
-	let mut storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+pub fn new_tester_with_config<T: Trait>(config: GenesisConfig) -> sp_io::TestExternalities {
+	let mut storage = system::GenesisConfig::default().build_storage::<T>().unwrap();
 
-	config.assimilate_storage::<MockRuntime>(&mut storage).unwrap();
+	config.assimilate_storage::<T>(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| System::set_block_number(1));
+	ext.execute_with(|| system::Module::<T>::set_block_number(1.into()));
 	ext
 }

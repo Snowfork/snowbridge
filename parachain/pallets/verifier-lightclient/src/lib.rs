@@ -7,7 +7,7 @@
 
 use frame_system::{self as system, ensure_signed};
 use frame_support::{decl_module, decl_storage, decl_event, decl_error,
-	dispatch::DispatchResult, ensure};
+	dispatch::DispatchResult, ensure, traits::Get};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
@@ -23,6 +23,19 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[derive(Clone, PartialEq, RuntimeDebug)]
+pub struct EthashConfiguration {
+	// Determines whether Ethash PoW is verified for headers
+	// NOTE: true by default, should only be false for dev
+	pub verify_pow: bool,
+}
+
+impl Default for EthashConfiguration {
+	fn default() -> Self {
+		EthashConfiguration { verify_pow: true }
+	}
+}
+
 /// Ethereum block header as it is stored in the runtime storage.
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
 pub struct StoredHeader<Submitter> {
@@ -37,6 +50,8 @@ pub struct StoredHeader<Submitter> {
 
 pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+	/// Ethash PoW configuration
+	type EthashConfiguration: Get<EthashConfiguration>;
 }
 
 decl_storage! {
@@ -47,8 +62,6 @@ decl_storage! {
 		Headers: map hasher(identity) H256 => Option<StoredHeader<T::AccountId>>;
 		/// Map of imported header hashes by number.
 		HeadersByNumber: map hasher(blake2_128_concat) u64 => Option<Vec<H256>>;
-		/// Flag to turn on PoW verification.
-		VerifyPoW get(fn verify_pow) config(): bool;
 	}
 
 	add_extra_genesis {
@@ -129,7 +142,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::DuplicateHeader,
 		);
 
-		if !VerifyPoW::get() {
+		if !T::EthashConfiguration::get().verify_pow {
 			return Ok(());
 		}
 

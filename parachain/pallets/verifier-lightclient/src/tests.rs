@@ -1,7 +1,7 @@
 use crate::mock::{
 	child_of_genesis_ethereum_header, ethereum_header_from_file,
 	ethereum_header_proof_from_file, new_tester, new_tester_with_config,
-	AccountId, Verifier, MockRuntime, Origin,
+	AccountId, Verifier, VerifierWithPoW, MockRuntime, MockRuntimeWithPoW, Origin,
 };
 use crate::sp_api_hidden_includes_decl_storage::hidden_include::{StorageMap, StorageValue};
 use frame_support::{assert_err, assert_ok};
@@ -121,28 +121,27 @@ fn it_rejects_ethereum_header_before_parent() {
 
 #[test]
 fn it_validates_proof_of_work() {
-	new_tester_with_config(GenesisConfig {
-		initial_header: ethereum_header_from_file(11090290),
-		initial_difficulty: 0.into(),
-		verify_pow: true,
+	new_tester_with_config::<MockRuntimeWithPoW>(GenesisConfig {
+			initial_header: ethereum_header_from_file(11090290),
+			initial_difficulty: 0.into(),
 	}).execute_with(|| {
 		let header1 = ethereum_header_from_file(11090291);
 		let header1_proof = ethereum_header_proof_from_file(11090291);
 		let header2 = ethereum_header_from_file(11090292);
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
-		assert_ok!(Verifier::import_header(
+		assert_ok!(VerifierWithPoW::import_header(
 			Origin::signed(ferdie.clone()),
 			header1,
 			header1_proof,
 		));
 		assert_err!(
-			Verifier::import_header(
+			VerifierWithPoW::import_header(
 				Origin::signed(ferdie),
 				header2,
 				Default::default(),
 			),
-			Error::<MockRuntime>::InvalidHeader,
+			Error::<MockRuntimeWithPoW>::InvalidHeader,
 		);
 	});
 }
