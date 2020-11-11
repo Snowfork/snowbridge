@@ -21,14 +21,42 @@ Draft
 
 ## Introduction
 
-Our parachain will support cross-parachain token transfers using [XCMP](https://github.com/paritytech/xcm-format/blob/master/README.md).
+Our parachain will support transfers of bridged assets using [XCMP](https://github.com/paritytech/xcm-format/blob/master/README.md).
 
 Other parachains wanting to participate in asset transfers will need to hold sovereign reserves in our parachain. This implies a unilateral trust model where:
 
 - Participating parachains must trust our parachain in its role as the reserve chain
 - Our parachain does not need to trust the participants
 
-## Scenarios
+## Asset Location
+
+To support asset transfers we need to represent the relative location of bridged ethereum assets using the XCM [MultiAsset](https://github.com/paritytech/xcm-format/blob/master/README.md#multiasset-universal-asset-identifiers) structure.
+
+Inside our parachain, the account balances for bridged ethereum assets are stored within our custom multi-asset [pallet](https://polkaeth-rustdocs.netlify.app/artemis_asset/index.html). Each asset is indentified by a 20-byte address that corresponds to a contract address on the Ethereum side. ETH is a special case and is identified by the zero address.
+
+### ETH
+
+```rust
+MultiAsset::ConcreteFungible {
+    id: MultiLocation::X2(
+			Junction::PalletInstance { id: 11 },
+      Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] })
+    amount: AMOUNT,
+  }
+```
+
+### ERC20
+
+```rust
+MultiAsset::ConcreteFungible {
+    id: MultiLocation::X2(
+			Junction::PalletInstance { id: 11 },
+      Junction::AccountKey20 { network: NetworkId::Any, key: CONTRACT_ADDRESS })
+    amount: AMOUNT,
+  }
+```
+
+## Supported Transfers
 
 We can implement support for the following scenarios using existing XCMP v0 message types.
 
@@ -47,6 +75,24 @@ Effects:
 2. The sovereign account of D on H will be credited with 21 PolkaETH.
 3. D will mint 21 PolkaETH into Bob's account.
 
+XCM Message:
+```rust
+Xcm::WithdrawAsset {
+  assets: vec![ASSET],
+  effects: vec![Order::DepositReserveAsset {
+    assets: vec![MultiAsset::All],
+    dest: MultiLocation::X2(Junction::Parent, Junction::Parachain { id: DEST_PARA_ID }),
+    effects: vec![Order::DepositAsset {
+      assets: vec![MultiAsset::All],
+      dest: MultiLocation::X1(Junction::AccountId32 {
+        network: DEST_NETWORK,
+        id: DEST_ACCOUNT,
+      }),
+    }],
+  }],
+}
+```
+
 ### Alice transfers 21 PolkaETH to Bob on our chain <!-- omit in toc -->
 
 Parties:
@@ -57,8 +103,32 @@ Parties:
 Effects:
 
 1. H will withdraw 21 PolkaETH from Alice's local account.
-2. The sovereign account of H on D will be credited with 21 PolkaETH.
+2. The sovereign account of H on D will be reduced by 21 PolkaETH.
 3. D will mint 21 PolkaETH into Bob's account.
+
+XCM Message:
+
+```rust
+Xcm::WithdrawAsset {
+  assets: vec![ASSET],
+  effects: vec![Order::InitiateReserveWithdraw {
+    assets: vec![MultiAsset::All],
+    reserve: MultiLocation::X2(
+      Junction::Parent,
+      Junction::Parachain {
+        id: DEST_PARA_ID,
+      },
+    ),
+    effects: vec![Order::DepositAsset {
+      assets: vec![MultiAsset::All],
+      dest: MultiLocation::X1(Junction::AccountId32 {
+          network: DEST_NETWORK,
+          id: DEST_ACCOUNT,
+      })
+    }]
+  }]
+}
+```
 
 ### Alice transfers 21 PolkaETH on chain X to Bob on chain Y <!-- omit in toc -->
 
@@ -77,24 +147,35 @@ Effects:
 3. The sovereign account of D on R will be credited with 21 PolkaETH.
 4. D will mint 21 PolkaETH into Bob's account.
 
+XCM Message:
 
-## Asset Identification
-
-To support transfers into our chain, the consensus system needs to be able to identify the relative location of bridged ethereum assets held within our parachain.
-
-These assets are all stored in our custom multi-asset [pallet](https://polkaeth-rustdocs.netlify.app/artemis_asset/index.html), and are individually identified by 20-byte identifiers. These identifiers can be used within [XCMP's MultiAssets](https://github.com/paritytech/xcm-format/blob/master/README.md#multiasset-universal-asset-identifiers). They will usually but not always correspond to a contract address on the Ethereum side.
-
-Given this structure, the relative location for an asset can be determined using:
-
-1. The index of our [asset](https://polkaeth-rustdocs.netlify.app/artemis_asset/index.html) pallet in the runtime.
-2. The AccountId of the asset owner
-3. The 20-byte asset identifier
-
-This kind of path can modelled using various XCMP primitives:
-
-```text
-<chain>/ConcreteFungible/<parachain>/PalletIndex(<index>)/AccountId32/AccountKey20
+```rust
+Xcm::WithdrawAsset {
+  assets: vec![ASSET],
+  effects: vec![Order::InitiateReserveWithdraw {
+    assets: vec![MultiAsset::All],
+    reserve: MultiLocation::X2(
+      Junction::Parent,
+      Junction::Parachain {
+          id: RESERVE_CHAIN,
+      },
+    ),
+    effects: vec![Order::DepositReserveAsset {
+      assets: vec![MultiAsset::All],
+      dest: MultiLocation::X2(Junction::Parent, Junction::Parachain { id: DEST_PARA }),
+      effects: vec![Order::DepositAsset {
+        assets: vec![MultiAsset::All],
+        dest: MultiLocation::X1(Junction::AccountId32 {
+          network: DEST_NETWORK,
+          id: DEST_ACCOUNT,
+        }),
+      }],
+    }]
+  }]
+}
 ```
+
+
 
 ## Future Extensions
 
