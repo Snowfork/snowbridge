@@ -1,5 +1,5 @@
 use crate::mock::{
-	child_of_genesis_ethereum_header, ethereum_header_from_file,
+	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
 	ethereum_header_proof_from_file, new_tester, new_tester_with_config,
 	AccountId, Verifier, VerifierWithPoW, MockRuntime, MockRuntimeWithPoW, Origin,
 };
@@ -7,7 +7,7 @@ use crate::sp_api_hidden_includes_decl_storage::hidden_include::{StorageMap, Sto
 use frame_support::{assert_err, assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::DispatchError;
-use crate::{BestBlock, Error, EthereumHeader, GenesisConfig, Headers, HeadersByNumber};
+use crate::{BestBlock, Error, EthereumHeader, FinalizedBlock, GenesisConfig, Headers, HeadersByNumber};
 
 #[test]
 fn it_tracks_highest_difficulty_ethereum_chain() {
@@ -37,10 +37,9 @@ fn it_tracks_highest_difficulty_ethereum_chain() {
 }
 
 #[test]
-fn it_tracks_multiple_unconfirmed_ethereum_forks() {
+fn it_tracks_multiple_unfinalized_ethereum_forks() {
 	new_tester().execute_with(|| {
-		let mut child1 = child_of_genesis_ethereum_header();
-		child1.number = 1 as u64;
+		let child1 = child_of_genesis_ethereum_header();
 		let child1_hash = child1.compute_hash();
 		let mut child2 = child1.clone();
 		// make child2 have a different hash to child1
@@ -65,6 +64,67 @@ fn it_tracks_multiple_unconfirmed_ethereum_forks() {
 	});
 }
 
+#[test]
+fn it_tracks_only_one_finalized_ethereum_fork() {
+	new_tester().execute_with(|| {
+		let block1 = child_of_genesis_ethereum_header();
+		let block1_hash = block1.compute_hash();
+		let block2 = child_of_header(&block1);
+		let block3 = child_of_header(&block2);
+		let block3_hash = block3.compute_hash();
+		let mut block4 = child_of_genesis_ethereum_header();
+		block4.difficulty = 2.into();
+		let mut block5 = child_of_header(&block4);
+		block5.difficulty = 3.into();
+		let mut block6 = child_of_genesis_ethereum_header();
+		block6.difficulty = 5.into();
+
+		// Initial chain:
+		//   B0
+		//   |  \
+		//   B1  B4
+		//   |
+		//   B2
+		//   |
+		//   B3
+		let ferdie: AccountId = Keyring::Ferdie.into();
+		for header in vec![block1, block4, block2, block3].into_iter() {
+			assert_ok!(Verifier::import_header(
+				Origin::signed(ferdie.clone()),
+				header,
+				Default::default(),
+			));
+		}
+		// Relies on DescendantsUntilFinalized = 2
+		assert_eq!(FinalizedBlock::get().hash, block1_hash);
+		assert_eq!(BestBlock::get().0.hash, block3_hash);
+
+		// With invalid forks (invalid since B1 is final):
+		//       B0
+		//     / | \
+		//   B6  B1  B4
+		//       |    \
+		//       B2    B5
+		//       |
+		//       B3
+		assert_err!(
+			Verifier::import_header(
+				Origin::signed(ferdie.clone()),
+				block5,
+				Default::default(),
+			),
+			Error::<MockRuntime>::HeaderOnStaleFork,
+		);
+		assert_err!(
+			Verifier::import_header(
+				Origin::signed(ferdie.clone()),
+				block6,
+				Default::default(),
+			),
+			Error::<MockRuntime>::AncientHeader,
+		);
+	});
+}
 
 #[test]
 fn it_imports_ethereum_header_only_once() {

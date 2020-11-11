@@ -37,6 +37,9 @@ pub struct StoredHeader<Submitter> {
 
 pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+	/// The number of descendents, in the highest difficulty chain, a block
+	/// needs to have in order to be considered final.
+	type DescendantsUntilFinalized: Get<u8>;
 	// Determines whether Ethash PoW is verified for headers
 	// NOTE: Should only be false for dev
 	type VerifyPoW: Get<bool>;
@@ -46,6 +49,8 @@ decl_storage! {
 	trait Store for Module<T: Trait> as VerifierModule {
 		/// Best known block.
 		BestBlock: (EthereumHeaderId, U256);
+		/// Best finalized block.
+		FinalizedBlock: EthereumHeaderId;
 		/// Map of imported headers by hash.
 		Headers: map hasher(identity) H256 => Option<StoredHeader<T::AccountId>>;
 		/// Map of imported header hashes by number.
@@ -59,14 +64,16 @@ decl_storage! {
 		build(|config| {
 			let initial_header = &config.initial_header;
 			let initial_hash = initial_header.compute_hash();
+			let initial_id = EthereumHeaderId {
+				number: initial_header.number,
+				hash: initial_hash,
+			};
 
 			BestBlock::put((
-				EthereumHeaderId {
-					number: initial_header.number,
-					hash: initial_hash,
-				},
+				initial_id,
 				config.initial_difficulty,
 			));
+			FinalizedBlock::put(initial_id);
 			Headers::<T>::insert(
 				initial_hash,
 				StoredHeader {
@@ -91,10 +98,14 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
+		/// Header is same height or older than finalized block (we don't support forks).
+		AncientHeader,
 		/// Header's parent has not been imported.
 		MissingParentHeader,
 		/// Header has already been imported.
 		DuplicateHeader,
+		/// Header is on a stale fork, i.e. it's not a descendant of the latest finalized block
+		HeaderOnStaleFork,
 		/// One or more header fields are invalid.
 		InvalidHeader,
 	}
@@ -119,16 +130,38 @@ decl_module! {
 impl<T: Trait> Module<T> {
 	// Validate an Ethereum header for import
 	fn validate_header_to_import(header: &EthereumHeader, proof: &[EthashProofData]) -> DispatchResult {
-		ensure!(
-			Headers::<T>::contains_key(header.parent_hash),
-			Error::<T>::MissingParentHeader,
-		);
-
+		// TODO: move contextless check first
 		let hash = header.compute_hash();
 		ensure!(
 			!Headers::<T>::contains_key(hash),
 			Error::<T>::DuplicateHeader,
 		);
+
+		let parent = Headers::<T>::get(header.parent_hash)
+			.ok_or(Error::<T>::MissingParentHeader)?
+			.header;
+
+		let finalized_header_id = FinalizedBlock::get();
+		ensure!(
+			header.number > finalized_header_id.number,
+			Error::<T>::AncientHeader,
+		);
+
+		// TODO: limit N where N = header.number - finalized_header.number
+		// to avoid iterating over long chains here
+		for (ancestor_hash, ancestor) in ancestry::<T>(header.parent_hash) {
+			if ancestor.number > finalized_header_id.number {
+				continue;
+			}
+			// This assertion holds because the AncientHeader check above ensures that
+			// iteration starts at or after the latest finalized block.
+			assert_eq!(ancestor.number, finalized_header_id.number);
+			ensure!(
+				ancestor_hash == finalized_header_id.hash,
+				Error::<T>::HeaderOnStaleFork,
+			);
+			break;
+		}
 
 		if !T::VerifyPoW::get() {
 			return Ok(());
@@ -136,9 +169,6 @@ impl<T: Trait> Module<T> {
 
 		// Adapted from https://github.com/near/rainbow-bridge/blob/3fcdfbc6c0011f0e1507956a81c820616fb963b4/contracts/near/eth-client/src/lib.rs#L363
 		// See YellowPaper formula (50) in section 4.3.4
-		let parent = Headers::<T>::get(header.parent_hash)
-			.ok_or(Error::<T>::MissingParentHeader)?
-			.header;
 		ensure!(
 			header.gas_used <= header.gas_limit
 			&& header.gas_limit < parent.gas_limit * 1025 / 1024
@@ -197,17 +227,49 @@ impl<T: Trait> Module<T> {
 		// Maybe track new highest difficulty chain
 		let (_, highest_difficulty) = BestBlock::get();
 		if total_difficulty > highest_difficulty {
-			BestBlock::put((
-				EthereumHeaderId {
-					number: header.number,
-					hash,
-				},
-				total_difficulty,
-			));
+			let best_block_id = EthereumHeaderId {
+				number: header.number,
+				hash,
+			};
+			BestBlock::put((best_block_id, total_difficulty));
+			Self::finalize_headers(&best_block_id);
 		}
 
 		Ok(())
 	}
+
+	fn finalize_headers(best_block_id: &EthereumHeaderId) {
+		let finalized_block_id = FinalizedBlock::get();
+		let required_descendants = T::DescendantsUntilFinalized::get() as usize;
+		for (i, (ancestor_hash, ancestor)) in ancestry::<T>(best_block_id.hash).enumerate() {
+			if i < required_descendants {
+				continue;
+			}
+			if ancestor.number > finalized_block_id.number {
+				FinalizedBlock::put(EthereumHeaderId {
+					hash: ancestor_hash,
+					number: ancestor.number,
+				});
+			} else {
+				assert!(ancestor_hash == finalized_block_id.hash);
+			}
+			break;
+		}
+	}
+}
+
+/// Return iterator over header ancestors, starting at given hash
+fn ancestry<T: Trait>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHeader)> {
+	sp_std::iter::from_fn(move || {
+		let header = Headers::<T>::get(&hash)?.header;
+		if header.number == 0 {
+			return None;
+		}
+
+		let current_hash = hash;
+		hash = header.parent_hash;
+		Some((current_hash, header))
+	})
 }
 
 // TODO implement artemis_core::Verifier
