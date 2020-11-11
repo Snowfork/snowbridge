@@ -21,20 +21,24 @@ Draft
 
 ## Introduction
 
-Our parachain will support transfers of bridged assets using [XCMP](https://github.com/paritytech/xcm-format/blob/master/README.md).
+Our parachain supports transfers of bridged assets using [XCMP](https://github.com/paritytech/xcm-format/blob/master/README.md).
 
 Other parachains wanting to participate in asset transfers will need to hold sovereign reserves in our parachain. This implies a unilateral trust model where:
 
 - Participating parachains must trust our parachain in its role as the reserve chain
 - Our parachain does not need to trust the participants
 
+Besides bridged assets, our parachain supports the transfer of DOT, the native currency of Polkadot.
+
 ## Asset Location
 
-To support asset transfers we need to represent the relative location of bridged ethereum assets using the XCM [MultiAsset](https://github.com/paritytech/xcm-format/blob/master/README.md#multiasset-universal-asset-identifiers) structure.
+We can represent the relative location of bridged ethereum assets using the XCM [MultiAsset](https://github.com/paritytech/xcm-format/blob/master/README.md#multiasset-universal-asset-identifiers) structure.
 
 Inside our parachain, the account balances for bridged ethereum assets are stored within our custom multi-asset [pallet](https://polkaeth-rustdocs.netlify.app/artemis_asset/index.html). Each asset is indentified by a 20-byte address that corresponds to a contract address on the Ethereum side. ETH is a special case and is identified by the zero address.
 
 ### ETH
+
+Example:
 
 ```rust
 MultiAsset::ConcreteFungible {
@@ -42,10 +46,12 @@ MultiAsset::ConcreteFungible {
 			Junction::PalletInstance { id: 11 },
       Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] })
     amount: AMOUNT,
-  }
+}
 ```
 
 ### ERC20
+
+Example:
 
 ```rust
 MultiAsset::ConcreteFungible {
@@ -53,16 +59,16 @@ MultiAsset::ConcreteFungible {
 			Junction::PalletInstance { id: 11 },
       Junction::AccountKey20 { network: NetworkId::Any, key: CONTRACT_ADDRESS })
     amount: AMOUNT,
-  }
+}
 ```
 
 ## Supported Transfers
 
-We can implement support for the following scenarios using existing XCMP v0 message types.
+The following scenarios highlight the various kinds of asset transfers supported by our parachain.
 
-### Alice transfers 21 PolkaETH to Bob on another chain <!-- omit in toc -->
+### Transfer pETH from the reserve parachain to another parachain <!-- omit in toc -->
 
-This transfer is based on [Transfer via reserve](https://github.com/paritytech/xcm-format/blob/master/README.md#transfer-via-reserve), except that our parachain is acting as both the home chain and reserve chain.
+In this example, Alice wants to transfer 21 pETH to Bob on another parachain.
 
 Parties:
 
@@ -71,14 +77,19 @@ Parties:
 
 Effects:
 
-1. H will withdraw 21 PolkaETH from Alice's local account.
-2. The sovereign account of D on H will be credited with 21 PolkaETH.
-3. D will mint 21 PolkaETH into Bob's account.
+1. H will withdraw 21 pETH from Alice's local account.
+2. The sovereign account of D on H will be credited with 21 pETH.
+3. D will mint 21 pETH into Bob's account.
 
-XCM Message:
+Example Message:
 ```rust
 Xcm::WithdrawAsset {
-  assets: vec![ASSET],
+  assets: vec![MultiAsset::ConcreteFungible {
+    id: MultiLocation::X2(
+			Junction::PalletInstance { id: 11 },
+      Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] })
+    amount: AMOUNT,
+  }],
   effects: vec![Order::DepositReserveAsset {
     assets: vec![MultiAsset::All],
     dest: MultiLocation::X2(Junction::Parent, Junction::Parachain { id: DEST_PARA_ID }),
@@ -93,7 +104,9 @@ Xcm::WithdrawAsset {
 }
 ```
 
-### Alice transfers 21 PolkaETH to Bob on our chain <!-- omit in toc -->
+### Transfer pETH from a parachain into the reserve parachain <!-- omit in toc -->
+
+In this example, Alice transfers 21 pETH to Bob on the reserve chain
 
 Parties:
 
@@ -102,15 +115,20 @@ Parties:
 
 Effects:
 
-1. H will withdraw 21 PolkaETH from Alice's local account.
-2. The sovereign account of H on D will be reduced by 21 PolkaETH.
-3. D will mint 21 PolkaETH into Bob's account.
+1. H will withdraw 21 pETH from Alice's local account.
+2. The sovereign account of H on D will be reduced by 21 pETH.
+3. D will mint 21 pETH into Bob's account.
 
-XCM Message:
+Example Message:
 
 ```rust
 Xcm::WithdrawAsset {
-  assets: vec![ASSET],
+  assets: vec![MultiAsset::ConcreteFungible {
+    id: MultiLocation::X2(
+			Junction::PalletInstance { id: 11 },
+      Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] })
+    amount: AMOUNT,
+  }],
   effects: vec![Order::InitiateReserveWithdraw {
     assets: vec![MultiAsset::All],
     reserve: MultiLocation::X2(
@@ -130,7 +148,7 @@ Xcm::WithdrawAsset {
 }
 ```
 
-### Alice transfers 21 PolkaETH on chain X to Bob on chain Y <!-- omit in toc -->
+### Transfer pETH between 2 parachains via the reserve parachain <!-- omit in toc -->
 
 In this scenario, our parachain is acting solely as the reserve chain for two other chains participating in a transfer.
 
@@ -142,16 +160,21 @@ Parties:
 
 Effects:
 
-1. H will withdraw 21 PolkaETH from Alice's local account.
-2. The sovereign account of H on R will be reduced by 21 PolkaETH.
-3. The sovereign account of D on R will be credited with 21 PolkaETH.
-4. D will mint 21 PolkaETH into Bob's account.
+1. H will withdraw 21 pETH from Alice's local account.
+2. The sovereign account of H on R will be reduced by 21 pETH.
+3. The sovereign account of D on R will be credited with 21 pETH.
+4. D will mint 21 pETH into Bob's account.
 
-XCM Message:
+Example Message:
 
 ```rust
 Xcm::WithdrawAsset {
-  assets: vec![ASSET],
+  assets: vec![MultiAsset::ConcreteFungible {
+    id: MultiLocation::X2(
+			Junction::PalletInstance { id: 11 },
+      Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] })
+    amount: AMOUNT,
+  }],
   effects: vec![Order::InitiateReserveWithdraw {
     assets: vec![MultiAsset::All],
     reserve: MultiLocation::X2(
@@ -175,15 +198,13 @@ Xcm::WithdrawAsset {
 }
 ```
 
-
-
 ## Future Extensions
 
 These extensions are still being explored for feasibility and value.
 
 ### Transfer from parachain to Ethereum
 
-We could also use XCMP to trigger a transfer of assets from our parachain to Ethereum, and vice versa. Since our parachain and our smart contracts on Ethereum have to trust each other, we could the [Teleportation](https://github.com/paritytech/xcm-format#transfer-via-teleport) mechanism described in the XCMP spec.
+We could also use XCMP to trigger a transfer of assets from our parachain to Ethereum, and vice versa. Since our parachain and our smart contracts on Ethereum have to trust each other, we could use the [Teleportation](https://github.com/paritytech/xcm-format#transfer-via-teleport) mechanism described in the XCMP spec.
 
 We'll probably want to use a custom message type in the long-term though.
 
@@ -213,36 +234,32 @@ Our bridge will support arbitrary messaging between Ethereum smart contracts and
 
 XCMP messages are asynchronous and sent in a fire-and-forget manner. Messages sent from Parachains to Ethereum will need to specify a target contract for delivery. Parachains will need to register to be notified of messages coming from Ethereum, and will be notified when relevant messages come through for them.
 
-At the application layer, parachain apps and ethereum smart contracts that interact are responsible for being aware of and trusting each other and for determining the payload and interface of their own messages. The bridge just facilitates transfer, verification and routing of these messages to the requested target application. Our ETHApp and ERC20App are examples of pairs of substrate+solidity applications that trust each other and specify a shared interface - although they're implemented as pallets, one could imagine them working similarily as seperate parachains.
+At the application layer, parachain apps and ethereum smart contracts that interact are responsible for being aware of and trusting each other and for determining the payload and interface of their own messages. The bridge just facilitates transfer, verification and routing of these messages to the requested target application. Our ETHApp and ERC20App are examples of pairs of custom FRAME + solidity applications that trust each other and specify a shared interface - although they're implemented as pallets, one could imagine them working similarily as seperate parachains.
 
-Example XCM sent to our parachain for sending a message to Ethereum:
 
+Example: Register a custom FRAME application to receive messages
 ```
-SendMessageToContract {
-  pallet_index: The index of the app module within the runtime
-  contract_address: The address of the app's peer on the Ethereum side.
-  payload: The payload of the message to be sent to the app's peer on the Ethereum side.
-  effects: *
+Xcm::Transact {
+  origin: *,
+  call: Bridge.register(app_id, dispatchable)
 }
 ```
 
-Example XCM sent to our parachain for registering to be notified about messages coming from Ethereum:
+Once an application living on another parachain has been registered, the bridge can issue XCM messages:
+
 ```
-RegisterAppForNotification {
-  pallet_index: The index of the app module within the runtime
-  contract_address: The address of the app's peer on the Ethereum side.
-  effects: *
+Xcm::Transact {
+  origin: *,
+  call: dispatchable (registered in above example)
 }
 ```
 
-Example XCM sent from our parachain to notify a listening parachain:
+In turn, the application would need to notify the bridge in order to unlock assets on the Ethereum side:
+
 ```
-NewMessageFromEthereum {
-  pallet_index: The index of the app module within the runtime
-  payload: The payload of the message coming from the app's peer on the Ethereum side.
-  nonce: ...
-  contract_address: The address of the app's peer on the Ethereum side.
-  effects: *
+Xcm::Transact {
+  origin: *
+  call: Bridge.notify(app_id, payload)
 }
 ```
 
