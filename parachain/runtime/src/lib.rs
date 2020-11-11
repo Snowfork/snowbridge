@@ -19,7 +19,6 @@ use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_grandpa::fg_primitives;
-use verifier_lightclient::EthashConfiguration;
 
 use sp_std::prelude::*;
 
@@ -266,12 +265,12 @@ impl verifier::Trait for Runtime {
 }
 
 parameter_types! {
-	pub EthashEnabledConfig: EthashConfiguration = EthashConfiguration { verify_pow: true };
+	pub const VerifyPoW: bool = true;
 }
 
 impl verifier_lightclient::Trait for Runtime {
 	type Event = Event;
-	type EthashConfiguration = EthashEnabledConfig;
+	type VerifyPoW = VerifyPoW;
 }
 
 impl asset::Trait for Runtime {

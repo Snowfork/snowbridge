@@ -1,6 +1,6 @@
 // Mock runtime
 use artemis_testutils::BlockWithProofs;
-use crate::{Module, EthashConfiguration, EthashProofData, EthereumHeader, GenesisConfig, Trait};
+use crate::{Module, EthashProofData, EthereumHeader, GenesisConfig, Trait};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
@@ -40,8 +40,6 @@ parameter_types! {
 	pub const MaximumBlockWeight: Weight = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
-	pub EthashDisabledConfiguration: EthashConfiguration = EthashConfiguration { verify_pow: false };
-	pub EthashEnabledConfiguration: EthashConfiguration = EthashConfiguration::default();
 }
 
 impl system::Trait for MockRuntime {
@@ -100,15 +98,19 @@ impl system::Trait for MockRuntimeWithPoW {
 	type SystemWeightInfo = ();
 }
 
+parameter_types! {
+	pub const PowDisabled: bool = false;
+	pub const PowEnabled: bool = true;
+}
 
 impl Trait for MockRuntime {
 	type Event = MockEvent;
-	type EthashConfiguration = EthashDisabledConfiguration;
+	type VerifyPoW = PowDisabled;
 }
 
 impl Trait for MockRuntimeWithPoW {
 	type Event = MockEvent;
-	type EthashConfiguration = EthashEnabledConfiguration;
+	type VerifyPoW = PowEnabled;
 }
 
 pub type Verifier = Module<MockRuntime>;
