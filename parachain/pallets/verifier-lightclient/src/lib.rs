@@ -38,7 +38,7 @@ pub struct StoredHeader<Submitter> {
 pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 	// Determines whether Ethash PoW is verified for headers
-	// NOTE: true by default, should only be false for dev
+	// NOTE: Should only be false for dev
 	type VerifyPoW: Get<bool>;
 }
 
