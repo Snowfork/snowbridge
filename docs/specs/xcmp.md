@@ -36,29 +36,25 @@ We can represent the relative location of bridged ethereum assets using the XCM 
 
 Inside our parachain, the account balances for bridged ethereum assets are stored within our custom multi-asset [pallet](https://polkaeth-rustdocs.netlify.app/artemis_asset/index.html). Each asset is indentified by a 20-byte address that corresponds to a contract address on the Ethereum side. ETH is a special case and is identified by the zero address.
 
-### ETH
-
-Example:
+Example: ETH
 
 ```rust
 MultiAsset::ConcreteFungible {
-    id: MultiLocation::X2(
-			Junction::PalletInstance { id: 11 },
-      Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] })
-    amount: AMOUNT,
+  id: MultiLocation::X2(
+    Junction::PalletInstance { id: 11 },
+    Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] })
+  amount: AMOUNT,
 }
 ```
 
-### ERC20
-
-Example:
+Example: ERC20
 
 ```rust
 MultiAsset::ConcreteFungible {
-    id: MultiLocation::X2(
-			Junction::PalletInstance { id: 11 },
-      Junction::AccountKey20 { network: NetworkId::Any, key: CONTRACT_ADDRESS })
-    amount: AMOUNT,
+  id: MultiLocation::X2(
+    Junction::PalletInstance { id: 11 },
+    Junction::AccountKey20 { network: NetworkId::Any, key: CONTRACT_ADDRESS })
+  amount: AMOUNT,
 }
 ```
 
@@ -86,7 +82,7 @@ Example Message:
 Xcm::WithdrawAsset {
   assets: vec![MultiAsset::ConcreteFungible {
     id: MultiLocation::X2(
-			Junction::PalletInstance { id: 11 },
+      Junction::PalletInstance { id: 11 },
       Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] })
     amount: AMOUNT,
   }],
@@ -125,7 +121,7 @@ Example Message:
 Xcm::WithdrawAsset {
   assets: vec![MultiAsset::ConcreteFungible {
     id: MultiLocation::X2(
-			Junction::PalletInstance { id: 11 },
+      Junction::PalletInstance { id: 11 },
       Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] })
     amount: AMOUNT,
   }],
@@ -171,7 +167,7 @@ Example Message:
 Xcm::WithdrawAsset {
   assets: vec![MultiAsset::ConcreteFungible {
     id: MultiLocation::X2(
-			Junction::PalletInstance { id: 11 },
+      Junction::PalletInstance { id: 11 },
       Junction::AccountKey20 { network: NetworkId::Any, key: [0; 20] })
     amount: AMOUNT,
   }],
