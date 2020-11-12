@@ -256,7 +256,10 @@ impl<T: Trait> Module<T> {
 
 			// Finalize blocks if possible
 			let finalized_block_id = FinalizedBlock::get();
-			let new_finalized_block_id = Self::finalize_headers(&best_block_id, &finalized_block_id);
+			let new_finalized_block_id = Self::get_best_finalized_header(
+				&best_block_id,
+				&finalized_block_id,
+			);
 			if new_finalized_block_id != finalized_block_id {
 				FinalizedBlock::put(new_finalized_block_id);
 			}
@@ -278,7 +281,7 @@ impl<T: Trait> Module<T> {
 
 	// Return the latest block that can be finalized based on the given
 	// highest difficulty chain and previously finalized block.
-	fn finalize_headers(
+	fn get_best_finalized_header(
 		best_block_id: &EthereumHeaderId,
 		finalized_block_id: &EthereumHeaderId,
 	) -> EthereumHeaderId {
