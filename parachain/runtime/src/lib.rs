@@ -264,8 +264,13 @@ impl verifier::Trait for Runtime {
 	type Event = Event;
 }
 
+parameter_types! {
+	pub const VerifyPoW: bool = true;
+}
+
 impl verifier_lightclient::Trait for Runtime {
 	type Event = Event;
+	type VerifyPoW = VerifyPoW;
 }
 
 impl asset::Trait for Runtime {
