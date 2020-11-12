@@ -23,6 +23,11 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+/// Max number of finalized headers to keep.
+const FINALIZED_HEADERS_TO_KEEP: u64 = 5_000;
+/// Max number of headers we're pruning in single import call.
+const HEADERS_TO_PRUNE_IN_SINGLE_IMPORT: u64 = 8;
+
 /// Ethereum block header as it is stored in the runtime storage.
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
 pub struct StoredHeader<Submitter> {
@@ -33,6 +38,17 @@ pub struct StoredHeader<Submitter> {
 	pub header: EthereumHeader,
 	/// Total difficulty of the chain.
 	pub total_difficulty: U256,
+}
+
+/// Blocks range that we want to prune.
+#[derive(Clone, Encode, Decode, Default, PartialEq, RuntimeDebug)]
+struct PruningRange {
+	/// Number of the oldest unpruned block(s). This might be the block that we do not
+	/// want to prune now (then it is equal to `oldest_block_to_keep`).
+	pub oldest_unpruned_block: u64,
+	/// Number of oldest block(s) that we want to keep. We want to prune blocks in range
+	/// [`oldest_unpruned_block`; `oldest_block_to_keep`).
+	pub oldest_block_to_keep: u64,
 }
 
 pub trait Trait: system::Trait {
@@ -49,6 +65,8 @@ decl_storage! {
 	trait Store for Module<T: Trait> as VerifierModule {
 		/// Best known block.
 		BestBlock: (EthereumHeaderId, U256);
+		/// Range of blocks that we want to prune.
+		BlocksToPrune: PruningRange;
 		/// Best finalized block.
 		FinalizedBlock: EthereumHeaderId;
 		/// Map of imported headers by hash.
@@ -73,6 +91,10 @@ decl_storage! {
 				initial_id,
 				config.initial_difficulty,
 			));
+			BlocksToPrune::put(PruningRange {
+				oldest_unpruned_block: initial_id.number,
+				oldest_block_to_keep: initial_id.number,
+			});
 			FinalizedBlock::put(initial_id);
 			Headers::<T>::insert(
 				initial_hash,
@@ -232,29 +254,101 @@ impl<T: Trait> Module<T> {
 				hash,
 			};
 			BestBlock::put((best_block_id, total_difficulty));
-			Self::finalize_headers(&best_block_id);
+
+			// Finalize blocks if possible
+			let finalized_block_id = FinalizedBlock::get();
+			let new_finalized_block_id = Self::finalize_headers(&best_block_id, &finalized_block_id);
+			if new_finalized_block_id != finalized_block_id {
+				FinalizedBlock::put(new_finalized_block_id);
+			}
+	
+			// Clean up old headers
+			let pruning_range = BlocksToPrune::get();
+			let new_pruning_range = Self::prune_header_range(
+				&pruning_range,
+				HEADERS_TO_PRUNE_IN_SINGLE_IMPORT,
+				new_finalized_block_id.number.saturating_sub(FINALIZED_HEADERS_TO_KEEP),
+			);
+			if new_pruning_range != pruning_range {
+				BlocksToPrune::put(new_pruning_range);
+			}
 		}
 
 		Ok(())
 	}
 
-	fn finalize_headers(best_block_id: &EthereumHeaderId) {
-		let finalized_block_id = FinalizedBlock::get();
+	// Return the latest block that can be finalized based on the given
+	// highest difficulty chain and previously finalized block.
+	fn finalize_headers(
+		best_block_id: &EthereumHeaderId,
+		finalized_block_id: &EthereumHeaderId,
+	) -> EthereumHeaderId {
+		let mut new_finalized_block_id = finalized_block_id.clone();
+
 		let required_descendants = T::DescendantsUntilFinalized::get() as usize;
 		for (i, (ancestor_hash, ancestor)) in ancestry::<T>(best_block_id.hash).enumerate() {
 			if i < required_descendants {
 				continue;
 			}
 			if ancestor.number > finalized_block_id.number {
-				FinalizedBlock::put(EthereumHeaderId {
+				new_finalized_block_id = EthereumHeaderId {
 					hash: ancestor_hash,
 					number: ancestor.number,
-				});
+				};
 			} else {
 				assert!(ancestor_hash == finalized_block_id.hash);
 			}
 			break;
 		}
+
+		new_finalized_block_id
+	}
+
+	// Remove old headers, from oldest to newest, in the provided range.
+	// Only up to `max_headers_to_prune` will be removed.
+	fn prune_header_range(
+		pruning_range: &PruningRange,
+		max_headers_to_prune: u64,
+		prune_end: u64,
+	) -> PruningRange {
+		let mut new_pruning_range = pruning_range.clone();
+
+		// We can only increase this since pruning cannot be reverted...
+		if prune_end > new_pruning_range.oldest_block_to_keep {
+			new_pruning_range.oldest_block_to_keep = prune_end;
+		}
+
+		let start = new_pruning_range.oldest_unpruned_block;
+		let end = new_pruning_range.oldest_block_to_keep;
+		let mut blocks_pruned = 0;
+		for number in start..end {
+			if blocks_pruned == max_headers_to_prune {
+				break;
+			}
+
+			if let Some(hashes_at_number) = HeadersByNumber::take(number) {
+				let mut remaining = hashes_at_number.len();
+				for hash in hashes_at_number.iter() {
+					Headers::<T>::remove(hash);
+					blocks_pruned += 1;
+					remaining -= 1;
+					if blocks_pruned == max_headers_to_prune {
+						break;
+					}
+				}
+
+				if remaining > 0 {
+					let remainder = &hashes_at_number[hashes_at_number.len() - remaining..];
+					HeadersByNumber::insert(number, remainder);
+				} else {
+					new_pruning_range.oldest_unpruned_block = number + 1;
+				}
+			} else {
+				new_pruning_range.oldest_unpruned_block = number + 1;
+			}
+		}
+
+		new_pruning_range
 	}
 }
 
