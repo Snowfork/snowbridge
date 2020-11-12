@@ -12,7 +12,7 @@ Draft
 
 - [Introduction](#introduction)
 - [Scenarios](#scenarios)
-- [Asset Identification](#asset-identification)
+- [Asset Location](#asset-location)
 - [Future Extensions](#future-extensions)
   - [Transfer from parachain to Ethereum](#transfer-from-parachain-to-ethereum)
   - [Bridge Messaging](#bridge-messaging)
