@@ -1,13 +1,17 @@
 use crate::mock::{
 	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
-	ethereum_header_proof_from_file, new_tester, new_tester_with_config,
-	AccountId, Verifier, VerifierWithPoW, MockRuntime, MockRuntimeWithPoW, Origin,
+	ethereum_header_proof_from_file, genesis_ethereum_block_hash, new_tester,
+	new_tester_with_config, AccountId, Verifier, VerifierWithPoW, MockRuntime,
+	MockRuntimeWithPoW, Origin,
 };
 use crate::sp_api_hidden_includes_decl_storage::hidden_include::{StorageMap, StorageValue};
 use frame_support::{assert_err, assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::DispatchError;
-use crate::{BestBlock, Error, EthereumHeader, FinalizedBlock, GenesisConfig, Headers, HeadersByNumber};
+use crate::{
+	BestBlock, Error, EthereumHeader, FinalizedBlock, GenesisConfig, Headers,
+	HeadersByNumber, PruningRange,
+};
 
 #[test]
 fn it_tracks_highest_difficulty_ethereum_chain() {
@@ -123,6 +127,84 @@ fn it_tracks_only_one_finalized_ethereum_fork() {
 			),
 			Error::<MockRuntime>::AncientHeader,
 		);
+	});
+}
+
+#[test]
+fn it_prunes_ethereum_headers_correctly() {
+	new_tester().execute_with(|| {
+		let block1 = child_of_genesis_ethereum_header();
+		let block1_hash = block1.compute_hash();
+		let block2 = child_of_header(&block1);
+		let block2_hash = block2.compute_hash();
+		let block3 = child_of_header(&block2);
+		let block3_hash = block3.compute_hash();
+		let mut block4 = child_of_genesis_ethereum_header();
+		block4.difficulty = 2.into();
+		let block4_hash = block4.compute_hash();
+
+		// Initial chain:
+		//   B0
+		//   |  \
+		//   B1  B4
+		//   |
+		//   B2
+		//   |
+		//   B3
+		let ferdie: AccountId = Keyring::Ferdie.into();
+		for header in vec![block1, block4, block2, block3].into_iter() {
+			assert_ok!(Verifier::import_header(
+				Origin::signed(ferdie.clone()),
+				header,
+				Default::default(),
+			));
+		}
+
+		// Prune genesis block
+		let new_range = Verifier::prune_header_range(
+			&PruningRange { oldest_unpruned_block: 0, oldest_block_to_keep: 1 },
+			2,
+			1,
+		);
+		assert_eq!(
+			new_range,
+			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 1 },
+		);
+		assert!(!Headers::<MockRuntime>::contains_key(genesis_ethereum_block_hash()));
+		assert!(!HeadersByNumber::contains_key(0));
+
+		// Prune next block (B1)
+		let new_range = Verifier::prune_header_range(
+			&PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 1 },
+			1,
+			2,
+		);
+		assert_eq!(
+			new_range,
+			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 2 },
+		);
+		assert!(!Headers::<MockRuntime>::contains_key(block1_hash));
+		assert!(Headers::<MockRuntime>::contains_key(block4_hash));
+		assert_eq!(HeadersByNumber::get(1).unwrap(), vec![block4_hash]);
+
+		// Prune next two blocks (B4, B2)
+		let new_range = Verifier::prune_header_range(
+			&PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 2 },
+			2,
+			4,
+		);
+		assert_eq!(
+			new_range,
+			PruningRange { oldest_unpruned_block: 3, oldest_block_to_keep: 4 },
+		);
+		assert!(!Headers::<MockRuntime>::contains_key(block4_hash));
+		assert!(!HeadersByNumber::contains_key(1));
+		assert!(!Headers::<MockRuntime>::contains_key(block2_hash));
+		assert!(!HeadersByNumber::contains_key(2));
+
+		// Finally, we're left with B3
+		assert!(Headers::<MockRuntime>::contains_key(block3_hash));
+		assert_eq!(HeadersByNumber::get(3).unwrap(), vec![block3_hash]);
 	});
 }
 

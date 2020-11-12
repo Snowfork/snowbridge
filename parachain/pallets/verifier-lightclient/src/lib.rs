@@ -53,7 +53,7 @@ struct PruningRange {
 
 pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
-	/// The number of descendents, in the highest difficulty chain, a block
+	/// The number of descendants, in the highest difficulty chain, a block
 	/// needs to have in order to be considered final.
 	type DescendantsUntilFinalized: Get<u8>;
 	// Determines whether Ethash PoW is verified for headers
@@ -152,7 +152,6 @@ decl_module! {
 impl<T: Trait> Module<T> {
 	// Validate an Ethereum header for import
 	fn validate_header_to_import(header: &EthereumHeader, proof: &[EthashProofData]) -> DispatchResult {
-		// TODO: move contextless check first
 		let hash = header.compute_hash();
 		ensure!(
 			!Headers::<T>::contains_key(hash),
@@ -304,8 +303,9 @@ impl<T: Trait> Module<T> {
 		new_finalized_block_id
 	}
 
-	// Remove old headers, from oldest to newest, in the provided range.
-	// Only up to `max_headers_to_prune` will be removed.
+	// Remove old headers, from oldest to newest, in the provided range
+	// (adjusted to `prune_end` if newer). Only up to `max_headers_to_prune`
+	// will be removed.
 	fn prune_header_range(
 		pruning_range: &PruningRange,
 		max_headers_to_prune: u64,

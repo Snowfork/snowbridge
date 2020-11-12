@@ -124,6 +124,10 @@ pub fn genesis_ethereum_header() -> EthereumHeader {
 	Default::default()
 }
 
+pub fn genesis_ethereum_block_hash() -> H256 {
+	genesis_ethereum_header().compute_hash()
+}
+
 pub fn child_of_genesis_ethereum_header() -> EthereumHeader {
 	child_of_header(&genesis_ethereum_header())
 }
