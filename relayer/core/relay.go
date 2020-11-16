@@ -27,32 +27,77 @@ type Relay struct {
 	chains []chain.Chain
 }
 
+type Direction int
+
+const (
+	Bidirectional Direction = iota
+	EthToSub
+	SubToEth
+)
+
+type RelayConfig struct {
+	Direction   Direction `mapstructure:"direction"`
+	HeadersOnly bool      `mapstructure:"headers-only"`
+}
+
 type Config struct {
-	Eth ethereum.Config  `mapstructure:"ethereum"`
-	Sub substrate.Config `mapstructure:"substrate"`
+	Relay RelayConfig      `mapstructure:"relay"`
+	Eth   ethereum.Config  `mapstructure:"ethereum"`
+	Sub   substrate.Config `mapstructure:"substrate"`
 }
 
 func NewRelay() (*Relay, error) {
-
-	// channel for messages from ethereum
-	ethMessages := make(chan chain.Message, 1)
-
-	// channel for messages from substrate
-	subMessages := make(chan chain.Message, 1)
-
 	config, err := loadConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	ethChain, err := ethereum.NewChain(&config.Eth, ethMessages, subMessages)
+	ethChain, err := ethereum.NewChain(&config.Eth)
 	if err != nil {
 		return nil, err
 	}
 
-	subChain, err := substrate.NewChain(&config.Sub, ethMessages, subMessages)
+	subChain, err := substrate.NewChain(&config.Sub)
 	if err != nil {
 		return nil, err
+	}
+
+	direction := config.Relay.Direction
+	headersOnly := config.Relay.HeadersOnly
+	if direction == Bidirectional || direction == EthToSub {
+		// channel for messages from ethereum
+		var ethMessages chan chain.Message
+		if !headersOnly {
+			ethMessages = make(chan chain.Message, 1)
+		}
+		// channel for headers from ethereum
+		ethHeaders := make(chan chain.Header, 1)
+
+		err := ethChain.WithSender(ethMessages, ethHeaders)
+		if err != nil {
+			return nil, err
+		}
+		err = subChain.WithReceiver(ethMessages, ethHeaders)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if direction == Bidirectional || direction == SubToEth {
+		// channel for messages from substrate
+		var subMessages chan chain.Message
+		if !headersOnly {
+			subMessages = make(chan chain.Message, 1)
+		}
+
+		err := subChain.WithSender(subMessages, nil)
+		if err != nil {
+			return nil, err
+		}
+		err = ethChain.WithReceiver(subMessages, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Relay{
@@ -112,6 +157,17 @@ func loadConfig() (*Config, error) {
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		return nil, err
+	}
+
+	var direction = config.Relay.Direction
+	if direction != Bidirectional &&
+		direction != EthToSub &&
+		direction != SubToEth {
+		return nil, fmt.Errorf("'direction' has invalid value %d", direction)
+	}
+
+	if config.Relay.HeadersOnly {
+		config.Eth.Apps = map[string]ethereum.ContractInfo{}
 	}
 
 	// Load secrets from environment variables

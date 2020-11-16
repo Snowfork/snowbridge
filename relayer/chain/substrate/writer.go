@@ -19,13 +19,15 @@ import (
 type Writer struct {
 	conn     *Connection
 	messages <-chan chain.Message
+	headers  <-chan chain.Header
 	log      *logrus.Entry
 }
 
-func NewWriter(conn *Connection, messages <-chan chain.Message, log *logrus.Entry) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
 	return &Writer{
 		conn:     conn,
 		messages: messages,
+		headers:  headers,
 		log:      log,
 	}, nil
 }
@@ -50,6 +52,8 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 					"error": err,
 				}).Error("Failure submitting message to substrate")
 			}
+		case <-wr.headers:
+			wr.log.Info("Received a header to write")
 		}
 	}
 }

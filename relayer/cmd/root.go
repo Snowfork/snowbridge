@@ -24,6 +24,12 @@ var rootCmd = &cobra.Command{
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file")
+	rootCmd.PersistentFlags().Int(
+		"direction",
+		0,
+		"Relay messages bi-directionally (0), from Eth to Sub (1), or from Sub to Eth (2)",
+	)
+	rootCmd.PersistentFlags().Bool("headers", false, "Only forward headers")
 	rootCmd.AddCommand(runCmd())
 }
 
@@ -44,6 +50,10 @@ func initConfig() {
 		viper.SetConfigName("config")
 		viper.SetConfigType("toml")
 	}
+
+	// Bind flags that override their config file counterparts
+	viper.BindPFlag("relay.direction", rootCmd.Flags().Lookup("direction"))
+	viper.BindPFlag("relay.headers-only", rootCmd.Flags().Lookup("headers"))
 
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())

@@ -20,52 +20,71 @@ type Listener struct {
 	conn      *Connection
 	contracts []Contract
 	messages  chan<- chain.Message
+	headers   chan<- chain.Header
 	log       *logrus.Entry
 }
 
-func NewListener(conn *Connection, messages chan<- chain.Message, contracts []Contract, log *logrus.Entry) (*Listener, error) {
+func NewListener(conn *Connection, messages chan<- chain.Message, headers chan<- chain.Header, contracts []Contract, log *logrus.Entry) (*Listener, error) {
 	return &Listener{
 		conn:      conn,
 		contracts: contracts,
 		messages:  messages,
+		headers:   headers,
 		log:       log,
 	}, nil
 }
 
 func (li *Listener) Start(cxt context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
-		return li.pollEvents(cxt)
+		return li.pollEventsAndHeaders(cxt)
 	})
 
 	return nil
 }
 
-func (li *Listener) pollEvents(ctx context.Context) error {
-	li.log.Info("Polling started")
-
-	query := makeFilterQuery(li.contracts)
-
+func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
 	events := make(chan gethTypes.Log)
+	subscriptionEvents := *new(geth.Subscription)
+	if li.messages == nil {
+		li.log.Info("Not polling events since channel is nil")
+	} else {
+		li.log.Info("Polling events started")
 
-	subscription, err := li.conn.client.SubscribeFilterLogs(ctx, query, events)
+		query := makeFilterQuery(li.contracts)
+
+		subscription, err := li.conn.client.SubscribeFilterLogs(ctx, query, events)
+		subscriptionEvents = subscription
+		if err != nil {
+			li.log.WithError(err).Error("Failed to subscribe to application events")
+			return err
+		}
+
+		for _, contract := range li.contracts {
+			li.log.WithFields(logrus.Fields{
+				"addresses":    contract.Address.Hex(),
+				"contractName": contract.Name,
+			}).Debug("Subscribed to contract events")
+		}
+	}
+
+	headers := make(chan *gethTypes.Header)
+	subscriptionHeaders, err := li.conn.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
-		li.log.WithError(err).Error("Failed to subscribe to application events")
+		li.log.WithError(err).Error("Failed to subscribe to new headers")
 		return err
 	}
 
-	for _, contract := range li.contracts {
-		li.log.WithFields(logrus.Fields{
-			"addresses":    contract.Address.Hex(),
-			"contractName": contract.Name,
-		}).Debug("Subscribed to contract events")
-	}
+	li.log.Info("Polling headers started")
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case err := <-subscription.Err():
-			li.log.WithError(err).Error("Subscription terminated")
+		case err := <-subscriptionEvents.Err():
+			li.log.WithError(err).Error("Events subscription terminated")
+			return err
+		case err := <-subscriptionHeaders.Err():
+			li.log.WithError(err).Error("Headers subscription terminated")
 			return err
 		case event := <-events:
 			li.log.WithFields(logrus.Fields{
@@ -83,6 +102,19 @@ func (li *Listener) pollEvents(ctx context.Context) error {
 				}).Error("Failed to generate message from ethereum event")
 			} else {
 				li.messages <- *msg
+			}
+		case ethheader := <-headers:
+			li.log.WithFields(logrus.Fields{
+				"blockNumber": ethheader.Number,
+			}).Info("Witnessed block header")
+
+			header, err := MakeHeaderFromEthHeader(ethheader, li.log)
+			if err != nil {
+				li.log.WithFields(logrus.Fields{
+					"blockNumber": ethheader.Number,
+				}).Error("Failed to generate header from ethereum header")
+			} else {
+				li.headers <- *header
 			}
 		}
 	}
