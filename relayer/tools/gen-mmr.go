@@ -29,10 +29,14 @@ type H256 [32]byte
 
 // Leaf node for MMR
 type MMRLeaf struct {
-	blockHash        H256
-	paraHeadsRoot    H256
+	// Relay chain block hash
+	blockHash H256
+	// Merkle root for Parachain block header hashes
+	paraHeadsRoot H256
+	// Has validator merkle roor
 	hasValidatorRoot bool
-	validatorRoot    H256
+	// Merkle root for validator public keys
+	validatorRoot H256
 }
 
 // hashing strategy for Merkle trees
@@ -40,7 +44,7 @@ func hashStrategy() hash.Hash {
 	return sha3.NewLegacyKeccak256()
 }
 
-// Merkle Tree for ParaHeads
+// Hashing strategy for ParaHead leaf nodes
 func (head ParaBlockHash) CalculateHash() ([]byte, error) {
 	h := sha3.NewLegacyKeccak256()
 	if _, err := h.Write(head[:]); err != nil {
@@ -53,7 +57,7 @@ func (head ParaBlockHash) Equals(other merkletree.Content) (bool, error) {
 	return head == other, nil
 }
 
-// Merkle Tree for validator keys
+// Hashing strategy for ValidatorPublicKey leaf nodes
 func (key ValidatorPublicKey) CalculateHash() ([]byte, error) {
 	h := sha3.NewLegacyKeccak256()
 	if _, err := h.Write(key); err != nil {
@@ -66,7 +70,7 @@ func (key ValidatorPublicKey) Equals(other merkletree.Content) (bool, error) {
 	return reflect.DeepEqual(key, other), nil
 }
 
-// Merkle Tree for MMRLeaf
+// Hashing strategy for MMRLeaf leaf nodes
 func (leaf MMRLeaf) CalculateHash() ([]byte, error) {
 	h := sha3.NewLegacyKeccak256()
 	if _, err := h.Write(leaf.blockHash[:]); err != nil {
