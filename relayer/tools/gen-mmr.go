@@ -101,6 +101,7 @@ func makeValidatorKeypair() *Keypair {
 	public := pk.Public().(*ecdsa.PublicKey)
 
 	return &Keypair{
+		// FIXME: Its not clear whether this marshalling is compatible with Solidity!
 		publicBytes: elliptic.Marshal(elliptic.P256(), public.X, public.Y),
 		public:      public,
 		private:     pk,
