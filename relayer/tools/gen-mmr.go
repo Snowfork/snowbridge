@@ -39,7 +39,7 @@ type MMRLeaf struct {
 	validatorRoot H256
 }
 
-// hashing strategy for Merkle trees
+// hashing strategy for interior Merkle tree nodes
 func hashStrategy() hash.Hash {
 	return sha3.NewLegacyKeccak256()
 }
