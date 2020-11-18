@@ -94,6 +94,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		/// Transfer some free balance to another account.
+		// TODO: Calculate weights (#161)
 		#[weight = 10]
 		pub fn transfer(origin,
 						dest: T::AccountId,
