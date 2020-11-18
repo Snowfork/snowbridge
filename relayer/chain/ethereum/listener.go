@@ -103,15 +103,16 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
 			} else {
 				li.messages <- *msg
 			}
-		case ethheader := <-headers:
+		case gethheader := <-headers:
 			li.log.WithFields(logrus.Fields{
-				"blockNumber": ethheader.Number,
+				"blockNumber": gethheader.Number,
 			}).Info("Witnessed block header")
 
-			header, err := MakeHeaderFromEthHeader(ethheader, li.log)
+			header, err := MakeHeaderFromEthHeader(gethheader, li.log)
 			if err != nil {
 				li.log.WithFields(logrus.Fields{
-					"blockNumber": ethheader.Number,
+					"blockHash":   gethheader.Hash(),
+					"blockNumber": gethheader.Number,
 				}).Error("Failed to generate header from ethereum header")
 			} else {
 				li.headers <- *header

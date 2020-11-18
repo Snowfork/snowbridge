@@ -15,6 +15,8 @@ type Message struct {
 }
 
 type Header struct {
+	HeaderData interface{}
+	ProofData  interface{}
 }
 
 type Chain interface {

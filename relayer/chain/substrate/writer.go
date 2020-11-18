@@ -45,26 +45,26 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case msg := <-wr.messages:
-			err := wr.Write(ctx, &msg)
+			err := wr.WriteMessage(ctx, &msg)
 			if err != nil {
 				wr.log.WithFields(logrus.Fields{
 					"appid": hex.EncodeToString(msg.AppID[:]),
 					"error": err,
 				}).Error("Failure submitting message to substrate")
 			}
-		case <-wr.headers:
-			wr.log.Info("Received a header to write")
+		case header := <-wr.headers:
+			err := wr.WriteHeader(ctx, &header)
+			if err != nil {
+				wr.log.WithFields(logrus.Fields{
+					"error": err,
+				}).Error("Failure submitting header to substrate")
+			}
 		}
 	}
 }
 
 // Write submits a transaction to the chain
-func (wr *Writer) Write(_ context.Context, msg *chain.Message) error {
-
-	c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", msg.AppID, msg.Payload)
-	if err != nil {
-		return err
-	}
+func (wr *Writer) write(c types.Call) error {
 
 	ext := types.NewExtrinsic(c)
 
@@ -118,9 +118,41 @@ func (wr *Writer) Write(_ context.Context, msg *chain.Message) error {
 		return err
 	}
 
+	return nil
+}
+
+// WriteMessage submits a "Bridge.submit" call
+func (wr *Writer) WriteMessage(_ context.Context, msg *chain.Message) error {
+	c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", msg.AppID, msg.Payload)
+	if err != nil {
+		return err
+	}
+
+	err = wr.write(c)
+	if err != nil {
+		return err
+	}
+
 	wr.log.WithFields(logrus.Fields{
 		"appid": hex.EncodeToString(msg.AppID[:]),
 	}).Info("Submitted message to Substrate")
+
+	return nil
+}
+
+// WriteHeader submits a "VerifierLightclient.import_header" call
+func (wr *Writer) WriteHeader(_ context.Context, header *chain.Header) error {
+	c, err := types.NewCall(&wr.conn.metadata, "VerifierLightclient.import_header", header.HeaderData, header.ProofData)
+	if err != nil {
+		return err
+	}
+
+	err = wr.write(c)
+	if err != nil {
+		return err
+	}
+
+	wr.log.Info("Submitted header to Substrate")
 
 	return nil
 }

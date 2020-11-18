@@ -145,8 +145,44 @@ decl_module! {
 		#[weight = 0]
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
-			Self::validate_header_to_import(&header, &proof)?;
-			Self::import_validated_header(&sender, &header)
+
+			frame_support::debug::trace!(
+				target: "import_header",
+				"Received header {}. Starting validation",
+				header.number,
+			);
+
+			if let Err(err) = Self::validate_header_to_import(&header, &proof) {
+				frame_support::debug::trace!(
+					target: "import_header",
+					"Validation for header {} returned error. Skipping import",
+					header.number,
+				);
+				return Err(err);
+			}
+		
+			frame_support::debug::trace!(
+				target: "import_header",
+				"Validation succeeded. Starting import of header {}",
+				header.number,
+			);
+
+			if let Err(err) = Self::import_validated_header(&sender, &header) {
+				frame_support::debug::trace!(
+					target: "import_header",
+					"Import of header {} failed",
+					header.number,
+				);
+				return Err(err);
+			}
+
+			frame_support::debug::trace!(
+				target: "import_header",
+				"Import of header {} succeeded!",
+				header.number,
+			);
+
+			Ok(())
 		}
 	}
 }
