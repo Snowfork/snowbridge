@@ -1,4 +1,4 @@
-//! # Asset
+//! # Assets
 //!
 //! The assets pallet provides functionality for handling account balances.
 //!
@@ -6,14 +6,7 @@
 //!
 //! This module is used by the ETH and ERC20 pallets to store account balances for bridged assets.
 //!
-//! Each asset is identified by a unique `H160` hash. This is useful for tracking ERC20 tokens which on Ethereum are identified by a 20-byte contract address.
-//!
-//! For various reasons, we built our own asset pallet instead of reusing existing work:
-//! - `assets`: Too high-level and limited for our needs
-//! - `generic-asset`: Its enforced permissions system implies trusted operations. But our system is designed to be trustless.
-//! - `balances`: Only stores balances for a single asset. Our ERC20 pallet supports multiple different ERC20 assets.
-//!
-//! Additionally, we need to store balances using `U256`, which seemed difficult or impossible to plug into the above pallets.
+//! Each asset is identified by a unique `H160` hash. This is useful for tracking ERC20 tokens which are natively identified by a 20-byte contract address.
 //!
 //! ## Interface
 //!
@@ -23,10 +16,12 @@
 //!
 //! ### Public Functions
 //!
-//! - `do_mint`: Mint to an account's free balance.
-//! - `do_burn`: Burn an account's free balance.
+//! - `total_issuance`: Retrieve total issuance for a fungible asset.
+//! - `balance`: Retrieve an account balance.
+//! - `withdraw`: Withdraw from an account.
+//! - `deposit`: Deposit into an account.
+//! - `transfer`: Transfer between accounts.
 //!
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_std::prelude::*;
