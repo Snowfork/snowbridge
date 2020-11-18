@@ -1,6 +1,6 @@
 //! # Asset
 //!
-//! The asset module provides functionality for handling account balances.
+//! The assets pallet provides functionality for handling account balances.
 //!
 //! ## Overview
 //!
