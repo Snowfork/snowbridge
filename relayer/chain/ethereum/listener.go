@@ -43,28 +43,30 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group) error {
 func (li *Listener) pollEvents(ctx context.Context) error {
 	li.log.Info("Polling started")
 
+	query := makeFilterQuery(li.contracts)
+
 	events := make(chan gethTypes.Log)
+
+	subscription, err := li.conn.client.SubscribeFilterLogs(ctx, query, events)
+	if err != nil {
+		li.log.WithError(err).Error("Failed to subscribe to application events")
+		return err
+	}
+
 	for _, contract := range li.contracts {
-		query := makeQuery(contract)
-
-		_, err := li.conn.client.SubscribeFilterLogs(ctx, query, events)
-		if err != nil {
-			li.log.WithFields(logrus.Fields{
-				"address": contract.Address.Hex(),
-			}).Error("Failed to subscribe to application events")
-			continue
-		}
-
 		li.log.WithFields(logrus.Fields{
-			"contractAddress": contract.Address.Hex(),
-			"contractName":    contract.Name,
-		}).Info("Subscribed to contract events")
+			"addresses":    contract.Address.Hex(),
+			"contractName": contract.Name,
+		}).Debug("Subscribed to contract events")
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case err := <-subscription.Err():
+			li.log.WithError(err).Error("Subscription terminated")
+			return err
 		case event := <-events:
 			li.log.WithFields(logrus.Fields{
 				"address":     event.Address.Hex(),
@@ -86,12 +88,18 @@ func (li *Listener) pollEvents(ctx context.Context) error {
 	}
 }
 
-func makeQuery(contract Contract) geth.FilterQuery {
-	signature := contract.ABI.Events["AppTransfer"].ID.Hex()
-	topic := gethCommon.HexToHash(signature)
+func makeFilterQuery(contracts []Contract) geth.FilterQuery {
+	var addresses []gethCommon.Address
+	var topics []gethCommon.Hash
+
+	for _, contract := range contracts {
+		addresses = append(addresses, contract.Address)
+		signature := contract.ABI.Events["AppTransfer"].ID.Hex()
+		topics = append(topics, gethCommon.HexToHash(signature))
+	}
 
 	return geth.FilterQuery{
-		Addresses: []gethCommon.Address{contract.Address},
-		Topics:    [][]gethCommon.Hash{{topic}},
+		Addresses: addresses,
+		Topics:    [][]gethCommon.Hash{topics},
 	}
 }
