@@ -24,7 +24,7 @@ deploy_contracts()
     truffle deploy --network ganache
 
     echo "Generating configuration from contracts"
-    truffle exec scripts/dumpRelayerDockerConfig.js $configdir --network ganache
+    truffle exec scripts/dumpTestConfig.js $configdir --network ganache
     popd
 
     cp $configdir/test-config.json test-config.json
