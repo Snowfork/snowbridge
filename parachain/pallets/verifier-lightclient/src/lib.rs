@@ -7,7 +7,7 @@
 
 use frame_system::{self as system, ensure_signed};
 use frame_support::{decl_module, decl_storage, decl_event, decl_error,
-	dispatch::DispatchResult, ensure, traits::Get};
+	dispatch::DispatchResult, dispatch::DispatchError, ensure, traits::Get};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
@@ -23,6 +23,11 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+/// Max number of finalized headers to keep.
+const FINALIZED_HEADERS_TO_KEEP: u64 = 5_000;
+/// Max number of headers we're pruning in single import call.
+const HEADERS_TO_PRUNE_IN_SINGLE_IMPORT: u64 = 8;
+
 /// Ethereum block header as it is stored in the runtime storage.
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
 pub struct StoredHeader<Submitter> {
@@ -35,8 +40,22 @@ pub struct StoredHeader<Submitter> {
 	pub total_difficulty: U256,
 }
 
+/// Blocks range that we want to prune.
+#[derive(Clone, Encode, Decode, Default, PartialEq, RuntimeDebug)]
+struct PruningRange {
+	/// Number of the oldest unpruned block(s). This might be the block that we do not
+	/// want to prune now (then it is equal to `oldest_block_to_keep`).
+	pub oldest_unpruned_block: u64,
+	/// Number of oldest block(s) that we want to keep. We want to prune blocks in range
+	/// [`oldest_unpruned_block`; `oldest_block_to_keep`).
+	pub oldest_block_to_keep: u64,
+}
+
 pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+	/// The number of descendants, in the highest difficulty chain, a block
+	/// needs to have in order to be considered final.
+	type DescendantsUntilFinalized: Get<u8>;
 	// Determines whether Ethash PoW is verified for headers
 	// NOTE: Should only be false for dev
 	type VerifyPoW: Get<bool>;
@@ -46,6 +65,10 @@ decl_storage! {
 	trait Store for Module<T: Trait> as VerifierModule {
 		/// Best known block.
 		BestBlock: (EthereumHeaderId, U256);
+		/// Range of blocks that we want to prune.
+		BlocksToPrune: PruningRange;
+		/// Best finalized block.
+		FinalizedBlock: EthereumHeaderId;
 		/// Map of imported headers by hash.
 		Headers: map hasher(identity) H256 => Option<StoredHeader<T::AccountId>>;
 		/// Map of imported header hashes by number.
@@ -59,14 +82,20 @@ decl_storage! {
 		build(|config| {
 			let initial_header = &config.initial_header;
 			let initial_hash = initial_header.compute_hash();
+			let initial_id = EthereumHeaderId {
+				number: initial_header.number,
+				hash: initial_hash,
+			};
 
 			BestBlock::put((
-				EthereumHeaderId {
-					number: initial_header.number,
-					hash: initial_hash,
-				},
+				initial_id,
 				config.initial_difficulty,
 			));
+			BlocksToPrune::put(PruningRange {
+				oldest_unpruned_block: initial_id.number,
+				oldest_block_to_keep: initial_id.number,
+			});
+			FinalizedBlock::put(initial_id);
 			Headers::<T>::insert(
 				initial_hash,
 				StoredHeader {
@@ -91,12 +120,18 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
+		/// Header is same height or older than finalized block (we don't support forks).
+		AncientHeader,
 		/// Header's parent has not been imported.
 		MissingParentHeader,
 		/// Header has already been imported.
 		DuplicateHeader,
+		/// Header is on a stale fork, i.e. it's not a descendant of the latest finalized block
+		HeaderOnStaleFork,
 		/// One or more header fields are invalid.
 		InvalidHeader,
+		/// This should never be returned - indicates a bug
+		Unknown,
 	}
 }
 
@@ -119,26 +154,43 @@ decl_module! {
 impl<T: Trait> Module<T> {
 	// Validate an Ethereum header for import
 	fn validate_header_to_import(header: &EthereumHeader, proof: &[EthashProofData]) -> DispatchResult {
-		ensure!(
-			Headers::<T>::contains_key(header.parent_hash),
-			Error::<T>::MissingParentHeader,
-		);
-
 		let hash = header.compute_hash();
 		ensure!(
 			!Headers::<T>::contains_key(hash),
 			Error::<T>::DuplicateHeader,
 		);
 
+		let parent = Headers::<T>::get(header.parent_hash)
+			.ok_or(Error::<T>::MissingParentHeader)?
+			.header;
+
+		let finalized_header_id = FinalizedBlock::get();
+		ensure!(
+			header.number > finalized_header_id.number,
+			Error::<T>::AncientHeader,
+		);
+
+		// TODO: limit N where N = header.number - finalized_header.number
+		// to avoid iterating over long chains here
+		let ancestor_at_finalized_number = ancestry::<T>(header.parent_hash)
+			.find(|(_, ancestor)| ancestor.number == finalized_header_id.number);
+		// We must find a matching ancestor above since AncientHeader check ensures
+		// that iteration starts at or after the latest finalized block.
+		ensure!(
+			ancestor_at_finalized_number.is_some(),
+			Error::<T>::Unknown,
+		);
+		ensure!(
+			ancestor_at_finalized_number.unwrap().0 == finalized_header_id.hash,
+			Error::<T>::HeaderOnStaleFork,
+		);
+	
 		if !T::VerifyPoW::get() {
 			return Ok(());
 		}
 
 		// Adapted from https://github.com/near/rainbow-bridge/blob/3fcdfbc6c0011f0e1507956a81c820616fb963b4/contracts/near/eth-client/src/lib.rs#L363
 		// See YellowPaper formula (50) in section 4.3.4
-		let parent = Headers::<T>::get(header.parent_hash)
-			.ok_or(Error::<T>::MissingParentHeader)?
-			.header;
 		ensure!(
 			header.gas_used <= header.gas_limit
 			&& header.gas_limit < parent.gas_limit * 1025 / 1024
@@ -197,17 +249,124 @@ impl<T: Trait> Module<T> {
 		// Maybe track new highest difficulty chain
 		let (_, highest_difficulty) = BestBlock::get();
 		if total_difficulty > highest_difficulty {
-			BestBlock::put((
-				EthereumHeaderId {
-					number: header.number,
-					hash,
-				},
-				total_difficulty,
-			));
+			let best_block_id = EthereumHeaderId {
+				number: header.number,
+				hash,
+			};
+			BestBlock::put((best_block_id, total_difficulty));
+
+			// Finalize blocks if possible
+			let finalized_block_id = FinalizedBlock::get();
+			let new_finalized_block_id = Self::get_best_finalized_header(
+				&best_block_id,
+				&finalized_block_id,
+			)?;
+			if new_finalized_block_id != finalized_block_id {
+				FinalizedBlock::put(new_finalized_block_id);
+			}
+	
+			// Clean up old headers
+			let pruning_range = BlocksToPrune::get();
+			let new_pruning_range = Self::prune_header_range(
+				&pruning_range,
+				HEADERS_TO_PRUNE_IN_SINGLE_IMPORT,
+				new_finalized_block_id.number.saturating_sub(FINALIZED_HEADERS_TO_KEEP),
+			);
+			if new_pruning_range != pruning_range {
+				BlocksToPrune::put(new_pruning_range);
+			}
 		}
 
 		Ok(())
 	}
+
+	// Return the latest block that can be finalized based on the given
+	// highest difficulty chain and previously finalized block.
+	fn get_best_finalized_header(
+		best_block_id: &EthereumHeaderId,
+		finalized_block_id: &EthereumHeaderId,
+	) -> Result<EthereumHeaderId, DispatchError> {
+		let required_descendants = T::DescendantsUntilFinalized::get() as usize;
+		let maybe_newly_finalized_ancestor = ancestry::<T>(best_block_id.hash)
+			.enumerate()
+			.find_map(|(i, pair)| if i < required_descendants { None } else { Some(pair) });
+		
+		match maybe_newly_finalized_ancestor {
+			Some((hash, header)) => {
+				// The header is newly finalized if it is younger than the current
+				// finalized block
+				if header.number > finalized_block_id.number {
+					return Ok(EthereumHeaderId {
+						hash: hash,
+						number: header.number,
+					});
+				}
+				if hash != finalized_block_id.hash {
+					return Err(Error::<T>::Unknown.into());
+				}
+				Ok(finalized_block_id.clone())
+			}
+			None => Ok(finalized_block_id.clone())
+		}
+	}
+
+	// Remove old headers, from oldest to newest, in the provided range
+	// (adjusted to `prune_end` if newer). Only up to `max_headers_to_prune`
+	// will be removed.
+	fn prune_header_range(
+		pruning_range: &PruningRange,
+		max_headers_to_prune: u64,
+		prune_end: u64,
+	) -> PruningRange {
+		let mut new_pruning_range = pruning_range.clone();
+
+		// We can only increase this since pruning cannot be reverted...
+		if prune_end > new_pruning_range.oldest_block_to_keep {
+			new_pruning_range.oldest_block_to_keep = prune_end;
+		}
+
+		let start = new_pruning_range.oldest_unpruned_block;
+		let end = new_pruning_range.oldest_block_to_keep;
+		let mut blocks_pruned = 0;
+		for number in start..end {
+			if blocks_pruned == max_headers_to_prune {
+				break;
+			}
+
+			if let Some(hashes_at_number) = HeadersByNumber::take(number) {
+				let mut remaining = hashes_at_number.len();
+				for hash in hashes_at_number.iter() {
+					Headers::<T>::remove(hash);
+					blocks_pruned += 1;
+					remaining -= 1;
+					if blocks_pruned == max_headers_to_prune {
+						break;
+					}
+				}
+
+				if remaining > 0 {
+					let remainder = &hashes_at_number[hashes_at_number.len() - remaining..];
+					HeadersByNumber::insert(number, remainder);
+				} else {
+					new_pruning_range.oldest_unpruned_block = number + 1;
+				}
+			} else {
+				new_pruning_range.oldest_unpruned_block = number + 1;
+			}
+		}
+
+		new_pruning_range
+	}
+}
+
+/// Return iterator over header ancestors, starting at given hash
+fn ancestry<T: Trait>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHeader)> {
+	sp_std::iter::from_fn(move || {
+		let header = Headers::<T>::get(&hash)?.header;
+		let current_hash = hash;
+		hash = header.parent_hash;
+		Some((current_hash, header))
+	})
 }
 
 // TODO implement artemis_core::Verifier

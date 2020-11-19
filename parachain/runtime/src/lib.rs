@@ -265,11 +265,13 @@ impl verifier::Trait for Runtime {
 }
 
 parameter_types! {
+	pub const DescendantsUntilFinalized: u8 = 35;
 	pub const VerifyPoW: bool = true;
 }
 
 impl verifier_lightclient::Trait for Runtime {
 	type Event = Event;
+	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type VerifyPoW = VerifyPoW;
 }
 

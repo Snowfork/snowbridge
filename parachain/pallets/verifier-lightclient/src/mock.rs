@@ -99,17 +99,20 @@ impl system::Trait for MockRuntimeWithPoW {
 }
 
 parameter_types! {
+	pub const DescendantsUntilFinalized: u8 = 2;
 	pub const PowDisabled: bool = false;
 	pub const PowEnabled: bool = true;
 }
 
 impl Trait for MockRuntime {
 	type Event = MockEvent;
+	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type VerifyPoW = PowDisabled;
 }
 
 impl Trait for MockRuntimeWithPoW {
 	type Event = MockEvent;
+	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type VerifyPoW = PowEnabled;
 }
 
@@ -126,8 +129,14 @@ pub fn genesis_ethereum_block_hash() -> H256 {
 }
 
 pub fn child_of_genesis_ethereum_header() -> EthereumHeader {
+	child_of_header(&genesis_ethereum_header())
+}
+
+pub fn child_of_header(header: &EthereumHeader) -> EthereumHeader {
 	let mut child: EthereumHeader = Default::default();
-	child.parent_hash = genesis_ethereum_block_hash();
+	child.difficulty = 1.into();
+	child.parent_hash = header.compute_hash();
+	child.number = header.number + 1;
 	child	
 }
 
