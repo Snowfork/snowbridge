@@ -7,7 +7,7 @@
 
 use frame_system::{self as system, ensure_signed};
 use frame_support::{decl_module, decl_storage, decl_event, decl_error,
-	dispatch::DispatchResult, ensure, traits::Get};
+	dispatch::DispatchResult, dispatch::DispatchError, ensure, traits::Get};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
@@ -130,6 +130,8 @@ decl_error! {
 		HeaderOnStaleFork,
 		/// One or more header fields are invalid.
 		InvalidHeader,
+		/// This should never be returned - indicates a bug
+		Unknown,
 	}
 }
 
@@ -170,20 +172,19 @@ impl<T: Trait> Module<T> {
 
 		// TODO: limit N where N = header.number - finalized_header.number
 		// to avoid iterating over long chains here
-		for (ancestor_hash, ancestor) in ancestry::<T>(header.parent_hash) {
-			if ancestor.number > finalized_header_id.number {
-				continue;
-			}
-			// This assertion holds because the AncientHeader check above ensures that
-			// iteration starts at or after the latest finalized block.
-			assert_eq!(ancestor.number, finalized_header_id.number);
-			ensure!(
-				ancestor_hash == finalized_header_id.hash,
-				Error::<T>::HeaderOnStaleFork,
-			);
-			break;
-		}
-
+		let ancestor_at_finalized_number = ancestry::<T>(header.parent_hash)
+			.find(|(_, ancestor)| ancestor.number == finalized_header_id.number);
+		// We must find a matching ancestor above since AncientHeader check ensures
+		// that iteration starts at or after the latest finalized block.
+		ensure!(
+			ancestor_at_finalized_number.is_some(),
+			Error::<T>::Unknown,
+		);
+		ensure!(
+			ancestor_at_finalized_number.unwrap().0 == finalized_header_id.hash,
+			Error::<T>::HeaderOnStaleFork,
+		);
+	
 		if !T::VerifyPoW::get() {
 			return Ok(());
 		}
@@ -259,7 +260,7 @@ impl<T: Trait> Module<T> {
 			let new_finalized_block_id = Self::get_best_finalized_header(
 				&best_block_id,
 				&finalized_block_id,
-			);
+			)?;
 			if new_finalized_block_id != finalized_block_id {
 				FinalizedBlock::put(new_finalized_block_id);
 			}
@@ -284,26 +285,29 @@ impl<T: Trait> Module<T> {
 	fn get_best_finalized_header(
 		best_block_id: &EthereumHeaderId,
 		finalized_block_id: &EthereumHeaderId,
-	) -> EthereumHeaderId {
-		let mut new_finalized_block_id = finalized_block_id.clone();
-
+	) -> Result<EthereumHeaderId, DispatchError> {
 		let required_descendants = T::DescendantsUntilFinalized::get() as usize;
-		for (i, (ancestor_hash, ancestor)) in ancestry::<T>(best_block_id.hash).enumerate() {
-			if i < required_descendants {
-				continue;
+		let maybe_newly_finalized_ancestor = ancestry::<T>(best_block_id.hash)
+			.enumerate()
+			.find_map(|(i, pair)| if i < required_descendants { None } else { Some(pair) });
+		
+		match maybe_newly_finalized_ancestor {
+			Some((hash, header)) => {
+				// The header is newly finalized if it is younger than the current
+				// finalized block
+				if header.number > finalized_block_id.number {
+					return Ok(EthereumHeaderId {
+						hash: hash,
+						number: header.number,
+					});
+				}
+				if hash != finalized_block_id.hash {
+					return Err(Error::<T>::Unknown.into());
+				}
+				Ok(finalized_block_id.clone())
 			}
-			if ancestor.number > finalized_block_id.number {
-				new_finalized_block_id = EthereumHeaderId {
-					hash: ancestor_hash,
-					number: ancestor.number,
-				};
-			} else {
-				assert!(ancestor_hash == finalized_block_id.hash);
-			}
-			break;
+			None => Ok(finalized_block_id.clone())
 		}
-
-		new_finalized_block_id
 	}
 
 	// Remove old headers, from oldest to newest, in the provided range
@@ -359,10 +363,6 @@ impl<T: Trait> Module<T> {
 fn ancestry<T: Trait>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHeader)> {
 	sp_std::iter::from_fn(move || {
 		let header = Headers::<T>::get(&hash)?.header;
-		if header.number == 0 {
-			return None;
-		}
-
 		let current_hash = hash;
 		hash = header.parent_hash;
 		Some((current_hash, header))
