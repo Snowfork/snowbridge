@@ -22,7 +22,7 @@ describe('Bridge', function () {
 
   before(async function () {
 
-    var addrs = require("../build/address.json")
+    var addrs = require("../test-config.json")
     this.ethAppAddress = addrs.ETHApp;
     this.erc20AppAddress = addrs.ERC20App;
     this.tokenAddress = addrs.TestToken;
