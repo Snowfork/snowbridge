@@ -73,11 +73,11 @@ func NewRelay() (*Relay, error) {
 		// channel for headers from ethereum
 		ethHeaders := make(chan chain.Header, 1)
 
-		err := ethChain.WithSender(ethMessages, ethHeaders)
+		err := ethChain.SetSender(ethMessages, ethHeaders)
 		if err != nil {
 			return nil, err
 		}
-		err = subChain.WithReceiver(ethMessages, ethHeaders)
+		err = subChain.SetReceiver(ethMessages, ethHeaders)
 		if err != nil {
 			return nil, err
 		}
@@ -90,11 +90,11 @@ func NewRelay() (*Relay, error) {
 			subMessages = make(chan chain.Message, 1)
 		}
 
-		err := subChain.WithSender(subMessages, nil)
+		err := subChain.SetSender(subMessages, nil)
 		if err != nil {
 			return nil, err
 		}
-		err = ethChain.WithReceiver(subMessages, nil)
+		err = ethChain.SetReceiver(subMessages, nil)
 		if err != nil {
 			return nil, err
 		}

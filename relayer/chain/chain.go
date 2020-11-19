@@ -23,6 +23,6 @@ type Chain interface {
 	Name() string
 	Start(ctx context.Context, eg *errgroup.Group) error
 	Stop()
-	WithReceiver(messages chan Message, headers chan Header) error
-	WithSender(messages chan Message, headers chan Header) error
+	SetReceiver(messages chan Message, headers chan Header) error
+	SetSender(messages chan Message, headers chan Header) error
 }

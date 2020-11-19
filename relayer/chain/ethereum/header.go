@@ -67,7 +67,7 @@ func MakeHeaderFromEthHeader(gethheader *etypes.Header, log *logrus.Entry) (*cha
 		Author:           types.NewH160(gethheader.Coinbase.Bytes()),
 		TransactionsRoot: types.NewH256(gethheader.TxHash.Bytes()),
 		OmmersHash:       types.NewH256(gethheader.UncleHash.Bytes()),
-		ExtraData:        gethheader.Extra,
+		ExtraData:        types.NewBytes(gethheader.Extra),
 		StateRoot:        types.NewH256(gethheader.Root.Bytes()),
 		ReceiptsRoot:     types.NewH256(gethheader.ReceiptHash.Bytes()),
 		LogsBloom:        types.NewBytes256(bloomBytes),
