@@ -1,7 +1,10 @@
 use sp_core::{Pair, Public, sr25519};
 use artemis_runtime::{
-	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
-	SystemConfig, VerifierConfig, VerifierLightclientConfig, WASM_BINARY, Signature
+	AccountId,
+	AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
+	SystemConfig, VerifierConfig, VerifierLightclientConfig,
+	ETHConfig, ERC20Config,
+	WASM_BINARY, Signature
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
@@ -160,5 +163,11 @@ fn testnet_genesis(
 			initial_header: Default::default(),
 			initial_difficulty: 0.into(),
 		}),
+		eth_app: Some(ETHConfig {
+			address: [0; 20]
+		}),
+		erc20_app: Some(ERC20Config {
+			address: [0; 20]
+		})
 	}
 }

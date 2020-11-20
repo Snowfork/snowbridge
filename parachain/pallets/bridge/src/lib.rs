@@ -22,7 +22,6 @@ use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 
 use artemis_core::{
-	registry::{App, lookup_app},
 	AppId, Application, Message, Verifier,
 };
 
@@ -69,9 +68,8 @@ decl_module! {
 		#[weight = 0]
 		pub fn submit(origin, app_id: AppId, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let app = lookup_app(app_id).ok_or(Error::<T>::AppNotFound)?;
 			Self::verify(who, app_id, &message)?;
-			Self::dispatch(app, message)
+			Self::dispatch(app_id, message)
 		}
 
 	}
@@ -83,12 +81,12 @@ impl<T: Trait> Module<T> {
 		T::Verifier::verify(sender, app_id, &message)
 	}
 
-	fn dispatch(app: App, message: Message) -> DispatchResult {
-		match app {
-			App::ETH => T::AppETH::handle(message.payload),
-			App::ERC20 => T::AppERC20::handle(message.payload)
+	fn dispatch(app_id: AppId, message: Message) -> DispatchResult {
+		match app_id {
+			_ if app_id == T::AppETH::address() => T::AppETH::handle(message.payload),
+			_ if app_id == T::AppERC20::address() => T::AppERC20::handle(message.payload),
+			_ => Err(Error::<T>::AppNotFound.into())
 		}
 	}
 
 }
-

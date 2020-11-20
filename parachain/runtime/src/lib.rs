@@ -304,8 +304,8 @@ construct_runtime!(
 		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
 		Asset: asset::{Module, Call, Storage, Event<T>},
-		ETH: eth_app::{Module, Call, Storage, Event<T>},
-		ERC20: erc20_app::{Module, Call, Storage, Event<T>},
+		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
+		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
 	}
 );
 

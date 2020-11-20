@@ -44,7 +44,7 @@ pub trait Trait: system::Trait + asset::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Erc20Module {
-
+		Address get(fn address) config(): [u8; 20];
 	}
 }
 
@@ -102,5 +102,9 @@ impl<T: Trait> Application for Module<T> {
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
 		Self::handle_event(payload_decoded)
+	}
+
+	fn address() -> [u8; 20] {
+		Address::get()
 	}
 }

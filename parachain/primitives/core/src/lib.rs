@@ -11,7 +11,6 @@ use frame_support::dispatch::DispatchResult;
 use sp_std::vec::Vec;
 
 pub mod types;
-pub mod registry;
 
 pub use types::{
 	AppId,
@@ -35,4 +34,6 @@ pub trait Application {
 
 	/// Handle a message payload
 	fn handle(payload: Vec<u8>) -> DispatchResult;
+
+	fn address() -> [u8; 20];
 }
