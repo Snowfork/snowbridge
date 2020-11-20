@@ -72,7 +72,7 @@ func (ch *Chain) SetSender(ethMessages chan<- chain.Message, ethHeaders chan<- c
 	return nil
 }
 
-func (ch *Chain) Start(subInit chan<- chain.Init, ethInit <-chan chain.Init, ctx context.Context, eg *errgroup.Group) error {
+func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, subInit chan<- chain.Init, ethInit <-chan chain.Init) error {
 	err := ch.conn.Connect(ctx)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (ch *Chain) Start(subInit chan<- chain.Init, ethInit <-chan chain.Init, ctx
 		}).Info("Received init params for Ethereum from Substrate")
 
 		if ch.listener != nil {
-			err = ch.listener.Start(ctx, eg)
+			err = ch.listener.Start(ctx, eg, ethInitHeaderID)
 			if err != nil {
 				return err
 			}

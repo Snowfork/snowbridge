@@ -63,7 +63,7 @@ func (ch *Chain) SetSender(subMessages chan<- chain.Message, _ chan<- chain.Head
 	return nil
 }
 
-func (ch *Chain) Start(ethInit chan<- chain.Init, _ <-chan chain.Init, ctx context.Context, eg *errgroup.Group) error {
+func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- chain.Init, _ <-chan chain.Init) error {
 	err := ch.conn.Connect(ctx)
 	if err != nil {
 		return err

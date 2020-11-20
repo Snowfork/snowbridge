@@ -5,6 +5,9 @@ package ethereum
 
 import (
 	"context"
+	"fmt"
+	"math/big"
+	"time"
 
 	geth "github.com/ethereum/go-ethereum"
 	gethCommon "github.com/ethereum/go-ethereum/common"
@@ -34,18 +37,18 @@ func NewListener(conn *Connection, messages chan<- chain.Message, headers chan<-
 	}, nil
 }
 
-func (li *Listener) Start(cxt context.Context, eg *errgroup.Group) error {
+func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, start *HeaderID) error {
 	eg.Go(func() error {
-		return li.pollEventsAndHeaders(cxt)
+		return li.pollEventsAndHeaders(cxt, start)
 	})
 
 	return nil
 }
 
-func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
+func (li *Listener) pollEventsAndHeaders(ctx context.Context, start *HeaderID) error {
 	events := make(chan gethTypes.Log)
 	var eventsSubscriptionErr <-chan error
-	headers := make(chan *gethTypes.Header)
+	headers := make(chan *gethTypes.Header, 5)
 	var headersSubscriptionErr <-chan error
 
 	if li.messages == nil {
@@ -72,12 +75,16 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
 
 	li.log.Info("Polling headers started")
 
+	currentBlock := uint64(start.Number)
+	newestBlock := uint64(0)
 	subscription, err := li.conn.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to subscribe to new headers")
 		return err
 	}
 	headersSubscriptionErr = subscription.Err()
+
+	rateLimit := time.Duration(1) * time.Second
 
 	for {
 		select {
@@ -107,23 +114,44 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
 				li.messages <- *msg
 			}
 		case gethheader := <-headers:
+			blockNumber := gethheader.Number.Uint64()
+			// TODO: Remove panics below
+			// Is it possible to get block X follow by block X - 1?
+			if blockNumber < newestBlock {
+				panic(fmt.Errorf("Witnessed block %v after %v", blockNumber, newestBlock))
+			}
+			newestBlock = blockNumber
 			li.log.WithFields(logrus.Fields{
-				"blockNumber": gethheader.Number,
-			}).Info("Witnessed block header")
-
-			header, err := MakeHeaderFromEthHeader(gethheader, li.log)
+				"blockNumber": blockNumber,
+			}).Info("Witnessed new block header")
+			if blockNumber == currentBlock || blockNumber == currentBlock+1 {
+				li.forwardHeader(gethheader)
+				currentBlock = blockNumber
+			} else if blockNumber < currentBlock {
+				panic(fmt.Errorf("Witnessed block %v after %v", blockNumber, newestBlock))
+			}
+		default:
+			if currentBlock == newestBlock {
+				continue
+			}
+			gethheader, err := li.conn.client.HeaderByNumber(ctx, new(big.Int).SetUint64(currentBlock))
 			if err != nil {
 				li.log.WithFields(logrus.Fields{
-					"blockHash":   gethheader.Hash(),
-					"blockNumber": gethheader.Number,
-				}).Error("Failed to generate header from ethereum header")
-			} else {
-				li.headers <- *header
+					"blockNumber": currentBlock,
+				}).Error("Failed to retrieve old block header")
+				continue
 			}
+			li.log.WithFields(logrus.Fields{
+				"blockNumber": currentBlock,
+			}).Info("Retrieved old block header")
+			li.forwardHeader(gethheader)
+			currentBlock = currentBlock + 1
+			sleep(ctx, rateLimit)
 		}
 	}
 }
 
+<<<<<<< HEAD
 func makeFilterQuery(contracts []Contract) geth.FilterQuery {
 	var addresses []gethCommon.Address
 	var topics []gethCommon.Hash
@@ -133,6 +161,30 @@ func makeFilterQuery(contracts []Contract) geth.FilterQuery {
 		signature := contract.ABI.Events["AppTransfer"].ID.Hex()
 		topics = append(topics, gethCommon.HexToHash(signature))
 	}
+=======
+func sleep(ctx context.Context, delay time.Duration) {
+	select {
+	case <-ctx.Done():
+	case <-time.After(delay):
+	}
+}
+
+func (li *Listener) forwardHeader(gethheader *gethTypes.Header) {
+	header, err := MakeHeaderFromEthHeader(gethheader, li.log)
+	if err != nil {
+		li.log.WithFields(logrus.Fields{
+			"blockHash":   gethheader.Hash(),
+			"blockNumber": gethheader.Number,
+		}).Error("Failed to generate header from ethereum header")
+	} else {
+		li.headers <- *header
+	}
+}
+
+func makeQuery(contract Contract) geth.FilterQuery {
+	signature := contract.ABI.Events["AppTransfer"].ID.Hex()
+	topic := gethCommon.HexToHash(signature)
+>>>>>>> Relay old blocks until catching up to current
 
 	return geth.FilterQuery{
 		Addresses: addresses,

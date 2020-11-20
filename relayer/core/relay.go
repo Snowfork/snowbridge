@@ -134,7 +134,7 @@ func (re *Relay) Start() {
 	ethInit := make(chan chain.Init, 1)
 	subInit := make(chan chain.Init, 1)
 
-	err := re.ethChain.Start(subInit, ethInit, ctx, eg)
+	err := re.ethChain.Start(ctx, eg, subInit, ethInit)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"chain": re.ethChain.Name(),
@@ -144,7 +144,7 @@ func (re *Relay) Start() {
 	}
 	log.WithField("name", re.ethChain.Name()).Info("Started chain")
 
-	err = re.subChain.Start(ethInit, subInit, ctx, eg)
+	err = re.subChain.Start(ctx, eg, ethInit, subInit)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"chain": re.subChain.Name(),
