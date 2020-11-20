@@ -59,8 +59,6 @@ const dumpConfig = async (tmpDir, bridge, ethApp, erc20App, testToken) => {
     return tmpDir
 }
 
-const dumpContractAddresses =
-
 module.exports = async (callback) => {
     try {
         let configDir = process.argv[4].toString();
