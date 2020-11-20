@@ -20,6 +20,7 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch:
 use frame_system::{self as system, ensure_signed};
 
 use sp_std::prelude::*;
+use sp_core::H160;
 
 use artemis_core::{
 	AppId, Application, Message, Verifier,
@@ -69,7 +70,7 @@ decl_module! {
 		pub fn submit(origin, app_id: AppId, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::verify(who, app_id, &message)?;
-			Self::dispatch(app_id, message)
+			Self::dispatch(&app_id.into(), &message)
 		}
 
 	}
@@ -81,10 +82,10 @@ impl<T: Trait> Module<T> {
 		T::Verifier::verify(sender, app_id, &message)
 	}
 
-	fn dispatch(app_id: AppId, message: Message) -> DispatchResult {
-		match app_id {
-			_ if app_id == T::AppETH::address() => T::AppETH::handle(message.payload),
-			_ if app_id == T::AppERC20::address() => T::AppERC20::handle(message.payload),
+	fn dispatch(address: &H160, message: &Message) -> DispatchResult {
+		match address {
+			_ if *address == T::AppETH::address() => T::AppETH::handle(message.payload.as_ref()),
+			_ if *address == T::AppERC20::address() => T::AppERC20::handle(message.payload.as_ref()),
 			_ => Err(Error::<T>::AppNotFound.into())
 		}
 	}

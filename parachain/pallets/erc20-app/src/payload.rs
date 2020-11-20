@@ -23,9 +23,9 @@ pub struct Payload<AccountId: codec::Decode> {
 
 impl<AccountId: codec::Decode> Payload<AccountId> {
 
-	pub fn decode(payload: Vec<u8>) -> Result<Self, DecodeError> {
+	pub fn decode(payload: &[u8]) -> Result<Self, DecodeError> {
 		// Decode ethereum Log event from RLP-encoded data
-		let log: Log = rlp::decode(&payload)?;
+		let log: Log = rlp::decode(payload)?;
 		let tokens = EVENT_ABI.decode(log.topics, log.data)?;
 		let mut tokens_iter = tokens.iter();
 

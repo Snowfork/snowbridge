@@ -110,7 +110,7 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Application for Module<T> {
-	fn handle(payload: Vec<u8>) -> DispatchResult {
+	fn handle(payload: &[u8]) -> DispatchResult {
 		let payload_decoded = Payload::decode(payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 

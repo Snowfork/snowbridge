@@ -6,11 +6,14 @@ configdir=$(mktemp -d -t artemis-config-XXX)
 
 start_ganache()
 {
-    echo "Pulling Ganache image"
-    docker-compose pull -q ganache
-
     echo "Starting Ganache"
-    docker-compose up ganache >$(pwd)/ganache.log 2>&1 &
+    yarn run ganache-cli \
+        --port=8545 \
+        --blockTime=0 \
+        --networkId=344 \
+        --deterministic \
+        --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
+        >ganache.log 2>&1 &
 
     scripts/wait-for-it.sh -t 20 localhost:8545
     sleep 5
@@ -79,5 +82,7 @@ start_relayer
 
 # TODO: Exit when any child process dies
 #  https://stackoverflow.com/questions/37496896/exit-a-bash-script-when-one-of-the-subprocesses-exits
+
+pstree $$
 
 wait
