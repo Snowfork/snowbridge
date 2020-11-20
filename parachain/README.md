@@ -57,33 +57,32 @@ Follow the [Setup](../ethereum/README.md#set-up) guide to do this.
 
 ### Configuration
 
-For a fully operational development chain, further configuration is required.
+For a fully operational chain, further configuration may be required.
 
 #### Ethereum Contract Addresses
 
-Application modules within the parachain are identified by hardcoded identifiers that match contract addresses for Bank applications on Ethereum. These identifiers are used for cross-chain message routing.
+Each application module (ETH, ERC20) within the parachain must be configured with the contract address for its peer application on the Ethereum side. These addresses are included in Genesis storage via the chain spec.
 
-It is necessary to inject these addresses into the build environment so that our build [scripts](https://doc.rust-lang.org/cargo/reference/build-scripts.html) can dynamically generate
-Rust code for message dispatch.
+For development and testing, it is not necessary to configure these. The builtin chain-spec already includes addresses that work out of the box with contracts deployed via `ganache-cli`.
 
-Autmatically:
+To change the config to use your own addresses, follow these steps:
 
-```bash
-eval $(scripts/make-build-config.sh)
-
-# verify that the environment variables are set
-echo $ETH_APP_ID
-echo $ERC20_APP_ID
-```
-
-Or manually (replace example addresses with your own):
+Generate a development chain-spec:
 
 ```bash
-export ETH_APP_ID=0x0d27b0069241c03575669fed1badcbccdc0dd4d1
-export ERC20_APP_ID=0x8fe1b1233f7032cef8cfc5eaaf411dffaa77a07c
+target/debug/artemis-node build-spec --dev > spec.json
 ```
 
-Tip: Use [direnv](https://direnv.net/) to persist these variables in your development environment.
+Edit the generated spec file and replace the following addresses:
+
+```json
+      "ethApp": {
+        "address": "0xfc97a6197dc90bef6bbefd672742ed75e9768553"
+      },
+      "erc20App": {
+        "address": "0xeda338e4dc46038493b885327842fd3e301cab39"
+      }
+```
 
 #### Relayer Key
 
@@ -114,13 +113,13 @@ target/release/artemis-node purge-chain --dev
 Start a dev chain:
 
 ```bash
-target/release/artemis-node --dev
+target/release/artemis-node --tmp --dev
 ```
 
-Or, start a dev chain with detailed logging:
+Or, start a dev chain with a custom chain spec:
 
 ```bash
-RUST_LOG=debug RUST_BACKTRACE=1 target/release/artemis-node -lruntime=debug --dev
+target/release/artemis-node --tmp --spec spec.json
 ```
 
 ## Interacting with the chain

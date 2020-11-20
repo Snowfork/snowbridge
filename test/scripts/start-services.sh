@@ -24,13 +24,11 @@ deploy_contracts()
     echo "Deploying contracts"
     pushd ../ethereum
 
-    truffle deploy --network ganache
+    truffle deploy --network e2e_test
 
     echo "Generating configuration from contracts"
-    truffle exec scripts/dumpTestConfig.js $configdir --network ganache
+    truffle exec scripts/dumpTestConfig.js $configdir --network e2e_test
     popd
-
-    cp $configdir/test-config.json test-config.json
 
     echo "Wrote configuration to $configdir"
 }
@@ -41,9 +39,6 @@ start_parachain()
     echo "Starting Parachain"
     logfile=$(pwd)/parachain.log
     pushd ../parachain
-
-    source $configdir/parachain.env
-    export ETH_APP_ID ERC20_APP_ID
 
     cargo build
     target/debug/artemis-node --tmp --dev >$logfile 2>&1 &

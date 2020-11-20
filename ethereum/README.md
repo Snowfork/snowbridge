@@ -14,11 +14,9 @@ This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge
 
 After starting the blockchain and deploying the contracts, the Bridge's Ethereum component is ready for usage.
 
-
-Install truffle:
-
+Install Ganache
 ```bash
-yarn global add truffle
+yarn global add ganache-cli
 ```
 
 Install dependencies with yarn:
@@ -33,10 +31,15 @@ Set up `.env` file. Note that deploying to ropsten network requires modifying th
 cp .env.example .env
 ```
 
-Start truffle environment containing a local Ethereum network:
+Start a ganache instance:
 
 ```bash
-truffle develop
+ganache-cli \
+    --port=9545 \
+    --blockTime=0 \
+    --networkId=344 \
+    --deterministic \
+    --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove'
 ```
 
 Open a fresh terminal window and deploy the contracts:
@@ -51,7 +54,12 @@ Make sure the truffle environment is running, then run tests
 
 ```bash
 # Start testing environment if it's not already running
-truffle develop
+ganache-cli \
+    --port=9545 \
+    --blockTime=0 \
+    --networkId=344 \
+    --deterministic \
+    --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove'
 
 # In a new terminal, test application gas expenditures
 truffle test test/test_gas.js
