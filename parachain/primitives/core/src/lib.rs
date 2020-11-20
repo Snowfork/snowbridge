@@ -41,6 +41,5 @@ pub trait Application {
 
 pub trait Commitments {
 
-
-	fn add(message: Vec<u8>);
+	fn add(address: H160, payload: &[u8]);
 }
