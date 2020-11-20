@@ -164,10 +164,10 @@ fn testnet_genesis(
 			initial_difficulty: 0.into(),
 		}),
 		eth_app: Some(ETHConfig {
-			address: [0; 20]
+			address: H160::zero()
 		}),
 		erc20_app: Some(ERC20Config {
-			address: [0; 20]
+			address: H160::zero()
 		})
 	}
 }

@@ -9,6 +9,7 @@
 use frame_support::dispatch::DispatchResult;
 
 use sp_std::vec::Vec;
+use sp_core::H160;
 
 pub mod types;
 
@@ -35,5 +36,5 @@ pub trait Application {
 	/// Handle a message payload
 	fn handle(payload: Vec<u8>) -> DispatchResult;
 
-	fn address() -> [u8; 20];
+	fn address() -> H160;
 }
