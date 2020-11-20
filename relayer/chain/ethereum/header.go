@@ -14,6 +14,11 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 )
 
+type HeaderID struct {
+	Number types.U64
+	Hash   types.H256
+}
+
 type Header struct {
 	ParentHash       types.H256
 	Timestamp        types.U64
