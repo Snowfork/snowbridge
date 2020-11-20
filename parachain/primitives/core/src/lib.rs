@@ -37,3 +37,10 @@ pub trait Application {
 
 	fn address() -> H160;
 }
+
+
+pub trait Commitments {
+
+
+	fn add(message: Vec<u8>);
+}

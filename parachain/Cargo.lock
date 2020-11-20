@@ -307,6 +307,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "artemis-messages"
+version = "0.1.0"
+dependencies = [
+ "artemis-core",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-node"
 version = "0.1.1"
 dependencies = [
