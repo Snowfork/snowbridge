@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/tranvictor/ethashproof"
 )
 
 type HeaderID struct {
@@ -41,11 +42,14 @@ type DoubleNodeWithMerkleProof struct {
 	Proof    [][16]byte
 }
 
-func MakeHeaderFromEthHeader(gethheader *etypes.Header, log *logrus.Entry) (*chain.Header, error) {
+func MakeHeaderFromEthHeader(gethheader *etypes.Header, _ *ethashproof.DatasetMerkleTreeCache, log *logrus.Entry) (*chain.Header, error) {
 
 	// Convert Geth types to their Substrate Go client counterparts that match our node
 	if !gethheader.Number.IsUint64() {
 		return nil, fmt.Errorf("gethheader.Number is not uint64")
+	}
+	if !gethheader.Time.IsUint64() {
+		return nil, fmt.Errorf("gethheader.Time is not uint64")
 	}
 
 	var gasUsed, gasLimit big.Int
@@ -67,7 +71,7 @@ func MakeHeaderFromEthHeader(gethheader *etypes.Header, log *logrus.Entry) (*cha
 
 	header := Header{
 		ParentHash:       types.NewH256(gethheader.ParentHash.Bytes()),
-		Timestamp:        types.NewU64(gethheader.Time),
+		Timestamp:        types.NewU64(gethheader.Time.Uint64()),
 		Number:           types.NewU64(gethheader.Number.Uint64()),
 		Author:           types.NewH160(gethheader.Coinbase.Bytes()),
 		TransactionsRoot: types.NewH256(gethheader.TxHash.Bytes()),
