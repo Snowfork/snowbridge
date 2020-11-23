@@ -54,8 +54,8 @@ func NewHeaderChainState(eg *errgroup.Group, currentBlock uint64, newestBlock ui
 
 // GetEthashProofCache returns the cache used for proof generation. It will return
 // immediately if `number` is in the current or next epoch. Outside that range, it
-// will potentially block for multiple minutes to generate the cache. Calling
-// GetEthashproofCache will also update the current epoch to `number` / 30000.
+// might block for multiple minutes to generate the cache. Calling GetEthashproofCache
+// will also update the current epoch to `number` / 30000.
 func (s *HeaderChainState) GetEthashproofCache(number uint64) (*ethashproof.DatasetMerkleTreeCache, error) {
 	epoch := number / 30000
 	cacheState := s.ethashproofCacheState
