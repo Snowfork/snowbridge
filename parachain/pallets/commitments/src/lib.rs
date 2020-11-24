@@ -12,9 +12,11 @@ use artemis_core::Commitments;
 
 use sp_core::{H160, H256};
 use sp_runtime::{
-	traits::Zero,
+	traits::{Zero, Hash},
 	DigestItem
 };
+
+use sp_io::hashing::keccak_256;
 
 use codec::{Encode, Decode};
 
@@ -26,13 +28,20 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+/// Custom DigestItem for header digest
 #[derive(Encode, Decode, Copy, Clone)]
 enum OtherDigestItem {
-	Commitment(H160, H256)
+	/// Message commitment for an application
+	Commitment {
+		/// Application address
+		address: H160,
+		/// Commitment to a set of messages
+		commitment: H256
+	}
 }
 
 pub trait Trait: frame_system::Trait {
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	type PruneInterval: Get<Self::BlockNumber>;
 }
@@ -45,15 +54,11 @@ decl_storage! {
 
 
 decl_event! {
-	pub enum Event<T> where AccountId = <T as frame_system::Trait>::AccountId {
-		SomethingStored(u32, AccountId),
-	}
+	pub enum Event {}
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
-		NoneValue,
-	}
+	pub enum Error for Module<T: Trait> {}
 }
 
 decl_module! {
@@ -62,6 +67,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		// Generate a message commitment every `T::PruneInterval` blocks
 		fn on_initialize(now: T::BlockNumber) -> Weight {
 			if (now % T::PruneInterval::get()).is_zero() {
 				Self::commit()
@@ -75,32 +81,37 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
+	// Generate a message commitment and prune storage
+	// TODO: return proper weight
 	fn commit() -> Weight {
 		let mut digest = <frame_system::Module<T>>::digest();
 
-		for (key, value) in <Self as Store>::Messages::iter() {
+		let mut addresses: Vec<H160> = Vec::new();
 
-			if_std! {
-				println!("key: {:?}", key);
-				println!("value: {:?}", value);
-			}
-			T::Hashing::hash(value.encode())
+		for (address, messages) in <Self as Store>::Messages::iter() {
+			// cache the storage key so we can prune it later
+			addresses.push(address);
+
+			// hash the messages and add a digest item
+			let commitment: H256 = keccak_256(&messages.encode()[..]).into();
+			let item = OtherDigestItem::Commitment{address, commitment};
+			digest.push(DigestItem::Other(item.encode()));
 		}
 
-
-
-		let foo: DigestItem<T::Hash> = DigestItem::Other(Vec::from([0u8; 12]));
-
-		digest.push(foo);
+		// prune messages
+		for address in addresses {
+			<Self as Store>::Messages::remove(address)
+		}
 
 		0
 	}
 }
 
 impl<T: Trait> Commitments for Module<T> {
+
+	// Add a message for eventual inclusion in a commitment
 	fn add(address: H160, payload: &[u8]) {
-		let mut messages: Vec<Vec<u8>> = <Self as Store>::Messages::get(address);
-		messages.push(payload.into());
-		<Self as Store>::Messages::insert(address, messages);
+		let value: Vec<u8> = payload.into();
+		<Self as Store>::Messages::append(address, payload);
 	}
 }
