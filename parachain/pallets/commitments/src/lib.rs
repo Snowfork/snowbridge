@@ -44,7 +44,7 @@ struct Message {
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
-	type PruneInterval: Get<Self::BlockNumber>;
+	type CommitInterval: Get<Self::BlockNumber>;
 }
 
 decl_storage! {
@@ -70,7 +70,7 @@ decl_module! {
 
 		// Generate a message commitment every `T::PruneInterval` blocks
 		fn on_initialize(now: T::BlockNumber) -> Weight {
-			if (now % T::PruneInterval::get()).is_zero() {
+			if (now % T::CommitInterval::get()).is_zero() {
 				Self::commit()
 			} else {
 				0
@@ -85,14 +85,11 @@ impl<T: Trait> Module<T> {
 	// Generate a message commitment
 	// TODO: return proper weight
 	fn commit() -> Weight {
-		let mut digest = <frame_system::Module<T>>::digest();
-		let messages: Vec<Message> = <Self as Store>::Messages::get();
-
+		let messages: Vec<Message> = <Self as Store>::Messages::take();
 		let hash: H256 = keccak_256(messages.encode().as_ref()).into();
-		digest.push(CustomDigestItem::Commitment(hash).into());
 
-		// Prune messages
-		<Self as Store>::Messages::kill();
+		let mut digest = <frame_system::Module<T>>::digest();
+		digest.push(CustomDigestItem::Commitment(hash).into());
 
 		0
 	}
