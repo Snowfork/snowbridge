@@ -13,7 +13,7 @@ use artemis_core::Commitments;
 use sp_core::{H160, H256};
 use sp_runtime::{
 	traits::{Zero, Hash},
-	DigestItem
+	DigestItem as RuntimeDigestItem
 };
 
 use sp_io::hashing::keccak_256;
@@ -30,7 +30,7 @@ mod tests;
 
 /// Custom DigestItem for header digest
 #[derive(Encode, Decode, Copy, Clone)]
-enum OtherDigestItem {
+enum DigestItem {
 	/// Message commitment for an application
 	Commitment {
 		/// Application address
@@ -38,6 +38,12 @@ enum OtherDigestItem {
 		/// Commitment to a set of messages
 		commitment: H256
 	}
+}
+
+impl<Hash> Into<RuntimeDigestItem<Hash>> for DigestItem {
+    fn into(self) -> RuntimeDigestItem<Hash> {
+        RuntimeDigestItem::Other(self.encode())
+    }
 }
 
 pub trait Trait: frame_system::Trait {
@@ -93,8 +99,8 @@ impl<T: Trait> Module<T> {
 
 			// hash the messages and add a digest item
 			let commitment: H256 = keccak_256(&messages.encode()[..]).into();
-			let item = OtherDigestItem::Commitment{address, commitment};
-			digest.push(DigestItem::Other(item.encode()));
+			let item = DigestItem::Commitment{address, commitment};
+			digest.push(item.into());
 		}
 
 		// prune messages
@@ -109,7 +115,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Commitments for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
-	fn add(address: H160, payload: Vec<u8>) {;
+	fn add(address: H160, payload: Vec<u8>) {
 		<Self as Store>::Messages::append(address, payload);
 	}
 }
