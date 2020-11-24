@@ -18,11 +18,12 @@ type Chain struct {
 	listener *Listener
 	writer   *Writer
 	conn     *Connection
+	log      *logrus.Entry
 }
 
 const Name = "Substrate"
 
-func NewChain(config *Config, ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
+func NewChain(config *Config) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
 
 	// Generate keypair from secret
@@ -31,26 +32,33 @@ func NewChain(config *Config, ethMessages chan chain.Message, subMessages chan c
 		return nil, err
 	}
 
-	conn := NewConnection(config.Endpoint, kp.AsKeyringPair(), log)
-
-	listener := NewListener(
-		config,
-		conn,
-		subMessages,
-		log,
-	)
-
-	writer, err := NewWriter(conn, ethMessages, log)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Chain{
 		config:   config,
-		conn:     conn,
-		listener: listener,
-		writer:   writer,
+		conn:     NewConnection(config.Endpoint, kp.AsKeyringPair(), log),
+		listener: nil,
+		writer:   nil,
+		log:      log,
 	}, nil
+}
+
+func (ch *Chain) SetReceiver(ethMessages chan chain.Message, ethHeaders chan chain.Header) error {
+	writer, err := NewWriter(ch.conn, ethMessages, ethHeaders, ch.log)
+	if err != nil {
+		return err
+	}
+	ch.writer = writer
+	return nil
+}
+
+func (ch *Chain) SetSender(subMessages chan chain.Message, _ chan chain.Header) error {
+	listener := NewListener(
+		ch.config,
+		ch.conn,
+		subMessages,
+		ch.log,
+	)
+	ch.listener = listener
+	return nil
 }
 
 func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group) error {
@@ -59,14 +67,18 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	err = ch.listener.Start(ctx, eg)
-	if err != nil {
-		return err
+	if ch.listener != nil {
+		err = ch.listener.Start(ctx, eg)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = ch.writer.Start(ctx, eg)
-	if err != nil {
-		return err
+	if ch.writer != nil {
+		err = ch.writer.Start(ctx, eg)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

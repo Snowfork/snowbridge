@@ -8,6 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
 )
@@ -20,11 +21,21 @@ func runCmd() *cobra.Command {
 		Example: "artemis-relay run",
 		RunE:    RunFn,
 	}
+	cmd.PersistentFlags().Int(
+		"direction",
+		0,
+		"Relay messages bi-directionally (0), from Eth to Sub (1), or from Sub to Eth (2)",
+	)
+	cmd.PersistentFlags().Bool("headers-only", false, "Only forward headers")
 	return cmd
 }
 
-func RunFn(_ *cobra.Command, _ []string) error {
+func RunFn(cmd *cobra.Command, _ []string) error {
 	setupLogging()
+
+	// Bind flags that override their config file counterparts
+	viper.BindPFlag("relay.direction", cmd.Flags().Lookup("direction"))
+	viper.BindPFlag("relay.headers-only", cmd.Flags().Lookup("headers-only"))
 
 	relay, err := core.NewRelay()
 	if err != nil {

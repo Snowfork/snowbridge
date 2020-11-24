@@ -19,47 +19,57 @@ type Chain struct {
 	listener *Listener
 	writer   *Writer
 	conn     *Connection
+	log      *logrus.Entry
 }
 
 const Name = "Ethereum"
 
 // NewChain initializes a new instance of EthChain
-func NewChain(config *Config, ethMessages chan chain.Message, subMessages chan chain.Message) (*Chain, error) {
+func NewChain(config *Config) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
-
-	bridgeContract, err := LoadBridgeContract(config)
-	if err != nil {
-		return nil, err
-	}
-
-	appContracts, err := LoadAppContracts(config)
-	if err != nil {
-		return nil, err
-	}
 
 	kp, err := secp256k1.NewKeypairFromString(config.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	conn := NewConnection(config.Endpoint, kp, log)
-
-	listener, err := NewListener(conn, ethMessages, appContracts, log)
-	if err != nil {
-		return nil, err
-	}
-
-	writer, err := NewWriter(conn, subMessages, bridgeContract, log)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Chain{
 		config:   config,
-		listener: listener,
-		writer:   writer,
-		conn:     conn,
+		listener: nil,
+		writer:   nil,
+		conn:     NewConnection(config.Endpoint, kp, log),
+		log:      log,
 	}, nil
+}
+
+func (ch *Chain) SetReceiver(subMessages chan chain.Message, _ chan chain.Header) error {
+	bridgeContract, err := LoadBridgeContract(ch.config)
+	if err != nil {
+		return err
+	}
+
+	writer, err := NewWriter(ch.conn, subMessages, bridgeContract, ch.log)
+	if err != nil {
+		return err
+	}
+	ch.writer = writer
+
+	return nil
+}
+
+func (ch *Chain) SetSender(ethMessages chan chain.Message, ethHeaders chan chain.Header) error {
+	appContracts, err := LoadAppContracts(ch.config)
+	if err != nil {
+		return err
+	}
+
+	listener, err := NewListener(ch.conn, ethMessages, ethHeaders, appContracts, ch.log)
+	if err != nil {
+		return err
+	}
+	ch.listener = listener
+
+	return nil
 }
 
 func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group) error {
@@ -68,14 +78,18 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	err = ch.listener.Start(ctx, eg)
-	if err != nil {
-		return err
+	if ch.listener != nil {
+		err = ch.listener.Start(ctx, eg)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = ch.writer.Start(ctx, eg)
-	if err != nil {
-		return err
+	if ch.writer != nil {
+		err = ch.writer.Start(ctx, eg)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -14,8 +14,15 @@ type Message struct {
 	Payload interface{}
 }
 
+type Header struct {
+	HeaderData interface{}
+	ProofData  interface{}
+}
+
 type Chain interface {
 	Name() string
 	Start(ctx context.Context, eg *errgroup.Group) error
 	Stop()
+	SetReceiver(messages chan Message, headers chan Header) error
+	SetSender(messages chan Message, headers chan Header) error
 }

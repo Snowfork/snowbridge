@@ -12,9 +12,9 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/sirupsen/logrus"
 	"github.com/centrifuge/go-substrate-rpc-client/scale"
 	types "github.com/centrifuge/go-substrate-rpc-client/types"
+	"github.com/sirupsen/logrus"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 )
 
@@ -45,6 +45,11 @@ func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (li *Listener) pollBlocks(ctx context.Context) error {
+	if li.messages == nil {
+		li.log.Info("Not polling events since channel is nil")
+		return nil
+	}
+
 	storageKey, err := types.CreateStorageKey(&li.conn.metadata, "System", "Events", nil, nil)
 	if err != nil {
 		return err
