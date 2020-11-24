@@ -226,6 +226,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "artemis-commitments"
+version = "0.1.0"
+dependencies = [
+ "artemis-core",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-core"
 version = "0.1.1"
 dependencies = [
@@ -304,20 +318,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "tiny-keccak 2.0.2",
-]
-
-[[package]]
-name = "artemis-messages"
-version = "0.1.0"
-dependencies = [
- "artemis-core",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
