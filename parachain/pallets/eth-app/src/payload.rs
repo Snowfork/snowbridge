@@ -69,7 +69,7 @@ mod tests {
 
 	#[test]
 	fn test_decode() {
-		assert_eq!(Payload::decode(LOG_DATA.to_vec()).unwrap(),
+		assert_eq!(Payload::decode(&LOG_DATA).unwrap(),
 			Payload {
 				sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 				recipient_addr: hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
