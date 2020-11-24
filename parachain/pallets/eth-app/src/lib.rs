@@ -93,12 +93,12 @@ decl_module! {
 			let asset_id: BridgedAssetId = H160::zero();
 			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
 
-			let msg = Message {
+			let message = Message {
 				sender: who.clone(),
 				recipient: recipient,
 				amount: amount
 			};
-			T::Commitments::add(Self::address(), msg.encode());
+			T::Commitments::add(Self::address(), message.encode());
 
 			Self::deposit_event(RawEvent::Transfer(who.clone(), recipient, amount));
 			Ok(())
