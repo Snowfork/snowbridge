@@ -3,7 +3,6 @@
 use sp_std::prelude::*;
 use frame_support::{
 	decl_module, decl_storage, decl_event, decl_error,
-	storage::IterableStorageMap,
 	weights::Weight,
 	traits::Get
 };
@@ -27,19 +26,19 @@ mod tests;
 /// Custom DigestItem for header digest
 #[derive(Encode, Decode, Copy, Clone)]
 enum CustomDigestItem {
-	/// Message commitment for an application
-	Commitment {
-		/// Application address
-		address: H160,
-		/// Commitment to a set of messages
-		commitment: H256
-	}
+	Commitment(H256)
 }
 
 impl<T> Into<DigestItem<T>> for CustomDigestItem {
     fn into(self) -> DigestItem<T> {
         DigestItem::Other(self.encode())
     }
+}
+
+#[derive(Encode, Decode, Clone)]
+struct Message {
+	address: H160,
+	payload: Vec<u8>,
 }
 
 pub trait Trait: frame_system::Trait {
@@ -51,7 +50,7 @@ pub trait Trait: frame_system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as Commitments {
 		/// messages for an application
-		Messages: map hasher(identity) H160 => Vec<Vec<u8>>;
+		Messages: Vec<Message>
 	}
 }
 
@@ -83,27 +82,17 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	// Generate a message commitment and prune storage
+	// Generate a message commitment
 	// TODO: return proper weight
 	fn commit() -> Weight {
 		let mut digest = <frame_system::Module<T>>::digest();
+		let messages: Vec<Message> = <Self as Store>::Messages::get();
 
-		let mut addresses: Vec<H160> = Vec::new();
+		let hash: H256 = keccak_256(messages.encode().as_ref()).into();
+		digest.push(CustomDigestItem::Commitment(hash).into());
 
-		for (address, messages) in <Self as Store>::Messages::iter() {
-			// cache the storage key so we can prune it later
-			addresses.push(address);
-
-			// hash the messages and add a digest item
-			let commitment: H256 = keccak_256(messages.encode().as_ref()).into();
-			let item = CustomDigestItem::Commitment { address, commitment };
-			digest.push(item.into());
-		}
-
-		// prune messages
-		for address in addresses {
-			<Self as Store>::Messages::remove(address)
-		}
+		// Prune messages
+		<Self as Store>::Messages::kill();
 
 		0
 	}
@@ -113,6 +102,6 @@ impl<T: Trait> Commitments for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
 	fn add(address: H160, payload: Vec<u8>) {
-		<Self as Store>::Messages::append(address, payload);
+		<Self as Store>::Messages::append(Message { address, payload });
 	}
 }
