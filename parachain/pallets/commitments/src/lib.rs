@@ -4,23 +4,19 @@ use sp_std::prelude::*;
 use frame_support::{
 	decl_module, decl_storage, decl_event, decl_error,
 	storage::IterableStorageMap,
-	dispatch,
 	weights::Weight,
 	traits::Get
 };
-use artemis_core::Commitments;
-
-use sp_core::{H160, H256};
-use sp_runtime::{
-	traits::{Zero, Hash},
-	DigestItem as RuntimeDigestItem
-};
 
 use sp_io::hashing::keccak_256;
+use sp_core::{H160, H256};
+use sp_runtime::{
+	traits::Zero,
+	DigestItem
+};
 
 use codec::{Encode, Decode};
-
-use sp_std::if_std;
+use artemis_core::Commitments;
 
 #[cfg(test)]
 mod mock;
@@ -30,7 +26,7 @@ mod tests;
 
 /// Custom DigestItem for header digest
 #[derive(Encode, Decode, Copy, Clone)]
-enum DigestItem {
+enum CustomDigestItem {
 	/// Message commitment for an application
 	Commitment {
 		/// Application address
@@ -40,9 +36,9 @@ enum DigestItem {
 	}
 }
 
-impl<Hash> Into<RuntimeDigestItem<Hash>> for DigestItem {
-    fn into(self) -> RuntimeDigestItem<Hash> {
-        RuntimeDigestItem::Other(self.encode())
+impl<T> Into<DigestItem<T>> for CustomDigestItem {
+    fn into(self) -> DigestItem<T> {
+        DigestItem::Other(self.encode())
     }
 }
 
@@ -54,6 +50,7 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Commitments {
+		/// messages for an application
 		Messages: map hasher(identity) H160 => Vec<Vec<u8>>;
 	}
 }
@@ -98,8 +95,8 @@ impl<T: Trait> Module<T> {
 			addresses.push(address);
 
 			// hash the messages and add a digest item
-			let commitment: H256 = keccak_256(&messages.encode()[..]).into();
-			let item = DigestItem::Commitment{address, commitment};
+			let commitment: H256 = keccak_256(messages.encode().as_ref()).into();
+			let item = CustomDigestItem::Commitment { address, commitment };
 			digest.push(item.into());
 		}
 
