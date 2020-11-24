@@ -52,7 +52,6 @@ decl_storage! {
 	}
 }
 
-
 decl_event! {
 	pub enum Event {}
 }
@@ -110,8 +109,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Commitments for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
-	fn add(address: H160, payload: &[u8]) {
-		let value: Vec<u8> = payload.into();
+	fn add(address: H160, payload: Vec<u8>) {;
 		<Self as Store>::Messages::append(address, payload);
 	}
 }

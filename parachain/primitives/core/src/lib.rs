@@ -8,6 +8,8 @@
 
 use frame_support::dispatch::DispatchResult;
 
+use sp_std::prelude::*;
+
 use sp_core::H160;
 
 pub mod types;
@@ -41,5 +43,5 @@ pub trait Application {
 
 pub trait Commitments {
 
-	fn add(address: H160, payload: &[u8]);
+	fn add(address: H160, payload: Vec<u8>);
 }

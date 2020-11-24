@@ -27,7 +27,9 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 
-use artemis_core::{Application, BridgedAssetId};
+use codec::{Encode, Decode};
+
+use artemis_core::{Application, BridgedAssetId, Commitments};
 use artemis_asset as asset;
 
 mod payload;
@@ -39,8 +41,19 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[derive(Encode, Decode, Clone)]
+struct Message<AccountId> {
+	token: H160,
+	sender: AccountId,
+	recipient: H160,
+	amount: U256,
+}
+
+
 pub trait Trait: system::Trait + asset::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+	type Commitments: Commitments;
 }
 
 decl_storage! {
@@ -88,6 +101,15 @@ decl_module! {
 			}
 
 			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
+
+			let msg = Message {
+				token: asset_id,
+				sender: who.clone(),
+				recipient: recipient,
+				amount: amount
+			};
+			T::Commitments::add(Self::address(), msg.encode());
+
 			Self::deposit_event(RawEvent::Transfer(asset_id, who.clone(), recipient, amount));
 			Ok(())
 		}
