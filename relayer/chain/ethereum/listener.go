@@ -44,7 +44,10 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group) error {
 
 func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
 	events := make(chan gethTypes.Log)
-	subscriptionEvents := *new(geth.Subscription)
+	var eventsSubscriptionErr <-chan error
+	headers := make(chan *gethTypes.Header)
+	var headersSubscriptionErr <-chan error
+
 	if li.messages == nil {
 		li.log.Info("Not polling events since channel is nil")
 	} else {
@@ -53,11 +56,11 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
 		query := makeFilterQuery(li.contracts)
 
 		subscription, err := li.conn.client.SubscribeFilterLogs(ctx, query, events)
-		subscriptionEvents = subscription
 		if err != nil {
 			li.log.WithError(err).Error("Failed to subscribe to application events")
 			return err
 		}
+		eventsSubscriptionErr = subscription.Err()
 
 		for _, contract := range li.contracts {
 			li.log.WithFields(logrus.Fields{
@@ -67,23 +70,23 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
 		}
 	}
 
-	headers := make(chan *gethTypes.Header)
-	subscriptionHeaders, err := li.conn.client.SubscribeNewHead(ctx, headers)
+	li.log.Info("Polling headers started")
+
+	subscription, err := li.conn.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to subscribe to new headers")
 		return err
 	}
-
-	li.log.Info("Polling headers started")
+	headersSubscriptionErr = subscription.Err()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case err := <-subscriptionEvents.Err():
+		case err := <-eventsSubscriptionErr:
 			li.log.WithError(err).Error("Events subscription terminated")
 			return err
-		case err := <-subscriptionHeaders.Err():
+		case err := <-headersSubscriptionErr:
 			li.log.WithError(err).Error("Headers subscription terminated")
 			return err
 		case event := <-events:
