@@ -5,6 +5,7 @@ package ethereum
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"golang.org/x/sync/errgroup"
@@ -86,7 +87,7 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, subInit chan<- c
 		ethInitHeaderID := (<-ethInit).(*HeaderID)
 		ch.log.WithFields(logrus.Fields{
 			"blockNumber": ethInitHeaderID.Number,
-			"blockHash":   ethInitHeaderID.Hash,
+			"blockHash":   hex.EncodeToString(ethInitHeaderID.Hash[:]),
 		}).Info("Received init params for Ethereum from Substrate")
 
 		if ch.listener != nil {

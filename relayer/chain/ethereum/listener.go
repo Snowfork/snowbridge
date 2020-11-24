@@ -5,9 +5,7 @@ package ethereum
 
 import (
 	"context"
-	"fmt"
 	"math/big"
-	"time"
 
 	geth "github.com/ethereum/go-ethereum"
 	gethCommon "github.com/ethereum/go-ethereum/common"
@@ -84,8 +82,6 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, start *HeaderID) e
 	}
 	headersSubscriptionErr = subscription.Err()
 
-	rateLimit := time.Duration(1) * time.Second
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -115,20 +111,13 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, start *HeaderID) e
 			}
 		case gethheader := <-headers:
 			blockNumber := gethheader.Number.Uint64()
-			// TODO: Remove panics below
-			// Is it possible to get block X follow by block X - 1?
-			if blockNumber < newestBlock {
-				panic(fmt.Errorf("Witnessed block %v after %v", blockNumber, newestBlock))
-			}
 			newestBlock = blockNumber
 			li.log.WithFields(logrus.Fields{
 				"blockNumber": blockNumber,
 			}).Info("Witnessed new block header")
-			if blockNumber == currentBlock || blockNumber == currentBlock+1 {
+			if blockNumber <= currentBlock+1 {
 				li.forwardHeader(gethheader)
 				currentBlock = blockNumber
-			} else if blockNumber < currentBlock {
-				panic(fmt.Errorf("Witnessed block %v after %v", blockNumber, newestBlock))
 			}
 		default:
 			if currentBlock == newestBlock {
@@ -139,33 +128,14 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, start *HeaderID) e
 				li.log.WithFields(logrus.Fields{
 					"blockNumber": currentBlock,
 				}).Error("Failed to retrieve old block header")
-				continue
+			} else {
+				li.log.WithFields(logrus.Fields{
+					"blockNumber": currentBlock,
+				}).Info("Retrieved old block header")
+				li.forwardHeader(gethheader)
+				currentBlock = currentBlock + 1
 			}
-			li.log.WithFields(logrus.Fields{
-				"blockNumber": currentBlock,
-			}).Info("Retrieved old block header")
-			li.forwardHeader(gethheader)
-			currentBlock = currentBlock + 1
-			sleep(ctx, rateLimit)
 		}
-	}
-}
-
-<<<<<<< HEAD
-func makeFilterQuery(contracts []Contract) geth.FilterQuery {
-	var addresses []gethCommon.Address
-	var topics []gethCommon.Hash
-
-	for _, contract := range contracts {
-		addresses = append(addresses, contract.Address)
-		signature := contract.ABI.Events["AppTransfer"].ID.Hex()
-		topics = append(topics, gethCommon.HexToHash(signature))
-	}
-=======
-func sleep(ctx context.Context, delay time.Duration) {
-	select {
-	case <-ctx.Done():
-	case <-time.After(delay):
 	}
 }
 
@@ -181,10 +151,15 @@ func (li *Listener) forwardHeader(gethheader *gethTypes.Header) {
 	}
 }
 
-func makeQuery(contract Contract) geth.FilterQuery {
-	signature := contract.ABI.Events["AppTransfer"].ID.Hex()
-	topic := gethCommon.HexToHash(signature)
->>>>>>> Relay old blocks until catching up to current
+func makeFilterQuery(contracts []Contract) geth.FilterQuery {
+	var addresses []gethCommon.Address
+	var topics []gethCommon.Hash
+
+	for _, contract := range contracts {
+		addresses = append(addresses, contract.Address)
+		signature := contract.ABI.Events["AppTransfer"].ID.Hex()
+		topics = append(topics, gethCommon.HexToHash(signature))
+	}
 
 	return geth.FilterQuery{
 		Addresses: addresses,

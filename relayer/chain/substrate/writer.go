@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/centrifuge/go-substrate-rpc-client/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 )
 
 type Writer struct {
@@ -21,6 +23,7 @@ type Writer struct {
 	messages <-chan chain.Message
 	headers  <-chan chain.Header
 	log      *logrus.Entry
+	nonce    uint32
 }
 
 func NewWriter(conn *Connection, messages <-chan chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
@@ -29,6 +32,7 @@ func NewWriter(conn *Connection, messages <-chan chain.Message, headers <-chan c
 		messages: messages,
 		headers:  headers,
 		log:      log,
+		nonce:    0,
 	}, nil
 }
 
@@ -56,7 +60,8 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 			err := wr.WriteHeader(ctx, &header)
 			if err != nil {
 				wr.log.WithFields(logrus.Fields{
-					"error": err,
+					"blockNumber": header.HeaderData.(ethereum.Header).Number,
+					"error":       err,
 				}).Error("Failure submitting header to substrate")
 			}
 		}
@@ -64,7 +69,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 }
 
 // Write submits a transaction to the chain
-func (wr *Writer) write(c types.Call) error {
+func (wr *Writer) write(ctx context.Context, c types.Call) error {
 
 	ext := types.NewExtrinsic(c)
 
@@ -85,16 +90,32 @@ func (wr *Writer) write(c types.Call) error {
 		return err
 	}
 
-	var accountInfo types.AccountInfo
-	ok, err := wr.conn.api.RPC.State.GetStorageLatest(key, &accountInfo)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return fmt.Errorf("no account info found for %s", wr.conn.kp.URI)
-	}
+	// Poll account state until we have a new nonce. This matches our extrinsic
+	// sending rate with the node's extrinsic processing rate, and avoids
+	// the transaction being dropped from the node's transaction pool.
+	var nonce uint32
+	for {
+		var accountInfo types.AccountInfo
+		ok, err := wr.conn.api.RPC.State.GetStorageLatest(key, &accountInfo)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("no account info found for %s", wr.conn.kp.URI)
+		}
 
-	nonce := uint32(accountInfo.Nonce)
+		nonce = uint32(accountInfo.Nonce)
+		if nonce != wr.nonce {
+			wr.nonce = nonce
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Duration(1) * time.Second):
+		}
+	}
 
 	o := types.SignatureOptions{
 		BlockHash:          genesisHash,
@@ -122,13 +143,13 @@ func (wr *Writer) write(c types.Call) error {
 }
 
 // WriteMessage submits a "Bridge.submit" call
-func (wr *Writer) WriteMessage(_ context.Context, msg *chain.Message) error {
+func (wr *Writer) WriteMessage(ctx context.Context, msg *chain.Message) error {
 	c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", msg.AppID, msg.Payload)
 	if err != nil {
 		return err
 	}
 
-	err = wr.write(c)
+	err = wr.write(ctx, c)
 	if err != nil {
 		return err
 	}
@@ -141,18 +162,45 @@ func (wr *Writer) WriteMessage(_ context.Context, msg *chain.Message) error {
 }
 
 // WriteHeader submits a "VerifierLightclient.import_header" call
-func (wr *Writer) WriteHeader(_ context.Context, header *chain.Header) error {
+func (wr *Writer) WriteHeader(ctx context.Context, header *chain.Header) error {
 	c, err := types.NewCall(&wr.conn.metadata, "VerifierLightclient.import_header", header.HeaderData, header.ProofData)
 	if err != nil {
 		return err
 	}
 
-	err = wr.write(c)
-	if err != nil {
-		return err
+	retries := 0
+	for {
+		err := wr.write(ctx, c)
+		if err != nil {
+			wr.log.WithFields(logrus.Fields{
+				"blockNumber": header.HeaderData.(ethereum.Header).Number,
+				"error":       err,
+				"retries":     retries,
+			}).Error("Failure submitting header to substrate")
+		} else {
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(getHeaderBackoffDelay(retries)):
+		}
+		retries = retries + 1
 	}
 
-	wr.log.Info("Submitted header to Substrate")
+	wr.log.WithFields(logrus.Fields{
+		"blockNumber": header.HeaderData.(ethereum.Header).Number,
+	}).Info("Submitted header to Substrate")
 
 	return nil
+}
+
+func getHeaderBackoffDelay(retryCount int) time.Duration {
+	backoff := []int{1, 1, 5, 5, 30, 30, 60} // seconds
+
+	if retryCount < len(backoff)-1 {
+		return time.Duration(backoff[retryCount]) * time.Second
+	}
+	return time.Duration(backoff[len(backoff)-1]) * time.Second
 }
