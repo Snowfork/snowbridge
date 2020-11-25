@@ -5,6 +5,7 @@ package ethereum
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"golang.org/x/sync/errgroup"
@@ -42,7 +43,7 @@ func NewChain(config *Config) (*Chain, error) {
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(subMessages chan chain.Message, _ chan chain.Header) error {
+func (ch *Chain) SetReceiver(subMessages <-chan chain.Message, _ <-chan chain.Header) error {
 	bridgeContract, err := LoadBridgeContract(ch.config)
 	if err != nil {
 		return err
@@ -57,7 +58,7 @@ func (ch *Chain) SetReceiver(subMessages chan chain.Message, _ chan chain.Header
 	return nil
 }
 
-func (ch *Chain) SetSender(ethMessages chan chain.Message, ethHeaders chan chain.Header) error {
+func (ch *Chain) SetSender(ethMessages chan<- chain.Message, ethHeaders chan<- chain.Header) error {
 	appContracts, err := LoadAppContracts(ch.config)
 	if err != nil {
 		return err
@@ -72,25 +73,39 @@ func (ch *Chain) SetSender(ethMessages chan chain.Message, ethHeaders chan chain
 	return nil
 }
 
-func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group) error {
+func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, subInit chan<- chain.Init, ethInit <-chan chain.Init) error {
 	err := ch.conn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	if ch.listener != nil {
-		err = ch.listener.Start(ctx, eg)
-		if err != nil {
-			return err
-		}
-	}
+	// If the Substrate chain needs init params from Ethereum,
+	// retrieve them here and send to subInit before closing.
+	close(subInit)
 
-	if ch.writer != nil {
-		err = ch.writer.Start(ctx, eg)
-		if err != nil {
-			return err
+	eg.Go(func() error {
+		ethInitHeaderID := (<-ethInit).(*HeaderID)
+		ch.log.WithFields(logrus.Fields{
+			"blockNumber": ethInitHeaderID.Number,
+			"blockHash":   hex.EncodeToString(ethInitHeaderID.Hash[:]),
+		}).Info("Received init params for Ethereum from Substrate")
+
+		if ch.listener != nil {
+			err = ch.listener.Start(ctx, eg, ethInitHeaderID)
+			if err != nil {
+				return err
+			}
 		}
-	}
+
+		if ch.writer != nil {
+			err = ch.writer.Start(ctx, eg)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 
 	return nil
 }

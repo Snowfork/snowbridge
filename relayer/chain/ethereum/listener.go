@@ -5,6 +5,7 @@ package ethereum
 
 import (
 	"context"
+	"math/big"
 
 	geth "github.com/ethereum/go-ethereum"
 	gethCommon "github.com/ethereum/go-ethereum/common"
@@ -34,18 +35,18 @@ func NewListener(conn *Connection, messages chan<- chain.Message, headers chan<-
 	}, nil
 }
 
-func (li *Listener) Start(cxt context.Context, eg *errgroup.Group) error {
+func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, start *HeaderID) error {
 	eg.Go(func() error {
-		return li.pollEventsAndHeaders(cxt)
+		return li.pollEventsAndHeaders(cxt, start)
 	})
 
 	return nil
 }
 
-func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
+func (li *Listener) pollEventsAndHeaders(ctx context.Context, start *HeaderID) error {
 	events := make(chan gethTypes.Log)
 	var eventsSubscriptionErr <-chan error
-	headers := make(chan *gethTypes.Header)
+	headers := make(chan *gethTypes.Header, 5)
 	var headersSubscriptionErr <-chan error
 
 	if li.messages == nil {
@@ -72,6 +73,8 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
 
 	li.log.Info("Polling headers started")
 
+	currentBlock := uint64(start.Number)
+	newestBlock := uint64(0)
 	subscription, err := li.conn.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to subscribe to new headers")
@@ -107,20 +110,44 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context) error {
 				li.messages <- *msg
 			}
 		case gethheader := <-headers:
+			blockNumber := gethheader.Number.Uint64()
+			newestBlock = blockNumber
 			li.log.WithFields(logrus.Fields{
-				"blockNumber": gethheader.Number,
-			}).Info("Witnessed block header")
-
-			header, err := MakeHeaderFromEthHeader(gethheader, li.log)
+				"blockNumber": blockNumber,
+			}).Info("Witnessed new block header")
+			if blockNumber <= currentBlock+1 {
+				li.forwardHeader(gethheader)
+				currentBlock = blockNumber
+			}
+		default:
+			if currentBlock == newestBlock {
+				continue
+			}
+			gethheader, err := li.conn.client.HeaderByNumber(ctx, new(big.Int).SetUint64(currentBlock))
 			if err != nil {
 				li.log.WithFields(logrus.Fields{
-					"blockHash":   gethheader.Hash(),
-					"blockNumber": gethheader.Number,
-				}).Error("Failed to generate header from ethereum header")
+					"blockNumber": currentBlock,
+				}).Error("Failed to retrieve old block header")
 			} else {
-				li.headers <- *header
+				li.log.WithFields(logrus.Fields{
+					"blockNumber": currentBlock,
+				}).Info("Retrieved old block header")
+				li.forwardHeader(gethheader)
+				currentBlock = currentBlock + 1
 			}
 		}
+	}
+}
+
+func (li *Listener) forwardHeader(gethheader *gethTypes.Header) {
+	header, err := MakeHeaderFromEthHeader(gethheader, li.log)
+	if err != nil {
+		li.log.WithFields(logrus.Fields{
+			"blockHash":   gethheader.Hash(),
+			"blockNumber": gethheader.Number,
+		}).Error("Failed to generate header from ethereum header")
+	} else {
+		li.headers <- *header
 	}
 }
 

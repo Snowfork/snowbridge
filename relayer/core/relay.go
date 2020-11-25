@@ -24,7 +24,8 @@ import (
 )
 
 type Relay struct {
-	chains []chain.Chain
+	ethChain chain.Chain
+	subChain chain.Chain
 }
 
 type Direction int
@@ -101,7 +102,8 @@ func NewRelay() (*Relay, error) {
 	}
 
 	return &Relay{
-		chains: []chain.Chain{ethChain, subChain},
+		ethChain: ethChain,
+		subChain: subChain,
 	}, nil
 }
 
@@ -127,17 +129,30 @@ func (re *Relay) Start() {
 		return nil
 	})
 
-	for _, chain := range re.chains {
-		err := chain.Start(ctx, eg)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"chain": chain.Name(),
-				"error": err,
-			}).Error("Failed to start chain")
-			return
-		}
-		log.WithField("name", chain.Name()).Info("Started chain")
+	// Short-lived channels that communicate initialization parameters
+	// between the two chains. The chains close them after startup.
+	ethInit := make(chan chain.Init, 1)
+	subInit := make(chan chain.Init, 1)
+
+	err := re.ethChain.Start(ctx, eg, subInit, ethInit)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"chain": re.ethChain.Name(),
+			"error": err,
+		}).Error("Failed to start chain")
+		return
 	}
+	log.WithField("name", re.ethChain.Name()).Info("Started chain")
+
+	err = re.subChain.Start(ctx, eg, ethInit, subInit)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"chain": re.subChain.Name(),
+			"error": err,
+		}).Error("Failed to start chain")
+		return
+	}
+	log.WithField("name", re.subChain.Name()).Info("Started chain")
 
 	// Wait until a fatal error or signal is raised
 	if err := eg.Wait(); err != nil {
@@ -147,9 +162,8 @@ func (re *Relay) Start() {
 	}
 
 	// Shutdown chains
-	for _, chain := range re.chains {
-		chain.Stop()
-	}
+	re.ethChain.Stop()
+	re.subChain.Stop()
 }
 
 func loadConfig() (*Config, error) {

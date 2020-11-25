@@ -62,7 +62,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as VerifierModule {
+	trait Store for Module<T: Trait> as VerifierLightclient {
 		/// Best known block.
 		BestBlock: (EthereumHeaderId, U256);
 		/// Range of blocks that we want to prune.
