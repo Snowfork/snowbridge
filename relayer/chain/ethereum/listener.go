@@ -5,6 +5,7 @@ package ethereum
 
 import (
 	"context"
+	"math/big"
 
 	geth "github.com/ethereum/go-ethereum"
 	gethCommon "github.com/ethereum/go-ethereum/common"
@@ -20,52 +21,76 @@ type Listener struct {
 	conn      *Connection
 	contracts []Contract
 	messages  chan<- chain.Message
+	headers   chan<- chain.Header
 	log       *logrus.Entry
 }
 
-func NewListener(conn *Connection, messages chan<- chain.Message, contracts []Contract, log *logrus.Entry) (*Listener, error) {
+func NewListener(conn *Connection, messages chan<- chain.Message, headers chan<- chain.Header, contracts []Contract, log *logrus.Entry) (*Listener, error) {
 	return &Listener{
 		conn:      conn,
 		contracts: contracts,
 		messages:  messages,
+		headers:   headers,
 		log:       log,
 	}, nil
 }
 
-func (li *Listener) Start(cxt context.Context, eg *errgroup.Group) error {
+func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, start *HeaderID) error {
 	eg.Go(func() error {
-		return li.pollEvents(cxt)
+		return li.pollEventsAndHeaders(cxt, start)
 	})
 
 	return nil
 }
 
-func (li *Listener) pollEvents(ctx context.Context) error {
-	li.log.Info("Polling started")
-
-	query := makeFilterQuery(li.contracts)
-
+func (li *Listener) pollEventsAndHeaders(ctx context.Context, start *HeaderID) error {
 	events := make(chan gethTypes.Log)
+	var eventsSubscriptionErr <-chan error
+	headers := make(chan *gethTypes.Header, 5)
+	var headersSubscriptionErr <-chan error
 
-	subscription, err := li.conn.client.SubscribeFilterLogs(ctx, query, events)
+	if li.messages == nil {
+		li.log.Info("Not polling events since channel is nil")
+	} else {
+		li.log.Info("Polling events started")
+
+		query := makeFilterQuery(li.contracts)
+
+		subscription, err := li.conn.client.SubscribeFilterLogs(ctx, query, events)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to subscribe to application events")
+			return err
+		}
+		eventsSubscriptionErr = subscription.Err()
+
+		for _, contract := range li.contracts {
+			li.log.WithFields(logrus.Fields{
+				"addresses":    contract.Address.Hex(),
+				"contractName": contract.Name,
+			}).Debug("Subscribed to contract events")
+		}
+	}
+
+	li.log.Info("Polling headers started")
+
+	currentBlock := uint64(start.Number)
+	newestBlock := uint64(0)
+	subscription, err := li.conn.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
-		li.log.WithError(err).Error("Failed to subscribe to application events")
+		li.log.WithError(err).Error("Failed to subscribe to new headers")
 		return err
 	}
-
-	for _, contract := range li.contracts {
-		li.log.WithFields(logrus.Fields{
-			"addresses":    contract.Address.Hex(),
-			"contractName": contract.Name,
-		}).Debug("Subscribed to contract events")
-	}
+	headersSubscriptionErr = subscription.Err()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case err := <-subscription.Err():
-			li.log.WithError(err).Error("Subscription terminated")
+		case err := <-eventsSubscriptionErr:
+			li.log.WithError(err).Error("Events subscription terminated")
+			return err
+		case err := <-headersSubscriptionErr:
+			li.log.WithError(err).Error("Headers subscription terminated")
 			return err
 		case event := <-events:
 			li.log.WithFields(logrus.Fields{
@@ -84,7 +109,45 @@ func (li *Listener) pollEvents(ctx context.Context) error {
 			} else {
 				li.messages <- *msg
 			}
+		case gethheader := <-headers:
+			blockNumber := gethheader.Number.Uint64()
+			newestBlock = blockNumber
+			li.log.WithFields(logrus.Fields{
+				"blockNumber": blockNumber,
+			}).Info("Witnessed new block header")
+			if blockNumber <= currentBlock+1 {
+				li.forwardHeader(gethheader)
+				currentBlock = blockNumber
+			}
+		default:
+			if currentBlock == newestBlock {
+				continue
+			}
+			gethheader, err := li.conn.client.HeaderByNumber(ctx, new(big.Int).SetUint64(currentBlock))
+			if err != nil {
+				li.log.WithFields(logrus.Fields{
+					"blockNumber": currentBlock,
+				}).Error("Failed to retrieve old block header")
+			} else {
+				li.log.WithFields(logrus.Fields{
+					"blockNumber": currentBlock,
+				}).Info("Retrieved old block header")
+				li.forwardHeader(gethheader)
+				currentBlock = currentBlock + 1
+			}
 		}
+	}
+}
+
+func (li *Listener) forwardHeader(gethheader *gethTypes.Header) {
+	header, err := MakeHeaderFromEthHeader(gethheader, li.log)
+	if err != nil {
+		li.log.WithFields(logrus.Fields{
+			"blockHash":   gethheader.Hash(),
+			"blockNumber": gethheader.Number,
+		}).Error("Failed to generate header from ethereum header")
+	} else {
+		li.headers <- *header
 	}
 }
 
