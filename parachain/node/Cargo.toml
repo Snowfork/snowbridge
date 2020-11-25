@@ -139,7 +139,6 @@ version = "2.0.0-rc6"
 hex-literal = "0.3"
 jsonrpc-core = "14.0.3"
 structopt = "0.3.8"
-hex-literal = "0.3.1"
 
 [build-dependencies.substrate-build-script-utils]
 git = "https://github.com/paritytech/substrate.git"
