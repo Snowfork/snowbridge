@@ -12,8 +12,6 @@ The E2E tests run against dockerized services.
    (cd ../ethereum && yarn install)
     ```
 
-3. Docker and docker-compose
-
 ## Setup
 
 Download dependencies:
