@@ -1,4 +1,3 @@
-use hex_literal::hex;
 use sp_core::{Pair, Public, sr25519};
 use artemis_runtime::{
 	AccountId, EthereumHeader,
