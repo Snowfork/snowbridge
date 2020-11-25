@@ -275,16 +275,31 @@ impl verifier_lightclient::Trait for Runtime {
 	type VerifyPoW = VerifyPoW;
 }
 
+
+parameter_types! {
+	pub const CommitInterval: BlockNumber = 20;
+}
+
+impl commitments::Trait for Runtime {
+	type Event = Event;
+
+	type CommitInterval = CommitInterval;
+}
+
 impl asset::Trait for Runtime {
 	type Event = Event;
 }
 
 impl eth_app::Trait for Runtime {
 	type Event = Event;
+
+	type Commitments = commitments::Module<Runtime>;
 }
 
 impl erc20_app::Trait for Runtime {
 	type Event = Event;
+
+	type Commitments = commitments::Module<Runtime>;
 }
 
 construct_runtime!(
@@ -301,6 +316,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Bridge: bridge::{Module, Call, Storage, Event},
+		Commitments: commitments::{Module, Call, Storage, Event},
 		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
 		Asset: asset::{Module, Call, Storage, Event<T>},
