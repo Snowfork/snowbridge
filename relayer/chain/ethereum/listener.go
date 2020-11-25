@@ -48,6 +48,15 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	return nil
 }
 
+func (li *Listener) onDone(ctx context.Context) error {
+	li.log.Info("Shutting down listener...")
+	if li.messages != nil {
+		close(li.messages)
+	}
+	close(li.headers)
+	return ctx.Err()
+}
+
 func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight uint64, hcs *HeaderCacheState) error {
 	events := make(chan gethTypes.Log)
 	var eventsSubscriptionErr <-chan error
@@ -90,7 +99,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return li.onDone(ctx)
 		case err := <-eventsSubscriptionErr:
 			li.log.WithError(err).Error("Events subscription terminated")
 			return err

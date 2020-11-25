@@ -43,11 +43,25 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
+func (wr *Writer) onDone(ctx context.Context) error {
+	wr.log.Info("Shutting down writer...")
+	// Avoid deadlock if a listener is still trying to send to a channel
+	if wr.messages != nil {
+		for range wr.messages {
+			wr.log.Debug("Discarded message")
+		}
+	}
+	for range wr.headers {
+		wr.log.Debug("Discarded header")
+	}
+	return ctx.Err()
+}
+
 func (wr *Writer) writeLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return wr.onDone(ctx)
 		case msg := <-wr.messages:
 			err := wr.WriteMessage(ctx, &msg)
 			if err != nil {
