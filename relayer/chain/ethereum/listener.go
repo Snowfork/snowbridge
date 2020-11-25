@@ -57,7 +57,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 	if li.messages == nil {
 		li.log.Info("Not polling events since channel is nil")
 	} else {
-		li.log.Info("Polling events started")
+		li.log.Info("Polling events starting...")
 
 		query := makeFilterQuery(li.contracts)
 
@@ -76,7 +76,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 		}
 	}
 
-	li.log.Info("Polling headers started")
+	li.log.Info("Polling headers starting...")
 
 	currentBlock := initBlockHeight
 	newestBlock := uint64(0)
@@ -118,6 +118,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 			blockNumber := gethheader.Number.Uint64()
 			newestBlock = blockNumber
 			li.log.WithFields(logrus.Fields{
+				"blockHash":   gethheader.Hash().Hex(),
 				"blockNumber": blockNumber,
 			}).Info("Witnessed new block header")
 
@@ -137,6 +138,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 				}).Error("Failed to retrieve old block header")
 			} else {
 				li.log.WithFields(logrus.Fields{
+					"blockHash":   gethheader.Hash().Hex(),
 					"blockNumber": currentBlock,
 				}).Info("Retrieved old block header")
 				li.forwardHeader(hcs, gethheader)
@@ -150,7 +152,7 @@ func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.H
 	cache, err := hcs.GetEthashproofCache(gethheader.Number.Uint64())
 	if err != nil {
 		li.log.WithFields(logrus.Fields{
-			"blockHash":   gethheader.Hash(),
+			"blockHash":   gethheader.Hash().Hex(),
 			"blockNumber": gethheader.Number,
 		}).Error("Failed to get ethashproof cache for header")
 	}
@@ -158,7 +160,7 @@ func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.H
 	header, err := MakeHeaderFromEthHeader(gethheader, cache, li.log)
 	if err != nil {
 		li.log.WithFields(logrus.Fields{
-			"blockHash":   gethheader.Hash(),
+			"blockHash":   gethheader.Hash().Hex(),
 			"blockNumber": gethheader.Number,
 		}).Error("Failed to generate header from ethereum header")
 	} else {

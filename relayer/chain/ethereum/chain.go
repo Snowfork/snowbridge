@@ -5,7 +5,7 @@ package ethereum
 
 import (
 	"context"
-	"encoding/hex"
+	"fmt"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"golang.org/x/sync/errgroup"
@@ -74,6 +74,10 @@ func (ch *Chain) SetSender(ethMessages chan<- chain.Message, ethHeaders chan<- c
 }
 
 func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, subInit chan<- chain.Init, ethInit <-chan chain.Init) error {
+	if ch.listener == nil && ch.writer == nil {
+		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
+	}
+
 	err := ch.conn.Connect(ctx)
 	if err != nil {
 		return err
@@ -87,7 +91,7 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, subInit chan<- c
 		ethInitHeaderID := (<-ethInit).(*HeaderID)
 		ch.log.WithFields(logrus.Fields{
 			"blockNumber": ethInitHeaderID.Number,
-			"blockHash":   hex.EncodeToString(ethInitHeaderID.Hash[:]),
+			"blockHash":   ethInitHeaderID.Hash.Hex(),
 		}).Info("Received init params for Ethereum from Substrate")
 
 		if ch.listener != nil {
