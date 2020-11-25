@@ -126,6 +126,6 @@ func (ch *Chain) queryEthereumInitParams() (*ethereum.HeaderID, error) {
 		return nil, err
 	}
 
-	headerID.Number = types.NewU64(uint64(headerID.Number) + 1)
-	return &headerID, nil
+	nextHeaderID := ethereum.HeaderID{Number: types.NewU64(uint64(headerID.Number) + 1)}
+	return &nextHeaderID, nil
 }

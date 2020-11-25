@@ -19,11 +19,12 @@ import (
 )
 
 type Writer struct {
-	conn     *Connection
-	messages <-chan chain.Message
-	headers  <-chan chain.Header
-	log      *logrus.Entry
-	nonce    uint32
+	conn         *Connection
+	messages     <-chan chain.Message
+	headers      <-chan chain.Header
+	log          *logrus.Entry
+	nonce        uint32
+	nonceCounter uint32
 }
 
 func NewWriter(conn *Connection, messages <-chan chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
@@ -32,11 +33,17 @@ func NewWriter(conn *Connection, messages <-chan chain.Message, headers <-chan c
 		messages: messages,
 		headers:  headers,
 		log:      log,
-		nonce:    0,
 	}, nil
 }
 
 func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
+	nonce, err := wr.queryAccountNonce()
+	if err != nil {
+		return err
+	}
+	wr.nonce = nonce
+	wr.nonceCounter = 0
+
 	eg.Go(func() error {
 		return wr.writeLoop(ctx)
 	})
@@ -55,6 +62,24 @@ func (wr *Writer) onDone(ctx context.Context) error {
 		wr.log.Debug("Discarded header")
 	}
 	return ctx.Err()
+}
+
+func (wr *Writer) queryAccountNonce() (uint32, error) {
+	key, err := types.CreateStorageKey(&wr.conn.metadata, "System", "Account", wr.conn.kp.PublicKey, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	var accountInfo types.AccountInfo
+	ok, err := wr.conn.api.RPC.State.GetStorageLatest(key, &accountInfo)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		return 0, fmt.Errorf("no account info found for %s", wr.conn.kp.URI)
+	}
+
+	return uint32(accountInfo.Nonce), nil
 }
 
 func (wr *Writer) writeLoop(ctx context.Context) error {
@@ -83,7 +108,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 }
 
 // Write submits a transaction to the chain
-func (wr *Writer) write(ctx context.Context, c types.Call) error {
+func (wr *Writer) write(_ context.Context, c types.Call) error {
 
 	ext := types.NewExtrinsic(c)
 
@@ -99,43 +124,11 @@ func (wr *Writer) write(ctx context.Context, c types.Call) error {
 		return err
 	}
 
-	key, err := types.CreateStorageKey(&wr.conn.metadata, "System", "Account", wr.conn.kp.PublicKey, nil)
-	if err != nil {
-		return err
-	}
-
-	// Poll account state until we have a new nonce. This matches our extrinsic
-	// sending rate with the node's extrinsic processing rate, and avoids
-	// the transaction being dropped from the node's transaction pool.
-	var nonce uint32
-	for {
-		var accountInfo types.AccountInfo
-		ok, err := wr.conn.api.RPC.State.GetStorageLatest(key, &accountInfo)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return fmt.Errorf("no account info found for %s", wr.conn.kp.URI)
-		}
-
-		nonce = uint32(accountInfo.Nonce)
-		if nonce != wr.nonce {
-			wr.nonce = nonce
-			break
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Duration(1) * time.Second):
-		}
-	}
-
 	o := types.SignatureOptions{
 		BlockHash:          genesisHash,
 		Era:                era,
 		GenesisHash:        genesisHash,
-		Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
+		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce + wr.nonceCounter)),
 		SpecVersion:        rv.SpecVersion,
 		Tip:                types.NewUCompactFromUInt(0),
 		TransactionVersion: 1,
@@ -152,6 +145,8 @@ func (wr *Writer) write(ctx context.Context, c types.Call) error {
 	if err != nil {
 		return err
 	}
+
+	wr.nonceCounter = wr.nonceCounter + 1
 
 	return nil
 }
