@@ -8,10 +8,9 @@
 
 use frame_support::dispatch::DispatchResult;
 
-use sp_std::vec::Vec;
+use sp_core::H160;
 
 pub mod types;
-pub mod registry;
 
 pub use types::{
 	AppId,
@@ -34,5 +33,7 @@ pub trait Verifier<AccountId> {
 pub trait Application {
 
 	/// Handle a message payload
-	fn handle(payload: Vec<u8>) -> DispatchResult;
+	fn handle(payload: &[u8]) -> DispatchResult;
+
+	fn address() -> H160;
 }

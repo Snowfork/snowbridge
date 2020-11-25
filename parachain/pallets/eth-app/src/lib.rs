@@ -43,8 +43,8 @@ pub trait Trait: system::Trait + asset::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Erc20Module {
-
+	trait Store for Module<T: Trait> as EthModule {
+		Address get(fn address) config(): H160;
 	}
 }
 
@@ -97,10 +97,14 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Application for Module<T> {
-	fn handle(payload: Vec<u8>) -> DispatchResult {
+	fn handle(payload: &[u8]) -> DispatchResult {
 		let payload_decoded = Payload::decode(payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
 		Self::handle_event(payload_decoded)
+	}
+
+	fn address() -> H160 {
+		Address::get()
 	}
 }

@@ -1,14 +1,17 @@
-use hex_literal::hex;
 use sp_core::{Pair, Public, sr25519};
 use artemis_runtime::{
-	AccountId, AuraConfig, BalancesConfig, EthereumHeader, GenesisConfig,
-	GrandpaConfig, SystemConfig, VerifierConfig, VerifierLightclientConfig, WASM_BINARY,
-	Signature,
+	AccountId, EthereumHeader,
+	AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
+	SystemConfig, VerifierConfig, VerifierLightclientConfig,
+	ETHConfig, ERC20Config,
+	WASM_BINARY, Signature,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{Verify, IdentifyAccount};
 use sc_service::ChainType;
+
+use hex_literal::hex;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -180,5 +183,11 @@ fn testnet_genesis(
 			},
 			initial_difficulty: 0x3fc9cb4448510a2b525u128.into(),
 		}),
+		eth_app: Some(ETHConfig {
+			address: hex!["fc97a6197dc90bef6bbefd672742ed75e9768553"].into()
+		}),
+		erc20_app: Some(ERC20Config {
+			address: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into()
+		})
 	}
 }

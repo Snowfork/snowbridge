@@ -6,11 +6,14 @@ configdir=$(mktemp -d -t artemis-config-XXX)
 
 start_ganache()
 {
-    echo "Pulling Ganache image"
-    docker-compose pull -q ganache
-
     echo "Starting Ganache"
-    docker-compose up ganache >$(pwd)/ganache.log 2>&1 &
+    yarn run ganache-cli \
+        --port=8545 \
+        --blockTime=0 \
+        --networkId=344 \
+        --deterministic \
+        --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
+        >ganache.log 2>&1 &
 
     scripts/wait-for-it.sh -t 20 localhost:8545
     sleep 5
@@ -21,13 +24,11 @@ deploy_contracts()
     echo "Deploying contracts"
     pushd ../ethereum
 
-    truffle deploy --network ganache
+    truffle deploy --network e2e_test
 
     echo "Generating configuration from contracts"
-    truffle exec scripts/dumpTestConfig.js $configdir --network ganache
+    truffle exec scripts/dumpTestConfig.js $configdir --network e2e_test
     popd
-
-    cp $configdir/test-config.json test-config.json
 
     echo "Wrote configuration to $configdir"
 }
@@ -38,9 +39,6 @@ start_parachain()
     echo "Starting Parachain"
     logfile=$(pwd)/parachain.log
     pushd ../parachain
-
-    source $configdir/parachain.env
-    export ETH_APP_ID ERC20_APP_ID
 
     cargo build
     target/debug/artemis-node --tmp --dev >$logfile 2>&1 &
@@ -79,5 +77,7 @@ start_relayer
 
 # TODO: Exit when any child process dies
 #  https://stackoverflow.com/questions/37496896/exit-a-bash-script-when-one-of-the-subprocesses-exits
+
+pstree $$
 
 wait
