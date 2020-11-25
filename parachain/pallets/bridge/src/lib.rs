@@ -70,7 +70,7 @@ decl_module! {
 		pub fn submit(origin, app_id: AppId, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::verify(who, app_id, &message)?;
-			Self::dispatch(&app_id.into(), &message)
+			Self::dispatch(app_id.into(), &message)
 		}
 
 	}
@@ -82,11 +82,13 @@ impl<T: Trait> Module<T> {
 		T::Verifier::verify(sender, app_id, &message)
 	}
 
-	fn dispatch(address: &H160, message: &Message) -> DispatchResult {
-		match address {
-			_ if *address == T::AppETH::address() => T::AppETH::handle(message.payload.as_ref()),
-			_ if *address == T::AppERC20::address() => T::AppERC20::handle(message.payload.as_ref()),
-			_ => Err(Error::<T>::AppNotFound.into())
+	fn dispatch(address: H160, message: &Message) -> DispatchResult {
+		if address == T::AppETH::address() {
+			T::AppETH::handle(message.payload.as_ref())
+		} else if address == T::AppERC20::address() {
+			T::AppERC20::handle(message.payload.as_ref())
+		} else {
+			Err(Error::<T>::AppNotFound.into())
 		}
 	}
 
