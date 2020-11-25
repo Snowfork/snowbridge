@@ -255,6 +255,7 @@ name = "artemis-erc20-app"
 version = "0.1.1"
 dependencies = [
  "artemis-asset",
+ "artemis-commitments",
  "artemis-core",
  "artemis-ethereum",
  "ethabi-decode",
@@ -277,6 +278,7 @@ name = "artemis-eth-app"
 version = "0.1.1"
 dependencies = [
  "artemis-asset",
+ "artemis-commitments",
  "artemis-core",
  "artemis-ethereum",
  "ethabi-decode",

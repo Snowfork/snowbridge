@@ -53,13 +53,13 @@ impl system::Trait for Test {
 
 
 parameter_types! {
-	pub const PruneInterval: u64 = 20;
+	pub const CommitInterval: u64 = 20;
 }
 
 impl Trait for Test {
 	type Event = ();
 
-	type PruneInterval = PruneInterval;
+	type CommitInterval = CommitInterval;
 }
 
 pub type CommitmentsModule = Module<Test>;
