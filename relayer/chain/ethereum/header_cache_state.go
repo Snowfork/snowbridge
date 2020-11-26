@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/sirupsen/logrus"
 	"github.com/tranvictor/ethashproof"
 	"golang.org/x/sync/errgroup"
 )
@@ -45,13 +44,11 @@ type HeaderCacheState struct {
 	ethashproofCacheLoader EthashproofCacheLoader
 	ethashproofCacheState  *EthashproofCacheState
 	eg                     *errgroup.Group
-	log                    *logrus.Entry
 }
 
 func NewHeaderCacheState(
 	eg *errgroup.Group,
 	initBlockHeight uint64,
-	log *logrus.Entry,
 	cl EthashproofCacheLoader,
 ) (*HeaderCacheState, error) {
 	cacheState := EthashproofCacheState{
@@ -68,7 +65,6 @@ func NewHeaderCacheState(
 		ethashproofCacheLoader: cacheLoader,
 		ethashproofCacheState:  &cacheState,
 		eg:                     eg,
-		log:                    log,
 	}
 
 	// Block until cache for current epoch is prepared

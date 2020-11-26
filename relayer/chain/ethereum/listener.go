@@ -36,7 +36,7 @@ func NewListener(conn *Connection, messages chan<- chain.Message, headers chan<-
 }
 
 func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64) error {
-	hcs, err := NewHeaderCacheState(eg, initBlockHeight, li.log, nil)
+	hcs, err := NewHeaderCacheState(eg, initBlockHeight, nil)
 	if err != nil {
 		return err
 	}

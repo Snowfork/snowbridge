@@ -256,7 +256,6 @@ mod tests {
     use hex_literal::hex;
     use rand::Rng;
     use std::path::PathBuf;
-    use hex::ToHex;
 
     fn fixture_path(name: &str) -> PathBuf {
         [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", name].iter().collect()
