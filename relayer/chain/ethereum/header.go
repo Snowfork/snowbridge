@@ -43,8 +43,30 @@ type DoubleNodeWithMerkleProof struct {
 	Proof    [][16]byte
 }
 
-func MakeHeaderFromEthHeader(gethheader *etypes.Header, proofcache *ethashproof.DatasetMerkleTreeCache, log *logrus.Entry) (*chain.Header, error) {
+func MakeHeaderFromEthHeader(
+	gethheader *etypes.Header,
+	proofcache *ethashproof.DatasetMerkleTreeCache,
+	log *logrus.Entry,
+) (*chain.Header, error) {
+	headerData, err := MakeHeaderData(gethheader)
+	if err != nil {
+		return nil, err
+	}
 
+	proofData, err := MakeProofData(gethheader, proofcache)
+	if err != nil {
+		return nil, err
+	}
+
+	log.WithFields(logrus.Fields{
+		"blockHash":   gethheader.Hash().Hex(),
+		"blockNumber": gethheader.Number,
+	}).Debug("Generated header from Ethereum header")
+
+	return &chain.Header{HeaderData: headerData, ProofData: proofData}, nil
+}
+
+func MakeHeaderData(gethheader *etypes.Header) (*Header, error) {
 	// Convert Geth types to their Substrate Go client counterparts that match our node
 	var blockNumber uint64
 	if !gethheader.Number.IsUint64() {
@@ -72,7 +94,7 @@ func MakeHeaderFromEthHeader(gethheader *etypes.Header, proofcache *ethashproof.
 		return nil, err
 	}
 
-	header := Header{
+	return &Header{
 		ParentHash:       types.NewH256(gethheader.ParentHash.Bytes()),
 		Timestamp:        types.NewU64(gethheader.Time.Uint64()),
 		Number:           types.NewU64(blockNumber),
@@ -87,9 +109,15 @@ func MakeHeaderFromEthHeader(gethheader *etypes.Header, proofcache *ethashproof.
 		GasLimit:         types.NewU256(gasLimit),
 		Difficulty:       types.NewU256(*gethheader.Difficulty),
 		Seal:             []types.Bytes{mixHashRLP, nonceRLP},
-	}
+	}, nil
+}
 
+func MakeProofData(
+	gethheader *etypes.Header,
+	proofcache *ethashproof.DatasetMerkleTreeCache,
+) ([]DoubleNodeWithMerkleProof, error) {
 	// Generate merkle proofs for Ethash
+	blockNumber := gethheader.Number.Uint64()
 	indices := ethash.Instance.GetVerificationIndices(
 		blockNumber,
 		ethash.Instance.SealHash(gethheader),
@@ -125,9 +153,5 @@ func MakeHeaderFromEthHeader(gethheader *etypes.Header, proofcache *ethashproof.
 		}
 	}
 
-	log.WithFields(logrus.Fields{
-		"blockNumber": gethheader.Number,
-	}).Debug("Generated header from Ethereum header")
-
-	return &chain.Header{HeaderData: header, ProofData: proofData}, nil
+	return proofData, nil
 }
