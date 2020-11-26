@@ -38,8 +38,8 @@ type EthashproofCacheState struct {
 	nextCache    *ethashproof.DatasetMerkleTreeCache
 }
 
-// HeaderChainState is a helper for tracking where we are
-// in the Ethereum chain. It warms up caches as we go.
+// HeaderCacheState warms up proof caches as we move along
+// the Ethereum chain
 type HeaderCacheState struct {
 	ethashproofCacheLoader EthashproofCacheLoader
 	ethashproofCacheState  *EthashproofCacheState
