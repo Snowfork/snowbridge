@@ -7,9 +7,31 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/sirupsen/logrus"
 	"github.com/tranvictor/ethashproof"
 	"golang.org/x/sync/errgroup"
 )
+
+type EthashproofCacheLoader interface {
+	MakeCache(epoch uint64) (*ethashproof.DatasetMerkleTreeCache, error)
+}
+
+type DefaultCacheLoader struct{}
+
+func (d *DefaultCacheLoader) MakeCache(epoch uint64) (*ethashproof.DatasetMerkleTreeCache, error) {
+	cache, err := ethashproof.LoadCache(int(epoch))
+	if err != nil {
+		// Cache probably doesn't exist - create it
+		_, err := ethashproof.CalculateDatasetMerkleRoot(epoch, true)
+		if err != nil {
+			return nil, err
+		}
+
+		return ethashproof.LoadCache(int(epoch))
+	}
+
+	return cache, nil
+}
 
 type EthashproofCacheState struct {
 	sync.Mutex
@@ -19,27 +41,38 @@ type EthashproofCacheState struct {
 
 // HeaderChainState is a helper for tracking where we are
 // in the Ethereum chain. It warms up caches as we go.
-type HeaderChainState struct {
-	currentBlock          uint64
-	newestBlock           uint64
-	ethashproofCacheState *EthashproofCacheState
-	eg                    *errgroup.Group
+type HeaderCacheState struct {
+	ethashproofCacheLoader EthashproofCacheLoader
+	ethashproofCacheState  *EthashproofCacheState
+	eg                     *errgroup.Group
+	log                    *logrus.Entry
 }
 
-func NewHeaderChainState(eg *errgroup.Group, currentBlock uint64, newestBlock uint64) (*HeaderChainState, error) {
+func NewHeaderCacheState(
+	eg *errgroup.Group,
+	initBlockHeight uint64,
+	log *logrus.Entry,
+	cl EthashproofCacheLoader,
+) (*HeaderCacheState, error) {
 	cacheState := EthashproofCacheState{
 		currentCache: nil,
 		nextCache:    nil,
 	}
-	state := HeaderChainState{
-		currentBlock:          currentBlock,
-		newestBlock:           newestBlock,
-		ethashproofCacheState: &cacheState,
-		eg:                    eg,
+
+	cacheLoader := cl
+	if cacheLoader == nil {
+		cacheLoader = &DefaultCacheLoader{}
+	}
+
+	state := HeaderCacheState{
+		ethashproofCacheLoader: cacheLoader,
+		ethashproofCacheState:  &cacheState,
+		eg:                     eg,
+		log:                    log,
 	}
 
 	// Block until cache for current epoch is prepared
-	cache, err := makeEthashproofCache(currentBlock / 30000)
+	cache, err := cacheLoader.MakeCache(initBlockHeight / 30000)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +89,7 @@ func NewHeaderChainState(eg *errgroup.Group, currentBlock uint64, newestBlock ui
 // immediately if `number` is in the current or next epoch. Outside that range, it
 // might block for multiple minutes to generate the cache. Calling GetEthashproofCache
 // will also update the current epoch to `number` / 30000.
-func (s *HeaderChainState) GetEthashproofCache(number uint64) (*ethashproof.DatasetMerkleTreeCache, error) {
+func (s *HeaderCacheState) GetEthashproofCache(number uint64) (*ethashproof.DatasetMerkleTreeCache, error) {
 	epoch := number / 30000
 	cacheState := s.ethashproofCacheState
 	if epoch == cacheState.currentCache.Epoch {
@@ -74,17 +107,24 @@ func (s *HeaderChainState) GetEthashproofCache(number uint64) (*ethashproof.Data
 		} else {
 			// Retrieving the next cache failed previously. Our only option is to retry
 			// and hope it was a transient issue
-			cache, err := makeEthashproofCache(epoch)
+			cache, err := s.ethashproofCacheLoader.MakeCache(epoch)
 			if err != nil {
 				return nil, err
 			}
 			cacheState.currentCache = cache
 		}
 	} else {
-		cache, err := makeEthashproofCache(epoch)
+		cache, err := s.ethashproofCacheLoader.MakeCache(epoch)
 		if err != nil {
 			return nil, err
 		}
+
+		if epoch == cacheState.currentCache.Epoch-1 {
+			cacheState.nextCache = cacheState.currentCache
+			cacheState.currentCache = cache
+			return cache, nil
+		}
+
 		cacheState.currentCache = cache
 	}
 
@@ -96,7 +136,7 @@ func (s *HeaderChainState) GetEthashproofCache(number uint64) (*ethashproof.Data
 	return cacheState.currentCache, nil
 }
 
-func (s *HeaderChainState) prepareNextEthashproofCache() error {
+func (s *HeaderCacheState) prepareNextEthashproofCache() error {
 	cacheState := s.ethashproofCacheState
 	cacheState.Mutex.Lock()
 	defer cacheState.Mutex.Unlock()
@@ -107,37 +147,10 @@ func (s *HeaderChainState) prepareNextEthashproofCache() error {
 		return fmt.Errorf("prepareNextEthashproofCache encountered non-nil nextCache")
 	}
 
-	cache, err := makeEthashproofCache(cacheState.currentCache.Epoch + 1)
+	cache, err := s.ethashproofCacheLoader.MakeCache(cacheState.currentCache.Epoch + 1)
 	if err != nil {
 		return err
 	}
 	cacheState.nextCache = cache
 	return nil
-}
-
-func (s *HeaderChainState) RecordBlockSeen(number uint64) {
-	s.newestBlock = number
-}
-
-func (s *HeaderChainState) RecordBlockForwarded(number uint64, maybeMoreBlocksAtNumber bool) {
-	if maybeMoreBlocksAtNumber {
-		s.currentBlock = number
-	} else {
-		s.currentBlock = number + 1
-	}
-}
-
-func makeEthashproofCache(epoch uint64) (*ethashproof.DatasetMerkleTreeCache, error) {
-	cache, err := ethashproof.LoadCache(int(epoch))
-	if err != nil {
-		// Cache probably doesn't exist - create it
-		_, err := ethashproof.CalculateDatasetMerkleRoot(epoch, true)
-		if err != nil {
-			return nil, err
-		}
-
-		return ethashproof.LoadCache(int(epoch))
-	}
-
-	return cache, nil
 }

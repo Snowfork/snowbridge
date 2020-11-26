@@ -35,20 +35,20 @@ func NewListener(conn *Connection, messages chan<- chain.Message, headers chan<-
 	}, nil
 }
 
-func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, start *HeaderID) error {
-	hcs, err := NewHeaderChainState(eg, uint64(start.Number), uint64(0))
+func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64) error {
+	hcs, err := NewHeaderCacheState(eg, initBlockHeight, li.log, nil)
 	if err != nil {
 		return err
 	}
 
 	eg.Go(func() error {
-		return li.pollEventsAndHeaders(cxt, hcs)
+		return li.pollEventsAndHeaders(cxt, initBlockHeight, hcs)
 	})
 
 	return nil
 }
 
-func (li *Listener) pollEventsAndHeaders(ctx context.Context, hcs *HeaderChainState) error {
+func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight uint64, hcs *HeaderCacheState) error {
 	events := make(chan gethTypes.Log)
 	var eventsSubscriptionErr <-chan error
 	headers := make(chan *gethTypes.Header, 5)
@@ -78,6 +78,8 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, hcs *HeaderChainSt
 
 	li.log.Info("Polling headers started")
 
+	currentBlock := initBlockHeight
+	newestBlock := uint64(0)
 	subscription, err := li.conn.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to subscribe to new headers")
@@ -114,37 +116,37 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, hcs *HeaderChainSt
 			}
 		case gethheader := <-headers:
 			blockNumber := gethheader.Number.Uint64()
-			hcs.RecordBlockSeen(blockNumber)
+			newestBlock = blockNumber
 			li.log.WithFields(logrus.Fields{
 				"blockNumber": blockNumber,
 			}).Info("Witnessed new block header")
 
-			if blockNumber <= hcs.currentBlock+1 {
+			if blockNumber <= currentBlock+1 {
 				li.forwardHeader(hcs, gethheader)
-				hcs.RecordBlockForwarded(blockNumber, true)
+				currentBlock = blockNumber
 			}
 		default:
-			if hcs.currentBlock == hcs.newestBlock {
+			if currentBlock == newestBlock {
 				continue
 			}
 
-			gethheader, err := li.conn.client.HeaderByNumber(ctx, new(big.Int).SetUint64(hcs.currentBlock))
+			gethheader, err := li.conn.client.HeaderByNumber(ctx, new(big.Int).SetUint64(currentBlock))
 			if err != nil {
 				li.log.WithFields(logrus.Fields{
-					"blockNumber": hcs.currentBlock,
+					"blockNumber": currentBlock,
 				}).Error("Failed to retrieve old block header")
 			} else {
 				li.log.WithFields(logrus.Fields{
-					"blockNumber": hcs.currentBlock,
+					"blockNumber": currentBlock,
 				}).Info("Retrieved old block header")
 				li.forwardHeader(hcs, gethheader)
-				hcs.RecordBlockForwarded(hcs.currentBlock, false)
+				currentBlock = currentBlock + 1
 			}
 		}
 	}
 }
 
-func (li *Listener) forwardHeader(hcs *HeaderChainState, gethheader *gethTypes.Header) {
+func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.Header) {
 	cache, err := hcs.GetEthashproofCache(gethheader.Number.Uint64())
 	if err != nil {
 		li.log.WithFields(logrus.Fields{

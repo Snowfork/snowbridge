@@ -91,7 +91,7 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, subInit chan<- c
 		}).Info("Received init params for Ethereum from Substrate")
 
 		if ch.listener != nil {
-			err = ch.listener.Start(ctx, eg, ethInitHeaderID)
+			err = ch.listener.Start(ctx, eg, uint64(ethInitHeaderID.Number))
 			if err != nil {
 				return err
 			}

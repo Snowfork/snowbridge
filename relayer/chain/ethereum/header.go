@@ -63,7 +63,7 @@ func MakeHeaderFromEthHeader(
 		"blockNumber": gethheader.Number,
 	}).Debug("Generated header from Ethereum header")
 
-	return &chain.Header{HeaderData: headerData, ProofData: proofData}, nil
+	return &chain.Header{HeaderData: *headerData, ProofData: proofData}, nil
 }
 
 func MakeHeaderData(gethheader *etypes.Header) (*Header, error) {
