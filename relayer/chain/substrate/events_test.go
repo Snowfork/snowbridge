@@ -29,12 +29,12 @@ func TestDecodeEvents(t *testing.T) {
 			{
 				ID:     [2]uint8{0x0, 0x0},
 				Name:   [2]string{"System", "ExtrinsicSuccess"},
-				Phase:  types.Phase{IsApplyExtrinsic: true, AsApplyExtrinsic: 0x0, IsFinalization: false, IsInitialization: false},
+				Phase:  types.Phase{IsApplyExtrinsic: true, AsApplyExtrinsic: 0x0, IsFinalization: false},
 				Topics: []types.Hash{},
 				Fields: SystemExtrinsicSuccess{
 					DispatchInfo: types.DispatchInfo{
 						Weight:  0x96ae380,
-						Class:   types.DispatchClass{IsNormal: false, IsOperational: false, IsMandatory: true},
+						Class:   types.DispatchClass{IsNormal: false, IsOperational: false},
 						PaysFee: false,
 					},
 				},
@@ -42,7 +42,7 @@ func TestDecodeEvents(t *testing.T) {
 			{
 				ID:     [2]uint8{0x2, 0x2},
 				Name:   [2]string{"Balances", "Transfer"},
-				Phase:  types.Phase{IsApplyExtrinsic: true, AsApplyExtrinsic: 0x1, IsFinalization: false, IsInitialization: false},
+				Phase:  types.Phase{IsApplyExtrinsic: true, AsApplyExtrinsic: 0x1, IsFinalization: false},
 				Topics: []types.Hash{},
 				Fields: BalancesTransfer{
 					From: types.AccountID{0xd4, 0x35, 0x93, 0xc7, 0x15, 0xfd, 0xd3, 0x1c, 0x61, 0x14, 0x1a, 0xbd, 0x4, 0xa9, 0x9f, 0xd6, 0x82, 0x2c, 0x85, 0x58, 0x85, 0x4c, 0xcd, 0xe3, 0x9a, 0x56, 0x84, 0xe7, 0xa5, 0x6d, 0xa2, 0x7d},
@@ -55,12 +55,12 @@ func TestDecodeEvents(t *testing.T) {
 			{
 				ID:     [2]uint8{0x0, 0x0},
 				Name:   [2]string{"System", "ExtrinsicSuccess"},
-				Phase:  types.Phase{IsApplyExtrinsic: true, AsApplyExtrinsic: 0x1, IsFinalization: false, IsInitialization: false},
+				Phase:  types.Phase{IsApplyExtrinsic: true, AsApplyExtrinsic: 0x1, IsFinalization: false},
 				Topics: []types.Hash{},
 				Fields: SystemExtrinsicSuccess{
 					DispatchInfo: types.DispatchInfo{
 						Weight:  0xb9f76c0,
-						Class:   types.DispatchClass{IsNormal: true, IsOperational: false, IsMandatory: false},
+						Class:   types.DispatchClass{IsNormal: true, IsOperational: false},
 						PaysFee: false,
 					},
 				},

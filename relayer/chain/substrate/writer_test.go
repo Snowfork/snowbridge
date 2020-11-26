@@ -28,11 +28,12 @@ func TestWrite(t *testing.T) {
 	conn := substrate.NewConnection("ws://127.0.0.1:9944/", sr25519.Alice().AsKeyringPair(), log)
 
 	messages := make(chan chain.Message, 1)
+	headers := make(chan chain.Header, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 	defer cancel()
 
-	writer, err := substrate.NewWriter(conn, messages, log)
+	writer, err := substrate.NewWriter(conn, messages, headers, log)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +60,7 @@ func TestWrite(t *testing.T) {
 		},
 	}
 
-	err = writer.Write(ctx, &chain.Message{AppID: AppID, Payload: message})
+	err = writer.WriteMessage(ctx, &chain.Message{AppID: AppID, Payload: message})
 	if err != nil {
 		t.Fatal(err)
 	}
