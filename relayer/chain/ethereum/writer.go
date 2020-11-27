@@ -65,8 +65,8 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 func (wr *Writer) onDone(ctx context.Context) error {
 	wr.log.Info("Shutting down writer...")
 	// Avoid deadlock if a listener is still trying to send to a channel
-	for m := range wr.messages {
-		wr.log.WithFields(logrus.Fields{"message": m}).Debug("Discarded")
+	for range wr.messages {
+		wr.log.Debug("Discarded message")
 	}
 	return ctx.Err()
 }

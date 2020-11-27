@@ -19,12 +19,11 @@ import (
 )
 
 type Writer struct {
-	conn         *Connection
-	messages     <-chan chain.Message
-	headers      <-chan chain.Header
-	log          *logrus.Entry
-	nonce        uint32
-	nonceCounter uint32
+	conn     *Connection
+	messages <-chan chain.Message
+	headers  <-chan chain.Header
+	log      *logrus.Entry
+	nonce    uint32
 }
 
 func NewWriter(conn *Connection, messages <-chan chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
@@ -42,7 +41,6 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 	wr.nonce = nonce
-	wr.nonceCounter = 0
 
 	eg.Go(func() error {
 		return wr.writeLoop(ctx)
@@ -128,7 +126,7 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 		BlockHash:          genesisHash,
 		Era:                era,
 		GenesisHash:        genesisHash,
-		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce + wr.nonceCounter)),
+		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
 		SpecVersion:        rv.SpecVersion,
 		Tip:                types.NewUCompactFromUInt(0),
 		TransactionVersion: 1,
@@ -146,7 +144,7 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 		return err
 	}
 
-	wr.nonceCounter = wr.nonceCounter + 1
+	wr.nonce = wr.nonce + 1
 
 	return nil
 }
