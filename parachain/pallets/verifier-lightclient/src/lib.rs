@@ -261,7 +261,8 @@ impl<T: Trait> Module<T> {
 	// Import a new, validated Ethereum header
 	fn import_validated_header(sender: &T::AccountId, header: &EthereumHeader) -> DispatchResult {
 		let hash = header.compute_hash();
-		let stored_parent_header = Headers::<T>::get(header.parent_hash).unwrap();
+		let stored_parent_header = Headers::<T>::get(header.parent_hash)
+			.ok_or(Error::<T>::MissingParentHeader)?;
 		let total_difficulty = stored_parent_header.total_difficulty
 			.checked_add(header.difficulty)
 			.ok_or("Total difficulty overflow")?;
@@ -274,10 +275,14 @@ impl<T: Trait> Module<T> {
 		Headers::<T>::insert(hash, header_to_store);
 
 		if HeadersByNumber::contains_key(header.number) {
+			let mut mutate_failed = false;
 			HeadersByNumber::mutate(header.number, |option| {
-				let hashes = option.as_mut().unwrap();
-				hashes.push(hash);
+				match option.as_mut() {
+					Some(hashes) => hashes.push(hash),
+					None => mutate_failed = true,
+				}
 			});
+			ensure!(!mutate_failed, Error::<T>::Unknown);
 		} else {
 			HeadersByNumber::insert(header.number, vec![hash]);
 		}

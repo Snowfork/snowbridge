@@ -44,6 +44,12 @@ func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
+func (li *Listener) onDone(ctx context.Context) error {
+	li.log.Info("Shutting down listener...")
+	close(li.messages)
+	return ctx.Err()
+}
+
 func (li *Listener) pollBlocks(ctx context.Context) error {
 	if li.messages == nil {
 		li.log.Info("Not polling events since channel is nil")
@@ -66,7 +72,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return li.onDone(ctx)
 		default:
 
 			li.log.WithField("block", currentBlock).Debug("Processing block")

@@ -3,7 +3,6 @@ package ethereum_test
 import (
 	"testing"
 
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -21,7 +20,6 @@ func (tl *TestCacheLoader) MakeCache(epoch uint64) (*ethashproof.DatasetMerkleTr
 }
 
 func TestHeaderCacheState(t *testing.T) {
-	logger, _ := test.NewNullLogger()
 	eg := &errgroup.Group{}
 	cacheLoader := TestCacheLoader{}
 	cacheLoader.On("MakeCache", uint64(0)).Return(&ethashproof.DatasetMerkleTreeCache{Epoch: 0}, nil)
@@ -30,7 +28,7 @@ func TestHeaderCacheState(t *testing.T) {
 	cacheLoader.On("MakeCache", uint64(3)).Return(&ethashproof.DatasetMerkleTreeCache{Epoch: 3}, nil)
 
 	// Should load epoch 0 and 1 caches
-	hcs, err := ethereum.NewHeaderCacheState(eg, 0, logger.WithField("test", "ing"), &cacheLoader)
+	hcs, err := ethereum.NewHeaderCacheState(eg, 0, &cacheLoader)
 	if err != nil {
 		panic(err)
 	}

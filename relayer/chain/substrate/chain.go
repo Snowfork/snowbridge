@@ -5,7 +5,7 @@ package substrate
 
 import (
 	"context"
-	"encoding/hex"
+	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
@@ -65,6 +65,10 @@ func (ch *Chain) SetSender(subMessages chan<- chain.Message, _ chan<- chain.Head
 }
 
 func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- chain.Init, _ <-chan chain.Init) error {
+	if ch.listener == nil && ch.writer == nil {
+		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
+	}
+
 	err := ch.conn.Connect(ctx)
 	if err != nil {
 		return err
@@ -78,7 +82,7 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- c
 	}
 	ch.log.WithFields(logrus.Fields{
 		"blockNumber": ethInitHeaderID.Number,
-		"blockHash":   hex.EncodeToString(ethInitHeaderID.Hash[:]),
+		"blockHash":   ethInitHeaderID.Hash.Hex(),
 	}).Info("Retrieved init params for Ethereum from Substrate")
 	ethInit <- ethInitHeaderID
 	close(ethInit)
@@ -122,6 +126,6 @@ func (ch *Chain) queryEthereumInitParams() (*ethereum.HeaderID, error) {
 		return nil, err
 	}
 
-	headerID.Number = types.NewU64(uint64(headerID.Number) + 1)
-	return &headerID, nil
+	nextHeaderID := ethereum.HeaderID{Number: types.NewU64(uint64(headerID.Number) + 1)}
+	return &nextHeaderID, nil
 }
