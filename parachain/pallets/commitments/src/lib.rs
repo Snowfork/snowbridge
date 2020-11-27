@@ -8,7 +8,7 @@ use frame_support::{
 };
 
 use sp_io::hashing::keccak_256;
-use sp_core::{H160, H256};
+use sp_core::{H160, H256, RuntimeDebug};
 use sp_runtime::{
 	traits::Zero,
 	DigestItem
@@ -24,7 +24,7 @@ mod mock;
 mod tests;
 
 /// Custom DigestItem for header digest
-#[derive(Encode, Decode, Copy, Clone)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
 enum CustomDigestItem {
 	Commitment(H256)
 }
@@ -35,10 +35,11 @@ impl<T> Into<DigestItem<T>> for CustomDigestItem {
     }
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 struct Message {
 	address: H160,
 	payload: Vec<u8>,
+	nonce: u64,
 }
 
 pub trait Trait: frame_system::Trait {
@@ -49,13 +50,18 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Commitments {
-		/// messages for an application
-		Messages: Vec<Message>
+		/// Nonce
+		pub Nonce get(fn nonce): u64;
+
+		/// messages
+		pub Messages: Vec<Message>;
 	}
 }
 
 decl_event! {
-	pub enum Event {}
+	pub enum Event {
+		Commitment(H256),
+	}
 }
 
 decl_error! {
@@ -87,8 +93,9 @@ impl<T: Trait> Module<T> {
 		let messages: Vec<Message> = <Self as Store>::Messages::take();
 		let hash: H256 = keccak_256(messages.encode().as_ref()).into();
 
-		let mut digest = <frame_system::Module<T>>::digest();
-		digest.push(CustomDigestItem::Commitment(hash).into());
+		let digest_item = CustomDigestItem::Commitment(hash.clone()).into();
+		<frame_system::Module<T>>::deposit_log(digest_item);
+		Self::deposit_event(Event::Commitment(hash));
 
 		0
 	}
@@ -98,6 +105,8 @@ impl<T: Trait> Commitments for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
 	fn add(address: H160, payload: Vec<u8>) {
-		<Self as Store>::Messages::append(Message { address, payload });
+		let nonce = <Self as Store>::Nonce::get();
+		<Self as Store>::Messages::append(Message { address, payload, nonce });
+		<Self as Store>::Nonce::set(nonce + 1);
 	}
 }

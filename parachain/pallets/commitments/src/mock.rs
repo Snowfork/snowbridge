@@ -53,7 +53,7 @@ impl system::Trait for Test {
 
 
 parameter_types! {
-	pub const CommitInterval: u64 = 20;
+	pub const CommitInterval: u64 = 5;
 }
 
 impl Trait for Test {
@@ -62,6 +62,7 @@ impl Trait for Test {
 	type CommitInterval = CommitInterval;
 }
 
+pub type System = system::Module<Test>;
 pub type CommitmentsModule = Module<Test>;
 
 // Build genesis storage according to the mock runtime.
