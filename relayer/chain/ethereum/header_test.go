@@ -1,15 +1,18 @@
 package ethereum_test
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
-	types "github.com/centrifuge/go-substrate-rpc-client/types"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
-	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
+	"github.com/tranvictor/ethashproof"
 )
 
 // To retrieve test data:
@@ -49,9 +52,28 @@ func gethHeader11090290() etypes.Header {
 	return header
 }
 
+func encodedProof11090290() []byte {
+	rawData := readTestData("encodedProof11090290.json")
+	var encoded []byte
+	err := json.Unmarshal(rawData, &encoded)
+	if err != nil {
+		panic(err)
+	}
+	return encoded
+}
+
+func proofCache11090290() *ethashproof.DatasetMerkleTreeCache {
+	rawData := readTestData("epochCache369.json")
+	var cache ethashproof.DatasetMerkleTreeCache
+	err := json.Unmarshal(rawData, &cache)
+	if err != nil {
+		panic(err)
+	}
+	return &cache
+}
+
 func TestHeader_EncodeDecode11090290(t *testing.T) {
 	gethHeader := gethHeader11090290()
-	logger, _ := logrustest.NewNullLogger()
 	// From header.encode() call in Substrate
 	expectedEncoded := []byte{
 		190, 222, 11, 221, 214, 243, 44, 137, 95, 197, 5, 255, 224, 195, 157, 155, 222, 88, 233, 165,
@@ -80,12 +102,12 @@ func TestHeader_EncodeDecode11090290(t *testing.T) {
 		16, 40, 21, 36, 136, 105, 53, 187, 231, 182, 60, 79, 142,
 	}
 
-	header, err := ethereum.MakeHeaderFromEthHeader(&gethHeader, logger.WithField("test", "ing"))
+	header, err := ethereum.MakeHeaderData(&gethHeader)
 	if err != nil {
 		panic(err)
 	}
 
-	encoded, err := encodeToBytes(header.HeaderData)
+	encoded, err := encodeToBytes(header)
 	if err != nil {
 		panic(err)
 	}
@@ -96,24 +118,17 @@ func TestHeader_EncodeDecode11090290(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assert.Equal(t, header.HeaderData, decoded, "Decoded Substrate header should match ethereum.Header")
+	assert.Equal(t, *header, decoded, "Decoded Substrate header should match ethereum.Header")
 }
 
 func TestProof_EncodeDecode(t *testing.T) {
-	// TODO: test with real data
-	expectedEncoded := []byte{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	}
-	var proofVec [][16]byte
-	proof := ethereum.DoubleNodeWithMerkleProof{
-		DagNodes: [2]types.H512{
-			types.NewH512(make([]byte, 64)),
-			types.NewH512(make([]byte, 64)),
-		},
-		Proof: proofVec,
+	gethHeader := gethHeader11090290()
+	cache := proofCache11090290()
+	expectedEncoded := encodedProof11090290()
+
+	proof, err := ethereum.MakeProofData(&gethHeader, cache)
+	if err != nil {
+		panic(err)
 	}
 
 	encoded, err := encodeToBytes(proof)
@@ -122,10 +137,23 @@ func TestProof_EncodeDecode(t *testing.T) {
 	}
 	assert.Equal(t, expectedEncoded, encoded, "Encoded ethereum.DoubleNodeWithMerkleProof should match Substrate proof")
 
-	var decoded ethereum.DoubleNodeWithMerkleProof
+	var decoded []ethereum.DoubleNodeWithMerkleProof
 	err = decodeFromBytes(encoded, &decoded)
 	if err != nil {
 		panic(err)
 	}
 	assert.Equal(t, proof, decoded, "Decoded Substrate proof should match ethereum.DoubleNodeWithMerkleProof")
+}
+
+func readTestData(filename string) []byte {
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	rawData, err := ioutil.ReadFile(filepath.Join(dir, "testdata", filename))
+	if err != nil {
+		panic(err)
+	}
+	return rawData
 }

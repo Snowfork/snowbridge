@@ -35,15 +35,20 @@ func NewListener(conn *Connection, messages chan<- chain.Message, headers chan<-
 	}, nil
 }
 
-func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, start *HeaderID) error {
+func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64) error {
+	hcs, err := NewHeaderCacheState(eg, initBlockHeight, nil)
+	if err != nil {
+		return err
+	}
+
 	eg.Go(func() error {
-		return li.pollEventsAndHeaders(cxt, start)
+		return li.pollEventsAndHeaders(cxt, initBlockHeight, hcs)
 	})
 
 	return nil
 }
 
-func (li *Listener) pollEventsAndHeaders(ctx context.Context, start *HeaderID) error {
+func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight uint64, hcs *HeaderCacheState) error {
 	events := make(chan gethTypes.Log)
 	var eventsSubscriptionErr <-chan error
 	headers := make(chan *gethTypes.Header, 5)
@@ -73,7 +78,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, start *HeaderID) e
 
 	li.log.Info("Polling headers started")
 
-	currentBlock := uint64(start.Number)
+	currentBlock := initBlockHeight
 	newestBlock := uint64(0)
 	subscription, err := li.conn.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
@@ -115,14 +120,16 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, start *HeaderID) e
 			li.log.WithFields(logrus.Fields{
 				"blockNumber": blockNumber,
 			}).Info("Witnessed new block header")
+
 			if blockNumber <= currentBlock+1 {
-				li.forwardHeader(gethheader)
+				li.forwardHeader(hcs, gethheader)
 				currentBlock = blockNumber
 			}
 		default:
 			if currentBlock == newestBlock {
 				continue
 			}
+
 			gethheader, err := li.conn.client.HeaderByNumber(ctx, new(big.Int).SetUint64(currentBlock))
 			if err != nil {
 				li.log.WithFields(logrus.Fields{
@@ -132,15 +139,23 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, start *HeaderID) e
 				li.log.WithFields(logrus.Fields{
 					"blockNumber": currentBlock,
 				}).Info("Retrieved old block header")
-				li.forwardHeader(gethheader)
+				li.forwardHeader(hcs, gethheader)
 				currentBlock = currentBlock + 1
 			}
 		}
 	}
 }
 
-func (li *Listener) forwardHeader(gethheader *gethTypes.Header) {
-	header, err := MakeHeaderFromEthHeader(gethheader, li.log)
+func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.Header) {
+	cache, err := hcs.GetEthashproofCache(gethheader.Number.Uint64())
+	if err != nil {
+		li.log.WithFields(logrus.Fields{
+			"blockHash":   gethheader.Hash(),
+			"blockNumber": gethheader.Number,
+		}).Error("Failed to get ethashproof cache for header")
+	}
+
+	header, err := MakeHeaderFromEthHeader(gethheader, cache, li.log)
 	if err != nil {
 		li.log.WithFields(logrus.Fields{
 			"blockHash":   gethheader.Hash(),
@@ -157,7 +172,7 @@ func makeFilterQuery(contracts []Contract) geth.FilterQuery {
 
 	for _, contract := range contracts {
 		addresses = append(addresses, contract.Address)
-		signature := contract.ABI.Events["AppTransfer"].ID.Hex()
+		signature := contract.ABI.Events["AppTransfer"].Id().Hex()
 		topics = append(topics, gethCommon.HexToHash(signature))
 	}
 
