@@ -74,7 +74,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// Generate a message commitment every `T::PruneInterval` blocks
+		// Generate a message commitment every `T::CommitInterval` blocks
 		fn on_initialize(now: T::BlockNumber) -> Weight {
 			if (now % T::CommitInterval::get()).is_zero() {
 				Self::commit()
