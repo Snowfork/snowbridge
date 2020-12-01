@@ -9,7 +9,7 @@ start_ganache()
     echo "Starting Ganache"
     yarn run ganache-cli \
         --port=8545 \
-        --blockTime=15 \
+        --blockTime=4 \
         --networkId=344 \
         --deterministic \
         --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
@@ -46,17 +46,18 @@ start_parachain()
     target/debug/artemis-node build-spec --dev --disable-default-bootnode > $configdir/spec.json
 
     echo "Inserting Ganache chain info into genesis spec"
-    ethereum_initial_header=`curl http://localhost:8545 \
+    ethereum_initial_header=$(curl http://localhost:8545 \
         -X POST \
         -H "Content-Type: application/json" \
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
-        | node ../test/scripts/helpers/transformEthHeader.js`
+        | node ../test/scripts/helpers/transformEthHeader.js)
     node ../test/scripts/helpers/overrideParachainSpec.js $configdir/spec.json \
         genesis.runtime.verifierLightclient.initialDifficulty 0x0 \
         genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header"
 
     target/debug/artemis-node -lruntime=debug \
         --alice \
+        --force-authoring \
         --tmp \
         --rpc-port 11133 \
         --ws-port 11144 \
