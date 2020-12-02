@@ -61,6 +61,7 @@ start_parachain()
         --tmp \
         --rpc-port 11133 \
         --ws-port 11144 \
+        --ws-external \
         --chain $configdir/spec.json \
         >$logfile 2>&1 &
 
