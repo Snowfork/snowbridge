@@ -88,6 +88,7 @@ start_relayer()
 
     popd
     echo "Relay PID: $!"
+
 }
 
 trap 'kill $(jobs -p)' SIGINT SIGTERM
@@ -97,9 +98,12 @@ deploy_contracts
 start_parachain
 start_relayer
 
-# TODO: Exit when any child process dies
-#  https://stackoverflow.com/questions/37496896/exit-a-bash-script-when-one-of-the-subprocesses-exits
-
+echo "Process Tree:"
 pstree $$
+
+echo "Waiting for relayer to generate DAG cache..."
+sleep 10
+
+echo "System has been initialized and E2E tests can be executed"
 
 wait
