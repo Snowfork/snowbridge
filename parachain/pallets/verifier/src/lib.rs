@@ -77,7 +77,7 @@ impl<T: Trait> Module<T> {
 		// Hash all inputs together to produce a unique key for the message
 		let (block_no, event_idx) = match message.verification {
 			VerificationInput::Basic { block_number, event_index } => (block_number, event_index),
-			VerificationInput::None => return Err(Error::<T>::NotSupported.into())
+			_ => return Err(Error::<T>::NotSupported.into())
 		};
 		let key_input = (app_id, message.payload.clone(), block_no, event_idx);
 		let key = T::Hashing::hash_of(&key_input);
