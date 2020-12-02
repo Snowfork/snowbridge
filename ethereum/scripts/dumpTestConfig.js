@@ -40,7 +40,7 @@ const dumpConfig = async (tmpDir, contracts) => {
             }
         },
         substrate: {
-            endpoint: "ws://localhost:9944/"
+            endpoint: "ws://localhost:11144/"
         }
     }
     fs.writeFileSync(path.join(tmpDir, "config.toml"), TOML.stringify(config))

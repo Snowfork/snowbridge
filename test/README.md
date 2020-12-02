@@ -1,6 +1,6 @@
 # E2E tests
 
-The E2E tests run against dockerized services.
+The E2E tests run against local deployments of the parachain, relayer and ganache.
 
 ## Requirements
 

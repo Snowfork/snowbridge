@@ -11,7 +11,7 @@ class SubClient {
     }
 
     async connect() {
-        const provider = new WsProvider('ws://127.0.0.1:9944');
+        const provider = new WsProvider(this.endpoint);
         this.api = await ApiPromise.create({
             provider,
             types: {

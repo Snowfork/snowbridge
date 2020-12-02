@@ -27,7 +27,7 @@ describe('Bridge', function () {
 
   before(async function () {
     ethClient = new EthClient("ws://localhost:8545", ethAppAddress, erc20AppAddress);
-    subClient = new SubClient("ws://localhost:9944");
+    subClient = new SubClient("ws://localhost:11144");
     await subClient.connect();
     await ethClient.initialize();
 
