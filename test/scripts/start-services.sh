@@ -101,7 +101,12 @@ start_relayer
 echo "Process Tree:"
 pstree $$
 
-echo "Waiting for relayer to generate DAG cache..."
+for i in {0..4}; do
+    echo "Waiting for relayer to generate DAG cache..."
+    sleep 30
+done
+
+echo "Waiting for relayer to sync headers..."
 sleep 10
 
 echo "System has been initialized and E2E tests can be executed"
