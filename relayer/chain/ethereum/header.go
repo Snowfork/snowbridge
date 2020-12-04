@@ -12,8 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/tranvictor/ethashproof"
-	"github.com/tranvictor/ethashproof/ethash"
+	"github.com/snowfork/ethashproof"
+	"github.com/snowfork/ethashproof/ethash"
 )
 
 type HeaderID struct {

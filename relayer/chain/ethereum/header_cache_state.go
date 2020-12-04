@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/tranvictor/ethashproof"
+	"github.com/snowfork/ethashproof"
 	"golang.org/x/sync/errgroup"
 )
 
