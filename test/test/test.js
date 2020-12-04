@@ -41,7 +41,7 @@ describe('Bridge', function () {
       let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, ETH_ASSET_ID);
 
       let { gasCost } = await ethClient.sendEth(ethClient.accounts[1], amount, polkadotRecipient);
-      await sleep(10000);
+      await sleep(30000);
 
       let afterEthBalance = await ethClient.getEthBalance(ethClient.accounts[1]);
       let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, ETH_ASSET_ID);
@@ -84,7 +84,7 @@ describe('Bridge', function () {
 
       await ethClient.approveERC20(ethClient.accounts[0], amount, tokenAddress);
       await ethClient.sendERC20(ethClient.accounts[0], amount, tokenAddress, polkadotRecipient);
-      await sleep(10000);
+      await sleep(30000);
 
       let afterEthBalance = await ethClient.getErc20Balance(ethClient.accounts[0], tokenAddress);
       let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, tokenAddress);

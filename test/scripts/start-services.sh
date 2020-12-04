@@ -61,6 +61,7 @@ start_parachain()
         --tmp \
         --rpc-port 11133 \
         --ws-port 11144 \
+        --rpc-cors=all \
         --chain $configdir/spec.json \
         >$logfile 2>&1 &
 
@@ -87,6 +88,7 @@ start_relayer()
 
     popd
     echo "Relay PID: $!"
+
 }
 
 trap 'kill $(jobs -p)' SIGINT SIGTERM
@@ -96,9 +98,17 @@ deploy_contracts
 start_parachain
 start_relayer
 
-# TODO: Exit when any child process dies
-#  https://stackoverflow.com/questions/37496896/exit-a-bash-script-when-one-of-the-subprocesses-exits
-
+echo "Process Tree:"
 pstree $$
+
+until $(grep "Polling headers starting..." $(pwd)/relay.log > /dev/null); do
+    echo "Waiting for relayer to generate DAG cache..."
+    sleep 20
+done
+
+echo "Waiting for relayer to sync headers..."
+sleep 10
+
+echo "System has been initialized and E2E tests can be executed"
 
 wait
