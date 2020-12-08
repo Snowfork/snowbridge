@@ -59,8 +59,6 @@ impl Trait for Test {
 	type Event = ();
 
 	type CommitInterval = CommitInterval;
-
-	type WeightInfo = ();
 }
 
 pub type System = system::Module<Test>;
