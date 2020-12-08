@@ -70,7 +70,7 @@ features = ["derive"]
 package = "ethabi-decode"
 default-features = false
 git = "https://github.com/Snowfork/ethabi-decode"
-version = "1.2.1"
+branch = "fix-nostd-build"
 
 [dependencies.artemis-core]
 default-features = false

@@ -26,26 +26,17 @@ use frame_support::{
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
-use codec::{Encode, Decode};
-
 use artemis_core::{Application, BridgedAssetId, Commitments};
 use artemis_asset as asset;
 
 mod payload;
-use payload::Payload;
+use payload::{InPayload, OutPayload};
 
 #[cfg(test)]
 mod mock;
 
 #[cfg(test)]
 mod tests;
-
-#[derive(Encode, Decode, Clone)]
-struct Message<AccountId> {
-	sender: AccountId,
-	recipient: H160,
-	amount: U256,
-}
 
 pub trait Trait: system::Trait + asset::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -93,9 +84,9 @@ decl_module! {
 			let asset_id: BridgedAssetId = H160::zero();
 			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
 
-			let message = Message {
-				sender: who.clone(),
-				recipient: recipient,
+			let message = OutPayload {
+				sender_addr: who.clone(),
+				recipient_addr: recipient,
 				amount: amount
 			};
 			T::Commitments::add(Self::address(), message.encode());
@@ -109,7 +100,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
+	fn handle_event(payload: InPayload<T::AccountId>) -> DispatchResult {
 		let asset_id: BridgedAssetId = H160::zero();
 		<asset::Module<T>>::do_mint(asset_id, &payload.recipient_addr, payload.amount)
 	}
@@ -117,7 +108,7 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Application for Module<T> {
 	fn handle(payload: &[u8]) -> DispatchResult {
-		let payload_decoded = Payload::decode(payload)
+		let payload_decoded = InPayload::decode(payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
 		Self::handle_event(payload_decoded)

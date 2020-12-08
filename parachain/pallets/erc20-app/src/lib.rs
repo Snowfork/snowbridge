@@ -27,29 +27,17 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 
-use codec::{Encode, Decode};
-
 use artemis_core::{Application, BridgedAssetId, Commitments};
 use artemis_asset as asset;
 
 mod payload;
-use payload::Payload;
+use payload::{InPayload, OutPayload};
 
 #[cfg(test)]
 mod mock;
 
 #[cfg(test)]
 mod tests;
-
-#[derive(Encode, Decode, Clone)]
-struct Message<AccountId> {
-	token: H160,
-	sender: AccountId,
-	recipient: H160,
-	amount: U256,
-}
-
-
 pub trait Trait: system::Trait + asset::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -62,7 +50,7 @@ decl_storage! {
 	}
 }
 
-decl_event!(
+decl_event! {
     /// Events for the ERC20 module.
 	pub enum Event<T>
 	where
@@ -71,7 +59,7 @@ decl_event!(
 		/// Signal a cross-chain transfer.
 		Transfer(BridgedAssetId, AccountId, H160, U256),
 	}
-);
+}
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
@@ -102,10 +90,10 @@ decl_module! {
 
 			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
 
-			let message = Message {
-				token: asset_id,
-				sender: who.clone(),
-				recipient: recipient,
+			let message = OutPayload {
+				token_addr: asset_id,
+				sender_addr: who.clone(),
+				recipient_addr: recipient,
 				amount: amount
 			};
 			T::Commitments::add(Self::address(), message.encode());
@@ -119,7 +107,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
+	fn handle_event(payload: InPayload<T::AccountId>) -> DispatchResult {
 		if payload.token_addr.is_zero() {
 			return Err(Error::<T>::InvalidAssetId.into())
 		}
@@ -133,7 +121,7 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Application for Module<T> {
 	fn handle(payload: &[u8]) -> DispatchResult {
-		let payload_decoded = Payload::decode(payload)
+		let payload_decoded = InPayload::decode(payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
 		Self::handle_event(payload_decoded)

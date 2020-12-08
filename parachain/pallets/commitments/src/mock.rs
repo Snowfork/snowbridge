@@ -51,7 +51,6 @@ impl system::Trait for Test {
 	type SystemWeightInfo = ();
 }
 
-
 parameter_types! {
 	pub const CommitInterval: u64 = 5;
 }
@@ -60,6 +59,8 @@ impl Trait for Test {
 	type Event = ();
 
 	type CommitInterval = CommitInterval;
+
+	type WeightInfo = ();
 }
 
 pub type System = system::Module<Test>;

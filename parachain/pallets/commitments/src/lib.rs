@@ -42,10 +42,17 @@ struct Message {
 	nonce: u64,
 }
 
+
+pub trait WeightInfo {
+	fn commit() -> Weight;
+}
+
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	type CommitInterval: Get<Self::BlockNumber>;
+
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -109,7 +116,7 @@ impl<T: Trait> Module<T> {
 
 		Self::deposit_event(Event::Commitment(hash));
 
-		0
+		T::WeightInfo::commit()
 	}
 }
 

@@ -1,6 +1,7 @@
 use ethabi::{Event as ABIEvent, Param, ParamKind, Token};
 use artemis_ethereum::{DecodeError, log::Log, H160, U256};
 
+use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
 static EVENT_ABI: &ABIEvent = &ABIEvent {
@@ -13,14 +14,14 @@ static EVENT_ABI: &ABIEvent = &ABIEvent {
 	anonymous: false
 };
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Payload<AccountId: codec::Decode> {
+#[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+pub struct InPayload<AccountId: codec::Decode> {
 	pub sender_addr: H160,
 	pub recipient_addr: AccountId,
 	pub amount: U256,
 }
 
-impl<AccountId: codec::Decode> Payload<AccountId> {
+impl<AccountId: codec::Decode> InPayload<AccountId> {
 
 	pub fn decode(payload: &[u8]) -> Result<Self, DecodeError> {
 		// Decode ethereum Log event from RLP-encoded data
@@ -50,6 +51,26 @@ impl<AccountId: codec::Decode> Payload<AccountId> {
 			recipient_addr,
 			amount,
 		})
+	}
+}
+
+// Message to Ethereum
+#[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+pub struct OutPayload<AccountId: codec::Encode> {
+	pub sender_addr: AccountId,
+	pub recipient_addr: H160,
+	pub amount: U256,
+}
+
+impl<AccountId: codec::Encode> OutPayload<AccountId> {
+	/// ABI-encode this payload
+	pub fn encode(&self) -> Vec<u8> {
+		let tokens = vec![
+			Token::FixedBytes(self.sender_addr.encode()),
+			Token::Address(self.recipient_addr),
+			Token::Uint(self.amount)
+		];
+		ethabi::encode(tokens.as_ref())
 	}
 }
 
