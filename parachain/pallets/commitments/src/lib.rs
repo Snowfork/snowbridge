@@ -116,6 +116,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Commitments for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
+	// TODO: Number of messages per commitment should be bounded
 	fn add(address: H160, payload: Vec<u8>) {
 		let nonce = <Self as Store>::Nonce::get();
 		<Self as Store>::MessageQueue::append(Message { address, payload, nonce });
