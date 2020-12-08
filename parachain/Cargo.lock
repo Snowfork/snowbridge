@@ -1448,7 +1448,7 @@ dependencies = [
 [[package]]
 name = "ethabi-decode"
 version = "1.3.1"
-source = "git+https://github.com/Snowfork/ethabi-decode?branch=fix-nostd-build#ba1c54a2c5da0d7b8a302afe47d10669910643cc"
+source = "git+https://github.com/Snowfork/ethabi-decode#473b19733e61ed753a722cfd3dd237cf7b167f31"
 dependencies = [
  "ethereum-types",
  "tiny-keccak 1.5.0",
