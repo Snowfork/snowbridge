@@ -57,6 +57,7 @@ decl_event! {
 		AccountId = <T as system::Trait>::AccountId,
 	{
 		/// Signal a cross-chain transfer.
+		// TODO: Remove once relayer is updated to read commitments instead
 		Transfer(BridgedAssetId, AccountId, H160, U256),
 	}
 }
