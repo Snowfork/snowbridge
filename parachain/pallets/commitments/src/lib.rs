@@ -10,7 +10,7 @@ use frame_support::{
 use sp_io::hashing::keccak_256;
 use sp_core::{H160, H256, RuntimeDebug};
 use sp_runtime::{
-	traits::Zero,
+	traits::{Zero, One},
 	DigestItem
 };
 
@@ -53,8 +53,11 @@ decl_storage! {
 		/// Nonce
 		pub Nonce get(fn nonce): u64;
 
-		/// messages
-		pub Messages: Vec<Message>;
+		/// Messages waiting to be committed
+		pub MessageQueue: Vec<Message>;
+
+		/// Committed Messages
+		pub Commitment: Vec<Message>;
 	}
 }
 
@@ -74,10 +77,17 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// Generate a message commitment every `T::CommitInterval` blocks
+		// Generate a message commitment every `T::CommitInterval` blocks.
+		//
+		// The hash of the commitment is stored as a digest item `CustomDigestItem::Commitment`
+		// in the block header. The committed messages are persisted into storage.
+
 		fn on_initialize(now: T::BlockNumber) -> Weight {
 			if (now % T::CommitInterval::get()).is_zero() {
 				Self::commit()
+			} else if (now % T::CommitInterval::get()).is_one() {
+				<Self as Store>::Commitment::kill();
+				0
 			} else {
 				0
 			}
@@ -90,11 +100,13 @@ impl<T: Trait> Module<T> {
 	// Generate a message commitment
 	// TODO: return proper weight
 	fn commit() -> Weight {
-		let messages: Vec<Message> = <Self as Store>::Messages::take();
+		let messages: Vec<Message> = <Self as Store>::MessageQueue::take();
+		<Self as Store>::Commitment::set(messages.clone());
 		let hash: H256 = keccak_256(messages.encode().as_ref()).into();
 
 		let digest_item = CustomDigestItem::Commitment(hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
+
 		Self::deposit_event(Event::Commitment(hash));
 
 		0
@@ -106,7 +118,7 @@ impl<T: Trait> Commitments for Module<T> {
 	// Add a message for eventual inclusion in a commitment
 	fn add(address: H160, payload: Vec<u8>) {
 		let nonce = <Self as Store>::Nonce::get();
-		<Self as Store>::Messages::append(Message { address, payload, nonce });
+		<Self as Store>::MessageQueue::append(Message { address, payload, nonce });
 		<Self as Store>::Nonce::set(nonce + 1);
 	}
 }

@@ -1,7 +1,7 @@
 // Copyright 2020 Parity Technologies (UK) Ltd.
 use crate::{mock::*};
 
-use crate::{Message, Messages};
+use crate::{Message, MessageQueue};
 
 use sp_runtime::DigestItem;
 use sp_core::H160;
@@ -21,40 +21,46 @@ fn run_to_block(n: u64) {
 	}
 }
 
+
+const CONTRACT_A: H160 =  H160::repeat_byte(1);
+const CONTRACT_B: H160 =  H160::repeat_byte(2);
+
+
 #[test]
 fn test_add_message() {
 	new_test_ext().execute_with(|| {
-		CommitmentsModule::add(H160::zero(), vec![0, 1, 2]);
-		CommitmentsModule::add(H160::zero(), vec![3, 4, 5]);
+		CommitmentsModule::add(CONTRACT_A, vec![0, 1, 2]);
+		CommitmentsModule::add(CONTRACT_B, vec![3, 4, 5]);
+
+		let messages = vec![
+			Message {
+				address: CONTRACT_A,
+				payload: vec![0, 1, 2],
+				nonce: 0
+			},
+			Message {
+				address: CONTRACT_B,
+				payload: vec![3, 4, 5],
+				nonce: 1
+			},
+		];
 
 		assert_eq!(
-			Messages::get(),
-			vec![
-				Message {
-					address: H160::zero(),
-					payload: vec![0, 1, 2],
-					nonce: 0
-				},
-				Message {
-					address: H160::zero(),
-					payload: vec![3, 4, 5],
-					nonce: 1
-				},
-			]
-		);
+			MessageQueue::get(), messages);
 		assert_eq!(CommitmentsModule::nonce(), 2);
 
+		// Run to block 5 where a commitment will be generated
 		run_to_block(5);
 
 		assert_eq!(
-			Messages::exists(), false
+			MessageQueue::exists(), false
 		);
+		assert_eq!(
+			crate::Commitment::get(), messages);
 		assert_eq!(
 			System::digest().logs(),
 			vec![
-				DigestItem::Other(
-					vec![0, 86, 198, 168, 58, 18, 129, 83, 95, 18, 32, 165, 255, 112, 95, 218, 79, 38, 66, 15, 168, 89, 176, 189, 174, 15, 225, 172, 165, 132, 159, 23, 89]
-				)
+				DigestItem::Other(vec![0, 111, 85, 53, 106, 24, 170, 33, 215, 249, 174, 245, 150, 102, 137, 206, 49, 177, 210, 102, 15, 157, 17, 140, 241, 216, 184, 12, 71, 156, 13, 43, 19])
 			]
 		);
 
