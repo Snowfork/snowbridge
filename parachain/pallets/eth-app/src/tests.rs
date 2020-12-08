@@ -7,7 +7,7 @@ use hex_literal::hex;
 use codec::Decode;
 use crate::RawEvent;
 
-use crate::payload::Payload;
+use crate::payload::InPayload;
 
 fn last_event() -> MockEvent {
 	System::events().pop().expect("Event expected").event
@@ -23,7 +23,7 @@ fn mints_after_handling_ethereum_event() {
 		let bob: AccountId = Keyring::Bob.into();
 
 		let recipient_addr = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
-		let event: Payload<TestAccountId> = Payload {
+		let event: InPayload<TestAccountId> = InPayload {
 			sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 			recipient_addr,
 			amount: 10.into(),
