@@ -36,7 +36,12 @@ func NewListener(conn *Connection, messages chan<- chain.Message, headers chan<-
 }
 
 func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64) error {
-	hcs, err := NewHeaderCacheState(eg, initBlockHeight, nil)
+	hcs, err := NewHeaderCacheState(
+		eg,
+		initBlockHeight,
+		&DefaultBlockLoader{conn: li.conn},
+		nil,
+	)
 	if err != nil {
 		return err
 	}
@@ -112,17 +117,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 				"txHash":      event.TxHash.Hex(),
 				"blockNumber": event.BlockNumber,
 			}).Info("Witnessed transaction for application")
-
-			msg, err := MakeMessageFromEvent(event, li.log)
-			if err != nil {
-				li.log.WithFields(logrus.Fields{
-					"address":     event.Address.Hex(),
-					"txHash":      event.TxHash.Hex(),
-					"blockNumber": event.BlockNumber,
-				}).Error("Failed to generate message from ethereum event")
-			} else {
-				li.messages <- *msg
-			}
+			li.forwardEvent(ctx, hcs, &event)
 		case gethheader := <-headers:
 			blockNumber := gethheader.Number.Uint64()
 			newestBlock = blockNumber
@@ -144,7 +139,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 			if err != nil {
 				li.log.WithFields(logrus.Fields{
 					"blockNumber": currentBlock,
-				}).Error("Failed to retrieve old block header")
+				}).WithError(err).Error("Failed to retrieve old block header")
 			} else {
 				li.log.WithFields(logrus.Fields{
 					"blockHash":   gethheader.Hash().Hex(),
@@ -157,13 +152,37 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 	}
 }
 
+func (li *Listener) forwardEvent(ctx context.Context, hcs *HeaderCacheState, event *gethTypes.Log) {
+	receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
+	if err != nil {
+		li.log.WithFields(logrus.Fields{
+			"blockHash":   event.BlockHash.Hex(),
+			"blockNumber": event.BlockNumber,
+			"txHash":      event.TxHash.Hex(),
+		}).WithError(err).Error("Failed to get receipt trie for event")
+		return
+	}
+
+	msg, err := MakeMessageFromEvent(event, receiptTrie, li.log)
+	if err != nil {
+		li.log.WithFields(logrus.Fields{
+			"address":     event.Address.Hex(),
+			"txHash":      event.TxHash.Hex(),
+			"blockNumber": event.BlockNumber,
+		}).WithError(err).Error("Failed to generate message from ethereum event")
+	} else {
+		li.messages <- *msg
+	}
+}
+
 func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.Header) {
 	cache, err := hcs.GetEthashproofCache(gethheader.Number.Uint64())
 	if err != nil {
 		li.log.WithFields(logrus.Fields{
 			"blockHash":   gethheader.Hash().Hex(),
 			"blockNumber": gethheader.Number,
-		}).Error("Failed to get ethashproof cache for header")
+		}).WithError(err).Error("Failed to get ethashproof cache for header")
+		return
 	}
 
 	header, err := MakeHeaderFromEthHeader(gethheader, cache, li.log)
@@ -171,7 +190,7 @@ func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.H
 		li.log.WithFields(logrus.Fields{
 			"blockHash":   gethheader.Hash().Hex(),
 			"blockNumber": gethheader.Number,
-		}).Error("Failed to generate header from ethereum header")
+		}).WithError(err).Error("Failed to generate header from ethereum header")
 	} else {
 		li.headers <- *header
 	}
@@ -180,11 +199,18 @@ func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.H
 func makeFilterQuery(contracts []Contract) geth.FilterQuery {
 	var addresses []gethCommon.Address
 	var topics []gethCommon.Hash
+	topicSet := make(map[gethCommon.Hash]bool)
 
 	for _, contract := range contracts {
 		addresses = append(addresses, contract.Address)
-		signature := contract.ABI.Events["AppTransfer"].Id().Hex()
-		topics = append(topics, gethCommon.HexToHash(signature))
+		for _, event := range contract.ABI.Events {
+			signature := gethCommon.HexToHash(event.Id().Hex())
+			_, exists := topicSet[signature]
+			if !exists {
+				topics = append(topics, signature)
+				topicSet[signature] = true
+			}
+		}
 	}
 
 	return geth.FilterQuery{
