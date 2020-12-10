@@ -10,7 +10,7 @@ use frame_support::{
 use sp_io::hashing::keccak_256;
 use sp_core::{H160, H256, RuntimeDebug};
 use sp_runtime::{
-	traits::{Zero, One},
+	traits::Zero,
 	DigestItem
 };
 
@@ -59,8 +59,8 @@ decl_storage! {
 		/// Messages waiting to be committed
 		pub MessageQueue: Vec<Message>;
 
-		/// Committed Messages
-		pub Commitment: Vec<Message>;
+		/// Committed Messages (encoded form)
+		pub Commitment: Vec<u8>;
 	}
 }
 
@@ -88,9 +88,6 @@ decl_module! {
 		fn on_initialize(now: T::BlockNumber) -> Weight {
 			if (now % T::CommitInterval::get()).is_zero() {
 				Self::commit()
-			} else if (now % T::CommitInterval::get()).is_one() {
-				<Self as Store>::Commitment::kill();
-				0
 			} else {
 				0
 			}
@@ -104,19 +101,21 @@ impl<T: Trait> Module<T> {
 	// TODO: return proper weight
 	fn commit() -> Weight {
 		let messages: Vec<Message> = <Self as Store>::MessageQueue::take();
-		<Self as Store>::Commitment::set(messages.clone());
 
-		let hash: H256 = keccak_256(&Self::serialize_commitment(&messages)).into();
+		let commitment = Self::encode_commitment(&messages);
+		let commitment_hash: H256 = keccak_256(&commitment).into();
 
-		let digest_item = CustomDigestItem::Commitment(hash.clone()).into();
+		<Self as Store>::Commitment::set(commitment);
+
+		let digest_item = CustomDigestItem::Commitment(commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		Self::deposit_event(Event::Commitment(hash));
+		Self::deposit_event(Event::Commitment(commitment_hash));
 
 		0
 	}
 
-	fn serialize_commitment(commitment: &[Message]) -> Vec<u8> {
+	fn encode_commitment(commitment: &[Message]) -> Vec<u8> {
 		let messages: Vec<Token> = commitment.iter()
 			.map(|message|
 				Token::Tuple(vec![

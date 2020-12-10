@@ -56,8 +56,6 @@ fn test_add_message() {
 			MessageQueue::exists(), false
 		);
 		assert_eq!(
-			crate::Commitment::get(), messages);
-		assert_eq!(
 			System::digest().logs(),
 			vec![
 				DigestItem::Other(vec![0, 48, 89, 246, 187, 20, 156, 87, 142, 138, 90, 46, 234, 197, 120, 204, 50, 208, 209, 63, 125, 48, 204, 124, 195, 132, 234, 48, 140, 24, 59, 6, 244])
