@@ -54,6 +54,11 @@ version = "2.0.0-rc6"
 default-features = false
 path = "../../primitives/core"
 
+[dependencies.ethabi]
+package = "ethabi-decode"
+default-features = false
+git = "https://github.com/Snowfork/ethabi-decode"
+
 [features]
 default = ["std"]
 std = [
@@ -64,5 +69,6 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
-    "artemis-core/std"
+    "artemis-core/std",
+    "ethabi/std"
 ]

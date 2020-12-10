@@ -17,6 +17,9 @@ use sp_runtime::{
 use codec::{Encode, Decode};
 use artemis_core::Commitments;
 
+
+use ethabi::{self, Token};
+
 #[cfg(test)]
 mod mock;
 
@@ -102,7 +105,8 @@ impl<T: Trait> Module<T> {
 	fn commit() -> Weight {
 		let messages: Vec<Message> = <Self as Store>::MessageQueue::take();
 		<Self as Store>::Commitment::set(messages.clone());
-		let hash: H256 = keccak_256(messages.encode().as_ref()).into();
+
+		let hash: H256 = keccak_256(&Self::serialize_commitment(&messages)).into();
 
 		let digest_item = CustomDigestItem::Commitment(hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
@@ -111,6 +115,21 @@ impl<T: Trait> Module<T> {
 
 		0
 	}
+
+	fn serialize_commitment(commitment: &[Message]) -> Vec<u8> {
+		let messages: Vec<Token> = commitment.iter()
+			.map(|message|
+				Token::Tuple(vec![
+					Token::Address(message.address),
+					Token::Bytes(message.payload.clone()),
+					Token::Uint(message.nonce.into())
+				])
+			)
+			.collect();
+
+		ethabi::encode(&vec![Token::FixedArray(messages)])
+	}
+
 }
 
 impl<T: Trait> Commitments for Module<T> {

@@ -230,6 +230,7 @@ name = "artemis-commitments"
 version = "0.1.0"
 dependencies = [
  "artemis-core",
+ "ethabi-decode",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
