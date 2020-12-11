@@ -258,7 +258,7 @@ impl pallet_transaction_payment::Trait for Runtime {
 
 impl bridge::Trait for Runtime {
 	type Event = Event;
-	type Verifier = verifier::Module<Runtime>;
+	type Verifier = verifier_lightclient::Module<Runtime>;
 	type AppETH = eth_app::Module<Runtime>;
 	type AppERC20 = erc20_app::Module<Runtime>;
 }

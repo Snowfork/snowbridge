@@ -12,6 +12,7 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
+use artemis_core::{AppId, Message, Verifier, VerificationInput};
 use artemis_ethereum::{HeaderId as EthereumHeaderId, H256, U256};
 use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
 
@@ -132,6 +133,8 @@ decl_error! {
 		InvalidHeader,
 		/// This should never be returned - indicates a bug
 		Unknown,
+		/// The specified verification scheme is not implemented by this module.
+		UnsupportedVerificationScheme,
 	}
 }
 
@@ -410,4 +413,12 @@ fn ancestry<T: Trait>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHea
 	})
 }
 
-// TODO implement artemis_core::Verifier
+impl<T: Trait> Verifier<T::AccountId> for Module<T> {
+	fn verify(_: T::AccountId, _: AppId, message: &Message) -> DispatchResult {
+		// TODO: actually implement verification
+		match message.verification {
+			VerificationInput::ReceiptProof { ref block_hash, ref tx_index, ref proof } => Ok(()),
+			_ => Err(Error::<T>::UnsupportedVerificationScheme.into())
+		}
+	}
+}
