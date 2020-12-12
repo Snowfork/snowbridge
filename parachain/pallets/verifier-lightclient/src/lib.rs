@@ -123,14 +123,21 @@ decl_error! {
 	pub enum Error for Module<T: Trait> {
 		/// Header is same height or older than finalized block (we don't support forks).
 		AncientHeader,
+		/// Header referenced in inclusion proof doesn't exist, e.g. because it's
+		/// pruned or older than genesis.
+		MissingHeader,
 		/// Header's parent has not been imported.
 		MissingParentHeader,
 		/// Header has already been imported.
 		DuplicateHeader,
+		/// Header referenced in inclusion proof is not final yet.
+		HeaderNotFinalized,
 		/// Header is on a stale fork, i.e. it's not a descendant of the latest finalized block
 		HeaderOnStaleFork,
 		/// One or more header fields are invalid.
 		InvalidHeader,
+		/// Proof could not be applied / verified.
+		InvalidProof,
 		/// This should never be returned - indicates a bug
 		Unknown,
 		/// The specified verification scheme is not implemented by this module.
@@ -415,9 +422,41 @@ fn ancestry<T: Trait>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHea
 
 impl<T: Trait> Verifier<T::AccountId> for Module<T> {
 	fn verify(_: T::AccountId, _: AppId, message: &Message) -> DispatchResult {
-		// TODO: actually implement verification
 		match message.verification {
-			VerificationInput::ReceiptProof { ref block_hash, ref tx_index, ref proof } => Ok(()),
+			VerificationInput::ReceiptProof { ref block_hash, ref tx_index, ref proof } => {
+				let header = Headers::<T>::get(block_hash)
+					.ok_or(Error::<T>::MissingHeader)?
+					.header;
+		
+				let receipt = header.check_receipt_proof(&proof.1)
+					.ok_or(Error::<T>::InvalidProof)?;
+				
+				// Check that the header is in the finalized chain
+				let finalized_block = FinalizedBlock::get();
+			
+				if header.number == finalized_block.number {
+					return if *block_hash == finalized_block.hash {
+						Ok(())
+					} else {
+						Err(Error::<T>::HeaderOnStaleFork.into())
+					}
+				}
+			
+				ensure!(
+					header.number < finalized_block.number,
+					Error::<T>::HeaderNotFinalized,
+				);
+				
+				let (finalized_hash_at_number, _) = ancestry::<T>(finalized_block.hash)
+					.find(|(_, ancestor)| ancestor.number == header.number)
+					.ok_or(Error::<T>::HeaderOnStaleFork)?;
+				ensure!(
+					*block_hash == finalized_hash_at_number,
+					Error::<T>::HeaderOnStaleFork,
+				);
+			
+				Ok(())
+			},
 			_ => Err(Error::<T>::UnsupportedVerificationScheme.into())
 		}
 	}
