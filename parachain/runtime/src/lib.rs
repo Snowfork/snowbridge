@@ -39,10 +39,10 @@ use xcm_builder::{
 	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
 };
-use xcm_executor::{traits::NativeAsset, Config, XcmExecutor};
+use xcm_executor::{Config, XcmExecutor};
 use cumulus_primitives::relay_chain::Balance as RelayChainBalance;
 
-use artemis_xcm_support::Transactor;
+use artemis_xcm_support::{Transactor, TrustedReserveFilter};
 
 
 /// An index to a block.
@@ -291,13 +291,18 @@ pub type LocalOriginConverter = (
 	SignedAccountId32AsNative<DotNetwork, Origin>,
 );
 
+
+parameter_types! {
+	pub ReserveAssetLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 1000 });
+}
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type Call = Call;
 	type XcmSender = MessageBroker;
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
-	type IsReserve = NativeAsset;
+	type IsReserve = TrustedReserveFilter<ReserveAssetLocation>;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 }

@@ -12,7 +12,7 @@ use sp_std::{
 	convert::TryFrom
 };
 
-use frame_support::traits::{Currency, WithdrawReasons, ExistenceRequirement};
+use frame_support::traits::{Get, Currency, WithdrawReasons, ExistenceRequirement};
 
 use xcm::v0::{
 	Junction,
@@ -24,7 +24,7 @@ use xcm::v0::{
 };
 
 use artemis_core::assets::MultiAsset as ArtemisMultiAsset;
-use xcm_executor::traits::{LocationConversion, TransactAsset};
+use xcm_executor::traits::{NativeAsset, LocationConversion, FilterAssetLocation, TransactAsset};
 
 pub struct Transactor<DOT, BridgedAssets, AccountIdConverter, AccountId>(
 	PhantomData<(DOT, BridgedAssets, AccountIdConverter, AccountId)>,
@@ -114,4 +114,28 @@ impl<
 		}
 	}
 
+}
+
+pub struct TrustedReserveFilter<T>(PhantomData<T>);
+
+impl<T: Get<MultiLocation>> FilterAssetLocation for TrustedReserveFilter<T> {
+	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		if NativeAsset::filter_asset_location(asset, origin) {
+			return true;
+		}
+
+		if let MultiAsset::ConcreteFungible { ref id, .. } = asset {
+			match id {
+				MultiLocation::X2(
+					Junction::PalletInstance { id: 11 },
+					Junction::AccountKey20 { network: NetworkId::Any, .. }) => {
+						return *origin == T::get()
+				},
+				_ => {
+					return false
+				}
+			}
+		}
+		false
+	}
 }
