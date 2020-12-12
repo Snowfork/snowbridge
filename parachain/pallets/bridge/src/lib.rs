@@ -72,7 +72,6 @@ decl_module! {
 			Self::verify(who, app_id, &message)?;
 			Self::dispatch(app_id.into(), &message)
 		}
-
 	}
 }
 

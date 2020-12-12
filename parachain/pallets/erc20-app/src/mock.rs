@@ -23,6 +23,7 @@ impl_outer_event! {
     pub enum MockEvent for MockRuntime {
 		system<T>,
 		asset<T>,
+		artemis_commitments,
         test_events<T>,
     }
 }
@@ -73,11 +74,22 @@ impl asset::Trait for MockRuntime {
 	type Event = MockEvent;
 }
 
+parameter_types! {
+	pub const CommitInterval: u64 = 20;
+}
+
+impl artemis_commitments::Trait for MockRuntime {
+	type Event = MockEvent;
+	type CommitInterval = CommitInterval;
+}
+
 impl Trait for MockRuntime {
 	type Event = MockEvent;
+	type Commitments = Commitments;
 }
 
 pub type System = system::Module<MockRuntime>;
+pub type Commitments = artemis_commitments::Module<MockRuntime>;
 pub type Asset = asset::Module<MockRuntime>;
 pub type ERC20 = Module<MockRuntime>;
 

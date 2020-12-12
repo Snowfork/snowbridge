@@ -21,7 +21,6 @@ tiny-keccak = { version = "2.0.2" }
 package = "ethabi-decode"
 default-features = false
 git = "https://github.com/Snowfork/ethabi-decode"
-version = "1.2.1"
 
 [dependencies.ethash]
 default-features = false

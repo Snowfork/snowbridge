@@ -8,7 +8,7 @@ use codec::Decode;
 
 use crate::RawEvent;
 
-use crate::payload::Payload;
+use crate::payload::InPayload;
 
 type TestAccountId = <MockRuntime as system::Trait>::AccountId;
 
@@ -24,7 +24,7 @@ fn mints_after_handling_ethereum_event() {
 		let token_addr = H160::repeat_byte(1);
 
 		let recipient_addr = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
-		let event: Payload<TestAccountId> = Payload {
+		let event: InPayload<TestAccountId> = InPayload {
 			sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 			recipient_addr,
 			token_addr,

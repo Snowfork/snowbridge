@@ -1,16 +1,12 @@
 [package]
-name = "artemis-eth-app"
-version = "0.1.1"
+name = "artemis-commitments"
+version = "0.1.0"
 authors = ["Snowfork <contact@snowfork.com>"]
+repository = "https://github.com/Snowfork/polkadot-ethereum"
 edition = "2018"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
-
-[dependencies]
-hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
-hex-literal = { version = "0.3.1", default-features = false }
-rlp = { version = "0.4", default-features = false }
 
 [dependencies.codec]
 default-features = false
@@ -54,55 +50,25 @@ git = "https://github.com/paritytech/substrate.git"
 tag = "v2.0.0-rc6"
 version = "2.0.0-rc6"
 
-[dev-dependencies.sp-keyring]
+[dependencies.artemis-core]
 default-features = false
-git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
-
-[dependencies.serde]
-package = "serde"
-optional = true
-version = "1.0.101"
-features = ["derive"]
+path = "../../primitives/core"
 
 [dependencies.ethabi]
 package = "ethabi-decode"
 default-features = false
 git = "https://github.com/Snowfork/ethabi-decode"
 
-[dependencies.artemis-core]
-default-features = false
-path = "../../primitives/core"
-
-[dependencies.artemis-ethereum]
-default-features = false
-path = "../../primitives/ethereum"
-
-[dependencies.artemis-asset]
-default-features = false
-path = "../../pallets/asset"
-
-[dependencies.artemis-commitments]
-default-features = false
-path = "../../pallets/commitments"
-
 [features]
 default = ["std"]
 std = [
-    "hex/std",
-    "serde/std",
     "codec/std",
     "frame-support/std",
     "frame-system/std",
     "sp-core/std",
-    "sp-std/std",
     "sp-io/std",
     "sp-runtime/std",
+    "sp-std/std",
     "artemis-core/std",
-    "artemis-ethereum/std",
-    "artemis-asset/std",
-    "artemis-commitments/std",
-    "ethabi/std",
-    "rlp/std"
+    "ethabi/std"
 ]

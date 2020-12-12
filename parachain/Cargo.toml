@@ -12,6 +12,7 @@ members = [
     "pallets/verifier-lightclient",
     "pallets/eth-app",
     "pallets/erc20-app",
+    "pallets/commitments",
     "node",
     "runtime",
 ]

@@ -237,3 +237,8 @@ default-features = false
 package = "artemis-erc20-app"
 path = "../pallets/erc20-app"
 version = "0.1.1"
+
+[dependencies.commitments]
+default-features = false
+package = "artemis-commitments"
+path = "../pallets/commitments"
