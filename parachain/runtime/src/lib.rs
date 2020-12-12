@@ -41,6 +41,7 @@ pub use frame_support::{
 	},
 };
 
+pub use artemis_core::AssetId;
 pub use verifier_lightclient::EthereumHeader;
 
 
@@ -278,7 +279,6 @@ impl verifier_lightclient::Trait for Runtime {
 	type VerifyPoW = VerifyPoW;
 }
 
-
 parameter_types! {
 	pub const CommitInterval: BlockNumber = 20;
 }
@@ -289,19 +289,25 @@ impl commitments::Trait for Runtime {
 	type CommitInterval = CommitInterval;
 }
 
-impl asset::Trait for Runtime {
+
+
+impl assets::Trait for Runtime {
 	type Event = Event;
+}
+
+parameter_types! {
+	pub const EthAssetId: AssetId = AssetId::ETH;
 }
 
 impl eth_app::Trait for Runtime {
 	type Event = Event;
-
+	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
 	type Commitments = commitments::Module<Runtime>;
 }
 
 impl erc20_app::Trait for Runtime {
 	type Event = Event;
-
+	type Assets = assets::Module<Runtime>;
 	type Commitments = commitments::Module<Runtime>;
 }
 
@@ -322,7 +328,7 @@ construct_runtime!(
 		Commitments: commitments::{Module, Call, Storage, Event},
 		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
-		Asset: asset::{Module, Call, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
 	}

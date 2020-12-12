@@ -209,7 +209,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
-name = "artemis-asset"
+name = "artemis-assets"
 version = "0.1.1"
 dependencies = [
  "artemis-core",
@@ -248,6 +248,7 @@ dependencies = [
  "parity-scale-codec",
  "rustc-hex",
  "sp-core",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -255,7 +256,7 @@ dependencies = [
 name = "artemis-erc20-app"
 version = "0.1.1"
 dependencies = [
- "artemis-asset",
+ "artemis-assets",
  "artemis-commitments",
  "artemis-core",
  "artemis-ethereum",
@@ -278,7 +279,7 @@ dependencies = [
 name = "artemis-eth-app"
 version = "0.1.1"
 dependencies = [
- "artemis-asset",
+ "artemis-assets",
  "artemis-commitments",
  "artemis-core",
  "artemis-ethereum",
@@ -361,8 +362,9 @@ dependencies = [
 name = "artemis-runtime"
 version = "0.1.1"
 dependencies = [
- "artemis-asset",
+ "artemis-assets",
  "artemis-commitments",
+ "artemis-core",
  "artemis-erc20-app",
  "artemis-eth-app",
  "frame-executive",

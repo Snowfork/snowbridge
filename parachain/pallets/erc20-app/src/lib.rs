@@ -27,8 +27,7 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 
-use artemis_core::{Application, BridgedAssetId, Commitments};
-use artemis_asset as asset;
+use artemis_core::{Application, AssetId, MultiAsset, Commitments};
 
 mod payload;
 use payload::{InPayload, OutPayload};
@@ -38,8 +37,10 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
-pub trait Trait: system::Trait + asset::Trait {
+pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+	type Assets: MultiAsset<<Self as system::Trait>::AccountId>;
 
 	type Commitments: Commitments;
 }
@@ -56,16 +57,13 @@ decl_event! {
 	where
 		AccountId = <T as system::Trait>::AccountId,
 	{
-		/// Signal a cross-chain transfer.
-		// TODO: Remove once relayer is updated to read commitments instead
-		Transfer(BridgedAssetId, AccountId, H160, U256),
+		Burned(H160, AccountId, U256),
+		Minted(H160, AccountId, U256),
 	}
 }
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		/// Asset ID is invalid.
-		InvalidAssetId,
 		/// The submitted payload could not be decoded.
 		InvalidPayload,
 	}
@@ -81,25 +79,21 @@ decl_module! {
 
 		/// Burn an ERC20 token balance
 		#[weight = 0]
-		pub fn burn(origin, asset_id: BridgedAssetId, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, token_addr: H160, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			// The asset_id 0 is reserved for the ETH app
-			if asset_id == H160::zero() {
-				return Err(Error::<T>::InvalidAssetId.into())
-			}
-
-			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
+			T::Assets::withdraw(AssetId::ERC20(token_addr), &who, amount)?;
 
 			let message = OutPayload {
-				token_addr: asset_id,
+				token_addr: token_addr,
 				sender_addr: who.clone(),
 				recipient_addr: recipient,
 				amount: amount
 			};
 			T::Commitments::add(Self::address(), message.encode());
 
-			Self::deposit_event(RawEvent::Transfer(asset_id, who.clone(), recipient, amount));
+			Self::deposit_event(RawEvent::Burned(token_addr, who.clone(), amount));
+
 			Ok(())
 		}
 
@@ -109,12 +103,17 @@ decl_module! {
 impl<T: Trait> Module<T> {
 
 	fn handle_event(payload: InPayload<T::AccountId>) -> DispatchResult {
-		if payload.token_addr.is_zero() {
-			return Err(Error::<T>::InvalidAssetId.into())
-		}
-
-		<asset::Module<T>>::do_mint(payload.token_addr, &payload.recipient_addr, payload.amount)?;
-
+		T::Assets::deposit(
+			AssetId::ERC20(payload.token_addr),
+			&payload.recipient_addr,
+			payload.amount
+		)?;
+		Self::deposit_event(
+			RawEvent::Minted(
+				payload.token_addr,
+				payload.recipient_addr.clone(),
+				payload.amount
+		));
 		Ok(())
 	}
 

@@ -1,10 +1,12 @@
-use crate::mock::{new_tester, MockEvent, MockRuntime, System, AccountId, Origin, Asset, ERC20};
+use crate::mock::{new_tester, MockEvent, MockRuntime, System, AccountId, Origin, Assets, ERC20};
 use frame_support::{assert_ok};
 use frame_system as system;
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
 use hex_literal::hex;
 use codec::Decode;
+
+use artemis_core::{AssetId, MultiAsset};
 
 use crate::RawEvent;
 
@@ -34,7 +36,7 @@ fn mints_after_handling_ethereum_event() {
 		let bob: AccountId = Keyring::Bob.into();
 
 		assert_ok!(ERC20::handle_event(event));
-		assert_eq!(Asset::free_balance(token_addr, &bob), 10.into());
+		assert_eq!(Assets::balance(AssetId::ERC20(token_addr), &bob), 10.into());
 	});
 }
 
@@ -44,7 +46,7 @@ fn burn_should_emit_bridge_event() {
 		let token_id = H160::repeat_byte(1);
 		let recipient = H160::repeat_byte(2);
 		let bob: AccountId = Keyring::Bob.into();
-		Asset::do_mint(token_id, &bob, 500.into()).unwrap();
+		Assets::deposit(AssetId::ERC20(token_id), &bob, 500.into()).unwrap();
 
 		assert_ok!(ERC20::burn(
 			Origin::signed(bob.clone()),
@@ -53,7 +55,7 @@ fn burn_should_emit_bridge_event() {
 			20.into()));
 
 		assert_eq!(
-			MockEvent::test_events(RawEvent::Transfer(token_id, bob, recipient, 20.into())),
+			MockEvent::test_events(RawEvent::Burned(token_id, bob, 20.into())),
 			last_event()
 		);
 
