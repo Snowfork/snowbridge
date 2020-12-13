@@ -36,7 +36,7 @@ fn mints_after_handling_ethereum_event() {
 		let bob: AccountId = Keyring::Bob.into();
 
 		assert_ok!(ERC20::handle_event(event));
-		assert_eq!(Assets::balance(AssetId::ERC20(token_addr), &bob), 10.into());
+		assert_eq!(Assets::balance(AssetId::Token(token_addr), &bob), 10.into());
 	});
 }
 
@@ -46,7 +46,7 @@ fn burn_should_emit_bridge_event() {
 		let token_id = H160::repeat_byte(1);
 		let recipient = H160::repeat_byte(2);
 		let bob: AccountId = Keyring::Bob.into();
-		Assets::deposit(AssetId::ERC20(token_id), &bob, 500.into()).unwrap();
+		Assets::deposit(AssetId::Token(token_id), &bob, 500.into()).unwrap();
 
 		assert_ok!(ERC20::burn(
 			Origin::signed(bob.clone()),

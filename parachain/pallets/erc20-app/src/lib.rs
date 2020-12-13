@@ -84,7 +84,7 @@ decl_module! {
 		pub fn burn(origin, token_addr: H160, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			T::Assets::withdraw(AssetId::ERC20(token_addr), &who, amount)?;
+			T::Assets::withdraw(AssetId::Token(token_addr), &who, amount)?;
 
 			let message = OutPayload {
 				token_addr: token_addr,
@@ -109,7 +109,7 @@ impl<T: Trait> Module<T> {
 
 	fn handle_event(payload: InPayload<T::AccountId>) -> DispatchResult {
 		T::Assets::deposit(
-			AssetId::ERC20(payload.token_addr),
+			AssetId::Token(payload.token_addr),
 			&payload.recipient_addr,
 			payload.amount
 		)?;

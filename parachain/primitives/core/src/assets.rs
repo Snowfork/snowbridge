@@ -6,7 +6,7 @@ use sp_core::{RuntimeDebug, H160, U256};
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, PartialOrd, RuntimeDebug)]
 pub enum AssetId {
 	ETH,
-	ERC20(H160)
+	Token(H160)
 }
 
 pub trait MultiAsset<AccountId>
