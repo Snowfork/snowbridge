@@ -49,9 +49,8 @@ fn burn_should_emit_bridge_event() {
 			20.into()));
 
 		assert_eq!(
-			MockEvent::test_events(RawEvent::Burned(bob, 20.into())),
+			MockEvent::test_events(RawEvent::Transfer(bob, recipient, 20.into())),
 			last_event()
 		);
-
 	});
 }
