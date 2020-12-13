@@ -53,7 +53,7 @@ func (ch *Chain) SetReceiver(ethMessages <-chan chain.Message, ethHeaders <-chan
 	return nil
 }
 
-func (ch *Chain) SetSender(subMessages chan<- chain.Commitment, _ chan<- chain.Header) error {
+func (ch *Chain) SetSender(subMessages chan<- chain.Message, _ chan<- chain.Header) error {
 	listener := NewListener(
 		ch.config,
 		ch.conn,
