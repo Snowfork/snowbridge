@@ -4,15 +4,11 @@
 package substrate
 
 import (
-	"bytes"
 	"context"
-	"encoding/hex"
-	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/centrifuge/go-substrate-rpc-client/scale"
 	types "github.com/centrifuge/go-substrate-rpc-client/types"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
@@ -22,16 +18,16 @@ type Listener struct {
 	eventDecoder *EventDecoder
 	config       *Config
 	conn         *Connection
-	messages     chan<- chain.Message
+	commitments  chan<- chain.Commitment
 	log          *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, messages chan<- chain.Message, log *logrus.Entry) *Listener {
+func NewListener(config *Config, conn *Connection, commitments chan<- chain.Commitment, log *logrus.Entry) *Listener {
 	return &Listener{
 		eventDecoder: NewEventDecoder(&conn.metadata),
 		config:       config,
 		conn:         conn,
-		messages:     messages,
+		commitments:  commitments,
 		log:          log,
 	}
 }
@@ -114,26 +110,17 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				continue
 			}
 
-			var records types.EventRecordsRaw
-			_, err = li.conn.api.RPC.State.GetStorage(storageKey, &records, hash)
+			var commitment types.Bytes
+			ok, err := li.conn.api.RPC.State.GetStorage(storageKey, &commitment, hash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch events for block")
 				sleep(ctx, retryInterval)
 				continue
 			}
 
-			li.log.WithField("record", hex.EncodeToString(records)).Trace("Fetched event record")
-
-			events, err := li.eventDecoder.Decode(records)
-			if err != nil {
-				li.log.WithFields(logrus.Fields{
-					"error": err,
-					"block": currentBlock,
-				}).Error("Failed to decode events for block")
-				return err
+			if ok {
+				li.handleCommitment(currentBlock, commitment)
 			}
-
-			li.handleEvents(currentBlock, events)
 
 			currentBlock++
 		}
@@ -148,41 +135,7 @@ func sleep(ctx context.Context, delay time.Duration) {
 }
 
 // Process transfer events in the block
-func (li *Listener) handleEvents(blockNumber uint64, events []Event) {
-
-	for i, event := range events {
-
-		li.log.WithFields(logrus.Fields{
-			"blockNumber": blockNumber,
-			"name":        fmt.Sprintf("%s.%s", event.Name[0], event.Name[1]),
-		}).Debug("Witnessed event")
-
-		switch fields := event.Fields.(type) {
-		case ETHTransfer:
-			buf := bytes.NewBuffer(nil)
-			encoder := scale.NewEncoder(buf)
-			encoder.Encode(fields.AccountID)
-			encoder.Encode(fields.Recipient)
-			encoder.Encode(fields.Amount)
-			encoder.Encode(uint64(blockNumber))
-			encoder.Encode(uint64(i))
-
-			targetAppID := li.config.Targets["eth"]
-
-			li.messages <- chain.Message{AppID: targetAppID, Payload: buf.Bytes()}
-		case ERC20Transfer:
-			buf := bytes.NewBuffer(nil)
-			encoder := scale.NewEncoder(buf)
-			encoder.Encode(fields.AccountID)
-			encoder.Encode(fields.Recipient)
-			encoder.Encode(fields.TokenID)
-			encoder.Encode(fields.Amount)
-			encoder.Encode(uint64(blockNumber))
-			encoder.Encode(uint64(i))
-
-			targetAppID := li.config.Targets["erc20"]
-
-			li.messages <- chain.Message{AppID: targetAppID, Payload: buf.Bytes()}
-		}
-	}
+func (li *Listener) handleCommitment(blockNumber uint64, commitment []byte) {
+	li.log.WithField("blockNumber", blockNumber).Debug("Witnessed commitment")
+	li.commitments <- chain.Commitment{BlockNumber: blockNumber, Bytes: commitment}
 }

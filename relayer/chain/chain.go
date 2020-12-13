@@ -14,6 +14,11 @@ type Message struct {
 	Payload interface{}
 }
 
+type Commitment struct {
+	BlockNumber uint64
+	Bytes       []byte
+}
+
 type Header struct {
 	HeaderData interface{}
 	ProofData  interface{}
