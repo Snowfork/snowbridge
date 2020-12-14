@@ -94,8 +94,8 @@ decl_module! {
 		// TODO: Calculate weights (#161)
 		#[weight = 10]
 		pub fn transfer(origin,
-						dest: T::AccountId,
 						asset_id: AssetId,
+						dest: T::AccountId,
 						amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			<Self as MultiAsset<_>>::transfer(asset_id, &who, &dest, amount)
