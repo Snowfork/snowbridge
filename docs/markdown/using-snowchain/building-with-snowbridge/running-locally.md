@@ -1,3 +1,10 @@
+---
+layout: default
+title: Running Locally
+parent: Building With Snowbridge
+nav_order: 1
+---
+
 # Running the bridge locally and testing it end to end manually from UI yourself
 
 ## Local extension Setup:

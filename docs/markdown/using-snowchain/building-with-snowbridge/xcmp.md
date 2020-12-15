@@ -1,7 +1,7 @@
 ---
 layout: default
 title: XCMP Interface
-parent: Specification
+parent: Building With Snowbridge
 nav_order: 2
 ---
 
