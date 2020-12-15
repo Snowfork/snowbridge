@@ -1,8 +1,9 @@
+use artemis_core::{VerificationOutput, Verifier as VerifierTrait};
 use crate::mock::{
 	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
-	ethereum_header_proof_from_file, genesis_ethereum_block_hash, new_tester,
-	new_tester_with_config, AccountId, Verifier, VerifierWithPoW, MockRuntime,
-	MockRuntimeWithPoW, Origin,
+	ethereum_header_proof_from_file, genesis_ethereum_block_hash, message_with_receipt_proof,
+	new_tester, new_tester_with_config, receipt_root_and_proof, AccountId, Verifier,
+	VerifierWithPoW, MockRuntime, MockRuntimeWithPoW, Origin,
 };
 use crate::sp_api_hidden_includes_decl_storage::hidden_include::{StorageMap, StorageValue};
 use frame_support::{assert_err, assert_ok};
@@ -285,5 +286,137 @@ fn it_validates_proof_of_work() {
 			),
 			Error::<MockRuntimeWithPoW>::InvalidHeader,
 		);
+	});
+}
+
+#[test]
+fn it_confirms_receipt_inclusion_in_finalized_header() {
+	let (receipts_root, receipt_proof) = receipt_root_and_proof();
+	let mut finalized_header: EthereumHeader = Default::default();
+	finalized_header.receipts_root = receipts_root;
+	let finalized_header_hash = finalized_header.compute_hash();
+
+	new_tester_with_config::<MockRuntime>(GenesisConfig {
+		initial_header: finalized_header,
+		initial_difficulty: 0.into(),
+	}).execute_with(|| {
+		let output = Verifier::verify(
+			Default::default(),
+			Default::default(),
+			&message_with_receipt_proof(finalized_header_hash, receipt_proof),
+		);
+		assert_ok!(&output);
+		assert!(match output.unwrap() {
+			VerificationOutput::Receipt(receipt) => true,
+			_ => false,
+		});
+	});
+}
+
+#[test]
+fn it_denies_receipt_inclusion_for_invalid_proof() {
+	new_tester().execute_with(|| {
+		let (_, receipt_proof) = receipt_root_and_proof();
+		assert_err!(
+			Verifier::verify(
+				Default::default(),
+				Default::default(),
+				&message_with_receipt_proof(genesis_ethereum_block_hash(), receipt_proof),
+			),
+			Error::<MockRuntime>::InvalidProof,
+		);
+	});
+}
+
+#[test]
+fn it_denies_receipt_inclusion_for_invalid_header() {
+	new_tester().execute_with(|| {
+		let (receipts_root, receipt_proof) = receipt_root_and_proof();
+		let mut block1 = child_of_genesis_ethereum_header();
+		block1.receipts_root = receipts_root;
+		let block1_hash = block1.compute_hash();
+		let mut block1_alt = child_of_genesis_ethereum_header();
+		block1_alt.receipts_root = receipts_root;
+		block1_alt.difficulty = 2.into();
+		let block1_alt_hash = block1_alt.compute_hash();
+		let block2_alt = child_of_header(&block1_alt);
+		let block3_alt = child_of_header(&block2_alt);
+		let block4_alt = child_of_header(&block3_alt);
+
+		// Header hasn't been imported yet
+		assert_err!(
+			Verifier::verify(
+				Default::default(),
+				Default::default(),
+				&message_with_receipt_proof(block1_hash, receipt_proof.clone()),
+			),
+			Error::<MockRuntime>::MissingHeader,
+		);
+
+		let ferdie: AccountId = Keyring::Ferdie.into();
+		assert_ok!(Verifier::import_header(
+			Origin::signed(ferdie.clone()),
+			block1,
+			Default::default(),
+		));
+
+		// Header has been imported but not finalized
+		assert_err!(
+			Verifier::verify(
+				Default::default(),
+				Default::default(),
+				&message_with_receipt_proof(block1_hash, receipt_proof.clone()),
+			),
+			Error::<MockRuntime>::HeaderNotFinalized,
+		);
+
+		// With alternate fork:
+		//   B0
+		//   |  \
+		//   B1  B1_ALT
+		//        \
+		//         B2_ALT
+		//          \
+		//           B3_ALT
+		for header in vec![block1_alt, block2_alt, block3_alt].into_iter() {
+			assert_ok!(Verifier::import_header(
+				Origin::signed(ferdie.clone()),
+				header,
+				Default::default(),
+			));
+		}
+		assert_eq!(FinalizedBlock::get().hash, block1_alt_hash);
+
+		// A finalized header at this height exists, but it's not block1
+		assert_err!(
+			Verifier::verify(
+				Default::default(),
+				Default::default(),
+				&message_with_receipt_proof(block1_hash, receipt_proof.clone()),
+			),
+			Error::<MockRuntime>::HeaderOnStaleFork,
+		);
+
+		assert_ok!(Verifier::import_header(
+			Origin::signed(ferdie.clone()),
+			block4_alt,
+			Default::default(),
+		));
+
+		// A finalized header at a newer height exists, but block1 isn't its ancestor
+		assert_err!(
+			Verifier::verify(
+				Default::default(),
+				Default::default(),
+				&message_with_receipt_proof(block1_hash, receipt_proof.clone()),
+			),
+			Error::<MockRuntime>::HeaderOnStaleFork,
+		);
+		// Verification works for an ancestor of the finalized header
+		assert_ok!(Verifier::verify(
+			Default::default(),
+			Default::default(),
+			&message_with_receipt_proof(block1_alt_hash, receipt_proof.clone()),
+		));
 	});
 }

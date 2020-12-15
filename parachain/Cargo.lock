@@ -4095,6 +4095,7 @@ dependencies = [
  "ethash",
  "frame-support",
  "frame-system",
+ "hex-literal 0.3.1",
  "parity-scale-codec",
  "rustc-hex",
  "serde",
