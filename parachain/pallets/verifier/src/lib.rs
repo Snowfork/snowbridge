@@ -19,11 +19,11 @@
 
 use frame_system as system;
 use frame_support::{decl_module, decl_storage, decl_event, decl_error,
-	dispatch::DispatchResult};
+	dispatch::DispatchError, dispatch::DispatchResult};
 use sp_runtime::traits::Hash;
 use sp_std::prelude::*;
 
-use artemis_core::{AppId, Message, Verifier, VerificationInput};
+use artemis_core::{AppId, Message, Verifier, VerificationInput, VerificationOutput};
 
 #[cfg(test)]
 mod mock;
@@ -102,8 +102,8 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Verifier<T::AccountId> for Module<T> {
-	fn verify(sender: T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
+	fn verify(sender: T::AccountId, app_id: AppId, message: &Message) -> Result<VerificationOutput, DispatchError> {
 		Self::do_verify(sender, app_id, message)?;
-		Ok(())
+		Ok(VerificationOutput::None)
 	}
 }

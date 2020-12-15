@@ -102,7 +102,7 @@ impl Header {
 		keccak_256(&self.rlp(false)).into()
 	}
 
-	pub fn check_receipt_proof(&self, proof: &Vec<Vec<u8>>) -> Option<Receipt> {
+	pub fn check_receipt_proof(&self, proof: &[Vec<u8>]) -> Option<Receipt> {
 		match self.apply_merkle_proof(proof) {
 			Some((root, data)) if root == self.receipts_root => rlp::decode(&data).ok(),
 			Some((_, _)) => None,
@@ -110,7 +110,7 @@ impl Header {
 		}
 	}
 
-	pub fn apply_merkle_proof(&self, proof: &Vec<Vec<u8>>) -> Option<(H256, Vec<u8>)> {
+	pub fn apply_merkle_proof(&self, proof: &[Vec<u8>]) -> Option<(H256, Vec<u8>)> {
 		let mut iter = proof.iter().rev();
 		let bytes = match iter.next() {
 			Some(b) => b,

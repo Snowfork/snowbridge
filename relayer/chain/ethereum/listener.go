@@ -114,8 +114,9 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 		case event := <-events:
 			li.log.WithFields(logrus.Fields{
 				"address":     event.Address.Hex(),
-				"txHash":      event.TxHash.Hex(),
+				"blockHash":   event.BlockHash.Hex(),
 				"blockNumber": event.BlockNumber,
+				"txHash":      event.TxHash.Hex(),
 			}).Info("Witnessed transaction for application")
 			li.forwardEvent(ctx, hcs, &event)
 		case gethheader := <-headers:
@@ -167,8 +168,9 @@ func (li *Listener) forwardEvent(ctx context.Context, hcs *HeaderCacheState, eve
 	if err != nil {
 		li.log.WithFields(logrus.Fields{
 			"address":     event.Address.Hex(),
-			"txHash":      event.TxHash.Hex(),
+			"blockHash":   event.BlockHash.Hex(),
 			"blockNumber": event.BlockNumber,
+			"txHash":      event.TxHash.Hex(),
 		}).WithError(err).Error("Failed to generate message from ethereum event")
 	} else {
 		li.messages <- *msg

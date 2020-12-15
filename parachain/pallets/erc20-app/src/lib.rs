@@ -27,7 +27,7 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 
-use artemis_core::{Application, AssetId, MultiAsset, Commitments};
+use artemis_core::{Application, AssetId, MultiAsset, Commitments, VerificationOutput};
 
 mod payload;
 use payload::{InPayload, OutPayload};
@@ -125,9 +125,10 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Application for Module<T> {
-	fn handle(payload: &[u8]) -> DispatchResult {
+	fn handle(payload: &[u8], _verification_output: &VerificationOutput) -> DispatchResult {
 		let payload_decoded = InPayload::decode(payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
+		// TODO: check that payload event exists in VerificationOutput.Receipt
 
 		Self::handle_event(payload_decoded)
 	}
