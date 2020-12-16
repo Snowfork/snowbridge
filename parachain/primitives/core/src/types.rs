@@ -2,7 +2,7 @@
 
 use frame_support::RuntimeDebug;
 use sp_std::vec::Vec;
-use sp_core::{H160, H256};
+use sp_core::H256;
 
 use codec::{Encode, Decode};
 
@@ -49,6 +49,3 @@ pub enum VerificationInput {
 	/// No verification scheme. Such messages will be dropped!
 	None
 }
-
-/// ID for Bridged Assets
-pub type BridgedAssetId = H160;
