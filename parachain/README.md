@@ -168,5 +168,11 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
   "Bloom": {
     "_": "[u8; 256]"
   }
+  "AssetId": {
+    "_enum": {
+      "ETH": null,
+      "Token": "H160"
+    }
+  }
 }
 ```

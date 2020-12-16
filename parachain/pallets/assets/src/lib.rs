@@ -1,27 +1,29 @@
 //! # Assets
 //!
-//! The assets pallet provides functionality for handling account balances.
+//! The Assets module provides functionality for handling fungible assets.
 //!
+//! - [`assets::Trait`](./trait.Trait.html)
+//! - [`Call`](./enum.Call.html)
+//! - [`Module`](./struct.Module.html)
+//
 //! ## Overview
 //!
-//! This module is used by the ETH and ERC20 pallets to store account balances for bridged assets.
+//! The assets module is used by the Polkadot-Ethereum bridge to store ETH and ERC20 token balances.
 //!
-//! Each asset is identified by a unique `H160` hash. This is useful for tracking ERC20 tokens which are natively identified by a 20-byte contract address.
+//! ### Implementations
+//!
+//! The Assets module provides implementations for the following traits.
+//!
+//! - [`MultiAsset`](../artemis_core/assets/trait.MultiAsset.html): Functions for dealing with a
+//! multiple fungible assets.
+//! - [`SingleAsset`](../artemis_core/assets/trait.SingleAsset.html): Functions for dealing with a
+//! single fungible asset.
 //!
 //! ## Interface
 //!
-//! ### Dispatchable Calls
+//! ### Dispatchable Functions
 //!
 //! - `transfer`: Transferring a balance between accounts.
-//!
-//! ### Public Functions
-//!
-//! - `total_issuance`: Retrieve total issuance for a fungible asset.
-//! - `balance`: Retrieve an account balance.
-//! - `withdraw`: Withdraw from an account.
-//! - `deposit`: Deposit into an account.
-//! - `transfer`: Transfer between accounts.
-//!
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_std::prelude::*;
