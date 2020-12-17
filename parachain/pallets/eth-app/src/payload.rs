@@ -1,8 +1,10 @@
 use ethabi::{Event as ABIEvent, Param, ParamKind, Token};
+use artemis_core::VerificationOutput;
 use artemis_ethereum::{DecodeError, log::Log, H160, U256};
 
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
+use sp_std::convert::{TryFrom, TryInto};
 
 static EVENT_ABI: &ABIEvent = &ABIEvent {
 	signature: "AppTransfer(address,bytes32,uint256)",
@@ -23,9 +25,26 @@ pub struct InPayload<AccountId: codec::Decode> {
 
 impl<AccountId: codec::Decode> InPayload<AccountId> {
 
-	pub fn decode(payload: &[u8]) -> Result<Self, DecodeError> {
+	pub fn decode_verified(payload: &[u8], verification_output: &VerificationOutput) -> Result<Self, DecodeError> {
 		// Decode ethereum Log event from RLP-encoded data
 		let log: Log = rlp::decode(payload)?;
+		
+		if let VerificationOutput::Receipt(receipt) = verification_output {
+			if !receipt.contains_log(&log) {
+				return Err(DecodeError::InvalidVerification);
+			}
+		} else {
+			return Err(DecodeError::InvalidVerification);
+		}
+	
+		log.try_into()
+	}
+}
+
+impl<AccountId: codec::Decode> TryFrom<Log> for InPayload<AccountId>{
+	type Error = DecodeError;
+
+	fn try_from(log: Log) -> Result<Self, Self::Error> {
 		let tokens = EVENT_ABI.decode(log.topics, log.data)?;
 		let mut tokens_iter = tokens.iter();
 
@@ -77,6 +96,8 @@ impl<AccountId: codec::Encode> OutPayload<AccountId> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use artemis_ethereum::Receipt;
+	use frame_support::assert_err;
 	use hex_literal::hex;
 
 	const LOG_DATA: [u8; 155] = hex!("
@@ -90,12 +111,31 @@ mod tests {
 
 	#[test]
 	fn test_decode() {
-		assert_eq!(InPayload::decode(&LOG_DATA).unwrap(),
+		let log: Log = rlp::decode(&LOG_DATA).unwrap();
+		let mut receipt: Receipt = Default::default();
+		receipt.logs = vec!(log);
+	
+		assert_eq!(
+			InPayload::decode_verified(&LOG_DATA, &VerificationOutput::Receipt(receipt)).unwrap(),
 			InPayload {
 				sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 				recipient_addr: hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
 				amount: U256::from_dec_str("1000000000000000").unwrap(),
 			}
+		);
+	}
+
+	#[test]
+	fn test_decode_error() {
+		let receipt: Receipt = Default::default();
+	
+		assert_err!(
+			InPayload::<H160>::decode_verified(&LOG_DATA, &VerificationOutput::Receipt(receipt)),
+			DecodeError::InvalidVerification,
+		);
+		assert_err!(
+			InPayload::<H160>::decode_verified(&LOG_DATA, &VerificationOutput::None),
+			DecodeError::InvalidVerification,
 		);
 	}
 }

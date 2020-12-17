@@ -116,11 +116,10 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Application for Module<T> {
-	fn handle(payload: &[u8], _verification_output: &VerificationOutput) -> DispatchResult {
-		let payload_decoded = InPayload::decode(payload)
+	fn handle(payload: &[u8], verification_output: &VerificationOutput) -> DispatchResult {
+		let payload_decoded = InPayload::decode_verified(payload, verification_output)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
-		// TODO: check that payload event exists in VerificationOutput.Receipt
-	
+
 		Self::handle_event(payload_decoded)
 	}
 

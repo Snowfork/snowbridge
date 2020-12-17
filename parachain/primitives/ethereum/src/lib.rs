@@ -31,6 +31,8 @@ pub enum DecodeError {
 	InvalidABI(ethabi::Error),
 	// Invalid message payload
 	InvalidPayload,
+	// Invalid verification for payload
+	InvalidVerification,
 }
 
 impl From<rlp::DecoderError> for DecodeError {
@@ -42,6 +44,19 @@ impl From<rlp::DecoderError> for DecodeError {
 impl From<ethabi::Error> for DecodeError {
 	fn from(err: ethabi::Error) -> Self {
 		DecodeError::InvalidABI(err)
+	}
+}
+
+impl PartialEq for DecodeError {
+	fn eq(&self, other: &Self) -> bool {
+		match (self, other) {
+			(Self::InvalidRLP(l), Self::InvalidRLP(r)) => l == r,
+			// ethabi::Error doesn't implement PartialEq
+			(Self::InvalidABI(_), Self::InvalidABI(_)) => true,
+			(Self::InvalidPayload, Self::InvalidPayload) => true,
+			(Self::InvalidVerification, Self::InvalidVerification) => true,
+			_ => false,
+		}
 	}
 }
 
