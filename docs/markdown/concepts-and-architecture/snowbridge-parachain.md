@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Snowbridge Parachain
-nav_order: 3
+nav_order: 4
 permalink: /concepts/snowbridge-parachain
 parent: Concepts and Architecture
 ---
