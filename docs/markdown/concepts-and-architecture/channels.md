@@ -9,29 +9,54 @@ parent: Concepts and Architecture
 A channel is a concept used as part of the bridge which facilitates the delivery of multiple RPCs in a single direction. A channel consists of a sender and a receiver, each being a piece of business logic that runs on opposite chains. Any user or system wanting to send a message across the bridge must submit their RPC to the channel. Channels at the very least are used to provide some deliverability guarantees to a RPC message, and to provide replay protection across multiple messages.
 
 ## Channel Qualities
-There are many different designs and ideas for how channels can be implemented, each with different tradeoffs and qualities.
+There are many different designs and ideas for how channels can be implemented, each with different tradeoffs and qualities. This page explores some of these and attempts to model out the domain of channel design such that we can eventually pick the design that suits our bridge best.
 
-## Ordered vs Unordered
-An ordered channel means that users are bound/dependent on others being processed. means that cost of processing your message is dependent on cost of processing all unprocessed messages. challenging to bound your cost - could bound by a max-fee-per-message, so any messages higher fail. but then still unbounded by number of messages. in practice, attacker trying to flood the bridge bounded by their budget to spend on these fees
+## Guaranteed Deliverability vs Guaranteed Delivery
+As described before, a channel must ensure deliverability, but it does not need to ensure delivery. Guranteed delivery is great for users and UX though, but complicated to get right and dependent on various assumptions. More complex channels can target both.
+
+## Delivery vs Processing
+Channels are responsible for delivering messages to their destination, but they do not have to be responsible for processing those messages. For example, a channel could deliver a message to Ethereum, but then expect applications/users to run a second transaction of their own to actually have those messages processed.
+
+A channel that provided delivery and processing would likely lead to a simpler and easier UX though, so there is a desire to design a channel that can provide both.
 
 ## Fees
-   - another consideration is the fee currency. fee is charged in currency of destination not of source, but fee is paid in source currency. so need some way to calculate fee based on destination currency rather than source currency. often oracles are used for this, but they come with their own problems. if the calculation is incorrect, then risk of excess unpaid fees bloating bridge too
+Channels often involve fees. To deliver/process messages on the receiving chain, a channel will need to pay gas fees on the receiving chain. To bring in income to offset this payment, the channel will need to charge users fees too, or have an alternative income model.
+
+### Receiver Delivery and Processing Gas Fees
+Any transaction that runs through a channel will have to account for gas fees on the destination chain. Delivery fees can be predicted to some extend, as delivery will happen via the receiver code/logic which is controlled by the channel designer/developer, however processing fees may not be as predictable. If processing happens in the same transaction as delivery, as in some channel designs, fees could be unexpected and even unbounded. In these cases, channels must still be responsible for ensuring that they preserve deliverability even when fees may be unbounded. Preserving deliverability at the expense of successful processing is likely preferred, as the expectation for successful processing can be left up to the sending/receiving application to ensure.
+
+### Sender Fees 
+When a user/application wants to submit to the channel, the channel will likely charge sender fees. At the very least, in order to preserve deliverability, a channel needs to ensure that it has enough fees to pay for gas for delivery on the receiving chain. It should design its sender fee/income model to aim to account for this.
+
+One consideration is that the fee currency charged to senders is likely not the same as the gas fee currency paid on the receiving chain to do delivery/processing. Most likely the sending fee can only be charged in a currency that exists on the sending chain and the gas fee can only be paid in a currency that exists on the receiving chain. The channel then needs some calculation/process to ensure that it charges enough sender fees to cover the delivery fees it needs to pay. Essentially, calculating the delivery fee based on the currency of the sending fee is likely needed. An exchange rate, perhaps based on an oracle could be used for this calculation, but Oracles come with their own problems. Incorrect fee/income management will risk draining the channel of its ability to pay for delivery, and so break the trust model.
+
+If the same currency can be made available on both the sending and receiving chain, this may simplify some of the above issues. One of Snowbridge's designs will do this by using PolkaETH as a sender fee. Ofcourse, PolkaETH doesn't exist without a bridge, so there is a bootstrap problem, but we expect to be able to bootstrap PolkaETH with a simple bridge design that only guarantees deliverability and then use it for a more powerful bridge design that guarantees delivery too. 
+
+Additionally, the delivery fee in Ethereum is charged based on Gas, not Ether, with a gas/ethereum market price that fluctuates over time. For a Polkadot -> Ethereum channel, even if we can make Ether available on Polkadot to be used for channel sender fees, we still need to account for gas fluctuations. The same concern applies with Polkadot and weights.
+
+**Thought:** Perhaps there's a way for us to actually get Gas as a currency on Polkadot, like **PolkaGas**? *(actually, I think this idea for PolkaGas is an equivalent solution to some mechanisms that have been discussed whereby there are feedback/control messages from Ethereum to Polkadot via the bridge to update with the latest gasPrice to get an up-to-date exchange rate. I think building an isolated, simplified PolkaGas app would likely be a cleaner, simpler design than an integrated feedback/control message. It could also provide a PolkaGas/PolkaETH exchange service based on the most recently known gas price)*
+
+## Ordered vs Unordered
+An ordered channel means that message are received and processed by the channel in the same order that they are sent into the channel. An unordered channel means that messages can be received and processed in any order.
+
+In any channel that is shared by multiple users/applications, ordering will place additional constraints on those users/applications. In an ordered channel, every message becomes dependent on the successful acceptance and processing of all previous messages, meaning that users may become dependent on others to get their messages processed first. In order for a channel to preserve deliverability, this issue must be solved.
+
+In an ordered channel, the cost of processing every message is dependent on cost of processing all past unprocessed messages too, and so it becomes challenging to bound the cost of a message. In the case of messages to Ethereum, with high gas costs, this needs to be dealt with. For example, a channel can set a max-processing-fee-per-message, so any messages higher fail. Message cost would still be unbounded though, as the potential number of past unprocessed messages could be unbounded. In practice though, an attacker trying to flood the channel would be bounded by their budget to spend on sender fees.
+
+Bounds on the max throughput of the channel, limiting maximum messages over time could also be used as a stronger bound.
 
 ## Incentives
- - third party incentivization
-   - one value from incentivization is to add incentive for third party to relay messages across the bridge and pay destination fees so that users can get guarantees on delivery even when they are not capable of doing their own relaying, whether that's because they're offline or are being targeted for censorship or are just not able to run their own relaying software reliably.
-   - another value from incentivization is to solve the fee bloating problem of ordered channels. if there is an incentive for relaying messages that presents a profit opportunity, then there are strong incentives for third party relayers to flush out bloated channels.
-   - for both use cases above, incentivization should ideally ensure that the reward for relaying is higher than the cost for relaying. similar to fee problem, reward currency may not be same as fee currency, so same exchange rate calculation issues may apply. also related is gas cost - gas cost should spike to break the goal that reward > cost.
+Besides for a channel charging sender fees to cover having to pay for receiver delivery/processing fees, it may also want to charge additional fees to cover incentives for third parties to actually participate in running the software to make the channel flow and relay messages.
+
+The core value proposition for additional incentives is to ensure that a third part is incentivized to relay messages across the channel and pay destination fees so that users can get guarantees on delivery even when they are not capable of doing their own relaying, whether that's because they're offline or are being targeted for censorship or are just not able to run their own relaying software reliably.
+
+Another value from incentivization is to solve the fee bloating problem of ordered channels. If the channel can be designed such that there is always a potential profit opportunity for relaying messages, then there are strong incentives for third party relayers or users with blocked messages to flush out bloated channels.
+
+For both use cases above, incentivization should ideally ensure that the reward for relaying is higher than the cost for relaying, ie, sender fee is higher than delivery + processing fee.
+
+Similar to problem with fees, incentive currencies may not be same as fee currencies, so same exchange rate calculation issues may apply and there could be a risk of something like a gas price spike that breaks the target of sender fee > delivery + processing fee, and so breaks guaranteed delivery. The same solutions could be used too though.
 
 ## Permissioning
-   - channel could accept messages from any user/contract/pallet and deliver messages to any user/contract/pallet, or could be permissioned only to send/receive from specific users, contracts or pallets. it could also constrain what messages/payloads are allowed, rather than allowing any rpc calls.
+Channels could also be permissioned, ie, restrict acceptance of messages or delivery of messages only to certain users/contracts/pallets/parachains.
 
-## Draft/Notes
-simplifying fees and incentivization:
- - if source+destination currency is the same, then we can get a much simpler fee and incentive model relying on simpler, safer assumptions. ofcourse, between polk and eth, nope but if we have a pegged asset to use with a highly secure and trusted peg, then we could use that for fees an incentivization. ie, use PolkaETH and SnowDOT. But they don't exist without a bridge, so problem of bootstrapping. To solve this, we could have a less featureful/powerful channel for bootstrapping the currency and a stronger, simpler one once bootstrapped. the bootstrap channel still needs to be highly secure and trusted.
- 
-as discussed above, an ordered channel can only truly be secure and trusted if it can solve the fee bloating problem, which is challenging without a trusted peg asset. this makes it challenging to use an ordered channel for the bootstrap channel. alternatively, we could use an unordered channel for the bootstrap channel. here are 2 possible solutions:
- 1 - unordered channel, no incentives, open - simple and usable for bootstrap
- 2 - ordered channel, permissioned just to ethapp and snowdot, fixed fee, minimum-enforced mint/burn amount that is significantly higher than fixed fee and accounts for wild currency exchange and gas price risk - solves fee bloating problem by ensuring that anyone attempting to bloat the channel would have to take a significant loss to do so. incentive-compatible so long as currency exchange + gas price fluctuation calculation remains within expected bounds. still incentive compatible even if not, though becomes a bit cheaper to attack.
-
- todo: dynamic blockchain idea - source chain commitments have bids for each item. items are only flushed out of queue once processed on destination chain and confirmation message relayed back to source chain. relayer can process any messages in any order they like (or maybe must enforce fee-ordering or maybe some other mechanism like new eip?). relayer must relay confirmation msg back to source chain to claim their reward.
+They could also permission based on deeper payload inspection, only allowing for certain kinds of rpc payloads, essentially becoming more application-specific channels. An application-specific channel could remove some risk of uncertain/unbounded processing fees, as it would be able to predict processing fees based on being aware of the destination application code.
