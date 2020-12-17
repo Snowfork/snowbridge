@@ -1,8 +1,8 @@
 ---
 layout: default
 title: Playing with Snowbridge
-nav_order: 3
+nav_order: 4
 permalink: /playing-with-snowbridge
 ---
-
- - using demo/polkaeth/polkaerc20/snowdot
+# Playing with Snowbridge
+We're working on a demo app you'll be able to use to play with the bridge. It should be released soon!

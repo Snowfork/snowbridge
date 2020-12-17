@@ -1,11 +1,15 @@
 ---
 layout: default
-title: Running Locally
+title: Running and Testing the Bridge Locally
 parent: Building With Snowbridge
+permalink: /building-with-snowbridge/running-locally
 nav_order: 1
 ---
 
 # Running the bridge locally and testing it end to end manually from UI yourself
+
+> **&nbsp;&nbsp;&nbsp;&nbsp;Warning:** May be out of date&nbsp;&nbsp;&nbsp;&nbsp;
+{: .label .label-red }
 
 ## Local extension Setup:
  - The tests setup a ganache server with a preset mnemonic. Add the first key from this mnemonic to your Metamask as an extra account to use for testing. You can find this first key here: ARTEMIS_ETHEREUM_KEY in /polkadot-ethereum/test/docker-compose.yml

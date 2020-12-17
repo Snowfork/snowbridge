@@ -1,11 +1,12 @@
 ---
 layout: default
-title: XCMP Interface
+title: XCM Interface for Assets
 parent: Building With Snowbridge
+permalink: /building-with-snowbridge/xcm-for-assets/
 nav_order: 2
 ---
 
-# XCMP Interface <!-- omit in toc -->
+# XCM Interface for Assets
 
 Draft
 {: .label .label-yellow }
@@ -221,41 +222,6 @@ WithdrawAsset {
       ]
     }
   ]
-}
-```
-
-### Bridge Messaging
-
-Our bridge will support arbitrary messaging between Ethereum smart contracts and parachain apps. We'll need XCMP messages to facilitate this communication. As XCMP is still quite immature and untested, the below ideas are still WIP and likely to change but should provide a starting point for thinking through an initial implementation and early experiments.
-
-XCMP messages are asynchronous and sent in a fire-and-forget manner. Messages sent from Parachains to Ethereum will need to specify a target contract for delivery. Parachains will need to register to be notified of messages coming from Ethereum, and will be notified when relevant messages come through for them.
-
-At the application layer, parachain apps and ethereum smart contracts that interact are responsible for being aware of and trusting each other and for determining the payload and interface of their own messages. The bridge just facilitates transfer, verification and routing of these messages to the requested target application. Our ETHApp and ERC20App are examples of pairs of custom FRAME + solidity applications that trust each other and specify a shared interface - although they're implemented as pallets, one could imagine them working similarily as seperate parachains.
-
-
-Example: Register a custom FRAME application to receive messages
-```
-Xcm::Transact {
-  origin: *,
-  call: Bridge.register(app_id, dispatchable)
-}
-```
-
-Once an application living on another parachain has been registered, the bridge can issue XCM messages:
-
-```
-Xcm::Transact {
-  origin: *,
-  call: dispatchable (registered in above example)
-}
-```
-
-In turn, the application would need to notify the bridge in order to unlock assets on the Ethereum side:
-
-```
-Xcm::Transact {
-  origin: *
-  call: Bridge.notify(app_id, payload)
 }
 ```
 
