@@ -1,16 +1,32 @@
-channel characteristics:
- - ordered vs unordered
-   - ordered means that users are bound/dependent on others being processed. means that cost of processing your message is dependent on cost of processing all unprocessed messages. challenging to bound your cost - could bound by a max-fee-per-message, so any messages higher fail. but then still unbounded by number of messages. in practice, attacker trying to flood the bridge bounded by their budget to spend on these fees
+---
+layout: default
+title: Channels
+nav_order: 2
+permalink: /concepts/channels
+parent: Concepts and Architecture
+---
+# Channels
+A channel is a concept used as part of the bridge which facilitates the delivery of multiple RPCs in a single direction. A channel consists of a sender and a receiver, each being a piece of business logic that runs on opposite chains. Any user or system wanting to send a message across the bridge must submit their RPC to the channel. Channels at the very least are used to provide some deliverability guarantees to a RPC message, and to provide replay protection across multiple messages.
+
+## Channel Qualities
+There are many different designs and ideas for how channels can be implemented, each with different tradeoffs and qualities.
+
+## Ordered vs Unordered
+An ordered channel means that users are bound/dependent on others being processed. means that cost of processing your message is dependent on cost of processing all unprocessed messages. challenging to bound your cost - could bound by a max-fee-per-message, so any messages higher fail. but then still unbounded by number of messages. in practice, attacker trying to flood the bridge bounded by their budget to spend on these fees
+
+## Fees
    - another consideration is the fee currency. fee is charged in currency of destination not of source, but fee is paid in source currency. so need some way to calculate fee based on destination currency rather than source currency. often oracles are used for this, but they come with their own problems. if the calculation is incorrect, then risk of excess unpaid fees bloating bridge too
- - direction
-   - ...
+
+## Incentives
  - third party incentivization
    - one value from incentivization is to add incentive for third party to relay messages across the bridge and pay destination fees so that users can get guarantees on delivery even when they are not capable of doing their own relaying, whether that's because they're offline or are being targeted for censorship or are just not able to run their own relaying software reliably.
    - another value from incentivization is to solve the fee bloating problem of ordered channels. if there is an incentive for relaying messages that presents a profit opportunity, then there are strong incentives for third party relayers to flush out bloated channels.
    - for both use cases above, incentivization should ideally ensure that the reward for relaying is higher than the cost for relaying. similar to fee problem, reward currency may not be same as fee currency, so same exchange rate calculation issues may apply. also related is gas cost - gas cost should spike to break the goal that reward > cost.
- - open vs permissioned
+
+## Permissioning
    - channel could accept messages from any user/contract/pallet and deliver messages to any user/contract/pallet, or could be permissioned only to send/receive from specific users, contracts or pallets. it could also constrain what messages/payloads are allowed, rather than allowing any rpc calls.
 
+## Draft/Notes
 simplifying fees and incentivization:
  - if source+destination currency is the same, then we can get a much simpler fee and incentive model relying on simpler, safer assumptions. ofcourse, between polk and eth, nope but if we have a pegged asset to use with a highly secure and trusted peg, then we could use that for fees an incentivization. ie, use PolkaETH and SnowDOT. But they don't exist without a bridge, so problem of bootstrapping. To solve this, we could have a less featureful/powerful channel for bootstrapping the currency and a stronger, simpler one once bootstrapped. the bootstrap channel still needs to be highly secure and trusted.
  

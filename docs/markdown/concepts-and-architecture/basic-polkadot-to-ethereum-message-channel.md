@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Basic Polkadot to Ethereum Message Channel
-nav_order: 6
+nav_order: 7
 permalink: /concepts/basic-polkadot-to-ethereum-message-channel
 parent: Concepts and Architecture
 ---
