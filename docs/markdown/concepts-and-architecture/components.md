@@ -23,7 +23,7 @@ A RPC is a message that is used by an application on one chain to call a functio
 ### Channel
 A channel is a concept used as part of the bridge which facilitates the delivery of multiple RPCs in a single direction. A channel consists of a sender and a receiver, each being a piece of business logic that runs on opposite chains. Any user or system wanting to send a message across the bridge must submit their RPC to the channel. Channels at the very least are used to provide some deliverability guarantees to a RPC message, and to provide replay protection across multiple messages.
 
-For more ideas around channels, see [Channels](/channels)
+For more ideas around channels, see [Channels](./channels)
 
 ### Bridge
 A bridge is a pair of two channels in opposite directions.
