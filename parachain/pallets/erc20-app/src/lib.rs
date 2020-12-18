@@ -20,6 +20,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_std::prelude::*;
+use sp_std::convert::TryInto;
 use sp_core::{H160, U256};
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
@@ -28,6 +29,7 @@ use frame_support::{
 };
 
 use artemis_core::{Application, AssetId, MultiAsset, Commitments, VerificationOutput};
+use artemis_ethereum::Log;
 
 mod payload;
 use payload::{InPayload, OutPayload};
@@ -68,6 +70,8 @@ decl_error! {
 	pub enum Error for Module<T: Trait> {
 		/// The submitted payload could not be decoded.
 		InvalidPayload,
+		// Invalid verification for payload.
+		InvalidVerification,
 	}
 }
 
@@ -126,10 +130,19 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Application for Module<T> {
 	fn handle(payload: &[u8], verification_output: &VerificationOutput) -> DispatchResult {
-		let payload_decoded = InPayload::decode_verified(payload, verification_output)
+		// Decode ethereum Log event from RLP-encoded data
+		let log: Log = rlp::decode(payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
+		
+		if let VerificationOutput::Receipt(receipt) = verification_output {
+			if !receipt.contains_log(&log) {
+				return Err(Error::<T>::InvalidVerification.into());
+			}
+		} else {
+			return Err(Error::<T>::InvalidVerification.into());
+		}
 
-		Self::handle_event(payload_decoded)
+		Self::handle_event(log.try_into().map_err(|_| Error::<T>::InvalidPayload)?)
 	}
 
 	fn address() -> H160 {
