@@ -14,7 +14,7 @@ Snowbridge will support various bits of functionality for blockchain developers.
 
 ## Running our Software
 
-If you're interested in running, using or building on any of our software directly, see our [GitHub](https://github.com/Snowfork/polkadot-ethereum){: target="_blank"}.
+If you're interested in running, using or building on any of our software directly, see our [GitHub repository](https://github.com/Snowfork/polkadot-ethereum){: target="_blank"}.
 
 ## Integrating with PolkaETH, PolkaERC20, or SnowDOT
 
