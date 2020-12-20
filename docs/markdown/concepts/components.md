@@ -127,7 +127,7 @@ For more details, see [Basic Ethereum to Polkadot Message Channel](./basic-ether
 
 ### Basic Polkadot to Ethereum Message Channel
 
-The Basic Polkadot to Ethereum Message Channel is a channel for sending Ethereum RPCs out from the parachain to Ethereum. It is responsible for accepting requests from other pallets and parachains for messages to be sent over to Ethereum. It puts those requests into [Parachain Message Commitments](#parachain-message-commitment) that will be included in the parachain header. The channel then processes those commitments and verifies them via the [Polkadot and Parachain Light Client Verifier](#polkadot-light-client-verifier) to extract Ethereum RPCs. Those Ethereum RPCs are then routed to their target contract by calling that contract.
+The Basic Polkadot to Ethereum Message Channel is a channel for sending Ethereum RPCs out from the parachain to Ethereum. It is responsible for accepting requests from other pallets and parachains for messages to be sent over to Ethereum. It puts those requests into [Parachain Message Commitments](#parachain-message-commitment) that will be included in the parachain header. The channel then processes those commitments and verifies them via the [Polkadot and Parachain Light Client Verifier](#polkadot-and-parachain-light-client-verifier) to extract Ethereum RPCs. Those Ethereum RPCs are then routed to their target contract by calling that contract.
 
 For more details, see [Basic Polkadot to Ethereum Message Channel](./basic-polkadot-to-ethereum-message-channel)
 
