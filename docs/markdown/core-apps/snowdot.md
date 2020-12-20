@@ -1,8 +1,8 @@
 ---
 layout: default
 title: SnowDOT
-parent: Core Bridge Applications
-permalink: /core-bridge-applications/snowdot
+parent: Core Applications
+permalink: /core-applications/snowdot
 nav_order: 3
 ---
 # SnowDOT

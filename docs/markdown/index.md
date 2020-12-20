@@ -26,7 +26,7 @@ Snowbridge is a trustless system for bridging arbitrary data between Polkadot an
 - [Playing with Snowbridge](./playing-with-snowbridge)
 - [Validating and Relaying](./validating-and-relaying)
 - [Building with Snowbridge](./building-with-snowbridge)
-- [Core Bridge Applications](./core-bridge-applications)
+- [Core Bridge Applications](./core-applications)
 - [API Documentation](./api-docs)
 
 ## Who is Snowfork?

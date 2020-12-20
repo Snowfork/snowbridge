@@ -1,8 +1,8 @@
 ---
 layout: default
 title: PolkaETH
-parent: Core Bridge Applications
-permalink: /core-bridge-applications/polkaeth
+parent: Core Applications
+permalink: /core-applications/polkaeth
 nav_order: 1
 ---
 # PolkaETH

@@ -19,6 +19,6 @@ As mentioned, our parachain is permissionless and tokenless, so anyone can run a
 
 ## Parachain Pallets
 
-The parachain provides low level bridging to Ethereum, but also contains pallets for a few high level applications for ETH, DOT and ERC20 pegged assets. These core bridge applications are detailed further here: [PolkaETH](../core-bridge-applications/polkaeth), [PolkaERC20](../core-bridge-applications/polkaerc20), [SnowDOT](../core-bridge-applications/snowdot)
+The parachain provides low level bridging to Ethereum, but also contains pallets for a few high level applications for ETH, DOT and ERC20 pegged assets. These core bridge applications are detailed further here: [PolkaETH](../core-applications/polkaeth), [PolkaERC20](../core-applications/polkaerc20), [SnowDOT](../core-applications/snowdot)
 
 We may add additional core bridge application pallets in future, for example for NFT/ERC721 bridging support or for other functionality that is likely to be needed across the wider Polkadot ecosystem.

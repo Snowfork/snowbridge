@@ -1,8 +1,8 @@
 ---
 layout: default
 title: PolkaERC20
-parent: Core Bridge Applications
-permalink: /core-bridge-applications/polkaerc20
+parent: Core Applications
+permalink: /core-applications/polkaerc20
 nav_order: 2
 ---
 # PolkaERC20

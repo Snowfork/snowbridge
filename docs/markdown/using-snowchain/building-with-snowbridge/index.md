@@ -30,7 +30,7 @@ If you want to get your own assets onto Ethereum, we'll likely build out support
 
 ## Arbitrary state, Cross-Chain Smart Contract Calls and Cross-Chain dApps
 
-Snowbridge supports sending and receiving of arbitrary state between Polkadot and Ethereum, as well as cross-chain smart contract calls. This means it can be used to develop any kinds of cross-chain dApps, not just asset transfer. If you look at the code for our core bridge applications [PolkaETH](../core-bridge-applications/polkaeth), [PolkaERC20](../core-bridge-applications/polkaerc20) and [SnowDOT](../core-bridge-applications/snowdot) you'll see that they've been implemented using pairs of Polkadot pallets and Ethereum smart contracts to create cross-chain dApps for those assets via cross-chain smart contract calls.
+Snowbridge supports sending and receiving of arbitrary state between Polkadot and Ethereum, as well as cross-chain smart contract calls. This means it can be used to develop any kinds of cross-chain dApps, not just asset transfer. If you look at the code for our core bridge applications [PolkaETH](../core-applications/polkaeth), [PolkaERC20](../core-applications/polkaerc20) and [SnowDOT](../core-applications/snowdot) you'll see that they've been implemented using pairs of Polkadot pallets and Ethereum smart contracts to create cross-chain dApps for those assets via cross-chain smart contract calls.
 
 Unfortunately Snowbridge currently only supports arbitrary state/cross-chain smart contract calls for pallets running on our own Parachain. We're working on building out some lower level XCMP messages that will allow for any pallets and/or smart contracts on any Parachain to be used as part of a cross-chain dApp, but this support is still in progress.
 

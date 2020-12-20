@@ -1,13 +1,13 @@
 ---
 layout: default
-title: Core Bridge Applications
+title: Core Applications
 nav_order: 3
 has_children: true
-permalink: /core-bridge-applications/
+permalink: /core-applications/
 ---
-# Core Bridge Applications
+# Core Applications
 
-Snowbridge comes with 3 built in applications. These are all effectively cross-chain dApps. They are intended to provide functionality that we expect is needed across the Polkadot ecosystem and across multiple parachains.
+Snowbridge comes with 3 built-in applications. These are all effectively cross-chain dApps. They are intended to provide functionality that we expect is needed across the Polkadot ecosystem and across multiple parachains.
 
 For now, we only have apps for turning ETH, ERC20 tokens and DOT into cross-chain pegged assets that can live on either Polkadot or Ethereum:
 - [PolkaETH](./polkaeth)
