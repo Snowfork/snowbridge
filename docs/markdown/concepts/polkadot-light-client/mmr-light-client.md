@@ -7,6 +7,7 @@ parent: Polkadot Light Client Verifier
 grand_parent: Concepts and Architecture
 ---
 # Polkadot Relay Chain MMR Light Client
+
 After the interactive protocol runs, we have new [BEEFY](https://github.com/paritytech/grandpa-bridge-gadget) MMR commitments. These are merkle mountain ranges that contain data for updates to the Polkadot Validator set and data for new parachain headers.
 
 We use merkle proofs to verify the contents of each BEEFY MMR, extracting the above two kinds of data.

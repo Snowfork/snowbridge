@@ -6,7 +6,7 @@ permalink: /concepts/polkadot-light-client-verifier/interactive-protocol
 parent: Polkadot Light Client Verifier
 grand_parent: Concepts and Architecture
 ---
-# Bridge design to a PoW chain based on random sampling
+# Bridging to a PoW chain using random sampling
 
 We want a bridge design that is light enough to deploy on Ethereum 1.x. It will be too expensive to put 1000 public keys on Ethereum, so we basically have two choices: verify all signatures in succinct proofs or only verify a few signatures. This is a design that tries to make the latter cryptoeconomically secure. The ideal security to aim for is for it to be as expensive to attack the bridge as the minimum of the market cap of DOTs and Ethereum. Since we can only use small deposits or slash the few validators who reveal, any individual attack attempt is necessarily much cheaper. However we can aim to make an attack very expensive in expectation by making sure that an attack succeeds with low probability and that failed attacks still cost the attackers.
 
@@ -18,7 +18,7 @@ We can describe this as a light client that uses an interactive protocol and the
 
 A prover wants to convince a light client that at least $1/3$ of validators signed a statement, which they claim that a specific set of at least $2/3$ of validators do. We assume that the light client already has a Merkle root $r_{val}$ of validator public keys.
 
-1. The prover sends to the light client the statement $S$, a bitfield $b$ of validators claimed to sign it (which claims that more than $2/3$ of validators signed $S$), one signatures $sig$ on $S$ from an arbitrary validator together with Merkle proofs from $r_{val}$ of their public key.   
+1. The prover sends to the light client the statement $S$, a bitfield $b$ of validators claimed to sign it (which claims that more than $2/3$ of validators signed $S$), one signatures $sig$ on $S$ from an arbitrary validator together with Merkle proofs from $r_{val}$ of their public key.
 
 2. The light client verifies the backing signature and its proof and asks for $k_{approval}$ validators at random among those that $b$ claims signed $S$
 
@@ -26,10 +26,9 @@ A prover wants to convince a light client that at least $1/3$ of validators sign
 
 4. If all these signatures are also correct then the light client accepts the block.
 
-
 Analysis: If at least $2/3$ of validators are honest but no honest validator signed $S$, then at least $1/2$ of validators the prover claimed to sign $S$ did not. Therefore the proof fails with probability at least $2^{-k_{approval}}$.
 
-Furthermore, if signing an incorrect statement $S$ is slashable and we slash by at least $minsupport$, then if the light client reports the initial claim, then at least $minsupport$ stake can be slashed for an incorrect inital statement. Now if at least $2/3$ of validators are honest, then the proof fails with probability $2^{-k_{approval}}$ and so there is an expected cost of $2^{k_{approval}} minsupport$. 
+Furthermore, if signing an incorrect statement $S$ is slashable and we slash by at least $minsupport$, then if the light client reports the initial claim, then at least $minsupport$ stake can be slashed for an incorrect inital statement. Now if at least $2/3$ of validators are honest, then the proof fails with probability $2^{-k_{approval}}$ and so there is an expected cost of $2^{k_{approval}} minsupport$.
 
 ## Implementing this on a PoW Ethereum chain
 
@@ -37,25 +36,23 @@ In this case the light client is a smart contract. We can use a block hash as a 
 
 In order to have an adversary with access to sufficient hashpower on Ethereum still undertake an unknown risk when submitting backing signatures on an invalid statement to the light client, we use the block hash of the block exactly 100 blocks later than the block in which the original claim transaction was included as a source of randomness.
 
-Now, if we e.g. assume that over $2/3$ of the hashpower of Ethereum is owned by honest miners and that over $1/2$ of the claimed signers are honest validators who didn't sign $S$, then we can analyse the maximum probability that the 100th block after the first transaction was included has a blockhash that results in the test succeeding against any strategy by the adversarial miners. This will involve building a Markov chain model of the worst case and proving that the bad guys can't do better. A back of the envelope calculation gave me that this would be something like $7p/2$ chance of success vs $p$ for a random number. 
+Now, if we e.g. assume that over $2/3$ of the hashpower of Ethereum is owned by honest miners and that over $1/2$ of the claimed signers are honest validators who didn't sign $S$, then we can analyse the maximum probability that the 100th block after the first transaction was included has a blockhash that results in the test succeeding against any strategy by the adversarial miners. This will involve building a Markov chain model of the worst case and proving that the bad guys can't do better. A back of the envelope calculation gave me that this would be something like $7p/2$ chance of success vs $p$ for a random number.
 
 Now we'd rather argue about rational miners than honest ones. In this case, producing a block with a hash that fails the test, which happens with probability $1-p$, would gain the miner some block reward $R$ if they released it. It would cost them in expectation $(1-p)/p$ block rewards. With $p=2^{-k_{approval}}$, this is $(2^{k_{approval}}-1)R$. With $R=5$ ETH and $k_{approval} = 25$, this would be 167,772,155 ETH which is more than the 112,421,804 ETH currently in existence. Something like this would be secure enough for rational miners to be honest even if there was only one mining pool for Ethereum.
 
 ### The protocol
 
-1. First a transaction including the data as in 1. above: 
+1. First a transaction including the data as in 1. above:
+    *the statement $S$, a bitfield $b$ of validators claimed to sign it (which claims that more than $2/3$ of validators signed $S$), one signatures $sig$ on $S$ from an arbitrary validator together with Merkle proofs from $r_{val}$ of their public key.*
 
-*the statement $S$, a bitfield $b$ of validators claimed to sign it (which claims that more than $2/3$ of validators signed $S$), one signatures $sig$ on $S$ from an arbitrary validator together with Merkle proofs from $r_{val}$ of their public key.*
-
-is placed on the Ethereum chain. The smart contract validates the signature and Merkle proof from the $r_{val}$ stored on chain. If this passes, it records $S$, $b$, the block number $n$ where this transaction is included and maybe another id or counter $id$ for disambiguation.
-
+    is placed on the Ethereum chain. The smart contract validates the signature and Merkle proof from the $r_{val}$ stored on chain. If this passes, it records $S$, $b$, the block number $n$ where this transaction is included and maybe another id or counter $id$ for disambiguation.
 2. Nothing happens until the block number is at least $n+k+1$. At this point, a designated[^designation-motivation] relayer (probably the same as sent the first transaction), can send a second transaction. The blockhash of block $n+k$ is used as a pseudorandom seed to generate $k_{approval}$ random validators from the $b$ validators who signed. The relayer generates a second transaction containing $S$, $id$, and these signatures.
-
 3. The smart contract processes this transaction. It generates the pseudorandom validators to check from the blockhash of the $n+k$th block. It then checks whether these signatures were included, whether they are correct and whether the Merkle proofs from $r_{val}$ are correct. If so, it accepts $S$ as having happened on Polkadot.
 
 Assuming the relayer used the correct blockhash and has all the signatures they claimed, this should suceed. Probably the pseudorandomness is generated by repeatedly hashing the blockhash.
 
 ### Relayer designation procedure
+
 <!---(temporary working name for 1st & 2nd transactions: initialization & finalization transactions)--->
 The second transaction (finalization transaction) is expensive compared to the first (initialization transaction). Thus, we need a mutual exclusion protocol that ensures that the finalization transaction is only submitted once by one of the protocol-abiding relayers.
 <!--This can be solved by designating a single relayer only to submit this transaction, within some timeout period.-->
@@ -66,7 +63,9 @@ Since the light client will be unaware of the designation choice, it can nonethe
 If we use the author of the initialization transaction, we still need to cater for the possibility that they -- intentionally or not -- time out on the second transaction.
 
 ### Optimistic scheme
-A protocol with competing initialization transactions for a given statement $S_n$ is only required whenever
+
+A protocol with competing initialization transactions for a given statement $S_n$ is only required whenever:
+
 1. the designated relayer for $S_n$ times out on the initialization transaction or submits a malicious statement $S'_n$
 2. the designated relayer for $S_n$ times submits a valid initialization transaction, but times out on the finalization transaction
 
@@ -76,4 +75,4 @@ This would then allocate a mutex for $S_n$ for a block range within which the sm
 
 This scheme can be iterated for up to $k-1$ failures, at which point we must revert to a protocol with competing initialization transactions. As such, $k$ increases the number of backup relayers we can have to remain within the optimistic scheme, but thus also increases the impact a sequence of colluding designated relayers can have.
 
-[^designation-motivation]: The motivation for having a designation procedure is that the second transaction will be very expensive, yet we will only refund one single relayer for sending it 
+[^designation-motivation]: The motivation for having a designation procedure is that the second transaction will be very expensive, yet we will only refund one single relayer for sending it
