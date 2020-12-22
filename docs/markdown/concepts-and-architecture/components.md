@@ -29,7 +29,7 @@ For more ideas around channels, see [Channels](./channels)
 A bridge is a pair of two channels in opposite directions.
 
 ### Relayer
-A relayer is a piece of software that runs offchain that watches two blockchains and relays messages across them. The relayer in our bridge is not part of the core protocol, as it is offchain and so is untrusted. We provide relayer software that will be run by incentivized relayers to keep the bridge active, but the details of the relayer are not relevant for understanding the trustless bridge protocol.
+A relayer is a piece of software that runs offchain that watches two blockchains and relays messages across them. The implementation of the relayer in our bridge is not part of the core protocol, as it is offchain and so is untrusted. Of course, some relayer still needs to be running in order for the bridge to function, but it only needs to conform to the protocol defined by on-chain requirements. We provide relayer software that will be run by incentivized relayers to keep the bridge active, but the details of the relayer are not relevant for understanding the trustless bridge protocol.
 
 For more details on the relayer, see [Validating and Relaying](/validating-and-relaying/)
 
