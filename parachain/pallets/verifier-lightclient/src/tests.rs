@@ -2,7 +2,7 @@ use artemis_core::{VerificationOutput, Verifier as VerifierTrait};
 use crate::mock::{
 	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
 	ethereum_header_proof_from_file, genesis_ethereum_block_hash, message_with_receipt_proof,
-	new_tester, new_tester_with_config, receipt_root_and_proof, AccountId, Verifier,
+	new_tester, new_tester_with_config, receipt, receipt_root_and_proof, AccountId, Verifier,
 	VerifierWithPoW, MockRuntime, MockRuntimeWithPoW, Origin,
 };
 use crate::sp_api_hidden_includes_decl_storage::hidden_include::{StorageMap, StorageValue};
@@ -307,7 +307,7 @@ fn it_confirms_receipt_inclusion_in_finalized_header() {
 		);
 		assert_ok!(&output);
 		assert!(match output.unwrap() {
-			VerificationOutput::Receipt(receipt) => true,
+			VerificationOutput::Receipt(r) => r == receipt(),
 			_ => false,
 		});
 	});

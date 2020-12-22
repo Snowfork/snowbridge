@@ -12,22 +12,22 @@ pub struct FullNode {
 
 impl rlp::Decodable for FullNode {
     fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        let maybe_children: Result<Vec<Option<H256>>, rlp::DecoderError> = rlp.iter()
+        let children: Vec<Option<H256>> = rlp.iter()
             .map(|item| {
                 let v: Vec<u8> = item.as_val()?;
                 match v.len() {
                     0 => Ok(None),
                     32 => {
                         let mut bytes = [0u8; 32];
-                        bytes[..].copy_from_slice(&v[..]);
+                        bytes.copy_from_slice(&v);
                         Ok(Some(bytes.into()))
                     }
                     _ => Err(rlp::DecoderError::Custom("Expected 32-byte hash or empty child"))
                 }
             })
-            .collect();
+            .collect::<Result<_, rlp::DecoderError>>()?;
 
-        Ok(Self {children: maybe_children?})
+        Ok(Self { children })
     }
 }
 

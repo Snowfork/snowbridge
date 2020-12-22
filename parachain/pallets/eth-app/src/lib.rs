@@ -26,7 +26,7 @@ use frame_support::{
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
-use artemis_core::{Application, Commitments, SingleAsset VerificationOutput};
+use artemis_core::{Application, Commitments, SingleAsset, VerificationOutput};
 
 mod payload;
 use payload::{InPayload, OutPayload};

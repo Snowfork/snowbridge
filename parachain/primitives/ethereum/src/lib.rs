@@ -111,17 +111,17 @@ impl Header {
 	}
 
 	pub fn apply_merkle_proof(&self, proof: &[Vec<u8>]) -> Option<(H256, Vec<u8>)> {
-		let mut iter = proof.iter().rev();
-		let bytes = match iter.next() {
+		let mut iter = proof.into_iter().rev();
+		let first_bytes = match iter.next() {
 			Some(b) => b,
 			None => return None,
 		};
-		let item_to_prove: mpt::ShortNode = rlp::decode(bytes).ok()?;
+		let item_to_prove: mpt::ShortNode = rlp::decode(first_bytes).ok()?;
 	
-		let final_hash: Option<[u8; 32]> = iter.fold(Some(keccak_256(bytes)), |maybe_hash, bytes| {
+		let final_hash: Option<[u8; 32]> = iter.fold(Some(keccak_256(first_bytes)), |maybe_hash, bytes| {
 			let expected_hash = maybe_hash?;
 			let node: mpt::FullNode = rlp::decode(bytes).ok()?;
-			let found_hash = node.children.iter().find(|&&hash| Some(expected_hash.into()) == hash);
+			let found_hash = node.children.into_iter().find(|&hash| Some(expected_hash.into()) == hash);
 			found_hash.map(|_| keccak_256(bytes))
 		});
 		
@@ -221,7 +221,7 @@ impl rlp::Decodable for Bloom {
 		match v.len() {
 			256 => {
 				let mut bytes = [0u8; 256];
-				bytes[..].copy_from_slice(&v[..]);
+				bytes.copy_from_slice(&v);
 				Ok(Self(bytes))
 			}
 			_ => Err(rlp::DecoderError::Custom("Expected 256 bytes"))

@@ -18,7 +18,7 @@
 
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::DispatchError, dispatch::DispatchResult};
+	dispatch::DispatchResult};
 use frame_system::{self as system, ensure_signed};
 
 use sp_std::prelude::*;
@@ -71,18 +71,13 @@ decl_module! {
 		#[weight = 0]
 		pub fn submit(origin, app_id: AppId, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let verification_output = Self::verify(who, app_id, &message)?;
+			let verification_output = T::Verifier::verify(who, app_id, &message)?;
 			Self::dispatch(app_id.into(), &message, &verification_output)
 		}
 	}
 }
 
 impl<T: Trait> Module<T> {
-
-	fn verify(sender: T::AccountId, app_id: AppId, message: &Message) -> Result<VerificationOutput, DispatchError> {
-		T::Verifier::verify(sender, app_id, &message)
-	}
-
 	fn dispatch(address: H160, message: &Message, verification_output: &VerificationOutput) -> DispatchResult {
 		if address == T::AppETH::address() {
 			T::AppETH::handle(message.payload.as_ref(), verification_output)
