@@ -26,7 +26,7 @@ use frame_support::{
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
-use artemis_core::{SingleAsset, Application, Commitments};
+use artemis_core::{Application, Commitments, SingleAsset, VerificationOutput};
 
 mod payload;
 use payload::{InPayload, OutPayload};
@@ -116,10 +116,11 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Application for Module<T> {
-	fn handle(payload: &[u8]) -> DispatchResult {
+	fn handle(payload: &[u8], _verification_output: &VerificationOutput) -> DispatchResult {
 		let payload_decoded = InPayload::decode(payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
-
+		// TODO: check that payload event exists in VerificationOutput.Receipt
+	
 		Self::handle_event(payload_decoded)
 	}
 
