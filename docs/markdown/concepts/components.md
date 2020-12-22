@@ -26,13 +26,14 @@ A RPC is a message that is used by an application on one chain to call a functio
 
 A channel is a concept used as part of the bridge which facilitates the delivery of multiple RPCs in a single direction. A channel consists of a sender and a receiver, each being a piece of business logic that runs on opposite chains. Any user or system wanting to send a message across the bridge must submit their RPC to the channel. Channels at the very least are used to provide some deliverability guarantees to a RPC message, and to provide replay protection across multiple messages.
 
+For more ideas around channels, see [Channels](./channels)
+
 ### Bridge
 
 A bridge is a pair of two channels in opposite directions.
 
 ### Relayer
-
-A relayer is a piece of software that runs offchain that watches two blockchains and relays messages across them. The relayer in our bridge is not part of the core protocol, as it is offchain and so is untrusted. We provide relayer software that will be run by incentivized relayers to keep the bridge active, but the details of the relayer are not relevant for understanding the trustless bridge protocol.
+A relayer is a piece of software that runs offchain that watches two blockchains and relays messages across them. The implementation of the relayer in our bridge is not part of the core protocol, as it is offchain and so is untrusted. Of course, some relayer still needs to be running in order for the bridge to function, but it only needs to conform to the protocol defined by on-chain requirements. We provide relayer software that will be run by incentivized relayers to keep the bridge active, but the details of the relayer are not relevant for understanding the trustless bridge protocol.
 
 For more details on the relayer, see [Validating and Relaying](/validating-and-relaying/)
 
