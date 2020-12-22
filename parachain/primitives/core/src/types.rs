@@ -4,6 +4,7 @@ use frame_support::RuntimeDebug;
 use sp_std::vec::Vec;
 use sp_core::H256;
 
+use artemis_ethereum::Receipt;
 use codec::{Encode, Decode};
 
 /// Identifier for an application module registered within the runtime.
@@ -47,5 +48,17 @@ pub enum VerificationInput {
 		proof: (Vec<Vec<u8>>, Vec<Vec<u8>>),
 	},
 	/// No verification scheme. Such messages will be dropped!
+	None
+}
+
+/// Verification output returned by the message verifier
+/// 
+/// This data type allows us to return a value that has been verified. The primary use case
+/// is returning the value proven by an inclusion proof, e.g. ReceiptProof returns Receipt.
+#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+pub enum VerificationOutput {
+	/// The receipt for which inclusion was proven. Corresponds to ReceiptProof input.
+	Receipt(Receipt),
+	/// Verification has no output aside from Ok / Err.
 	None
 }

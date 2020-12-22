@@ -5,6 +5,11 @@ nav_order: 8
 permalink: /concepts/incentivized-bridge
 parent: Concepts and Architecture
 ---
+# Incentivized Bridge
+
+Draft
+{: .label .label-yellow }
+
 In progress...
 
 ## Draft/Notes on our incentivized bridge channels
