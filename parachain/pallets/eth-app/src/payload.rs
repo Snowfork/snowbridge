@@ -3,6 +3,7 @@ use artemis_ethereum::{DecodeError, log::Log, H160, U256};
 
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
+use sp_std::convert::TryFrom;
 
 static EVENT_ABI: &ABIEvent = &ABIEvent {
 	signature: "AppTransfer(address,bytes32,uint256)",
@@ -21,11 +22,10 @@ pub struct InPayload<AccountId: codec::Decode> {
 	pub amount: U256,
 }
 
-impl<AccountId: codec::Decode> InPayload<AccountId> {
+impl<AccountId: codec::Decode> TryFrom<Log> for InPayload<AccountId>{
+	type Error = DecodeError;
 
-	pub fn decode(payload: &[u8]) -> Result<Self, DecodeError> {
-		// Decode ethereum Log event from RLP-encoded data
-		let log: Log = rlp::decode(payload)?;
+	fn try_from(log: Log) -> Result<Self, Self::Error> {
 		let tokens = EVENT_ABI.decode(log.topics, log.data)?;
 		let mut tokens_iter = tokens.iter();
 
@@ -89,8 +89,11 @@ mod tests {
 	");
 
 	#[test]
-	fn test_decode() {
-		assert_eq!(InPayload::decode(&LOG_DATA).unwrap(),
+	fn test_from_log_conversion() {
+		let log: Log = rlp::decode(&LOG_DATA).unwrap();
+	
+		assert_eq!(
+			InPayload::try_from(log).unwrap(),
 			InPayload {
 				sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 				recipient_addr: hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],

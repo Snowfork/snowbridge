@@ -1,9 +1,9 @@
-use artemis_core::{VerificationOutput, Verifier as VerifierTrait};
+use artemis_core::{Verifier as VerifierTrait};
 use crate::mock::{
 	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
-	ethereum_header_proof_from_file, genesis_ethereum_block_hash, message_with_receipt_proof,
-	new_tester, new_tester_with_config, receipt, receipt_root_and_proof, AccountId, Verifier,
-	VerifierWithPoW, MockRuntime, MockRuntimeWithPoW, Origin,
+	ethereum_header_proof_from_file, genesis_ethereum_block_hash, log_payload,
+	message_with_receipt_proof, new_tester, new_tester_with_config, receipt_root_and_proof,
+	AccountId, Verifier, VerifierWithPoW, MockRuntime, MockRuntimeWithPoW, Origin,
 };
 use crate::sp_api_hidden_includes_decl_storage::hidden_include::{StorageMap, StorageValue};
 use frame_support::{assert_err, assert_ok};
@@ -300,16 +300,11 @@ fn it_confirms_receipt_inclusion_in_finalized_header() {
 		initial_header: finalized_header,
 		initial_difficulty: 0.into(),
 	}).execute_with(|| {
-		let output = Verifier::verify(
+		assert_ok!(Verifier::verify(
 			Default::default(),
 			Default::default(),
-			&message_with_receipt_proof(finalized_header_hash, receipt_proof),
-		);
-		assert_ok!(&output);
-		assert!(match output.unwrap() {
-			VerificationOutput::Receipt(r) => r == receipt(),
-			_ => false,
-		});
+			&message_with_receipt_proof(log_payload(), finalized_header_hash, receipt_proof),
+		));
 	});
 }
 
@@ -321,7 +316,7 @@ fn it_denies_receipt_inclusion_for_invalid_proof() {
 			Verifier::verify(
 				Default::default(),
 				Default::default(),
-				&message_with_receipt_proof(genesis_ethereum_block_hash(), receipt_proof),
+				&message_with_receipt_proof(log_payload(), genesis_ethereum_block_hash(), receipt_proof),
 			),
 			Error::<MockRuntime>::InvalidProof,
 		);
@@ -329,8 +324,44 @@ fn it_denies_receipt_inclusion_for_invalid_proof() {
 }
 
 #[test]
+fn it_denies_receipt_inclusion_for_invalid_log() {
+	let (receipts_root, receipt_proof) = receipt_root_and_proof();
+	let mut finalized_header: EthereumHeader = Default::default();
+	finalized_header.receipts_root = receipts_root;
+	let finalized_header_hash = finalized_header.compute_hash();
+
+	new_tester_with_config::<MockRuntime>(GenesisConfig {
+		initial_header: finalized_header,
+		initial_difficulty: 0.into(),
+	}).execute_with(|| {
+		// Invalid log payload
+		assert_err!(
+			Verifier::verify(
+				Default::default(),
+				Default::default(),
+				&message_with_receipt_proof(Vec::new(), finalized_header_hash, receipt_proof.clone()),
+			),
+			Error::<MockRuntime>::InvalidProof,
+		);
+
+		// Valid log payload but doesn't exist in receipt
+		let mut log = log_payload();
+		log[3] = 204;
+		assert_err!(
+			Verifier::verify(
+				Default::default(),
+				Default::default(),
+				&message_with_receipt_proof(log, finalized_header_hash, receipt_proof),
+			),
+			Error::<MockRuntime>::InvalidProof,
+		);
+	})
+}
+
+#[test]
 fn it_denies_receipt_inclusion_for_invalid_header() {
 	new_tester().execute_with(|| {
+		let log = log_payload();
 		let (receipts_root, receipt_proof) = receipt_root_and_proof();
 		let mut block1 = child_of_genesis_ethereum_header();
 		block1.receipts_root = receipts_root;
@@ -348,7 +379,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 			Verifier::verify(
 				Default::default(),
 				Default::default(),
-				&message_with_receipt_proof(block1_hash, receipt_proof.clone()),
+				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
 			Error::<MockRuntime>::MissingHeader,
 		);
@@ -365,7 +396,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 			Verifier::verify(
 				Default::default(),
 				Default::default(),
-				&message_with_receipt_proof(block1_hash, receipt_proof.clone()),
+				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
 			Error::<MockRuntime>::HeaderNotFinalized,
 		);
@@ -392,7 +423,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 			Verifier::verify(
 				Default::default(),
 				Default::default(),
-				&message_with_receipt_proof(block1_hash, receipt_proof.clone()),
+				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
 			Error::<MockRuntime>::HeaderOnStaleFork,
 		);
@@ -408,7 +439,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 			Verifier::verify(
 				Default::default(),
 				Default::default(),
-				&message_with_receipt_proof(block1_hash, receipt_proof.clone()),
+				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
 			Error::<MockRuntime>::HeaderOnStaleFork,
 		);
@@ -416,7 +447,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 		assert_ok!(Verifier::verify(
 			Default::default(),
 			Default::default(),
-			&message_with_receipt_proof(block1_alt_hash, receipt_proof.clone()),
+			&message_with_receipt_proof(log.clone(), block1_alt_hash, receipt_proof.clone()),
 		));
 	});
 }

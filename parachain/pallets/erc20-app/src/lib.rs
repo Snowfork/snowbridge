@@ -20,6 +20,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_std::prelude::*;
+use sp_std::convert::TryInto;
 use sp_core::{H160, U256};
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
@@ -27,7 +28,8 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 
-use artemis_core::{Application, AssetId, MultiAsset, Commitments, VerificationOutput};
+use artemis_core::{Application, AssetId, MultiAsset, Commitments};
+use artemis_ethereum::Log;
 
 mod payload;
 use payload::{InPayload, OutPayload};
@@ -125,10 +127,12 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Application for Module<T> {
-	fn handle(payload: &[u8], _verification_output: &VerificationOutput) -> DispatchResult {
-		let payload_decoded = InPayload::decode(payload)
+	fn handle(payload: &[u8]) -> DispatchResult {
+		// Decode ethereum Log event from RLP-encoded data, and try to convert to InPayload
+		let payload_decoded = rlp::decode::<Log>(payload)
+			.map_err(|_| Error::<T>::InvalidPayload)?
+			.try_into()
 			.map_err(|_| Error::<T>::InvalidPayload)?;
-		// TODO: check that payload event exists in VerificationOutput.Receipt
 
 		Self::handle_event(payload_decoded)
 	}
