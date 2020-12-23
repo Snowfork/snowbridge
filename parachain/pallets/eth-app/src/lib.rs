@@ -71,8 +71,6 @@ decl_error! {
 	pub enum Error for Module<T: Trait> {
 		/// The submitted payload could not be decoded.
 		InvalidPayload,
-		// Invalid verification for payload.
-		InvalidVerification,
 	}
 }
 
