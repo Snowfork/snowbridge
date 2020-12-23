@@ -12,8 +12,8 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
-use artemis_core::{AppId, Message, Verifier, VerificationInput, VerificationOutput};
-use artemis_ethereum::{HeaderId as EthereumHeaderId, Receipt, H256, U256};
+use artemis_core::{AppId, Message, Verifier, VerificationInput};
+use artemis_ethereum::{HeaderId as EthereumHeaderId, Log, Receipt, H256, U256};
 use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
 
 pub use artemis_ethereum::Header as EthereumHeader;
@@ -457,11 +457,18 @@ fn ancestry<T: Trait>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHea
 
 impl<T: Trait> Verifier<T::AccountId> for Module<T> {
 
-	fn verify(_: T::AccountId, _: AppId, message: &Message) -> Result<VerificationOutput, DispatchError> {
+	fn verify(_: T::AccountId, _: AppId, message: &Message) -> DispatchResult {
 		match message.verification {
 			VerificationInput::ReceiptProof { ref block_hash, ref tx_index, ref proof } => {
 				let receipt = Self::verify_receipt_inclusion(block_hash, &proof.1)?;
-				Ok(VerificationOutput::Receipt(receipt))
+
+				let log: Log = rlp::decode(&message.payload)
+					.map_err(|_| Error::<T>::InvalidProof)?;
+				if !receipt.contains_log(&log) {
+					return Err(Error::<T>::InvalidProof.into());
+				}
+		
+				Ok(())
 			},
 			_ => Err(Error::<T>::UnsupportedVerificationScheme.into())
 		}

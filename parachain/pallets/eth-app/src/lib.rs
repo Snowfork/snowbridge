@@ -27,7 +27,7 @@ use sp_std::prelude::*;
 use sp_std::convert::TryInto;
 use sp_core::{H160, U256};
 
-use artemis_core::{Application, Commitments, SingleAsset, VerificationOutput};
+use artemis_core::{Application, Commitments, SingleAsset};
 use artemis_ethereum::Log;
 
 mod payload;
@@ -120,20 +120,14 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Application for Module<T> {
-	fn handle(payload: &[u8], verification_output: &VerificationOutput) -> DispatchResult {
-		// Decode ethereum Log event from RLP-encoded data
-		let log: Log = rlp::decode(payload)
+	fn handle(payload: &[u8]) -> DispatchResult {
+		// Decode ethereum Log event from RLP-encoded data, and try to convert to InPayload
+		let payload_decoded = rlp::decode::<Log>(payload)
+			.map_err(|_| Error::<T>::InvalidPayload)?
+			.try_into()
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
-		if let VerificationOutput::Receipt(receipt) = verification_output {
-			if !receipt.contains_log(&log) {
-				return Err(Error::<T>::InvalidVerification.into());
-			}
-		} else {
-			return Err(Error::<T>::InvalidVerification.into());
-		}
-
-		Self::handle_event(log.try_into().map_err(|_| Error::<T>::InvalidPayload)?)
+		Self::handle_event(payload_decoded)
 	}
 
 	fn address() -> H160 {
