@@ -10,6 +10,6 @@ nav_order: 2
 Draft
 {: .label .label-yellow }
 
-PolkaETH is a cross-chain dApp that facilitates the creation and movement of pegged ERC20 assets in the same way as PolkaETH.
+PolkaERC20 is a cross-chain application that facilitates the creation and movement of pegged ERC20 assets in the same way as PolkaETH.
 
 Further details will be added at a later point.

@@ -1,12 +1,12 @@
 ---
 layout: default
-title: Polkadot Relay Chain MMR Light Client
+title: MMR Light-Client for Polkadot Relay Chain
 nav_order: 3
 permalink: /concepts/polkadot-light-client-verifier/mmr-light-client
 parent: Polkadot Light Client Verifier
 grand_parent: Concepts and Architecture
 ---
-# Polkadot Relay Chain MMR Light Client
+# MMR Light-Client for Polkadot Relay Chain
 
 After the interactive protocol runs, we have new [BEEFY](https://github.com/paritytech/grandpa-bridge-gadget) MMR commitments. These are merkle mountain ranges that contain data for updates to the Polkadot Validator set and data for new parachain headers.
 

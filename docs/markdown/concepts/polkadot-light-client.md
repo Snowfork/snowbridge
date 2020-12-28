@@ -45,9 +45,8 @@ The first step for trustless verification of our bridge on Ethereum starts with 
 
 For more details, see [Polkadot Relay Chain Interactive Update Protocol](/concepts/polkadot-light-client-verifier/interactive-protocol)
 
-### Updating Relay Chain Consensus and Following Snowbridge Parachain
-
-These verified relay chain MMR blocks contain validator set updates and parachain header updates. We can use them to update our knowledge about Polkadot validators and to extract and follow new headers of our Snowbridge parachain blocks.
+### Applying New Relay Chain MMR UPdates
+These verified relay chain MMR updates contain validator set updates and parachain header updates. We can use them to update our knowledge about Polkadot validators and to extract and follow new headers of our Snowbridge parachain blocks.
 
 For more details, see [Polkadot Relay Chain MMR Light Client](/concepts/polkadot-light-client-verifier/mmr-light-client)
 

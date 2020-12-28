@@ -1,15 +1,15 @@
 ---
 layout: default
-title: Basic Ethereum to Polkadot Message Channel
+title: Basic Message Channel (Ethereum → Polkadot)
 nav_order: 6
 permalink: /concepts/basic-ethereum-to-polkadot-message-channel
 parent: Concepts and Architecture
 ---
-# Basic Ethereum to Polkadot Message Channel
+# Basic Message Channel (Ethereum → Polkadot)
 
 ## Overview
 
-The Basic Ethereum to Polkadot Message Channel manages a channel for sending Polkadot RPCs out from Ethereum to Polkadot via events. It consists of a smart contract on the Ethereum side and a corresponding pallet on the parachain side.
+This basic channel provides a mechanism for sending messages out from Ethereum to Polkadot via events. It consists of a smart contract on the Ethereum side and a corresponding pallet on the parachain side.
 
 The smart contract is responsible for accepting requests from other smart contracts for Polkadot RPCs to be sent over to Polkadot. It uses Ethereum Events as the medium for sending messages, so after accepting a request, it adds a nonce and emits an event that the corresponding pallet will receive on the Polkadot side.
 
@@ -29,7 +29,7 @@ This basic channel uses an increasing integer as a nonce for replay protection w
 
 Messages can be processed in any order. The receiving pallet stores the set of nonces that have been used so that it can check for replay protection. Whenever a new message is processed, that message's nonce is added to the set.
 
-For V1, a basic key value store will be used for storing nonces. This is ofcourse not optimized as it requires storing a new item for every message, so longer term a more optimized alternative can be implemented.
+For V1, a basic key-value store will be used for storing nonces. This is ofcourse not optimized as it requires storing a new item for every message, so longer term a more optimized alternative can be implemented.
 
 ## Deliverability
 
@@ -42,7 +42,7 @@ Once a message has been delivered and checked, it is routed to the destination p
 The channel smart contract accepts Polkadot RPCs and adds a nonce, outputting events with the following format:
 
 ```
-BasicE2PChannelEvent {
+ChannelEvent {
     nonce Int
     rpc PolkadotRPC
 }
