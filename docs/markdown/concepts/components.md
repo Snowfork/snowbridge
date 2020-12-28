@@ -6,9 +6,9 @@ permalink: /concepts/components
 parent: Concepts and Architecture
 ---
 
-# Componentized Bridge Spec
+# Modular Bridge Spec
 
-We componentize our bridge into much simpler smaller pieces. The goals for this include:
+Our bridge is modular by design with simple, small pieces. The goals for this include:
 
 - Getting to an easier to understand, simple design
 - Having a design that supports seperation of incentives/guarantees with the ability to have different bridge designs with different fees and guarantees
@@ -39,10 +39,15 @@ For more details on the relayer, see [Validating and Relaying](/validating-and-r
 
 ### Deliverability and Delivery
 
-In the context of these docs, we often use the words guaranteed deliverability and guaranteed delivery. They both refer to different kinds of trust in the bridge:
-- If a bridge has **Guaranteed Deliverability** it means that it is trustlessly possible for a message to be delivered across that bridge, ie, so long as someone is willing to run the software to relay the message and pay gas fees, it will be processed successfully and go through. **Guaranteed Deliverability** does not mean that someone will actually do so - only that it is possible to do so without permission.
-- With **Guaranteed Deliverability**, the sender of the message can always deliver the message themself if they are willing to run a relayer and pay gas prices to do so, and so does not need to trust any third party if they don't want to.
-- **Guaranteed Delivery** on the other hand means that in addition, there are strong incentives or requirements for messages to be delivered such that based on economic assumptions, some third party will actually run software to relay messages and pay for gas and so messages will in fact be delivered even if the sender does not relay themself.
+In the context of these docs, we often use the words guaranteed deliverability and guaranteed delivery. They both refer to different kinds of trust in the bridge.
+
+#### Guaranteed Deliverability
+If a bridge has **Guaranteed Deliverability** it means that it is trustlessly possible for a message to be delivered across that bridge, ie, so long as someone is willing to run the software to relay the message and pay gas fees, it will be processed successfully and go through. **Guaranteed Deliverability** does not mean that someone will actually do so - only that it is possible to do so without permission.
+
+With **Guaranteed Deliverability**, the sender of the message can always deliver the message themself if they are willing to run a relayer and pay gas prices to do so, and so does not need to trust any third party if they don't want to.
+
+#### Guaranteed Delivery
+**Guaranteed Delivery** on the other hand means that in addition, there are strong incentives or requirements for messages to be delivered such that based on economic assumptions, some third party will actually run software to relay messages and pay for gas and so messages will in fact be delivered even if the sender does not relay themself.
 
 ## Core Building Block Components
 
@@ -90,7 +95,7 @@ EthereumRPC {
 }
 ```
 
-Payloads for an EthereumRPC are expected to be ABI encoded contract call data which have been encoded by the sending pallet before sending. The receiving smart contract will be called directly with that ABI-encoded call.
+Payloads for an EthereumRPC are expected to be ABI-encoded contract call data which have been encoded by the sending pallet before sending. The receiving smart contract will be called directly with that ABI-encoded call.
 
 #### Snowbridge Parachain
 
@@ -112,29 +117,29 @@ For trustless verification on Ethereum we need a Polkadot light client and a par
 
 For more details, see [Polkadot Light Client Verifier](./polkadot-light-client-verifier/)
 
-## Basic Bootstrap Bridge
+## Basic Bridge
 
-The basic bootstrap bridge is a lower level bridge intended to act as a bootstrap and simpler alternative to the main bridge. It is not incentivized and so does not guarantee delivery. It does however guarantee deliverability and replay protection.
+The basic bridge is a lower level bridge intended to act as a bootstrap and simpler alternative to the main bridge. It is not incentivized and so does not guarantee delivery. It does however guarantee deliverability and replay protection.
 
 This bridge consists of 2 basic channels.
 
-### Basic Ethereum to Polkadot Message Channel
+### Basic Message Channel (Ethereum → Polkadot)
 
-The Basic Ethereum to Polkadot Message Channel is a channel for sending Polkadot RPCs out from Ethereum to Polkadot via events. It consists of a smart contract on the Ethereum side and a corresponding pallet on the parachain side.
+This is a channel for sending Polkadot RPCs out from Ethereum to Polkadot via events. It consists of a smart contract on the Ethereum side and a corresponding pallet on the parachain side.
 
 The smart contract is responsible for accepting requests from other smart contracts for Ethereum RPCs to be sent over to Polkadot. It puts those requests into a channel that a corresponding pallet will receive on the Polkadot side.
 
-For more details, see [Basic Ethereum to Polkadot Message Channel](./basic-ethereum-to-polkadot-message-channel)
+For more details, see [Basic Message Channel (Ethereum → Polkadot)](./basic-ethereum-to-polkadot-message-channel)
 
-### Basic Polkadot to Ethereum Message Channel
+### Basic Message Channel (Polkadot → Ethereum)
 
-The Basic Polkadot to Ethereum Message Channel is a channel for sending Ethereum RPCs out from the parachain to Ethereum. It is responsible for accepting requests from other pallets and parachains for messages to be sent over to Ethereum. It puts those requests into [Parachain Message Commitments](#parachain-message-commitment) that will be included in the parachain header. The channel then processes those commitments and verifies them via the [Polkadot and Parachain Light Client Verifier](#polkadot-and-parachain-light-client-verifier) to extract Ethereum RPCs. Those Ethereum RPCs are then routed to their target contract by calling that contract.
+This is a channel for sending Ethereum RPCs out from the parachain to Ethereum. It is responsible for accepting requests from other pallets and parachains for messages to be sent over to Ethereum. It puts those requests into [Parachain Message Commitments](#parachain-message-commitment) that will be included in the parachain header. The channel then processes those commitments and verifies them via the [Polkadot and Parachain Light Client Verifier](#polkadot-and-parachain-light-client-verifier) to extract Ethereum RPCs. Those Ethereum RPCs are then routed to their target contract by calling that contract.
 
-For more details, see [Basic Polkadot to Ethereum Message Channel](./basic-polkadot-to-ethereum-message-channel)
+For more details, see [Basic Message Channel (Polkadot → Ethereum)](./basic-polkadot-to-ethereum-message-channel)
 
 ## Incentivized Bridge
 
-The incentivized bridge extends the basic bootstrap bridge by adding a strict message ordering channels in both directions that enforce delivery of messages in the order that they are sent. It also adds incentives which provide guaranteed delivery with strong properties based on simple economic assumptions without the need for any kind of Oracle-based system.
+The incentivized bridge extends the basic bridge by adding a strict message ordering channels in both directions that enforce delivery of messages in the order that they are sent. It also adds incentives which provide guaranteed delivery with strong properties based on simple economic assumptions without the need for any kind of Oracle-based solution.
 
 A common problem with bridges is in handling fluctuating gas prices and exchange rates across chains and assets. Often oracle-based solutions are used to deal with this. However, once we have a bootstrap bridge up, we now have access to cross-chain pegged assets, and so we can use those as part of our bridge incentive model. This means using PolkaETH and SnowDOT to cover costs for relayers such that they are not impacted by changing exchange rates nor gas prices.
 

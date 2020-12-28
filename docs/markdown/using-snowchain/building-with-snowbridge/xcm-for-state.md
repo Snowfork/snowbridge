@@ -1,12 +1,12 @@
 ---
 layout: default
-title: XCM Interface for Cross Chain Applications
+title: XCM Interface for Cross-Chain Applications
 parent: Building With Snowbridge
 permalink: /building-with-snowbridge/xcm-for-state/
 nav_order: 3
 ---
 
-# XCM Interface for Cross-chain Applications
+# XCM Interface for Cross-Chain Applications
 
 Draft
 {: .label .label-yellow }
