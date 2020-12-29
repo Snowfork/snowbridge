@@ -20,6 +20,12 @@ type latestBlockInfo struct {
 	height             uint64
 }
 
+// Syncer retrieves headers starting at a given initial height up to the latest.
+// Headers are sent to the channel `headers` in order. If the initial height is
+// old, (finalized) headers in the canonical chain will be forwarded in quick succession
+// until we catch up with the unfinalized headers. From that point onwards, headers
+// on all forks are forwarded. A header is considered final if it has at least
+// `descendantsUntilFinal` descendants.
 type Syncer struct {
 	descendantsUntilFinal uint64
 	headerCache           HeaderCache

@@ -13,6 +13,10 @@ type HeaderCacheItem struct {
 	Forwarded bool
 }
 
+// This is used to store the latest headers as they are published. Up to
+// `numHeightsToTrack` heights are stored. Once this number is reached, an old
+// height is pruned each time a new height is added. The current stored height
+// range is given by [minHeight, maxHeight].
 type HeaderCache struct {
 	headers           map[string]*HeaderCacheItem
 	hashesByHeight    map[uint64][]string
@@ -31,6 +35,9 @@ func NewHeaderCache(numHeightsToTrack uint64) *HeaderCache {
 	}
 }
 
+// Returns true if insertion was successful. Insertion will only fail
+// if a header is too old, i.e. we've seen at least `numHeightsToTrack`
+// newer heights
 func (hc *HeaderCache) Insert(header *gethTypes.Header) bool {
 	hash := header.Hash().Hex()
 	_, exists := hc.headers[hash]
