@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
 )
 
 // Listener streams the Ethereum blockchain for application events
@@ -89,7 +90,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 		}
 	}
 
-	headerSyncer := NewSyncer(li.conn, 35, headers, li.log)
+	headerSyncer := syncer.NewSyncer(35, syncer.NewHeaderLoader(li.conn.client), headers, li.log)
 
 	li.log.Info("Syncing headers starting...")
 	err := headerSyncer.StartSync(headerCtx, headerEg, initBlockHeight)
