@@ -5,9 +5,11 @@ nav_order: 4
 permalink: /concepts/snowbridge-parachain
 parent: Concepts and Architecture
 ---
+
 # Snowbridge Parachain
 
 The Snowbridge parachain is a tokenless, permissionless parachain. For now, anyone can run a collator node. The parachain facilitates the following functionality:
+
 - Allowing other applications on other parachains to send and receive messages from smart contract applications on Ethereum
 - Wrapping ETH on Ethereum into a Polkadot-based asset via PolkaETH
 - Wrapping ERC20 tokens on Ethereum into Polkadot-based assets via PolkaERC20
@@ -15,7 +17,7 @@ The Snowbridge parachain is a tokenless, permissionless parachain. For now, anyo
 
 ## Block production and permissioning
 
-As mentioned, our parachain is permissionless and tokenless, so anyone can run a collator node. This is somewhat censorship-resistant, but it does mean that an attacker could DDoS the bridge by running tons of nodes that submit empty blocks. Eventually honest blocks are likely to go through, but we do plan to mitigate this in future. Currently Cumulus/Polkadot do not easily support alternative block production and permissioning mechanisms, but we are likely to move to proof-of-stake based consensus with stake being places in DOT tokens once it is supported by Cumulus.
+As mentioned, our parachain is permissionless and tokenless, so anyone can run a collator node. This is somewhat censorship-resistant, but it does mean that an attacker could DoS the bridge by running nodes that submit empty blocks. Eventually honest blocks are likely to go through, but we do plan to mitigate this in future. Currently Cumulus/Polkadot do not easily support alternative block production and permissioning mechanisms, but we are likely to move to proof-of-stake based consensus with stake being placed in DOT tokens once it is supported by Cumulus.
 
 ## Parachain Pallets
 

@@ -5,6 +5,7 @@ nav_order: 6
 permalink: /concepts/basic-ethereum-to-polkadot-message-channel
 parent: Concepts and Architecture
 ---
+
 # Basic Ethereum to Polkadot Message Channel
 
 ## Overview
@@ -13,7 +14,7 @@ The Basic Ethereum to Polkadot Message Channel manages a channel for sending Pol
 
 The smart contract is responsible for accepting requests from other smart contracts for Polkadot RPCs to be sent over to Polkadot. It uses Ethereum Events as the medium for sending messages, so after accepting a request, it adds a nonce and emits an event that the corresponding pallet will receive on the Polkadot side.
 
-The corresponsing receiving pallet accepts as input a set of events and a transaction receipt proof, calls out to the [Ethereum Light Client Verifier](./ethereum-verifier) to verify that each Ethereum event is in fact valid and included in the Ethereum chain, and then it processes those events by forwarding them to their destination pallet.
+The corresponsing receiving pallet accepts as input a set of events and a transaction receipt proof, calls out to the [Ethereum Light Client Verifier](./ethereum-verifier) to confirm that the containing block is considered final by having a predefined number of confirmations and to verify that each Ethereum event is in fact valid and included in the Ethereum chain, and then it processes those events by forwarding them to their destination pallet.
 
 This channel is intended to be a simple straightforward channel which provides only a basic guarantee of deliverability and replay protection.
 
@@ -29,7 +30,7 @@ This basic channel uses an increasing integer as a nonce for replay protection w
 
 Messages can be processed in any order. The receiving pallet stores the set of nonces that have been used so that it can check for replay protection. Whenever a new message is processed, that message's nonce is added to the set.
 
-For V1, a basic key value store will be used for storing nonces. This is ofcourse not optimized as it requires storing a new item for every message, so longer term a more optimized alternative can be implemented.
+For V1, a basic key value store will be used for storing nonces. This is of course not optimized as it requires storing a new item for every message, so longer term a more optimized alternative can be implemented.
 
 ## Deliverability
 
@@ -55,6 +56,6 @@ Future optimizations could be done to the replay protection mechanism to improve
 - Using a small proof stored on-chain to summarize the set of nonces that have been used, like a merkle tree root that can quickly verify whether a given nonce has been used and can be updated with new nonces as they are used
 - Exploring something like a RSA accumulator or Bloom Filter
 
- In future, a more complex design for the bootstrap channel could be explored. For example, a channel that batches messages into blocks at regular intervals would be able to process messages in order and so would only require storing the nonce of the most recently processed message to be checked for replay protection rather than storing every processed nonce.
+In the future, a more complex design for the bootstrap channel could be explored. For example, a channel that batches messages into blocks at regular intervals would be able to process messages in order and so would only require storing the nonce of the most recently processed message to be checked for replay protection rather than storing every processed nonce.
 
- Adding something like a bidding market for ordering and inclusion of messages within a block could be valuable too, though this would then mean having a more nuanced guarantee of message deliverability which would be dependent on the bidding market, so is not ideal in the short term for our initial basic bootstrap implementation.
+Adding something like a bidding market for ordering and inclusion of messages within a block could be valuable too, though this would then mean having a more nuanced guarantee of message deliverability which would be dependent on the bidding market, so is not ideal in the short term for our initial basic bootstrap implementation.

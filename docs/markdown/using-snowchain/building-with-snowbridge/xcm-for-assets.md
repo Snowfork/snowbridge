@@ -63,22 +63,23 @@ MultiAsset::ConcreteFungible {
 
 The following scenarios highlight the various kinds of asset transfers supported by our parachain.
 
-### Transfer pETH from the reserve parachain to another parachain <!-- omit in toc -->
+### Transfer PolkaETH from the reserve parachain to another parachain <!-- omit in toc -->
 
-In this example, Alice wants to transfer 21 pETH to Bob on another parachain.
+In this example, Alice wants to transfer 21 PolkaETH to Bob on another parachain.
 
 Parties:
 
-- H: Home chain (Ethereum Bridge)
+- H: Home chain (Snowfork parachain)
 - D: Destination chain
 
 Effects:
 
-1. H will withdraw 21 pETH from Alice's local account.
-2. The sovereign account of D on H will be credited with 21 pETH.
-3. D will mint 21 pETH into Bob's account.
+1. H will withdraw 21 PolkaETH from Alice's local account.
+2. The sovereign account of D on H will be credited with 21 PolkaETH.
+3. D will mint 21 PolkaETH into Bob's account.
 
 Example Message:
+
 ```rust
 Xcm::WithdrawAsset {
   assets: vec![MultiAsset::ConcreteFungible {
@@ -101,20 +102,20 @@ Xcm::WithdrawAsset {
 }
 ```
 
-### Transfer pETH from a parachain into the reserve parachain <!-- omit in toc -->
+### Transfer PolkaETH from a parachain into the reserve parachain <!-- omit in toc -->
 
-In this example, Alice transfers 21 pETH to Bob on the reserve chain
+In this example, Alice transfers 21 PolkaETH to Bob on the reserve chain
 
 Parties:
 
 - H: Home chain
-- D: Destination chain (Ethereum Bridge)
+- D: Destination chain (Snowfork parachain)
 
 Effects:
 
-1. H will withdraw 21 pETH from Alice's local account.
-2. The sovereign account of H on D will be reduced by 21 pETH.
-3. D will mint 21 pETH into Bob's account.
+1. H will withdraw 21 PolkaETH from Alice's local account.
+2. The sovereign account of H on D will be reduced by 21 PolkaETH.
+3. D will mint 21 PolkaETH into Bob's account.
 
 Example Message:
 
@@ -145,7 +146,7 @@ Xcm::WithdrawAsset {
 }
 ```
 
-### Transfer pETH between 2 parachains via the reserve parachain <!-- omit in toc -->
+### Transfer PolkaETH between 2 parachains via the reserve parachain <!-- omit in toc -->
 
 In this scenario, our parachain is acting solely as the reserve chain for two other chains participating in a transfer.
 
@@ -153,14 +154,14 @@ Parties:
 
 - H: Home chain
 - D: Destination chain
-- R: Reserve Chain (Ethereum Bridge)
+- R: Reserve Chain (Snowfork parachain)
 
 Effects:
 
-1. H will withdraw 21 pETH from Alice's local account.
-2. The sovereign account of H on R will be reduced by 21 pETH.
-3. The sovereign account of D on R will be credited with 21 pETH.
-4. D will mint 21 pETH into Bob's account.
+1. H will withdraw 21 PolkaETH from Alice's local account.
+2. The sovereign account of H on R will be reduced by 21 PolkaETH.
+3. The sovereign account of D on R will be credited with 21 PolkaETH.
+4. D will mint 21 PolkaETH into Bob's account.
 
 Example Message:
 

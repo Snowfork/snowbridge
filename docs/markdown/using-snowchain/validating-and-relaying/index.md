@@ -5,6 +5,7 @@ nav_order: 5
 has_children: true
 permalink: /validating-and-relaying/
 ---
+
 # Validating and Relaying
 
 Draft

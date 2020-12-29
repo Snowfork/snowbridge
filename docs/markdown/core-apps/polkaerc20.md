@@ -5,6 +5,7 @@ parent: Core Applications
 permalink: /core-applications/polkaerc20
 nav_order: 2
 ---
+
 # PolkaERC20
 
 Draft
