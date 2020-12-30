@@ -88,8 +88,7 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 			s.log.WithField(
 				"blockNumber", syncedUpUntil+1,
 			).WithError(err).Error("Failed to retrieve finalized header")
-			// Only option is to retry
-			continue
+			return err
 		}
 
 		s.log.WithFields(logrus.Fields{
