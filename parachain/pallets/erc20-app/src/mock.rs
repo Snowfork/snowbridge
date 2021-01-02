@@ -1,6 +1,6 @@
 // Mock runtime
 
-use crate::{Module, Trait};
+use crate::{Module, Config};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
@@ -40,7 +40,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Trait for MockRuntime {
+impl system::Config for MockRuntime {
 	type BaseCallFilter = ();
 	type Origin = Origin;
 	type Call = ();
@@ -61,14 +61,13 @@ impl system::Trait for MockRuntime {
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type ModuleToIndex = ();
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 }
 
-impl artemis_assets::Trait for MockRuntime {
+impl artemis_assets::Config for MockRuntime {
 	type Event = MockEvent;
 }
 
@@ -76,12 +75,12 @@ parameter_types! {
 	pub const CommitInterval: u64 = 20;
 }
 
-impl artemis_commitments::Trait for MockRuntime {
+impl artemis_commitments::Config for MockRuntime {
 	type Event = MockEvent;
 	type CommitInterval = CommitInterval;
 }
 
-impl Trait for MockRuntime {
+Config for MockRuntime {
 	type Event = MockEvent;
 	type Assets = Assets;
 	type Commitments = Commitments;

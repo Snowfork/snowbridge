@@ -27,37 +27,37 @@ version = "2.1.0"
 [dependencies.frame-support]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
+branch = "master"
 
 [dependencies.frame-system]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-core]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-std]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-runtime]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
+branch = "master"
 
 [dev-dependencies.sp-keyring]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
+branch = "master"
 
 [dependencies.artemis-core]
 default-features = false

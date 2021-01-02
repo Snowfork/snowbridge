@@ -44,6 +44,16 @@ std = [
     "eth-app/std",
     "erc20-app/std",
 ]
+runtime-benchmarks = [
+	"sp-runtime/runtime-benchmarks",
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"frame-system-benchmarking",
+	"hex-literal",
+	"frame-system/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
+	"pallet-timestamp/runtime-benchmarks",
+]
 
 [dependencies.codec]
 default-features = false
@@ -54,74 +64,62 @@ version = "1.3.4"
 [dependencies.frame-executive]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.frame-support]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.frame-system]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.frame-system-rpc-runtime-api]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.pallet-aura]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.pallet-balances]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.pallet-grandpa]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.pallet-randomness-collective-flip]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.pallet-sudo]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.pallet-timestamp]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.pallet-transaction-payment]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.pallet-transaction-payment-rpc-runtime-api]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.serde]
 features = ["derive"]
@@ -131,74 +129,78 @@ version = "1.0.101"
 [dependencies.sp-api]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-block-builder]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-consensus-aura]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sp-core]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-inherents]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-offchain]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-runtime]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-session]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-std]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-transaction-pool]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-version]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
-[build-dependencies.wasm-builder-runner]
+[dependencies.frame-benchmarking]
+optional = true
+default-features = false
 git = "https://github.com/paritytech/substrate.git"
-package = "substrate-wasm-builder-runner"
-tag = "v2.0.0-rc6"
-version = "1.0.5"
+branch = "master"
+
+[dependencies.frame-system-benchmarking]
+optional = true
+default-features = false
+git = "https://github.com/paritytech/substrate.git"
+branch = "master"
+
+[dependencies.hex-literal]
+version = "0.3.1"
+optional = true
+
+[build-dependencies.substrate-wasm-builder]
+git = "https://github.com/paritytech/substrate.git"
+branch = "master"
+version = "3.0.0"
 
 # Our Pallets
 
@@ -206,43 +208,36 @@ version = "1.0.5"
 default-features = false
 package = "artemis-core"
 path = "../primitives/core"
-version = "0.1.1"
 
 [dependencies.bridge]
 default-features = false
 package = "pallet-bridge"
 path = "../pallets/bridge"
-version = "0.1.1"
 
 [dependencies.verifier]
 default-features = false
 package = "pallet-verifier"
 path = "../pallets/verifier"
-version = "0.1.1"
 
 [dependencies.verifier-lightclient]
 default-features = false
 package = "pallet-verifier-lightclient"
 path = "../pallets/verifier-lightclient"
-version = "0.1.1"
 
 [dependencies.assets]
 default-features = false
 package = "artemis-assets"
 path = "../pallets/assets"
-version = "0.1.1"
 
 [dependencies.eth-app]
 default-features = false
 package = "artemis-eth-app"
 path = "../pallets/eth-app"
-version = "0.1.1"
 
 [dependencies.erc20-app]
 default-features = false
 package = "artemis-erc20-app"
 path = "../pallets/erc20-app"
-version = "0.1.1"
 
 [dependencies.commitments]
 default-features = false

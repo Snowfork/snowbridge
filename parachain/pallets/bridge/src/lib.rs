@@ -26,11 +26,11 @@ use sp_core::H160;
 
 use artemis_core::{AppId, Application, Message, Verifier};
 
-pub trait Trait: system::Trait {
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+pub trait Config: system::Config {
+	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
 	/// The verifier module responsible for verifying submitted messages.
-	type Verifier: Verifier<<Self as system::Trait>::AccountId>;
+	type Verifier: Verifier<<Self as system::Config>::AccountId>;
 
 	/// ETH Application
 	type AppETH: Application;
@@ -40,7 +40,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as BridgeModule {
+	trait Store for Module<T: Config> as BridgeModule {
 
 	}
 }
@@ -52,14 +52,14 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
     	/// Target application not found.
 		AppNotFound
 	}
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 
 		type Error = Error<T>;
 
@@ -78,7 +78,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn dispatch(address: H160, message: &Message) -> DispatchResult {
 		if address == T::AppETH::address() {
 			T::AppETH::handle(message.payload.as_ref())

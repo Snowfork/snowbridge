@@ -31,12 +31,12 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: system::Trait {
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+pub trait Config: system::Config {
+	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as VerifierModule {
+	trait Store for Module<T: Config> as VerifierModule {
 		/// The trusted [`AccountId`] of the external relayer service.
 		RelayKey get(fn key) config(): T::AccountId;
 
@@ -52,7 +52,7 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Verification scheme is not supported.
 		NotSupported,
 		/// The message failed verification.
@@ -61,14 +61,14 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 
 	/// Verify a message
 	fn do_verify(sender: T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
@@ -101,7 +101,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> Verifier<T::AccountId> for Module<T> {
+impl<T: Config> Verifier<T::AccountId> for Module<T> {
 	fn verify(sender: T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
 		Self::do_verify(sender, app_id, message)
 	}

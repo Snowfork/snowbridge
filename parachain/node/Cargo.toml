@@ -15,132 +15,125 @@ name = "artemis-node"
 
 [dependencies.artemis-runtime]
 path = "../runtime"
-version = "0.1.1"
 
 [dependencies.pallet-transaction-payment-rpc]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sc-basic-authorship]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sc-cli]
 features = ["wasmtime"]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sc-client-api]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
+
+[dependencies.sc-keystore]
+git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 
 [dependencies.sc-consensus]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sc-consensus-aura]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sc-executor]
 features = ["wasmtime"]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sc-finality-grandpa]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sc-rpc]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sc-rpc-api]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sc-service]
 features = ["wasmtime"]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sc-transaction-pool]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-api]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-block-builder]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-blockchain]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-consensus]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sp-consensus-aura]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "0.8.0-rc6"
+branch = "master"
 
 [dependencies.sp-core]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-finality-grandpa]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-inherents]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-runtime]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.sp-transaction-pool]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
 
 [dependencies.substrate-frame-rpc-system]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
+
+[dependencies.frame-benchmarking]
+git = "https://github.com/paritytech/substrate.git"
+branch = "master"
+
+[dependencies.frame-benchmarking-cli]
+git = "https://github.com/paritytech/substrate.git"
+branch = "master"
 
 [dependencies]
 hex-literal = "0.3"
-jsonrpc-core = "14.0.3"
+jsonrpc-core = "15.1.0"
 structopt = "0.3.8"
 
 [build-dependencies.substrate-build-script-utils]
 git = "https://github.com/paritytech/substrate.git"
-tag = "v2.0.0-rc6"
-version = "2.0.0-rc6"
+branch = "master"
+
+[features]
+default = []
+runtime-benchmarks = [
+	"artemis-runtime/runtime-benchmarks",
+]

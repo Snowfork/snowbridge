@@ -52,8 +52,8 @@ struct PruningRange {
 	pub oldest_block_to_keep: u64,
 }
 
-pub trait Trait: system::Trait {
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+pub trait Config: system::Config {
+	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 	/// The number of descendants, in the highest difficulty chain, a block
 	/// needs to have in order to be considered final.
 	type DescendantsUntilFinalized: Get<u8>;
@@ -63,7 +63,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as VerifierLightclient {
+	trait Store for Module<T: Config> as VerifierLightclient {
 		/// Best known block.
 		BestBlock: (EthereumHeaderId, U256);
 		/// Range of blocks that we want to prune.
@@ -120,7 +120,7 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Header is same height or older than finalized block (we don't support forks).
 		AncientHeader,
 		/// Header referenced in inclusion proof doesn't exist, e.g. because it's
@@ -146,7 +146,7 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -197,7 +197,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	// Validate an Ethereum header for import
 	fn validate_header_to_import(header: &EthereumHeader, proof: &[EthashProofData]) -> DispatchResult {
 		let hash = header.compute_hash();
@@ -446,7 +446,7 @@ impl<T: Trait> Module<T> {
 }
 
 /// Return iterator over header ancestors, starting at given hash
-fn ancestry<T: Trait>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHeader)> {
+fn ancestry<T: Config>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHeader)> {
 	sp_std::iter::from_fn(move || {
 		let header = Headers::<T>::get(&hash)?.header;
 		let current_hash = hash;
@@ -455,7 +455,7 @@ fn ancestry<T: Trait>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHea
 	})
 }
 
-impl<T: Trait> Verifier<T::AccountId> for Module<T> {
+impl<T: Config> Verifier<T::AccountId> for Module<T> {
 
 	fn verify(_: T::AccountId, _: AppId, message: &Message) -> DispatchResult {
 		match message.verification {

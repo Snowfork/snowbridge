@@ -1,7 +1,7 @@
 // Mock runtime
 use artemis_core::{Message, VerificationInput};
 use artemis_testutils::BlockWithProofs;
-use crate::{Module, EthashProofData, EthereumHeader, GenesisConfig, Trait};
+use crate::{Module, EthashProofData, EthereumHeader, GenesisConfig, Config};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
@@ -45,7 +45,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Trait for MockRuntime {
+impl system::Config for MockRuntime {
 	type BaseCallFilter = ();
 	type Origin = Origin;
 	type Call = ();
@@ -66,14 +66,13 @@ impl system::Trait for MockRuntime {
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type ModuleToIndex = ();
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 }
 
-impl system::Trait for MockRuntimeWithPoW {
+impl system::Config for MockRuntimeWithPoW {
 	type BaseCallFilter = ();
 	type Origin = Origin;
 	type Call = ();
@@ -94,7 +93,6 @@ impl system::Trait for MockRuntimeWithPoW {
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type ModuleToIndex = ();
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
@@ -107,13 +105,13 @@ parameter_types! {
 	pub const PowEnabled: bool = true;
 }
 
-impl Trait for MockRuntime {
+Config for MockRuntime {
 	type Event = MockEvent;
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type VerifyPoW = PowDisabled;
 }
 
-impl Trait for MockRuntimeWithPoW {
+Config for MockRuntimeWithPoW {
 	type Event = MockEvent;
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type VerifyPoW = PowEnabled;
@@ -199,7 +197,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	})
 }
 
-pub fn new_tester_with_config<T: Trait>(config: GenesisConfig) -> sp_io::TestExternalities {
+pub fn new_tester_with_config<T: Config>(config: GenesisConfig) -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<T>().unwrap();
 
 	config.assimilate_storage::<T>(&mut storage).unwrap();
