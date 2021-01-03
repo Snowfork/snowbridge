@@ -31,10 +31,18 @@ Follow these steps to prepare your local environment for Substrate development.
 The project is currently being developed and is working with the following version of Rust:
 
 ```
-stable-x86_64-unknown-linux-gnu (default)
-rustc 1.45.0 (5c1f21c3b 2020-07-13)
+rustc 1.49.0-nightly (a1dfd2490 2020-10-05)
 ```
 
+Make sure this version is installed:
+```
+rustup install nightly-2020-10-06
+
+# find your nightly toolchain
+rustup toolchain list
+
+rustup target add wasm32-unknown-unknown --toolchain put_the_corresponding_toolchain_you_installed_here
+```
 #### Simple Method
 
 Install all the required dependencies with a single command (be patient, this can take up to 30
