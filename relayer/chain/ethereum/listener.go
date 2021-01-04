@@ -176,7 +176,7 @@ func makeFilterQuery(contracts []Contract) geth.FilterQuery {
 	for _, contract := range contracts {
 		addresses = append(addresses, contract.Address)
 		for _, event := range contract.ABI.Events {
-			signature := gethCommon.HexToHash(event.Id().Hex())
+			signature := gethCommon.HexToHash(event.ID.Hex())
 			_, exists := topicSet[signature]
 			if !exists {
 				topics = append(topics, signature)
