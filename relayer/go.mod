@@ -7,7 +7,7 @@ require (
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
 	github.com/centrifuge/go-substrate-rpc-client v2.0.0-rc6+incompatible
 	github.com/deckarep/golang-set v1.7.1 // indirect
-	github.com/ethereum/go-ethereum v1.8.23
+	github.com/ethereum/go-ethereum v1.9.25
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/magefile/mage v1.10.0
 	github.com/mattn/go-runewidth v0.0.9 // indirect
