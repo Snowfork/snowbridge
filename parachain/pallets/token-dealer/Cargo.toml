@@ -1,0 +1,87 @@
+[package]
+name = "artemis-token-dealer"
+description = "Artemis Token Dealer"
+version = "0.1.1"
+edition = "2018"
+authors = ["Snowfork <contact@snowfork.com>"]
+repository = "https://github.com/Snowfork/polkadot-ethereum"
+
+[dependencies]
+serde = { version = "1.0.111", optional = true }
+codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+
+artemis-xcm-support = { path = "../../primitives/xcm-support", default-features = false }
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "master", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "master", default-features = false }
+
+[dependencies.artemis-core]
+default-features = false
+path = "../../primitives/core"
+
+[dependencies.xcm-executor]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "master"
+
+[dev-dependencies]
+clear_on_drop = { version = "0.2.4", features = ["no_cc"] }	# https://github.com/paritytech/substrate/issues/4179
+polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+
+
+[dev-dependencies.sp-keyring]
+default-features = false
+git = "https://github.com/paritytech/substrate.git"
+branch = "master"
+
+[dev-dependencies.artemis-assets]
+default-features = false
+path = "../../pallets/assets"
+
+[dev-dependencies.cumulus-message-broker]
+default-features = false
+git = "https://github.com/paritytech/cumulus"
+branch = "master"
+
+[dev-dependencies.parachain-info]
+git = "https://github.com/paritytech/cumulus"
+branch = "master"
+default-features = false
+
+[dev-dependencies.polkadot-parachain]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "master"
+
+[dev-dependencies.xcm-builder]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "master"
+
+[dev-dependencies.pallet-balances]
+default-features = false
+git = "https://github.com/paritytech/substrate.git"
+branch = "master"
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"codec/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"sp-io/std",
+	"sp-core/std",
+	"frame-support/std",
+	"frame-system/std",
+	"xcm/std",
+	"artemis-xcm-support/std",
+	"artemis-core/std",
+	"cumulus-primitives/std",
+]

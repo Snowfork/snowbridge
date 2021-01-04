@@ -9,57 +9,24 @@ repository = "https://github.com/Snowfork/polkadot-ethereum"
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
-[features]
-default = ["std"]
-std = [
-    "codec/std",
-    "frame-executive/std",
-    "frame-support/std",
-    "frame-system/std",
-    "frame-system-rpc-runtime-api/std",
-    "pallet-aura/std",
-    "pallet-balances/std",
-    "pallet-grandpa/std",
-    "pallet-randomness-collective-flip/std",
-    "pallet-sudo/std",
-    "pallet-timestamp/std",
-    "pallet-transaction-payment/std",
-    "pallet-transaction-payment-rpc-runtime-api/std",
-    "serde",
-    "sp-api/std",
-    "sp-block-builder/std",
-    "sp-consensus-aura/std",
-    "sp-core/std",
-    "sp-inherents/std",
-    "sp-offchain/std",
-    "sp-runtime/std",
-    "sp-session/std",
-    "sp-std/std",
-    "sp-transaction-pool/std",
-    "sp-version/std",
-    "bridge/std",
-    "verifier/std",
-    "verifier-lightclient/std",
-    "assets/std",
-    "eth-app/std",
-    "erc20-app/std",
-]
-runtime-benchmarks = [
-	"sp-runtime/runtime-benchmarks",
-	"frame-benchmarking",
-	"frame-support/runtime-benchmarks",
-	"frame-system-benchmarking",
-	"hex-literal",
-	"frame-system/runtime-benchmarks",
-	"pallet-balances/runtime-benchmarks",
-	"pallet-timestamp/runtime-benchmarks",
-]
+# Third-party
 
 [dependencies.codec]
 default-features = false
 features = ["derive"]
 package = "parity-scale-codec"
 version = "1.3.4"
+
+[dependencies.serde]
+features = ["derive"]
+optional = true
+version = "1.0.101"
+
+[dependencies.hex-literal]
+version = "0.3.1"
+optional = true
+
+# Substrate
 
 [dependencies.frame-executive]
 default-features = false
@@ -120,11 +87,6 @@ branch = "master"
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
 branch = "master"
-
-[dependencies.serde]
-features = ["derive"]
-optional = true
-version = "1.0.101"
 
 [dependencies.sp-api]
 default-features = false
@@ -193,14 +155,66 @@ default-features = false
 git = "https://github.com/paritytech/substrate.git"
 branch = "master"
 
-[dependencies.hex-literal]
-version = "0.3.1"
-optional = true
+# Build
 
 [build-dependencies.substrate-wasm-builder]
 git = "https://github.com/paritytech/substrate.git"
 branch = "master"
 version = "3.0.0"
+
+# Cumulus
+
+[dependencies.cumulus-runtime]
+default-features = false
+git = "https://github.com/paritytech/cumulus"
+branch = "master"
+
+[dependencies.cumulus-parachain-upgrade]
+default-features = false
+git = "https://github.com/paritytech/cumulus"
+branch = "master"
+
+[dependencies.cumulus-primitives]
+default-features = false
+git = "https://github.com/paritytech/cumulus"
+branch = "master"
+
+[dependencies.cumulus-message-broker]
+default-features = false
+git = "https://github.com/paritytech/cumulus"
+branch = "master"
+
+[dependencies.parachain-info]
+default-features = false
+git = "https://github.com/paritytech/cumulus"
+branch = "master"
+
+# XCM
+
+[dependencies.xcm]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "master"
+
+[dependencies.xcm-executor]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "master"
+
+[dependencies.xcm-builder]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "master"
+
+[dependencies.xcm-handler]
+default-features = false
+git = "https://github.com/paritytech/cumulus"
+branch = "master"
+
+[dependencies.polkadot-parachain]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = "master"
 
 # Our Pallets
 
@@ -243,3 +257,71 @@ path = "../pallets/erc20-app"
 default-features = false
 package = "artemis-commitments"
 path = "../pallets/commitments"
+
+[dependencies.artemis-token-dealer]
+default-features = false
+path = "../pallets/token-dealer"
+
+[dependencies.artemis-xcm-support]
+default-features = false
+path = "../primitives/xcm-support"
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame-executive/std",
+    "frame-support/std",
+    "frame-system/std",
+    "frame-system-rpc-runtime-api/std",
+    "pallet-aura/std",
+    "pallet-balances/std",
+    "pallet-grandpa/std",
+    "pallet-randomness-collective-flip/std",
+    "pallet-sudo/std",
+    "pallet-timestamp/std",
+    "pallet-transaction-payment/std",
+    "pallet-transaction-payment-rpc-runtime-api/std",
+    "serde",
+    "sp-api/std",
+    "sp-block-builder/std",
+    "sp-consensus-aura/std",
+    "sp-core/std",
+    "sp-inherents/std",
+    "sp-offchain/std",
+    "sp-runtime/std",
+    "sp-session/std",
+    "sp-std/std",
+    "sp-transaction-pool/std",
+    "sp-version/std",
+	"cumulus-runtime/std",
+	"cumulus-parachain-upgrade/std",
+	"cumulus-primitives/std",
+	"cumulus-message-broker/std",
+	"parachain-info/std",
+	"xcm/std",
+	"xcm-executor/std",
+	"xcm-builder/std",
+	"xcm-handler/std",
+	"polkadot-parachain/std",
+    "bridge/std",
+    "verifier/std",
+    "verifier-lightclient/std",
+    "assets/std",
+    "eth-app/std",
+    "erc20-app/std",
+    "commitments/std",
+    "artemis-token-dealer/std",
+    "artemis-xcm-support/std"
+]
+
+runtime-benchmarks = [
+	"sp-runtime/runtime-benchmarks",
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"frame-system-benchmarking",
+	"hex-literal",
+	"frame-system/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
+	"pallet-timestamp/runtime-benchmarks",
+]

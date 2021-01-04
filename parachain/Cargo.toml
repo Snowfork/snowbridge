@@ -6,6 +6,7 @@ members = [
     "primitives/core",
     "primitives/ethereum",
     "primitives/testutils",
+    "primitives/xcm-support",
     "pallets/bridge",
     "pallets/assets",
     "pallets/verifier",
@@ -13,6 +14,7 @@ members = [
     "pallets/eth-app",
     "pallets/erc20-app",
     "pallets/commitments",
+    "pallets/token-dealer",
     "node",
     "runtime",
 ]

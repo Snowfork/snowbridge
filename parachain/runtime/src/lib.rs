@@ -13,12 +13,9 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionSource},
 };
 use sp_runtime::traits::{
-	BlakeTwo256, Block as BlockT, AccountIdLookup, Verify, IdentifyAccount, NumberFor,
+	BlakeTwo256, Convert, Block as BlockT, AccountIdLookup, Verify, IdentifyAccount,
 };
 use sp_api::impl_runtime_apis;
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
-use pallet_grandpa::fg_primitives;
 
 use sp_std::prelude::*;
 
@@ -44,6 +41,17 @@ use pallet_transaction_payment::CurrencyAdapter;
 
 pub use artemis_core::AssetId;
 pub use verifier_lightclient::EthereumHeader;
+
+use polkadot_parachain::primitives::Sibling;
+use xcm::v0::{Junction, MultiLocation, NetworkId};
+use xcm_builder::{
+	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
+};
+use xcm_executor::{Config, XcmExecutor};
+use cumulus_primitives::relay_chain::Balance as RelayChainBalance;
+
+use artemis_xcm_support::{Transactor, TrustedReserveFilter};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -88,10 +96,7 @@ pub mod opaque {
 	pub type BlockId = generic::BlockId<Block>;
 
 	impl_opaque_keys! {
-		pub struct SessionKeys {
-			pub aura: Aura,
-			pub grandpa: Grandpa,
-		}
+		pub struct SessionKeys {}
 	}
 }
 
@@ -188,29 +193,6 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 }
 
-impl pallet_aura::Config for Runtime {
-	type AuthorityId = AuraId;
-}
-
-impl pallet_grandpa::Config for Runtime {
-	type Event = Event;
-	type Call = Call;
-
-	type KeyOwnerProofSystem = ();
-
-	type KeyOwnerProof =
-		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
-
-	type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
-		KeyTypeId,
-		GrandpaId,
-	)>>::IdentificationTuple;
-
-	type HandleEquivocation = ();
-
-	type WeightInfo = ();
-}
-
 parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 }
@@ -218,7 +200,7 @@ parameter_types! {
 impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = u64;
-	type OnTimestampSet = Aura;
+	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
 	type WeightInfo = ();
 }
@@ -249,6 +231,102 @@ impl pallet_transaction_payment::Config for Runtime {
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate = ();
+}
+
+// Cumulus and XCMP
+
+impl cumulus_parachain_upgrade::Config for Runtime {
+	type Event = Event;
+	type OnValidationData = ();
+}
+
+impl cumulus_message_broker::Config for Runtime {
+	type DownwardMessageHandlers = ();
+	type HrmpMessageHandlers = ();
+}
+
+impl parachain_info::Config for Runtime {}
+
+pub struct RelayToNative;
+impl Convert<RelayChainBalance, Balance> for RelayToNative {
+	fn convert(val: u128) -> Balance {
+		val
+	}
+}
+
+pub struct NativeToRelay;
+impl Convert<Balance, RelayChainBalance> for NativeToRelay {
+	fn convert(val: u128) -> Balance {
+		val
+	}
+}
+
+parameter_types! {
+	pub const PolkadotNetworkId: NetworkId = NetworkId::Polkadot;
+}
+
+pub struct AccountId32Converter;
+impl Convert<AccountId, [u8; 32]> for AccountId32Converter {
+	fn convert(account_id: AccountId) -> [u8; 32] {
+		account_id.into()
+	}
+}
+
+impl artemis_token_dealer::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type ToRelayChainBalance = NativeToRelay;
+	type AccountIdConverter = LocationConverter;
+	type AccountId32Converter = AccountId32Converter;
+	type RelayChainNetworkId = PolkadotNetworkId;
+	type ParaId = ParachainInfo;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+}
+
+parameter_types! {
+	pub DotNetwork: NetworkId = NetworkId::Polkadot;
+	pub RelayChainOrigin: Origin = xcm_handler::Origin::Relay.into();
+	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
+		id: ParachainInfo::parachain_id().into(),
+	});
+}
+
+pub type LocationConverter = (
+	ParentIsDefault<AccountId>,
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	AccountId32Aliases<DotNetwork, AccountId>,
+);
+
+pub type LocalAssetTransactor = Transactor<Balances, Assets, LocationConverter, AccountId>;
+
+pub type LocalOriginConverter = (
+	SovereignSignedViaLocation<LocationConverter, Origin>,
+	RelayChainAsNative<RelayChainOrigin, Origin>,
+	SiblingParachainAsNative<xcm_handler::Origin, Origin>,
+	SignedAccountId32AsNative<DotNetwork, Origin>,
+);
+
+
+parameter_types! {
+	pub ReserveAssetLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 1000 });
+}
+
+pub struct XcmConfig;
+impl Config for XcmConfig {
+	type Call = Call;
+	type XcmSender = LocalXcmHandler;
+	type AssetTransactor = LocalAssetTransactor;
+	type OriginConverter = LocalOriginConverter;
+	type IsReserve = TrustedReserveFilter<ReserveAssetLocation>;
+	type IsTeleporter = ();
+	type LocationInverter = LocationInverter<Ancestry>;
+}
+
+impl xcm_handler::Config for Runtime {
+	type Event = Event;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type UpwardMessageSender = MessageBroker;
+	type HrmpMessageSender = MessageBroker;
 }
 
 // Our pallets
@@ -285,8 +363,6 @@ impl commitments::Config for Runtime {
 	type CommitInterval = CommitInterval;
 }
 
-
-
 impl assets::Config for Runtime {
 	type Event = Event;
 }
@@ -314,12 +390,15 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Aura: pallet_aura::{Module, Config<T>, Inherent},
-		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
+
+		ParachainInfo: parachain_info::{Module, Storage, Config},
+		ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
+		MessageBroker: cumulus_message_broker::{Module, Call, Inherent},
+
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Commitments: commitments::{Module, Call, Storage, Event},
 		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
@@ -327,6 +406,9 @@ construct_runtime!(
 		Assets: assets::{Module, Call, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
+
+		LocalXcmHandler: xcm_handler::{Module, Event<T>, Origin},
+		TokenDealer: artemis_token_dealer::{Module, Storage, Call, Event<T>},
 	}
 );
 
@@ -424,16 +506,6 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
-		fn slot_duration() -> u64 {
-			Aura::slot_duration()
-		}
-
-		fn authorities() -> Vec<AuraId> {
-			Aura::authorities()
-		}
-	}
-
 	impl sp_session::SessionKeys<Block> for Runtime {
 		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
 			opaque::SessionKeys::generate(seed)
@@ -443,32 +515,6 @@ impl_runtime_apis! {
 			encoded: Vec<u8>,
 		) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
 			opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
-		}
-	}
-
-	impl fg_primitives::GrandpaApi<Block> for Runtime {
-		fn grandpa_authorities() -> GrandpaAuthorityList {
-			Grandpa::grandpa_authorities()
-		}
-
-		fn submit_report_equivocation_unsigned_extrinsic(
-			_equivocation_proof: fg_primitives::EquivocationProof<
-				<Block as BlockT>::Hash,
-				NumberFor<Block>,
-			>,
-			_key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
-		) -> Option<()> {
-			None
-		}
-
-		fn generate_key_ownership_proof(
-			_set_id: fg_primitives::SetId,
-			_authority_id: GrandpaId,
-		) -> Option<fg_primitives::OpaqueKeyOwnershipProof> {
-			// NOTE: this is the only implementation possible since we've
-			// defined our key owner proof type as a bottom type (i.e. a type
-			// with no values).
-			None
 		}
 	}
 
@@ -488,3 +534,5 @@ impl_runtime_apis! {
 	}
 
 }
+
+cumulus_runtime::register_validate_block!(Block, Executive);
