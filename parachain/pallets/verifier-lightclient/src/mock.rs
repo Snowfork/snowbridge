@@ -47,6 +47,8 @@ parameter_types! {
 
 impl system::Config for MockRuntime {
 	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -58,22 +60,20 @@ impl system::Config for MockRuntime {
 	type Header = Header;
 	type Event = MockEvent;
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
+	type PalletInfo = ();
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
 impl system::Config for MockRuntimeWithPoW {
 	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -85,18 +85,14 @@ impl system::Config for MockRuntimeWithPoW {
 	type Header = Header;
 	type Event = MockEvent;
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
+	type PalletInfo = ();
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {
@@ -105,13 +101,13 @@ parameter_types! {
 	pub const PowEnabled: bool = true;
 }
 
-Config for MockRuntime {
+impl Config for MockRuntime {
 	type Event = MockEvent;
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type VerifyPoW = PowDisabled;
 }
 
-Config for MockRuntimeWithPoW {
+impl Config for MockRuntimeWithPoW {
 	type Event = MockEvent;
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type VerifyPoW = PowEnabled;

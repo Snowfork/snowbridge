@@ -34,6 +34,8 @@ use frame_support::{
 	dispatch::{DispatchResult, DispatchError},
 };
 
+use sp_runtime::traits::StaticLookup;
+
 use sp_core::{U256};
 
 use artemis_core::assets::{AssetId, MultiAsset, SingleAsset};
@@ -97,9 +99,10 @@ decl_module! {
 		#[weight = 10]
 		pub fn transfer(origin,
 						asset_id: AssetId,
-						dest: T::AccountId,
+						dest: <T::Lookup as StaticLookup>::Source,
 						amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			let dest = T::Lookup::lookup(dest)?;
 			<Self as MultiAsset<_>>::transfer(asset_id, &who, &dest, amount)
 		}
 

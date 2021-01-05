@@ -1,6 +1,6 @@
 // Mock runtime
 
-use crate::{Module, Trait};
+use crate::{Module, Config};
 use sp_core::{H160, H256};
 use frame_support::{
 	impl_outer_origin, impl_outer_event, impl_outer_dispatch, parameter_types,
@@ -66,10 +66,12 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Trait for MockRuntime {
+impl system::Config for MockRuntime {
 	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
 	type Origin = Origin;
-	type Call = Call;
+	type Call = ();
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -79,19 +81,14 @@ impl system::Trait for MockRuntime {
 	type Header = Header;
 	type Event = MockEvent;
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type ModuleToIndex = ();
-	type AccountData = pallet_balances::AccountData<Balance>;
+	type PalletInfo = ();
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {
@@ -101,7 +98,7 @@ parameter_types! {
 	pub const TransactionByteFee: u128 = 1;
 }
 
-impl pallet_balances::Trait for MockRuntime {
+impl pallet_balances::Config for MockRuntime {
 	/// The type for recording an account's balance.
 	type Balance = Balance;
 	/// The ubiquitous event type.
@@ -112,7 +109,7 @@ impl pallet_balances::Trait for MockRuntime {
 	type WeightInfo = ();
 }
 
-impl artemis_assets::Trait for MockRuntime {
+impl artemis_assets::Config for MockRuntime {
 	type Event = MockEvent;
 	type AssetId = H160;
 }
@@ -120,14 +117,12 @@ impl artemis_assets::Trait for MockRuntime {
 
 // Cumulus and XCMP
 
-impl cumulus_message_broker::Trait for MockRuntime {
-	type Event = MockEvent;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type ParachainId = parachain_info::Module<MockRuntime>;
-	type SendDownward = ();
+impl cumulus_message_broker::Config for MockRuntime {
+	type DownwardMessageHandlers = ();
+	type HrmpMessageHandlers = ();
 }
 
-impl parachain_info::Trait for MockRuntime {}
+impl parachain_info::Config for MockRuntime {}
 
 pub struct NativeToRelay;
 impl Convert<Balance, RelayChainBalance> for NativeToRelay {
@@ -180,7 +175,7 @@ impl Config for XcmConfig {
 }
 
 
-impl Trait for MockRuntime {
+impl Config for MockRuntime {
 	type Event = MockEvent;
 	type Balance = Balance;
 	type ToRelayChainBalance = NativeToRelay;
