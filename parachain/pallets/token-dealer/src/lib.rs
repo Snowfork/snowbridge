@@ -22,12 +22,6 @@ use xcm_executor::traits::LocationConversion;
 
 use artemis_core::AssetId;
 
-#[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-mod tests;
-
 /// Global identifier for a bridged ethereum asset (Within a polkadot consensus system)
 #[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
 pub struct XAssetId {
