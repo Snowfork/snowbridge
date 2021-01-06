@@ -3,12 +3,18 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use crate::{Bloom, Log};
 
-#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug)]
 pub struct Receipt {
 	pub post_state_or_status: Vec<u8>,
 	pub cumulative_gas_used: u64,
 	pub bloom: Bloom,
 	pub logs: Vec<Log>,
+}
+
+impl Receipt {
+	pub fn contains_log(&self, log: &Log) -> bool {
+		self.logs.iter().find(|&l| l == log).is_some()
+	}
 }
 
 impl rlp::Decodable for Receipt {

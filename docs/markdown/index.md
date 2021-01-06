@@ -30,9 +30,9 @@ Snowbridge is a trustless system for bridging arbitrary data between Polkadot an
 - [Core Bridge Applications](./core-applications)
 - [API Documentation](./api-docs)
 
-## Who is Snowfork?
+## Snowfork
 
-Snowfork is a research, development and staffing agency that sprouted from a collection of elite developers, designers and product managers with years of experience collaborating on projects together. Snowbridge is one of our core projects. See our main [website](https://www.snowfork.com) for more details.
+Snowbridge is built by Snowfork - a research, development and staffing agency that sprouted from a collection of elite developers, designers and product managers with years of experience collaborating on projects together. Snowbridge is one of our core projects. See our main [website](https://www.snowfork.com) for more details.
 
 ## About this site
 

@@ -9,10 +9,11 @@ import (
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/tranvictor/ethashproof"
+	"github.com/snowfork/ethashproof"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -64,7 +65,7 @@ func block11408438() *gethTypes.Block {
 	block := gethTypes.NewBlockWithHeader(&header).WithBody(transactions, []*gethTypes.Header{})
 	// Sanity check for match between header and transaction data
 	expectedTxHash := gethCommon.HexToHash("84d7fb20eff54c19387510fd646e16c3bc0879545799595b78bb2129242d770c")
-	if gethTypes.DeriveSha(block.Transactions()) != expectedTxHash ||
+	if gethTypes.DeriveSha(block.Transactions(), new(gethTrie.Trie)) != expectedTxHash ||
 		block.TxHash() != expectedTxHash {
 		panic(fmt.Errorf("Geth header transaction hash doesn't match block transactions"))
 	}

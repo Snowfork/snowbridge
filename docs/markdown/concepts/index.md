@@ -14,7 +14,7 @@ Snowbridge is a complex project with lots of moving pieces that can interact in 
 
 Snowbridge has a layered architecture with a clear seperation between low level bridge functionality, mid level trust functionality and high level application functionality.
 
-You are probably familiar with the conventional [OSI communication model](https://en.wikipedia.org/wiki/OSI_model), which inspired Snowfork's architecture.
+You are probably familiar with the conventional [Internet protocol suite (TCP/IP)](https://en.wikipedia.org/wiki/Internet_protocol_suite){:target="_blank"}, our system is a similar simplified version.
 
 You can have communication go from one layer up or down to another layer - for example, between the App Layer and the Bridge Layer, as in the green arrow below.
 

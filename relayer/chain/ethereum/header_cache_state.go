@@ -14,7 +14,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
-	"github.com/tranvictor/ethashproof"
+	"github.com/snowfork/ethashproof"
 	"golang.org/x/sync/errgroup"
 )
 

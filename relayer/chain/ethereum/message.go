@@ -54,11 +54,16 @@ func NewProof() *Proof {
 	}
 }
 
-// For interface ethdb.Putter
+// For interface ethdb.KeyValueWriter
 func (p *Proof) Put(key []byte, value []byte) error {
 	p.Keys = append(p.Keys, types.NewBytes(common.CopyBytes(key)))
 	p.Values = append(p.Values, types.NewBytes(common.CopyBytes(value)))
 	return nil
+}
+
+// For interface ethdb.KeyValueWriter
+func (p *Proof) Delete(_ []byte) error {
+	return fmt.Errorf("Delete should never be called to generate a proof")
 }
 
 func (v VerificationInput) Encode(encoder scale.Encoder) error {

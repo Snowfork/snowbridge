@@ -28,7 +28,7 @@ func decodeFromBytes(bz []byte, target interface{}) error {
 
 type TestProof ethereum.Proof
 
-// For interface gethTrie.DatabaseReader
+// For interface gethTrie.KeyValueReader
 func (tp *TestProof) Get(key []byte) ([]byte, error) {
 	for i, k := range tp.Keys {
 		if bytes.Equal(k, key) {
@@ -38,7 +38,7 @@ func (tp *TestProof) Get(key []byte) ([]byte, error) {
 	return nil, fmt.Errorf("Value for key %s does not exist", key)
 }
 
-// For interface gethTrie.DatabaseReader
+// For interface gethTrie.KeyValueReader
 func (tp *TestProof) Has(key []byte) (bool, error) {
 	_, err := tp.Get(key)
 	return err == nil, nil
@@ -111,7 +111,7 @@ func TestMessage_Proof(t *testing.T) {
 		panic(err)
 	}
 	proofNodes := TestProof(*proof.Proof)
-	provenReceipt, _, err := gethTrie.VerifyProof(block.ReceiptHash(), key, &proofNodes)
+	provenReceipt, err := gethTrie.VerifyProof(block.ReceiptHash(), key, &proofNodes)
 	assert.Nil(t, err)
 	assert.Equal(t, provenReceipt, receipt5Encoded)
 }

@@ -6,8 +6,7 @@ permalink: /concepts/polkadot-light-client-verifier/interactive-protocol
 parent: Polkadot Light Client Verifier
 grand_parent: Concepts and Architecture
 ---
-
-# Bridging to a PoW chain using random sampling
+# Polkadot Relay Chain Interactive Update Protocol
 
 We want a bridge design that is light enough to deploy on Ethereum 1.x. It will be too expensive to verify signatures from say 1000 validators of the Polkadot relay chain on Ethereum, so we basically have two choices: verify all signatures in succinct proofs or only verify a few signatures. We settled for a design that tries to make the latter cryptoeconomically secure. The ideal security to aim for is for an attack to be as expensive as the smaller market cap of DOT and ETH. Unfortunately, we can only slash the bond of the few validators whose signatures are verified, so any attack attempt is necessarily much cheaper than the whole market cap. However, we can aim to make an attack very expensive in expectation by making sure that an attack succeeds with low probability and that failed attacks still cost the attackers.
 
@@ -31,7 +30,7 @@ Analysis: If at least $2/3$ of validators are honest but no honest validator sig
 
 Furthermore, if signing an incorrect statement $S$ is slashable and we slash by at least $minsupport$, then if the light client reports the initial claim, then at least $minsupport$ stake can be slashed for an incorrect inital statement. Now if at least $2/3$ of validators are honest, then the proof fails with probability $2^{-k_{approval}}$ and so there is an expected cost of $2^{k_{approval}} minsupport$.
 
-## Implementing this on a PoW Ethereum chain
+## Implementing this on an Ethereum PoW Chain
 
 In this case the light client is a smart contract. We can use a block hash as a source of randomness, although this can be manipulated.
 

@@ -1,16 +1,15 @@
 ---
 layout: default
-title: Basic Polkadot to Ethereum Message Channel
+title: Basic Message Channel (Polkadot → Ethereum)
 nav_order: 7
 permalink: /concepts/basic-polkadot-to-ethereum-message-channel
 parent: Concepts and Architecture
 ---
-
-# Basic Polkadot to Ethereum Message Channel
+# Basic Message Channel (Polkadot → Ethereum)
 
 ## Overview
 
-The Basic Polkadot to Ethereum Message Channel manages a channel for sending Ethereum RPCs out from Polkadot to Ethereum via Snowbridge Parachain commitments. It consists of our Snowbridge Parachain and its Commitments pallet, which operates a basic channel that provides replay protection.
+This basic channel provides a mechanism for sending messages out from Polkadot to Ethereum via Snowbridge Parachain commitments. It consists of our Snowbridge Parachain and its Commitments pallet, which operates a basic channel that provides replay protection.
 
 The Commitments pallet is responsible for accepting requests from other pallets or parachains via XCMP for Ethereum RPCs to be sent over to Ethereum. After accepting a request, it adds a nonce and puts the message into a queue. At a fixed interval (initially once a minute) it produces a commitment to that queue in the form of a single hash of all the messages in that queue that is added to the parachain header.
 
