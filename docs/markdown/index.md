@@ -6,13 +6,14 @@ permalink: /
 ---
 
 # Welcome to Snowbridge
+
 {: .fs-9 }
 
 This site provides documentation for Snowbridge, a trustless system for bridging arbitrary data between Polkadot and Ethereum.
 {: .fs-6 .fw-300 }
 
-[Main Website](https://snowbridge.snowfork.com/){: target="_blank" .btn-purple .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[View on GitHub](https://github.com/Snowfork/polkadot-ethereum){: target="_blank" .btn .fs-5 .mb-4 .mb-md-0 }
+[Main Website](https://snowbridge.snowfork.com/){: target="\_blank" .btn-purple .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[View on GitHub](https://github.com/Snowfork/polkadot-ethereum){: target="\_blank" .btn .fs-5 .mb-4 .mb-md-0 }
 
 This site will grow and be refined over time as Snowbridge is developed. We welcome you to join the Snowbridge community and contribute to this site and to the project.
 

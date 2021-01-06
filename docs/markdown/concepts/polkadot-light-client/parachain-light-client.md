@@ -13,6 +13,6 @@ In-Progress
 
 The parachain light client receives our latest parachain block headers from the MMR Light Client. With them, it can extract our parachain commitments.
 
-We can use these commitments to verify and process every message that has been commited to by the bridge.
+We can use these commitments to verify and process every message that has been committed to by the bridge.
 
 More details coming soon...
