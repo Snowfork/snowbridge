@@ -18,7 +18,7 @@ require (
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/shirou/gopsutil v3.20.12+incompatible // indirect
 	github.com/sirupsen/logrus v1.6.0
-	github.com/snowfork/ethashproof v0.0.0-20210106045803-0077cadeeacd
+	github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.4.0
