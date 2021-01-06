@@ -20,4 +20,4 @@ For now, we only have apps for turning ETH, ERC20 tokens and DOT into cross-chai
 
 We will likely add additional core bridge application pallets in future, for example for NFT/ERC721 bridging support or for other functionality that is likely to be needed across the wider Polkadot ecosystem. We are also in talks with other parachain teams that want to integrate with Snowbridge to connect to Ethereum for things like stablecoins, DeFi, EVM/Solidity Smart Contract support and games and so may add functionality to support those parachains and use cases in time too.
 
-<!-- TODO: add section to get in touch if someone wants to build those? -->
+If you're interested in collaborating in these endeavors, please get in touch - <a class="email-link" href="mailto:polkaeth@snowfork.com">polkaeth@snowfork.com</a>!

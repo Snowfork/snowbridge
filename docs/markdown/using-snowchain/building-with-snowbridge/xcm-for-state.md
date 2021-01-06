@@ -45,10 +45,8 @@ Xcm::Transact {
 
 Option A: Encode Destination Parachain and Parachain Pallet in RLP on Ethereum. Consuming Parachain needs to have Ethereum-xcm-adapter to be able to interpret the message and route it to the right pallet.
 
-Ethereum ETHApp:
+Ethereum-side app (eg: ETHApp):
 -> emits plain Ethereum event(target_parachain_index, target_pallet_index, payload)
-
-<!-- Why ETHApp? That app should be custom, and have nothing to do with Ether, right? -->
 
 Parachain A:
 accepts Ethereum event (target_parachain_index, target_pallet_index, payload)

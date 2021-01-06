@@ -16,21 +16,15 @@ The Commitments pallet is responsible for accepting requests from other pallets 
 
 The corresponding receiving Snowbridge Parachain Light Client smart contract accepts as input this commitment as well as the set of messages in that commitment. It validates the inclusion of the commitment in the MMR as described [here](./ethereum-light-client-verifier) and then verifies that those messages are included in the commitment by hashing them and then processes them in order by calling out to the Ethereum smart contracts for each Ethereum RPC.
 
-<!-- TODO: I believe the basic bridge should use merkle tree based commitments to ensure there can be no cencorship. The goal is not to optimize for costs, but to minimize trust/attack vectors at the expense of a higher cost. We don't need orderding for that. The approach described here can be attacked, e. g. by flooding with txs during high gas price times. -->
-
-This channel is intended to be a simple straightforward channel which provides only a basic guarantee of deliverability and replay protection. As a side effect of the queue system, messages are ordered and so this basic channel provides strict ordering too.
+This channel is intended to be a simple straightforward channel which provides only a basic guarantee of deliverability and replay protection. As a side effect of the queue system, messages are ordered and so this basic channel provides strict ordering too. In future, the censorship resistance of the basic bridge will be improved even further - see [this issue](https://github.com/Snowfork/polkadot-ethereum/issues/196){: target="\_blank"} for more details.
 
 ## Replay Protection
 
-This basic channel uses an ordered queue of commitments with ordered messages. Messages and commitments must be processed in order. It stores the count of the most recently processed commitment/message, and so will only play new commitments/messages and update the count once completed.
-
-<!-- TODO: What do we mean by "count" here? A strictly increasing nonce per commitment? Per message? -->
+This basic channel uses an ordered queue of commitments with ordered messages. Messages and commitments must be processed in order. It stores the nonce of the most recently processed message, which is a strictly increasing integer, and so will only play new commitments/messages and update the count once completed.
 
 ## Deliverability
 
-The receiving smart contract places no constraints on accepting messages other than that they can be verified by the Polkadot Light Client Verifier and that they are new commitments with a higher nonce. Users are expected to deliver commitments to their own messages as well as all messages in those commitments themselves without depending on any third party.
-
-<!-- TODO: this is an issue, expecting users to process their and all preceeding messages will be a big hurdle. If there is no mechanism to pay a relayer to process all, this will lead to a [Tragedy of the commons](https://en.wikipedia.org/wiki/Tragedy_of_the_commons) -->
+The receiving smart contract places no constraints on accepting messages other than that they can be verified by the Polkadot Light Client Verifier and that they are new commitments with a higher nonce. Users are expected to deliver commitments to their own messages as well as all messages in those commitments themselves without depending on any third party. Given that the bridge is ordered, users are also responsible for ensuring the bridge is up to date with no blockage, though this constraint will be removed in a more optimized future version described [here](https://github.com/Snowfork/polkadot-ethereum/issues/196){: target="\_blank"}.
 
 Once a commitment and its messages have been delivered and checked, they are routed to the destination smart contract specified in the EthereumRPC.
 

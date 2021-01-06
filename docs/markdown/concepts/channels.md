@@ -10,8 +10,6 @@ parent: Concepts and Architecture
 
 A channel is a concept used as part of the bridge which facilitates the delivery of multiple RPCs in a single direction. A channel consists of a sender and a receiver, each being a piece of business logic that runs on opposite chains. Any user or system wanting to send a message across the bridge must submit their RPC to the channel. Channels at the very least are used to provide some deliverability guarantees to a RPC message, and to provide replay protection across multiple messages.
 
-<!-- TODO the above is a duplicate of a paragraph in docs/markdown/concepts/components.md -->
-
 ## Channel Qualities
 
 There are many different designs and ideas for how channels can be implemented, each with different tradeoffs and qualities. This page explores some of these and attempts to model out the domain of channel design such that we can eventually pick the design that suits our bridge best.

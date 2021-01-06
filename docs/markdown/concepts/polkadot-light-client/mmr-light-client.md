@@ -16,5 +16,3 @@ We use merkle proofs to verify the contents of each BEEFY MMR, extracting the ab
 New validator set updates are applied to our interactive protocol client so that it knows which validator signatures will be valid for the next block.
 
 The new Parachain header for our Snowbridge chain is verified and then provided to our [Parachain Light Client](/concepts/polkadot-light-client-verifier/parachain-light-client) to be used for verifying and processing new bridge messages.
-
-<!-- TODO: why do we need to store those headers? It should be cheaper to just store the MMR root and then verify a proof against that. -->

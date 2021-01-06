@@ -63,9 +63,7 @@ PolkadotRPC {
 }
 ```
 
-Payloads for a PolkadotRPC are expected to be RLP encoded, as emitted by Ethereum and the receiving pallet is expected to handle and decode it into the Rust types it needs.
-
-<!-- TODO: why do we need that assumption? The payload can be whatever the source wants to send, right? -->
+Payloads for a PolkadotRPC can be anything in theory, but in practice they are expected to be understood by the receiving pallet, which handles and decodes the payload into the Rust types it needs. In our applications we use RLP-encoded payloads because they are easy and cheap to generate and send from Ethereum. 
 
 #### Ethereum Light Client Verifier
 
