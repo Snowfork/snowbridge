@@ -35,7 +35,7 @@ Besides bridged assets, our parachain supports the transfer of DOT, the native c
 
 We can represent the relative location of bridged ethereum assets using the XCM [MultiAsset](https://github.com/paritytech/xcm-format/blob/master/README.md#multiasset-universal-asset-identifiers) structure.
 
-Inside our parachain, the account balances for bridged ethereum assets are stored within our custom multi-asset [pallet](https://polkaeth-rustdocs.netlify.app/artemis_asset/index.html). Each asset is indentified by a 20-byte address that corresponds to a contract address on the Ethereum side. ETH is a special case and is identified by the zero address.
+Inside our parachain, the account balances for bridged ethereum assets are stored within our custom multi-asset [pallet](https://snowbridge-rust-docs.snowfork.com/artemis_asset/index.html). Each asset is indentified by a 20-byte address that corresponds to a contract address on the Ethereum side. ETH is a special case and is identified by the zero address.
 
 Example: ETH
 
@@ -63,9 +63,9 @@ MultiAsset::ConcreteFungible {
 
 The following scenarios highlight the various kinds of asset transfers supported by our parachain.
 
-### Transfer PolkaETH from the reserve parachain to another parachain <!-- omit in toc -->
+### Transfer SnowETH from the reserve parachain to another parachain <!-- omit in toc -->
 
-In this example, Alice wants to transfer 21 PolkaETH to Bob on another parachain.
+In this example, Alice wants to transfer 21 SnowETH to Bob on another parachain.
 
 Parties:
 
@@ -74,9 +74,9 @@ Parties:
 
 Effects:
 
-1. H will withdraw 21 PolkaETH from Alice's local account.
-2. The sovereign account of D on H will be credited with 21 PolkaETH.
-3. D will mint 21 PolkaETH into Bob's account.
+1. H will withdraw 21 SnowETH from Alice's local account.
+2. The sovereign account of D on H will be credited with 21 SnowETH.
+3. D will mint 21 SnowETH into Bob's account.
 
 Example Message:
 
@@ -102,9 +102,9 @@ Xcm::WithdrawAsset {
 }
 ```
 
-### Transfer PolkaETH from a parachain into the reserve parachain <!-- omit in toc -->
+### Transfer SnowETH from a parachain into the reserve parachain <!-- omit in toc -->
 
-In this example, Alice transfers 21 PolkaETH to Bob on the reserve chain
+In this example, Alice transfers 21 SnowETH to Bob on the reserve chain
 
 Parties:
 
@@ -113,9 +113,9 @@ Parties:
 
 Effects:
 
-1. H will withdraw 21 PolkaETH from Alice's local account.
-2. The sovereign account of H on D will be reduced by 21 PolkaETH.
-3. D will mint 21 PolkaETH into Bob's account.
+1. H will withdraw 21 SnowETH from Alice's local account.
+2. The sovereign account of H on D will be reduced by 21 SnowETH.
+3. D will mint 21 SnowETH into Bob's account.
 
 Example Message:
 
@@ -146,7 +146,7 @@ Xcm::WithdrawAsset {
 }
 ```
 
-### Transfer PolkaETH between 2 parachains via the reserve parachain <!-- omit in toc -->
+### Transfer SnowETH between 2 parachains via the reserve parachain <!-- omit in toc -->
 
 In this scenario, our parachain is acting solely as the reserve chain for two other chains participating in a transfer.
 
@@ -158,10 +158,10 @@ Parties:
 
 Effects:
 
-1. H will withdraw 21 PolkaETH from Alice's local account.
-2. The sovereign account of H on R will be reduced by 21 PolkaETH.
-3. The sovereign account of D on R will be credited with 21 PolkaETH.
-4. D will mint 21 PolkaETH into Bob's account.
+1. H will withdraw 21 SnowETH from Alice's local account.
+2. The sovereign account of H on R will be reduced by 21 SnowETH.
+3. The sovereign account of D on R will be credited with 21 SnowETH.
+4. D will mint 21 SnowETH into Bob's account.
 
 Example Message:
 

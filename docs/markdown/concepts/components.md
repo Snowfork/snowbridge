@@ -137,8 +137,6 @@ For more details, see [Basic Polkadot to Ethereum Message Channel](./basic-polka
 
 The incentivized bridge extends the basic bootstrap bridge by adding strict message ordering channels in both directions that enforce delivery of messages in the order that they are sent. It also adds incentives which provide guaranteed delivery with strong properties based on simple economic assumptions without the need for any kind of Oracle-based system.
 
-A common problem with bridges is in handling fluctuating gas prices and exchange rates across chains and assets. Often oracle-based solutions are used to deal with this. However, once we have a bootstrap bridge up, we now have access to cross-chain pegged assets, and so we can use those as part of our bridge incentive model. This means using PolkaETH and SnowDOT to cover costs for relayers such that they are not impacted by changing exchange rates. Longer term, we consider adding a gas token which can be used to have fixed future gas costs. A gas token would act much like a future in a traditional stock market.
-
-<!-- Why not call PolkaETH SnowETH? -->
+A common problem with bridges is in handling fluctuating gas prices and exchange rates across chains and assets. Often oracle-based solutions are used to deal with this. However, once we have a bootstrap bridge up, we now have access to cross-chain pegged assets, and so we can use those as part of our bridge incentive model. This means using SnowETH and SnowDOT to cover costs for relayers such that they are not impacted by changing exchange rates. Longer term, we consider adding a gas token which can be used to have fixed future gas costs. A gas token would act much like a future in a traditional stock market.
 
 For more details, see [Incentivized Bridge](./incentivized-bridge)
