@@ -7,11 +7,12 @@ members = [
     "primitives/ethereum",
     "primitives/testutils",
     "pallets/bridge",
-    "pallets/asset",
+    "pallets/assets",
     "pallets/verifier",
     "pallets/verifier-lightclient",
     "pallets/eth-app",
     "pallets/erc20-app",
+    "pallets/commitments",
     "node",
     "runtime",
 ]

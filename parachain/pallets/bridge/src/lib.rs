@@ -16,15 +16,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(unused_variables)]
 
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage,
+	dispatch::DispatchResult};
 use frame_system::{self as system, ensure_signed};
 
 use sp_std::prelude::*;
 use sp_core::H160;
 
-use artemis_core::{
-	AppId, Application, Message, Verifier,
-};
+use artemis_core::{AppId, Application, Message, Verifier};
 
 pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
@@ -69,19 +69,16 @@ decl_module! {
 		#[weight = 0]
 		pub fn submit(origin, app_id: AppId, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			Self::verify(who, app_id, &message)?;
+
+			// TODO: move replay protection here
+
+			T::Verifier::verify(who, app_id, &message)?;
 			Self::dispatch(app_id.into(), &message)
 		}
-
 	}
 }
 
 impl<T: Trait> Module<T> {
-
-	fn verify(sender: T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
-		T::Verifier::verify(sender, app_id, &message)
-	}
-
 	fn dispatch(address: H160, message: &Message) -> DispatchResult {
 		if address == T::AppETH::address() {
 			T::AppETH::handle(message.payload.as_ref())

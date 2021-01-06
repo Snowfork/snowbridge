@@ -41,6 +41,7 @@ pub use frame_support::{
 	},
 };
 
+pub use artemis_core::AssetId;
 pub use verifier_lightclient::EthereumHeader;
 
 
@@ -258,7 +259,7 @@ impl pallet_transaction_payment::Trait for Runtime {
 
 impl bridge::Trait for Runtime {
 	type Event = Event;
-	type Verifier = verifier::Module<Runtime>;
+	type Verifier = verifier_lightclient::Module<Runtime>;
 	type AppETH = eth_app::Module<Runtime>;
 	type AppERC20 = erc20_app::Module<Runtime>;
 }
@@ -278,16 +279,36 @@ impl verifier_lightclient::Trait for Runtime {
 	type VerifyPoW = VerifyPoW;
 }
 
-impl asset::Trait for Runtime {
+parameter_types! {
+	pub const CommitInterval: BlockNumber = 20;
+}
+
+impl commitments::Trait for Runtime {
 	type Event = Event;
+
+	type CommitInterval = CommitInterval;
+}
+
+
+
+impl assets::Trait for Runtime {
+	type Event = Event;
+}
+
+parameter_types! {
+	pub const EthAssetId: AssetId = AssetId::ETH;
 }
 
 impl eth_app::Trait for Runtime {
 	type Event = Event;
+	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
+	type Commitments = commitments::Module<Runtime>;
 }
 
 impl erc20_app::Trait for Runtime {
 	type Event = Event;
+	type Assets = assets::Module<Runtime>;
+	type Commitments = commitments::Module<Runtime>;
 }
 
 construct_runtime!(
@@ -304,9 +325,10 @@ construct_runtime!(
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Bridge: bridge::{Module, Call, Storage, Event},
+		Commitments: commitments::{Module, Call, Storage, Event},
 		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
-		Asset: asset::{Module, Call, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
 	}

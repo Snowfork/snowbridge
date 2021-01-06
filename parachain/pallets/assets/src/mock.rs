@@ -15,14 +15,14 @@ impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
 }
 
-mod generic_asset {
+mod assets {
     pub use crate::Event;
 }
 
 impl_outer_event! {
     pub enum TestEvent for MockRuntime {
         system<T>,
-        generic_asset<T>,
+        assets<T>,
     }
 }
 
@@ -72,11 +72,12 @@ impl Trait for MockRuntime {
 	type Event = TestEvent;
 }
 
-pub type Asset = Module<MockRuntime>;
+pub type Assets = Module<MockRuntime>;
 pub type System = system::Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {
 	let storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
 	ext

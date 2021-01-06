@@ -20,6 +20,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_std::prelude::*;
+use sp_std::convert::TryInto;
 use sp_core::{H160, U256};
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
@@ -27,20 +28,23 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 
-use artemis_core::{Application, BridgedAssetId};
-use artemis_asset as asset;
+use artemis_core::{Application, AssetId, MultiAsset, Commitments};
+use artemis_ethereum::Log;
 
 mod payload;
-use payload::Payload;
+use payload::{InPayload, OutPayload};
 
 #[cfg(test)]
 mod mock;
 
 #[cfg(test)]
 mod tests;
-
-pub trait Trait: system::Trait + asset::Trait {
+pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+	type Assets: MultiAsset<<Self as system::Trait>::AccountId>;
+
+	type Commitments: Commitments;
 }
 
 decl_storage! {
@@ -49,21 +53,21 @@ decl_storage! {
 	}
 }
 
-decl_event!(
+decl_event! {
     /// Events for the ERC20 module.
 	pub enum Event<T>
 	where
 		AccountId = <T as system::Trait>::AccountId,
 	{
-		/// Signal a cross-chain transfer.
-		Transfer(BridgedAssetId, AccountId, H160, U256),
+		Burned(H160, AccountId, U256),
+		Minted(H160, AccountId, U256),
+		// TODO: Remove once relayer is updated to read commitments instead
+		Transfer(H160, AccountId, H160, U256),
 	}
-);
+}
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		/// Asset ID is invalid.
-		InvalidAssetId,
 		/// The submitted payload could not be decoded.
 		InvalidPayload,
 	}
@@ -79,16 +83,24 @@ decl_module! {
 
 		/// Burn an ERC20 token balance
 		#[weight = 0]
-		pub fn burn(origin, asset_id: BridgedAssetId, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, token_addr: H160, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			// The asset_id 0 is reserved for the ETH app
-			if asset_id == H160::zero() {
-				return Err(Error::<T>::InvalidAssetId.into())
-			}
+			T::Assets::withdraw(AssetId::Token(token_addr), &who, amount)?;
 
-			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
-			Self::deposit_event(RawEvent::Transfer(asset_id, who.clone(), recipient, amount));
+			let message = OutPayload {
+				token_addr: token_addr,
+				sender_addr: who.clone(),
+				recipient_addr: recipient,
+				amount: amount
+			};
+			T::Commitments::add(Self::address(), message.encode());
+
+			Self::deposit_event(RawEvent::Burned(token_addr, who.clone(), amount));
+
+			// TODO: Remove once relayer can read message commitments
+			Self::deposit_event(RawEvent::Transfer(token_addr, who.clone(), recipient, amount));
+
 			Ok(())
 		}
 
@@ -97,13 +109,18 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
-		if payload.token_addr.is_zero() {
-			return Err(Error::<T>::InvalidAssetId.into())
-		}
-
-		<asset::Module<T>>::do_mint(payload.token_addr, &payload.recipient_addr, payload.amount)?;
-
+	fn handle_event(payload: InPayload<T::AccountId>) -> DispatchResult {
+		T::Assets::deposit(
+			AssetId::Token(payload.token_addr),
+			&payload.recipient_addr,
+			payload.amount
+		)?;
+		Self::deposit_event(
+			RawEvent::Minted(
+				payload.token_addr,
+				payload.recipient_addr.clone(),
+				payload.amount
+		));
 		Ok(())
 	}
 
@@ -111,7 +128,10 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Application for Module<T> {
 	fn handle(payload: &[u8]) -> DispatchResult {
-		let payload_decoded = Payload::decode(payload)
+		// Decode ethereum Log event from RLP-encoded data, and try to convert to InPayload
+		let payload_decoded = rlp::decode::<Log>(payload)
+			.map_err(|_| Error::<T>::InvalidPayload)?
+			.try_into()
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
 		Self::handle_event(payload_decoded)

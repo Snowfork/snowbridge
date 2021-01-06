@@ -7,7 +7,9 @@ use hex_literal::hex;
 use codec::Decode;
 use crate::RawEvent;
 
-use crate::payload::Payload;
+use artemis_core::SingleAsset;
+
+use crate::payload::InPayload;
 
 fn last_event() -> MockEvent {
 	System::events().pop().expect("Event expected").event
@@ -23,24 +25,23 @@ fn mints_after_handling_ethereum_event() {
 		let bob: AccountId = Keyring::Bob.into();
 
 		let recipient_addr = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
-		let event: Payload<TestAccountId> = Payload {
+		let event: InPayload<TestAccountId> = InPayload {
 			sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 			recipient_addr,
 			amount: 10.into(),
 		};
 
 		assert_ok!(ETH::handle_event(event));
-		assert_eq!(Asset::free_balance(H160::zero(), &bob), 10.into());
+		assert_eq!(Asset::balance(&bob), 10.into());
 	});
 }
 
 #[test]
 fn burn_should_emit_bridge_event() {
 	new_tester().execute_with(|| {
-		let token_addr = H160::zero();
 		let recipient = H160::repeat_byte(2);
 		let bob: AccountId = Keyring::Bob.into();
-		Asset::do_mint(token_addr, &bob, 500.into()).unwrap();
+		Asset::deposit(&bob, 500.into()).unwrap();
 
 		assert_ok!(ETH::burn(
 			Origin::signed(bob.clone()),
@@ -51,6 +52,5 @@ fn burn_should_emit_bridge_event() {
 			MockEvent::test_events(RawEvent::Transfer(bob, recipient, 20.into())),
 			last_event()
 		);
-
 	});
 }

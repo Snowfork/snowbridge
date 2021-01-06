@@ -40,7 +40,7 @@ std = [
     "bridge/std",
     "verifier/std",
     "verifier-lightclient/std",
-    "asset/std",
+    "assets/std",
     "eth-app/std",
     "erc20-app/std",
 ]
@@ -202,6 +202,12 @@ version = "1.0.5"
 
 # Our Pallets
 
+[dependencies.artemis-core]
+default-features = false
+package = "artemis-core"
+path = "../primitives/core"
+version = "0.1.1"
+
 [dependencies.bridge]
 default-features = false
 package = "pallet-bridge"
@@ -220,10 +226,10 @@ package = "pallet-verifier-lightclient"
 path = "../pallets/verifier-lightclient"
 version = "0.1.1"
 
-[dependencies.asset]
+[dependencies.assets]
 default-features = false
-package = "artemis-asset"
-path = "../pallets/asset"
+package = "artemis-assets"
+path = "../pallets/assets"
 version = "0.1.1"
 
 [dependencies.eth-app]
@@ -237,3 +243,8 @@ default-features = false
 package = "artemis-erc20-app"
 path = "../pallets/erc20-app"
 version = "0.1.1"
+
+[dependencies.commitments]
+default-features = false
+package = "artemis-commitments"
+path = "../pallets/commitments"

@@ -8,7 +8,8 @@ use sp_runtime::{
 };
 use frame_system as system;
 
-use artemis_asset as asset;
+use artemis_core::AssetId;
+use artemis_assets::SingleAssetAdaptor;
 
 impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
@@ -21,7 +22,8 @@ mod test_events {
 impl_outer_event! {
     pub enum MockEvent for MockRuntime {
 		system<T>,
-		asset<T>,
+		artemis_assets<T>,
+		artemis_commitments,
         test_events<T>,
     }
 }
@@ -68,16 +70,32 @@ impl system::Trait for MockRuntime {
 	type SystemWeightInfo = ();
 }
 
-impl asset::Trait for MockRuntime {
+impl artemis_assets::Trait for MockRuntime {
 	type Event = MockEvent;
+}
+
+parameter_types! {
+	pub const CommitInterval: u64 = 20;
+}
+
+impl artemis_commitments::Trait for MockRuntime {
+	type Event = MockEvent;
+	type CommitInterval = CommitInterval;
+}
+
+parameter_types! {
+	pub const EthAssetId: AssetId = AssetId::ETH;
 }
 
 impl Trait for MockRuntime {
 	type Event = MockEvent;
+	type Asset = Asset;
+	type Commitments = Commitments;
 }
 
 pub type System = system::Module<MockRuntime>;
-pub type Asset = asset::Module<MockRuntime>;
+pub type Commitments = artemis_commitments::Module<MockRuntime>;
+pub type Asset = SingleAssetAdaptor<MockRuntime, EthAssetId>;
 pub type ETH = Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {
@@ -86,4 +104,3 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
-

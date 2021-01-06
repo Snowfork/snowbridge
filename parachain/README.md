@@ -149,11 +149,6 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
     "blockNumber": "u64",
     "eventIndex": "u32"
   },
-  "TokenId": "H160",
-  "BridgedAssetId": "H160",
-  "AssetAccountData": {
-    "free": "U256"
-  },
   "EthereumHeader": {
     "parentHash": "H256",
     "timestamp": "u64",
@@ -172,6 +167,12 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
   },
   "Bloom": {
     "_": "[u8; 256]"
+  },
+  "AssetId": {
+    "_enum": {
+      "ETH": null,
+      "Token": "H160"
+    }
   }
 }
 ```

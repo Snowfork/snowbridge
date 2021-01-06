@@ -73,9 +73,6 @@ func MakeHeaderData(gethheader *etypes.Header) (*Header, error) {
 		return nil, fmt.Errorf("gethheader.Number is not uint64")
 	}
 	blockNumber = gethheader.Number.Uint64()
-	if !gethheader.Time.IsUint64() {
-		return nil, fmt.Errorf("gethheader.Time is not uint64")
-	}
 
 	var gasUsed, gasLimit big.Int
 	gasUsed.SetUint64(gethheader.GasUsed)
@@ -96,7 +93,7 @@ func MakeHeaderData(gethheader *etypes.Header) (*Header, error) {
 
 	return &Header{
 		ParentHash:       types.NewH256(gethheader.ParentHash.Bytes()),
-		Timestamp:        types.NewU64(gethheader.Time.Uint64()),
+		Timestamp:        types.NewU64(gethheader.Time),
 		Number:           types.NewU64(blockNumber),
 		Author:           types.NewH160(gethheader.Coinbase.Bytes()),
 		TransactionsRoot: types.NewH256(gethheader.TxHash.Bytes()),

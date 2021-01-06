@@ -24,13 +24,14 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 use sp_std::prelude::*;
+use sp_std::convert::TryInto;
 use sp_core::{H160, U256};
 
-use artemis_core::{Application, BridgedAssetId};
-use artemis_asset as asset;
+use artemis_core::{Application, Commitments, SingleAsset};
+use artemis_ethereum::Log;
 
 mod payload;
-use payload::Payload;
+use payload::{InPayload, OutPayload};
 
 #[cfg(test)]
 mod mock;
@@ -38,8 +39,12 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: system::Trait + asset::Trait {
+pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+	type Asset: SingleAsset<<Self as system::Trait>::AccountId>;
+
+	type Commitments: Commitments;
 }
 
 decl_storage! {
@@ -54,7 +59,10 @@ decl_event!(
 	where
 		AccountId = <T as system::Trait>::AccountId
 	{
-		/// Signal a cross-chain transfer.
+		Burned(AccountId, U256),
+		Minted(AccountId, U256),
+
+		// TODO: Remove once relayer is updated to read commitments instead
 		Transfer(AccountId, H160, U256),
 	}
 );
@@ -79,9 +87,21 @@ decl_module! {
 		#[weight = 0]
 		pub fn burn(origin, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let asset_id: BridgedAssetId = H160::zero();
-			<asset::Module<T>>::do_burn(asset_id, &who, amount)?;
+
+			T::Asset::withdraw(&who, amount)?;
+
+			let message = OutPayload {
+				sender_addr: who.clone(),
+				recipient_addr: recipient,
+				amount: amount
+			};
+			T::Commitments::add(Self::address(), message.encode());
+
+			Self::deposit_event(RawEvent::Burned(who.clone(), amount));
+
+			// TODO: Remove once relayer can read message commitments
 			Self::deposit_event(RawEvent::Transfer(who.clone(), recipient, amount));
+
 			Ok(())
 		}
 
@@ -90,15 +110,19 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-	fn handle_event(payload: Payload<T::AccountId>) -> DispatchResult {
-		let asset_id: BridgedAssetId = H160::zero();
-		<asset::Module<T>>::do_mint(asset_id, &payload.recipient_addr, payload.amount)
+	fn handle_event(payload: InPayload<T::AccountId>) -> DispatchResult {
+		T::Asset::deposit(&payload.recipient_addr, payload.amount)?;
+		Self::deposit_event(RawEvent::Minted(payload.recipient_addr.clone(), payload.amount));
+		Ok(())
 	}
 }
 
 impl<T: Trait> Application for Module<T> {
 	fn handle(payload: &[u8]) -> DispatchResult {
-		let payload_decoded = Payload::decode(payload)
+		// Decode ethereum Log event from RLP-encoded data, and try to convert to InPayload
+		let payload_decoded = rlp::decode::<Log>(payload)
+			.map_err(|_| Error::<T>::InvalidPayload)?
+			.try_into()
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
 		Self::handle_event(payload_decoded)

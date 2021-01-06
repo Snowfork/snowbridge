@@ -6,10 +6,8 @@ use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weight
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
-use sp_std::convert::{From};
+use sp_std::convert::From;
 use frame_system as system;
-
-use artemis_asset as asset;
 
 impl_outer_origin! {
 	pub enum Origin for MockRuntime {}
@@ -22,7 +20,8 @@ mod test_events {
 impl_outer_event! {
     pub enum MockEvent for MockRuntime {
 		system<T>,
-		asset<T>,
+		artemis_assets<T>,
+		artemis_commitments,
         test_events<T>,
     }
 }
@@ -69,16 +68,28 @@ impl system::Trait for MockRuntime {
 	type SystemWeightInfo = ();
 }
 
-impl asset::Trait for MockRuntime {
+impl artemis_assets::Trait for MockRuntime {
 	type Event = MockEvent;
+}
+
+parameter_types! {
+	pub const CommitInterval: u64 = 20;
+}
+
+impl artemis_commitments::Trait for MockRuntime {
+	type Event = MockEvent;
+	type CommitInterval = CommitInterval;
 }
 
 impl Trait for MockRuntime {
 	type Event = MockEvent;
+	type Assets = Assets;
+	type Commitments = Commitments;
 }
 
 pub type System = system::Module<MockRuntime>;
-pub type Asset = asset::Module<MockRuntime>;
+pub type Commitments = artemis_commitments::Module<MockRuntime>;
+pub type Assets = artemis_assets::Module<MockRuntime>;
 pub type ERC20 = Module<MockRuntime>;
 
 pub fn new_tester() -> sp_io::TestExternalities {

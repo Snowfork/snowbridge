@@ -70,7 +70,6 @@ features = ["derive"]
 package = "ethabi-decode"
 default-features = false
 git = "https://github.com/Snowfork/ethabi-decode"
-version = "1.2.1"
 
 [dependencies.artemis-core]
 default-features = false
@@ -80,9 +79,13 @@ path = "../../primitives/core"
 default-features = false
 path = "../../primitives/ethereum"
 
-[dependencies.artemis-asset]
+[dependencies.artemis-assets]
 default-features = false
-path = "../../pallets/asset"
+path = "../../pallets/assets"
+
+[dependencies.artemis-commitments]
+default-features = false
+path = "../../pallets/commitments"
 
 [features]
 default = ["std"]
@@ -98,7 +101,8 @@ std = [
     "sp-runtime/std",
     "artemis-core/std",
     "artemis-ethereum/std",
-    "artemis-asset/std",
+    "artemis-assets/std",
+    "artemis-commitments/std",
     "ethabi/std",
     "rlp/std"
 ]
