@@ -12,7 +12,7 @@ import (
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
-	"github.com/tranvictor/ethashproof"
+	"github.com/snowfork/ethashproof"
 )
 
 // To retrieve test data:

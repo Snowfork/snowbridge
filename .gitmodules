@@ -1,3 +1,0 @@
-[submodule "relayer/ethashproof"]
-	path = relayer/ethashproof
-	url = https://github.com/Snowfork/ethashproof.git

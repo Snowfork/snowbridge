@@ -13,7 +13,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/tranvictor/ethashproof"
+	"github.com/snowfork/ethashproof"
 	"golang.org/x/sync/errgroup"
 )
 
