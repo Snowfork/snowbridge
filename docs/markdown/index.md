@@ -6,7 +6,6 @@ permalink: /
 ---
 
 # Welcome to Snowbridge
-
 {: .fs-9 }
 
 This site provides documentation for Snowbridge, a trustless system for bridging arbitrary data between Polkadot and Ethereum.
