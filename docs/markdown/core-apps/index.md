@@ -14,7 +14,7 @@ For now, we only have apps for turning ETH, ERC20 tokens and DOT into cross-chai
 
 - [SnowETH](./snoweth)
 - [SnowERC20](./snowerc20)
-- [SnowDOT](./snowdot)
+- [WrappedDOT](./wrappeddot)
 
 ## Future
 

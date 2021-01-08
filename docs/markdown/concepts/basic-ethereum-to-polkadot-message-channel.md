@@ -19,7 +19,7 @@ This channel is intended to be a simple straightforward channel which provides o
 
 ## Motivation
 
-The intention behind a channel with minimal guarantees is for it to be used as a basic bootstrap mechanism for other more complicated channels. For example, other more complex channel designs may want to depend on already-bootstrapped cross-chain applications, like SnowETH or SnowDOT for their incentives, so this channel can be used to bootstrap liquidity in those applications.
+The intention behind a channel with minimal guarantees is for it to be used as a basic bootstrap mechanism for other more complicated channels. For example, other more complex channel designs may want to depend on already-bootstrapped cross-chain applications, like SnowETH or WrappedDOT for their incentives, so this channel can be used to bootstrap liquidity in those applications.
 
 A channel used for bootstrapping must at the very least provide a basic guarantee of deliverability and of replay protection to ensure correctness and censorship resistance, but no other guarantees are required. It must also only depend on the core bridge pallets and no bridge applications.
 

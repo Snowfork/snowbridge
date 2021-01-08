@@ -13,7 +13,7 @@ The Snowbridge parachain is a tokenless, permissionless parachain. For now, anyo
 - Allowing other applications on other parachains to send and receive messages from smart contract applications on Ethereum
 - Wrapping ETH on Ethereum into a Polkadot-based asset via SnowETH
 - Wrapping ERC20 tokens on Ethereum into Polkadot-based assets via SnowERC20
-- Wrapping DOTs into Etherum-based assets via SnowDOT
+- Wrapping DOTs into Etherum-based assets via WrappedDOT
 
 ## Block production and permissioning
 
@@ -21,6 +21,6 @@ As mentioned, our parachain is permissionless and tokenless, so anyone can run a
 
 ## Parachain Pallets
 
-The parachain provides low level bridging to Ethereum, but also contains pallets for a few high level applications for ETH, DOT and ERC20 pegged assets. These core bridge applications are detailed further here: [SnowETH](../core-applications/snoweth), [SnowERC20](../core-applications/snowerc20), [SnowDOT](../core-applications/snowdot)
+The parachain provides low level bridging to Ethereum, but also contains pallets for a few high level applications for ETH, DOT and ERC20 pegged assets. These core bridge applications are detailed further here: [SnowETH](../core-applications/snoweth), [SnowERC20](../core-applications/snowerc20), [WrappedDOT](../core-applications/wrappeddot)
 
 We may add additional application pallets in future, for example for NFT/ERC721 bridging support or for other functionality that is likely to be needed across the wider Polkadot ecosystem.
