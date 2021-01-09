@@ -23,7 +23,7 @@ jsonrpc-core = "15.1.0"
 jsonrpc-pubsub = "14.2.0"
 log = "0.4.8"
 rand = "0.7.2"
-structopt = "0.3.8" 
+structopt = "0.3.8"
 tracing = "0.1.22"
 parking_lot = "0.10.0"
 
@@ -39,8 +39,6 @@ polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch =
 polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "master" }
 polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "master" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "master" }
-
-
 
 [dependencies.artemis-runtime]
 path = "../runtime"
@@ -149,7 +147,6 @@ branch = "master"
 [dependencies.sp-trie]
 git = "https://github.com/paritytech/substrate.git"
 branch = "master"
-
 
 [dependencies.sp-transaction-pool]
 git = "https://github.com/paritytech/substrate.git"

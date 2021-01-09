@@ -53,7 +53,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> String {
-		"http://www.snowfork.com".into()
+		"http://snowbridge.snowfork.com".into()
 	}
 
 	fn copyright_start_year() -> i32 {
