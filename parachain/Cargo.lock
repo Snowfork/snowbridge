@@ -217,7 +217,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "parity-scale-codec",
- "rlp 0.4.6",
+ "rlp",
  "rustc-hex",
  "serde",
  "sp-core",
@@ -240,7 +240,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "parity-scale-codec",
- "rlp 0.4.6",
+ "rlp",
  "rustc-hex",
  "serde",
  "sp-core",
@@ -264,7 +264,7 @@ dependencies = [
  "parity-bytes",
  "parity-scale-codec",
  "rand 0.7.3",
- "rlp 0.5.0",
+ "rlp",
  "rustc-hex",
  "serde",
  "serde-big-array",
@@ -1728,7 +1728,7 @@ dependencies = [
  "byteorder",
  "ethereum-types",
  "primitive-types 0.8.0",
- "rlp 0.5.0",
+ "rlp",
  "sha3 0.8.2",
 ]
 
@@ -2779,7 +2779,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f28220f89297a075ddc7245cd538076ee98b01f2a9c23a53a4f1105d5a322808"
 dependencies = [
- "rlp 0.5.0",
+ "rlp",
 ]
 
 [[package]]
@@ -4847,7 +4847,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "parity-scale-codec",
- "rlp 0.5.0",
+ "rlp",
  "rustc-hex",
  "serde",
  "serde_json",
@@ -6598,15 +6598,6 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "rlp"
-version = "0.4.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1190dcc8c3a512f1eef5d09bb8c84c7f39e1054e174d1795482e18f5272f2e73"
-dependencies = [
- "rustc-hex",
 ]
 
 [[package]]
