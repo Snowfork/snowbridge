@@ -300,8 +300,8 @@ mod tests {
 			gas_limit: 0xbe8c19.into(),
 			difficulty: 0xbc140caa61087i64.into(),
 			seal: vec![
-				rlp::encode(&mix_hash),
-				rlp::encode(&nonce),
+				rlp::encode(&mix_hash).to_vec(),
+				rlp::encode(&nonce).to_vec(),
 			],
 		};
 		assert_eq!(
@@ -316,8 +316,8 @@ mod tests {
 		let mix_hash: H256 = hex!("be3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").into();
 		let mut header: Header = Default::default();
 		header.seal = vec![
-			rlp::encode(&mix_hash.0.to_vec()),
-			rlp::encode(&nonce.0.to_vec()),
+			rlp::encode(&mix_hash.0.to_vec()).to_vec(),
+			rlp::encode(&nonce.0.to_vec()).to_vec(),
 		];
 		assert_eq!(header.nonce().unwrap(), nonce);
 		assert_eq!(header.mix_hash().unwrap(), mix_hash);
@@ -329,8 +329,8 @@ mod tests {
 		let mix_hash = hex!("bebe3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").to_vec();
 		let mut header: Header = Default::default();
 		header.seal = vec![
-			rlp::encode(&mix_hash),
-			rlp::encode(&nonce),
+			rlp::encode(&mix_hash).to_vec(),
+			rlp::encode(&nonce).to_vec(),
 		];
 		assert_eq!(header.nonce(), None);
 		assert_eq!(header.mix_hash(), None);

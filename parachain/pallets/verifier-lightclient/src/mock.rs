@@ -114,8 +114,8 @@ impl Config for MockRuntimeWithPoW {
 }
 
 pub type Verifier = Module<MockRuntime>;
-
 pub type VerifierWithPoW = Module<MockRuntimeWithPoW>;
+pub type System = system::Module<MockRuntime>;
 
 pub fn genesis_ethereum_header() -> EthereumHeader {
 	Default::default()
@@ -134,7 +134,7 @@ pub fn child_of_header(header: &EthereumHeader) -> EthereumHeader {
 	child.difficulty = 1.into();
 	child.parent_hash = header.compute_hash();
 	child.number = header.number + 1;
-	child	
+	child
 }
 
 fn fixture_path(name: &str) -> PathBuf {
@@ -185,7 +185,7 @@ pub fn log_payload() -> Vec<u8> {
 		59f2488da000000000000000000000000000000000000000000000000003e973b5a5d1078e
 	").to_vec()
 }
- 
+
 pub fn new_tester() -> sp_io::TestExternalities {
 	new_tester_with_config::<MockRuntime>(GenesisConfig {
 		initial_header: genesis_ethereum_header(),
@@ -199,6 +199,6 @@ pub fn new_tester_with_config<T: Config>(config: GenesisConfig) -> sp_io::TestEx
 	config.assimilate_storage::<T>(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| system::Module::<T>::set_block_number(1.into()));
+	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
