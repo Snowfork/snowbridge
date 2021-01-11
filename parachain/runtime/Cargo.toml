@@ -15,131 +15,130 @@ targets = ["x86_64-unknown-linux-gnu"]
 default-features = false
 features = ["derive"]
 package = "parity-scale-codec"
-version = "1.3.4"
-
-[dependencies.serde]
-features = ["derive"]
-optional = true
-version = "1.0.101"
+version = "1.3.5"
 
 [dependencies.hex-literal]
 version = "0.3.1"
 optional = true
+
+[dependencies.getrandom]
+version = "0.2.1"
+features = ["js"]
 
 # Substrate
 
 [dependencies.frame-executive]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.frame-support]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.frame-system]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.frame-system-rpc-runtime-api]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.pallet-balances]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.pallet-randomness-collective-flip]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.pallet-timestamp]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.pallet-transaction-payment]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.pallet-transaction-payment-rpc-runtime-api]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-api]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-block-builder]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-core]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-inherents]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-offchain]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-runtime]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-session]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-std]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-transaction-pool]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-version]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.frame-benchmarking]
 optional = true
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.frame-system-benchmarking]
 optional = true
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 # Build
 
 [build-dependencies.substrate-wasm-builder]
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 version = "3.0.0"
 
 # Cumulus
@@ -174,17 +173,17 @@ branch = "master"
 [dependencies.xcm]
 default-features = false
 git = "https://github.com/paritytech/polkadot"
-branch = "master"
+rev = "c59408004db39c25f078e3e1961e640159b1bdda"
 
 [dependencies.xcm-executor]
 default-features = false
 git = "https://github.com/paritytech/polkadot"
-branch = "master"
+rev = "c59408004db39c25f078e3e1961e640159b1bdda"
 
 [dependencies.xcm-builder]
 default-features = false
 git = "https://github.com/paritytech/polkadot"
-branch = "master"
+rev = "c59408004db39c25f078e3e1961e640159b1bdda"
 
 [dependencies.xcm-handler]
 default-features = false
@@ -194,7 +193,7 @@ branch = "master"
 [dependencies.polkadot-parachain]
 default-features = false
 git = "https://github.com/paritytech/polkadot"
-branch = "master"
+rev = "c59408004db39c25f078e3e1961e640159b1bdda"
 
 # Our Pallets
 
@@ -207,11 +206,6 @@ path = "../primitives/core"
 default-features = false
 package = "pallet-bridge"
 path = "../pallets/bridge"
-
-[dependencies.verifier]
-default-features = false
-package = "pallet-verifier"
-path = "../pallets/verifier"
 
 [dependencies.verifier-lightclient]
 default-features = false
@@ -249,7 +243,6 @@ path = "../primitives/xcm-support"
 [features]
 default = ["std"]
 std = [
-    "serde",
     "codec/std",
     "frame-executive/std",
     "frame-support/std",
@@ -281,7 +274,6 @@ std = [
 	"xcm-handler/std",
 	"polkadot-parachain/std",
     "bridge/std",
-    "verifier/std",
     "verifier-lightclient/std",
     "assets/std",
     "eth-app/std",

@@ -5,17 +5,21 @@ authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false }
+codec = { package = "parity-scale-codec", version = "1.3.5", default-features = false }
 ethbloom = { version = "0.10.0", default-features = false }
-ethereum-types = { version = "0.10.0", default-features = false, features = ["codec", "serialize", "rlp"] }
+ethereum-types = { version = "0.10.0", default-features = false, features = ["codec", "rlp"] }
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 hex-literal = { version = "0.3.1", default-features = false }
 libsecp256k1 = { version = "0.3", default-features = false }
-parity-bytes = { version = "0.1", default-features = false }
+parity-bytes = { version = "0.1.2", default-features = false }
 rlp = { version = "0.5", default-features = false }
-serde = { version = "1.0", optional = true }
+serde = { version = "1.0.101", optional = true }
 serde-big-array = { version = "0.2", optional = true }
 tiny-keccak = { version = "2.0.2" }
+
+[dependencies.getrandom]
+version = "0.2.1"
+features = ["js"]
 
 [dependencies.ethabi]
 package = "ethabi-decode"
@@ -30,27 +34,29 @@ branch = "master"
 [dependencies.sp-std]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-core]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-runtime]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [features]
 default = ["std"]
 expensive_tests = []
 std = [
+	"serde",
+	"serde-big-array",
 	"codec/std",
 	"ethabi/std",
 	"ethash/std",
@@ -60,8 +66,6 @@ std = [
 	"libsecp256k1/std",
 	"parity-bytes/std",
 	"rlp/std",
-	"serde",
-	"serde-big-array",
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",

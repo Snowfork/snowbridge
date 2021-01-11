@@ -13,37 +13,37 @@ targets = ["x86_64-unknown-linux-gnu"]
 default-features = false
 features = ["derive"]
 package = "parity-scale-codec"
-version = "1.3.4"
+version = "1.3.5"
 
 [dependencies.frame-support]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.frame-system]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-core]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-std]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-io]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.sp-runtime]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
-branch = "master"
+rev = "c9d93653e567f10867273b0171f3025419795c37"
 
 [dependencies.artemis-core]
 default-features = false

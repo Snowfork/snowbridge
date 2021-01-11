@@ -5,21 +5,22 @@ authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false }
+codec = { package = "parity-scale-codec", version = "1.3.5", default-features = false }
 
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false}
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false}
+sp-std = { git = "https://github.com/paritytech/substrate", rev = "c9d93653e567f10867273b0171f3025419795c37", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", rev = "c9d93653e567f10867273b0171f3025419795c37", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", rev = "c9d93653e567f10867273b0171f3025419795c37", default-features = false}
+frame-support = { git = "https://github.com/paritytech/substrate", rev = "c9d93653e567f10867273b0171f3025419795c37", default-features = false}
 
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "master", default-features = false }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "master", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", rev = "c59408004db39c25f078e3e1961e640159b1bdda", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", rev = "c59408004db39c25f078e3e1961e640159b1bdda", default-features = false }
 
 artemis-core = { path = "../../primitives/core", default-features = false }
 
 [features]
 default = ["std"]
 std = [
+        "codec/std",
         "sp-std/std",
         "sp-runtime/std",
         "frame-support/std",
