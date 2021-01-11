@@ -8,11 +8,12 @@
 use frame_system::{self as system, ensure_signed};
 use frame_support::{debug, decl_module, decl_storage, decl_event, decl_error,
 	dispatch::DispatchResult, dispatch::DispatchError, ensure, traits::Get};
+use sp_std::collections::btree_map::BTreeMap;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
-use artemis_core::{AppId, Message, Verifier, VerificationInput};
+use artemis_core::{AppId, Message, Messages, Verifier, VerificationInput};
 use artemis_ethereum::{HeaderId as EthereumHeaderId, Log, Receipt, H256, U256};
 use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
 
@@ -419,12 +420,23 @@ impl<T: Config> Module<T> {
 		let receipt = header.check_receipt_proof(&proof)
 			.ok_or(Error::<T>::InvalidProof)?;
 		
-		// Check that the header is in the finalized chain
 		let finalized_block = FinalizedBlock::get();
+		Self::check_header_finality(
+			&EthereumHeaderId { hash: *block_hash, number: header.number },
+			&finalized_block,
+		)?;
 	
+		Ok(receipt)
+	}
+
+	// Checks that the header is in the finalized chain
+	fn check_header_finality(
+		header: &EthereumHeaderId,
+		finalized_block: &EthereumHeaderId,
+	) -> DispatchResult {
 		if header.number == finalized_block.number {
-			return if *block_hash == finalized_block.hash {
-				Ok(receipt)
+			return if header.hash == finalized_block.hash {
+				Ok(())
 			} else {
 				Err(Error::<T>::HeaderOnStaleFork.into())
 			}
@@ -439,11 +451,11 @@ impl<T: Config> Module<T> {
 			.find(|(_, ancestor)| ancestor.number == header.number)
 			.ok_or(Error::<T>::HeaderOnStaleFork)?;
 		ensure!(
-			*block_hash == finalized_hash_at_number,
+			header.hash == finalized_hash_at_number,
 			Error::<T>::HeaderOnStaleFork,
 		);
-	
-		Ok(receipt)
+
+		Ok(())
 	}
 }
 
@@ -474,5 +486,49 @@ impl<T: Config> Verifier<T::AccountId> for Module<T> {
 			},
 			_ => Err(Error::<T>::UnsupportedVerificationScheme.into())
 		}
+	}
+
+	fn verify_bulk(_: T::AccountId, messages_by_app: &[Messages]) -> DispatchResult {
+		// Maps from block hash to (payload, proof) tuples
+		let mut data_by_block: BTreeMap<H256, Vec<(&[u8], &[Vec<u8>])>> = BTreeMap::new();
+
+		// Extract payload and proof, and group by block
+		for messages in messages_by_app.iter() {
+			for message in messages.1.iter() {
+				if let VerificationInput::ReceiptProof { block_hash, tx_index, ref proof } = message.verification {
+					match data_by_block.get_mut(&block_hash) {
+						Some(p) => p.push((&message.payload, &proof.1)),
+						None => { data_by_block.insert(block_hash, vec![(&message.payload, &proof.1)]); }
+					}
+				} else {
+					return Err(Error::<T>::UnsupportedVerificationScheme.into());
+				}
+			}
+		}
+
+		let finalized_block = FinalizedBlock::get();
+	
+		for (block_hash, data) in data_by_block.iter() {
+			let header = Headers::<T>::get(block_hash)
+				.ok_or(Error::<T>::MissingHeader)?
+				.header;
+	
+			Self::check_header_finality(
+				&EthereumHeaderId { hash: *block_hash, number: header.number },
+				&finalized_block,
+			)?;
+
+			for (payload, proof) in data.iter() {
+				let receipt = header.check_receipt_proof(proof)
+					.ok_or(Error::<T>::InvalidProof)?;
+				let log: Log = rlp::decode(payload)
+					.map_err(|_| Error::<T>::InvalidProof)?;
+				if !receipt.contains_log(&log) {
+					return Err(Error::<T>::InvalidProof.into());
+				}
+			}
+		}
+
+		Ok(())
 	}
 }

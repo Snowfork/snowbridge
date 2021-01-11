@@ -24,6 +24,9 @@ pub struct Message {
 	pub verification: VerificationInput,
 }
 
+#[derive(Clone, Encode, Decode, Default, PartialEq, RuntimeDebug)]
+pub struct Messages(pub AppId, pub Vec<Message>);
+
 /// Verification input for the message verifier.
 ///
 /// This data type allows us to support multiple verification schemes. In the near future,

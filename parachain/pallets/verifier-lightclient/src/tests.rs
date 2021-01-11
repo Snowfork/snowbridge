@@ -1,4 +1,4 @@
-use artemis_core::{Verifier as VerifierConfig};
+use artemis_core::{AppId, Messages, Verifier as VerifierConfig};
 use crate::mock::{
 	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
 	ethereum_header_proof_from_file, genesis_ethereum_block_hash, log_payload,
@@ -305,6 +305,84 @@ fn it_confirms_receipt_inclusion_in_finalized_header() {
 			Default::default(),
 			&message_with_receipt_proof(log_payload(), finalized_header_hash, receipt_proof),
 		));
+	});
+}
+
+#[test]
+fn it_confirms_receipt_inclusion_in_finalized_header_bulk() {
+	let (receipts_root, receipt_proof) = receipt_root_and_proof();
+	let mut block0: EthereumHeader = Default::default();
+	block0.receipts_root = receipts_root;
+
+	new_tester_with_config::<MockRuntime>(GenesisConfig {
+		initial_header: block0.clone(),
+		initial_difficulty: 0.into(),
+	}).execute_with(|| {
+		let mut block1 = child_of_header(&block0);
+		block1.receipts_root = receipts_root;
+		let mut block2 = child_of_header(&block1);
+		block2.receipts_root = receipts_root;
+		let block3 = child_of_header(&block2);
+
+		let block0_hash = block0.compute_hash();
+		let block1_hash = block1.compute_hash();
+		let block2_hash = block2.compute_hash();
+
+		// Construct chain where B1 is finalized:
+		//   B0
+		//   |
+		//   B1
+		//   |
+		//   B2
+		//   |
+		//   B3
+		let ferdie: AccountId = Keyring::Ferdie.into();
+		for header in vec![block1, block2, block3].into_iter() {
+			assert_ok!(Verifier::import_header(
+				Origin::signed(ferdie.clone()),
+				header,
+				Default::default(),
+			));
+		}
+
+		let payload = log_payload();
+		let app_id_0: AppId = Default::default();
+		let mut app_id_1: AppId = Default::default();
+		app_id_1[0] = 1;
+		let finalized_valid_messages = vec![
+			Messages (app_id_0, vec![
+				message_with_receipt_proof(payload.clone(), block0_hash, receipt_proof.clone()),
+				message_with_receipt_proof(payload.clone(), block1_hash, receipt_proof.clone()),
+			]),
+			Messages (app_id_1, vec![
+				message_with_receipt_proof(payload.clone(), block0_hash, receipt_proof.clone()),
+				message_with_receipt_proof(payload.clone(), block1_hash, receipt_proof.clone()),
+			]),
+		];
+		let one_unfinalized_message = vec![
+			Messages (app_id_0, vec![
+				message_with_receipt_proof(payload.clone(), block0_hash, receipt_proof.clone()),
+				// Not finalized
+				message_with_receipt_proof(payload.clone(), block2_hash, receipt_proof.clone()),
+			]),
+		];
+		let one_invalid_message = vec![
+			Messages (app_id_0, vec![
+				message_with_receipt_proof(payload.clone(), block0_hash, receipt_proof.clone()),
+				// Invalid proof
+				message_with_receipt_proof(payload.clone(), block1_hash, Default::default()),
+			]),
+		];
+
+		assert_ok!(Verifier::verify_bulk(Default::default(), &finalized_valid_messages));
+		assert_err!(
+			Verifier::verify_bulk(Default::default(), &one_unfinalized_message),
+			Error::<MockRuntime>::HeaderNotFinalized,
+		);
+		assert_err!(
+			Verifier::verify_bulk(Default::default(), &one_invalid_message),
+			Error::<MockRuntime>::InvalidProof,
+		);
 	});
 }
 
