@@ -2,7 +2,7 @@ use cumulus_primitives::ParaId;
 use artemis_runtime::{
 	AccountId, EthereumHeader,
 	BalancesConfig, GenesisConfig,
-	SystemConfig, VerifierConfig, VerifierLightclientConfig,
+	SystemConfig, VerifierLightclientConfig,
 	ETHConfig, ERC20Config,
 	ParachainInfoConfig,
 	WASM_BINARY, Signature,
@@ -62,7 +62,6 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		ChainType::Local,
 		move || {
 			testnet_genesis(
-				get_account_id_from_seed::<sr25519::Public>("Relay"),
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -95,7 +94,6 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
-	relay_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	para_id: ParaId
 ) -> GenesisConfig {
@@ -110,9 +108,6 @@ fn testnet_genesis(
 		pallet_balances: Some(BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
-		}),
-		verifier: Some(VerifierConfig {
-			key: relay_key,
 		}),
 		verifier_lightclient: Some(VerifierLightclientConfig {
 			initial_header: EthereumHeader {
