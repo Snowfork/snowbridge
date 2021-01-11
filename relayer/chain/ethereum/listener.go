@@ -5,6 +5,7 @@ package ethereum
 
 import (
 	"context"
+	"math/big"
 
 	geth "github.com/ethereum/go-ethereum"
 	gethCommon "github.com/ethereum/go-ethereum/common"
@@ -68,30 +69,20 @@ func (li *Listener) pollEventsAndHeaders(
 	descendantsUntilFinal uint64,
 	hcs *HeaderCacheState,
 ) error {
-	events := make(chan gethTypes.Log)
-	var eventsSubscriptionErr <-chan error
 	headers := make(chan *gethTypes.Header, 5)
 	headerEg, headerCtx := errgroup.WithContext(ctx)
+	var eventQuery *geth.FilterQuery
 
 	if li.messages == nil {
 		li.log.Info("Not polling events since channel is nil")
 	} else {
-		li.log.Info("Polling events starting...")
-
-		query := makeFilterQuery(li.contracts)
-
-		subscription, err := li.conn.client.SubscribeFilterLogs(ctx, query, events)
-		if err != nil {
-			li.log.WithError(err).Error("Failed to subscribe to application events")
-			return err
-		}
-		eventsSubscriptionErr = subscription.Err()
+		eventQuery = makeFilterQuery(li.contracts)
 
 		for _, contract := range li.contracts {
 			li.log.WithFields(logrus.Fields{
 				"addresses":    contract.Address.Hex(),
 				"contractName": contract.Name,
-			}).Debug("Subscribed to contract events")
+			}).Debug("Polling contract events")
 		}
 	}
 
@@ -110,20 +101,34 @@ func (li *Listener) pollEventsAndHeaders(
 			return li.onDone(ctx)
 		case <-headerCtx.Done():
 			return li.onDone(ctx)
-		case err := <-eventsSubscriptionErr:
-			li.log.WithError(err).Error("Events subscription terminated")
-			li.onDone(ctx)
-			return err
-		case event := <-events:
-			li.log.WithFields(logrus.Fields{
-				"address":     event.Address.Hex(),
-				"blockHash":   event.BlockHash.Hex(),
-				"blockNumber": event.BlockNumber,
-				"txHash":      event.TxHash.Hex(),
-			}).Info("Witnessed transaction for application")
-			li.forwardEvent(ctx, hcs, &event)
 		case gethheader := <-headers:
 			li.forwardHeader(hcs, gethheader)
+			if eventQuery == nil {
+				continue
+			}
+
+			finalizedHeader := gethheader.Number.Uint64() - descendantsUntilFinal - 1
+			eventQuery.FromBlock = new(big.Int).SetUint64(finalizedHeader)
+			eventQuery.ToBlock = new(big.Int).SetUint64(finalizedHeader)
+			events, err := li.conn.client.FilterLogs(ctx, *eventQuery)
+			if err != nil {
+				li.log.WithFields(logrus.Fields{
+					"blockNumber": finalizedHeader,
+				}).WithError(err).Error("Failed to query logs for finalized block")
+				continue
+			}
+
+			if len(events) > 0 {
+				for _, event := range events {
+					li.log.WithFields(logrus.Fields{
+						"address":     event.Address.Hex(),
+						"blockHash":   event.BlockHash.Hex(),
+						"blockNumber": event.BlockNumber,
+						"txHash":      event.TxHash.Hex(),
+					}).Info("Witnessed transaction for application")
+					li.forwardEvent(ctx, hcs, &event)
+				}
+			}
 		}
 	}
 }
@@ -173,7 +178,7 @@ func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.H
 	}
 }
 
-func makeFilterQuery(contracts []Contract) geth.FilterQuery {
+func makeFilterQuery(contracts []Contract) *geth.FilterQuery {
 	var addresses []gethCommon.Address
 	var topics []gethCommon.Hash
 	topicSet := make(map[gethCommon.Hash]bool)
@@ -190,7 +195,7 @@ func makeFilterQuery(contracts []Contract) geth.FilterQuery {
 		}
 	}
 
-	return geth.FilterQuery{
+	return &geth.FilterQuery{
 		Addresses: addresses,
 		Topics:    [][]gethCommon.Hash{topics},
 	}
