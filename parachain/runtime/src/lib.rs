@@ -338,10 +338,6 @@ impl bridge::Config for Runtime {
 	type AppERC20 = erc20_app::Module<Runtime>;
 }
 
-impl verifier::Config for Runtime {
-	type Event = Event;
-}
-
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 35;
 	pub const VerifyPoW: bool = true;
@@ -401,7 +397,6 @@ construct_runtime!(
 
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Commitments: commitments::{Module, Call, Storage, Event},
-		Verifier: verifier::{Module, Call, Storage, Event, Config<T>},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
 		Assets: assets::{Module, Call, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},

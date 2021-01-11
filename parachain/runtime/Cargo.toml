@@ -48,27 +48,12 @@ default-features = false
 git = "https://github.com/paritytech/substrate.git"
 branch = "master"
 
-[dependencies.pallet-aura]
-default-features = false
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-
 [dependencies.pallet-balances]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
 branch = "master"
 
-[dependencies.pallet-grandpa]
-default-features = false
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-
 [dependencies.pallet-randomness-collective-flip]
-default-features = false
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-
-[dependencies.pallet-sudo]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
 branch = "master"
@@ -94,11 +79,6 @@ git = "https://github.com/paritytech/substrate.git"
 branch = "master"
 
 [dependencies.sp-block-builder]
-default-features = false
-git = "https://github.com/paritytech/substrate.git"
-branch = "master"
-
-[dependencies.sp-consensus-aura]
 default-features = false
 git = "https://github.com/paritytech/substrate.git"
 branch = "master"
@@ -269,23 +249,19 @@ path = "../primitives/xcm-support"
 [features]
 default = ["std"]
 std = [
+    "serde",
     "codec/std",
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
-    "pallet-aura/std",
     "pallet-balances/std",
-    "pallet-grandpa/std",
     "pallet-randomness-collective-flip/std",
-    "pallet-sudo/std",
     "pallet-timestamp/std",
     "pallet-transaction-payment/std",
     "pallet-transaction-payment-rpc-runtime-api/std",
-    "serde",
     "sp-api/std",
     "sp-block-builder/std",
-    "sp-consensus-aura/std",
     "sp-core/std",
     "sp-inherents/std",
     "sp-offchain/std",
