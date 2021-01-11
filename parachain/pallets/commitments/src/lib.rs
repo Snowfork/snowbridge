@@ -58,9 +58,6 @@ decl_storage! {
 
 		/// Messages waiting to be committed
 		pub MessageQueue: Vec<Message>;
-
-		/// Committed Messages (encoded form)
-		pub Commitment: Vec<u8>;
 	}
 }
 
@@ -97,6 +94,11 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
+
+	fn offchain_key() -> Vec<u8> {
+		"commitment".into()
+	}
+
 	// Generate a message commitment
 	// TODO: return proper weight
 	fn commit() -> Weight {
@@ -105,10 +107,10 @@ impl<T: Trait> Module<T> {
 		let commitment = Self::encode_commitment(&messages);
 		let commitment_hash: H256 = keccak_256(&commitment).into();
 
-		<Self as Store>::Commitment::set(commitment);
-
 		let digest_item = CustomDigestItem::Commitment(commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
+
+		sp_io::offchain_index::set(Self::offchain_key().as_ref(), commitment.as_ref());
 
 		Self::deposit_event(Event::Commitment(commitment_hash));
 
