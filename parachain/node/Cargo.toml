@@ -170,6 +170,3 @@ branch = "master"
 
 [features]
 default = []
-runtime-benchmarks = [
-	"artemis-runtime/runtime-benchmarks",
-]
