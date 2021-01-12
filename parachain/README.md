@@ -84,17 +84,9 @@ Edit the generated spec file and replace the following addresses:
       }
 ```
 
-#### Relayer Key
-
-_It is not required to change anything here for local development and testing._
-
-The parachain depends on a external relayer service to forward messages to and from Ethereum. The relayer service is trusted by the parachain. Its identity should be injected into the [GenesisConfig](https://snowfork.github.io/artemis-rust-docs/pallet_verifier/struct.GenesisConfig.html#structfield.key) for the [Verifier](https://snowfork.github.io/artemis-rust-docs/pallet_verifier/index.html) pallet.
-
-The node's baked-in chain spec uses `//Relay` as the relayer's account seed. For reference, see [chain_spec.rs](https://github.com/Snowfork/polkadot-ethereum/blob/main/parachain/node/src/chain_spec.rs#L50).
-
 ### Build
 
-Once the development environment is set up, build the node template. This command will build the
+Once the development environment is set up, build the parachain. This command will build the
 [Wasm](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution) and
 [native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
 
@@ -104,23 +96,35 @@ cargo build --release
 
 ### Run
 
-Purge any existing dev chain state:
+
+Install `polkadot-launch`:
 
 ```bash
-target/release/artemis-node purge-chain --dev
+git clone https://github.com/paritytech/polkadot-launch.git
+cd polkadot-launch
+yarn global add file:.
 ```
 
-Start a dev chain:
+Build polkadot:
 
 ```bash
-target/release/artemis-node --tmp --dev
+git clone https://github.com/paritytech/polkadot.git
+cd polkadot
+cargo build --release --features=real-overseer
 ```
 
-Or, start a dev chain with a custom chain spec:
+Create a configuration for polkadot-launch by editing `config.json`:
 
 ```bash
-target/release/artemis-node --tmp --spec spec.json
+vim config.json
 ```
+
+Launch polkadot and parachain:
+
+```bash
+polkadot-launch config.json
+```
+
 
 ## Interacting with the chain
 
