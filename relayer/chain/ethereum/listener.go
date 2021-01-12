@@ -17,6 +17,8 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
 )
 
+const MaxMessagesPerSend = 10
+
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
 	conn      *Connection
@@ -107,7 +109,7 @@ func (li *Listener) pollEventsAndHeaders(
 				continue
 			}
 
-			finalizedHeader := gethheader.Number.Uint64() - descendantsUntilFinal - 1
+			finalizedHeader := gethheader.Number.Uint64() - descendantsUntilFinal
 			eventQuery.FromBlock = new(big.Int).SetUint64(finalizedHeader)
 			eventQuery.ToBlock = new(big.Int).SetUint64(finalizedHeader)
 			events, err := li.conn.client.FilterLogs(ctx, *eventQuery)
@@ -148,19 +150,19 @@ func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, ev
 			return
 		}
 
-		messages, exists := messagesByAddress[event.Address]
-		if exists {
-			messagesByAddress[event.Address] = append(messages, msg)
-		} else {
-			messagesByAddress[event.Address] = []*Message{msg}
-		}
+		messagesByAddress[event.Address] = append(messagesByAddress[event.Address], msg)
 	}
 
-	messages := make([]chain.Message, 0, len(messagesByAddress))
-	for address, msgs := range messagesByAddress {
-		messages = append(messages, chain.Message{AppID: address, Payload: msgs})
+	nextChunk := MakeMessageChunker(messagesByAddress, MaxMessagesPerSend)
+	for {
+		messages, hasMore := nextChunk()
+		if len(messages) > 0 {
+			li.messages <- messages
+		}
+		if !hasMore {
+			break
+		}
 	}
-	li.messages <- messages
 }
 
 func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.Header) {
