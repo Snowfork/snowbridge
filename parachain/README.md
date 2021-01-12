@@ -28,26 +28,14 @@ Follow these steps to prepare your local environment for Substrate development.
 
 ### Requirements
 
-The project is currently being developed and is working with the following version of Rust:
-
-```
-stable-x86_64-unknown-linux-gnu (default)
-rustc 1.45.0 (5c1f21c3b 2020-07-13)
-```
-
-#### Simple Method
-
-Install all the required dependencies with a single command (be patient, this can take up to 30
-minutes).
-
-```bash
-curl https://getsubstrate.io -sSf | bash -s -- --fast
-```
-
-#### Manual Method
-
 Find manual setup instructions at the
 [Substrate Developer Hub](https://substrate.dev/docs/en/knowledgebase/getting-started/#manual-installation).
+
+The project currently follows the tip of Substrate master and so following nightly version of Rust is required:
+
+```
+nightly-2021-01-10-x86_64-unknown-linux-gnu (default)
+```
 
 ### Dependencies
 
