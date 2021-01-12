@@ -37,6 +37,9 @@ The project currently follows the tip of Substrate master and so following night
 nightly-2021-01-10-x86_64-unknown-linux-gnu (default)
 ```
 
+This version is also specified in the `rust-toolchain` file and so it should be installed automatically when running cargo.
+
+
 ### Dependencies
 
 Before building the parachain, ensure our smart contracts are deployed on your local truffle chain.
