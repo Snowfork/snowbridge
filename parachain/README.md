@@ -100,6 +100,7 @@ Build polkadot:
 ```bash
 git clone https://github.com/paritytech/polkadot.git
 cd polkadot
+git checkout rococo-v1
 cargo build --release --features=real-overseer
 ```
 
@@ -114,6 +115,8 @@ Launch polkadot and parachain:
 ```bash
 polkadot-launch config.json
 ```
+
+To view the parachain logs, open another terminal and view the `200.log` log file.
 
 
 ## Interacting with the chain
