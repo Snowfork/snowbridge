@@ -22,7 +22,7 @@
 			"wsPort": 9988,
 			"port": 31200,
 			"balance": "1000000000000000000000",
-			"flags": ["--discover-local", "--", "--execution=wasm"]
+			"flags": ["--rpc-cors=all", "--enable-offchain-indexing", "--discover-local", "--", "--execution=wasm"]
 		}
 	],
 	"simpleParachains": [],
