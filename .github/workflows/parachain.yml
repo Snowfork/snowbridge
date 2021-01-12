@@ -42,7 +42,7 @@ jobs:
           profile: minimal
           toolchain: nightly-2021-01-10
           target: wasm32-unknown-unknown
-      - uses: actions-rs/install@v0.1
+      - uses: actions-rs/install@v0.1.2
         with:
           crate: sccache
           version: latest
@@ -81,17 +81,17 @@ jobs:
           path: |
             ~/.cache/sccache
           key: ${{ runner.os }}-scacche-test-${{ hashFiles('parachain/Cargo.lock') }}
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: sccache
-          version: latest
-          use-tool-cache: true
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly-2021-01-10
           target: wasm32-unknown-unknown
-      - uses: actions-rs/install@v0.1
+      - uses: actions-rs/install@v0.1.2
+        with:
+          crate: sccache
+          version: latest
+          use-tool-cache: true
+      - uses: actions-rs/install@v0.1.2
         with:
           crate: cargo-tarpaulin
           version: latest
