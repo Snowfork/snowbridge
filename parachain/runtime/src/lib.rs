@@ -354,7 +354,7 @@ parameter_types! {
 }
 
 impl commitments::Config for Runtime {
-	const INDEXING_KEY: &'static [u8] = b"commitment";
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 
 	type Event = Event;
 

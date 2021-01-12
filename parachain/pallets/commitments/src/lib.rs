@@ -47,7 +47,7 @@ struct Message {
 
 pub trait Config: frame_system::Config {
 
-	const INDEXING_KEY: &'static [u8];
+	const INDEXING_PREFIX: &'static [u8];
 
 	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
@@ -97,6 +97,10 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 
+	fn offchain_key(hash: H256) -> Vec<u8> {
+		(T::INDEXING_PREFIX, hash).encode()
+	}
+
 	// Generate a message commitment
 	// TODO: return proper weight
 	fn commit() -> Weight {
@@ -108,7 +112,7 @@ impl<T: Config> Module<T> {
 		let digest_item = CustomDigestItem::Commitment(commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		sp_io::offchain_index::set(T::INDEXING_KEY, &commitment);
+		sp_io::offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
 
 		Self::deposit_event(Event::Commitment(commitment_hash));
 

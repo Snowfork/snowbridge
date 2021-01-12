@@ -16,6 +16,7 @@ ExecStart=/usr/local/bin/artemis-collator \
     {% else %}
     --bootnodes {{ bootnodes }} \
     {% endif %}
+    --enable-offchain-indexing \
     -- \
     --chain /etc/rococo.json \
     --bootnodes {{ relaychain_bootnodes }}

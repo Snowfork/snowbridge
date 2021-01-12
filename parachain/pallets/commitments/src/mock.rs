@@ -53,7 +53,7 @@ parameter_types! {
 }
 
 impl Config for Test {
-	const INDEXING_KEY: &'static [u8] = b"commitment";
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 
 	type Event = ();
 
