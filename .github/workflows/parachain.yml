@@ -6,7 +6,6 @@ on:
       - 'parachain/**'
       - '!parachain/README.md'
       - '!parachain/LICENSE'
-      - '!parachain/docker-compose.yml'
     branches:
       - main
   pull_request:
@@ -14,16 +13,15 @@ on:
       - 'parachain/**'
       - '!parachain/README.md'
       - '!parachain/LICENSE'
-      - '!parachain/docker-compose.yml'
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       CARGO_INCREMENTAL: 0
-      RUSTC_WRAPPER: sccache
       RUST_BACKTRACE: 1
       RUSTFLAGS: -C debuginfo=1
+      SKIP_WASM_BUILD: 1
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v1
@@ -34,37 +32,26 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - uses: actions/cache@v1
-        with:
-          path: |
-            ~/.cache/sccache
-          key: ${{ runner.os }}-scacche-check-${{ hashFiles('parachain/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2020-08-10
+          toolchain: nightly-2021-01-10
           target: wasm32-unknown-unknown
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: sccache
-          version: latest
-          use-tool-cache: true
-      - run: sccache -s
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
+          toolchain: nightly-2021-01-10
           args: --manifest-path parachain/Cargo.toml
-      - run: sccache -s
 
   test:
     needs: check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       CARGO_INCREMENTAL: 0
-      RUSTC_WRAPPER: sccache
       RUST_BACKTRACE: 1
       RUSTFLAGS: -C debuginfo=1
+      SKIP_WASM_BUILD: 1
     steps:
       - uses: actions/checkout@v2
         with:
@@ -77,22 +64,16 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - uses: actions/cache@v1
+      - uses: actions-rs/toolchain@v1
         with:
-          path: |
-            ~/.cache/sccache
-          key: ${{ runner.os }}-scacche-test-${{ hashFiles('parachain/Cargo.lock') }}
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: sccache
-          version: latest
-          use-tool-cache: true
-      - uses: actions-rs/install@v0.1
+          profile: minimal
+          toolchain: nightly-2021-01-10
+          target: wasm32-unknown-unknown
+      - uses: actions-rs/install@v0.1.2
         with:
           crate: cargo-tarpaulin
           version: latest
           use-tool-cache: true
-      - run: sccache -s
       - name: cargo test
         uses: actions-rs/cargo@v1
         with:
@@ -103,4 +84,4 @@ jobs:
             --exclude artemis-node,artemis-runtime
             --exclude-files 'node/src/command.rs,*/mock.rs,*/test.rs'
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
-      - run: sccache -s
+          toolchain: nightly-2021-01-10
