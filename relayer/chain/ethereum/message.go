@@ -15,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 )
 
 type Message struct {
@@ -117,7 +116,7 @@ func (v *VerificationInput) Decode(decoder scale.Decoder) error {
 	return nil
 }
 
-func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie, log *logrus.Entry) (*chain.Message, error) {
+func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie, log *logrus.Entry) (*Message, error) {
 	// RLP encode event log's Address, Topics, and Data
 	var buf bytes.Buffer
 	err := event.EncodeRLP(&buf)
@@ -150,12 +149,10 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie, log *logr
 
 	value := hex.EncodeToString(message.Data)
 	log.WithFields(logrus.Fields{
-		"payload":     value,
-		"blockNumber": message.VerificationInput.AsBasic.BlockNumber,
-		"eventIndex":  message.VerificationInput.AsBasic.EventIndex,
+		"payload":    value,
+		"blockHash":  message.VerificationInput.AsReceiptProof.BlockHash.Hex(),
+		"eventIndex": message.VerificationInput.AsReceiptProof.TxIndex,
 	}).Debug("Generated message from Ethereum log")
 
-	msg := chain.Message{AppID: event.Address, Payload: message}
-
-	return &msg, nil
+	return &message, nil
 }

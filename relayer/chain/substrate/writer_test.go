@@ -27,7 +27,7 @@ func TestWrite(t *testing.T) {
 
 	conn := substrate.NewConnection("ws://127.0.0.1:9944/", sr25519.Alice().AsKeyringPair(), log)
 
-	messages := make(chan chain.Message, 1)
+	messages := make(chan []chain.Message, 1)
 	headers := make(chan chain.Header, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)

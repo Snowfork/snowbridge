@@ -20,13 +20,13 @@ import (
 
 type Writer struct {
 	conn     *Connection
-	messages <-chan chain.Message
+	messages <-chan []chain.Message
 	headers  <-chan chain.Header
 	log      *logrus.Entry
 	nonce    uint32
 }
 
-func NewWriter(conn *Connection, messages <-chan chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan []chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
 	return &Writer{
 		conn:     conn,
 		messages: messages,
@@ -85,13 +85,13 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return wr.onDone(ctx)
-		case msg := <-wr.messages:
-			err := wr.WriteMessage(ctx, &msg)
+		case msgs := <-wr.messages:
+			err := wr.WriteMessages(ctx, msgs)
 			if err != nil {
 				wr.log.WithFields(logrus.Fields{
-					"appid": hex.EncodeToString(msg.AppID[:]),
-					"error": err,
-				}).Error("Failure submitting message to substrate")
+					"appids": getAppIdsForLog(msgs),
+					"error":  err,
+				}).Error("Failure submitting messages to substrate")
 			}
 		case header := <-wr.headers:
 			err := wr.WriteHeader(ctx, &header)
@@ -168,6 +168,23 @@ func (wr *Writer) WriteMessage(ctx context.Context, msg *chain.Message) error {
 	return nil
 }
 
+// WriteMessages submits a "Bridge.submit_bulk" call
+func (wr *Writer) WriteMessages(ctx context.Context, msgs []chain.Message) error {
+	c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit_bulk", msgs)
+	if err != nil {
+		return err
+	}
+
+	err = wr.write(ctx, c)
+	if err != nil {
+		return err
+	}
+
+	wr.log.WithField("appids", getAppIdsForLog(msgs)).Info("Submitted messages to Substrate")
+
+	return nil
+}
+
 // WriteHeader submits a "VerifierLightclient.import_header" call
 func (wr *Writer) WriteHeader(ctx context.Context, header *chain.Header) error {
 	c, err := types.NewCall(&wr.conn.metadata, "VerifierLightclient.import_header", header.HeaderData, header.ProofData)
@@ -210,4 +227,12 @@ func getHeaderBackoffDelay(retryCount int) time.Duration {
 		return time.Duration(backoff[retryCount]) * time.Second
 	}
 	return time.Duration(backoff[len(backoff)-1]) * time.Second
+}
+
+func getAppIdsForLog(msgs []chain.Message) []string {
+	appIds := make([]string, len(msgs))
+	for i, msg := range msgs {
+		appIds[i] = hex.EncodeToString(msg.AppID[:])
+	}
+	return appIds
 }

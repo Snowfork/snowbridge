@@ -21,12 +21,12 @@ import (
 type Listener struct {
 	conn      *Connection
 	contracts []Contract
-	messages  chan<- chain.Message
+	messages  chan<- []chain.Message
 	headers   chan<- chain.Header
 	log       *logrus.Entry
 }
 
-func NewListener(conn *Connection, messages chan<- chain.Message, headers chan<- chain.Header, contracts []Contract, log *logrus.Entry) (*Listener, error) {
+func NewListener(conn *Connection, messages chan<- []chain.Message, headers chan<- chain.Header, contracts []Contract, log *logrus.Entry) (*Listener, error) {
 	return &Listener{
 		conn:      conn,
 		contracts: contracts,
@@ -118,43 +118,49 @@ func (li *Listener) pollEventsAndHeaders(
 				continue
 			}
 
-			if len(events) > 0 {
-				for _, event := range events {
-					li.log.WithFields(logrus.Fields{
-						"address":     event.Address.Hex(),
-						"blockHash":   event.BlockHash.Hex(),
-						"blockNumber": event.BlockNumber,
-						"txHash":      event.TxHash.Hex(),
-					}).Info("Witnessed transaction for application")
-					li.forwardEvent(ctx, hcs, &event)
-				}
-			}
+			li.forwardEvents(ctx, hcs, events)
 		}
 	}
 }
 
-func (li *Listener) forwardEvent(ctx context.Context, hcs *HeaderCacheState, event *gethTypes.Log) {
-	receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
-	if err != nil {
-		li.log.WithFields(logrus.Fields{
-			"blockHash":   event.BlockHash.Hex(),
-			"blockNumber": event.BlockNumber,
-			"txHash":      event.TxHash.Hex(),
-		}).WithError(err).Error("Failed to get receipt trie for event")
-		return
+func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, events []gethTypes.Log) {
+	messagesByAddress := make(map[gethCommon.Address][]*Message, 0)
+
+	for _, event := range events {
+		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
+		if err != nil {
+			li.log.WithFields(logrus.Fields{
+				"blockHash":   event.BlockHash.Hex(),
+				"blockNumber": event.BlockNumber,
+				"txHash":      event.TxHash.Hex(),
+			}).WithError(err).Error("Failed to get receipt trie for event")
+			return
+		}
+
+		msg, err := MakeMessageFromEvent(&event, receiptTrie, li.log)
+		if err != nil {
+			li.log.WithFields(logrus.Fields{
+				"address":     event.Address.Hex(),
+				"blockHash":   event.BlockHash.Hex(),
+				"blockNumber": event.BlockNumber,
+				"txHash":      event.TxHash.Hex(),
+			}).WithError(err).Error("Failed to generate message from ethereum event")
+			return
+		}
+
+		messages, exists := messagesByAddress[event.Address]
+		if exists {
+			messagesByAddress[event.Address] = append(messages, msg)
+		} else {
+			messagesByAddress[event.Address] = []*Message{msg}
+		}
 	}
 
-	msg, err := MakeMessageFromEvent(event, receiptTrie, li.log)
-	if err != nil {
-		li.log.WithFields(logrus.Fields{
-			"address":     event.Address.Hex(),
-			"blockHash":   event.BlockHash.Hex(),
-			"blockNumber": event.BlockNumber,
-			"txHash":      event.TxHash.Hex(),
-		}).WithError(err).Error("Failed to generate message from ethereum event")
-	} else {
-		li.messages <- *msg
+	messages := make([]chain.Message, 0, len(messagesByAddress))
+	for address, msgs := range messagesByAddress {
+		messages = append(messages, chain.Message{AppID: address, Payload: msgs})
 	}
+	li.messages <- messages
 }
 
 func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.Header) {

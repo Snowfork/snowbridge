@@ -102,9 +102,8 @@ func TestMessage_Proof(t *testing.T) {
 	assert.NotNil(t, msg)
 
 	// Retrieve the encapsulating receipt from the proof using the payload fields
-	msgPayload := msg.Payload.(ethereum.Message)
-	assert.True(t, msgPayload.VerificationInput.IsReceiptProof)
-	proof := msgPayload.VerificationInput.AsReceiptProof
+	assert.True(t, msg.VerificationInput.IsReceiptProof)
+	proof := msg.VerificationInput.AsReceiptProof
 	assert.Equal(t, block.Hash().Hex(), proof.BlockHash.Hex())
 	key, err := rlp.EncodeToBytes(uint(proof.TxIndex))
 	if err != nil {
