@@ -45,14 +45,14 @@ struct Message {
 	nonce: u64,
 }
 
-pub trait Trait: frame_system::Trait {
-	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+pub trait Config: frame_system::Config {
+	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
 	type CommitInterval: Get<Self::BlockNumber>;
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Commitments {
+	trait Store for Module<T: Config> as Commitments {
 		/// Nonce
 		pub Nonce get(fn nonce): u64;
 
@@ -68,11 +68,11 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {}
+	pub enum Error for Module<T: Config> {}
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -92,7 +92,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 
 
 	fn offchain_key() -> Vec<u8> {
@@ -133,7 +133,7 @@ impl<T: Trait> Module<T> {
 
 }
 
-impl<T: Trait> Commitments for Module<T> {
+impl<T: Config> Commitments for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
 	// TODO: Number of messages per commitment should be bounded

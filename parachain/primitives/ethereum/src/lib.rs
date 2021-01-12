@@ -117,21 +117,21 @@ impl Header {
 			None => return None,
 		};
 		let item_to_prove: mpt::ShortNode = rlp::decode(first_bytes).ok()?;
-	
+
 		let final_hash: Option<[u8; 32]> = iter.fold(Some(keccak_256(first_bytes)), |maybe_hash, bytes| {
 			let expected_hash = maybe_hash?;
 			let node: mpt::FullNode = rlp::decode(bytes).ok()?;
 			let found_hash = node.children.into_iter().find(|&hash| Some(expected_hash.into()) == hash);
 			found_hash.map(|_| keccak_256(bytes))
 		});
-		
+
 		final_hash.map(|hash| (hash.into(), item_to_prove.value))
 	}
 
 	pub fn mix_hash(&self) -> Option<H256> {
 		let bytes: Bytes = self.decoded_seal_field(0, 32)?;
 		let size = bytes.len();
-		let mut mix_hash = [0u8; 32];	
+		let mut mix_hash = [0u8; 32];
 		for i in 0..size {
 			mix_hash[31 - i] = bytes[size - 1 - i];
 		}
@@ -185,7 +185,7 @@ impl Header {
 			}
 		}
 
-		s.out()
+		s.out().to_vec()
 	}
 }
 
@@ -300,8 +300,8 @@ mod tests {
 			gas_limit: 0xbe8c19.into(),
 			difficulty: 0xbc140caa61087i64.into(),
 			seal: vec![
-				rlp::encode(&mix_hash),
-				rlp::encode(&nonce),
+				rlp::encode(&mix_hash).to_vec(),
+				rlp::encode(&nonce).to_vec(),
 			],
 		};
 		assert_eq!(
@@ -316,8 +316,8 @@ mod tests {
 		let mix_hash: H256 = hex!("be3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").into();
 		let mut header: Header = Default::default();
 		header.seal = vec![
-			rlp::encode(&mix_hash.0.to_vec()),
-			rlp::encode(&nonce.0.to_vec()),
+			rlp::encode(&mix_hash.0.to_vec()).to_vec(),
+			rlp::encode(&nonce.0.to_vec()).to_vec(),
 		];
 		assert_eq!(header.nonce().unwrap(), nonce);
 		assert_eq!(header.mix_hash().unwrap(), mix_hash);
@@ -329,8 +329,8 @@ mod tests {
 		let mix_hash = hex!("bebe3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").to_vec();
 		let mut header: Header = Default::default();
 		header.seal = vec![
-			rlp::encode(&mix_hash),
-			rlp::encode(&nonce),
+			rlp::encode(&mix_hash).to_vec(),
+			rlp::encode(&nonce).to_vec(),
 		];
 		assert_eq!(header.nonce(), None);
 		assert_eq!(header.mix_hash(), None);
@@ -344,7 +344,7 @@ mod tests {
 	fn header_check_receipt_proof() {
 		let mut header: Header = Default::default();
 		header.receipts_root = hex!("fd5e397a84884641f53c496804f24b5276cbb8c5c9cfc2342246be8e3ce5ad02").into();
-	
+
 		// Valid proof
 		let proof_receipt5 = vec!(
 			hex!("f90131a0b5ba404eb5a6a88e56579f4d37ef9813b5ad7f86f0823ff3b407ac5a6bb465eca0398ead2655e78e03c127ce22c5830e90f18b1601ec055f938336c084feb915a9a026d322c26e46c50942c1aabde50e36df5cde572aed650ce73ea3182c6e90a02ca00600a356135f4db1db0d9842264cdff2652676f881669e91e316c0b6dd783011a0837f1deb4075336da320388c1edfffc56c448a43f4a5ba031300d32a7b509fc5a01c3ac82fd65b4aba7f9afaf604d9c82ec7e2deb573a091ae235751bc5c0c288da05d454159d9071b0f68b6e0503d290f23ac7602c1db0c569dee4605d8f5298f09a00bbed10350ec954448df795f6fd46e3faefc800ede061b3840eedc6e2b07a74da0acb02d26a3650f2064c14a435fdf1f668d8655daf455ebdf671713a7c089b3898080808080808080").to_vec(),

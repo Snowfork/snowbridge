@@ -39,16 +39,16 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
-pub trait Trait: system::Trait {
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+pub trait Config: system::Config {
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
-	type Assets: MultiAsset<<Self as system::Trait>::AccountId>;
+	type Assets: MultiAsset<<Self as system::Config>::AccountId>;
 
 	type Commitments: Commitments;
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Erc20Module {
+	trait Store for Module<T: Config> as Erc20Module {
 		Address get(fn address) config(): H160;
 	}
 }
@@ -57,7 +57,7 @@ decl_event! {
     /// Events for the ERC20 module.
 	pub enum Event<T>
 	where
-		AccountId = <T as system::Trait>::AccountId,
+		AccountId = <T as system::Config>::AccountId,
 	{
 		Burned(H160, AccountId, U256),
 		Minted(H160, AccountId, U256),
@@ -67,7 +67,7 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// The submitted payload could not be decoded.
 		InvalidPayload,
 	}
@@ -75,7 +75,7 @@ decl_error! {
 
 decl_module! {
 
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 
 		type Error = Error<T>;
 
@@ -107,7 +107,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 
 	fn handle_event(payload: InPayload<T::AccountId>) -> DispatchResult {
 		T::Assets::deposit(
@@ -126,7 +126,7 @@ impl<T: Trait> Module<T> {
 
 }
 
-impl<T: Trait> Application for Module<T> {
+impl<T: Config> Application for Module<T> {
 	fn handle(payload: &[u8]) -> DispatchResult {
 		// Decode ethereum Log event from RLP-encoded data, and try to convert to InPayload
 		let payload_decoded = rlp::decode::<Log>(payload)

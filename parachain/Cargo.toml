@@ -1,3 +1,5 @@
+cargo-features = ["resolver"]
+
 [profile.release]
 panic = "unwind"
 
@@ -6,13 +8,15 @@ members = [
     "primitives/core",
     "primitives/ethereum",
     "primitives/testutils",
+    "primitives/xcm-support",
     "pallets/bridge",
     "pallets/assets",
-    "pallets/verifier",
     "pallets/verifier-lightclient",
     "pallets/eth-app",
     "pallets/erc20-app",
     "pallets/commitments",
+    "pallets/token-dealer",
     "node",
     "runtime",
 ]
+resolver = "2"

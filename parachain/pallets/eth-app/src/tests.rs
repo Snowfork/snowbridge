@@ -17,7 +17,7 @@ fn last_event() -> MockEvent {
 
 const RECIPIENT_ADDR_BYTES: [u8; 32] = hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"];
 
-type TestAccountId = <MockRuntime as system::Trait>::AccountId;
+type TestAccountId = <MockRuntime as system::Config>::AccountId;
 
 #[test]
 fn mints_after_handling_ethereum_event() {

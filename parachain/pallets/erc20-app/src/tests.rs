@@ -12,7 +12,7 @@ use crate::RawEvent;
 
 use crate::payload::InPayload;
 
-type TestAccountId = <MockRuntime as system::Trait>::AccountId;
+type TestAccountId = <MockRuntime as system::Config>::AccountId;
 
 const RECIPIENT_ADDR_BYTES: [u8; 32] = hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"];
 
