@@ -104,7 +104,7 @@ git checkout rococo-v1
 cargo build --release --features=real-overseer
 ```
 
-Create a configuration for polkadot-launch by editing `config.json`:
+Create a configuration for polkadot-launch by editing `config.json`. You'll need to substitute `<POLKADOT_DIR>` with the location of your polkadot checkout above.
 
 ```bash
 vim config.json
@@ -116,7 +116,7 @@ Launch polkadot and parachain:
 polkadot-launch config.json
 ```
 
-To view the parachain logs, open another terminal and view the `200.log` log file.
+To view the parachain logs, open another terminal and view the `200.log` file. Note that it will take several minutes for the parachain to start producing blocks.
 
 
 ## Interacting with the chain
