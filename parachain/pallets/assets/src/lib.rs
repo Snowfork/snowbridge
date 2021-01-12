@@ -2,7 +2,7 @@
 //!
 //! The Assets module provides functionality for handling fungible assets.
 //!
-//! - [`assets::Trait`](./trait.Trait.html)
+//! - [`assets::Config`](./trait.Config.html)
 //! - [`Call`](./enum.Call.html)
 //! - [`Module`](./struct.Module.html)
 //
@@ -34,6 +34,8 @@ use frame_support::{
 	dispatch::{DispatchResult, DispatchError},
 };
 
+use sp_runtime::traits::StaticLookup;
+
 use sp_core::{U256};
 
 use artemis_core::assets::{AssetId, MultiAsset, SingleAsset};
@@ -45,12 +47,12 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: system::Trait {
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+pub trait Config: system::Config {
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Asset {
+	trait Store for Module<T: Config> as Asset {
 		pub TotalIssuance get(fn total_issuance): map hasher(blake2_128_concat) AssetId => U256;
 		pub Balances get(fn balances): double_map hasher(blake2_128_concat) AssetId, hasher(blake2_128_concat) T::AccountId => U256;
 	}
@@ -69,14 +71,14 @@ decl_storage! {
 decl_event!(
 	pub enum Event<T>
 	where
-		<T as system::Trait>::AccountId,
+		<T as system::Config>::AccountId,
 	{
 		Transferred(AssetId, AccountId, AccountId, U256),
 	}
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		TotalIssuanceOverflow,
 		TotalIssuanceUnderflow,
 		BalanceOverflow,
@@ -86,7 +88,7 @@ decl_error! {
 
 decl_module! {
 
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 
 		type Error = Error<T>;
 
@@ -97,16 +99,17 @@ decl_module! {
 		#[weight = 10]
 		pub fn transfer(origin,
 						asset_id: AssetId,
-						dest: T::AccountId,
+						dest: <T::Lookup as StaticLookup>::Source,
 						amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			let dest = T::Lookup::lookup(dest)?;
 			<Self as MultiAsset<_>>::transfer(asset_id, &who, &dest, amount)
 		}
 
 	}
 }
 
-impl<T: Trait> MultiAsset<T::AccountId> for Module<T> {
+impl<T: Config> MultiAsset<T::AccountId> for Module<T> {
 
 	fn total_issuance(asset_id: AssetId) -> U256 {
 		Module::<T>::total_issuance(asset_id)
@@ -170,7 +173,7 @@ pub struct SingleAssetAdaptor<T, I>(marker::PhantomData<(T, I)>);
 
 impl<T, I> SingleAsset<T::AccountId> for SingleAssetAdaptor<T, I>
 where
-	T: Trait,
+	T: Config,
 	I: Get<AssetId>,
 {
 

@@ -1,29 +1,45 @@
-use sp_core::{Pair, Public, sr25519};
+use cumulus_primitives::ParaId;
 use artemis_runtime::{
 	AccountId, EthereumHeader,
-	AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
-	SystemConfig, VerifierConfig, VerifierLightclientConfig,
+	BalancesConfig, GenesisConfig,
+	SystemConfig, VerifierLightclientConfig,
 	ETHConfig, ERC20Config,
+	ParachainInfoConfig,
 	WASM_BINARY, Signature,
 };
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_finality_grandpa::AuthorityId as GrandpaId;
+use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
+use sc_service::{ChainType, Properties};
+use sp_core::{Pair, Public, sr25519};
 use sp_runtime::traits::{Verify, IdentifyAccount};
-use sc_service::ChainType;
+use serde::{Deserialize, Serialize};
 
 use hex_literal::hex;
 
-// The URL for the telemetry server.
-// const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
+pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
 	TPublic::Pair::from_string(&format!("//{}", seed), None)
 		.expect("static values are valid; qed")
 		.public()
+}
+
+/// The extensions for the [`ChainSpec`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
+#[serde(deny_unknown_fields)]
+pub struct Extensions {
+	/// The relay chain of the Parachain.
+	pub relay_chain: String,
+	/// The id of the Parachain.
+	pub para_id: u32,
+}
+
+impl Extensions {
+	/// Try to get the extension from the given `ChainSpec`.
+	pub fn try_get(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Option<&Self> {
+		sc_chain_spec::get_extension(chain_spec.extensions())
+	}
 }
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -35,131 +51,63 @@ pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId where
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-/// Helper function to generate an authority key for Aura
-pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
-	(
-		get_from_seed::<AuraId>(s),
-		get_from_seed::<GrandpaId>(s),
-	)
-}
+pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
+	let mut props = Properties::new();
+	props.insert("tokenSymbol".into(), "DEV".into());
+	props.insert("tokenDecimals".into(), 12.into());
 
-pub fn development_config() -> Result<ChainSpec, String> {
-	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
-
-	Ok(ChainSpec::from_genesis(
-		// Name
-		"Development",
-		// ID
-		"dev",
-		ChainType::Development,
-		move || testnet_genesis(
-			wasm_binary,
-			// Initial PoA authorities
-			vec![
-				authority_keys_from_seed("Alice"),
-			],
-			// Relay account
-			get_account_id_from_seed::<sr25519::Public>("Relay"),
-			// Pre-funded accounts
-			vec![
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_account_id_from_seed::<sr25519::Public>("Relay"),
-				get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-				get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-				get_account_id_from_seed::<sr25519::Public>("Relay//stash"),
-			],
-			true,
-		),
-		// Bootnodes
-		vec![],
-		// Telemetry
-		None,
-		// Protocol ID
-		None,
-		// Properties
-		None,
-		// Extensions
-		None,
-	))
-}
-
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
-	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
-
-	Ok(ChainSpec::from_genesis(
-		// Name
-		"Local Testnet",
-		// ID
+	ChainSpec::from_genesis(
+		"Artemis Local Testnet",
 		"local_testnet",
 		ChainType::Local,
-		move || testnet_genesis(
-			wasm_binary,
-			// Initial PoA authorities
-			vec![
-				authority_keys_from_seed("Alice"),
-				authority_keys_from_seed("Bob"),
-			],
-			// Relay Account
-			get_account_id_from_seed::<sr25519::Public>("Relay"),
-			// Pre-funded accounts
-			vec![
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_account_id_from_seed::<sr25519::Public>("Charlie"),
-				get_account_id_from_seed::<sr25519::Public>("Dave"),
-				get_account_id_from_seed::<sr25519::Public>("Eve"),
-				get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-				get_account_id_from_seed::<sr25519::Public>("Relay"),
-				get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-				get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-				get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-				get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-				get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-				get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				get_account_id_from_seed::<sr25519::Public>("Relay//stash"),
-			],
-			true,
-		),
-		// Bootnodes
+		move || {
+			testnet_genesis(
+				vec![
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie"),
+					get_account_id_from_seed::<sr25519::Public>("Dave"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+					get_account_id_from_seed::<sr25519::Public>("Relay"),
+					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Relay//stash"),
+				],
+				para_id
+			)
+		},
 		vec![],
-		// Telemetry
 		None,
-		// Protocol ID
 		None,
-		// Properties
-		None,
-		// Extensions
-		None,
-	))
+		Some(props),
+		Extensions {
+			relay_chain: "local_testnet".into(),
+			para_id: para_id.into(),
+		},
+	)
 }
 
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
-	wasm_binary: &[u8],
-	initial_authorities: Vec<(AuraId, GrandpaId)>,
-	relay_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	_enable_println: bool,
+	para_id: ParaId
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
 			// Add Wasm runtime to storage.
-			code: wasm_binary.to_vec(),
+			code: WASM_BINARY
+				.expect("WASM binary was not build, please build it!")
+				.to_vec(),
 			changes_trie_config: Default::default(),
 		}),
 		pallet_balances: Some(BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
-		}),
-		pallet_aura: Some(AuraConfig {
-			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
-		}),
-		pallet_grandpa: Some(GrandpaConfig {
-			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
-		}),
-		verifier: Some(VerifierConfig {
-			key: relay_key,
 		}),
 		verifier_lightclient: Some(VerifierLightclientConfig {
 			initial_header: EthereumHeader {
@@ -188,6 +136,7 @@ fn testnet_genesis(
 		}),
 		erc20_app: Some(ERC20Config {
 			address: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into()
-		})
+		}),
+		parachain_info: Some(ParachainInfoConfig { parachain_id: para_id }),
 	}
 }

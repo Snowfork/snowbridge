@@ -1,4 +1,4 @@
-use artemis_core::{Verifier as VerifierTrait};
+use artemis_core::{Verifier as VerifierConfig};
 use crate::mock::{
 	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
 	ethereum_header_proof_from_file, genesis_ethereum_block_hash, log_payload,

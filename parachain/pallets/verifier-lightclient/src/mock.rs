@@ -1,7 +1,7 @@
 // Mock runtime
 use artemis_core::{Message, VerificationInput};
 use artemis_testutils::BlockWithProofs;
-use crate::{Module, EthashProofData, EthereumHeader, GenesisConfig, Trait};
+use crate::{Module, EthashProofData, EthereumHeader, GenesisConfig, Config};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
@@ -45,8 +45,10 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Trait for MockRuntime {
+impl system::Config for MockRuntime {
 	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -58,23 +60,20 @@ impl system::Trait for MockRuntime {
 	type Header = Header;
 	type Event = MockEvent;
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type ModuleToIndex = ();
+	type PalletInfo = ();
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
-impl system::Trait for MockRuntimeWithPoW {
+impl system::Config for MockRuntimeWithPoW {
 	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -86,19 +85,14 @@ impl system::Trait for MockRuntimeWithPoW {
 	type Header = Header;
 	type Event = MockEvent;
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type ModuleToIndex = ();
+	type PalletInfo = ();
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {
@@ -107,21 +101,21 @@ parameter_types! {
 	pub const PowEnabled: bool = true;
 }
 
-impl Trait for MockRuntime {
+impl Config for MockRuntime {
 	type Event = MockEvent;
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type VerifyPoW = PowDisabled;
 }
 
-impl Trait for MockRuntimeWithPoW {
+impl Config for MockRuntimeWithPoW {
 	type Event = MockEvent;
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type VerifyPoW = PowEnabled;
 }
 
 pub type Verifier = Module<MockRuntime>;
-
 pub type VerifierWithPoW = Module<MockRuntimeWithPoW>;
+pub type System = system::Module<MockRuntime>;
 
 pub fn genesis_ethereum_header() -> EthereumHeader {
 	Default::default()
@@ -140,7 +134,7 @@ pub fn child_of_header(header: &EthereumHeader) -> EthereumHeader {
 	child.difficulty = 1.into();
 	child.parent_hash = header.compute_hash();
 	child.number = header.number + 1;
-	child	
+	child
 }
 
 fn fixture_path(name: &str) -> PathBuf {
@@ -191,7 +185,7 @@ pub fn log_payload() -> Vec<u8> {
 		59f2488da000000000000000000000000000000000000000000000000003e973b5a5d1078e
 	").to_vec()
 }
- 
+
 pub fn new_tester() -> sp_io::TestExternalities {
 	new_tester_with_config::<MockRuntime>(GenesisConfig {
 		initial_header: genesis_ethereum_header(),
@@ -199,12 +193,12 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	})
 }
 
-pub fn new_tester_with_config<T: Trait>(config: GenesisConfig) -> sp_io::TestExternalities {
+pub fn new_tester_with_config<T: Config>(config: GenesisConfig) -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<T>().unwrap();
 
 	config.assimilate_storage::<T>(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
-	ext.execute_with(|| system::Module::<T>::set_block_number(1.into()));
+	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
