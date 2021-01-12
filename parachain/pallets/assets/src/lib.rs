@@ -26,7 +26,6 @@
 //! - `transfer`: Transferring a balance between accounts.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
 use sp_std::prelude::*;
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
