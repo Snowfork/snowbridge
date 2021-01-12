@@ -12,6 +12,8 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
    (cd ../ethereum && yarn install)
     ```
 
+3. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
+
 ## Setup
 
 Download dependencies:
