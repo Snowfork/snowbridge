@@ -1,5 +1,6 @@
 const ETHApp = artifacts.require('ETHApp');
 const ERC20App = artifacts.require('ERC20App');
+const OrderedOutChannel = artifacts.require('OrderedOutChannel');
 const TestToken = artifacts.require('TestToken');
 
 const BigNumber = web3.BigNumber;
@@ -20,7 +21,9 @@ contract('Gas expenditures', function (accounts) {
     describe('Gas costs', function(){
 
         beforeEach(async function () {
-          this.ethApp = await ETHApp.new();
+          const basicOutChannel = await OrderedOutChannel.new();
+          const incentivizedOutChannel = await OrderedOutChannel.new();
+          this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
           this.erc20App = await ERC20App.new();
         });
 
@@ -32,6 +35,7 @@ contract('Gas expenditures', function (accounts) {
             // Deposit Ethereum to the contract
             const result = await this.ethApp.sendETH(
                 recipient,
+                true,
                 {from: userOne, value: weiAmount}
               ).should.be.fulfilled;
 

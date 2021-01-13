@@ -1,6 +1,8 @@
 const ETHApp = artifacts.require("ETHApp");
+const OrderedOutChannel = artifacts.require("OrderedOutChannel");
 
 const Web3Utils = require("web3-utils");
+const ethers = require("ethers");
 const BigNumber = web3.BigNumber;
 
 require("chai")
@@ -19,7 +21,9 @@ contract("EthApp", function (accounts) {
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      this.ethApp = await ETHApp.new();
+      const basicOutChannel = await OrderedOutChannel.new();
+      const incentivizedOutChannel = await OrderedOutChannel.new();
+      this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
     });
 
     it("should deploy and initialize the ETHApp contract", async function () {
@@ -29,7 +33,9 @@ contract("EthApp", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      this.ethApp = await ETHApp.new();
+      const basicOutChannel = await OrderedOutChannel.new();
+      const incentivizedOutChannel = await OrderedOutChannel.new();
+      this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
     });
 
     it("should support Ethereum deposits", async function () {
@@ -41,10 +47,13 @@ contract("EthApp", function (accounts) {
       const weiAmount = web3.utils.toWei("0.25", "ether");
 
       // Deposit Ethereum to the contract and get the logs of the transaction
-      const { logs } = await this.ethApp.sendETH(
+      const tx = await this.ethApp.sendETH(
         recipient,
+        true,
         {from: userOne, value: weiAmount}
       ).should.be.fulfilled;
+
+      const logs = tx.logs;
 
       // Confirm app event emitted with expected values
       const appEvent = logs.find(
@@ -64,6 +73,31 @@ contract("EthApp", function (accounts) {
       // Confirm contract's locked Ethereum counter has increased by amount locked
       const afterTotalETH = await this.ethApp.totalETH();
       Number(afterTotalETH).should.be.bignumber.equal(beforeTotalETH+Number(weiAmount));
+
+      outChannelLogFields = [{
+          type: 'uint256',
+          name: 'nonce'
+      },{
+          type: 'address',
+          name: 'senderAddress'
+      },{
+          type: 'string',
+          name: 'targetApplicationId',
+      },{
+          type: 'bytes',
+          name: 'payload',
+      }];
+
+      const channelEvent = tx.receipt.rawLogs[1];
+
+      const decodedEvent = web3.eth.abi.decodeLog(outChannelLogFields, channelEvent.data, channelEvent.topics);
+
+      decodedEvent.nonce.should.be.equal('0');
+      decodedEvent.senderAddress.should.be.equal(this.ethApp.address);
+      decodedEvent.targetApplicationId.should.be.equal("eth-app");
+
+      const expectedPayload = web3.eth.abi.encodeParameters([ 'address', 'bytes32', 'uint256' ], [ userOne, ethers.utils.formatBytes32String(recipient.toString()), weiAmount ]);
+      decodedEvent.payload.should.be.equal(expectedPayload);
     });
   });
 
@@ -71,7 +105,11 @@ contract("EthApp", function (accounts) {
   describe("handle received messages", function () {
 
     before(async function () {
-        this.ethApp = await ETHApp.new();
+
+        const basicOutChannel = await OrderedOutChannel.new();
+        const incentivizedOutChannel = await OrderedOutChannel.new();
+        this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
+
         await this.ethApp.register(owner);
 
         // Prepare transaction parameters
@@ -81,6 +119,7 @@ contract("EthApp", function (accounts) {
         // Send to a substrate recipient to load contract with unlockable ETH
         await this.ethApp.sendETH(
           substrateRecipient,
+          true,
           {
             from: userOne,
             value: lockAmountWei
