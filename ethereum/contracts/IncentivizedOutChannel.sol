@@ -8,8 +8,6 @@ contract IncentivizedOutChannel is OutChannel  {
 
     uint256 public currentNonce;
 
-    event NewMessage(uint256 nonce, address senderAddress, string targetApplicationId, bytes payload);
-
     constructor() public {
         currentNonce = 0;
     }
