@@ -1,5 +1,6 @@
 const ETHApp = artifacts.require("ETHApp");
-const OrderedOutChannel = artifacts.require("OrderedOutChannel");
+const BasicOutChannel = artifacts.require("BasicOutChannel");
+const IncentivizedOutChannel = artifacts.require("IncentivizedOutChannel");
 
 const Web3Utils = require("web3-utils");
 const ethers = require("ethers");
@@ -21,8 +22,8 @@ contract("EthApp", function (accounts) {
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      const basicOutChannel = await OrderedOutChannel.new();
-      const incentivizedOutChannel = await OrderedOutChannel.new();
+      const basicOutChannel = await BasicOutChannel.new();
+      const incentivizedOutChannel = await IncentivizedOutChannel.new();
       this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
     });
 
@@ -33,8 +34,8 @@ contract("EthApp", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      const basicOutChannel = await OrderedOutChannel.new();
-      const incentivizedOutChannel = await OrderedOutChannel.new();
+      const basicOutChannel = await BasicOutChannel.new();
+      const incentivizedOutChannel = await IncentivizedOutChannel.new();
       this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
     });
 
@@ -106,8 +107,8 @@ contract("EthApp", function (accounts) {
 
     before(async function () {
 
-        const basicOutChannel = await OrderedOutChannel.new();
-        const incentivizedOutChannel = await OrderedOutChannel.new();
+      const basicOutChannel = await BasicOutChannel.new();
+      const incentivizedOutChannel = await IncentivizedOutChannel.new();
         this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
 
         await this.ethApp.register(owner);

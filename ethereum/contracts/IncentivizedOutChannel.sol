@@ -1,10 +1,10 @@
  // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.2;
 
-import "./ChannelOut.sol";
+import "./OutChannel.sol";
 
-// OrderedOutChannel is a basic channel that just outputs messages with an increasing nonce.
-contract OrderedOutChannel is ChannelOut  {
+// IncentivizedOutChannel is a channel that outputs ordered messages with an increasing nonce. It will have incentivization too.
+contract IncentivizedOutChannel is OutChannel  {
 
     uint256 public currentNonce;
 
@@ -15,7 +15,7 @@ contract OrderedOutChannel is ChannelOut  {
     }
 
     /**
-     * @dev Submits a message into the channel
+     * @dev Submits a message to the channel
      */
     function submit(string memory targetApplicationId, bytes memory payload) public override {
         emit NewMessage(currentNonce, msg.sender, targetApplicationId, payload);

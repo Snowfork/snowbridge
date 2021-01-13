@@ -1,5 +1,6 @@
 const Verifier = artifacts.require("Verifier");
-const OrderedOutChannel = artifacts.require("OrderedOutChannel");
+const BasicOutChannel = artifacts.require("BasicOutChannel");
+const IncentivizedOutChannel = artifacts.require("IncentivizedOutChannel");
 const Decoder = artifacts.require("Decoder");
 const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
@@ -12,8 +13,8 @@ module.exports = function(deployer, network, accounts) {
     const verifier = await deployer.deploy(Verifier, accounts[0]);
 
     // Deploy OutChannels and get deployed addresses
-    const basicOutChannel = await deployer.deploy(OrderedOutChannel);
-    const incentivizedOutChannel = await deployer.deploy(OrderedOutChannel);
+    const basicOutChannel = await deployer.deploy(BasicOutChannel);
+    const incentivizedOutChannel = await deployer.deploy(IncentivizedOutChannel);
 
     // Link libraries to applications
     await deployer.deploy(Decoder);

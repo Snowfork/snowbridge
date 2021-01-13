@@ -6,16 +6,22 @@ const os = require('os');
 const Bridge = artifacts.require("Bridge")
 const ETHApp = artifacts.require("ETHApp")
 const ERC20App = artifacts.require("ERC20App")
+const BasicOutChannel = artifacts.require("BasicOutChannel")
+const IncentivizedOutChannel = artifacts.require("IncentivizedOutChannel")
 
-const dump = (bridge, ethApp, erc20App) => {
+const dump = (bridge, ethApp, erc20App, basicOutChannel, incentivizedOutChannel) => {
 
     const bridgeAbiFile = uniqueFilename(os.tmpdir(), "Bridge")
     const ethAbiFile = uniqueFilename(os.tmpdir(), "ETHApp")
     const erc20AbiFile = uniqueFilename(os.tmpdir(), "ERC20App")
+    const basicOutChannelAbiFile = uniqueFilename(os.tmpdir(), "BasicOutChannel")
+    const incentivizedOutChannelAbiFile = uniqueFilename(os.tmpdir(), "IncentivizedOutChannel")
 
     fs.writeFileSync(bridgeAbiFile, JSON.stringify(bridge.abi, null, 2))
     fs.writeFileSync(ethAbiFile, JSON.stringify(ethApp.abi, null, 2))
     fs.writeFileSync(erc20AbiFile, JSON.stringify(erc20App.abi, null, 2))
+    fs.writeFileSync(basicOutChannelAbiFile, JSON.stringify(basicOutChannel.abi, null, 2))
+    fs.writeFileSync(incentivizedOutChannelAbiFile, JSON.stringify(incentivizedOutChannel.abi, null, 2))
 
     const config = {
         ethereum: {
@@ -33,6 +39,16 @@ const dump = (bridge, ethApp, erc20App) => {
                     address: erc20App.address,
                     abi: erc20AbiFile,
                 }
+            },
+            channels: {
+                basic: {
+                    address: basicOutChannel.address,
+                    abi: basicOutChannelAbiFile,
+                },
+                incentivized: {
+                    address: incentivizedOutChannel.address,
+                    abi: incentivizedOutChannelAbiFile,
+                }
             }
         },
         substrate: {
@@ -48,8 +64,10 @@ module.exports = async (callback) => {
         let bridge = await Bridge.deployed()
         let ethApp = await ETHApp.deployed()
         let erc20App = await ERC20App.deployed()
+        let basicOutChannel = await BasicOutChannel.deployed()
+        let incentivizedOutChannel = await IncentivizedOutChannel.deployed()
 
-        dump(bridge, ethApp, erc20App)
+        dump(bridge, ethApp, erc20App, basicOutChannel, incentivizedOutChannel)
 
     } catch (error) {
         callback(error)

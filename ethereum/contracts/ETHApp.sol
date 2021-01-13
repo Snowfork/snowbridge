@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Decoder.sol";
 import "./Application.sol";
-import "./ChannelOut.sol";
+import "./OutChannel.sol";
 
 contract ETHApp is Application {
     using SafeMath for uint256;
@@ -51,11 +51,11 @@ contract ETHApp is Application {
         emit AppTransfer(msg.sender, _recipient, msg.value);
 
         AppTransferPayload memory payload = AppTransferPayload(msg.sender, _recipient, msg.value);
-        ChannelOut outChannel;
+        OutChannel outChannel;
         if(incentivized) {
-            outChannel = ChannelOut(incentivizedOutChannelAddress);
+            outChannel = OutChannel(incentivizedOutChannelAddress);
         } else {
-            outChannel = ChannelOut(basicOutChannelAddress);
+            outChannel = OutChannel(basicOutChannelAddress);
         }
         outChannel.submit(TARGET_APPLICATION_ID, abi.encode(payload));
 
