@@ -77,13 +77,13 @@ endpoint = "ws://localhost:9545/"
 address = "0x17f7C1e314180D8b8588CA50cF09A0e0847c77F6"
 abi = "/tmp/Bridge.json"
 
-[ethereum.apps.basicOutChannel]
-address = "0x2ffA5ecdBe006d30397c7636d3e015EEE251369F"
-abi = "/tmp/BasicOutChannel.json"
+[ethereum.apps.eth]
+address = "0x95aF4D3B8938063486fE23C8D8867deD6aee5646"
+abi = "/tmp/ETHApp.json"
 
-[ethereum.apps.incentivizedOutChannel]
-address = "0xFc97A6197dc90bef6bbEFD672742Ed75E9768553"
-abi = "/tmp/IncentivizedOutChannel.json"
+[ethereum.apps.erc20]
+address = "0xb664F267fa8775563E2aD1cED44a0996198F7eE0"
+abi = "/tmp/ERC20App.json"
 
 [substrate]
 endpoint = "ws://127.0.0.1:9944/"
