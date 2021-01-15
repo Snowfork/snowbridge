@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.2;
+pragma experimental ABIEncoderV2;
 
 contract Verifier {
-
     address public operator;
 
     /**
      * @dev constructor sets the operator's address
      * @param _operator address of the contract's operator
      */
-    constructor(address _operator)
-    public
-    {
+    constructor(address _operator) public {
         operator = _operator;
     }
 
@@ -19,12 +17,8 @@ contract Verifier {
      * @dev verifies the operator as the original tx sender
      * @return bool indicating if operator is the original sender
      */
-    function verifyOperator()
-        public
-        view
-        returns (bool)
-    {
-       return tx.origin == operator;
+    function verifyOperator() public view returns (bool) {
+        return tx.origin == operator;
     }
 
     /**
@@ -50,9 +44,13 @@ contract Verifier {
      * @return bytes32 the prefixed hashed message
      */
     function prefixed(bytes32 _hashedMessage) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", _hashedMessage)
-        );
+        return
+            keccak256(
+                abi.encodePacked(
+                    "\x19Ethereum Signed Message:\n32",
+                    _hashedMessage
+                )
+            );
     }
 
     /**
@@ -101,7 +99,10 @@ contract Verifier {
         }
 
         // Prevent malleable signatures, see https://www.di.ens.fr/~stern/data/St101.pdf
-        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
+        if (
+            uint256(s) >
+            0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0
+        ) {
             revert("ECDSA: invalid signature 's' value");
         }
 

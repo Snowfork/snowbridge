@@ -13,11 +13,9 @@ require("chai")
 
 contract("BasicSendChannel", function (accounts) {
   // Accounts
-  const owner = accounts[0];
   const userOne = accounts[1];
   const testAppId = "arbitrary-app-id";
   const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
-  const weiAmount = web3.utils.toWei("0.25", "ether");
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
@@ -38,7 +36,7 @@ contract("BasicSendChannel", function (accounts) {
       const tx = await this.basicSendChannel.send(
         testAppId,
         testPayload,
-        { from: userOne, value: weiAmount }
+        { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
       const rawLog = tx.receipt.rawLogs[0];

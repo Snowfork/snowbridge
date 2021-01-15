@@ -13,11 +13,9 @@ require("chai")
 
 contract("IncentivizedSendChannel", function (accounts) {
   // Accounts
-  const owner = accounts[0];
   const userOne = accounts[1];
   const testAppId = "arbitrary-app-id";
   const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
-  const weiAmount = web3.utils.toWei("0.25", "ether");
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
@@ -38,7 +36,7 @@ contract("IncentivizedSendChannel", function (accounts) {
       const tx = await this.incentivizedSendChannel.send(
         testAppId,
         testPayload,
-        { from: userOne, value: weiAmount }
+        { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
       const rawLog = tx.receipt.rawLogs[0];
@@ -49,19 +47,19 @@ contract("IncentivizedSendChannel", function (accounts) {
       const tx = await this.incentivizedSendChannel.send(
         testAppId,
         testPayload,
-        { from: userOne, value: weiAmount }
+        { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
       const tx2 = await this.incentivizedSendChannel.send(
         testAppId,
         testPayload,
-        { from: userOne, value: weiAmount }
+        { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
       const tx3 = await this.incentivizedSendChannel.send(
         testAppId,
         testPayload,
-        { from: userOne, value: weiAmount }
+        { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
       const rawLog = tx3.receipt.rawLogs[0];

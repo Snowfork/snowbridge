@@ -28,7 +28,10 @@ contract ETHApp is Application {
         uint256 _amount;
     }
 
-    constructor(address _basicSendChannelAddress, address _incentivizedSendChannelAddress) public {
+    constructor(
+        address _basicSendChannelAddress,
+        address _incentivizedSendChannelAddress
+    ) public {
         totalETH = 0;
         basicSendChannelAddress = _basicSendChannelAddress;
         incentivizedSendChannelAddress = _incentivizedSendChannelAddress;
@@ -39,10 +42,7 @@ contract ETHApp is Application {
         bridge = _bridge;
     }
 
-    function sendETH(bytes32 _recipient, bool incentivized)
-        public
-        payable
-    {
+    function sendETH(bytes32 _recipient, bool incentivized) public payable {
         require(msg.value > 0, "Value of transaction must be positive");
 
         // Increment locked Ethereum counter by this amount
@@ -50,21 +50,18 @@ contract ETHApp is Application {
 
         emit Locked(msg.sender, _recipient, msg.value);
 
-        ETHLockedPayload memory payload = ETHLockedPayload(msg.sender, _recipient, msg.value);
+        ETHLockedPayload memory payload =
+            ETHLockedPayload(msg.sender, _recipient, msg.value);
         SendChannel sendChannel;
-        if(incentivized) {
+        if (incentivized) {
             sendChannel = SendChannel(incentivizedSendChannelAddress);
         } else {
             sendChannel = SendChannel(basicSendChannelAddress);
         }
         sendChannel.send(TARGET_APPLICATION_ID, abi.encode(payload));
-
     }
 
-    function handle(bytes memory _data)
-        public
-        override
-    {
+    function handle(bytes memory _data) public override {
         require(msg.sender == bridge);
         require(_data.length >= PAYLOAD_LENGTH, "Invalid payload");
 
@@ -80,11 +77,12 @@ contract ETHApp is Application {
         emit Unlock(sender, recipient, amount);
     }
 
-    function unlockETH(address payable _recipient, uint256 _amount)
-        internal
-    {
+    function unlockETH(address payable _recipient, uint256 _amount) internal {
         require(_amount > 0, "Must unlock a positive amount");
-        require(totalETH >= _amount, "ETH token balances insufficient to fulfill the unlock request");
+        require(
+            totalETH >= _amount,
+            "ETH token balances insufficient to fulfill the unlock request"
+        );
 
         totalETH = totalETH.sub(_amount);
         _recipient.transfer(_amount);

@@ -22,7 +22,7 @@ module.exports = function(deployer, network, accounts) {
 
     // Deploy applications
     const ethApp = await deployer.deploy(ETHApp, basicSendChannel.address, incentivizedSendChannel.address);
-    const erc20App = await deployer.deploy(ERC20App);
+    const erc20App = await deployer.deploy(ERC20App, basicSendChannel.address, incentivizedSendChannel.address);
 
     // Deploy Bridge
     const bridge = await deployer.deploy(Bridge, verifier.address, [ethApp.address, erc20App.address]);
