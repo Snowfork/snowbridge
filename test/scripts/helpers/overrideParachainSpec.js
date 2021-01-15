@@ -13,7 +13,7 @@ function replaceNested(data, keys, value) {
         return value;
     }
 
-    const key0 = keys[0];
+    const key0 = isNaN(parseInt(keys[0])) ? keys[0] : parseInt(keys[0]);
     if (!(key0 in data)) {
         throw Error("Key '" + key + "' not found in original spec");
     }

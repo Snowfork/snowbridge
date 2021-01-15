@@ -37,13 +37,13 @@ deploy_contracts()
 start_parachain()
 {
     echo "Starting Parachain"
-    logfile=$(pwd)/parachain.log
     pushd ../parachain
+    bin=$(pwd)/target/debug/artemis
 
-    cargo build
+    cargo build --features "test-e2e"
 
     echo "Generating Parachain spec"
-    target/debug/artemis-node build-spec --dev --disable-default-bootnode > $configdir/spec.json
+    target/debug/artemis build-spec --disable-default-bootnode > $configdir/spec.json
 
     echo "Inserting Ganache chain info into genesis spec"
     ethereum_initial_header=$(curl http://localhost:8545 \
@@ -55,15 +55,21 @@ start_parachain()
         genesis.runtime.verifierLightclient.initialDifficulty 0x0 \
         genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header"
 
-    target/debug/artemis-node -lruntime=debug \
-        --alice \
-        --force-authoring \
-        --tmp \
-        --rpc-port 11133 \
-        --ws-port 11144 \
-        --rpc-cors=all \
-        --chain $configdir/spec.json \
-        >$logfile 2>&1 &
+    echo "Writing Polkadot configuration"
+    cp config.json $configdir/polkadotConfig.json
+    parachain_conf="{
+		\"bin\": \"$bin\",
+		\"id\": \"200\",
+		\"wsPort\": 11144,
+		\"port\": 31200,
+		\"balance\": \"1000000000000000000000\",
+		\"flags\": [\"--discover-local\", \"--\", \"--execution=wasm\"],
+		\"chain\": \"$configdir/spec.json\"
+	}"
+    node ../test/scripts/helpers/overrideParachainSpec.js $configdir/polkadotConfig.json \
+        parachains.0 "$parachain_conf"
+
+    polkadot-launch $configdir/polkadotConfig.json &
 
     popd
 
