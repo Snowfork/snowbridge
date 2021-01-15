@@ -361,6 +361,8 @@ parameter_types! {
 }
 
 impl commitments::Config for Runtime {
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+
 	type Event = Event;
 
 	type CommitInterval = CommitInterval;

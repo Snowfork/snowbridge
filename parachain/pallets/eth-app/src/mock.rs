@@ -76,6 +76,7 @@ parameter_types! {
 }
 
 impl artemis_commitments::Config for MockRuntime {
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = MockEvent;
 	type CommitInterval = CommitInterval;
 }

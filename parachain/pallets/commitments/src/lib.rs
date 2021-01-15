@@ -46,6 +46,9 @@ struct Message {
 }
 
 pub trait Config: frame_system::Config {
+
+	const INDEXING_PREFIX: &'static [u8];
+
 	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
 	type CommitInterval: Get<Self::BlockNumber>;
@@ -58,9 +61,6 @@ decl_storage! {
 
 		/// Messages waiting to be committed
 		pub MessageQueue: Vec<Message>;
-
-		/// Committed Messages (encoded form)
-		pub Commitment: Vec<u8>;
 	}
 }
 
@@ -97,6 +97,10 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 
+	fn offchain_key(hash: H256) -> Vec<u8> {
+		(T::INDEXING_PREFIX, hash).encode()
+	}
+
 	// Generate a message commitment
 	// TODO: return proper weight
 	fn commit() -> Weight {
@@ -105,10 +109,10 @@ impl<T: Config> Module<T> {
 		let commitment = Self::encode_commitment(&messages);
 		let commitment_hash: H256 = keccak_256(&commitment).into();
 
-		<Self as Store>::Commitment::set(commitment);
-
 		let digest_item = CustomDigestItem::Commitment(commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
+
+		sp_io::offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
 
 		Self::deposit_event(Event::Commitment(commitment_hash));
 
