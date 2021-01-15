@@ -1,6 +1,6 @@
 const Verifier = artifacts.require("Verifier");
-const BasicOutChannel = artifacts.require("BasicOutChannel");
-const IncentivizedOutChannel = artifacts.require("IncentivizedOutChannel");
+const BasicSendChannel = artifacts.require("BasicSendChannel");
+const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
 const Decoder = artifacts.require("Decoder");
 const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
@@ -12,16 +12,16 @@ module.exports = function(deployer, network, accounts) {
     // Deploy Verifier and get deployed address
     const verifier = await deployer.deploy(Verifier, accounts[0]);
 
-    // Deploy OutChannels and get deployed addresses
-    const basicOutChannel = await deployer.deploy(BasicOutChannel);
-    const incentivizedOutChannel = await deployer.deploy(IncentivizedOutChannel);
+    // Deploy SendChannels and get deployed addresses
+    const basicSendChannel = await deployer.deploy(BasicSendChannel);
+    const incentivizedSendChannel = await deployer.deploy(IncentivizedSendChannel);
 
     // Link libraries to applications
     await deployer.deploy(Decoder);
     deployer.link(Decoder, [ETHApp, ERC20App]);
 
     // Deploy applications
-    const ethApp = await deployer.deploy(ETHApp, basicOutChannel.address, incentivizedOutChannel.address);
+    const ethApp = await deployer.deploy(ETHApp, basicSendChannel.address, incentivizedSendChannel.address);
     const erc20App = await deployer.deploy(ERC20App);
 
     // Deploy Bridge

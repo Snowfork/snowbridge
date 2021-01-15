@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Decoder.sol";
 import "./Application.sol";
-import "./OutChannel.sol";
+import "./SendChannel.sol";
 
 contract ETHApp is Application {
     using SafeMath for uint256;
@@ -16,22 +16,22 @@ contract ETHApp is Application {
 
     address public bridge;
     uint256 public totalETH;
-    address public basicOutChannelAddress;
-    address public incentivizedOutChannelAddress;
+    address public basicSendChannelAddress;
+    address public incentivizedSendChannelAddress;
 
-    event AppTransfer(address _sender, bytes32 _recipient, uint256 _amount);
+    event Locked(address _sender, bytes32 _recipient, uint256 _amount);
     event Unlock(bytes _sender, address _recipient, uint256 _amount);
 
-    struct AppTransferPayload {
+    struct ETHLockedPayload {
         address _sender;
         bytes32 _recipient;
         uint256 _amount;
     }
 
-    constructor(address _basicOutChannelAddress, address _incentivizedOutChannelAddress) public {
+    constructor(address _basicSendChannelAddress, address _incentivizedSendChannelAddress) public {
         totalETH = 0;
-        basicOutChannelAddress = _basicOutChannelAddress;
-        incentivizedOutChannelAddress = _incentivizedOutChannelAddress;
+        basicSendChannelAddress = _basicSendChannelAddress;
+        incentivizedSendChannelAddress = _incentivizedSendChannelAddress;
     }
 
     function register(address _bridge) public override {
@@ -48,16 +48,16 @@ contract ETHApp is Application {
         // Increment locked Ethereum counter by this amount
         totalETH = totalETH.add(msg.value);
 
-        emit AppTransfer(msg.sender, _recipient, msg.value);
+        emit Locked(msg.sender, _recipient, msg.value);
 
-        AppTransferPayload memory payload = AppTransferPayload(msg.sender, _recipient, msg.value);
-        OutChannel outChannel;
+        ETHLockedPayload memory payload = ETHLockedPayload(msg.sender, _recipient, msg.value);
+        SendChannel sendChannel;
         if(incentivized) {
-            outChannel = OutChannel(incentivizedOutChannelAddress);
+            sendChannel = SendChannel(incentivizedSendChannelAddress);
         } else {
-            outChannel = OutChannel(basicOutChannelAddress);
+            sendChannel = SendChannel(basicSendChannelAddress);
         }
-        outChannel.submit(TARGET_APPLICATION_ID, abi.encode(payload));
+        sendChannel.send(TARGET_APPLICATION_ID, abi.encode(payload));
 
     }
 

@@ -1,10 +1,12 @@
 const ETHApp = artifacts.require("ETHApp");
-const BasicOutChannel = artifacts.require("BasicOutChannel");
-const IncentivizedOutChannel = artifacts.require("IncentivizedOutChannel");
+const BasicSendChannel = artifacts.require("BasicSendChannel");
+const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
 
 const Web3Utils = require("web3-utils");
 const ethers = require("ethers");
 const BigNumber = web3.BigNumber;
+
+const { confirmChannelSend } = require("./helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -22,9 +24,9 @@ contract("EthApp", function (accounts) {
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      const basicOutChannel = await BasicOutChannel.new();
-      const incentivizedOutChannel = await IncentivizedOutChannel.new();
-      this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
+      const basicSendChannel = await BasicSendChannel.new();
+      const incentivizedSendChannel = await IncentivizedSendChannel.new();
+      this.ethApp = await ETHApp.new(basicSendChannel.address, incentivizedSendChannel.address);
     });
 
     it("should deploy and initialize the ETHApp contract", async function () {
@@ -34,9 +36,9 @@ contract("EthApp", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      const basicOutChannel = await BasicOutChannel.new();
-      const incentivizedOutChannel = await IncentivizedOutChannel.new();
-      this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
+      this.basicSendChannel = await BasicSendChannel.new();
+      this.incentivizedSendChannel = await IncentivizedSendChannel.new();
+      this.ethApp = await ETHApp.new(this.basicSendChannel.address, this.incentivizedSendChannel.address);
     });
 
     it("should support Ethereum deposits", async function () {
@@ -58,7 +60,7 @@ contract("EthApp", function (accounts) {
 
       // Confirm app event emitted with expected values
       const appEvent = logs.find(
-          e => e.event === "AppTransfer"
+          e => e.event === "Locked"
       );
 
       appEvent.args._sender.should.be.equal(userOne);
@@ -74,31 +76,34 @@ contract("EthApp", function (accounts) {
       // Confirm contract's locked Ethereum counter has increased by amount locked
       const afterTotalETH = await this.ethApp.totalETH();
       Number(afterTotalETH).should.be.bignumber.equal(beforeTotalETH+Number(weiAmount));
+    });
 
-      outChannelLogFields = [{
-          type: 'uint256',
-          name: 'nonce'
-      },{
-          type: 'address',
-          name: 'senderAddress'
-      },{
-          type: 'string',
-          name: 'targetApplicationId',
-      },{
-          type: 'bytes',
-          name: 'payload',
-      }];
-
-      const channelEvent = tx.receipt.rawLogs[1];
-
-      const decodedEvent = web3.eth.abi.decodeLog(outChannelLogFields, channelEvent.data, channelEvent.topics);
-
-      decodedEvent.nonce.should.be.equal('0');
-      decodedEvent.senderAddress.should.be.equal(this.ethApp.address);
-      decodedEvent.targetApplicationId.should.be.equal("eth-app");
-
+    it("should send lock payload to the correct channels", async function () {
+      // Prepare transaction parameters
+      const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
+      const weiAmount = web3.utils.toWei("0.25", "ether");
       const expectedPayload = web3.eth.abi.encodeParameters([ 'address', 'bytes32', 'uint256' ], [ userOne, ethers.utils.formatBytes32String(recipient.toString()), weiAmount ]);
-      decodedEvent.payload.should.be.equal(expectedPayload);
+
+      // Deposit Ethereum to the contract via incentivized channel
+      const tx_incentivized = await this.ethApp.sendETH(
+        recipient,
+        true,
+        {from: userOne, value: weiAmount}
+      ).should.be.fulfilled;
+      
+
+      // Confirm payload submitted to incentivized channel
+      confirmChannelSend(tx_incentivized.receipt.rawLogs[1], this.incentivizedSendChannel.address, this.ethApp.address, "eth-app", expectedPayload)
+
+      // Deposit Ethereum to the contract via basic channel
+      const tx_basic = await this.ethApp.sendETH(
+        recipient,
+        false,
+        {from: userOne, value: weiAmount}
+      ).should.be.fulfilled;
+      
+      // Confirm payload submitted to basic channel
+      confirmChannelSend(tx_basic.receipt.rawLogs[1], this.basicSendChannel.address, this.ethApp.address, "eth-app", expectedPayload)
     });
   });
 
@@ -107,9 +112,9 @@ contract("EthApp", function (accounts) {
 
     before(async function () {
 
-      const basicOutChannel = await BasicOutChannel.new();
-      const incentivizedOutChannel = await IncentivizedOutChannel.new();
-        this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
+      const basicSendChannel = await BasicSendChannel.new();
+      const incentivizedSendChannel = await IncentivizedSendChannel.new();
+        this.ethApp = await ETHApp.new(basicSendChannel.address, incentivizedSendChannel.address);
 
         await this.ethApp.register(owner);
 

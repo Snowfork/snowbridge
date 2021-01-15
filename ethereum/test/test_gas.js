@@ -1,7 +1,7 @@
 const ETHApp = artifacts.require('ETHApp');
 const ERC20App = artifacts.require('ERC20App');
-const BasicOutChannel = artifacts.require('BasicOutChannel');
-const IncentivizedOutChannel = artifacts.require('IncentivizedOutChannel');
+const BasicSendChannel = artifacts.require('BasicSendChannel');
+const IncentivizedSendChannel = artifacts.require('IncentivizedSendChannel');
 const TestToken = artifacts.require('TestToken');
 
 const BigNumber = web3.BigNumber;
@@ -22,9 +22,9 @@ contract('Gas expenditures', function (accounts) {
     describe('Gas costs', function(){
 
         beforeEach(async function () {
-          const basicOutChannel = await BasicOutChannel.new();
-          const incentivizedOutChannel = await IncentivizedOutChannel.new();
-          this.ethApp = await ETHApp.new(basicOutChannel.address, incentivizedOutChannel.address);
+          const basicSendChannel = await BasicSendChannel.new();
+          const incentivizedSendChannel = await IncentivizedSendChannel.new();
+          this.ethApp = await ETHApp.new(basicSendChannel.address, incentivizedSendChannel.address);
           this.erc20App = await ERC20App.new();
         });
 
