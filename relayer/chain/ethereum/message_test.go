@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/centrifuge/go-substrate-rpc-client/scale"
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
 )

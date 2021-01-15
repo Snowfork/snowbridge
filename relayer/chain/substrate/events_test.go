@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/centrifuge/go-substrate-rpc-client/types"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/stretchr/testify/assert"
 )
 

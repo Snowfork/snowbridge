@@ -7,8 +7,8 @@ import (
 	"crypto/rand"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/centrifuge/go-substrate-rpc-client/signature"
-	"github.com/centrifuge/go-substrate-rpc-client/types"
+	"github.com/snowfork/go-substrate-rpc-client/v2/signature"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto"
 )
 

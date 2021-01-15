@@ -8,9 +8,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	gsrpc "github.com/centrifuge/go-substrate-rpc-client"
-	"github.com/centrifuge/go-substrate-rpc-client/signature"
-	"github.com/centrifuge/go-substrate-rpc-client/types"
+	gsrpc "github.com/snowfork/go-substrate-rpc-client/v2"
+	"github.com/snowfork/go-substrate-rpc-client/v2/signature"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 )
 
 type Connection struct {

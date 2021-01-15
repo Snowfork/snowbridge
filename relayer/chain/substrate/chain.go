@@ -9,8 +9,8 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/centrifuge/go-substrate-rpc-client/types"
 	"github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"

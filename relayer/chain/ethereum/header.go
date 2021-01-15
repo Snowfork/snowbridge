@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"math/big"
 
-	types "github.com/centrifuge/go-substrate-rpc-client/types"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/ethashproof"
 	"github.com/snowfork/ethashproof/ethash"
+	types "github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 )
 
 type HeaderID struct {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	gsrpc "github.com/centrifuge/go-substrate-rpc-client"
+	gsrpc "github.com/snowfork/go-substrate-rpc-client/v2"
 
-	"github.com/centrifuge/go-substrate-rpc-client/types"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 )
 
 type Events []Event
