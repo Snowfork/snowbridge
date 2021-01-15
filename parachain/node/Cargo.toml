@@ -74,3 +74,6 @@ artemis-runtime = { path = "../runtime" }
 
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+
+[features]
+test-e2e = ["artemis-runtime/test-e2e"]

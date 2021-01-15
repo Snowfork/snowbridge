@@ -103,3 +103,4 @@ std = [
     "artemis-token-dealer/std",
     "artemis-xcm-support/std"
 ]
+test-e2e = []

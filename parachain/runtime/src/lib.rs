@@ -338,9 +338,16 @@ impl bridge::Config for Runtime {
 	type AppERC20 = erc20_app::Module<Runtime>;
 }
 
+#[cfg(not(feature = "test-e2e"))]
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 35;
 	pub const VerifyPoW: bool = true;
+}
+
+#[cfg(feature = "test-e2e")]
+parameter_types! {
+	pub const DescendantsUntilFinalized: u8 = 0;
+	pub const VerifyPoW: bool = false;
 }
 
 impl verifier_lightclient::Config for Runtime {
