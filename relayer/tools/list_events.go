@@ -50,7 +50,7 @@ type Event struct {
 
 func listEvents(m *types.Metadata) []Event {
 	events := []Event{}
-	for i, mod := range m.AsMetadataV11.Modules {
+	for i, mod := range m.AsMetadataV12.Modules {
 		if !mod.HasEvents {
 			continue
 		}
@@ -82,7 +82,7 @@ func main() {
 		panic(err)
 	}
 
-	if !m.IsMetadataV11 {
+	if !m.IsMetadataV12 {
 		panic("Unsupported metadata version")
 	}
 
