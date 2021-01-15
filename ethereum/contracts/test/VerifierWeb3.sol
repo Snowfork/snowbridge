@@ -2,7 +2,6 @@
 pragma solidity >=0.6.2;
 
 contract VerifierWeb3 {
-
     address public operator;
 
     /**
@@ -78,10 +77,7 @@ contract VerifierWeb3 {
      * @param _message bytes32 is the original, unprefixed message
      * @return bytes32 is the prefixed, hashed message
      */
-    function ethMessageHash(bytes32 _message)
-        public
-        pure
-        returns (bytes32) {
+    function ethMessageHash(bytes32 _message) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked("\x19Ethereum Signed Message:\n32", _message)
