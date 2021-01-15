@@ -25,7 +25,7 @@ pub struct Message {
 }
 
 #[derive(Clone, Encode, Decode, Default, PartialEq, RuntimeDebug)]
-pub struct Messages(pub AppId, pub Vec<Message>);
+pub struct MessageBatch(pub AppId, pub Vec<Message>);
 
 /// Verification input for the message verifier.
 ///

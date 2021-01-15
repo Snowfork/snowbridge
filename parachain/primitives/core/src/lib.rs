@@ -16,7 +16,7 @@ pub mod assets;
 pub use types::{
 	AppId,
 	Message,
-	Messages,
+	MessageBatch,
 	VerificationInput,
 };
 
@@ -29,7 +29,7 @@ pub trait Verifier<AccountId> {
 
 	fn verify(sender: AccountId, app_id: AppId, message: &Message) -> DispatchResult;
 
-	fn verify_bulk(sender: AccountId, messages_by_app: &[Messages]) -> DispatchResult;
+	fn verify_bulk(sender: AccountId, messages_by_app: &[MessageBatch]) -> DispatchResult;
 }
 
 /// A trait for handling message payloads.

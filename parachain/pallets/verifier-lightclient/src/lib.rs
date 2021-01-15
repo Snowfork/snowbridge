@@ -13,7 +13,7 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
-use artemis_core::{AppId, Message, Messages, Verifier, VerificationInput};
+use artemis_core::{AppId, Message, MessageBatch, Verifier, VerificationInput};
 use artemis_ethereum::{HeaderId as EthereumHeaderId, Log, Receipt, H256, U256};
 use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
 
@@ -488,7 +488,7 @@ impl<T: Config> Verifier<T::AccountId> for Module<T> {
 		}
 	}
 
-	fn verify_bulk(_: T::AccountId, messages_by_app: &[Messages]) -> DispatchResult {
+	fn verify_bulk(_: T::AccountId, messages_by_app: &[MessageBatch]) -> DispatchResult {
 		// Maps from block hash to (payload, proof) tuples
 		let mut data_by_block: BTreeMap<H256, Vec<(&[u8], &[Vec<u8>])>> = BTreeMap::new();
 

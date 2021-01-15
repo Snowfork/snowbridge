@@ -1,4 +1,4 @@
-use artemis_core::{AppId, Messages, Verifier as VerifierConfig};
+use artemis_core::{AppId, MessageBatch, Verifier as VerifierConfig};
 use crate::mock::{
 	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
 	ethereum_header_proof_from_file, genesis_ethereum_block_hash, log_payload,
@@ -350,24 +350,24 @@ fn it_confirms_receipt_inclusion_in_finalized_header_bulk() {
 		let mut app_id_1: AppId = Default::default();
 		app_id_1[0] = 1;
 		let finalized_valid_messages = vec![
-			Messages (app_id_0, vec![
+			MessageBatch (app_id_0, vec![
 				message_with_receipt_proof(payload.clone(), block0_hash, receipt_proof.clone()),
 				message_with_receipt_proof(payload.clone(), block1_hash, receipt_proof.clone()),
 			]),
-			Messages (app_id_1, vec![
+			MessageBatch (app_id_1, vec![
 				message_with_receipt_proof(payload.clone(), block0_hash, receipt_proof.clone()),
 				message_with_receipt_proof(payload.clone(), block1_hash, receipt_proof.clone()),
 			]),
 		];
 		let one_unfinalized_message = vec![
-			Messages (app_id_0, vec![
+			MessageBatch (app_id_0, vec![
 				message_with_receipt_proof(payload.clone(), block0_hash, receipt_proof.clone()),
 				// Not finalized
 				message_with_receipt_proof(payload.clone(), block2_hash, receipt_proof.clone()),
 			]),
 		];
 		let one_invalid_message = vec![
-			Messages (app_id_0, vec![
+			MessageBatch (app_id_0, vec![
 				message_with_receipt_proof(payload.clone(), block0_hash, receipt_proof.clone()),
 				// Invalid proof
 				message_with_receipt_proof(payload.clone(), block1_hash, Default::default()),

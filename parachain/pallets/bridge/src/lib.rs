@@ -24,7 +24,7 @@ use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 use sp_core::H160;
 
-use artemis_core::{AppId, Application, Message, Messages, Verifier};
+use artemis_core::{AppId, Application, Message, MessageBatch, Verifier};
 
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
@@ -55,8 +55,6 @@ decl_error! {
 	pub enum Error for Module<T: Config> {
 		/// Target application not found. No messages were processed
 		AppNotFound,
-		/// Some appplication messages failed in their handler and were skipped.
-		SkippedFailedMessages,
 	}
 }
 
@@ -80,7 +78,7 @@ decl_module! {
 
 		/// Submit multiple messages for dispatch to multiple target applications.
 		#[weight = 0]
-		pub fn submit_bulk(origin, messages_by_app: Vec<Messages>) -> DispatchResult {
+		pub fn submit_bulk(origin, messages_by_app: Vec<MessageBatch>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Verifier::verify_bulk(who, messages_by_app.as_slice())?;
@@ -104,7 +102,7 @@ decl_module! {
 				.filter_map(|r| r.err())
 				.collect();
 
-			if errors.is_empty() { Ok(()) } else { Err(Error::<T>::SkippedFailedMessages.into()) }
+			Ok(())
 		}
 	}
 }
