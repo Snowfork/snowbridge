@@ -4,18 +4,18 @@ const fs = require('fs');
 const os = require('os');
 
 const Bridge = artifacts.require("Bridge")
-const BasicOutChannel = artifacts.require("BasicOutChannel")
-const IncentivizedOutChannel = artifacts.require("IncentivizedOutChannel")
+const ETHApp = artifacts.require("ETHApp")
+const ERC20App = artifacts.require("ERC20App")
 
-const dump = (bridge, basicOutChannel, incentivizedOutChannel) => {
+const dump = (bridge, ethApp, erc20App) => {
 
     const bridgeAbiFile = uniqueFilename(os.tmpdir(), "Bridge")
-    const basicOutChannelAbiFile = uniqueFilename(os.tmpdir(), "BasicOutChannel")
-    const incentivizedOutChannelAbiFile = uniqueFilename(os.tmpdir(), "IncentivizedOutChannel")
+    const ethAbiFile = uniqueFilename(os.tmpdir(), "ETHApp")
+    const erc20AbiFile = uniqueFilename(os.tmpdir(), "ERC20App")
 
     fs.writeFileSync(bridgeAbiFile, JSON.stringify(bridge.abi, null, 2))
-    fs.writeFileSync(basicOutChannelAbiFile, JSON.stringify(basicOutChannel.abi, null, 2))
-    fs.writeFileSync(incentivizedOutChannelAbiFile, JSON.stringify(incentivizedOutChannel.abi, null, 2))
+    fs.writeFileSync(ethAbiFile, JSON.stringify(ethApp.abi, null, 2))
+    fs.writeFileSync(erc20AbiFile, JSON.stringify(erc20App.abi, null, 2))
 
     const config = {
         ethereum: {
@@ -25,15 +25,15 @@ const dump = (bridge, basicOutChannel, incentivizedOutChannel) => {
                 abi: bridgeAbiFile,
             },
             apps:{
-                basicOutChannel: {
-                    address: basicOutChannel.address,
-                    abi: basicOutChannelAbiFile,
+                eth:{
+                    address: ethApp.address,
+                    abi: ethAbiFile,
                 },
-                incentivizedOutChannel: {
-                    address: incentivizedOutChannel.address,
-                    abi: incentivizedOutChannelAbiFile,
+                erc20:{
+                    address: erc20App.address,
+                    abi: erc20AbiFile,
                 }
-            },
+            }
         },
         substrate: {
             endpoint: "ws://127.0.0.1:9944/"
@@ -46,10 +46,10 @@ const dump = (bridge, basicOutChannel, incentivizedOutChannel) => {
 module.exports = async (callback) => {
     try {
         let bridge = await Bridge.deployed()
-        let basicOutChannel = await BasicOutChannel.deployed()
-        let incentivizedOutChannel = await IncentivizedOutChannel.deployed()
+        let ethApp = await ETHApp.deployed()
+        let erc20App = await ERC20App.deployed()
 
-        dump(bridge, basicOutChannel, incentivizedOutChannel)
+        dump(bridge, ethApp, erc20App)
 
     } catch (error) {
         callback(error)
