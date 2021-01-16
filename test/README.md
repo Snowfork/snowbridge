@@ -22,6 +22,26 @@ Download dependencies:
 yarn install
 ```
 
+Install `polkadot-launch`:
+
+```bash
+git clone https://github.com/paritytech/polkadot-launch.git
+cd polkadot-launch
+yarn global add file:$(pwd)
+```
+
+Build polkadot:
+
+```bash
+git clone https://github.com/paritytech/polkadot.git
+cd polkadot
+git checkout rococo-v1
+cargo build --release --features=real-overseer
+```
+
+Update `../parachain/config.json`. You'll need to substitute `<POLKADOT_DIR>` with the location of your polkadot checkout above.
+
+
 Start all services (parachain, relayer, ganache, etc):
 
 ```bash

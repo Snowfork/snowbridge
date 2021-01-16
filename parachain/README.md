@@ -92,7 +92,7 @@ Install `polkadot-launch`:
 ```bash
 git clone https://github.com/paritytech/polkadot-launch.git
 cd polkadot-launch
-yarn global add file:.
+yarn global add file:$(pwd)
 ```
 
 Build polkadot:

@@ -107,7 +107,7 @@ start_relayer
 echo "Process Tree:"
 pstree $$
 
-until $(grep "Polling headers starting..." $(pwd)/relay.log > /dev/null); do
+until $(grep "Syncing headers starting..." $(pwd)/relay.log > /dev/null); do
     echo "Waiting for relayer to generate DAG cache..."
     sleep 20
 done
