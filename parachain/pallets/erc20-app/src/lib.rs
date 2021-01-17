@@ -61,8 +61,6 @@ decl_event! {
 	{
 		Burned(H160, AccountId, U256),
 		Minted(H160, AccountId, U256),
-		// TODO: Remove once relayer is updated to read commitments instead
-		Transfer(H160, AccountId, H160, U256),
 	}
 }
 
@@ -95,11 +93,7 @@ decl_module! {
 				amount: amount
 			};
 			T::Commitments::add(Self::address(), message.encode());
-
 			Self::deposit_event(RawEvent::Burned(token_addr, who.clone(), amount));
-
-			// TODO: Remove once relayer can read message commitments
-			Self::deposit_event(RawEvent::Transfer(token_addr, who.clone(), recipient, amount));
 
 			Ok(())
 		}

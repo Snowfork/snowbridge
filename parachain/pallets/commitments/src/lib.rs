@@ -28,11 +28,11 @@ mod tests;
 
 /// Custom DigestItem for header digest
 #[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
-enum CustomDigestItem {
-	Commitment(H256)
+enum AuxiliaryDigestItem {
+	CommitmentHash(H256)
 }
 
-impl<T> Into<DigestItem<T>> for CustomDigestItem {
+impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
     fn into(self) -> DigestItem<T> {
         DigestItem::Other(self.encode())
     }
@@ -109,7 +109,7 @@ impl<T: Config> Module<T> {
 		let commitment = Self::encode_commitment(&messages);
 		let commitment_hash: H256 = keccak_256(&commitment).into();
 
-		let digest_item = CustomDigestItem::Commitment(commitment_hash.clone()).into();
+		let digest_item = AuxiliaryDigestItem::CommitmentHash(commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
 		sp_io::offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);

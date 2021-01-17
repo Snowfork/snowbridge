@@ -4,7 +4,7 @@ use crate::{mock::*};
 use crate::{Message, MessageQueue};
 
 use sp_runtime::DigestItem;
-use sp_core::H160;
+use sp_core::{H160, H256};
 
 use frame_support::{
 	traits::{OnInitialize}
@@ -63,4 +63,14 @@ fn test_add_message() {
 		);
 
 	});
+}
+
+
+#[test]
+fn test_make_offline_key() {
+	let hash = H256::repeat_byte(7);
+
+	println!("{:?}", CommitmentsModule::offchain_key(hash));
+	println!("{:?}", CommitmentsModule::offchain_key(hash).len());
+
 }
