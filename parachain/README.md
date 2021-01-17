@@ -129,8 +129,8 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
 
 ```json
 {
-  "Address": "AccountId",
-  "LookupSource": "AccountId",
+  "Address": "MultiAddress",
+  "LookupSource": "MultiAddress",
   "AppId": "[u8; 20]",
   "Message": {
     "payload": "Vec<u8>",

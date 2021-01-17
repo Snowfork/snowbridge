@@ -5,13 +5,13 @@ package substrate
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
-	gsrpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate/digest"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate/offchain"
@@ -95,43 +95,36 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				continue
 			}
 
-			if uint32(finalizedHeader.Number)%li.config.CommitInterval != 0 {
-				currentBlock++
-				continue
-			}
-
-			auxiliaryDigestItem, err := getAuxiliaryDigestItem(finalizedHeader)
+			digestItem, err := digest.GetAuxiliaryDigestItem(finalizedHeader.Digest)
 			if err != nil {
-				sleep(ctx, retryInterval)
-				continue
+				return err
 			}
 
-			if auxiliaryDigestItem.IsCommitmentHash {
-				storageKey, err := offchain.MakeStorageKey(auxiliaryDigestItem.AsCommitmentHash)
+			if digestItem != nil && digestItem.IsCommitmentHash {
+
+				li.log.WithFields(logrus.Fields{
+					"block":          finalizedHeader.Number,
+					"commitmentHash": digestItem.AsCommitmentHash.Hex(),
+				}).Debug("Found commitment hash in header digest")
+
+				storageKey, err := offchain.MakeStorageKey(digestItem.AsCommitmentHash)
 				if err != nil {
-					li.log.WithError(err).Error("Failed to create storage key")
 					return err
 				}
-				li.conn.api.RPC.Offchain.LocalStorageGet(gsrpcOffchain.Persistent, storageKey)
+
+				data, err := li.conn.api.RPC.Offchain.LocalStorageGet(rpcOffchain.Persistent, storageKey)
+				if err != nil {
+					li.log.WithError(err).Error("Failed to read commitment from offchain storage")
+					sleep(ctx, retryInterval)
+					continue
+				}
+
+				fmt.Println(data)
 			}
 
 			currentBlock++
 		}
 	}
-}
-
-func getAuxiliaryDigestItem(header *types.Header) (*digest.AuxiliaryDigestItem, error) {
-	for _, digestItem := range header.Digest {
-		if digestItem.IsOther {
-			auxDigestItem, err := digest.DecodeFromBytes(digestItem.AsOther)
-			if err != nil {
-				return nil, err
-			}
-
-			return &auxDigestItem, nil
-		}
-	}
-	return nil, nil
 }
 
 func sleep(ctx context.Context, delay time.Duration) {

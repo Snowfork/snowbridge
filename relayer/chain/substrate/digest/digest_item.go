@@ -45,3 +45,17 @@ func DecodeFromBytes(data []byte) (AuxiliaryDigestItem, error) {
 
 	return digestItem, nil
 }
+
+func GetAuxiliaryDigestItem(digest types.Digest) (*AuxiliaryDigestItem, error) {
+	for _, digestItem := range digest {
+		if digestItem.IsOther {
+			auxDigestItem, err := DecodeFromBytes(digestItem.AsOther)
+			if err != nil {
+				return nil, err
+			}
+
+			return &auxDigestItem, nil
+		}
+	}
+	return nil, nil
+}

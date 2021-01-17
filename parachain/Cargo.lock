@@ -193,6 +193,7 @@ dependencies = [
  "frame-support",
  "parity-scale-codec",
  "rustc-hex",
+ "serde",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -275,6 +276,7 @@ dependencies = [
 name = "artemis-node"
 version = "0.1.1"
 dependencies = [
+ "artemis-core",
  "artemis-runtime",
  "cumulus-collator",
  "cumulus-consensus",

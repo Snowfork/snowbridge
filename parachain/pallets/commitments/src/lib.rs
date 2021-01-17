@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::prelude::*;
+use sp_std::{if_std, prelude::*};
 use frame_support::{
 	decl_module, decl_storage, decl_event, decl_error,
 	weights::Weight,
@@ -112,7 +112,9 @@ impl<T: Config> Module<T> {
 		let digest_item = AuxiliaryDigestItem::CommitmentHash(commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		sp_io::offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
+		if_std! {
+			sp_io::offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
+		};
 
 		Self::deposit_event(Event::Commitment(commitment_hash));
 

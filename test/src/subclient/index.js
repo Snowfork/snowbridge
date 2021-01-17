@@ -15,27 +15,47 @@ class SubClient {
         this.api = await ApiPromise.create({
             provider,
             types: {
-                Address: 'AccountId',
-                LookupSource: 'AccountId',
-                AppId: '[u8; 20]',
-                Message: {
-                    payload: 'Vec<u8>',
-                    verification: 'VerificationInput'
+                "Address": "MultiAddress",
+                "LookupSource": "MultiAddress",
+                "AppId": "[u8; 20]",
+                "Message": {
+                  "payload": "Vec<u8>",
+                  "verification": "VerificationInput"
                 },
-                VerificationInput: {
-                    _enum: {
-                        Basic: 'VerificationBasic',
-                        None: null
-                    }
+                "VerificationInput": {
+                  "_enum": {
+                    "Basic": "VerificationBasic",
+                    "None": null
+                  }
                 },
-                VerificationBasic: {
-                    blockNumber: 'u64',
-                    eventIndex: 'u32'
+                "VerificationBasic": {
+                  "blockNumber": "u64",
+                  "eventIndex": "u32"
                 },
-                TokenId: 'H160',
-                BridgedAssetId: 'H160',
-                AssetAccountData: {
-                    free: 'U256'
+                "EthereumHeader": {
+                  "parentHash": "H256",
+                  "timestamp": "u64",
+                  "number": "u64",
+                  "author": "H160",
+                  "transactionsRoot": "H256",
+                  "ommersHash": "H256",
+                  "extraData": "Vec<u8>",
+                  "stateRoot": "H256",
+                  "receiptsRoot": "H256",
+                  "logBloom": "Bloom",
+                  "gasUsed": "U256",
+                  "gasLimit": "U256",
+                  "difficulty": "U256",
+                  "seal": "Vec<Vec<u8>>"
+                },
+                "Bloom": {
+                  "_": "[u8; 256]"
+                },
+                "AssetId": {
+                  "_enum": {
+                    "ETH": null,
+                    "Token": "H160"
+                  }
                 }
             }
         })
@@ -46,11 +66,8 @@ class SubClient {
     }
 
     async queryAccountBalance(accountId, assetId) {
-        let accountData = await this.api.query.asset.account(assetId, accountId);
-        if (accountData && accountData.free) {
-            return BigNumber(accountData.free.toBigInt())
-        }
-        return null
+        let balance = await this.api.query.assets.balances(assetId, accountId);
+        return BigNumber(balance.toBigInt())
     }
 
     async burnETH(account, recipient, amount) {

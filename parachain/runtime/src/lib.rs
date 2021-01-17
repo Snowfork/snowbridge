@@ -357,7 +357,7 @@ impl verifier_lightclient::Config for Runtime {
 }
 
 parameter_types! {
-	pub const CommitInterval: BlockNumber = 20;
+	pub const CommitInterval: BlockNumber = 5;
 }
 
 impl commitments::Config for Runtime {
@@ -407,7 +407,7 @@ construct_runtime!(
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Commitments: commitments::{Module, Call, Storage, Event},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
-		Assets: assets::{Module, Call, Storage, Event<T>},
+		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
 

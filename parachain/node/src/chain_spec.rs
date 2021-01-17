@@ -3,7 +3,7 @@ use artemis_runtime::{
 	AccountId, EthereumHeader,
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
-	ETHConfig, ERC20Config,
+	ETHConfig, ERC20Config, AssetsConfig,
 	ParachainInfoConfig,
 	WASM_BINARY, Signature,
 };
@@ -14,6 +14,8 @@ use sp_runtime::traits::{Verify, IdentifyAccount};
 use serde::{Deserialize, Serialize};
 
 use hex_literal::hex;
+
+use artemis_core::AssetId;
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
@@ -69,14 +71,12 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Dave"),
 					get_account_id_from_seed::<sr25519::Public>("Eve"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Relay"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Relay//stash"),
 				],
 				para_id
 			)
@@ -108,6 +108,9 @@ fn testnet_genesis(
 		pallet_balances: Some(BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
+		}),
+		assets: Some(AssetsConfig {
+			balances: vec![(AssetId::ETH, get_account_id_from_seed::<sr25519::Public>("Ferdie"), 100000000000.into())]
 		}),
 		verifier_lightclient: Some(VerifierLightclientConfig {
 			initial_header: EthereumHeader {
