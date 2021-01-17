@@ -71,6 +71,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Dave"),
 					get_account_id_from_seed::<sr25519::Public>("Eve"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+                    get_account_id_from_seed::<sr25519::Public>("Relay"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
@@ -110,7 +111,7 @@ fn testnet_genesis(
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		}),
 		assets: Some(AssetsConfig {
-			balances: vec![(AssetId::ETH, get_account_id_from_seed::<sr25519::Public>("Ferdie"), 100000000000.into())]
+			balances: vec![(AssetId::ETH, get_account_id_from_seed::<sr25519::Public>("Ferdie"), 10000000.into())]
 		}),
 		verifier_lightclient: Some(VerifierLightclientConfig {
 			initial_header: EthereumHeader {
