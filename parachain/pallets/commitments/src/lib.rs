@@ -112,9 +112,7 @@ impl<T: Config> Module<T> {
 		let digest_item = AuxiliaryDigestItem::CommitmentHash(commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		if_std! {
-			sp_io::offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
-		};
+		sp_io::offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
 
 		Self::deposit_event(Event::Commitment(commitment_hash));
 
