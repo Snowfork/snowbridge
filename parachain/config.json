@@ -19,10 +19,9 @@
 		{
 			"bin": "target/release/artemis",
 			"id": "200",
-			"wsPort": 9988,
-			"port": 31200,
-			"balance": "1000000000000000000000",
-			"flags": ["-lbasic_authorship=trace,txpool=trace", "--rpc-cors=all", "--enable-offchain-indexing", "--discover-local", "--", "--execution=wasm"]
+			"wsPort": 9966,
+			"port": 30666,
+			"flags": ["--rpc-cors=all", "--offchain-worker=Always", "--enable-offchain-indexing=true", "--discover-local", "--", "--execution=wasm"]
 		}
 	],
 	"simpleParachains": [],

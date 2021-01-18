@@ -86,6 +86,12 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		case <-ctx.Done():
 			return wr.onDone(ctx)
 		case msg := <-wr.messages:
+
+			if msg.Payload == nil {
+				wr.log.Error("Invalid message. Not sending to Substrate")
+				continue
+			}
+
 			err := wr.WriteMessage(ctx, &msg)
 			if err != nil {
 				wr.log.WithFields(logrus.Fields{
@@ -94,6 +100,12 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 				}).Error("Failure submitting message to substrate")
 			}
 		case header := <-wr.headers:
+
+			if header.HeaderData == nil && header.ProofData == nil {
+				wr.log.Error("Invalid header. Not sending to Substrate")
+				continue
+			}
+
 			err := wr.WriteHeader(ctx, &header)
 			if err != nil {
 				wr.log.WithFields(logrus.Fields{
@@ -110,7 +122,7 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 
 	ext := types.NewExtrinsic(c)
 
-	era := types.ExtrinsicEra{IsMortalEra: false}
+	era := types.ExtrinsicEra{IsImmortalEra: true}
 
 	genesisHash, err := wr.conn.api.RPC.Chain.GetBlockHash(0)
 	if err != nil {
