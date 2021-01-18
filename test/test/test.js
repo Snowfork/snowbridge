@@ -34,8 +34,6 @@ describe('Bridge', function () {
     this.erc20AssetId =  subClient.api.createType('AssetId',
       { Token: "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23" }
     );
-    console.log(this.erc20AssetId.asToken)
-
 
   });
 

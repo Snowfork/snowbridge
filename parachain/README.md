@@ -162,6 +162,10 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
     "difficulty": "U256",
     "seal": "Vec<Vec<u8>>"
   },
+  "EthashProofData": {
+    "dagNodes": "[H512; 2]",
+    "proof": "Vec<H128>"
+  },
   "Bloom": {
     "_": "[u8; 256]"
   },
