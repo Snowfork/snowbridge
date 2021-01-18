@@ -48,6 +48,10 @@ class SubClient {
                   "difficulty": "U256",
                   "seal": "Vec<Vec<u8>>"
                 },
+                "EthashProofData": {
+                  "dagNodes": "[H512; 2]",
+                  "proof": "Vec<H128>"
+                },
                 "Bloom": {
                   "_": "[u8; 256]"
                 },
@@ -82,4 +86,3 @@ class SubClient {
 }
 
 module.exports.SubClient = SubClient;
-
