@@ -411,6 +411,12 @@ github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892 h1:gxkgKQvLyZ
 github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892/go.mod h1:Yy1jPDuUtVPG1b3XnRGiEHWPs09Yd5UphOTqPhN9XPU=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210117082755-9d5143604692 h1:wyR4ScXCOrFFI/u2HMv3/hSFDqOB0aQiEsIhbNrpH6M=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210117082755-9d5143604692/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210118071900-bd2ecbd316be h1:RviUeP+ydV0ALvik29Cr6mLvpeYqJCTVWOkagd9eWEk=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210118071900-bd2ecbd316be/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210118074520-293bd59dc531 h1:uRmj1w0llPKQICNwMdUqiFZ/+3JdnfemXVEkIxqq3Wg=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210118074520-293bd59dc531/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210118082032-2f0fe0c419f3 h1:URMO4YnfleniEIFhMDI1ITo9grooskEPL2RMrV09HYk=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210118082032-2f0fe0c419f3/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210118141341-5dbe64a82b7a h1:Z0N1IzzaiL78QvNL86vQNYUgn3boPIvXGCtsNeRzV5Y=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210118141341-5dbe64a82b7a/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210118150956-f56aad0b8041 h1:zp94NaH3/IRk/ehPM8EscvQ8yKx1Dz0omqDoyGimYRw=

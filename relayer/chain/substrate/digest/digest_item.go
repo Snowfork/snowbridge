@@ -1,7 +1,6 @@
 package digest
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
@@ -13,7 +12,7 @@ type AuxiliaryDigestItem struct {
 	AsCommitmentHash types.H256
 }
 
-func (a AuxiliaryDigestItem) Decode(decoder scale.Decoder) error {
+func (a *AuxiliaryDigestItem) Decode(decoder scale.Decoder) error {
 	tag, err := decoder.ReadOneByte()
 	if err != nil {
 		return err
@@ -34,26 +33,14 @@ func (a AuxiliaryDigestItem) Decode(decoder scale.Decoder) error {
 	return nil
 }
 
-func DecodeFromBytes(data []byte) (AuxiliaryDigestItem, error) {
-	var digestItem AuxiliaryDigestItem
-
-	decoder := scale.NewDecoder(bytes.NewReader(data))
-	err := decoder.Decode(&digestItem)
-	if err != nil {
-		return AuxiliaryDigestItem{}, nil
-	}
-
-	return digestItem, nil
-}
-
 func GetAuxiliaryDigestItem(digest types.Digest) (*AuxiliaryDigestItem, error) {
 	for _, digestItem := range digest {
 		if digestItem.IsOther {
-			auxDigestItem, err := DecodeFromBytes(digestItem.AsOther)
+			var auxDigestItem AuxiliaryDigestItem
+			err := types.DecodeFromBytes(digestItem.AsOther, &auxDigestItem)
 			if err != nil {
 				return nil, err
 			}
-
 			return &auxDigestItem, nil
 		}
 	}
