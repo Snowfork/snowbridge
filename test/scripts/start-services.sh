@@ -63,7 +63,7 @@ start_parachain()
 		\"wsPort\": 11144,
 		\"port\": 31200,
 		\"balance\": \"1000000000000000000000\",
-		\"flags\": [\"--discover-local\", \"--\", \"--execution=wasm\"],
+		\"flags\": [\"-lbasic_authorship=trace,txpool=trace\", \"--rpc-cors=all\", \"--offchain-worker=Always\", \"--enable-offchain-indexing=true\", \"--discover-local\", \"--\", \"--execution=wasm\"],
 		\"chain\": \"$configdir/spec.json\"
 	}"
     node ../test/scripts/helpers/overrideParachainSpec.js $configdir/polkadotConfig.json \
