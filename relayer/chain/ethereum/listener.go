@@ -93,7 +93,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 	headerSyncer := syncer.NewSyncer(35, syncer.NewHeaderLoader(li.conn.client), headers, li.log)
 
 	li.log.Info("Syncing headers starting...")
-	err := headerSyncer.StartSync(headerCtx, headerEg, initBlockHeight)
+	err := headerSyncer.StartSync(headerCtx, headerEg, initBlockHeight-1)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to start header sync")
 		return err

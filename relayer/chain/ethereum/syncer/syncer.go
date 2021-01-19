@@ -45,22 +45,28 @@ func NewSyncer(descendantsUntilFinal uint64, loader HeaderLoader, headers chan<-
 }
 
 func (s *Syncer) StartSync(ctx context.Context, eg *errgroup.Group, initBlockHeight uint64) error {
+	lbi := &latestBlockInfo{
+		fetchFinalizedDone: false,
+		height:             0,
+	}
+
+	eg.Go(func() error {
+		return s.pollNewHeaders(ctx, lbi)
+	})
+
+	lbi.Lock()
+	defer lbi.Unlock()
 	latestHeader, err := s.loader.HeaderByNumber(ctx, nil)
 	if err != nil {
 		s.log.WithError(err).Error("Failed to retrieve latest header")
 		return err
 	}
-
-	lbi := &latestBlockInfo{
-		fetchFinalizedDone: false,
-		height:             latestHeader.Number.Uint64(),
+	if latestHeader.Number.Uint64() > lbi.height {
+		lbi.height = latestHeader.Number.Uint64()
 	}
 
 	eg.Go(func() error {
 		return s.fetchFinalizedHeaders(ctx, initBlockHeight, lbi)
-	})
-	eg.Go(func() error {
-		return s.pollNewHeaders(ctx, lbi)
 	})
 
 	return nil
