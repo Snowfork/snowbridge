@@ -66,11 +66,10 @@ start_parachain()
         \"port\": 31200,
         \"balance\": \"1000000000000000000000\",
         \"flags\": [
-            \"-lbasic_authorship=trace,import_header=trace,runtime=debug,txpool=trace\",
+            \"-lruntime=debug,import_header=trace\",
             \"--rpc-cors=all\",
             \"--offchain-worker=Always\",
             \"--enable-offchain-indexing=true\",
-            \"--discover-local\",
             \"--\",
             \"--execution=wasm\"
         ],
@@ -84,7 +83,8 @@ start_parachain()
     popd
 
     scripts/wait-for-it.sh -t 20 localhost:11144
-    sleep 5
+    # waiting for parachain to sync with relay chain and produce initial blocks
+    sleep 20
 
 }
 

@@ -21,7 +21,7 @@
 			"id": "200",
 			"wsPort": 9966,
 			"port": 30666,
-			"flags": ["--rpc-cors=all", "--offchain-worker=Always", "--enable-offchain-indexing=true", "--discover-local", "--", "--execution=wasm"]
+			"flags": ["-lruntime=debug,commitments=debug", "--rpc-cors=all", "--offchain-worker=Always", "--enable-offchain-indexing=true", "--", "--execution=wasm"]
 		}
 	],
 	"simpleParachains": [],

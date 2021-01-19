@@ -254,7 +254,7 @@ dependencies = [
  "ethash",
  "ethbloom",
  "ethereum-types",
- "getrandom 0.2.1",
+ "getrandom 0.2.2",
  "hex-literal",
  "libsecp256k1",
  "parity-bytes",
@@ -350,7 +350,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
- "getrandom 0.2.1",
+ "getrandom 0.2.2",
  "hex-literal",
  "pallet-balances",
  "pallet-bridge",
@@ -1301,7 +1301,7 @@ dependencies = [
 [[package]]
 name = "cumulus-collator"
 version = "0.1.0"
-source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#fe8d6f805be7a2cac4213c4921d5234ac89aee75"
+source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#5f065b1f1d3b6a37fadf7722dd37507d319cdfd3"
 dependencies = [
  "cumulus-network",
  "cumulus-primitives",
@@ -1331,7 +1331,7 @@ dependencies = [
 [[package]]
 name = "cumulus-consensus"
 version = "0.1.0"
-source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#fe8d6f805be7a2cac4213c4921d5234ac89aee75"
+source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#5f065b1f1d3b6a37fadf7722dd37507d319cdfd3"
 dependencies = [
  "futures 0.3.12",
  "parity-scale-codec",
@@ -1353,7 +1353,7 @@ dependencies = [
 [[package]]
 name = "cumulus-message-broker"
 version = "0.1.0"
-source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#fe8d6f805be7a2cac4213c4921d5234ac89aee75"
+source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#5f065b1f1d3b6a37fadf7722dd37507d319cdfd3"
 dependencies = [
  "cumulus-parachain-upgrade",
  "cumulus-primitives",
@@ -1367,7 +1367,7 @@ dependencies = [
 [[package]]
 name = "cumulus-network"
 version = "0.1.0"
-source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#fe8d6f805be7a2cac4213c4921d5234ac89aee75"
+source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#5f065b1f1d3b6a37fadf7722dd37507d319cdfd3"
 dependencies = [
  "cumulus-primitives",
  "derive_more",
@@ -1394,7 +1394,7 @@ dependencies = [
 [[package]]
 name = "cumulus-parachain-upgrade"
 version = "0.1.0"
-source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#fe8d6f805be7a2cac4213c4921d5234ac89aee75"
+source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#5f065b1f1d3b6a37fadf7722dd37507d319cdfd3"
 dependencies = [
  "cumulus-primitives",
  "cumulus-runtime",
@@ -1418,7 +1418,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives"
 version = "0.1.0"
-source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#fe8d6f805be7a2cac4213c4921d5234ac89aee75"
+source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#5f065b1f1d3b6a37fadf7722dd37507d319cdfd3"
 dependencies = [
  "impl-trait-for-tuples 0.1.3",
  "parity-scale-codec",
@@ -1436,7 +1436,7 @@ dependencies = [
 [[package]]
 name = "cumulus-runtime"
 version = "0.1.0"
-source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#fe8d6f805be7a2cac4213c4921d5234ac89aee75"
+source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#5f065b1f1d3b6a37fadf7722dd37507d319cdfd3"
 dependencies = [
  "cumulus-primitives",
  "frame-executive",
@@ -1457,7 +1457,7 @@ dependencies = [
 [[package]]
 name = "cumulus-service"
 version = "0.1.0"
-source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#fe8d6f805be7a2cac4213c4921d5234ac89aee75"
+source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#5f065b1f1d3b6a37fadf7722dd37507d319cdfd3"
 dependencies = [
  "cumulus-collator",
  "cumulus-consensus",
@@ -2309,9 +2309,9 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4060f4657be78b8e766215b02b18a2e862d83745545de804638e2b545e81aee6"
+checksum = "c9495705279e7140bf035dde1f6e750c162df8b625267cd52cc44e0b156732c8"
 dependencies = [
  "cfg-if 1.0.0",
  "js-sys",
@@ -4788,7 +4788,7 @@ dependencies = [
 [[package]]
 name = "parachain-info"
 version = "0.1.0"
-source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#fe8d6f805be7a2cac4213c4921d5234ac89aee75"
+source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#5f065b1f1d3b6a37fadf7722dd37507d319cdfd3"
 dependencies = [
  "cumulus-primitives",
  "frame-support",
@@ -6319,7 +6319,7 @@ version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c026d7df8b298d90ccbbc5190bd04d85e159eaf5576caeacf8741da93ccbd2e5"
 dependencies = [
- "getrandom 0.2.1",
+ "getrandom 0.2.2",
 ]
 
 [[package]]
@@ -10387,7 +10387,7 @@ dependencies = [
 [[package]]
 name = "xcm-handler"
 version = "0.1.0"
-source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#fe8d6f805be7a2cac4213c4921d5234ac89aee75"
+source = "git+https://github.com/snowfork/cumulus.git?branch=rococo-v1#5f065b1f1d3b6a37fadf7722dd37507d319cdfd3"
 dependencies = [
  "cumulus-primitives",
  "frame-support",

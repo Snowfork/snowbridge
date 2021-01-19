@@ -13,7 +13,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionSource},
 };
 use sp_runtime::traits::{
-	BlakeTwo256, Convert, Block as BlockT, AccountIdLookup, Verify, IdentifyAccount,
+	BlakeTwo256, Keccak256, Convert, Block as BlockT, AccountIdLookup, Verify, IdentifyAccount,
 };
 use sp_api::impl_runtime_apis;
 
@@ -364,9 +364,9 @@ parameter_types! {
 
 impl commitments::Config for Runtime {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
-
 	type Event = Event;
-
+	type Hash = sp_core::H256;
+	type Hashing = Keccak256;
 	type CommitInterval = CommitInterval;
 }
 

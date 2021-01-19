@@ -4,19 +4,17 @@ use sp_std::prelude::*;
 use frame_support::{
 	decl_module, decl_storage, decl_event, decl_error,
 	weights::Weight,
-	traits::Get
+	traits::Get,
 };
 
-use sp_io::hashing::keccak_256;
-use sp_core::{H160, H256, RuntimeDebug};
+use sp_core::{H160, RuntimeDebug};
 use sp_runtime::{
-	traits::Zero,
+	traits::{Member, Hash, Zero, MaybeSerializeDeserialize},
 	DigestItem
 };
 
 use codec::{Encode, Decode};
 use artemis_core::Commitments;
-
 
 use ethabi::{self, Token};
 
@@ -28,11 +26,11 @@ mod tests;
 
 /// Custom DigestItem for header digest
 #[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
-enum AuxiliaryDigestItem {
-	CommitmentHash(H256)
+enum AuxiliaryDigestItem<H: Encode> {
+	CommitmentHash(H)
 }
 
-impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
+impl<T, H: Encode> Into<DigestItem<T>> for AuxiliaryDigestItem<H> {
     fn into(self) -> DigestItem<T> {
         DigestItem::Other(self.encode())
     }
@@ -48,6 +46,12 @@ struct Message {
 pub trait Config: frame_system::Config {
 
 	const INDEXING_PREFIX: &'static [u8];
+
+	type Hashing: Hash<Output = <Self as Config>::Hash>;
+
+	type Hash: Member + MaybeSerializeDeserialize + sp_std::fmt::Debug
+		+ sp_std::hash::Hash + AsRef<[u8]> + AsMut<[u8]> + Copy + Default + codec::Codec
+		+ codec::EncodeLike;
 
 	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
@@ -66,7 +70,7 @@ decl_storage! {
 
 decl_event! {
 	pub enum Event {
-		Commitment(H256),
+
 	}
 }
 
@@ -86,6 +90,7 @@ decl_module! {
 		// in the block header. The committed messages are persisted into storage.
 
 		fn on_initialize(now: T::BlockNumber) -> Weight {
+			sp_io::offchain_index::set(b"foo", b"bar");
 			if (now % T::CommitInterval::get()).is_zero() {
 				Self::commit()
 			} else {
@@ -97,7 +102,7 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 
-	fn offchain_key(hash: H256) -> Vec<u8> {
+	fn offchain_key(hash: <T as Config>::Hash) -> Vec<u8> {
 		(T::INDEXING_PREFIX, hash).encode()
 	}
 
@@ -107,14 +112,12 @@ impl<T: Config> Module<T> {
 		let messages: Vec<Message> = <Self as Store>::MessageQueue::take();
 
 		let commitment = Self::encode_commitment(&messages);
-		let commitment_hash: H256 = keccak_256(&commitment).into();
+		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
 		let digest_item = AuxiliaryDigestItem::CommitmentHash(commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
 		sp_io::offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
-
-		Self::deposit_event(Event::Commitment(commitment_hash));
 
 		0
 	}
