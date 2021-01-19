@@ -4,7 +4,7 @@ use crate::{Module, Config};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
+	traits::{BlakeTwo256, Keccak256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
 use sp_std::convert::From;
 use frame_system as system;
@@ -76,6 +76,8 @@ parameter_types! {
 impl artemis_commitments::Config for MockRuntime {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = MockEvent;
+	type Hash = H256;
+	type Hashing = Keccak256;
 	type CommitInterval = CommitInterval;
 }
 

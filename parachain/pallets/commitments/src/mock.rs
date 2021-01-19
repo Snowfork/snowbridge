@@ -54,12 +54,9 @@ parameter_types! {
 
 impl Config for Test {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
-
+	type Event = ();
 	type Hash = H256;
 	type Hashing = Keccak256;
-
-	type Event = ();
-
 	type CommitInterval = CommitInterval;
 }
 
