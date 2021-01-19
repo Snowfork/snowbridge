@@ -129,8 +129,8 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
 
 ```json
 {
-  "Address": "AccountId",
-  "LookupSource": "AccountId",
+  "Address": "MultiAddress",
+  "LookupSource": "MultiAddress",
   "AppId": "[u8; 20]",
   "Message": {
     "payload": "Vec<u8>",
@@ -161,6 +161,10 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
     "gasLimit": "U256",
     "difficulty": "U256",
     "seal": "Vec<Vec<u8>>"
+  },
+  "EthashProofData": {
+    "dagNodes": "[H512; 2]",
+    "proof": "Vec<H128>"
   },
   "Bloom": {
     "_": "[u8; 256]"
