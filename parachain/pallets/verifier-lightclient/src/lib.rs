@@ -156,6 +156,8 @@ decl_module! {
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
+			debug::RuntimeLogger::init();
+
 			debug::trace!(
 				target: "import_header",
 				"Received header {}. Starting validation",

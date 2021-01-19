@@ -72,6 +72,7 @@ Or, manually create a config file using the template below:
 ```toml
 [ethereum]
 endpoint = "ws://localhost:9545/"
+descendants-until-final = 35
 
 [ethereum.bridge]
 address = "0x17f7C1e314180D8b8588CA50cF09A0e0847c77F6"

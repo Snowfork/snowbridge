@@ -24,6 +24,7 @@ const dumpConfig = async (tmpDir, contracts) => {
     const config = {
         ethereum: {
             endpoint: "ws://localhost:8545/",
+            "descendants-until-final": 0,
             bridge: {
                 address: contracts.bridge.address,
                 abi: bridgeAbiFile,
