@@ -55,7 +55,7 @@ fn burn_should_emit_bridge_event() {
 			20.into()));
 
 		assert_eq!(
-			MockEvent::test_events(RawEvent::Transfer(token_id, bob, recipient, 20.into())),
+			MockEvent::test_events(RawEvent::Burned(token_id, bob, 20.into())),
 			last_event()
 		);
 	});

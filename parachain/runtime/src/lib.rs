@@ -37,7 +37,8 @@ pub use frame_support::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
 };
-use pallet_transaction_payment::CurrencyAdapter;
+use pallet_transaction_payment::{FeeDetails, CurrencyAdapter};
+use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
 pub use artemis_core::AssetId;
 pub use verifier_lightclient::EthereumHeader;
@@ -105,7 +106,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("artemis-node"),
 	impl_name: create_runtime_str!("artemis-node"),
 	authoring_version: 1,
-	spec_version: 1,
+	spec_version: 100,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -238,6 +239,7 @@ impl pallet_transaction_payment::Config for Runtime {
 impl cumulus_parachain_upgrade::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
+	type SelfParaId = parachain_info::Module<Runtime>;
 }
 
 impl cumulus_message_broker::Config for Runtime {
@@ -357,7 +359,7 @@ impl verifier_lightclient::Config for Runtime {
 }
 
 parameter_types! {
-	pub const CommitInterval: BlockNumber = 20;
+	pub const CommitInterval: BlockNumber = 5;
 }
 
 impl commitments::Config for Runtime {
@@ -407,7 +409,7 @@ construct_runtime!(
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Commitments: commitments::{Module, Call, Storage, Event},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
-		Assets: assets::{Module, Call, Storage, Event<T>},
+		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
 
@@ -529,11 +531,11 @@ impl_runtime_apis! {
 	}
 
 	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
-		fn query_info(
-			uxt: <Block as BlockT>::Extrinsic,
-			len: u32,
-		) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
+		fn query_info(uxt: <Block as BlockT>::Extrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
 			TransactionPayment::query_info(uxt, len)
+		}
+		fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> FeeDetails<Balance> {
+			TransactionPayment::query_fee_details(uxt, len)
 		}
 	}
 

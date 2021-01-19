@@ -18,7 +18,7 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococ
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
-cumulus-primitives = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1", default-features = false }
+cumulus-primitives = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1", default-features = false }
 
 artemis-core = { path = "../../primitives/core", default-features = false }
 
