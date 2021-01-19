@@ -301,7 +301,7 @@ impl<T: Config> Module<T> {
 
 		// Maybe track new highest difficulty chain
 		let (_, highest_difficulty) = BestBlock::get();
-		if total_difficulty > highest_difficulty {
+		if total_difficulty > highest_difficulty || (!T::VerifyPoW::get() && total_difficulty == U256::zero()) {
 			let best_block_id = EthereumHeaderId {
 				number: header.number,
 				hash,
