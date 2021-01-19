@@ -77,7 +77,7 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 
 	for {
 		lbi.Lock()
-		latestFinalizedHeight := lbi.height - s.descendantsUntilFinal
+		latestFinalizedHeight := saturatingSub(lbi.height, s.descendantsUntilFinal)
 		if syncedUpUntil >= latestFinalizedHeight {
 			// Signals to pollNewHeaders that new headers can be forwarded now
 			lbi.fetchFinalizedDone = true
@@ -139,7 +139,7 @@ func (s *Syncer) pollNewHeaders(ctx context.Context, lbi *latestBlockInfo) error
 			}).Debug("Witnessed new header")
 
 			if lbi.fetchFinalizedDone {
-				err = s.forwardAncestry(ctx, header.Hash(), lbi.height-s.descendantsUntilFinal)
+				err = s.forwardAncestry(ctx, header.Hash(), saturatingSub(lbi.height, s.descendantsUntilFinal))
 				if err != nil {
 					s.log.WithFields(logrus.Fields{
 						"blockHash":   header.Hash().Hex(),
@@ -181,4 +181,12 @@ func (s *Syncer) forwardAncestry(ctx context.Context, hash gethCommon.Hash, olde
 	s.headers <- item.Header
 	item.Forwarded = true
 	return nil
+}
+
+// Subtraction but returns 0 when r > l
+func saturatingSub(l uint64, r uint64) uint64 {
+	if r > l {
+		return 0
+	}
+	return l - r
 }
