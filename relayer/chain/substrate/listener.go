@@ -5,7 +5,6 @@ package substrate
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -95,14 +94,12 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				continue
 			}
 
-			fmt.Println(finalizedHeader.Digest)
 			digestItem, err := digest.GetAuxiliaryDigestItem(finalizedHeader.Digest)
 			if err != nil {
 				return err
 			}
 
 			if digestItem != nil && digestItem.IsCommitmentHash {
-
 				li.log.WithFields(logrus.Fields{
 					"block":          finalizedHeader.Number,
 					"commitmentHash": digestItem.AsCommitmentHash.Hex(),
@@ -113,8 +110,6 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					return err
 				}
 
-				fmt.Println("storagekey ")
-
 				data, err := li.conn.api.RPC.Offchain.LocalStorageGet(rpcOffchain.Persistent, storageKey)
 				if err != nil {
 					li.log.WithError(err).Error("Failed to read commitment from offchain storage")
@@ -122,7 +117,10 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					continue
 				}
 
-				fmt.Println("COMMITMENT", data)
+				li.log.WithFields(logrus.Fields{
+					"block":               finalizedHeader.Number,
+					"commitmentSizeBytes": len(*data),
+				}).Debug("Retrieved commitment from offchain storage")
 			}
 
 			currentBlock++
