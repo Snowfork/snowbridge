@@ -35,7 +35,7 @@ func NewListener(conn *Connection, messages chan<- chain.Message, headers chan<-
 	}, nil
 }
 
-func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64) error {
+func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
 	hcs, err := NewHeaderCacheState(
 		eg,
 		initBlockHeight,
@@ -47,7 +47,7 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	}
 
 	eg.Go(func() error {
-		return li.pollEventsAndHeaders(cxt, initBlockHeight, hcs)
+		return li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
 	})
 
 	return nil
@@ -62,7 +62,12 @@ func (li *Listener) onDone(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight uint64, hcs *HeaderCacheState) error {
+func (li *Listener) pollEventsAndHeaders(
+	ctx context.Context,
+	initBlockHeight uint64,
+	descendantsUntilFinal uint64,
+	hcs *HeaderCacheState,
+) error {
 	events := make(chan gethTypes.Log)
 	var eventsSubscriptionErr <-chan error
 	headers := make(chan *gethTypes.Header, 5)
@@ -90,7 +95,7 @@ func (li *Listener) pollEventsAndHeaders(ctx context.Context, initBlockHeight ui
 		}
 	}
 
-	headerSyncer := syncer.NewSyncer(35, syncer.NewHeaderLoader(li.conn.client), headers, li.log)
+	headerSyncer := syncer.NewSyncer(descendantsUntilFinal, syncer.NewHeaderLoader(li.conn.client), headers, li.log)
 
 	li.log.Info("Syncing headers starting...")
 	err := headerSyncer.StartSync(headerCtx, headerEg, initBlockHeight-1)

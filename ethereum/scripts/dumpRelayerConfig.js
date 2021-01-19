@@ -20,6 +20,7 @@ const dump = (bridge, ethApp, erc20App) => {
     const config = {
         ethereum: {
             endpoint: "ws://localhost:9545/",
+            "descendants-until-final": 35,
             bridge: {
                 address: bridge.address,
                 abi: bridgeAbiFile,
