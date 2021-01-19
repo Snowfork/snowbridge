@@ -17,7 +17,7 @@ require (
 	github.com/shirou/gopsutil v3.20.12+incompatible // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892
-	github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210118082032-2f0fe0c419f3
+	github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210119190512-7a856f0fe2c4
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.4.0
