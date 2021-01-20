@@ -89,6 +89,7 @@ decl_module! {
 		// The hash of the commitment is stored as a digest item `CustomDigestItem::Commitment`
 		// in the block header. The committed messages are persisted into storage.
 		fn on_initialize(now: T::BlockNumber) -> Weight {
+			sp_io::offchain_index::set(b"foo", b"bar");
 			if (now % T::CommitInterval::get()).is_zero() {
 				Self::commit()
 			} else {

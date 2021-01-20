@@ -66,6 +66,7 @@ start_parachain()
         \"port\": 31200,
         \"balance\": \"1000000000000000000000\",
         \"flags\": [
+            \"--execution=native\",
             \"-lruntime=debug,import_header=trace\",
             \"--rpc-cors=all\",
             \"--offchain-worker=Always\",
