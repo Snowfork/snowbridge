@@ -1,11 +1,10 @@
 use codec::{Encode, Decode};
 use ethereum_types::{H64, H128, H256, H512};
-use sp_io::hashing::{keccak_256, sha2_256};
+use sp_io::hashing::{keccak_256, keccak_512, sha2_256};
 use sp_runtime::RuntimeDebug;
 use sp_std::cell::RefCell;
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
-use tiny_keccak::{Hasher, Keccak};
 
 pub use crate::ethashdata::{DAGS_MERKLE_ROOTS, DAGS_START_EPOCH};
 
@@ -237,15 +236,6 @@ impl EthashProver {
         let full_size = ethash::get_full_size(epoch as usize);
         return ethash::hashimoto_light(header_hash, nonce, full_size, cache.as_slice());
     }
-}
-
-// https://github.com/paritytech/substrate/commit/510e68b8d06a3d407eda0d4c1c330bd484140b65
-fn keccak_512(data: &[u8]) -> [u8; 64] {
-	let mut keccak = Keccak::v512();
-	keccak.update(data);
-	let mut output = [0u8; 64];
-	keccak.finalize(&mut output);
-	output
 }
 
 #[cfg(test)]

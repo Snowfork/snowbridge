@@ -15,7 +15,6 @@ parity-bytes = { version = "0.1.2", default-features = false }
 rlp = { version = "0.5", default-features = false }
 serde = { version = "1.0.101", optional = true }
 serde-big-array = { version = "0.2", optional = true }
-tiny-keccak = { version = "2.0.2" }
 getrandom = { version = "0.2.1", features = ["js"] }
 
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
