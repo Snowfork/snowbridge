@@ -126,9 +126,9 @@ func (li *Listener) pollEventsAndHeaders(
 }
 
 func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, events []gethTypes.Log) {
-	messagesByAddress := make(map[gethCommon.Address][]*Message, 0)
+	messages := make([]chain.Message, len(events))
 
-	for _, event := range events {
+	for i, event := range events {
 		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
 		if err != nil {
 			li.log.WithFields(logrus.Fields{
@@ -150,17 +150,13 @@ func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, ev
 			return
 		}
 
-		messagesByAddress[event.Address] = append(messagesByAddress[event.Address], msg)
-	}
-
-	nextChunk := MakeMessageChunker(messagesByAddress, MaxMessagesPerSend)
-	for {
-		messages, hasMore := nextChunk()
-		if len(messages) > 0 {
-			li.messages <- messages
-		}
-		if !hasMore {
-			break
+		messages[i] = *msg
+		if (i+1)%MaxMessagesPerSend == 0 || i == len(events)-1 {
+			start := i + 1 - MaxMessagesPerSend
+			if i == len(events)-1 {
+				start = i - (i % MaxMessagesPerSend)
+			}
+			li.messages <- messages[start : i+1]
 		}
 	}
 }

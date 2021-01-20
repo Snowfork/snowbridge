@@ -13,7 +13,7 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
-use artemis_core::{AppId, Message, MessageBatch, Verifier, VerificationInput};
+use artemis_core::{AppId, Message, Verifier, VerificationInput};
 use artemis_ethereum::{HeaderId as EthereumHeaderId, Log, Receipt, H256, U256};
 use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
 
@@ -488,21 +488,19 @@ impl<T: Config> Verifier<T::AccountId> for Module<T> {
 		}
 	}
 
-	fn verify_bulk(_: T::AccountId, messages_by_app: &[MessageBatch]) -> DispatchResult {
+	fn verify_bulk(_: T::AccountId, messages: &[(AppId, Message)]) -> DispatchResult {
 		// Maps from block hash to (payload, proof) tuples
 		let mut data_by_block: BTreeMap<H256, Vec<(&[u8], &[Vec<u8>])>> = BTreeMap::new();
 
 		// Extract payload and proof, and group by block
-		for messages in messages_by_app.iter() {
-			for message in messages.1.iter() {
-				if let VerificationInput::ReceiptProof { block_hash, tx_index, ref proof } = message.verification {
-					match data_by_block.get_mut(&block_hash) {
-						Some(p) => p.push((&message.payload, &proof.1)),
-						None => { data_by_block.insert(block_hash, vec![(&message.payload, &proof.1)]); }
-					}
-				} else {
-					return Err(Error::<T>::UnsupportedVerificationScheme.into());
+		for (_, message) in messages.iter() {
+			if let VerificationInput::ReceiptProof { block_hash, tx_index, ref proof } = message.verification {
+				match data_by_block.get_mut(&block_hash) {
+					Some(p) => p.push((&message.payload, &proof.1)),
+					None => { data_by_block.insert(block_hash, vec![(&message.payload, &proof.1)]); }
 				}
+			} else {
+				return Err(Error::<T>::UnsupportedVerificationScheme.into());
 			}
 		}
 

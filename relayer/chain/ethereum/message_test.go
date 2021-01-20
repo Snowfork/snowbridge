@@ -3,15 +3,12 @@ package ethereum_test
 import (
 	"bytes"
 	"fmt"
-	"math/big"
 	"testing"
 
-	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
 )
@@ -105,8 +102,9 @@ func TestMessage_Proof(t *testing.T) {
 	assert.NotNil(t, msg)
 
 	// Retrieve the encapsulating receipt from the proof using the payload fields
-	assert.True(t, msg.VerificationInput.IsReceiptProof)
-	proof := msg.VerificationInput.AsReceiptProof
+	msgPayload := msg.Payload.(ethereum.Message)
+	assert.True(t, msgPayload.VerificationInput.IsReceiptProof)
+	proof := msgPayload.VerificationInput.AsReceiptProof
 	assert.Equal(t, block.Hash().Hex(), proof.BlockHash.Hex())
 	key, err := rlp.EncodeToBytes(uint(proof.TxIndex))
 	if err != nil {
@@ -116,44 +114,4 @@ func TestMessage_Proof(t *testing.T) {
 	provenReceipt, err := gethTrie.VerifyProof(block.ReceiptHash(), key, &proofNodes)
 	assert.Nil(t, err)
 	assert.Equal(t, provenReceipt, receipt5Encoded)
-}
-
-func TestMessage_Chunking(t *testing.T) {
-	address1 := gethCommon.BigToAddress(big.NewInt(1))
-	address2 := gethCommon.BigToAddress(big.NewInt(2))
-	address3 := gethCommon.BigToAddress(big.NewInt(3))
-	address4 := gethCommon.BigToAddress(big.NewInt(4))
-	m := ethereum.Message{}
-	messagesOriginal := map[gethCommon.Address][]*ethereum.Message{
-		address1: {&m, &m, &m},
-		address2: {&m},
-		address3: {&m, &m},
-		address4: {&m},
-	}
-
-	messages := make(map[gethCommon.Address][]*ethereum.Message)
-	addToMessages := func(chunk []chain.Message) {
-		for _, msg := range chunk {
-			messages[msg.AppID] = append(messages[msg.AppID], msg.Payload.([]*ethereum.Message)...)
-		}
-	}
-
-	nextChunk := ethereum.MakeMessageChunker(messagesOriginal, 2)
-	chunk, hasMore := nextChunk()
-	addToMessages(chunk)
-	assert.True(t, hasMore)
-
-	chunk, hasMore = nextChunk()
-	addToMessages(chunk)
-	assert.True(t, hasMore)
-
-	chunk, hasMore = nextChunk()
-	addToMessages(chunk)
-	assert.True(t, hasMore)
-
-	chunk, hasMore = nextChunk()
-	addToMessages(chunk)
-	assert.False(t, hasMore)
-
-	assert.Equal(t, messagesOriginal, messages)
 }

@@ -230,9 +230,14 @@ func getHeaderBackoffDelay(retryCount int) time.Duration {
 }
 
 func getAppIdsForLog(msgs []chain.Message) []string {
-	appIds := make([]string, len(msgs))
-	for i, msg := range msgs {
-		appIds[i] = hex.EncodeToString(msg.AppID[:])
+	appIDSet := make(map[string]bool, 0)
+	appIDs := make([]string, 0)
+	for _, msg := range msgs {
+		appID := hex.EncodeToString(msg.AppID[:])
+		if _, ok := appIDSet[appID]; !ok {
+			appIDs = append(appIDs, appID)
+			appIDSet[appID] = true
+		}
 	}
-	return appIds
+	return appIDs
 }

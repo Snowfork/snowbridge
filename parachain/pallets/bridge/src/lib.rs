@@ -24,7 +24,7 @@ use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 use sp_core::H160;
 
-use artemis_core::{AppId, Application, Message, MessageBatch, Verifier};
+use artemis_core::{AppId, Application, Message, Verifier};
 
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
@@ -53,7 +53,7 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
-		/// Target application not found. No messages were processed
+		/// Target application not found.
 		AppNotFound,
 	}
 }
@@ -78,27 +78,13 @@ decl_module! {
 
 		/// Submit multiple messages for dispatch to multiple target applications.
 		#[weight = 0]
-		pub fn submit_bulk(origin, messages_by_app: Vec<MessageBatch>) -> DispatchResult {
+		pub fn submit_bulk(origin, messages: Vec<(AppId, Message)>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			T::Verifier::verify_bulk(who, messages_by_app.as_slice())?;
+			T::Verifier::verify_bulk(who, messages.as_slice())?;
 
-			let handlers: Vec<fn(&[u8]) -> DispatchResult> = messages_by_app.iter()
-				.filter_map(|messages| Self::get_handler(messages.0.into()))
-				.collect();
-			if handlers.len() < messages_by_app.len() {
-				return Err(Error::<T>::AppNotFound.into());
-			}
-
-			let errors: Vec<DispatchError> = messages_by_app.iter()
-				.enumerate()
-				.map(|(i, messages)| {
-					let handler = handlers[i];
-					messages.1.iter()
-						.map(|msg| handler(&msg.payload))
-						.collect::<Vec<DispatchResult>>()
-				})
-				.flatten()
+			let errors: Vec<DispatchError> = messages.iter()
+				.map(|(app_id, msg)| Self::dispatch(app_id.into(), msg))
 				.filter_map(|r| r.err())
 				.collect();
 
@@ -109,17 +95,13 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 	fn dispatch(address: H160, message: &Message) -> DispatchResult {
-		let handler = Self::get_handler(address)
-			.ok_or(Error::<T>::AppNotFound)?;
-		handler(message.payload.as_ref())
+		if address == T::AppETH::address() {
+			T::AppETH::handle(message.payload.as_ref())
+		} else if address == T::AppERC20::address() {
+			T::AppERC20::handle(message.payload.as_ref())
+		} else {
+			Err(Error::<T>::AppNotFound.into())
+		}
 	}
 
-	fn get_handler(address: H160) -> Option<fn(&[u8]) -> DispatchResult> {
-		if address == T::AppETH::address() {
-			return Some(T::AppETH::handle);
-		} else if address == T::AppERC20::address() {
-			return Some(T::AppERC20::handle);
-		}
-		None
-	}
 }

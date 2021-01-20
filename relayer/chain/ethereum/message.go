@@ -117,7 +117,7 @@ func (v *VerificationInput) Decode(decoder scale.Decoder) error {
 	return nil
 }
 
-func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie, log *logrus.Entry) (*Message, error) {
+func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie, log *logrus.Entry) (*chain.Message, error) {
 	// RLP encode event log's Address, Topics, and Data
 	var buf bytes.Buffer
 	err := event.EncodeRLP(&buf)
@@ -155,44 +155,7 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie, log *logr
 		"eventIndex": message.VerificationInput.AsReceiptProof.TxIndex,
 	}).Debug("Generated message from Ethereum log")
 
-	return &message, nil
-}
+	msg := chain.Message{AppID: event.Address, Payload: message}
 
-func MakeMessageChunker(messagesByAddress map[common.Address][]*Message, chunkSize int) func() ([]chain.Message, bool) {
-	i, offset := 0, 0
-	addresses := make([]common.Address, 0, len(messagesByAddress))
-	for k := range messagesByAddress {
-		addresses = append(addresses, k)
-	}
-
-	return func() ([]chain.Message, bool) {
-		chunk := make([]chain.Message, 0)
-		count := 0
-
-		for i < len(addresses) {
-			if count == chunkSize {
-				return chunk, true
-			}
-
-			address := addresses[i]
-			messagesForAddress := messagesByAddress[address]
-			r := chunkSize - count
-			start := offset
-			end := offset + r
-			if end >= len(messagesForAddress) {
-				end = len(messagesForAddress)
-				i++
-				offset = 0
-			} else {
-				offset += r
-			}
-
-			part := messagesForAddress[start:end]
-			chunk = append(chunk, chain.Message{AppID: address, Payload: part})
-
-			count += len(part)
-		}
-
-		return chunk, false
-	}
+	return &msg, nil
 }
