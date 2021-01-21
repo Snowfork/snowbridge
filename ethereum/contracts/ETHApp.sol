@@ -4,10 +4,9 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Decoder.sol";
-import "./Application.sol";
 import "./SendChannel.sol";
 
-contract ETHApp is Application {
+contract ETHApp {
     using SafeMath for uint256;
     using Decoder for bytes;
 
@@ -20,7 +19,7 @@ contract ETHApp is Application {
     address public incentivizedSendChannelAddress;
 
     event Locked(address _sender, bytes32 _recipient, uint256 _amount);
-    event Unlock(bytes _sender, address _recipient, uint256 _amount);
+    event Unlock(address _recipient, uint256 _amount);
 
     struct ETHLockedPayload {
         address _sender;
@@ -37,7 +36,7 @@ contract ETHApp is Application {
         incentivizedSendChannelAddress = _incentivizedSendChannelAddress;
     }
 
-    function register(address _bridge) public override {
+    function register(address _bridge) public {
         require(bridge == address(0), "Bridge has already been registered");
         bridge = _bridge;
     }
@@ -61,23 +60,8 @@ contract ETHApp is Application {
         sendChannel.send(TARGET_APPLICATION_ID, abi.encode(payload));
     }
 
-    function handle(bytes memory _data) public override {
+    function unlockETH(address payable _recipient, uint256 _amount) public {
         require(msg.sender == bridge);
-        require(_data.length >= PAYLOAD_LENGTH, "Invalid payload");
-
-        // Decode sender bytes
-        bytes memory sender = _data.slice(0, 32);
-        // Decode recipient address
-        address payable recipient = _data.sliceAddress(32);
-        // Decode amount int256
-        bytes memory amountBytes = _data.slice(32 + 20, 32);
-        uint256 amount = amountBytes.decodeUint256();
-
-        unlockETH(recipient, amount);
-        emit Unlock(sender, recipient, amount);
-    }
-
-    function unlockETH(address payable _recipient, uint256 _amount) internal {
         require(_amount > 0, "Must unlock a positive amount");
         require(
             totalETH >= _amount,
@@ -86,5 +70,6 @@ contract ETHApp is Application {
 
         totalETH = totalETH.sub(_amount);
         _recipient.transfer(_amount);
+        emit Unlock(_recipient, _amount);
     }
 }
