@@ -24,7 +24,6 @@ use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 
 use artemis_core::{ChannelId, Application, Message, Verifier};
-use primitives::{InboundChannel, OutboundChannel};
 
 use channel::inbound::make_inbound_channel;
 use channel::outbound::make_outbound_channel;
@@ -77,7 +76,7 @@ decl_module! {
 		pub fn submit(origin, channel_id: ChannelId, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let channel = make_inbound_channel(channel_id);
+			let mut channel = make_inbound_channel::<T>(channel_id);
 			channel.submit(&message)
 		}
 	}
@@ -87,7 +86,7 @@ impl<T: Config> Module<T> {
 
 	fn submit_to_ethereum(channel_id: ChannelId, payload: &[u8]) -> DispatchResult {
 		// Construct channel object from storage
-		let channel = make_outbound_channel(channel_id);
+		let mut channel = make_outbound_channel::<T>(channel_id);
 		channel.submit(payload)
 	}
 
