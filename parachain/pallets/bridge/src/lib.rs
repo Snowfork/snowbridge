@@ -16,6 +16,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(unused_variables)]
 
+use std::collections::btree_map::IntoValues;
+
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult};
@@ -24,7 +26,21 @@ use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 use sp_core::H160;
 
+use sp_runtime::RuntimeDebug;
+
+use codec::{Encode, Decode}
+
 use artemis_core::{AppId, Application, Message, Verifier};
+
+use primitives::{self, ChannelId, MessageNonce};
+
+pub mod primitives;
+pub mod inbound_channel;
+
+pub trait ApplicationRegistry {
+
+	fn iter() -> Iterator<Application>;
+}
 
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
@@ -32,24 +48,53 @@ pub trait Config: system::Config {
 	/// The verifier module responsible for verifying submitted messages.
 	type Verifier: Verifier<<Self as system::Config>::AccountId>;
 
-	/// ETH Application
-	type AppETH: Application;
+	type ApplicationRegistry: ApplicationRegistry;
+}
+// Storage for inbound channels
+//
+// Adapted from parity-bridges-common (modules/message-lane/lib.rs)
+struct RuntimeInboundChannelStorage<T: Config> {
+	cached_data: RefCell<Option<InboundChannelData>>,
+}
 
-	/// ERC20 Application
-	type AppERC20: Application;
+impl<T: Config> RuntimeInboundChannelStorage {
+	fn data(&self) -> InboundChannelData {
+		match self.cached_data.clone().into_inner() {
+			Some(data) => data,
+			None => {
+				let data = InboundChannelData::<T>::get(&self.lane_id);
+				*self.cached_data.try_borrow_mut().expect(
+					"we're in the single-threaded environment;\
+						we have no recursive borrows; qed",
+				) = Some(data.clone());
+				data
+			}
+		}
+	}
+
+	fn set_data(&mut self, data: InboundLaneData<T::InboundRelayer>) {
+		*self.cached_data.try_borrow_mut().expect(
+			"we're in the single-threaded environment;\
+				we have no recursive borrows; qed",
+		) = Some(data.clone());
+		InboundChannelData::<T>::set(data)
+	}
 }
 
 decl_storage! {
 	trait Store for Module<T: Config> as BridgeModule {
-
+		InboundChannelData: primitives::InboundChannelData;
 	}
 }
 
-decl_event!(
+decl_event! {
     /// Events for the Bridge module.
 	pub enum Event {
+
+		/// Message accepted for delivery to Ethereum
+		MessageAccepted(ChannelId, MessageNonce)
 	}
-);
+}
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
@@ -65,28 +110,31 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		/// Submit `message` for dispatch to a target application identified by `app_id`.
 		#[weight = 0]
-		pub fn submit(origin, app_id: AppId, message: Message) -> DispatchResult {
+		pub fn submit(origin, channel_id: ChannelId, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			// TODO: move replay protection here
+			// Construct channel object from storage
+			let channel = Self::get_inbound_channel(channel_id);
 
-			T::Verifier::verify(who, app_id, &message)?;
-			Self::dispatch(app_id.into(), &message)
+			// Design choices:
+			//   Do verification and then submit to channel?
+			channel.submit(&message)
+
 		}
 	}
 }
 
 impl<T: Config> Module<T> {
-	fn dispatch(address: H160, message: &Message) -> DispatchResult {
-		if address == T::AppETH::address() {
-			T::AppETH::handle(message.payload.as_ref())
-		} else if address == T::AppERC20::address() {
-			T::AppERC20::handle(message.payload.as_ref())
-		} else {
-			Err(Error::<T>::AppNotFound.into())
-		}
+
+
+	fn submit_to_ethereum(channel_id: ChannelId, payload: &[u8]) {
+		// Construct channel object from storage
+		let channel = Self::get_outbound_channel(channel_id);
+
+		let nonce = channel.submit(payload);
+		Self::deposit_event(RawEvent::MessageAccepted(channel_id, nonce));
+
 	}
 
 }

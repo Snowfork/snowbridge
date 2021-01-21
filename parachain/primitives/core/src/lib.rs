@@ -41,7 +41,7 @@ pub trait Application {
 	fn address() -> H160;
 }
 
-pub trait Commitments {
+pub trait Bridge {
 
-	fn add(address: H160, payload: Vec<u8>);
+	fn submit_to_ethereum(channel_id: ChannelId, payload: Vec<u8>);
 }

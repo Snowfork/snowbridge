@@ -27,7 +27,7 @@ use sp_std::prelude::*;
 use sp_std::convert::TryInto;
 use sp_core::{H160, U256};
 
-use artemis_core::{Application, Commitments, SingleAsset};
+use artemis_core::{Application, Bridge, SingleAsset};
 use artemis_ethereum::Log;
 
 mod payload;
@@ -45,6 +45,8 @@ pub trait Config: system::Config {
 	type Asset: SingleAsset<<Self as system::Config>::AccountId>;
 
 	type Commitments: Commitments;
+
+	type Bridge: Bridge;
 }
 
 decl_storage! {
@@ -85,7 +87,7 @@ decl_module! {
 		// Users should burn their holdings to release funds on the Ethereum side
 		// TODO: Calculate weights
 		#[weight = 0]
-		pub fn burn(origin, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, channel_id: ChannelId, recipient: H160, amount: U256, ) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Asset::withdraw(&who, amount)?;
@@ -95,7 +97,8 @@ decl_module! {
 				recipient_addr: recipient,
 				amount: amount
 			};
-			T::Commitments::add(Self::address(), message.encode());
+
+			T::Bridge::submit_to_ethereum(channel_id, message.encode());
 
 			Self::deposit_event(RawEvent::Burned(who.clone(), amount));
 
