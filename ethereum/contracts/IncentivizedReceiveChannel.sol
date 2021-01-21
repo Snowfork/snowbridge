@@ -31,6 +31,8 @@ contract IncentivizedReceiveChannel {
         lastProcessedNonce = 0;
     }
 
+    event MessageDelivered(uint256 nonce, bool result);
+
     function newParachainCommitment(
         Commitment memory commitment,
         CommitmentContents memory commitmentContents,
@@ -108,13 +110,14 @@ contract IncentivizedReceiveChannel {
             address targetApplicationAddress = message.targetApplicationAddress;
             uint256 allowedGas = MAX_GAS_PER_MESSAGE;
 
+            bool result;
             assembly {
                 let x := mload(0x40) // Find empty storage location using "free memory pointer"
                 mstore(x, callInput) // Place signature at begining of empty storage
 
                 // Dispatch call to the receiver - it is expected to be fire and forget. If the call reverts, runs out of gas, error,
                 // etc, its the fault of the sender
-                let success := call(
+                result := call(
                     // Pop the top stack value
                     allowedGas, // Allowed gas
                     targetApplicationAddress, // To addr
@@ -126,9 +129,11 @@ contract IncentivizedReceiveChannel {
                 )
 
                 // TODO - get output value and clear storage pointer.
-                // bool re := mload(x) // Assign output value to c
+                // let result := mload(x) // Assign output value to c
                 // mstore(0x40, add(x, callInput.length)) // Set storage pointer to empty space
             }
+
+            emit MessageDelivered(message.nonce, result);
         }
     }
 }

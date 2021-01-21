@@ -57,6 +57,18 @@ contract("IncentivizedReceiveChannel", function (accounts) {
         { from: userOne }
       ).should.be.fulfilled;
 
+      console.log(tx.logs);
+      console.log(tx.logs);
+
+      // Confirm Message delivered correctly
+      const deliveryEvent = tx.logs.find(
+        e => e.event === "MessageDelivered"
+      );
+
+      expect(deliveryEvent).to.not.be.equal(undefined);
+      deliveryEvent.args.nonce.toNumber().should.be.equal(testMessage.nonce);
+      deliveryEvent.args.result.should.be.equal(true);
+
       // Confirm ETHApp processed event correctly
       const appEvent = tx.logs.find(
         e => e.event === "Unlock"
