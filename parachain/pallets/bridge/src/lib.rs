@@ -31,17 +31,18 @@ use sp_runtime::RuntimeDebug;
 use codec::{Encode, Decode}
 
 use artemis_core::{AppId, Application, Message, Verifier};
+use primitives::{self, ChannelId, InboundChannel, OutboundChannel};
 
-use primitives::{self, ChannelId, MessageNonce};
+use inbound_channel::make_inbound_channel;
+use outbound_channel::make_outbound_channel;
 
 pub mod primitives;
 pub mod inbound_channel;
+pub mod outbound_channel;
 
 pub trait ApplicationRegistry {
-
 	fn iter() -> Iterator<Application>;
 }
-
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
@@ -50,40 +51,11 @@ pub trait Config: system::Config {
 
 	type ApplicationRegistry: ApplicationRegistry;
 }
-// Storage for inbound channels
-//
-// Adapted from parity-bridges-common (modules/message-lane/lib.rs)
-struct RuntimeInboundChannelStorage<T: Config> {
-	cached_data: RefCell<Option<InboundChannelData>>,
-}
-
-impl<T: Config> RuntimeInboundChannelStorage {
-	fn data(&self) -> InboundChannelData {
-		match self.cached_data.clone().into_inner() {
-			Some(data) => data,
-			None => {
-				let data = InboundChannelData::<T>::get(&self.lane_id);
-				*self.cached_data.try_borrow_mut().expect(
-					"we're in the single-threaded environment;\
-						we have no recursive borrows; qed",
-				) = Some(data.clone());
-				data
-			}
-		}
-	}
-
-	fn set_data(&mut self, data: InboundLaneData<T::InboundRelayer>) {
-		*self.cached_data.try_borrow_mut().expect(
-			"we're in the single-threaded environment;\
-				we have no recursive borrows; qed",
-		) = Some(data.clone());
-		InboundChannelData::<T>::set(data)
-	}
-}
 
 decl_storage! {
 	trait Store for Module<T: Config> as BridgeModule {
 		InboundChannelData: primitives::InboundChannelData;
+		OutboundChannelData: primitives::OutboundChannelData;
 	}
 }
 
@@ -91,8 +63,6 @@ decl_event! {
     /// Events for the Bridge module.
 	pub enum Event {
 
-		/// Message accepted for delivery to Ethereum
-		MessageAccepted(ChannelId, Option<MessageNonce>)
 	}
 }
 
@@ -114,28 +84,19 @@ decl_module! {
 		pub fn submit(origin, channel_id: ChannelId, message: Message) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			// Construct channel object from storage
-			let channel = Self::get_inbound_channel(channel_id);
+			let channel = make_inbound_channel(channel_id);
 
-			// Design choices:
-			//   Do verification and then submit to channel?
 			channel.submit(&message)
-
 		}
 	}
 }
 
 impl<T: Config> Module<T> {
 
-
-	fn submit_to_ethereum(channel_id: ChannelId, payload: &[u8]) {
+	fn submit_to_ethereum(channel_id: ChannelId, payload: &[u8]) -> DispatchResult {
 		// Construct channel object from storage
-		let channel = Self::get_outbound_channel(channel_id);
-
-		// Would be nice for emit a MessageAccepted event with a nonce if its the incentivized channel
-		let maybe_nonce = channel.submit(payload);
-		Self::deposit_event(RawEvent::MessageAccepted(channel_id, nonce));
-
+		let channel = make_outbound_channel(channel_id);
+		channel.submit(payload)
 	}
 
 }
