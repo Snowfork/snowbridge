@@ -9,7 +9,7 @@ use crate::{
 use artemis_core::{AppId, Application, Message, Verifier};
 
 struct BasicOutboundChannel<T: Config> {
-	data: RuntimeInboundChannelStorage<T>
+	data: RuntimeOutboundChannelStorage<T>
 }
 
 impl<T: Config> BasicOutboundChannel<T> {
