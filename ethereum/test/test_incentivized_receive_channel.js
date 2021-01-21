@@ -38,17 +38,17 @@ contract("IncentivizedReceiveChannel", function (accounts) {
 
       const recipient = userTwo;
       const amount = 1;
-      const testPayload = this.ethApp.methods.unlockETH(recipient, amount).encodeABI();
+      const testPayload = this.ethApp.contract.methods.unlockETH(recipient, amount).encodeABI();
 
       const testMessage = {
-        nonce: 0,
+        nonce: 1,
         senderApplicationId: 'eth-app',
         targetApplicationAddress: this.ethApp.address,
         payload: testPayload
       }
 
       // Send commitment including one payload for the ETHApp
-      const { logs } = await this.incentivizedReceiveChannel.newParachainCommitment(
+      const tx = await this.incentivizedReceiveChannel.newParachainCommitment(
         { commitmentHash: ethers.utils.formatBytes32String("fake-hash") },
         { messages: [testMessage] },
         5,
@@ -58,7 +58,7 @@ contract("IncentivizedReceiveChannel", function (accounts) {
       ).should.be.fulfilled;
 
       // Confirm ETHApp processed event correctly
-      const appEvent = logs.find(
+      const appEvent = tx.logs.find(
         e => e.event === "Unlock"
       );
 

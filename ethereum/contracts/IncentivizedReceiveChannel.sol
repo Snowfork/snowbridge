@@ -95,39 +95,39 @@ contract IncentivizedReceiveChannel {
     function processCommitmentContents(
         CommitmentContents memory commitmentContents
     ) internal {
-        for (uint256 i = 0; i < commitmentContents.length; i++) {
+        for (uint256 i = 0; i < commitmentContents.messages.length; i++) {
             // Check message nonce is correct and increment nonce for replay protection
-            Message memory message = commitmentContents[i];
+            Message memory message = commitmentContents.messages[i];
             require(message.nonce == lastProcessedNonce + 1, "invalid nonce");
 
             lastProcessedNonce = lastProcessedNonce + 1;
 
             // Deliver the message to the destination
             // Delivery will have fixed maximum gas allowed for the destination app.
-            // TODO: payload needs format: [bytes4(sha3("function_name(arg1_type,arg2_type)")) + bytes input]
-            bytes4 sig = bytes4(sha3("add(int256,int256)"));
+            bytes memory callInput = message.payload;
+            address targetApplicationAddress = message.targetApplicationAddress;
+            uint256 allowedGas = MAX_GAS_PER_MESSAGE;
 
             assembly {
                 let x := mload(0x40) // Find empty storage location using "free memory pointer"
-                mstore(x, sig) // Place signature at begining of empty storage
-                mstore(add(x, 0x04), a) // Place first argument directly next to signature
-                mstore(add(x, 0x24), b) // Place second argument next to first, padded to 32 bytes
+                mstore(x, callInput) // Place signature at begining of empty storage
 
                 // Dispatch call to the receiver - it is expected to be fire and forget. If the call reverts, runs out of gas, error,
                 // etc, its the fault of the sender
                 let success := call(
                     // Pop the top stack value
-                    MAX_GAS_PER_MESSAGE, // Allowed gas
-                    message.targetApplicationAddress, // To addr
+                    allowedGas, // Allowed gas
+                    targetApplicationAddress, // To addr
                     0, // No value
                     x, // Inputs are stored at location x
                     0x44, // Inputs are 68 bytes long
                     x, // Store output over input (saves space)
-                    0x20
-                ) // Outputs are 32 bytes long
+                    0x20 // Outputs are 32 bytes long
+                )
 
-                c := mload(x) // Assign output value to c
-                mstore(0x40, add(x, 0x44)) // Set storage pointer to empty space
+                // TODO - get output value and clear storage pointer.
+                // bool re := mload(x) // Assign output value to c
+                // mstore(0x40, add(x, callInput.length)) // Set storage pointer to empty space
             }
         }
     }
