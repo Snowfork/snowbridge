@@ -11,10 +11,12 @@ pub enum ChannelId {
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 struct InboundChannelData {
+	// only used by incentivized channel
 	pub nonce: u64
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 struct OutboundChannelData {
+	// only used by incentivized channel
 	pub nonce: u64
 }
