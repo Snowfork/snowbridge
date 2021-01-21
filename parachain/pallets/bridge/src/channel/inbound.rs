@@ -1,30 +1,20 @@
-
 use frame_support::dispatch::DispatchResult;
-use sp_std::cell::RefCell;
 
-use artemis_core::{AppId, Application, Message, Verifier};
+use sp_std::{boxed::Box, cell::RefCell};
+
+use artemis_core::{ChannelId, Message};
 
 use crate::{
-	Event,
 	Config,
 	InboundChannelData,
-	primitives::{self, ChannelId, InboundChannel, InboundChannelData as ChannelData}
+	primitives::{InboundChannel, InboundChannelData as ChannelData}
 };
 
-
 /// Construct an inbound channel object
-pub fn make_inbound_channel<T: Config>(channel_id: ChannelId) -> InboundChannel<T> {
+pub fn make_inbound_channel<T: Config>(channel_id: ChannelId) -> Box<dyn InboundChannel<T>> {
 	match channel_id {
-		ChannelId::Basic => {
-			BasicInboundChannel {
-				data: Storage::new()
-			}
-		},
-		ChannelId::Incentivized => {
-			IncentivizedInboundChannel {
-				data: Storage::new()
-			}
-		}
+		ChannelId::Basic =>  Box::new(BasicInboundChannel::new()),
+		ChannelId::Incentivized =>  Box::new(BasicInboundChannel::new()),
 	}
 
 }
@@ -40,7 +30,7 @@ impl<T: Config> Storage<T> {
 	}
 }
 
-impl<T: Config> Storage {
+impl<T: Config> Storage<T> {
 	fn data(&self) -> ChannelData {
 		match self.cached_data.clone().into_inner() {
 			Some(data) => data,
@@ -69,6 +59,12 @@ struct BasicInboundChannel<T: Config> {
 	data: Storage<T>
 }
 
+impl<T: Config> BasicInboundChannel<T> {
+	fn new() -> Self {
+		Self { data: Storage::new() }
+	}
+}
+
 impl<T: Config> InboundChannel<T> for BasicInboundChannel<T> {
 	fn submit(message: &Message) -> DispatchResult {
 		// These things are available in this scope:
@@ -77,6 +73,7 @@ impl<T: Config> InboundChannel<T> for BasicInboundChannel<T> {
 		//   T::ApplicationRegistry
 		//   T::Rewards
 		//   Event
+		Ok(())
 	}
 }
 
@@ -85,7 +82,13 @@ struct IncentivizedInboundChannel<T: Config> {
 	data: Storage<T>
 }
 
-impl<T: Config> InboundChannel<T> for IncentivizedInboundChannel {
+impl<T: Config> IncentivizedInboundChannel<T> {
+	fn new() -> Self {
+		Self { data: Storage::new() }
+	}
+}
+
+impl<T: Config> InboundChannel<T> for IncentivizedInboundChannel<T> {
 	fn submit(message: &Message) -> DispatchResult {
 		// These things are available in this scope:
 		//   self.data()  // persistent data for channel
@@ -93,5 +96,6 @@ impl<T: Config> InboundChannel<T> for IncentivizedInboundChannel {
 		//   T::ApplicationRegistry
 		//   T::Rewards
 		//   Event
+		Ok(())
 	}
 }

@@ -18,6 +18,7 @@ pub use types::{
 	AppId,
 	Message,
 	VerificationInput,
+	ChannelId,
 };
 
 pub use assets::{AssetId, MultiAsset, SingleAsset};
@@ -39,6 +40,11 @@ pub trait Application {
 	fn handle(payload: &[u8]) -> DispatchResult;
 
 	fn address() -> H160;
+}
+
+pub trait Commitments {
+
+	fn add(address: H160, payload: Vec<u8>);
 }
 
 pub trait Bridge {

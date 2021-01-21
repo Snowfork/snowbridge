@@ -12,6 +12,12 @@ use codec::{Encode, Decode};
 /// for cross-chain routing of messages.
 pub type AppId = [u8; 20];
 
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+pub enum ChannelId {
+	Basic,
+	Incentivized
+}
+
 /// A message relayed from Ethereum.
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct Message {

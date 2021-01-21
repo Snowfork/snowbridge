@@ -8,11 +8,6 @@ use crate::Config;
 use artemis_core::Message;
 
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
-pub enum ChannelId {
-	Basic,
-	Incentivized
-}
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct InboundChannelData {
@@ -26,9 +21,9 @@ pub struct OutboundChannelData {
 }
 
 pub trait InboundChannel<T: Config> {
-	fn submit(message: &Message) -> DispatchResult;
+	fn submit(&self, message: &Message) -> DispatchResult;
 }
 
 pub trait OutboundChannel<T: Config> {
-	fn submit(message: &[u8]) -> DispatchResult;
+	fn submit(&self, message: &[u8]) -> DispatchResult;
 }

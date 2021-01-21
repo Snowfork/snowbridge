@@ -2,29 +2,19 @@ use frame_support::dispatch::DispatchResult;
 use sp_std::cell::RefCell;
 
 use crate::{
-	Event,
 	Config,
 	OutboundChannelData,
-	primitives::{self, ChannelId, OutboundChannel, OutboundChannelData as ChannelData}
+	primitives::{OutboundChannel, OutboundChannelData as ChannelData}
 };
 
-use artemis_core::{AppId, Application, Message, Verifier};
+use artemis_core::ChannelId;
 
 /// Construct an inbound channel object
-pub fn make_outbound_channel<T: Config>(channel_id: ChannelId) -> OutboundChannel<T> {
+pub fn make_outbound_channel<T: Config>(channel_id: ChannelId) -> Box<dyn OutboundChannel<T>> {
 	match channel_id {
-		ChannelId::Basic => {
-			BasicOutboundChannel {
-				data: Storage::new()
-			}
-		},
-		ChannelId::Incentivized => {
-			IncentivizedOutboundChannel {
-				data: Storage::new()
-			}
-		}
+		ChannelId::Basic =>  Box::new(BasicOutboundChannel::new()),
+		ChannelId::Incentivized => Box::new(IncentivizedOutboundChannel::new()),
 	}
-
 }
 
 // Storage layer for a channel
@@ -38,7 +28,7 @@ impl<T: Config> Storage<T> {
 	}
 }
 
-impl<T: Config> Storage {
+impl<T: Config> Storage<T> {
 	fn data(&self) -> ChannelData {
 		match self.cached_data.clone().into_inner() {
 			Some(data) => data,
@@ -66,13 +56,20 @@ struct BasicOutboundChannel<T: Config> {
 	data: Storage<T>
 }
 
+impl<T: Config> BasicOutboundChannel<T> {
+	fn new() -> Self {
+		Self { data: Storage::new() }
+	}
+}
+
 impl<T: Config> OutboundChannel<T> for BasicOutboundChannel<T> {
-	fn submit(message: &Message) -> DispatchResult {
+	fn submit(message: &[u8]) -> DispatchResult {
 		// These things are available in this scope:
 		//   self.data()  // persistent data for channel
 		//   T::Commitments
 		//   T::Fees
 		//   Event
+		Ok(())
 	}
 }
 
@@ -80,12 +77,19 @@ struct IncentivizedOutboundChannel<T: Config> {
 	data: Storage<T>
 }
 
+impl<T: Config> IncentivizedOutboundChannel<T> {
+	fn new() -> Self {
+		Self { data: Storage::new() }
+	}
+}
+
 impl<T: Config> OutboundChannel<T> for IncentivizedOutboundChannel<T> {
-	fn submit(message: &Message) -> DispatchResult {
+	fn submit(message: &[u8]) -> DispatchResult {
 		// These things are available in this scope:
 		//   self.data()  // persistent data for channel
 		//   T::Commitments
 		//   T::Fees
 		//   Event
+		Ok(())
 	}
 }

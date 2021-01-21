@@ -16,40 +16,33 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(unused_variables)]
 
-use std::collections::btree_map::IntoValues;
-
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult};
 use frame_system::{self as system, ensure_signed};
 
 use sp_std::prelude::*;
-use sp_core::H160;
 
-use sp_runtime::RuntimeDebug;
+use artemis_core::{ChannelId, Application, Message, Verifier};
+use primitives::{InboundChannel, OutboundChannel};
 
-use codec::{Encode, Decode}
+use channel::inbound::make_inbound_channel;
+use channel::outbound::make_outbound_channel;
 
-use artemis_core::{AppId, Application, Message, Verifier};
-use primitives::{self, ChannelId, InboundChannel, OutboundChannel};
-
-use inbound_channel::make_inbound_channel;
-use outbound_channel::make_outbound_channel;
-
+mod channel;
 pub mod primitives;
-pub mod inbound_channel;
-pub mod outbound_channel;
 
-pub trait ApplicationRegistry {
-	fn iter() -> Iterator<Application>;
-}
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
 	/// The verifier module responsible for verifying submitted messages.
 	type Verifier: Verifier<<Self as system::Config>::AccountId>;
 
-	type ApplicationRegistry: ApplicationRegistry;
+	// TODO figure out how to handle applications generically
+	//   For this to happen, we need to instantiate shim objects which talk to the underlying application pallets.
+	type PolkaETH: Application;
+	type PolkaERC20: Application;
 }
 
 decl_storage! {
@@ -85,7 +78,6 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 
 			let channel = make_inbound_channel(channel_id);
-
 			channel.submit(&message)
 		}
 	}
