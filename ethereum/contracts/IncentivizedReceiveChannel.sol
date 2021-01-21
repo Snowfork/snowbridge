@@ -76,14 +76,16 @@ contract IncentivizedReceiveChannel {
 
         // Require there is enough gas to play all messages
         require(
-            gasleft() >= commitmentContents.messages.length * MAX_GAS_PER_MESSAGE,
+            gasleft() >=
+                commitmentContents.messages.length * MAX_GAS_PER_MESSAGE,
             "insufficient gas for delivery of all messages"
         );
 
         // Require all payloads are smaller than max_payload_size
         for (uint256 i = 0; i < commitmentContents.messages.length; i++) {
             require(
-                commitmentContents.messages[i].payload.length <= MAX_PAYLOAD_BYTE_SIZE,
+                commitmentContents.messages[i].payload.length <=
+                    MAX_PAYLOAD_BYTE_SIZE,
                 "message payload bytesize exceeds maximum payload size"
             );
         }
@@ -94,38 +96,39 @@ contract IncentivizedReceiveChannel {
         CommitmentContents memory commitmentContents
     ) internal {
         for (uint256 i = 0; i < commitmentContents.length; i++) {
-          // Check message nonce is correct and increment nonce for replay protection
-          Message memory message = commitmentContents[i];
-          require(message.nonce == lastProcessedNonce + 1, "invalid nonce");
+            // Check message nonce is correct and increment nonce for replay protection
+            Message memory message = commitmentContents[i];
+            require(message.nonce == lastProcessedNonce + 1, "invalid nonce");
 
-          lastProcessedNonce =  lastProcessedNonce + 1;
+            lastProcessedNonce = lastProcessedNonce + 1;
 
+            // Deliver the message to the destination
+            // Delivery will have fixed maximum gas allowed for the destination app.
+            // TODO: payload needs format: [bytes4(sha3("function_name(arg1_type,arg2_type)")) + bytes input]
+            bytes4 sig = bytes4(sha3("add(int256,int256)"));
 
-          // Deliver the message to the destination
-          // Delivery will have fixed maximum gas allowed for the destination app.
-          // TODO: payload needs format: [bytes4(sha3("function_name(arg1_type,arg2_type)")) + bytes input]
-          bytes4 sig = bytes4(sha3("add(int256,int256)"));
+            assembly {
+                let x := mload(0x40) // Find empty storage location using "free memory pointer"
+                mstore(x, sig) // Place signature at begining of empty storage
+                mstore(add(x, 0x04), a) // Place first argument directly next to signature
+                mstore(add(x, 0x24), b) // Place second argument next to first, padded to 32 bytes
 
+                // Dispatch call to the receiver - it is expected to be fire and forget. If the call reverts, runs out of gas, error,
+                // etc, its the fault of the sender
+                let success := call(
+                    // Pop the top stack value
+                    MAX_GAS_PER_MESSAGE, // Allowed gas
+                    message.targetApplicationAddress, // To addr
+                    0, // No value
+                    x, // Inputs are stored at location x
+                    0x44, // Inputs are 68 bytes long
+                    x, // Store output over input (saves space)
+                    0x20
+                ) // Outputs are 32 bytes long
 
-          assembly {
-            let x := mload(0x40)  // Find empty storage location using "free memory pointer"
-            mstore(x,sig)         // Place signature at begining of empty storage
-            mstore(add(x,0x04),a) // Place first argument directly next to signature
-            mstore(add(x,0x24),b) // Place second argument next to first, padded to 32 bytes
-
-            // Dispatch call to the receiver - it is expected to be fire and forget. If the call reverts, runs out of gas, error,
-            // etc, its the fault of the sender
-            let success := call(                                    // Pop the top stack value
-                                MAX_GAS_PER_MESSAGE,                // Allowed gas
-                                message.targetApplicationAddress,   // To addr
-                                0,                                  // No value
-                                x,                                  // Inputs are stored at location x
-                                0x44,                               // Inputs are 68 bytes long
-                                x,                                  // Store output over input (saves space)
-                                0x20)                               // Outputs are 32 bytes long
-
-            c := mload(x)                                           // Assign output value to c
-            mstore(0x40,add(x,0x44))                                // Set storage pointer to empty space
+                c := mload(x) // Assign output value to c
+                mstore(0x40, add(x, 0x44)) // Set storage pointer to empty space
+            }
         }
     }
 }
