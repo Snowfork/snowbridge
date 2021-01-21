@@ -82,7 +82,6 @@ impl<T: Config> BasicInboundChannel<T> {
 impl<T: Config> InboundChannel<T> for BasicInboundChannel<T> {
 	fn submit(&mut self, message: &Message) -> DispatchResult {
 		// These things are available in this scope:
-		//   self.data()  // persistent data for channel
 		//   T::Verifier
 		//   T::ApplicationRegistry
 		//   T::Rewards
@@ -104,7 +103,6 @@ impl<T: Config> IncentivizedInboundChannel<T> {
 impl<T: Config> InboundChannel<T> for IncentivizedInboundChannel<T> {
 	fn submit(&mut self, message: &Message) -> DispatchResult {
 		// These things are available in this scope:
-		//   self.data()  // persistent data for channel
 		//   T::Verifier
 		//   T::ApplicationRegistry
 		//   T::Rewards
