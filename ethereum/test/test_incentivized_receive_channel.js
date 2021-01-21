@@ -1,5 +1,6 @@
 const IncentivizedReceiveChannel = artifacts.require("IncentivizedReceiveChannel");
 const ETHApp = artifacts.require("ETHApp");
+const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
 
 const Web3Utils = require("web3-utils");
 const BigNumber = web3.BigNumber;
@@ -29,13 +30,30 @@ contract("IncentivizedReceiveChannel", function (accounts) {
 
   describe("newParachainCommitment", function () {
     beforeEach(async function () {
+      const incentivizedSendChannel = await IncentivizedSendChannel.new();
+      this.ethApp = await ETHApp.new(incentivizedSendChannel.address, incentivizedSendChannel.address);
+
       this.incentivizedReceiveChannel = await IncentivizedReceiveChannel.new();
-      this.ethApp = await ETHApp.new(this.incentivizedReceiveChannel.address, this.incentivizedReceiveChannel.address);
       await this.ethApp.register(this.incentivizedReceiveChannel.address);
+
+      // Prepare ETHApp with some liquidity for testing
+      const lockAmountWei = 5000;
+      const POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
+      const substrateRecipient = Buffer.from(POLKADOT_ADDRESS, "hex");
+
+      // Send to a substrate recipient to load contract with unlockable ETH
+      await this.ethApp.sendETH(
+        substrateRecipient,
+        true,
+        {
+          from: userOne,
+          value: lockAmountWei
+        }
+      ).should.be.fulfilled;
+
     });
 
     it("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
-
       const recipient = userTwo;
       const amount = 1;
       const testPayload = this.ethApp.contract.methods.unlockETH(recipient, amount).encodeABI();
@@ -56,9 +74,6 @@ contract("IncentivizedReceiveChannel", function (accounts) {
         ethers.utils.formatBytes32String("fake-proof2"),
         { from: userOne }
       ).should.be.fulfilled;
-
-      console.log(tx.logs);
-      console.log(tx.logs);
 
       // Confirm Message delivered correctly
       const deliveryEvent = tx.logs.find(
