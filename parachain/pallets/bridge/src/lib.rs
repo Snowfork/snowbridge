@@ -92,7 +92,7 @@ decl_event! {
 	pub enum Event {
 
 		/// Message accepted for delivery to Ethereum
-		MessageAccepted(ChannelId, MessageNonce)
+		MessageAccepted(ChannelId, Option<MessageNonce>)
 	}
 }
 
@@ -132,7 +132,8 @@ impl<T: Config> Module<T> {
 		// Construct channel object from storage
 		let channel = Self::get_outbound_channel(channel_id);
 
-		let nonce = channel.submit(payload);
+		// Would be nice for emit a MessageAccepted event with a nonce if its the incentivized channel
+		let maybe_nonce = channel.submit(payload);
 		Self::deposit_event(RawEvent::MessageAccepted(channel_id, nonce));
 
 	}
