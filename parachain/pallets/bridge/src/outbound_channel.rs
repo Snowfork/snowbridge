@@ -12,7 +12,7 @@ struct BasicOutboundChannel<T: Config> {
 	data: RuntimeInboundChannelStorage<T>
 }
 
-impl<T: Config> BasicInboundChannel<T> {
+impl<T: Config> BasicOutboundChannel<T> {
 	fn submit(message: &Message) -> DispatchResult {
 		// These things are available in this scope:
 		//   self.data()  // persistent data for channel
@@ -26,7 +26,7 @@ struct IncentivizedOutboundChannel<T: Config> {
 	data: RuntimeInboundChannelStorage<T>
 }
 
-impl<T: Config> IncentivizedInboundChannel<T> {
+impl<T: Config> IncentivizedOutboundChannel<T> {
 	fn submit(message: &Message) {
 		// These things are available in this scope:
 		//   self.data()  // persistent data for channel
