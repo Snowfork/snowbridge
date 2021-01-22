@@ -429,6 +429,8 @@ github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122084514-56a251f32
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122084514-56a251f3275d/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122110525-6cbe57d791d1 h1:/cS3WfFDPW1LEast5bfL1QBeGJYnI1HXQX5XtNPV9uc=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122110525-6cbe57d791d1/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122183154-789fecaf3a9b h1:QfSHfPVMe+j7dEzqay08XpsLAPQN00tif1xaB1yWNWo=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122183154-789fecaf3a9b/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spaolacci/murmur3 v1.0.1-0.20190317074736-539464a789e9/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
