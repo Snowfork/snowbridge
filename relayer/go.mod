@@ -17,12 +17,12 @@ require (
 	github.com/shirou/gopsutil v3.20.12+incompatible // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892
-	github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210119190512-7a856f0fe2c4
+	github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122084514-56a251f3275d
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
 	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
+	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
 )
