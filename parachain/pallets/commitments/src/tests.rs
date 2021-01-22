@@ -4,7 +4,7 @@ use crate::{mock::*};
 use crate::{Message, MessageQueue};
 
 use sp_runtime::DigestItem;
-use sp_core::{H160, H256};
+use sp_core::H160;
 
 use frame_support::{
 	traits::{OnInitialize}
@@ -12,7 +12,7 @@ use frame_support::{
 
 use frame_support::storage::StorageValue;
 
-use artemis_core::Commitments;
+use artemis_core::MessageCommitment;
 
 fn run_to_block(n: u64) {
 	while System::block_number() < n {
@@ -29,19 +29,19 @@ const CONTRACT_B: H160 =  H160::repeat_byte(2);
 #[test]
 fn test_add_message() {
 	new_test_ext().execute_with(|| {
-		CommitmentsModule::add(CONTRACT_A, vec![0, 1, 2]);
-		CommitmentsModule::add(CONTRACT_B, vec![3, 4, 5]);
+		CommitmentsModule::add(CONTRACT_A, 0, vec![0, 1, 2]);
+		CommitmentsModule::add(CONTRACT_B, 1, vec![3, 4, 5]);
 
 		let messages = vec![
 			Message {
 				address: CONTRACT_A,
+				nonce: 0,
 				payload: vec![0, 1, 2],
-				nonce: 0
 			},
 			Message {
 				address: CONTRACT_B,
+				nonce: 1,
 				payload: vec![3, 4, 5],
-				nonce: 1
 			},
 		];
 
