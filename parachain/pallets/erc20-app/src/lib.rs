@@ -28,11 +28,11 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 
-use artemis_core::{Application, AssetId, MultiAsset, Commitments};
+use artemis_core::{Application, AssetId, MultiAsset, MessageCommitment};
 use artemis_ethereum::Log;
 
 mod payload;
-use payload::{InPayload, OutPayload};
+use payload::{InboundPayload, OutboundPayload};
 
 #[cfg(test)]
 mod mock;
@@ -44,7 +44,7 @@ pub trait Config: system::Config {
 
 	type Assets: MultiAsset<<Self as system::Config>::AccountId>;
 
-	type Commitments: Commitments;
+	type MessageCommitment: MessageCommitment;
 }
 
 decl_storage! {
@@ -86,13 +86,13 @@ decl_module! {
 
 			T::Assets::withdraw(AssetId::Token(token_addr), &who, amount)?;
 
-			let message = OutPayload {
+			let message = OutboundPayload {
 				token_addr: token_addr,
 				sender_addr: who.clone(),
 				recipient_addr: recipient,
 				amount: amount
 			};
-			T::Commitments::add(Self::address(), message.encode());
+			T::MessageCommitment::add(Self::address(), 0, &message.encode());
 			Self::deposit_event(RawEvent::Burned(token_addr, who.clone(), amount));
 
 			Ok(())
@@ -103,7 +103,7 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 
-	fn handle_event(payload: InPayload<T::AccountId>) -> DispatchResult {
+	fn handle_event(payload: InboundPayload<T::AccountId>) -> DispatchResult {
 		T::Assets::deposit(
 			AssetId::Token(payload.token_addr),
 			&payload.recipient_addr,
@@ -122,7 +122,7 @@ impl<T: Config> Module<T> {
 
 impl<T: Config> Application for Module<T> {
 	fn handle(payload: &[u8]) -> DispatchResult {
-		// Decode ethereum Log event from RLP-encoded data, and try to convert to InPayload
+		// Decode ethereum Log event from RLP-encoded data, and try to convert to InboundPayload
 		let payload_decoded = rlp::decode::<Log>(payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?
 			.try_into()

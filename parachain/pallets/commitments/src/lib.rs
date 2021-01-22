@@ -15,7 +15,7 @@ use sp_runtime::{
 };
 
 use codec::{Encode, Decode};
-use artemis_core::Commitments;
+use artemis_core::MessageCommitment;
 
 use ethabi::{self, Token};
 
@@ -40,8 +40,8 @@ impl<T, H: Encode> Into<DigestItem<T>> for AuxiliaryDigestItem<H> {
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 struct Message {
 	address: H160,
-	payload: Vec<u8>,
 	nonce: u64,
+	payload: Vec<u8>,
 }
 
 pub trait Config: frame_system::Config {
@@ -61,9 +61,6 @@ pub trait Config: frame_system::Config {
 
 decl_storage! {
 	trait Store for Module<T: Config> as Commitments {
-		/// Nonce
-		pub Nonce get(fn nonce): u64;
-
 		/// Messages waiting to be committed
 		pub MessageQueue: Vec<Message>;
 	}
@@ -139,13 +136,11 @@ impl<T: Config> Module<T> {
 
 }
 
-impl<T: Config> Commitments for Module<T> {
+impl<T: Config> MessageCommitment for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
 	// TODO: Number of messages per commitment should be bounded
-	fn add(address: H160, payload: Vec<u8>) {
-		let nonce = <Self as Store>::Nonce::get();
-		<Self as Store>::MessageQueue::append(Message { address, payload, nonce });
-		<Self as Store>::Nonce::set(nonce + 1);
+	fn add(address: H160, nonce: u64, payload: &[u8]) {
+		<Self as Store>::MessageQueue::append(Message { address, payload.to_vec(), nonce });
 	}
 }

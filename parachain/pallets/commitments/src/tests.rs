@@ -47,7 +47,6 @@ fn test_add_message() {
 
 		assert_eq!(
 			MessageQueue::get(), messages);
-		assert_eq!(CommitmentsModule::nonce(), 2);
 
 		// Run to block 5 where a commitment will be generated
 		run_to_block(5);

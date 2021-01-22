@@ -84,11 +84,11 @@ impl artemis_commitments::Config for MockRuntime {
 impl Config for MockRuntime {
 	type Event = MockEvent;
 	type Assets = Assets;
-	type Commitments = Commitments;
+	type Commitments = MessageCommitment;
 }
 
 pub type System = system::Module<MockRuntime>;
-pub type Commitments = artemis_commitments::Module<MockRuntime>;
+pub type MessageCommitment = artemis_commitments::Module<MockRuntime>;
 pub type Assets = artemis_assets::Module<MockRuntime>;
 pub type ERC20 = Module<MockRuntime>;
 

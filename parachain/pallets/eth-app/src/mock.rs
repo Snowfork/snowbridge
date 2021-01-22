@@ -90,11 +90,11 @@ parameter_types! {
 impl Config for MockRuntime {
 	type Event = MockEvent;
 	type Asset = Asset;
-	type Commitments = Commitments;
+	type Commitments = MessageCommitment;
 }
 
 pub type System = system::Module<MockRuntime>;
-pub type Commitments = artemis_commitments::Module<MockRuntime>;
+pub type MessageCommitment = artemis_commitments::Module<MockRuntime>;
 pub type Asset = SingleAssetAdaptor<MockRuntime, EthAssetId>;
 pub type ETH = Module<MockRuntime>;
 
