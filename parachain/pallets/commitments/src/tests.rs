@@ -64,13 +64,3 @@ fn test_add_message() {
 
 	});
 }
-
-
-#[test]
-fn test_make_offline_key() {
-	let hash = H256::repeat_byte(7);
-
-	println!("{:?}", CommitmentsModule::offchain_key(hash));
-	println!("{:?}", CommitmentsModule::offchain_key(hash).len());
-
-}
