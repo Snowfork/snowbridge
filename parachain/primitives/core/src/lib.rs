@@ -8,7 +8,6 @@
 
 use frame_support::dispatch::DispatchResult;
 
-use sp_std::prelude::*;
 use sp_core::H160;
 
 pub mod types;

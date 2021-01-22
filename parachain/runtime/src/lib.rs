@@ -381,13 +381,13 @@ parameter_types! {
 impl eth_app::Config for Runtime {
 	type Event = Event;
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
-	type Commitments = commitments::Module<Runtime>;
+	type MessageCommitment = commitments::Module<Runtime>;
 }
 
 impl erc20_app::Config for Runtime {
 	type Event = Event;
 	type Assets = assets::Module<Runtime>;
-	type Commitments = commitments::Module<Runtime>;
+	type MessageCommitment = commitments::Module<Runtime>;
 }
 
 construct_runtime!(

@@ -141,6 +141,6 @@ impl<T: Config> MessageCommitment for Module<T> {
 	// Add a message for eventual inclusion in a commitment
 	// TODO: Number of messages per commitment should be bounded
 	fn add(address: H160, nonce: u64, payload: &[u8]) {
-		<Self as Store>::MessageQueue::append(Message { address, payload.to_vec(), nonce });
+		<Self as Store>::MessageQueue::append(Message { address, nonce, payload: payload.to_vec() });
 	}
 }
