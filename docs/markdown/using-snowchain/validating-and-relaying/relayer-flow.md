@@ -14,7 +14,7 @@ The relayer can be started in 2 different modes for relaying from Polkadot to Et
 This mode runs the relayer in a mode where it ensures that the Ethereum contract receives at least 1 MMR proof per epoch. It only interacts with the Relay Chain Light Client, not the Parachain Light Client.
 
 ### Relayer process starts in MMR-Epochs-Only mode
-```mermaid
+```mermaid!
 graph TD;
   S1[Query Relay Chain Light Client for latest relayed MMR Epoch];
   S1-->S2;
@@ -29,7 +29,7 @@ graph TD;
   S6[Add to New MMR Root Processing Queue];
 ```
 ### Ethereum Block Processing Queue
-```mermaid
+```mermaid!
 graph TD;
   Eb1[New Block In Queue];
   Eb1-- contains updated latestRelayedEpoch -->Eb2
@@ -38,7 +38,7 @@ graph TD;
   Eb3[Ignore];
 ```
 ### New MMR Root Processing Queue
-```mermaid
+```mermaid!
 graph TD;
   M1[New MMR Root In Queue];
   M1-->M1a;
@@ -52,7 +52,7 @@ graph TD;
   M3-- No -->M2;
 ```
 ### MMR Relay Queue
-```mermaid
+```mermaid!
 graph TD;
   Mr00[New MMR to Relay];
   Mr00-->Mr01;
@@ -76,7 +76,7 @@ graph TD;
 ## Incentivized-Channel Mode
 In this mode, the relayer watches for new incentivized channel commitments, ensuring that everything needed to process that commitment is relayed to Ethereum.
 ### Relayer process starts in Incentivized-Channel Mode
-```mermaid
+```mermaid!
 graph TD;
   S1[Query Parachain Light Client for latest incentivized channel commitment];
   S1-->S2;
@@ -91,7 +91,7 @@ graph TD;
   S6[Add to New Incentivized Channel Commitment Processing Queue];
 ```
 ### Ethereum Block Processing Queue
-```mermaid
+```mermaid!
 graph TD;
   Eb1[New Block In Queue];
   Eb1-- contains updated latestIncentivizedChannelCommitment -->Eb2
@@ -100,7 +100,7 @@ graph TD;
   Eb3[Ignore];
 ```
 ### New Incentivized Channel Commitment Processing Queue
-```mermaid
+```mermaid!
 graph TD;
   M1[New commitment in queue];
   M1-->M1a;
