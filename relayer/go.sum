@@ -427,6 +427,8 @@ github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210119190512-7a856f0fe
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210119190512-7a856f0fe2c4/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122084514-56a251f3275d h1:CeJZbXkbLYSQrjYgxbG6ZwXMdbvb2TT/qJOsYd5sgU0=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122084514-56a251f3275d/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122110525-6cbe57d791d1 h1:/cS3WfFDPW1LEast5bfL1QBeGJYnI1HXQX5XtNPV9uc=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122110525-6cbe57d791d1/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spaolacci/murmur3 v1.0.1-0.20190317074736-539464a789e9/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
@@ -597,6 +599,8 @@ golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 h1:nVuTkr9L6Bq62qpUqKo/RnZCF
 golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 h1:myAQVi0cGEoqQVR5POX+8RR2mrocKqNN1hmeMqhX27k=
 golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20210122093101-04d7465088b8 h1:de2yTH1xuxjmGB7i6Z5o2z3RCHVa0XlpSZzjd8Fe6bE=
+golang.org/x/sys v0.0.0-20210122093101-04d7465088b8/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/term v0.0.0-20201117132131-f5c789dd3221/go.mod h1:Nr5EML6q2oocZ2LXRh80K7BxOlk5/8JxuGnuhpl+muw=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=

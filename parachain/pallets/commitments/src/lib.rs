@@ -7,6 +7,7 @@ use frame_support::{
 	traits::Get,
 };
 
+use sp_io::offchain_index;
 use sp_core::{H160, RuntimeDebug};
 use sp_runtime::{
 	traits::{Member, Hash, Zero, MaybeSerializeDeserialize},
@@ -89,7 +90,6 @@ decl_module! {
 		// The hash of the commitment is stored as a digest item `CustomDigestItem::Commitment`
 		// in the block header. The committed messages are persisted into storage.
 		fn on_initialize(now: T::BlockNumber) -> Weight {
-			sp_io::offchain_index::set(b"foo", b"bar");
 			if (now % T::CommitInterval::get()).is_zero() {
 				Self::commit()
 			} else {
@@ -105,10 +105,12 @@ impl<T: Config> Module<T> {
 		(T::INDEXING_PREFIX, hash).encode()
 	}
 
-	// Generate a message commitment
 	// TODO: return proper weight
 	fn commit() -> Weight {
 		let messages: Vec<Message> = <Self as Store>::MessageQueue::take();
+		if messages.len() == 0 {
+			return 0
+		}
 
 		let commitment = Self::encode_commitment(&messages);
 		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
@@ -116,7 +118,7 @@ impl<T: Config> Module<T> {
 		let digest_item = AuxiliaryDigestItem::CommitmentHash(commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		sp_io::offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
+		offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
 
 		0
 	}

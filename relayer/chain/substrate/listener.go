@@ -117,10 +117,15 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					continue
 				}
 
-				li.log.WithFields(logrus.Fields{
-					"block":               finalizedHeader.Number,
-					"commitmentSizeBytes": len(*data),
-				}).Debug("Retrieved commitment from offchain storage")
+				if data != nil {
+					li.log.WithFields(logrus.Fields{
+						"block":               finalizedHeader.Number,
+						"commitmentSizeBytes": len(*data),
+					}).Debug("Retrieved commitment from offchain storage")
+				} else {
+					li.log.WithError(err).Error("Commitment not found in offchain storage")
+				}
+
 			}
 
 			currentBlock++
