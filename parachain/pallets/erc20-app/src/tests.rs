@@ -10,7 +10,7 @@ use artemis_core::{AssetId, MultiAsset};
 
 use crate::RawEvent;
 
-use crate::payload::InPayload;
+use crate::payload::InboundPayload;
 
 type TestAccountId = <MockRuntime as system::Config>::AccountId;
 
@@ -26,7 +26,7 @@ fn mints_after_handling_ethereum_event() {
 		let token_addr = H160::repeat_byte(1);
 
 		let recipient_addr = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
-		let event: InPayload<TestAccountId> = InPayload {
+		let event: InboundPayload<TestAccountId> = InboundPayload {
 			sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 			recipient_addr,
 			token_addr,
@@ -55,7 +55,7 @@ fn burn_should_emit_bridge_event() {
 			20.into()));
 
 		assert_eq!(
-			MockEvent::test_events(RawEvent::Transfer(token_id, bob, recipient, 20.into())),
+			MockEvent::test_events(RawEvent::Burned(token_id, bob, 20.into())),
 			last_event()
 		);
 	});

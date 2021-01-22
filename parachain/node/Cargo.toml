@@ -41,6 +41,7 @@ sc-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", bra
 sc-rpc = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sc-rpc-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sc-service = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+sc-telemetry = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sc-transaction-pool = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
 sp-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
@@ -59,17 +60,18 @@ substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate.gi
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 frame-benchmarking-cli= { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
-cumulus-consensus = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
-cumulus-collator = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
-cumulus-network = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
-cumulus-primitives = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
-cumulus-service = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
+cumulus-consensus = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1" }
+cumulus-collator = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1" }
+cumulus-network = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1" }
+cumulus-primitives = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1" }
+cumulus-service = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1" }
 
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1" }
 polkadot-service = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1" }
 polkadot-cli = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1" }
 
+artemis-core = { path = "../primitives/core" }
 artemis-runtime = { path = "../runtime" }
 
 [build-dependencies]

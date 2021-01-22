@@ -27,11 +27,11 @@ use sp_std::prelude::*;
 use sp_std::convert::TryInto;
 use sp_core::{H160, U256};
 
-use artemis_core::{Application, Commitments, SingleAsset};
+use artemis_core::{Application, MessageCommitment, SingleAsset};
 use artemis_ethereum::Log;
 
 mod payload;
-use payload::{InPayload, OutPayload};
+use payload::{InboundPayload, OutboundPayload};
 
 #[cfg(test)]
 mod mock;
@@ -44,7 +44,7 @@ pub trait Config: system::Config {
 
 	type Asset: SingleAsset<<Self as system::Config>::AccountId>;
 
-	type Commitments: Commitments;
+	type MessageCommitment: MessageCommitment;
 }
 
 decl_storage! {
@@ -61,9 +61,6 @@ decl_event!(
 	{
 		Burned(AccountId, U256),
 		Minted(AccountId, U256),
-
-		// TODO: Remove once relayer is updated to read commitments instead
-		Transfer(AccountId, H160, U256),
 	}
 );
 
@@ -90,17 +87,13 @@ decl_module! {
 
 			T::Asset::withdraw(&who, amount)?;
 
-			let message = OutPayload {
+			let message = OutboundPayload {
 				sender_addr: who.clone(),
 				recipient_addr: recipient,
 				amount: amount
 			};
-			T::Commitments::add(Self::address(), message.encode());
-
+			T::MessageCommitment::add(Self::address(), 0, &message.encode());
 			Self::deposit_event(RawEvent::Burned(who.clone(), amount));
-
-			// TODO: Remove once relayer can read message commitments
-			Self::deposit_event(RawEvent::Transfer(who.clone(), recipient, amount));
 
 			Ok(())
 		}
@@ -110,7 +103,7 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 
-	fn handle_event(payload: InPayload<T::AccountId>) -> DispatchResult {
+	fn handle_event(payload: InboundPayload<T::AccountId>) -> DispatchResult {
 		T::Asset::deposit(&payload.recipient_addr, payload.amount)?;
 		Self::deposit_event(RawEvent::Minted(payload.recipient_addr.clone(), payload.amount));
 		Ok(())
@@ -119,7 +112,7 @@ impl<T: Config> Module<T> {
 
 impl<T: Config> Application for Module<T> {
 	fn handle(payload: &[u8]) -> DispatchResult {
-		// Decode ethereum Log event from RLP-encoded data, and try to convert to InPayload
+		// Decode ethereum Log event from RLP-encoded data, and try to convert to InboundPayload
 		let payload_decoded = rlp::decode::<Log>(payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?
 			.try_into()

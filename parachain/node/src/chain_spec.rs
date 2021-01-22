@@ -3,7 +3,7 @@ use artemis_runtime::{
 	AccountId, EthereumHeader,
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
-	ETHConfig, ERC20Config,
+	ETHConfig, ERC20Config, AssetsConfig,
 	ParachainInfoConfig,
 	WASM_BINARY, Signature,
 };
@@ -14,6 +14,8 @@ use sp_runtime::traits::{Verify, IdentifyAccount};
 use serde::{Deserialize, Serialize};
 
 use hex_literal::hex;
+
+use artemis_core::AssetId;
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
@@ -37,16 +39,17 @@ pub struct Extensions {
 
 impl Extensions {
 	/// Try to get the extension from the given `ChainSpec`.
-	pub fn try_get(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Option<&Self> {
+	pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
 		sc_chain_spec::get_extension(chain_spec.extensions())
 	}
 }
 
 type AccountPublic = <Signature as Verify>::Signer;
 
-/// Generate an account ID from seed.
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId where
-	AccountPublic: From<<TPublic::Pair as Pair>::Public>
+/// Helper function to generate an account ID from seed
+pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+where
+	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
@@ -76,7 +79,6 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Relay//stash"),
 				],
 				para_id
 			)
@@ -108,6 +110,9 @@ fn testnet_genesis(
 		pallet_balances: Some(BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
+		}),
+		assets: Some(AssetsConfig {
+			balances: vec![(AssetId::ETH, get_account_id_from_seed::<sr25519::Public>("Ferdie"), 10000000.into())]
 		}),
 		verifier_lightclient: Some(VerifierLightclientConfig {
 			initial_header: EthereumHeader {

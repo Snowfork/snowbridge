@@ -110,7 +110,7 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 
 	ext := types.NewExtrinsic(c)
 
-	era := types.ExtrinsicEra{IsMortalEra: false}
+	era := types.ExtrinsicEra{IsImmortalEra: true}
 
 	genesisHash, err := wr.conn.api.RPC.Chain.GetBlockHash(0)
 	if err != nil {
