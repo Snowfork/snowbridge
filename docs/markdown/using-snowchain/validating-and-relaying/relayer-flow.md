@@ -1,4 +1,11 @@
-# Relayer flow diagram
+---
+layout: default
+title: Relayer Flow
+parent: Validating and Relaying
+nav_order: 2
+---
+
+# Relayer Flow
 
 ## Polkadot to Ethereum
 The relayer can be started in 2 different modes for relaying from Polkadot to Ethereum.
