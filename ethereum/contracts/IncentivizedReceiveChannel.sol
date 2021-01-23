@@ -140,34 +140,25 @@ contract IncentivizedReceiveChannel {
         }
     }
 
-    function test(
-        bytes4 sig,
-        bytes memory args,
-        address ethApp
-    ) public returns (bool) {
-        bytes memory recipient = args.slice(0, 20); // slice(start, length)
-        bytes memory amount = args.slice(20, 32); // slice(start, length)
-
+    function test(bytes calldata args, address ethApp) external returns (bool) {
         bool success;
         assembly {
-            let x := mload(0x40) //Find empty storage location using "free memory pointer"
-            mstore(x, sig) //Place signature at begining of empty storage
-            mstore(add(x, 0x04), recipient) //Place first argument directly next to signature
-            mstore(add(x, 0x24), amount) //Place second argument next to first, padded to 32 bytes
-            // mload
+            let startingFreeMemoryPos := mload(0x40) // Find empty storage location using "free memory pointer"
+            calldatacopy(startingFreeMemoryPos, 100, 0x44) //copy s bytes from calldata at position f to mem at position t
+            log0(startingFreeMemoryPos, 0x44)
+            log0(sub(startingFreeMemoryPos, 100), 0x100)
             success := call(
-                //This is the critical change (Pop the top stack value)
                 50000, //50k gas
                 ethApp, //To addr
                 0, //No value
-                x, //Inputs are stored at location x
-                0x44, // input size = 32 + 32 + 4 bytes
-                x, //Store output over input (saves space)
+                startingFreeMemoryPos, //Inputs are stored at location x
+                0x56, // input size = 4 + 20 + 32 bytes
+                startingFreeMemoryPos, //Store output over input (saves space)
                 0x20
             ) //Outputs are 32 bytes long
 
             // c := mload(x) //Assign output value to c
-            mstore(0x40, add(x, 0x44)) // Set storage pointer to empty space
+            // mstore(0x40, add(x, 0x44)) // Set storage pointer to empty space
         }
 
         return success;

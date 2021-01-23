@@ -23,7 +23,7 @@ contract("IncentivizedReceiveChannel", function (accounts) {
       this.incentivizedReceiveChannel = await IncentivizedReceiveChannel.new();
     });
 
-    it("should deploy and initialize the IncentivizedReceiveChannel contract", async function () {
+   xit("should deploy and initialize the IncentivizedReceiveChannel contract", async function () {
       this.incentivizedReceiveChannel.should.exist;
     });
   });
@@ -54,40 +54,27 @@ contract("IncentivizedReceiveChannel", function (accounts) {
     });
 
     it("inline assembly call should work", async function () {
-      // const userTwoBalanceBefore = await web3.eth.getBalance(userTwo);
-      // console.log("userTwoBalanceBefore:", userTwoBalanceBefore);
+      const userTwoBalanceBefore = parseInt(await web3.eth.getBalance(userTwo))
 
-      // const totalEthBefore = await this.ethApp.totalETH.call();
-      // console.log("totalEthBefore:", Number(totalEthBefore));
+      const totalEthBefore = (await this.ethApp.totalETH.call()).toNumber();
 
       var abi = this.ethApp.abi
       var iChannel = new ethers.utils.Interface(abi)
       var calldata = iChannel.functions.unlockETH.encode([userTwo, 2]);
+      const tx = await this.incentivizedReceiveChannel.test(calldata, this.ethApp.address)
 
-      // const inputs = iChannel.functions.unlockETH.inputs;
-      // for(input of inputs) {
-      //   console.log(input.type);
-      // }
+      console.log({rawLogs: tx.receipt.rawLogs});
 
-      // Sig is first 4 bytes of hashed function name/param types
-      const sigBytes = calldata.slice(0, 34); // 0x + 32 bytes
-      const sig = sigBytes.slice(0, 10);       // 4 bytes
+      const totalEthAfter = (await this.ethApp.totalETH.call()).toNumber();
 
-      // Args are the remaining bytes
-      const args = "0x" + calldata.slice(34, calldata.length);
+      const userTwoBalanceAfter = parseInt(await web3.eth.getBalance(userTwo));
 
-      const res = await this.incentivizedReceiveChannel.test.call(sig, args, this.ethApp.address).should.be.fulfilled;
-      res.should.be.equal(true);
-
-      // const totalEthAfter = await this.ethApp.totalETH.call();
-      // console.log("totalEthAfter:", Number(totalEthAfter));
-
-      // const userTwoBalanceAfter = await web3.eth.getBalance(userTwo);
-      // console.log("userTwoBalanceAfter:", userTwoBalanceAfter);
+      totalEthAfter.should.be.equal(totalEthBefore - 2);
+      userTwoBalanceAfter.should.be.equal(userTwoBalanceAfter + 2);
     });
 
 
-    it("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
+    xit("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
       const recipient = userTwo;
       const amount = 1;
 
@@ -118,7 +105,7 @@ contract("IncentivizedReceiveChannel", function (accounts) {
       );
 
       expect(deliveryEvent).to.not.be.equal(undefined);
-      console.log("deliveryEvent:", deliveryEvent);
+      // console.log("deliveryEvent:", deliveryEvent);
       deliveryEvent.args.nonce.toNumber().should.be.equal(testMessage.nonce);
       deliveryEvent.args.result.should.be.equal(true);
 
