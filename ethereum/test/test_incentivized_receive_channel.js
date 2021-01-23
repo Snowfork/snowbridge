@@ -94,17 +94,6 @@ contract("IncentivizedReceiveChannel", function (accounts) {
       const abi = this.ethApp.abi
       const iChannel = new ethers.utils.Interface(abi)
       const testPayload = iChannel.functions.unlockETH.encode([userTwo, 100]);
-      // const testPayload = this.ethApp.contract.methods.unlockETH(recipient, amount).encodeABI();
-
-      // const sig = testPayload.slice(0, 34); // 0x + 32 bytes
-      // const fourByteSig = sig.slice(0, 10); // 0x + 32 bytes
-      // console.log(fourByteSig);
-
-      const partTwo = testPayload.slice(34, testPayload.length);
-      console.log(partTwo);
-
-      // const formattedPayload = fourByteSig + partTwo;
-      // console.log("formattedPayload:", formattedPayload)
 
       const testMessage = {
         nonce: 1,
