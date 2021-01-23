@@ -170,6 +170,7 @@ name = "artemis-commitments"
 version = "0.1.0"
 dependencies = [
  "artemis-core",
+ "enum-iterator",
  "ethabi-decode",
  "frame-support",
  "frame-system",
@@ -184,6 +185,7 @@ dependencies = [
 name = "artemis-core"
 version = "0.1.1"
 dependencies = [
+ "enum-iterator",
  "frame-support",
  "parity-scale-codec",
  "rustc-hex",
@@ -198,7 +200,6 @@ name = "artemis-erc20-app"
 version = "0.1.1"
 dependencies = [
  "artemis-assets",
- "artemis-commitments",
  "artemis-core",
  "artemis-ethereum",
  "ethabi-decode",
@@ -221,7 +222,6 @@ name = "artemis-eth-app"
 version = "0.1.1"
 dependencies = [
  "artemis-assets",
- "artemis-commitments",
  "artemis-core",
  "artemis-ethereum",
  "ethabi-decode",
@@ -1627,6 +1627,26 @@ name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+
+[[package]]
+name = "enum-iterator"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c79a6321a1197d7730510c7e3f6cb80432dfefecb32426de8cea0aa19b4bb8d7"
+dependencies = [
+ "enum-iterator-derive",
+]
+
+[[package]]
+name = "enum-iterator-derive"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e94aa31f7c0dc764f57896dc615ddd76fc13b0d5dca7eb6cc5e018a5a09ec06"
+dependencies = [
+ "proc-macro2 1.0.24",
+ "quote 1.0.8",
+ "syn 1.0.58",
+]
 
 [[package]]
 name = "enum_primitive"

@@ -6,18 +6,16 @@ use frame_support::{
 	weights::Weight,
 	traits::Get,
 };
-
 use sp_io::offchain_index;
-use sp_core::{H160, RuntimeDebug};
+use sp_core::{H160, H256, RuntimeDebug};
 use sp_runtime::{
-	traits::{Member, Hash, Zero, MaybeSerializeDeserialize},
+	traits::{Hash, Zero},
 	DigestItem
 };
-
 use codec::{Encode, Decode};
-use artemis_core::MessageCommitment;
-
+use artemis_core::{ChannelId, MessageCommitment};
 use ethabi::{self, Token};
+use enum_iterator::IntoEnumIterator;
 
 #[cfg(test)]
 mod mock;
@@ -27,11 +25,11 @@ mod tests;
 
 /// Custom DigestItem for header digest
 #[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
-enum AuxiliaryDigestItem<H: Encode> {
-	CommitmentHash(H)
+enum AuxiliaryDigestItem {
+	Commitment(ChannelId, H256)
 }
 
-impl<T, H: Encode> Into<DigestItem<T>> for AuxiliaryDigestItem<H> {
+impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
     fn into(self) -> DigestItem<T> {
         DigestItem::Other(self.encode())
     }
@@ -48,11 +46,7 @@ pub trait Config: frame_system::Config {
 
 	const INDEXING_PREFIX: &'static [u8];
 
-	type Hashing: Hash<Output = <Self as Config>::Hash>;
-
-	type Hash: Member + MaybeSerializeDeserialize + sp_std::fmt::Debug
-		+ sp_std::hash::Hash + AsRef<[u8]> + AsMut<[u8]> + Copy + Default + codec::Codec
-		+ codec::EncodeLike;
+	type Hashing: Hash<Output = H256>;
 
 	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
@@ -62,7 +56,7 @@ pub trait Config: frame_system::Config {
 decl_storage! {
 	trait Store for Module<T: Config> as Commitments {
 		/// Messages waiting to be committed
-		pub MessageQueue: Vec<Message>;
+		pub MessageQueues: map hasher(identity) ChannelId => Vec<Message>;
 	}
 }
 
@@ -98,13 +92,23 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 
-	fn offchain_key(hash: <T as Config>::Hash) -> Vec<u8> {
-		(T::INDEXING_PREFIX, hash).encode()
+	fn offchain_key(channel_id: ChannelId, hash: H256) -> Vec<u8> {
+		(T::INDEXING_PREFIX, channel_id, hash).encode()
 	}
 
 	// TODO: return proper weight
 	fn commit() -> Weight {
-		let messages: Vec<Message> = <Self as Store>::MessageQueue::take();
+		let mut weight: Weight = 0;
+
+		for channel_id in ChannelId::into_enum_iter() {
+			weight += Self::commit_for_channel(channel_id);
+		}
+
+		weight
+	}
+
+	fn commit_for_channel(channel_id: ChannelId) -> Weight {
+		let messages: Vec<Message> = <Self as Store>::MessageQueues::take(channel_id);
 		if messages.len() == 0 {
 			return 0
 		}
@@ -112,10 +116,10 @@ impl<T: Config> Module<T> {
 		let commitment = Self::encode_commitment(&messages);
 		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
-		let digest_item = AuxiliaryDigestItem::CommitmentHash(commitment_hash.clone()).into();
+		let digest_item = AuxiliaryDigestItem::Commitment(channel_id, commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
+		offchain_index::set(&Self::offchain_key(channel_id, commitment_hash), &commitment);
 
 		0
 	}
@@ -133,14 +137,19 @@ impl<T: Config> Module<T> {
 
 		ethabi::encode(&vec![Token::FixedArray(messages)])
 	}
-
 }
 
 impl<T: Config> MessageCommitment for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
-	// TODO: Number of messages per commitment should be bounded
-	fn add(address: H160, nonce: u64, payload: &[u8]) {
-		<Self as Store>::MessageQueue::append(Message { address, nonce, payload: payload.to_vec() });
+	fn add(channel_id: ChannelId, address: H160, nonce: u64, payload: &[u8]) {
+		<Self as Store>::MessageQueues::append(
+			channel_id,
+			Message {
+				address,
+				nonce,
+				payload: payload.to_vec()
+			}
+		);
 	}
 }
