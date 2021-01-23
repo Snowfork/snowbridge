@@ -2,8 +2,11 @@ pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./Decoder.sol";
 
 contract IncentivizedReceiveChannel {
+    using Decoder for bytes;
+
     uint256 public lastProcessedNonce;
 
     uint256 public MAX_PAYLOAD_BYTE_SIZE = 1000;
@@ -123,7 +126,7 @@ contract IncentivizedReceiveChannel {
                     targetApplicationAddress, // To addr
                     0, // No value
                     x, // Inputs are stored at location x
-                    0x44, // Inputs are 68 bytes long
+                    0x44, // Input size = 32 + 32 + 4 bytes
                     x, // Store output over input (saves space)
                     0x20 // Outputs are 32 bytes long
                 )
@@ -135,5 +138,38 @@ contract IncentivizedReceiveChannel {
 
             emit MessageDelivered(message.nonce, result);
         }
+    }
+
+    function test(
+        bytes4 sig,
+        bytes memory args,
+        address ethApp
+    ) public returns (bool) {
+        bytes memory recipient = args.slice(0, 20); // slice(start, length)
+        bytes memory amount = args.slice(20, 32); // slice(start, length)
+
+        bool success;
+        assembly {
+            let x := mload(0x40) //Find empty storage location using "free memory pointer"
+            mstore(x, sig) //Place signature at begining of empty storage
+            mstore(add(x, 0x04), recipient) //Place first argument directly next to signature
+            mstore(add(x, 0x24), amount) //Place second argument next to first, padded to 32 bytes
+            // mload
+            success := call(
+                //This is the critical change (Pop the top stack value)
+                50000, //50k gas
+                ethApp, //To addr
+                0, //No value
+                x, //Inputs are stored at location x
+                0x44, // input size = 32 + 32 + 4 bytes
+                x, //Store output over input (saves space)
+                0x20
+            ) //Outputs are 32 bytes long
+
+            // c := mload(x) //Assign output value to c
+            mstore(0x40, add(x, 0x44)) // Set storage pointer to empty space
+        }
+
+        return success;
     }
 }

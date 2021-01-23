@@ -53,10 +53,58 @@ contract("IncentivizedReceiveChannel", function (accounts) {
 
     });
 
+    it("inline assembly call should work", async function () {
+      // const userTwoBalanceBefore = await web3.eth.getBalance(userTwo);
+      // console.log("userTwoBalanceBefore:", userTwoBalanceBefore);
+
+      // const totalEthBefore = await this.ethApp.totalETH.call();
+      // console.log("totalEthBefore:", Number(totalEthBefore));
+
+      var abi = this.ethApp.abi
+      var iChannel = new ethers.utils.Interface(abi)
+      var calldata = iChannel.functions.unlockETH.encode([userTwo, 2]);
+
+      // const inputs = iChannel.functions.unlockETH.inputs;
+      // for(input of inputs) {
+      //   console.log(input.type);
+      // }
+
+      // Sig is first 4 bytes of hashed function name/param types
+      const sigBytes = calldata.slice(0, 34); // 0x + 32 bytes
+      const sig = sigBytes.slice(0, 10);       // 4 bytes
+
+      // Args are the remaining bytes
+      const args = "0x" + calldata.slice(34, calldata.length);
+
+      const res = await this.incentivizedReceiveChannel.test.call(sig, args, this.ethApp.address).should.be.fulfilled;
+      res.should.be.equal(true);
+
+      // const totalEthAfter = await this.ethApp.totalETH.call();
+      // console.log("totalEthAfter:", Number(totalEthAfter));
+
+      // const userTwoBalanceAfter = await web3.eth.getBalance(userTwo);
+      // console.log("userTwoBalanceAfter:", userTwoBalanceAfter);
+    });
+
+
     it("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
       const recipient = userTwo;
       const amount = 1;
-      const testPayload = this.ethApp.contract.methods.unlockETH(recipient, amount).encodeABI();
+
+      const abi = this.ethApp.abi
+      const iChannel = new ethers.utils.Interface(abi)
+      const testPayload = iChannel.functions.unlockETH.encode([userTwo, 100]);
+      // const testPayload = this.ethApp.contract.methods.unlockETH(recipient, amount).encodeABI();
+
+      // const sig = testPayload.slice(0, 34); // 0x + 32 bytes
+      // const fourByteSig = sig.slice(0, 10); // 0x + 32 bytes
+      // console.log(fourByteSig);
+
+      const partTwo = testPayload.slice(34, testPayload.length);
+      console.log(partTwo);
+
+      // const formattedPayload = fourByteSig + partTwo;
+      // console.log("formattedPayload:", formattedPayload)
 
       const testMessage = {
         nonce: 1,
@@ -81,6 +129,7 @@ contract("IncentivizedReceiveChannel", function (accounts) {
       );
 
       expect(deliveryEvent).to.not.be.equal(undefined);
+      console.log("deliveryEvent:", deliveryEvent);
       deliveryEvent.args.nonce.toNumber().should.be.equal(testMessage.nonce);
       deliveryEvent.args.result.should.be.equal(true);
 
