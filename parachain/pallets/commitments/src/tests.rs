@@ -29,8 +29,8 @@ const CONTRACT_B: H160 =  H160::repeat_byte(2);
 #[test]
 fn test_add_message() {
 	new_test_ext().execute_with(|| {
-		CommitmentsModule::add(CONTRACT_A, 0, vec![0, 1, 2]);
-		CommitmentsModule::add(CONTRACT_B, 1, vec![3, 4, 5]);
+		CommitmentsModule::add(CONTRACT_A, 0, &vec![0, 1, 2]);
+		CommitmentsModule::add(CONTRACT_B, 1, &vec![3, 4, 5]);
 
 		let messages = vec![
 			Message {
