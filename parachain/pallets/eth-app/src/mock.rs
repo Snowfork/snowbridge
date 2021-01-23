@@ -90,7 +90,7 @@ parameter_types! {
 impl Config for MockRuntime {
 	type Event = MockEvent;
 	type Asset = Asset;
-	type Commitments = MessageCommitment;
+	type MessageCommitment = MessageCommitment;
 }
 
 pub type System = system::Module<MockRuntime>;

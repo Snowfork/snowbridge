@@ -84,7 +84,7 @@ impl artemis_commitments::Config for MockRuntime {
 impl Config for MockRuntime {
 	type Event = MockEvent;
 	type Assets = Assets;
-	type Commitments = MessageCommitment;
+	type MessageCommitment = MessageCommitment;
 }
 
 pub type System = system::Module<MockRuntime>;
