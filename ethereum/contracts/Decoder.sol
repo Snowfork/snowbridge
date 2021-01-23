@@ -84,4 +84,18 @@ library Decoder {
         }
         return temp;
     }
+
+    // Slice 32 bytes and cast to an address
+    function sliceUint(bytes memory _bytes, uint256 _start)
+        internal
+        pure
+        returns (uint256)
+    {
+        require(_bytes.length >= _start + 32, "slicing out of range");
+        uint256 x;
+        assembly {
+            x := mload(add(_bytes, add(0x20, _start)))
+        }
+        return x;
+    }
 }
