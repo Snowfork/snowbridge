@@ -1,5 +1,3 @@
-const ethers = require("ethers");
-
 const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedTargetApplicationId, expectedPayload, expectedNonce = 0) => {
     outChannelLogFields = [{
         type: 'uint256',
@@ -15,10 +13,6 @@ const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, exp
         name: 'payload',
     }];
 
-    const decodedEvent2 = ethers.utils.defaultAbiCoder.decode(
-        ['uint256', 'address', 'string', 'bytes'],
-        channelEvent.data
-    );
     const decodedEvent = web3.eth.abi.decodeLog(outChannelLogFields, channelEvent.data, channelEvent.topics);
 
     channelEvent.address.should.be.equal(channelAddress);
@@ -28,4 +22,20 @@ const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, exp
     decodedEvent.payload.should.be.equal(expectedPayload);
 };
 
-module.exports = { confirmChannelSend };
+const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmount) => {
+    unlockLogFields = [{
+        type: 'address',
+        name: '_recipient'
+    }, {
+        type: 'uint256',
+        name: '_amount'
+    }];
+
+    const decodedEvent = web3.eth.abi.decodeLog(unlockLogFields, rawEvent.data, rawEvent.topics);
+
+    rawEvent.address.should.be.equal(ethAppAddress);
+    decodedEvent._recipient.should.be.equal(expectedRecipient);
+    parseFloat(decodedEvent._amount).should.be.equal(expectedAmount);
+};
+
+module.exports = { confirmChannelSend, confirmUnlock };

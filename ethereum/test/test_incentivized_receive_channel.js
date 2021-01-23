@@ -5,6 +5,8 @@ const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
 const Web3Utils = require("web3-utils");
 const BigNumber = web3.BigNumber;
 
+const { confirmUnlock } = require("./helpers");
+
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
@@ -23,7 +25,7 @@ contract("IncentivizedReceiveChannel", function (accounts) {
       this.incentivizedReceiveChannel = await IncentivizedReceiveChannel.new();
     });
 
-   xit("should deploy and initialize the IncentivizedReceiveChannel contract", async function () {
+   it("should deploy and initialize the IncentivizedReceiveChannel contract", async function () {
       this.incentivizedReceiveChannel.should.exist;
     });
   });
@@ -53,34 +55,14 @@ contract("IncentivizedReceiveChannel", function (accounts) {
 
     });
 
-    it("inline assembly call should work", async function () {
-      const userTwoBalanceBefore = parseInt(await web3.eth.getBalance(userTwo))
 
-      const totalEthBefore = (await this.ethApp.totalETH.call()).toNumber();
-
-      var abi = this.ethApp.abi
-      var iChannel = new ethers.utils.Interface(abi)
-      var calldata = iChannel.functions.unlockETH.encode([userTwo, 2]);
-      const tx = await this.incentivizedReceiveChannel.test(calldata, this.ethApp.address)
-
-      console.log({rawLogs: tx.receipt.rawLogs});
-
-      const totalEthAfter = (await this.ethApp.totalETH.call()).toNumber();
-
-      const userTwoBalanceAfter = parseInt(await web3.eth.getBalance(userTwo));
-
-      totalEthAfter.should.be.equal(totalEthBefore - 2);
-      userTwoBalanceAfter.should.be.equal(userTwoBalanceAfter + 2);
-    });
-
-
-    xit("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
+    it("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
       const recipient = userTwo;
       const amount = 1;
 
       const abi = this.ethApp.abi
       const iChannel = new ethers.utils.Interface(abi)
-      const testPayload = iChannel.functions.unlockETH.encode([userTwo, 100]);
+      const testPayload = iChannel.functions.unlockETH.encode([userTwo, 2]);
 
       const testMessage = {
         nonce: 1,
@@ -97,7 +79,7 @@ contract("IncentivizedReceiveChannel", function (accounts) {
         ethers.utils.formatBytes32String("fake-proof1"),
         ethers.utils.formatBytes32String("fake-proof2"),
         { from: userOne }
-      ).should.be.fulfilled;
+      )
 
       // Confirm Message delivered correctly
       const deliveryEvent = tx.logs.find(
@@ -105,18 +87,12 @@ contract("IncentivizedReceiveChannel", function (accounts) {
       );
 
       expect(deliveryEvent).to.not.be.equal(undefined);
-      // console.log("deliveryEvent:", deliveryEvent);
       deliveryEvent.args.nonce.toNumber().should.be.equal(testMessage.nonce);
       deliveryEvent.args.result.should.be.equal(true);
 
       // Confirm ETHApp processed event correctly
-      const appEvent = tx.logs.find(
-        e => e.event === "Unlock"
-      );
-
-      expect(appEvent).to.not.be.equal(undefined);
-      appEvent.args._recipient.should.be.equal(recipient);
-      Number(appEvent.args._amount).should.be.bignumber.equal(amount);
+      const rawUnlockLog = tx.receipt.rawLogs[0];
+      confirmUnlock(rawUnlockLog, this.ethApp.address, userTwo, 2)
     });
   });
 

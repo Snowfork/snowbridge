@@ -109,58 +109,29 @@ contract IncentivizedReceiveChannel {
 
             // Deliver the message to the destination
             // Delivery will have fixed maximum gas allowed for the destination app.
-            bytes memory callInput = message.payload;
             address targetApplicationAddress = message.targetApplicationAddress;
             uint256 allowedGas = MAX_GAS_PER_MESSAGE;
+            bytes memory callInput = message.payload;
 
             bool result;
+            uint256 callInputLength = callInput.length;
             assembly {
-                let x := mload(0x40) // Find empty storage location using "free memory pointer"
-                mstore(x, callInput) // Place signature at begining of empty storage
+                let callInputDataPointer := add(callInput, 32) // Move 32 ahead of callInput length slot to get to actual data slot (TODO: verify this works in all cases)
 
                 // Dispatch call to the receiver - it is expected to be fire and forget. If the call reverts, runs out of gas, error,
                 // etc, its the fault of the sender
                 result := call(
-                    // Pop the top stack value
                     allowedGas, // Allowed gas
                     targetApplicationAddress, // To addr
-                    0, // No value
-                    x, // Inputs are stored at location x
-                    0x44, // Input size = 32 + 32 + 4 bytes
-                    x, // Store output over input (saves space)
-                    0x20 // Outputs are 32 bytes long
+                    0, // No ether value being sent
+                    callInputDataPointer, // Inputs are stored at callInputDataPointer
+                    callInputLength, // Input length
+                    callInputDataPointer, // Store output over input (saves space)
+                    callInputLength // Outputs can be as long as input length
                 )
-
-                // TODO - get output value and clear storage pointer.
-                // let result := mload(x) // Assign output value to c
-                // mstore(0x40, add(x, callInput.length)) // Set storage pointer to empty space
             }
 
             emit MessageDelivered(message.nonce, result);
         }
-    }
-
-    function test(bytes calldata args, address ethApp) external returns (bool) {
-        bool success;
-        assembly {
-            let startingFreeMemoryPos := mload(0x40) // Find empty storage location using "free memory pointer"
-            calldatacopy(startingFreeMemoryPos, 100, 0x44) //copy s bytes from calldata at position f to mem at position t
-            log0(startingFreeMemoryPos, 0x44)
-            log0(sub(startingFreeMemoryPos, 100), 0x100)
-            success := call(
-                50000, //50k gas
-                ethApp, //To addr
-                0, //No value
-                startingFreeMemoryPos, //Inputs are stored at location x
-                0x56, // input size = 4 + 20 + 32 bytes
-                startingFreeMemoryPos, //Store output over input (saves space)
-                0x20
-            ) //Outputs are 32 bytes long
-
-            // c := mload(x) //Assign output value to c
-            // mstore(0x40, add(x, 0x44)) // Set storage pointer to empty space
-        }
-
-        return success;
     }
 }
