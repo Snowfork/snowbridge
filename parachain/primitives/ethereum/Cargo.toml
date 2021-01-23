@@ -23,9 +23,10 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococ
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", branch = "master", package = "ethabi-decode", default-features = false }
-ethash = { git = "https://github.com/Snowfork/ethash.git", branch = "master", default-features = false }
+ethash = { git = "https://github.com/Snowfork/ethash.git", rev = "e7df4de5bab9e2a3fe9b274284d5b0e3776d6e56", default-features = false }
 
 [dev-dependencies]
+wasm-bindgen-test = "0.3.19"
 artemis-testutils = { path = "../../primitives/testutils" }
 rand = "0.7.3"
 serde = { version = "1.0", features = ["derive"] }
