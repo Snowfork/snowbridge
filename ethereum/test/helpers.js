@@ -1,3 +1,5 @@
+const ethers = require("ethers");
+
 const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedTargetApplicationId, expectedPayload, expectedNonce = 0) => {
     outChannelLogFields = [{
         type: 'uint256',
@@ -53,4 +55,11 @@ const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
     decodedEvent._result.should.be.equal(expectedResult);
 };
 
-module.exports = { confirmChannelSend, confirmUnlock, confirmMessageDelivered };
+const hashMessage = (message) => {
+    return ethers.utils.solidityKeccak256(
+        [ 'uint256', 'string', 'address', 'bytes' ],
+        [ message.nonce, message.senderApplicationId, message.targetApplicationAddress, message.payload ]
+      );
+}
+
+module.exports = { confirmChannelSend, confirmUnlock, confirmMessageDelivered, hashMessage };

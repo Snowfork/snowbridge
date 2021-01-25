@@ -76,8 +76,11 @@ contract IncentivizedReceiveChannel {
         // Prove that the commitment is in fact in the parachain block header
         // require(parachainBlockHeader.commitment == commitment)
 
-        // Prove that the commitmentContents match the commitment
-        // require(commitment == hash(commitmentContents))
+        // Validate that the commitment matches the commitment contents
+        require(
+            validateCommitment(commitment, commitmentContents),
+            "invalid commitment"
+        );
 
         // Require there is enough gas to play all messages
         require(
@@ -133,5 +136,38 @@ contract IncentivizedReceiveChannel {
 
             emit MessageDelivered(message.nonce, result);
         }
+    }
+
+    function validateCommitment(
+        Commitment memory commitment,
+        CommitmentContents memory commitmentContents
+    ) internal returns (bool) {
+        bytes32 commitmentHash;
+        for (uint256 i = 0; i < commitmentContents.messages.length; i++) {
+            if (i == 0) {
+                commitmentHash = hashMessage(commitmentContents.messages[i]);
+            } else {
+                bytes32 messageHash =
+                    hashMessage(commitmentContents.messages[i]);
+                commitmentHash = keccak256(
+                    abi.encodePacked(commitmentHash, messageHash)
+                );
+            }
+        }
+        return
+            keccak256(abi.encodePacked(commitmentHash)) ==
+            keccak256(abi.encodePacked(commitment.commitmentHash));
+    }
+
+    function hashMessage(Message memory message) internal returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    message.nonce,
+                    message.senderApplicationId,
+                    message.targetApplicationAddress,
+                    message.payload
+                )
+            );
     }
 }
