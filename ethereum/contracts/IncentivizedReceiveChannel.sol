@@ -34,7 +34,7 @@ contract IncentivizedReceiveChannel {
         lastProcessedNonce = 0;
     }
 
-    event MessageDelivered(uint256 nonce, bool result);
+    event MessageDelivered(uint256 _nonce, bool _result);
 
     function newParachainCommitment(
         Commitment memory commitment,

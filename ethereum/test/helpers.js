@@ -38,4 +38,19 @@ const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmoun
     parseFloat(decodedEvent._amount).should.be.equal(expectedAmount);
 };
 
-module.exports = { confirmChannelSend, confirmUnlock };
+const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
+    messageDeliveredLogFields = [{
+        type: 'uint256',
+        name: '_nonce'
+    }, {
+        type: 'bool',
+        name: '_result'
+    }];
+
+    const decodedEvent = web3.eth.abi.decodeLog(messageDeliveredLogFields, rawEvent.data, rawEvent.topics);
+
+    parseFloat(decodedEvent._nonce).should.be.equal(expectedNonce);
+    decodedEvent._result.should.be.equal(expectedResult);
+};
+
+module.exports = { confirmChannelSend, confirmUnlock, confirmMessageDelivered };
