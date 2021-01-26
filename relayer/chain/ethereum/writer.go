@@ -19,7 +19,7 @@ import (
 type Writer struct {
 	conn           *Connection
 	bridgeContract *Contract
-	messages       <-chan chain.Message
+	messages       <-chan []chain.Message
 	log            *logrus.Entry
 }
 
@@ -46,7 +46,7 @@ const RawABI = `
 ]
 `
 
-func NewWriter(conn *Connection, messages <-chan chain.Message, bridgeContract *Contract, log *logrus.Entry) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan []chain.Message, bridgeContract *Contract, log *logrus.Entry) (*Writer, error) {
 	return &Writer{
 		conn:           conn,
 		bridgeContract: bridgeContract,
@@ -76,10 +76,12 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return wr.onDone(ctx)
-		case msg := <-wr.messages:
-			err := wr.Write(ctx, &msg)
-			if err != nil {
-				wr.log.WithError(err).Error("Error submitting message to ethereum")
+		case msgs := <-wr.messages:
+			for _, msg := range msgs {
+				err := wr.Write(ctx, &msg)
+				if err != nil {
+					wr.log.WithError(err).Error("Error submitting message to ethereum")
+				}
 			}
 		}
 	}

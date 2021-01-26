@@ -27,6 +27,8 @@ pub use assets::{AssetId, MultiAsset, SingleAsset};
 pub trait Verifier<AccountId> {
 
 	fn verify(sender: AccountId, app_id: AppId, message: &Message) -> DispatchResult;
+
+	fn verify_bulk(sender: AccountId, messages: &[(AppId, Message)]) -> DispatchResult;
 }
 
 /// A trait for handling message payloads.

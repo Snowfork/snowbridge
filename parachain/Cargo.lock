@@ -245,7 +245,7 @@ version = "0.1.0"
 dependencies = [
  "artemis-testutils",
  "ethabi-decode",
- "ethash",
+ "ethash 0.5.0 (git+https://github.com/Snowfork/ethash.git?rev=e7df4de5bab9e2a3fe9b274284d5b0e3776d6e56)",
  "ethbloom",
  "ethereum-types",
  "getrandom 0.2.2",
@@ -263,7 +263,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "tiny-keccak 2.0.2",
+ "wasm-bindgen-test",
 ]
 
 [[package]]
@@ -1013,6 +1013,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "console_error_panic_hook"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8d976903543e0c48546a91908f21588a680a8c8f984df9a5d69feccb2b2a211"
+dependencies = [
+ "cfg-if 0.1.10",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "const_fn"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1718,7 +1728,19 @@ dependencies = [
 [[package]]
 name = "ethash"
 version = "0.5.0"
-source = "git+https://github.com/Snowfork/ethash.git?branch=master#f8d72b1af1e6f996192c96112f6a318e5293a48f"
+source = "git+https://github.com/Snowfork/ethash.git?rev=e7df4de5bab9e2a3fe9b274284d5b0e3776d6e56#e7df4de5bab9e2a3fe9b274284d5b0e3776d6e56"
+dependencies = [
+ "byteorder",
+ "ethereum-types",
+ "primitive-types",
+ "rlp",
+ "sha3 0.8.2",
+]
+
+[[package]]
+name = "ethash"
+version = "0.5.0"
+source = "git+https://github.com/Snowfork/ethash.git?branch=master#e7df4de5bab9e2a3fe9b274284d5b0e3776d6e56"
 dependencies = [
  "byteorder",
  "ethereum-types",
@@ -4731,7 +4753,7 @@ dependencies = [
  "artemis-core",
  "artemis-ethereum",
  "artemis-testutils",
- "ethash",
+ "ethash 0.5.0 (git+https://github.com/Snowfork/ethash.git)",
  "frame-support",
  "frame-system",
  "hex-literal",
@@ -9853,6 +9875,30 @@ name = "wasm-bindgen-shared"
 version = "0.2.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e7811dd7f9398f14cc76efd356f98f03aa30419dea46aa810d71e819fc97158"
+
+[[package]]
+name = "wasm-bindgen-test"
+version = "0.3.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0355fa0c1f9b792a09b6dcb6a8be24d51e71e6d74972f9eb4a44c4c004d24a25"
+dependencies = [
+ "console_error_panic_hook",
+ "js-sys",
+ "scoped-tls",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-bindgen-test-macro",
+]
+
+[[package]]
+name = "wasm-bindgen-test-macro"
+version = "0.3.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27e07b46b98024c2ba2f9e83a10c2ef0515f057f2da299c1762a2017de80438b"
+dependencies = [
+ "proc-macro2 1.0.24",
+ "quote 1.0.8",
+]
 
 [[package]]
 name = "wasm-gc-api"

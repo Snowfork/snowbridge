@@ -17,8 +17,8 @@
 #![allow(unused_variables)]
 
 use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::DispatchResult};
+	debug, decl_error, decl_event, decl_module, decl_storage,
+	dispatch::DispatchError, dispatch::DispatchResult};
 use frame_system::{self as system, ensure_signed};
 
 use sp_std::prelude::*;
@@ -53,8 +53,8 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
-    	/// Target application not found.
-		AppNotFound
+		/// Target application not found.
+		AppNotFound,
 	}
 }
 
@@ -74,6 +74,39 @@ decl_module! {
 
 			T::Verifier::verify(who, app_id, &message)?;
 			Self::dispatch(app_id.into(), &message)
+		}
+
+		/// Submit multiple messages for dispatch to multiple target applications.
+		#[weight = 0]
+		pub fn submit_bulk(origin, messages: Vec<(AppId, Message)>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			debug::RuntimeLogger::init();
+
+			debug::trace!(
+				target: "submit_messages",
+				"Received {} messages",
+				messages.len(),
+			);
+
+			T::Verifier::verify_bulk(who, messages.as_slice())?;
+
+			debug::trace!(
+				target: "submit_messages",
+				"Message verification succeeded",
+			);
+
+			let errors: Vec<DispatchError> = messages.iter()
+				.map(|(app_id, msg)| Self::dispatch(app_id.into(), msg))
+				.filter_map(|r| r.err())
+				.collect();
+
+			debug::trace!(
+				target: "submit_messages",
+				"Messages were dispatched",
+			);
+
+			Ok(())
 		}
 	}
 }

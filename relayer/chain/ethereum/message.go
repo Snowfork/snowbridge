@@ -150,9 +150,9 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie, log *logr
 
 	value := hex.EncodeToString(message.Data)
 	log.WithFields(logrus.Fields{
-		"payload":     value,
-		"blockNumber": message.VerificationInput.AsBasic.BlockNumber,
-		"eventIndex":  message.VerificationInput.AsBasic.EventIndex,
+		"payload":    value,
+		"blockHash":  message.VerificationInput.AsReceiptProof.BlockHash.Hex(),
+		"eventIndex": message.VerificationInput.AsReceiptProof.TxIndex,
 	}).Debug("Generated message from Ethereum log")
 
 	msg := chain.Message{AppID: event.Address, Payload: message}
