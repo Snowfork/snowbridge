@@ -20,25 +20,24 @@ pub fn make_outbound_channel<T: Config>(channel_id: ChannelId) -> Box<dyn Outbou
 }
 
 struct BasicOutboundChannel<T: Config> {
+	id: ChannelId,
 	storage: Storage<T>
 }
 
 impl<T: Config> BasicOutboundChannel<T> {
-
-	const CHANNEL_ID: ChannelId = ChannelId::Basic;
-
 	fn new() -> Self {
 		Self {
-			storage: Storage::new(Self::CHANNEL_ID)
+			id: ChannelId::Basic,
+			storage: Storage::new(ChannelId::Basic)
 		}
 	}
 }
 
 impl<T: Config> OutboundChannel for BasicOutboundChannel<T> {
 	// This implementation is a WIP!
-	fn submit(&mut self, payload: &[u8]) -> DispatchResult {
+	fn submit(&self, payload: &[u8]) -> DispatchResult {
 		self.storage.try_mutate(|data| {
-			T::MessageCommitment::add(Self::CHANNEL_ID, H160::zero(), data.nonce, payload);
+			T::MessageCommitment::add(self.id, H160::zero(), data.nonce, payload);
 			data.nonce += 1;
 			Ok(())
 		})
@@ -46,25 +45,24 @@ impl<T: Config> OutboundChannel for BasicOutboundChannel<T> {
 }
 
 struct IncentivizedOutboundChannel<T: Config> {
+	id: ChannelId,
 	storage: Storage<T>
 }
 
 impl<T: Config> IncentivizedOutboundChannel<T> {
-
-	const CHANNEL_ID: ChannelId = ChannelId::Incentivized;
-
 	fn new() -> Self {
 		Self {
-			storage: Storage::new(Self::CHANNEL_ID)
+			id: ChannelId::Incentivized,
+			storage: Storage::new(ChannelId::Incentivized)
 		}
 	}
 }
 
 impl<T: Config> OutboundChannel for IncentivizedOutboundChannel<T> {
 	// This implementation is a WIP!
-	fn submit(&mut self, payload: &[u8]) -> DispatchResult {
+	fn submit(&self, payload: &[u8]) -> DispatchResult {
 		self.storage.try_mutate(|data| {
-			T::MessageCommitment::add(Self::CHANNEL_ID, H160::zero(), data.nonce, payload);
+			T::MessageCommitment::add(self.id, H160::zero(), data.nonce, payload);
 			data.nonce += 1;
 			Ok(())
 		})
@@ -97,12 +95,12 @@ impl<T: Config> Storage<T> {
 		}
 	}
 
-	fn set(&mut self, data: OutboundChannelData) {
+	fn set(&self, data: OutboundChannelData) {
 		self.cached_data.set(Some(data));
 		OutboundChannels::insert(self.channel_id, data)
 	}
 
-	fn try_mutate<R, E, F>(&mut self, f: F) -> Result<R, E>
+	fn try_mutate<R, E, F>(&self, f: F) -> Result<R, E>
 	where
 		F: FnOnce(&mut OutboundChannelData) -> Result<R, E>
 	{

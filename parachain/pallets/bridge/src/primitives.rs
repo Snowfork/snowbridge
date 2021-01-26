@@ -23,5 +23,5 @@ where
 }
 
 pub trait OutboundChannel {
-	fn submit(&mut self, payload: &[u8]) -> DispatchResult;
+	fn submit(&self, payload: &[u8]) -> DispatchResult;
 }

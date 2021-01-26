@@ -29,6 +29,13 @@ pub trait Verifier<AccountId> {
 
 	fn verify(sender: AccountId, app_id: AppId, message: &Message) -> DispatchResult;
 }
+
+impl<AccountId> Verifier<AccountId> for () {
+	fn verify(sender: AccountId, app_id: AppId, message: &Message) -> DispatchResult {
+		Ok(())
+	}
+}
+
 /// Outbound submission for applications
 pub trait SubmitOutbound {
 	fn submit(channel_id: ChannelId, payload: &[u8]) -> DispatchResult;
@@ -47,4 +54,8 @@ pub trait Application {
 /// Add a message to a commitment
 pub trait MessageCommitment {
 	fn add(channel_id: ChannelId, address: H160, nonce: u64, payload: &[u8]);
+}
+
+impl MessageCommitment for () {
+	fn add(channel_id: ChannelId, address: H160, nonce: u64, payload: &[u8]) { }
 }

@@ -27,8 +27,14 @@ use channel::inbound::make_inbound_channel;
 use channel::outbound::make_outbound_channel;
 use primitives::{InboundChannelData, OutboundChannelData};
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 mod channel;
-pub mod primitives;
+mod primitives;
 
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
@@ -82,7 +88,7 @@ decl_module! {
 impl<T: Config> SubmitOutbound for Module<T> {
 	fn submit(channel_id: ChannelId, payload: &[u8]) -> DispatchResult {
 		// Construct channel object from storage
-		let mut channel = make_outbound_channel::<T>(channel_id);
+		let channel = make_outbound_channel::<T>(channel_id);
 		channel.submit(payload)
 	}
 }

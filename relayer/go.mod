@@ -3,6 +3,7 @@ module github.com/snowfork/polkadot-ethereum/relayer
 go 1.14
 
 require (
+	github.com/Snowfork/go-substrate-rpc-client v1.1.0
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20210107181124-fad53805024e // indirect
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
