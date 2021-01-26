@@ -23,7 +23,7 @@
 			"port": 31200,
 			"balance": "1000000000000000000000",
 			"flags": [
-				"-lbasic_authorship=trace,commitments=debug,import_header=trace,runtime=debug",
+				"-lbasic_authorship=trace,commitments=debug,import_header=trace,runtime=debug,submit_messages=trace",
 				"--execution=native",
 				"--rpc-port=9980",
 				"--offchain-worker=Always",
