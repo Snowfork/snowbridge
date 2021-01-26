@@ -19,8 +19,8 @@
 		{
 			"bin": "target/release/artemis",
 			"id": "200",
-			"wsPort": 9988,
-			"port": 31200,
+			"wsPort": 9966,
+			"port": 30666,
 			"balance": "1000000000000000000000",
 			"flags": [
 				"-lbasic_authorship=trace,commitments=debug,import_header=trace,runtime=debug,submit_messages=trace",
