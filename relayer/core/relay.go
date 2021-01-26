@@ -48,7 +48,7 @@ type Config struct {
 }
 
 func NewRelay() (*Relay, error) {
-	config, err := loadConfig()
+	config, err := LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (re *Relay) Start() {
 	re.subChain.Stop()
 }
 
-func loadConfig() (*Config, error) {
+func LoadConfig() (*Config, error) {
 	var config Config
 	err := viper.Unmarshal(&config)
 	if err != nil {
