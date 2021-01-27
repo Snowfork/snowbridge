@@ -28,7 +28,7 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 
-use artemis_core::{Application, AssetId, MultiAsset, MessageCommitment};
+use artemis_core::{ChannelId, SubmitOutbound, Application, AssetId, MultiAsset};
 use artemis_ethereum::Log;
 
 mod payload;
@@ -44,7 +44,7 @@ pub trait Config: system::Config {
 
 	type Assets: MultiAsset<<Self as system::Config>::AccountId>;
 
-	type MessageCommitment: MessageCommitment;
+	type SubmitOutbound: SubmitOutbound;
 }
 
 decl_storage! {
@@ -81,7 +81,7 @@ decl_module! {
 
 		/// Burn an ERC20 token balance
 		#[weight = 0]
-		pub fn burn(origin, token_addr: H160, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, channel_id: ChannelId, token_addr: H160, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Assets::withdraw(AssetId::Token(token_addr), &who, amount)?;
@@ -92,7 +92,9 @@ decl_module! {
 				recipient_addr: recipient,
 				amount: amount
 			};
-			T::MessageCommitment::add(Self::address(), 0, &message.encode());
+
+			T::SubmitOutbound::submit(channel_id, &message.encode())?;
+
 			Self::deposit_event(RawEvent::Burned(token_addr, who.clone(), amount));
 
 			Ok(())
@@ -102,8 +104,7 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-
-	fn handle_event(payload: InboundPayload<T::AccountId>) -> DispatchResult {
+	fn handle_payload(payload: &InboundPayload<T::AccountId>) -> DispatchResult {
 		T::Assets::deposit(
 			AssetId::Token(payload.token_addr),
 			&payload.recipient_addr,
@@ -117,7 +118,6 @@ impl<T: Config> Module<T> {
 		));
 		Ok(())
 	}
-
 }
 
 impl<T: Config> Application for Module<T> {
@@ -128,7 +128,7 @@ impl<T: Config> Application for Module<T> {
 			.try_into()
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
-		Self::handle_event(payload_decoded)
+		Self::handle_payload(&payload_decoded)
 	}
 
 	fn address() -> H160 {

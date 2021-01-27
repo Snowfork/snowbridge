@@ -4,7 +4,7 @@ use crate::{Module, Config};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
-	traits::{BlakeTwo256, Keccak256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
+	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
 use frame_system as system;
 
@@ -23,7 +23,6 @@ impl_outer_event! {
     pub enum MockEvent for MockRuntime {
 		system<T>,
 		artemis_assets<T>,
-		artemis_commitments,
         test_events<T>,
     }
 }
@@ -72,29 +71,16 @@ impl artemis_assets::Config for MockRuntime {
 }
 
 parameter_types! {
-	pub const CommitInterval: u64 = 20;
-}
-
-impl artemis_commitments::Config for MockRuntime {
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
-	type Event = MockEvent;
-	type Hash = H256;
-	type Hashing = Keccak256;
-	type CommitInterval = CommitInterval;
-}
-
-parameter_types! {
 	pub const EthAssetId: AssetId = AssetId::ETH;
 }
 
 impl Config for MockRuntime {
 	type Event = MockEvent;
 	type Asset = Asset;
-	type MessageCommitment = MessageCommitment;
+	type SubmitOutbound = ();
 }
 
 pub type System = system::Module<MockRuntime>;
-pub type MessageCommitment = artemis_commitments::Module<MockRuntime>;
 pub type Asset = SingleAssetAdaptor<MockRuntime, EthAssetId>;
 pub type ETH = Module<MockRuntime>;
 

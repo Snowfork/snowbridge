@@ -145,6 +145,12 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
 {
   "Address": "MultiAddress",
   "LookupSource": "MultiAddress",
+  "ChannelId": {
+    "_enum": {
+      "Basic": null,
+      "Incentivized": null
+    }
+  },
   "AppId": "[u8; 20]",
   "Message": {
     "payload": "Vec<u8>",

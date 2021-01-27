@@ -3,6 +3,7 @@ package offchain
 import (
 	"testing"
 
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate/digest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,7 +15,11 @@ func TestMakeStorageKey(t *testing.T) {
 		7, 7, 7, 7, 7, 7, 7, 7,
 	}
 
-	key, err := MakeStorageKey(commitmentHash)
+	channelID := digest.ChannelID{
+		IsBasic: true,
+	}
+
+	key, err := MakeStorageKey(channelID, commitmentHash)
 	if err != nil {
 		panic(err)
 	}

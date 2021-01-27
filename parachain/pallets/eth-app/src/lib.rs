@@ -27,7 +27,7 @@ use sp_std::prelude::*;
 use sp_std::convert::TryInto;
 use sp_core::{H160, U256};
 
-use artemis_core::{Application, MessageCommitment, SingleAsset};
+use artemis_core::{ChannelId, Application, SubmitOutbound, SingleAsset};
 use artemis_ethereum::Log;
 
 mod payload;
@@ -44,7 +44,7 @@ pub trait Config: system::Config {
 
 	type Asset: SingleAsset<<Self as system::Config>::AccountId>;
 
-	type MessageCommitment: MessageCommitment;
+	type SubmitOutbound: SubmitOutbound;
 }
 
 decl_storage! {
@@ -82,7 +82,7 @@ decl_module! {
 		// Users should burn their holdings to release funds on the Ethereum side
 		// TODO: Calculate weights
 		#[weight = 0]
-		pub fn burn(origin, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, channel_id: ChannelId, recipient: H160, amount: U256, ) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Asset::withdraw(&who, amount)?;
@@ -92,7 +92,9 @@ decl_module! {
 				recipient_addr: recipient,
 				amount: amount
 			};
-			T::MessageCommitment::add(Self::address(), 0, &message.encode());
+
+			T::SubmitOutbound::submit(channel_id, &message.encode())?;
+
 			Self::deposit_event(RawEvent::Burned(who.clone(), amount));
 
 			Ok(())
@@ -102,8 +104,7 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-
-	fn handle_event(payload: InboundPayload<T::AccountId>) -> DispatchResult {
+	fn handle_payload(payload: &InboundPayload<T::AccountId>) -> DispatchResult  {
 		T::Asset::deposit(&payload.recipient_addr, payload.amount)?;
 		Self::deposit_event(RawEvent::Minted(payload.recipient_addr.clone(), payload.amount));
 		Ok(())
@@ -118,7 +119,7 @@ impl<T: Config> Application for Module<T> {
 			.try_into()
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
-		Self::handle_event(payload_decoded)
+		Self::handle_payload(&payload_decoded)
 	}
 
 	fn address() -> H160 {

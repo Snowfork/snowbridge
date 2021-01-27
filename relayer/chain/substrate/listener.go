@@ -99,13 +99,14 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				return err
 			}
 
-			if digestItem != nil && digestItem.IsCommitmentHash {
+			if digestItem != nil && digestItem.IsCommitment {
 				li.log.WithFields(logrus.Fields{
 					"block":          finalizedHeader.Number,
-					"commitmentHash": digestItem.AsCommitmentHash.Hex(),
+					"channelID":      digestItem.AsCommitment.ChannelID,
+					"commitmentHash": digestItem.AsCommitment.Hash.Hex(),
 				}).Debug("Found commitment hash in header digest")
 
-				storageKey, err := offchain.MakeStorageKey(digestItem.AsCommitmentHash)
+				storageKey, err := offchain.MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
 				if err != nil {
 					return err
 				}

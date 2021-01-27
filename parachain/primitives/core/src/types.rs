@@ -3,7 +3,7 @@
 use frame_support::RuntimeDebug;
 use sp_std::vec::Vec;
 use sp_core::H256;
-
+use enum_iterator::IntoEnumIterator;
 use codec::{Encode, Decode};
 
 /// Identifier for an application module registered within the runtime.
@@ -11,6 +11,12 @@ use codec::{Encode, Decode};
 /// Typically an identifier of this type will hold an Ethereum contract address. This provides a mechanism
 /// for cross-chain routing of messages.
 pub type AppId = [u8; 20];
+
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug)]
+pub enum ChannelId {
+	Basic,
+	Incentivized
+}
 
 /// A message relayed from Ethereum.
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]

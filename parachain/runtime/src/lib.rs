@@ -40,7 +40,8 @@ pub use frame_support::{
 use pallet_transaction_payment::{FeeDetails, CurrencyAdapter};
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::AssetId;
+pub use artemis_core::{AssetId, Application};
+
 pub use verifier_lightclient::EthereumHeader;
 
 use polkadot_parachain::primitives::Sibling;
@@ -335,6 +336,7 @@ impl bridge::Config for Runtime {
 	type Verifier = verifier_lightclient::Module<Runtime>;
 	type AppETH = eth_app::Module<Runtime>;
 	type AppERC20 = erc20_app::Module<Runtime>;
+	type MessageCommitment = commitments::Module<Runtime>;
 }
 
 #[cfg(not(feature = "test-e2e"))]
@@ -362,7 +364,6 @@ parameter_types! {
 impl commitments::Config for Runtime {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
-	type Hash = sp_core::H256;
 	type Hashing = Keccak256;
 	type CommitInterval = CommitInterval;
 }
@@ -378,13 +379,13 @@ parameter_types! {
 impl eth_app::Config for Runtime {
 	type Event = Event;
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
-	type MessageCommitment = commitments::Module<Runtime>;
+	type SubmitOutbound = bridge::Module<Runtime>;
 }
 
 impl erc20_app::Config for Runtime {
 	type Event = Event;
 	type Assets = assets::Module<Runtime>;
-	type MessageCommitment = commitments::Module<Runtime>;
+	type SubmitOutbound = bridge::Module<Runtime>;
 }
 
 construct_runtime!(

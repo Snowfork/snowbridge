@@ -17,6 +17,12 @@ class SubClient {
             types: {
                 "Address": "MultiAddress",
                 "LookupSource": "MultiAddress",
+                "ChannelId": {
+                  "_enum": {
+                    "Basic": null,
+                    "Incentivized": null
+                  }
+                },
                 "AppId": "[u8; 20]",
                 "Message": {
                   "payload": "Vec<u8>",
