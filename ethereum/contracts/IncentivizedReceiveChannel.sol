@@ -2,8 +2,11 @@ pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./Decoder.sol";
 
 contract IncentivizedReceiveChannel {
+    using Decoder for bytes;
+
     uint256 public lastProcessedNonce;
 
     uint256 public MAX_PAYLOAD_BYTE_SIZE = 1000;
@@ -31,7 +34,7 @@ contract IncentivizedReceiveChannel {
         lastProcessedNonce = 0;
     }
 
-    event MessageDelivered(uint256 nonce, bool result);
+    event MessageDelivered(uint256 _nonce, bool _result);
 
     function newParachainCommitment(
         Commitment memory commitment,
@@ -73,8 +76,11 @@ contract IncentivizedReceiveChannel {
         // Prove that the commitment is in fact in the parachain block header
         // require(parachainBlockHeader.commitment == commitment)
 
-        // Prove that the commitmentContents match the commitment
-        // require(commitment == hash(commitmentContents))
+        // Validate that the commitment matches the commitment contents
+        require(
+            validateCommitment(commitment, commitmentContents),
+            "invalid commitment"
+        );
 
         // Require there is enough gas to play all messages
         require(
@@ -106,34 +112,62 @@ contract IncentivizedReceiveChannel {
 
             // Deliver the message to the destination
             // Delivery will have fixed maximum gas allowed for the destination app.
-            bytes memory callInput = message.payload;
             address targetApplicationAddress = message.targetApplicationAddress;
             uint256 allowedGas = MAX_GAS_PER_MESSAGE;
+            bytes memory callInput = message.payload;
 
             bool result;
+            uint256 callInputLength = callInput.length;
             assembly {
-                let x := mload(0x40) // Find empty storage location using "free memory pointer"
-                mstore(x, callInput) // Place signature at begining of empty storage
+                let callInputDataPointer := add(callInput, 32) // Move 32 ahead of callInput length slot to get to actual data slot (TODO: verify this works in all cases)
 
                 // Dispatch call to the receiver - it is expected to be fire and forget. If the call reverts, runs out of gas, error,
                 // etc, its the fault of the sender
                 result := call(
-                    // Pop the top stack value
                     allowedGas, // Allowed gas
                     targetApplicationAddress, // To addr
-                    0, // No value
-                    x, // Inputs are stored at location x
-                    0x44, // Inputs are 68 bytes long
-                    x, // Store output over input (saves space)
-                    0x20 // Outputs are 32 bytes long
+                    0, // No ether value being sent
+                    callInputDataPointer, // Inputs are stored at callInputDataPointer
+                    callInputLength, // Input length
+                    callInputDataPointer, // Store output over input (saves space)
+                    callInputLength // Outputs can be as long as input length
                 )
-
-                // TODO - get output value and clear storage pointer.
-                // let result := mload(x) // Assign output value to c
-                // mstore(0x40, add(x, callInput.length)) // Set storage pointer to empty space
             }
 
             emit MessageDelivered(message.nonce, result);
         }
+    }
+
+    function validateCommitment(
+        Commitment memory commitment,
+        CommitmentContents memory commitmentContents
+    ) internal returns (bool) {
+        bytes32 commitmentHash;
+        for (uint256 i = 0; i < commitmentContents.messages.length; i++) {
+            if (i == 0) {
+                commitmentHash = hashMessage(commitmentContents.messages[i]);
+            } else {
+                bytes32 messageHash =
+                    hashMessage(commitmentContents.messages[i]);
+                commitmentHash = keccak256(
+                    abi.encodePacked(commitmentHash, messageHash)
+                );
+            }
+        }
+        return
+            keccak256(abi.encodePacked(commitmentHash)) ==
+            keccak256(abi.encodePacked(commitment.commitmentHash));
+    }
+
+    function hashMessage(Message memory message) internal returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    message.nonce,
+                    message.senderApplicationId,
+                    message.targetApplicationAddress,
+                    message.payload
+                )
+            );
     }
 }

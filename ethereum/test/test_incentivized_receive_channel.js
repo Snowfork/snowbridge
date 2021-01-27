@@ -5,6 +5,8 @@ const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
 const Web3Utils = require("web3-utils");
 const BigNumber = web3.BigNumber;
 
+const { confirmUnlock, confirmMessageDelivered, hashMessage } = require("./helpers");
+
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
@@ -14,16 +16,16 @@ const ethers = require("ethers");
 
 contract("IncentivizedReceiveChannel", function (accounts) {
   // Accounts
-  const owner = accounts[0];
   const userOne = accounts[1];
   const userTwo = accounts[2];
+  const userThree = accounts[3];
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
       this.incentivizedReceiveChannel = await IncentivizedReceiveChannel.new();
     });
 
-    it("should deploy and initialize the IncentivizedReceiveChannel contract", async function () {
+   it("should deploy and initialize the IncentivizedReceiveChannel contract", async function () {
       this.incentivizedReceiveChannel.should.exist;
     });
   });
@@ -53,46 +55,54 @@ contract("IncentivizedReceiveChannel", function (accounts) {
 
     });
 
-    it("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
-      const recipient = userTwo;
-      const amount = 1;
-      const testPayload = this.ethApp.contract.methods.unlockETH(recipient, amount).encodeABI();
 
-      const testMessage = {
+    it("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
+      const abi = this.ethApp.abi;
+      const iChannel = new ethers.utils.Interface(abi);
+
+      // Construct first message
+      const payloadOne = iChannel.functions.unlockETH.encode([userTwo, 2]);
+      const messageOne = {
         nonce: 1,
         senderApplicationId: 'eth-app',
         targetApplicationAddress: this.ethApp.address,
-        payload: testPayload
+        payload: payloadOne
       }
+
+      // Construct second message
+      const payloadTwo = iChannel.functions.unlockETH.encode([userThree, 5]);
+      const messageTwo = {
+        nonce: 2,
+        senderApplicationId: 'eth-app',
+        targetApplicationAddress: this.ethApp.address,
+        payload: payloadTwo
+      }
+
+      // Construct commitment hash from message hashes
+      const messageOneHash = hashMessage(messageOne);
+      const messageTwoHash = hashMessage(messageTwo);
+      const commitmentHash = ethers.utils.solidityKeccak256([ 'bytes32', 'bytes32' ], [ messageOneHash, messageTwoHash ]);
 
       // Send commitment including one payload for the ETHApp
       const tx = await this.incentivizedReceiveChannel.newParachainCommitment(
-        { commitmentHash: ethers.utils.formatBytes32String("fake-hash") },
-        { messages: [testMessage] },
+        { commitmentHash: commitmentHash },
+        { messages: [messageOne, messageTwo] },
         5,
         ethers.utils.formatBytes32String("fake-proof1"),
         ethers.utils.formatBytes32String("fake-proof2"),
         { from: userOne }
-      ).should.be.fulfilled;
+      )
 
-      // Confirm Message delivered correctly
-      const deliveryEvent = tx.logs.find(
-        e => e.event === "MessageDelivered"
-      );
+      // Confirm ETHApp and IncentivizedReceiveChannel processed messages correctly
+      const firstRawUnlockLog = tx.receipt.rawLogs[0];
+      confirmUnlock(firstRawUnlockLog, this.ethApp.address, userTwo, 2);
+      const firstMessageDeliveredLog = tx.receipt.rawLogs[1];
+      confirmMessageDelivered(firstMessageDeliveredLog, 1, true);
 
-      expect(deliveryEvent).to.not.be.equal(undefined);
-      deliveryEvent.args.nonce.toNumber().should.be.equal(testMessage.nonce);
-      deliveryEvent.args.result.should.be.equal(true);
-
-      // Confirm ETHApp processed event correctly
-      const appEvent = tx.logs.find(
-        e => e.event === "Unlock"
-      );
-
-      expect(appEvent).to.not.be.equal(undefined);
-      appEvent.args._recipient.should.be.equal(recipient);
-      Number(appEvent.args._amount).should.be.bignumber.equal(amount);
+      const secondRawUnlockLog = tx.receipt.rawLogs[2];
+      confirmUnlock(secondRawUnlockLog, this.ethApp.address, userThree, 5);
+      const secondMessageDeliveredLog = tx.receipt.rawLogs[3];
+      confirmMessageDelivered(secondMessageDeliveredLog, 2, true);
     });
   });
-
 });
