@@ -6,9 +6,9 @@ use sp_core::H160;
 use hex_literal::hex;
 use codec::Decode;
 
-use artemis_core::{ChannelId, AssetId, MultiAsset, registry::make_registry};
+use artemis_core::{ChannelId, AssetId, MultiAsset};
 
-use crate::{RawEvent, make_proxy};
+use crate::RawEvent;
 
 use crate::payload::InboundPayload;
 
@@ -60,16 +60,4 @@ fn burn_should_emit_bridge_event() {
 			last_event()
 		);
 	});
-}
-
-#[test]
-fn test_make_proxy() {
-	let proxy = make_proxy::<MockRuntime>();
-	let mut registry = make_registry();
-
-	registry.insert(H160::repeat_byte(1), proxy);
-
-	let foo = registry.get(&H160::repeat_byte(1)).unwrap();
-
-	assert!(foo.handle(&vec![0, 1, 2]).is_err())
 }
