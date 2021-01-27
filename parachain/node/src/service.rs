@@ -1,18 +1,3 @@
-// Copyright 2019-2020 PureStake Inc.
-// This file is part of Moonbeam.
-
-// Moonbeam is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Moonbeam is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Moonbeam.  If not, see <http://www.gnu.org/licenses/>.
 
 use cumulus_network::build_block_announce_validator;
 use cumulus_service::{
@@ -48,13 +33,13 @@ pub fn new_partial(
 		(),
 		sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
 		sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>,
-		(),
+		Option<sc_telemetry::TelemetrySpan>,
 	>,
 	sc_service::Error,
 > {
 	let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
-	let (client, backend, keystore_container, task_manager) =
+	let (client, backend, keystore_container, task_manager, telemetry_span) =
 		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
 	let client = Arc::new(client);
 
@@ -84,13 +69,13 @@ pub fn new_partial(
 		transaction_pool,
 		inherent_data_providers,
 		select_chain: (),
-		other: (),
+		other: telemetry_span,
 	};
 
 	Ok(params)
 }
 
-#[sc_cli::prefix_logs_with("Parachain")]
+#[sc_tracing::logging::prefix_logs_with("Parachain")]
 async fn start_node_impl<RB>(
 	parachain_config: Configuration,
 	collator_key: CollatorPair,
@@ -121,6 +106,7 @@ where
 		)?;
 
 	let params = new_partial(&parachain_config)?;
+	let telemetry_span = params.other;
 	params
 		.inherent_data_providers
 		.register_provider(sp_timestamp::InherentDataProvider)
@@ -160,18 +146,18 @@ where
 		client: client.clone(),
 		transaction_pool: transaction_pool.clone(),
 		task_manager: &mut task_manager,
-		telemetry_connection_sinks: Default::default(),
 		config: parachain_config,
 		keystore: params.keystore_container.sync_keystore(),
 		backend: backend.clone(),
 		network: network.clone(),
 		network_status_sinks,
 		system_rpc_tx,
+		telemetry_span,
 	})?;
 
 	let announce_block = {
 		let network = network.clone();
-		Arc::new(move |hash, data| network.announce_block(hash, data))
+		Arc::new(move |hash, data| network.announce_block(hash, Some(data)))
 	};
 
 	if validator {

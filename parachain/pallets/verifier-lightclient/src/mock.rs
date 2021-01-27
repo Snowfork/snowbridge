@@ -28,6 +28,13 @@ impl_outer_event! {
     }
 }
 
+impl_outer_event! {
+    pub enum MockEventWithPoW for MockRuntimeWithPoW {
+		system<T>,
+        test_events,
+    }
+}
+
 pub type Signature = MultiSignature;
 
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
@@ -83,7 +90,7 @@ impl system::Config for MockRuntimeWithPoW {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = MockEvent;
+	type Event = MockEventWithPoW;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
@@ -108,7 +115,7 @@ impl Config for MockRuntime {
 }
 
 impl Config for MockRuntimeWithPoW {
-	type Event = MockEvent;
+	type Event = MockEventWithPoW;
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type VerifyPoW = PowEnabled;
 }

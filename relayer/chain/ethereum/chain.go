@@ -43,7 +43,7 @@ func NewChain(config *Config) (*Chain, error) {
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(subMessages <-chan chain.Message, _ <-chan chain.Header) error {
+func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.Header) error {
 	bridgeContract, err := LoadBridgeContract(ch.config)
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (ch *Chain) SetReceiver(subMessages <-chan chain.Message, _ <-chan chain.He
 	return nil
 }
 
-func (ch *Chain) SetSender(ethMessages chan<- chain.Message, ethHeaders chan<- chain.Header) error {
+func (ch *Chain) SetSender(ethMessages chan<- []chain.Message, ethHeaders chan<- chain.Header) error {
 	appContracts, err := LoadAppContracts(ch.config)
 	if err != nil {
 		return err

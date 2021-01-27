@@ -48,7 +48,7 @@ type Config struct {
 }
 
 func NewRelay() (*Relay, error) {
-	config, err := loadConfig()
+	config, err := LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +67,13 @@ func NewRelay() (*Relay, error) {
 	headersOnly := config.Relay.HeadersOnly
 	if direction == Bidirectional || direction == EthToSub {
 		// channel for messages from ethereum
-		var ethMessages chan chain.Message
+		var ethMessages chan []chain.Message
 		if !headersOnly {
-			ethMessages = make(chan chain.Message, 1)
+			ethMessages = make(chan []chain.Message, 1)
 		}
-		// channel for headers from ethereum
-		ethHeaders := make(chan chain.Header, 1)
+		// channel for headers from ethereum (it's a blocking channel so that we
+		// can guarantee that a header is forwarded before we send dependent messages)
+		ethHeaders := make(chan chain.Header)
 
 		err := ethChain.SetSender(ethMessages, ethHeaders)
 		if err != nil {
@@ -86,9 +87,9 @@ func NewRelay() (*Relay, error) {
 
 	if direction == Bidirectional || direction == SubToEth {
 		// channel for messages from substrate
-		var subMessages chan chain.Message
+		var subMessages chan []chain.Message
 		if !headersOnly {
-			subMessages = make(chan chain.Message, 1)
+			subMessages = make(chan []chain.Message, 1)
 		}
 
 		err := subChain.SetSender(subMessages, nil)
@@ -166,7 +167,7 @@ func (re *Relay) Start() {
 	re.subChain.Stop()
 }
 
-func loadConfig() (*Config, error) {
+func LoadConfig() (*Config, error) {
 	var config Config
 	err := viper.Unmarshal(&config)
 	if err != nil {

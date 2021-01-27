@@ -16,13 +16,13 @@ static EVENT_ABI: &ABIEvent = &ABIEvent {
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
-pub struct InPayload<AccountId: codec::Decode> {
+pub struct InboundPayload<AccountId: codec::Decode> {
 	pub sender_addr: H160,
 	pub recipient_addr: AccountId,
 	pub amount: U256,
 }
 
-impl<AccountId: codec::Decode> TryFrom<Log> for InPayload<AccountId>{
+impl<AccountId: codec::Decode> TryFrom<Log> for InboundPayload<AccountId>{
 	type Error = DecodeError;
 
 	fn try_from(log: Log) -> Result<Self, Self::Error> {
@@ -56,13 +56,13 @@ impl<AccountId: codec::Decode> TryFrom<Log> for InPayload<AccountId>{
 
 // Message to Ethereum
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
-pub struct OutPayload<AccountId: codec::Encode> {
+pub struct OutboundPayload<AccountId: codec::Encode> {
 	pub sender_addr: AccountId,
 	pub recipient_addr: H160,
 	pub amount: U256,
 }
 
-impl<AccountId: codec::Encode> OutPayload<AccountId> {
+impl<AccountId: codec::Encode> OutboundPayload<AccountId> {
 	/// ABI-encode this payload
 	pub fn encode(&self) -> Vec<u8> {
 		let tokens = vec![
@@ -91,10 +91,10 @@ mod tests {
 	#[test]
 	fn test_from_log_conversion() {
 		let log: Log = rlp::decode(&LOG_DATA).unwrap();
-	
+
 		assert_eq!(
-			InPayload::try_from(log).unwrap(),
-			InPayload {
+			InboundPayload::try_from(log).unwrap(),
+			InboundPayload {
 				sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 				recipient_addr: hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
 				amount: U256::from_dec_str("1000000000000000").unwrap(),

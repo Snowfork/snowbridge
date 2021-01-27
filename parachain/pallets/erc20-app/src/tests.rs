@@ -6,11 +6,11 @@ use sp_core::H160;
 use hex_literal::hex;
 use codec::Decode;
 
-use artemis_core::{AssetId, MultiAsset};
+use artemis_core::{ChannelId, AssetId, MultiAsset};
 
 use crate::RawEvent;
 
-use crate::payload::InPayload;
+use crate::payload::InboundPayload;
 
 type TestAccountId = <MockRuntime as system::Config>::AccountId;
 
@@ -26,7 +26,7 @@ fn mints_after_handling_ethereum_event() {
 		let token_addr = H160::repeat_byte(1);
 
 		let recipient_addr = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
-		let event: InPayload<TestAccountId> = InPayload {
+		let payload: InboundPayload<TestAccountId> = InboundPayload {
 			sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
 			recipient_addr,
 			token_addr,
@@ -35,7 +35,7 @@ fn mints_after_handling_ethereum_event() {
 
 		let bob: AccountId = Keyring::Bob.into();
 
-		assert_ok!(ERC20::handle_event(event));
+		assert_ok!(ERC20::handle_payload(&payload));
 		assert_eq!(Assets::balance(AssetId::Token(token_addr), &bob), 10.into());
 	});
 }
@@ -50,12 +50,13 @@ fn burn_should_emit_bridge_event() {
 
 		assert_ok!(ERC20::burn(
 			Origin::signed(bob.clone()),
+			ChannelId::Incentivized,
 			token_id,
 			recipient,
 			20.into()));
 
 		assert_eq!(
-			MockEvent::test_events(RawEvent::Transfer(token_id, bob, recipient, 20.into())),
+			MockEvent::test_events(RawEvent::Burned(token_id, bob, 20.into())),
 			last_event()
 		);
 	});

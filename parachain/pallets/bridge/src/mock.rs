@@ -1,6 +1,7 @@
-// Mock runtime
 
-use crate::{Module, Config};
+use super::*;
+
+use crate::Config;
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
@@ -10,7 +11,7 @@ use sp_std::convert::From;
 use frame_system as system;
 
 impl_outer_origin! {
-	pub enum Origin for MockRuntime {}
+	pub enum Origin for Test {}
 }
 
 mod test_events {
@@ -18,10 +19,9 @@ mod test_events {
 }
 
 impl_outer_event! {
-    pub enum MockEvent for MockRuntime {
+    pub enum TestEvent for Test {
 		system<T>,
-		artemis_assets<T>,
-        test_events<T>,
+        test_events,
     }
 }
 
@@ -30,7 +30,7 @@ pub type Signature = MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 #[derive(Clone, Eq, PartialEq)]
-pub struct MockRuntime;
+pub struct Test;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -39,7 +39,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Config for MockRuntime {
+impl system::Config for Test {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
 	type BlockLength = ();
@@ -52,7 +52,7 @@ impl system::Config for MockRuntime {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = MockEvent;
+	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
@@ -64,26 +64,19 @@ impl system::Config for MockRuntime {
 	type SS58Prefix = ();
 }
 
-impl artemis_assets::Config for MockRuntime {
-	type Event = MockEvent;
+impl Config for Test {
+	type Event = TestEvent;
+	type Verifier = ();
+	type AppETH = ();
+	type AppERC20 = ();
+	type MessageCommitment = ();
 }
 
-parameter_types! {
-	pub const CommitInterval: u64 = 20;
-}
-
-impl Config for MockRuntime {
-	type Event = MockEvent;
-	type Assets = Assets;
-	type SubmitOutbound = ();
-}
-
-pub type System = system::Module<MockRuntime>;
-pub type Assets = artemis_assets::Module<MockRuntime>;
-pub type ERC20 = Module<MockRuntime>;
+pub type System = system::Module<Test>;
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+	let storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
 	ext

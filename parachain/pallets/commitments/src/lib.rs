@@ -4,21 +4,18 @@ use sp_std::prelude::*;
 use frame_support::{
 	decl_module, decl_storage, decl_event, decl_error,
 	weights::Weight,
-	traits::Get
+	traits::Get,
 };
-
-use sp_io::hashing::keccak_256;
+use sp_io::offchain_index;
 use sp_core::{H160, H256, RuntimeDebug};
 use sp_runtime::{
-	traits::Zero,
+	traits::{Hash, Zero},
 	DigestItem
 };
-
 use codec::{Encode, Decode};
-use artemis_core::Commitments;
-
-
+use artemis_core::{ChannelId, MessageCommitment};
 use ethabi::{self, Token};
+use enum_iterator::IntoEnumIterator;
 
 #[cfg(test)]
 mod mock;
@@ -28,11 +25,11 @@ mod tests;
 
 /// Custom DigestItem for header digest
 #[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
-enum CustomDigestItem {
-	Commitment(H256)
+enum AuxiliaryDigestItem {
+	Commitment(ChannelId, H256)
 }
 
-impl<T> Into<DigestItem<T>> for CustomDigestItem {
+impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
     fn into(self) -> DigestItem<T> {
         DigestItem::Other(self.encode())
     }
@@ -41,13 +38,15 @@ impl<T> Into<DigestItem<T>> for CustomDigestItem {
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 struct Message {
 	address: H160,
-	payload: Vec<u8>,
 	nonce: u64,
+	payload: Vec<u8>,
 }
 
 pub trait Config: frame_system::Config {
 
 	const INDEXING_PREFIX: &'static [u8];
+
+	type Hashing: Hash<Output = H256>;
 
 	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
@@ -56,17 +55,14 @@ pub trait Config: frame_system::Config {
 
 decl_storage! {
 	trait Store for Module<T: Config> as Commitments {
-		/// Nonce
-		pub Nonce get(fn nonce): u64;
-
 		/// Messages waiting to be committed
-		pub MessageQueue: Vec<Message>;
+		pub MessageQueues: map hasher(identity) ChannelId => Vec<Message>;
 	}
 }
 
 decl_event! {
 	pub enum Event {
-		Commitment(H256),
+
 	}
 }
 
@@ -84,7 +80,6 @@ decl_module! {
 		//
 		// The hash of the commitment is stored as a digest item `CustomDigestItem::Commitment`
 		// in the block header. The committed messages are persisted into storage.
-
 		fn on_initialize(now: T::BlockNumber) -> Weight {
 			if (now % T::CommitInterval::get()).is_zero() {
 				Self::commit()
@@ -97,24 +92,34 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 
-	fn offchain_key(hash: H256) -> Vec<u8> {
-		(T::INDEXING_PREFIX, hash).encode()
+	fn offchain_key(channel_id: ChannelId, hash: H256) -> Vec<u8> {
+		(T::INDEXING_PREFIX, channel_id, hash).encode()
 	}
 
-	// Generate a message commitment
 	// TODO: return proper weight
 	fn commit() -> Weight {
-		let messages: Vec<Message> = <Self as Store>::MessageQueue::take();
+		let mut weight: Weight = 0;
+
+		for channel_id in ChannelId::into_enum_iter() {
+			weight += Self::commit_for_channel(channel_id);
+		}
+
+		weight
+	}
+
+	fn commit_for_channel(channel_id: ChannelId) -> Weight {
+		let messages: Vec<Message> = <Self as Store>::MessageQueues::take(channel_id);
+		if messages.len() == 0 {
+			return 0
+		}
 
 		let commitment = Self::encode_commitment(&messages);
-		let commitment_hash: H256 = keccak_256(&commitment).into();
+		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
-		let digest_item = CustomDigestItem::Commitment(commitment_hash.clone()).into();
+		let digest_item = AuxiliaryDigestItem::Commitment(channel_id, commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		sp_io::offchain_index::set(&Self::offchain_key(commitment_hash), &commitment);
-
-		Self::deposit_event(Event::Commitment(commitment_hash));
+		offchain_index::set(&Self::offchain_key(channel_id, commitment_hash), &commitment);
 
 		0
 	}
@@ -132,16 +137,19 @@ impl<T: Config> Module<T> {
 
 		ethabi::encode(&vec![Token::FixedArray(messages)])
 	}
-
 }
 
-impl<T: Config> Commitments for Module<T> {
+impl<T: Config> MessageCommitment for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
-	// TODO: Number of messages per commitment should be bounded
-	fn add(address: H160, payload: Vec<u8>) {
-		let nonce = <Self as Store>::Nonce::get();
-		<Self as Store>::MessageQueue::append(Message { address, payload, nonce });
-		<Self as Store>::Nonce::set(nonce + 1);
+	fn add(channel_id: ChannelId, address: H160, nonce: u64, payload: &[u8]) {
+		<Self as Store>::MessageQueues::append(
+			channel_id,
+			Message {
+				address,
+				nonce,
+				payload: payload.to_vec()
+			}
+		);
 	}
 }

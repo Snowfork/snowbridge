@@ -3,7 +3,7 @@ use crate::{Module, Config};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup}, testing::Header, Perbill,
+	traits::{BlakeTwo256, Keccak256, IdentityLookup}, testing::Header, Perbill,
 };
 use frame_system as system;
 
@@ -54,9 +54,8 @@ parameter_types! {
 
 impl Config for Test {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
-
 	type Event = ();
-
+	type Hashing = Keccak256;
 	type CommitInterval = CommitInterval;
 }
 
