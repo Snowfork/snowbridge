@@ -1,10 +1,7 @@
-use frame_support::dispatch::{Parameter, DispatchResult};
+use frame_support::dispatch::DispatchResult;
 use sp_runtime::RuntimeDebug;
 use codec::{Encode, Decode};
-use artemis_core::Message;
-
-use sp_std::fmt::Debug;
-use sp_runtime::traits::{Member, MaybeSerializeDeserialize};
+use artemis_core::{AppId, Message};
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, Default, RuntimeDebug)]
 pub struct InboundChannelData {
@@ -16,10 +13,8 @@ pub struct OutboundChannelData {
 }
 
 pub trait InboundChannel<AccountId>
-where
-	AccountId: Parameter + Member + Ord + MaybeSerializeDeserialize + Debug
 {
-	fn submit(&mut self, relayer: &AccountId, message: &Message) -> DispatchResult;
+	fn submit(&mut self, relayer: &AccountId, app_id: AppId, message: &Message) -> DispatchResult;
 }
 
 pub trait OutboundChannel {

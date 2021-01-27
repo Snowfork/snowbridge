@@ -44,7 +44,7 @@ func NewChain(config *Config) (*Chain, error) {
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(ethMessages <-chan chain.Message, ethHeaders <-chan chain.Header) error {
+func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header) error {
 	writer, err := NewWriter(ch.conn, ethMessages, ethHeaders, ch.log)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (ch *Chain) SetReceiver(ethMessages <-chan chain.Message, ethHeaders <-chan
 	return nil
 }
 
-func (ch *Chain) SetSender(subMessages chan<- chain.Message, _ chan<- chain.Header) error {
+func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header) error {
 	listener := NewListener(
 		ch.config,
 		ch.conn,

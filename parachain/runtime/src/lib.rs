@@ -7,7 +7,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use sp_core::{H160, crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
 	transaction_validity::{TransactionValidity, TransactionSource},
@@ -41,7 +41,6 @@ use pallet_transaction_payment::{FeeDetails, CurrencyAdapter};
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
 pub use artemis_core::{AssetId, Application};
-pub use artemis_core::registry::{AppRegistry, make_registry};
 
 pub use verifier_lightclient::EthereumHeader;
 
@@ -238,13 +237,10 @@ impl pallet_transaction_payment::Config for Runtime {
 
 // Cumulus and XCMP
 
-impl cumulus_parachain_upgrade::Config for Runtime {
+impl cumulus_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
 	type SelfParaId = parachain_info::Module<Runtime>;
-}
-
-impl cumulus_message_broker::Config for Runtime {
 	type DownwardMessageHandlers = ();
 	type HrmpMessageHandlers = ();
 }
@@ -329,25 +325,17 @@ impl Config for XcmConfig {
 impl xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type UpwardMessageSender = MessageBroker;
-	type HrmpMessageSender = MessageBroker;
+	type UpwardMessageSender = ParachainSystem;
+	type HrmpMessageSender = ParachainSystem;
 }
 
 // Our pallets
 
-parameter_types! {
-	pub Apps: AppRegistry = {
-		let mut registry = make_registry();
-		registry.insert(H160::repeat_byte(1), eth_app::make_proxy::<Runtime>());
-		registry.insert(H160::repeat_byte(2), erc20_app::make_proxy::<Runtime>());
-		registry
-	};
-}
-
 impl bridge::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
-	type Apps = Apps;
+	type AppETH = eth_app::Module<Runtime>;
+	type AppERC20 = erc20_app::Module<Runtime>;
 	type MessageCommitment = commitments::Module<Runtime>;
 }
 
@@ -413,8 +401,7 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 
 		ParachainInfo: parachain_info::{Module, Storage, Config},
-		ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
-		MessageBroker: cumulus_message_broker::{Module, Call, Inherent},
+		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
 
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Commitments: commitments::{Module, Call, Storage, Event},

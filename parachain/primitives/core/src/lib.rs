@@ -12,7 +12,6 @@ use sp_core::H160;
 
 pub mod types;
 pub mod assets;
-pub mod registry;
 
 pub use types::{
 	AppId,
@@ -28,10 +27,15 @@ pub use assets::{AssetId, MultiAsset, SingleAsset};
 pub trait Verifier<AccountId> {
 
 	fn verify(sender: AccountId, app_id: AppId, message: &Message) -> DispatchResult;
+
+	fn verify_bulk(sender: AccountId, messages: &[(AppId, Message)]) -> DispatchResult;
 }
 
 impl<AccountId> Verifier<AccountId> for () {
 	fn verify(sender: AccountId, app_id: AppId, message: &Message) -> DispatchResult {
+		Ok(())
+	}
+	fn verify_bulk(sender: AccountId, messages: &[(AppId, Message)]) -> DispatchResult {
 		Ok(())
 	}
 }
@@ -49,8 +53,23 @@ impl SubmitOutbound for () {
 
 /// An Application handles message payloads
 pub trait Application {
-	fn handle(&self, payload: &[u8]) -> DispatchResult;
+
+	/// Handle a message payload
+	fn handle(payload: &[u8]) -> DispatchResult;
+
+	fn address() -> H160;
 }
+
+impl Application for () {
+	fn handle(payload: &[u8]) -> DispatchResult {
+		Ok(())
+	}
+
+	fn address() -> H160 {
+		H160::zero()
+	}
+}
+
 /// Add a message to a commitment
 pub trait MessageCommitment {
 	fn add(channel_id: ChannelId, address: H160, nonce: u64, payload: &[u8]);

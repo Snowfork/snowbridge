@@ -25,9 +25,6 @@ use frame_support::{
 };
 use sp_std::prelude::*;
 use sp_std::convert::TryInto;
-use sp_std::marker::PhantomData;
-use sp_std::boxed::Box;
-
 use sp_core::{H160, U256};
 
 use artemis_core::{ChannelId, Application, SubmitOutbound, SingleAsset};
@@ -107,16 +104,6 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-	fn handle_raw(payload: &[u8]) -> DispatchResult {
-		// Decode ethereum Log event from RLP-encoded data, and try to convert to InPayload
-		let inbound_payload: InboundPayload<T::AccountId> = rlp::decode::<Log>(payload)
-			.map_err(|_| Error::<T>::InvalidPayload)?
-			.try_into()
-			.map_err(|_| Error::<T>::InvalidPayload)?;
-
-		Self::handle_payload(&inbound_payload)
-	}
-
 	fn handle_payload(payload: &InboundPayload<T::AccountId>) -> DispatchResult  {
 		T::Asset::deposit(&payload.recipient_addr, payload.amount)?;
 		Self::deposit_event(RawEvent::Minted(payload.recipient_addr.clone(), payload.amount));
@@ -124,15 +111,18 @@ impl<T: Config> Module<T> {
 	}
 }
 
-#[derive(Copy, Clone)]
-struct Proxy<T: Config>(PhantomData<T>);
+impl<T: Config> Application for Module<T> {
+	fn handle(payload: &[u8]) -> DispatchResult {
+		// Decode ethereum Log event from RLP-encoded data, and try to convert to InboundPayload
+		let payload_decoded = rlp::decode::<Log>(payload)
+			.map_err(|_| Error::<T>::InvalidPayload)?
+			.try_into()
+			.map_err(|_| Error::<T>::InvalidPayload)?;
 
-impl<T: Config> Application for Proxy<T> {
-	fn handle(&self, payload: &[u8]) -> DispatchResult {
-		<Module<T>>::handle_raw(payload)
+		Self::handle_payload(&payload_decoded)
 	}
-}
 
-pub fn make_proxy<T: Config>() -> Box<dyn Application> {
-	Box::new(Proxy::<T>(PhantomData))
+	fn address() -> H160 {
+		Address::get()
+	}
 }

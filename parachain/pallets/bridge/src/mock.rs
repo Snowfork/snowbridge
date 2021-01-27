@@ -2,7 +2,6 @@
 use super::*;
 
 use crate::Config;
-use artemis_core::registry::make_registry;
 use sp_core::H256;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
 use sp_runtime::{
@@ -65,14 +64,11 @@ impl system::Config for Test {
 	type SS58Prefix = ();
 }
 
-parameter_types! {
-	pub Apps: AppRegistry = make_registry();
-}
-
 impl Config for Test {
 	type Event = TestEvent;
 	type Verifier = ();
-	type Apps = Apps;
+	type AppETH = ();
+	type AppERC20 = ();
 	type MessageCommitment = ();
 }
 

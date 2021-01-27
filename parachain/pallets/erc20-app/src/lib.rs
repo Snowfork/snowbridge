@@ -21,8 +21,6 @@
 
 use sp_std::prelude::*;
 use sp_std::convert::TryInto;
-use sp_std::marker::PhantomData;
-use sp_std::boxed::Box;
 use sp_core::{H160, U256};
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
@@ -106,16 +104,6 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-	fn handle_raw(payload: &[u8]) -> DispatchResult {
-		// Decode ethereum Log event from RLP-encoded data, and try to convert to InboundPayload
-		let inbound_payload = rlp::decode::<Log>(payload)
-			.map_err(|_| Error::<T>::InvalidPayload)?
-			.try_into()
-			.map_err(|_| Error::<T>::InvalidPayload)?;
-
-		Self::handle_payload(&inbound_payload)
-	}
-
 	fn handle_payload(payload: &InboundPayload<T::AccountId>) -> DispatchResult {
 		T::Assets::deposit(
 			AssetId::Token(payload.token_addr),
@@ -132,15 +120,18 @@ impl<T: Config> Module<T> {
 	}
 }
 
-#[derive(Copy, Clone)]
-struct Proxy<T: Config>(PhantomData<T>);
+impl<T: Config> Application for Module<T> {
+	fn handle(payload: &[u8]) -> DispatchResult {
+		// Decode ethereum Log event from RLP-encoded data, and try to convert to InboundPayload
+		let payload_decoded = rlp::decode::<Log>(payload)
+			.map_err(|_| Error::<T>::InvalidPayload)?
+			.try_into()
+			.map_err(|_| Error::<T>::InvalidPayload)?;
 
-impl<T: Config> Application for Proxy<T> {
-	fn handle(&self, payload: &[u8]) -> DispatchResult {
-		<Module<T>>::handle_raw(payload)
+		Self::handle_payload(&payload_decoded)
 	}
-}
 
-pub fn make_proxy<T: Config>() -> Box<dyn Application> {
-	Box::new(Proxy::<T>(PhantomData))
+	fn address() -> H160 {
+		Address::get()
+	}
 }

@@ -19,11 +19,11 @@ import (
 type Listener struct {
 	config   *Config
 	conn     *Connection
-	messages chan<- chain.Message
+	messages chan<- []chain.Message
 	log      *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, messages chan<- chain.Message, log *logrus.Entry) *Listener {
+func NewListener(config *Config, conn *Connection, messages chan<- []chain.Message, log *logrus.Entry) *Listener {
 	return &Listener{
 		config:   config,
 		conn:     conn,

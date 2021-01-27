@@ -18,11 +18,16 @@
 
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
-	traits::Get,
-	dispatch::DispatchResult};
+	dispatch::{DispatchError, DispatchResult},
+	debug,
+};
 use frame_system::{self as system, ensure_signed};
+use sp_core::H160;
 use sp_std::prelude::*;
-use artemis_core::{ChannelId, SubmitOutbound, Message, MessageCommitment, Verifier, registry::AppRegistry};
+use artemis_core::{
+	AppId, ChannelId, SubmitOutbound, Message,
+	MessageCommitment, Verifier, Application,
+};
 use channel::inbound::make_inbound_channel;
 use channel::outbound::make_outbound_channel;
 use primitives::{InboundChannelData, OutboundChannelData};
@@ -42,7 +47,11 @@ pub trait Config: system::Config {
 	/// The verifier module responsible for verifying submitted messages.
 	type Verifier: Verifier<<Self as system::Config>::AccountId>;
 
-	type Apps: Get<AppRegistry>;
+	/// ETH Application
+	type AppETH: Application;
+
+	/// ERC20 Application
+	type AppERC20: Application;
 
 	type MessageCommitment: MessageCommitment;
 }
@@ -63,8 +72,8 @@ decl_event! {
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
-    	/// Target application not found.
-		AppNotFound
+		/// Target application not found.
+		AppNotFound,
 	}
 }
 
@@ -76,11 +85,56 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 0]
-		pub fn submit(origin, channel_id: ChannelId, message: Message) -> DispatchResult {
+		pub fn submit(origin, channel_id: ChannelId, app_id: AppId, message: Message) -> DispatchResult {
 			let relayer = ensure_signed(origin)?;
 
 			let mut channel = make_inbound_channel::<T>(channel_id);
-			channel.submit(&relayer, &message)
+			channel.submit(&relayer, app_id, &message)
+		}
+
+		/// Submit multiple messages for dispatch to multiple target applications.
+		#[weight = 0]
+		pub fn submit_bulk(origin, messages: Vec<(AppId, Message)>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			debug::RuntimeLogger::init();
+
+			debug::trace!(
+				target: "submit_messages",
+				"Received {} messages",
+				messages.len(),
+			);
+
+			T::Verifier::verify_bulk(who, messages.as_slice())?;
+
+			debug::trace!(
+				target: "submit_messages",
+				"Message verification succeeded",
+			);
+
+			let errors: Vec<DispatchError> = messages.iter()
+				.map(|(app_id, msg)| Self::dispatch(app_id.into(), msg))
+				.filter_map(|r| r.err())
+				.collect();
+
+			debug::trace!(
+				target: "submit_messages",
+				"Messages were dispatched",
+			);
+
+			Ok(())
+		}
+	}
+}
+
+impl<T: Config> Module<T> {
+	fn dispatch(address: H160, message: &Message) -> DispatchResult {
+		if address == T::AppETH::address() {
+			T::AppETH::handle(message.payload.as_ref())
+		} else if address == T::AppERC20::address() {
+			T::AppERC20::handle(message.payload.as_ref())
+		} else {
+			Err(Error::<T>::AppNotFound.into())
 		}
 	}
 }

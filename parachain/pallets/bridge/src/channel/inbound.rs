@@ -1,9 +1,8 @@
-use frame_support::{dispatch::DispatchResult, storage::StorageMap, traits::Get};
-use sp_core::H160;
+use frame_support::{dispatch::DispatchResult, storage::StorageMap};
 use sp_std::{cell::Cell, marker::PhantomData, boxed::Box};
-use artemis_core::{ChannelId, Message};
+use artemis_core::{ChannelId, AppId, Message, Verifier};
 use crate::{
-	Error,
+	Module,
 	Config,
 	InboundChannels,
 	primitives::{InboundChannel, InboundChannelData}
@@ -20,16 +19,18 @@ where
 	}
 }
 
-const DUMMY_APP_ID: H160 = H160::zero();
-
 /// Basic Channel
 struct BasicInboundChannel<T: Config> {
+	#[allow(dead_code)]
+	channel_id: ChannelId,
+	#[allow(dead_code)]
 	storage: Storage<T>
 }
 
 impl<T: Config> BasicInboundChannel<T> {
 	fn new() -> Self {
 		Self {
+			channel_id: ChannelId::Basic,
 			storage: Storage::new(ChannelId::Basic)
 		}
 	}
@@ -37,30 +38,24 @@ impl<T: Config> BasicInboundChannel<T> {
 
 impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 	// This implementation is a WIP!
-	fn submit(&mut self, relayer: &T::AccountId, message: &Message) -> DispatchResult {
-		self.storage.try_mutate(|data| {
-			// Example: Increment nonce
-			data.nonce += 1;
-
-			// Example: find an app and dispatch payload
-			let registry = T::Apps::get();
-			registry.get(&DUMMY_APP_ID)
-					.ok_or(Error::<T>::AppNotFound)?
-					.handle(&message.payload)?;
-
-			Ok(())
-		})
+	fn submit(&mut self, relayer: &T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
+		T::Verifier::verify(relayer.clone(), app_id, &message)?;
+		Module::<T>::dispatch(app_id.into(), message)
 	}
 }
 
 /// Incentivized Channel
 struct IncentivizedInboundChannel<T: Config> {
+	#[allow(dead_code)]
+	channel_id: ChannelId,
+	#[allow(dead_code)]
 	storage: Storage<T>
 }
 
 impl<T: Config> IncentivizedInboundChannel<T> {
 	fn new() -> Self {
 		Self {
+			channel_id: ChannelId::Incentivized,
 			storage: Storage::new(ChannelId::Incentivized)
 		}
 	}
@@ -68,8 +63,9 @@ impl<T: Config> IncentivizedInboundChannel<T> {
 
 impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 	// This implementation is a WIP!
-	fn submit(&mut self, relayer: &T::AccountId, message: &Message) -> DispatchResult {
-		Ok(())
+	fn submit(&mut self, relayer: &T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
+		T::Verifier::verify(relayer.clone(), app_id, &message)?;
+		Module::<T>::dispatch(app_id.into(), message)
 	}
 }
 
@@ -88,6 +84,7 @@ impl<T: Config> Storage<T> {
 		}
 	}
 
+	#[allow(dead_code)]
 	fn get(&self) -> InboundChannelData {
 		match self.cached_data.get() {
 			Some(data) => data,
@@ -99,11 +96,13 @@ impl<T: Config> Storage<T> {
 		}
 	}
 
+	#[allow(dead_code)]
 	fn set(&mut self, data: InboundChannelData) {
 		self.cached_data.set(Some(data));
 		InboundChannels::insert(self.channel_id, data)
 	}
 
+	#[allow(dead_code)]
 	fn try_mutate<R, E, F>(&mut self, f: F) -> Result<R, E>
 	where
 		F: FnOnce(&mut InboundChannelData) -> Result<R, E>
