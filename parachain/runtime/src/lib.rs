@@ -236,13 +236,10 @@ impl pallet_transaction_payment::Config for Runtime {
 
 // Cumulus and XCMP
 
-impl cumulus_parachain_upgrade::Config for Runtime {
+impl cumulus_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
 	type SelfParaId = parachain_info::Module<Runtime>;
-}
-
-impl cumulus_message_broker::Config for Runtime {
 	type DownwardMessageHandlers = ();
 	type HrmpMessageHandlers = ();
 }
@@ -327,8 +324,8 @@ impl Config for XcmConfig {
 impl xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type UpwardMessageSender = MessageBroker;
-	type HrmpMessageSender = MessageBroker;
+	type UpwardMessageSender = ParachainSystem;
+	type HrmpMessageSender = ParachainSystem;
 }
 
 // Our pallets
@@ -403,8 +400,7 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 
 		ParachainInfo: parachain_info::{Module, Storage, Config},
-		ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
-		MessageBroker: cumulus_message_broker::{Module, Call, Inherent},
+		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
 
 		Bridge: bridge::{Module, Call, Storage, Event},
 		Commitments: commitments::{Module, Call, Storage, Event},
