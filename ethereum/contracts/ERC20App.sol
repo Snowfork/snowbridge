@@ -26,7 +26,7 @@ contract ERC20App is Application {
         address _token,
         uint256 _amount
     );
-    event Unlock(
+    event Unlocked(
         bytes _sender,
         address _recipient,
         address _token,
@@ -96,7 +96,7 @@ contract ERC20App is Application {
         uint256 amount = amountBytes.decodeUint256();
 
         sendTokens(recipient, tokenAddr, amount);
-        emit Unlock(sender, recipient, tokenAddr, amount);
+        emit Unlocked(sender, recipient, tokenAddr, amount);
     }
 
     function sendTokens(

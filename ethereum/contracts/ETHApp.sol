@@ -20,7 +20,7 @@ contract ETHApp is Application {
     address public incentivizedSendChannelAddress;
 
     event Locked(address _sender, bytes32 _recipient, uint256 _amount);
-    event Unlock(bytes _sender, address _recipient, uint256 _amount);
+    event Unlocked(bytes _sender, address _recipient, uint256 _amount);
 
     struct ETHLockedPayload {
         address _sender;
@@ -74,7 +74,7 @@ contract ETHApp is Application {
         uint256 amount = amountBytes.decodeUint256();
 
         unlockETH(recipient, amount);
-        emit Unlock(sender, recipient, amount);
+        emit Unlocked(sender, recipient, amount);
     }
 
     function unlockETH(address payable _recipient, uint256 _amount) internal {
