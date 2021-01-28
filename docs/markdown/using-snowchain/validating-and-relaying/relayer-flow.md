@@ -8,7 +8,7 @@ nav_order: 2
 # Relayer Flow
 
 ## Polkadot to Ethereum
-The relayer can be started in 2 different modes for relaying from Polkadot to Ethereum.
+The relayer can be started in 2 different modes for relaying from Polkadot to Ethereum. Both can be run in parallel.
 
 ## MMR-Only mode
 This mode runs the relayer in a mode where it ensures that the Ethereum contract receives MMR roots, where at least one MMR proof per epoch is guaranteed. It only interacts with the Relay Chain Light Client, not the Parachain Light Client.
