@@ -54,7 +54,7 @@ graph TD;
 ### MMR Relay Queue
 ```mermaid!
 graph TD;
-  Mr00[New MMR to Relay];
+  Mr00[New MMR Root to Relay];
   Mr00-->Mr01;
   Mr01[Query relay chain for all signatures on that MMR Root];
   Mr01-->Mr02;
