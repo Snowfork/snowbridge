@@ -109,10 +109,15 @@ graph TD;
   M1a-- Yes -->M3;
   M2[Ignore];
   M3[Is the relay chain's MMR root far along enough to be able to prove the parachain block for this commitment?];
-  M3-- No -->M4;
-  M3-- Yes -->M5;
+  M3-- No -->M30;
+  M30[Add to Request MMR Root Relay Queue];
+  M30-->M4;
   M4[Wait some time];
-  M4-- Retry -->M3;
+  M4-->M40;
+  M40[Is the relay chain's MMR root far along enough to be able to prove the parachain block for this commitment?];
+  M40-- No -->M4;
+  M40-- Yes -->M5;
+  M3-- Yes -->M5;
   M5[Get MMR Root -> MMRLeaf proof for relevant parachain block];
   M6[Get MMRLeaf parachain_heads -> our parachain head merkle proof];
   M7[Query Parachain for all messages in commitment];
@@ -125,3 +130,20 @@ graph TD;
   M9--Transaction Successful -->M10;
   M10[Done];
 ```
+
+### Request MMR Relay Queue
+```mermaid!
+graph TD;
+  M1[New MMR Root Relay Requested]
+  M1-->M1a;
+  M1a[Does a new enough MMR Root to fulfil this request exist yet];
+  M1a-- No -->M2;
+  M1a-- Yes -->M3;
+  M2[Wait some time];
+  M2-- Retry --> M1a;
+  M3[Retrieve MMR Root and add to MMR Relay Queue];
+  M3-->M4
+  M4[Done];
+```
+### MMR Relay Queue
+Same as in MMR-Epochs-Only mode
