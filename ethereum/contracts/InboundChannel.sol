@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2;
+pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 abstract contract InboundChannel {
@@ -8,11 +8,11 @@ abstract contract InboundChannel {
 
     struct Message {
         address target;
-        uint256 nonce;
+        uint64 nonce;
         bytes payload;
     }
 
-    event MessageDelivered(uint256 nonce, bool result);
+    event MessageDelivered(uint64 nonce, bool result);
 
     function submit(Message[] memory commitment) virtual public;
 }

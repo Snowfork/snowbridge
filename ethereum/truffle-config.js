@@ -8,7 +8,7 @@ module.exports = {
     development: {
       host: "127.0.0.1",
       port: 9545,
-      network_id: "344"
+      network_id: "*"
     },
     // Integration tests
     e2e_test: {
@@ -30,7 +30,7 @@ module.exports = {
   },
   compilers: {
     solc: {
-      version: "0.6.2",
+      version: "0.7.6",
     }
   }
 };

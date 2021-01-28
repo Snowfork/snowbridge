@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2;
+pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -43,7 +43,7 @@ contract ERC20App is Application {
     constructor(
         address _basicOutboundChannelAddress,
         address _incentivizedOutboundChannelAddress
-    ) public {
+    ) {
         basicOutboundChannelAddress = _basicOutboundChannelAddress;
         incentivizedOutboundChannelAddress = _incentivizedOutboundChannelAddress;
     }
@@ -77,7 +77,7 @@ contract ERC20App is Application {
         } else {
             sendChannel = OutboundChannel(basicOutboundChannelAddress);
         }
-        sendChannel.send(TARGET_APPLICATION_ID, abi.encode(payload));
+        sendChannel.submit(abi.encode(payload));
     }
 
     function handle(bytes memory _data) public override {

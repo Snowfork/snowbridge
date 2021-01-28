@@ -1,16 +1,16 @@
-package offchain
+package substrate
 
 import (
 	"bytes"
 
 	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate/digest"
+	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 var IndexingPrefix = []byte("commitment")
 
-func MakeStorageKey(channelID digest.ChannelID, hash types.H256) ([]byte, error) {
+func MakeStorageKey(channelID chainTypes.ChannelID, hash types.H256) ([]byte, error) {
 	var buffer = bytes.Buffer{}
 	encoder := scale.NewEncoder(&buffer)
 

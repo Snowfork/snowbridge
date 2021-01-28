@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2;
+pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -30,7 +30,7 @@ contract ETHApp {
     constructor(
         address _basicOutboundChannelAddress,
         address _incentivizedOutboundChannelAddress
-    ) public {
+    ) {
         totalETH = 0;
         basicOutboundChannelAddress = _basicOutboundChannelAddress;
         incentivizedOutboundChannelAddress = _incentivizedOutboundChannelAddress;
@@ -57,7 +57,7 @@ contract ETHApp {
         } else {
             sendChannel = OutboundChannel(basicOutboundChannelAddress);
         }
-        sendChannel.send(TARGET_APPLICATION_ID, abi.encode(payload));
+        sendChannel.submit(abi.encode(payload));
     }
 
     function unlockETH(address payable _recipient, uint256 _amount) public {

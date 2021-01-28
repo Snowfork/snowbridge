@@ -418,6 +418,7 @@ github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892 h1:gxkgKQvLyZ
 github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892/go.mod h1:Yy1jPDuUtVPG1b3XnRGiEHWPs09Yd5UphOTqPhN9XPU=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122183154-789fecaf3a9b h1:QfSHfPVMe+j7dEzqay08XpsLAPQN00tif1xaB1yWNWo=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122183154-789fecaf3a9b/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
+github.com/snowfork/polkadot-ethereum v0.2.1-alpha h1:o/HeqHe99/8OZdCgfj+tJW+6AmO7GWCOCNsTpMRcYVY=
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spaolacci/murmur3 v1.0.1-0.20190317074736-539464a789e9/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=

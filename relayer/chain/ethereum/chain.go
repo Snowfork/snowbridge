@@ -7,7 +7,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
@@ -44,12 +48,23 @@ func NewChain(config *Config) (*Chain, error) {
 }
 
 func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.Header) error {
-	bridgeContract, err := LoadBridgeContract(ch.config)
+	var contracts map[substrate.ChannelID]*inbound.Contract
+
+	id := substrate.ChannelID{IsBasic: true}
+	contract, err := inbound.NewContract(common.HexToAddress(ch.config.Channels.Basic.Inbound), ch.conn.client)
 	if err != nil {
 		return err
 	}
+	contracts[id] = contract
 
-	writer, err := NewWriter(ch.conn, subMessages, bridgeContract, ch.log)
+	id = substrate.ChannelID{IsBasic: true}
+	contract, err = inbound.NewContract(common.HexToAddress(ch.config.Channels.Incentivized.Inbound), ch.conn.client)
+	if err != nil {
+		return err
+	}
+	contracts[id] = contract
+
+	writer, err := NewWriter(ch.conn, subMessages, contracts, ch.log)
 	if err != nil {
 		return err
 	}
@@ -59,12 +74,22 @@ func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.
 }
 
 func (ch *Chain) SetSender(ethMessages chan<- []chain.Message, ethHeaders chan<- chain.Header) error {
-	appContracts, err := LoadAppContracts(ch.config)
+	var contracts []*outbound.Contract
+
+	contract, err := outbound.NewContract(common.HexToAddress(ch.config.Channels.Basic.Outbound), ch.conn.client)
 	if err != nil {
 		return err
 	}
+	contracts = append(contracts, contract)
 
-	listener, err := NewListener(ch.conn, ethMessages, ethHeaders, appContracts, ch.log)
+	contract, err = outbound.NewContract(common.HexToAddress(ch.config.Channels.Incentivized.Outbound), ch.conn.client)
+	if err != nil {
+		return err
+	}
+	contracts = append(contracts, contract)
+
+
+	listener, err := NewListener(ch.conn, ethMessages, ethHeaders, contracts, ch.log)
 	if err != nil {
 		return err
 	}

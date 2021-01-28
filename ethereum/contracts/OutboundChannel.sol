@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2;
+pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 // OutboundChannel contains methods that all outgoing channels must implement
 abstract contract OutboundChannel {
-    event NewMessage(
-        uint256 nonce,
-        address senderAddress,
-        string targetApplicationId,
+
+    uint64 public nonce;
+
+    event Message(
+        address source,
+        uint64 nonce,
         bytes payload
     );
 
     /**
      * @dev Sends a message across the channel
      */
-    function send(string memory targetApplicationId, bytes memory payload)
+    function submit(bytes memory payload)
         public
         virtual;
 }

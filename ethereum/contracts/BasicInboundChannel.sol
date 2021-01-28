@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./InboundChannel.sol";
 import "./Decoder.sol";
 
-contract IncentivizedInboundChannel is InboundChannel {
+contract BasicInboundChannel is InboundChannel {
     using Decoder for bytes;
 
     uint256 public MAX_PAYLOAD_BYTE_SIZE = 1000;

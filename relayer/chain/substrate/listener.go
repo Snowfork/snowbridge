@@ -11,9 +11,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate/digest"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate/offchain"
+	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type Listener struct {
@@ -94,7 +94,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				continue
 			}
 
-			digestItem, err := digest.GetAuxiliaryDigestItem(finalizedHeader.Digest)
+			digestItem, err := getAuxiliaryDigestItem(finalizedHeader.Digest)
 			if err != nil {
 				return err
 			}
@@ -106,7 +106,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					"commitmentHash": digestItem.AsCommitment.Hash.Hex(),
 				}).Debug("Found commitment hash in header digest")
 
-				storageKey, err := offchain.MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
+				storageKey, err := MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
 				if err != nil {
 					return err
 				}
@@ -125,8 +125,23 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					}).Debug("Retrieved commitment from offchain storage")
 				} else {
 					li.log.WithError(err).Error("Commitment not found in offchain storage")
+					continue
 				}
 
+				var messages []chainTypes.CommitmentMessage
+
+				err = types.DecodeFromBytes(*data, messages)
+				if err != nil {
+					li.log.WithError(err).Error("Faild to decode commitment messages")
+				}
+
+				message := chain.SubstrateOutboundMessage{
+					ChannelID: digestItem.AsCommitment.ChannelID,
+					CommitmentHash: digestItem.AsCommitment.Hash,
+					Commitment: messages,
+				}
+
+				li.messages <- []chain.Message{message}
 			}
 
 			currentBlock++
@@ -139,4 +154,19 @@ func sleep(ctx context.Context, delay time.Duration) {
 	case <-ctx.Done():
 	case <-time.After(delay):
 	}
+}
+
+
+func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestItem, error) {
+	for _, digestItem := range digest {
+		if digestItem.IsOther {
+			var auxDigestItem chainTypes.AuxiliaryDigestItem
+			err := types.DecodeFromBytes(digestItem.AsOther, &auxDigestItem)
+			if err != nil {
+				return nil, err
+			}
+			return &auxDigestItem, nil
+		}
+	}
+	return nil, nil
 }
