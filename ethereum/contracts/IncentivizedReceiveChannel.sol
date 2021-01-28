@@ -61,8 +61,8 @@ contract IncentivizedReceiveChannel {
         // Prove we can get the MMRLeaf that is claimed to contain our Parachain Block Header
         // BEEFYLightClient.verifyMMRLeaf(parachainHeadsMMRProof)
         // BeefyLightClient{
-        // verifyMMRLeaf(parachainHeadsMMRProof) {
-        //MMRVerification.verifyInclusionProof(latestMMRRoot, parachainHeadsMMRProof)
+        //   verifyMMRLeaf(parachainHeadsMMRProof) {
+        //   MMRVerification.verifyInclusionProof(latestMMRRoot, parachainHeadsMMRProof)
         // }
         //}
         //}
@@ -116,25 +116,13 @@ contract IncentivizedReceiveChannel {
             uint256 allowedGas = MAX_GAS_PER_MESSAGE;
             bytes memory callInput = message.payload;
 
-            bool result;
-            uint256 callInputLength = callInput.length;
-            assembly {
-                let callInputDataPointer := add(callInput, 32) // Move 32 ahead of callInput length slot to get to actual data slot (TODO: verify this works in all cases)
+            bool success;
+            bytes memory result;
+            (success, result) = targetApplicationAddress.call.value(0).gas(
+                allowedGas
+            )(callInput);
 
-                // Dispatch call to the receiver - it is expected to be fire and forget. If the call reverts, runs out of gas, error,
-                // etc, its the fault of the sender
-                result := call(
-                    allowedGas, // Allowed gas
-                    targetApplicationAddress, // To addr
-                    0, // No ether value being sent
-                    callInputDataPointer, // Inputs are stored at callInputDataPointer
-                    callInputLength, // Input length
-                    callInputDataPointer, // Store output over input (saves space)
-                    callInputLength // Outputs can be as long as input length
-                )
-            }
-
-            emit MessageDelivered(message.nonce, result);
+            emit MessageDelivered(message.nonce, success);
         }
     }
 
