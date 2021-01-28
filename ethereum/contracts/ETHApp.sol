@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Decoder.sol";
-import "./SendChannel.sol";
+import "./OutboundChannel.sol";
 
 contract ETHApp {
     using SafeMath for uint256;
@@ -15,8 +15,8 @@ contract ETHApp {
 
     address public bridge;
     uint256 public totalETH;
-    address public basicSendChannelAddress;
-    address public incentivizedSendChannelAddress;
+    address public basicOutboundChannelAddress;
+    address public incentivizedOutboundChannelAddress;
 
     event Locked(address _sender, bytes32 _recipient, uint256 _amount);
     event Unlock(address _recipient, uint256 _amount);
@@ -28,12 +28,12 @@ contract ETHApp {
     }
 
     constructor(
-        address _basicSendChannelAddress,
-        address _incentivizedSendChannelAddress
+        address _basicOutboundChannelAddress,
+        address _incentivizedOutboundChannelAddress
     ) public {
         totalETH = 0;
-        basicSendChannelAddress = _basicSendChannelAddress;
-        incentivizedSendChannelAddress = _incentivizedSendChannelAddress;
+        basicOutboundChannelAddress = _basicOutboundChannelAddress;
+        incentivizedOutboundChannelAddress = _incentivizedOutboundChannelAddress;
     }
 
     function register(address _bridge) public {
@@ -51,11 +51,11 @@ contract ETHApp {
 
         ETHLockedPayload memory payload =
             ETHLockedPayload(msg.sender, _recipient, msg.value);
-        SendChannel sendChannel;
+        OutboundChannel sendChannel;
         if (incentivized) {
-            sendChannel = SendChannel(incentivizedSendChannelAddress);
+            sendChannel = OutboundChannel(incentivizedOutboundChannelAddress);
         } else {
-            sendChannel = SendChannel(basicSendChannelAddress);
+            sendChannel = OutboundChannel(basicOutboundChannelAddress);
         }
         sendChannel.send(TARGET_APPLICATION_ID, abi.encode(payload));
     }

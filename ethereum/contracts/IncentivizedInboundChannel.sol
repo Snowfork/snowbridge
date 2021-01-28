@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Decoder.sol";
 
-contract IncentivizedReceiveChannel {
+contract IncentivizedInboundChannel {
     using Decoder for bytes;
 
     uint64 public lastProcessedNonce;
@@ -24,8 +24,6 @@ contract IncentivizedReceiveChannel {
     constructor() public {
         lastProcessedNonce = 0;
     }
-
-    event MessageDelivered(uint256 _nonce, bool _result);
 
     function submit(
         Message[] memory commitment

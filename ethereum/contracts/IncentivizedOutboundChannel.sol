@@ -2,10 +2,10 @@
 pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
-import "./SendChannel.sol";
+import "./OutboundChannel.sol";
 
-// IncentivizedSendChannel is a channel that sends ordered messages with an increasing nonce. It will have incentivization too.
-contract IncentivizedSendChannel is SendChannel {
+// IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have incentivization too.
+contract IncentivizedOutboundChannel is OutboundChannel {
     uint256 public currentNonce;
 
     constructor() public {

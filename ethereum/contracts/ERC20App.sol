@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Decoder.sol";
 import "./Application.sol";
-import "./SendChannel.sol";
+import "./OutboundChannel.sol";
 
 contract ERC20App is Application {
     using SafeMath for uint256;
@@ -17,8 +17,8 @@ contract ERC20App is Application {
 
     address public bridge;
     mapping(address => uint256) public totalTokens;
-    address public basicSendChannelAddress;
-    address public incentivizedSendChannelAddress;
+    address public basicOutboundChannelAddress;
+    address public incentivizedOutboundChannelAddress;
 
     event Locked(
         address _sender,
@@ -41,11 +41,11 @@ contract ERC20App is Application {
     }
 
     constructor(
-        address _basicSendChannelAddress,
-        address _incentivizedSendChannelAddress
+        address _basicOutboundChannelAddress,
+        address _incentivizedOutboundChannelAddress
     ) public {
-        basicSendChannelAddress = _basicSendChannelAddress;
-        incentivizedSendChannelAddress = _incentivizedSendChannelAddress;
+        basicOutboundChannelAddress = _basicOutboundChannelAddress;
+        incentivizedOutboundChannelAddress = _incentivizedOutboundChannelAddress;
     }
 
     function register(address _bridge) public override {
@@ -71,11 +71,11 @@ contract ERC20App is Application {
 
         ERC20LockedPayload memory payload =
             ERC20LockedPayload(msg.sender, _recipient, _tokenAddr, _amount);
-        SendChannel sendChannel;
+        OutboundChannel sendChannel;
         if (incentivized) {
-            sendChannel = SendChannel(incentivizedSendChannelAddress);
+            sendChannel = OutboundChannel(incentivizedOutboundChannelAddress);
         } else {
-            sendChannel = SendChannel(basicSendChannelAddress);
+            sendChannel = OutboundChannel(basicOutboundChannelAddress);
         }
         sendChannel.send(TARGET_APPLICATION_ID, abi.encode(payload));
     }

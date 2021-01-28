@@ -2,10 +2,10 @@
 pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
-import "./SendChannel.sol";
+import "./OutboundChannel.sol";
 
-// BasicSendChannel is a basic channel that just sends messages with a nonce.
-contract BasicSendChannel is SendChannel {
+// BasicOutboundChannel is a basic channel that just sends messages with a nonce.
+contract BasicOutboundChannel is OutboundChannel {
     uint256 public currentNonce;
 
     constructor() public {

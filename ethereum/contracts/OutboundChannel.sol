@@ -2,8 +2,8 @@
 pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
-// SendChannel contains methods that all outgoing channels must implement
-abstract contract SendChannel {
+// OutboundChannel contains methods that all outgoing channels must implement
+abstract contract OutboundChannel {
     event NewMessage(
         uint256 nonce,
         address senderAddress,
