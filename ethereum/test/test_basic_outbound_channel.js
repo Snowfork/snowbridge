@@ -14,7 +14,6 @@ require("chai")
 contract("BasicOutboundChannel", function (accounts) {
   // Accounts
   const userOne = accounts[1];
-  const testAppId = "arbitrary-app-id";
   const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
 
   describe("deployment and initialization", function () {
@@ -33,14 +32,13 @@ contract("BasicOutboundChannel", function (accounts) {
     });
 
     it("should send messages out with the correct event and fields", async function () {
-      const tx = await this.basicSendChannel.send(
-        testAppId,
+      const tx = await this.basicSendChannel.submit(
         testPayload,
         { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
       const rawLog = tx.receipt.rawLogs[0];
-      confirmChannelSend(rawLog, this.basicSendChannel.address, userOne, testAppId, testPayload)
+      confirmChannelSend(rawLog, this.basicSendChannel.address, userOne, testPayload)
     });
 
   });

@@ -1,26 +1,26 @@
 const ethers = require("ethers");
 
-const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedTargetApplicationId, expectedPayload, expectedNonce = 0) => {
-    outChannelLogFields = [{
-        type: 'uint256',
-        name: 'nonce'
-    }, {
-        type: 'address',
-        name: 'senderAddress'
-    }, {
-        type: 'string',
-        name: 'targetApplicationId',
-    }, {
-        type: 'bytes',
-        name: 'payload',
-    }];
+const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedPayload, expectedNonce = 0) => {
+    outChannelLogFields = [
+        {
+            type: 'address',
+            name: 'source'
+        },
+        {
+            type: 'uint64',
+            name: 'nonce'
+        },
+        {
+            type: 'bytes',
+            name: 'payload',
+        }
+    ];
 
     const decodedEvent = web3.eth.abi.decodeLog(outChannelLogFields, channelEvent.data, channelEvent.topics);
 
     channelEvent.address.should.be.equal(channelAddress);
+    decodedEvent.source.should.be.equal(sendingAppAddress);
     decodedEvent.nonce.should.be.equal('' + expectedNonce);
-    decodedEvent.senderAddress.should.be.equal(sendingAppAddress);
-    decodedEvent.targetApplicationId.should.be.equal(expectedTargetApplicationId);
     decodedEvent.payload.should.be.equal(expectedPayload);
 };
 
@@ -42,7 +42,7 @@ const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmoun
 
 const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
     messageDeliveredLogFields = [{
-        type: 'uint256',
+        type: 'uint64',
         name: '_nonce'
     }, {
         type: 'bool',
@@ -57,9 +57,9 @@ const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
 
 const hashMessage = (message) => {
     return ethers.utils.solidityKeccak256(
-        [ 'uint256', 'string', 'address', 'bytes' ],
-        [ message.nonce, message.senderApplicationId, message.targetApplicationAddress, message.payload ]
-      );
+        ['uint256', 'string', 'address', 'bytes'],
+        [message.nonce, message.senderApplicationId, message.targetApplicationAddress, message.payload]
+    );
 }
 
 module.exports = { confirmChannelSend, confirmUnlock, confirmMessageDelivered, hashMessage };

@@ -81,7 +81,6 @@ contract ERC20App is Application {
     }
 
     function handle(bytes memory _data) public override {
-        require(msg.sender == bridge);
         require(_data.length >= PAYLOAD_LENGTH, "Invalid Payload");
 
         // Decode sender bytes

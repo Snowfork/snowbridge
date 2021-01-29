@@ -154,10 +154,11 @@ func (li *Listener) queryEvents(ctx context.Context, contract *outbound.Contract
 			}
 			break
 		}
+
+		fmt.Printf("Event %+v", iter.Event)
+
 		events = append(events, iter.Event)
 	}
-
-	fmt.Println("Events! ", events)
 
 	return events, nil
 }

@@ -43,7 +43,7 @@ contract("EthApp", function (accounts) {
 
     it("should support Ethereum deposits", async function () {
       // Load initial contract state
-      const beforeTotalETH = Number(await this.ethApp.totalETH());
+      const beforeTotalETH = Number(await this.ethApp.balance());
 
       // Prepare transaction parameters
       const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
@@ -63,10 +63,10 @@ contract("EthApp", function (accounts) {
         e => e.event === "Locked"
       );
 
-      appEvent.args._sender.should.be.equal(userOne);
+      appEvent.args.sender.should.be.equal(userOne);
       const expectedRecipient = Web3Utils.padRight(Web3Utils.toHex(recipient).toLowerCase(), BYTES32_LENGTH);
-      appEvent.args._recipient.should.be.equal(expectedRecipient);
-      Number(appEvent.args._amount).should.be.bignumber.equal(weiAmount);
+      appEvent.args.recipient.should.be.equal(expectedRecipient);
+      Number(appEvent.args.amount).should.be.bignumber.equal(weiAmount);
 
       // Confirm contract's Ethereum balance has increased
       const contractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
@@ -74,7 +74,7 @@ contract("EthApp", function (accounts) {
       contractBalance.should.be.bignumber.equal(Web3Utils.fromWei(weiAmount, "ether"));
 
       // Confirm contract's locked Ethereum counter has increased by amount locked
-      const afterTotalETH = await this.ethApp.totalETH();
+      const afterTotalETH = await this.ethApp.balance();
       Number(afterTotalETH).should.be.bignumber.equal(beforeTotalETH + Number(weiAmount));
     });
 
@@ -93,7 +93,7 @@ contract("EthApp", function (accounts) {
 
 
       // Confirm payload submitted to incentivized channel
-      confirmChannelSend(tx_incentivized.receipt.rawLogs[1], this.incentivizedSendChannel.address, this.ethApp.address, "eth-app", expectedPayload)
+      confirmChannelSend(tx_incentivized.receipt.rawLogs[1], this.incentivizedSendChannel.address, this.ethApp.address, expectedPayload)
 
       // Deposit Ethereum to the contract via basic channel
       const tx_basic = await this.ethApp.sendETH(
@@ -103,7 +103,7 @@ contract("EthApp", function (accounts) {
       ).should.be.fulfilled;
 
       // Confirm payload submitted to basic channel
-      confirmChannelSend(tx_basic.receipt.rawLogs[1], this.basicSendChannel.address, this.ethApp.address, "eth-app", expectedPayload)
+      confirmChannelSend(tx_basic.receipt.rawLogs[1], this.basicSendChannel.address, this.ethApp.address, expectedPayload)
     });
   });
 
@@ -115,8 +115,6 @@ contract("EthApp", function (accounts) {
       const basicSendChannel = await BasicOutboundChannel.new();
       const incentivizedSendChannel = await IncentivizedOutboundChannel.new();
       this.ethApp = await ETHApp.new(basicSendChannel.address, incentivizedSendChannel.address);
-
-      await this.ethApp.register(owner);
 
       // Prepare transaction parameters
       const lockAmountWei = 5000;
@@ -142,7 +140,7 @@ contract("EthApp", function (accounts) {
       const decodedAmount = 4660;
 
       // Load initial state
-      const beforeTotalETH = Number(await this.ethApp.totalETH());
+      const beforeTotalETH = Number(await this.ethApp.balance());
       const beforeContractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
       const beforeUserBalanceWei = await web3.eth.getBalance(decodedRecipient);
 
@@ -150,12 +148,12 @@ contract("EthApp", function (accounts) {
 
       // Confirm unlock event emitted with expected values
       const unlockEvent = logs.find(
-        e => e.event === "Unlock"
+        e => e.event === "Unlocked"
       );
 
-      unlockEvent.args._sender.should.be.equal(decodedSender);
-      unlockEvent.args._recipient.should.be.equal(decodedRecipient);
-      Number(unlockEvent.args._amount).should.be.bignumber.equal(decodedAmount);
+      unlockEvent.args.sender.should.be.equal(decodedSender);
+      unlockEvent.args.recipient.should.be.equal(decodedRecipient);
+      Number(unlockEvent.args.amount).should.be.bignumber.equal(decodedAmount);
 
       // Get the user and ETHApp's Ethereum balance after unlock
       const afterContractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
@@ -166,7 +164,7 @@ contract("EthApp", function (accounts) {
       afterContractBalanceWei.should.be.bignumber.equal(beforeContractBalanceWei - decodedAmount);
 
       // Confirm contract's locked Ethereum counter has decreased by amount unlocked
-      const afterTotalETH = await this.ethApp.totalETH();
+      const afterTotalETH = await this.ethApp.balance();
       Number(afterTotalETH).should.be.bignumber.equal(beforeTotalETH - Number(decodedAmount));
     });
   });
