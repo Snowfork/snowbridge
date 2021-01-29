@@ -100,6 +100,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 					"blockNumber": header.HeaderData.(ethereum.Header).Number,
 					"error":       err,
 				}).Error("Failure submitting header to substrate")
+				return err
 			}
 		}
 	}
@@ -201,6 +202,9 @@ func (wr *Writer) WriteHeader(ctx context.Context, header *chain.Header) error {
 				"error":       err,
 				"retries":     retries,
 			}).Error("Failure submitting header to substrate")
+			if retries >= 4 {
+				return err
+			}
 		} else {
 			break
 		}
