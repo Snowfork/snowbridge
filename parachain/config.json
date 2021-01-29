@@ -23,7 +23,6 @@
 			"port": 30666,
 			"flags": [
 				"-lbasic_authorship=trace,commitments=debug,import_header=trace,runtime=debug,submit_messages=trace",
-				"--execution=native",
 				"--rpc-port=9980",
 				"--offchain-worker=Always",
 				"--enable-offchain-indexing=true",
@@ -34,5 +33,7 @@
 	],
 	"simpleParachains": [],
 	"types": {
+		"Address": "MultiAddress",
+		"LookupSource": "MultiAddress"
 	}
 }

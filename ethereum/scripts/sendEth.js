@@ -26,7 +26,7 @@ module.exports = async () => {
     const weiAmount = web3.utils.toWei(ethAmountStr)
 
     const ethApp = await ETHApp.deployed()
-    const { logs } = await ethApp.sendETH(recipient, {
+    const { logs } = await ethApp.sendETH(recipient, false, {
         from: accounts[0],
         value: weiAmount,
         gas: 300000 // 300,000 Gwei
@@ -35,9 +35,9 @@ module.exports = async () => {
     console.log("Locked up ETH ...");
 
     // Get event logs
-    const event = logs.find(e => e.event === "AppTransfer");
+    const event = logs.find(e => e.event === "Locked");
 
-    console.log(event.args);
+    console.log(logs);
   } catch (error) {
     console.error({ error });
   }

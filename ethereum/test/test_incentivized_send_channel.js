@@ -1,4 +1,4 @@
-const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
+const IncentivizedOutboundChannel = artifacts.require("IncentivizedOutboundChannel");
 
 const Web3Utils = require("web3-utils");
 const ethers = require("ethers");
@@ -11,7 +11,7 @@ require("chai")
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
-contract("IncentivizedSendChannel", function (accounts) {
+contract("IncentivizedOutboundChannel", function (accounts) {
   // Accounts
   const userOne = accounts[1];
   const testAppId = "arbitrary-app-id";
@@ -19,7 +19,7 @@ contract("IncentivizedSendChannel", function (accounts) {
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      this.incentivizedSendChannel = await IncentivizedSendChannel.new();
+      this.incentivizedSendChannel = await IncentivizedOutboundChannel.new();
     });
 
     it("should deploy and initialize the ETHApp contract", async function () {
@@ -29,7 +29,7 @@ contract("IncentivizedSendChannel", function (accounts) {
 
   describe("send", function () {
     beforeEach(async function () {
-      this.incentivizedSendChannel = await IncentivizedSendChannel.new();
+      this.incentivizedSendChannel = await IncentivizedOutboundChannel.new();
     });
 
     it("should send messages out with the correct event and fields", async function () {

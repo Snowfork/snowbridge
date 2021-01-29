@@ -1,7 +1,7 @@
 const ERC20App = artifacts.require("ERC20App");
 const TestToken = artifacts.require("TestToken");
-const BasicSendChannel = artifacts.require("BasicSendChannel");
-const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
+const BasicOutboundChannel = artifacts.require("BasicOutboundChannel");
+const IncentivizedOutboundChannel = artifacts.require("IncentivizedOutboundChannel");
 
 const Web3Utils = require("web3-utils");
 const ethers = require("ethers");
@@ -25,8 +25,8 @@ contract("ERC20App", function (accounts) {
 
   describe("initialization and deployment", function () {
     beforeEach(async function () {
-      const basicSendChannel = await BasicSendChannel.new();
-      const incentivizedSendChannel = await IncentivizedSendChannel.new();
+      const basicSendChannel = await BasicOutboundChannel.new();
+      const incentivizedSendChannel = await IncentivizedOutboundChannel.new();
       this.erc20App = await ERC20App.new(basicSendChannel.address, incentivizedSendChannel.address);
     });
 
@@ -37,8 +37,8 @@ contract("ERC20App", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      this.basicSendChannel = await BasicSendChannel.new();
-      this.incentivizedSendChannel = await IncentivizedSendChannel.new();
+      this.basicSendChannel = await BasicOutboundChannel.new();
+      this.incentivizedSendChannel = await IncentivizedOutboundChannel.new();
       this.erc20App = await ERC20App.new(this.basicSendChannel.address, this.incentivizedSendChannel.address);
     });
 
@@ -154,8 +154,8 @@ contract("ERC20App", function (accounts) {
   describe("handle received messages", function () {
 
     before(async function () {
-      const basicSendChannel = await BasicSendChannel.new();
-      const incentivizedSendChannel = await IncentivizedSendChannel.new();
+      const basicSendChannel = await BasicOutboundChannel.new();
+      const incentivizedSendChannel = await IncentivizedOutboundChannel.new();
       this.erc20App = await ERC20App.new(basicSendChannel.address, incentivizedSendChannel.address);
       await this.erc20App.register(owner);
 

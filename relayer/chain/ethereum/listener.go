@@ -5,8 +5,10 @@ package ethereum
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
@@ -21,6 +23,7 @@ const MaxMessagesPerSend = 10
 
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
+	config    *Config
 	conn      *Connection
 	contracts []*outbound.Contract
 	messages  chan<- []chain.Message
@@ -28,8 +31,9 @@ type Listener struct {
 	log       *logrus.Entry
 }
 
-func NewListener(conn *Connection, messages chan<- []chain.Message, headers chan<- chain.Header, contracts []*outbound.Contract, log *logrus.Entry) (*Listener, error) {
+func NewListener(config *Config, conn *Connection, messages chan<- []chain.Message, headers chan<- chain.Header, contracts []*outbound.Contract, log *logrus.Entry) (*Listener, error) {
 	return &Listener{
+		config:    config,
 		conn:      conn,
 		contracts: contracts,
 		messages:  messages,
@@ -48,6 +52,19 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	if err != nil {
 		return err
 	}
+
+	contract, err := outbound.NewContract(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.client)
+	if err != nil {
+		return err
+	}
+	li.contracts = append(li.contracts, contract)
+
+	contract, err = outbound.NewContract(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.client)
+	if err != nil {
+		return err
+	}
+	li.contracts = append(li.contracts, contract)
+
 
 	eg.Go(func() error {
 		return li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
@@ -103,11 +120,10 @@ func (li *Listener) pollEventsAndHeaders(
 			}
 
 			finalizedBlockNumber := gethheader.Number.Uint64() - descendantsUntilFinal
-
 			var events []*outbound.ContractMessage
 
 			for _, channelContract := range li.contracts {
-				channelEvents, err := li.queryEvents(channelContract, finalizedBlockNumber, &finalizedBlockNumber)
+				channelEvents, err := li.queryEvents(ctx, channelContract, finalizedBlockNumber, &finalizedBlockNumber)
 				if err != nil {
 					li.log.WithError(err).Error("Failure fetching event logs")
 				}
@@ -120,9 +136,9 @@ func (li *Listener) pollEventsAndHeaders(
 	}
 }
 
-func (li *Listener) queryEvents(contract *outbound.Contract, start uint64, end *uint64) ([]*outbound.ContractMessage, error) {
+func (li *Listener) queryEvents(ctx context.Context, contract *outbound.Contract, start uint64, end *uint64) ([]*outbound.ContractMessage, error) {
 	var events []*outbound.ContractMessage
-	filterOps := bind.FilterOpts{Start: start, End: end}
+	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
 	iter, err := contract.FilterMessage(&filterOps);
 	if err != nil {
@@ -136,9 +152,12 @@ func (li *Listener) queryEvents(contract *outbound.Contract, start uint64, end *
 			if err != nil {
 				return nil, err
 			}
+			break
 		}
 		events = append(events, iter.Event)
 	}
+
+	fmt.Println("Events! ", events)
 
 	return events, nil
 }

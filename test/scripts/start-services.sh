@@ -86,7 +86,6 @@ start_parachain()
     scripts/wait-for-it.sh -t 20 localhost:11144
     # waiting for parachain to sync with relay chain and produce initial blocks
     sleep 20
-
 }
 
 start_relayer()

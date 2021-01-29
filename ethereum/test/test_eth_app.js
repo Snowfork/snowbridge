@@ -1,6 +1,6 @@
 const ETHApp = artifacts.require("ETHApp");
-const BasicSendChannel = artifacts.require("BasicSendChannel");
-const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
+const BasicOutboundChannel = artifacts.require("BasicOutboundChannel");
+const IncentivizedOutboundChannel = artifacts.require("IncentivizedOutboundChannel");
 
 const Web3Utils = require("web3-utils");
 const ethers = require("ethers");
@@ -24,8 +24,8 @@ contract("EthApp", function (accounts) {
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      const basicSendChannel = await BasicSendChannel.new();
-      const incentivizedSendChannel = await IncentivizedSendChannel.new();
+      const basicSendChannel = await BasicOutboundChannel.new();
+      const incentivizedSendChannel = await IncentivizedOutboundChannel.new();
       this.ethApp = await ETHApp.new(basicSendChannel.address, incentivizedSendChannel.address);
     });
 
@@ -36,8 +36,8 @@ contract("EthApp", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      this.basicSendChannel = await BasicSendChannel.new();
-      this.incentivizedSendChannel = await IncentivizedSendChannel.new();
+      this.basicSendChannel = await BasicOutboundChannel.new();
+      this.incentivizedSendChannel = await IncentivizedOutboundChannel.new();
       this.ethApp = await ETHApp.new(this.basicSendChannel.address, this.incentivizedSendChannel.address);
     });
 
@@ -112,8 +112,8 @@ contract("EthApp", function (accounts) {
 
     before(async function () {
 
-      const basicSendChannel = await BasicSendChannel.new();
-      const incentivizedSendChannel = await IncentivizedSendChannel.new();
+      const basicSendChannel = await BasicOutboundChannel.new();
+      const incentivizedSendChannel = await IncentivizedOutboundChannel.new();
       this.ethApp = await ETHApp.new(basicSendChannel.address, incentivizedSendChannel.address);
 
       await this.ethApp.register(owner);

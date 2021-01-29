@@ -1,9 +1,6 @@
-const Verifier = artifacts.require("Verifier");
-
 const Decoder = artifacts.require("Decoder");
 const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
-const Bridge = artifacts.require("Bridge");
 const TestToken = artifacts.require("TestToken");
 
 const channelContracts = {
@@ -32,7 +29,7 @@ module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
 
     channels.basic.inbound = await deployer.deploy(channelContracts.basic.inbound)
-    channels.basic.outbound = await deployer.deploy(channelContracts.basic.inbound)
+    channels.basic.outbound = await deployer.deploy(channelContracts.basic.outbound)
     channels.incentivized.inbound = await deployer.deploy(channelContracts.incentivized.inbound)
     channels.incentivized.outbound = await deployer.deploy(channelContracts.incentivized.outbound)
 

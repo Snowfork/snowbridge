@@ -3,37 +3,43 @@ const TOML = require('@iarna/toml');
 const fs = require('fs');
 const os = require('os');
 
-const Bridge = artifacts.require("Bridge")
-const BasicOutChannel = artifacts.require("BasicOutChannel")
-const IncentivizedOutChannel = artifacts.require("IncentivizedOutChannel")
+const channelContracts = {
+    basic: {
+        inbound: artifacts.require("BasicInboundChannel"),
+        outbound: artifacts.require("BasicOutboundChannel")
+    },
+    incentivized: {
+        inbound: artifacts.require("IncentivizedInboundChannel"),
+        outbound: artifacts.require("IncentivizedOutboundChannel")
+    },
+}
 
-const dump = (bridge, basicOutChannel, incentivizedOutChannel) => {
+const channels = {
+    basic: {
+        inbound: null,
+        outbound: null
+    },
+    incentivized: {
+        inbound: null,
+        outbound: null
+    },
+}
 
-    const bridgeAbiFile = uniqueFilename(os.tmpdir(), "Bridge")
-    const basicOutChannelAbiFile = uniqueFilename(os.tmpdir(), "BasicOutChannel")
-    const incentivizedOutChannelAbiFile = uniqueFilename(os.tmpdir(), "IncentivizedOutChannel")
-
-    fs.writeFileSync(bridgeAbiFile, JSON.stringify(bridge.abi, null, 2))
-    fs.writeFileSync(basicOutChannelAbiFile, JSON.stringify(basicOutChannel.abi, null, 2))
-    fs.writeFileSync(incentivizedOutChannelAbiFile, JSON.stringify(incentivizedOutChannel.abi, null, 2))
+const dump = (channels) => {
 
     const config = {
         ethereum: {
             endpoint: "ws://localhost:9545/",
             "descendants-until-final": 35,
-            bridge: {
-                address: bridge.address,
-                abi: bridgeAbiFile,
-            },
-            apps:{
-                basicOutChannel: {
-                    address: basicOutChannel.address,
-                    abi: basicOutChannelAbiFile,
+            channels: {
+                basic: {
+                    inbound: channels.basic.inbound.address,
+                    outbound: channels.basic.outbound.address,
                 },
-                incentivizedOutChannel: {
-                    address: incentivizedOutChannel.address,
-                    abi: incentivizedOutChannelAbiFile,
-                }
+                incentivized: {
+                    inbound: channels.incentivized.inbound.address,
+                    outbound: channels.incentivized.outbound.address,
+                },
             },
         },
         substrate: {
@@ -43,15 +49,13 @@ const dump = (bridge, basicOutChannel, incentivizedOutChannel) => {
     console.log(TOML.stringify(config))
 }
 
-
 module.exports = async (callback) => {
     try {
-        let bridge = await Bridge.deployed()
-        let basicOutChannel = await BasicOutChannel.deployed()
-        let incentivizedOutChannel = await IncentivizedOutChannel.deployed()
-
-        dump(bridge, basicOutChannel, incentivizedOutChannel)
-
+        channels.basic.inbound = await channelContracts.basic.inbound.deployed()
+        channels.basic.outbound = await channelContracts.basic.outbound.deployed()
+        channels.incentivized.inbound = await channelContracts.incentivized.inbound.deployed()
+        channels.incentivized.outbound = await channelContracts.incentivized.outbound.deployed()
+        dump(channels)
     } catch (error) {
         callback(error)
     }

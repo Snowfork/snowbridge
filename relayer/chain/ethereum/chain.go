@@ -48,7 +48,7 @@ func NewChain(config *Config) (*Chain, error) {
 }
 
 func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.Header) error {
-	var contracts map[substrate.ChannelID]*inbound.Contract
+	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
 	id := substrate.ChannelID{IsBasic: true}
 	contract, err := inbound.NewContract(common.HexToAddress(ch.config.Channels.Basic.Inbound), ch.conn.client)
@@ -75,21 +75,7 @@ func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.
 
 func (ch *Chain) SetSender(ethMessages chan<- []chain.Message, ethHeaders chan<- chain.Header) error {
 	var contracts []*outbound.Contract
-
-	contract, err := outbound.NewContract(common.HexToAddress(ch.config.Channels.Basic.Outbound), ch.conn.client)
-	if err != nil {
-		return err
-	}
-	contracts = append(contracts, contract)
-
-	contract, err = outbound.NewContract(common.HexToAddress(ch.config.Channels.Incentivized.Outbound), ch.conn.client)
-	if err != nil {
-		return err
-	}
-	contracts = append(contracts, contract)
-
-
-	listener, err := NewListener(ch.conn, ethMessages, ethHeaders, contracts, ch.log)
+	listener, err := NewListener(ch.config, ch.conn, ethMessages, ethHeaders, contracts, ch.log)
 	if err != nil {
 		return err
 	}

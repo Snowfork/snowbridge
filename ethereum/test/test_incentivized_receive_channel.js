@@ -1,6 +1,6 @@
-const IncentivizedReceiveChannel = artifacts.require("IncentivizedReceiveChannel");
+const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
 const ETHApp = artifacts.require("ETHApp");
-const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
+const IncentivizedOutboundChannel = artifacts.require("IncentivizedOutboundChannel");
 
 const Web3Utils = require("web3-utils");
 const BigNumber = web3.BigNumber;
@@ -14,7 +14,7 @@ require("chai")
 
 const ethers = require("ethers");
 
-contract("IncentivizedReceiveChannel", function (accounts) {
+contract("IncentivizedInboundChannel", function (accounts) {
   // Accounts
   const userOne = accounts[1];
   const userTwo = accounts[2];
@@ -22,20 +22,20 @@ contract("IncentivizedReceiveChannel", function (accounts) {
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      this.incentivizedReceiveChannel = await IncentivizedReceiveChannel.new();
+      this.incentivizedReceiveChannel = await IncentivizedInboundChannel.new();
     });
 
-   it("should deploy and initialize the IncentivizedReceiveChannel contract", async function () {
+   it("should deploy and initialize the IncentivizedInboundChannel contract", async function () {
       this.incentivizedReceiveChannel.should.exist;
     });
   });
 
   describe("newParachainCommitment", function () {
     beforeEach(async function () {
-      const incentivizedSendChannel = await IncentivizedSendChannel.new();
+      const incentivizedSendChannel = await IncentivizedOutboundChannel.new();
       this.ethApp = await ETHApp.new(incentivizedSendChannel.address, incentivizedSendChannel.address);
 
-      this.incentivizedReceiveChannel = await IncentivizedReceiveChannel.new();
+      this.incentivizedReceiveChannel = await IncentivizedInboundChannel.new();
       await this.ethApp.register(this.incentivizedReceiveChannel.address);
 
       // Prepare ETHApp with some liquidity for testing
@@ -93,7 +93,7 @@ contract("IncentivizedReceiveChannel", function (accounts) {
         { from: userOne }
       )
 
-      // Confirm ETHApp and IncentivizedReceiveChannel processed messages correctly
+      // Confirm ETHApp and IncentivizedInboundChannel processed messages correctly
       const firstRawUnlockLog = tx.receipt.rawLogs[0];
       confirmUnlock(firstRawUnlockLog, this.ethApp.address, userTwo, 2);
       const firstMessageDeliveredLog = tx.receipt.rawLogs[1];
