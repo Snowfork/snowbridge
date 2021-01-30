@@ -1,4 +1,5 @@
 const Decoder = artifacts.require("Decoder");
+const ScaleCodec = artifacts.require("ScaleCodec");
 const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
 const TestToken = artifacts.require("TestToken");
@@ -28,16 +29,15 @@ const channels = {
 
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
-
     channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
     channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
     channels.incentivized.inbound.instance = await deployer.deploy(channels.incentivized.inbound.contract)
     channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract)
 
-
     // Link libraries to applications
     await deployer.deploy(Decoder);
     deployer.link(Decoder, [ETHApp, ERC20App]);
+    //deployer.link(ScaleCodec, [ETHApp]);
 
     // Deploy applications
     const ethApp = await deployer.deploy(
@@ -52,13 +52,6 @@ module.exports = function(deployer, network, accounts) {
       },
     );
 
-    // const erc20App = await deployer.deploy(
-    //   ERC20App,
-    //   channels.basic.outbound.address,
-    //   channels.incentivized.outbound.address
-    // );
-
-    // Deploy TEST ERC20 token for testing
     await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
   })
 };

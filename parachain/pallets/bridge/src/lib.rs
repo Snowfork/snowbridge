@@ -18,13 +18,13 @@
 
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::{DispatchError, DispatchResult},
+	dispatch::DispatchResult,
 	storage::StorageMap,
-	debug,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_core::H160;
 use sp_std::prelude::*;
+use sp_std::convert::TryFrom;
 use artemis_core::{
 	ChannelId, SubmitOutbound, Message,
 	MessageCommitment, Verifier, Application,
@@ -33,6 +33,7 @@ use artemis_core::{
 use channel::inbound::make_inbound_channel;
 use channel::outbound::make_outbound_channel;
 use primitives::{InboundChannelData, OutboundChannelData};
+use envelope::Envelope;
 
 #[cfg(test)]
 mod mock;
@@ -42,6 +43,7 @@ mod tests;
 
 mod channel;
 mod primitives;
+mod envelope;
 
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
@@ -66,7 +68,7 @@ decl_storage! {
 	}
 	add_extra_genesis {
 		config(source_channels): SourceChannelConfig;
-		build(|config: &GenesisConfig<T>| {
+		build(|config: &GenesisConfig| {
 			let sources = config.source_channels;
 			SourceChannels::insert(sources.basic.address, ChannelId::Basic);
 			SourceChannels::insert(sources.incentivized.address, ChannelId::Incentivized);
@@ -85,10 +87,10 @@ decl_error! {
 	pub enum Error for Module<T: Config> {
 		/// Message came from an invalid source channel
 		InvalidSourceChannel,
-
+		/// Message has an invalid envelope
+		InvalidEnvelope,
 		/// Message has an unexpected nonce
 		BadNonce,
-
 		/// Target application not found.
 		AppNotFound,
 	}
@@ -105,14 +107,15 @@ decl_module! {
 		pub fn submit(origin, message: Message) -> DispatchResult {
 			let relayer = ensure_signed(origin)?;
 
-			let envelope = T::Verifier::verify(&message)?;
+			let log = T::Verifier::verify(&message)?;
+			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
 			let channel_id = SourceChannels::get(envelope.channel)
-				.ok_or(Err(Error::<T>::InvalidSourceChannel.into()))?;
+				.ok_or(Error::<T>::InvalidSourceChannel)?;
 
-			let mut channel = make_inbound_channel::<T>(channel_id);
+			let channel = make_inbound_channel::<T>(channel_id);
 
-			channel.submit(&relayer, envelope)
+			channel.submit(&relayer, &envelope)
 		}
 	}
 }

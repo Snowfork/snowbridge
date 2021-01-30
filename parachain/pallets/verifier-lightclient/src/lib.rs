@@ -8,17 +8,13 @@
 use frame_system::{self as system, ensure_signed};
 use frame_support::{debug, decl_module, decl_storage, decl_event, decl_error,
 	dispatch::DispatchResult, dispatch::DispatchError, ensure, traits::Get};
-use sp_std::collections::btree_map::BTreeMap;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
-use artemis_core::{Envelope, Message, Verifier, Proof};
+use artemis_core::{Message, Verifier, Proof};
 use artemis_ethereum::{HeaderId as EthereumHeaderId, Log, Receipt, H256, U256};
 use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
-
-use sp_std::convert::TryFrom;
-
 pub use artemis_ethereum::Header as EthereumHeader;
 
 #[cfg(test)]
@@ -26,8 +22,6 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
-
-mod envelope;
 
 /// Max number of finalized headers to keep.
 const FINALIZED_HEADERS_TO_KEEP: u64 = 5_000;
@@ -424,7 +418,7 @@ impl<T: Config> Module<T> {
 		
 		let finalized_block = FinalizedBlock::get();
 		Self::check_header_finality(
-			&EthereumHeaderId { hash: *block_hash, number: header.number },
+			&EthereumHeaderId { hash: proof.block_hash, number: header.number },
 			&finalized_block,
 		)?;
 	
@@ -473,7 +467,7 @@ fn ancestry<T: Config>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHe
 
 impl<T: Config> Verifier<T::AccountId> for Module<T> {
 
-	fn verify(message: &Message) -> Result<Envelope, DispatchError> {
+	fn verify(message: &Message) -> Result<Log, DispatchError> {
 		let receipt = Self::verify_receipt_inclusion(&message.proof)?;
 
 		let log: Log = rlp::decode(&message.data)
@@ -483,8 +477,6 @@ impl<T: Config> Verifier<T::AccountId> for Module<T> {
 			return Err(Error::<T>::InvalidProof.into());
 		}
 
-		let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidProof)?;
-
-		Ok(envelope)
+		Ok(log)
 	}
 }

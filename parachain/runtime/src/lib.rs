@@ -403,7 +403,7 @@ construct_runtime!(
 		ParachainInfo: parachain_info::{Module, Storage, Config},
 		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
 
-		Bridge: bridge::{Module, Call, Storage, Event},
+		Bridge: bridge::{Module, Call, Config, Storage, Event},
 		Commitments: commitments::{Module, Call, Storage, Event},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
 		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>},

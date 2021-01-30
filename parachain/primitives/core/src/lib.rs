@@ -8,26 +8,31 @@
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
 use sp_core::H160;
+use artemis_ethereum::Log;
 
 pub mod types;
 pub mod assets;
-pub mod envelope;
 
 pub use types::{
 	Message,
 	Proof,
 	ChannelId,
 	SourceChannelConfig,
+	SourceChannel,
 };
-
-pub use envelope::Envelope;
 
 pub use assets::{AssetId, MultiAsset, SingleAsset};
 /// A trait for verifying messages.
 ///
 /// This trait should be implemented by runtime modules that wish to provide message verification functionality.
 pub trait Verifier<AccountId> {
-	fn verify(message: &Message) -> Result<Envelope, DispatchError>;
+	fn verify(message: &Message) -> Result<Log, DispatchError>;
+}
+
+impl<AccountId> Verifier<AccountId> for () {
+	fn verify(message: &Message) -> Result<Log, DispatchError> {
+		Ok(Default::default())
+	}
 }
 
 /// Outbound submission for applications

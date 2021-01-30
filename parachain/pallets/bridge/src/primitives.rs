@@ -1,7 +1,8 @@
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::RuntimeDebug;
 use codec::{Encode, Decode};
-use artemis_core::{Message, Envelope};
+
+use crate::envelope::Envelope;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, Default, RuntimeDebug)]
 pub struct InboundChannelData {
@@ -14,7 +15,7 @@ pub struct OutboundChannelData {
 
 pub trait InboundChannel<AccountId>
 {
-	fn submit(&mut self, relayer: &AccountId, envelope: &Envelope) -> DispatchResult;
+	fn submit(&self, relayer: &AccountId, envelope: &Envelope) -> DispatchResult;
 }
 
 pub trait OutboundChannel {

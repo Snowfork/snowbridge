@@ -114,6 +114,8 @@ contract("EthApp", function (accounts) {
         { from: userOne, value: weiAmount }
       ).should.be.fulfilled;
 
+      console.log(tx.receipt.rawLogs[1])
+
       // Confirm payload submitted to incentivized channel
       confirmChannelSend(tx.receipt.rawLogs[1], this.channels.incentivized.outbound.address, this.app.address, 0)
     });

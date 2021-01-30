@@ -2,7 +2,7 @@ use ethabi::{Event, Param, ParamKind, Token};
 use artemis_ethereum::{log::Log, H160};
 
 use sp_core::RuntimeDebug;
-use sp_std::prelude::*;
+//use sp_std::prelude::*;
 use sp_std::convert::TryFrom;
 
 static EVENT_ABI: &Event = &Event {
@@ -42,8 +42,6 @@ impl TryFrom<Log> for Envelope {
 
 		let nonce = match iter.next().ok_or(EnvelopeDecodeError)? {
 			Token::Uint(value) => {
-				// this should be safe since in Solidity, a uint64 fits
-				// into the lower 64-bits of a uint256.
 				value.low_u64()
 			}
 			_ => return Err(EnvelopeDecodeError)
@@ -68,17 +66,33 @@ mod tests {
 	use super::*;
 	use hex_literal::hex;
 
-	const LOG_DATA: [u8; 155] = hex!("
-		f899947c5c2fb581612f040ebf9e74f94c9eac8681a95fe1a0691df88ac0
-		2f64f3b39fb1b52b940a2730e41ae20f39eec131634df2f8edce77b86000
-		0000000000000000000000cffeaaf7681c89285d65cfbe808b80e5026965
-		73d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a5
-		6da27d00000000000000000000000000000000000000000000000000038d
-		7ea4c68000
+	const LOG: [u8; 284] = hex!("
+		f901199430d2da52e36f80b17fe2694a5e4900b81cf26344e1a0779b38144a38
+		cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
+		0000000000000000abe98e5ef4dc7a5c4f317823986fe48649f0edbb00000000
+		0000000000000000000000000000000000000000000000000000000000000000
+		0000000000000000000000000000000000000000000000000000006000000000
+		000000000000000000000000000000000000000000000000000000541ed28b61
+		269a6d3d28d07b1fd834ebe4e703368ed43593c715fdd31c61141abd04a99fd6
+		822c8558854ccde39a5684e7a56da27d00010000000000000000000000000000
+		00000000000000000000000000000000000000000000000000000000
 	");
 
 	#[test]
 	fn test_try_from_log() {
+		let log: Log = rlp::decode(&LOG).unwrap();
+		let envelope = Envelope::try_from(log).unwrap();
 
+		assert_eq!(envelope,
+			Envelope {
+				channel: hex!["30d2da52e36f80b17fe2694a5e4900b81cf26344"].into(),
+				source: hex!["abe98e5ef4dc7a5c4f317823986fe48649f0edbb"].into(),
+				nonce: 0,
+				payload: hex!("
+					1ed28b61269a6d3d28d07b1fd834ebe4e703368ed43593c715fdd31c61141abd
+					04a99fd6822c8558854ccde39a5684e7a56da27d000100000000000000000000
+					0000000000000000000000000000000000000000"
+				).into(),
+			})
 	}
 }

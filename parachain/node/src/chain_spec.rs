@@ -3,19 +3,19 @@ use artemis_runtime::{
 	AccountId, EthereumHeader,
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
-	ETHConfig, ERC20Config, AssetsConfig,
+	BridgeConfig, ETHConfig, ERC20Config, AssetsConfig,
 	ParachainInfoConfig,
 	WASM_BINARY, Signature,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
-use sp_core::{Pair, Public, sr25519};
+use sp_core::{H160, Pair, Public, sr25519};
 use sp_runtime::traits::{Verify, IdentifyAccount};
 use serde::{Deserialize, Serialize};
 
 use hex_literal::hex;
 
-use artemis_core::AssetId;
+use artemis_core::{AssetId, SourceChannelConfig, SourceChannel};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
@@ -110,6 +110,16 @@ fn testnet_genesis(
 		pallet_balances: Some(BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
+		}),
+		bridge: Some(BridgeConfig {
+			source_channels: SourceChannelConfig {
+				basic: SourceChannel {
+					address: H160::zero(),
+				},
+				incentivized: SourceChannel {
+					address: H160::zero(),
+				}
+			},
 		}),
 		assets: Some(AssetsConfig {
 			balances: vec![(AssetId::ETH, get_account_id_from_seed::<sr25519::Public>("Ferdie"), 10000000.into())]
