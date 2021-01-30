@@ -1,6 +1,6 @@
 const ethers = require("ethers");
 
-const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedPayload, expectedNonce = 0) => {
+const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0) => {
     outChannelLogFields = [
         {
             type: 'address',
@@ -21,7 +21,6 @@ const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, exp
     channelEvent.address.should.be.equal(channelAddress);
     decodedEvent.source.should.be.equal(sendingAppAddress);
     decodedEvent.nonce.should.be.equal('' + expectedNonce);
-    decodedEvent.payload.should.be.equal(expectedPayload);
 };
 
 const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmount) => {

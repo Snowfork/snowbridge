@@ -5,10 +5,9 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Decoder.sol";
-import "./Application.sol";
 import "./OutboundChannel.sol";
 
-contract ERC20App is Application {
+contract ERC20App {
     using SafeMath for uint256;
     using Decoder for bytes;
 
@@ -48,11 +47,6 @@ contract ERC20App is Application {
         incentivizedOutboundChannelAddress = _incentivizedOutboundChannelAddress;
     }
 
-    function register(address _bridge) public override {
-        require(bridge == address(0), "Bridge has already been registered");
-        bridge = _bridge;
-    }
-
     function sendERC20(
         bytes32 _recipient,
         address _tokenAddr,
@@ -78,24 +72,6 @@ contract ERC20App is Application {
             sendChannel = OutboundChannel(basicOutboundChannelAddress);
         }
         sendChannel.submit(abi.encode(payload));
-    }
-
-    function handle(bytes memory _data) public override {
-        require(_data.length >= PAYLOAD_LENGTH, "Invalid Payload");
-
-        // Decode sender bytes
-        bytes memory sender = _data.slice(0, 32);
-        // Decode recipient address
-        address recipient = _data.sliceAddress(32);
-        // Decode token address
-        address tokenAddr = _data.sliceAddress(32 + 20);
-        // Decode amount int256
-        bytes memory amountBytes = _data.slice(32 + 40, 32);
-
-        uint256 amount = amountBytes.decodeUint256();
-
-        sendTokens(recipient, tokenAddr, amount);
-        emit Unlock(sender, recipient, tokenAddr, amount);
     }
 
     function sendTokens(

@@ -24,11 +24,10 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 use sp_std::prelude::*;
-use sp_std::convert::TryInto;
 use sp_core::{H160, U256};
+use codec::Decode;
 
 use artemis_core::{ChannelId, Application, SubmitOutbound, SingleAsset};
-use artemis_ethereum::Log;
 
 mod payload;
 use payload::{InboundPayload, OutboundPayload};
@@ -105,18 +104,15 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 	fn handle_payload(payload: &InboundPayload<T::AccountId>) -> DispatchResult  {
-		T::Asset::deposit(&payload.recipient_addr, payload.amount)?;
-		Self::deposit_event(RawEvent::Minted(payload.recipient_addr.clone(), payload.amount));
+		T::Asset::deposit(&payload.recipient, payload.amount)?;
+		Self::deposit_event(RawEvent::Minted(payload.recipient.clone(), payload.amount));
 		Ok(())
 	}
 }
 
 impl<T: Config> Application for Module<T> {
-	fn handle(payload: &[u8]) -> DispatchResult {
-		// Decode ethereum Log event from RLP-encoded data, and try to convert to InboundPayload
-		let payload_decoded = rlp::decode::<Log>(payload)
-			.map_err(|_| Error::<T>::InvalidPayload)?
-			.try_into()
+	fn handle(mut payload: &[u8]) -> DispatchResult {
+		let payload_decoded: InboundPayload<T::AccountId> = InboundPayload::decode(&mut payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
 		Self::handle_payload(&payload_decoded)

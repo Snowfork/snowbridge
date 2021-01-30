@@ -6,38 +6,28 @@
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::dispatch::DispatchResult;
-
+use frame_support::dispatch::{DispatchError, DispatchResult};
 use sp_core::H160;
 
 pub mod types;
 pub mod assets;
+pub mod envelope;
 
 pub use types::{
-	AppId,
 	Message,
-	VerificationInput,
+	Proof,
 	ChannelId,
+	SourceChannelConfig,
 };
+
+pub use envelope::Envelope;
 
 pub use assets::{AssetId, MultiAsset, SingleAsset};
 /// A trait for verifying messages.
 ///
 /// This trait should be implemented by runtime modules that wish to provide message verification functionality.
 pub trait Verifier<AccountId> {
-
-	fn verify(sender: AccountId, app_id: AppId, message: &Message) -> DispatchResult;
-
-	fn verify_bulk(sender: AccountId, messages: &[(AppId, Message)]) -> DispatchResult;
-}
-
-impl<AccountId> Verifier<AccountId> for () {
-	fn verify(sender: AccountId, app_id: AppId, message: &Message) -> DispatchResult {
-		Ok(())
-	}
-	fn verify_bulk(sender: AccountId, messages: &[(AppId, Message)]) -> DispatchResult {
-		Ok(())
-	}
+	fn verify(message: &Message) -> Result<Envelope, DispatchError>;
 }
 
 /// Outbound submission for applications

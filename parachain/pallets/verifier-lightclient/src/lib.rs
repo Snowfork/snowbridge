@@ -13,9 +13,11 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
-use artemis_core::{AppId, Message, Verifier, VerificationInput};
+use artemis_core::{Envelope, Message, Verifier, Proof};
 use artemis_ethereum::{HeaderId as EthereumHeaderId, Log, Receipt, H256, U256};
 use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
+
+use sp_std::convert::TryFrom;
 
 pub use artemis_ethereum::Header as EthereumHeader;
 
@@ -24,6 +26,8 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
+
+mod envelope;
 
 /// Max number of finalized headers to keep.
 const FINALIZED_HEADERS_TO_KEEP: u64 = 5_000;
@@ -138,11 +142,9 @@ decl_error! {
 		/// One or more header fields are invalid.
 		InvalidHeader,
 		/// Proof could not be applied / verified.
-		InvalidProof,
+		InvalidProof,	
 		/// This should never be returned - indicates a bug
 		Unknown,
-		/// The specified verification scheme is not implemented by this module.
-		UnsupportedVerificationScheme,
 	}
 }
 
@@ -412,12 +414,12 @@ impl<T: Config> Module<T> {
 		new_pruning_range
 	}
 
-	fn verify_receipt_inclusion(block_hash: &H256, proof: &[Vec<u8>]) -> Result<Receipt, DispatchError> {
-		let header = Headers::<T>::get(block_hash)
+	fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
+		let header = Headers::<T>::get(proof.block_hash)
 			.ok_or(Error::<T>::MissingHeader)?
 			.header;
 	
-		let receipt = header.check_receipt_proof(&proof)
+		let receipt = header.check_receipt_proof(&proof.merkle_proof.1)
 			.ok_or(Error::<T>::InvalidProof)?;
 		
 		let finalized_block = FinalizedBlock::get();
@@ -471,62 +473,18 @@ fn ancestry<T: Config>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHe
 
 impl<T: Config> Verifier<T::AccountId> for Module<T> {
 
-	fn verify(_: T::AccountId, _: AppId, message: &Message) -> DispatchResult {
-		match message.verification {
-			VerificationInput::ReceiptProof { ref block_hash, ref tx_index, ref proof } => {
-				let receipt = Self::verify_receipt_inclusion(block_hash, &proof.1)?;
+	fn verify(message: &Message) -> Result<Envelope, DispatchError> {
+		let receipt = Self::verify_receipt_inclusion(&message.proof)?;
 
-				let log: Log = rlp::decode(&message.payload)
-					.map_err(|_| Error::<T>::InvalidProof)?;
-				if !receipt.contains_log(&log) {
-					return Err(Error::<T>::InvalidProof.into());
-				}
-		
-				Ok(())
-			},
-			_ => Err(Error::<T>::UnsupportedVerificationScheme.into())
-		}
-	}
+		let log: Log = rlp::decode(&message.data)
+			.map_err(|_| Error::<T>::InvalidProof)?;
 
-	fn verify_bulk(_: T::AccountId, messages: &[(AppId, Message)]) -> DispatchResult {
-		// Maps from block hash to (payload, proof) tuples
-		let mut data_by_block: BTreeMap<H256, Vec<(&[u8], &[Vec<u8>])>> = BTreeMap::new();
-
-		// Extract payload and proof, and group by block
-		for (_, message) in messages.iter() {
-			if let VerificationInput::ReceiptProof { block_hash, tx_index, ref proof } = message.verification {
-				match data_by_block.get_mut(&block_hash) {
-					Some(p) => p.push((&message.payload, &proof.1)),
-					None => { data_by_block.insert(block_hash, vec![(&message.payload, &proof.1)]); }
-				}
-			} else {
-				return Err(Error::<T>::UnsupportedVerificationScheme.into());
-			}
+		if !receipt.contains_log(&log) {
+			return Err(Error::<T>::InvalidProof.into());
 		}
 
-		let finalized_block = FinalizedBlock::get();
-	
-		for (block_hash, data) in data_by_block.iter() {
-			let header = Headers::<T>::get(block_hash)
-				.ok_or(Error::<T>::MissingHeader)?
-				.header;
-	
-			Self::check_header_finality(
-				&EthereumHeaderId { hash: *block_hash, number: header.number },
-				&finalized_block,
-			)?;
+		let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidProof)?;
 
-			for (payload, proof) in data.iter() {
-				let receipt = header.check_receipt_proof(proof)
-					.ok_or(Error::<T>::InvalidProof)?;
-				let log: Log = rlp::decode(payload)
-					.map_err(|_| Error::<T>::InvalidProof)?;
-				if !receipt.contains_log(&log) {
-					return Err(Error::<T>::InvalidProof.into());
-				}
-			}
-		}
-
-		Ok(())
+		Ok(envelope)
 	}
 }

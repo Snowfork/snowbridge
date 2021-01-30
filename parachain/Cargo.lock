@@ -185,7 +185,9 @@ dependencies = [
 name = "artemis-core"
 version = "0.1.1"
 dependencies = [
+ "artemis-ethereum",
  "enum-iterator",
+ "ethabi-decode",
  "frame-support",
  "parity-scale-codec",
  "rustc-hex",
@@ -4358,6 +4360,7 @@ name = "pallet-bridge"
 version = "0.1.1"
 dependencies = [
  "artemis-core",
+ "artemis-ethereum",
  "frame-support",
  "frame-system",
  "parity-scale-codec",

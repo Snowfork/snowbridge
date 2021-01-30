@@ -3,35 +3,37 @@ const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
 const TestToken = artifacts.require("TestToken");
 
-const channelContracts = {
-  basic: {
-    inbound: artifacts.require("BasicInboundChannel"),
-    outbound: artifacts.require("BasicOutboundChannel")
-  },
-  incentivized: {
-    inbound: artifacts.require("IncentivizedInboundChannel"),
-    outbound: artifacts.require("IncentivizedOutboundChannel")
-  }, 
-}
-
 const channels = {
   basic: {
-    inbound: null,
-    outbound: null
+    inbound: {
+      contract: artifacts.require("BasicInboundChannel"),
+      instance: null
+    },
+    outbound: {
+      contract: artifacts.require("BasicOutboundChannel"),
+      instance: null,
+    }
   },
   incentivized: {
-    inbound: null,
-    outbound: null
-  }, 
-} 
+    inbound: {
+      contract: artifacts.require("IncentivizedInboundChannel"),
+      instance: null 
+    },
+    outbound: {
+      contract: artifacts.require("IncentivizedOutboundChannel"),
+      instance: null 
+    }
+  },
+}
 
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
 
-    channels.basic.inbound = await deployer.deploy(channelContracts.basic.inbound)
-    channels.basic.outbound = await deployer.deploy(channelContracts.basic.outbound)
-    channels.incentivized.inbound = await deployer.deploy(channelContracts.incentivized.inbound)
-    channels.incentivized.outbound = await deployer.deploy(channelContracts.incentivized.outbound)
+    channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
+    channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
+    channels.incentivized.inbound.instance = await deployer.deploy(channels.incentivized.inbound.contract)
+    channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract)
+
 
     // Link libraries to applications
     await deployer.deploy(Decoder);
@@ -40,15 +42,21 @@ module.exports = function(deployer, network, accounts) {
     // Deploy applications
     const ethApp = await deployer.deploy(
       ETHApp,
-      channels.basic.outbound.address,
-      channels.incentivized.outbound.address
+      {
+        inbound: channels.basic.inbound.instance.address,
+        outbound: channels.basic.outbound.instance.address,
+      },
+      {
+        inbound: channels.incentivized.inbound.instance.address,
+        outbound: channels.incentivized.outbound.instance.address,
+      },
     );
 
-    const erc20App = await deployer.deploy(
-      ERC20App,
-      channels.basic.outbound.address,
-      channels.incentivized.outbound.address
-    );
+    // const erc20App = await deployer.deploy(
+    //   ERC20App,
+    //   channels.basic.outbound.address,
+    //   channels.incentivized.outbound.address
+    // );
 
     // Deploy TEST ERC20 token for testing
     await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");

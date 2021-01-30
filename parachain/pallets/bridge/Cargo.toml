@@ -20,6 +20,7 @@ sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 
 artemis-core = { path = "../../primitives/core", default-features = false }
+artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
@@ -34,5 +35,6 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
-    "artemis-core/std"
+    "artemis-core/std",
+    "artemis-ethereum/std",
 ]

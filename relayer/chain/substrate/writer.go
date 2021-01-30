@@ -87,6 +87,8 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 			return wr.onDone(ctx)
 		case msgs := <-wr.messages:
 
+			fmt.Println("Got messages!")
+
 			var concreteMsgs []chain.EthereumOutboundMessage
 			for _, msg := range msgs {
 				cmsg, ok := msg.(chain.EthereumOutboundMessage)
@@ -117,7 +119,6 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 
 // Write submits a transaction to the chain
 func (wr *Writer) write(_ context.Context, c types.Call) error {
-
 	ext := types.NewExtrinsic(c)
 
 	era := types.ExtrinsicEra{IsImmortalEra: true}
@@ -161,6 +162,10 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 
 // WriteMessages submits a "Bridge.submit_bulk" call
 func (wr *Writer) WriteMessages(ctx context.Context, msgs []chain.EthereumOutboundMessage) error {
+
+	fmt.Println("Write messages!")
+
+
 	c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit_bulk", msgs)
 	if err != nil {
 		return err

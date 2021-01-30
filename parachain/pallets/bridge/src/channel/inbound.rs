@@ -1,7 +1,8 @@
-use frame_support::{dispatch::DispatchResult, storage::StorageMap};
+use frame_support::{dispatch::DispatchResult, ensure, storage::StorageMap};
 use sp_std::{cell::Cell, marker::PhantomData, boxed::Box};
-use artemis_core::{ChannelId, AppId, Message, Verifier};
+use artemis_core::{ChannelId, Message, Verifier, Envelope};
 use crate::{
+	Error,
 	Module,
 	Config,
 	InboundChannels,
@@ -37,10 +38,15 @@ impl<T: Config> BasicInboundChannel<T> {
 }
 
 impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
-	// This implementation is a WIP!
-	fn submit(&mut self, relayer: &T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
-		T::Verifier::verify(relayer.clone(), app_id, &message)?;
-		Module::<T>::dispatch(app_id.into(), message)
+	fn submit(&self, relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
+		self.storage.try_mutate(|data| {
+			if envelope.nonce != data.nonce + 1 {
+				return Err(Error::<T>::BadNonce.into())
+			}
+			data.nonce += 1;
+
+			Module::<T>::dispatch(envelope.source, envelope.payload)
+		})
 	}
 }
 
@@ -62,10 +68,15 @@ impl<T: Config> IncentivizedInboundChannel<T> {
 }
 
 impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
-	// This implementation is a WIP!
-	fn submit(&mut self, relayer: &T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
-		T::Verifier::verify(relayer.clone(), app_id, &message)?;
-		Module::<T>::dispatch(app_id.into(), message)
+	fn submit(&self, relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
+		self.storage.try_mutate(|data| {
+			if envelope.nonce != data.nonce + 1 {
+				return Err(Error::<T>::BadNonce.into())
+			}
+			data.nonce += 1;
+
+			Module::<T>::dispatch(envelope.source, envelope.payload)
+		})
 	}
 }
 
@@ -97,13 +108,13 @@ impl<T: Config> Storage<T> {
 	}
 
 	#[allow(dead_code)]
-	fn set(&mut self, data: InboundChannelData) {
+	fn set(&self, data: InboundChannelData) {
 		self.cached_data.set(Some(data));
 		InboundChannels::insert(self.channel_id, data)
 	}
 
 	#[allow(dead_code)]
-	fn try_mutate<R, E, F>(&mut self, f: F) -> Result<R, E>
+	fn try_mutate<R, E, F>(&self, f: F) -> Result<R, E>
 	where
 		F: FnOnce(&mut InboundChannelData) -> Result<R, E>
 	{

@@ -1,4 +1,4 @@
-use artemis_core::{AppId, Verifier as VerifierConfig};
+use artemis_core::{Envelope, Verifier as VerifierConfig};
 use crate::mock::{
 	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
 	ethereum_header_proof_from_file, genesis_ethereum_block_hash, log_payload,
@@ -301,8 +301,6 @@ fn it_confirms_receipt_inclusion_in_finalized_header() {
 		initial_difficulty: 0.into(),
 	}).execute_with(|| {
 		assert_ok!(Verifier::verify(
-			Default::default(),
-			Default::default(),
 			&message_with_receipt_proof(log_payload(), finalized_header_hash, receipt_proof),
 		));
 	});
@@ -384,8 +382,6 @@ fn it_denies_receipt_inclusion_for_invalid_proof() {
 		let (_, receipt_proof) = receipt_root_and_proof();
 		assert_err!(
 			Verifier::verify(
-				Default::default(),
-				Default::default(),
 				&message_with_receipt_proof(log_payload(), genesis_ethereum_block_hash(), receipt_proof),
 			),
 			Error::<MockRuntime>::InvalidProof,
@@ -407,8 +403,6 @@ fn it_denies_receipt_inclusion_for_invalid_log() {
 		// Invalid log payload
 		assert_err!(
 			Verifier::verify(
-				Default::default(),
-				Default::default(),
 				&message_with_receipt_proof(Vec::new(), finalized_header_hash, receipt_proof.clone()),
 			),
 			Error::<MockRuntime>::InvalidProof,
@@ -419,8 +413,6 @@ fn it_denies_receipt_inclusion_for_invalid_log() {
 		log[3] = 204;
 		assert_err!(
 			Verifier::verify(
-				Default::default(),
-				Default::default(),
 				&message_with_receipt_proof(log, finalized_header_hash, receipt_proof),
 			),
 			Error::<MockRuntime>::InvalidProof,

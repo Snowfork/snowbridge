@@ -24,10 +24,10 @@ fn mints_after_handling_ethereum_event() {
 	new_tester().execute_with(|| {
 		let bob: AccountId = Keyring::Bob.into();
 
-		let recipient_addr = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
+		let recipient = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
 		let payload: InboundPayload<TestAccountId> = InboundPayload {
-			sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
-			recipient_addr,
+			sender: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
+			recipient,
 			amount: 10.into(),
 		};
 

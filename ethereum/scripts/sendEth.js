@@ -26,7 +26,7 @@ module.exports = async () => {
     const weiAmount = web3.utils.toWei(ethAmountStr)
 
     const ethApp = await ETHApp.deployed()
-    const { logs } = await ethApp.sendETH(recipient, false, {
+    const { logs } = await ethApp.lock(recipient, 0, {
         from: accounts[0],
         value: weiAmount,
         gas: 300000 // 300,000 Gwei

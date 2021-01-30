@@ -3,22 +3,29 @@ pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./Decoder.sol";
+import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
-import "./ChannelId.sol";
+
+enum ChannelId {
+    Basic,
+    Incentivized
+}
 
 contract ETHApp {
     using SafeMath for uint256;
-    using Decoder for bytes;
-
-    uint64 constant PAYLOAD_LENGTH = 84;
+    using ScaleCodec for uint256;
 
     uint256 public balance;
-    address public basicOutboundChannelAddress;
-    address public incentivizedOutboundChannelAddress;
+
+    mapping(ChannelId => Channel) public channels;
 
     event Locked(address sender, bytes32 recipient, uint256 amount);
-    event Unlocked(bytes sender, address recipient, uint256 amount);
+    event Unlocked(bytes32 sender, address recipient, uint256 amount);
+
+    struct Channel {
+        address inbound;
+        address outbound;
+    }
 
     struct OutboundPayload {
         address sender;
@@ -26,17 +33,21 @@ contract ETHApp {
         uint256 amount;
     }
 
-    constructor(
-        address _basicOutboundChannelAddress,
-        address _incentivizedOutboundChannelAddress
-    ) {
+    constructor(Channel memory _basic, Channel memory _incentivized) {
         balance = 0;
-        basicOutboundChannelAddress = _basicOutboundChannelAddress;
-        incentivizedOutboundChannelAddress = _incentivizedOutboundChannelAddress;
+
+        Channel storage c1 = channels[ChannelId.Basic];
+        c1.inbound = _basic.inbound;
+        c1.outbound = _basic.outbound;
+
+        Channel storage c2 = channels[ChannelId.Incentivized];
+        c2.inbound = _incentivized.inbound;
+        c2.outbound = _incentivized.outbound;
     }
 
     function lock(bytes32 _recipient, ChannelId _channelId) public payable {
         require(msg.value > 0, "Value of transaction must be positive");
+        require(_channelId == ChannelId.Basic || _channelId == ChannelId.Incentivized, "Invalid channel ID");
 
         // Increment locked Ethereum counter by this amount
         balance = balance.add(msg.value);
@@ -45,39 +56,30 @@ contract ETHApp {
 
         OutboundPayload memory payload = OutboundPayload(msg.sender, _recipient, msg.value);
 
-        OutboundChannel sendChannel;
-        if (_channelId == ChannelId.Incentivized) {
-            sendChannel = OutboundChannel(incentivizedOutboundChannelAddress);
-        } else {
-            sendChannel = OutboundChannel(basicOutboundChannelAddress);
-        }
-        sendChannel.submit(abi.encode(payload));
+        OutboundChannel channel = OutboundChannel(channels[_channelId].outbound);
+        channel.submit(encodeOutboundPayload(payload));
     }
 
-    function handle(bytes memory _data)
-        public
-    {
-        require(_data.length >= PAYLOAD_LENGTH, "Invalid payload");
-
-        // Decode sender bytes
-        bytes memory sender = _data.slice(0, 32);
-        // Decode recipient address
-        address payable recipient = _data.sliceAddress(32);
-        // Decode amount int256
-        bytes memory amountBytes = _data.slice(32 + 20, 32);
-        uint256 amount = amountBytes.decodeUint256();
-
-        unlock(recipient, amount);
-        emit Unlocked(sender, recipient, amount);
-    }
-
-    function unlock(address payable _recipient, uint256 _amount)
-        internal
-    {
+    function unlock(address payable _recipient, uint256 _amount) internal {
         require(_amount > 0, "Must unlock a positive amount");
-        require(balance >= _amount, "ETH token balances insufficient to fulfill the unlock request");
+        require(
+            balance >= _amount,
+            "ETH token balances insufficient to fulfill the unlock request"
+        );
 
         balance = balance.sub(_amount);
         _recipient.transfer(_amount);
+    }
+
+    function encodeOutboundPayload(OutboundPayload memory payload) private pure returns (bytes memory) {
+        return abi.encodePacked(payload.sender, payload.recipient, payload.amount.toBytes32LE());
+    }
+
+    function bytesToBytes32(bytes memory b, uint offset) private pure returns (bytes32) {
+        bytes32 out;
+        for (uint i = 0; i < 32; i++) {
+            out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);
+        }
+        return out;
     }
 }

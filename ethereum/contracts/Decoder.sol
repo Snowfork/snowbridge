@@ -3,18 +3,9 @@ pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 library Decoder {
-    // Decodes a SCALE encoded uint256 by converting bytes (bid endian) to little endian format
-    function decodeUint256(bytes memory data) public pure returns (uint256) {
-        uint256 number;
-        for (uint256 i = data.length; i > 0; i--) {
-            number = number + uint256(uint8(data[i - 1])) * (2**(8 * (i - 1)));
-        }
-        return number;
-    }
-
     // Slice a section from a byte array.
     // Inspired by github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol.
-    function slice(
+    function sliceLegacy(
         bytes memory _bytes,
         uint256 _start,
         uint256 _length
@@ -85,7 +76,6 @@ library Decoder {
         return temp;
     }
 
-    // Slice 32 bytes and cast to an address
     function sliceUint(bytes memory _bytes, uint256 _start)
         internal
         pure

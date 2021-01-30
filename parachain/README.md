@@ -151,20 +151,14 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
       "Incentivized": null
     }
   },
-  "AppId": "[u8; 20]",
   "Message": {
-    "payload": "Vec<u8>",
-    "verification": "VerificationInput"
+    "data": "Vec<u8>",
+    "proof": "Proof"
   },
-  "VerificationInput": {
-    "_enum": {
-      "Basic": "VerificationBasic",
-      "None": null
-    }
-  },
-  "VerificationBasic": {
-    "blockNumber": "u64",
-    "eventIndex": "u32"
+  "Proof": {
+    "blockHash": "H256",
+    "txIndex": "u32",
+    "merkle_proof": "(Vec<Vec<u8>>, Vec<Vec<u8>>)"
   },
   "EthereumHeader": {
     "parentHash": "H256",

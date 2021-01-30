@@ -4,7 +4,7 @@
 //!
 //! ## Implementation
 //!
-//! Before a [Message] is dispatched to a target [`Application`], it is submitted to a [`Verifier`] for verification. The target application is determined using the [`AppId`] submitted along with the message.
+//! Before a [Message] is dispatched to a target [`Application`], it is submitted to a [`Verifier`] for verification.
 //!
 //! ## Interface
 //!
@@ -19,14 +19,16 @@
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::{DispatchError, DispatchResult},
+	storage::StorageMap,
 	debug,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_core::H160;
 use sp_std::prelude::*;
 use artemis_core::{
-	AppId, ChannelId, SubmitOutbound, Message,
+	ChannelId, SubmitOutbound, Message,
 	MessageCommitment, Verifier, Application,
+	SourceChannelConfig,
 };
 use channel::inbound::make_inbound_channel;
 use channel::outbound::make_outbound_channel;
@@ -58,8 +60,17 @@ pub trait Config: system::Config {
 
 decl_storage! {
 	trait Store for Module<T: Config> as BridgeModule {
+		pub SourceChannels: map hasher(identity) H160 => Option<ChannelId>;
 		pub InboundChannels: map hasher(identity) ChannelId => InboundChannelData;
 		pub OutboundChannels: map hasher(identity) ChannelId => OutboundChannelData;
+	}
+	add_extra_genesis {
+		config(source_channels): SourceChannelConfig;
+		build(|config: &GenesisConfig<T>| {
+			let sources = config.source_channels;
+			SourceChannels::insert(sources.basic.address, ChannelId::Basic);
+			SourceChannels::insert(sources.incentivized.address, ChannelId::Incentivized);
+		});
 	}
 }
 
@@ -72,6 +83,12 @@ decl_event! {
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
+		/// Message came from an invalid source channel
+		InvalidSourceChannel,
+
+		/// Message has an unexpected nonce
+		BadNonce,
+
 		/// Target application not found.
 		AppNotFound,
 	}
@@ -85,54 +102,27 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 0]
-		pub fn submit(origin, channel_id: ChannelId, app_id: AppId, message: Message) -> DispatchResult {
+		pub fn submit(origin, message: Message) -> DispatchResult {
 			let relayer = ensure_signed(origin)?;
 
+			let envelope = T::Verifier::verify(&message)?;
+
+			let channel_id = SourceChannels::get(envelope.channel)
+				.ok_or(Err(Error::<T>::InvalidSourceChannel.into()))?;
+
 			let mut channel = make_inbound_channel::<T>(channel_id);
-			channel.submit(&relayer, app_id, &message)
-		}
 
-		/// Submit multiple messages for dispatch to multiple target applications.
-		#[weight = 0]
-		pub fn submit_bulk(origin, messages: Vec<(AppId, Message)>) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-
-			debug::RuntimeLogger::init();
-
-			debug::trace!(
-				target: "submit_messages",
-				"Received {} messages",
-				messages.len(),
-			);
-
-			T::Verifier::verify_bulk(who, messages.as_slice())?;
-
-			debug::trace!(
-				target: "submit_messages",
-				"Message verification succeeded",
-			);
-
-			let errors: Vec<DispatchError> = messages.iter()
-				.map(|(app_id, msg)| Self::dispatch(app_id.into(), msg))
-				.filter_map(|r| r.err())
-				.collect();
-
-			debug::trace!(
-				target: "submit_messages",
-				"Messages were dispatched",
-			);
-
-			Ok(())
+			channel.submit(&relayer, envelope)
 		}
 	}
 }
 
 impl<T: Config> Module<T> {
-	fn dispatch(address: H160, message: &Message) -> DispatchResult {
-		if address == T::AppETH::address() {
-			T::AppETH::handle(message.payload.as_ref())
-		} else if address == T::AppERC20::address() {
-			T::AppERC20::handle(message.payload.as_ref())
+	fn dispatch(source: H160, payload: &[u8]) -> DispatchResult {
+		if source == T::AppETH::address() {
+			T::AppETH::handle(payload)
+		} else if source == T::AppERC20::address() {
+			T::AppERC20::handle(payload)
 		} else {
 			Err(Error::<T>::AppNotFound.into())
 		}
