@@ -18,11 +18,11 @@ const channels = {
   incentivized: {
     inbound: {
       contract: artifacts.require("IncentivizedInboundChannel"),
-      instance: null 
+      instance: null
     },
     outbound: {
       contract: artifacts.require("IncentivizedOutboundChannel"),
-      instance: null 
+      instance: null
     }
   },
 }
@@ -36,8 +36,9 @@ module.exports = function(deployer, network, accounts) {
 
     // Link libraries to applications
     await deployer.deploy(Decoder);
+    await deployer.deploy(ScaleCodec);
     deployer.link(Decoder, [ETHApp, ERC20App]);
-    //deployer.link(ScaleCodec, [ETHApp]);
+    deployer.link(ScaleCodec, [ETHApp]);
 
     // Deploy applications
     const ethApp = await deployer.deploy(
