@@ -8,15 +8,13 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"github.com/stretchr/testify/assert"
 )
 
-
-type TestProof substrate.Proof
+type TestProof substrate.MerkleProof
 
 // For interface gethTrie.KeyValueReader
 func (tp *TestProof) Get(key []byte) ([]byte, error) {
@@ -60,23 +58,16 @@ func TestMessage_Proof(t *testing.T) {
 	}
 
 	logger, _ := test.NewNullLogger()
-	genericMsg, err := ethereum.MakeMessageFromEvent(&event5_5, receiptTrie, logger.WithField("test", "ing"))
+	msg, err := ethereum.MakeMessageFromEvent(&event5_5, receiptTrie, logger.WithField("test", "ing"))
 	assert.Nil(t, err)
-	assert.NotNil(t, genericMsg)
+	assert.NotNil(t, msg)
 
-	// Retrieve the encapsulating receipt from the proof using the payload fields
-	concreteMsg, ok := genericMsg.(*chain.EthereumOutboundMessage)
-	assert.True(t, ok)
-	msgPayload := concreteMsg.Payload
-
-	assert.True(t, msgPayload.VerificationInput.IsReceiptProof)
-	proof := msgPayload.VerificationInput.AsReceiptProof
-	assert.Equal(t, block.Hash().Hex(), proof.BlockHash.Hex())
-	key, err := rlp.EncodeToBytes(uint(proof.TxIndex))
+	assert.Equal(t, block.Hash().Hex(), msg.Proof.BlockHash.Hex())
+	key, err := rlp.EncodeToBytes(uint(msg.Proof.TxIndex))
 	if err != nil {
 		panic(err)
 	}
-	proofNodes := TestProof(*proof.Proof)
+	proofNodes := TestProof(*msg.Proof.MerkleProof)
 	provenReceipt, err := gethTrie.VerifyProof(block.ReceiptHash(), key, &proofNodes)
 	assert.Nil(t, err)
 	assert.Equal(t, provenReceipt, receipt5Encoded)

@@ -25,14 +25,8 @@ pub use assets::{AssetId, MultiAsset, SingleAsset};
 /// A trait for verifying messages.
 ///
 /// This trait should be implemented by runtime modules that wish to provide message verification functionality.
-pub trait Verifier<AccountId> {
+pub trait Verifier {
 	fn verify(message: &Message) -> Result<Log, DispatchError>;
-}
-
-impl<AccountId> Verifier<AccountId> for () {
-	fn verify(message: &Message) -> Result<Log, DispatchError> {
-		Ok(Default::default())
-	}
 }
 
 /// Outbound submission for applications

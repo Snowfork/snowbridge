@@ -6,7 +6,6 @@ package chain
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"golang.org/x/sync/errgroup"
@@ -22,10 +21,7 @@ type SubstrateOutboundMessage struct {
 }
 
 // Message from ethereum
-type EthereumOutboundMessage struct {
-	AppID   common.Address
-	Payload substrate.Message
-}
+type EthereumOutboundMessage substrate.Message
 
 type Header struct {
 	HeaderData interface{}

@@ -19,8 +19,6 @@ import (
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
-var AppID = [20]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-
 func TestWrite(t *testing.T) {
 	logger, hook := test.NewNullLogger()
 	log := logger.WithField("chain", "Substrate")
@@ -49,20 +47,9 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	message := chainTypes.Message{
-		Data: []byte{0, 1, 2},
-		VerificationInput: chainTypes.VerificationInput{
-			IsBasic: true,
-			AsBasic: chainTypes.VerificationBasic{
-				BlockNumber: 47,
-				EventIndex:  uint32(2),
-			},
-		},
-	}
+	message := chainTypes.Message{}
 
-	err = writer.WriteMessages(ctx,
-		[]chain.EthereumOutboundMessage{{AppID: AppID, Payload: message}},
-	)
+	err = writer.WriteMessages(ctx, []chain.EthereumOutboundMessage{chain.EthereumOutboundMessage(message)})
 	if err != nil {
 		t.Fatal(err)
 	}

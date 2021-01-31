@@ -49,7 +49,7 @@ pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
 	/// The verifier module responsible for verifying submitted messages.
-	type Verifier: Verifier<<Self as system::Config>::AccountId>;
+	type Verifier: Verifier;
 
 	/// ETH Application
 	type AppETH: Application;
@@ -109,10 +109,8 @@ decl_module! {
 
 			let log = T::Verifier::verify(&message)?;
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
-
 			let channel_id = SourceChannels::get(envelope.channel)
 				.ok_or(Error::<T>::InvalidSourceChannel)?;
-
 			let channel = make_inbound_channel::<T>(channel_id);
 
 			channel.submit(&relayer, &envelope)

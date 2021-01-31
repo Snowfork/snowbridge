@@ -136,7 +136,7 @@ decl_error! {
 		/// One or more header fields are invalid.
 		InvalidHeader,
 		/// Proof could not be applied / verified.
-		InvalidProof,	
+		InvalidProof,
 		/// This should never be returned - indicates a bug
 		Unknown,
 	}
@@ -147,7 +147,7 @@ decl_module! {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
-		
+
 		// TODO: Calculate weight
 		#[weight = 0]
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
@@ -169,7 +169,7 @@ decl_module! {
 				);
 				return Err(err);
 			}
-		
+
 			debug::trace!(
 				target: "import_header",
 				"Validation succeeded. Starting import of header {}",
@@ -229,7 +229,7 @@ impl<T: Config> Module<T> {
 			ancestor_at_finalized_number.unwrap().0 == finalized_header_id.hash,
 			Error::<T>::HeaderOnStaleFork,
 		);
-	
+
 		if !T::VerifyPoW::get() {
 			return Ok(());
 		}
@@ -314,7 +314,7 @@ impl<T: Config> Module<T> {
 			if new_finalized_block_id != finalized_block_id {
 				FinalizedBlock::put(new_finalized_block_id);
 			}
-	
+
 			// Clean up old headers
 			let pruning_range = BlocksToPrune::get();
 			let new_pruning_range = Self::prune_header_range(
@@ -340,7 +340,7 @@ impl<T: Config> Module<T> {
 		let maybe_newly_finalized_ancestor = ancestry::<T>(best_block_id.hash)
 			.enumerate()
 			.find_map(|(i, pair)| if i < required_descendants { None } else { Some(pair) });
-		
+
 		match maybe_newly_finalized_ancestor {
 			Some((hash, header)) => {
 				// The header is newly finalized if it is younger than the current
@@ -412,16 +412,16 @@ impl<T: Config> Module<T> {
 		let header = Headers::<T>::get(proof.block_hash)
 			.ok_or(Error::<T>::MissingHeader)?
 			.header;
-	
+
 		let receipt = header.check_receipt_proof(&proof.merkle_proof.1)
 			.ok_or(Error::<T>::InvalidProof)?;
-		
+
 		let finalized_block = FinalizedBlock::get();
 		Self::check_header_finality(
 			&EthereumHeaderId { hash: proof.block_hash, number: header.number },
 			&finalized_block,
 		)?;
-	
+
 		Ok(receipt)
 	}
 
@@ -437,12 +437,12 @@ impl<T: Config> Module<T> {
 				Err(Error::<T>::HeaderOnStaleFork.into())
 			}
 		}
-	
+
 		ensure!(
 			header.number < finalized_block.number,
 			Error::<T>::HeaderNotFinalized,
 		);
-		
+
 		let (finalized_hash_at_number, _) = ancestry::<T>(finalized_block.hash)
 			.find(|(_, ancestor)| ancestor.number == header.number)
 			.ok_or(Error::<T>::HeaderOnStaleFork)?;
@@ -465,7 +465,7 @@ fn ancestry<T: Config>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHe
 	})
 }
 
-impl<T: Config> Verifier<T::AccountId> for Module<T> {
+impl<T: Config> Verifier for Module<T> {
 
 	fn verify(message: &Message) -> Result<Log, DispatchError> {
 		let receipt = Self::verify_receipt_inclusion(&message.proof)?;

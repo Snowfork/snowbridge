@@ -5,7 +5,6 @@ package substrate
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -101,9 +100,8 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 			err := wr.WriteMessages(ctx, concreteMsgs)
 			if err != nil {
 				wr.log.WithFields(logrus.Fields{
-					"appids": getAppIdsForLog(concreteMsgs),
-					"error":  err,
-				}).Error("Failure submitting messages to substrate")
+					"error": err,
+				}).Error("Failure submitting message to substrate")
 			}
 		case header := <-wr.headers:
 			err := wr.WriteHeader(ctx, &header)
@@ -165,18 +163,20 @@ func (wr *Writer) WriteMessages(ctx context.Context, msgs []chain.EthereumOutbou
 
 	fmt.Println("Write messages!")
 
+	for _, msg := range msgs {
 
-	c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit_bulk", msgs)
-	if err != nil {
-		return err
+		c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", msg)
+		if err != nil {
+			return err
+		}
+
+		err = wr.write(ctx, c)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = wr.write(ctx, c)
-	if err != nil {
-		return err
-	}
-
-	wr.log.WithField("appids", getAppIdsForLog(msgs)).Info("Submitted messages to Substrate")
+	wr.log.WithField("count", len(msgs)).Info("Submitted messages to Substrate")
 
 	return nil
 }
@@ -223,17 +223,4 @@ func getHeaderBackoffDelay(retryCount int) time.Duration {
 		return time.Duration(backoff[retryCount]) * time.Second
 	}
 	return time.Duration(backoff[len(backoff)-1]) * time.Second
-}
-
-func getAppIdsForLog(msgs []chain.EthereumOutboundMessage) []string {
-	appIDSet := make(map[string]bool, 0)
-	appIDs := make([]string, 0)
-	for _, msg := range msgs {
-		appID := hex.EncodeToString(msg.AppID[:])
-		if _, ok := appIDSet[appID]; !ok {
-			appIDs = append(appIDs, appID)
-			appIDSet[appID] = true
-		}
-	}
-	return appIDs
 }

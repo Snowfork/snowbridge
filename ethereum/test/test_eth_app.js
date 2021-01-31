@@ -3,6 +3,7 @@ const ETHApp = artifacts.require("ETHApp");
 const Web3Utils = require("web3-utils");
 const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
+const rlp = require("rlp");
 
 const { confirmChannelSend } = require("./helpers");
 
@@ -97,27 +98,52 @@ contract("EthApp", function (accounts) {
 
       let tx;
 
+
+
       // Deposit Ethereum to the contract (basic channel)
+
+      console.log("basic outbound channel 1")
+
       tx = await this.app.lock(
         recipient,
         0,
         { from: userOne, value: weiAmount }
       ).should.be.fulfilled;
 
-      // Confirm payload submitted to basic channel
-      confirmChannelSend(tx.receipt.rawLogs[1], this.channels.basic.outbound.address, this.app.address, 0)
+      encodedLog = rlp.encode([tx.receipt.rawLogs[1].address, tx.receipt.rawLogs[1].topics,tx.receipt.rawLogs[1].data])
+      console.log(encodedLog.toString('hex'))
 
-      // Deposit Ethereum to the contract (incentivized channel)
       tx = await this.app.lock(
         recipient,
-        1,
+        0,
         { from: userOne, value: weiAmount }
       ).should.be.fulfilled;
+      console.log()
 
-      console.log(tx.receipt.rawLogs[1])
+      encodedLog = rlp.encode([tx.receipt.rawLogs[1].address, tx.receipt.rawLogs[1].topics,tx.receipt.rawLogs[1].data])
+      console.log(encodedLog.toString('hex'))
 
-      // Confirm payload submitted to incentivized channel
-      confirmChannelSend(tx.receipt.rawLogs[1], this.channels.incentivized.outbound.address, this.app.address, 0)
+
+
+
+
+
+
+
+
+
+      // // Confirm payload submitted to basic channel
+      // confirmChannelSend(tx.receipt.rawLogs[1], this.channels.basic.outbound.address, this.app.address, 0)
+
+      // // Deposit Ethereum to the contract (incentivized channel)
+      // tx = await this.app.lock(
+      //   recipient,
+      //   1,
+      //   { from: userOne, value: weiAmount }
+      // ).should.be.fulfilled;
+
+      // // Confirm payload submitted to incentivized channel
+      // confirmChannelSend(tx.receipt.rawLogs[1], this.channels.incentivized.outbound.address, this.app.address, 0)
     });
 
   })
@@ -138,11 +164,11 @@ contract("EthApp", function (accounts) {
   //     };
 
   //     this.ethApp = await ETHApp.new(
-  //       { 
+  //       {
   //         inbound: this.channels.basic.inbound.address,
   //         outbound: this.channels.basic.outbound.address,
   //       },
-  //       { 
+  //       {
   //         inbound: this.channels.incentivized.inbound.address,
   //         outbound: this.channels.incentivized.outbound.address,
   //       },

@@ -1,7 +1,6 @@
 const Decoder = artifacts.require("Decoder");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ETHApp = artifacts.require("ETHApp");
-const ERC20App = artifacts.require("ERC20App");
 const TestToken = artifacts.require("TestToken");
 
 const channels = {
@@ -37,7 +36,7 @@ module.exports = function(deployer, network, accounts) {
     // Link libraries to applications
     await deployer.deploy(Decoder);
     await deployer.deploy(ScaleCodec);
-    deployer.link(Decoder, [ETHApp, ERC20App]);
+    deployer.link(Decoder, [ETHApp]);
     deployer.link(ScaleCodec, [ETHApp]);
 
     // Deploy applications

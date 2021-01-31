@@ -34,7 +34,7 @@ impl<T: Config> BasicInboundChannel<T> {
 impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 	fn submit(&self, relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
 		self.storage.try_mutate(|data| {
-			if envelope.nonce != data.nonce + 1 {
+			if envelope.nonce != data.nonce {
 				return Err(Error::<T>::BadNonce.into())
 			}
 			data.nonce += 1;
@@ -64,7 +64,7 @@ impl<T: Config> IncentivizedInboundChannel<T> {
 impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 	fn submit(&self, relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
 		self.storage.try_mutate(|data| {
-			if envelope.nonce != data.nonce + 1 {
+			if envelope.nonce != data.nonce {
 				return Err(Error::<T>::BadNonce.into())
 			}
 			data.nonce += 1;

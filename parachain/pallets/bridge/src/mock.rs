@@ -3,12 +3,20 @@ use super::*;
 
 use crate::Config;
 use sp_core::H256;
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
+use frame_support::{impl_outer_origin, impl_outer_event, parameter_types,
+	weights::Weight,
+	dispatch::DispatchError
+};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
 use sp_std::convert::From;
 use frame_system as system;
+
+use artemis_core::{Application, SourceChannel, SourceChannelConfig};
+use artemis_ethereum::Log;
+
+use hex_literal::hex;
 
 impl_outer_origin! {
 	pub enum Origin for Test {}
@@ -63,19 +71,70 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 }
+// Mock verifier that gives the green light to all messages
+pub struct MockVerifier;
+
+impl Verifier for MockVerifier {
+	fn verify(message: &Message) -> Result<Log, DispatchError> {
+		let log: Log = rlp::decode(&message.data).unwrap();
+		Ok(log)
+	}
+}
+// Mock ETH app
+pub struct MockETHApp;
+
+impl Application for MockETHApp {
+	fn handle(_: &[u8]) -> DispatchResult {
+		Ok(())
+	}
+
+	fn address() -> H160 {
+		hex!["8f5acf5f15d4c3d654a759b96bb674a236c8c0f3"].into()
+	}
+}
 
 impl Config for Test {
 	type Event = TestEvent;
-	type Verifier = ();
-	type AppETH = ();
+	type Verifier = MockVerifier;
+	type AppETH = MockETHApp;
 	type AppERC20 = ();
 	type MessageCommitment = ();
 }
 
 pub type System = system::Module<Test>;
+pub type Bridge = Module<Test>;
+
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	new_tester_with_config::<Test>(GenesisConfig {
+		source_channels: SourceChannelConfig {
+			basic: SourceChannel {
+				address: H160::zero(),
+			},
+			incentivized: SourceChannel {
+				address: H160::zero(),
+			}
+		}
+	})
+}
+
+pub fn new_tester_with_source_channels(basic: H160, incentivized: H160) -> sp_io::TestExternalities {
+	new_tester_with_config::<Test>(GenesisConfig {
+		source_channels: SourceChannelConfig {
+			basic: SourceChannel {
+				address: basic,
+			},
+			incentivized: SourceChannel {
+				address: incentivized,
+			}
+		}
+	})
+}
+
+pub fn new_tester_with_config<T: Config>(config: GenesisConfig) -> sp_io::TestExternalities {
+	let mut storage = system::GenesisConfig::default().build_storage::<T>().unwrap();
+
+	config.assimilate_storage(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));

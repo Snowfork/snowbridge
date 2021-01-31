@@ -9,7 +9,7 @@ use artemis_runtime::{
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
-use sp_core::{H160, Pair, Public, sr25519};
+use sp_core::{Pair, Public, sr25519};
 use sp_runtime::traits::{Verify, IdentifyAccount};
 use serde::{Deserialize, Serialize};
 
@@ -114,10 +114,10 @@ fn testnet_genesis(
 		bridge: Some(BridgeConfig {
 			source_channels: SourceChannelConfig {
 				basic: SourceChannel {
-					address: H160::zero(),
+					address: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
 				},
 				incentivized: SourceChannel {
-					address: H160::zero(),
+					address: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
 				}
 			},
 		}),
@@ -147,7 +147,7 @@ fn testnet_genesis(
 			initial_difficulty: 19755084633726428633088u128.into(),
 		}),
 		eth_app: Some(ETHConfig {
-			address: hex!["fc97a6197dc90bef6bbefd672742ed75e9768553"].into()
+			address: hex!["83428c7db9815f482a39a1715684dCF755021997"].into()
 		}),
 		erc20_app: Some(ERC20Config {
 			address: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into()
