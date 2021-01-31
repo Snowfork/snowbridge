@@ -23,7 +23,7 @@ contract IncentivizedReceiveChannel {
     }
 
     struct Commitment {
-        bytes commitmentHash;
+        bytes32 commitmentHash;
     }
 
     struct CommitmentContents {
@@ -130,32 +130,17 @@ contract IncentivizedReceiveChannel {
         Commitment memory commitment,
         CommitmentContents memory commitmentContents
     ) internal returns (bool) {
-        bytes32 commitmentHash;
+        bytes memory contents;
         for (uint256 i = 0; i < commitmentContents.messages.length; i++) {
-            if (i == 0) {
-                commitmentHash = hashMessage(commitmentContents.messages[i]);
-            } else {
-                bytes32 messageHash =
-                    hashMessage(commitmentContents.messages[i]);
-                commitmentHash = keccak256(
-                    abi.encodePacked(commitmentHash, messageHash)
-                );
-            }
-        }
-        return
-            keccak256(abi.encodePacked(commitmentHash)) ==
-            keccak256(abi.encodePacked(commitment.commitmentHash));
-    }
-
-    function hashMessage(Message memory message) internal returns (bytes32) {
-        return
-            keccak256(
+            bytes memory temp =
                 abi.encodePacked(
-                    message.nonce,
-                    message.senderApplicationId,
-                    message.targetApplicationAddress,
-                    message.payload
-                )
-            );
+                    commitmentContents.messages[i].nonce,
+                    commitmentContents.messages[i].senderApplicationId,
+                    commitmentContents.messages[i].targetApplicationAddress,
+                    commitmentContents.messages[i].payload
+                );
+            contents = abi.encodePacked(contents, temp);
+        }
+        return keccak256(contents) == commitment.commitmentHash;
     }
 }
