@@ -6,10 +6,7 @@ use codec::{Encode, Decode};
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
-// Message from Ethereum
-//
-// Encoded on the Ethereum side using abi.encodePacked, which is equivalent to SCALE-encoding
-// for these fixed-length inputs.
+// Message from Ethereum (SCALE-encoded)
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct InboundPayload<AccountId: codec::Decode> {
 	pub sender: H160,
@@ -17,12 +14,11 @@ pub struct InboundPayload<AccountId: codec::Decode> {
 	pub amount: U256,
 }
 
-
 // Message to Ethereum (ABI-encoded)
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct OutboundPayload<AccountId: codec::Encode> {
-	pub sender_addr: AccountId,
-	pub recipient_addr: H160,
+	pub sender: AccountId,
+	pub recipient: H160,
 	pub amount: U256,
 }
 
@@ -30,11 +26,11 @@ impl<AccountId: codec::Encode> OutboundPayload<AccountId> {
 	/// ABI-encode this payload
 	pub fn encode(&self) -> Vec<u8> {
 		let tokens = vec![
-			Token::FixedBytes(self.sender_addr.encode()),
-			Token::Address(self.recipient_addr),
+			Token::FixedBytes(self.sender.encode()),
+			Token::Address(self.recipient),
 			Token::Uint(self.amount)
 		];
-		ethabi::encode(tokens.as_ref())
+		ethabi::encode_function("unlock(bytes32,address,uint256)", tokens.as_ref())
 	}
 }
 
@@ -48,7 +44,7 @@ mod tests {
 	const INBOUND_PAYLOAD_BYTES: [u8; 84] = hex!("
 		1ed28b61269a6d3d28d07b1fd834ebe4e703368ed43593c715fdd31c61141abd
 		04a99fd6822c8558854ccde39a5684e7a56da27d000100000000000000000000
-		0000000000000000000000000000000000000000	
+		0000000000000000000000000000000000000000
 	");
 
 	#[test]

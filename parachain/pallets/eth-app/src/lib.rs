@@ -87,8 +87,8 @@ decl_module! {
 			T::Asset::withdraw(&who, amount)?;
 
 			let message = OutboundPayload {
-				sender_addr: who.clone(),
-				recipient_addr: recipient,
+				sender: who.clone(),
+				recipient: recipient,
 				amount: amount
 			};
 
