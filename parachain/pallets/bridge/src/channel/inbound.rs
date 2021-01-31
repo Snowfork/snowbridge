@@ -18,7 +18,6 @@ where
 struct BasicInboundChannel<T: Config> {
 	#[allow(dead_code)]
 	channel_id: ChannelId,
-	#[allow(dead_code)]
 	storage: Storage<T>
 }
 
@@ -48,7 +47,6 @@ impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 struct IncentivizedInboundChannel<T: Config> {
 	#[allow(dead_code)]
 	channel_id: ChannelId,
-	#[allow(dead_code)]
 	storage: Storage<T>
 }
 
