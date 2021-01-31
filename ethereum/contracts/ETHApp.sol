@@ -60,7 +60,7 @@ contract ETHApp {
         channel.submit(encodeOutboundPayload(payload));
     }
 
-    function unlock(address payable _recipient, uint256 _amount) internal {
+    function unlock(bytes32 _sender, address payable _recipient, uint256 _amount) public {
         require(_amount > 0, "Must unlock a positive amount");
         require(
             balance >= _amount,
@@ -69,6 +69,7 @@ contract ETHApp {
 
         balance = balance.sub(_amount);
         _recipient.transfer(_amount);
+        emit Unlocked(_sender, _recipient, _amount);
     }
 
     function encodeOutboundPayload(OutboundPayload memory payload) private pure returns (bytes memory) {

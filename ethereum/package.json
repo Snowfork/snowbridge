@@ -2,7 +2,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@iarna/toml": "^2.2.5",
-    "@openzeppelin/contracts": "^3.1.0",
+    "@openzeppelin/contracts": "^3.3.0-solc-0.7",
     "@truffle/contract": "^4.0.31",
     "@truffle/hdwallet-provider": "^1.1.0",
     "chai": "^4.2.0",
