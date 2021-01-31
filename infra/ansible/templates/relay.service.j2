@@ -7,7 +7,7 @@ Wants=network-online.target
 Environment=ARTEMIS_ETHEREUM_KEY={{ keys.ethereum }}
 Environment=ARTEMIS_SUBSTRATE_KEY={{ keys.substrate }}
 ExecStart=/usr/local/bin/artemis-relay run --config /etc/artemis-relay/config.toml
-Restart=on-failure
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
