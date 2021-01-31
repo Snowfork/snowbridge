@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
@@ -155,11 +156,41 @@ func (re *Relay) Start() {
 	}
 	log.WithField("name", re.subChain.Name()).Info("Started chain")
 
-	// Wait until a fatal error or signal is raised
-	if err := eg.Wait(); err != nil {
-		if !errors.Is(err, context.Canceled) {
+	notifyWaitDone := make(chan struct{})
+
+	go func() {
+		err := eg.Wait()
+		if err != nil && !errors.Is(err, context.Canceled) {
 			log.WithField("error", err).Error("Encountered an unrecoverable failure")
 		}
+		close(notifyWaitDone)
+	}()
+
+	// Wait until a fatal error or signal is raised
+	select {
+	case <-notifyWaitDone:
+		break
+	case <-ctx.Done():
+		// Goroutines are either shutting down or deadlocked.
+		// Give them a second...
+		time.Sleep(time.Second)
+		_, stillWaiting := <-notifyWaitDone
+
+		if !stillWaiting {
+			// All goroutines have ended
+			break
+		}
+
+		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
+		re.ethChain.Stop()
+		re.subChain.Stop()
+		relayProc, err := os.FindProcess(os.Getpid())
+		if err != nil {
+			log.WithError(err).Error("Failed to kill this process")
+			return
+		}
+		relayProc.Kill()
+		return
 	}
 
 	// Shutdown chains
