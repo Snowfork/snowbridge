@@ -5,7 +5,7 @@ const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
 const Web3Utils = require("web3-utils");
 const BigNumber = web3.BigNumber;
 
-const { confirmUnlock, confirmMessageDelivered, hashMessage } = require("./helpers");
+const { confirmUnlock, confirmMessageDelivered, buildCommitment } = require("./helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -78,15 +78,14 @@ contract("IncentivizedReceiveChannel", function (accounts) {
         payload: payloadTwo
       }
 
-      // Construct commitment hash from message hashes
-      const messageOneHash = hashMessage(messageOne);
-      const messageTwoHash = hashMessage(messageTwo);
-      const commitmentHash = ethers.utils.solidityKeccak256([ 'bytes32', 'bytes32' ], [ messageOneHash, messageTwoHash ]);
+       // Construct commitment hash from messages
+      const messages = [messageOne, messageTwo];
+      const commitment = buildCommitment(messages);
 
       // Send commitment including one payload for the ETHApp
       const tx = await this.incentivizedReceiveChannel.newParachainCommitment(
-        { commitmentHash: commitmentHash },
-        { messages: [messageOne, messageTwo] },
+        { commitmentHash: commitment },
+        { messages: messages },
         5,
         ethers.utils.formatBytes32String("fake-proof1"),
         ethers.utils.formatBytes32String("fake-proof2"),

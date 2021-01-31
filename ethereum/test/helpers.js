@@ -55,11 +55,31 @@ const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
     decodedEvent._result.should.be.equal(expectedResult);
 };
 
-const hashMessage = (message) => {
+const buildCommitment = (messages) => {
+    let messagesBytes;
+    for(var i = 0; i < messages.length; i++) {
+        // Pack the message contents into a bytes field
+        const messagePacked = ethers.utils.solidityPack(
+            [ 'uint256', 'string', 'address', 'bytes' ],
+            [ messages[i].nonce, messages[i].senderApplicationId, messages[i].targetApplicationAddress, messages[i].payload ]
+        );
+
+        // Append the message's bytes to any previous message bytes
+        if(i == 0) {
+            messagesBytes = messagePacked;
+        } else {
+            messagesBytes = ethers.utils.solidityPack(
+                [ 'bytes', 'bytes' ],
+                [ messagesBytes, messagePacked ]
+            );
+        }
+    }
+
+    // Hash the messages' bytes to convert from 'bytes memory' to 'bytes32' for saving gas on function arguments
     return ethers.utils.solidityKeccak256(
-        [ 'uint256', 'string', 'address', 'bytes' ],
-        [ message.nonce, message.senderApplicationId, message.targetApplicationAddress, message.payload ]
-      );
+        [ 'bytes'],
+        [ messagesBytes ]
+    );
 }
 
-module.exports = { confirmChannelSend, confirmUnlock, confirmMessageDelivered, hashMessage };
+module.exports = { confirmChannelSend, confirmUnlock, confirmMessageDelivered, buildCommitment };
