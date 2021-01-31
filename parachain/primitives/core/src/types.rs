@@ -5,6 +5,8 @@ use sp_std::vec::Vec;
 use sp_core::{H160, H256};
 use enum_iterator::IntoEnumIterator;
 use codec::{Encode, Decode};
+
+#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug)]
