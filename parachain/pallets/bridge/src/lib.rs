@@ -17,6 +17,7 @@
 #![allow(unused_variables)]
 
 use frame_support::{
+	debug,
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
 	storage::StorageMap,

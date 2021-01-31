@@ -15,6 +15,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type Writer struct {
@@ -88,9 +89,11 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 
 			fmt.Println("Got messages!")
 
-			var concreteMsgs []chain.EthereumOutboundMessage
+			var concreteMsgs []*chain.EthereumOutboundMessage
 			for _, msg := range msgs {
-				cmsg, ok := msg.(chain.EthereumOutboundMessage)
+
+				fmt.Println("MESSAGE ", msg)
+				cmsg, ok := msg.(*chain.EthereumOutboundMessage)
 				if !ok {
 					return fmt.Errorf("Invalid message")
 				}
@@ -159,13 +162,13 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 }
 
 // WriteMessages submits a "Bridge.submit_bulk" call
-func (wr *Writer) WriteMessages(ctx context.Context, msgs []chain.EthereumOutboundMessage) error {
+func (wr *Writer) WriteMessages(ctx context.Context, msgs []*chain.EthereumOutboundMessage) error {
 
 	fmt.Println("Write messages!")
 
 	for _, msg := range msgs {
 
-		c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", msg)
+		c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", substrate.Message(*msg))
 		if err != nil {
 			return err
 		}

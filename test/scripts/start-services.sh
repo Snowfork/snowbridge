@@ -64,10 +64,9 @@ start_parachain()
         \"id\": \"200\",
         \"wsPort\": 11144,
         \"port\": 31200,
-        \"balance\": \"1000000000000000000000\",
         \"flags\": [
             \"--execution=native\",
-            \"-lruntime=debug,import_header=trace\",
+            \"-lruntime=debug,import_header=trace,bridge=trace\",
             \"--rpc-cors=all\",
             \"--offchain-worker=Always\",
             \"--enable-offchain-indexing=true\",
