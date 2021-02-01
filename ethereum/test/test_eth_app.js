@@ -5,7 +5,7 @@ const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
 const rlp = require("rlp");
 
-const { confirmChannelSend } = require("./helpers");
+const { confirmChannelSend, confirmUnlock } = require("./helpers");
 
 const channelContracts = {
   basic: {
@@ -123,7 +123,7 @@ contract("EthApp", function (accounts) {
 
   })
 
-  describe("should support Ethereum withdrawals", function () {
+  describe("withdrawals", function () {
 
     before(async function () {
 
@@ -176,11 +176,12 @@ contract("EthApp", function (accounts) {
 
       tx = await this.channels.basic.inbound.submit(commitment).should.be.fulfilled;
 
-      // Confirm app event emitted with expected values
-      const event = tx.logs.find(
-        e => e.event === "Unlocked"
+      confirmUnlock(
+        tx.receipt.rawLogs[0],
+        this.app.address,
+        "0xBFC3bfA25613416ED7C8b2a05c3902afd9764880",
+        BigNumber(10000),
       );
-
 
     });
   });

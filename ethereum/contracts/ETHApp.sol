@@ -69,7 +69,7 @@ contract ETHApp {
     }
 
     function unlock(bytes32 _sender, address payable _recipient, uint256 _amount) public {
-        // TODO: ensure message sender is an inbound channel
+        // TODO: Ensure message sender is a known inbound channel
         require(_amount > 0, "Must unlock a positive amount");
         require(
             balance >= _amount,

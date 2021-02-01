@@ -38,7 +38,6 @@ mod tests {
 	use super::*;
 	use hex_literal::hex;
 	use hex::ToHex;
-	use sp_keyring::AccountKeyring as Keyring;
 
 	const INBOUND_PAYLOAD_BYTES: [u8; 84] = hex!("
 		1ed28b61269a6d3d28d07b1fd834ebe4e703368ed43593c715fdd31c61141abd

@@ -1,4 +1,5 @@
 const ethers = require("ethers");
+const BigNumber = require('bignumber.js');
 
 const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0) => {
     outChannelLogFields = [
@@ -24,19 +25,26 @@ const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, exp
 };
 
 const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmount) => {
-    unlockLogFields = [{
-        type: 'address',
-        name: '_recipient'
-    }, {
-        type: 'uint256',
-        name: '_amount'
-    }];
+    unlockLogFields = [
+        {
+            type: 'bytes32',
+            name: 'sender'
+        },
+        {
+            type: 'address',
+            name: 'recipient'
+        },
+        {
+            type: 'uint256',
+            name: 'amount'
+        }
+    ];
 
     const decodedEvent = web3.eth.abi.decodeLog(unlockLogFields, rawEvent.data, rawEvent.topics);
 
     rawEvent.address.should.be.equal(ethAppAddress);
-    decodedEvent._recipient.should.be.equal(expectedRecipient);
-    parseFloat(decodedEvent._amount).should.be.equal(expectedAmount);
+    decodedEvent.recipient.should.be.equal(expectedRecipient);
+    decodedEvent.amount.should.be.bignumber.equal(expectedAmount);
 };
 
 const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
