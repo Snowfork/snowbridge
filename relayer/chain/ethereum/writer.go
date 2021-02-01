@@ -46,7 +46,7 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	wr.contracts[id] = contract
 
-	id = substrate.ChannelID{IsBasic: true}
+	id = substrate.ChannelID{IsIncentivized: true}
 	contract, err = inbound.NewContract(common.HexToAddress(wr.config.Channels.Incentivized.Inbound), wr.conn.client)
 	if err != nil {
 		return err

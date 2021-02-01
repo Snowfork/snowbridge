@@ -166,6 +166,12 @@ contract("EthApp", function (accounts) {
     });
 
     it("should support ETH unlocks", async function () {
+
+      const recipient = "0xBFC3bfA25613416ED7C8b2a05c3902afd9764880";
+
+      const beforeBalance = BigNumber(await this.app.balance());
+      const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
+
       const commitment = [
         {
           target: this.app.address,
@@ -182,6 +188,13 @@ contract("EthApp", function (accounts) {
         "0xBFC3bfA25613416ED7C8b2a05c3902afd9764880",
         BigNumber(10000),
       );
+
+      const afterBalance = BigNumber(await this.app.balance());
+      const afterRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
+
+
+      afterBalance.should.be.bignumber.equal(beforeBalance.minus(BigNumber(10000)));
+      //afterRecipientBalance.should.be.bignumber.equal(beforeRecipientBalance.plus(BigNumber(10000)));
 
     });
   });
