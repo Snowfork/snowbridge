@@ -54,6 +54,7 @@ const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
     decodedEvent._result.should.be.equal(expectedResult);
 };
 
+
 const hashMessage = (message) => {
     return ethers.utils.solidityKeccak256(
         ['uint256', 'string', 'address', 'bytes'],

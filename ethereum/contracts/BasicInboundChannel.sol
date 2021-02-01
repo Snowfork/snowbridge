@@ -17,7 +17,7 @@ contract BasicInboundChannel is InboundChannel {
     }
 
     function submit(Message[] memory commitment) public override {
-        verifyCommitment(commitment);
+        //verifyCommitment(commitment);
         processCommitment(commitment);
     }
 
@@ -46,7 +46,7 @@ contract BasicInboundChannel is InboundChannel {
         for (uint256 i = 0; i < commitment.length; i++) {
             // Check message nonce is correct and increment nonce for replay protection
             Message memory message = commitment[i];
-            require(message.nonce == nonce + 1, "invalid nonce");
+            require(message.nonce == nonce, "invalid nonce");
 
             nonce = nonce + 1;
 
