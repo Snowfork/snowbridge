@@ -14,31 +14,21 @@ require("chai")
 contract("BasicOutboundChannel", function (accounts) {
   // Accounts
   const userOne = accounts[1];
-  const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
+  const payload = ethers.utils.formatBytes32String("arbitrary-payload");
 
-  describe("deployment and initialization", function () {
+  describe("submit messages", function () {
     beforeEach(async function () {
-      this.basicSendChannel = await BasicOutboundChannel.new();
-    });
-
-    it("should deploy and initialize the ETHApp contract", async function () {
-      this.basicSendChannel.should.exist;
-    });
-  });
-
-  describe("send", function () {
-    beforeEach(async function () {
-      this.basicSendChannel = await BasicOutboundChannel.new();
+      this.channel = await BasicOutboundChannel.new();
     });
 
     it("should send messages out with the correct event and fields", async function () {
-      const tx = await this.basicSendChannel.submit(
-        testPayload,
+      const tx = await this.channel.submit(
+        payload,
         { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
       const rawLog = tx.receipt.rawLogs[0];
-      confirmChannelSend(rawLog, this.basicSendChannel.address, userOne, testPayload)
+      confirmChannelSend(rawLog, this.channel.address, userOne)
     });
 
   });

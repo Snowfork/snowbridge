@@ -1,4 +1,4 @@
-const Scale = artifacts.require("Scale");
+const ScaleCodec = artifacts.require("ScaleCodec");
 
 const BigNumber = web3.BigNumber;
 
@@ -15,7 +15,7 @@ contract("Scale", function () {
 
   describe("Scale contract deployment", function () {
     beforeEach(async function () {
-      this.scale = await Scale.new();
+      this.scale = await ScaleCodec.new();
     });
 
     it("should deploy and initialize the contract", async function () {
@@ -78,7 +78,7 @@ contract("Scale", function () {
   describe("decoding uint256s", async function () {
 
     beforeEach(async function () {
-      this.scale = await Scale.new();
+      this.scale = await ScaleCodec.new();
     });
 
     it("should decode uint256", async function () {
@@ -99,7 +99,7 @@ contract("Scale", function () {
   describe("Gas costs", async function () {
 
     beforeEach(async function () {
-      this.scale = await Scale.new();
+      this.scale = await ScaleCodec.new();
     });
 
     it("compact uints: [0, 63]", async function () {
