@@ -26,6 +26,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file")
 	rootCmd.AddCommand(runCmd())
 	rootCmd.AddCommand(getBlockCmd())
+	rootCmd.AddCommand(getMessageCmd())
 }
 
 func initConfig() {

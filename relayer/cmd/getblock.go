@@ -50,7 +50,7 @@ func GetBlockFn(cmd *cobra.Command, _ []string) error {
 
 	format := Format(cmd.Flags().Lookup("format").Value.String())
 
-	header, err := getEthBlock(&config.Eth)
+	header, err := getFinalizedEthBlock(&config.Eth)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func GetBlockFn(cmd *cobra.Command, _ []string) error {
 	return printEthBlockForSub(header, format)
 }
 
-func getEthBlock(config *ethereum.Config) (*gethTypes.Header, error) {
+func getFinalizedEthBlock(config *ethereum.Config) (*gethTypes.Header, error) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(config.Endpoint)
 	if err != nil {

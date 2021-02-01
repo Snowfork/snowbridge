@@ -45,7 +45,7 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	hcs, err := NewHeaderCacheState(
 		eg,
 		initBlockHeight,
-		&DefaultBlockLoader{conn: li.conn},
+		&DefaultBlockLoader{Conn: li.conn},
 		nil,
 	)
 	if err != nil {
