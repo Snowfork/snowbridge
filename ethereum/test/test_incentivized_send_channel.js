@@ -22,7 +22,7 @@ contract("IncentivizedSendChannel", function (accounts) {
       this.incentivizedSendChannel = await IncentivizedSendChannel.new();
     });
 
-    it("should deploy and initialize the ETHApp contract", async function () {
+    it("should deploy and initialize the incentivized send channel contract", async function () {
       this.incentivizedSendChannel.should.exist;
     });
   });

@@ -40,8 +40,8 @@ contract("IncentivizedReceiveChannel", function (accounts) {
 
       // Prepare ETHApp with some liquidity for testing
       const lockAmountWei = 5000;
-      const POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
-      const substrateRecipient = Buffer.from(POLKADOT_ADDRESS, "hex");
+      this.POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
+      substrateRecipient = Buffer.from(this.POLKADOT_ADDRESS, "hex");
 
       // Send to a substrate recipient to load contract with unlockable ETH
       await this.ethApp.sendETH(
@@ -59,9 +59,10 @@ contract("IncentivizedReceiveChannel", function (accounts) {
     it("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
       const abi = this.ethApp.abi;
       const iChannel = new ethers.utils.Interface(abi);
+      const polkadotSenderAddress = ethers.utils.formatBytes32String("fake-address");
 
       // Construct first message
-      const payloadOne = iChannel.functions.unlockETH.encode([userTwo, 2]);
+      const payloadOne = iChannel.functions.unlockETH.encode([polkadotSenderAddress, userTwo, 2]);
       const messageOne = {
         nonce: 1,
         senderApplicationId: 'eth-app',
@@ -70,7 +71,7 @@ contract("IncentivizedReceiveChannel", function (accounts) {
       }
 
       // Construct second message
-      const payloadTwo = iChannel.functions.unlockETH.encode([userThree, 5]);
+      const payloadTwo = iChannel.functions.unlockETH.encode([polkadotSenderAddress, userThree, 5]);
       const messageTwo = {
         nonce: 2,
         senderApplicationId: 'eth-app',
@@ -94,12 +95,12 @@ contract("IncentivizedReceiveChannel", function (accounts) {
 
       // Confirm ETHApp and IncentivizedReceiveChannel processed messages correctly
       const firstRawUnlockLog = tx.receipt.rawLogs[0];
-      confirmUnlock(firstRawUnlockLog, this.ethApp.address, userTwo, 2);
+      confirmUnlock(firstRawUnlockLog, polkadotSenderAddress, this.ethApp.address, userTwo, 2);
       const firstMessageDeliveredLog = tx.receipt.rawLogs[1];
       confirmMessageDelivered(firstMessageDeliveredLog, 1, true);
 
       const secondRawUnlockLog = tx.receipt.rawLogs[2];
-      confirmUnlock(secondRawUnlockLog, this.ethApp.address, userThree, 5);
+      confirmUnlock(secondRawUnlockLog, polkadotSenderAddress, this.ethApp.address, userThree, 5);
       const secondMessageDeliveredLog = tx.receipt.rawLogs[3];
       confirmMessageDelivered(secondMessageDeliveredLog, 2, true);
     });

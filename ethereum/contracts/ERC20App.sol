@@ -8,7 +8,7 @@ import "./Decoder.sol";
 import "./Application.sol";
 import "./SendChannel.sol";
 
-contract ERC20App is Application {
+contract ERC20App {
     using SafeMath for uint256;
     using Decoder for bytes;
 
@@ -26,8 +26,8 @@ contract ERC20App is Application {
         address _token,
         uint256 _amount
     );
-    event Unlock(
-        bytes _sender,
+    event Unlocked(
+        bytes32 _polkadotSender,
         address _recipient,
         address _token,
         uint256 _amount
@@ -48,7 +48,7 @@ contract ERC20App is Application {
         incentivizedSendChannelAddress = _incentivizedSendChannelAddress;
     }
 
-    function register(address _bridge) public override {
+    function register(address _bridge) public {
         require(bridge == address(0), "Bridge has already been registered");
         bridge = _bridge;
     }
@@ -80,30 +80,13 @@ contract ERC20App is Application {
         sendChannel.send(TARGET_APPLICATION_ID, abi.encode(payload));
     }
 
-    function handle(bytes memory _data) public override {
-        require(msg.sender == bridge);
-        require(_data.length >= PAYLOAD_LENGTH, "Invalid Payload");
-
-        // Decode sender bytes
-        bytes memory sender = _data.slice(0, 32);
-        // Decode recipient address
-        address recipient = _data.sliceAddress(32);
-        // Decode token address
-        address tokenAddr = _data.sliceAddress(32 + 20);
-        // Decode amount int256
-        bytes memory amountBytes = _data.slice(32 + 40, 32);
-
-        uint256 amount = amountBytes.decodeUint256();
-
-        sendTokens(recipient, tokenAddr, amount);
-        emit Unlock(sender, recipient, tokenAddr, amount);
-    }
-
     function sendTokens(
+        bytes32 _polkadotSender,
         address _recipient,
         address _token,
         uint256 _amount
-    ) internal {
+    ) public {
+        require(msg.sender == bridge);
         require(_amount > 0, "Must unlock a positive amount");
         require(
             _amount <= totalTokens[_token],
@@ -115,5 +98,6 @@ contract ERC20App is Application {
             IERC20(_token).transfer(_recipient, _amount),
             "ERC20 token transfer failed"
         );
+        emit Unlocked(_polkadotSender, _recipient, _token, _amount);
     }
 }

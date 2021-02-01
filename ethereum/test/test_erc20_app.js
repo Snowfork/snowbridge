@@ -151,7 +151,7 @@ contract("ERC20App", function (accounts) {
     });
   });
 
-  describe("handle received messages", function () {
+  describe("send ERC20 correctly (for unlocks)", function () {
 
     before(async function () {
       const basicSendChannel = await BasicSendChannel.new();
@@ -191,43 +191,39 @@ contract("ERC20App", function (accounts) {
     });
 
     it("should support ERC20 unlocks", async function () {
-      // Encoded data
-      const encodedTokenAddress = this.token.address.slice(2, this.token.address.length);
-      const encodedData = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dcffeaaf7681c89285d65cfbe808b80e502696573" + encodedTokenAddress + "3412000000000000000000000000000000000000000000000000000000000000"
-      // Decoded data
-      const decodedSender = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
-      const decodedRecipient = "0xCfFEAAf7681c89285D65CfbE808b80e502696573";
-      const decodedTokenAddr = this.token.address;
-      const decodedAmount = 4660;
+      const polkadotSender = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
+      const recipient = "0xCfFEAAf7681c89285D65CfbE808b80e502696573";
+      const tokenAddress = this.token.address;
+      const amount = 4660;
 
       // Load initial state
       const beforeTotalERC20 = Number(await this.erc20App.totalTokens(this.token.address));
       const beforeTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
-      const beforeUserBalance = Number(await this.token.balanceOf(decodedRecipient));
+      const beforeUserBalance = Number(await this.token.balanceOf(recipient));
 
-      const { logs } = await this.erc20App.handle(encodedData).should.be.fulfilled;
+      const { logs } = await this.erc20App.sendTokens(polkadotSender, recipient, tokenAddress, amount).should.be.fulfilled;
 
       // Confirm unlock event emitted with expected values
       const unlockEvent = logs.find(
-        e => e.event === "Unlock"
+        e => e.event === "Unlocked"
       );
 
-      unlockEvent.args._sender.should.be.equal(decodedSender);
-      unlockEvent.args._recipient.should.be.equal(decodedRecipient);
-      unlockEvent.args._token.should.be.equal(decodedTokenAddr);
-      Number(unlockEvent.args._amount).should.be.bignumber.equal(decodedAmount);
+      unlockEvent.args._polkadotSender.should.be.equal(polkadotSender);
+      unlockEvent.args._recipient.should.be.equal(recipient);
+      unlockEvent.args._token.should.be.equal(tokenAddress);
+      Number(unlockEvent.args._amount).should.be.bignumber.equal(amount);
 
       // Get the user and ERC20App token balance after unlock
       const afterTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
-      const afterUserBalance = Number(await this.token.balanceOf(decodedRecipient));
+      const afterUserBalance = Number(await this.token.balanceOf(recipient));
 
       // Confirm that the user's token balance has increased
-      afterTestTokenBalance.should.be.bignumber.equal(parseInt(beforeTestTokenBalance) - decodedAmount);
-      afterUserBalance.should.be.bignumber.equal(beforeUserBalance + decodedAmount);
+      afterTestTokenBalance.should.be.bignumber.equal(parseInt(beforeTestTokenBalance) - amount);
+      afterUserBalance.should.be.bignumber.equal(beforeUserBalance + amount);
 
       // Confirm contract's locked ERC20 counter has decreased by amount locked
       const afterTotalERC20 = await this.erc20App.totalTokens(this.token.address);
-      Number(afterTotalERC20).should.be.bignumber.equal(beforeTotalERC20 - decodedAmount);
+      Number(afterTotalERC20).should.be.bignumber.equal(beforeTotalERC20 - amount);
     });
   });
 

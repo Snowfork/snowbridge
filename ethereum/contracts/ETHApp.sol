@@ -19,7 +19,11 @@ contract ETHApp {
     address public incentivizedSendChannelAddress;
 
     event Locked(address _sender, bytes32 _recipient, uint256 _amount);
-    event Unlock(address _recipient, uint256 _amount);
+    event Unlocked(
+        bytes32 _polkadotSender,
+        address _recipient,
+        uint256 _amount
+    );
 
     struct ETHLockedPayload {
         address _sender;
@@ -60,7 +64,11 @@ contract ETHApp {
         sendChannel.send(TARGET_APPLICATION_ID, abi.encode(payload));
     }
 
-    function unlockETH(address payable _recipient, uint256 _amount) public {
+    function unlockETH(
+        bytes32 _polkadotSender,
+        address payable _recipient,
+        uint256 _amount
+    ) public {
         require(msg.sender == bridge);
         require(_amount > 0, "Must unlock a positive amount");
         require(
@@ -70,6 +78,6 @@ contract ETHApp {
 
         totalETH = totalETH.sub(_amount);
         _recipient.transfer(_amount);
-        emit Unlock(_recipient, _amount);
+        emit Unlocked(_polkadotSender, _recipient, _amount);
     }
 }

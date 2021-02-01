@@ -24,8 +24,11 @@ const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, exp
     decodedEvent.payload.should.be.equal(expectedPayload);
 };
 
-const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmount) => {
+const confirmUnlock = (rawEvent, polkadotSender, ethAppAddress, expectedRecipient, expectedAmount) => {
     unlockLogFields = [{
+        type: 'bytes32',
+        name: '_polkadotSender'
+    }, {
         type: 'address',
         name: '_recipient'
     }, {
@@ -36,6 +39,7 @@ const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmoun
     const decodedEvent = web3.eth.abi.decodeLog(unlockLogFields, rawEvent.data, rawEvent.topics);
 
     rawEvent.address.should.be.equal(ethAppAddress);
+    decodedEvent._polkadotSender.should.be.equal(polkadotSender);
     decodedEvent._recipient.should.be.equal(expectedRecipient);
     parseFloat(decodedEvent._amount).should.be.equal(expectedAmount);
 };
