@@ -19,18 +19,27 @@ contract ETHApp {
 
     mapping(ChannelId => Channel) public channels;
 
-    event Locked(address sender, bytes32 recipient, uint256 amount);
-    event Unlocked(bytes32 sender, address recipient, uint256 amount);
+    event Locked(
+        address sender,
+        bytes32 recipient,
+        uint256 amount
+    );
 
-    struct Channel {
-        address inbound;
-        address outbound;
-    }
+    event Unlocked(
+        bytes32 sender,
+        address recipient,
+        uint256 amount
+    );
 
     struct OutboundPayload {
         address sender;
         bytes32 recipient;
         uint256 amount;
+    }
+
+    struct Channel {
+        address inbound;
+        address outbound;
     }
 
     constructor(Channel memory _basic, Channel memory _incentivized) {
@@ -57,7 +66,7 @@ contract ETHApp {
         OutboundPayload memory payload = OutboundPayload(msg.sender, _recipient, msg.value);
 
         OutboundChannel channel = OutboundChannel(channels[_channelId].outbound);
-        channel.submit(encodeOutboundPayload(payload));
+        channel.submit(encodePayload(payload));
     }
 
     function unlock(bytes32 _sender, address payable _recipient, uint256 _amount) public {
@@ -72,15 +81,12 @@ contract ETHApp {
         emit Unlocked(_sender, _recipient, _amount);
     }
 
-    function encodeOutboundPayload(OutboundPayload memory payload) private pure returns (bytes memory) {
-        return abi.encodePacked(payload.sender, payload.recipient, payload.amount.toBytes32LE());
-    }
-
-    function bytesToBytes32(bytes memory b, uint offset) private pure returns (bytes32) {
-        bytes32 out;
-        for (uint i = 0; i < 32; i++) {
-            out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);
-        }
-        return out;
+    // SCALE-encode payload
+    function encodePayload(OutboundPayload memory payload) private pure returns (bytes memory) {
+        return abi.encodePacked(
+            payload.sender,
+            payload.recipient,
+            payload.amount.toBytes32LE()
+        );
     }
 }

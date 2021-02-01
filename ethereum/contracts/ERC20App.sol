@@ -4,91 +4,107 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./Decoder.sol";
+import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
+
+enum ChannelId {
+    Basic,
+    Incentivized
+}
 
 contract ERC20App {
     using SafeMath for uint256;
-    using Decoder for bytes;
+    using ScaleCodec for uint256;
 
-    uint64 constant PAYLOAD_LENGTH = 104;
-    string constant TARGET_APPLICATION_ID = "erc20-app";
+    mapping(address => uint256) public balances;
 
-    address public bridge;
-    mapping(address => uint256) public totalTokens;
-    address public basicOutboundChannelAddress;
-    address public incentivizedOutboundChannelAddress;
+    mapping(ChannelId => Channel) public channels;
 
     event Locked(
-        address _sender,
-        bytes32 _recipient,
-        address _token,
-        uint256 _amount
-    );
-    event Unlock(
-        bytes _sender,
-        address _recipient,
-        address _token,
-        uint256 _amount
+        address token,
+        address sender,
+        bytes32 recipient,
+        uint256 amount
     );
 
-    struct ERC20LockedPayload {
-        address _sender;
-        bytes32 _recipient;
-        address _token;
-        uint256 _amount;
+    event Unlocked(
+        address token,
+        bytes32 sender,
+        address recipient,
+        uint256 amount
+    );
+
+    struct OutboundPayload {
+        address token;
+        address sender;
+        bytes32 recipient;
+        uint256 amount;
     }
 
-    constructor(
-        address _basicOutboundChannelAddress,
-        address _incentivizedOutboundChannelAddress
-    ) {
-        basicOutboundChannelAddress = _basicOutboundChannelAddress;
-        incentivizedOutboundChannelAddress = _incentivizedOutboundChannelAddress;
+    struct Channel {
+        address inbound;
+        address outbound;
     }
 
-    function sendERC20(
+    constructor(Channel memory _basic, Channel memory _incentivized) {
+        Channel storage c1 = channels[ChannelId.Basic];
+        c1.inbound = _basic.inbound;
+        c1.outbound = _basic.outbound;
+
+        Channel storage c2 = channels[ChannelId.Incentivized];
+        c2.inbound = _incentivized.inbound;
+        c2.outbound = _incentivized.outbound;
+    }
+
+    function lock(
+        address _token,
         bytes32 _recipient,
-        address _tokenAddr,
         uint256 _amount,
-        bool incentivized
+        ChannelId _channelId
     ) public {
         require(
-            IERC20(_tokenAddr).transferFrom(msg.sender, address(this), _amount),
+            IERC20(_token).transferFrom(msg.sender, address(this), _amount),
             "Contract token allowances insufficient to complete this lock request"
         );
 
         // Increment locked ERC20 token counter by this amount
-        totalTokens[_tokenAddr] = totalTokens[_tokenAddr].add(_amount);
+        balances[_token] = balances[_token].add(_amount);
 
-        emit Locked(msg.sender, _recipient, _tokenAddr, _amount);
+        emit Locked(_token, msg.sender, _recipient, _amount);
 
-        ERC20LockedPayload memory payload =
-            ERC20LockedPayload(msg.sender, _recipient, _tokenAddr, _amount);
-        OutboundChannel sendChannel;
-        if (incentivized) {
-            sendChannel = OutboundChannel(incentivizedOutboundChannelAddress);
-        } else {
-            sendChannel = OutboundChannel(basicOutboundChannelAddress);
-        }
-        sendChannel.submit(abi.encode(payload));
+        OutboundPayload memory payload = OutboundPayload(_token, msg.sender, _recipient, _amount);
+
+        OutboundChannel channel = OutboundChannel(channels[_channelId].outbound);
+        channel.submit(encodePayload(payload));
     }
 
-    function sendTokens(
-        address _recipient,
+    function unlock(
         address _token,
+        bytes32 _sender,
+        address _recipient,
         uint256 _amount
-    ) internal {
+    ) public {
         require(_amount > 0, "Must unlock a positive amount");
         require(
-            _amount <= totalTokens[_token],
+            _amount <= balances[_token],
             "ERC20 token balances insufficient to fulfill the unlock request"
         );
 
-        totalTokens[_token] = totalTokens[_token].sub(_amount);
+        balances[_token] = balances[_token].sub(_amount);
         require(
             IERC20(_token).transfer(_recipient, _amount),
             "ERC20 token transfer failed"
+        );
+        emit Unlocked(_token, _sender, _recipient, _amount);
+    }
+
+    // SCALE-encode payload
+    function encodePayload(OutboundPayload memory payload) private pure returns (bytes memory) {
+        return abi.encodePacked(
+            payload.token,
+            payload.sender,
+            payload.recipient,
+            payload.amount.toBytes32LE()
         );
     }
 }
