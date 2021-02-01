@@ -67,7 +67,6 @@ contract ERC20App {
             "Contract token allowances insufficient to complete this lock request"
         );
 
-        // Increment locked ERC20 token counter by this amount
         balances[_token] = balances[_token].add(_amount);
 
         emit Locked(_token, msg.sender, _recipient, _amount);

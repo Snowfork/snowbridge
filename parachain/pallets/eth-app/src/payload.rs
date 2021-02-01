@@ -37,6 +37,8 @@ impl<AccountId: codec::Encode> OutboundPayload<AccountId> {
 mod tests {
 	use super::*;
 	use hex_literal::hex;
+	use hex::ToHex;
+	use sp_keyring::AccountKeyring as Keyring;
 
 	const INBOUND_PAYLOAD_BYTES: [u8; 84] = hex!("
 		1ed28b61269a6d3d28d07b1fd834ebe4e703368ed43593c715fdd31c61141abd
@@ -54,6 +56,17 @@ mod tests {
 				amount: 256.into()
 			}
 		);
+	}
+
+	#[test]
+	fn test_outbound_payload_encode() {
+		let payload: OutboundPayload<[u8; 32]> = OutboundPayload {
+			sender: hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
+			recipient: hex!["bfc3bfa25613416ed7c8b2a05c3902afd9764880"].into(),
+			amount: 10000.into(),
+		};
+
+		println!("{:?}", payload.encode().to_hex::<String>());
 	}
 
 }

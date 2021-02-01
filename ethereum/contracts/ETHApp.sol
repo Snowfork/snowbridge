@@ -58,7 +58,6 @@ contract ETHApp {
         require(msg.value > 0, "Value of transaction must be positive");
         require(_channelId == ChannelId.Basic || _channelId == ChannelId.Incentivized, "Invalid channel ID");
 
-        // Increment locked Ethereum counter by this amount
         balance = balance.add(msg.value);
 
         emit Locked(msg.sender, _recipient, msg.value);
