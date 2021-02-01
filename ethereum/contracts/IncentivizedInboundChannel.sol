@@ -50,31 +50,14 @@ contract IncentivizedInboundChannel is InboundChannel {
 
             nonce = nonce + 1;
 
-            // Deliver the message to the destination
             // Delivery will have fixed maximum gas allowed for the destination app.
-            address target = message.target;
-            uint256 allowedGas = MAX_GAS_PER_MESSAGE;
-            bytes memory callInput = message.payload;
+            // uint256 allowedGas = MAX_GAS_PER_MESSAGE;
 
-            bool result;
-            uint256 callInputLength = callInput.length;
-            assembly {
-                let callInputDataPointer := add(callInput, 32) // Move 32 ahead of callInput length slot to get to actual data slot (TODO: verify this works in all cases)
+            bool success;
+            bytes memory result;
+            (success, result) = message.target.call{value: 0}(message.payload);
 
-                // Dispatch call to the receiver - it is expected to be fire and forget. If the call reverts, runs out of gas, error,
-                // etc, its the fault of the sender
-                result := call(
-                    allowedGas, // Allowed gas
-                    target, // To addr
-                    0, // No ether value being sent
-                    callInputDataPointer, // Inputs are stored at callInputDataPointer
-                    callInputLength, // Input length
-                    callInputDataPointer, // Store output over input (saves space)
-                    callInputLength // Outputs can be as long as input length
-                )
-            }
-
-            emit MessageDelivered(message.nonce, result);
+            emit MessageDelivered(message.nonce, success);
         }
     }
 
