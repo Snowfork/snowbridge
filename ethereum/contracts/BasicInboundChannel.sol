@@ -50,12 +50,7 @@ contract BasicInboundChannel is InboundChannel {
 
             nonce = nonce + 1;
 
-            // Delivery will have fixed maximum gas allowed for the destination app.
-            // uint256 allowedGas = MAX_GAS_PER_MESSAGE;
-
-            bool success;
-            bytes memory result;
-            (success, result) = message.target.call{value: 0}(message.payload);
+            (bool success,) = message.target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(message.payload);
 
             emit MessageDelivered(message.nonce, success);
         }
