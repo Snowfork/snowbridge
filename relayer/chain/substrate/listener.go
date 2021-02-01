@@ -130,15 +130,15 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 
 				var messages []chainTypes.CommitmentMessage
 
-				err = types.DecodeFromBytes(*data, messages)
+				err = types.DecodeFromBytes(*data, &messages)
 				if err != nil {
 					li.log.WithError(err).Error("Faild to decode commitment messages")
 				}
 
 				message := chain.SubstrateOutboundMessage{
-					ChannelID: digestItem.AsCommitment.ChannelID,
+					ChannelID:      digestItem.AsCommitment.ChannelID,
 					CommitmentHash: digestItem.AsCommitment.Hash,
-					Commitment: messages,
+					Commitment:     messages,
 				}
 
 				li.messages <- []chain.Message{message}
@@ -155,7 +155,6 @@ func sleep(ctx context.Context, delay time.Duration) {
 	case <-time.After(delay):
 	}
 }
-
 
 func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestItem, error) {
 	for _, digestItem := range digest {

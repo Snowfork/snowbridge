@@ -147,10 +147,10 @@ fn testnet_genesis(
 			initial_difficulty: 19755084633726428633088u128.into(),
 		}),
 		eth_app: Some(ETHConfig {
-			address: hex!["83428c7db9815f482a39a1715684dCF755021997"].into()
+			address: hex!["774667629726ec1fabebcec0d9139bd1c8f72a23"].into()
 		}),
 		erc20_app: Some(ERC20Config {
-			address: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into()
+			address: hex!["83428c7db9815f482a39a1715684dCF755021997"].into()
 		}),
 		parachain_info: Some(ParachainInfoConfig { parachain_id: para_id }),
 	}
