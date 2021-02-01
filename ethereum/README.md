@@ -6,9 +6,8 @@ This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge
 - Application.sol: an abstract contract that must be implemented by any Bridge application
     - ETHApp.sol: application for cross-chain ETH transfers between Ethereum and Substrate
     - ERC20App.sol: application for cross-chain ERC20 transfers between Ethereum and Substrate
-- Decoder.sol: a library for decoding SCALE encoded data
 - Verifier.sol: verifies tx origin and signatures
-- Scale.sol: implements decoding of SCALE encoded compact uints; not currently used, included to support future work on generalized data relay
+- ScaleCodec.sol: SCALE encoding and decoding
 
 ## Set up
 
