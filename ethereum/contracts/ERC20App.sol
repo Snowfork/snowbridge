@@ -84,6 +84,7 @@ contract ERC20App {
         address _recipient,
         uint256 _amount
     ) public {
+        // TODO: ensure message sender is an inbound channel
         require(_amount > 0, "Must unlock a positive amount");
         require(
             _amount <= balances[_token],
