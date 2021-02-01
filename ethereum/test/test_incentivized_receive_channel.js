@@ -5,7 +5,7 @@ const IncentivizedSendChannel = artifacts.require("IncentivizedSendChannel");
 const Web3Utils = require("web3-utils");
 const BigNumber = web3.BigNumber;
 
-const { confirmUnlock, confirmMessageDelivered, buildCommitment } = require("./helpers");
+const { confirmUnlock, confirmMessageDelivered, buildCommitment, buildPackedCommitment } = require("./helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -55,7 +55,6 @@ contract("IncentivizedReceiveChannel", function (accounts) {
 
     });
 
-
     it("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
       const abi = this.ethApp.abi;
       const iChannel = new ethers.utils.Interface(abi);
@@ -80,8 +79,8 @@ contract("IncentivizedReceiveChannel", function (accounts) {
       }
 
        // Construct commitment hash from messages
-      const messages = [messageOne, messageTwo];
-      const commitment = buildCommitment(messages);
+       const messages = [messageOne, messageTwo];
+       const commitment = buildPackedCommitment(messages);
 
       // Send commitment including one payload for the ETHApp
       const tx = await this.incentivizedReceiveChannel.newParachainCommitment(
@@ -103,6 +102,40 @@ contract("IncentivizedReceiveChannel", function (accounts) {
       confirmUnlock(secondRawUnlockLog, polkadotSenderAddress, this.ethApp.address, userThree, 5);
       const secondMessageDeliveredLog = tx.receipt.rawLogs[3];
       confirmMessageDelivered(secondMessageDeliveredLog, 2, true);
+    });
+
+    it("should use abi.encode instead of abi.encodePacked", async function () {
+      const abi = this.ethApp.abi;
+      const iChannel = new ethers.utils.Interface(abi);
+      const polkadotSenderAddress = ethers.utils.formatBytes32String("fake-address");
+
+      // Construct first message
+      const payloadOne = iChannel.functions.unlockETH.encode([polkadotSenderAddress, userTwo, 2]);
+      const messageOne = {
+        nonce: 1,
+        senderApplicationId: 'eth-app',
+        targetApplicationAddress: this.ethApp.address,
+        payload: payloadOne
+      }
+
+       // Construct commitment hash from messages
+       const messages = [messageOne];
+       const commitment = buildCommitment(messages);
+       console.log("commitment:", commitment);
+
+       console.log('--------------------------------------------------------------------------------------');
+
+       const res = await this.incentivizedReceiveChannel.testCommitment.call(
+        { commitmentHash: commitment },
+        { messages: messages }
+       )
+       console.log("res:", res);
+
+       const resTwo = await this.incentivizedReceiveChannel.testCommitmentHash.call(
+        { commitmentHash: commitment },
+        { messages: messages }
+       )
+       console.log("commitment:", resTwo);
     });
   });
 });

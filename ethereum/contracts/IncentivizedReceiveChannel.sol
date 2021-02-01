@@ -143,4 +143,18 @@ contract IncentivizedReceiveChannel {
         }
         return keccak256(contents) == commitment.commitmentHash;
     }
+
+    function testCommitment(
+        Commitment memory commitment,
+        CommitmentContents memory commitmentContents
+    ) public returns (bytes memory) {
+        return abi.encode(commitmentContents.messages);
+    }
+
+    function testCommitmentHash(
+        Commitment memory commitment,
+        CommitmentContents memory commitmentContents
+    ) public returns (bytes32) {
+        return keccak256(abi.encode(commitmentContents.messages));
+    }
 }
