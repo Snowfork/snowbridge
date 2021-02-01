@@ -60,12 +60,15 @@ mod tests {
 	#[test]
 	fn test_outbound_payload_encode() {
 		let payload: OutboundPayload<[u8; 32]> = OutboundPayload {
-			sender: hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
-			recipient: hex!["bfc3bfa25613416ed7c8b2a05c3902afd9764880"].into(),
-			amount: 10000.into(),
+			sender: hex!["1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50"],
+			recipient: hex!["ccb3c82493ac988cebe552779e7195a3a9dc651f"].into(),
+			amount: U256::from_str_radix("1000000000000000000", 10).unwrap(), // 1 ETH
 		};
 
-		println!("{:?}", payload.encode().to_hex::<String>());
+		println!("Payload:");
+		println!("  {:?}", payload);
+		println!("Payload (ABI-encoded):");
+		println!("  {:?}", payload.encode().to_hex::<String>());
 	}
 
 }

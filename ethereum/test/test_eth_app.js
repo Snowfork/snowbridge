@@ -16,6 +16,32 @@ const channelContracts = {
     inbound: artifacts.require("IncentivizedInboundChannel"),
     outbound: artifacts.require("IncentivizedOutboundChannel"),
   },
+};
+
+const deployContracts = async (channelContracts) => {
+  const channels = {
+    basic: {
+      inbound: await channelContracts.basic.inbound.new(),
+      outbound: await channelContracts.basic.outbound.new(),
+    },
+    incentivized: {
+      inbound: await channelContracts.incentivized.inbound.new(),
+      outbound: await channelContracts.incentivized.outbound.new(),
+    },
+  };
+
+  const app = await ETHApp.new(
+    {
+      inbound: channels.basic.inbound.address,
+      outbound: channels.basic.outbound.address,
+    },
+    {
+      inbound: channels.incentivized.inbound.address,
+      outbound: channels.incentivized.outbound.address,
+    },
+  );
+
+  return [channels, app]
 }
 
 require("chai")
@@ -33,27 +59,7 @@ contract("EthApp", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      this.channels = {
-        basic: {
-          inbound: await channelContracts.basic.inbound.new(),
-          outbound: await channelContracts.basic.outbound.new(),
-        },
-        incentivized: {
-          inbound: await channelContracts.incentivized.inbound.new(),
-          outbound: await channelContracts.incentivized.outbound.new(),
-        },
-      };
-
-      this.app = await ETHApp.new(
-        {
-          inbound: this.channels.basic.inbound.address,
-          outbound: this.channels.basic.outbound.address,
-        },
-        {
-          inbound: this.channels.incentivized.inbound.address,
-          outbound: this.channels.incentivized.outbound.address,
-        },
-      );
+      [this.channels, this.app] = await deployContracts(channelContracts);
     });
 
     it("should support Ethereum deposits", async function () {
@@ -126,40 +132,18 @@ contract("EthApp", function (accounts) {
   describe("withdrawals", function () {
 
     before(async function () {
+      [this.channels, this.app] = await deployContracts(channelContracts);
 
-      this.channels = {
-        basic: {
-            inbound: await channelContracts.basic.inbound.new(),
-            outbound: await channelContracts.basic.outbound.new()
-        },
-        incentivized: {
-            inbound: await channelContracts.incentivized.inbound.new(),
-            outbound: await channelContracts.incentivized.outbound.new()
-        },
-      };
+      // Lockup funds in app
+      const amount = web3.utils.toWei("2", "ether");
+      const recipient = Buffer.from(POLKADOT_ADDRESS.replace(/^0x/, ""), "hex");
 
-      this.app = await ETHApp.new(
-        {
-          inbound: this.channels.basic.inbound.address,
-          outbound: this.channels.basic.outbound.address,
-        },
-        {
-          inbound: this.channels.incentivized.inbound.address,
-          outbound: this.channels.incentivized.outbound.address,
-        },
-      );
-
-      // Prepare transaction parameters
-      const lockAmountWei = 50000;
-      const substrateRecipient = Buffer.from(POLKADOT_ADDRESS.replace(/^0x/, ""), "hex");
-
-      // Send to a substrate recipient to load contract with unlockable ETH
       await this.app.lock(
-        substrateRecipient,
+        recipient,
         0,
         {
           from: userOne,
-          value: lockAmountWei
+          value: amount
         }
       ).should.be.fulfilled;
 
@@ -167,16 +151,23 @@ contract("EthApp", function (accounts) {
 
     it("should support ETH unlocks", async function () {
 
-      const recipient = "0xBFC3bfA25613416ED7C8b2a05c3902afd9764880";
+      // receipt on the ethereum side
+      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
+
+      // expected amount to unlock
+      const amount = BigNumber(web3.utils.toWei("1", "ether"));
 
       const beforeBalance = BigNumber(await this.app.balance());
       const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
+      // Commitment payload generated using:
+      //   cd parachain/pallets/eth-app
+      //   cargo test test_outbound_payload_encode -- --nocapture
       const commitment = [
         {
           target: this.app.address,
           nonce: 0,
-          payload: "0x6dea30e7d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d000000000000000000000000bfc3bfa25613416ed7c8b2a05c3902afd97648800000000000000000000000000000000000000000000000000000000000002710"
+          payload: "0x6dea30e71aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000de0b6b3a7640000"
         }
       ]
 
@@ -185,16 +176,15 @@ contract("EthApp", function (accounts) {
       confirmUnlock(
         tx.receipt.rawLogs[0],
         this.app.address,
-        "0xBFC3bfA25613416ED7C8b2a05c3902afd9764880",
-        BigNumber(10000),
+        recipient,
+        amount,
       );
 
       const afterBalance = BigNumber(await this.app.balance());
       const afterRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
-
-      afterBalance.should.be.bignumber.equal(beforeBalance.minus(BigNumber(10000)));
-      //afterRecipientBalance.should.be.bignumber.equal(beforeRecipientBalance.plus(BigNumber(10000)));
+      afterBalance.should.be.bignumber.equal(beforeBalance.minus(amount));
+      afterRecipientBalance.minus(beforeRecipientBalance).should.be.bignumber.equal(amount);
 
     });
   });
