@@ -70,5 +70,4 @@ mod tests {
 		println!("Payload (ABI-encoded):");
 		println!("  {:?}", payload.encode().to_hex::<String>());
 	}
-
 }

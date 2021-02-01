@@ -1,19 +1,18 @@
-const ETHApp = artifacts.require("ETHApp");
-
-const Web3Utils = require("web3-utils");
-const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
-const rlp = require("rlp");
+const {
+  confirmChannelSend,
+  confirmUnlock,
+  deployContracts,
+  addressBytes,
+  ChannelId
+} = require("./helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
-const { confirmChannelSend, confirmUnlock } = require("./helpers");
-
-const BASIC_CHANNEL = 0;
-const INCENTIVIZED_CHANNEL = 1;
+const ETHApp = artifacts.require("ETHApp");
 
 const channelContracts = {
   basic: {
@@ -26,34 +25,6 @@ const channelContracts = {
   },
 };
 
-const deployContracts = async (channelContracts) => {
-  const channels = {
-    basic: {
-      inbound: await channelContracts.basic.inbound.new(),
-      outbound: await channelContracts.basic.outbound.new(),
-    },
-    incentivized: {
-      inbound: await channelContracts.incentivized.inbound.new(),
-      outbound: await channelContracts.incentivized.outbound.new(),
-    },
-  };
-
-  const app = await ETHApp.new(
-    {
-      inbound: channels.basic.inbound.address,
-      outbound: channels.basic.outbound.address,
-    },
-    {
-      inbound: channels.incentivized.inbound.address,
-      outbound: channels.incentivized.outbound.address,
-    },
-  );
-
-  return [channels, app]
-}
-
-const addressBytes = (address) => Buffer.from(address.replace(/^0x/, ""), "hex");
-
 const lockupFunds = (contract, sender, recipient, amount, channel) => {
   return contract.lock(
     addressBytes(recipient),
@@ -65,7 +36,7 @@ const lockupFunds = (contract, sender, recipient, amount, channel) => {
   )
 }
 
-contract("EthApp", function (accounts) {
+contract("ETHApp", function (accounts) {
   // Accounts
   const owner = accounts[0];
   const userOne = accounts[1];
@@ -75,14 +46,14 @@ contract("EthApp", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      [this.channels, this.app] = await deployContracts(channelContracts);
+      [this.channels, this.app] = await deployContracts(channelContracts, ETHApp);
     });
 
     it("should lock funds", async function () {
       const beforeBalance = BigNumber(await this.app.balance());
       const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
 
-      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, BASIC_CHANNEL)
+      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
@@ -103,25 +74,21 @@ contract("EthApp", function (accounts) {
       afterBalanceState.should.be.bignumber.equal(beforeBalance.plus(amount));
     });
 
-    it("should send payload to the basic channel", async function () {
+    it("should send payload to the basic outbound channel", async function () {
       const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
 
-      // Deposit Ethereum to the contract (incentivized channel)
-      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, BASIC_CHANNEL)
+      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
 
-      // Confirm payload submitted to incentivized channel
       confirmChannelSend(tx.receipt.rawLogs[1], this.channels.basic.outbound.address, this.app.address, 0)
     });
 
-    it("should send payload to the basic channel", async function () {
+    it("should send payload to the incentivized outbound channel", async function () {
       const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
 
-      // Deposit Ethereum to the contract (incentivized channel)
-      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, INCENTIVIZED_CHANNEL)
+      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Incentivized)
         .should.be.fulfilled;
 
-      // Confirm payload submitted to incentivized channel
       confirmChannelSend(tx.receipt.rawLogs[1], this.channels.incentivized.outbound.address, this.app.address, 0)
     });
 
@@ -130,13 +97,13 @@ contract("EthApp", function (accounts) {
   describe("withdrawals", function () {
 
     beforeEach(async function () {
-      [this.channels, this.app] = await deployContracts(channelContracts);
+      [this.channels, this.app] = await deployContracts(channelContracts, ETHApp);
     });
 
-    it("should support unlocks via the basic inbound channel", async function () {
+    it("should unlock via the basic inbound channel", async function () {
       // Lockup funds in app
       const lockupAmount = BigNumber(web3.utils.toWei("2", "ether"));
-      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, lockupAmount, BASIC_CHANNEL)
+      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Basic)
         .should.be.fulfilled;
 
       // recipient on the ethereum side
@@ -176,10 +143,10 @@ contract("EthApp", function (accounts) {
 
     });
 
-    it("should support unlocks via the incentivized inbound channel", async function () {
+    it("should unlock via the incentivized inbound channel", async function () {
       // Lockup funds in app
       const lockupAmount = BigNumber(web3.utils.toWei("2", "ether"));
-      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, lockupAmount, BASIC_CHANNEL)
+      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Incentivized)
         .should.be.fulfilled;
 
       // recipient on the ethereum side
@@ -202,7 +169,7 @@ contract("EthApp", function (accounts) {
         }
       ]
 
-      tx = await this.channels.basic.inbound.submit(commitment).should.be.fulfilled;
+      tx = await this.channels.incentivized.inbound.submit(commitment).should.be.fulfilled;
 
       confirmUnlock(
         tx.receipt.rawLogs[0],
