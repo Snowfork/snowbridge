@@ -1,6 +1,6 @@
-const Decoder = artifacts.require("Decoder");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ETHApp = artifacts.require("ETHApp");
+const ERC20App = artifacts.require("ERC20App");
 const TestToken = artifacts.require("TestToken");
 
 const channels = {
@@ -34,14 +34,24 @@ module.exports = function(deployer, network, accounts) {
     channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract)
 
     // Link libraries to applications
-    await deployer.deploy(Decoder);
     await deployer.deploy(ScaleCodec);
-    deployer.link(Decoder, [ETHApp]);
-    deployer.link(ScaleCodec, [ETHApp]);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App]);
 
     // Deploy applications
-    const ethApp = await deployer.deploy(
+    await deployer.deploy(
       ETHApp,
+      {
+        inbound: channels.basic.inbound.instance.address,
+        outbound: channels.basic.outbound.instance.address,
+      },
+      {
+        inbound: channels.incentivized.inbound.instance.address,
+        outbound: channels.incentivized.outbound.instance.address,
+      },
+    );
+
+    await deployer.deploy(
+      ERC20App,
       {
         inbound: channels.basic.inbound.instance.address,
         outbound: channels.basic.outbound.instance.address,

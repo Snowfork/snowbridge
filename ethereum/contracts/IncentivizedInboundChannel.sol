@@ -4,11 +4,8 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./InboundChannel.sol";
-import "./Decoder.sol";
 
 contract IncentivizedInboundChannel is InboundChannel {
-    using Decoder for bytes;
-
     uint256 public MAX_PAYLOAD_BYTE_SIZE = 1000;
     uint256 public MAX_PAYLOAD_GAS_COST = 500000;
     uint256 public EXTERNAL_CALL_COST = 21000;
