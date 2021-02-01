@@ -16,20 +16,18 @@
 //!
 //! - `burn`: Burn an ERC20 token balance.
 //!
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::prelude::*;
-use sp_std::convert::TryInto;
-use sp_core::{H160, U256};
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
 };
+use sp_std::prelude::*;
+use sp_core::{H160, U256};
+use codec::Decode;
 
-use artemis_core::{ChannelId, SubmitOutbound, Application, AssetId, MultiAsset};
-use artemis_ethereum::Log;
+use artemis_core::{ChannelId, Application, SubmitOutbound, AssetId, MultiAsset};
 
 mod payload;
 use payload::{InboundPayload, OutboundPayload};
@@ -81,21 +79,21 @@ decl_module! {
 
 		/// Burn an ERC20 token balance
 		#[weight = 0]
-		pub fn burn(origin, channel_id: ChannelId, token_addr: H160, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, channel_id: ChannelId, token: H160, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			T::Assets::withdraw(AssetId::Token(token_addr), &who, amount)?;
+			T::Assets::withdraw(AssetId::Token(token), &who, amount)?;
 
 			let message = OutboundPayload {
-				token_addr: token_addr,
-				sender_addr: who.clone(),
-				recipient_addr: recipient,
+				token: token,
+				sender: who.clone(),
+				recipient: recipient,
 				amount: amount
 			};
 
 			T::SubmitOutbound::submit(channel_id, &message.encode())?;
 
-			Self::deposit_event(RawEvent::Burned(token_addr, who.clone(), amount));
+			Self::deposit_event(RawEvent::Burned(token, who.clone(), amount));
 
 			Ok(())
 		}
@@ -106,14 +104,14 @@ decl_module! {
 impl<T: Config> Module<T> {
 	fn handle_payload(payload: &InboundPayload<T::AccountId>) -> DispatchResult {
 		T::Assets::deposit(
-			AssetId::Token(payload.token_addr),
-			&payload.recipient_addr,
+			AssetId::Token(payload.token),
+			&payload.recipient,
 			payload.amount
 		)?;
 		Self::deposit_event(
 			RawEvent::Minted(
-				payload.token_addr,
-				payload.recipient_addr.clone(),
+				payload.token,
+				payload.recipient.clone(),
 				payload.amount
 		));
 		Ok(())
@@ -121,11 +119,8 @@ impl<T: Config> Module<T> {
 }
 
 impl<T: Config> Application for Module<T> {
-	fn handle(payload: &[u8]) -> DispatchResult {
-		// Decode ethereum Log event from RLP-encoded data, and try to convert to InboundPayload
-		let payload_decoded = rlp::decode::<Log>(payload)
-			.map_err(|_| Error::<T>::InvalidPayload)?
-			.try_into()
+	fn handle(mut payload: &[u8]) -> DispatchResult {
+		let payload_decoded: InboundPayload<T::AccountId> = InboundPayload::decode(&mut payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
 		Self::handle_payload(&payload_decoded)

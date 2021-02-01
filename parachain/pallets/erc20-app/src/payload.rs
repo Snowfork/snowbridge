@@ -1,77 +1,25 @@
-
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
-use sp_std::convert::TryFrom;
+use codec::{Encode, Decode};
 
-use ethabi::{self, Event as ABIEvent, Param, ParamKind, Token};
-use artemis_ethereum::{DecodeError, log::Log, H160, U256};
+use ethabi::{self, Token};
+use artemis_ethereum::{H160, U256};
 
-static EVENT_ABI: &ABIEvent = &ABIEvent {
-	signature: "AppTransfer(address,bytes32,address,uint256)",
-	inputs: &[
-		Param { kind: ParamKind::Address, indexed: false },
-		Param { kind: ParamKind::FixedBytes(32), indexed: false },
-		Param { kind: ParamKind::Address, indexed: false },
-		Param { kind: ParamKind::Uint(256), indexed: false },
-	],
-	anonymous: false
-};
-
-
-// Message from Ethereum
-#[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+// Message from Ethereum (SCALE-encoded)
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct InboundPayload<AccountId: codec::Decode> {
-	pub sender_addr: H160,
-	pub recipient_addr: AccountId,
-	pub token_addr: H160,
+	pub sender: H160,
+	pub recipient: AccountId,
+	pub token: H160,
 	pub amount: U256,
 }
 
-impl<AccountId: codec::Decode> TryFrom<Log> for InboundPayload<AccountId>{
-	type Error = DecodeError;
-
-	fn try_from(log: Log) -> Result<Self, Self::Error> {
-		// Extract ABI-encoded data from log event
-		let tokens = EVENT_ABI.decode(log.topics, log.data)?;
-		let mut tokens_iter = tokens.iter();
-
-		let sender_addr = match tokens_iter.next().ok_or(DecodeError::InvalidPayload)? {
-			Token::Address(sender) => *sender,
-			_ => return Err(DecodeError::InvalidPayload)
-		};
-
-		let recipient_addr = match tokens_iter.next().ok_or(DecodeError::InvalidPayload)? {
-			Token::FixedBytes(data) => {
-				AccountId::decode(&mut data.as_slice()).map_err(|_| DecodeError::InvalidPayload)?
-			}
-			_ => return Err(DecodeError::InvalidPayload)
-		};
-
-		let token_addr = match tokens_iter.next().ok_or(DecodeError::InvalidPayload)? {
-			Token::Address(address) => *address,
-			_ => return Err(DecodeError::InvalidPayload)
-		};
-
-		let amount = match tokens_iter.next().ok_or(DecodeError::InvalidPayload)? {
-			Token::Uint(amount) => *amount,
-			_ => return Err(DecodeError::InvalidPayload)
-		};
-
-		Ok(Self {
-			sender_addr,
-			recipient_addr,
-			token_addr,
-			amount,
-		})
-	}
-}
-
-// Message to Ethereum
+// Message to Ethereum (ABI-encoded)
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct OutboundPayload<AccountId: codec::Encode> {
-	pub token_addr: H160,
-	pub sender_addr: AccountId,
-	pub recipient_addr: H160,
+	pub token: H160,
+	pub sender: AccountId,
+	pub recipient: H160,
 	pub amount: U256,
 }
 
@@ -79,42 +27,11 @@ impl<AccountId: codec::Encode> OutboundPayload<AccountId> {
 	/// ABI-encode this payload
 	pub fn encode(&self) -> Vec<u8> {
 		let tokens = vec![
-			Token::Address(self.token_addr),
-			Token::FixedBytes(self.sender_addr.encode()),
-			Token::Address(self.recipient_addr),
+			Token::Address(self.token),
+			Token::FixedBytes(self.sender.encode()),
+			Token::Address(self.recipient),
 			Token::Uint(self.amount)
 		];
-		ethabi::encode(tokens.as_ref())
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use hex_literal::hex;
-
-	const LOG_DATA: [u8; 187] = hex!("
-		f8b994c3a1ca063da8d4d3b2c697316ea6e69ccd263a44e1a0be9215fdb4
-		23dfc80cce917dc48fa52d3e247875e3d7cea229d3f28661ad0f60b88000
-		0000000000000000000000cffeaaf7681c89285d65cfbe808b80e5026965
-		73d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a5
-		6da27d000000000000000000000000f465670390f5214ed43d5027f31ed3
-		3764f0448700000000000000000000000000000000000000000000000000
-		00000000000002
-	");
-
-	#[test]
-	fn test_from_log_conversion() {
-		let log: Log = rlp::decode(&LOG_DATA).unwrap();
-
-		assert_eq!(
-			InboundPayload::try_from(log).unwrap(),
-			InboundPayload {
-				sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
-				recipient_addr: hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
-				token_addr: hex!["f465670390f5214ed43d5027f31ed33764f04487"].into(),
-				amount: 2.into()
-			}
-		);
+		ethabi::encode_function("unlock(address,bytes32,address,uint256)", tokens.as_ref())
 	}
 }

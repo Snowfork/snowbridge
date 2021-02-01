@@ -1,10 +1,9 @@
-use ethabi::Token;
-use artemis_ethereum::{H160, U256};
-
-use codec::{Encode, Decode};
-
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
+use codec::{Encode, Decode};
+
+use ethabi::{self, Token};
+use artemis_ethereum::{H160, U256};
 
 // Message from Ethereum (SCALE-encoded)
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
@@ -33,8 +32,6 @@ impl<AccountId: codec::Encode> OutboundPayload<AccountId> {
 		ethabi::encode_function("unlock(bytes32,address,uint256)", tokens.as_ref())
 	}
 }
-
-
 
 #[cfg(test)]
 mod tests {
