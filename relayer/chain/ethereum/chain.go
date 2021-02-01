@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
@@ -50,21 +49,7 @@ func NewChain(config *Config) (*Chain, error) {
 func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.Header) error {
 	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
-	id := substrate.ChannelID{IsBasic: true}
-	contract, err := inbound.NewContract(common.HexToAddress(ch.config.Channels.Basic.Inbound), ch.conn.client)
-	if err != nil {
-		return err
-	}
-	contracts[id] = contract
-
-	id = substrate.ChannelID{IsBasic: true}
-	contract, err = inbound.NewContract(common.HexToAddress(ch.config.Channels.Incentivized.Inbound), ch.conn.client)
-	if err != nil {
-		return err
-	}
-	contracts[id] = contract
-
-	writer, err := NewWriter(ch.conn, subMessages, contracts, ch.log)
+	writer, err := NewWriter(ch.config, ch.conn, subMessages, contracts, ch.log)
 	if err != nil {
 		return err
 	}

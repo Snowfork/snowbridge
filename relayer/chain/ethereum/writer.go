@@ -6,11 +6,9 @@ package ethereum
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -22,14 +20,16 @@ import (
 )
 
 type Writer struct {
+	config    *Config
 	conn      *Connection
 	contracts map[substrate.ChannelID]*inbound.Contract
 	messages  <-chan []chain.Message
 	log       *logrus.Entry
 }
 
-func NewWriter(conn *Connection, messages <-chan []chain.Message, contracts map[substrate.ChannelID]*inbound.Contract, log *logrus.Entry) (*Writer, error) {
+func NewWriter(config *Config, conn *Connection, messages <-chan []chain.Message, contracts map[substrate.ChannelID]*inbound.Contract, log *logrus.Entry) (*Writer, error) {
 	return &Writer{
+		config:    config,
 		conn:      conn,
 		contracts: contracts,
 		messages:  messages,
@@ -38,6 +38,21 @@ func NewWriter(conn *Connection, messages <-chan []chain.Message, contracts map[
 }
 
 func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
+
+	id := substrate.ChannelID{IsBasic: true}
+	contract, err := inbound.NewContract(common.HexToAddress(wr.config.Channels.Basic.Inbound), wr.conn.client)
+	if err != nil {
+		return err
+	}
+	wr.contracts[id] = contract
+
+	id = substrate.ChannelID{IsBasic: true}
+	contract, err = inbound.NewContract(common.HexToAddress(wr.config.Channels.Incentivized.Inbound), wr.conn.client)
+	if err != nil {
+		return err
+	}
+	wr.contracts[id] = contract
+
 	eg.Go(func() error {
 		return wr.writeLoop(ctx)
 	})
@@ -77,7 +92,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 func (wr *Writer) signerFn(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
 	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, wr.conn.kp.PrivateKey())
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 	return signedTx, nil
 }
@@ -89,9 +104,9 @@ func (wr *Writer) Write(ctx context.Context, msg *chain.SubstrateOutboundMessage
 		return fmt.Errorf("Unknown contract")
 	}
 
-	options := bind.TransactOpts {
-		From: wr.conn.kp.CommonAddress(),
-		Signer: wr.signerFn,
+	options := bind.TransactOpts{
+		From:    wr.conn.kp.CommonAddress(),
+		Signer:  wr.signerFn,
 		Context: ctx,
 	}
 
@@ -99,8 +114,8 @@ func (wr *Writer) Write(ctx context.Context, msg *chain.SubstrateOutboundMessage
 	for _, m := range msg.Commitment {
 		messages = append(messages,
 			inbound.InboundChannelMessage{
-				Target: m.Target,
-				Nonce: m.Nonce,
+				Target:  m.Target,
+				Nonce:   m.Nonce,
 				Payload: m.Payload,
 			},
 		)
@@ -108,22 +123,13 @@ func (wr *Writer) Write(ctx context.Context, msg *chain.SubstrateOutboundMessage
 
 	tx, err := contract.Submit(&options, messages)
 	if err != nil {
-		 wr.log.WithError(err).Error("Failed to submit transaction")
-		 return err
+		wr.log.WithError(err).Error("Failed to submit transaction")
+		return err
 	}
 
 	wr.log.WithFields(logrus.Fields{
-		"txHash":        tx.Hash().Hex(),
+		"txHash": tx.Hash().Hex(),
 	}).Info("Transaction submitted")
 
 	return nil
-}
-
-func loadContractABI(abiString string) (*abi.ABI, error) {
-	contractABI, err := abi.JSON(strings.NewReader(abiString))
-	if err != nil {
-		return nil, err
-	}
-
-	return &contractABI, nil
 }
