@@ -6,7 +6,6 @@ import "./OutboundChannel.sol";
 
 // BasicOutboundChannel is a basic channel that just sends messages with a nonce.
 contract BasicOutboundChannel is OutboundChannel {
-
     constructor() {
         nonce = 0;
     }
@@ -14,10 +13,7 @@ contract BasicOutboundChannel is OutboundChannel {
     /**
      * @dev Sends a message across the channel
      */
-    function submit(bytes memory payload)
-        public
-        override
-    {
+    function submit(bytes memory payload) public override {
         emit Message(msg.sender, nonce, payload);
         nonce = nonce + 1;
     }
