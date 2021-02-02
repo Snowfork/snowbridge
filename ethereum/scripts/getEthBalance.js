@@ -5,6 +5,9 @@
 module.exports = async () => {
 
     try {
+
+        console.log("accounts ", await web3.eth.getAccounts());
+
         const account = process.argv[4].toString();
         if (!account) {
             console.log("Please provide an Ethereum address to check balance")

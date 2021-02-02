@@ -34,8 +34,8 @@ pub struct Proof {
 	pub block_hash: H256,
 	// The index of the transaction (and receipt) within the block.
 	pub tx_index: u32,
-	// Merkle proof keys and values
-	pub merkle_proof: (Vec<Vec<u8>>, Vec<Vec<u8>>),
+	// Proof keys and values
+	pub data: (Vec<Vec<u8>>, Vec<Vec<u8>>),
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]

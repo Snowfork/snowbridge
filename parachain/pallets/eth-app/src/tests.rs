@@ -46,11 +46,11 @@ fn burn_should_emit_bridge_event() {
 		assert_ok!(ETH::burn(
 			Origin::signed(bob.clone()),
 			ChannelId::Incentivized,
-			recipient,
+			recipient.clone(),
 			20.into()));
 
 		assert_eq!(
-			MockEvent::test_events(RawEvent::Burned(bob, 20.into())),
+			MockEvent::test_events(RawEvent::Burned(bob, recipient, 20.into())),
 			last_event()
 		);
 	});

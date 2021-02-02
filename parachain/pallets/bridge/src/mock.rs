@@ -93,11 +93,24 @@ impl Application for MockETHApp {
 	}
 }
 
+pub struct MockERC20App;
+
+impl Application for MockERC20App {
+	fn handle(_: &[u8]) -> DispatchResult {
+		Ok(())
+	}
+
+	fn address() -> H160 {
+		H160::zero()
+	}
+}
+
+
 impl Config for Test {
 	type Event = TestEvent;
 	type Verifier = MockVerifier;
 	type AppETH = MockETHApp;
-	type AppERC20 = ();
+	type AppERC20 = MockERC20App;
 	type MessageCommitment = ();
 }
 

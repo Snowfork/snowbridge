@@ -1,5 +1,6 @@
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::RuntimeDebug;
+use sp_core::H160;
 use codec::{Encode, Decode};
 
 use crate::envelope::Envelope;
@@ -19,5 +20,5 @@ pub trait InboundChannel<AccountId>
 }
 
 pub trait OutboundChannel {
-	fn submit(&self, payload: &[u8]) -> DispatchResult;
+	fn submit(&self, target: H160, payload: &[u8]) -> DispatchResult;
 }

@@ -31,13 +31,7 @@ pub trait Verifier {
 
 /// Outbound submission for applications
 pub trait SubmitOutbound {
-	fn submit(channel_id: ChannelId, payload: &[u8]) -> DispatchResult;
-}
-
-impl SubmitOutbound for () {
-	fn submit(channel_id: ChannelId, payload: &[u8]) -> DispatchResult {
-		Ok(())
-	}
+	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult;
 }
 
 /// An Application handles message payloads
@@ -47,16 +41,6 @@ pub trait Application {
 	fn handle(payload: &[u8]) -> DispatchResult;
 
 	fn address() -> H160;
-}
-
-impl Application for () {
-	fn handle(payload: &[u8]) -> DispatchResult {
-		Ok(())
-	}
-
-	fn address() -> H160 {
-		H160::zero()
-	}
 }
 
 /// Add a message to a commitment

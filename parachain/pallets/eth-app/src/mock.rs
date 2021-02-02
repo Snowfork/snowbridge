@@ -1,14 +1,18 @@
 // Mock runtime
 
 use crate::{Module, Config};
-use sp_core::H256;
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
+use sp_core::{H160, H256};
+use frame_support::{
+	impl_outer_origin, impl_outer_event, parameter_types,
+	weights::Weight,
+	dispatch::DispatchResult,
+};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
 use frame_system as system;
 
-use artemis_core::AssetId;
+use artemis_core::{ChannelId, AssetId, SubmitOutbound};
 use artemis_assets::SingleAssetAdaptor;
 
 impl_outer_origin! {
@@ -70,6 +74,14 @@ impl artemis_assets::Config for MockRuntime {
 	type Event = MockEvent;
 }
 
+pub struct MockSubmitOutbound;
+
+impl SubmitOutbound for MockSubmitOutbound {
+	fn submit(_: ChannelId, _: H160, _: &[u8]) -> DispatchResult {
+		Ok(())
+	}
+}
+
 parameter_types! {
 	pub const EthAssetId: AssetId = AssetId::ETH;
 }
@@ -77,7 +89,7 @@ parameter_types! {
 impl Config for MockRuntime {
 	type Event = MockEvent;
 	type Asset = Asset;
-	type SubmitOutbound = ();
+	type SubmitOutbound = MockSubmitOutbound;
 }
 
 pub type System = system::Module<MockRuntime>;

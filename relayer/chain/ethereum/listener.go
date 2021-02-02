@@ -109,12 +109,6 @@ func (li *Listener) pollEventsAndHeaders(
 
 			if li.messages == nil {
 				li.log.Info("Not polling events since channel is nil")
-			} else {
-				for _, contract := range li.contracts {
-					li.log.WithFields(logrus.Fields{
-						"contract": contract,
-					}).Debug("Polling contract events")
-				}
 			}
 
 			finalizedBlockNumber := gethheader.Number.Uint64() - descendantsUntilFinal

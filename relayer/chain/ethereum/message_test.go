@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type TestProof substrate.MerkleProof
+type TestProof substrate.ProofData
 
 // For interface gethTrie.KeyValueReader
 func (tp *TestProof) Get(key []byte) ([]byte, error) {
@@ -67,7 +67,7 @@ func TestMessage_Proof(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	proofNodes := TestProof(*msg.Proof.MerkleProof)
+	proofNodes := TestProof(*msg.Proof.Data)
 	provenReceipt, err := gethTrie.VerifyProof(block.ReceiptHash(), key, &proofNodes)
 	assert.Nil(t, err)
 	assert.Equal(t, provenReceipt, receipt5Encoded)

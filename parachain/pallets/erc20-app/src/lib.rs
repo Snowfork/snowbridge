@@ -57,8 +57,8 @@ decl_event! {
 	where
 		AccountId = <T as system::Config>::AccountId,
 	{
-		Burned(H160, AccountId, U256),
-		Minted(H160, AccountId, U256),
+		Burned(H160, AccountId, H160, U256),
+		Minted(H160, H160, AccountId, U256),
 	}
 }
 
@@ -87,13 +87,13 @@ decl_module! {
 			let message = OutboundPayload {
 				token: token,
 				sender: who.clone(),
-				recipient: recipient,
+				recipient: recipient.clone(),
 				amount: amount
 			};
 
-			T::SubmitOutbound::submit(channel_id, &message.encode())?;
+			T::SubmitOutbound::submit(channel_id, Address::get(), &message.encode())?;
 
-			Self::deposit_event(RawEvent::Burned(token, who.clone(), amount));
+			Self::deposit_event(RawEvent::Burned(token, who.clone(), recipient, amount));
 
 			Ok(())
 		}
@@ -111,6 +111,7 @@ impl<T: Config> Module<T> {
 		Self::deposit_event(
 			RawEvent::Minted(
 				payload.token,
+				payload.sender,
 				payload.recipient.clone(),
 				payload.amount
 		));

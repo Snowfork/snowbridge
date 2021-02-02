@@ -19,14 +19,15 @@ use crate::{
 fn test_submit_outbound_basic() {
 	new_tester().execute_with(|| {
 		let chan_id = ChannelId::Basic;
+		let target = H160::zero();
 		let channel = make_outbound_channel::<Test>(chan_id);
 
-		assert_ok!(channel.submit(&vec![0, 1, 2]));
+		assert_ok!(channel.submit(target, &vec![0, 1, 2]));
 
 		let data: OutboundChannelData = OutboundChannels::get(chan_id);
 		assert_eq!(data.nonce, 1);
 
-		assert_ok!(channel.submit(&vec![0, 1, 2]));
+		assert_ok!(channel.submit(target, &vec![0, 1, 2]));
 
 		let data: OutboundChannelData = OutboundChannels::get(chan_id);
 		assert_eq!(data.nonce, 2);
@@ -38,14 +39,15 @@ fn test_submit_outbound_basic() {
 fn test_submit_outbound_incentivized() {
 	new_tester().execute_with(|| {
 		let chan_id = ChannelId::Incentivized;
+		let target = H160::zero();
 		let channel = make_outbound_channel::<Test>(chan_id);
 
-		assert_ok!(channel.submit(&vec![0, 1, 2]));
+		assert_ok!(channel.submit(target, &vec![0, 1, 2]));
 
 		let data: OutboundChannelData = OutboundChannels::get(chan_id);
 		assert_eq!(data.nonce, 1);
 
-		assert_ok!(channel.submit(&vec![0, 1, 2]));
+		assert_ok!(channel.submit(target, &vec![0, 1, 2]));
 
 		let data: OutboundChannelData = OutboundChannels::get(chan_id);
 		assert_eq!(data.nonce, 2);
@@ -105,7 +107,7 @@ fn test_submit_inbound_invalid_source_channel() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				merkle_proof: Default::default()
+				data: Default::default()
 			},
 		};
 		assert_noop!(
@@ -128,7 +130,7 @@ fn test_submit_inbound_basic() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				merkle_proof: Default::default()
+				data: Default::default()
 			},
 		};
 		assert_ok!(Bridge::submit(origin.clone(), message_1));
@@ -141,7 +143,7 @@ fn test_submit_inbound_basic() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				merkle_proof: Default::default()
+				data: Default::default()
 			},
 		};
 		assert_ok!(Bridge::submit(origin.clone(), message_2));
@@ -162,7 +164,7 @@ fn test_submit_inbound_basic_bad_nonce() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				merkle_proof: Default::default()
+				data: Default::default()
 			},
 		};
 		assert_ok!(Bridge::submit(origin.clone(), message.clone()));
@@ -190,7 +192,7 @@ fn test_submit_inbound_incentivized() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				merkle_proof: Default::default()
+				data: Default::default()
 			},
 		};
 		assert_ok!(Bridge::submit(origin.clone(), message_1));
@@ -203,7 +205,7 @@ fn test_submit_inbound_incentivized() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				merkle_proof: Default::default()
+				data: Default::default()
 			},
 		};
 		assert_ok!(Bridge::submit(origin.clone(), message_2));
@@ -224,7 +226,7 @@ fn test_submit_inbound_incentivized_bad_nonce() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				merkle_proof: Default::default()
+				data: Default::default()
 			},
 		};
 		assert_ok!(Bridge::submit(origin.clone(), message.clone()));

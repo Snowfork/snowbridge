@@ -158,7 +158,7 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
   "Proof": {
     "blockHash": "H256",
     "txIndex": "u32",
-    "merkle_proof": "(Vec<Vec<u8>>, Vec<Vec<u8>>)"
+    "data": "(Vec<Vec<u8>>, Vec<Vec<u8>>)"
   },
   "EthereumHeader": {
     "parentHash": "H256",

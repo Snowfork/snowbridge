@@ -29,7 +29,7 @@ func MakeMessageFromEvent(event *outbound.ContractMessage, receiptsTrie *etrie.T
 		return nil, err
 	}
 
-	proof := substrate.NewMerkleProof()
+	proof := substrate.NewProofData()
 	err = receiptsTrie.Prove(receiptKey, 0, proof)
 	if err != nil {
 		return nil, err
@@ -38,9 +38,9 @@ func MakeMessageFromEvent(event *outbound.ContractMessage, receiptsTrie *etrie.T
 	message := substrate.Message{
 		Data: buf.Bytes(),
 		Proof: substrate.Proof{
-			BlockHash:   types.NewH256(event.Raw.BlockHash.Bytes()),
-			TxIndex:     types.NewU32(uint32(event.Raw.TxIndex)),
-			MerkleProof: proof,
+			BlockHash: types.NewH256(event.Raw.BlockHash.Bytes()),
+			TxIndex:   types.NewU32(uint32(event.Raw.TxIndex)),
+			Data:      proof,
 		},
 	}
 

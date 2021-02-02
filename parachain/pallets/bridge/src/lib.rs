@@ -131,9 +131,9 @@ impl<T: Config> Module<T> {
 }
 
 impl<T: Config> SubmitOutbound for Module<T> {
-	fn submit(channel_id: ChannelId, payload: &[u8]) -> DispatchResult {
+	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult {
 		// Construct channel object from storage
 		let channel = make_outbound_channel::<T>(channel_id);
-		channel.submit(payload)
+		channel.submit(target, payload)
 	}
 }

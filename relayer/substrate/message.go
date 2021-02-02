@@ -16,31 +16,31 @@ type Message struct {
 }
 
 type Proof struct {
-	BlockHash   types.H256
-	TxIndex     types.U32
-	MerkleProof *MerkleProof
+	BlockHash types.H256
+	TxIndex   types.U32
+	Data      *ProofData
 }
 
-type MerkleProof struct {
+type ProofData struct {
 	Keys   []types.Bytes
 	Values []types.Bytes
 }
 
-func NewMerkleProof() *MerkleProof {
-	return &MerkleProof{
+func NewProofData() *ProofData {
+	return &ProofData{
 		Keys:   make([]types.Bytes, 0),
 		Values: make([]types.Bytes, 0),
 	}
 }
 
 // For interface ethdb.KeyValueWriter
-func (p *MerkleProof) Put(key []byte, value []byte) error {
+func (p *ProofData) Put(key []byte, value []byte) error {
 	p.Keys = append(p.Keys, types.NewBytes(gethCommon.CopyBytes(key)))
 	p.Values = append(p.Values, types.NewBytes(gethCommon.CopyBytes(value)))
 	return nil
 }
 
 // For interface ethdb.KeyValueWriter
-func (p *MerkleProof) Delete(_ []byte) error {
+func (p *ProofData) Delete(_ []byte) error {
 	return fmt.Errorf("Delete should never be called to generate a proof")
 }

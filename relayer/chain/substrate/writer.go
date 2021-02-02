@@ -157,7 +157,6 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 	return nil
 }
 
-// WriteMessages submits a "Bridge.submit_bulk" call
 func (wr *Writer) WriteMessages(ctx context.Context, msgs []*chain.EthereumOutboundMessage) error {
 	for _, msg := range msgs {
 

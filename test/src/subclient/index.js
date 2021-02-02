@@ -30,7 +30,7 @@ class SubClient {
                 "Proof": {
                   "blockHash": "H256",
                   "txIndex": "u32",
-                  "merkleProof": "(Vec<Vec<u8>>, Vec<Vec<u8>>)"
+                  "data": "(Vec<Vec<u8>>, Vec<Vec<u8>>)"
                 },
                 "EthereumHeader": {
                   "parentHash": "H256",

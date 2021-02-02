@@ -1,13 +1,11 @@
-# Relayer <!-- omit in toc -->
+# Relayer
 
 Relayer service that streams transactions from blockchain networks, packages data into messages, and sends the packets to the correlated bridge component.
 
-Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe/ChainBridge). This relayer service
-is inspired by their design and incorporates some of their code.
+Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe/ChainBridge). Our implementation is inspired by their design and incorporates some of their code.
 
 - [Requirements](#requirements)
   - [Development](#development)
-  - [Dependencies](#dependencies)
 - [Configuration](#configuration)
   - [Secrets](#secrets)
 - [Build](#build)
@@ -38,57 +36,30 @@ To enable revive for linting in VS-code, add the following to your config:
 }
 ```
 
-### Dependencies
-
-The relayer depends on the following:
-
-- A running parachain
-- An ethereum chain with our contracts deployed
-
-Open a new terminal, and start the parachain
-
-```bash
-cd ../parachain
-target/release/artemis-node --dev
-```
-
-To ensure the ethereum contracts are deployed, follow the [Setup](../ethereum/README.md#set-up) guide.
-
 ## Configuration
 
 Before running the relayer, it needs to be configured first. By default the configuration file is read from  `~/.config/artemis-relay/config.toml`, but this can be overriden by passing the `--config PATH` flag to the relayer binary.
 
-To autogenerate a valid config file, run:
-
-```bash
-scripts/make-config.sh > /tmp/relay-config.toml
-
-# verify that the config looks like valid TOML
-cat /tmp/relay-config.toml
-```
-
-Or, manually create a config file using the template below:
+Example Configuration:
 
 ```toml
 [ethereum]
-endpoint = "ws://localhost:9545/"
-descendants-until-final = 35
+endpoint = "ws://localhost:8545/"
+descendants-until-final = 0
 
-[ethereum.bridge]
-address = "0x17f7C1e314180D8b8588CA50cF09A0e0847c77F6"
-abi = "/tmp/Bridge.json"
+[ethereum.channels.basic]
+inbound = "0x992B9df075935E522EC7950F37eC8557e86f6fdb"
+outbound = "0x2ffA5ecdBe006d30397c7636d3e015EEE251369F"
 
-[ethereum.apps.eth]
-address = "0x95aF4D3B8938063486fE23C8D8867deD6aee5646"
-abi = "/tmp/ETHApp.json"
-
-[ethereum.apps.erc20]
-address = "0xb664F267fa8775563E2aD1cED44a0996198F7eE0"
-abi = "/tmp/ERC20App.json"
+[ethereum.channels.incentivized]
+inbound = "0xFc97A6197dc90bef6bbEFD672742Ed75E9768553"
+outbound = "0xEDa338E4dC46038493b885327842fD3E301CaB39"
 
 [substrate]
-endpoint = "ws://127.0.0.1:9944/"
+endpoint = "ws://127.0.0.1:11144/"
 ```
+
+NOTE: For development and testing, we use our E2E test stack described [here](../test/README.md). It automatically generates a suitable configuration for testing.
 
 ### Secrets
 
@@ -109,15 +80,15 @@ mage build
 
 ## Run
 
-Run the relayer with the config generated in [Configuration](#configuration).
+Run the relayer with the configuration described in [Configuration](#configuration).
 
 ```bash
-build/artemis-relay run --config /tmp/relay-config.toml
+build/artemis-relay run --config config.toml
 ```
 
 ## Tests
 
-This will run both unit and integration tests. Please ensure that both the ethereum and substrate chains are running as described in [Service Dependencies](#service-dependencies).
+To run both unit and integration tests, run the following command:
 
 ```bash
 mage test

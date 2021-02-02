@@ -159,13 +159,13 @@ pub fn ethereum_header_proof_from_file(block_num: u64) -> Vec<EthashProofData> {
 		.to_double_node_with_merkle_proof_vec(EthashProofData::from_values)
 }
 
-pub fn message_with_receipt_proof(payload: Vec<u8>, block_hash: H256, merkle_proof: (Vec<Vec<u8>>, Vec<Vec<u8>>)) -> Message {
+pub fn message_with_receipt_proof(payload: Vec<u8>, block_hash: H256, proof_data: (Vec<Vec<u8>>, Vec<Vec<u8>>)) -> Message {
 	Message {
 		data: payload,
 		proof: Proof {
 			block_hash,
 			tx_index: 0,
-			merkle_proof,
+			data: proof_data,
 		},
 	}
 }

@@ -413,7 +413,7 @@ impl<T: Config> Module<T> {
 			.ok_or(Error::<T>::MissingHeader)?
 			.header;
 
-		let receipt = header.check_receipt_proof(&proof.merkle_proof.1)
+		let receipt = header.check_receipt_proof(&proof.data.1)
 			.ok_or(Error::<T>::InvalidProof)?;
 
 		let finalized_block = FinalizedBlock::get();
