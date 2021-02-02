@@ -30,7 +30,7 @@ See [test/README.md](test/README.md)
 
 ## Usage
 
-To test out and use the bridge, please refer to to the [Tests](Tests) section above.
+To test out and use the bridge, please refer to to the [Tests](#Tests) section above.
 
 ## Security
 
