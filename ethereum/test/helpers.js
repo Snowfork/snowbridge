@@ -1,7 +1,7 @@
 const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
 
-const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedPayload, expectedNonce = 0) => {
+const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
   outChannelLogFields = [
     {
       type: 'address',
@@ -22,7 +22,9 @@ const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, exp
   channelEvent.address.should.be.equal(channelAddress);
   decodedEvent.source.should.be.equal(sendingAppAddress);
   decodedEvent.nonce.should.be.equal('' + expectedNonce);
-  decodedEvent.payload.should.be.equal(expectedPayload);
+  if (expectedPayload) {
+    decodedEvent.payload.should.be.equal(expectedPayload);
+  }
 };
 
 const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmount) => {
