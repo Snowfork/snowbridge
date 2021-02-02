@@ -1,14 +1,18 @@
 package ethereum
 
 type Config struct {
-	Endpoint              string                  `mapstructure:"endpoint"`
-	PrivateKey            string                  `mapstructure:"private-key"`
-	DescendantsUntilFinal byte                    `mapstructure:"descendants-until-final"`
-	Bridge                ContractInfo            `mapstructure:"bridge"`
-	Apps                  map[string]ContractInfo `mapstructure:"apps"`
+	Endpoint              string         `mapstructure:"endpoint"`
+	PrivateKey            string         `mapstructure:"private-key"`
+	DescendantsUntilFinal byte           `mapstructure:"descendants-until-final"`
+	Channels              ChannelsConfig `mapstructure:"channels"`
 }
 
-type ContractInfo struct {
-	Address string `mapstructure:"address"`
-	AbiPath string `mapstructure:"abi"`
+type ChannelsConfig struct {
+	Basic        ChannelConfig `mapstructure:"basic"`
+	Incentivized ChannelConfig `mapstructure:"incentivized"`
+}
+
+type ChannelConfig struct {
+	Inbound  string `mapstructure:"inbound"`
+	Outbound string `mapstructure:"outbound"`
 }

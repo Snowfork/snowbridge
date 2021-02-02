@@ -7,9 +7,9 @@ use hex_literal::hex;
 use codec::Decode;
 use crate::RawEvent;
 
-use artemis_core::SingleAsset;
+use artemis_core::{SingleAsset, ChannelId};
 
-use crate::payload::InPayload;
+use crate::payload::InboundPayload;
 
 fn last_event() -> MockEvent {
 	System::events().pop().expect("Event expected").event
@@ -24,14 +24,14 @@ fn mints_after_handling_ethereum_event() {
 	new_tester().execute_with(|| {
 		let bob: AccountId = Keyring::Bob.into();
 
-		let recipient_addr = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
-		let event: InPayload<TestAccountId> = InPayload {
-			sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
-			recipient_addr,
+		let recipient = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
+		let payload: InboundPayload<TestAccountId> = InboundPayload {
+			sender: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
+			recipient,
 			amount: 10.into(),
 		};
 
-		assert_ok!(ETH::handle_event(event));
+		assert_ok!(ETH::handle_payload(&payload));
 		assert_eq!(Asset::balance(&bob), 10.into());
 	});
 }
@@ -45,11 +45,12 @@ fn burn_should_emit_bridge_event() {
 
 		assert_ok!(ETH::burn(
 			Origin::signed(bob.clone()),
-			recipient,
+			ChannelId::Incentivized,
+			recipient.clone(),
 			20.into()));
 
 		assert_eq!(
-			MockEvent::test_events(RawEvent::Transfer(bob, recipient, 20.into())),
+			MockEvent::test_events(RawEvent::Burned(bob, recipient, 20.into())),
 			last_event()
 		);
 	});

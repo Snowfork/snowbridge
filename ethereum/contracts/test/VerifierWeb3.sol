@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2;
+pragma solidity >=0.7.6;
 
 contract VerifierWeb3 {
     address public operator;
@@ -8,7 +8,7 @@ contract VerifierWeb3 {
      * @dev constructor sets the operator's address
      * @param _operator address of the contract's operator
      */
-    constructor(address _operator) public {
+    constructor(address _operator) {
         operator = _operator;
     }
 

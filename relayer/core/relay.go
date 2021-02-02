@@ -11,14 +11,13 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/ethereum/go-ethereum/common"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -48,7 +47,7 @@ type Config struct {
 }
 
 func NewRelay() (*Relay, error) {
-	config, err := loadConfig()
+	config, err := LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +66,13 @@ func NewRelay() (*Relay, error) {
 	headersOnly := config.Relay.HeadersOnly
 	if direction == Bidirectional || direction == EthToSub {
 		// channel for messages from ethereum
-		var ethMessages chan chain.Message
+		var ethMessages chan []chain.Message
 		if !headersOnly {
-			ethMessages = make(chan chain.Message, 1)
+			ethMessages = make(chan []chain.Message, 1)
 		}
-		// channel for headers from ethereum
-		ethHeaders := make(chan chain.Header, 1)
+		// channel for headers from ethereum (it's a blocking channel so that we
+		// can guarantee that a header is forwarded before we send dependent messages)
+		ethHeaders := make(chan chain.Header)
 
 		err := ethChain.SetSender(ethMessages, ethHeaders)
 		if err != nil {
@@ -86,9 +86,9 @@ func NewRelay() (*Relay, error) {
 
 	if direction == Bidirectional || direction == SubToEth {
 		// channel for messages from substrate
-		var subMessages chan chain.Message
+		var subMessages chan []chain.Message
 		if !headersOnly {
-			subMessages = make(chan chain.Message, 1)
+			subMessages = make(chan []chain.Message, 1)
 		}
 
 		err := subChain.SetSender(subMessages, nil)
@@ -154,11 +154,41 @@ func (re *Relay) Start() {
 	}
 	log.WithField("name", re.subChain.Name()).Info("Started chain")
 
-	// Wait until a fatal error or signal is raised
-	if err := eg.Wait(); err != nil {
-		if !errors.Is(err, context.Canceled) {
+	notifyWaitDone := make(chan struct{})
+
+	go func() {
+		err := eg.Wait()
+		if err != nil && !errors.Is(err, context.Canceled) {
 			log.WithField("error", err).Error("Encountered an unrecoverable failure")
 		}
+		close(notifyWaitDone)
+	}()
+
+	// Wait until a fatal error or signal is raised
+	select {
+	case <-notifyWaitDone:
+		break
+	case <-ctx.Done():
+		// Goroutines are either shutting down or deadlocked.
+		// Give them a second...
+		time.Sleep(time.Second)
+		_, stillWaiting := <-notifyWaitDone
+
+		if !stillWaiting {
+			// All goroutines have ended
+			break
+		}
+
+		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
+		re.ethChain.Stop()
+		re.subChain.Stop()
+		relayProc, err := os.FindProcess(os.Getpid())
+		if err != nil {
+			log.WithError(err).Error("Failed to kill this process")
+			return
+		}
+		relayProc.Kill()
+		return
 	}
 
 	// Shutdown chains
@@ -166,7 +196,7 @@ func (re *Relay) Start() {
 	re.subChain.Stop()
 }
 
-func loadConfig() (*Config, error) {
+func LoadConfig() (*Config, error) {
 	var config Config
 	err := viper.Unmarshal(&config)
 	if err != nil {
@@ -178,10 +208,6 @@ func loadConfig() (*Config, error) {
 		direction != EthToSub &&
 		direction != SubToEth {
 		return nil, fmt.Errorf("'direction' has invalid value %d", direction)
-	}
-
-	if config.Relay.HeadersOnly {
-		config.Eth.Apps = map[string]ethereum.ContractInfo{}
 	}
 
 	// Load secrets from environment variables
@@ -199,12 +225,6 @@ func loadConfig() (*Config, error) {
 		return nil, fmt.Errorf("environment variable not set: ARTEMIS_SUBSTRATE_KEY")
 	}
 	config.Sub.PrivateKey = value
-
-	// Copy over Ethereum application addresses to the Substrate config
-	config.Sub.Targets = make(map[string][20]byte)
-	for k, v := range config.Eth.Apps {
-		config.Sub.Targets[k] = common.HexToAddress(v.Address)
-	}
 
 	return &config, nil
 }

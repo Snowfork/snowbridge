@@ -13,7 +13,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionSource},
 };
 use sp_runtime::traits::{
-	BlakeTwo256, Convert, Block as BlockT, AccountIdLookup, Verify, IdentifyAccount,
+	BlakeTwo256, Keccak256, Convert, Block as BlockT, AccountIdLookup, Verify, IdentifyAccount,
 };
 use sp_api::impl_runtime_apis;
 
@@ -37,9 +37,11 @@ pub use frame_support::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
 };
-use pallet_transaction_payment::CurrencyAdapter;
+use pallet_transaction_payment::{FeeDetails, CurrencyAdapter};
+use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::AssetId;
+pub use artemis_core::{AssetId, Application};
+
 pub use verifier_lightclient::EthereumHeader;
 
 use polkadot_parachain::primitives::Sibling;
@@ -105,7 +107,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("artemis-node"),
 	impl_name: create_runtime_str!("artemis-node"),
 	authoring_version: 1,
-	spec_version: 1,
+	spec_version: 100,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -235,12 +237,10 @@ impl pallet_transaction_payment::Config for Runtime {
 
 // Cumulus and XCMP
 
-impl cumulus_parachain_upgrade::Config for Runtime {
+impl cumulus_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
-}
-
-impl cumulus_message_broker::Config for Runtime {
+	type SelfParaId = parachain_info::Module<Runtime>;
 	type DownwardMessageHandlers = ();
 	type HrmpMessageHandlers = ();
 }
@@ -325,8 +325,8 @@ impl Config for XcmConfig {
 impl xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type UpwardMessageSender = MessageBroker;
-	type HrmpMessageSender = MessageBroker;
+	type UpwardMessageSender = ParachainSystem;
+	type HrmpMessageSender = ParachainSystem;
 }
 
 // Our pallets
@@ -336,6 +336,7 @@ impl bridge::Config for Runtime {
 	type Verifier = verifier_lightclient::Module<Runtime>;
 	type AppETH = eth_app::Module<Runtime>;
 	type AppERC20 = erc20_app::Module<Runtime>;
+	type MessageCommitment = commitments::Module<Runtime>;
 }
 
 #[cfg(not(feature = "test-e2e"))]
@@ -357,15 +358,13 @@ impl verifier_lightclient::Config for Runtime {
 }
 
 parameter_types! {
-	pub const CommitInterval: BlockNumber = 20;
+	pub const CommitInterval: BlockNumber = 5;
 }
 
 impl commitments::Config for Runtime {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
-
 	type Event = Event;
-
-	type CommitInterval = CommitInterval;
+	type Hashing = Keccak256;
 }
 
 impl assets::Config for Runtime {
@@ -379,13 +378,13 @@ parameter_types! {
 impl eth_app::Config for Runtime {
 	type Event = Event;
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
-	type Commitments = commitments::Module<Runtime>;
+	type SubmitOutbound = bridge::Module<Runtime>;
 }
 
 impl erc20_app::Config for Runtime {
 	type Event = Event;
 	type Assets = assets::Module<Runtime>;
-	type Commitments = commitments::Module<Runtime>;
+	type SubmitOutbound = bridge::Module<Runtime>;
 }
 
 construct_runtime!(
@@ -401,13 +400,12 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 
 		ParachainInfo: parachain_info::{Module, Storage, Config},
-		ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
-		MessageBroker: cumulus_message_broker::{Module, Call, Inherent},
+		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
 
-		Bridge: bridge::{Module, Call, Storage, Event},
-		Commitments: commitments::{Module, Call, Storage, Event},
+		Bridge: bridge::{Module, Call, Config, Storage, Event},
+		Commitments: commitments::{Module, Call, Config<T>, Storage, Event},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
-		Assets: assets::{Module, Call, Storage, Event<T>},
+		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
 
@@ -529,11 +527,11 @@ impl_runtime_apis! {
 	}
 
 	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
-		fn query_info(
-			uxt: <Block as BlockT>::Extrinsic,
-			len: u32,
-		) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
+		fn query_info(uxt: <Block as BlockT>::Extrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
 			TransactionPayment::query_info(uxt, len)
+		}
+		fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> FeeDetails<Balance> {
+			TransactionPayment::query_fee_details(uxt, len)
 		}
 	}
 

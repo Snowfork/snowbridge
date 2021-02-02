@@ -8,15 +8,11 @@ import (
 )
 
 func Build() {
-	mg.Deps(BuildMain, BuildTools)
+	mg.Deps(BuildMain)
 }
 
 func BuildMain() error {
 	return sh.Run("go", "build", "-o", "build/artemis-relay", "main.go")
-}
-
-func BuildTools() error {
-	return sh.Run("go", "build", "-o", "build/list-events", "tools/list_events.go")
 }
 
 func Test() error {

@@ -301,8 +301,6 @@ fn it_confirms_receipt_inclusion_in_finalized_header() {
 		initial_difficulty: 0.into(),
 	}).execute_with(|| {
 		assert_ok!(Verifier::verify(
-			Default::default(),
-			Default::default(),
 			&message_with_receipt_proof(log_payload(), finalized_header_hash, receipt_proof),
 		));
 	});
@@ -314,8 +312,6 @@ fn it_denies_receipt_inclusion_for_invalid_proof() {
 		let (_, receipt_proof) = receipt_root_and_proof();
 		assert_err!(
 			Verifier::verify(
-				Default::default(),
-				Default::default(),
 				&message_with_receipt_proof(log_payload(), genesis_ethereum_block_hash(), receipt_proof),
 			),
 			Error::<MockRuntime>::InvalidProof,
@@ -337,8 +333,6 @@ fn it_denies_receipt_inclusion_for_invalid_log() {
 		// Invalid log payload
 		assert_err!(
 			Verifier::verify(
-				Default::default(),
-				Default::default(),
 				&message_with_receipt_proof(Vec::new(), finalized_header_hash, receipt_proof.clone()),
 			),
 			Error::<MockRuntime>::InvalidProof,
@@ -349,8 +343,6 @@ fn it_denies_receipt_inclusion_for_invalid_log() {
 		log[3] = 204;
 		assert_err!(
 			Verifier::verify(
-				Default::default(),
-				Default::default(),
 				&message_with_receipt_proof(log, finalized_header_hash, receipt_proof),
 			),
 			Error::<MockRuntime>::InvalidProof,
@@ -377,8 +369,6 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 		// Header hasn't been imported yet
 		assert_err!(
 			Verifier::verify(
-				Default::default(),
-				Default::default(),
 				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
 			Error::<MockRuntime>::MissingHeader,
@@ -394,8 +384,6 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 		// Header has been imported but not finalized
 		assert_err!(
 			Verifier::verify(
-				Default::default(),
-				Default::default(),
 				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
 			Error::<MockRuntime>::HeaderNotFinalized,
@@ -421,8 +409,6 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 		// A finalized header at this height exists, but it's not block1
 		assert_err!(
 			Verifier::verify(
-				Default::default(),
-				Default::default(),
 				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
 			Error::<MockRuntime>::HeaderOnStaleFork,
@@ -437,16 +423,12 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 		// A finalized header at a newer height exists, but block1 isn't its ancestor
 		assert_err!(
 			Verifier::verify(
-				Default::default(),
-				Default::default(),
 				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
 			Error::<MockRuntime>::HeaderOnStaleFork,
 		);
 		// Verification works for an ancestor of the finalized header
 		assert_ok!(Verifier::verify(
-			Default::default(),
-			Default::default(),
 			&message_with_receipt_proof(log.clone(), block1_alt_hash, receipt_proof.clone()),
 		));
 	});

@@ -1,68 +1,60 @@
 const TOML = require('@iarna/toml');
 const fs  = require('fs');
-const os = require('os');
 const path = require('path');
 
-const Bridge = artifacts.require("Bridge")
-const ETHApp = artifacts.require("ETHApp")
-const ERC20App = artifacts.require("ERC20App")
-const TestToken = artifacts.require("TestToken")
+const channelContracts = {
+    basic: {
+        inbound: artifacts.require("BasicInboundChannel"),
+        outbound: artifacts.require("BasicOutboundChannel")
+    },
+    incentivized: {
+        inbound: artifacts.require("IncentivizedInboundChannel"),
+        outbound: artifacts.require("IncentivizedOutboundChannel")
+    },
+}
 
-const jsonify = (abi) => JSON.stringify(abi, null, 2)
+const channels = {
+    basic: {
+        inbound: null,
+        outbound: null
+    },
+    incentivized: {
+        inbound: null,
+        outbound: null
+    },
+}
 
-const dumpConfig = async (tmpDir, contracts) => {
-
-    // Relayer Config
-    let bridgeAbiFile = path.join(tmpDir, "Bridge.json")
-    let ethAbiFile = path.join(tmpDir, "ETHApp.json")
-    let erc20AbiFile = path.join(tmpDir, "ERC20App.json")
-
-    fs.writeFileSync(bridgeAbiFile, jsonify(contracts.bridge.abi))
-    fs.writeFileSync(ethAbiFile, jsonify(contracts.ethApp.abi))
-    fs.writeFileSync(erc20AbiFile, jsonify(contracts.erc20App.abi))
-
+const dump = (tmpDir, channels) => {
     const config = {
         ethereum: {
             endpoint: "ws://localhost:8545/",
             "descendants-until-final": 0,
-            bridge: {
-                address: contracts.bridge.address,
-                abi: bridgeAbiFile,
-            },
-            apps: {
-                eth: {
-                    address: contracts.ethApp.address,
-                    abi: ethAbiFile,
+            channels: {
+                basic: {
+                    inbound: channels.basic.inbound.address,
+                    outbound: channels.basic.outbound.address,
                 },
-                erc20: {
-                    address: contracts.erc20App.address,
-                    abi: erc20AbiFile,
-                }
-            }
+                incentivized: {
+                    inbound: channels.incentivized.inbound.address,
+                    outbound: channels.incentivized.outbound.address,
+                },
+            },
         },
         substrate: {
-            endpoint: "ws://localhost:11144/"
+            endpoint: "ws://127.0.0.1:11144/"
         }
     }
-    fs.writeFileSync(path.join(tmpDir, "config.toml"), TOML.stringify(config))
+    fs.writeFileSync(path.join(tmpDir, "config.toml"), TOML.stringify(config));
 }
 
 module.exports = async (callback) => {
     try {
         let configDir = process.argv[4].toString();
-        if (!configDir) {
-            console.log("Please provide a directory to write the config")
-            return
-        }
-
-        let contracts = {
-            bridge: await Bridge.deployed(),
-            ethApp: await ETHApp.deployed(),
-            erc20App: await ERC20App.deployed()
-        }
-
-        await dumpConfig(configDir, contracts)
-
+        channels.basic.inbound = await channelContracts.basic.inbound.deployed();
+        channels.basic.outbound = await channelContracts.basic.outbound.deployed();
+        channels.incentivized.inbound = await channelContracts.incentivized.inbound.deployed();
+        channels.incentivized.outbound = await channelContracts.incentivized.outbound.deployed();
+        await dump(configDir, channels);
     } catch (error) {
         callback(error)
     }

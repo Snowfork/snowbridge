@@ -14,12 +14,10 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
+	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
-
-var AppID = [20]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 func TestWrite(t *testing.T) {
 	logger, hook := test.NewNullLogger()
@@ -27,7 +25,7 @@ func TestWrite(t *testing.T) {
 
 	conn := substrate.NewConnection("ws://127.0.0.1:9944/", sr25519.Alice().AsKeyringPair(), log)
 
-	messages := make(chan chain.Message, 1)
+	messages := make(chan []chain.Message, 1)
 	headers := make(chan chain.Header, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
@@ -49,18 +47,9 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	message := ethereum.Message{
-		Data: []byte{0, 1, 2},
-		VerificationInput: ethereum.VerificationInput{
-			IsBasic: true,
-			AsBasic: ethereum.VerificationBasic{
-				BlockNumber: 47,
-				EventIndex:  uint32(2),
-			},
-		},
-	}
+	message := chainTypes.Message{}
 
-	err = writer.WriteMessage(ctx, &chain.Message{AppID: AppID, Payload: message})
+	err = writer.WriteMessages(ctx, []chain.EthereumOutboundMessage{chain.EthereumOutboundMessage(message)})
 	if err != nil {
 		t.Fatal(err)
 	}

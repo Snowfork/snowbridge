@@ -4,7 +4,7 @@
 //!
 //! ## Implementation
 //!
-//! Before a [Message] is dispatched to a target [`Application`], it is submitted to a [`Verifier`] for verification. The target application is determined using the [`AppId`] submitted along with the message.
+//! Before a [`Message`] is dispatched to a target [`Application`], it is submitted to a [`Verifier`] for verification.
 //!
 //! ## Interface
 //!
@@ -18,43 +18,85 @@
 
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::DispatchResult};
+	dispatch::DispatchResult,
+	storage::StorageMap,
+};
 use frame_system::{self as system, ensure_signed};
-
-use sp_std::prelude::*;
 use sp_core::H160;
+use sp_std::prelude::*;
+use sp_std::convert::TryFrom;
+use artemis_core::{
+	ChannelId, SubmitOutbound, Message,
+	MessageCommitment, Verifier, Application,
+	SourceChannelConfig,
+};
+use channel::inbound::make_inbound_channel;
+use channel::outbound::make_outbound_channel;
+use primitives::{InboundChannelData, OutboundChannelData};
+use envelope::Envelope;
 
-use artemis_core::{AppId, Application, Message, Verifier};
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
+mod channel;
+mod primitives;
+mod envelope;
 
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
-	/// The verifier module responsible for verifying submitted messages.
-	type Verifier: Verifier<<Self as system::Config>::AccountId>;
+	/// Verifier module for message verification.
+	type Verifier: Verifier;
 
-	/// ETH Application
+	/// ETH Application.
 	type AppETH: Application;
 
-	/// ERC20 Application
+	/// ERC20 Application.
 	type AppERC20: Application;
+
+	/// Used by outbound channels to persist messages for outbound delivery.
+	type MessageCommitment: MessageCommitment;
 }
 
 decl_storage! {
 	trait Store for Module<T: Config> as BridgeModule {
+		/// Outbound (source) channels on Ethereum from whom we will accept messages.
+		pub SourceChannels: map hasher(identity) H160 => Option<ChannelId>;
+		/// Storage for inbound channels.
+		pub InboundChannels: map hasher(identity) ChannelId => InboundChannelData;
+		/// Storage for outbound channels.
+		pub OutboundChannels: map hasher(identity) ChannelId => OutboundChannelData;
+	}
+	add_extra_genesis {
+		config(source_channels): SourceChannelConfig;
+		build(|config: &GenesisConfig| {
+			let sources = config.source_channels;
+			SourceChannels::insert(sources.basic.address, ChannelId::Basic);
+			SourceChannels::insert(sources.incentivized.address, ChannelId::Incentivized);
+		});
+	}
+}
+
+decl_event! {
+    /// Events for the Bridge module.
+	pub enum Event {
 
 	}
 }
 
-decl_event!(
-    /// Events for the Bridge module.
-	pub enum Event {
-	}
-);
-
 decl_error! {
 	pub enum Error for Module<T: Config> {
-    	/// Target application not found.
-		AppNotFound
+		/// Message came from an invalid outbound channel on the Ethereum side.
+		InvalidSourceChannel,
+		/// Message has an invalid envelope.
+		InvalidEnvelope,
+		/// Message has an unexpected nonce.
+		BadNonce,
+		/// Target application not found.
+		AppNotFound,
 	}
 }
 
@@ -65,28 +107,51 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		/// Submit `message` for dispatch to a target application identified by `app_id`.
 		#[weight = 0]
-		pub fn submit(origin, app_id: AppId, message: Message) -> DispatchResult {
-			let who = ensure_signed(origin)?;
+		pub fn submit(origin, message: Message) -> DispatchResult {
+			let relayer = ensure_signed(origin)?;
+			// submit message to verifier for verification
+			let log = T::Verifier::verify(&message)?;
 
-			// TODO: move replay protection here
+			// Decode log into an Envelope
+			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
-			T::Verifier::verify(who, app_id, &message)?;
-			Self::dispatch(app_id.into(), &message)
+			// Verify that the message was submitted to us from a known
+			// outbound channel on the ethereum side
+			let channel_id = SourceChannels::get(envelope.channel)
+				.ok_or(Error::<T>::InvalidSourceChannel)?;
+
+			// Submit to an inbound channel for further processing
+			let channel = make_inbound_channel::<T>(channel_id);
+			channel.submit(&relayer, &envelope)
 		}
 	}
 }
 
 impl<T: Config> Module<T> {
-	fn dispatch(address: H160, message: &Message) -> DispatchResult {
-		if address == T::AppETH::address() {
-			T::AppETH::handle(message.payload.as_ref())
-		} else if address == T::AppERC20::address() {
-			T::AppERC20::handle(message.payload.as_ref())
+
+	// Dispatch a message payload to a target application identified by `source`.
+	// In the current design there is 1-1 mapping between applications across chains.
+	//
+	// TODO: This will all be redesigned in https://github.com/Snowfork/polkadot-ethereum/issues/239
+	fn dispatch(source: H160, payload: &[u8]) -> DispatchResult {
+		if source == T::AppETH::address() {
+			T::AppETH::handle(payload)
+		} else if source == T::AppERC20::address() {
+			T::AppERC20::handle(payload)
 		} else {
 			Err(Error::<T>::AppNotFound.into())
 		}
 	}
+}
 
+impl<T: Config> SubmitOutbound for Module<T> {
+
+	// Submit a message to to Ethereum, taking into account the desired
+	// channel for delivery.
+	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult {
+		// Construct channel object from storage
+		let channel = make_outbound_channel::<T>(channel_id);
+		channel.submit(target, payload)
+	}
 }

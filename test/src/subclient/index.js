@@ -17,20 +17,20 @@ class SubClient {
             types: {
                 "Address": "MultiAddress",
                 "LookupSource": "MultiAddress",
-                "AppId": "[u8; 20]",
-                "Message": {
-                  "payload": "Vec<u8>",
-                  "verification": "VerificationInput"
-                },
-                "VerificationInput": {
+                "ChannelId": {
                   "_enum": {
-                    "Basic": "VerificationBasic",
-                    "None": null
+                    "Basic": null,
+                    "Incentivized": null
                   }
                 },
-                "VerificationBasic": {
-                  "blockNumber": "u64",
-                  "eventIndex": "u32"
+                "Message": {
+                  "data": "Vec<u8>",
+                  "proof": "Proof"
+                },
+                "Proof": {
+                  "blockHash": "H256",
+                  "txIndex": "u32",
+                  "data": "(Vec<Vec<u8>>, Vec<Vec<u8>>)"
                 },
                 "EthereumHeader": {
                   "parentHash": "H256",
