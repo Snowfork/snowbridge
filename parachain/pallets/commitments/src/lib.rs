@@ -23,9 +23,10 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// Custom DigestItem for header digest
+/// Auxiliary [`DigestItem`] to include in header digest.
 #[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
-enum AuxiliaryDigestItem {
+pub enum AuxiliaryDigestItem {
+	/// A batch of messages has been committed.
 	Commitment(ChannelId, H256)
 }
 
@@ -35,15 +36,20 @@ impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
     }
 }
 
+
+/// Wire-format for committed messages
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
-struct Message {
+pub struct Message {
+	/// Target application on the Ethereum side.
 	target: H160,
+	/// A nonce for replay protection and ordering.
 	nonce: u64,
+	/// Payload for target application.
 	payload: Vec<u8>,
 }
 
 pub trait Config: frame_system::Config {
-
+	/// Prefix for offchain storage keys.
 	const INDEXING_PREFIX: &'static [u8];
 
 	type Hashing: Hash<Output = H256>;
@@ -53,10 +59,10 @@ pub trait Config: frame_system::Config {
 
 decl_storage! {
 	trait Store for Module<T: Config> as Commitments {
-		/// Interval between committing messages
+		/// Interval between committing messages.
 		Interval get(fn interval) config(): T::BlockNumber;
 
-		/// Messages waiting to be committed
+		/// Messages waiting to be committed.
 		pub MessageQueues: map hasher(identity) ChannelId => Vec<Message>;
 	}
 }
@@ -77,10 +83,10 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// Generate a message commitment every `T::CommitInterval` blocks.
+		// Generate a message commitment every [`Interval`] blocks.
 		//
-		// The hash of the commitment is stored as a digest item `CustomDigestItem::Commitment`
-		// in the block header. The committed messages are persisted into storage.
+		// The commitment hash is included in an [`AuxiliaryDigestItem`] in the block header,
+		// with the corresponding commitment is persisted offchain.
 		fn on_initialize(now: T::BlockNumber) -> Weight {
 			if (now % Self::interval()).is_zero() {
 				Self::commit()
@@ -93,6 +99,7 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 
+	// Generate a key for offchain storage
 	fn offchain_key(channel_id: ChannelId, hash: H256) -> Vec<u8> {
 		(T::INDEXING_PREFIX, channel_id, hash).encode()
 	}
@@ -125,6 +132,7 @@ impl<T: Config> Module<T> {
 		0
 	}
 
+	// ABI-encode the commitment
 	fn encode_commitment(commitment: &[Message]) -> Vec<u8> {
 		let messages: Vec<Token> = commitment.iter()
 			.map(|message|
@@ -135,7 +143,6 @@ impl<T: Config> Module<T> {
 				])
 			)
 			.collect();
-
 		ethabi::encode(&vec![Token::FixedArray(messages)])
 	}
 }

@@ -5,6 +5,7 @@ use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 use sp_std::convert::TryFrom;
 
+// Used to decode a raw Ethereum log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
 	signature: "Message(address,uint64,bytes)",
 	inputs: &[
@@ -15,11 +16,16 @@ static EVENT_ABI: &Event = &Event {
 	anonymous: false
 };
 
+/// An inbound message that has had its outer envelope decoded.
 #[derive(Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct Envelope {
+	/// The address of the outbound channel on Ethereum that forwarded this message.
 	pub channel: H160,
+	/// The application on Ethereum where the message originated from.
 	pub source: H160,
+	/// A nonce for enforcing replay protection and ordering.
 	pub nonce: u64,
+	/// The inner payload generated from the source application.
 	pub payload: Vec<u8>,
 }
 

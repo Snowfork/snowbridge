@@ -47,6 +47,7 @@ pub trait Config: system::Config {
 
 decl_storage! {
 	trait Store for Module<T: Config> as Erc20Module {
+		/// Address of the peer application on the Ethereum side.
 		Address get(fn address) config(): H160;
 	}
 }
@@ -120,6 +121,7 @@ impl<T: Config> Module<T> {
 }
 
 impl<T: Config> Application for Module<T> {
+	// Handle a message submitted to us by an inbound channel.
 	fn handle(mut payload: &[u8]) -> DispatchResult {
 		let payload_decoded: InboundPayload<T::AccountId> = InboundPayload::decode(&mut payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
