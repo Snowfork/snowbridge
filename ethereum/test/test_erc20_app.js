@@ -27,7 +27,7 @@ const channelContracts = {
 };
 
 const approveFunds = (token, contract, account, amount) => {
-  return token.approve(contract.address, amount, { from: account})
+  return token.approve(contract.address, amount, { from: account })
 }
 
 const lockupFunds = (contract, token, sender, recipient, amount, channel) => {

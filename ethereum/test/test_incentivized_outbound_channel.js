@@ -14,56 +14,47 @@ require("chai")
 contract("IncentivizedOutboundChannel", function (accounts) {
   // Accounts
   const userOne = accounts[1];
-  const testAppId = "arbitrary-app-id";
   const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      this.incentivizedSendChannel = await IncentivizedOutboundChannel.new();
-    });
-
-    it("should deploy and initialize the ETHApp contract", async function () {
-      this.incentivizedSendChannel.should.exist;
+      this.channel = await IncentivizedOutboundChannel.new();
     });
   });
 
   describe("send", function () {
     beforeEach(async function () {
-      this.incentivizedSendChannel = await IncentivizedOutboundChannel.new();
+      this.channel = await IncentivizedOutboundChannel.new();
     });
 
     it("should send messages out with the correct event and fields", async function () {
-      const tx = await this.incentivizedSendChannel.send(
-        testAppId,
+      const tx = await this.channel.submit(
         testPayload,
         { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
       const rawLog = tx.receipt.rawLogs[0];
-      confirmChannelSend(rawLog, this.incentivizedSendChannel.address, userOne, testAppId, testPayload)
+      confirmChannelSend(rawLog, this.channel.address, userOne, 0, testPayload)
     });
 
     it("should increment nonces correctly", async function () {
-      const tx = await this.incentivizedSendChannel.send(
-        testAppId,
+      const tx = await this.channel.submit(
         testPayload,
         { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
-      const tx2 = await this.incentivizedSendChannel.send(
-        testAppId,
+      const tx2 = await this.channel.submit(
         testPayload,
         { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
-      const tx3 = await this.incentivizedSendChannel.send(
-        testAppId,
+      const tx3 = await this.channel.submit(
         testPayload,
         { from: userOne, value: 0 }
       ).should.be.fulfilled;
 
       const rawLog = tx3.receipt.rawLogs[0];
-      confirmChannelSend(rawLog, this.incentivizedSendChannel.address, userOne, testAppId, testPayload, 2)
+      confirmChannelSend(rawLog, this.channel.address, userOne, 2, testPayload)
     });
 
   });

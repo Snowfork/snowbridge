@@ -28,7 +28,7 @@ contract("BasicOutboundChannel", function (accounts) {
       ).should.be.fulfilled;
 
       const rawLog = tx.receipt.rawLogs[0];
-      confirmChannelSend(rawLog, this.channel.address, userOne)
+      confirmChannelSend(rawLog, this.channel.address, userOne, 0, payload)
     });
 
   });
