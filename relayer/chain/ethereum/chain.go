@@ -8,6 +8,9 @@ import (
 	"fmt"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
@@ -44,12 +47,9 @@ func NewChain(config *Config) (*Chain, error) {
 }
 
 func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.Header) error {
-	bridgeContract, err := LoadBridgeContract(ch.config)
-	if err != nil {
-		return err
-	}
+	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
-	writer, err := NewWriter(ch.conn, subMessages, bridgeContract, ch.log)
+	writer, err := NewWriter(ch.config, ch.conn, subMessages, contracts, ch.log)
 	if err != nil {
 		return err
 	}
@@ -59,12 +59,8 @@ func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.
 }
 
 func (ch *Chain) SetSender(ethMessages chan<- []chain.Message, ethHeaders chan<- chain.Header) error {
-	appContracts, err := LoadAppContracts(ch.config)
-	if err != nil {
-		return err
-	}
-
-	listener, err := NewListener(ch.conn, ethMessages, ethHeaders, appContracts, ch.log)
+	var contracts []*outbound.Contract
+	listener, err := NewListener(ch.config, ch.conn, ethMessages, ethHeaders, contracts, ch.log)
 	if err != nil {
 		return err
 	}

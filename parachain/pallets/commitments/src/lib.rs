@@ -4,7 +4,7 @@ use sp_std::prelude::*;
 use frame_support::{
 	decl_module, decl_storage, decl_event, decl_error,
 	weights::Weight,
-	traits::Get,
+	dispatch::DispatchResult,
 };
 use sp_io::offchain_index;
 use sp_core::{H160, H256, RuntimeDebug};
@@ -23,9 +23,10 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// Custom DigestItem for header digest
+/// Auxiliary [`DigestItem`] to include in header digest.
 #[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
-enum AuxiliaryDigestItem {
+pub enum AuxiliaryDigestItem {
+	/// A batch of messages has been committed.
 	Commitment(ChannelId, H256)
 }
 
@@ -35,27 +36,33 @@ impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
     }
 }
 
+
+/// Wire-format for committed messages
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
-struct Message {
-	address: H160,
+pub struct Message {
+	/// Target application on the Ethereum side.
+	target: H160,
+	/// A nonce for replay protection and ordering.
 	nonce: u64,
+	/// Payload for target application.
 	payload: Vec<u8>,
 }
 
 pub trait Config: frame_system::Config {
-
+	/// Prefix for offchain storage keys.
 	const INDEXING_PREFIX: &'static [u8];
 
 	type Hashing: Hash<Output = H256>;
 
 	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
-
-	type CommitInterval: Get<Self::BlockNumber>;
 }
 
 decl_storage! {
 	trait Store for Module<T: Config> as Commitments {
-		/// Messages waiting to be committed
+		/// Interval between committing messages.
+		Interval get(fn interval) config(): T::BlockNumber;
+
+		/// Messages waiting to be committed.
 		pub MessageQueues: map hasher(identity) ChannelId => Vec<Message>;
 	}
 }
@@ -76,12 +83,12 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// Generate a message commitment every `T::CommitInterval` blocks.
+		// Generate a message commitment every [`Interval`] blocks.
 		//
-		// The hash of the commitment is stored as a digest item `CustomDigestItem::Commitment`
-		// in the block header. The committed messages are persisted into storage.
+		// The commitment hash is included in an [`AuxiliaryDigestItem`] in the block header,
+		// with the corresponding commitment is persisted offchain.
 		fn on_initialize(now: T::BlockNumber) -> Weight {
-			if (now % T::CommitInterval::get()).is_zero() {
+			if (now % Self::interval()).is_zero() {
 				Self::commit()
 			} else {
 				0
@@ -92,6 +99,7 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 
+	// Generate a key for offchain storage
 	fn offchain_key(channel_id: ChannelId, hash: H256) -> Vec<u8> {
 		(T::INDEXING_PREFIX, channel_id, hash).encode()
 	}
@@ -119,22 +127,22 @@ impl<T: Config> Module<T> {
 		let digest_item = AuxiliaryDigestItem::Commitment(channel_id, commitment_hash.clone()).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		offchain_index::set(&Self::offchain_key(channel_id, commitment_hash), &commitment);
+		offchain_index::set(&Self::offchain_key(channel_id, commitment_hash), &messages.encode());
 
 		0
 	}
 
+	// ABI-encode the commitment
 	fn encode_commitment(commitment: &[Message]) -> Vec<u8> {
 		let messages: Vec<Token> = commitment.iter()
 			.map(|message|
 				Token::Tuple(vec![
-					Token::Address(message.address),
+					Token::Address(message.target),
 					Token::Bytes(message.payload.clone()),
 					Token::Uint(message.nonce.into())
 				])
 			)
 			.collect();
-
 		ethabi::encode(&vec![Token::FixedArray(messages)])
 	}
 }
@@ -142,14 +150,17 @@ impl<T: Config> Module<T> {
 impl<T: Config> MessageCommitment for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
-	fn add(channel_id: ChannelId, address: H160, nonce: u64, payload: &[u8]) {
-		<Self as Store>::MessageQueues::append(
+	// TODO (Security): Limit number of messages per commitment
+	//   https://github.com/Snowfork/polkadot-ethereum/issues/226
+	fn add(channel_id: ChannelId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
+		MessageQueues::append(
 			channel_id,
 			Message {
-				address,
+				target,
 				nonce,
 				payload: payload.to_vec()
 			}
 		);
+		Ok(())
 	}
 }

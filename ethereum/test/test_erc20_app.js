@@ -1,13 +1,47 @@
-const ERC20App = artifacts.require("ERC20App");
-const TestToken = artifacts.require("TestToken");
-
-const Web3Utils = require("web3-utils");
-const BigNumber = web3.BigNumber;
+const BigNumber = require('bignumber.js');
+const {
+  confirmChannelSend,
+  confirmUnlockTokens,
+  deployContracts,
+  addressBytes,
+  ChannelId
+} = require("./helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
   .should();
+
+const ERC20App = artifacts.require("ERC20App");
+const TestToken = artifacts.require("TestToken");
+
+const channelContracts = {
+  basic: {
+    inbound: artifacts.require("BasicInboundChannel"),
+    outbound: artifacts.require("BasicOutboundChannel"),
+  },
+  incentivized: {
+    inbound: artifacts.require("IncentivizedInboundChannel"),
+    outbound: artifacts.require("IncentivizedOutboundChannel"),
+  },
+};
+
+const approveFunds = (token, contract, account, amount) => {
+  return token.approve(contract.address, amount, { from: account})
+}
+
+const lockupFunds = (contract, token, sender, recipient, amount, channel) => {
+  return contract.lock(
+    token.address,
+    addressBytes(recipient),
+    amount.toString(),
+    channel,
+    {
+      from: sender,
+      value: 0
+    }
+  )
+}
 
 contract("ERC20App", function (accounts) {
   // Accounts
@@ -15,162 +49,153 @@ contract("ERC20App", function (accounts) {
   const userOne = accounts[1];
 
   // Constants
-  const POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
-  const BYTES32_LENGTH = 64;
-
-  describe("initialization and deployment", function () {
-    beforeEach(async function () {
-      this.erc20App = await ERC20App.new();
-    });
-
-    it("should deploy and initialize the ERC20App contract", async function () {
-      this.erc20App.should.exist;
-    });
-  });
+  const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
   describe("deposits", function () {
     beforeEach(async function () {
-      this.erc20App = await ERC20App.new();
-    });
+      [this.channels, this.app] = await deployContracts(channelContracts, ERC20App);
+      this.symbol = "TEST";
+      this.token = await TestToken.new(100000, "Test Token", this.symbol);
 
-    // Set up an ERC20 token for testing token deposits
-    before(async function () {
-        this.symbol = "TEST";
-        this.token = await TestToken.new(100000, "Test Token", this.symbol);
-
-        // Load user account with 'TEST' ERC20 tokens
-        await this.token.transfer(userOne, 1000, {
-            from: owner
-        }).should.be.fulfilled;
-    });
-
-    it("should support ERC20 deposits", async function () {
-      // Load initial state
-      const beforeTotalERC20 = Number(await this.erc20App.totalTokens(this.token.address));
-      const beforeTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
-      const beforeUserBalance = Number(await this.token.balanceOf(userOne));
-
-      // Prepare transaction parameters
-      const amount = 100;
-      const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
-
-      // Approve tokens to contract
-      await this.token.approve(this.erc20App.address, amount, {
-        from: userOne
+      // Load user account with 'TEST' ERC20 tokens
+      await this.token.transfer(userOne, 1000, {
+        from: owner
       }).should.be.fulfilled;
+    });
 
-      // Deposit ERC20 tokens to the contract and get the logs of the transaction
-      const { logs } = await this.erc20App.sendERC20(
-        recipient,
-        this.token.address,
-        amount,
-        {
-          from: userOne,
-          value: 0
-        }
-      ).should.be.fulfilled;
+    it("should lock funds", async function () {
+      amount = 100;
+      const beforeVaultBalance = BigNumber(await this.app.balances(this.token.address));
+      const beforeUserBalance = BigNumber(await this.token.balanceOf(userOne));
+
+      await approveFunds(this.token, this.app, userOne, amount * 2)
+        .should.be.fulfilled;
+
+      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+        .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
-      const appEvent = logs.find(
-          e => e.event === "AppTransfer"
+      const event = tx.logs.find(
+        e => e.event === "Locked"
       );
 
-      // Check event fields
-      appEvent.args._sender.should.be.equal(userOne);
-      const expectedRecipient = Web3Utils.padRight(Web3Utils.toHex(recipient).toLowerCase(), BYTES32_LENGTH);
-      appEvent.args._recipient.should.be.equal(expectedRecipient);
-      appEvent.args._token.should.be.equal(this.token.address);
-      Number(appEvent.args._amount).should.be.bignumber.equal(amount);
+      event.args.sender.should.be.equal(userOne);
+      event.args.recipient.should.be.equal(POLKADOT_ADDRESS);
+      BigNumber(event.args.amount).should.be.bignumber.equal(amount);
 
-      //Get the user and ERC20App token balance after deposit
-      const afterTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
-      const afterUserBalance = Number(await this.token.balanceOf(userOne));
+      const afterVaultBalance = BigNumber(await this.app.balances(this.token.address));
+      const afterUserBalance = BigNumber(await this.token.balanceOf(userOne));
 
-      //Confirm that the contract's token balance has increased
-      afterTestTokenBalance.should.be.bignumber.equal(beforeTestTokenBalance + amount);
-      afterUserBalance.should.be.bignumber.equal(beforeUserBalance - amount);
-
-      // Confirm contract's locked ERC20 counter has increased by amount locked
-      const afterTotalERC20 = await this.erc20App.totalTokens(this.token.address);
-      Number(afterTotalERC20).should.be.bignumber.equal(beforeTotalERC20+amount);
-    });
-  });
-
-  describe("handle received messages", function () {
-
-    before(async function () {
-        this.erc20App = await ERC20App.new();
-        await this.erc20App.register(owner);
-
-        // Set up an ERC20 token for testing token deposits
-        this.symbol = "TEST";
-        this.token = await TestToken.new(100000, "Test Token", this.symbol);
-
-        // Load user account with 'TEST' ERC20 tokens
-        await this.token.transfer(userOne, 10000, {
-            from: owner
-        }).should.be.fulfilled;
-
-        // Prepare transaction parameters
-        const lockAmount = 10000;
-        const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
-
-        // Approve tokens to contract
-        await this.token.approve(this.erc20App.address, lockAmount, {
-          from: userOne
-        }).should.be.fulfilled;
-
-        // Deposit ERC20 tokens to the contract (so the app has funds to be unlocked)
-        await this.erc20App.sendERC20(
-          recipient,
-          this.token.address,
-          lockAmount,
-          {
-            from: userOne,
-            value: 0
-          }
-        ).should.be.fulfilled;
+      afterVaultBalance.should.be.bignumber.equal(beforeVaultBalance.plus(100));
+      afterUserBalance.should.be.bignumber.equal(beforeUserBalance.minus(100));
     });
 
-    it("should support ERC20 unlocks", async function () {
-      // Encoded data
-      const encodedTokenAddress = this.token.address.slice(2, this.token.address.length);
-      const encodedData = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dcffeaaf7681c89285d65cfbe808b80e502696573" + encodedTokenAddress + "3412000000000000000000000000000000000000000000000000000000000000"
-      // Decoded data
-      const decodedSender = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
-      const decodedRecipient = "0xCfFEAAf7681c89285D65CfbE808b80e502696573";
-      const decodedTokenAddr = this.token.address;
-      const decodedAmount = 4660;
+    it("should send payload to the basic outbound channel", async function () {
+      const amount = 100;
 
-      // Load initial state
-      const beforeTotalERC20 = Number(await this.erc20App.totalTokens(this.token.address));
-      const beforeTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
-      const beforeUserBalance = Number(await this.token.balanceOf(decodedRecipient));
+      await approveFunds(this.token, this.app, userOne, amount * 2)
+        .should.be.fulfilled;
 
-     const { logs } = await this.erc20App.handle(encodedData).should.be.fulfilled;
+      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+        .should.be.fulfilled;
 
-      // Confirm unlock event emitted with expected values
-      const unlockEvent = logs.find(
-          e => e.event === "Unlock"
+      confirmChannelSend(tx.receipt.rawLogs[3], this.channels.basic.outbound.address, this.app.address, 0)
+    });
+
+    it("should send payload to the incentivized outbound channel", async function () {
+      const amount = 100;
+
+      await approveFunds(this.token, this.app, userOne, amount * 2)
+        .should.be.fulfilled;
+
+      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Incentivized)
+        .should.be.fulfilled;
+
+      confirmChannelSend(tx.receipt.rawLogs[3], this.channels.incentivized.outbound.address, this.app.address, 0)
+    });
+  })
+
+  describe("withdrawals", function () {
+
+    beforeEach(async function () {
+      [this.channels, this.app] = await deployContracts(channelContracts, ERC20App);
+      this.symbol = "TEST";
+      this.token = await TestToken.new(100000, "Test Token", this.symbol);
+
+      // Load user account with 'TEST' ERC20 tokens
+      await this.token.transfer(userOne, 1000, {
+        from: owner
+      }).should.be.fulfilled;
+    });
+
+    it("should unlock via the basic inbound channel", async function () {
+      const lockupAmount = 200;
+      await approveFunds(this.token, this.app, userOne, lockupAmount * 2)
+        .should.be.fulfilled;
+      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Basic)
+        .should.be.fulfilled;
+
+      // recipient on the ethereum side
+      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
+
+      // expected amount to unlock
+      const amount = BigNumber(100);
+
+      // Commitment payload generated using:
+      //   cd parachain/pallets/erc20-app
+      //   cargo test test_outbound_payload_encode -- --nocapture
+      token_addr = this.token.address.replace(/^0x/, "");
+      const commitment = [
+        {
+          target: this.app.address,
+          nonce: 0,
+          payload: `0x010ce3c7000000000000000000000000${token_addr}1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000000000000000064`,
+        }
+      ]
+
+      tx = await this.channels.basic.inbound.submit(commitment).should.be.fulfilled;
+
+      confirmUnlockTokens(
+        tx.receipt.rawLogs[1],
+        this.app.address,
+        recipient,
+        amount,
       );
+    });
 
-      unlockEvent.args._sender.should.be.equal(decodedSender);
-      unlockEvent.args._recipient.should.be.equal(decodedRecipient);
-      unlockEvent.args._token.should.be.equal(decodedTokenAddr);
-      Number(unlockEvent.args._amount).should.be.bignumber.equal(decodedAmount);
+    it("should unlock via the incentivized inbound channel", async function () {
+      const lockupAmount = 200;
+      await approveFunds(this.token, this.app, userOne, lockupAmount * 2)
+        .should.be.fulfilled;
+      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Incentivized)
+        .should.be.fulfilled;
 
-      // Get the user and ERC20App token balance after unlock
-      const afterTestTokenBalance = Number(await this.token.balanceOf(this.erc20App.address));
-      const afterUserBalance = Number(await this.token.balanceOf(decodedRecipient));
+      // recipient on the ethereum side
+      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
 
-      // Confirm that the user's token balance has increased
-      afterTestTokenBalance.should.be.bignumber.equal(beforeTestTokenBalance - decodedAmount);
-      afterUserBalance.should.be.bignumber.equal(beforeUserBalance + decodedAmount);
+      // expected amount to unlock
+      const amount = BigNumber(100);
 
-      // Confirm contract's locked ERC20 counter has decreased by amount locked
-      const afterTotalERC20 = await this.erc20App.totalTokens(this.token.address);
-      Number(afterTotalERC20).should.be.bignumber.equal(beforeTotalERC20 - decodedAmount);
+      // Commitment payload generated using:
+      //   cd parachain/pallets/erc20-app
+      //   cargo test test_outbound_payload_encode -- --nocapture
+      token_addr = this.token.address.replace(/^0x/, "");
+      const commitment = [
+        {
+          target: this.app.address,
+          nonce: 0,
+          payload: `0x010ce3c7000000000000000000000000${token_addr}1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000000000000000064`,
+        }
+      ]
+
+      tx = await this.channels.incentivized.inbound.submit(commitment).should.be.fulfilled;
+
+      confirmUnlockTokens(
+        tx.receipt.rawLogs[1],
+        this.app.address,
+        recipient,
+        amount,
+      );
     });
   });
-
 });

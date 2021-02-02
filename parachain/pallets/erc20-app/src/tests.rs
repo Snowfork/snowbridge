@@ -23,20 +23,20 @@ fn last_event() -> MockEvent {
 #[test]
 fn mints_after_handling_ethereum_event() {
 	new_tester().execute_with(|| {
-		let token_addr = H160::repeat_byte(1);
+		let token = H160::repeat_byte(1);
 
-		let recipient_addr = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
+		let recipient = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
 		let payload: InboundPayload<TestAccountId> = InboundPayload {
-			sender_addr: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
-			recipient_addr,
-			token_addr,
+			token,
+			sender: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
+			recipient,
 			amount: 10.into(),
 		};
 
 		let bob: AccountId = Keyring::Bob.into();
 
 		assert_ok!(ERC20::handle_payload(&payload));
-		assert_eq!(Assets::balance(AssetId::Token(token_addr), &bob), 10.into());
+		assert_eq!(Assets::balance(AssetId::Token(token), &bob), 10.into());
 	});
 }
 
@@ -52,11 +52,11 @@ fn burn_should_emit_bridge_event() {
 			Origin::signed(bob.clone()),
 			ChannelId::Incentivized,
 			token_id,
-			recipient,
+			recipient.clone(),
 			20.into()));
 
 		assert_eq!(
-			MockEvent::test_events(RawEvent::Burned(token_id, bob, 20.into())),
+			MockEvent::test_events(RawEvent::Burned(token_id, bob, recipient, 20.into())),
 			last_event()
 		);
 	});

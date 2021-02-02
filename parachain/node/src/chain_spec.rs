@@ -3,7 +3,8 @@ use artemis_runtime::{
 	AccountId, EthereumHeader,
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
-	ETHConfig, ERC20Config, AssetsConfig,
+	BridgeConfig, ETHConfig, ERC20Config, AssetsConfig,
+	CommitmentsConfig,
 	ParachainInfoConfig,
 	WASM_BINARY, Signature,
 };
@@ -15,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use hex_literal::hex;
 
-use artemis_core::AssetId;
+use artemis_core::{AssetId, SourceChannelConfig, SourceChannel};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
@@ -111,6 +112,16 @@ fn testnet_genesis(
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		}),
+		bridge: Some(BridgeConfig {
+			source_channels: SourceChannelConfig {
+				basic: SourceChannel {
+					address: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
+				},
+				incentivized: SourceChannel {
+					address: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
+				}
+			},
+		}),
 		assets: Some(AssetsConfig {
 			balances: vec![(AssetId::ETH, get_account_id_from_seed::<sr25519::Public>("Ferdie"), 10000000.into())]
 		}),
@@ -136,11 +147,14 @@ fn testnet_genesis(
 			},
 			initial_difficulty: 19755084633726428633088u128.into(),
 		}),
+		commitments: Some(CommitmentsConfig {
+			interval: 1,
+		}),
 		eth_app: Some(ETHConfig {
-			address: hex!["fc97a6197dc90bef6bbefd672742ed75e9768553"].into()
+			address: hex!["774667629726ec1fabebcec0d9139bd1c8f72a23"].into()
 		}),
 		erc20_app: Some(ERC20Config {
-			address: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into()
+			address: hex!["83428c7db9815f482a39a1715684dCF755021997"].into()
 		}),
 		parachain_info: Some(ParachainInfoConfig { parachain_id: para_id }),
 	}

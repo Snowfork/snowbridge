@@ -5,7 +5,6 @@ package substrate
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type Writer struct {
@@ -86,12 +86,21 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		case <-ctx.Done():
 			return wr.onDone(ctx)
 		case msgs := <-wr.messages:
-			err := wr.WriteMessages(ctx, msgs)
+
+			var concreteMsgs []*chain.EthereumOutboundMessage
+			for _, msg := range msgs {
+				cmsg, ok := msg.(*chain.EthereumOutboundMessage)
+				if !ok {
+					return fmt.Errorf("Invalid message")
+				}
+				concreteMsgs = append(concreteMsgs, cmsg)
+			}
+
+			err := wr.WriteMessages(ctx, concreteMsgs)
 			if err != nil {
 				wr.log.WithFields(logrus.Fields{
-					"appids": getAppIdsForLog(msgs),
-					"error":  err,
-				}).Error("Failure submitting messages to substrate")
+					"error": err,
+				}).Error("Failure submitting message to substrate")
 			}
 		case header := <-wr.headers:
 			err := wr.WriteHeader(ctx, &header)
@@ -108,7 +117,6 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 
 // Write submits a transaction to the chain
 func (wr *Writer) write(_ context.Context, c types.Call) error {
-
 	ext := types.NewExtrinsic(c)
 
 	era := types.ExtrinsicEra{IsImmortalEra: true}
@@ -150,38 +158,21 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 	return nil
 }
 
-// WriteMessage submits a "Bridge.submit" call
-func (wr *Writer) WriteMessage(ctx context.Context, msg *chain.Message) error {
-	c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", msg.AppID, msg.Payload)
-	if err != nil {
-		return err
+func (wr *Writer) WriteMessages(ctx context.Context, msgs []*chain.EthereumOutboundMessage) error {
+	for _, msg := range msgs {
+
+		c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", substrate.Message(*msg))
+		if err != nil {
+			return err
+		}
+
+		err = wr.write(ctx, c)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = wr.write(ctx, c)
-	if err != nil {
-		return err
-	}
-
-	wr.log.WithFields(logrus.Fields{
-		"appid": hex.EncodeToString(msg.AppID[:]),
-	}).Info("Submitted message to Substrate")
-
-	return nil
-}
-
-// WriteMessages submits a "Bridge.submit_bulk" call
-func (wr *Writer) WriteMessages(ctx context.Context, msgs []chain.Message) error {
-	c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit_bulk", msgs)
-	if err != nil {
-		return err
-	}
-
-	err = wr.write(ctx, c)
-	if err != nil {
-		return err
-	}
-
-	wr.log.WithField("appids", getAppIdsForLog(msgs)).Info("Submitted messages to Substrate")
+	wr.log.WithField("count", len(msgs)).Info("Submitted messages to Substrate")
 
 	return nil
 }
@@ -231,17 +222,4 @@ func getHeaderBackoffDelay(retryCount int) time.Duration {
 		return time.Duration(backoff[retryCount]) * time.Second
 	}
 	return time.Duration(backoff[len(backoff)-1]) * time.Second
-}
-
-func getAppIdsForLog(msgs []chain.Message) []string {
-	appIDSet := make(map[string]bool, 0)
-	appIDs := make([]string, 0)
-	for _, msg := range msgs {
-		appID := hex.EncodeToString(msg.AppID[:])
-		if _, ok := appIDSet[appID]; !ok {
-			appIDs = append(appIDs, appID)
-			appIDSet[appID] = true
-		}
-	}
-	return appIDs
 }

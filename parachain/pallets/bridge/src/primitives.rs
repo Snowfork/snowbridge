@@ -1,22 +1,31 @@
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::RuntimeDebug;
+use sp_core::H160;
 use codec::{Encode, Decode};
-use artemis_core::{AppId, Message};
 
+use crate::envelope::Envelope;
+
+
+/// Persistent storage for inbound channels
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, Default, RuntimeDebug)]
 pub struct InboundChannelData {
 	pub nonce: u64
 }
+/// Persistent storage for outbound channels
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, Default, RuntimeDebug)]
 pub struct OutboundChannelData {
 	pub nonce: u64
 }
 
+/// Handles messages inbound from Ethereum
 pub trait InboundChannel<AccountId>
 {
-	fn submit(&mut self, relayer: &AccountId, app_id: AppId, message: &Message) -> DispatchResult;
+	/// Submit a message envelope for processing
+	fn submit(&self, relayer: &AccountId, envelope: &Envelope) -> DispatchResult;
 }
 
+/// Handles messages outbound to Ethereum
 pub trait OutboundChannel {
-	fn submit(&self, payload: &[u8]) -> DispatchResult;
+	/// Submit a message payload for processing
+	fn submit(&self, target: H160, payload: &[u8]) -> DispatchResult;
 }

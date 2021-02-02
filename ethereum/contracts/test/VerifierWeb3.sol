@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2;
+pragma solidity >=0.7.6;
 
 contract VerifierWeb3 {
-
     address public operator;
 
     /**
      * @dev constructor sets the operator's address
      * @param _operator address of the contract's operator
      */
-    constructor(address _operator) public {
+    constructor(address _operator) {
         operator = _operator;
     }
 
@@ -78,10 +77,7 @@ contract VerifierWeb3 {
      * @param _message bytes32 is the original, unprefixed message
      * @return bytes32 is the prefixed, hashed message
      */
-    function ethMessageHash(bytes32 _message)
-        public
-        pure
-        returns (bytes32) {
+    function ethMessageHash(bytes32 _message) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked("\x19Ethereum Signed Message:\n32", _message)

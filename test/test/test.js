@@ -37,7 +37,7 @@ describe('Bridge', function () {
 
   });
 
-  describe('ETH App', function () {
+  describe.skip('ETH App', function () {
     it('should transfer ETH from Ethereum to Substrate', async function() {
       let amount = BigNumber('10000000000000000'); // 0.01 ETH
 
@@ -79,7 +79,7 @@ describe('Bridge', function () {
     })
   });
 
-  describe('ERC20 App', function () {
+  describe.skip('ERC20 App', function () {
     it('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
       let amount = BigNumber('1000');
 

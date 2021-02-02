@@ -1,6 +1,7 @@
 package ethereum_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,10 +11,24 @@ import (
 
 	ecommon "github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/snowfork/ethashproof"
+	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
-	"github.com/snowfork/ethashproof"
 )
+
+func encodeToBytes(value interface{}) ([]byte, error) {
+	var buffer = bytes.Buffer{}
+	err := scale.NewEncoder(&buffer).Encode(value)
+	if err != nil {
+		return buffer.Bytes(), err
+	}
+	return buffer.Bytes(), nil
+}
+
+func decodeFromBytes(bz []byte, target interface{}) error {
+	return scale.NewDecoder(bytes.NewReader(bz)).Decode(target)
+}
 
 // To retrieve test data:
 // curl https://mainnet.infura.io/v3/<PROJECT_ID> \

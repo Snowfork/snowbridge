@@ -64,10 +64,9 @@ start_parachain()
         \"id\": \"200\",
         \"wsPort\": 11144,
         \"port\": 31200,
-        \"balance\": \"1000000000000000000000\",
         \"flags\": [
             \"--execution=native\",
-            \"-lruntime=debug,import_header=trace\",
+            \"-lruntime=debug,import_header=trace,bridge=trace\",
             \"--rpc-cors=all\",
             \"--offchain-worker=Always\",
             \"--enable-offchain-indexing=true\",
@@ -86,7 +85,6 @@ start_parachain()
     scripts/wait-for-it.sh -t 20 localhost:11144
     # waiting for parachain to sync with relay chain and produce initial blocks
     sleep 20
-
 }
 
 start_relayer()

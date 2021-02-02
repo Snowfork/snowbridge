@@ -3,7 +3,6 @@
 // truffle exec getEthBalance.js [user-address] --network ropsten
 
 module.exports = async () => {
-
     try {
         const account = process.argv[4].toString();
         if (!account) {

@@ -175,6 +175,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -185,6 +186,7 @@ dependencies = [
 name = "artemis-core"
 version = "0.1.1"
 dependencies = [
+ "artemis-ethereum",
  "enum-iterator",
  "frame-support",
  "parity-scale-codec",
@@ -345,7 +347,6 @@ dependencies = [
  "frame-system",
  "frame-system-rpc-runtime-api",
  "getrandom 0.2.2",
- "hex-literal",
  "pallet-balances",
  "pallet-bridge",
  "pallet-randomness-collective-flip",
@@ -1735,7 +1736,7 @@ dependencies = [
 [[package]]
 name = "ethabi-decode"
 version = "1.3.2"
-source = "git+https://github.com/Snowfork/ethabi-decode.git?branch=master#26b1c5bc6eb80c79092828d36df73645dcaa4258"
+source = "git+https://github.com/Snowfork/ethabi-decode.git?branch=master#8c41372bd99079e4d4bb69020057ec6fc1b27e4c"
 dependencies = [
  "ethereum-types",
  "tiny-keccak 1.5.0",
@@ -4358,9 +4359,14 @@ name = "pallet-bridge"
 version = "0.1.1"
 dependencies = [
  "artemis-core",
+ "artemis-ethereum",
+ "ethabi-decode",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "parity-scale-codec",
+ "rlp",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-keyring",

@@ -1,128 +1,188 @@
-const ETHApp = artifacts.require("ETHApp");
-
-const Web3Utils = require("web3-utils");
-const BigNumber = web3.BigNumber;
+const BigNumber = require('bignumber.js');
+const {
+  confirmChannelSend,
+  confirmUnlock,
+  deployContracts,
+  addressBytes,
+  ChannelId
+} = require("./helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
-contract("EthApp", function (accounts) {
+const ETHApp = artifacts.require("ETHApp");
+
+const channelContracts = {
+  basic: {
+    inbound: artifacts.require("BasicInboundChannel"),
+    outbound: artifacts.require("BasicOutboundChannel"),
+  },
+  incentivized: {
+    inbound: artifacts.require("IncentivizedInboundChannel"),
+    outbound: artifacts.require("IncentivizedOutboundChannel"),
+  },
+};
+
+const lockupFunds = (contract, sender, recipient, amount, channel) => {
+  return contract.lock(
+    addressBytes(recipient),
+    channel,
+    {
+      from: sender,
+      value: amount.toString(),
+    }
+  )
+}
+
+contract("ETHApp", function (accounts) {
   // Accounts
   const owner = accounts[0];
   const userOne = accounts[1];
 
   // Constants
-  const POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
-  const BYTES32_LENGTH = 64;
-
-  describe("deployment and initialization", function () {
-    beforeEach(async function () {
-      this.ethApp = await ETHApp.new();
-    });
-
-    it("should deploy and initialize the ETHApp contract", async function () {
-      this.ethApp.should.exist;
-    });
-  });
+  const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
   describe("deposits", function () {
     beforeEach(async function () {
-      this.ethApp = await ETHApp.new();
+      [this.channels, this.app] = await deployContracts(channelContracts, ETHApp);
     });
 
-    it("should support Ethereum deposits", async function () {
-      // Load initial contract state
-      const beforeTotalETH = Number(await this.ethApp.totalETH());
+    it("should lock funds", async function () {
+      const beforeBalance = BigNumber(await this.app.balance());
+      const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
 
-      // Prepare transaction parameters
-      const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
-      const weiAmount = web3.utils.toWei("0.25", "ether");
-
-      // Deposit Ethereum to the contract and get the logs of the transaction
-      const { logs } = await this.ethApp.sendETH(
-        recipient,
-        {from: userOne, value: weiAmount}
-      ).should.be.fulfilled;
+      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+        .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
-      const appEvent = logs.find(
-          e => e.event === "AppTransfer"
+      const event = tx.logs.find(
+        e => e.event === "Locked"
       );
 
-      appEvent.args._sender.should.be.equal(userOne);
-      const expectedRecipient = Web3Utils.padRight(Web3Utils.toHex(recipient).toLowerCase(), BYTES32_LENGTH);
-      appEvent.args._recipient.should.be.equal(expectedRecipient);
-      Number(appEvent.args._amount).should.be.bignumber.equal(weiAmount);
+      event.args.sender.should.be.equal(userOne);
+      event.args.recipient.should.be.equal(POLKADOT_ADDRESS);
+      BigNumber(event.args.amount).should.be.bignumber.equal(amount);
 
-      // Confirm contract's Ethereum balance has increased
-      const contractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
-      const contractBalance = Web3Utils.fromWei(contractBalanceWei, "ether");
-      contractBalance.should.be.bignumber.equal(Web3Utils.fromWei(weiAmount, "ether"));
+      // Confirm contract's balance has increased
+      const afterBalance = await web3.eth.getBalance(this.app.address);
+      afterBalance.should.be.bignumber.equal(amount);
 
-      // Confirm contract's locked Ethereum counter has increased by amount locked
-      const afterTotalETH = await this.ethApp.totalETH();
-      Number(afterTotalETH).should.be.bignumber.equal(beforeTotalETH+Number(weiAmount));
-    });
-  });
-
-
-  describe("handle received messages", function () {
-
-    before(async function () {
-        this.ethApp = await ETHApp.new();
-        await this.ethApp.register(owner);
-
-        // Prepare transaction parameters
-        const lockAmountWei = 5000;
-        const substrateRecipient = Buffer.from(POLKADOT_ADDRESS, "hex");
-
-        // Send to a substrate recipient to load contract with unlockable ETH
-        await this.ethApp.sendETH(
-          substrateRecipient,
-          {
-            from: userOne,
-            value: lockAmountWei
-          }
-        ).should.be.fulfilled;
+      // Confirm contract's locked balance state has increased by amount locked
+      const afterBalanceState = BigNumber(await this.app.balance());
+      afterBalanceState.should.be.bignumber.equal(beforeBalance.plus(amount));
     });
 
-    it("should support ETH unlocks", async function () {
-      // Encoded data
-      const encodedData = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dcffeaaf7681c89285d65cfbe808b80e5026965733412000000000000000000000000000000000000000000000000000000000000";
-      // Decoded data
-      const decodedSender = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
-      const decodedRecipient = "0xCfFEAAf7681c89285D65CfbE808b80e502696573";
-      const decodedAmount = 4660;
+    it("should send payload to the basic outbound channel", async function () {
+      const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
 
-      // Load initial state
-      const beforeTotalETH = Number(await this.ethApp.totalETH());
-      const beforeContractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
-      const beforeUserBalanceWei = await web3.eth.getBalance(decodedRecipient);
+      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+        .should.be.fulfilled;
 
-     const { logs } = await this.ethApp.handle(encodedData).should.be.fulfilled;
+      confirmChannelSend(tx.receipt.rawLogs[1], this.channels.basic.outbound.address, this.app.address, 0)
+    });
 
-      // Confirm unlock event emitted with expected values
-      const unlockEvent = logs.find(
-          e => e.event === "Unlock"
+    it("should send payload to the incentivized outbound channel", async function () {
+      const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
+
+      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Incentivized)
+        .should.be.fulfilled;
+
+      confirmChannelSend(tx.receipt.rawLogs[1], this.channels.incentivized.outbound.address, this.app.address, 0)
+    });
+
+  })
+
+  describe("withdrawals", function () {
+
+    beforeEach(async function () {
+      [this.channels, this.app] = await deployContracts(channelContracts, ETHApp);
+    });
+
+    it("should unlock via the basic inbound channel", async function () {
+      // Lockup funds in app
+      const lockupAmount = BigNumber(web3.utils.toWei("2", "ether"));
+      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Basic)
+        .should.be.fulfilled;
+
+      // recipient on the ethereum side
+      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
+
+      // expected amount to unlock
+      const amount = BigNumber(web3.utils.toWei("1", "ether"));
+
+      const beforeBalance = BigNumber(await this.app.balance());
+      const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
+
+      // Commitment payload generated using:
+      //   cd parachain/pallets/eth-app
+      //   cargo test test_outbound_payload_encode -- --nocapture
+      const commitment = [
+        {
+          target: this.app.address,
+          nonce: 0,
+          payload: "0x6dea30e71aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+        }
+      ]
+
+      tx = await this.channels.basic.inbound.submit(commitment).should.be.fulfilled;
+
+      confirmUnlock(
+        tx.receipt.rawLogs[0],
+        this.app.address,
+        recipient,
+        amount,
       );
 
-      unlockEvent.args._sender.should.be.equal(decodedSender);
-      unlockEvent.args._recipient.should.be.equal(decodedRecipient);
-      Number(unlockEvent.args._amount).should.be.bignumber.equal(decodedAmount);
+      const afterBalance = BigNumber(await this.app.balance());
+      const afterRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
-      // Get the user and ETHApp's Ethereum balance after unlock
-      const afterContractBalanceWei = await web3.eth.getBalance(this.ethApp.address);
-      const afterUserBalanceWei = await web3.eth.getBalance(decodedRecipient);
+      afterBalance.should.be.bignumber.equal(beforeBalance.minus(amount));
+      afterRecipientBalance.minus(beforeRecipientBalance).should.be.bignumber.equal(amount);
 
-      // Confirm user's balance increased and contract's Ethereum balance has decreased
-      afterUserBalanceWei.should.be.bignumber.equal(beforeUserBalanceWei + decodedAmount);
-      afterContractBalanceWei.should.be.bignumber.equal(beforeContractBalanceWei - decodedAmount);
+    });
 
-      // Confirm contract's locked Ethereum counter has decreased by amount unlocked
-      const afterTotalETH = await this.ethApp.totalETH();
-      Number(afterTotalETH).should.be.bignumber.equal(beforeTotalETH-Number(decodedAmount));
+    it("should unlock via the incentivized inbound channel", async function () {
+      // Lockup funds in app
+      const lockupAmount = BigNumber(web3.utils.toWei("2", "ether"));
+      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Incentivized)
+        .should.be.fulfilled;
+
+      // recipient on the ethereum side
+      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
+
+      // expected amount to unlock
+      const amount = BigNumber(web3.utils.toWei("1", "ether"));
+
+      const beforeBalance = BigNumber(await this.app.balance());
+      const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
+
+      // Commitment payload generated using:
+      //   cd parachain/pallets/eth-app
+      //   cargo test test_outbound_payload_encode -- --nocapture
+      const commitment = [
+        {
+          target: this.app.address,
+          nonce: 0,
+          payload: "0x6dea30e71aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+        }
+      ]
+
+      tx = await this.channels.incentivized.inbound.submit(commitment).should.be.fulfilled;
+
+      confirmUnlock(
+        tx.receipt.rawLogs[0],
+        this.app.address,
+        recipient,
+        amount,
+      );
+
+      const afterBalance = BigNumber(await this.app.balance());
+      const afterRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
+
+      afterBalance.should.be.bignumber.equal(beforeBalance.minus(amount));
+      afterRecipientBalance.minus(beforeRecipientBalance).should.be.bignumber.equal(amount);
     });
   });
 });

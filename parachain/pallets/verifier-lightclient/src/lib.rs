@@ -8,15 +8,13 @@
 use frame_system::{self as system, ensure_signed};
 use frame_support::{debug, decl_module, decl_storage, decl_event, decl_error,
 	dispatch::DispatchResult, dispatch::DispatchError, ensure, traits::Get};
-use sp_std::collections::btree_map::BTreeMap;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
-use artemis_core::{AppId, Message, Verifier, VerificationInput};
+use artemis_core::{Message, Verifier, Proof};
 use artemis_ethereum::{HeaderId as EthereumHeaderId, Log, Receipt, H256, U256};
 use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
-
 pub use artemis_ethereum::Header as EthereumHeader;
 
 #[cfg(test)]
@@ -141,8 +139,6 @@ decl_error! {
 		InvalidProof,
 		/// This should never be returned - indicates a bug
 		Unknown,
-		/// The specified verification scheme is not implemented by this module.
-		UnsupportedVerificationScheme,
 	}
 }
 
@@ -151,7 +147,7 @@ decl_module! {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
-		
+
 		// TODO: Calculate weight
 		#[weight = 0]
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
@@ -173,7 +169,7 @@ decl_module! {
 				);
 				return Err(err);
 			}
-		
+
 			debug::trace!(
 				target: "import_header",
 				"Validation succeeded. Starting import of header {}",
@@ -233,7 +229,7 @@ impl<T: Config> Module<T> {
 			ancestor_at_finalized_number.unwrap().0 == finalized_header_id.hash,
 			Error::<T>::HeaderOnStaleFork,
 		);
-	
+
 		if !T::VerifyPoW::get() {
 			return Ok(());
 		}
@@ -318,7 +314,7 @@ impl<T: Config> Module<T> {
 			if new_finalized_block_id != finalized_block_id {
 				FinalizedBlock::put(new_finalized_block_id);
 			}
-	
+
 			// Clean up old headers
 			let pruning_range = BlocksToPrune::get();
 			let new_pruning_range = Self::prune_header_range(
@@ -344,7 +340,7 @@ impl<T: Config> Module<T> {
 		let maybe_newly_finalized_ancestor = ancestry::<T>(best_block_id.hash)
 			.enumerate()
 			.find_map(|(i, pair)| if i < required_descendants { None } else { Some(pair) });
-		
+
 		match maybe_newly_finalized_ancestor {
 			Some((hash, header)) => {
 				// The header is newly finalized if it is younger than the current
@@ -412,20 +408,20 @@ impl<T: Config> Module<T> {
 		new_pruning_range
 	}
 
-	fn verify_receipt_inclusion(block_hash: &H256, proof: &[Vec<u8>]) -> Result<Receipt, DispatchError> {
-		let header = Headers::<T>::get(block_hash)
+	fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
+		let header = Headers::<T>::get(proof.block_hash)
 			.ok_or(Error::<T>::MissingHeader)?
 			.header;
-	
-		let receipt = header.check_receipt_proof(&proof)
+
+		let receipt = header.check_receipt_proof(&proof.data.1)
 			.ok_or(Error::<T>::InvalidProof)?;
-		
+
 		let finalized_block = FinalizedBlock::get();
 		Self::check_header_finality(
-			&EthereumHeaderId { hash: *block_hash, number: header.number },
+			&EthereumHeaderId { hash: proof.block_hash, number: header.number },
 			&finalized_block,
 		)?;
-	
+
 		Ok(receipt)
 	}
 
@@ -441,12 +437,12 @@ impl<T: Config> Module<T> {
 				Err(Error::<T>::HeaderOnStaleFork.into())
 			}
 		}
-	
+
 		ensure!(
 			header.number < finalized_block.number,
 			Error::<T>::HeaderNotFinalized,
 		);
-		
+
 		let (finalized_hash_at_number, _) = ancestry::<T>(finalized_block.hash)
 			.find(|(_, ancestor)| ancestor.number == header.number)
 			.ok_or(Error::<T>::HeaderOnStaleFork)?;
@@ -469,64 +465,18 @@ fn ancestry<T: Config>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHe
 	})
 }
 
-impl<T: Config> Verifier<T::AccountId> for Module<T> {
+impl<T: Config> Verifier for Module<T> {
 
-	fn verify(_: T::AccountId, _: AppId, message: &Message) -> DispatchResult {
-		match message.verification {
-			VerificationInput::ReceiptProof { ref block_hash, ref tx_index, ref proof } => {
-				let receipt = Self::verify_receipt_inclusion(block_hash, &proof.1)?;
+	fn verify(message: &Message) -> Result<Log, DispatchError> {
+		let receipt = Self::verify_receipt_inclusion(&message.proof)?;
 
-				let log: Log = rlp::decode(&message.payload)
-					.map_err(|_| Error::<T>::InvalidProof)?;
-				if !receipt.contains_log(&log) {
-					return Err(Error::<T>::InvalidProof.into());
-				}
-		
-				Ok(())
-			},
-			_ => Err(Error::<T>::UnsupportedVerificationScheme.into())
-		}
-	}
+		let log: Log = rlp::decode(&message.data)
+			.map_err(|_| Error::<T>::InvalidProof)?;
 
-	fn verify_bulk(_: T::AccountId, messages: &[(AppId, Message)]) -> DispatchResult {
-		// Maps from block hash to (payload, proof) tuples
-		let mut data_by_block: BTreeMap<H256, Vec<(&[u8], &[Vec<u8>])>> = BTreeMap::new();
-
-		// Extract payload and proof, and group by block
-		for (_, message) in messages.iter() {
-			if let VerificationInput::ReceiptProof { block_hash, tx_index, ref proof } = message.verification {
-				match data_by_block.get_mut(&block_hash) {
-					Some(p) => p.push((&message.payload, &proof.1)),
-					None => { data_by_block.insert(block_hash, vec![(&message.payload, &proof.1)]); }
-				}
-			} else {
-				return Err(Error::<T>::UnsupportedVerificationScheme.into());
-			}
+		if !receipt.contains_log(&log) {
+			return Err(Error::<T>::InvalidProof.into());
 		}
 
-		let finalized_block = FinalizedBlock::get();
-	
-		for (block_hash, data) in data_by_block.iter() {
-			let header = Headers::<T>::get(block_hash)
-				.ok_or(Error::<T>::MissingHeader)?
-				.header;
-	
-			Self::check_header_finality(
-				&EthereumHeaderId { hash: *block_hash, number: header.number },
-				&finalized_block,
-			)?;
-
-			for (payload, proof) in data.iter() {
-				let receipt = header.check_receipt_proof(proof)
-					.ok_or(Error::<T>::InvalidProof)?;
-				let log: Log = rlp::decode(payload)
-					.map_err(|_| Error::<T>::InvalidProof)?;
-				if !receipt.contains_log(&log) {
-					return Err(Error::<T>::InvalidProof.into());
-				}
-			}
-		}
-
-		Ok(())
+		Ok(log)
 	}
 }

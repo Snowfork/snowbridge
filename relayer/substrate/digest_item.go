@@ -1,4 +1,4 @@
-package digest
+package substrate
 
 import (
 	"fmt"
@@ -77,18 +77,4 @@ func (c ChannelID) Encode(encoder scale.Encoder) error {
 	}
 
 	return nil
-}
-
-func GetAuxiliaryDigestItem(digest types.Digest) (*AuxiliaryDigestItem, error) {
-	for _, digestItem := range digest {
-		if digestItem.IsOther {
-			var auxDigestItem AuxiliaryDigestItem
-			err := types.DecodeFromBytes(digestItem.AsOther, &auxDigestItem)
-			if err != nil {
-				return nil, err
-			}
-			return &auxDigestItem, nil
-		}
-	}
-	return nil, nil
 }

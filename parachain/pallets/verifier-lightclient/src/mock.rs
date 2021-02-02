@@ -1,5 +1,5 @@
 // Mock runtime
-use artemis_core::{Message, VerificationInput};
+use artemis_core::{Message, Proof};
 use artemis_testutils::BlockWithProofs;
 use crate::{Module, EthashProofData, EthereumHeader, GenesisConfig, Config};
 use sp_core::H256;
@@ -159,13 +159,13 @@ pub fn ethereum_header_proof_from_file(block_num: u64) -> Vec<EthashProofData> {
 		.to_double_node_with_merkle_proof_vec(EthashProofData::from_values)
 }
 
-pub fn message_with_receipt_proof(payload: Vec<u8>, block_hash: H256, proof: (Vec<Vec<u8>>, Vec<Vec<u8>>)) -> Message {
+pub fn message_with_receipt_proof(payload: Vec<u8>, block_hash: H256, proof_data: (Vec<Vec<u8>>, Vec<Vec<u8>>)) -> Message {
 	Message {
-		payload: payload,
-		verification: VerificationInput::ReceiptProof {
-			block_hash: block_hash,
+		data: payload,
+		proof: Proof {
+			block_hash,
 			tx_index: 0,
-			proof: proof,
+			data: proof_data,
 		},
 	}
 }

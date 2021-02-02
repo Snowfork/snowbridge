@@ -1,12 +1,7 @@
-use frame_support::{dispatch::DispatchResult, storage::StorageMap};
+use frame_support::{dispatch::{DispatchError, DispatchResult}, storage::StorageMap};
 use sp_std::{cell::Cell, marker::PhantomData, boxed::Box};
-use artemis_core::{ChannelId, AppId, Message, Verifier};
-use crate::{
-	Module,
-	Config,
-	InboundChannels,
-	primitives::{InboundChannel, InboundChannelData}
-};
+use artemis_core::ChannelId;
+use crate::{Config, Error, InboundChannels, Module, envelope::Envelope, primitives::{InboundChannel, InboundChannelData}};
 
 /// Construct an inbound channel object
 pub fn make_inbound_channel<T>(channel_id: ChannelId) -> Box<dyn InboundChannel<T::AccountId>>
@@ -23,7 +18,6 @@ where
 struct BasicInboundChannel<T: Config> {
 	#[allow(dead_code)]
 	channel_id: ChannelId,
-	#[allow(dead_code)]
 	storage: Storage<T>
 }
 
@@ -37,10 +31,18 @@ impl<T: Config> BasicInboundChannel<T> {
 }
 
 impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
-	// This implementation is a WIP!
-	fn submit(&mut self, relayer: &T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
-		T::Verifier::verify(relayer.clone(), app_id, &message)?;
-		Module::<T>::dispatch(app_id.into(), message)
+	fn submit(&self, relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
+		self.storage.try_mutate::<_,DispatchError,_>(|data| {
+			if envelope.nonce != data.nonce {
+				return Err(Error::<T>::BadNonce.into())
+			}
+			data.nonce += 1;
+			Ok(())
+		})?;
+
+		let _ = Module::<T>::dispatch(envelope.source, &envelope.payload);
+
+		Ok(())
 	}
 }
 
@@ -48,7 +50,6 @@ impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 struct IncentivizedInboundChannel<T: Config> {
 	#[allow(dead_code)]
 	channel_id: ChannelId,
-	#[allow(dead_code)]
 	storage: Storage<T>
 }
 
@@ -62,10 +63,18 @@ impl<T: Config> IncentivizedInboundChannel<T> {
 }
 
 impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
-	// This implementation is a WIP!
-	fn submit(&mut self, relayer: &T::AccountId, app_id: AppId, message: &Message) -> DispatchResult {
-		T::Verifier::verify(relayer.clone(), app_id, &message)?;
-		Module::<T>::dispatch(app_id.into(), message)
+	fn submit(&self, relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
+		self.storage.try_mutate::<_,DispatchError,_>(|data| {
+			if envelope.nonce != data.nonce {
+				return Err(Error::<T>::BadNonce.into())
+			}
+			data.nonce += 1;
+			Ok(())
+		})?;
+
+		let _ = Module::<T>::dispatch(envelope.source, &envelope.payload);
+
+		Ok(())
 	}
 }
 
@@ -97,13 +106,13 @@ impl<T: Config> Storage<T> {
 	}
 
 	#[allow(dead_code)]
-	fn set(&mut self, data: InboundChannelData) {
+	fn set(&self, data: InboundChannelData) {
 		self.cached_data.set(Some(data));
 		InboundChannels::insert(self.channel_id, data)
 	}
 
 	#[allow(dead_code)]
-	fn try_mutate<R, E, F>(&mut self, f: F) -> Result<R, E>
+	fn try_mutate<R, E, F>(&self, f: F) -> Result<R, E>
 	where
 		F: FnOnce(&mut InboundChannelData) -> Result<R, E>
 	{

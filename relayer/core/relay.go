@@ -19,8 +19,6 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/ethereum/go-ethereum/common"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -212,10 +210,6 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("'direction' has invalid value %d", direction)
 	}
 
-	if config.Relay.HeadersOnly {
-		config.Eth.Apps = map[string]ethereum.ContractInfo{}
-	}
-
 	// Load secrets from environment variables
 	var value string
 	var ok bool
@@ -231,12 +225,6 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("environment variable not set: ARTEMIS_SUBSTRATE_KEY")
 	}
 	config.Sub.PrivateKey = value
-
-	// Copy over Ethereum application addresses to the Substrate config
-	config.Sub.Targets = make(map[string][20]byte)
-	for k, v := range config.Eth.Apps {
-		config.Sub.Targets[k] = common.HexToAddress(v.Address)
-	}
 
 	return &config, nil
 }

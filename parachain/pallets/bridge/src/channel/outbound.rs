@@ -35,9 +35,9 @@ impl<T: Config> BasicOutboundChannel<T> {
 
 impl<T: Config> OutboundChannel for BasicOutboundChannel<T> {
 	// This implementation is a WIP!
-	fn submit(&self, payload: &[u8]) -> DispatchResult {
+	fn submit(&self, target: H160, payload: &[u8]) -> DispatchResult {
 		self.storage.try_mutate(|data| {
-			T::MessageCommitment::add(self.id, H160::zero(), data.nonce, payload);
+			T::MessageCommitment::add(self.id, target, data.nonce, payload)?;
 			data.nonce += 1;
 			Ok(())
 		})
@@ -60,9 +60,9 @@ impl<T: Config> IncentivizedOutboundChannel<T> {
 
 impl<T: Config> OutboundChannel for IncentivizedOutboundChannel<T> {
 	// This implementation is a WIP!
-	fn submit(&self, payload: &[u8]) -> DispatchResult {
+	fn submit(&self, target: H160, payload: &[u8]) -> DispatchResult {
 		self.storage.try_mutate(|data| {
-			T::MessageCommitment::add(self.id, H160::zero(), data.nonce, payload);
+			T::MessageCommitment::add(self.id, target, data.nonce, payload)?;
 			data.nonce += 1;
 			Ok(())
 		})

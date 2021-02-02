@@ -1,9 +1,9 @@
-package offchain
+package substrate
 
 import (
 	"testing"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate/digest"
+	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +15,7 @@ func TestMakeStorageKey(t *testing.T) {
 		7, 7, 7, 7, 7, 7, 7, 7,
 	}
 
-	channelID := digest.ChannelID{
+	channelID := chainTypes.ChannelID{
 		IsBasic: true,
 	}
 
