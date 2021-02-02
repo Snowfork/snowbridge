@@ -4,7 +4,7 @@ use sp_std::prelude::*;
 use frame_support::{
 	decl_module, decl_storage, decl_event, decl_error,
 	weights::Weight,
-	traits::Get,
+	dispatch::DispatchResult,
 };
 use sp_io::offchain_index;
 use sp_core::{H160, H256, RuntimeDebug};
@@ -37,7 +37,7 @@ impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 struct Message {
-	address: H160,
+	target: H160,
 	nonce: u64,
 	payload: Vec<u8>,
 }
@@ -49,12 +49,13 @@ pub trait Config: frame_system::Config {
 	type Hashing: Hash<Output = H256>;
 
 	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
-
-	type CommitInterval: Get<Self::BlockNumber>;
 }
 
 decl_storage! {
 	trait Store for Module<T: Config> as Commitments {
+		/// Interval between committing messages
+		Interval get(fn interval) config(): T::BlockNumber;
+
 		/// Messages waiting to be committed
 		pub MessageQueues: map hasher(identity) ChannelId => Vec<Message>;
 	}
@@ -81,7 +82,7 @@ decl_module! {
 		// The hash of the commitment is stored as a digest item `CustomDigestItem::Commitment`
 		// in the block header. The committed messages are persisted into storage.
 		fn on_initialize(now: T::BlockNumber) -> Weight {
-			if (now % T::CommitInterval::get()).is_zero() {
+			if (now % Self::interval()).is_zero() {
 				Self::commit()
 			} else {
 				0
@@ -128,7 +129,7 @@ impl<T: Config> Module<T> {
 		let messages: Vec<Token> = commitment.iter()
 			.map(|message|
 				Token::Tuple(vec![
-					Token::Address(message.address),
+					Token::Address(message.target),
 					Token::Bytes(message.payload.clone()),
 					Token::Uint(message.nonce.into())
 				])
@@ -142,14 +143,17 @@ impl<T: Config> Module<T> {
 impl<T: Config> MessageCommitment for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
-	fn add(channel_id: ChannelId, address: H160, nonce: u64, payload: &[u8]) {
-		<Self as Store>::MessageQueues::append(
+	// TODO (Security): Limit number of messages per commitment
+	//   https://github.com/Snowfork/polkadot-ethereum/issues/226
+	fn add(channel_id: ChannelId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
+		MessageQueues::append(
 			channel_id,
 			Message {
-				address,
+				target,
 				nonce,
 				payload: payload.to_vec()
 			}
 		);
+		Ok(())
 	}
 }

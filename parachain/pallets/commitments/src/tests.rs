@@ -28,17 +28,17 @@ const CONTRACT_B: H160 =  H160::repeat_byte(2);
 #[test]
 fn test_add_message() {
 	new_test_ext().execute_with(|| {
-		CommitmentsModule::add(ChannelId::Basic, CONTRACT_A, 0, &vec![0, 1, 2]);
-		CommitmentsModule::add(ChannelId::Basic, CONTRACT_B, 1, &vec![3, 4, 5]);
+		CommitmentsModule::add(ChannelId::Basic, CONTRACT_A, 0, &vec![0, 1, 2]).unwrap();
+		CommitmentsModule::add(ChannelId::Basic, CONTRACT_B, 1, &vec![3, 4, 5]).unwrap();
 
 		let messages = vec![
 			Message {
-				address: CONTRACT_A,
+				target: CONTRACT_A,
 				nonce: 0,
 				payload: vec![0, 1, 2],
 			},
 			Message {
-				address: CONTRACT_B,
+				target: CONTRACT_B,
 				nonce: 1,
 				payload: vec![3, 4, 5],
 			},

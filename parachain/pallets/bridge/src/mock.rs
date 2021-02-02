@@ -13,7 +13,7 @@ use sp_runtime::{
 use sp_std::convert::From;
 use frame_system as system;
 
-use artemis_core::{Application, SourceChannel, SourceChannelConfig};
+use artemis_core::{MessageCommitment, ChannelId, Application, SourceChannel, SourceChannelConfig};
 use artemis_ethereum::Log;
 
 use hex_literal::hex;
@@ -105,13 +105,20 @@ impl Application for MockERC20App {
 	}
 }
 
+pub struct MockMessageCommitment;
+
+impl MessageCommitment for MockMessageCommitment {
+	fn add(channel_id: ChannelId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
+		Ok(())
+	}
+}
 
 impl Config for Test {
 	type Event = TestEvent;
 	type Verifier = MockVerifier;
 	type AppETH = MockETHApp;
 	type AppERC20 = MockERC20App;
-	type MessageCommitment = ();
+	type MessageCommitment = MockMessageCommitment;
 }
 
 pub type System = system::Module<Test>;

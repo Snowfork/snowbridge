@@ -365,7 +365,6 @@ impl commitments::Config for Runtime {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
-	type CommitInterval = CommitInterval;
 }
 
 impl assets::Config for Runtime {
@@ -404,7 +403,7 @@ construct_runtime!(
 		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
 
 		Bridge: bridge::{Module, Call, Config, Storage, Event},
-		Commitments: commitments::{Module, Call, Storage, Event},
+		Commitments: commitments::{Module, Call, Config<T>, Storage, Event},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
 		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},

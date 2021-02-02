@@ -4,6 +4,7 @@ use artemis_runtime::{
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
 	BridgeConfig, ETHConfig, ERC20Config, AssetsConfig,
+	CommitmentsConfig,
 	ParachainInfoConfig,
 	WASM_BINARY, Signature,
 };
@@ -145,6 +146,9 @@ fn testnet_genesis(
 				],
 			},
 			initial_difficulty: 19755084633726428633088u128.into(),
+		}),
+		commitments: Some(CommitmentsConfig {
+			interval: 1,
 		}),
 		eth_app: Some(ETHConfig {
 			address: hex!["774667629726ec1fabebcec0d9139bd1c8f72a23"].into()
