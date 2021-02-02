@@ -8,7 +8,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
