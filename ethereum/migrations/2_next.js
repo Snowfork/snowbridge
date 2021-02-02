@@ -26,16 +26,12 @@ const channels = {
   },
 }
 
-module.exports = function (deployer, network, accounts) {
+module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
     channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
     channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
     channels.incentivized.inbound.instance = await deployer.deploy(channels.incentivized.inbound.contract)
     channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract)
-
-    // Deploy SendChannels and get deployed addresses
-    const basicSendChannel = await deployer.deploy(BasicSendChannel);
-    const incentivizedSendChannel = await deployer.deploy(IncentivizedSendChannel);
 
     // Link libraries to applications
     await deployer.deploy(ScaleCodec);
