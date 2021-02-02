@@ -87,12 +87,8 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 			return wr.onDone(ctx)
 		case msgs := <-wr.messages:
 
-			fmt.Println("Got messages!")
-
 			var concreteMsgs []*chain.EthereumOutboundMessage
 			for _, msg := range msgs {
-
-				fmt.Println("MESSAGE ", msg)
 				cmsg, ok := msg.(*chain.EthereumOutboundMessage)
 				if !ok {
 					return fmt.Errorf("Invalid message")
@@ -163,9 +159,6 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 
 // WriteMessages submits a "Bridge.submit_bulk" call
 func (wr *Writer) WriteMessages(ctx context.Context, msgs []*chain.EthereumOutboundMessage) error {
-
-	fmt.Println("Write messages!")
-
 	for _, msg := range msgs {
 
 		c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", substrate.Message(*msg))

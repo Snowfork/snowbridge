@@ -5,7 +5,6 @@ package ethereum
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -65,7 +64,6 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	}
 	li.contracts = append(li.contracts, contract)
 
-
 	eg.Go(func() error {
 		return li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
 	})
@@ -114,7 +112,7 @@ func (li *Listener) pollEventsAndHeaders(
 			} else {
 				for _, contract := range li.contracts {
 					li.log.WithFields(logrus.Fields{
-						"contract":    contract,
+						"contract": contract,
 					}).Debug("Polling contract events")
 				}
 			}
@@ -140,7 +138,7 @@ func (li *Listener) queryEvents(ctx context.Context, contract *outbound.Contract
 	var events []*outbound.ContractMessage
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-	iter, err := contract.FilterMessage(&filterOps);
+	iter, err := contract.FilterMessage(&filterOps)
 	if err != nil {
 		return nil, err
 	}
@@ -154,8 +152,6 @@ func (li *Listener) queryEvents(ctx context.Context, contract *outbound.Contract
 			}
 			break
 		}
-
-		fmt.Printf("Event %+v", iter.Event)
 
 		events = append(events, iter.Event)
 	}
@@ -219,4 +215,3 @@ func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.H
 		li.headers <- *header
 	}
 }
-
