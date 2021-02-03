@@ -188,3 +188,5 @@ contract("ERC20App", function (accounts) {
     });
   });
 });
+
+module.exports = { lockupERC20: lockupFunds };

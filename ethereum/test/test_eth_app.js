@@ -176,4 +176,4 @@ contract("ETHApp", function (accounts) {
   });
 });
 
-module.exports = { lockupFunds };
+module.exports = { lockupETH: lockupFunds };
