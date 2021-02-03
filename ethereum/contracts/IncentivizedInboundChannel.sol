@@ -16,44 +16,93 @@ contract IncentivizedInboundChannel is InboundChannel {
         nonce = 0;
     }
 
-    function submit(Message[] memory commitment) public override {
-        //verifyCommitment(commitment);
-        processCommitment(commitment);
+    // TODO: Submit should take in all inputs required for verification,
+    // including eg: _commitment, _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
+    function submit(Message[] memory _messages) public override {
+        //TODO: Verify messages
+        //verifyMessages(_messages, _commitment, ...);
+        processMessages(_messages);
     }
 
-    function verifyCommitment(Message[] memory commitment) internal view returns (bool success) {
+    //TODO: verifyMessages should accept all needed proofs
+    function verifyMessages(Message[] memory _messages, bytes32 _commitment)
+        internal
+        view
+        returns (bool success)
+    {
+        // Prove we can get the MMRLeaf that is claimed to contain our Parachain Block Header
+        // BEEFYLightClient.verifyMMRLeaf(parachainHeadsMMRProof)
+        // BeefyLightClient{
+        //   verifyMMRLeaf(parachainHeadsMMRProof) {
+        //   MMRVerification.verifyInclusionProof(latestMMRRoot, parachainHeadsMMRProof)
+        // }
+        //}
+        //}
+        // returns mmrLeaf;
+
+        // Prove we can get the claimed parachain block header from the MMRLeaf
+        // allParachainHeadsMerkleTreeRoot = mmrLeaf.parachain_heads;
+        // MerkeTree.verify(allParachainHeadsMerkleTreeRoot, ourParachainMerkleProof)
+        // returns parachainBlockHeader
+
+        // Prove that the commitment is in fact in the parachain block header
+        // require(parachainBlockHeader.commitment == commitment)
+
+        // Validate that the commitment matches the commitment contents
+        require(
+            validateMessagesMatchCommitment(_messages, _commitment),
+            "invalid commitment"
+        );
+
         // Require there is enough gas to play all messages
         require(
-            gasleft() >=
-                commitment.length * MAX_GAS_PER_MESSAGE,
+            gasleft() >= _messages.length * MAX_GAS_PER_MESSAGE,
             "insufficient gas for delivery of all messages"
         );
 
         // Require all payloads are smaller than max_payload_size
-        for (uint256 i = 0; i < commitment.length; i++) {
+        for (uint256 i = 0; i < _messages.length; i++) {
             require(
-                commitment[i].payload.length <=
-                    MAX_PAYLOAD_BYTE_SIZE,
+                _messages[i].payload.length <= MAX_PAYLOAD_BYTE_SIZE,
                 "message payload bytesize exceeds maximum payload size"
             );
         }
         return true;
     }
 
-    function processCommitment(
-        Message[] memory commitment
-    ) internal {
-        for (uint256 i = 0; i < commitment.length; i++) {
+    function processMessages(Message[] memory _messages) internal {
+        for (uint256 i = 0; i < _messages.length; i++) {
             // Check message nonce is correct and increment nonce for replay protection
-            Message memory message = commitment[i];
+            Message memory message = _messages[i];
             require(message.nonce == nonce, "invalid nonce");
 
             nonce = nonce + 1;
 
-            (bool success,) = message.target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(message.payload);
+            // Deliver the message to the target
+            // Delivery will have fixed maximum gas allowed for the target app
+            (bool success, ) =
+                message.target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(
+                    message.payload
+                );
 
             emit MessageDelivered(message.nonce, success);
         }
     }
 
+    function validateMessagesMatchCommitment(
+        Message[] memory _messages,
+        bytes32 _commitment
+    ) internal pure returns (bool) {
+        bytes memory messagesBytes;
+        for (uint256 i = 0; i < _messages.length; i++) {
+            bytes memory messageBytes =
+                abi.encodePacked(
+                    _messages[i].target,
+                    _messages[i].nonce,
+                    _messages[i].payload
+                );
+            messagesBytes = abi.encodePacked(messagesBytes, messageBytes);
+        }
+        return keccak256(messagesBytes) == _commitment;
+    }
 }

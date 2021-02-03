@@ -2,7 +2,7 @@ const BigNumber = require('bignumber.js');
 const {
   confirmChannelSend,
   confirmUnlock,
-  deployContracts,
+  deployAppContractWithChannels,
   addressBytes,
   ChannelId
 } = require("./helpers");
@@ -13,17 +13,6 @@ require("chai")
   .should();
 
 const ETHApp = artifacts.require("ETHApp");
-
-const channelContracts = {
-  basic: {
-    inbound: artifacts.require("BasicInboundChannel"),
-    outbound: artifacts.require("BasicOutboundChannel"),
-  },
-  incentivized: {
-    inbound: artifacts.require("IncentivizedInboundChannel"),
-    outbound: artifacts.require("IncentivizedOutboundChannel"),
-  },
-};
 
 const lockupFunds = (contract, sender, recipient, amount, channel) => {
   return contract.lock(
@@ -46,7 +35,7 @@ contract("ETHApp", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      [this.channels, this.app] = await deployContracts(channelContracts, ETHApp);
+      [this.channels, this.app] = await deployAppContractWithChannels(ETHApp);
     });
 
     it("should lock funds", async function () {
@@ -97,7 +86,7 @@ contract("ETHApp", function (accounts) {
   describe("withdrawals", function () {
 
     beforeEach(async function () {
-      [this.channels, this.app] = await deployContracts(channelContracts, ETHApp);
+      [this.channels, this.app] = await deployAppContractWithChannels(ETHApp);
     });
 
     it("should unlock via the basic inbound channel", async function () {
@@ -186,3 +175,5 @@ contract("ETHApp", function (accounts) {
     });
   });
 });
+
+module.exports = { lockupFunds };

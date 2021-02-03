@@ -1,6 +1,17 @@
 const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
 
+const channelContracts = {
+  basic: {
+    inbound: artifacts.require("BasicInboundChannel"),
+    outbound: artifacts.require("BasicOutboundChannel"),
+  },
+  incentivized: {
+    inbound: artifacts.require("IncentivizedInboundChannel"),
+    outbound: artifacts.require("IncentivizedOutboundChannel"),
+  },
+};
+
 const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
   outChannelLogFields = [
     {
@@ -88,19 +99,19 @@ const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
 
   const decodedEvent = web3.eth.abi.decodeLog(messageDeliveredLogFields, rawEvent.data, rawEvent.topics);
 
-  parseFloat(decodedEvent._nonce).should.be.equal(expectedNonce);
-  decodedEvent._result.should.be.equal(expectedResult);
+  parseFloat(decodedEvent.nonce).should.be.equal(expectedNonce);
+  decodedEvent.result.should.be.equal(expectedResult);
 };
 
 
 const hashMessage = (message) => {
   return ethers.utils.solidityKeccak256(
-    ['uint256', 'string', 'address', 'bytes'],
-    [message.nonce, message.senderApplicationId, message.targetApplicationAddress, message.payload]
+    ['address', 'uint256', 'bytes'],
+    [message.target, message.nonce, message.payload]
   );
 }
 
-const deployContracts = async (channelContracts, appContract) => {
+const deployAppContractWithChannels = async (appContract) => {
   const channels = {
     basic: {
       inbound: await channelContracts.basic.inbound.new(),
@@ -142,7 +153,7 @@ module.exports = {
   confirmUnlockTokens,
   confirmMessageDelivered,
   hashMessage,
-  deployContracts,
+  deployAppContractWithChannels,
   addressBytes,
   ChannelId,
 };
