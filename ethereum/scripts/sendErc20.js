@@ -10,8 +10,8 @@ module.exports = async () => {
   // Parameters
   const amount = Number(process.argv[4]);
   if (amount < 1) {
-      console.log("Must provide a valid token amount")
-      return
+    console.log("Must provide a valid token amount")
+    return
   }
 
   const polkadotRecipient = process.argv[5].toString();
@@ -52,16 +52,16 @@ module.exports = async () => {
     console.log("ERC20 tokens successfully approved to ERC20App:\n", approvalEvent);
 
     // Send ERC20 tokens to ERC20App
-    result = await erc20App.sendERC20(recipient, testToken.address, amount, {
-        from: accounts[0],
-        value: 0,
-        gas: 300000 // 300,000 Gwei
-      });
+    result = await erc20App.lock(testToken.address, recipient, amount, 0, {
+      from: accounts[0],
+      value: 0,
+      gas: 300000 // 300,000 Gwei
+    });
 
     console.log("TestTokens succesfully sent to ERC20App:")
 
     // Get event logs
-    event = result.logs.find(e => e.event === "AppTransfer");
+    event = result.logs.find(e => e.event === "Locked");
 
     // Parse event fields
     const appEvent = {
