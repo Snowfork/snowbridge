@@ -11,8 +11,8 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
    yarn global add truffle
    (cd ../ethereum && yarn install)
     ```
-
-3. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
+3. Development environment for Relayer. See relayer [requirements](../relayer/README.md#requirements).
+4. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
 
 ## Setup
 

@@ -14,6 +14,11 @@ Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe
 
 ## Requirements
 
+### Usage
+
+For usage and development, you'll need:
+- [Subkey](https://substrate.dev/docs/en/knowledgebase/integrate/subkey): Used for substrate key management
+
 ### Development
 
 This project requires the following tools for day to day development:
