@@ -7,10 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
-enum ChannelId {
-    Basic,
-    Incentivized
-}
+enum ChannelId {Basic, Incentivized}
 
 contract ERC20App {
     using SafeMath for uint256;
@@ -66,14 +63,21 @@ contract ERC20App {
             IERC20(_token).transferFrom(msg.sender, address(this), _amount),
             "Contract token allowances insufficient to complete this lock request"
         );
+        require(
+            _channelId == ChannelId.Basic ||
+                _channelId == ChannelId.Incentivized,
+            "Invalid channel ID"
+        );
 
         balances[_token] = balances[_token].add(_amount);
 
         emit Locked(_token, msg.sender, _recipient, _amount);
 
-        OutboundPayload memory payload = OutboundPayload(_token, msg.sender, _recipient, _amount);
+        OutboundPayload memory payload =
+            OutboundPayload(_token, msg.sender, _recipient, _amount);
 
-        OutboundChannel channel = OutboundChannel(channels[_channelId].outbound);
+        OutboundChannel channel =
+            OutboundChannel(channels[_channelId].outbound);
         channel.submit(encodePayload(payload));
     }
 
@@ -99,12 +103,17 @@ contract ERC20App {
     }
 
     // SCALE-encode payload
-    function encodePayload(OutboundPayload memory payload) private pure returns (bytes memory) {
-        return abi.encodePacked(
-            payload.token,
-            payload.sender,
-            payload.recipient,
-            payload.amount.toBytes32LE()
-        );
+    function encodePayload(OutboundPayload memory payload)
+        private
+        pure
+        returns (bytes memory)
+    {
+        return
+            abi.encodePacked(
+                payload.token,
+                payload.sender,
+                payload.recipient,
+                payload.amount.toBytes32LE()
+            );
     }
 }
