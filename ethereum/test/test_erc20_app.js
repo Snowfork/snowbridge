@@ -7,8 +7,6 @@ const {
   ChannelId
 } = require("./helpers");
 
-const { confirmChannelSend } = require("./helpers");
-
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))

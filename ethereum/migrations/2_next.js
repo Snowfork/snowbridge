@@ -26,7 +26,7 @@ const channels = {
   },
 }
 
-module.exports = function (deployer, network, accounts) {
+module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
     channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
     channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
@@ -63,6 +63,5 @@ module.exports = function (deployer, network, accounts) {
     );
 
     await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
-
   })
 };
