@@ -7,8 +7,6 @@ const {
   ChannelId
 } = require("./helpers");
 
-const { confirmChannelSend } = require("./helpers");
-
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
@@ -57,8 +55,6 @@ contract("ETHApp", function (accounts) {
 
       const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
-
-      const logs = tx.logs;
 
       // Confirm app event emitted with expected values
       const event = tx.logs.find(

@@ -33,10 +33,6 @@ module.exports = function (deployer, network, accounts) {
     channels.incentivized.inbound.instance = await deployer.deploy(channels.incentivized.inbound.contract)
     channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract)
 
-    // Deploy SendChannels and get deployed addresses
-    const basicSendChannel = await deployer.deploy(BasicSendChannel);
-    const incentivizedSendChannel = await deployer.deploy(IncentivizedSendChannel);
-
     // Link libraries to applications
     await deployer.deploy(ScaleCodec);
     deployer.link(ScaleCodec, [ETHApp, ERC20App]);
