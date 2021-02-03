@@ -17,10 +17,12 @@ contract BasicInboundChannel is InboundChannel {
     }
 
     // TODO: Submit should take in all inputs required for verification,
-    // including eg: _commitment, _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
-    function submit(Message[] memory _messages) public override {
-        //TODO: Verify messages
-        //verifyMessages(_messages, _commitment, ...);
+    // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
+    function submit(Message[] memory _messages, bytes32 _commitment)
+        public
+        override
+    {
+        verifyMessages(_messages, _commitment);
         processMessages(_messages);
     }
 

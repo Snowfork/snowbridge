@@ -61,6 +61,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       // Send commitment including one payload for the ETHApp
       const tx = await this.incentivizedInboundChannel.submit(
         [messageOne, messageTwo],
+        commitmentHash,
         { from: userOne }
       )
 
