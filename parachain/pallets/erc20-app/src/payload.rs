@@ -8,9 +8,9 @@ use artemis_ethereum::{H160, U256};
 // Message from Ethereum (SCALE-encoded)
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct InboundPayload<AccountId: codec::Decode> {
+	pub token: H160,
 	pub sender: H160,
 	pub recipient: AccountId,
-	pub token: H160,
 	pub amount: U256,
 }
 

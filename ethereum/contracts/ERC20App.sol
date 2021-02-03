@@ -63,6 +63,11 @@ contract ERC20App {
             IERC20(_token).transferFrom(msg.sender, address(this), _amount),
             "Contract token allowances insufficient to complete this lock request"
         );
+        require(
+            _channelId == ChannelId.Basic ||
+                _channelId == ChannelId.Incentivized,
+            "Invalid channel ID"
+        );
 
         balances[_token] = balances[_token].add(_amount);
 
