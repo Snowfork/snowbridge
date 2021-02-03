@@ -69,7 +69,7 @@ Send 10 Ether to `//Alice` on Substrate:
 
 ```bash
 cd ../ethereum
-truffle exec scripts/sendEth.js 10
+truffle exec scripts/sendEth.js 10 \
   0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d \
   --network e2e_test
 ```
