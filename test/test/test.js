@@ -37,7 +37,7 @@ describe('Bridge', function () {
   });
 
   describe('ETH App', function () {
-    xit('should transfer ETH from Ethereum to Substrate', async function () {
+    it('should transfer ETH from Ethereum to Substrate', async function () {
       const amount = BigNumber(Web3.utils.toWei('0.01', "ether"));
 
       const account = ethClient.accounts[0];
@@ -59,7 +59,7 @@ describe('Bridge', function () {
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost))
     });
 
-    xit('should transfer ETH from Substrate to Ethereum', async function () {
+    it('should transfer ETH from Substrate to Ethereum', async function () {
 
       let amount = BigNumber('10000000000000000'); // 0.01 ETH
 
@@ -106,7 +106,7 @@ describe('Bridge', function () {
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance))
     });
 
-    xit('should transfer ERC20 from Substrate to Ethereum', async function () {
+    it('should transfer ERC20 from Substrate to Ethereum', async function () {
       let amount = BigNumber('1000');
 
       const account = ethClient.accounts[0];
