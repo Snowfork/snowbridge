@@ -40,7 +40,7 @@ describe('Bridge', function () {
     it('should transfer ETH from Ethereum to Substrate', async function () {
       const amount = BigNumber(Web3.utils.toWei('0.01', "ether"));
 
-      const account = ethClient.accounts[0];
+      const account = ethClient.accounts[1];
 
       const beforeEthBalance = await ethClient.getEthBalance(account);
       const beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.ethAssetId);
@@ -63,13 +63,13 @@ describe('Bridge', function () {
 
       let amount = BigNumber('10000000000000000'); // 0.01 ETH
 
-      const account = ethClient.accounts[0];
+      const account = ethClient.accounts[1];
 
       let beforeEthBalance = await ethClient.getEthBalance(account);
       let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.ethAssetId);
 
       await subClient.burnETH(subClient.alice, account, amount.toFixed())
-      await sleep(30000);
+      await sleep(60000);
 
       let afterEthBalance = await ethClient.getEthBalance(account);
       let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.ethAssetId);
@@ -84,7 +84,7 @@ describe('Bridge', function () {
   });
 
   describe('ERC20 App', function () {
-    it('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
+    xit('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
       let amount = BigNumber('1000');
 
       const account = ethClient.accounts[0];
@@ -106,7 +106,7 @@ describe('Bridge', function () {
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance))
     });
 
-    it('should transfer ERC20 from Substrate to Ethereum', async function () {
+    xit('should transfer ERC20 from Substrate to Ethereum', async function () {
       let amount = BigNumber('1000');
 
       const account = ethClient.accounts[0];
