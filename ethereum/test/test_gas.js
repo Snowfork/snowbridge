@@ -6,6 +6,10 @@ const TestToken = artifacts.require('TestToken');
 
 const BigNumber = web3.BigNumber;
 
+const { lockupETH } = require('./test_eth_app');
+const { lockupERC20 } = require('./test_erc20_app');
+const { deployAppContractWithChannels, ChannelId } = require("./helpers");
+
 require('chai')
   .use(require('chai-as-promised'))
   .use(require('chai-bignumber')(BigNumber))
@@ -22,25 +26,20 @@ contract('Gas expenditures', function (accounts) {
   describe('Gas costs', function () {
 
     beforeEach(async function () {
-      const basicSendChannel = await BasicOutboundChannel.new();
-      const incentivizedSendChannel = await IncentivizedOutboundChannel.new();
-      this.ethApp = await ETHApp.new(basicSendChannel.address, incentivizedSendChannel.address);
-      this.erc20App = await ERC20App.new(basicSendChannel.address, incentivizedSendChannel.address);
+      [, this.ethApp] = await deployAppContractWithChannels(ETHApp);
+      [, this.erc20App] = await deployAppContractWithChannels(ERC20App);
     });
 
-    it('sendETH gas usage', async function () {
+    it('lock eth gas usage', async function () {
       // Prepare transaction parameters
-      const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
       const weiAmount = web3.utils.toWei("0.25", "ether");
 
       // Deposit Ethereum to the contract
-      const result = await this.ethApp.sendETH(
-        recipient,
-        true,
-        { from: userOne, value: weiAmount }
-      ).should.be.fulfilled;
 
-      console.log('\tsendETH gas: ' + result.receipt.gasUsed);
+      const result = await lockupETH(this.ethApp, userOne, POLKADOT_ADDRESS, weiAmount,
+        ChannelId.Basic).should.be.fulfilled;
+
+      console.log('\lock eth gas: ' + result.receipt.gasUsed);
     });
 
     // Set up an ERC20 token for testing token deposits
@@ -54,9 +53,8 @@ contract('Gas expenditures', function (accounts) {
       }).should.be.fulfilled;
     });
 
-    it('sendERC20 gas usage', async function () {
+    it('lock erc20 gas usage', async function () {
       // Prepare transaction parameters
-      const recipient = Buffer.from(POLKADOT_ADDRESS, "hex");
       const amount = 100;
 
       // Approve tokens to contract
@@ -64,19 +62,10 @@ contract('Gas expenditures', function (accounts) {
         from: userOne
       }).should.be.fulfilled;
 
-      // Deposit ERC20 tokens to the contract
-      const result = await this.erc20App.sendERC20(
-        recipient,
-        this.token.address,
-        amount,
-        true,
-        {
-          from: userOne,
-          value: 0
-        }
-      ).should.be.fulfilled;
+      const result = await lockupERC20(this.erc20App, this.token, userOne,
+        POLKADOT_ADDRESS, amount, ChannelId.Basic).should.be.fulfilled;
 
-      console.log('\tsendERC20 gas: ' + result.receipt.gasUsed);
+      console.log('\lock erc20 gas: ' + result.receipt.gasUsed);
     });
   });
 });

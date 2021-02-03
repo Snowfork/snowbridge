@@ -6,10 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
-enum ChannelId {
-    Basic,
-    Incentivized
-}
+enum ChannelId {Basic, Incentivized}
 
 contract ETHApp {
     using SafeMath for uint256;
@@ -19,17 +16,9 @@ contract ETHApp {
 
     mapping(ChannelId => Channel) public channels;
 
-    event Locked(
-        address sender,
-        bytes32 recipient,
-        uint256 amount
-    );
+    event Locked(address sender, bytes32 recipient, uint256 amount);
 
-    event Unlocked(
-        bytes32 sender,
-        address recipient,
-        uint256 amount
-    );
+    event Unlocked(bytes32 sender, address recipient, uint256 amount);
 
     struct OutboundPayload {
         address sender;
@@ -56,19 +45,29 @@ contract ETHApp {
 
     function lock(bytes32 _recipient, ChannelId _channelId) public payable {
         require(msg.value > 0, "Value of transaction must be positive");
-        require(_channelId == ChannelId.Basic || _channelId == ChannelId.Incentivized, "Invalid channel ID");
+        require(
+            _channelId == ChannelId.Basic ||
+                _channelId == ChannelId.Incentivized,
+            "Invalid channel ID"
+        );
 
         balance = balance.add(msg.value);
 
         emit Locked(msg.sender, _recipient, msg.value);
 
-        OutboundPayload memory payload = OutboundPayload(msg.sender, _recipient, msg.value);
+        OutboundPayload memory payload =
+            OutboundPayload(msg.sender, _recipient, msg.value);
 
-        OutboundChannel channel = OutboundChannel(channels[_channelId].outbound);
+        OutboundChannel channel =
+            OutboundChannel(channels[_channelId].outbound);
         channel.submit(encodePayload(payload));
     }
 
-    function unlock(bytes32 _sender, address payable _recipient, uint256 _amount) public {
+    function unlock(
+        bytes32 _sender,
+        address payable _recipient,
+        uint256 _amount
+    ) public {
         // TODO: Ensure message sender is a known inbound channel
         require(_amount > 0, "Must unlock a positive amount");
         require(
@@ -82,11 +81,16 @@ contract ETHApp {
     }
 
     // SCALE-encode payload
-    function encodePayload(OutboundPayload memory payload) private pure returns (bytes memory) {
-        return abi.encodePacked(
-            payload.sender,
-            payload.recipient,
-            payload.amount.toBytes32LE()
-        );
+    function encodePayload(OutboundPayload memory payload)
+        private
+        pure
+        returns (bytes memory)
+    {
+        return
+            abi.encodePacked(
+                payload.sender,
+                payload.recipient,
+                payload.amount.toBytes32LE()
+            );
     }
 }
