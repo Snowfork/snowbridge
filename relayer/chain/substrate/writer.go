@@ -5,7 +5,6 @@ package substrate
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -16,17 +15,18 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type Writer struct {
 	conn     *Connection
-	messages <-chan chain.Message
+	messages <-chan []chain.Message
 	headers  <-chan chain.Header
 	log      *logrus.Entry
 	nonce    uint32
 }
 
-func NewWriter(conn *Connection, messages <-chan chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
+func NewWriter(conn *Connection, messages <-chan []chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
 	return &Writer{
 		conn:     conn,
 		messages: messages,
@@ -85,11 +85,20 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return wr.onDone(ctx)
-		case msg := <-wr.messages:
-			err := wr.WriteMessage(ctx, &msg)
+		case msgs := <-wr.messages:
+
+			var concreteMsgs []*chain.EthereumOutboundMessage
+			for _, msg := range msgs {
+				cmsg, ok := msg.(*chain.EthereumOutboundMessage)
+				if !ok {
+					return fmt.Errorf("Invalid message")
+				}
+				concreteMsgs = append(concreteMsgs, cmsg)
+			}
+
+			err := wr.WriteMessages(ctx, concreteMsgs)
 			if err != nil {
 				wr.log.WithFields(logrus.Fields{
-					"appid": hex.EncodeToString(msg.AppID[:]),
 					"error": err,
 				}).Error("Failure submitting message to substrate")
 			}
@@ -100,6 +109,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 					"blockNumber": header.HeaderData.(ethereum.Header).Number,
 					"error":       err,
 				}).Error("Failure submitting header to substrate")
+				return err
 			}
 		}
 	}
@@ -107,10 +117,9 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 
 // Write submits a transaction to the chain
 func (wr *Writer) write(_ context.Context, c types.Call) error {
-
 	ext := types.NewExtrinsic(c)
 
-	era := types.ExtrinsicEra{IsMortalEra: false}
+	era := types.ExtrinsicEra{IsImmortalEra: true}
 
 	genesisHash, err := wr.conn.api.RPC.Chain.GetBlockHash(0)
 	if err != nil {
@@ -149,21 +158,21 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 	return nil
 }
 
-// WriteMessage submits a "Bridge.submit" call
-func (wr *Writer) WriteMessage(ctx context.Context, msg *chain.Message) error {
-	c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", msg.AppID, msg.Payload)
-	if err != nil {
-		return err
+func (wr *Writer) WriteMessages(ctx context.Context, msgs []*chain.EthereumOutboundMessage) error {
+	for _, msg := range msgs {
+
+		c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", substrate.Message(*msg))
+		if err != nil {
+			return err
+		}
+
+		err = wr.write(ctx, c)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = wr.write(ctx, c)
-	if err != nil {
-		return err
-	}
-
-	wr.log.WithFields(logrus.Fields{
-		"appid": hex.EncodeToString(msg.AppID[:]),
-	}).Info("Submitted message to Substrate")
+	wr.log.WithField("count", len(msgs)).Info("Submitted messages to Substrate")
 
 	return nil
 }
@@ -184,6 +193,9 @@ func (wr *Writer) WriteHeader(ctx context.Context, header *chain.Header) error {
 				"error":       err,
 				"retries":     retries,
 			}).Error("Failure submitting header to substrate")
+			if retries >= 4 {
+				return err
+			}
 		} else {
 			break
 		}

@@ -2,26 +2,26 @@
 
 use frame_support::RuntimeDebug;
 use sp_std::vec::Vec;
-use sp_core::H256;
-
+use sp_core::{H160, H256};
+use enum_iterator::IntoEnumIterator;
 use codec::{Encode, Decode};
 
-/// Identifier for an application module registered within the runtime.
-///
-/// Typically an identifier of this type will hold an Ethereum contract address. This provides a mechanism
-/// for cross-chain routing of messages.
-pub type AppId = [u8; 20];
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug)]
+pub enum ChannelId {
+	Basic,
+	Incentivized
+}
 
 /// A message relayed from Ethereum.
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct Message {
-	/// The raw message payload.
-	///
-	/// Its content is undefined and can only be decoded by target applications.
-	pub payload: Vec<u8>,
-
+	/// The raw message data.
+	pub data: Vec<u8>,
 	/// Input to the message verifier
-	pub verification: VerificationInput,
+	pub proof: Proof,
 }
 
 /// Verification input for the message verifier.
@@ -29,23 +29,24 @@ pub struct Message {
 /// This data type allows us to support multiple verification schemes. In the near future,
 /// A light-client scheme will be added too.
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
-pub enum VerificationInput {
-	/// Basic scheme supports replay protection
-	Basic {
-		/// The block number of the block in which the event was included.
-		block_number: u64,
-		/// The index of the event within the block.
-		event_index: u32,
-	},
-	/// Light-client-based scheme checks receipt inclusion proof
-	ReceiptProof {
-		// The block hash of the block in which the receipt was included.
-		block_hash: H256,
-		// The index of the transaction (and receipt) within the block.
-		tx_index: u32,
-		// Merkle proof keys and values
-		proof: (Vec<Vec<u8>>, Vec<Vec<u8>>),
-	},
-	/// No verification scheme. Such messages will be dropped!
-	None
+pub struct Proof {
+	// The block hash of the block in which the receipt was included.
+	pub block_hash: H256,
+	// The index of the transaction (and receipt) within the block.
+	pub tx_index: u32,
+	// Proof keys and values
+	pub data: (Vec<Vec<u8>>, Vec<Vec<u8>>),
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct SourceChannelConfig {
+	pub basic: SourceChannel,
+	pub incentivized: SourceChannel,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct SourceChannel {
+	pub address: H160
 }

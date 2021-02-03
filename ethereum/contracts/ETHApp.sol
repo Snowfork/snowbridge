@@ -1,83 +1,96 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2;
+pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./Decoder.sol";
-import "./SendChannel.sol";
+import "./ScaleCodec.sol";
+import "./OutboundChannel.sol";
+
+enum ChannelId {Basic, Incentivized}
 
 contract ETHApp {
     using SafeMath for uint256;
-    using Decoder for bytes;
+    using ScaleCodec for uint256;
 
-    uint64 constant PAYLOAD_LENGTH = 84;
-    string constant TARGET_APPLICATION_ID = "eth-app";
+    uint256 public balance;
 
-    address public bridge;
-    uint256 public totalETH;
-    address public basicSendChannelAddress;
-    address public incentivizedSendChannelAddress;
+    mapping(ChannelId => Channel) public channels;
 
-    event Locked(address _sender, bytes32 _recipient, uint256 _amount);
-    event Unlocked(
-        bytes32 _polkadotSender,
-        address _recipient,
-        uint256 _amount
-    );
+    event Locked(address sender, bytes32 recipient, uint256 amount);
 
-    struct ETHLockedPayload {
-        address _sender;
-        bytes32 _recipient;
-        uint256 _amount;
+    event Unlocked(bytes32 sender, address recipient, uint256 amount);
+
+    struct OutboundPayload {
+        address sender;
+        bytes32 recipient;
+        uint256 amount;
     }
 
-    constructor(
-        address _basicSendChannelAddress,
-        address _incentivizedSendChannelAddress
-    ) public {
-        totalETH = 0;
-        basicSendChannelAddress = _basicSendChannelAddress;
-        incentivizedSendChannelAddress = _incentivizedSendChannelAddress;
+    struct Channel {
+        address inbound;
+        address outbound;
     }
 
-    function register(address _bridge) public {
-        require(bridge == address(0), "Bridge has already been registered");
-        bridge = _bridge;
+    constructor(Channel memory _basic, Channel memory _incentivized) {
+        balance = 0;
+
+        Channel storage c1 = channels[ChannelId.Basic];
+        c1.inbound = _basic.inbound;
+        c1.outbound = _basic.outbound;
+
+        Channel storage c2 = channels[ChannelId.Incentivized];
+        c2.inbound = _incentivized.inbound;
+        c2.outbound = _incentivized.outbound;
     }
 
-    function sendETH(bytes32 _recipient, bool incentivized) public payable {
+    function lock(bytes32 _recipient, ChannelId _channelId) public payable {
         require(msg.value > 0, "Value of transaction must be positive");
+        require(
+            _channelId == ChannelId.Basic ||
+                _channelId == ChannelId.Incentivized,
+            "Invalid channel ID"
+        );
 
-        // Increment locked Ethereum counter by this amount
-        totalETH = totalETH.add(msg.value);
+        balance = balance.add(msg.value);
 
         emit Locked(msg.sender, _recipient, msg.value);
 
-        ETHLockedPayload memory payload =
-            ETHLockedPayload(msg.sender, _recipient, msg.value);
-        SendChannel sendChannel;
-        if (incentivized) {
-            sendChannel = SendChannel(incentivizedSendChannelAddress);
-        } else {
-            sendChannel = SendChannel(basicSendChannelAddress);
-        }
-        sendChannel.send(TARGET_APPLICATION_ID, abi.encode(payload));
+        OutboundPayload memory payload =
+            OutboundPayload(msg.sender, _recipient, msg.value);
+
+        OutboundChannel channel =
+            OutboundChannel(channels[_channelId].outbound);
+        channel.submit(encodePayload(payload));
     }
 
-    function unlockETH(
-        bytes32 _polkadotSender,
+    function unlock(
+        bytes32 _sender,
         address payable _recipient,
         uint256 _amount
     ) public {
-        require(msg.sender == bridge);
+        // TODO: Ensure message sender is a known inbound channel
         require(_amount > 0, "Must unlock a positive amount");
         require(
-            totalETH >= _amount,
+            balance >= _amount,
             "ETH token balances insufficient to fulfill the unlock request"
         );
 
-        totalETH = totalETH.sub(_amount);
+        balance = balance.sub(_amount);
         _recipient.transfer(_amount);
-        emit Unlocked(_polkadotSender, _recipient, _amount);
+        emit Unlocked(_sender, _recipient, _amount);
+    }
+
+    // SCALE-encode payload
+    function encodePayload(OutboundPayload memory payload)
+        private
+        pure
+        returns (bytes memory)
+    {
+        return
+            abi.encodePacked(
+                payload.sender,
+                payload.recipient,
+                payload.amount.toBytes32LE()
+            );
     }
 }

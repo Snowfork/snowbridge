@@ -25,6 +25,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file")
 	rootCmd.AddCommand(runCmd())
+	rootCmd.AddCommand(getBlockCmd())
 }
 
 func initConfig() {

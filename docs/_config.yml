@@ -3,7 +3,8 @@ email: contact@snowfork.com
 description: A bridge between Polkadot and Ethereum
 baseurl: ""
 url: ""
-
+plugins:
+  - jekyll-spaceship
 theme: just-the-docs
 
 footer_content: "Copyright &copy; 2020 Snowfork"

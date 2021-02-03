@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2;
+pragma solidity >=0.7.6;
 
-contract Scale {
+library ScaleCodec {
     // Decodes a SCALE encoded uint256 by converting bytes (bid endian) to little endian format
     function decodeUint256(bytes memory data) public pure returns (uint256) {
         uint256 number;
@@ -15,7 +15,7 @@ contract Scale {
     function decodeUintCompact(bytes memory data)
         public
         pure
-        returns (uint256)
+        returns (uint256 v)
     {
         uint8 b = readByteAtIndex(data, 0); // read the first byte
         uint8 mode = b & 3; // bitwise operation
@@ -61,5 +61,14 @@ contract Scale {
         returns (uint8)
     {
         return uint8(data[index]);
+    }
+
+    function toBytes32LE(uint256 value) internal pure returns (bytes32) {
+        bytes32 b = bytes32(value);
+        bytes32 out;
+        for (uint i = 0; i < 32; i++) {
+            out |= bytes32(b[32 - i - 1] & 0xFF) >> (i * 8);
+        }
+        return out;
     }
 }

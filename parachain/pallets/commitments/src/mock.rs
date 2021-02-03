@@ -1,9 +1,9 @@
 // Copyright 2020 Parity Technologies (UK) Ltd.
-use crate::{Module, Config};
+use crate::{GenesisConfig, Module, Config};
 use sp_core::H256;
 use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup}, testing::Header, Perbill,
+	traits::{BlakeTwo256, Keccak256, IdentityLookup}, testing::Header, Perbill,
 };
 use frame_system as system;
 
@@ -54,10 +54,8 @@ parameter_types! {
 
 impl Config for Test {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
-
 	type Event = ();
-
-	type CommitInterval = CommitInterval;
+	type Hashing = Keccak256;
 }
 
 pub type System = system::Module<Test>;
@@ -65,5 +63,10 @@ pub type CommitmentsModule = Module<Test>;
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	let mut storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let config: GenesisConfig<Test> = GenesisConfig {
+		interval: 1u64
+	};
+	config.assimilate_storage(&mut storage).unwrap();
+	storage.into()
 }

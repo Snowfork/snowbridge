@@ -24,14 +24,13 @@ use frame_support::{
 	dispatch::DispatchResult,
 };
 use sp_std::prelude::*;
-use sp_std::convert::TryInto;
 use sp_core::{H160, U256};
+use codec::Decode;
 
-use artemis_core::{Application, Commitments, SingleAsset};
-use artemis_ethereum::Log;
+use artemis_core::{ChannelId, Application, SubmitOutbound, SingleAsset};
 
 mod payload;
-use payload::{InPayload, OutPayload};
+use payload::{InboundPayload, OutboundPayload};
 
 #[cfg(test)]
 mod mock;
@@ -44,11 +43,12 @@ pub trait Config: system::Config {
 
 	type Asset: SingleAsset<<Self as system::Config>::AccountId>;
 
-	type Commitments: Commitments;
+	type SubmitOutbound: SubmitOutbound;
 }
 
 decl_storage! {
 	trait Store for Module<T: Config> as EthModule {
+		/// Address of the peer application on the Ethereum side.
 		Address get(fn address) config(): H160;
 	}
 }
@@ -59,11 +59,8 @@ decl_event!(
 	where
 		AccountId = <T as system::Config>::AccountId
 	{
-		Burned(AccountId, U256),
-		Minted(AccountId, U256),
-
-		// TODO: Remove once relayer is updated to read commitments instead
-		Transfer(AccountId, H160, U256),
+		Burned(AccountId, H160, U256),
+		Minted(H160, AccountId, U256),
 	}
 );
 
@@ -85,22 +82,20 @@ decl_module! {
 		// Users should burn their holdings to release funds on the Ethereum side
 		// TODO: Calculate weights
 		#[weight = 0]
-		pub fn burn(origin, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(origin, channel_id: ChannelId, recipient: H160, amount: U256, ) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Asset::withdraw(&who, amount)?;
 
-			let message = OutPayload {
-				sender_addr: who.clone(),
-				recipient_addr: recipient,
+			let message = OutboundPayload {
+				sender: who.clone(),
+				recipient: recipient.clone(),
 				amount: amount
 			};
-			T::Commitments::add(Self::address(), message.encode());
 
-			Self::deposit_event(RawEvent::Burned(who.clone(), amount));
+			T::SubmitOutbound::submit(channel_id, Address::get(), &message.encode())?;
 
-			// TODO: Remove once relayer can read message commitments
-			Self::deposit_event(RawEvent::Transfer(who.clone(), recipient, amount));
+			Self::deposit_event(RawEvent::Burned(who.clone(), recipient, amount));
 
 			Ok(())
 		}
@@ -109,23 +104,20 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-
-	fn handle_event(payload: InPayload<T::AccountId>) -> DispatchResult {
-		T::Asset::deposit(&payload.recipient_addr, payload.amount)?;
-		Self::deposit_event(RawEvent::Minted(payload.recipient_addr.clone(), payload.amount));
+	fn handle_payload(payload: &InboundPayload<T::AccountId>) -> DispatchResult  {
+		T::Asset::deposit(&payload.recipient, payload.amount)?;
+		Self::deposit_event(RawEvent::Minted(payload.sender, payload.recipient.clone(), payload.amount));
 		Ok(())
 	}
 }
 
 impl<T: Config> Application for Module<T> {
-	fn handle(payload: &[u8]) -> DispatchResult {
-		// Decode ethereum Log event from RLP-encoded data, and try to convert to InPayload
-		let payload_decoded = rlp::decode::<Log>(payload)
-			.map_err(|_| Error::<T>::InvalidPayload)?
-			.try_into()
+	// Handle a message submitted to us by an inbound channel.
+	fn handle(mut payload: &[u8]) -> DispatchResult {
+		let payload_decoded: InboundPayload<T::AccountId> = InboundPayload::decode(&mut payload)
 			.map_err(|_| Error::<T>::InvalidPayload)?;
 
-		Self::handle_event(payload_decoded)
+		Self::handle_payload(&payload_decoded)
 	}
 
 	fn address() -> H160 {

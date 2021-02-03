@@ -28,7 +28,6 @@ artemis-ethereum = { path = "../../primitives/ethereum", default-features = fals
 
 [dev-dependencies]
 artemis-assets = { path = "../../pallets/assets", default-features = false }
-artemis-commitments = { path = "../../pallets/commitments", default-features = false }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 
 [features]

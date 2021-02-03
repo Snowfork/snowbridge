@@ -1,14 +1,18 @@
 // Mock runtime
 
 use crate::{Module, Config};
-use sp_core::H256;
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
+use sp_core::{H160, H256};
+use frame_support::{
+	impl_outer_origin, impl_outer_event, parameter_types,
+	weights::Weight,
+	dispatch::DispatchResult,
+};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
 };
 use frame_system as system;
 
-use artemis_core::AssetId;
+use artemis_core::{ChannelId, AssetId, SubmitOutbound};
 use artemis_assets::SingleAssetAdaptor;
 
 impl_outer_origin! {
@@ -23,7 +27,6 @@ impl_outer_event! {
     pub enum MockEvent for MockRuntime {
 		system<T>,
 		artemis_assets<T>,
-		artemis_commitments,
         test_events<T>,
     }
 }
@@ -71,14 +74,12 @@ impl artemis_assets::Config for MockRuntime {
 	type Event = MockEvent;
 }
 
-parameter_types! {
-	pub const CommitInterval: u64 = 20;
-}
+pub struct MockSubmitOutbound;
 
-impl artemis_commitments::Config for MockRuntime {
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
-	type Event = MockEvent;
-	type CommitInterval = CommitInterval;
+impl SubmitOutbound for MockSubmitOutbound {
+	fn submit(_: ChannelId, _: H160, _: &[u8]) -> DispatchResult {
+		Ok(())
+	}
 }
 
 parameter_types! {
@@ -88,11 +89,10 @@ parameter_types! {
 impl Config for MockRuntime {
 	type Event = MockEvent;
 	type Asset = Asset;
-	type Commitments = Commitments;
+	type SubmitOutbound = MockSubmitOutbound;
 }
 
 pub type System = system::Module<MockRuntime>;
-pub type Commitments = artemis_commitments::Module<MockRuntime>;
 pub type Asset = SingleAssetAdaptor<MockRuntime, EthAssetId>;
 pub type ETH = Module<MockRuntime>;
 
