@@ -84,7 +84,7 @@ describe('Bridge', function () {
   });
 
   describe('ERC20 App', function () {
-    xit('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
+    it('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
       let amount = BigNumber('1000');
 
       const account = ethClient.accounts[0];
@@ -106,7 +106,7 @@ describe('Bridge', function () {
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance))
     });
 
-    xit('should transfer ERC20 from Substrate to Ethereum', async function () {
+    it('should transfer ERC20 from Substrate to Ethereum', async function () {
       let amount = BigNumber('1000');
 
       const account = ethClient.accounts[0];
@@ -115,7 +115,7 @@ describe('Bridge', function () {
       let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.erc20AssetId);
 
       await subClient.burnERC20(subClient.alice, TestTokenAddress, account, amount.toFixed())
-      await sleep(30000);
+      await sleep(60000);
 
       let afterEthBalance = await ethClient.getErc20Balance(account);
       let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.erc20AssetId);
