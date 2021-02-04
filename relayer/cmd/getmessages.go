@@ -14,14 +14,18 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
+	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 func getMessagesCmd() *cobra.Command {
@@ -38,12 +42,6 @@ func getMessagesCmd() *cobra.Command {
 		"i",
 		0,
 		"Index in the block of the receipt (or transaction) that contains the event",
-	)
-	cmd.Flags().BoolP(
-		"filter-by-config",
-		"f",
-		false,
-		"Select logs based on the config instead of the receipt index",
 	)
 	cmd.MarkFlagRequired("block")
 	return cmd
@@ -64,34 +62,30 @@ func GetMessagesFn(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	filterByConfig := cmd.Flags().Lookup("filter-by-config").Value.String() == "true"
-	indexPtr := &index
-	if filterByConfig {
-		indexPtr = nil
-	}
 
-	logs, trie, err := getEthLogsAndReceiptTrie(&config.Eth, blockHash, indexPtr)
+	contractEvents, trie, err := getEthContractEventsAndTrie(&config.Eth, blockHash, index)
 	if err != nil {
 		return err
 	}
-	for _, log := range logs {
-		printEthLogForSub(log, trie)
+
+	for _, event := range contractEvents {
+		printEthContractEventForSub(event, trie)
 	}
 	return nil
 }
 
-func getEthLogsAndReceiptTrie(
+func getEthContractEventsAndTrie(
 	config *ethereum.Config,
 	blockHash gethCommon.Hash,
-	index *uint64,
-) ([]*gethTypes.Log, *gethTrie.Trie, error) {
+	index uint64,
+) ([]*outbound.ContractMessage, *gethTrie.Trie, error) {
 	ctx := context.Background()
 	kp, err := secp256k1.NewKeypairFromString(config.PrivateKey)
 	if err != nil {
 		return nil, nil, err
 	}
-	log := logrus.WithField("chain", "Ethereum")
-	conn := ethereum.NewConnection(config.Endpoint, kp, log)
+
+	conn := ethereum.NewConnection(config.Endpoint, kp, logrus.WithField("chain", "Ethereum"))
 	err = conn.Connect(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -110,38 +104,76 @@ func getEthLogsAndReceiptTrie(
 	}
 	trie := makeTrie(receipts)
 
-	if index == nil {
-		contracts, err := ethereum.LoadAppContracts(config)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		query := ethereum.MakeFilterQuery(contracts)
-		query.BlockHash = &blockHash
-		logs, err := conn.GetClient().FilterLogs(ctx, *query)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		logPtrs := make([]*gethTypes.Log, len(logs))
-		for i, log := range logs {
-			logCopy := log
-			logPtrs[i] = &logCopy
-		}
-		return logPtrs, trie, nil
+	contracts, err := getEthContractsFromConfig(config, conn.GetClient())
+	if err != nil {
+		return nil, nil, err
 	}
 
-	receipt := receipts[*index]
-	return receipt.Logs, trie, nil
+	contractMessages, err := getEthContractMessages(ctx, contracts, block.NumberU64(), index)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return contractMessages, trie, nil
 }
 
-func printEthLogForSub(log *gethTypes.Log, trie *gethTrie.Trie) error {
-	message, err := ethereum.MakeMessageFromEvent(log, trie, logrus.WithField("chain", "Ethereum"))
+func getEthContractsFromConfig(config *ethereum.Config, client *ethclient.Client) ([]*outbound.Contract, error) {
+	contractBasic, err := outbound.NewContract(gethCommon.HexToAddress(config.Channels.Basic.Outbound), client)
+	if err != nil {
+		return nil, err
+	}
+
+	contractIncentivized, err := outbound.NewContract(gethCommon.HexToAddress(config.Channels.Incentivized.Outbound), client)
+	if err != nil {
+		return nil, err
+	}
+
+	return []*outbound.Contract{contractBasic, contractIncentivized}, nil
+}
+
+func getEthContractMessages(
+	ctx context.Context,
+	contracts []*outbound.Contract,
+	blockNumber uint64,
+	index uint64,
+) ([]*outbound.ContractMessage, error) {
+	events := make([]*outbound.ContractMessage, 0)
+	filterOps := bind.FilterOpts{Start: blockNumber, End: &blockNumber, Context: ctx}
+	for _, contract := range contracts {
+		iter, err := contract.FilterMessage(&filterOps)
+		if err != nil {
+			return nil, err
+		}
+
+		for {
+			more := iter.Next()
+			if !more {
+				err = iter.Error()
+				if err != nil {
+					return nil, err
+				}
+				break
+			}
+
+			if uint64(iter.Event.Raw.TxIndex) != index {
+				continue
+			}
+			events = append(events, iter.Event)
+		}
+	}
+
+	return events, nil
+}
+
+func printEthContractEventForSub(contractMsg *outbound.ContractMessage, trie *gethTrie.Trie) error {
+	message, err := ethereum.MakeMessageFromEvent(contractMsg, trie, logrus.WithField("chain", "Ethereum"))
 	if err != nil {
 		return err
 	}
-	messageEth := message.Payload.(ethereum.Message)
-	verificationInput := messageEth.VerificationInput.AsReceiptProof
+
+	messageForSub := substrate.Message(*message)
+	proof := messageForSub.Proof
+
 	formatProofVec := func(data []types.Bytes) string {
 		hexRep := make([]string, len(data))
 		for i, datum := range data {
@@ -151,24 +183,25 @@ func printEthLogForSub(log *gethTypes.Log, trie *gethTrie.Trie) error {
 			%s,
 		]`, strings.Join(hexRep, ",\n"))
 	}
+
 	fmt.Println("")
 	fmt.Printf(
 		`Message {
-			payload: hex!("%s").to_vec(),
-			verification: VerificationInput::ReceiptProof {
+			data: hex!("%s").to_vec(),
+			proof: Proof {
 				block_hash: hex!("%x").into(),
 				tx_index: %d,
-				proof: (
+				data: (
 					%s,
 					%s,
 				),
 			},
 		}`,
-		hex.EncodeToString(messageEth.Data),
-		verificationInput.BlockHash,
-		verificationInput.TxIndex,
-		formatProofVec(verificationInput.Proof.Keys),
-		formatProofVec(verificationInput.Proof.Values),
+		hex.EncodeToString(messageForSub.Data),
+		proof.BlockHash,
+		proof.TxIndex,
+		formatProofVec(proof.Data.Keys),
+		formatProofVec(proof.Data.Values),
 	)
 	fmt.Println("")
 	return nil
