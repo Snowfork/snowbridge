@@ -4405,6 +4405,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-dispatch"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-elections-phragmen"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#0b0d124d5f9be89f614f2be8e9da038fcb9f540e"
