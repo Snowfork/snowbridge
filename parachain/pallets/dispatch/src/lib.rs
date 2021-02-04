@@ -7,6 +7,7 @@ use frame_support::{
 	traits::EnsureOrigin,
 	weights::GetDispatchInfo,
 	RuntimeDebug,
+	traits::{Filter, Get},
 };
 
 use frame_system::{self as system};
@@ -15,14 +16,13 @@ use sp_std::prelude::*;
 
 use codec::{Encode, Decode};
 
-pub type Origin = RawOrigin;
 
 #[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
-pub struct RawOrigin(H160);
+pub struct Origin(H160);
 
-impl From<H160> for RawOrigin {
-	fn from(hash: H160) -> RawOrigin {
-		RawOrigin(hash)
+impl From<H160> for Origin {
+	fn from(hash: H160) -> Origin {
+		Origin(hash)
 	}
 }
 
@@ -30,7 +30,7 @@ pub struct EnsureEthereumAccount;
 
 impl<OuterOrigin> EnsureOrigin<OuterOrigin> for EnsureEthereumAccount
 where
-	OuterOrigin: Into<Result<RawOrigin, OuterOrigin>>,
+	OuterOrigin: Into<Result<Origin, OuterOrigin>>,
 {
 	type Success = H160;
 
@@ -40,7 +40,7 @@ where
 }
 
 pub trait Config: system::Config {
-	type Origin: From<RawOrigin>;
+	type Origin: From<Origin>;
 
 	type MessageId: Parameter;
 
@@ -84,7 +84,7 @@ impl<T: Config> Module<T> {
 			}
 		};
 
-		let origin = RawOrigin(source).into();
+		let origin = Origin(source).into();
 		let result = call.dispatch(origin);
 
 		Self::deposit_event(RawEvent::Delivered(
@@ -93,3 +93,123 @@ impl<T: Config> Module<T> {
 		));
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
+	use frame_system::{EventRecord, Phase};
+	use sp_core::H256;
+	use sp_runtime::{
+		testing::Header,
+		traits::{BlakeTwo256, IdentityLookup},
+		Perbill,
+	};
+
+	type AccountId = u64;
+	type Dispatch = Module<Test>;
+	type System = frame_system::Module<Test>;
+
+	#[derive(Clone, Eq, PartialEq)]
+	pub struct Test;
+
+	mod dispatch {
+		pub use crate::Event;
+	}
+
+	mod origin {
+		pub use crate::Origin;
+	}
+
+	impl_outer_event! {
+		pub enum TestEvent for Test {
+			frame_system<T>,
+			dispatch<T>,
+		}
+	}
+
+	impl_outer_origin! {
+		pub enum Origin for Test where system = frame_system {
+			origin
+		}
+	}
+
+	impl_outer_dispatch! {
+		pub enum Call for Test where origin: Origin {
+			frame_system::System,
+			dispatch::Dispatch,
+		}
+	}
+
+	parameter_types! {
+		pub const BlockHashCount: u64 = 250;
+		pub const MaximumBlockWeight: Weight = 1024;
+		pub const MaximumBlockLength: u32 = 2 * 1024;
+		pub const AvailableBlockRatio: Perbill = Perbill::one();
+	}
+
+	impl frame_system::Config for Test {
+		type Origin = Origin;
+		type Index = u64;
+		type Call = Call;
+		type BlockNumber = u64;
+		type Hash = H256;
+		type Hashing = BlakeTwo256;
+		type AccountId = AccountId;
+		type Lookup = IdentityLookup<Self::AccountId>;
+		type Header = Header;
+		type Event = TestEvent;
+		type BlockHashCount = BlockHashCount;
+		type Version = ();
+		type PalletInfo = ();
+		type AccountData = ();
+		type OnNewAccount = ();
+		type OnKilledAccount = ();
+		type BaseCallFilter = ();
+		type SystemWeightInfo = ();
+		type BlockWeights = ();
+		type BlockLength = ();
+		type DbWeight = ();
+		type SS58Prefix = ();
+	}
+
+	impl Config for Test {
+		type Origin = Origin;
+		type Event = TestEvent;
+		type MessageId = u64;
+		type Call = Call;
+	}
+
+	fn new_test_ext() -> sp_io::TestExternalities {
+		let t = frame_system::GenesisConfig::default()
+			.build_storage::<Test>()
+			.unwrap();
+		sp_io::TestExternalities::new(t)
+	}
+
+	#[test]
+	fn should_dispatch_bridge_message() {
+		new_test_ext().execute_with(|| {
+			let id = 37;
+			let source = H160::repeat_byte(7);
+
+			let message = Call::System(<frame_system::Call<Test>>::remark(vec![])).encode();
+
+			System::set_block_number(1);
+			Dispatch::dispatch(source, id, &message);
+
+			assert_eq!(
+				System::events(),
+				vec![EventRecord {
+					phase: Phase::Initialization,
+					event: TestEvent::dispatch(Event::<Test>::Delivered(id, Ok(()))),
+					topics: vec![],
+				}],
+			);
+		})
+	}
+
+
+
+}
+
