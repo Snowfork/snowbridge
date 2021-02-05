@@ -1,7 +1,10 @@
 use frame_support::{dispatch::{DispatchError, DispatchResult}, storage::StorageMap};
 use sp_std::{cell::Cell, marker::PhantomData, boxed::Box};
-use artemis_core::ChannelId;
-use crate::{Config, Error, InboundChannels, Module, envelope::Envelope, primitives::{InboundChannel, InboundChannelData}};
+use artemis_core::{ChannelId, MessageDispatch};
+use crate::{
+	Config, Error, InboundChannels,
+	envelope::Envelope, primitives::{InboundChannel, InboundChannelData}
+};
 
 /// Construct an inbound channel object
 pub fn make_inbound_channel<T>(channel_id: ChannelId) -> Box<dyn InboundChannel<T::AccountId>>
@@ -16,7 +19,6 @@ where
 
 /// Basic Channel
 struct BasicInboundChannel<T: Config> {
-	#[allow(dead_code)]
 	channel_id: ChannelId,
 	storage: Storage<T>
 }
@@ -40,7 +42,8 @@ impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 			Ok(())
 		})?;
 
-		let _ = Module::<T>::dispatch(envelope.source, &envelope.payload);
+		let message_id = (self.channel_id, envelope.nonce);
+		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 		Ok(())
 	}
@@ -48,7 +51,6 @@ impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 
 /// Incentivized Channel
 struct IncentivizedInboundChannel<T: Config> {
-	#[allow(dead_code)]
 	channel_id: ChannelId,
 	storage: Storage<T>
 }
@@ -72,7 +74,8 @@ impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 			Ok(())
 		})?;
 
-		let _ = Module::<T>::dispatch(envelope.source, &envelope.payload);
+		let message_id = (self.channel_id, envelope.nonce);
+		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 		Ok(())
 	}

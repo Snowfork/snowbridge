@@ -13,10 +13,8 @@ use sp_runtime::{
 use sp_std::convert::From;
 use frame_system as system;
 
-use artemis_core::{MessageCommitment, ChannelId, Application, SourceChannel, SourceChannelConfig};
+use artemis_core::{MessageCommitment, MessageDispatch, ChannelId, SourceChannel, SourceChannelConfig};
 use artemis_ethereum::Log;
-
-use hex_literal::hex;
 
 impl_outer_origin! {
 	pub enum Origin for Test {}
@@ -80,30 +78,6 @@ impl Verifier for MockVerifier {
 		Ok(log)
 	}
 }
-// Mock ETH app
-pub struct MockETHApp;
-
-impl Application for MockETHApp {
-	fn handle(_: &[u8]) -> DispatchResult {
-		Ok(())
-	}
-
-	fn address() -> H160 {
-		hex!["8f5acf5f15d4c3d654a759b96bb674a236c8c0f3"].into()
-	}
-}
-
-pub struct MockERC20App;
-
-impl Application for MockERC20App {
-	fn handle(_: &[u8]) -> DispatchResult {
-		Ok(())
-	}
-
-	fn address() -> H160 {
-		H160::zero()
-	}
-}
 
 pub struct MockMessageCommitment;
 
@@ -113,12 +87,18 @@ impl MessageCommitment for MockMessageCommitment {
 	}
 }
 
+pub struct MockMessageDispatch;
+
+impl MessageDispatch<(ChannelId, u64)> for MockMessageDispatch {
+	fn dispatch(source: H160, id: (ChannelId, u64), payload: &[u8]) {}
+}
+
+
 impl Config for Test {
 	type Event = TestEvent;
 	type Verifier = MockVerifier;
-	type AppETH = MockETHApp;
-	type AppERC20 = MockERC20App;
 	type MessageCommitment = MockMessageCommitment;
+	type MessageDispatch = MockMessageDispatch;
 }
 
 pub type System = system::Module<Test>;

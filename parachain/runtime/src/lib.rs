@@ -40,7 +40,8 @@ pub use frame_support::{
 use pallet_transaction_payment::{FeeDetails, CurrencyAdapter};
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId, Application};
+pub use artemis_core::{AssetId};
+use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::EthereumHeader;
 
@@ -379,12 +380,14 @@ impl eth_app::Config for Runtime {
 	type Event = Event;
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
 	type SubmitOutbound = bridge::Module<Runtime>;
+	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
 }
 
 impl erc20_app::Config for Runtime {
 	type Event = Event;
 	type Assets = assets::Module<Runtime>;
 	type SubmitOutbound = bridge::Module<Runtime>;
+	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
 }
 
 construct_runtime!(

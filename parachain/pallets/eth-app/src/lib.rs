@@ -10,8 +10,6 @@
 //!
 //! ## Interface
 //!
-//! This application implements the [`Application`] trait and conforms to its interface
-//!
 //! ### Dispatchable Calls
 //!
 //! - `burn`: Burn an ETH balance.

@@ -354,6 +354,7 @@ dependencies = [
  "artemis-assets",
  "artemis-commitments",
  "artemis-core",
+ "artemis-dispatch",
  "artemis-erc20-app",
  "artemis-eth-app",
  "artemis-token-dealer",

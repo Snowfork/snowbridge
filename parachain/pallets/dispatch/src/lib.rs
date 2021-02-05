@@ -14,6 +14,8 @@ use frame_system::{self as system};
 use sp_core::H160;
 use sp_std::prelude::*;
 
+use artemis_core::MessageDispatch;
+
 use codec::{Encode, Decode};
 
 #[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
@@ -81,9 +83,8 @@ decl_module! {
 
 pub type MessageIdOf<T> = <T as Config>::MessageId;
 
-impl<T: Config> Module<T> {
-
-	pub fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8]) {
+impl<T: Config> MessageDispatch<MessageIdOf<T>> for Module<T> {
+	fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8]) {
 		let call = match <T as Config>::Call::decode(&mut &payload[..]) {
 			Ok(call) => call,
 			Err(_) => {
@@ -105,7 +106,11 @@ impl<T: Config> Module<T> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
+	use frame_support::{
+		impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types,
+		dispatch::DispatchError,
+		weights::Weight
+	};
 	use frame_system::{EventRecord, Phase};
 	use sp_core::H256;
 	use sp_runtime::{

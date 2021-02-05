@@ -27,7 +27,7 @@ use sp_std::prelude::*;
 use sp_std::convert::TryFrom;
 use artemis_core::{
 	ChannelId, SubmitOutbound, Message,
-	MessageCommitment, Verifier, Application,
+	MessageCommitment, MessageDispatch, Verifier,
 	SourceChannelConfig,
 };
 use channel::inbound::make_inbound_channel;
@@ -51,14 +51,11 @@ pub trait Config: system::Config {
 	/// Verifier module for message verification.
 	type Verifier: Verifier;
 
-	/// ETH Application.
-	type AppETH: Application;
-
-	/// ERC20 Application.
-	type AppERC20: Application;
-
 	/// Used by outbound channels to persist messages for outbound delivery.
 	type MessageCommitment: MessageCommitment;
+
+	/// Verifier module for message verification.
+	type MessageDispatch: MessageDispatch<(ChannelId, u64)>;
 }
 
 decl_storage! {
@@ -124,23 +121,6 @@ decl_module! {
 			// Submit to an inbound channel for further processing
 			let channel = make_inbound_channel::<T>(channel_id);
 			channel.submit(&relayer, &envelope)
-		}
-	}
-}
-
-impl<T: Config> Module<T> {
-
-	// Dispatch a message payload to a target application identified by `source`.
-	// In the current design there is 1-1 mapping between applications across chains.
-	//
-	// TODO: This will all be redesigned in https://github.com/Snowfork/polkadot-ethereum/issues/239
-	fn dispatch(source: H160, payload: &[u8]) -> DispatchResult {
-		if source == T::AppETH::address() {
-			T::AppETH::handle(payload)
-		} else if source == T::AppERC20::address() {
-			T::AppERC20::handle(payload)
-		} else {
-			Err(Error::<T>::AppNotFound.into())
 		}
 	}
 }
