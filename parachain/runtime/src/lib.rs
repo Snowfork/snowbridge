@@ -40,7 +40,7 @@ pub use frame_support::{
 use pallet_transaction_payment::{FeeDetails, CurrencyAdapter};
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId};
+pub use artemis_core::{AssetId, ChannelId};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::EthereumHeader;
@@ -332,12 +332,18 @@ impl xcm_handler::Config for Runtime {
 
 // Our pallets
 
+impl dispatch::Config for Runtime {
+	type Origin = Origin;
+	type Event = Event;
+	type Call = Call;
+	type MessageId = (ChannelId, u64);
+}
+
 impl bridge::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
-	type AppETH = eth_app::Module<Runtime>;
-	type AppERC20 = erc20_app::Module<Runtime>;
 	type MessageCommitment = commitments::Module<Runtime>;
+	type MessageDispatch = dispatch::Module<Runtime>;
 }
 
 #[cfg(not(feature = "test-e2e"))]
@@ -380,14 +386,14 @@ impl eth_app::Config for Runtime {
 	type Event = Event;
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
 	type SubmitOutbound = bridge::Module<Runtime>;
-	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
+	type CallOrigin = EnsureEthereumAccount;
 }
 
 impl erc20_app::Config for Runtime {
 	type Event = Event;
 	type Assets = assets::Module<Runtime>;
 	type SubmitOutbound = bridge::Module<Runtime>;
-	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
+	type CallOrigin = EnsureEthereumAccount;
 }
 
 construct_runtime!(
@@ -406,6 +412,7 @@ construct_runtime!(
 		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
 
 		Bridge: bridge::{Module, Call, Config, Storage, Event},
+		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin},
 		Commitments: commitments::{Module, Call, Config<T>, Storage, Event},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
 		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>},
