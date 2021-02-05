@@ -259,8 +259,8 @@ impl<T: Config> Module<T> {
 		ensure!(
 			mix_hash == header_mix_hash
 			&& U256::from(result.0) < ethash::cross_boundary(header.difficulty)
-			&& header.difficulty < header.difficulty * 101 / 100
-			&& header.difficulty > header.difficulty * 99 / 100,
+			&& header.difficulty < parent.difficulty * 101 / 100
+			&& header.difficulty > parent.difficulty * 99 / 100,
 			Error::<T>::InvalidHeader,
 		);
 
