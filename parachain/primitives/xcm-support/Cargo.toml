@@ -14,6 +14,8 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ro
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
+
 
 artemis-core = { path = "../../primitives/core", default-features = false }
 
@@ -26,5 +28,6 @@ std = [
         "frame-support/std",
         "xcm/std",
         "xcm-executor/std",
+        "xcm-builder/std",
         "artemis-core/std"
 ]

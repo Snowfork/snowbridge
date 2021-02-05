@@ -9,10 +9,9 @@ use sp_core::U256;
 use sp_std::{
 	marker::PhantomData,
 	prelude::*,
-	convert::{TryFrom, TryInto}
 };
 
-use frame_support::traits::{Get, Currency, WithdrawReasons, ExistenceRequirement};
+use frame_support::traits::Get;
 
 use xcm::v0::{
 	Junction,
@@ -26,23 +25,35 @@ use xcm_executor::traits::{NativeAsset, LocationConversion, FilterAssetLocation,
 
 use artemis_core::assets::{MultiAsset as ArtemisMultiAsset, AssetId};
 
+use codec::Decode;
 
-pub struct Transactor<DOT, BridgedAssets, AccountIdConverter, AccountId>(
-	PhantomData<(DOT, BridgedAssets, AccountIdConverter, AccountId)>,
+
+pub struct AssetsTransactor<BridgedAssets, AccountIdConverter, AccountId>(
+	PhantomData<(BridgedAssets, AccountIdConverter, AccountId)>,
 );
 
 impl<
-	DOT: Currency<AccountId>,
 	BridgedAssets: ArtemisMultiAsset<AccountId>,
 	AccountIdConverter: LocationConversion<AccountId>,
 	AccountId: sp_std::fmt::Debug
 	> TransactAsset
-	for Transactor<DOT, BridgedAssets, AccountIdConverter, AccountId>
+	for AssetsTransactor<BridgedAssets, AccountIdConverter, AccountId>
 {
 	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
 		if let MultiAsset::ConcreteFungible { id, amount } = asset {
-			Self::deposit(id, &who, *amount)
+			match id {
+				MultiLocation::X1(Junction::GeneralKey(key)) => {
+					let asset_id: AssetId = AssetId::decode(&mut key.as_ref())
+						.map_err(|_| XcmError::Undefined)?;
+					let value: U256 = (*amount).into();
+					BridgedAssets::deposit(asset_id, &who, value).map_err(|_| XcmError::Undefined)?;
+					Ok(())
+				},
+				_ => {
+					Err(XcmError::Undefined)
+				}
+			}
 		} else {
 			Err(XcmError::Undefined)
 		}
@@ -51,94 +62,22 @@ impl<
 	fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<MultiAsset, XcmError> {
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
 		if let MultiAsset::ConcreteFungible { id, amount } = asset {
-			Self::withdraw(id, &who, *amount).map(|_| asset.clone())
+			match id {
+				MultiLocation::X1(Junction::GeneralKey(key)) => {
+					let asset_id: AssetId = AssetId::decode(&mut key.as_ref())
+						.map_err(|_| XcmError::Undefined)?;
+					let value: U256 = (*amount).into();
+					BridgedAssets::withdraw(asset_id, &who, value).map_err(|_| XcmError::Undefined)?;
+					Ok(asset.clone())
+				},
+				_ => {
+					Err(XcmError::Undefined)
+				}
+			}
 		} else {
 			Err(XcmError::Undefined)
 		}
 	}
-}
-
-
-impl<
-       DOT: Currency<AccountId>,
-       BridgedAssets: ArtemisMultiAsset<AccountId>,
-       AccountIdConverter: LocationConversion<AccountId>,
-       AccountId: sp_std::fmt::Debug
-       > Transactor<DOT, BridgedAssets, AccountIdConverter, AccountId>
-{
-	fn deposit(id: &MultiLocation, who: &AccountId, amount: u128) -> XcmResult {
-		match id {
-			// Deposit DOT
-			MultiLocation::X1(Junction::Parent) => {
-				let value = <<DOT as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(amount)
-					.map_err(|_| ())?;
-
-				let _ = DOT::deposit_creating(&who, value);
-				Ok(())
-			},
-			// Deposit ETH
-			MultiLocation::X2(
-				Junction::PalletInstance { id: 0 },
-				Junction::GeneralIndex { id: 0 },
-			) => {
-				let value: U256 = amount.into();
-				BridgedAssets::deposit(AssetId::ETH, &who, value).map_err(|_| XcmError::Undefined)?;
-				Ok(())
-			},
-			// Deposit ERC20
-			MultiLocation::X3(
-				Junction::PalletInstance { id: 0 },
-				Junction::GeneralIndex { id: 1 },
-				Junction::GeneralKey(key)
-			) => {
-				let value: U256 = amount.into();
-				let key_fixed: [u8; 20] = key.clone().try_into().map_err(|_| XcmError::Undefined)?;
-				BridgedAssets::deposit(AssetId::Token(key_fixed.into()), &who, value).map_err(|_| XcmError::Undefined)?;
-				Ok(())
-			},
-			_ => {
-				Err(XcmError::Undefined)
-			}
-		}
-	}
-
-	fn withdraw(id: &MultiLocation, who: &AccountId, amount: u128) -> XcmResult {
-		match id {
-			// Withdraw DOT
-			MultiLocation::X1(Junction::Parent) => {
-				let value = <<DOT as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(amount)
-					.map_err(|_| ())?;
-
-				let _ = DOT::withdraw(&who, value, WithdrawReasons::TRANSFER, ExistenceRequirement::KeepAlive)
-					.map_err(|_| XcmError::Undefined)?;
-				Ok(())
-			},
-			// Withdraw ETH
-			MultiLocation::X2(
-				Junction::PalletInstance { id: 0 },
-				Junction::GeneralIndex { id: 0 },
-			) => {
-				let value: U256 = amount.into();
-				BridgedAssets::withdraw(AssetId::ETH, &who, value).map_err(|_| XcmError::Undefined)?;
-				Ok(())
-			},
-			// Deposit ERC20
-			MultiLocation::X3(
-				Junction::PalletInstance { id: 0 },
-				Junction::GeneralIndex { id: 1 },
-				Junction::GeneralKey(key)
-			) => {
-				let value: U256 = amount.into();
-				let key_fixed: [u8; 20] = key.clone().try_into().map_err(|_| XcmError::Undefined)?;
-				BridgedAssets::withdraw(AssetId::Token(key_fixed.into()), &who, value).map_err(|_| XcmError::Undefined)?;
-				Ok(())
-			},
-			_ => {
-				Err(XcmError::Undefined)
-			}
-		}
-	}
-
 }
 
 pub struct TrustedReserveFilter<T>(PhantomData<T>);
