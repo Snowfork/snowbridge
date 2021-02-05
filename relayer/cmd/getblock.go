@@ -87,10 +87,13 @@ func getEthBlock(config *ethereum.Config, blockHash *gethCommon.Hash) (*gethType
 
 	var header *gethTypes.Header
 	if blockHash == nil {
-		header, err = client.HeaderByNumber(ctx, nil)
+		latest, err := client.HeaderByNumber(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
 		header, err = client.HeaderByNumber(
 			ctx,
-			new(big.Int).Sub(header.Number, big.NewInt(int64(config.DescendantsUntilFinal))),
+			new(big.Int).Sub(latest.Number, big.NewInt(int64(config.DescendantsUntilFinal))),
 		)
 	} else {
 		header, err = client.HeaderByHash(ctx, *blockHash)
