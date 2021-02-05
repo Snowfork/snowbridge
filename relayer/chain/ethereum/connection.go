@@ -53,3 +53,7 @@ func (co *Connection) Close() {
 		co.client.Close()
 	}
 }
+
+func (co *Connection) GetClient() *ethclient.Client {
+	return co.client
+}
