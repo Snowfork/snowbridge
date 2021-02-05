@@ -17,6 +17,8 @@ contract ERC20App {
 
     mapping(ChannelId => Channel) public channels;
 
+    bytes2 constant CALL_INDEX = 0x0d01;
+
     event Locked(
         address token,
         address sender,
@@ -30,13 +32,6 @@ contract ERC20App {
         address recipient,
         uint256 amount
     );
-
-    struct OutboundPayload {
-        address token;
-        address sender;
-        bytes32 recipient;
-        uint256 amount;
-    }
 
     struct Channel {
         address inbound;
@@ -64,8 +59,7 @@ contract ERC20App {
             "Contract token allowances insufficient to complete this lock request"
         );
         require(
-            _channelId == ChannelId.Basic ||
-                _channelId == ChannelId.Incentivized,
+            _channelId == ChannelId.Basic || _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
 
@@ -73,12 +67,10 @@ contract ERC20App {
 
         emit Locked(_token, msg.sender, _recipient, _amount);
 
-        OutboundPayload memory payload =
-            OutboundPayload(_token, msg.sender, _recipient, _amount);
+        bytes memory call = encodeCall(_token, msg.sender, _recipient, _amount);
 
-        OutboundChannel channel =
-            OutboundChannel(channels[_channelId].outbound);
-        channel.submit(encodePayload(payload));
+        OutboundChannel channel = OutboundChannel(channels[_channelId].outbound);
+        channel.submit(call);
     }
 
     function unlock(
@@ -102,18 +94,11 @@ contract ERC20App {
         emit Unlocked(_token, _sender, _recipient, _amount);
     }
 
-    // SCALE-encode payload
-    function encodePayload(OutboundPayload memory payload)
+    function encodeCall(address _token, address _sender, bytes32 _recipient, uint256 _amount)
         private
         pure
         returns (bytes memory)
     {
-        return
-            abi.encodePacked(
-                payload.token,
-                payload.sender,
-                payload.recipient,
-                payload.amount.toBytes32LE()
-            );
+        return abi.encodePacked(CALL_INDEX, _token, _sender, _recipient, _amount.toBytes32LE());
     }
 }
