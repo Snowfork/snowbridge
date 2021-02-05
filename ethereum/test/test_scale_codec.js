@@ -11,7 +11,7 @@ function toHexBytes(uint) {
   return "0x" + uint.split(" ").join("");
 }
 
-contract("Scale", function () {
+contract("ScaleCodec", function () {
 
   describe("Scale contract deployment", function () {
     beforeEach(async function () {
