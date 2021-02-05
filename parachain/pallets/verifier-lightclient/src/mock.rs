@@ -148,13 +148,13 @@ fn fixture_path(name: &str) -> PathBuf {
 	[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", name].iter().collect()
 }
 
-pub fn ethereum_header_from_file(block_num: u64) -> EthereumHeader {
-	let filepath = fixture_path(&format!("{}.json", block_num));
+pub fn ethereum_header_from_file(block_num: u64, suffix: &str) -> EthereumHeader {
+	let filepath = fixture_path(&format!("{}{}.json", block_num, suffix));
 	serde_json::from_reader(File::open(&filepath).unwrap()).unwrap()
 }
 
-pub fn ethereum_header_proof_from_file(block_num: u64) -> Vec<EthashProofData> {
-	let filepath = fixture_path(&format!("{}_proof.json", block_num));
+pub fn ethereum_header_proof_from_file(block_num: u64, suffix: &str) -> Vec<EthashProofData> {
+	let filepath = fixture_path(&format!("{}{}_proof.json", block_num, suffix));
 	BlockWithProofs::from_file(&filepath)
 		.to_double_node_with_merkle_proof_vec(EthashProofData::from_values)
 }
