@@ -3,11 +3,10 @@
 use frame_support::{
 	decl_event, decl_module, decl_storage,
 	dispatch::{Parameter, Dispatchable, DispatchResult},
-	traits::EnsureOrigin,
+	traits::{EnsureOrigin, Filter},
 	weights::GetDispatchInfo,
 };
 
-use sp_runtime::traits::BadOrigin;
 use sp_core::RuntimeDebug;
 
 use frame_system::{self as system};
@@ -40,28 +39,29 @@ where
 	}
 }
 
-pub fn ensure_ethereum_account<OuterOrigin>(o: OuterOrigin) -> Result<H160, BadOrigin>
-	where OuterOrigin: Into<Result<Origin, OuterOrigin>> + From<Origin>
-{
-	match o.into() {
-		Ok(Origin(account)) => Ok(account),
-		_ => Err(BadOrigin),
-	}
-}
-
 pub trait Config: system::Config {
-	type Origin: From<Origin>;
 
-	type MessageId: Parameter;
-
+	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
+	/// The overarching origin type.
+	type Origin: From<Origin>;
+
+	/// Id of the message. Whenever message is passed to the dispatch module, it emits
+	/// event with this id + dispatch result.
+	type MessageId: Parameter;
+
+	/// The overarching dispatch call type.
 	type Call: Parameter
 		+ GetDispatchInfo
 		+ Dispatchable<
 			Origin = <Self as Config>::Origin,
 			PostInfo = frame_support::dispatch::PostDispatchInfo,
 		>;
+
+	/// The pallet will filter all incoming calls right before they're dispatched. If this filter
+	/// rejects the call, special event (`Event::MessageRejected`) is emitted.
+	type CallFilter: Filter<<Self as Config>::Call>;
 }
 
 decl_storage! {
@@ -71,7 +71,12 @@ decl_storage! {
 decl_event! {
     /// Events for the Bridge module.
 	pub enum Event<T> where <T as Config>::MessageId {
-		Delivered(MessageId, DispatchResult),
+		/// Message has been dispatched with given result.
+		MessageDispatched(MessageId, DispatchResult),
+		/// Message has been rejected
+		MessageRejected(MessageId),
+		/// We have failed to decode a Call from the message.
+		MessageDecodeFailed(MessageId),
 	}
 }
 
@@ -88,15 +93,20 @@ impl<T: Config> MessageDispatch<MessageIdOf<T>> for Module<T> {
 		let call = match <T as Config>::Call::decode(&mut &payload[..]) {
 			Ok(call) => call,
 			Err(_) => {
-				frame_support::debug::trace!(target: "dispatch", "Failed to decode Call from message {:?}", id);
+				Self::deposit_event(RawEvent::MessageDecodeFailed(id));
 				return;
 			}
 		};
 
+		if !T::CallFilter::filter(&call) {
+			Self::deposit_event(RawEvent::MessageRejected(id));
+			return;
+		}
+
 		let origin = Origin(source).into();
 		let result = call.dispatch(origin);
 
-		Self::deposit_event(RawEvent::Delivered(
+		Self::deposit_event(RawEvent::MessageDispatched(
 			id,
 			result.map(drop).map_err(|e| e.error),
 		));
@@ -186,11 +196,22 @@ mod tests {
 		type SS58Prefix = ();
 	}
 
+	pub struct CallFilter;
+	impl Filter<Call> for CallFilter {
+		fn filter(call: &Call) -> bool {
+			match call {
+				Call::System(frame_system::pallet::Call::<Test>::remark(_)) => true,
+				_ => false
+			}
+		}
+	}
+
 	impl Config for Test {
 		type Origin = Origin;
 		type Event = TestEvent;
 		type MessageId = u64;
 		type Call = Call;
+		type CallFilter = CallFilter;
 	}
 
 	fn new_test_ext() -> sp_io::TestExternalities {
@@ -201,7 +222,7 @@ mod tests {
 	}
 
 	#[test]
-	fn should_dispatch_bridge_message() {
+	fn test_dispatch_bridge_message() {
 		new_test_ext().execute_with(|| {
 			let id = 37;
 			let source = H160::repeat_byte(7);
@@ -215,7 +236,51 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: TestEvent::dispatch(Event::<Test>::Delivered(id, Err(DispatchError::BadOrigin))),
+					event: TestEvent::dispatch(Event::<Test>::MessageDispatched(id, Err(DispatchError::BadOrigin))),
+					topics: vec![],
+				}],
+			);
+		})
+	}
+
+	#[test]
+	fn test_message_decode_failed() {
+		new_test_ext().execute_with(|| {
+			let id = 37;
+			let source = H160::repeat_byte(7);
+
+			let message: Vec<u8> = vec![1, 2, 3];
+
+			System::set_block_number(1);
+			Dispatch::dispatch(source, id, &message);
+
+			assert_eq!(
+				System::events(),
+				vec![EventRecord {
+					phase: Phase::Initialization,
+					event: TestEvent::dispatch(Event::<Test>::MessageDecodeFailed(id)),
+					topics: vec![],
+				}],
+			);
+		})
+	}
+
+	#[test]
+	fn test_message_rejected() {
+		new_test_ext().execute_with(|| {
+			let id = 37;
+			let source = H160::repeat_byte(7);
+
+			let message = Call::System(<frame_system::Call<Test>>::set_code(vec![])).encode();
+
+			System::set_block_number(1);
+			Dispatch::dispatch(source, id, &message);
+
+			assert_eq!(
+				System::events(),
+				vec![EventRecord {
+					phase: Phase::Initialization,
+					event: TestEvent::dispatch(Event::<Test>::MessageRejected(id)),
 					topics: vec![],
 				}],
 			);
@@ -223,6 +288,4 @@ mod tests {
 	}
 
 
-
 }
-

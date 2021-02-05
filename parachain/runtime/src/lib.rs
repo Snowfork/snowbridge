@@ -31,7 +31,7 @@ pub use pallet_balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
 	construct_runtime, parameter_types, StorageValue,
-	traits::{KeyOwnerProofSystem, Randomness},
+	traits::{KeyOwnerProofSystem, Randomness, Filter},
 	weights::{
 		Weight, IdentityFee,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -332,11 +332,22 @@ impl xcm_handler::Config for Runtime {
 
 // Our pallets
 
+pub struct CallFilter;
+impl Filter<Call> for CallFilter {
+	fn filter(call: &Call) -> bool {
+		match call {
+			Call::ETH(_) | Call::ERC20(_) => true,
+			_ => false
+		}
+	}
+}
+
 impl dispatch::Config for Runtime {
 	type Origin = Origin;
 	type Event = Event;
-	type Call = Call;
 	type MessageId = (ChannelId, u64);
+	type Call = Call;
+	type CallFilter = CallFilter;
 }
 
 impl bridge::Config for Runtime {

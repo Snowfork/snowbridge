@@ -91,6 +91,7 @@ impl artemis_dispatch::Config for Test {
 	type Event = Event;
 	type MessageId = u64;
 	type Call = Call;
+	type CallFilter = ();
 }
 
 pub struct MockSubmitOutbound;
