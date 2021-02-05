@@ -28,6 +28,7 @@ artemis-ethereum = { path = "../../primitives/ethereum", default-features = fals
 
 [dev-dependencies]
 artemis-assets = { path = "../../pallets/assets", default-features = false }
+artemis-dispatch = { path = "../../pallets/dispatch", default-features = false }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 
 [features]
@@ -44,6 +45,7 @@ std = [
     "sp-runtime/std",
     "artemis-core/std",
     "artemis-ethereum/std",
+    "artemis-dispatch/std",
     "ethabi/std",
     "rlp/std"
 ]

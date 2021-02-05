@@ -1,14 +1,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(unused_variables)]
 
 use frame_support::{
 	decl_event, decl_module, decl_storage,
 	dispatch::{Parameter, Dispatchable, DispatchResult},
 	traits::EnsureOrigin,
 	weights::GetDispatchInfo,
-	RuntimeDebug,
-	traits::{Filter, Get},
 };
+
+use sp_runtime::traits::BadOrigin;
+use sp_core::RuntimeDebug;
 
 use frame_system::{self as system};
 use sp_core::H160;
@@ -16,9 +16,8 @@ use sp_std::prelude::*;
 
 use codec::{Encode, Decode};
 
-
 #[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
-pub struct Origin(H160);
+pub struct Origin(pub H160);
 
 impl From<H160> for Origin {
 	fn from(hash: H160) -> Origin {
@@ -30,12 +29,21 @@ pub struct EnsureEthereumAccount;
 
 impl<OuterOrigin> EnsureOrigin<OuterOrigin> for EnsureEthereumAccount
 where
-	OuterOrigin: Into<Result<Origin, OuterOrigin>>,
+	OuterOrigin: Into<Result<Origin, OuterOrigin>> + From<Origin>
 {
 	type Success = H160;
 
 	fn try_origin(o: OuterOrigin) -> Result<Self::Success, OuterOrigin> {
 		o.into().and_then(|o| Ok(o.0))
+	}
+}
+
+pub fn ensure_ethereum_account<OuterOrigin>(o: OuterOrigin) -> Result<H160, BadOrigin>
+	where OuterOrigin: Into<Result<Origin, OuterOrigin>> + From<Origin>
+{
+	match o.into() {
+		Ok(Origin(account)) => Ok(account),
+		_ => Err(BadOrigin),
 	}
 }
 
@@ -202,7 +210,7 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: TestEvent::dispatch(Event::<Test>::Delivered(id, Ok(()))),
+					event: TestEvent::dispatch(Event::<Test>::Delivered(id, Err(DispatchError::BadOrigin))),
 					topics: vec![],
 				}],
 			);

@@ -1,5 +1,5 @@
 [package]
-name = "pallet-dispatch"
+name = "artemis-dispatch"
 description = "Artemis Dispatch Pallet"
 version = "0.1.1"
 edition = "2018"

@@ -198,11 +198,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "artemis-dispatch"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-erc20-app"
 version = "0.1.1"
 dependencies = [
  "artemis-assets",
  "artemis-core",
+ "artemis-dispatch",
  "artemis-ethereum",
  "ethabi-decode",
  "frame-support",
@@ -225,6 +243,7 @@ version = "0.1.1"
 dependencies = [
  "artemis-assets",
  "artemis-core",
+ "artemis-dispatch",
  "artemis-ethereum",
  "ethabi-decode",
  "frame-support",
@@ -4400,23 +4419,6 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-dispatch"
-version = "0.1.1"
-dependencies = [
- "artemis-core",
- "frame-support",
- "frame-system",
- "hex-literal",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]

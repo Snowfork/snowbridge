@@ -34,15 +34,6 @@ pub trait SubmitOutbound {
 	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult;
 }
 
-/// An Application handles message payloads
-pub trait Application {
-
-	/// Handle a message payload
-	fn handle(payload: &[u8]) -> DispatchResult;
-
-	fn address() -> H160;
-}
-
 /// Add a message to a commitment
 pub trait MessageCommitment {
 	fn add(channel_id: ChannelId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult;

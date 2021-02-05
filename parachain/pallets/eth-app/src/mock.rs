@@ -1,34 +1,46 @@
 // Mock runtime
 
-use crate::{Module, Config};
+use crate::{Module, GenesisConfig, Config};
 use sp_core::{H160, H256};
 use frame_support::{
-	impl_outer_origin, impl_outer_event, parameter_types,
+	impl_outer_origin, impl_outer_event, impl_outer_dispatch, parameter_types,
 	weights::Weight,
 	dispatch::DispatchResult,
 };
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
+	traits::{
+		BlakeTwo256, IdentityLookup, IdentifyAccount, Verify,
+	}, testing::Header, Perbill, MultiSignature,
 };
 use frame_system as system;
 
 use artemis_core::{ChannelId, AssetId, SubmitOutbound};
 use artemis_assets::SingleAssetAdaptor;
 
+use crate as eth_app;
+
 impl_outer_origin! {
-	pub enum Origin for MockRuntime {}
+	pub enum Origin for Test where system = frame_system {
+		artemis_dispatch
+	}
 }
 
-mod test_events {
-    pub use crate::Event;
+impl_outer_dispatch! {
+	pub enum Call for Test where origin: Origin {
+			frame_system::System,
+			artemis_assets::Assets,
+			artemis_dispatch::Dispatch,
+			eth_app::ETH,
+	}
 }
 
 impl_outer_event! {
-    pub enum MockEvent for MockRuntime {
-		system<T>,
-		artemis_assets<T>,
-        test_events<T>,
-    }
+	pub enum Event for Test {
+			system<T>,
+			artemis_assets<T>,
+			artemis_dispatch<T>,
+			eth_app<T>,
+	}
 }
 
 pub type Signature = MultiSignature;
@@ -36,7 +48,7 @@ pub type Signature = MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 #[derive(Clone, Eq, PartialEq)]
-pub struct MockRuntime;
+pub struct Test;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -45,12 +57,12 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Config for MockRuntime {
+impl system::Config for Test {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
 	type BlockLength = ();
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -58,7 +70,7 @@ impl system::Config for MockRuntime {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = MockEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
@@ -70,8 +82,15 @@ impl system::Config for MockRuntime {
 	type SS58Prefix = ();
 }
 
-impl artemis_assets::Config for MockRuntime {
-	type Event = MockEvent;
+impl artemis_assets::Config for Test {
+	type Event = Event;
+}
+
+impl artemis_dispatch::Config for Test {
+	type Origin = Origin;
+	type Event = Event;
+	type MessageId = u64;
+	type Call = Call;
 }
 
 pub struct MockSubmitOutbound;
@@ -86,18 +105,28 @@ parameter_types! {
 	pub const EthAssetId: AssetId = AssetId::ETH;
 }
 
-impl Config for MockRuntime {
-	type Event = MockEvent;
+impl Config for Test {
+	type Event = Event;
 	type Asset = Asset;
 	type SubmitOutbound = MockSubmitOutbound;
+	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
 }
 
-pub type System = system::Module<MockRuntime>;
-pub type Asset = SingleAssetAdaptor<MockRuntime, EthAssetId>;
-pub type ETH = Module<MockRuntime>;
+pub type System = system::Module<Test>;
+pub type Dispatch = artemis_dispatch::Module<Test>;
+pub type Assets = artemis_assets::Module<Test>;
+pub type ETH = Module<Test>;
+
+pub type Asset = SingleAssetAdaptor<Test, EthAssetId>;
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+	let mut storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+	let config: GenesisConfig = GenesisConfig {
+		address: H160::repeat_byte(1),
+	};
+	config.assimilate_storage(&mut storage).unwrap();
+
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
 	ext
