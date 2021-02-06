@@ -265,12 +265,12 @@ fn it_rejects_ethereum_header_before_parent() {
 #[test]
 fn it_validates_proof_of_work() {
 	new_tester_with_config::<MockRuntimeWithPoW>(GenesisConfig {
-			initial_header: ethereum_header_from_file(11090290),
+			initial_header: ethereum_header_from_file(11090290, ""),
 			initial_difficulty: 0.into(),
 	}).execute_with(|| {
-		let header1 = ethereum_header_from_file(11090291);
-		let header1_proof = ethereum_header_proof_from_file(11090291);
-		let header2 = ethereum_header_from_file(11090292);
+		let header1 = ethereum_header_from_file(11090291, "");
+		let header1_proof = ethereum_header_proof_from_file(11090291, "");
+		let header2 = ethereum_header_from_file(11090292, "");
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		assert_ok!(VerifierWithPoW::import_header(
@@ -283,6 +283,26 @@ fn it_validates_proof_of_work() {
 				Origin::signed(ferdie),
 				header2,
 				Default::default(),
+			),
+			Error::<MockRuntimeWithPoW>::InvalidHeader,
+		);
+	});
+}
+
+#[test]
+fn it_rejects_ethereum_header_with_low_difficulty() {
+	new_tester_with_config::<MockRuntimeWithPoW>(GenesisConfig {
+		initial_header: ethereum_header_from_file(11090291, ""),
+		initial_difficulty: 0.into(),
+	}).execute_with(|| {
+		let header = ethereum_header_from_file(11090292, "_low_difficulty");
+		let header_proof = ethereum_header_proof_from_file(11090292, "_low_difficulty");
+
+		assert_err!(
+			VerifierWithPoW::import_header(
+				Origin::signed(Keyring::Ferdie.into()),
+				header,
+				header_proof,
 			),
 			Error::<MockRuntimeWithPoW>::InvalidHeader,
 		);

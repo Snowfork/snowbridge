@@ -24,15 +24,15 @@ type BlockLoader interface {
 }
 
 type DefaultBlockLoader struct {
-	conn *Connection
+	Conn *Connection
 }
 
 func (d *DefaultBlockLoader) GetBlock(ctx context.Context, hash gethCommon.Hash) (*gethTypes.Block, error) {
-	return d.conn.client.BlockByHash(ctx, hash)
+	return d.Conn.client.BlockByHash(ctx, hash)
 }
 
 func (d *DefaultBlockLoader) GetAllReceipts(ctx context.Context, block *gethTypes.Block) (gethTypes.Receipts, error) {
-	return GetAllReceipts(ctx, d.conn, block)
+	return GetAllReceipts(ctx, d.Conn, block)
 }
 
 // Keeps the blocks and receipts for the latest block heights / numbers

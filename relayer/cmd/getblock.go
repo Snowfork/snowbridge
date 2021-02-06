@@ -5,10 +5,12 @@ package cmd
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
 
+	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -28,11 +30,12 @@ const (
 func getBlockCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "getblock",
-		Short:   "Retrieve the latest finalized block",
+		Short:   "Retrieve a block, either specified by hash or the latest finalized block",
 		Args:    cobra.ExactArgs(0),
 		Example: "artemis-relay getblock",
 		RunE:    GetBlockFn,
 	}
+	cmd.Flags().StringP("block", "b", "", "Block hash")
 	cmd.Flags().StringP(
 		"format",
 		"f",
@@ -48,9 +51,19 @@ func GetBlockFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	hashStr := cmd.Flags().Lookup("block").Value.String()
+	var blockHash *gethCommon.Hash
+	if len(hashStr) > 0 {
+		hashBytes, err := hex.DecodeString(hashStr)
+		if err != nil {
+			return err
+		}
+		hash := gethCommon.BytesToHash(hashBytes)
+		blockHash = &hash
+	}
 	format := Format(cmd.Flags().Lookup("format").Value.String())
 
-	header, err := getEthBlock(&config.Eth)
+	header, err := getEthBlock(&config.Eth, blockHash)
 	if err != nil {
 		return err
 	}
@@ -58,7 +71,7 @@ func GetBlockFn(cmd *cobra.Command, _ []string) error {
 	return printEthBlockForSub(header, format)
 }
 
-func getEthBlock(config *ethereum.Config) (*gethTypes.Header, error) {
+func getEthBlock(config *ethereum.Config, blockHash *gethCommon.Hash) (*gethTypes.Header, error) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(config.Endpoint)
 	if err != nil {
@@ -72,11 +85,19 @@ func getEthBlock(config *ethereum.Config) (*gethTypes.Header, error) {
 		"chainID":  chainID,
 	}).Info("Connected to chain")
 
-	latestHeader, err := client.HeaderByNumber(ctx, nil)
-	header, err := client.HeaderByNumber(
-		ctx,
-		new(big.Int).Sub(latestHeader.Number, big.NewInt(int64(config.DescendantsUntilFinal))),
-	)
+	var header *gethTypes.Header
+	if blockHash == nil {
+		latest, err := client.HeaderByNumber(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+		header, err = client.HeaderByNumber(
+			ctx,
+			new(big.Int).Sub(latest.Number, big.NewInt(int64(config.DescendantsUntilFinal))),
+		)
+	} else {
+		header, err = client.HeaderByHash(ctx, *blockHash)
+	}
 	if err != nil {
 		return nil, err
 	}

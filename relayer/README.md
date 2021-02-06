@@ -50,7 +50,7 @@ Example Configuration:
 ```toml
 [ethereum]
 endpoint = "ws://localhost:8545/"
-descendants-until-final = 0
+descendants-until-final = 35
 
 [ethereum.channels.basic]
 inbound = "0x992B9df075935E522EC7950F37eC8557e86f6fdb"

@@ -45,7 +45,7 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	hcs, err := NewHeaderCacheState(
 		eg,
 		initBlockHeight,
-		&DefaultBlockLoader{conn: li.conn},
+		&DefaultBlockLoader{Conn: li.conn},
 		nil,
 	)
 	if err != nil {
@@ -109,6 +109,11 @@ func (li *Listener) pollEventsAndHeaders(
 
 			if li.messages == nil {
 				li.log.Info("Not polling events since channel is nil")
+			}
+
+			// Don't attempt to forward events prior to genesis block
+			if descendantsUntilFinal > gethheader.Number.Uint64() {
+				continue
 			}
 
 			finalizedBlockNumber := gethheader.Number.Uint64() - descendantsUntilFinal
