@@ -51,10 +51,10 @@ use xcm_builder::{
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
 	CurrencyAdapter,
 };
-use xcm_executor::{Config, XcmExecutor, traits::IsConcrete};
+use xcm_executor::{Config, XcmExecutor, traits::{NativeAsset, IsConcrete}};
 use cumulus_primitives::relay_chain::Balance as RelayChainBalance;
 
-use artemis_xcm_support::{AssetsTransactor, TrustedReserveFilter};
+use artemis_xcm_support::AssetsTransactor;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -320,10 +320,12 @@ pub type LocalOriginConverter = (
 	SignedAccountId32AsNative<RococoNetwork, Origin>,
 );
 
-
-parameter_types! {
-	pub ReserveAssetLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 1000 });
-}
+// pub struct AllowAllFilter;
+// impl FilterAssetLocation for AllowAllFilter {
+// 	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+// 		true
+// 	}
+// }
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
@@ -331,7 +333,7 @@ impl Config for XcmConfig {
 	type XcmSender = LocalXcmHandler;
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
-	type IsReserve = TrustedReserveFilter<ReserveAssetLocation>;
+	type IsReserve = NativeAsset;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 }

@@ -11,8 +11,6 @@ use sp_std::{
 	prelude::*,
 };
 
-use frame_support::traits::Get;
-
 use xcm::v0::{
 	Junction,
 	MultiAsset,
@@ -21,7 +19,7 @@ use xcm::v0::{
 	Error as XcmError,
 };
 
-use xcm_executor::traits::{NativeAsset, LocationConversion, FilterAssetLocation, TransactAsset};
+use xcm_executor::traits::{LocationConversion, TransactAsset};
 
 use artemis_core::assets::{MultiAsset as ArtemisMultiAsset, AssetId};
 
@@ -77,37 +75,5 @@ impl<
 		} else {
 			Err(XcmError::Undefined)
 		}
-	}
-}
-
-pub struct TrustedReserveFilter<T>(PhantomData<T>);
-
-impl<T: Get<MultiLocation>> FilterAssetLocation for TrustedReserveFilter<T> {
-	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-		if NativeAsset::filter_asset_location(asset, origin) {
-			return true;
-		}
-
-		if let MultiAsset::ConcreteFungible { ref id, .. } = asset {
-			match id {
-				MultiLocation::X2(
-					Junction::PalletInstance { id: 0 },
-					Junction::GeneralIndex { id: 0 }
-				) => {
-						return *origin == T::get()
-				},
-				MultiLocation::X3(
-					Junction::PalletInstance { id: 0 },
-					Junction::GeneralIndex { id: 1 },
-					Junction::GeneralKey(_)
-				) => {
-						return *origin == T::get()
-				},
-				_ => {
-					return false
-				}
-			}
-		}
-		false
 	}
 }
