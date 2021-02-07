@@ -99,6 +99,13 @@ contract ERC20App {
         pure
         returns (bytes memory)
     {
-        return abi.encodePacked(CALL_INDEX, _token, _sender, _recipient, _amount.toBytes32LE());
+        return
+            abi.encodePacked(
+                CALL_INDEX,
+                payload.token,
+                payload.sender,
+                payload.recipient,
+                payload.amount.encode256()
+            );
     }
 }

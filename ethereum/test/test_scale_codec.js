@@ -96,7 +96,52 @@ contract("ScaleCodec", function () {
     });
   });
 
-  describe("Gas costs", async function () {
+  describe("encoding unsigned integers", async function () {
+    beforeEach(async function () {
+      this.scale = await ScaleCodec.new();
+    });
+
+    it("should encode uint256", async function () {
+      const output = await this.scale.methods["encode256(uint256)"].call("12063978950259949786323707366460749298097791896371638493358994162204017315152");
+      output.should.be.equal("0x504d8a21dd3868465c8c9f2898b7f014036935fa9a1488629b109d3d59f8ab1a");
+    });
+
+    it("should encode uint128", async function () {
+      const output = await this.scale.methods["encode128(uint128)"].call("35452847761173902980759433963665451267");
+      output.should.be.equal("0x036935fa9a1488629b109d3d59f8ab1a");
+    });
+
+    it("should encode uint64", async function () {
+      const output = await this.scale.methods["encode64(uint64)"].call("1921902728173129883");
+      output.should.be.equal("0x9b109d3d59f8ab1a");
+    });
+
+    it("should encode uint32", async function () {
+      const output = await this.scale.methods["encode32(uint32)"].call("447477849");
+      output.should.be.equal("0x59f8ab1a");
+    });
+
+    it("should encode uint16", async function () {
+      const output = await this.scale.methods["encode16(uint16)"].call("6827");
+      output.should.be.equal("0xab1a");
+    });
+  });
+
+
+  describe("Gas costs (encoding)", async function () {
+
+    beforeEach(async function () {
+      this.scale = await ScaleCodec.new();
+    });
+
+    it("uint256", async function () {
+      const gasUsed = await this.scale.encode256.estimateGas("12063978950259949786323707366460749298097791896371638493358994162204017315152");
+      console.log('\tEncoding uint256 average gas: ' + gasUsed);
+    });
+
+  });
+
+  describe("Gas costs (decoding)", async function () {
 
     beforeEach(async function () {
       this.scale = await ScaleCodec.new();
