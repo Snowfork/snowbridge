@@ -59,22 +59,22 @@ const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
     decodedEvent._result.should.be.equal(expectedResult);
 };
 
-const buildCommitment = (messages) => {
+const buildPackedCommitment = (messages) => {
     let messagesBytes;
     for(var i = 0; i < messages.length; i++) {
         // Pack the message contents into a bytes field
-        const messagePacked = ethers.utils.solidityPack(
+        const message = ethers.utils.solidityPack(
             [ 'uint256', 'string', 'address', 'bytes' ],
             [ messages[i].nonce, messages[i].senderApplicationId, messages[i].targetApplicationAddress, messages[i].payload ]
         );
 
         // Append the message's bytes to any previous message bytes
         if(i == 0) {
-            messagesBytes = messagePacked;
+            messagesBytes = message;
         } else {
             messagesBytes = ethers.utils.solidityPack(
                 [ 'bytes', 'bytes' ],
-                [ messagesBytes, messagePacked ]
+                [ messagesBytes, message ]
             );
         }
     }
@@ -86,4 +86,27 @@ const buildCommitment = (messages) => {
     );
 }
 
-module.exports = { confirmChannelSend, confirmUnlock, confirmMessageDelivered, buildCommitment };
+const buildCommitment = (messages) => {
+    let dataStartOffset = 32;
+    const prefix = ethers.utils.defaultAbiCoder.encode(
+        [ 'uint256', 'uint256', 'uint256'],
+        [ 2, 1, dataStartOffset ],
+    )
+
+    const messagesBytes = ethers.utils.defaultAbiCoder.encode(
+        [ 'uint256', 'string', 'address', 'bytes' ],
+        [ messages[0].nonce, messages[0].senderApplicationId, messages[0].targetApplicationAddress, messages[0].payload ]
+    );
+
+    let prefixedBytes = prefix + messagesBytes.slice(2, messagesBytes.length)
+    console.log("loc:", prefixedBytes)
+
+    // Hash the messages' bytes to convert from 'bytes memory' to 'bytes32' for saving gas on function arguments
+    return ethers.utils.solidityKeccak256(
+        [ 'bytes'],
+        [ messagesBytes ]
+    );
+}
+
+
+module.exports = { confirmChannelSend, confirmUnlock, confirmMessageDelivered, buildCommitment, buildPackedCommitment };
