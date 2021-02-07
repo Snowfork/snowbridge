@@ -90,7 +90,7 @@ contract ETHApp {
             abi.encodePacked(
                 payload.sender,
                 payload.recipient,
-                payload.amount.toBytes32LE()
+                payload.amount.encode256()
             );
     }
 }
