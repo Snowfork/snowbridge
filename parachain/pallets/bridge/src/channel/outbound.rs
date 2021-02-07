@@ -6,6 +6,8 @@ use sp_core::H160;
 use sp_std::{cell::Cell, marker::PhantomData, boxed::Box};
 use artemis_core::{ChannelId, MessageCommitment};
 use crate::{
+	Event,
+	Module,
 	Config,
 	OutboundChannels,
 	primitives::{OutboundChannel, OutboundChannelData}
@@ -37,8 +39,9 @@ impl<T: Config> OutboundChannel for BasicOutboundChannel<T> {
 	// This implementation is a WIP!
 	fn submit(&self, target: H160, payload: &[u8]) -> DispatchResult {
 		self.storage.try_mutate(|data| {
-			T::MessageCommitment::add(self.id, target, data.nonce, payload)?;
 			data.nonce += 1;
+			T::MessageCommitment::add(self.id, target, data.nonce, payload)?;
+			<Module<T>>::deposit_event(Event::MessageAccepted(self.id, data.nonce));
 			Ok(())
 		})
 	}
@@ -62,8 +65,9 @@ impl<T: Config> OutboundChannel for IncentivizedOutboundChannel<T> {
 	// This implementation is a WIP!
 	fn submit(&self, target: H160, payload: &[u8]) -> DispatchResult {
 		self.storage.try_mutate(|data| {
-			T::MessageCommitment::add(self.id, target, data.nonce, payload)?;
 			data.nonce += 1;
+			T::MessageCommitment::add(self.id, target, data.nonce, payload)?;
+			<Module<T>>::deposit_event(Event::MessageAccepted(self.id, data.nonce));
 			Ok(())
 		})
 	}

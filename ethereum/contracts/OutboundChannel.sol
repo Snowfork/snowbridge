@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 // OutboundChannel contains methods that all outgoing channels must implement
 abstract contract OutboundChannel {
 
+    // Nonce for last submitted message
     uint64 public nonce;
 
     event Message(

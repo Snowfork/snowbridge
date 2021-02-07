@@ -17,6 +17,7 @@ pub use types::{
 	Message,
 	Proof,
 	ChannelId,
+	MessageId,
 	SourceChannelConfig,
 	SourceChannel,
 };

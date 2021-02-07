@@ -74,7 +74,7 @@ contract BasicInboundChannel is InboundChannel {
         for (uint256 i = 0; i < _messages.length; i++) {
             // Check message nonce is correct and increment nonce for replay protection
             Message memory message = _messages[i];
-            require(message.nonce == nonce, "invalid nonce");
+            require(message.nonce == nonce + 1, "invalid nonce");
 
             nonce = nonce + 1;
 

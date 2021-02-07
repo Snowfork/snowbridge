@@ -1,5 +1,6 @@
 const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
+const rlp = require("rlp");
 
 const channelContracts = {
   basic: {
@@ -147,6 +148,10 @@ const ChannelId = {
   Incentivized: 1,
 }
 
+const encodeLog = (log) => {
+  return rlp.encode([log.address, log.topics, log.data]).toString("hex")
+}
+
 module.exports = {
   confirmChannelSend,
   confirmUnlock,
@@ -156,4 +161,5 @@ module.exports = {
   deployAppContractWithChannels,
   addressBytes,
   ChannelId,
+  encodeLog,
 };

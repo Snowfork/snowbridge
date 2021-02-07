@@ -88,7 +88,7 @@ contract("ERC20App", function (accounts) {
       let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
 
-      confirmChannelSend(tx.receipt.rawLogs[3], this.channels.basic.outbound.address, this.app.address, 0)
+      confirmChannelSend(tx.receipt.rawLogs[3], this.channels.basic.outbound.address, this.app.address, 1)
     });
 
     it("should send payload to the incentivized outbound channel", async function () {
@@ -100,7 +100,7 @@ contract("ERC20App", function (accounts) {
       let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Incentivized)
         .should.be.fulfilled;
 
-      confirmChannelSend(tx.receipt.rawLogs[3], this.channels.incentivized.outbound.address, this.app.address, 0)
+      confirmChannelSend(tx.receipt.rawLogs[3], this.channels.incentivized.outbound.address, this.app.address, 1)
     });
   })
 
@@ -137,7 +137,7 @@ contract("ERC20App", function (accounts) {
       const commitment = [
         {
           target: this.app.address,
-          nonce: 0,
+          nonce: 1,
           payload: `0x010ce3c7000000000000000000000000${token_addr}1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000000000000000064`,
         }
       ]
@@ -172,7 +172,7 @@ contract("ERC20App", function (accounts) {
       const commitment = [
         {
           target: this.app.address,
-          nonce: 0,
+          nonce: 1,
           payload: `0x010ce3c7000000000000000000000000${token_addr}1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000000000000000064`,
         }
       ]

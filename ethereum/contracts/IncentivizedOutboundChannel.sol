@@ -18,7 +18,7 @@ contract IncentivizedOutboundChannel is OutboundChannel {
         public
         override
     {
-        emit Message(msg.sender, nonce, payload);
         nonce = nonce + 1;
+        emit Message(msg.sender, nonce, payload);
     }
 }

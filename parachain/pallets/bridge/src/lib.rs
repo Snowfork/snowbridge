@@ -26,7 +26,7 @@ use sp_core::H160;
 use sp_std::prelude::*;
 use sp_std::convert::TryFrom;
 use artemis_core::{
-	ChannelId, SubmitOutbound, Message,
+	ChannelId, SubmitOutbound, Message, MessageId,
 	MessageCommitment, MessageDispatch, Verifier,
 	SourceChannelConfig,
 };
@@ -45,6 +45,8 @@ mod channel;
 mod primitives;
 mod envelope;
 
+type MessageNonce = u64;
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
@@ -55,7 +57,7 @@ pub trait Config: system::Config {
 	type MessageCommitment: MessageCommitment;
 
 	/// Verifier module for message verification.
-	type MessageDispatch: MessageDispatch<(ChannelId, u64)>;
+	type MessageDispatch: MessageDispatch<MessageId>;
 }
 
 decl_storage! {
@@ -80,7 +82,8 @@ decl_storage! {
 decl_event! {
     /// Events for the Bridge module.
 	pub enum Event {
-
+		/// Message has been accepted by an outbound channel
+		MessageAccepted(ChannelId, MessageNonce),
 	}
 }
 

@@ -40,7 +40,7 @@ pub use frame_support::{
 use pallet_transaction_payment::{FeeDetails, CurrencyAdapter};
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId, ChannelId};
+pub use artemis_core::{AssetId, ChannelId, MessageId};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::EthereumHeader;
@@ -345,7 +345,7 @@ impl Filter<Call> for CallFilter {
 impl dispatch::Config for Runtime {
 	type Origin = Origin;
 	type Event = Event;
-	type MessageId = (ChannelId, u64);
+	type MessageId = MessageId;
 	type Call = Call;
 	type CallFilter = CallFilter;
 }

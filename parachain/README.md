@@ -151,7 +151,11 @@ For interacting with our chain using the Polkadot-JS API, you'll need to supply 
       "Incentivized": null
     }
   },
-  "MessageId": "(ChannelId, u64)",
+  "MessageNonce": "u64",
+  "MessageId": {
+    "channelId": "ChannelId",
+    "nonce": "u64"
+  },
   "Message": {
     "data": "Vec<u8>",
     "proof": "Proof"

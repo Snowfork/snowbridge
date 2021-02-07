@@ -1,6 +1,6 @@
 use frame_support::{dispatch::{DispatchError, DispatchResult}, storage::StorageMap};
 use sp_std::{cell::Cell, marker::PhantomData, boxed::Box};
-use artemis_core::{ChannelId, MessageDispatch};
+use artemis_core::{ChannelId, MessageId, MessageDispatch};
 use crate::{
 	Config, Error, InboundChannels,
 	envelope::Envelope, primitives::{InboundChannel, InboundChannelData}
@@ -35,14 +35,14 @@ impl<T: Config> BasicInboundChannel<T> {
 impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 	fn submit(&self, relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
 		self.storage.try_mutate::<_,DispatchError,_>(|data| {
-			if envelope.nonce != data.nonce {
+			if envelope.nonce != data.nonce + 1 {
 				return Err(Error::<T>::BadNonce.into())
 			}
 			data.nonce += 1;
 			Ok(())
 		})?;
 
-		let message_id = (self.channel_id, envelope.nonce);
+		let message_id = MessageId::new(self.channel_id, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 		Ok(())
@@ -67,14 +67,14 @@ impl<T: Config> IncentivizedInboundChannel<T> {
 impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 	fn submit(&self, relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
 		self.storage.try_mutate::<_,DispatchError,_>(|data| {
-			if envelope.nonce != data.nonce {
+			if envelope.nonce != data.nonce + 1 {
 				return Err(Error::<T>::BadNonce.into())
 			}
 			data.nonce += 1;
 			Ok(())
 		})?;
 
-		let message_id = (self.channel_id, envelope.nonce);
+		let message_id = MessageId::new(self.channel_id, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 		Ok(())

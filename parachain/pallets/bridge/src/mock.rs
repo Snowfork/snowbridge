@@ -13,7 +13,7 @@ use sp_runtime::{
 use sp_std::convert::From;
 use frame_system as system;
 
-use artemis_core::{MessageCommitment, MessageDispatch, ChannelId, SourceChannel, SourceChannelConfig};
+use artemis_core::{MessageCommitment, MessageDispatch, ChannelId, MessageId, SourceChannel, SourceChannelConfig};
 use artemis_ethereum::Log;
 
 impl_outer_origin! {
@@ -89,8 +89,8 @@ impl MessageCommitment for MockMessageCommitment {
 
 pub struct MockMessageDispatch;
 
-impl MessageDispatch<(ChannelId, u64)> for MockMessageDispatch {
-	fn dispatch(source: H160, id: (ChannelId, u64), payload: &[u8]) {}
+impl MessageDispatch<MessageId> for MockMessageDispatch {
+	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
 }
 
 
