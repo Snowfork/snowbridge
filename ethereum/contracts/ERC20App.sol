@@ -17,7 +17,7 @@ contract ERC20App {
 
     mapping(ChannelId => Channel) public channels;
 
-    bytes2 constant CALL_INDEX = 0x0d01;
+    bytes2 constant MINT_CALL = 0x0d01;
 
     event Locked(
         address token,
@@ -101,7 +101,7 @@ contract ERC20App {
     {
         return
             abi.encodePacked(
-                CALL_INDEX,
+                MINT_CALL,
                 payload.token,
                 payload.sender,
                 payload.recipient,

@@ -20,7 +20,7 @@ contract ETHApp {
 
     event Unlocked(bytes32 sender, address recipient, uint256 amount);
 
-    bytes2 constant CALL_INDEX = 0x0c01;
+    bytes2 constant MINT_CALL = 0x0c01;
 
     struct Channel {
         address inbound;
@@ -81,7 +81,7 @@ contract ETHApp {
     {
         return
             abi.encodePacked(
-                CALL_INDEX,
+                MINT_CALL,
                 payload.sender,
                 payload.recipient,
                 payload.amount.encode256()
