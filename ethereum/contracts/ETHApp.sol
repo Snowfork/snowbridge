@@ -82,9 +82,10 @@ contract ETHApp {
         return
             abi.encodePacked(
                 MINT_CALL,
-                payload.sender,
-                payload.recipient,
-                payload.amount.encode256()
+                _sender,
+                byte(0x00), // Encode recipient as MultiAddress::Id
+                _recipient,
+                _amount.encode256()
             );
     }
 }

@@ -102,10 +102,11 @@ contract ERC20App {
         return
             abi.encodePacked(
                 MINT_CALL,
-                payload.token,
-                payload.sender,
-                payload.recipient,
-                payload.amount.encode256()
+                _token,
+                _sender,
+                byte(0x00), // Encode recipient as MultiAddress::Id
+                _recipient,
+                _amount.encode256()
             );
     }
 }

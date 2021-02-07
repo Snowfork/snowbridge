@@ -22,6 +22,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::EnsureOrigin,
 };
+use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
@@ -99,12 +100,13 @@ decl_module! {
 		}
 
 		#[weight = 0]
-		pub fn mint(origin, token: H160, sender: H160, recipient: T::AccountId, amount: U256) -> DispatchResult {
+		pub fn mint(origin, token: H160, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != Address::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
+			let recipient = T::Lookup::lookup(recipient)?;
 			T::Assets::deposit(AssetId::Token(token), &recipient, amount)?;
 			Self::deposit_event(RawEvent::Minted(token, sender, recipient, amount));
 
