@@ -24,6 +24,7 @@ type Writer struct {
 	headers  <-chan chain.Header
 	log      *logrus.Entry
 	nonce    uint32
+	pool     *extrinsicPool
 }
 
 func NewWriter(conn *Connection, messages <-chan []chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
@@ -41,6 +42,8 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 	wr.nonce = nonce
+
+	wr.pool = newExtrinsicPool(eg, wr.conn, wr.log)
 
 	eg.Go(func() error {
 		return wr.writeLoop(ctx)
@@ -116,7 +119,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 }
 
 // Write submits a transaction to the chain
-func (wr *Writer) write(_ context.Context, c types.Call) error {
+func (wr *Writer) write(ctx context.Context, c types.Call) error {
 	ext := types.NewExtrinsic(c)
 
 	era := types.ExtrinsicEra{IsImmortalEra: true}
@@ -148,10 +151,7 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 		return err
 	}
 
-	_, err = wr.conn.api.RPC.Author.SubmitExtrinsic(extI)
-	if err != nil {
-		return err
-	}
+	wr.pool.WaitForSubmitAndWatch(ctx, &extI)
 
 	wr.nonce = wr.nonce + 1
 
