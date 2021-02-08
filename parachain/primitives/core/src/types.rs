@@ -9,6 +9,21 @@ use codec::{Encode, Decode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+pub struct MessageId {
+	pub channel_id: ChannelId,
+	pub nonce: u64,
+}
+
+impl MessageId {
+	pub fn new(channel_id: ChannelId, nonce: u64) -> Self {
+		Self {
+			channel_id, nonce
+		}
+	}
+}
+
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug)]
 pub enum ChannelId {
 	Basic,

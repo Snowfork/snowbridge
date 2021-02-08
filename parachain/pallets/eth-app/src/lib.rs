@@ -10,8 +10,6 @@
 //!
 //! ## Interface
 //!
-//! This application implements the [`Application`] trait and conforms to its interface
-//!
 //! ### Dispatchable Calls
 //!
 //! - `burn`: Burn an ETH balance.
@@ -21,16 +19,17 @@
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::DispatchResult,
+	dispatch::{DispatchError, DispatchResult},
+	traits::EnsureOrigin,
 };
+use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
-use codec::Decode;
 
-use artemis_core::{ChannelId, Application, SubmitOutbound, SingleAsset};
+use artemis_core::{ChannelId, SubmitOutbound, SingleAsset};
 
 mod payload;
-use payload::{InboundPayload, OutboundPayload};
+use payload::OutboundPayload;
 
 #[cfg(test)]
 mod mock;
@@ -44,6 +43,8 @@ pub trait Config: system::Config {
 	type Asset: SingleAsset<<Self as system::Config>::AccountId>;
 
 	type SubmitOutbound: SubmitOutbound;
+
+	type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
 }
 
 decl_storage! {
@@ -72,7 +73,6 @@ decl_error! {
 }
 
 decl_module! {
-
 	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 
 		type Error = Error<T>;
@@ -82,7 +82,7 @@ decl_module! {
 		// Users should burn their holdings to release funds on the Ethereum side
 		// TODO: Calculate weights
 		#[weight = 0]
-		pub fn burn(origin, channel_id: ChannelId, recipient: H160, amount: U256, ) -> DispatchResult {
+		pub fn burn(origin, channel_id: ChannelId, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Asset::withdraw(&who, amount)?;
@@ -94,33 +94,23 @@ decl_module! {
 			};
 
 			T::SubmitOutbound::submit(channel_id, Address::get(), &message.encode())?;
-
 			Self::deposit_event(RawEvent::Burned(who.clone(), recipient, amount));
 
 			Ok(())
 		}
 
-	}
-}
+		#[weight = 0]
+		pub fn mint(origin, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
+			let who = T::CallOrigin::ensure_origin(origin)?;
+			if who != Address::get() {
+				return Err(DispatchError::BadOrigin.into());
+			}
 
-impl<T: Config> Module<T> {
-	fn handle_payload(payload: &InboundPayload<T::AccountId>) -> DispatchResult  {
-		T::Asset::deposit(&payload.recipient, payload.amount)?;
-		Self::deposit_event(RawEvent::Minted(payload.sender, payload.recipient.clone(), payload.amount));
-		Ok(())
-	}
-}
+			let recipient = T::Lookup::lookup(recipient)?;
+			T::Asset::deposit(&recipient, amount)?;
+			Self::deposit_event(RawEvent::Minted(sender, recipient.clone(), amount));
 
-impl<T: Config> Application for Module<T> {
-	// Handle a message submitted to us by an inbound channel.
-	fn handle(mut payload: &[u8]) -> DispatchResult {
-		let payload_decoded: InboundPayload<T::AccountId> = InboundPayload::decode(&mut payload)
-			.map_err(|_| Error::<T>::InvalidPayload)?;
-
-		Self::handle_payload(&payload_decoded)
-	}
-
-	fn address() -> H160 {
-		Address::get()
+			Ok(())
+		}
 	}
 }

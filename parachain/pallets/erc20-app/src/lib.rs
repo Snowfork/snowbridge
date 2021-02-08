@@ -10,8 +10,6 @@
 //!
 //! ## Interface
 //!
-//! This application implements the [`Application`] trait and conforms to its interface.
-//!
 //! ### Dispatchable Calls
 //!
 //! - `burn`: Burn an ERC20 token balance.
@@ -21,16 +19,17 @@
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::DispatchResult,
+	dispatch::{DispatchError, DispatchResult},
+	traits::EnsureOrigin,
 };
+use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
-use codec::Decode;
 
-use artemis_core::{ChannelId, Application, SubmitOutbound, AssetId, MultiAsset};
+use artemis_core::{ChannelId, SubmitOutbound, AssetId, MultiAsset};
 
 mod payload;
-use payload::{InboundPayload, OutboundPayload};
+use payload::OutboundPayload;
 
 #[cfg(test)]
 mod mock;
@@ -43,6 +42,8 @@ pub trait Config: system::Config {
 	type Assets: MultiAsset<<Self as system::Config>::AccountId>;
 
 	type SubmitOutbound: SubmitOutbound;
+
+	type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
 }
 
 decl_storage! {
@@ -93,43 +94,24 @@ decl_module! {
 			};
 
 			T::SubmitOutbound::submit(channel_id, Address::get(), &message.encode())?;
-
 			Self::deposit_event(RawEvent::Burned(token, who.clone(), recipient, amount));
 
 			Ok(())
 		}
 
-	}
-}
+		#[weight = 0]
+		pub fn mint(origin, token: H160, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
+			let who = T::CallOrigin::ensure_origin(origin)?;
+			if who != Address::get() {
+				return Err(DispatchError::BadOrigin.into());
+			}
 
-impl<T: Config> Module<T> {
-	fn handle_payload(payload: &InboundPayload<T::AccountId>) -> DispatchResult {
-		T::Assets::deposit(
-			AssetId::Token(payload.token),
-			&payload.recipient,
-			payload.amount
-		)?;
-		Self::deposit_event(
-			RawEvent::Minted(
-				payload.token,
-				payload.sender,
-				payload.recipient.clone(),
-				payload.amount
-		));
-		Ok(())
-	}
-}
+			let recipient = T::Lookup::lookup(recipient)?;
+			T::Assets::deposit(AssetId::Token(token), &recipient, amount)?;
+			Self::deposit_event(RawEvent::Minted(token, sender, recipient, amount));
 
-impl<T: Config> Application for Module<T> {
-	// Handle a message submitted to us by an inbound channel.
-	fn handle(mut payload: &[u8]) -> DispatchResult {
-		let payload_decoded: InboundPayload<T::AccountId> = InboundPayload::decode(&mut payload)
-			.map_err(|_| Error::<T>::InvalidPayload)?;
+			Ok(())
+		}
 
-		Self::handle_payload(&payload_decoded)
-	}
-
-	fn address() -> H160 {
-		Address::get()
 	}
 }

@@ -111,6 +111,11 @@ func (li *Listener) pollEventsAndHeaders(
 				li.log.Info("Not polling events since channel is nil")
 			}
 
+			// Don't attempt to forward events prior to genesis block
+			if descendantsUntilFinal > gethheader.Number.Uint64() {
+				continue
+			}
+
 			finalizedBlockNumber := gethheader.Number.Uint64() - descendantsUntilFinal
 			var events []*outbound.ContractMessage
 

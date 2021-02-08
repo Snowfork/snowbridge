@@ -35,8 +35,7 @@ use frame_support::{
 };
 
 use sp_runtime::traits::StaticLookup;
-
-use sp_core::{U256};
+use sp_core::U256;
 
 use artemis_core::assets::{AssetId, MultiAsset, SingleAsset};
 use sp_std::marker;

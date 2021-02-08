@@ -14,7 +14,7 @@ contract BasicOutboundChannel is OutboundChannel {
      * @dev Sends a message across the channel
      */
     function submit(bytes memory payload) public override {
-        emit Message(msg.sender, nonce, payload);
         nonce = nonce + 1;
+        emit Message(msg.sender, nonce, payload);
     }
 }
