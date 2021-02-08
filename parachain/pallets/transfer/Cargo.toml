@@ -1,6 +1,6 @@
 [package]
-name = "artemis-token-dealer"
-description = "Artemis Token Dealer"
+name = "artemis-transfer"
+description = "Artemis XCM Transfer pallet"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]

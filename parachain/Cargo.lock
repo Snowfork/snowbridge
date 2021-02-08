@@ -357,7 +357,7 @@ dependencies = [
  "artemis-dispatch",
  "artemis-erc20-app",
  "artemis-eth-app",
- "artemis-token-dealer",
+ "artemis-transfer",
  "artemis-xcm-support",
  "cumulus-parachain-system",
  "cumulus-primitives",
@@ -406,7 +406,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "artemis-token-dealer"
+name = "artemis-transfer"
 version = "0.1.1"
 dependencies = [
  "artemis-core",

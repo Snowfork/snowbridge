@@ -7,7 +7,7 @@ use frame_support::{decl_event, decl_error, decl_module, decl_storage,
 };
 use frame_system::ensure_signed;
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, Convert, MaybeSerializeDeserialize, Member},
+	traits::{AtLeast32BitUnsigned, Convert, MaybeSerializeDeserialize, Member, StaticLookup},
 	RuntimeDebug,
 };
 use sp_std::convert::TryInto;
@@ -22,32 +22,7 @@ use xcm_executor::traits::LocationConversion;
 
 use artemis_core::AssetId;
 
-/// Global identifier for a bridged ethereum asset (Within a polkadot consensus system)
-#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
-pub struct XAssetId {
-	/// The reserve chain of the asset.
-	pub reserve_chain: ParaId,
-	/// The identity of the asset.
-	pub asset: AssetId
-}
-
-impl Into<MultiLocation> for XAssetId {
-	fn into(self) -> MultiLocation {
-		match self.asset {
-			AssetId::ETH =>
-				MultiLocation::X2(
-					Junction::PalletInstance { id: 0 }, // fungible assets pallet
-					Junction::GeneralIndex { id: 0 }, // ETH
-				),
-			AssetId::Token(key) =>
-				MultiLocation::X3(
-					Junction::PalletInstance { id: 0 }, // fungible assets pallet
-					Junction::GeneralIndex { id: 1 }, // ERC20 token
-					Junction::GeneralKey(key.to_fixed_bytes().into()) // address
-				)
-			}
-	}
-}
+use codec::Encode;
 
 pub trait Config: frame_system::Config {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
@@ -70,10 +45,10 @@ decl_event! {
 		<T as Config>::Balance,
 	{
 		/// Transferred DOT to relay chain. [src, dest, amount]
-		TransferredToRelayChain(AccountId, AccountId, Balance),
+		TransferredUpwards(AccountId, AccountId, Balance),
 
-		/// Transferred to parachain. [x_asset_id, src, para_id, dest, dest_network, amount]
-		TransferredToParachain(XAssetId, AccountId, ParaId, AccountId, NetworkId, Balance),
+		/// Transferred to parachain. [reserve, asset_id, src, para_id, dest, dest_network, amount]
+		Transferred(Option<ParaId>, AssetId, AccountId, ParaId, AccountId, NetworkId, Balance),
 	}
 }
 
@@ -83,8 +58,8 @@ decl_error! {
 		BadLocation,
 		/// The XCM message version is not supported.
 		BadVersion,
-		/// XCM execution failed
-		ExecutionFailed,
+		/// The XCM message was not executed locally
+		ExecutionFailed
 	}
 }
 
@@ -94,13 +69,19 @@ decl_module! {
 
 		/// Transfer DOT upwards to relay chain.
 		#[weight = 10]
-		pub fn transfer_dot_to_relaychain(origin, dest: T::AccountId, amount: T::Balance) -> DispatchResult {
+		pub fn transfer_upwards(origin, recipient: <T::Lookup as StaticLookup>::Source, amount: T::Balance) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
-			let xcm = Self::make_xcm_upward_transfer(&dest, amount);
 
-			Self::execute(&who, xcm.into())?;
+			let recipient = T::Lookup::lookup(recipient)?;
 
-			Self::deposit_event(Event::<T>::TransferredToRelayChain(who, dest, amount));
+			let xcm = Self::make_xcm_upward_transfer(&recipient, amount);
+			let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
+				.map_err(|_| Error::<T>::BadLocation)?;
+
+			T::XcmExecutor::execute_xcm(xcm_origin, xcm)
+				.map_err(|_| Error::<T>::ExecutionFailed.into())?;
+
+			Self::deposit_event(Event::<T>::TransferredUpwards(who, recipient, amount));
 
 			Ok(())
 		}
@@ -111,18 +92,20 @@ decl_module! {
 		///
 		/// # Arguments
 		///
+		/// * `reserve`: Reserve chain for the bridged asset
 		/// * `asset`: Global identifier for a bridged asset
 		/// * `para_id`: Destination parachain
 		/// * `network`: Network for destination account
 		/// * `account`: Destination account
 		/// * `amount`: Amount to transfer
 		#[weight = 10]
-		pub fn transfer_bridged_asset_to_parachain(
+		pub fn transfer(
 			origin,
-			asset: XAssetId,
+			reserve: Option<ParaId>,
+			asset: AssetId,
 			para_id: ParaId,
 			network: NetworkId,
-			account: T::AccountId,
+			recipient: <T::Lookup as StaticLookup>::Source,
 			amount: T::Balance
 		) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
@@ -131,29 +114,35 @@ decl_module! {
 				return Ok(());
 			}
 
-			let location: MultiLocation = asset.clone().into();
+			let location = MultiLocation::X1(Junction::GeneralKey(asset.encode()));
+			let recipient = T::Lookup::lookup(recipient)?;
 
-			let xcm = if asset.reserve_chain == T::ParaId::get() {
-				Self::make_xcm_lateral_transfer_native(
-					location,
-					para_id,
-					&network,
-					&account,
-					amount)
-			} else {
-				Self::make_xcm_lateral_transfer_foreign(
-					asset.reserve_chain,
-					location,
-					para_id,
-					&network,
-					&account,
-					amount)
+			let xcm = match reserve {
+				Some(reserve_para_id) =>
+					Self::make_xcm_lateral_transfer_foreign(
+						reserve,
+						location,
+						para_id,
+						&network,
+						&recipient,
+						amount),
+				None =>
+					Self::make_xcm_lateral_transfer_native(
+						location,
+						para_id,
+						&network,
+						&recipient,
+						amount),
 			};
 
-			Self::execute(&who, xcm.into())?;
+			let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
+				.map_err(|_| Error::<T>::BadLocation)?;
+
+			T::XcmExecutor::execute_xcm(xcm_origin, xcm)
+				.map_err(|_| Error::<T>::ExecutionFailed.into())?;
 
 			Self::deposit_event(
-				Event::<T>::TransferredToParachain(asset, who, para_id, account, network, amount),
+				Event::<T>::Transferred(reserve, asset, who, para_id, recipient, network, amount),
 			);
 
 			Ok(())
@@ -163,20 +152,8 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 
-	// Execute the XCM message
-	fn execute(who: &T::AccountId, xcm: VersionedXcm) -> DispatchResult {
-		let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
-			.map_err(|_| Error::<T>::BadLocation)?;
-
-		let xcm: Xcm = xcm.try_into()
-			.map_err(|_| Error::<T>::BadVersion)?;
-
-		T::XcmExecutor::execute_xcm(xcm_origin, xcm)
-			.map_err(|_| Error::<T>::ExecutionFailed.into())
-	}
-
 	// Transfer DOT upwards to relay chain
-	fn make_xcm_upward_transfer(dest: &T::AccountId, amount: T::Balance) -> Xcm {
+	fn make_xcm_upward_transfer(recipient: &T::AccountId, amount: T::Balance) -> Xcm {
 		Xcm::WithdrawAsset {
 			assets: vec![MultiAsset::ConcreteFungible {
 				id: MultiLocation::X1(Junction::Parent),
@@ -189,7 +166,7 @@ impl<T: Config> Module<T> {
 					assets: vec![MultiAsset::All],
 					dest: MultiLocation::X1(Junction::AccountId32 {
 						network: T::RelayChainNetworkId::get(),
-						id: T::AccountId32Converter::convert(dest.clone()),
+						id: T::AccountId32Converter::convert(recipient.clone()),
 					}),
 				}],
 			}],
@@ -201,7 +178,7 @@ impl<T: Config> Module<T> {
 		location: MultiLocation,
 		para_id: ParaId,
 		network: &NetworkId,
-		account: &T::AccountId,
+		recipient: &T::AccountId,
 		amount: T::Balance,
 	) -> Xcm {
 		Xcm::WithdrawAsset {
@@ -216,7 +193,7 @@ impl<T: Config> Module<T> {
 					assets: vec![MultiAsset::All],
 					dest: MultiLocation::X1(Junction::AccountId32 {
 						network: network.clone(),
-						id: T::AccountId32Converter::convert(account.clone()),
+						id: T::AccountId32Converter::convert(recipient.clone()),
 					}),
 				}],
 			}],
@@ -229,14 +206,14 @@ impl<T: Config> Module<T> {
 		location: MultiLocation,
 		para_id: ParaId,
 		network: &NetworkId,
-		account: &T::AccountId,
+		recipient: &T::AccountId,
 		amount: T::Balance,
 	) -> Xcm {
 		let deposit_to_dest = Order::DepositAsset {
 			assets: vec![MultiAsset::All],
 			dest: MultiLocation::X1(Junction::AccountId32 {
 				network: network.clone(),
-				id: T::AccountId32Converter::convert(account.clone()),
+				id: T::AccountId32Converter::convert(recipient.clone()),
 			}),
 		};
 
