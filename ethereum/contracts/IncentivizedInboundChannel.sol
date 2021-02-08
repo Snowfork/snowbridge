@@ -85,7 +85,7 @@ contract IncentivizedInboundChannel is InboundChannel {
                     message.payload
                 );
 
-            emit MessageDelivered(message.nonce, success);
+            emit MessageDispatched(message.nonce, success);
         }
     }
 

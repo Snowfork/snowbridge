@@ -132,11 +132,6 @@ polkadot-launch config.json
 
 To view the parachain logs, open another terminal and view the `200.log` file. Note that it will take several minutes for the parachain to start producing blocks.
 
-
-## Interacting with the chain
-
-You can interact with a development chain using our [webapp](https://polkaeth-substrate.netlify.app). Its an instance of the Polkadot-JS webapp with the necessary configuration to interact with our development chain.
-
 ### Custom Types
 
 For interacting with our chain using the Polkadot-JS API, you'll need to supply these custom types:
