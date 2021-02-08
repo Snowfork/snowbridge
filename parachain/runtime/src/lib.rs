@@ -365,7 +365,7 @@ parameter_types! {
 
 #[cfg(feature = "test-e2e")]
 parameter_types! {
-	pub const DescendantsUntilFinalized: u8 = 0;
+	pub const DescendantsUntilFinalized: u8 = 1;
 	pub const VerifyPoW: bool = false;
 }
 

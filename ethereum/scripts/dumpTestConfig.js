@@ -1,5 +1,5 @@
 const TOML = require('@iarna/toml');
-const fs  = require('fs');
+const fs = require('fs');
 const path = require('path');
 
 const channelContracts = {
@@ -28,7 +28,7 @@ const dump = (tmpDir, channels) => {
     const config = {
         ethereum: {
             endpoint: "ws://localhost:8545/",
-            "descendants-until-final": 0,
+            "descendants-until-final": 3,
             channels: {
                 basic: {
                     inbound: channels.basic.inbound.address,
