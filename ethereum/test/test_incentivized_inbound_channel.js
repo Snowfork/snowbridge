@@ -2,7 +2,7 @@ const ETHApp = artifacts.require("ETHApp");
 
 const BigNumber = web3.BigNumber;
 
-const { confirmUnlock, confirmMessageDelivered, hashMessage, deployAppContractWithChannels, ChannelId } = require("./helpers");
+const { confirmUnlock, confirmMessageDispatched, hashMessage, deployAppContractWithChannels, ChannelId } = require("./helpers");
 const { lockupETH } = require('./test_eth_app');
 
 require("chai")
@@ -41,7 +41,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const payloadOne = iChannel.encodeFunctionData(unlockFragment, [polkadotSender, userTwo, 2]);
       const messageOne = {
         target: this.ethApp.address,
-        nonce: 0,
+        nonce: 1,
         payload: payloadOne
       }
 
@@ -49,7 +49,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const payloadTwo = iChannel.encodeFunctionData(unlockFragment, [polkadotSender, userThree, 5]);
       const messageTwo = {
         target: this.ethApp.address,
-        nonce: 1,
+        nonce: 2,
         payload: payloadTwo
       }
 
@@ -67,13 +67,13 @@ contract("IncentivizedInboundChannel", function (accounts) {
       // Confirm ETHApp and IncentivizedInboundChannel processed messages correctly
       const firstRawUnlockLog = tx.receipt.rawLogs[0];
       confirmUnlock(firstRawUnlockLog, this.ethApp.address, userTwo, 2);
-      const firstMessageDeliveredLog = tx.receipt.rawLogs[1];
-      confirmMessageDelivered(firstMessageDeliveredLog, 0, true);
+      const firstMessageDispatchedLog = tx.receipt.rawLogs[1];
+      confirmMessageDispatched(firstMessageDispatchedLog, 1, true);
 
       const secondRawUnlockLog = tx.receipt.rawLogs[2];
       confirmUnlock(secondRawUnlockLog, this.ethApp.address, userThree, 5);
-      const secondMessageDeliveredLog = tx.receipt.rawLogs[3];
-      confirmMessageDelivered(secondMessageDeliveredLog, 1, true);
+      const secondMessageDispatchedLog = tx.receipt.rawLogs[3];
+      confirmMessageDispatched(secondMessageDispatchedLog, 2, true);
     });
   });
 });

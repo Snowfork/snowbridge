@@ -20,11 +20,7 @@ contract ETHApp {
 
     event Unlocked(bytes32 sender, address recipient, uint256 amount);
 
-    struct OutboundPayload {
-        address sender;
-        bytes32 recipient;
-        uint256 amount;
-    }
+    bytes2 constant MINT_CALL = 0x0c01;
 
     struct Channel {
         address inbound;
@@ -55,12 +51,10 @@ contract ETHApp {
 
         emit Locked(msg.sender, _recipient, msg.value);
 
-        OutboundPayload memory payload =
-            OutboundPayload(msg.sender, _recipient, msg.value);
+        bytes memory call = encodeCall(msg.sender, _recipient, msg.value);
 
-        OutboundChannel channel =
-            OutboundChannel(channels[_channelId].outbound);
-        channel.submit(encodePayload(payload));
+        OutboundChannel channel = OutboundChannel(channels[_channelId].outbound);
+        channel.submit(call);
     }
 
     function unlock(
@@ -80,17 +74,18 @@ contract ETHApp {
         emit Unlocked(_sender, _recipient, _amount);
     }
 
-    // SCALE-encode payload
-    function encodePayload(OutboundPayload memory payload)
+    function encodeCall(address _sender, bytes32 _recipient, uint256 _amount)
         private
         pure
         returns (bytes memory)
     {
         return
             abi.encodePacked(
-                payload.sender,
-                payload.recipient,
-                payload.amount.toBytes32LE()
+                MINT_CALL,
+                _sender,
+                byte(0x00), // Encode recipient as MultiAddress::Id
+                _recipient,
+                _amount.encode256()
             );
     }
 }

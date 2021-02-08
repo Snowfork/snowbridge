@@ -23,6 +23,11 @@ class SubClient {
             "Incentivized": null
           }
         },
+        "MessageNonce": "u64",
+        "MessageId": {
+          "channelId": "ChannelId",
+          "nonce": "u64"
+        },
         "Message": {
           "data": "Vec<u8>",
           "proof": "Proof"
@@ -55,11 +60,21 @@ class SubClient {
         "Bloom": {
           "_": "[u8; 256]"
         },
+        "PruningRange": {
+          "oldestUnprunedBlock": "u64",
+          "oldestBlockToKeep": "u64"
+        },
         "AssetId": {
           "_enum": {
             "ETH": null,
             "Token": "H160"
           }
+        },
+        "InboundChannelData": {
+          "nonce": "u64"
+        },
+        "OutboundChannelData": {
+          "nonce": "u64"
         }
       }
     })

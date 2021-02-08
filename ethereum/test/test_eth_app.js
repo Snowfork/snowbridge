@@ -4,7 +4,8 @@ const {
   confirmUnlock,
   deployAppContractWithChannels,
   addressBytes,
-  ChannelId
+  ChannelId,
+  encodeLog
 } = require("./helpers");
 
 require("chai")
@@ -69,7 +70,11 @@ contract("ETHApp", function (accounts) {
       const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
 
-      confirmChannelSend(tx.receipt.rawLogs[1], this.channels.basic.outbound.address, this.app.address, 0)
+      // Used for generating mock inputs for Substrate tests (don't delete!)
+      // console.log(tx.receipt.rawLogs[1])
+      // console.log(encodeLog(tx.receipt.rawLogs[1]));
+
+      confirmChannelSend(tx.receipt.rawLogs[1], this.channels.basic.outbound.address, this.app.address, 1)
     });
 
     it("should send payload to the incentivized outbound channel", async function () {
@@ -78,7 +83,7 @@ contract("ETHApp", function (accounts) {
       const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Incentivized)
         .should.be.fulfilled;
 
-      confirmChannelSend(tx.receipt.rawLogs[1], this.channels.incentivized.outbound.address, this.app.address, 0)
+      confirmChannelSend(tx.receipt.rawLogs[1], this.channels.incentivized.outbound.address, this.app.address, 1)
     });
 
   })
@@ -110,7 +115,7 @@ contract("ETHApp", function (accounts) {
       const commitment = [
         {
           target: this.app.address,
-          nonce: 0,
+          nonce: 1,
           payload: "0x6dea30e71aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000de0b6b3a7640000"
         }
       ]
@@ -153,7 +158,7 @@ contract("ETHApp", function (accounts) {
       const commitment = [
         {
           target: this.app.address,
-          nonce: 0,
+          nonce: 1,
           payload: "0x6dea30e71aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000de0b6b3a7640000"
         }
       ]
