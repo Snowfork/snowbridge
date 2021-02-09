@@ -2,7 +2,7 @@ const ETHApp = artifacts.require("ETHApp");
 
 const BigNumber = web3.BigNumber;
 
-const { confirmUnlock, confirmMessageDelivered, deployAppContractWithChannels, ChannelId, buildCommitment } = require("./helpers");
+const { confirmUnlock, confirmMessageDispatched, deployAppContractWithChannels, ChannelId, buildCommitment } = require("./helpers");
 const { lockupETH } = require('./test_eth_app');
 
 require("chai")
@@ -40,7 +40,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const payloadOne = iChannel.encodeFunctionData(unlockFragment, [polkadotSender, userTwo, 2]);
       const messageOne = {
         target: this.ethApp.address,
-        nonce: 0,
+        nonce: 1,
         payload: payloadOne
       }
 
@@ -48,7 +48,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const payloadTwo = iChannel.encodeFunctionData(unlockFragment, [polkadotSender, userThree, 5]);
       const messageTwo = {
         target: this.ethApp.address,
-        nonce: 1,
+        nonce: 2,
         payload: payloadTwo
       }
 
@@ -56,7 +56,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const payloadThree = iChannel.encodeFunctionData(unlockFragment, [polkadotSender, userTwo, 7]);
       const messageThree = {
         target: this.ethApp.address,
-        nonce: 2,
+        nonce: 3,
         payload: payloadThree
       }
 
@@ -64,7 +64,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const payloadFour = iChannel.encodeFunctionData(unlockFragment, [polkadotSender, userThree, 9]);
       const messageFour = {
         target: this.ethApp.address,
-        nonce: 3,
+        nonce: 4,
         payload: payloadFour
       }
 
@@ -82,23 +82,23 @@ contract("IncentivizedInboundChannel", function (accounts) {
       // Confirm ETHApp and IncentivizedInboundChannel processed messages correctly
       const firstRawUnlockLog = tx.receipt.rawLogs[0];
       confirmUnlock(firstRawUnlockLog, this.ethApp.address, userTwo, 2);
-      const firstMessageDeliveredLog = tx.receipt.rawLogs[1];
-      confirmMessageDelivered(firstMessageDeliveredLog, 0, true);
+      const firstMessageDispatchedLog = tx.receipt.rawLogs[1];
+      confirmMessageDispatched(firstMessageDispatchedLog, 1, true);
 
       const secondRawUnlockLog = tx.receipt.rawLogs[2];
       confirmUnlock(secondRawUnlockLog, this.ethApp.address, userThree, 5);
-      const secondMessageDeliveredLog = tx.receipt.rawLogs[3];
-      confirmMessageDelivered(secondMessageDeliveredLog, 1, true);
+      const secondMessageDispatchedLog = tx.receipt.rawLogs[3];
+      confirmMessageDispatched(secondMessageDispatchedLog, 2, true);
 
       const thirdRawUnlockLog = tx.receipt.rawLogs[4];
       confirmUnlock(thirdRawUnlockLog, this.ethApp.address, userTwo, 7);
-      const thirdMessageDeliveredLog = tx.receipt.rawLogs[5];
-      confirmMessageDelivered(thirdMessageDeliveredLog, 2, true);
+      const thirdMessageDispatchedLog = tx.receipt.rawLogs[5];
+      confirmMessageDispatched(thirdMessageDispatchedLog, 3, true);
 
       const fourthRawUnlockLog = tx.receipt.rawLogs[6];
       confirmUnlock(fourthRawUnlockLog, this.ethApp.address, userThree, 9);
-      const fourthMessageDeliveredLog = tx.receipt.rawLogs[7];
-      confirmMessageDelivered(fourthMessageDeliveredLog, 3, true);
+      const fourthMessageDispatchedLog = tx.receipt.rawLogs[7];
+      confirmMessageDispatched(fourthMessageDispatchedLog, 4, true);
 
     });
   });

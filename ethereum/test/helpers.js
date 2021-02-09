@@ -13,17 +13,6 @@ const channelContracts = {
   },
 };
 
-const channelContracts = {
-  basic: {
-    inbound: artifacts.require("BasicInboundChannel"),
-    outbound: artifacts.require("BasicOutboundChannel"),
-  },
-  incentivized: {
-    inbound: artifacts.require("IncentivizedInboundChannel"),
-    outbound: artifacts.require("IncentivizedOutboundChannel"),
-  },
-};
-
 const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
   outChannelLogFields = [
     {
@@ -211,7 +200,7 @@ module.exports = {
   confirmChannelSend,
   confirmUnlock,
   confirmUnlockTokens,
-  confirmMessageDelivered,
+  confirmMessageDispatched,
   deployAppContractWithChannels,
   addressBytes,
   ChannelId,

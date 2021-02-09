@@ -68,12 +68,11 @@ contract ERC20App {
 
         emit Locked(_token, msg.sender, _recipient, _amount);
 
-        OutboundPayload memory payload =
-            OutboundPayload(_token, msg.sender, _recipient, _amount);
+        bytes memory call = encodeCall(_token, msg.sender, _recipient, _amount);
 
         OutboundChannel channel =
             OutboundChannel(channels[_channelId].outbound);
-        channel.submit(encodePayload(payload));
+        channel.submit(call);
     }
 
     function unlock(
@@ -98,17 +97,20 @@ contract ERC20App {
     }
 
     // SCALE-encode payload
-    function encodePayload(OutboundPayload memory payload)
-        private
-        pure
-        returns (bytes memory)
-    {
+    function encodeCall(
+        address _token,
+        address _sender,
+        bytes32 _recipient,
+        uint256 _amount
+    ) private pure returns (bytes memory) {
         return
             abi.encodePacked(
-                payload.token,
-                payload.sender,
-                payload.recipient,
-                payload.amount.toBytes32LE()
+                MINT_CALL,
+                _token,
+                _sender,
+                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                _recipient,
+                _amount.encode256()
             );
     }
 }
