@@ -7,7 +7,7 @@
     "test": "mocha --timeout 80000 --exit"
   },
   "dependencies": {
-    "@polkadot/api": "^3.4.2",
+    "@polkadot/api": "^3.8.1",
     "bignumber.js": "^9.0.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
@@ -17,6 +17,7 @@
     "mocha": "^8.1.3",
     "rlp": "^2.2.6",
     "web3": "^1.3.0",
-    "web3-utils": "^1.3.0"
+    "web3-utils": "^1.3.0",
+    "ws": "^7.4.3"
   }
 }
