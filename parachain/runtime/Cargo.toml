@@ -34,16 +34,16 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "rococo
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-version = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 
-cumulus-runtime = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1", default-features = false }
-cumulus-parachain-system = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1", default-features = false }
-cumulus-primitives = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1", default-features = false }
-parachain-info = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1", default-features = false }
+cumulus-runtime = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1", default-features = false }
+cumulus-parachain-system = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1", default-features = false }
+cumulus-primitives = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1", default-features = false }
+parachain-info = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1", default-features = false }
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
-xcm-handler = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1", default-features = false }
+xcm-handler = { git = "https://github.com/snowfork/cumulus.git", branch = "rococo-v1", default-features = false }
 
 artemis-core = { path = "../primitives/core", default-features = false }
 artemis-transfer = { path = "../pallets/transfer", default-features = false }

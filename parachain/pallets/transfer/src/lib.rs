@@ -1,28 +1,25 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
+use codec::Encode;
 use frame_support::{decl_event, decl_error, decl_module, decl_storage,
 	dispatch::DispatchResult,
 	traits::Get, Parameter,
 };
 use frame_system::ensure_signed;
+use frame_support::debug::trace;
+
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, Convert, MaybeSerializeDeserialize, Member, StaticLookup},
-	RuntimeDebug,
 };
-use sp_std::convert::TryInto;
 use sp_std::prelude::*;
 use sp_std::vec;
 
 use cumulus_primitives::{relay_chain::Balance as RelayChainBalance, ParaId};
 use xcm::v0::{Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm, ExecuteXcm};
-use xcm::VersionedXcm;
 
 use xcm_executor::traits::LocationConversion;
 
 use artemis_core::AssetId;
-
-use codec::Encode;
 
 pub trait Config: frame_system::Config {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
@@ -47,8 +44,8 @@ decl_event! {
 		/// Transferred DOT to relay chain. [src, dest, amount]
 		TransferredUpwards(AccountId, AccountId, Balance),
 
-		/// Transferred to parachain. [reserve, asset_id, src, para_id, dest, dest_network, amount]
-		Transferred(Option<ParaId>, AssetId, AccountId, ParaId, AccountId, NetworkId, Balance),
+		/// Transferred to parachain. [asset_id, src, para_id, dest, dest_network, amount]
+		Transferred(AssetId, AccountId, ParaId, AccountId, NetworkId, Balance),
 	}
 }
 
@@ -79,7 +76,7 @@ decl_module! {
 				.map_err(|_| Error::<T>::BadLocation)?;
 
 			T::XcmExecutor::execute_xcm(xcm_origin, xcm)
-				.map_err(|_| Error::<T>::ExecutionFailed.into())?;
+				.map_err(|_| Error::<T>::ExecutionFailed)?;
 
 			Self::deposit_event(Event::<T>::TransferredUpwards(who, recipient, amount));
 
@@ -92,7 +89,6 @@ decl_module! {
 		///
 		/// # Arguments
 		///
-		/// * `reserve`: Reserve chain for the bridged asset
 		/// * `asset`: Global identifier for a bridged asset
 		/// * `para_id`: Destination parachain
 		/// * `network`: Network for destination account
@@ -101,7 +97,6 @@ decl_module! {
 		#[weight = 10]
 		pub fn transfer(
 			origin,
-			reserve: Option<ParaId>,
 			asset: AssetId,
 			para_id: ParaId,
 			network: NetworkId,
@@ -114,35 +109,36 @@ decl_module! {
 				return Ok(());
 			}
 
+			trace!(target: "xcmp", "Transfer 1");
+
 			let location = MultiLocation::X1(Junction::GeneralKey(asset.encode()));
 			let recipient = T::Lookup::lookup(recipient)?;
 
-			let xcm = match reserve {
-				Some(reserve_para_id) =>
-					Self::make_xcm_lateral_transfer_foreign(
-						reserve,
+			trace!(target: "xcmp", "Transfer 2");
+
+			let xcm = Self::make_xcm_lateral_transfer(
 						location,
 						para_id,
 						&network,
 						&recipient,
-						amount),
-				None =>
-					Self::make_xcm_lateral_transfer_native(
-						location,
-						para_id,
-						&network,
-						&recipient,
-						amount),
-			};
+						amount);
+
+			trace!(target: "xcmp", "Transfer 3");
 
 			let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
 				.map_err(|_| Error::<T>::BadLocation)?;
 
+			trace!(target: "xcmp", "Transfer 4");
+
+
 			T::XcmExecutor::execute_xcm(xcm_origin, xcm)
-				.map_err(|_| Error::<T>::ExecutionFailed.into())?;
+				.map_err(|e| {
+					trace!(target: "xcmp", "Transfer Execute Error {:?}", e);
+					Error::<T>::ExecutionFailed
+				})?;
 
 			Self::deposit_event(
-				Event::<T>::Transferred(reserve, asset, who, para_id, recipient, network, amount),
+				Event::<T>::Transferred(asset, who, para_id, recipient, network, amount)
 			);
 
 			Ok(())
@@ -173,8 +169,8 @@ impl<T: Config> Module<T> {
 		}
 	}
 
-	// Transfer bridged assets which are native to this parachain
-	fn make_xcm_lateral_transfer_native(
+	// Transfer bridged assets laterally to another parachain
+	fn make_xcm_lateral_transfer(
 		location: MultiLocation,
 		para_id: ParaId,
 		network: &NetworkId,
@@ -196,51 +192,6 @@ impl<T: Config> Module<T> {
 						id: T::AccountId32Converter::convert(recipient.clone()),
 					}),
 				}],
-			}],
-		}
-	}
-
-	// Transfer bridged assets which are foreign to this parachain
-	fn make_xcm_lateral_transfer_foreign(
-		reserve_chain: ParaId,
-		location: MultiLocation,
-		para_id: ParaId,
-		network: &NetworkId,
-		recipient: &T::AccountId,
-		amount: T::Balance,
-	) -> Xcm {
-		let deposit_to_dest = Order::DepositAsset {
-			assets: vec![MultiAsset::All],
-			dest: MultiLocation::X1(Junction::AccountId32 {
-				network: network.clone(),
-				id: T::AccountId32Converter::convert(recipient.clone()),
-			}),
-		};
-
-		let reserve_chain_order = if para_id == reserve_chain {
-			deposit_to_dest
-		} else {
-			Order::DepositReserveAsset {
-				assets: vec![MultiAsset::All],
-				dest: MultiLocation::X2(Junction::Parent, Junction::Parachain { id: para_id.into() }),
-				effects: vec![deposit_to_dest],
-			}
-		};
-
-		Xcm::WithdrawAsset {
-			assets: vec![MultiAsset::ConcreteFungible {
-				id: location,
-				amount: amount.into(),
-			}],
-			effects: vec![Order::InitiateReserveWithdraw {
-				assets: vec![MultiAsset::All],
-				reserve: MultiLocation::X2(
-					Junction::Parent,
-					Junction::Parachain {
-						id: reserve_chain.into(),
-					},
-				),
-				effects: vec![reserve_chain_order],
 			}],
 		}
 	}

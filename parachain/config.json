@@ -22,16 +22,40 @@
 			"wsPort": 9966,
 			"port": 30666,
 			"flags": [
-				"-lbasic_authorship=trace,commitments=debug,import_header=trace,runtime=debug,submit_messages=trace",
+				"-limport_header=trace,xcmp=trace,runtime=debug,submit_messages=trace",
 				"--rpc-port=9980",
 				"--offchain-worker=Always",
 				"--enable-offchain-indexing=true",
+				"--execution=native",
+				"--",
+				"--execution=wasm"
+			]
+		},
+		{
+			"bin": "target/release/artemis",
+			"id": "300",
+			"wsPort": 9977,
+			"port": 30777,
+			"flags": [
+				"-limport_header=trace,xcmp=trace,runtime=debug,submit_messages=trace",
+				"--rpc-port=9990",
+				"--offchain-worker=Always",
+				"--enable-offchain-indexing=true",
+				"--execution=native",
 				"--",
 				"--execution=wasm"
 			]
 		}
 	],
 	"simpleParachains": [],
+	"hrmpChannels": [
+		{
+			"sender": "200",
+			"recipient": "300",
+			"maxCapacity": 8,
+			"maxMessageSize": 512
+		}
+	],
 	"types": {
 		"Address": "MultiAddress",
 		"LookupSource": "MultiAddress"
