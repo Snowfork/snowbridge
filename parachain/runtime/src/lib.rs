@@ -46,13 +46,13 @@ use dispatch::EnsureEthereumAccount;
 pub use verifier_lightclient::EthereumHeader;
 
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{Junction, MultiAsset, MultiLocation, NetworkId};
+use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
 	CurrencyAdapter,
 };
-use xcm_executor::{Config, XcmExecutor, traits::{NativeAsset, IsConcrete, FilterAssetLocation}};
+use xcm_executor::{Config, XcmExecutor, traits::{NativeAsset, IsConcrete}};
 use cumulus_primitives::relay_chain::Balance as RelayChainBalance;
 
 use artemis_xcm_support::AssetsTransactor;
@@ -314,14 +314,6 @@ type LocalAssetTransactor2 = CurrencyAdapter<
 
 type LocalAssetTransactor = (LocalAssetTransactor1, LocalAssetTransactor2);
 
-// TODO: USED FOR TESTING! Remove for Prod!
-pub struct AllowAllFilter;
-impl FilterAssetLocation for AllowAllFilter {
-    fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-            true
-    }
-}
-
 pub type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
 	RelayChainAsNative<RelayChainOrigin, Origin>,
@@ -335,7 +327,7 @@ impl Config for XcmConfig {
 	type XcmSender = LocalXcmHandler;
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
-	type IsReserve = (NativeAsset, AllowAllFilter);
+	type IsReserve = NativeAsset;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 }

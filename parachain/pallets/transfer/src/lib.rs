@@ -6,7 +6,6 @@ use frame_support::{decl_event, decl_error, decl_module, decl_storage,
 	traits::Get, Parameter,
 };
 use frame_system::ensure_signed;
-use frame_support::debug::trace;
 
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, Convert, MaybeSerializeDeserialize, Member, StaticLookup},
@@ -109,12 +108,8 @@ decl_module! {
 				return Ok(());
 			}
 
-			trace!(target: "xcmp", "Transfer 1");
-
 			let location = MultiLocation::X1(Junction::GeneralKey(asset.encode()));
 			let recipient = T::Lookup::lookup(recipient)?;
-
-			trace!(target: "xcmp", "Transfer 2");
 
 			let xcm = Self::make_xcm_lateral_transfer(
 						location,
@@ -123,19 +118,11 @@ decl_module! {
 						&recipient,
 						amount);
 
-			trace!(target: "xcmp", "Transfer 3");
-
 			let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
 				.map_err(|_| Error::<T>::BadLocation)?;
 
-			trace!(target: "xcmp", "Transfer 4");
-
-
 			T::XcmExecutor::execute_xcm(xcm_origin, xcm)
-				.map_err(|e| {
-					trace!(target: "xcmp", "Transfer Execute Error {:?}", e);
-					Error::<T>::ExecutionFailed
-				})?;
+				.map_err(|_| Error::<T>::ExecutionFailed)?;
 
 			Self::deposit_event(
 				Event::<T>::Transferred(asset, who, para_id, recipient, network, amount)

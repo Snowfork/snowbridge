@@ -11,8 +11,6 @@ use sp_std::{
 	prelude::*,
 };
 
-use frame_support::debug::trace;
-
 use xcm::v0::{
 	Junction,
 	MultiAsset,
@@ -40,60 +38,43 @@ impl<
 	for AssetsTransactor<Assets, AccountIdConverter, AccountId>
 {
 	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
-		trace!(target: "xcmp", "Deposit: asset {:?}", asset);
-		trace!(target: "xcmp", "         location {:?}", location);
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
-
-		trace!(target: "xcmp", "Deposit: who {:?}", who);
 
 		if let MultiAsset::ConcreteFungible { id, amount } = asset {
 			match id {
 				MultiLocation::X1(Junction::GeneralKey(key)) => {
-					trace!(target: "xcmp", "FOO 1");
 					let asset_id: AssetId = AssetId::decode(&mut key.as_ref())
 						.map_err(|_| XcmError::Undefined)?;
-					trace!(target: "xcmp", "FOO 2");
 					let value: U256 = (*amount).into();
 					Assets::deposit(asset_id, &who, value).map_err(|_| XcmError::Undefined)?;
-					trace!(target: "xcmp", "FOO 3");
 					Ok(())
 				},
 				_ => {
-					trace!(target: "xcmp", "BAR 1");
 					Err(XcmError::Undefined)
 				}
 			}
 		} else {
-			trace!(target: "xcmp", "BOO 1");
 			Err(XcmError::Undefined)
 		}
 	}
 
 	fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<MultiAsset, XcmError> {
-		trace!(target: "xcmp", "Withdraw: asset {:?}", asset);
-		trace!(target: "xcmp", "          location {:?}", location);
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
-		trace!(target: "xcmp", "Withdraw: who {:?}", who);
 
 		if let MultiAsset::ConcreteFungible { id, amount } = asset {
 			match id {
 				MultiLocation::X1(Junction::GeneralKey(key)) => {
-					trace!(target: "xcmp", "FOO 1");
 					let asset_id: AssetId = AssetId::decode(&mut key.as_ref())
 						.map_err(|_| XcmError::Undefined)?;
-					trace!(target: "xcmp", "FOO 2");
 					let value: U256 = (*amount).into();
 					Assets::withdraw(asset_id, &who, value).map_err(|_| XcmError::Undefined)?;
-					trace!(target: "xcmp", "FOO 3");
 					Ok(asset.clone())
 				},
 				_ => {
-					trace!(target: "xcmp", "BAR 1");
 					Err(XcmError::Undefined)
 				}
 			}
 		} else {
-			trace!(target: "xcmp", "BOO 1");
 			Err(XcmError::Undefined)
 		}
 	}
