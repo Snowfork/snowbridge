@@ -11,8 +11,8 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
    yarn global add truffle
    (cd ../ethereum && yarn install)
     ```
-
-3. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
+3. Development environment for Relayer. See relayer [requirements](../relayer/README.md#requirements).
+4. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
 
 ## Setup
 
@@ -61,7 +61,7 @@ yarn test
 
 Make sure to setup the E2E stack as described above.
 
-For interacting with Substrate, open [https://polkadot.js.org/apps/](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144&types=eNplkm9PwjAQxr%2BK6StN9kKmLAQNCSjJSMAYBd8YYkp7bA1du%2FSPQcm%2Bu1e2BZiv2nv63K%2FX6x3ImHMD1pIhWXjpRBtGZK71zpfv2hsG%2F0%2BfcqoUyBknwwP5AuWLsJlQKxgZKi9lRGaKgXLiW%2FwCuoJWVRFZYD7NkHggnDqK5A9gj34wQmhptN6i8npc0Vxv0LqRmu1SanM8TeN%2Bgma3nykOexT8XYxxQ7sOuAY5iq7Oo5uAnLocDPgiBcrBBHZJDdbZgYsCrKNFGfDJPSr4wk3wNyH1LtchTHvJbUgwVFnKnNDKvmntTihdFGDsJR726H%2FuPh8vdHCZbICBKF0HKXU2kVpjy0m9RiSjdmVDn8mq9qAwF4UIWY3CxXYrGH7jz0mzQGVTQ9ulpklY77H7dZXhs7IXzSEMymfa78UPV%2FH67MtCdtqL8R2Y3hSHgxHcfoDefrIOJ2NrwXWGZrpM25FZ6h2otqlVVf0BYfrQ0w%3D%3D) in your browser (Make sure to use this link specifically).
+For interacting with Substrate, open [https://polkadot.js.org/apps/](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144&types=eNplkttOwkAQhl%2FF7JUmvZAqhKAhASUpCRCj4I0hZtkOsKHdafZgUNJ3d4YWOXi1OzP%2FfLtz2IlemlpwTnTEOGReH8xIjBA3oXjDYBX8jz6tpTGQDVPR2YlPMCHnS186rUTHhCyLxNAoMF5%2F6R8gFfvKMhJjypcrmCBFCRta90SrnRVNHdEnz0TCnKQcQZyRSi8p8A7qMbS7JC0s4pI8L%2FuTxNWFpIsM1SaRbk3RJG62SOy3Q5PClsl3Mdk17ZpxNbIbXZ1aN4wc%2BDVYCHkCMgXL7EJaKvgCrnNwXubFX63UqgXra1MGv0Y2k0brlhOsNE4qr9G4V0R%2FRGGeg3XneNiS%2FvmyfHrQw3myBQW68BfIDFf9DJFmJ6ozEivpZo4HJmaVhhwjnWvOqj2pXi61on34PvocyKz%2Bw6FLdZPov%2FvuV7%2FkYa0mmAJv3EfSbMQPV%2FH8ZGScnTRiqoPS68%2FRhrE6tEnbbM050nMO%2FMX2DabJYfemuAFzaGpZlr%2BYV%2Bf6) in your browser (Make sure to use this link specifically).
 
 #### Locking up ETH to mint PolkaETH on Substrate
 
@@ -69,7 +69,7 @@ Send 10 Ether to `//Alice` on Substrate:
 
 ```bash
 cd ../ethereum
-truffle exec scripts/sendEth.js 10
+truffle exec scripts/sendEth.js 10 \
   0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d \
   --network e2e_test
 ```

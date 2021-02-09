@@ -25,7 +25,7 @@ contract ETHApp {
         bytes32 recipient;
         uint256 amount;
     }
-
+    
     struct Channel {
         address inbound;
         address outbound;

@@ -1,7 +1,31 @@
 //! Helper types to work with Ethereum's Merkle Patricia Trie nodes
 
+use sp_std::convert::TryFrom;
 use sp_std::prelude::*;
 use ethereum_types::H256;
+
+pub trait Node {
+    fn contains_hash(&self, hash: H256) -> bool;
+}
+
+impl TryFrom<&[u8]> for Box<dyn Node> {
+    type Error = rlp::DecoderError;
+
+    fn try_from(bytes: &[u8]) -> Result<Box<dyn Node>, Self::Error> {
+        let rlp = rlp::Rlp::new(bytes);
+        match rlp.item_count()? {
+            2 => {
+                let node: ShortNode = rlp.as_val()?;
+                Ok(Box::new(node))
+            }
+            17 => {
+                let node: FullNode = rlp.as_val()?;
+                Ok(Box::new(node))
+            }
+            _ => Err(rlp::DecoderError::Custom("Invalid number of list elements"))
+        }
+    }
+}
 
 /// Intermediate trie node with children (refers to node with same name in Geth).
 /// This struct only handles the proof representation, i.e. a child is either empty
@@ -31,8 +55,14 @@ impl rlp::Decodable for FullNode {
     }
 }
 
-/// Terminating trie node where `value` is the RLP-encoded item we're
-/// proving (refers to node with same name in Geth)
+impl Node for FullNode {
+    fn contains_hash(&self, hash: H256) -> bool {
+        self.children.iter().find(|&h| Some(hash) == *h).is_some()
+    }
+}
+
+/// Trie node where `value` is either the RLP-encoded item we're
+/// proving or an intermediate hash (refers to node with same name in Geth)
 /// Proof verification should return `value`. `key` is an implementation
 /// detail of the trie.
 pub struct ShortNode {
@@ -58,10 +88,16 @@ impl rlp::Decodable for ShortNode {
     }
 }
 
+impl Node for ShortNode {
+    fn contains_hash(&self, hash: H256) -> bool {
+        self.value == hash.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
-    use super::{FullNode, ShortNode};
+    use super::*;
     use hex_literal::hex;
 
     const RAW_PROOF: [&[u8]; 3] = [
@@ -85,8 +121,14 @@ mod tests {
 
     #[test]
     fn decode_short_node() {
+        // key + item value
         let node: ShortNode = rlp::decode(RAW_PROOF[2]).unwrap();
-        assert_eq!(node.key, vec!(32));
+        assert_eq!(node.key, vec![32]);
         assert!(node.value.len() > 0);
+
+        // key + item hash
+        let node: ShortNode = rlp::decode(&hex!("e4820001a04fff54398cad4d05ea6abfd8b0f3b4fe14c04d7ff5f5211c5b927d9cf72ac1d8")).unwrap();
+        assert_eq!(node.key, vec![0, 1]);
+        assert_eq!(node.value, hex!("4fff54398cad4d05ea6abfd8b0f3b4fe14c04d7ff5f5211c5b927d9cf72ac1d8").to_vec());
     }
 }

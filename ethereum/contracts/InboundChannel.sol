@@ -11,7 +11,7 @@ abstract contract InboundChannel {
         bytes payload;
     }
 
-    event MessageDelivered(uint64 nonce, bool result);
+    event MessageDispatched(uint64 nonce, bool result);
 
     function submit(Message[] memory commitment, bytes32 _commitment)
         public

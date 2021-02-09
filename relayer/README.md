@@ -14,6 +14,11 @@ Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe
 
 ## Requirements
 
+### Usage
+
+For usage and development, you'll need:
+- [Subkey](https://substrate.dev/docs/en/knowledgebase/integrate/subkey): Used for substrate key management
+
 ### Development
 
 This project requires the following tools for day to day development:
@@ -45,7 +50,7 @@ Example Configuration:
 ```toml
 [ethereum]
 endpoint = "ws://localhost:8545/"
-descendants-until-final = 0
+descendants-until-final = 35
 
 [ethereum.channels.basic]
 inbound = "0x992B9df075935E522EC7950F37eC8557e86f6fdb"

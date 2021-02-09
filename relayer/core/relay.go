@@ -143,6 +143,7 @@ func (re *Relay) Start() {
 		return
 	}
 	log.WithField("name", re.ethChain.Name()).Info("Started chain")
+	defer re.ethChain.Stop()
 
 	err = re.subChain.Start(ctx, eg, ethInit, subInit)
 	if err != nil {
@@ -153,6 +154,7 @@ func (re *Relay) Start() {
 		return
 	}
 	log.WithField("name", re.subChain.Name()).Info("Started chain")
+	defer re.subChain.Stop()
 
 	notifyWaitDone := make(chan struct{})
 
@@ -171,12 +173,14 @@ func (re *Relay) Start() {
 	case <-ctx.Done():
 		// Goroutines are either shutting down or deadlocked.
 		// Give them a second...
-		time.Sleep(time.Second)
-		_, stillWaiting := <-notifyWaitDone
-
-		if !stillWaiting {
-			// All goroutines have ended
+		select {
+		case <-time.After(time.Second):
 			break
+		case _, stillWaiting := <-notifyWaitDone:
+			if !stillWaiting {
+				// All goroutines have ended
+				return
+			}
 		}
 
 		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
@@ -185,15 +189,9 @@ func (re *Relay) Start() {
 		relayProc, err := os.FindProcess(os.Getpid())
 		if err != nil {
 			log.WithError(err).Error("Failed to kill this process")
-			return
 		}
 		relayProc.Kill()
-		return
 	}
-
-	// Shutdown chains
-	re.ethChain.Stop()
-	re.subChain.Stop()
 }
 
 func LoadConfig() (*Config, error) {

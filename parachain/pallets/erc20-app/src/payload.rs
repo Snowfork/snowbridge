@@ -1,6 +1,6 @@
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
-use codec::{Encode, Decode};
+use codec::Encode;
 
 use ethabi::{self, Token};
 use artemis_ethereum::{H160, U256};
@@ -16,14 +16,14 @@ pub struct InboundPayload<AccountId: codec::Decode> {
 
 // Message to Ethereum (ABI-encoded)
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
-pub struct OutboundPayload<AccountId: codec::Encode> {
+pub struct OutboundPayload<AccountId: Encode> {
 	pub token: H160,
 	pub sender: AccountId,
 	pub recipient: H160,
 	pub amount: U256,
 }
 
-impl<AccountId: codec::Encode> OutboundPayload<AccountId> {
+impl<AccountId: Encode> OutboundPayload<AccountId> {
 	/// ABI-encode this payload
 	pub fn encode(&self) -> Vec<u8> {
 		let tokens = vec![
@@ -35,7 +35,6 @@ impl<AccountId: codec::Encode> OutboundPayload<AccountId> {
 		ethabi::encode_function("unlock(address,bytes32,address,uint256)", tokens.as_ref())
 	}
 }
-
 
 #[cfg(test)]
 mod tests {

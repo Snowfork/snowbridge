@@ -17,6 +17,8 @@ contract ERC20App {
 
     mapping(ChannelId => Channel) public channels;
 
+    bytes2 constant MINT_CALL = 0x0d01;
+
     event Locked(
         address token,
         address sender,
@@ -30,13 +32,6 @@ contract ERC20App {
         address recipient,
         uint256 amount
     );
-
-    struct OutboundPayload {
-        address token;
-        address sender;
-        bytes32 recipient;
-        uint256 amount;
-    }
 
     struct Channel {
         address inbound;

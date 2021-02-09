@@ -1,5 +1,17 @@
 const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
+const rlp = require("rlp");
+
+const channelContracts = {
+  basic: {
+    inbound: artifacts.require("BasicInboundChannel"),
+    outbound: artifacts.require("BasicOutboundChannel"),
+  },
+  incentivized: {
+    inbound: artifacts.require("IncentivizedInboundChannel"),
+    outbound: artifacts.require("IncentivizedOutboundChannel"),
+  },
+};
 
 const channelContracts = {
   basic: {
@@ -88,8 +100,8 @@ const confirmUnlockTokens = (rawEvent, erc20AppAddress, expectedRecipient, expec
   decodedEvent.amount.should.be.bignumber.equal(expectedAmount);
 };
 
-const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
-  messageDeliveredLogFields = [{
+const confirmMessageDispatched = (rawEvent, expectedNonce, expectedResult) => {
+  messageDispatchedLogFields = [{
     type: 'uint64',
     name: 'nonce'
   }, {
@@ -97,7 +109,7 @@ const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
     name: 'result'
   }];
 
-  const decodedEvent = web3.eth.abi.decodeLog(messageDeliveredLogFields, rawEvent.data, rawEvent.topics);
+  const decodedEvent = web3.eth.abi.decodeLog(messageDispatchedLogFields, rawEvent.data, rawEvent.topics);
 
   parseFloat(decodedEvent.nonce).should.be.equal(expectedNonce);
   decodedEvent.result.should.be.equal(expectedResult);
@@ -189,6 +201,10 @@ const INCENTIVIZED_CHANNEL = 1;
 const ChannelId = {
   Basic: 0,
   Incentivized: 1,
+}
+
+const encodeLog = (log) => {
+  return rlp.encode([log.address, log.topics, log.data]).toString("hex")
 }
 
 module.exports = {

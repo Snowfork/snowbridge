@@ -1,42 +1,38 @@
-use crate::mock::{new_tester, MockEvent, MockRuntime, System, AccountId, Origin, Assets, ERC20};
+use crate::mock::{new_tester, Event, System, AccountId, Origin, Assets, ERC20};
 use frame_support::{assert_ok};
-use frame_system as system;
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
-use hex_literal::hex;
-use codec::Decode;
-
 use artemis_core::{ChannelId, AssetId, MultiAsset};
 
 use crate::RawEvent;
 
-use crate::payload::InboundPayload;
-
-type TestAccountId = <MockRuntime as system::Config>::AccountId;
-
-const RECIPIENT_ADDR_BYTES: [u8; 32] = hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"];
-
-fn last_event() -> MockEvent {
+fn last_event() -> Event {
 	System::events().pop().expect("Event expected").event
 }
 
 #[test]
 fn mints_after_handling_ethereum_event() {
 	new_tester().execute_with(|| {
-		let token = H160::repeat_byte(1);
+		let peer_contract = H160::repeat_byte(1);
+		let token = H160::repeat_byte(2);
+		let sender = H160::repeat_byte(3);
+		let recipient: AccountId = Keyring::Bob.into();
+		let amount = 10;
+		assert_ok!(
+			ERC20::mint(
+				artemis_dispatch::Origin(peer_contract).into(),
+				token,
+				sender,
+				recipient.clone(),
+				amount.into()
+			)
+		);
+		assert_eq!(Assets::balance(AssetId::Token(token), &recipient), amount.into());
 
-		let recipient = TestAccountId::decode(&mut &RECIPIENT_ADDR_BYTES[..]).unwrap();
-		let payload: InboundPayload<TestAccountId> = InboundPayload {
-			token,
-			sender: hex!["cffeaaf7681c89285d65cfbe808b80e502696573"].into(),
-			recipient,
-			amount: 10.into(),
-		};
-
-		let bob: AccountId = Keyring::Bob.into();
-
-		assert_ok!(ERC20::handle_payload(&payload));
-		assert_eq!(Assets::balance(AssetId::Token(token), &bob), 10.into());
+		assert_eq!(
+			Event::erc20_app(RawEvent::Minted(token, sender, recipient, amount.into())),
+			last_event()
+		);
 	});
 }
 
@@ -56,7 +52,7 @@ fn burn_should_emit_bridge_event() {
 			20.into()));
 
 		assert_eq!(
-			MockEvent::test_events(RawEvent::Burned(token_id, bob, recipient, 20.into())),
+			Event::erc20_app(RawEvent::Burned(token_id, bob, recipient, 20.into())),
 			last_event()
 		);
 	});

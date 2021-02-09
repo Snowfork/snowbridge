@@ -234,7 +234,7 @@ impl<T: Config> Module<T> {
 			return Ok(());
 		}
 
-		// Adapted from https://github.com/near/rainbow-bridge/blob/3fcdfbc6c0011f0e1507956a81c820616fb963b4/contracts/near/eth-client/src/lib.rs#L363
+		// Adapted from https://github.com/near/rainbow-bridge/blob/c6daf8a1dbf0bdb99a404a49c58263f25cd782fd/contracts/near/eth-client/src/lib.rs#L363
 		// See YellowPaper formula (50) in section 4.3.4
 		ensure!(
 			header.gas_used <= header.gas_limit
@@ -259,8 +259,8 @@ impl<T: Config> Module<T> {
 		ensure!(
 			mix_hash == header_mix_hash
 			&& U256::from(result.0) < ethash::cross_boundary(header.difficulty)
-			&& header.difficulty < header.difficulty * 101 / 100
-			&& header.difficulty > header.difficulty * 99 / 100,
+			&& header.difficulty < parent.difficulty * 101 / 100
+			&& header.difficulty > parent.difficulty * 99 / 100,
 			Error::<T>::InvalidHeader,
 		);
 

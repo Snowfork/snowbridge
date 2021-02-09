@@ -49,6 +49,7 @@ artemis-core = { path = "../primitives/core", default-features = false }
 artemis-token-dealer = { path = "../pallets/token-dealer", default-features = false }
 artemis-xcm-support = { path = "../primitives/xcm-support", default-features = false }
 bridge = { path = "../pallets/bridge", package = "pallet-bridge", default-features = false }
+dispatch = { path = "../pallets/dispatch", package = "artemis-dispatch", default-features = false }
 verifier-lightclient = { path = "../pallets/verifier-lightclient", package = "pallet-verifier-lightclient", default-features = false }
 assets = { path = "../pallets/assets", package = "artemis-assets", default-features = false }
 eth-app = { path = "../pallets/eth-app", package = "artemis-eth-app", default-features = false }
@@ -94,6 +95,7 @@ std = [
     "bridge/std",
     "verifier-lightclient/std",
     "assets/std",
+    "dispatch/std",
     "eth-app/std",
     "erc20-app/std",
     "commitments/std",

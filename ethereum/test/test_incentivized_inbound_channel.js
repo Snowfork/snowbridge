@@ -33,6 +33,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const abi = this.ethApp.abi;
       const iChannel = new ethers.utils.Interface(abi);
       const polkadotSender = ethers.utils.formatBytes32String('fake-polkadot-address');
+
       const unlockFragment = iChannel.functions['unlock(bytes32,address,uint256)'];
 
       // Construct first message
@@ -98,6 +99,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       confirmUnlock(fourthRawUnlockLog, this.ethApp.address, userThree, 9);
       const fourthMessageDeliveredLog = tx.receipt.rawLogs[7];
       confirmMessageDelivered(fourthMessageDeliveredLog, 3, true);
+
     });
   });
 });
