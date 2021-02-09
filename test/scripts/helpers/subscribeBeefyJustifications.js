@@ -7,6 +7,7 @@
 
 const { ApiPromise, WsProvider } = require('@polkadot/api');
 const WebSocket = require('ws');
+const { ethereumEncode } = require("@polkadot/util-crypto");
 
 const RELAY_CHAIN_RPC_ENDPOINT = 'ws://localhost:9944';
 async function start() {
@@ -29,7 +30,7 @@ async function start() {
 
   const ws = new WebSocket('ws://localhost:9955');
   const currentAuthorities = await api.query.beefy.authorities();
-  console.log({ currentAuthorities: currentAuthorities.map(a => a.toString()) });
+  console.log({ currentAuthorities: currentAuthorities.map(a => ethereumEncode(a)) });
 
   const startSubscriptionRPC = {
     jsonrpc: '2.0',
