@@ -95,16 +95,6 @@ contract BasicInboundChannel is InboundChannel {
         Message[] memory _messages,
         bytes32 _commitment
     ) internal pure returns (bool) {
-        bytes memory messagesBytes;
-        for (uint256 i = 0; i < _messages.length; i++) {
-            bytes memory messageBytes =
-                abi.encodePacked(
-                    _messages[i].target,
-                    _messages[i].nonce,
-                    _messages[i].payload
-                );
-            messagesBytes = abi.encodePacked(messagesBytes, messageBytes);
-        }
-        return keccak256(messagesBytes) == _commitment;
+        return keccak256(abi.encode(_messages)) == _commitment;
     }
 }
