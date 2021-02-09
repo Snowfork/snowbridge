@@ -103,11 +103,55 @@ const confirmMessageDelivered = (rawEvent, expectedNonce, expectedResult) => {
   decodedEvent.result.should.be.equal(expectedResult);
 };
 
+const buildCommitment = (messages) => {
+  const byteSize = 32;
+  const msgsLength = messages.length * byteSize;
+  let headEncoding = ethers.utils.defaultAbiCoder.encode(
+      [ 'uint256', 'uint256', 'uint256'],
+      [ byteSize, messages.length, msgsLength ], // offset of first param, message count, messages length
+  )
+  let encodedMessages = headEncoding + buildMessagesHead(messages, msgsLength);
 
-const hashMessage = (message) => {
+  for(message of messages) {
+    const encodedMessage = encodeMessage(message);
+    encodedMessages += encodedMessage.slice(2, encodedMessage.length);
+  }
+
   return ethers.utils.solidityKeccak256(
-    ['address', 'uint256', 'bytes'],
-    [message.target, message.nonce, message.payload]
+      [ 'bytes'],
+      [ encodedMessages ]
+  );
+}
+
+const buildMessagesHead = (messages, msgsLength) => {
+  let messagesHead = "";
+  for(var i = 1; i < messages.length; i++) {
+    // Encode padded byte count integer
+    let encodedNum = ethers.utils.defaultAbiCoder.encode(
+      [ 'uint256'],
+      [ msgsLength ],
+    )
+    let formattedNum = encodedNum.slice(2, encodedNum.length);
+
+    // Count zeros to determine insert index
+    let z = 0;
+    while(formattedNum.charAt(z) == "0") {
+      z++;
+    }
+    let insertAt = (formattedNum.length - (64-z));
+
+    // Splice message index number just before padded byte count
+    let finalizedStr = formattedNum.substr(0, insertAt-1) + i + formattedNum.substr(insertAt, formattedNum.length);
+    messagesHead += finalizedStr;
+  }
+
+  return messagesHead;
+}
+
+const encodeMessage = (message) => {
+  return ethers.utils.defaultAbiCoder.encode(
+    [ 'address', 'uint64', 'bytes' ],
+    [ message.target, message.nonce, message.payload ]
   );
 }
 
@@ -152,8 +196,8 @@ module.exports = {
   confirmUnlock,
   confirmUnlockTokens,
   confirmMessageDelivered,
-  hashMessage,
   deployAppContractWithChannels,
   addressBytes,
   ChannelId,
+  buildCommitment,
 };
