@@ -108,7 +108,7 @@ contract ERC20App {
                 MINT_CALL,
                 _token,
                 _sender,
-                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                bytes(0x00), // Encode recipient as MultiAddress::Id
                 _recipient,
                 _amount.encode256()
             );
