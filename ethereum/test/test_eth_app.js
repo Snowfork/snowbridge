@@ -107,7 +107,7 @@ contract("ETHApp", function (accounts) {
       const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
 
       // expected amount to unlock
-      const amount = web3.utils.toWei("1", "ether");
+      const amount = BigNumber(web3.utils.toWei("1", "ether"));
 
       const beforeBalance = BigNumber(await this.app.balance());
       const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
