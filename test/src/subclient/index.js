@@ -23,6 +23,11 @@ class SubClient {
             "Incentivized": null
           }
         },
+        "MessageNonce": "u64",
+        "MessageId": {
+          "channelId": "ChannelId",
+          "nonce": "u64"
+        },
         "Message": {
           "data": "Vec<u8>",
           "proof": "Proof"
