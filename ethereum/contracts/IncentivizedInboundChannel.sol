@@ -20,7 +20,7 @@ contract IncentivizedInboundChannel is InboundChannel {
 
     // TODO: Submit should take in all inputs required for verification,
     // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
-    function submit(Message[] memory _messages, bytes32 _commitment)
+    function submit(Message[] calldata _messages, bytes32 _commitment)
         public
         override
     {
@@ -29,7 +29,7 @@ contract IncentivizedInboundChannel is InboundChannel {
     }
 
     //TODO: verifyMessages should accept all needed proofs
-    function verifyMessages(Message[] memory _messages, bytes32 _commitment)
+    function verifyMessages(Message[] calldata _messages, bytes32 _commitment)
         internal
         view
         returns (bool success)
@@ -80,7 +80,7 @@ contract IncentivizedInboundChannel is InboundChannel {
         return true;
     }
 
-    function processMessages(Message[] memory _messages) internal {
+    function processMessages(Message[] calldata _messages) internal {
         for (uint256 i = 0; i < _messages.length; i++) {
             // Check message nonce is correct and increment nonce for replay protection
             Message memory message = _messages[i];
@@ -100,7 +100,7 @@ contract IncentivizedInboundChannel is InboundChannel {
     }
 
     function validateMessagesMatchCommitment(
-        Message[] memory _messages,
+        Message[] calldata _messages,
         bytes32 _commitment
     ) internal pure returns (bool) {
         return keccak256(abi.encode(_messages)) == _commitment;

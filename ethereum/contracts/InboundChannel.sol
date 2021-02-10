@@ -13,7 +13,7 @@ abstract contract InboundChannel {
 
     event MessageDispatched(uint64 nonce, bool result);
 
-    function submit(Message[] memory _messages, bytes32 _commitment)
+    function submit(Message[] calldata _messages, bytes32 _commitment)
         public
         virtual;
 }
