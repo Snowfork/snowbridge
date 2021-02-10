@@ -6,7 +6,6 @@ package substrate
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -104,6 +103,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 				wr.log.WithFields(logrus.Fields{
 					"error": err,
 				}).Error("Failure submitting message to substrate")
+				return err
 			}
 		case header := <-wr.headers:
 			err := wr.WriteHeader(ctx, &header)
@@ -145,13 +145,12 @@ func (wr *Writer) write(ctx context.Context, c types.Call) error {
 	}
 
 	extI := ext
-
 	err = extI.Sign(*wr.conn.kp, o)
 	if err != nil {
 		return err
 	}
 
-	wr.pool.WaitForSubmitAndWatch(ctx, &extI)
+	wr.pool.WaitForSubmitAndWatch(ctx, wr.nonce, &extI)
 
 	wr.nonce = wr.nonce + 1
 
@@ -184,28 +183,9 @@ func (wr *Writer) WriteHeader(ctx context.Context, header *chain.Header) error {
 		return err
 	}
 
-	retries := 0
-	for {
-		err := wr.write(ctx, c)
-		if err != nil {
-			wr.log.WithFields(logrus.Fields{
-				"blockNumber": header.HeaderData.(ethereum.Header).Number,
-				"error":       err,
-				"retries":     retries,
-			}).Error("Failure submitting header to substrate")
-			if retries >= 4 {
-				return err
-			}
-		} else {
-			break
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(getHeaderBackoffDelay(retries)):
-		}
-		retries = retries + 1
+	err = wr.write(ctx, c)
+	if err != nil {
+		return err
 	}
 
 	wr.log.WithFields(logrus.Fields{
@@ -213,13 +193,4 @@ func (wr *Writer) WriteHeader(ctx context.Context, header *chain.Header) error {
 	}).Info("Submitted header to Substrate")
 
 	return nil
-}
-
-func getHeaderBackoffDelay(retryCount int) time.Duration {
-	backoff := []int{1, 1, 5, 5, 30, 30, 60} // seconds
-
-	if retryCount < len(backoff)-1 {
-		return time.Duration(backoff[retryCount]) * time.Second
-	}
-	return time.Duration(backoff[len(backoff)-1]) * time.Second
 }

@@ -102,7 +102,12 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 			"blockNumber": syncedUpUntil + 1,
 		}).Debug("Retrieved finalized header")
 
-		s.headers <- header
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			s.headers <- header
+		}
 		syncedUpUntil++
 	}
 
@@ -123,10 +128,8 @@ func (s *Syncer) pollNewHeaders(ctx context.Context, lbi *latestBlockInfo) error
 	for {
 		select {
 		case <-ctx.Done():
-			close(s.headers)
 			return ctx.Err()
 		case err := <-headersSubscriptionErr:
-			close(s.headers)
 			return err
 		case header := <-headers:
 			s.headerCache.Insert(header)

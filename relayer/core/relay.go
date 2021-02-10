@@ -174,7 +174,7 @@ func (re *Relay) Start() {
 		// Goroutines are either shutting down or deadlocked.
 		// Give them a second...
 		select {
-		case <-time.After(time.Second):
+		case <-time.After(3 * time.Second):
 			break
 		case _, stillWaiting := <-notifyWaitDone:
 			if !stillWaiting {
