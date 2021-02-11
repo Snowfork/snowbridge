@@ -75,19 +75,18 @@ contract BasicInboundChannel is InboundChannel {
     function processMessages(Message[] calldata _messages) internal {
         for (uint256 i = 0; i < _messages.length; i++) {
             // Check message nonce is correct and increment nonce for replay protection
-            Message memory message = _messages[i];
-            require(message.nonce == nonce + 1, "invalid nonce");
+            require(_messages[i].nonce == nonce + 1, "invalid nonce");
 
             nonce = nonce + 1;
 
             // Deliver the message to the target
             // Delivery will have fixed maximum gas allowed for the target app
             (bool success, ) =
-                message.target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(
-                    message.payload
+                _messages[i].target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(
+                    _messages[i].payload
                 );
 
-            emit MessageDispatched(message.nonce, success);
+            emit MessageDispatched(_messages[i].nonce, success);
         }
     }
 

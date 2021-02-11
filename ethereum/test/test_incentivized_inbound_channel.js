@@ -79,6 +79,8 @@ contract("IncentivizedInboundChannel", function (accounts) {
         { from: userOne }
       )
 
+      console.log("Submitted " + messages.length + " messages. Gas used: " + tx.receipt.gasUsed);
+
       // Confirm ETHApp and IncentivizedInboundChannel processed messages correctly
       const firstRawUnlockLog = tx.receipt.rawLogs[0];
       confirmUnlock(firstRawUnlockLog, this.ethApp.address, userTwo, 2);
