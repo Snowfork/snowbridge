@@ -47,9 +47,9 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	message := chainTypes.Message{}
+	message := chain.EthereumOutboundMessage(chainTypes.Message{})
 
-	err = writer.WriteMessages(ctx, []chain.EthereumOutboundMessage{chain.EthereumOutboundMessage(message)})
+	err = writer.WriteMessages(ctx, []*chain.EthereumOutboundMessage{&message})
 	if err != nil {
 		t.Fatal(err)
 	}

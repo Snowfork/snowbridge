@@ -6,7 +6,6 @@ package substrate
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -24,6 +23,7 @@ type Writer struct {
 	headers  <-chan chain.Header
 	log      *logrus.Entry
 	nonce    uint32
+	pool     *extrinsicPool
 }
 
 func NewWriter(conn *Connection, messages <-chan []chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
@@ -41,6 +41,8 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 	wr.nonce = nonce
+
+	wr.pool = newExtrinsicPool(eg, wr.conn, wr.log)
 
 	eg.Go(func() error {
 		return wr.writeLoop(ctx)
@@ -101,6 +103,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 				wr.log.WithFields(logrus.Fields{
 					"error": err,
 				}).Error("Failure submitting message to substrate")
+				return err
 			}
 		case header := <-wr.headers:
 			err := wr.WriteHeader(ctx, &header)
@@ -116,12 +119,22 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 }
 
 // Write submits a transaction to the chain
-func (wr *Writer) write(_ context.Context, c types.Call) error {
+func (wr *Writer) write(ctx context.Context, c types.Call) error {
 	ext := types.NewExtrinsic(c)
 
-	era := types.ExtrinsicEra{IsImmortalEra: true}
+	latestBlock, err := wr.conn.api.RPC.Chain.GetBlockLatest()
+	if err != nil {
+		return err
+	}
+
+	era := NewMortalEra(uint64(latestBlock.Block.Header.Number))
 
 	genesisHash, err := wr.conn.api.RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return err
+	}
+
+	latestHash, err := wr.conn.api.RPC.Chain.GetBlockHashLatest()
 	if err != nil {
 		return err
 	}
@@ -132,26 +145,22 @@ func (wr *Writer) write(_ context.Context, c types.Call) error {
 	}
 
 	o := types.SignatureOptions{
-		BlockHash:          genesisHash,
+		BlockHash:          latestHash,
 		Era:                era,
 		GenesisHash:        genesisHash,
 		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
 		SpecVersion:        rv.SpecVersion,
 		Tip:                types.NewUCompactFromUInt(0),
-		TransactionVersion: 1,
+		TransactionVersion: rv.TransactionVersion,
 	}
 
 	extI := ext
-
 	err = extI.Sign(*wr.conn.kp, o)
 	if err != nil {
 		return err
 	}
 
-	_, err = wr.conn.api.RPC.Author.SubmitExtrinsic(extI)
-	if err != nil {
-		return err
-	}
+	wr.pool.WaitForSubmitAndWatch(ctx, wr.nonce, &extI)
 
 	wr.nonce = wr.nonce + 1
 
@@ -184,28 +193,9 @@ func (wr *Writer) WriteHeader(ctx context.Context, header *chain.Header) error {
 		return err
 	}
 
-	retries := 0
-	for {
-		err := wr.write(ctx, c)
-		if err != nil {
-			wr.log.WithFields(logrus.Fields{
-				"blockNumber": header.HeaderData.(ethereum.Header).Number,
-				"error":       err,
-				"retries":     retries,
-			}).Error("Failure submitting header to substrate")
-			if retries >= 4 {
-				return err
-			}
-		} else {
-			break
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(getHeaderBackoffDelay(retries)):
-		}
-		retries = retries + 1
+	err = wr.write(ctx, c)
+	if err != nil {
+		return err
 	}
 
 	wr.log.WithFields(logrus.Fields{
@@ -213,13 +203,4 @@ func (wr *Writer) WriteHeader(ctx context.Context, header *chain.Header) error {
 	}).Info("Submitted header to Substrate")
 
 	return nil
-}
-
-func getHeaderBackoffDelay(retryCount int) time.Duration {
-	backoff := []int{1, 1, 5, 5, 30, 30, 60} // seconds
-
-	if retryCount < len(backoff)-1 {
-		return time.Duration(backoff[retryCount]) * time.Second
-	}
-	return time.Duration(backoff[len(backoff)-1]) * time.Second
 }
