@@ -122,9 +122,19 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 func (wr *Writer) write(ctx context.Context, c types.Call) error {
 	ext := types.NewExtrinsic(c)
 
-	era := types.ExtrinsicEra{IsImmortalEra: true}
+	latestBlock, err := wr.conn.api.RPC.Chain.GetBlockLatest()
+	if err != nil {
+		return err
+	}
+
+	era := NewMortalEra(uint64(latestBlock.Block.Header.Number))
 
 	genesisHash, err := wr.conn.api.RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return err
+	}
+
+	latestHash, err := wr.conn.api.RPC.Chain.GetBlockHashLatest()
 	if err != nil {
 		return err
 	}
@@ -135,13 +145,13 @@ func (wr *Writer) write(ctx context.Context, c types.Call) error {
 	}
 
 	o := types.SignatureOptions{
-		BlockHash:          genesisHash,
+		BlockHash:          latestHash,
 		Era:                era,
 		GenesisHash:        genesisHash,
 		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
 		SpecVersion:        rv.SpecVersion,
 		Tip:                types.NewUCompactFromUInt(0),
-		TransactionVersion: 1,
+		TransactionVersion: rv.TransactionVersion,
 	}
 
 	extI := ext
