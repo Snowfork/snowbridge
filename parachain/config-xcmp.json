@@ -22,7 +22,6 @@
 			"wsPort": 9966,
 			"port": 30666,
 			"flags": [
-				"-limport_header=trace,runtime=debug,submit_messages=trace",
 				"--rpc-port=9980",
 				"--offchain-worker=Always",
 				"--enable-offchain-indexing=true",
@@ -36,7 +35,6 @@
 			"wsPort": 9977,
 			"port": 30777,
 			"flags": [
-				"-limport_header=trace,runtime=debug,submit_messages=trace",
 				"--rpc-port=9990",
 				"--offchain-worker=Always",
 				"--enable-offchain-indexing=true",
