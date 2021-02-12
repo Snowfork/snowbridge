@@ -37,7 +37,7 @@ pub use frame_support::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
 };
-use pallet_transaction_payment::{FeeDetails, CurrencyAdapter};
+use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
 pub use artemis_core::{AssetId, ChannelId, MessageId};
@@ -50,11 +50,12 @@ use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
+	CurrencyAdapter,
 };
-use xcm_executor::{Config, XcmExecutor};
+use xcm_executor::{Config, XcmExecutor, traits::{NativeAsset, IsConcrete}};
 use cumulus_primitives::relay_chain::Balance as RelayChainBalance;
 
-use artemis_xcm_support::{Transactor, TrustedReserveFilter};
+use artemis_xcm_support::AssetsTransactor;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -230,7 +231,7 @@ parameter_types! {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
-	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
+	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate = ();
@@ -242,8 +243,8 @@ impl cumulus_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
 	type SelfParaId = parachain_info::Module<Runtime>;
-	type DownwardMessageHandlers = ();
-	type HrmpMessageHandlers = ();
+	type DownwardMessageHandlers = LocalXcmHandler;
+	type HrmpMessageHandlers = LocalXcmHandler;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -273,7 +274,7 @@ impl Convert<AccountId, [u8; 32]> for AccountId32Converter {
 	}
 }
 
-impl artemis_token_dealer::Config for Runtime {
+impl artemis_transfer::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type ToRelayChainBalance = NativeToRelay;
@@ -285,7 +286,8 @@ impl artemis_token_dealer::Config for Runtime {
 }
 
 parameter_types! {
-	pub DotNetwork: NetworkId = NetworkId::Polkadot;
+	pub const RococoLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
+	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
 	pub RelayChainOrigin: Origin = xcm_handler::Origin::Relay.into();
 	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
 		id: ParachainInfo::parachain_id().into(),
@@ -295,22 +297,29 @@ parameter_types! {
 pub type LocationConverter = (
 	ParentIsDefault<AccountId>,
 	SiblingParachainConvertsVia<Sibling, AccountId>,
-	AccountId32Aliases<DotNetwork, AccountId>,
+	AccountId32Aliases<RococoNetwork, AccountId>,
 );
 
-pub type LocalAssetTransactor = Transactor<Balances, Assets, LocationConverter, AccountId>;
+type LocalAssetTransactor1 = AssetsTransactor<Assets, LocationConverter, AccountId>;
+type LocalAssetTransactor2 = CurrencyAdapter<
+	// Use this currency:
+	Balances,
+	// Use this currency when it is a fungible asset matching the given location or name:
+	IsConcrete<RococoLocation>,
+	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
+	LocationConverter,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+>;
+
+type LocalAssetTransactor = (LocalAssetTransactor1, LocalAssetTransactor2);
 
 pub type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
 	RelayChainAsNative<RelayChainOrigin, Origin>,
 	SiblingParachainAsNative<xcm_handler::Origin, Origin>,
-	SignedAccountId32AsNative<DotNetwork, Origin>,
+	SignedAccountId32AsNative<RococoNetwork, Origin>,
 );
-
-
-parameter_types! {
-	pub ReserveAssetLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 1000 });
-}
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
@@ -318,7 +327,7 @@ impl Config for XcmConfig {
 	type XcmSender = LocalXcmHandler;
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
-	type IsReserve = TrustedReserveFilter<ReserveAssetLocation>;
+	type IsReserve = NativeAsset;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 }
@@ -431,7 +440,7 @@ construct_runtime!(
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
 
 		LocalXcmHandler: xcm_handler::{Module, Event<T>, Origin},
-		TokenDealer: artemis_token_dealer::{Module, Storage, Call, Event<T>},
+		Transfer: artemis_transfer::{Module, Call, Event<T>},
 	}
 );
 

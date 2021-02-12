@@ -10,7 +10,7 @@ use artemis_runtime::{
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
-use sp_core::{Pair, Public, sr25519};
+use sp_core::{Pair, Public, U256, sr25519};
 use sp_runtime::traits::{Verify, IdentifyAccount};
 use serde::{Deserialize, Serialize};
 
@@ -123,7 +123,13 @@ fn testnet_genesis(
 			},
 		}),
 		assets: Some(AssetsConfig {
-			balances: vec![(AssetId::ETH, get_account_id_from_seed::<sr25519::Public>("Ferdie"), 10000000.into())]
+			balances: vec![
+				(
+					AssetId::ETH,
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+					U256::from_str_radix("1000000000000000000", 10).unwrap()
+				)
+			]
 		}),
 		verifier_lightclient: Some(VerifierLightclientConfig {
 			initial_header: EthereumHeader {
