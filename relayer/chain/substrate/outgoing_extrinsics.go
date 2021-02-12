@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const MaxWatchedExtrinsics = 500
+const MaxWatchedExtrinsics = 200
 
 type extrinsicPool struct {
 	sync.Mutex
@@ -22,7 +22,7 @@ type extrinsicPool struct {
 	eg       *errgroup.Group
 	log      *logrus.Entry
 	maxNonce uint32
-	watched  uint
+	watched  chan struct{}
 }
 
 func newExtrinsicPool(eg *errgroup.Group, conn *Connection, log *logrus.Entry) *extrinsicPool {
@@ -30,32 +30,19 @@ func newExtrinsicPool(eg *errgroup.Group, conn *Connection, log *logrus.Entry) *
 		conn:    conn,
 		eg:      eg,
 		log:     log,
-		watched: 0,
+		watched: make(chan struct{}, MaxWatchedExtrinsics),
 	}
 	return &ep
 }
 
 func (ep *extrinsicPool) WaitForSubmitAndWatch(ctx context.Context, nonce uint32, ext *types.Extrinsic) {
-	defer ep.Unlock()
-
-	for {
-		ep.Lock()
-		if ep.hasCapacity() {
-			ep.eg.Go(func() error {
-				return ep.submitAndWatchLoop(ctx, nonce, ext)
-			})
-
-			ep.watched++
-			return
-		}
-		ep.Unlock()
-
-		time.Sleep(100 * time.Millisecond)
+	select {
+	case ep.watched <- struct{}{}:
+		ep.eg.Go(func() error {
+			return ep.submitAndWatchLoop(ctx, nonce, ext)
+		})
+	case <-ctx.Done():
 	}
-}
-
-func (ep *extrinsicPool) hasCapacity() bool {
-	return ep.watched < MaxWatchedExtrinsics
 }
 
 func (ep *extrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, ext *types.Extrinsic) error {
@@ -76,19 +63,19 @@ func (ep *extrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 				// relayer's intervention, e.g. if an internal Substrate mechanism re-introduces it to the
 				// txpool.
 				sub.Unsubscribe()
-				statusStr := getStatusString(&status)
+				statusStr := ep.getStatusString(&status)
 				ep.log.WithFields(logrus.Fields{
 					"nonce":  nonce,
 					"status": statusStr,
 				}).Debug("Extrinsic failed to be processed")
 
-				// Back off to give the txpool time to resolve any backlog
-				time.Sleep(ep.getRetryDelay(nonce))
+				// Back off for ~1 block to give the txpool time to resolve any backlog
+				time.Sleep(time.Second * 6)
 
 				ep.Lock()
 				if nonce <= ep.maxNonce {
 					// We're in the clear - no need to retry
-					ep.watched--
+					<-ep.watched
 					ep.Unlock()
 					return nil
 				}
@@ -117,7 +104,7 @@ func (ep *extrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 				if nonce > ep.maxNonce {
 					ep.maxNonce = nonce
 				}
-				ep.watched--
+				<-ep.watched
 				return nil
 			}
 
@@ -127,20 +114,7 @@ func (ep *extrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 	}
 }
 
-func (ep *extrinsicPool) getRetryDelay(nonce uint32) time.Duration {
-	ep.Lock()
-	defer ep.Unlock()
-	if nonce <= ep.maxNonce {
-		// No delay because we don't need to retry
-		return 0
-	}
-
-	// Stagger retries in the case that we have a series of failed extrinsics
-	noncesToCatchUp := nonce - ep.maxNonce
-	return time.Duration(noncesToCatchUp) * time.Second * 5
-}
-
-func getStatusString(status *types.ExtrinsicStatus) string {
+func (ep *extrinsicPool) getStatusString(status *types.ExtrinsicStatus) string {
 	statusBytes, err := status.MarshalJSON()
 	if err != nil {
 		return "failed to serialize status"

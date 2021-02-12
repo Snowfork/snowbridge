@@ -172,7 +172,7 @@ func (re *Relay) Start() {
 		break
 	case <-ctx.Done():
 		// Goroutines are either shutting down or deadlocked.
-		// Give them a second...
+		// Give them a few seconds...
 		select {
 		case <-time.After(3 * time.Second):
 			break
