@@ -15,42 +15,49 @@
 
     - name: Create user
       user:
-        name: artemis-collator
+        name: artemis
         system: yes
-        home: /var/lib/artemis-collator
+        home: /var/lib/artemis
         create_home: no
         shell: /usr/sbin/nologin
 
     - name: Make data directory
       file:
-        path: /var/lib/artemis-collator
+        path: /var/lib/artemis
         state: directory
-        owner: artemis-collator
-        group: artemis-collator
+        owner: artemis
+        group: artemis
 
     - name: Download collator
       amazon.aws.aws_s3:
         bucket: snowfork-rococo
-        object: artemis-collator
-        dest: /usr/local/bin/artemis-collator
+        object: artemis
+        dest: /usr/local/bin/artemis
         mode: get
 
     - name: Make collator executable
       file:
-        path: /usr/local/bin/artemis-collator
+        path: /usr/local/bin/artemis
         mode: "0755"
 
-    - name: Download chainspec
+    - name: Download parachain chainspec
       amazon.aws.aws_s3:
         bucket: snowfork-rococo
-        object: rococo.json
-        dest: /etc/rococo.json
+        object: artemis-rococo.json
+        dest: /etc/artemis-rococo.json
+        mode: get
+
+    - name: Download relaychain chainspec
+      amazon.aws.aws_s3:
+        bucket: snowfork-rococo
+        object: rococo-local.json
+        dest: /etc/rococo-local.json
         mode: get
 
     - name: Create service file
       template:
         src: collator.service.j2
-        dest: /etc/systemd/system/artemis-collator.service
+        dest: /etc/systemd/system/artemis.service
         owner: root
         group: root
         mode: 0644
@@ -58,7 +65,7 @@
 
     - name: Make sure service is running
       systemd:
-        name: artemis-collator
+        name: artemis
         state: started
         enabled: yes
 
@@ -69,6 +76,6 @@
   handlers:
     - name: Restart collator
       systemd:
-        name: artemis-collator
+        name: artemis
         state: restarted
         daemon_reload: yes

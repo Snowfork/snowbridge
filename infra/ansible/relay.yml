@@ -1,15 +1,12 @@
 - hosts: relay
   vars:
-    apps:
-      eth:
-        address: "0x19a04AaE0c7F929d8BC0B7f69D106310f168B500"
-        abi: /etc/artemis-relay/ETHApp.json
-      erc20:
-        address: "0xF1becfDcA540605451553b4d5f80ACF17C7A490A"
-        abi: /etc/artemis-relay/ERC20App.json
-      bridge:
-        address: "0x7f138Fd13e80D8141DAf9CA1d3808e3164974655"
-        abi: /etc/artemis-relay/Bridge.json
+    channels:
+      basic:
+        inbound: "0xB6Be7Ab42C75BA987ebC038e4AEC753585b4Ef3b"
+        outbound: "0x654dD7719b2D8d57BeBc8B4598AfCf2E5265953b"
+      incentivized:
+        inbound: "0x0A534A39162aF7Fd031F36e8709f8AE4a0Cd4a68"
+        outbound: "0x4a838cD37220bCf2dD278e9B31F8B3e3DE3a9550"
     endpoints:
       ethereum: wss://ropsten.infura.io/ws/v3/e8b4790b8e4049cca3c04f738cfa25f2
       substrate: wss://parachain-rpc.snowfork.network
@@ -36,12 +33,6 @@
           dest: /usr/local/bin/artemis-relay
         - object: subkey
           dest: /usr/local/bin/subkey
-        - object: ETHApp.json
-          dest: "{{ apps.eth.abi }}"
-        - object: ERC20App.json
-          dest: "{{ apps.erc20.abi }}"
-        - object: Bridge.json
-          dest: "{{ apps.bridge.abi }}"
 
     - name: Make binaries executable
       file:

@@ -90,3 +90,5 @@ Create or update the relay:
 ```bash
 ansible-playbook relay.yml
 ```
+
+target/release/artemis export-genesis-state --chain artemis-rococo.json --parachain-id 200

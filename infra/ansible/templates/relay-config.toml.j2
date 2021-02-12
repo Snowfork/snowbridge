@@ -1,17 +1,14 @@
 [ethereum]
 endpoint = {{ endpoints.ethereum|tojson }}
+descendants-until-final = 2
 
-[ethereum.bridge]
-address = {{ apps.bridge.address|tojson }}
-abi = {{ apps.bridge.abi|tojson }}
+[ethereum.channels.basic]
+inbound = {{ channels.basic.inbound|tojson }}
+outbound = {{ channels.basic.outbound|tojson }}
 
-[ethereum.apps.eth]
-address = {{ apps.eth.address|tojson }}
-abi = {{ apps.eth.abi|tojson }}
-
-[ethereum.apps.erc20]
-address = {{ apps.erc20.address|tojson }}
-abi = {{ apps.erc20.abi|tojson }}
+[ethereum.channels.incentivized]
+inbound = {{ channels.incentivized.inbound|tojson }}
+outbound = {{ channels.incentivized.outbound|tojson }}
 
 [substrate]
 endpoint = {{ endpoints.substrate|tojson }}
