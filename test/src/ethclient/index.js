@@ -78,6 +78,15 @@ class EthClient {
       });
   }
 
+  async transferERC20(from, to, amount) {
+    const erc20Instance = this.loadERC20Contract();
+    return erc20Instance.methods.transfer(to, this.web3.utils.toBN(amount))
+      .send({
+        from
+      });
+  }
+
+
   async lockERC20(from, amount, polkadotRecipient) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
