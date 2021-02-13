@@ -7,7 +7,8 @@
 
 const { ApiPromise, WsProvider } = require('@polkadot/api');
 const WebSocket = require('ws');
-const { ethereumEncode } = require("@polkadot/util-crypto");
+const { base58Decode, addressToEvm, secp256k1Expand, secp256k1Compress, decodeAddress, ethereumEncode, blake2AsHex, keccakAsHex } = require("@polkadot/util-crypto");
+const { u8aToHex, u8aToU8a } = require("@polkadot/util");
 
 const RELAY_CHAIN_RPC_ENDPOINT = 'ws://localhost:9944';
 async function start() {
@@ -17,20 +18,32 @@ async function start() {
     types: {
       SignedCommitment: {
         commitment: 'Commitment',
-        signatures: 'Vec<Option<Signature>>'
+        signatures: 'Vec<Option<BeefySignature>>'
       },
       Commitment: {
         payload: 'H256',
         block_number: 'BlockNumber',
         validator_set_id: 'ValidatorSetId'
       },
-      ValidatorSetId: 'u64'
+      ValidatorSetId: 'u64',
+      BeefySignature: '[u8; 65]',
     }
   });
 
   const ws = new WebSocket('ws://localhost:9955');
   const currentAuthorities = await api.query.beefy.authorities();
-  console.log({ currentAuthorities: currentAuthorities.map(a => ethereumEncode(a)) });
+
+  const currentAuthoritiesString = currentAuthorities.map(a => a.toString());
+  const currentAuthoritiesu8aAddress = currentAuthorities.map(a => u8aToU8a(a));
+  const currentAuthoritiessecp256k1Expand = currentAuthoritiesu8aAddress.map(a => ethereumEncode(a));
+  const currentAuthoritiesDecoded = currentAuthoritiesString.map(a => u8aToHex(decodeAddress(a)));
+  // const currentAuthoritiesExpanded = currentAuthoritiesDecoded.map(a => secp256k1Compress(a));
+  // const currentAuthoritiesETHEncoded = currentAuthorities.map(a => ethereumEncode(a));
+
+  console.log({ currentAuthoritiesString, currentAuthoritiesu8aAddress, currentAuthoritiessecp256k1Expand });
+  console.log({ currentAuthorities: currentAuthorities.map(a => u8aToHex(decodeAddress(a))) });
+  console.log({ currentAuthoritiesEth: currentAuthorities.map(a => ethereumEncode(a)) });
+  console.log({ currentAuthoritiesEthKec: currentAuthorities.map(a => keccakAsHex(ethereumEncode(a))) });
 
   const startSubscriptionRPC = {
     jsonrpc: '2.0',
@@ -42,10 +55,25 @@ async function start() {
     ws.send(JSON.stringify(startSubscriptionRPC));
   });
 
+  const getMethods = (obj) => {
+    let properties = new Set()
+    let currentObj = obj
+    do {
+      Object.getOwnPropertyNames(currentObj).map(item => properties.add(item))
+    } while ((currentObj = Object.getPrototypeOf(currentObj)))
+    return [...properties.keys()].filter(item => typeof obj[item] === 'function')
+  }
+
   ws.on('message', function incoming(data) {
     jdata = JSON.parse(data);
     if (jdata && jdata.params && jdata.params.result) {
-      console.log(api.createType('SignedCommitment', jdata.params.result).toString());
+      console.log(typeof jdata.params.result)
+      const signedCommitment = api.createType('SignedCommitment', jdata.params.result);
+      const signedCommitmentJSON = api.createType('SignedCommitment', jdata.params.result).toJSON();
+      const commitment = signedCommitment.commitment;
+      const commitmentBytes = commitment.toHex();
+      const hashedCommitment = blake2AsHex(commitmentBytes, 256);
+      console.log({ signedCommitmentJSON, commitmentBytes, hashedCommitment });
     }
   });
 
