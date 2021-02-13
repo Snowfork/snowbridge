@@ -18,6 +18,17 @@ Install Ganache
 yarn global add ganache-cli
 ```
 
+---
+**NOTE**
+
+Make sure to read [Yearn docs](https://classic.yarnpkg.com/en/docs/cli/global/) regarding global packages and path in case `Ganache` is not working.
+
+Alternatively, you could skip this step and install dependencies locally in the next step. In that case `Ganache` will be installed only for the current project and you'll need to invoke it with `yarn run ganache-cli`.
+
+Please, also note that if you have not installed `truffle` as a global package you will need to prefix commands with `yarn run...` in order to use locally installed package.
+
+---
+
 Install dependencies with yarn:
 
 ```bash
@@ -34,7 +45,7 @@ Start a ganache instance:
 
 ```bash
 ganache-cli \
-    --port=9545 \
+    --port=8545 \
     --blockTime=0 \
     --networkId=344 \
     --deterministic \
@@ -44,7 +55,7 @@ ganache-cli \
 Open a fresh terminal window and deploy the contracts:
 
 ```bash
-truffle migrate --all
+truffle deploy --network e2e_test
 ```
 
 ## Testing
@@ -54,17 +65,17 @@ Make sure the truffle environment is running, then run tests
 ```bash
 # Start testing environment if it's not already running
 ganache-cli \
-    --port=9545 \
+    --port=8545 \
     --blockTime=0 \
     --networkId=344 \
     --deterministic \
     --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove'
 
 # In a new terminal, test application gas expenditures
-truffle test test/test_gas.js
+truffle test test/test_gas.js --network e2e_test
 
 # Run all tests
-truffle test
+truffle test --network e2e_test
 ```
 
 ## Scripts
@@ -75,31 +86,31 @@ The project includes several scripts for Bridge interaction:
 `getTx.js` gets information about a transaction
 
 ``` bash
-truffle exec scripts/getTx.js [tx-hash]
+truffle exec scripts/getTx.js [tx-hash] --network e2e_test
 ```
 
 `getEthBalance.js` gets an address' ETH balance
 
 ``` bash
-truffle exec scripts/getEthBalance.js [ethereum-address]
+truffle exec scripts/getEthBalance.js [ethereum-address] --network e2e_test
 ```
 
 `getERC20balance.js` gets an address' ERC20 token balance
 
 ``` bash
-truffle exec scripts/getERC20Balance.js [ethereum-address] [token-contract-address]
+truffle exec scripts/getERC20Balance.js [ethereum-address] [token-contract-address] --network e2e_test
 ```
 
 `sendEth.js` deposits ETH into the ETHApp, initiating a cross-chain transfer to Substrate
 
 ``` bash
-truffle exec scripts/sendEth.js [amount] [polkadot-recipient]
+truffle exec scripts/sendEth.js [amount] [polkadot-recipient] --network e2e_test
 ```
 
 `sendERC20.js` deposits ERC20 tokens into the ERC20App, initiating a cross-chain transfer to Substrate
 
 ``` bash
-truffle exec scripts/sendERC20.js [amount] [token-contract-address] [polkadot-recipient]
+truffle exec scripts/sendERC20.js [amount] [token-contract-address] [polkadot-recipient] --network e2e_test
 ```
 
 

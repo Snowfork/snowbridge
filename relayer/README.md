@@ -4,13 +4,22 @@ Relayer service that streams transactions from blockchain networks, packages dat
 
 Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe/ChainBridge). Our implementation is inspired by their design and incorporates some of their code.
 
-- [Requirements](#requirements)
-  - [Development](#development)
-- [Configuration](#configuration)
-  - [Secrets](#secrets)
-- [Build](#build)
-- [Run](#run)
-- [Tests](#tests)
+---
+**NOTE**
+
+Please, note that the relayer might take a considerable amount of time to catch up first time it's started. You can check relayer logs in order to follow progress and make sure it's actually working.
+
+----
+
+- [Relayer](#relayer)
+  - [Requirements](#requirements)
+    - [Usage](#usage)
+    - [Development](#development)
+  - [Configuration](#configuration)
+    - [Secrets](#secrets)
+  - [Build](#build)
+  - [Run](#run)
+  - [Tests](#tests)
 
 ## Requirements
 
@@ -50,7 +59,7 @@ Example Configuration:
 ```toml
 [ethereum]
 endpoint = "ws://localhost:8545/"
-descendants-until-final = 35
+descendants-until-final = 3
 
 [ethereum.channels.basic]
 inbound = "0x992B9df075935E522EC7950F37eC8557e86f6fdb"
@@ -73,8 +82,8 @@ The relayer requires secret keys for submitting transactions to both chains. It 
 Example:
 
 ```bash
-export ARTEMIS_ETHEREUM_KEY=75fa57baca6ee656752e2daf522e75ded86d3ad24d660701aaa78e24b207f550
-export ARTEMIS_SUBSTRATE_KEY=//Relay
+export ARTEMIS_ETHEREUM_KEY="0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
+export ARTEMIS_SUBSTRATE_KEY="//Relay"
 ```
 
 ## Build
