@@ -53,7 +53,8 @@ contract ETHApp {
 
         bytes memory call = encodeCall(msg.sender, _recipient, msg.value);
 
-        OutboundChannel channel = OutboundChannel(channels[_channelId].outbound);
+        OutboundChannel channel =
+            OutboundChannel(channels[_channelId].outbound);
         channel.submit(call);
     }
 
@@ -74,11 +75,12 @@ contract ETHApp {
         emit Unlocked(_sender, _recipient, _amount);
     }
 
-    function encodeCall(address _sender, bytes32 _recipient, uint256 _amount)
-        private
-        pure
-        returns (bytes memory)
-    {
+    // SCALE-encode payload
+    function encodeCall(
+        address _sender,
+        bytes32 _recipient,
+        uint256 _amount
+    ) private pure returns (bytes memory) {
         return
             abi.encodePacked(
                 MINT_CALL,

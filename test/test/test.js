@@ -94,6 +94,7 @@ describe('Bridge', function () {
 
       await ethClient.approveERC20(account, amount);
       await ethClient.lockERC20(account, amount, polkadotRecipient);
+
       await sleep(50000);
 
       let afterEthBalance = await ethClient.getErc20Balance(account);

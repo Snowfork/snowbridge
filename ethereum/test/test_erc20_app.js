@@ -4,7 +4,8 @@ const {
   confirmUnlockTokens,
   deployAppContractWithChannels,
   addressBytes,
-  ChannelId
+  ChannelId,
+  buildCommitment
 } = require("./helpers");
 
 require("chai")
@@ -134,15 +135,16 @@ contract("ERC20App", function (accounts) {
       //   cd parachain/pallets/erc20-app
       //   cargo test test_outbound_payload_encode -- --nocapture
       token_addr = this.token.address.replace(/^0x/, "");
-      const commitment = [
+      const messages = [
         {
           target: this.app.address,
           nonce: 1,
           payload: `0x010ce3c7000000000000000000000000${token_addr}1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000000000000000064`,
         }
       ]
+      const commitment = buildCommitment(messages);
 
-      tx = await this.channels.basic.inbound.submit(commitment).should.be.fulfilled;
+      tx = await this.channels.basic.inbound.submit(messages, commitment).should.be.fulfilled;
 
       confirmUnlockTokens(
         tx.receipt.rawLogs[1],
@@ -169,15 +171,16 @@ contract("ERC20App", function (accounts) {
       //   cd parachain/pallets/erc20-app
       //   cargo test test_outbound_payload_encode -- --nocapture
       token_addr = this.token.address.replace(/^0x/, "");
-      const commitment = [
+      const messages = [
         {
           target: this.app.address,
           nonce: 1,
           payload: `0x010ce3c7000000000000000000000000${token_addr}1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000000000000000064`,
         }
       ]
+      const commitment = buildCommitment(messages);
 
-      tx = await this.channels.incentivized.inbound.submit(commitment).should.be.fulfilled;
+      tx = await this.channels.incentivized.inbound.submit(messages, commitment).should.be.fulfilled;
 
       confirmUnlockTokens(
         tx.receipt.rawLogs[1],

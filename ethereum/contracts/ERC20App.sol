@@ -59,7 +59,8 @@ contract ERC20App {
             "Contract token allowances insufficient to complete this lock request"
         );
         require(
-            _channelId == ChannelId.Basic || _channelId == ChannelId.Incentivized,
+            _channelId == ChannelId.Basic ||
+                _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
 
@@ -69,7 +70,8 @@ contract ERC20App {
 
         bytes memory call = encodeCall(_token, msg.sender, _recipient, _amount);
 
-        OutboundChannel channel = OutboundChannel(channels[_channelId].outbound);
+        OutboundChannel channel =
+            OutboundChannel(channels[_channelId].outbound);
         channel.submit(call);
     }
 
@@ -94,11 +96,13 @@ contract ERC20App {
         emit Unlocked(_token, _sender, _recipient, _amount);
     }
 
-    function encodeCall(address _token, address _sender, bytes32 _recipient, uint256 _amount)
-        private
-        pure
-        returns (bytes memory)
-    {
+    // SCALE-encode payload
+    function encodeCall(
+        address _token,
+        address _sender,
+        bytes32 _recipient,
+        uint256 _amount
+    ) private pure returns (bytes memory) {
         return
             abi.encodePacked(
                 MINT_CALL,
