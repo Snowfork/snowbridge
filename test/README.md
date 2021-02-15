@@ -25,11 +25,7 @@ yarn install
 Install `polkadot-launch`:
 
 ```bash
-git clone https://github.com/paritytech/polkadot-launch.git /tmp/polkadot-launch
-cd /tmp/polkadot-launch
-yarn install
-yarn build
-yarn global add file:$(pwd)
+yarn global add polkadot-launch
 ```
 
 Build polkadot:
@@ -37,7 +33,7 @@ Build polkadot:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout bf2d87a1
+git checkout 9bc8915a
 cargo build --release --features=real-overseer
 ```
 
@@ -50,8 +46,6 @@ scripts/start-services.sh
 ## Run Tests
 
 ### Integration Tests
-
-NOTE: Integration tests are currently being redeveloped due to major architectural changes introduced recently in [#237](https://github.com/Snowfork/polkadot-ethereum/pull/237). So they are disabled for now.
 
 ```bash
 yarn test
