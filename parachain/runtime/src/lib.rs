@@ -53,7 +53,7 @@ use xcm_builder::{
 	CurrencyAdapter,
 };
 use xcm_executor::{Config, XcmExecutor, traits::{NativeAsset, IsConcrete}};
-use cumulus_primitives::relay_chain::Balance as RelayChainBalance;
+use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 
 use artemis_xcm_support::AssetsTransactor;
 
@@ -332,7 +332,7 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 }
 
-impl xcm_handler::Config for Runtime {
+impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
@@ -567,4 +567,4 @@ impl_runtime_apis! {
 
 }
 
-cumulus_runtime::register_validate_block!(Block, Executive);
+cumulus_pallet_parachain_system::register_validate_block!(Block, Executive);
