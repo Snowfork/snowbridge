@@ -175,6 +175,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
+ "rustc-hex",
  "serde",
  "sp-core",
  "sp-io",

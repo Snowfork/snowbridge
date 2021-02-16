@@ -6,13 +6,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./InboundChannel.sol";
 
 contract IncentivizedInboundChannel is InboundChannel {
-    //TODO: Review/check below numbers and formulas
-    uint256 public MAX_PAYLOAD_BYTE_SIZE = 1000;
-    uint256 public MAX_PAYLOAD_GAS_COST = 500000;
-    uint256 public EXTERNAL_CALL_COST = 21000;
-    uint256 public POST_PROCESSING_LEFTOVER_GAS_REQUIRED = 999;
-    uint256 public MAX_GAS_PER_MESSAGE =
-        EXTERNAL_CALL_COST + MAX_PAYLOAD_BYTE_SIZE + MAX_PAYLOAD_GAS_COST;
 
     constructor() {
         nonce = 0;
@@ -58,25 +51,6 @@ contract IncentivizedInboundChannel is InboundChannel {
             "invalid commitment"
         );
 
-        // Require all payloads are smaller than max_payload_size
-        for (uint256 i = 0; i < _messages.length; i++) {
-            require(
-                _messages[i].payload.length <= MAX_PAYLOAD_BYTE_SIZE,
-                "message payload bytesize exceeds maximum payload size"
-            );
-        }
-
-        // Require there is enough gas to play all messages
-        // TODO: Test/review further.
-        uint256 maxMessageProcessingCost =
-            _messages.length * MAX_GAS_PER_MESSAGE;
-        require(
-            gasleft() >=
-                maxMessageProcessingCost +
-                    POST_PROCESSING_LEFTOVER_GAS_REQUIRED,
-            "insufficient gas for delivery of all messages"
-        );
-
         return true;
     }
 
@@ -90,9 +64,7 @@ contract IncentivizedInboundChannel is InboundChannel {
             // Deliver the message to the target
             // Delivery will have fixed maximum gas allowed for the target app
             (bool success, ) =
-                _messages[i].target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(
-                    _messages[i].payload
-                );
+                _messages[i].target.call(_messages[i].payload);
 
             emit MessageDispatched(_messages[i].nonce, success);
         }

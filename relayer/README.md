@@ -41,6 +41,28 @@ To enable revive for linting in VS-code, add the following to your config:
 }
 ```
 
+## Contract Bindings
+
+The bindings in the [contracts](contracts/) directory for our Ethereum contracts are dynamically generated.
+
+Make sure you have `jq` installed:
+
+```bash
+sudo apt install jq
+```
+
+Compile the contracts in another terminal window:
+
+```bash
+truffle compile --all
+```
+
+Generate the bindings:
+
+```bash
+go generate ./...
+```
+
 ## Configuration
 
 Before running the relayer, it needs to be configured first. By default the configuration file is read from  `~/.config/artemis-relay/config.toml`, but this can be overriden by passing the `--config PATH` flag to the relayer binary.
