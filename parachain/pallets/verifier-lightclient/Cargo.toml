@@ -25,7 +25,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ro
 artemis-core = { path = "../../primitives/core", default-features = false }
 artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
 
-ethash = { git = "https://github.com/Snowfork/ethash.git", branch = "master", default-features = false }
+ethash = { git = "https://github.com/snowfork/ethash.git", branch = "update-dependencies", default-features = false }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }

@@ -5,9 +5,9 @@ authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.6", default-features = false }
-ethbloom = { version = "0.10.0", default-features = false }
-ethereum-types = { version = "0.10.0", default-features = false, features = ["codec", "rlp"] }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+ethbloom = { version = "0.11.0", default-features = false }
+ethereum-types = { version = "0.11.0", default-features = false, features = ["codec", "rlp", "serialize"] }
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 hex-literal = { version = "0.3.1", default-features = false }
 libsecp256k1 = { version = "0.3", default-features = false }
@@ -22,8 +22,8 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "rococo
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 
-ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", branch = "master", package = "ethabi-decode", default-features = false }
-ethash = { git = "https://github.com/Snowfork/ethash.git", rev = "e7df4de5bab9e2a3fe9b274284d5b0e3776d6e56", default-features = false }
+ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", branch = "update-dependencies", package = "ethabi-decode", default-features = false }
+ethash = { git = "https://github.com/snowfork/ethash.git", branch = "update-dependencies", default-features = false }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.19"

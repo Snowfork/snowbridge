@@ -239,7 +239,7 @@ impl pallet_transaction_payment::Config for Runtime {
 
 // Cumulus and XCMP
 
-impl cumulus_parachain_system::Config for Runtime {
+impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
 	type SelfParaId = parachain_info::Module<Runtime>;
@@ -288,7 +288,7 @@ impl artemis_transfer::Config for Runtime {
 parameter_types! {
 	pub const RococoLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
 	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
-	pub RelayChainOrigin: Origin = xcm_handler::Origin::Relay.into();
+	pub RelayChainOrigin: Origin = cumulus_pallet_xcm_handler::Origin::Relay.into();
 	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
 		id: ParachainInfo::parachain_id().into(),
 	});
@@ -317,7 +317,7 @@ type LocalAssetTransactor = (LocalAssetTransactor1, LocalAssetTransactor2);
 pub type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
 	RelayChainAsNative<RelayChainOrigin, Origin>,
-	SiblingParachainAsNative<xcm_handler::Origin, Origin>,
+	SiblingParachainAsNative<cumulus_pallet_xcm_handler::Origin, Origin>,
 	SignedAccountId32AsNative<RococoNetwork, Origin>,
 );
 
@@ -429,7 +429,7 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 
 		ParachainInfo: parachain_info::{Module, Storage, Config},
-		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
+		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
 
 		Bridge: bridge::{Module, Call, Config, Storage, Event},
 		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin},
@@ -439,7 +439,7 @@ construct_runtime!(
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
 
-		LocalXcmHandler: xcm_handler::{Module, Event<T>, Origin},
+		LocalXcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin},
 		Transfer: artemis_transfer::{Module, Call, Event<T>},
 	}
 );
