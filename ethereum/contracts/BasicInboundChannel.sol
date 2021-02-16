@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./InboundChannel.sol";
 
 contract BasicInboundChannel is InboundChannel {
+    uint256 constant public MAX_GAS_PER_MESSAGE = 100000;
 
     constructor() {
         nonce = 0;
@@ -51,6 +52,12 @@ contract BasicInboundChannel is InboundChannel {
             "invalid commitment"
         );
 
+        // Require there is enough gas to play all messages
+        require(
+            gasleft() >= _messages.length * MAX_GAS_PER_MESSAGE,
+            "insufficient gas for delivery of all messages"
+        );
+
         return true;
     }
 
@@ -63,7 +70,7 @@ contract BasicInboundChannel is InboundChannel {
 
             // Deliver the message to the target
             (bool success, ) =
-                _messages[i].target.call(_messages[i].payload);
+                _messages[i].target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(_messages[i].payload);
 
             emit MessageDispatched(_messages[i].nonce, success);
         }
