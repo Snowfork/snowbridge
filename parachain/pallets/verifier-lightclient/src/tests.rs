@@ -1,12 +1,13 @@
 use artemis_core::{Verifier as VerifierConfig};
 use crate::mock::{
-	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
+	child_of_genesis_ethereum_header, child_of_header,
 	genesis_ethereum_block_hash, log_payload,
 	message_with_receipt_proof, receipt_root_and_proof,
-	AccountId, new_tester, new_tester_with_config
+	AccountId, new_tester, new_tester_with_config,
+	ethereum_header_from_file, ethereum_header_proof_from_file
 };
 
-//use crate::mock::mock_verifier_with_pow;
+use crate::mock::mock_verifier_with_pow;
 
 use crate::mock::mock_verifier::{
 	Verifier,
@@ -272,52 +273,51 @@ fn it_rejects_ethereum_header_before_parent() {
 }
 
 #[test]
-// fn it_validates_proof_of_work() {
-// 	new_tester_with_config::<mock_verifier_with_pow::Test>(GenesisConfig {
-// 			initial_header: ethereum_header_from_file(11090290, ""),
-// 			initial_difficulty: 0.into(),
-// 	}).execute_with(|| {
-// 		let header1 = ethereum_header_from_file(11090291, "");
-// 		let header1_proof = ethereum_header_proof_from_file(11090291, "");
-// 		let header2 = ethereum_header_from_file(11090292, "");
+fn it_validates_proof_of_work() {
+	new_tester_with_config::<mock_verifier_with_pow::Test>(GenesisConfig {
+			initial_header: ethereum_header_from_file(11090290, ""),
+			initial_difficulty: 0.into(),
+	}).execute_with(|| {
+		let header1 = ethereum_header_from_file(11090291, "");
+		let header1_proof = ethereum_header_proof_from_file(11090291, "");
+		let header2 = ethereum_header_from_file(11090292, "");
 
-// 		let ferdie: AccountId = Keyring::Ferdie.into();
-// 		assert_ok!(mock_verifier_with_pow::Verifier::import_header(
-// 			mock_verifier_with_pow::Origin::signed(ferdie.clone()),
-// 			header1,
-// 			header1_proof,
-// 		));
-// 		assert_err!(
-// 			mock_verifier_with_pow::Verifier::import_header(
-// 				mock_verifier_with_pow::Origin::signed(ferdie),
-// 				header2,
-// 				Default::default(),
-// 			),
-// 			Error::<mock_verifier_with_pow::Test>::InvalidHeader,
-// 		);
-// 	});
-// }
+		let ferdie: AccountId = Keyring::Ferdie.into();
+		assert_ok!(mock_verifier_with_pow::Verifier::import_header(
+			mock_verifier_with_pow::Origin::signed(ferdie.clone()),
+			header1,
+			header1_proof,
+		));
+		assert_err!(
+			mock_verifier_with_pow::Verifier::import_header(
+				mock_verifier_with_pow::Origin::signed(ferdie),
+				header2,
+				Default::default(),
+			),
+			Error::<mock_verifier_with_pow::Test>::InvalidHeader,
+		);
+	});
+}
 
-// #[test]
-// fn it_rejects_ethereum_header_with_low_difficulty() {
-// 	new_tester_with_config::<mock_verifier_with_pow::Test>(GenesisConfig {
-// 		initial_header: ethereum_header_from_file(11090291, ""),
-// 		initial_difficulty: 0.into(),
-// 	}).execute_with(|| {
-// 		let header = ethereum_header_from_file(11090292, "_low_difficulty");
-// 		let header_proof = ethereum_header_proof_from_file(11090292, "_low_difficulty");
+#[test]
+fn it_rejects_ethereum_header_with_low_difficulty() {
+	new_tester_with_config::<mock_verifier_with_pow::Test>(GenesisConfig {
+		initial_header: ethereum_header_from_file(11090291, ""),
+		initial_difficulty: 0.into(),
+	}).execute_with(|| {
+		let header = ethereum_header_from_file(11090292, "_low_difficulty");
+		let header_proof = ethereum_header_proof_from_file(11090292, "_low_difficulty");
 
-// 		assert_err!(
-// 			mock_verifier_with_pow::Verifier::import_header(
-// 				mock_verifier_with_pow::Origin::signed(Keyring::Ferdie.into()),
-// 				header,
-// 				header_proof,
-// 			),
-// 			Error::<mock_verifier_with_pow::Test>::InvalidHeader,
-// 		);
-// 	});
-// }
-
+		assert_err!(
+			mock_verifier_with_pow::Verifier::import_header(
+				mock_verifier_with_pow::Origin::signed(Keyring::Ferdie.into()),
+				header,
+				header_proof,
+			),
+			Error::<mock_verifier_with_pow::Test>::InvalidHeader,
+		);
+	});
+}
 
 #[test]
 fn it_confirms_receipt_inclusion_in_finalized_header() {
