@@ -21,15 +21,15 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "rococo
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 
-ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
+ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "update-dependencies", default-features = false }
 
 artemis-core = { path = "../../primitives/core", default-features = false }
 artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
 
 [dev-dependencies]
-artemis-assets = { path = "../../pallets/assets", default-features = false }
-artemis-dispatch = { path = "../../pallets/dispatch", default-features = false }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+artemis-assets = { path = "../../pallets/assets" }
+artemis-dispatch = { path = "../../pallets/dispatch" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
 [features]
 default = ["std"]

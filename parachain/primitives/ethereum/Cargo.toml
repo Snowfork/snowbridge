@@ -22,8 +22,8 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "rococo
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 
-ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", branch = "master", package = "ethabi-decode", default-features = false }
-ethash = { git = "https://github.com/snowfork/ethash.git", branch = "master", default-features = false }
+ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", branch = "update-dependencies", package = "ethabi-decode", default-features = false }
+ethash = { git = "https://github.com/snowfork/ethash.git", branch = "update-dependencies", default-features = false }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.19"

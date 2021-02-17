@@ -1,16 +1,13 @@
 // Mock runtime
-
-use crate::{Module, GenesisConfig, Config};
 use sp_core::{H160, H256};
 use frame_support::{
-	impl_outer_origin, impl_outer_event, impl_outer_dispatch, parameter_types,
-	weights::Weight,
+	parameter_types,
 	dispatch::DispatchResult,
 };
 use sp_runtime::{
 	traits::{
 		BlakeTwo256, IdentityLookup, IdentifyAccount, Verify,
-	}, testing::Header, Perbill, MultiSignature,
+	}, testing::Header, MultiSignature,
 };
 use frame_system as system;
 
@@ -18,42 +15,28 @@ use artemis_core::{ChannelId, AssetId, SubmitOutbound};
 
 use crate as erc20_app;
 
-impl_outer_origin! {
-	pub enum Origin for Test where system = frame_system {
-		artemis_dispatch
-	}
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-impl_outer_dispatch! {
-	pub enum Call for Test where origin: Origin {
-			frame_system::System,
-			artemis_assets::Assets,
-			artemis_dispatch::Dispatch,
-			erc20_app::ERC20,
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Storage, Event<T>},
+		Assets: artemis_assets::{Module, Call, Storage, Event<T>},
+		Dispatch: artemis_dispatch::{Module, Call, Storage, Origin, Event<T>},
+		ERC20App: erc20_app::{Module, Call, Config, Storage, Event<T>},
 	}
-}
-
-impl_outer_event! {
-	pub enum Event for Test {
-			system<T>,
-			artemis_assets<T>,
-			artemis_dispatch<T>,
-			erc20_app<T>,
-	}
-}
+);
 
 pub type Signature = MultiSignature;
 
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
-
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: Weight = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
 impl system::Config for Test {
@@ -73,7 +56,7 @@ impl system::Config for Test {
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
-	type PalletInfo = ();
+	type PalletInfo = PalletInfo;
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
@@ -105,22 +88,17 @@ parameter_types! {
 	pub const EthAssetId: AssetId = AssetId::ETH;
 }
 
-impl Config for Test {
+impl erc20_app::Config for Test {
 	type Event = Event;
 	type Assets = Assets;
 	type SubmitOutbound = MockSubmitOutbound;
 	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
 }
 
-pub type System = system::Module<Test>;
-pub type Dispatch = artemis_dispatch::Module<Test>;
-pub type Assets = artemis_assets::Module<Test>;
-pub type ERC20 = Module<Test>;
-
 pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	let config: GenesisConfig = GenesisConfig {
+	let config = erc20_app::GenesisConfig {
 		address: H160::repeat_byte(1),
 	};
 	config.assimilate_storage(&mut storage).unwrap();

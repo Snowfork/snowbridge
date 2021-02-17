@@ -22,7 +22,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ro
 
 artemis-core = { path = "../../primitives/core", default-features = false }
 artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
-ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
+ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "update-dependencies", default-features = false }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }

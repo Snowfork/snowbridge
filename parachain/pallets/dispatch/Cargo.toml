@@ -23,7 +23,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ro
 artemis-core = { path = "../../primitives/core", default-features = false }
 
 [dev-dependencies]
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 hex-literal = { version = "0.3.1" }
 
 [features]
