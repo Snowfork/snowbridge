@@ -13,7 +13,7 @@ use sp_runtime::{
 use sp_std::prelude::*;
 use sp_std::vec;
 
-use cumulus_primitives::{relay_chain::Balance as RelayChainBalance, ParaId};
+use cumulus_primitives_core::{relay_chain::Balance as RelayChainBalance, ParaId};
 use xcm::v0::{Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm, ExecuteXcm};
 
 use xcm_executor::traits::LocationConversion;

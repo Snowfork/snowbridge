@@ -1,13 +1,11 @@
-use crate::{mock::*};
+use crate::mock::{new_test_ext, System, Commitments};
 
 use crate::{Message, MessageQueues};
 
 use sp_runtime::DigestItem;
 use sp_core::H160;
 
-use frame_support::{
-	traits::{OnInitialize}
-};
+use frame_support::traits::OnInitialize;
 
 use frame_support::storage::StorageMap;
 
@@ -16,7 +14,7 @@ use artemis_core::{ChannelId, MessageCommitment};
 fn run_to_block(n: u64) {
 	while System::block_number() < n {
 		System::set_block_number(System::block_number() + 1);
-		CommitmentsModule::on_initialize(System::block_number());
+		Commitments::on_initialize(System::block_number());
 	}
 }
 
@@ -28,8 +26,8 @@ const CONTRACT_B: H160 =  H160::repeat_byte(2);
 #[test]
 fn test_add_message() {
 	new_test_ext().execute_with(|| {
-		CommitmentsModule::add(ChannelId::Basic, CONTRACT_A, 0, &vec![0, 1, 2]).unwrap();
-		CommitmentsModule::add(ChannelId::Basic, CONTRACT_B, 1, &vec![3, 4, 5]).unwrap();
+		Commitments::add(ChannelId::Basic, CONTRACT_A, 0, &vec![0, 1, 2]).unwrap();
+		Commitments::add(ChannelId::Basic, CONTRACT_B, 1, &vec![3, 4, 5]).unwrap();
 
 		let messages = vec![
 			Message {

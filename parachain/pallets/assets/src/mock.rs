@@ -1,51 +1,42 @@
 // Mock runtime
-
 use super::*;
 
-use crate::{Module, Config};
 use sp_core::H256;
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
+use frame_support::parameter_types;
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, Perbill, MultiSignature
+	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
 };
-use sp_std::convert::{From};
-use frame_system as system;
+use sp_std::convert::From;
 
-impl_outer_origin! {
-	pub enum Origin for MockRuntime {}
-}
+use crate as assets;
 
-mod assets {
-    pub use crate::Event;
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-impl_outer_event! {
-    pub enum TestEvent for MockRuntime {
-        system<T>,
-        assets<T>,
-    }
-}
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Event<T>},
+	}
+);
 
 pub type Signature = MultiSignature;
-
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-#[derive(Clone, Eq, PartialEq)]
-pub struct MockRuntime;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: Weight = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Config for MockRuntime {
+impl system::Config for Test {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
 	type BlockLength = ();
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -53,11 +44,11 @@ impl system::Config for MockRuntime {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
-	type PalletInfo = ();
+	type PalletInfo = PalletInfo;
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
@@ -65,15 +56,12 @@ impl system::Config for MockRuntime {
 	type SS58Prefix = ();
 }
 
-impl Config for MockRuntime {
-	type Event = TestEvent;
+impl assets::Config for Test {
+	type Event = Event;
 }
 
-pub type Assets = Module<MockRuntime>;
-pub type System = system::Module<MockRuntime>;
-
 pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+	let storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));

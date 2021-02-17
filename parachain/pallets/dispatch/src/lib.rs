@@ -117,58 +117,36 @@ impl<T: Config> MessageDispatch<MessageIdOf<T>> for Module<T> {
 mod tests {
 	use super::*;
 	use frame_support::{
-		impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types,
+		parameter_types,
 		dispatch::DispatchError,
-		weights::Weight
 	};
 	use frame_system::{EventRecord, Phase};
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::Header,
 		traits::{BlakeTwo256, IdentityLookup},
-		Perbill,
 	};
 
+	use crate as dispatch;
+
+	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+	type Block = frame_system::mocking::MockBlock<Test>;
+
+	frame_support::construct_runtime!(
+		pub enum Test where
+			Block = Block,
+			NodeBlock = Block,
+			UncheckedExtrinsic = UncheckedExtrinsic,
+		{
+			System: frame_system::{Module, Call, Storage, Event<T>},
+			Dispatch: dispatch::{Module, Call, Storage, Origin, Event<T>},
+		}
+	);
+
 	type AccountId = u64;
-	type Dispatch = Module<Test>;
-	type System = frame_system::Module<Test>;
-
-	#[derive(Clone, Eq, PartialEq)]
-	pub struct Test;
-
-	mod dispatch {
-		pub use crate::Event;
-	}
-
-	mod origin {
-		pub use crate::Origin;
-	}
-
-	impl_outer_event! {
-		pub enum TestEvent for Test {
-			frame_system<T>,
-			dispatch<T>,
-		}
-	}
-
-	impl_outer_origin! {
-		pub enum Origin for Test where system = frame_system {
-			origin
-		}
-	}
-
-	impl_outer_dispatch! {
-		pub enum Call for Test where origin: Origin {
-			frame_system::System,
-			dispatch::Dispatch,
-		}
-	}
 
 	parameter_types! {
 		pub const BlockHashCount: u64 = 250;
-		pub const MaximumBlockWeight: Weight = 1024;
-		pub const MaximumBlockLength: u32 = 2 * 1024;
-		pub const AvailableBlockRatio: Perbill = Perbill::one();
 	}
 
 	impl frame_system::Config for Test {
@@ -181,10 +159,10 @@ mod tests {
 		type AccountId = AccountId;
 		type Lookup = IdentityLookup<Self::AccountId>;
 		type Header = Header;
-		type Event = TestEvent;
+		type Event = Event;
 		type BlockHashCount = BlockHashCount;
 		type Version = ();
-		type PalletInfo = ();
+		type PalletInfo = PalletInfo;
 		type AccountData = ();
 		type OnNewAccount = ();
 		type OnKilledAccount = ();
@@ -206,9 +184,9 @@ mod tests {
 		}
 	}
 
-	impl Config for Test {
+	impl dispatch::Config for Test {
 		type Origin = Origin;
-		type Event = TestEvent;
+		type Event = Event;
 		type MessageId = u64;
 		type Call = Call;
 		type CallFilter = CallFilter;
@@ -236,7 +214,7 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: TestEvent::dispatch(Event::<Test>::MessageDispatched(id, Err(DispatchError::BadOrigin))),
+					event: Event::dispatch(crate::Event::<Test>::MessageDispatched(id, Err(DispatchError::BadOrigin))),
 					topics: vec![],
 				}],
 			);
@@ -258,7 +236,7 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: TestEvent::dispatch(Event::<Test>::MessageDecodeFailed(id)),
+					event: Event::dispatch(crate::Event::<Test>::MessageDecodeFailed(id)),
 					topics: vec![],
 				}],
 			);
@@ -280,7 +258,7 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: TestEvent::dispatch(Event::<Test>::MessageRejected(id)),
+					event: Event::dispatch(crate::Event::<Test>::MessageRejected(id)),
 					topics: vec![],
 				}],
 			);
