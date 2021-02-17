@@ -21,7 +21,7 @@ sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 
 artemis-core = { path = "../../primitives/core", default-features = false }
-ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "update-dependencies", default-features = false }
+ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [features]
 default = ["std"]
