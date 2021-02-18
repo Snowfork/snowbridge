@@ -83,8 +83,8 @@ start_parachain()
     popd
 
     scripts/wait-for-it.sh -t 20 localhost:11144
-    # waiting for parachain to sync with relay chain and produce initial blocks
-    sleep 20
+    echo "Waiting for consensus between polkadot and parachain"
+    sleep 60
 }
 
 start_relayer()
@@ -117,7 +117,7 @@ pstree $$
 
 sleep 3
 until $(grep "Syncing headers starting..." $(pwd)/relay.log > /dev/null); do
-    echo "Waiting for relayer to generate DAG cache..."
+    echo "Waiting for relayer to generate the DAG cache. This can take up to 20 minutes."
     sleep 20
 done
 
@@ -126,6 +126,6 @@ until $(grep "Done retrieving finalized headers" $(pwd)/relay.log > /dev/null); 
     sleep 5
 done
 
-echo "System has been initialized and E2E tests can be executed"
+echo "System has been initialized"
 
 wait
