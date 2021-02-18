@@ -4,29 +4,17 @@ Relayer service that streams transactions from blockchain networks, packages dat
 
 Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe/ChainBridge). Our implementation is inspired by their design and incorporates some of their code.
 
----
-**NOTE**
-
-Please, note that the relayer might take a considerable amount of time to catch up first time it's started. You can check relayer logs in order to follow progress and make sure it's actually working.
-
-----
-
-- [Relayer](#relayer)
-  - [Requirements](#requirements)
-    - [Usage](#usage)
-    - [Development](#development)
-  - [Configuration](#configuration)
-    - [Secrets](#secrets)
-  - [Build](#build)
-  - [Run](#run)
-  - [Tests](#tests)
+- [Requirements](#requirements)
+  - [Usage](#usage)
+  - [Development](#development)
+- [Configuration](#configuration)
+  - [Secrets](#secrets)
+- [Build](#build)
+- [Run](#run)
+- [Tests](#tests)
 
 ## Requirements
 
-### Usage
-
-For usage and development, you'll need:
-- [Subkey](https://substrate.dev/docs/en/knowledgebase/integrate/subkey): Used for substrate key management
 
 ### Development
 
@@ -34,6 +22,7 @@ This project requires the following tools for day to day development:
 
 - [Mage](https://magefile.org/): Used for build tasks
 - [Revive](https://github.com/mgechev/revive): Used for linting instead of golint
+- [Subkey](https://substrate.dev/docs/en/knowledgebase/integrate/subkey): Used for substrate key management
 
 Please install them first.
 
@@ -54,13 +43,21 @@ To enable revive for linting in VS-code, add the following to your config:
 
 The bindings in the [contracts](contracts/) directory for our Ethereum contracts are dynamically generated.
 
-Make sure you have `jq` installed:
+Make sure you have the following dependencies installed:
+
+Install [jq](https://stedolan.github.io/jq/):
 
 ```bash
 sudo apt install jq
 ```
 
-Compile the contracts in another terminal window:
+Install [abigen](https://geth.ethereum.org/docs/dapp/native-bindings):
+
+```
+go install github.com/ethereum/go-ethereum/cmd/abigen
+```
+
+Compile the contracts in the [ethereum](../ethereum) directory:
 
 ```bash
 truffle compile --all
@@ -92,7 +89,7 @@ inbound = "0xFc97A6197dc90bef6bbEFD672742Ed75E9768553"
 outbound = "0xEDa338E4dC46038493b885327842fD3E301CaB39"
 
 [substrate]
-endpoint = "ws://127.0.0.1:11144/"
+endpoint = "ws://127.0.0.1:9944/"
 ```
 
 NOTE: For development and testing, we use our E2E test stack described [here](../test/README.md). It automatically generates a suitable configuration for testing.
@@ -121,6 +118,8 @@ Run the relayer with the configuration described in [Configuration](#configurati
 ```bash
 build/artemis-relay run --config config.toml
 ```
+
+NOTE: On its first run, the relayer has to perform some initial computation relating to Ethereum PoW verification. This can take over 10 minutes to complete, and is not a sign that its stuck or frozen.
 
 ## Tests
 
