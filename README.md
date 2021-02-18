@@ -2,14 +2,9 @@
 
 Components for a Polkadot Ethereum Bridge
 
----
-**NOTE**
+## Development
 
-Please, note that individual component documentation might be outdated or incomplete so you might bump into some issues with manual setup. In such cases, it is recommended to refer to `test/scripts/start-services.sh` script, which we keep up to date.
-
-This script performs all the manual steps for you so you're encouraged to start with it.
-
----
+To locally bootstrap our system for testing and development, or just to play around, please refer to our [tests](test/README.md) component.
 
 ## Components
 
