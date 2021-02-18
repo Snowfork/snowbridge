@@ -18,14 +18,12 @@
 	"parachains": [
 		{
 			"bin": "target/release/artemis",
-			"chain": "",
 			"id": "200",
-			"wsPort": 11144,
-			"port": 31200,
+			"wsPort": 9966,
+			"port": 30666,
 			"flags": [
-				"--execution=native",
-				"-lruntime=debug,import_header=trace,bridge=trace",
-				"--rpc-cors=all",
+				"-lbasic_authorship=trace,commitments=debug,import_header=trace,runtime=debug,submit_messages=trace",
+				"--rpc-port=9980",
 				"--offchain-worker=Always",
 				"--enable-offchain-indexing=true",
 				"--",
