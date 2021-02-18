@@ -4,19 +4,14 @@ Relayer service that streams transactions from blockchain networks, packages dat
 
 Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe/ChainBridge). Our implementation is inspired by their design and incorporates some of their code.
 
-- [Requirements](#requirements)
-  - [Usage](#usage)
-  - [Development](#development)
+- [Development](#development)
 - [Configuration](#configuration)
   - [Secrets](#secrets)
 - [Build](#build)
 - [Run](#run)
 - [Tests](#tests)
 
-## Requirements
-
-
-### Development
+## Development
 
 This project requires the following tools for day to day development:
 

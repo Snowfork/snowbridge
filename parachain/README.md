@@ -11,7 +11,7 @@ A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 - [Configuration](#configuration)
   - [Ethereum Genesis Block](#ethereum-genesis-block)
   - [Ethereum Contract Addresses](#ethereum-contract-addresses)
-- [Documentation](#documentation)
+- [API Documentation](#api-documentation)
 - [Custom Types](#custom-types)
 
 ## Development
