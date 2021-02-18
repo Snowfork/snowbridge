@@ -1,4 +1,5 @@
-use cumulus_primitives::ParaId;
+use cumulus_primitives_core::ParaId;
+use hex_literal::hex;
 use artemis_runtime::{
 	AccountId, EthereumHeader,
 	BalancesConfig, GenesisConfig,
@@ -10,18 +11,16 @@ use artemis_runtime::{
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
-use sp_core::{Pair, Public, U256, sr25519};
-use sp_runtime::traits::{Verify, IdentifyAccount};
 use serde::{Deserialize, Serialize};
-
-use hex_literal::hex;
-
-use artemis_core::{AssetId, SourceChannelConfig, SourceChannel};
+use sp_core::{sr25519, Pair, Public, U256};
+use sp_runtime::traits::{IdentifyAccount, Verify};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
-/// Generate a crypto pair from seed.
+use artemis_core::{AssetId, SourceChannelConfig, SourceChannel};
+
+/// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
 	TPublic::Pair::from_string(&format!("//{}", seed), None)
 		.expect("static values are valid; qed")

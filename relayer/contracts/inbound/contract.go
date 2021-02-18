@@ -34,7 +34,7 @@ type InboundChannelMessage struct {
 }
 
 // ContractABI is the input ABI used to generate the binding from.
-const ContractABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDelivered\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structInboundChannel.Message[]\",\"name\":\"commitment\",\"type\":\"tuple[]\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ContractABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structInboundChannel.Message[]\",\"name\":\"_messages\",\"type\":\"tuple[]\"},{\"internalType\":\"bytes32\",\"name\":\"_commitment\",\"type\":\"bytes32\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // Contract is an auto generated Go binding around an Ethereum contract.
 type Contract struct {
@@ -209,30 +209,30 @@ func (_Contract *ContractCallerSession) Nonce() (uint64, error) {
 	return _Contract.Contract.Nonce(&_Contract.CallOpts)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x21d16868.
+// Submit is a paid mutator transaction binding the contract method 0x6f8bfa34.
 //
-// Solidity: function submit((address,uint64,bytes)[] commitment) returns()
-func (_Contract *ContractTransactor) Submit(opts *bind.TransactOpts, commitment []InboundChannelMessage) (*types.Transaction, error) {
-	return _Contract.contract.Transact(opts, "submit", commitment)
+// Solidity: function submit((address,uint64,bytes)[] _messages, bytes32 _commitment) returns()
+func (_Contract *ContractTransactor) Submit(opts *bind.TransactOpts, _messages []InboundChannelMessage, _commitment [32]byte) (*types.Transaction, error) {
+	return _Contract.contract.Transact(opts, "submit", _messages, _commitment)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x21d16868.
+// Submit is a paid mutator transaction binding the contract method 0x6f8bfa34.
 //
-// Solidity: function submit((address,uint64,bytes)[] commitment) returns()
-func (_Contract *ContractSession) Submit(commitment []InboundChannelMessage) (*types.Transaction, error) {
-	return _Contract.Contract.Submit(&_Contract.TransactOpts, commitment)
+// Solidity: function submit((address,uint64,bytes)[] _messages, bytes32 _commitment) returns()
+func (_Contract *ContractSession) Submit(_messages []InboundChannelMessage, _commitment [32]byte) (*types.Transaction, error) {
+	return _Contract.Contract.Submit(&_Contract.TransactOpts, _messages, _commitment)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x21d16868.
+// Submit is a paid mutator transaction binding the contract method 0x6f8bfa34.
 //
-// Solidity: function submit((address,uint64,bytes)[] commitment) returns()
-func (_Contract *ContractTransactorSession) Submit(commitment []InboundChannelMessage) (*types.Transaction, error) {
-	return _Contract.Contract.Submit(&_Contract.TransactOpts, commitment)
+// Solidity: function submit((address,uint64,bytes)[] _messages, bytes32 _commitment) returns()
+func (_Contract *ContractTransactorSession) Submit(_messages []InboundChannelMessage, _commitment [32]byte) (*types.Transaction, error) {
+	return _Contract.Contract.Submit(&_Contract.TransactOpts, _messages, _commitment)
 }
 
-// ContractMessageDeliveredIterator is returned from FilterMessageDelivered and is used to iterate over the raw logs and unpacked data for MessageDelivered events raised by the Contract contract.
-type ContractMessageDeliveredIterator struct {
-	Event *ContractMessageDelivered // Event containing the contract specifics and raw log
+// ContractMessageDispatchedIterator is returned from FilterMessageDispatched and is used to iterate over the raw logs and unpacked data for MessageDispatched events raised by the Contract contract.
+type ContractMessageDispatchedIterator struct {
+	Event *ContractMessageDispatched // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -246,7 +246,7 @@ type ContractMessageDeliveredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *ContractMessageDeliveredIterator) Next() bool {
+func (it *ContractMessageDispatchedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -255,7 +255,7 @@ func (it *ContractMessageDeliveredIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(ContractMessageDelivered)
+			it.Event = new(ContractMessageDispatched)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -270,7 +270,7 @@ func (it *ContractMessageDeliveredIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(ContractMessageDelivered)
+		it.Event = new(ContractMessageDispatched)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -286,42 +286,42 @@ func (it *ContractMessageDeliveredIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *ContractMessageDeliveredIterator) Error() error {
+func (it *ContractMessageDispatchedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *ContractMessageDeliveredIterator) Close() error {
+func (it *ContractMessageDispatchedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// ContractMessageDelivered represents a MessageDelivered event raised by the Contract contract.
-type ContractMessageDelivered struct {
+// ContractMessageDispatched represents a MessageDispatched event raised by the Contract contract.
+type ContractMessageDispatched struct {
 	Nonce  uint64
 	Result bool
 	Raw    types.Log // Blockchain specific contextual infos
 }
 
-// FilterMessageDelivered is a free log retrieval operation binding the contract event 0xeac05dca6c4c48e5ae5dec4abf2582d89ac78bdb125c7e91b8515fea6f210606.
+// FilterMessageDispatched is a free log retrieval operation binding the contract event 0x504b093d860dc827c72a879d052fd8ac6b4c2af80c5f3a634654f172690bf10a.
 //
-// Solidity: event MessageDelivered(uint64 nonce, bool result)
-func (_Contract *ContractFilterer) FilterMessageDelivered(opts *bind.FilterOpts) (*ContractMessageDeliveredIterator, error) {
+// Solidity: event MessageDispatched(uint64 nonce, bool result)
+func (_Contract *ContractFilterer) FilterMessageDispatched(opts *bind.FilterOpts) (*ContractMessageDispatchedIterator, error) {
 
-	logs, sub, err := _Contract.contract.FilterLogs(opts, "MessageDelivered")
+	logs, sub, err := _Contract.contract.FilterLogs(opts, "MessageDispatched")
 	if err != nil {
 		return nil, err
 	}
-	return &ContractMessageDeliveredIterator{contract: _Contract.contract, event: "MessageDelivered", logs: logs, sub: sub}, nil
+	return &ContractMessageDispatchedIterator{contract: _Contract.contract, event: "MessageDispatched", logs: logs, sub: sub}, nil
 }
 
-// WatchMessageDelivered is a free log subscription operation binding the contract event 0xeac05dca6c4c48e5ae5dec4abf2582d89ac78bdb125c7e91b8515fea6f210606.
+// WatchMessageDispatched is a free log subscription operation binding the contract event 0x504b093d860dc827c72a879d052fd8ac6b4c2af80c5f3a634654f172690bf10a.
 //
-// Solidity: event MessageDelivered(uint64 nonce, bool result)
-func (_Contract *ContractFilterer) WatchMessageDelivered(opts *bind.WatchOpts, sink chan<- *ContractMessageDelivered) (event.Subscription, error) {
+// Solidity: event MessageDispatched(uint64 nonce, bool result)
+func (_Contract *ContractFilterer) WatchMessageDispatched(opts *bind.WatchOpts, sink chan<- *ContractMessageDispatched) (event.Subscription, error) {
 
-	logs, sub, err := _Contract.contract.WatchLogs(opts, "MessageDelivered")
+	logs, sub, err := _Contract.contract.WatchLogs(opts, "MessageDispatched")
 	if err != nil {
 		return nil, err
 	}
@@ -331,8 +331,8 @@ func (_Contract *ContractFilterer) WatchMessageDelivered(opts *bind.WatchOpts, s
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(ContractMessageDelivered)
-				if err := _Contract.contract.UnpackLog(event, "MessageDelivered", log); err != nil {
+				event := new(ContractMessageDispatched)
+				if err := _Contract.contract.UnpackLog(event, "MessageDispatched", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -353,12 +353,12 @@ func (_Contract *ContractFilterer) WatchMessageDelivered(opts *bind.WatchOpts, s
 	}), nil
 }
 
-// ParseMessageDelivered is a log parse operation binding the contract event 0xeac05dca6c4c48e5ae5dec4abf2582d89ac78bdb125c7e91b8515fea6f210606.
+// ParseMessageDispatched is a log parse operation binding the contract event 0x504b093d860dc827c72a879d052fd8ac6b4c2af80c5f3a634654f172690bf10a.
 //
-// Solidity: event MessageDelivered(uint64 nonce, bool result)
-func (_Contract *ContractFilterer) ParseMessageDelivered(log types.Log) (*ContractMessageDelivered, error) {
-	event := new(ContractMessageDelivered)
-	if err := _Contract.contract.UnpackLog(event, "MessageDelivered", log); err != nil {
+// Solidity: event MessageDispatched(uint64 nonce, bool result)
+func (_Contract *ContractFilterer) ParseMessageDispatched(log types.Log) (*ContractMessageDispatched, error) {
+	event := new(ContractMessageDispatched)
+	if err := _Contract.contract.UnpackLog(event, "MessageDispatched", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

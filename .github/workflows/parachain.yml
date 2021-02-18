@@ -42,7 +42,7 @@ jobs:
         with:
           command: check
           toolchain: nightly-2021-01-10
-          args: --manifest-path parachain/Cargo.toml
+          args: --manifest-path parachain/Cargo.toml --workspace --exclude artemis
 
   test:
     needs: check
@@ -81,7 +81,7 @@ jobs:
           args: >-
             --manifest-path parachain/Cargo.toml
             --verbose --workspace
-            --exclude artemis-node,artemis-runtime
-            --exclude-files 'node/src/command.rs,*/mock.rs,*/test.rs'
+            --exclude artemis,artemis-runtime
+            --exclude-files 'src/command.rs,*/mock.rs,*/test.rs'
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
           toolchain: nightly-2021-01-10

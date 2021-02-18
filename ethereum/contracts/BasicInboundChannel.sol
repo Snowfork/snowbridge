@@ -6,11 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./InboundChannel.sol";
 
 contract BasicInboundChannel is InboundChannel {
-    uint256 public MAX_PAYLOAD_BYTE_SIZE = 1000;
-    uint256 public MAX_PAYLOAD_GAS_COST = 500000;
-    uint256 public EXTERNAL_CALL_COST = 21000;
-    uint256 public MAX_GAS_PER_MESSAGE =
-        EXTERNAL_CALL_COST + MAX_PAYLOAD_BYTE_SIZE + EXTERNAL_CALL_COST;
+    uint256 constant public MAX_GAS_PER_MESSAGE = 100000;
 
     constructor() {
         nonce = 0;
@@ -62,13 +58,6 @@ contract BasicInboundChannel is InboundChannel {
             "insufficient gas for delivery of all messages"
         );
 
-        // Require all payloads are smaller than max_payload_size
-        for (uint256 i = 0; i < _messages.length; i++) {
-            require(
-                _messages[i].payload.length <= MAX_PAYLOAD_BYTE_SIZE,
-                "message payload bytesize exceeds maximum payload size"
-            );
-        }
         return true;
     }
 
@@ -80,11 +69,8 @@ contract BasicInboundChannel is InboundChannel {
             nonce = nonce + 1;
 
             // Deliver the message to the target
-            // Delivery will have fixed maximum gas allowed for the target app
             (bool success, ) =
-                _messages[i].target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(
-                    _messages[i].payload
-                );
+                _messages[i].target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(_messages[i].payload);
 
             emit MessageDispatched(_messages[i].nonce, success);
         }

@@ -7,7 +7,7 @@ authors = ["Snowfork <contact@snowfork.com>"]
 repository = "https://github.com/Snowfork/polkadot-ethereum"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.6", default-features = false }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
 
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
@@ -18,7 +18,7 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococ
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
-cumulus-primitives = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1", default-features = false }
 
 artemis-core = { path = "../../primitives/core", default-features = false }
 
@@ -32,7 +32,7 @@ std = [
 	"sp-core/std",
 	"frame-support/std",
 	"frame-system/std",
-	"cumulus-primitives/std",
+	"cumulus-primitives-core/std",
 	"xcm/std",
 	"xcm-executor/std",
 	"artemis-core/std",

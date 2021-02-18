@@ -1,10 +1,20 @@
 use artemis_core::{Verifier as VerifierConfig};
 use crate::mock::{
-	child_of_genesis_ethereum_header, child_of_header, ethereum_header_from_file,
-	ethereum_header_proof_from_file, genesis_ethereum_block_hash, log_payload,
-	message_with_receipt_proof, new_tester, new_tester_with_config, receipt_root_and_proof,
-	AccountId, Verifier, VerifierWithPoW, MockRuntime, MockRuntimeWithPoW, Origin,
+	child_of_genesis_ethereum_header, child_of_header,
+	genesis_ethereum_block_hash, log_payload,
+	message_with_receipt_proof, receipt_root_and_proof,
+	AccountId, new_tester, new_tester_with_config,
+	ethereum_header_from_file, ethereum_header_proof_from_file
 };
+
+use crate::mock::mock_verifier_with_pow;
+
+use crate::mock::mock_verifier::{
+	Verifier,
+	Test,
+	Origin,
+};
+
 use crate::sp_api_hidden_includes_decl_storage::hidden_include::{StorageMap, StorageValue};
 use frame_support::{assert_err, assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
@@ -16,7 +26,7 @@ use crate::{
 
 #[test]
 fn it_tracks_highest_difficulty_ethereum_chain() {
-	new_tester().execute_with(|| {
+	new_tester::<Test>().execute_with(|| {
 		let mut child1 = child_of_genesis_ethereum_header();
 		child1.difficulty = 0xbc140caa61087i64.into();
 		let child1_hash = child1.compute_hash();
@@ -34,7 +44,7 @@ fn it_tracks_highest_difficulty_ethereum_chain() {
 			child2,
 			Default::default(),
 		));
-	
+
 		let (header_id, highest_difficulty) = BestBlock::get();
 		assert_eq!(header_id.hash, child1_hash);
 		assert_eq!(highest_difficulty, 0xbc140caa61087i64.into());
@@ -43,7 +53,7 @@ fn it_tracks_highest_difficulty_ethereum_chain() {
 
 #[test]
 fn it_tracks_multiple_unfinalized_ethereum_forks() {
-	new_tester().execute_with(|| {
+	new_tester::<Test>().execute_with(|| {
 		let child1 = child_of_genesis_ethereum_header();
 		let child1_hash = child1.compute_hash();
 		let mut child2 = child1.clone();
@@ -63,15 +73,15 @@ fn it_tracks_multiple_unfinalized_ethereum_forks() {
 			Default::default(),
 		));
 
-		assert!(Headers::<MockRuntime>::contains_key(child1_hash));
-		assert!(Headers::<MockRuntime>::contains_key(child2_hash));
+		assert!(Headers::<Test>::contains_key(child1_hash));
+		assert!(Headers::<Test>::contains_key(child2_hash));
 		assert_eq!(HeadersByNumber::get(1).unwrap(), vec![child1_hash, child2_hash]);
 	});
 }
 
 #[test]
 fn it_tracks_only_one_finalized_ethereum_fork() {
-	new_tester().execute_with(|| {
+	new_tester::<Test>().execute_with(|| {
 		let block1 = child_of_genesis_ethereum_header();
 		let block1_hash = block1.compute_hash();
 		let block2 = child_of_header(&block1);
@@ -118,7 +128,7 @@ fn it_tracks_only_one_finalized_ethereum_fork() {
 				block5,
 				Default::default(),
 			),
-			Error::<MockRuntime>::HeaderOnStaleFork,
+			Error::<Test>::HeaderOnStaleFork,
 		);
 		assert_err!(
 			Verifier::import_header(
@@ -126,14 +136,14 @@ fn it_tracks_only_one_finalized_ethereum_fork() {
 				block6,
 				Default::default(),
 			),
-			Error::<MockRuntime>::AncientHeader,
+			Error::<Test>::AncientHeader,
 		);
 	});
 }
 
 #[test]
 fn it_prunes_ethereum_headers_correctly() {
-	new_tester().execute_with(|| {
+	new_tester::<Test>().execute_with(|| {
 		let block1 = child_of_genesis_ethereum_header();
 		let block1_hash = block1.compute_hash();
 		let block2 = child_of_header(&block1);
@@ -171,7 +181,7 @@ fn it_prunes_ethereum_headers_correctly() {
 			new_range,
 			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 1 },
 		);
-		assert!(!Headers::<MockRuntime>::contains_key(genesis_ethereum_block_hash()));
+		assert!(!Headers::<Test>::contains_key(genesis_ethereum_block_hash()));
 		assert!(!HeadersByNumber::contains_key(0));
 
 		// Prune next block (B1)
@@ -184,8 +194,8 @@ fn it_prunes_ethereum_headers_correctly() {
 			new_range,
 			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 2 },
 		);
-		assert!(!Headers::<MockRuntime>::contains_key(block1_hash));
-		assert!(Headers::<MockRuntime>::contains_key(block4_hash));
+		assert!(!Headers::<Test>::contains_key(block1_hash));
+		assert!(Headers::<Test>::contains_key(block4_hash));
 		assert_eq!(HeadersByNumber::get(1).unwrap(), vec![block4_hash]);
 
 		// Prune next two blocks (B4, B2)
@@ -198,20 +208,20 @@ fn it_prunes_ethereum_headers_correctly() {
 			new_range,
 			PruningRange { oldest_unpruned_block: 3, oldest_block_to_keep: 4 },
 		);
-		assert!(!Headers::<MockRuntime>::contains_key(block4_hash));
+		assert!(!Headers::<Test>::contains_key(block4_hash));
 		assert!(!HeadersByNumber::contains_key(1));
-		assert!(!Headers::<MockRuntime>::contains_key(block2_hash));
+		assert!(!Headers::<Test>::contains_key(block2_hash));
 		assert!(!HeadersByNumber::contains_key(2));
 
 		// Finally, we're left with B3
-		assert!(Headers::<MockRuntime>::contains_key(block3_hash));
+		assert!(Headers::<Test>::contains_key(block3_hash));
 		assert_eq!(HeadersByNumber::get(3).unwrap(), vec![block3_hash]);
 	});
 }
 
 #[test]
 fn it_imports_ethereum_header_only_once() {
-	new_tester().execute_with(|| {
+	new_tester::<Test>().execute_with(|| {
 		let child = child_of_genesis_ethereum_header();
 		let child_for_reimport = child.clone();
 
@@ -227,14 +237,14 @@ fn it_imports_ethereum_header_only_once() {
 				child_for_reimport,
 				Default::default(),
 			),
-			Error::<MockRuntime>::DuplicateHeader,
+			Error::<Test>::DuplicateHeader,
 		);
 	});
 }
 
 #[test]
 fn it_rejects_unsigned_ethereum_header() {
-	new_tester().execute_with(|| {
+	new_tester::<Test>().execute_with(|| {
 		let child = child_of_genesis_ethereum_header();
 		assert_err!(
 			Verifier::import_header(Origin::none(), child, Default::default()),
@@ -245,7 +255,7 @@ fn it_rejects_unsigned_ethereum_header() {
 
 #[test]
 fn it_rejects_ethereum_header_before_parent() {
-	new_tester().execute_with(|| {
+	new_tester::<Test>().execute_with(|| {
 		let child = child_of_genesis_ethereum_header();
 		let mut child_of_child: EthereumHeader = Default::default();
 		child_of_child.parent_hash = child.compute_hash();
@@ -257,14 +267,14 @@ fn it_rejects_ethereum_header_before_parent() {
 				child_of_child,
 				Default::default(),
 			),
-			Error::<MockRuntime>::MissingParentHeader,
+			Error::<Test>::MissingParentHeader,
 		);
 	});
 }
 
 #[test]
 fn it_validates_proof_of_work() {
-	new_tester_with_config::<MockRuntimeWithPoW>(GenesisConfig {
+	new_tester_with_config::<mock_verifier_with_pow::Test>(GenesisConfig {
 			initial_header: ethereum_header_from_file(11090290, ""),
 			initial_difficulty: 0.into(),
 	}).execute_with(|| {
@@ -273,25 +283,25 @@ fn it_validates_proof_of_work() {
 		let header2 = ethereum_header_from_file(11090292, "");
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
-		assert_ok!(VerifierWithPoW::import_header(
-			Origin::signed(ferdie.clone()),
+		assert_ok!(mock_verifier_with_pow::Verifier::import_header(
+			mock_verifier_with_pow::Origin::signed(ferdie.clone()),
 			header1,
 			header1_proof,
 		));
 		assert_err!(
-			VerifierWithPoW::import_header(
-				Origin::signed(ferdie),
+			mock_verifier_with_pow::Verifier::import_header(
+				mock_verifier_with_pow::Origin::signed(ferdie),
 				header2,
 				Default::default(),
 			),
-			Error::<MockRuntimeWithPoW>::InvalidHeader,
+			Error::<mock_verifier_with_pow::Test>::InvalidHeader,
 		);
 	});
 }
 
 #[test]
 fn it_rejects_ethereum_header_with_low_difficulty() {
-	new_tester_with_config::<MockRuntimeWithPoW>(GenesisConfig {
+	new_tester_with_config::<mock_verifier_with_pow::Test>(GenesisConfig {
 		initial_header: ethereum_header_from_file(11090291, ""),
 		initial_difficulty: 0.into(),
 	}).execute_with(|| {
@@ -299,12 +309,12 @@ fn it_rejects_ethereum_header_with_low_difficulty() {
 		let header_proof = ethereum_header_proof_from_file(11090292, "_low_difficulty");
 
 		assert_err!(
-			VerifierWithPoW::import_header(
-				Origin::signed(Keyring::Ferdie.into()),
+			mock_verifier_with_pow::Verifier::import_header(
+				mock_verifier_with_pow::Origin::signed(Keyring::Ferdie.into()),
 				header,
 				header_proof,
 			),
-			Error::<MockRuntimeWithPoW>::InvalidHeader,
+			Error::<mock_verifier_with_pow::Test>::InvalidHeader,
 		);
 	});
 }
@@ -316,7 +326,7 @@ fn it_confirms_receipt_inclusion_in_finalized_header() {
 	finalized_header.receipts_root = receipts_root;
 	let finalized_header_hash = finalized_header.compute_hash();
 
-	new_tester_with_config::<MockRuntime>(GenesisConfig {
+	new_tester_with_config::<Test>(GenesisConfig {
 		initial_header: finalized_header,
 		initial_difficulty: 0.into(),
 	}).execute_with(|| {
@@ -328,13 +338,13 @@ fn it_confirms_receipt_inclusion_in_finalized_header() {
 
 #[test]
 fn it_denies_receipt_inclusion_for_invalid_proof() {
-	new_tester().execute_with(|| {
+	new_tester::<Test>().execute_with(|| {
 		let (_, receipt_proof) = receipt_root_and_proof();
 		assert_err!(
 			Verifier::verify(
 				&message_with_receipt_proof(log_payload(), genesis_ethereum_block_hash(), receipt_proof),
 			),
-			Error::<MockRuntime>::InvalidProof,
+			Error::<Test>::InvalidProof,
 		);
 	});
 }
@@ -346,7 +356,7 @@ fn it_denies_receipt_inclusion_for_invalid_log() {
 	finalized_header.receipts_root = receipts_root;
 	let finalized_header_hash = finalized_header.compute_hash();
 
-	new_tester_with_config::<MockRuntime>(GenesisConfig {
+	new_tester_with_config::<Test>(GenesisConfig {
 		initial_header: finalized_header,
 		initial_difficulty: 0.into(),
 	}).execute_with(|| {
@@ -355,7 +365,7 @@ fn it_denies_receipt_inclusion_for_invalid_log() {
 			Verifier::verify(
 				&message_with_receipt_proof(Vec::new(), finalized_header_hash, receipt_proof.clone()),
 			),
-			Error::<MockRuntime>::InvalidProof,
+			Error::<Test>::InvalidProof,
 		);
 
 		// Valid log payload but doesn't exist in receipt
@@ -365,14 +375,14 @@ fn it_denies_receipt_inclusion_for_invalid_log() {
 			Verifier::verify(
 				&message_with_receipt_proof(log, finalized_header_hash, receipt_proof),
 			),
-			Error::<MockRuntime>::InvalidProof,
+			Error::<Test>::InvalidProof,
 		);
 	})
 }
 
 #[test]
 fn it_denies_receipt_inclusion_for_invalid_header() {
-	new_tester().execute_with(|| {
+	new_tester::<Test>().execute_with(|| {
 		let log = log_payload();
 		let (receipts_root, receipt_proof) = receipt_root_and_proof();
 		let mut block1 = child_of_genesis_ethereum_header();
@@ -391,7 +401,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 			Verifier::verify(
 				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
-			Error::<MockRuntime>::MissingHeader,
+			Error::<Test>::MissingHeader,
 		);
 
 		let ferdie: AccountId = Keyring::Ferdie.into();
@@ -406,7 +416,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 			Verifier::verify(
 				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
-			Error::<MockRuntime>::HeaderNotFinalized,
+			Error::<Test>::HeaderNotFinalized,
 		);
 
 		// With alternate fork:
@@ -431,7 +441,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 			Verifier::verify(
 				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
-			Error::<MockRuntime>::HeaderOnStaleFork,
+			Error::<Test>::HeaderOnStaleFork,
 		);
 
 		assert_ok!(Verifier::import_header(
@@ -445,7 +455,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 			Verifier::verify(
 				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
-			Error::<MockRuntime>::HeaderOnStaleFork,
+			Error::<Test>::HeaderOnStaleFork,
 		);
 		// Verification works for an ancestor of the finalized header
 		assert_ok!(Verifier::verify(
