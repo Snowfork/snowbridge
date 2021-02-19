@@ -66,6 +66,7 @@ contract IncentivizedInboundChannel is InboundChannel {
         for (uint256 i = 0; i < _messages.length; i++) {
             // Check message nonce is correct and increment nonce for replay protection
             require(_messages[i].nonce == nonce + 1, "invalid nonce");
+            // fee is in wei
             require(_messages[i].fee > 0, "fee must be positive");
 
             nonce = nonce + 1;
