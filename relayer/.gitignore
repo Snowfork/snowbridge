@@ -1,3 +1,6 @@
 /bridgerelayer
 /.envrc
 build/
+
+config.toml
+spec.json

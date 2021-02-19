@@ -1,18 +1,2 @@
 # Local Netlify folder
 .netlify
-
-# Javascript local files
-node_modules
-package-lock.json
-yarn.lock
-
-# The library shouldn't decide about the exact versions of 
-# its dependencies, but let the downstream crate decide.
-Cargo.lock
-
-# Binaries
-relayer/artemis-relay
-
-# Local configs
-relayer/config.toml
-relayer/spec.json
