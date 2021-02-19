@@ -28,7 +28,7 @@ use sp_version::NativeVersion;
 pub use sp_runtime::BuildStorage;
 pub use pallet_timestamp::Call as TimestampCall;
 pub use pallet_balances::Call as BalancesCall;
-pub use sp_runtime::{Permill, Perbill};
+pub use sp_runtime::{Permill, Perbill, ModuleId, traits::AccountIdConversion};
 pub use frame_support::{
 	construct_runtime, parameter_types, StorageValue,
 	traits::{KeyOwnerProofSystem, Randomness, Filter},
@@ -40,7 +40,7 @@ pub use frame_support::{
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId, ChannelId, MessageId};
+pub use artemis_core::{AssetId, ChannelId, MessageId, rewards::InstantRewards};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::EthereumHeader;
@@ -345,7 +345,7 @@ pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(call: &Call) -> bool {
 		match call {
-			Call::ETH(_) | Call::ERC20(_) => true,
+			Call::ETH(_) | Call::ERC20(_) | Call::DOT(_) => true,
 			_ => false
 		}
 	}
@@ -359,11 +359,18 @@ impl dispatch::Config for Runtime {
 	type CallFilter = CallFilter;
 }
 
+parameter_types! {
+	pub RewardsAccount: AccountId = DotModuleId::get().into_account();
+}
+
 impl bridge::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
 	type MessageCommitment = commitments::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
+	type RewardsAccount = RewardsAccount;
+	type InboundMessageFee = Balance;
+	type RewardRelayer = InstantRewards<Self, Balances>;
 }
 
 #[cfg(not(feature = "test-e2e"))]
@@ -396,6 +403,18 @@ impl commitments::Config for Runtime {
 
 impl assets::Config for Runtime {
 	type Event = Event;
+}
+
+parameter_types! {
+	pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
+}
+
+impl dot_app::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type SubmitOutbound = bridge::Module<Runtime>;
+	type CallOrigin = EnsureEthereumAccount;
+	type ModuleId = DotModuleId;
 }
 
 parameter_types! {
@@ -438,6 +457,7 @@ construct_runtime!(
 		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
+		DOT: dot_app::{Module, Call, Config, Storage, Event<T>},
 
 		LocalXcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin},
 		Transfer: artemis_transfer::{Module, Call, Event<T>},

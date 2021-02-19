@@ -51,6 +51,7 @@ bridge = { path = "../pallets/bridge", package = "pallet-bridge", default-featur
 dispatch = { path = "../pallets/dispatch", package = "artemis-dispatch", default-features = false }
 verifier-lightclient = { path = "../pallets/verifier-lightclient", package = "pallet-verifier-lightclient", default-features = false }
 assets = { path = "../pallets/assets", package = "artemis-assets", default-features = false }
+dot-app = { path = "../pallets/dot-app", package = "artemis-dot-app", default-features = false }
 eth-app = { path = "../pallets/eth-app", package = "artemis-eth-app", default-features = false }
 erc20-app = { path = "../pallets/erc20-app", package = "artemis-erc20-app", default-features = false }
 commitments = { path = "../pallets/commitments", package = "artemis-commitments", default-features = false }
@@ -94,6 +95,7 @@ std = [
     "verifier-lightclient/std",
     "assets/std",
     "dispatch/std",
+    "dot-app/std",
     "eth-app/std",
     "erc20-app/std",
     "commitments/std",

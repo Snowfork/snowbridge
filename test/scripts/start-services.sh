@@ -7,7 +7,7 @@ configdir=$(mktemp -d -t artemis-config-XXX)
 start_ganache()
 {
     echo "Starting Ganache"
-    yarn run ganache-cli \
+    NODE_OPTIONS="--max_old_space_size=8192" yarn run ganache-cli \
         --port=8545 \
         --blockTime=4 \
         --networkId=344 \
