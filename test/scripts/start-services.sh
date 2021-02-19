@@ -105,7 +105,7 @@ start_relayer()
 
 }
 
-trap 'kill $(jobs -p)' SIGINT SIGTERM
+trap 'kill $(jobs -p)' SIGINT SIGTERM EXIT
 
 start_ganache
 deploy_contracts
