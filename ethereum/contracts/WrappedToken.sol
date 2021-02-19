@@ -23,6 +23,9 @@ contract WrappedToken is ERC777, Ownable {
         _mint(recipient, amount, data, "");
     }
 
+    // Don't allow users to directly burn their SnowDOT via the IERC777 burn API, as it won't have
+    // the desired effect.
+
     function burn(uint256, bytes memory) public pure override  {
         revert("not-supported");
     }
