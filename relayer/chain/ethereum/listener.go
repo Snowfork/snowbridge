@@ -152,7 +152,9 @@ func (li *Listener) queryEvents(ctx context.Context, contract *outbound.Contract
 			break
 		}
 
-		events = append(events, iter.Event)
+		if li.config.Channels.Basic.AccountWhitelistMap[iter.Event.Source] {
+			events = append(events, iter.Event)
+		}
 	}
 
 	return events, nil

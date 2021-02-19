@@ -16,7 +16,8 @@ const channelContracts = {
 const channels = {
     basic: {
         inbound: null,
-        outbound: null
+        outbound: null,
+        account_whitelist: null
     },
     incentivized: {
         inbound: null,
@@ -33,6 +34,7 @@ const dump = (tmpDir, channels) => {
                 basic: {
                     inbound: channels.basic.inbound.address,
                     outbound: channels.basic.outbound.address,
+                    account_whitelist: channels.basic.account_whitelist.slice(0, 3)
                 },
                 incentivized: {
                     inbound: channels.incentivized.inbound.address,
@@ -52,6 +54,7 @@ module.exports = async (callback) => {
         let configDir = process.argv[4].toString();
         channels.basic.inbound = await channelContracts.basic.inbound.deployed();
         channels.basic.outbound = await channelContracts.basic.outbound.deployed();
+        channels.basic.account_whitelist = await web3.eth.getAccounts();
         channels.incentivized.inbound = await channelContracts.incentivized.inbound.deployed();
         channels.incentivized.outbound = await channelContracts.incentivized.outbound.deployed();
         await dump(configDir, channels);

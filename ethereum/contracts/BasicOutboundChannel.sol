@@ -2,19 +2,19 @@
 pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./OutboundChannel.sol";
 
 // BasicOutboundChannel is a basic channel that just sends messages with a nonce.
 contract BasicOutboundChannel is OutboundChannel {
-    constructor() {
-        nonce = 0;
-    }
+    using SafeMath for uint;
+
+    mapping(address => uint) account_nonces;
 
     /**
      * @dev Sends a message across the channel
      */
     function submit(bytes memory payload) public override {
-        nonce = nonce + 1;
-        emit Message(msg.sender, nonce, payload);
+        emit Message(msg.sender, account_nonces[msg.sender]++, payload);
     }
 }
