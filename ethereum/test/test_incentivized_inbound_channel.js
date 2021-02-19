@@ -41,7 +41,8 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const messageOne = {
         target: this.ethApp.address,
         nonce: 1,
-        payload: payloadOne
+        payload: payloadOne,
+        fee: 1000
       }
 
       // Construct second message
@@ -49,7 +50,8 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const messageTwo = {
         target: this.ethApp.address,
         nonce: 2,
-        payload: payloadTwo
+        payload: payloadTwo,
+        fee: 2000
       }
 
       // Construct third message
@@ -57,7 +59,8 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const messageThree = {
         target: this.ethApp.address,
         nonce: 3,
-        payload: payloadThree
+        payload: payloadThree,
+        fee: 5000
       }
 
       // Construct third message
@@ -65,7 +68,8 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const messageFour = {
         target: this.ethApp.address,
         nonce: 4,
-        payload: payloadFour
+        payload: payloadFour,
+        fee: 10000
       }
 
        // Construct commitment hash from messages
