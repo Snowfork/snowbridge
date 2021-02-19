@@ -54,6 +54,7 @@ assets = { path = "../pallets/assets", package = "artemis-assets", default-featu
 eth-app = { path = "../pallets/eth-app", package = "artemis-eth-app", default-features = false }
 erc20-app = { path = "../pallets/erc20-app", package = "artemis-erc20-app", default-features = false }
 commitments = { path = "../pallets/commitments", package = "artemis-commitments", default-features = false }
+basic-channel = { path = "../pallets/basic-channel", package = "artemis-basic-channel", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = "4.0.0"
@@ -82,14 +83,14 @@ std = [
     "sp-std/std",
     "sp-transaction-pool/std",
     "sp-version/std",
-	"cumulus-primitives-core/std",
-	"cumulus-pallet-parachain-system/std",
-	"cumulus-pallet-xcm-handler/std",
-	"parachain-info/std",
-	"xcm/std",
-	"xcm-executor/std",
-	"xcm-builder/std",
-	"polkadot-parachain/std",
+    "cumulus-primitives-core/std",
+    "cumulus-pallet-parachain-system/std",
+    "cumulus-pallet-xcm-handler/std",
+    "parachain-info/std",
+    "xcm/std",
+    "xcm-executor/std",
+    "xcm-builder/std",
+    "polkadot-parachain/std",
     "bridge/std",
     "verifier-lightclient/std",
     "assets/std",
@@ -97,6 +98,7 @@ std = [
     "eth-app/std",
     "erc20-app/std",
     "commitments/std",
+    "basic-channel/std",
     "artemis-transfer/std",
     "artemis-xcm-support/std"
 ]
