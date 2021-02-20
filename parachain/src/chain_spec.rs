@@ -1,14 +1,10 @@
+use artemis_runtime::{
+	AccountId, AssetsConfig, BalancesConfig, BasicChannelConfig, CommitmentsConfig, ERC20Config,
+	ETHConfig, EthereumHeader, GenesisConfig, ParachainInfoConfig, Signature, SystemConfig,
+	VerifierLightclientConfig, WASM_BINARY,
+};
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use artemis_runtime::{
-	AccountId, EthereumHeader,
-	BalancesConfig, GenesisConfig,
-	SystemConfig, VerifierLightclientConfig,
-	BridgeConfig, ETHConfig, ERC20Config, AssetsConfig,
-	CommitmentsConfig,
-	ParachainInfoConfig,
-	WASM_BINARY, Signature,
-};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use serde::{Deserialize, Serialize};
@@ -18,7 +14,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
-use artemis_core::{AssetId, SourceChannelConfig, SourceChannel};
+use artemis_core::{AssetId, SourceChannel, SourceChannelConfig};
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -80,7 +76,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				para_id
+				para_id,
 			)
 		},
 		vec![],
@@ -95,10 +91,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 }
 
 /// Configure initial storage state for FRAME modules.
-fn testnet_genesis(
-	endowed_accounts: Vec<AccountId>,
-	para_id: ParaId
-) -> GenesisConfig {
+fn testnet_genesis(endowed_accounts: Vec<AccountId>, para_id: ParaId) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
 			// Add Wasm runtime to storage.
@@ -111,7 +104,7 @@ fn testnet_genesis(
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		}),
-		bridge: Some(BridgeConfig {
+		basic_channel: Some(BasicChannelConfig {
 			source_channels: SourceChannelConfig {
 				basic: SourceChannel {
 					address: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),

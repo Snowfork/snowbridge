@@ -1,56 +1,104 @@
+//! # Basic Channel
+//!
+//! The Basic Channel module is is a non-incentivized bridge between Ethereum and Pokadot
+//! ecosystems. It is meant to be a low-barrier entry to cross-chain communication without guarantees,
+//! but also without fees.
+//!
+//! ## Implementation
+//!
+//! Before a [`Message`] is dispatched to a target [`Application`], it is submitted to a [`Verifier`] for verification.
+//!
+//! ## Interface
+//!
+//! ### Dispatchable Calls
+//!
+//! - `submit`: Submit a message for verification and dispatch.
+//!
+
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch, traits::Get};
-use frame_system::ensure_signed;
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult,
+	storage::StorageMap,
+};
+use frame_system::{self as system, ensure_signed};
+
+use sp_core::H160;
+use sp_std::prelude::*;
+use sp_std::convert::TryFrom;
+use artemis_core::{
+	ChannelId, SubmitOutbound, Message, MessageId,
+	MessageCommitment, MessageDispatch, Verifier,
+	SourceChannelConfig,
+};
+use channel::inbound::make_inbound_channel;
+use channel::outbound::make_outbound_channel;
+use primitives::{InboundChannelData, OutboundChannelData};
+use envelope::Envelope;
 
 #[cfg(test)]
 mod mock;
-
 #[cfg(test)]
 mod tests;
+mod channel;
+mod primitives;
+mod envelope;
 
-/// Configure the pallet by specifying the parameters and types on which it depends.
-pub trait Trait: frame_system::Trait {
-	/// Because this pallet emits events, it depends on the runtime's definition of an event.
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+type MessageNonce = u64;
+
+pub trait Config: system::Config {
+	type Event: From<Event> + Into<<Self as system::Config>::Event>;
+
+	/// Verifier module for message verification.
+	type Verifier: Verifier;
+
+	/// Used by outbound channels to persist messages for outbound delivery.
+	type MessageCommitment: MessageCommitment;
+
+	/// Verifier module for message verification.
+	type MessageDispatch: MessageDispatch<MessageId>;
 }
 
 // The pallet's runtime storage items.
-// https://substrate.dev/docs/en/knowledgebase/runtime/storage
 decl_storage! {
-	// A unique name is used to ensure that the pallet's storage items are isolated.
-	// This name may be updated, but each pallet in the runtime must use a unique name.
-	// ---------------------------------vvvvvvvvvvvvvv
-	trait Store for Module<T: Trait> as BasicChannelModule {
-	// Learn more about declaring storage items:
-	// https://substrate.dev/docs/en/knowledgebase/runtime/storage#declaring-storage-items
-	Something get(fn something): Option<u32>;
+	trait Store for Module<T: Config> as BasicChannelModule {
+		/// Outbound (source) channels on Ethereum from whom we will accept messages.
+		pub SourceChannels: map hasher(identity) H160 => Option<ChannelId>;
+		/// Storage for inbound channels.
+		pub InboundChannels: map hasher(identity) ChannelId => InboundChannelData;
+		/// Storage for outbound channels.
+		pub OutboundChannels: map hasher(identity) ChannelId => OutboundChannelData;
+	}
+	add_extra_genesis {
+		config(source_channels): SourceChannelConfig;
+		build(|config: &GenesisConfig| {
+			let sources = config.source_channels;
+			SourceChannels::insert(sources.basic.address, ChannelId::Basic);
+			SourceChannels::insert(sources.incentivized.address, ChannelId::Incentivized);
+		});
 	}
 }
 
 // Pallets use events to inform users when important changes are made.
-// https://substrate.dev/docs/en/knowledgebase/runtime/events
 decl_event!(
-	pub enum Event<T>
-	where
-		AccountId = <T as frame_system::Trait>::AccountId,
-	{
-		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
-		SomethingStored(u32, AccountId),
+	pub enum Event {
+		/// Message has been accepted by an outbound channel
+		MessageAccepted(ChannelId, MessageNonce),
 	}
 );
 
 // Errors inform users that something went wrong.
 decl_error! {
-	pub enum Error for Module<T: Trait> {
-	/// Error names should be descriptive.
-	NoneValue,
-	/// Errors should have helpful documentation associated with them.
-	StorageOverflow,
+	pub enum Error for Module<T: Config> {
+		/// Message came from an invalid outbound channel on the Ethereum side.
+		InvalidSourceChannel,
+		/// Message has an invalid envelope.
+		InvalidEnvelope,
+		/// Message has an unexpected nonce.
+		BadNonce,
+		/// Target application not found.
+		AppNotFound,
 	}
 }
 
@@ -58,48 +106,40 @@ decl_error! {
 // These functions materialize as "extrinsics", which are often compared to transactions.
 // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-	// Errors must be initialized if they are used by the pallet.
-	type Error = Error<T>;
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 
-	// Events must be initialized if they are used by the pallet.
-	fn deposit_event() = default;
+		type Error = Error<T>;
 
-	/// An example dispatchable that takes a singles value as a parameter, writes the value to
-	/// storage and emits an event. This function must be dispatched by a signed extrinsic.
-	#[weight = 10_000 + T::DbWeight::get().writes(1)]
-	pub fn do_something(origin, something: u32) -> dispatch::DispatchResult {
-		// Check that the extrinsic was signed and get the signer.
-		// This function will return an error if the extrinsic is not signed.
-		// https://substrate.dev/docs/en/knowledgebase/runtime/origin
-		let who = ensure_signed(origin)?;
+		fn deposit_event() = default;
 
-		// Update storage.
-		Something::put(something);
+		#[weight = 0]
+		pub fn submit(origin, message: Message) -> DispatchResult {
+			let relayer = ensure_signed(origin)?;
+			// submit message to verifier for verification
+			let log = T::Verifier::verify(&message)?;
 
-		// Emit an event.
-		Self::deposit_event(RawEvent::SomethingStored(something, who));
-		// Return a successful DispatchResult
-		Ok(())
-	}
+			// Decode log into an Envelope
+			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
-	/// An example dispatchable that may throw a custom error.
-	#[weight = 10_000 + T::DbWeight::get().reads_writes(1,1)]
-	pub fn cause_error(origin) -> dispatch::DispatchResult {
-		let _who = ensure_signed(origin)?;
+			// Verify that the message was submitted to us from a known
+			// outbound channel on the ethereum side
+			let channel_id = SourceChannels::get(envelope.channel)
+				.ok_or(Error::<T>::InvalidSourceChannel)?;
 
-		// Read a value from storage.
-		match Something::get() {
-		// Return an error if the value has not been set.
-		None => Err(Error::<T>::NoneValue)?,
-		Some(old) => {
-				// Increment the value read from storage; will error in the event of overflow.
-				let new = old.checked_add(1).ok_or(Error::<T>::StorageOverflow)?;
-				// Update the value in storage with the incremented result.
-				Something::put(new);
-				Ok(())
-				},
-			}
+			// Submit to an inbound channel for further processing
+			let channel = make_inbound_channel::<T>(channel_id);
+			channel.submit(&relayer, &envelope)
 		}
+	}
+}
+
+impl<T: Config> SubmitOutbound for Module<T> {
+
+	// Submit a message to to Ethereum, taking into account the desired
+	// channel for delivery.
+	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult {
+		// Construct channel object from storage
+		let channel = make_outbound_channel::<T>(channel_id);
+		channel.submit(target, payload)
 	}
 }
