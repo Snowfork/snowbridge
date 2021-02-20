@@ -26,7 +26,7 @@ use artemis_core::{
 use channel::{inbound::BasicInboundChannel, outbound::BasicOutboundChannel};
 use envelope::Envelope;
 use primitives::{InboundChannel, InboundChannelData, OutboundChannel, OutboundChannelData};
-use sp_core::H160;
+use sp_core::H160 as EthAddress;
 use sp_std::convert::TryFrom;
 use sp_std::prelude::*;
 
@@ -53,17 +53,15 @@ pub trait Config: system::Config {
 	type MessageDispatch: MessageDispatch<MessageId>;
 }
 
-// The pallet's runtime storage items.
 decl_storage! {
 	trait Store for Module<T: Config> as BasicChannelModule {
 		/// Storage for inbound channels.
-		pub InboundChannels: map hasher(identity) H160 => InboundChannelData;
+		pub InboundChannels: map hasher(identity) EthAddress => InboundChannelData;
 		/// Storage for outbound channels.
 		pub OutboundChannels: map hasher(identity) ChannelId => OutboundChannelData;
 	}
 }
 
-// Pallets use events to inform users when important changes are made.
 decl_event!(
 	pub enum Event {
 		/// Message has been accepted by an outbound channel
@@ -71,7 +69,6 @@ decl_event!(
 	}
 );
 
-// Errors inform users that something went wrong.
 decl_error! {
 	pub enum Error for Module<T: Config> {
 		/// Message has an invalid envelope.
@@ -83,9 +80,6 @@ decl_error! {
 	}
 }
 
-// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-// These functions materialize as "extrinsics", which are often compared to transactions.
-// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 decl_module! {
 	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 
@@ -102,7 +96,6 @@ decl_module! {
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
-			// TODO: NOT THE SOURCE BUT THE ETH ADDRESS
 			let channel = BasicInboundChannel::<T>::new(envelope.source);
 			channel.submit(&relayer, &envelope)
 		}
@@ -111,7 +104,7 @@ decl_module! {
 
 impl<T: Config> SubmitOutbound for Module<T> {
 	// Submit a message to Ethereum, taking the desired channel for delivery.
-	fn submit(_channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult {
+	fn submit(_channel_id: ChannelId, target: EthAddress, payload: &[u8]) -> DispatchResult {
 		// Construct channel object from storage
 		let channel = BasicOutboundChannel::<T>::new();
 		channel.submit(target, payload)

@@ -13,7 +13,6 @@ use sp_std::{cell::Cell, marker::PhantomData};
 
 /// Basic Channel
 pub struct BasicInboundChannel<T: Config> {
-	channel_id: ChannelId,
 	eth_address: H160,
 	storage: Storage<T>,
 }
@@ -21,7 +20,6 @@ pub struct BasicInboundChannel<T: Config> {
 impl<T: Config> BasicInboundChannel<T> {
 	pub fn new(eth_address: H160) -> Self {
 		Self {
-			channel_id: ChannelId::Basic,
 			eth_address,
 			storage: Storage::new(eth_address),
 		}
@@ -38,7 +36,7 @@ impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 			Ok(())
 		})?;
 
-		let message_id = MessageId::new(self.channel_id, self.eth_address, envelope.nonce);
+		let message_id = MessageId::new(ChannelId::Basic, self.eth_address, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 		Ok(())
