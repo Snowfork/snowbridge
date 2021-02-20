@@ -1,15 +1,19 @@
-use frame_support::{dispatch::{DispatchError, DispatchResult}, storage::StorageMap};
-use sp_std::{cell::Cell, marker::PhantomData, boxed::Box};
-use artemis_core::{ChannelId, MessageId, MessageDispatch};
 use crate::{
+	envelope::Envelope,
+	primitives::{InboundChannel, InboundChannelData},
 	Config, Error, InboundChannels,
-	envelope::Envelope, primitives::{InboundChannel, InboundChannelData}
 };
+use artemis_core::{ChannelId, MessageDispatch, MessageId};
+use frame_support::{
+	dispatch::{DispatchError, DispatchResult},
+	storage::StorageMap,
+};
+use sp_std::{boxed::Box, cell::Cell, marker::PhantomData};
 
 /// Construct an inbound channel object
 pub fn make_inbound_channel<T>(channel_id: ChannelId) -> Box<dyn InboundChannel<T::AccountId>>
 where
-	T: Config
+	T: Config,
 {
 	match channel_id {
 		ChannelId::Basic => Box::new(BasicInboundChannel::<T>::new()),
@@ -20,23 +24,23 @@ where
 /// Basic Channel
 struct BasicInboundChannel<T: Config> {
 	channel_id: ChannelId,
-	storage: Storage<T>
+	storage: Storage<T>,
 }
 
 impl<T: Config> BasicInboundChannel<T> {
 	fn new() -> Self {
 		Self {
 			channel_id: ChannelId::Basic,
-			storage: Storage::new(ChannelId::Basic)
+			storage: Storage::new(ChannelId::Basic),
 		}
 	}
 }
 
 impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 	fn submit(&self, relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
-		self.storage.try_mutate::<_,DispatchError,_>(|data| {
+		self.storage.try_mutate::<_, DispatchError, _>(|data| {
 			if envelope.nonce != data.nonce + 1 {
-				return Err(Error::<T>::BadNonce.into())
+				return Err(Error::<T>::BadNonce.into());
 			}
 			data.nonce += 1;
 			Ok(())
@@ -52,23 +56,23 @@ impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 /// Incentivized Channel
 struct IncentivizedInboundChannel<T: Config> {
 	channel_id: ChannelId,
-	storage: Storage<T>
+	storage: Storage<T>,
 }
 
 impl<T: Config> IncentivizedInboundChannel<T> {
 	fn new() -> Self {
 		Self {
 			channel_id: ChannelId::Incentivized,
-			storage: Storage::new(ChannelId::Incentivized)
+			storage: Storage::new(ChannelId::Incentivized),
 		}
 	}
 }
 
 impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 	fn submit(&self, relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
-		self.storage.try_mutate::<_,DispatchError,_>(|data| {
+		self.storage.try_mutate::<_, DispatchError, _>(|data| {
 			if envelope.nonce != data.nonce + 1 {
-				return Err(Error::<T>::BadNonce.into())
+				return Err(Error::<T>::BadNonce.into());
 			}
 			data.nonce += 1;
 			Ok(())
@@ -84,7 +88,7 @@ impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 struct Storage<T: Config> {
 	channel_id: ChannelId,
 	cached_data: Cell<Option<InboundChannelData>>,
-	phantom: PhantomData<T>
+	phantom: PhantomData<T>,
 }
 
 impl<T: Config> Storage<T> {
@@ -92,7 +96,7 @@ impl<T: Config> Storage<T> {
 		Storage {
 			channel_id,
 			cached_data: Cell::new(None),
-			phantom: PhantomData
+			phantom: PhantomData,
 		}
 	}
 
@@ -117,7 +121,7 @@ impl<T: Config> Storage<T> {
 	#[allow(dead_code)]
 	fn try_mutate<R, E, F>(&self, f: F) -> Result<R, E>
 	where
-		F: FnOnce(&mut InboundChannelData) -> Result<R, E>
+		F: FnOnce(&mut InboundChannelData) -> Result<R, E>,
 	{
 		let mut data = self.get();
 		let result = f(&mut data);

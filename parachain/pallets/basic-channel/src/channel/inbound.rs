@@ -4,34 +4,26 @@ use crate::{
 	Config, Error, InboundChannels,
 };
 use artemis_core::{ChannelId, MessageDispatch, MessageId};
+use artemis_ethereum::H160;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	storage::StorageMap,
 };
-use sp_std::{boxed::Box, cell::Cell, marker::PhantomData};
-
-/// Construct an inbound channel object
-pub fn make_inbound_channel<T>(channel_id: ChannelId) -> Box<dyn InboundChannel<T::AccountId>>
-where
-	T: Config,
-{
-	match channel_id {
-		ChannelId::Basic => Box::new(BasicInboundChannel::<T>::new()),
-		ChannelId::Incentivized => Box::new(IncentivizedInboundChannel::<T>::new()),
-	}
-}
+use sp_std::{cell::Cell, marker::PhantomData};
 
 /// Basic Channel
-struct BasicInboundChannel<T: Config> {
+pub struct BasicInboundChannel<T: Config> {
 	channel_id: ChannelId,
+	eth_address: H160,
 	storage: Storage<T>,
 }
 
 impl<T: Config> BasicInboundChannel<T> {
-	fn new() -> Self {
+	pub fn new(eth_address: H160) -> Self {
 		Self {
 			channel_id: ChannelId::Basic,
-			storage: Storage::new(ChannelId::Basic),
+			eth_address,
+			storage: Storage::new(eth_address),
 		}
 	}
 }
@@ -46,39 +38,7 @@ impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 			Ok(())
 		})?;
 
-		let message_id = MessageId::new(self.channel_id, envelope.nonce);
-		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
-
-		Ok(())
-	}
-}
-
-/// Incentivized Channel
-struct IncentivizedInboundChannel<T: Config> {
-	channel_id: ChannelId,
-	storage: Storage<T>,
-}
-
-impl<T: Config> IncentivizedInboundChannel<T> {
-	fn new() -> Self {
-		Self {
-			channel_id: ChannelId::Incentivized,
-			storage: Storage::new(ChannelId::Incentivized),
-		}
-	}
-}
-
-impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
-	fn submit(&self, _relayer: &T::AccountId, envelope: &Envelope) -> DispatchResult {
-		self.storage.try_mutate::<_, DispatchError, _>(|data| {
-			if envelope.nonce != data.nonce + 1 {
-				return Err(Error::<T>::BadNonce.into());
-			}
-			data.nonce += 1;
-			Ok(())
-		})?;
-
-		let message_id = MessageId::new(self.channel_id, envelope.nonce);
+		let message_id = MessageId::new(self.channel_id, self.eth_address, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 		Ok(())
@@ -86,15 +46,15 @@ impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 }
 
 struct Storage<T: Config> {
-	channel_id: ChannelId,
+	eth_address: H160,
 	cached_data: Cell<Option<InboundChannelData>>,
 	phantom: PhantomData<T>,
 }
 
 impl<T: Config> Storage<T> {
-	fn new(channel_id: ChannelId) -> Self {
+	fn new(eth_address: H160) -> Self {
 		Storage {
-			channel_id,
+			eth_address,
 			cached_data: Cell::new(None),
 			phantom: PhantomData,
 		}
@@ -105,7 +65,7 @@ impl<T: Config> Storage<T> {
 		match self.cached_data.get() {
 			Some(data) => data,
 			None => {
-				let data = InboundChannels::get(self.channel_id);
+				let data = InboundChannels::get(self.eth_address);
 				self.cached_data.set(Some(data));
 				data
 			}
@@ -115,7 +75,7 @@ impl<T: Config> Storage<T> {
 	#[allow(dead_code)]
 	fn set(&self, data: InboundChannelData) {
 		self.cached_data.set(Some(data));
-		InboundChannels::insert(self.channel_id, data)
+		InboundChannels::insert(self.eth_address, data)
 	}
 
 	#[allow(dead_code)]

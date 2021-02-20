@@ -27,7 +27,7 @@ struct BasicOutboundChannel<T: Config> {
 }
 
 impl<T: Config> BasicOutboundChannel<T> {
-	fn new() -> Self {
+	pub fn new() -> Self {
 		Self {
 			id: ChannelId::Basic,
 			storage: Storage::new(ChannelId::Basic)

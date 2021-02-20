@@ -1,8 +1,8 @@
 //! # Basic Channel
 //!
 //! The Basic Channel module is is a non-incentivized bridge between Ethereum and Pokadot
-//! ecosystems. It is meant to be a low-barrier entry to cross-chain communication without guarantees,
-//! but also without fees.
+//! ecosystems. It is meant to be a low-barrier entry to cross-chain communication without
+//! guarantees, but also without fees.
 //!
 //! ## Implementation
 //!
@@ -15,35 +15,28 @@
 //! - `submit`: Submit a message for verification and dispatch.
 //!
 
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult,
-	storage::StorageMap,
-};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult};
 use frame_system::{self as system, ensure_signed};
 
-use sp_core::H160;
-use sp_std::prelude::*;
-use sp_std::convert::TryFrom;
 use artemis_core::{
-	ChannelId, SubmitOutbound, Message, MessageId,
-	MessageCommitment, MessageDispatch, Verifier,
-	SourceChannelConfig,
+	ChannelId, Message, MessageCommitment, MessageDispatch, MessageId, SubmitOutbound, Verifier,
 };
-use channel::inbound::make_inbound_channel;
-use channel::outbound::make_outbound_channel;
-use primitives::{InboundChannelData, OutboundChannelData};
+use channel::{inbound::BasicInboundChannel, outbound::BasicOutboundChannel};
 use envelope::Envelope;
+use primitives::{InboundChannel, InboundChannelData, OutboundChannel, OutboundChannelData};
+use sp_core::H160;
+use sp_std::convert::TryFrom;
+use sp_std::prelude::*;
 
+mod channel;
+mod envelope;
 #[cfg(test)]
 mod mock;
+mod primitives;
 #[cfg(test)]
 mod tests;
-mod channel;
-mod primitives;
-mod envelope;
 
 type MessageNonce = u64;
 
@@ -63,20 +56,10 @@ pub trait Config: system::Config {
 // The pallet's runtime storage items.
 decl_storage! {
 	trait Store for Module<T: Config> as BasicChannelModule {
-		/// Outbound (source) channels on Ethereum from whom we will accept messages.
-		pub SourceChannels: map hasher(identity) H160 => Option<ChannelId>;
 		/// Storage for inbound channels.
-		pub InboundChannels: map hasher(identity) ChannelId => InboundChannelData;
+		pub InboundChannels: map hasher(identity) H160 => InboundChannelData;
 		/// Storage for outbound channels.
 		pub OutboundChannels: map hasher(identity) ChannelId => OutboundChannelData;
-	}
-	add_extra_genesis {
-		config(source_channels): SourceChannelConfig;
-		build(|config: &GenesisConfig| {
-			let sources = config.source_channels;
-			SourceChannels::insert(sources.basic.address, ChannelId::Basic);
-			SourceChannels::insert(sources.incentivized.address, ChannelId::Incentivized);
-		});
 	}
 }
 
@@ -91,8 +74,6 @@ decl_event!(
 // Errors inform users that something went wrong.
 decl_error! {
 	pub enum Error for Module<T: Config> {
-		/// Message came from an invalid outbound channel on the Ethereum side.
-		InvalidSourceChannel,
 		/// Message has an invalid envelope.
 		InvalidEnvelope,
 		/// Message has an unexpected nonce.
@@ -121,25 +102,18 @@ decl_module! {
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
-			// Verify that the message was submitted to us from a known
-			// outbound channel on the ethereum side
-			let channel_id = SourceChannels::get(envelope.channel)
-				.ok_or(Error::<T>::InvalidSourceChannel)?;
-
-			// Submit to an inbound channel for further processing
-			let channel = make_inbound_channel::<T>(channel_id);
+			// TODO: NOT THE SOURCE BUT THE ETH ADDRESS
+			let channel = BasicInboundChannel::<T>::new(envelope.source);
 			channel.submit(&relayer, &envelope)
 		}
 	}
 }
 
 impl<T: Config> SubmitOutbound for Module<T> {
-
-	// Submit a message to to Ethereum, taking into account the desired
-	// channel for delivery.
-	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult {
+	// Submit a message to Ethereum, taking the desired channel for delivery.
+	fn submit(_channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult {
 		// Construct channel object from storage
-		let channel = make_outbound_channel::<T>(channel_id);
+		let channel = BasicOutboundChannel::<T>::new();
 		channel.submit(target, payload)
 	}
 }

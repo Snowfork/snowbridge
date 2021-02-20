@@ -1,25 +1,27 @@
 //! Types for representing messages
 
-use frame_support::RuntimeDebug;
-use sp_std::vec::Vec;
-use sp_core::{H160, H256};
+use codec::{Decode, Encode};
 use enum_iterator::IntoEnumIterator;
-use codec::{Encode, Decode};
+use frame_support::RuntimeDebug;
+use sp_core::{H160, H256};
+use sp_std::vec::Vec;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct MessageId {
 	pub channel_id: ChannelId,
+	pub eth_address: H160,
 	pub nonce: u64,
 }
 
 impl MessageId {
-	pub fn new(channel_id: ChannelId, nonce: u64) -> Self {
+	pub fn new(channel_id: ChannelId, eth_address: H160, nonce: u64) -> Self {
 		Self {
-			channel_id, nonce
+			channel_id,
+			eth_address,
+			nonce,
 		}
 	}
 }
@@ -27,7 +29,7 @@ impl MessageId {
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug)]
 pub enum ChannelId {
 	Basic,
-	Incentivized
+	Incentivized,
 }
 
 /// A message relayed from Ethereum.
@@ -63,5 +65,5 @@ pub struct SourceChannelConfig {
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SourceChannel {
-	pub address: H160
+	pub address: H160,
 }
