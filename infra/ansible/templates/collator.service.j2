@@ -4,21 +4,23 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=artemis-collator
-Group=artemis-collator
-ExecStart=/usr/local/bin/artemis-collator \
-    --base-path /var/lib/artemis-collator \
+User=artemis
+Group=artemis
+ExecStart=/usr/local/bin/artemis \
+    --chain /etc/artemis-rococo.json \
+    --base-path /var/lib/artemis \
     --rpc-cors=all \
     --validator \
-    --parachain-id 1000 \
+    --parachain-id 200 \
     {% if inventory_hostname == 'parachain-node-0' %}
     --node-key {{ hostvars['parachain-node-0'].node_key }} \
     {% else %}
     --bootnodes {{ bootnodes }} \
     {% endif %}
-    --enable-offchain-indexing \
+    --offchain-worker=Always \
+    --enable-offchain-indexing true \
     -- \
-    --chain /etc/rococo.json \
+    --chain /etc/rococo-local.json \
     --bootnodes {{ relaychain_bootnodes }}
 Restart=on-failure
 
