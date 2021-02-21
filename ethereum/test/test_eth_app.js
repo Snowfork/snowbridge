@@ -5,13 +5,15 @@ const {
   deployAppContractWithChannels,
   addressBytes,
   ChannelId,
-  encodeLog
+  buildCommitment
 } = require("./helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
   .should();
+
+const ethers = require("ethers");
 
 const ETHApp = artifacts.require("ETHApp");
 
@@ -30,6 +32,7 @@ contract("ETHApp", function (accounts) {
   // Accounts
   const owner = accounts[0];
   const userOne = accounts[1];
+  const userTwo = accounts[2];
 
   // Constants
   const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
@@ -112,15 +115,16 @@ contract("ETHApp", function (accounts) {
       // Commitment payload generated using:
       //   cd parachain/pallets/eth-app
       //   cargo test test_outbound_payload_encode -- --nocapture
-      const commitment = [
+      const messages = [
         {
           target: this.app.address,
           nonce: 1,
           payload: "0x6dea30e71aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000de0b6b3a7640000"
         }
       ]
+      const commitment = buildCommitment(messages);
 
-      tx = await this.channels.basic.inbound.submit(commitment).should.be.fulfilled;
+      tx = await this.channels.basic.inbound.submit(messages, commitment).should.be.fulfilled;
 
       confirmUnlock(
         tx.receipt.rawLogs[0],
@@ -134,7 +138,6 @@ contract("ETHApp", function (accounts) {
 
       afterBalance.should.be.bignumber.equal(beforeBalance.minus(amount));
       afterRecipientBalance.minus(beforeRecipientBalance).should.be.bignumber.equal(amount);
-
     });
 
     it("should unlock via the incentivized inbound channel", async function () {
@@ -147,7 +150,7 @@ contract("ETHApp", function (accounts) {
       const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
 
       // expected amount to unlock
-      const amount = BigNumber(web3.utils.toWei("1", "ether"));
+      const amount = web3.utils.toWei("1", "ether");
 
       const beforeBalance = BigNumber(await this.app.balance());
       const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
@@ -155,15 +158,16 @@ contract("ETHApp", function (accounts) {
       // Commitment payload generated using:
       //   cd parachain/pallets/eth-app
       //   cargo test test_outbound_payload_encode -- --nocapture
-      const commitment = [
+      const messages = [
         {
           target: this.app.address,
           nonce: 1,
           payload: "0x6dea30e71aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000de0b6b3a7640000"
         }
       ]
+      const commitment = buildCommitment(messages);
 
-      tx = await this.channels.incentivized.inbound.submit(commitment).should.be.fulfilled;
+      tx = await this.channels.incentivized.inbound.submit(messages, commitment).should.be.fulfilled;
 
       confirmUnlock(
         tx.receipt.rawLogs[0],

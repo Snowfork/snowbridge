@@ -9,7 +9,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 serde = { version = "1.0.101", optional = true }
-codec = { version = "1.3.6", package = "parity-scale-codec", default-features = false, features = ["derive"] }
+codec = { version = "2.0.0", package = "parity-scale-codec", default-features = false, features = ["derive"] }
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 rlp = { version = "0.5", default-features = false }
 hex-literal = { version = "0.3.1", default-features = false }
@@ -27,9 +27,9 @@ artemis-core = { path = "../../primitives/core", default-features = false }
 artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
 
 [dev-dependencies]
-artemis-assets = { path = "../../pallets/assets", default-features = false }
-artemis-dispatch = { path = "../../pallets/dispatch", default-features = false }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+artemis-assets = { path = "../../pallets/assets" }
+artemis-dispatch = { path = "../../pallets/dispatch" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
 [features]
 default = ["std"]
@@ -45,7 +45,6 @@ std = [
     "sp-runtime/std",
     "artemis-core/std",
     "artemis-ethereum/std",
-    "artemis-dispatch/std",
     "ethabi/std",
     "rlp/std"
 ]

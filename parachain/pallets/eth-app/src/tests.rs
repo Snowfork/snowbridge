@@ -1,4 +1,4 @@
-use crate::mock::{new_tester, AccountId, Origin, Event, System, Asset, ETH};
+use crate::mock::{new_tester, AccountId, Origin, Event, System, Asset, ETHApp};
 use frame_support::{assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
@@ -18,7 +18,7 @@ fn mints_after_handling_ethereum_event() {
 		let recipient: AccountId = Keyring::Bob.into();
 		let amount = 10;
 		assert_ok!(
-			ETH::mint(
+			ETHApp::mint(
 				artemis_dispatch::Origin(peer_contract).into(),
 				sender,
 				recipient.clone(),
@@ -41,7 +41,7 @@ fn burn_should_emit_bridge_event() {
 		let bob: AccountId = Keyring::Bob.into();
 		Asset::deposit(&bob, 500.into()).unwrap();
 
-		assert_ok!(ETH::burn(
+		assert_ok!(ETHApp::burn(
 			Origin::signed(bob.clone()),
 			ChannelId::Incentivized,
 			recipient.clone(),

@@ -105,9 +105,10 @@ func (wr *Writer) Write(ctx context.Context, msg *chain.SubstrateOutboundMessage
 	}
 
 	options := bind.TransactOpts{
-		From:    wr.conn.kp.CommonAddress(),
-		Signer:  wr.signerFn,
-		Context: ctx,
+		From:     wr.conn.kp.CommonAddress(),
+		Signer:   wr.signerFn,
+		Context:  ctx,
+		GasLimit: 500000,
 	}
 
 	var messages []inbound.InboundChannelMessage
@@ -121,7 +122,7 @@ func (wr *Writer) Write(ctx context.Context, msg *chain.SubstrateOutboundMessage
 		)
 	}
 
-	tx, err := contract.Submit(&options, messages)
+	tx, err := contract.Submit(&options, messages, msg.CommitmentHash)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err

@@ -2,6 +2,10 @@
 
 Components for a Polkadot Ethereum Bridge
 
+## Development
+
+To locally bootstrap our system for testing and development, or just to play around, please refer to our [tests](test/README.md) component.
+
 ## Components
 
 ### Ethereum

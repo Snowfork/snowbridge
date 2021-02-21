@@ -1,0 +1,59 @@
+{
+	"relaychain": {
+		"bin": "/tmp/polkadot/target/release/polkadot",
+		"chain": "rococo-local",
+		"nodes": [
+			{
+				"name": "alice",
+				"wsPort": 9944,
+				"port": 30444
+			},
+			{
+				"name": "bob",
+				"wsPort": 9955,
+				"port": 30555
+			}
+		]
+	},
+	"parachains": [
+		{
+			"bin": "target/release/artemis",
+			"id": "200",
+			"wsPort": 9966,
+			"port": 30666,
+			"flags": [
+				"--rpc-port=9980",
+				"--offchain-worker=Always",
+				"--enable-offchain-indexing=true",
+				"--",
+				"--execution=wasm"
+			]
+		},
+		{
+			"bin": "target/release/artemis",
+			"id": "300",
+			"wsPort": 9977,
+			"port": 30777,
+			"flags": [
+				"--rpc-port=9990",
+				"--offchain-worker=Always",
+				"--enable-offchain-indexing=true",
+				"--",
+				"--execution=wasm"
+			]
+		}
+	],
+	"simpleParachains": [],
+	"hrmpChannels": [
+		{
+			"sender": "200",
+			"recipient": "300",
+			"maxCapacity": 8,
+			"maxMessageSize": 512
+		}
+	],
+	"types": {
+		"Address": "MultiAddress",
+		"LookupSource": "MultiAddress"
+	}
+}

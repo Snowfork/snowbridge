@@ -138,12 +138,12 @@ impl<T: Config> Module<T> {
 			.map(|message|
 				Token::Tuple(vec![
 					Token::Address(message.target),
-					Token::Bytes(message.payload.clone()),
-					Token::Uint(message.nonce.into())
+					Token::Uint(message.nonce.into()),
+					Token::Bytes(message.payload.clone())
 				])
 			)
 			.collect();
-		ethabi::encode(&vec![Token::FixedArray(messages)])
+		ethabi::encode(&vec![Token::Array(messages)])
 	}
 }
 

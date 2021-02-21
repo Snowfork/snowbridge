@@ -2,7 +2,7 @@ const ETHApp = artifacts.require("ETHApp");
 
 const BigNumber = web3.BigNumber;
 
-const { confirmUnlock, confirmMessageDispatched, hashMessage, deployAppContractWithChannels, ChannelId } = require("./helpers");
+const { confirmUnlock, confirmMessageDispatched, deployAppContractWithChannels, ChannelId, buildCommitment } = require("./helpers");
 const { lockupETH } = require('./test_eth_app');
 
 require("chai")
@@ -29,7 +29,6 @@ contract("IncentivizedInboundChannel", function (accounts) {
       await lockupETH(this.ethApp, userOne, this.POLKADOT_ADDRESS, 5000, ChannelId.Incentivized)
     });
 
-
     it("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {
       const abi = this.ethApp.abi;
       const iChannel = new ethers.utils.Interface(abi);
@@ -53,16 +52,34 @@ contract("IncentivizedInboundChannel", function (accounts) {
         payload: payloadTwo
       }
 
-      // Construct commitment hash from message hashes
-      const messageOneHash = hashMessage(messageOne);
-      const messageTwoHash = hashMessage(messageTwo);
-      const commitmentHash = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [messageOneHash, messageTwoHash]);
+      // Construct third message
+      const payloadThree = iChannel.encodeFunctionData(unlockFragment, [polkadotSender, userTwo, 7]);
+      const messageThree = {
+        target: this.ethApp.address,
+        nonce: 3,
+        payload: payloadThree
+      }
+
+      // Construct third message
+      const payloadFour = iChannel.encodeFunctionData(unlockFragment, [polkadotSender, userThree, 9]);
+      const messageFour = {
+        target: this.ethApp.address,
+        nonce: 4,
+        payload: payloadFour
+      }
+
+       // Construct commitment hash from messages
+       const messages = [messageOne, messageTwo, messageThree, messageFour];
+       const commitment = buildCommitment(messages);
 
       // Send commitment including one payload for the ETHApp
       const tx = await this.incentivizedInboundChannel.submit(
-        [messageOne, messageTwo],
+        messages,
+        commitment,
         { from: userOne }
       )
+
+      console.log("Submitted " + messages.length + " messages. Gas used: " + tx.receipt.gasUsed);
 
       // Confirm ETHApp and IncentivizedInboundChannel processed messages correctly
       const firstRawUnlockLog = tx.receipt.rawLogs[0];
@@ -74,6 +91,17 @@ contract("IncentivizedInboundChannel", function (accounts) {
       confirmUnlock(secondRawUnlockLog, this.ethApp.address, userThree, 5);
       const secondMessageDispatchedLog = tx.receipt.rawLogs[3];
       confirmMessageDispatched(secondMessageDispatchedLog, 2, true);
+
+      const thirdRawUnlockLog = tx.receipt.rawLogs[4];
+      confirmUnlock(thirdRawUnlockLog, this.ethApp.address, userTwo, 7);
+      const thirdMessageDispatchedLog = tx.receipt.rawLogs[5];
+      confirmMessageDispatched(thirdMessageDispatchedLog, 3, true);
+
+      const fourthRawUnlockLog = tx.receipt.rawLogs[6];
+      confirmUnlock(fourthRawUnlockLog, this.ethApp.address, userThree, 9);
+      const fourthMessageDispatchedLog = tx.receipt.rawLogs[7];
+      confirmMessageDispatched(fourthMessageDispatchedLog, 4, true);
+
     });
   });
 });

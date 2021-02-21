@@ -51,7 +51,7 @@ pub trait Config: system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as Asset {
+	trait Store for Module<T: Config> as Assets {
 		pub TotalIssuance get(fn total_issuance): map hasher(blake2_128_concat) AssetId => U256;
 		pub Balances get(fn balances): double_map hasher(blake2_128_concat) AssetId, hasher(blake2_128_concat) T::AccountId => U256;
 	}
@@ -86,7 +86,6 @@ decl_error! {
 }
 
 decl_module! {
-
 	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 
 		type Error = Error<T>;
@@ -104,7 +103,6 @@ decl_module! {
 			let dest = T::Lookup::lookup(dest)?;
 			<Self as MultiAsset<_>>::transfer(asset_id, &who, &dest, amount)
 		}
-
 	}
 }
 
