@@ -368,7 +368,7 @@ impl bridge::Config for Runtime {
 
 #[cfg(not(feature = "test-e2e"))]
 parameter_types! {
-	pub const DescendantsUntilFinalized: u8 = 35;
+	pub const DescendantsUntilFinalized: u8 = 3;
 	pub const VerifyPoW: bool = true;
 }
 

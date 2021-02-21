@@ -2,11 +2,11 @@
   vars:
     channels:
       basic:
-        inbound: "0xB6Be7Ab42C75BA987ebC038e4AEC753585b4Ef3b"
-        outbound: "0x654dD7719b2D8d57BeBc8B4598AfCf2E5265953b"
+        inbound: "0x8dA9882462CE4B97A0b5e16Ec0d6A7B13Ce983d0"
+        outbound: "0x9C13E3a4766c68e44B140308d4fbD09977aF7858"
       incentivized:
-        inbound: "0x0A534A39162aF7Fd031F36e8709f8AE4a0Cd4a68"
-        outbound: "0x4a838cD37220bCf2dD278e9B31F8B3e3DE3a9550"
+        inbound: "0x0529C1AB513D18104cd2F30cC45E275C93731B7e"
+        outbound: "0x1424631e2463c82DdD9C33A9272B118f48393093"
     endpoints:
       ethereum: wss://ropsten.infura.io/ws/v3/e8b4790b8e4049cca3c04f738cfa25f2
       substrate: wss://parachain-rpc.snowfork.network
