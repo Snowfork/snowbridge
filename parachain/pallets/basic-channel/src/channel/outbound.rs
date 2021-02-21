@@ -2,9 +2,8 @@ use crate::{
 	primitives::{OutboundChannel, OutboundChannelData},
 	Config, Event, Module, OutboundChannels,
 };
-use artemis_core::MessageCommitment;
+use artemis_core::{ChannelId, MessageCommitment};
 use frame_support::{dispatch::DispatchResult, storage::StorageMap};
-use frame_system::{self as system};
 use sp_core::H160;
 use sp_std::{cell::Cell, marker::PhantomData};
 
@@ -27,8 +26,11 @@ impl<T: Config> OutboundChannel for BasicOutboundChannel<T> {
 	fn submit(&self, target: H160, payload: &[u8]) -> DispatchResult {
 		self.storage.try_mutate(|data| {
 			data.nonce += 1;
-			T::MessageCommitment::add(self.account_id.clone(), target, data.nonce, payload)?;
-			//<Module<T>>::deposit_event(Event::MessageAccepted(self.account_id, data.nonce));
+			T::MessageCommitment::add(ChannelId::Basic, target, data.nonce, payload)?;
+			<Module<T>>::deposit_event(Event::<T>::MessageAccepted(
+				self.account_id.clone(),
+				data.nonce,
+			));
 			Ok(())
 		})
 	}

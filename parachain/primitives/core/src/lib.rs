@@ -35,9 +35,14 @@ pub trait SubmitOutbound<AccountId> {
 	fn submit(account_id: AccountId, target: H160, payload: &[u8]) -> DispatchResult;
 }
 
+/// Outbound submission for applications, specifying ChannelId
+pub trait SubmitOutboundChannel {
+	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult;
+}
+
 /// Add a message to a commitment
-pub trait MessageCommitment<AccountId> {
-	fn add(account_id: AccountId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult;
+pub trait MessageCommitment {
+	fn add(channel_id: ChannelId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult;
 }
 
 /// Dispatch a message

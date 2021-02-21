@@ -359,6 +359,13 @@ impl dispatch::Config for Runtime {
 	type CallFilter = CallFilter;
 }
 
+impl bridge::Config for Runtime {
+	type Event = Event;
+	type Verifier = verifier_lightclient::Module<Runtime>;
+	type MessageCommitment = commitments::Module<Runtime>;
+	type MessageDispatch = dispatch::Module<Runtime>;
+}
+
 impl basic_channel::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
@@ -405,14 +412,14 @@ parameter_types! {
 impl eth_app::Config for Runtime {
 	type Event = Event;
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
-	type SubmitOutbound = basic_channel::Module<Runtime>;
+	type SubmitOutbound = bridge::Module<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 }
 
 impl erc20_app::Config for Runtime {
 	type Event = Event;
 	type Assets = assets::Module<Runtime>;
-	type SubmitOutbound = basic_channel::Module<Runtime>;
+	type SubmitOutbound = bridge::Module<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 }
 
@@ -431,7 +438,8 @@ construct_runtime!(
 		ParachainInfo: parachain_info::{Module, Storage, Config},
 		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
 
-		BasicChannel: basic_channel::{Module, Call, Config, Storage, Event},
+		BasicChannel: basic_channel::{Module, Call, Storage, Event<T>},
+		Bridge: bridge::{Module, Call, Config, Storage, Event},
 		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin},
 		Commitments: commitments::{Module, Call, Config<T>, Storage, Event},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},

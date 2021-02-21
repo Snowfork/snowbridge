@@ -26,7 +26,7 @@ use sp_core::H160;
 use sp_std::prelude::*;
 use sp_std::convert::TryFrom;
 use artemis_core::{
-	ChannelId, SubmitOutbound, Message, MessageId,
+	ChannelId, SubmitOutboundChannel, Message, MessageId,
 	MessageCommitment, MessageDispatch, Verifier,
 	SourceChannelConfig,
 };
@@ -128,7 +128,8 @@ decl_module! {
 	}
 }
 
-impl<T: Config> SubmitOutbound for Module<T> {
+impl<T: Config> SubmitOutboundChannel for Module<T> {
+	// TODO: If we keep the bridge, rethink API
 
 	// Submit a message to to Ethereum, taking into account the desired
 	// channel for delivery.

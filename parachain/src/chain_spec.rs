@@ -1,5 +1,5 @@
 use artemis_runtime::{
-	AccountId, AssetsConfig, BalancesConfig, BasicChannelConfig, CommitmentsConfig, ERC20Config,
+	AccountId, AssetsConfig, BalancesConfig, BridgeConfig, CommitmentsConfig, ERC20Config,
 	ETHConfig, EthereumHeader, GenesisConfig, ParachainInfoConfig, Signature, SystemConfig,
 	VerifierLightclientConfig, WASM_BINARY,
 };
@@ -104,7 +104,7 @@ fn testnet_genesis(endowed_accounts: Vec<AccountId>, para_id: ParaId) -> Genesis
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		}),
-		basic_channel: Some(BasicChannelConfig {
+		bridge: Some(BridgeConfig {
 			source_channels: SourceChannelConfig {
 				basic: SourceChannel {
 					address: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),

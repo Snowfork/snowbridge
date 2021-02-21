@@ -26,7 +26,7 @@ use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
-use artemis_core::{ChannelId, SubmitOutbound, SingleAsset};
+use artemis_core::{ChannelId, SubmitOutboundChannel, SingleAsset};
 
 mod payload;
 use payload::OutboundPayload;
@@ -42,7 +42,7 @@ pub trait Config: system::Config {
 
 	type Asset: SingleAsset<<Self as system::Config>::AccountId>;
 
-	type SubmitOutbound: SubmitOutbound;
+	type SubmitOutbound: SubmitOutboundChannel;
 
 	type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
 }

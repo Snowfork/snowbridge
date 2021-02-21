@@ -47,7 +47,7 @@ pub trait Config: system::Config {
 	type Verifier: Verifier;
 
 	/// Used by outbound channels to persist messages for outbound delivery.
-	type MessageCommitment: MessageCommitment<Self::AccountId>;
+	type MessageCommitment: MessageCommitment;
 
 	/// Verifier module for message verification.
 	type MessageDispatch: MessageDispatch<MessageId>;

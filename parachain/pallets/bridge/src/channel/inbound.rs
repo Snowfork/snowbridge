@@ -46,7 +46,7 @@ impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 			Ok(())
 		})?;
 
-		let message_id = MessageId::new(self.channel_id, envelope.nonce);
+		let message_id = MessageId::new(self.channel_id, envelope.source, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 		Ok(())
@@ -78,7 +78,7 @@ impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 			Ok(())
 		})?;
 
-		let message_id = MessageId::new(self.channel_id, envelope.nonce);
+		let message_id = MessageId::new(self.channel_id, envelope.source, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 		Ok(())
