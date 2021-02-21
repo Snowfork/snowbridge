@@ -21,7 +21,7 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch:
 use frame_system::{self as system, ensure_signed};
 
 use artemis_core::{
-	ChannelId, Message, MessageCommitment, MessageDispatch, MessageId, SubmitOutbound, Verifier,
+	Message, MessageCommitment, MessageDispatch, MessageId, SubmitOutbound, Verifier,
 };
 use channel::{inbound::BasicInboundChannel, outbound::BasicOutboundChannel};
 use envelope::Envelope;
@@ -41,13 +41,13 @@ mod tests;
 type MessageNonce = u64;
 
 pub trait Config: system::Config {
-	type Event: From<Event> + Into<<Self as system::Config>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// Verifier module for message verification.
 	type Verifier: Verifier;
 
 	/// Used by outbound channels to persist messages for outbound delivery.
-	type MessageCommitment: MessageCommitment;
+	type MessageCommitment: MessageCommitment<Self::AccountId>;
 
 	/// Verifier module for message verification.
 	type MessageDispatch: MessageDispatch<MessageId>;
@@ -58,14 +58,17 @@ decl_storage! {
 		/// Storage for inbound channels.
 		pub InboundChannels: map hasher(identity) EthAddress => InboundChannelData;
 		/// Storage for outbound channels.
-		pub OutboundChannels: map hasher(identity) ChannelId => OutboundChannelData;
+		pub OutboundChannels: map hasher(identity) T::AccountId => OutboundChannelData;
 	}
 }
 
 decl_event!(
-	pub enum Event {
+	pub enum Event<T>
+	where
+		AccountId = <T as system::Config>::AccountId,
+	{
 		/// Message has been accepted by an outbound channel
-		MessageAccepted(ChannelId, MessageNonce),
+		MessageAccepted(AccountId, MessageNonce),
 	}
 );
 
@@ -102,11 +105,11 @@ decl_module! {
 	}
 }
 
-impl<T: Config> SubmitOutbound for Module<T> {
+impl<T: Config> SubmitOutbound<T::AccountId> for Module<T> {
 	// Submit a message to Ethereum, taking the desired channel for delivery.
-	fn submit(_channel_id: ChannelId, target: EthAddress, payload: &[u8]) -> DispatchResult {
+	fn submit(account_id: T::AccountId, target: EthAddress, payload: &[u8]) -> DispatchResult {
 		// Construct channel object from storage
-		let channel = BasicOutboundChannel::<T>::new();
+		let channel = BasicOutboundChannel::<T>::new(account_id);
 		channel.submit(target, payload)
 	}
 }
