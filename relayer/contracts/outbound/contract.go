@@ -27,7 +27,7 @@ var (
 )
 
 // ContractABI is the input ABI used to generate the binding from.
-const ContractABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"source\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"Message\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ContractABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"source\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"Message\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // Contract is an auto generated Go binding around an Ethereum contract.
 type Contract struct {
@@ -293,14 +293,14 @@ func (it *ContractMessageIterator) Close() error {
 // ContractMessage represents a Message event raised by the Contract contract.
 type ContractMessage struct {
 	Source  common.Address
-	Nonce   *big.Int
+	Nonce   uint64
 	Payload []byte
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterMessage is a free log retrieval operation binding the contract event 0x66e7e6a7271f241b3984665efcb646635ed452b2b87ac963df0722b67b2f94e7.
+// FilterMessage is a free log retrieval operation binding the contract event 0x779b38144a38cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15b.
 //
-// Solidity: event Message(address source, uint256 nonce, bytes payload)
+// Solidity: event Message(address source, uint64 nonce, bytes payload)
 func (_Contract *ContractFilterer) FilterMessage(opts *bind.FilterOpts) (*ContractMessageIterator, error) {
 
 	logs, sub, err := _Contract.contract.FilterLogs(opts, "Message")
@@ -310,9 +310,9 @@ func (_Contract *ContractFilterer) FilterMessage(opts *bind.FilterOpts) (*Contra
 	return &ContractMessageIterator{contract: _Contract.contract, event: "Message", logs: logs, sub: sub}, nil
 }
 
-// WatchMessage is a free log subscription operation binding the contract event 0x66e7e6a7271f241b3984665efcb646635ed452b2b87ac963df0722b67b2f94e7.
+// WatchMessage is a free log subscription operation binding the contract event 0x779b38144a38cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15b.
 //
-// Solidity: event Message(address source, uint256 nonce, bytes payload)
+// Solidity: event Message(address source, uint64 nonce, bytes payload)
 func (_Contract *ContractFilterer) WatchMessage(opts *bind.WatchOpts, sink chan<- *ContractMessage) (event.Subscription, error) {
 
 	logs, sub, err := _Contract.contract.WatchLogs(opts, "Message")
@@ -347,9 +347,9 @@ func (_Contract *ContractFilterer) WatchMessage(opts *bind.WatchOpts, sink chan<
 	}), nil
 }
 
-// ParseMessage is a log parse operation binding the contract event 0x66e7e6a7271f241b3984665efcb646635ed452b2b87ac963df0722b67b2f94e7.
+// ParseMessage is a log parse operation binding the contract event 0x779b38144a38cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15b.
 //
-// Solidity: event Message(address source, uint256 nonce, bytes payload)
+// Solidity: event Message(address source, uint64 nonce, bytes payload)
 func (_Contract *ContractFilterer) ParseMessage(log types.Log) (*ContractMessage, error) {
 	event := new(ContractMessage)
 	if err := _Contract.contract.UnpackLog(event, "Message", log); err != nil {

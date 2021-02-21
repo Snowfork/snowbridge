@@ -7,14 +7,14 @@ import "./OutboundChannel.sol";
 
 // BasicOutboundChannel is a basic channel that just sends messages with a nonce.
 contract BasicOutboundChannel is OutboundChannel {
-    using SafeMath for uint;
+    using SafeMath for uint64;
 
-    mapping(address => uint) account_nonces;
+    mapping(address => uint64) account_nonces;
 
     /**
      * @dev Sends a message across the channel
      */
     function submit(bytes memory payload) public override {
-        emit Message(msg.sender, account_nonces[msg.sender]++, payload);
+        emit Message(msg.sender, ++account_nonces[msg.sender], payload);
     }
 }

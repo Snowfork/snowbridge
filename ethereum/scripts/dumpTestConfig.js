@@ -13,6 +13,9 @@ const channelContracts = {
     },
 }
 
+const ethAppContract = artifacts.require("ETHApp");
+const erc20AppContract = artifacts.require('ERC20App');
+
 const channels = {
     basic: {
         inbound: null,
@@ -34,7 +37,7 @@ const dump = (tmpDir, channels) => {
                 basic: {
                     inbound: channels.basic.inbound.address,
                     outbound: channels.basic.outbound.address,
-                    account_whitelist: channels.basic.account_whitelist.slice(0, 3)
+                    account_whitelist: [channels.ethApp.address, channels.erc20App.address]
                 },
                 incentivized: {
                     inbound: channels.incentivized.inbound.address,
@@ -55,6 +58,8 @@ module.exports = async (callback) => {
         channels.basic.inbound = await channelContracts.basic.inbound.deployed();
         channels.basic.outbound = await channelContracts.basic.outbound.deployed();
         channels.basic.account_whitelist = await web3.eth.getAccounts();
+        channels.ethApp = await ethAppContract.deployed();
+        channels.erc20App = await erc20AppContract.deployed();
         channels.incentivized.inbound = await channelContracts.incentivized.inbound.deployed();
         channels.incentivized.outbound = await channelContracts.incentivized.outbound.deployed();
         await dump(configDir, channels);
