@@ -595,10 +595,8 @@
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-0.14.0.tgz#9fb3a3cf3132328151f353de4632e01e52102bea"
   integrity sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==
 
-"@snowfork/snowbridge-types@^0.1.2":
-  version "0.1.4"
-  resolved "https://registry.yarnpkg.com/@snowfork/snowbridge-types/-/snowbridge-types-0.1.4.tgz#b5c86f3421067b0a8962f785eda2b1135cc391a6"
-  integrity sha512-hyNgUcPMWy9LF8i3FK1hYvOCE4nL+ywUujOGCaKaNJrT+OsCQezjIakyqdz+kPF0t5xZT9x+LwpxblnaDr2O+g==
+"@snowfork/snowbridge-types@file:../types":
+  version "0.2.1"
 
 "@szmarczak/http-timer@^1.1.2":
   version "1.1.2"
