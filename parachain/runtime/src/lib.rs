@@ -106,10 +106,10 @@ pub mod opaque {
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("artemis-node"),
-	impl_name: create_runtime_str!("artemis-node"),
+	spec_name: create_runtime_str!("snowbridge"),
+	impl_name: create_runtime_str!("snowbridge"),
 	authoring_version: 1,
-	spec_version: 100,
+	spec_version: 1,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
