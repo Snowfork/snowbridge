@@ -2,7 +2,7 @@
   "name": "@snowfork/snowbridge-types",
   "version": "0.2.1",
   "description": "Type definitions for the Snowbridge parachain",
-  "repository": "https://github.com/snowfork/snowbridge-types",
+  "repository": "https://github.com/snowfork/polkadot-ethereum",
   "author": "Snowfork <contact@snowfork.com>",
   "license": "Apache-2.0",
   "main": "dist/index.js",
