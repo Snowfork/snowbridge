@@ -1,12 +1,20 @@
 {
   "name": "@snowfork/snowbridge-types",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Type definitions for the Snowbridge parachain",
-  "repository": "https://github.com/snowfork/polkadot-ethereum",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/snowfork/polkadot-ethereum.git",
+    "directory": "types"
+  },
   "author": "Snowfork <contact@snowfork.com>",
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "README.md"
+  ],
   "keywords": [
     "Ethereum",
     "Polkadot",
