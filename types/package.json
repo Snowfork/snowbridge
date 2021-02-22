@@ -1,6 +1,6 @@
 {
   "name": "@snowfork/snowbridge-types",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Type definitions for the Snowbridge parachain",
   "repository": {
     "type": "git",
@@ -25,10 +25,10 @@
     "prepublish": "yarn build"
   },
   "devDependencies": {
-    "typescript": "^4.1.5",
     "@polkadot/keyring": "^5.7.1",
     "@polkadot/types": "^3.9.3",
     "@polkadot/util": "^5.7.1",
-    "@polkadot/util-crypto": "^5.7.1"
+    "@polkadot/util-crypto": "^5.7.1",
+    "typescript": "^4.1.5"
   }
 }
