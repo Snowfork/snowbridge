@@ -7,12 +7,12 @@ import "./OutboundChannel.sol";
 // IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have incentivization too.
 contract IncentivizedOutboundChannel is OutboundChannel {
 
-    uint256 public gasFee;
+    uint256 public relayFee;
     address public feeController;
 
-    constructor(uint256 _gasFee, address _feeControllerAddress) {
+    constructor(uint256 _relayFee, address _feeControllerAddress) {
         nonce = 0;
-        gasFee = _gasFee;
+        relayFee = _relayFee;
         feeController = _feeControllerAddress;
     }
 
@@ -33,7 +33,7 @@ contract IncentivizedOutboundChannel is OutboundChannel {
         nonce = nonce + 1;
 
 
-        emit Message(msg.sender, nonce, payload, gasFee);
+        emit Message(msg.sender, nonce, payload, relayFee);
     }
 
     modifier onlyFeeController {
@@ -42,11 +42,11 @@ contract IncentivizedOutboundChannel is OutboundChannel {
     }
 
     /**
-    * @dev Sets gasFee. Only feeController is allowed to set gasFee
+    * @dev Sets relayFee. Only feeController is allowed to set relayFee
     */
-    function setGasFee(uint256 _fee) public onlyFeeController {
+    function setrelayFee(uint256 _fee) public onlyFeeController {
         require(_fee > 0, "fee must be positive");
-        gasFee = _fee;
+        relayFee = _fee;
     }
 
     /**
