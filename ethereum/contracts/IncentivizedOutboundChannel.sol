@@ -7,21 +7,13 @@ import "./OutboundChannel.sol";
 // IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have incentivization too.
 contract IncentivizedOutboundChannel is OutboundChannel {
 
-    uint256 private _relayFee;
-    address private _feeController;
+    uint256 public relayFee;
+    address public feeController;
 
-    function relayFee() public view virtual returns (uint256) {
-        return _relayFee;
-    }
-
-      function feeController() public view virtual returns (address) {
-        return _feeController;
-    }
-
-    constructor(uint256 _fee, address _feeControllerAddress) {
+    constructor(uint256 _relayFee, address _feeControllerAddress) {
         nonce = 0;
-        _relayFee = _fee;
-        _feeController = _feeControllerAddress;
+        relayFee = _relayFee;
+        feeController = _feeControllerAddress;
     }
 
     event Message(
@@ -41,11 +33,11 @@ contract IncentivizedOutboundChannel is OutboundChannel {
         nonce = nonce + 1;
 
 
-        emit Message(msg.sender, nonce, payload, _relayFee);
+        emit Message(msg.sender, nonce, payload, relayFee);
     }
 
     modifier onlyFeeController {
-        require(msg.sender == _feeController, "Caller is not a fee controller");
+        require(msg.sender == feeController, "Caller is not a fee controller");
         _;
     }
 
@@ -54,13 +46,13 @@ contract IncentivizedOutboundChannel is OutboundChannel {
     */
     function setRelayFee(uint256 _fee) public onlyFeeController {
         require(_fee > 0, "fee must be positive");
-        _relayFee = _fee;
+        relayFee = _fee;
     }
 
     /**
     * @dev Change feeController address
     */
     function setFeeController(address _feeControllerAddress) public onlyFeeController {
-        _feeController = _feeControllerAddress;
+        feeController = _feeControllerAddress;
     }
 }

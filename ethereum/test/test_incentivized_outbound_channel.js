@@ -61,7 +61,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
 
   });
 
-  describe("_relayFee", function () {
+  describe("relayFee", function () {
     beforeEach(async function () {
       this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
     });
@@ -75,7 +75,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
     })
   })
 
-  describe("_feeController", function () {
+  describe("feeController", function () {
     beforeEach(async function () {
       this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
     });
