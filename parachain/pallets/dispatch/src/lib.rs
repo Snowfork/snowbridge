@@ -37,6 +37,11 @@ where
 	fn try_origin(o: OuterOrigin) -> Result<Self::Success, OuterOrigin> {
 		o.into().and_then(|o| Ok(o.0))
 	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> OuterOrigin {
+		OuterOrigin::from(Origin(Default::default()))
+	}
 }
 
 pub trait Config: system::Config {
