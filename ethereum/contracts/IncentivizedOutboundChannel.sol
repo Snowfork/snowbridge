@@ -10,10 +10,10 @@ contract IncentivizedOutboundChannel is OutboundChannel {
     uint256 public gasFee;
     address public feeController;
 
-    constructor(uint256 _gasFee, address _feeController) {
+    constructor(uint256 _gasFee, address _feeControllerAddress) {
         nonce = 0;
         gasFee = _gasFee;
-        feeController = _feeController;
+        feeController = _feeControllerAddress;
     }
 
     event Message(
@@ -31,11 +31,13 @@ contract IncentivizedOutboundChannel is OutboundChannel {
         override
     {
         nonce = nonce + 1;
-        emit Message(msg.sender, nonce, payload, msg.value);
+
+
+        emit Message(msg.sender, nonce, payload, gasFee);
     }
 
     modifier onlyFeeController {
-        require(msg.sender == feeController, "Caller is not fee controller");
+        require(msg.sender == feeController, "Caller is not a fee controller");
         _;
     }
 
