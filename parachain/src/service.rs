@@ -23,6 +23,7 @@ native_executor_instance!(
 	pub Executor,
 	artemis_runtime::api::dispatch,
 	artemis_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
 );
 
 /// Starts a `ServiceBuilder` for a full service.

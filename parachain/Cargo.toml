@@ -68,10 +68,19 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branc
 artemis-core = { path = "primitives/core" }
 artemis-runtime = { path = "runtime" }
 
+# These dependencies are used for runtime benchmarking
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
 [features]
+default = []
+runtime-benchmarks = [
+    "artemis-runtime/runtime-benchmarks",
+    "polkadot-service/runtime-benchmarks",
+]
 test-e2e = ["artemis-runtime/test-e2e"]
 
 [profile.release]
