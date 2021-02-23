@@ -29,6 +29,35 @@ async function start() {
       ValidatorSetId: 'u64',
       BeefySignature: '[u8; 65]',
       Authorities: 'Vec<[u8; 33]>',
+      MMRStorageKey: {
+        prefix: 'Vec<u8>',
+        pos: 'u64'
+      },
+      MMRProof: {
+        blockHash: 'BlockHash',
+        leaf: 'Vec<u8>',
+        proof: 'Vec<u8>',
+      },
+      BlockHash: 'H256',
+      MMRLeaf: {
+        parent_number_and_hash: 'ParentNumberAndHash',
+        parachainHeads: 'H256',
+        beefyNextAuthoritySet: 'BeefyNextAuthoritySet',
+      },
+      ParentNumberAndHash: {
+        parentNumber: 'ParentNumber',
+        hash: '[u8; 32]'
+      },
+      // TODO: The MMRLeaf is a Vec<u8>, so double-scale encoded which messes this first variable up.
+      // Should fix
+      ParentNumber: { idk: '[u8; 2]', blockNumber: 'u32' },
+      BeefyNextAuthoritySet: {
+        id: 'u64',
+        /// Number of validators in the set.
+        len: 'u32',
+        /// Merkle Root Hash build from BEEFY uncompressed AuthorityIds.
+        root: 'H256',
+      }
     },
     rpc: {
       beefy: {
@@ -36,12 +65,21 @@ async function start() {
           alias: ['beefy_subscribeJustifications', 'beefy_unsubscribeJustifications'],
           params: [],
           type: 'SignedCommitment',
-          method: _ => console.log("qq"),
           pubsub: [
             'justifications',
             'subscribeJustifications',
             'unsubscribeJustifications'
           ],
+        }
+      },
+      mmr: {
+        generateProof: {
+          alias: ['mmr_generateProof'],
+          params: [{
+            name: 'leaf_index',
+            type: 'u64'
+          }],
+          type: 'MMRProof'
         }
       }
     }
@@ -86,10 +124,6 @@ async function subscribeJustifications(api) {
 }
 
 async function getLatestMMRInJustification(justification, api) {
-  // Print relevant API for reference:
-  console.log({ mmr: Object.keys(api.query.mmr) })
-  console.log({ beefy: Object.keys(api.query.beefy) })
-  console.log({ mmrLeaf: Object.keys(api.query.mmrLeaf) })
   const blockNumber = justification.commitment.block_number.toString();
   const mmrRoot = justification.commitment.payload.toString();
   console.log({
@@ -103,9 +137,12 @@ async function getLatestMMRInJustification(justification, api) {
   // TODO Get proof and para_head of our parachain in para_heads
 }
 
-async function getMMRLeafForBlock(bblockNumberlock, api) {
-  // TODO query offchain storage for that MMRLeaf
-  // TODO print that MMRLeaf
+async function getMMRLeafForBlock(blockNumber, api) {
+  const mmrProof = await api.rpc.mmr.generateProof(blockNumber);
+  console.log({ mmrProof: mmrProof.toString() });
+
+  mmrLeaf = api.createType('MMRLeaf', mmrProof.leaf.toHex());
+  console.log({ mmrLeafDec: mmrLeaf.toString() })
 }
 
 start();
