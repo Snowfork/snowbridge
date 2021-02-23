@@ -36,9 +36,17 @@ async function start() {
       MMRProof: {
         blockHash: 'BlockHash',
         leaf: 'Vec<u8>',
-        proof: 'Vec<u8>',
+        proof: 'ActualMMRProof',
       },
       BlockHash: 'H256',
+      ActualMMRProof: {
+        /// The index of the leaf the proof is for.
+        leaf_index: 'u64',
+        /// Number of leaves in MMR, when the proof was generated.
+        leaf_count: 'u64',
+        /// Proof elements (hashes of siblings of inner nodes on the path to the leaf).
+        items: 'Vec<Hash>',
+      },
       MMRLeaf: {
         parent_number_and_hash: 'ParentNumberAndHash',
         parachainHeads: 'H256',
@@ -141,8 +149,8 @@ async function getMMRLeafForBlock(blockNumber, api) {
   const mmrProof = await api.rpc.mmr.generateProof(blockNumber);
   console.log({ mmrProof: mmrProof.toString() });
 
-  mmrLeaf = api.createType('MMRLeaf', mmrProof.leaf.toHex());
-  console.log({ mmrLeafDec: mmrLeaf.toString() })
+  decodedLeaf = api.createType('MMRLeaf', mmrProof.leaf.toHex());
+  console.log({ decodedLeaf: decodedLeaf.toString() })
 }
 
 start();
