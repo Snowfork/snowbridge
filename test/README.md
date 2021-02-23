@@ -22,18 +22,23 @@ Download dependencies:
 yarn install
 ```
 
-Install `polkadot-launch`:
+Install our beefy-compatible fork of `polkadot-launch`:
 
 ```bash
-yarn global add polkadot-launch
+git clone -n https://github.com/snowfork/polkadot-launch.git /tmp/polkadot-launch
+cd /tmp/polkadot-launch
+git checkout beefy
+yarn install
+yarn build
+yarn global add file:$(pwd)
 ```
 
-Build polkadot:
+Build the beefy-filled version of polkadot:
 
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout rococo-v1
+git checkout td-mmr # Note: This has been tested only on commit e6e77c2c. If td-mmr has become newer, then things may break.
 cargo build --release --features=real-overseer
 ```
 

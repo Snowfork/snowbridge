@@ -32,6 +32,7 @@
 		}
 	],
 	"simpleParachains": [],
+	"hrmpChannels": [],
 	"types": {
 		"Address": "MultiAddress",
 		"LookupSource": "MultiAddress"
