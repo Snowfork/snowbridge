@@ -3,6 +3,7 @@ const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
 const DOTApp = artifacts.require("DOTApp");
 const TestToken = artifacts.require("TestToken");
+const FeeController = artifacts.require("FeeController");
 
 const channels = {
   basic: {
@@ -29,10 +30,11 @@ const channels = {
 
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
+    await deployer.deploy(FeeController)
     channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
     channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
     channels.incentivized.inbound.instance = await deployer.deploy(channels.incentivized.inbound.contract)
-    channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract)
+    channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract, 10000, FeeController.address)
 
     // Link libraries to applications
     await deployer.deploy(ScaleCodec);

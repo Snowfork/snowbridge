@@ -14,17 +14,19 @@ require("chai")
 contract("IncentivizedOutboundChannel", function (accounts) {
   // Accounts
   const userOne = accounts[1];
+  const userTwo = accounts[2];
+  const userThree = accounts[3];
   const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new();
+      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
     });
   });
 
   describe("send", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new();
+      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
     });
 
     it("should send messages out with the correct event and fields", async function () {
@@ -59,4 +61,31 @@ contract("IncentivizedOutboundChannel", function (accounts) {
 
   });
 
+  describe("_relayFee", function () {
+    beforeEach(async function () {
+      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
+    });
+
+    it("should let feeController set relayFee", async function () {
+      await this.channel.setRelayFee(20000, {from: userTwo}).should.be.fulfilled;
+    })
+
+    it("should not allow non feeController caller to set relayFee", async function () {
+      await this.channel.setRelayFee(20000, {from: userThree}).should.be.rejected;
+    })
+  })
+
+  describe("_feeController", function () {
+    beforeEach(async function () {
+      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
+    });
+
+    it("should let feeController set itself", async function () {
+      await this.channel.setFeeController(userThree, {from: userTwo}).should.be.fulfilled;
+    })
+
+    it("should not allow non feeController caller to change feeController", async function () {
+      await this.channel.setFeeController(userThree, {from: userOne}).should.be.rejected;
+    })
+  })
 });
