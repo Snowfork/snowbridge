@@ -13,6 +13,10 @@
 				"wsPort": 9955,
 				"port": 30555
 			}
+		],
+		"flags": [
+			"--enable-offchain-indexing=true",
+			"--offchain-worker=Always"
 		]
 	},
 	"parachains": [
