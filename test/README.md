@@ -38,7 +38,7 @@ Build the beefy-filled version of polkadot:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout td-mmr # Note: This has been tested only on commit e6e77c2c. If td-mmr has become newer, then things may break.
+git checkout td-mmr-custom-rpc # Note: This has been tested only on commit ace614d9. If td-mmr has become newer, then things may break.
 cargo build --release --features=real-overseer
 ```
 
