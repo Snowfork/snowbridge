@@ -20,17 +20,12 @@
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult};
 use frame_system::{self as system, ensure_signed};
 
-use artemis_core::{
-	Message, MessageCommitment, MessageDispatch, MessageId, SubmitOutbound, Verifier,
-};
-use channel::{inbound::BasicInboundChannel, outbound::BasicOutboundChannel};
+use artemis_core::{ChannelId, Message, MessageCommitment, MessageDispatch, MessageId, Verifier};
 use envelope::Envelope;
-use primitives::{InboundChannel, InboundChannelData, OutboundChannel, OutboundChannelData};
 use sp_core::H160 as EthAddress;
 use sp_std::convert::TryFrom;
 use sp_std::prelude::*;
 
-mod channel;
 mod envelope;
 #[cfg(test)]
 mod mock;
@@ -56,9 +51,9 @@ pub trait Config: system::Config {
 decl_storage! {
 	trait Store for Module<T: Config> as BasicChannelModule {
 		/// Storage for inbound channels.
-		pub InboundChannels: map hasher(identity) EthAddress => InboundChannelData;
+		pub InboundChannels: map hasher(identity) EthAddress => u64;
 		/// Storage for outbound channels.
-		pub OutboundChannels: map hasher(identity) T::AccountId => OutboundChannelData;
+		pub OutboundChannels: map hasher(identity) T::AccountId => u64;
 	}
 }
 
@@ -92,24 +87,47 @@ decl_module! {
 
 		#[weight = 0]
 		pub fn submit(origin, message: Message) -> DispatchResult {
-			let relayer = ensure_signed(origin)?;
-			// submit message to verifier for verification
+			let _relayer = ensure_signed(origin)?;
+
+			// Submit message to verifier for verification
 			let log = T::Verifier::verify(&message)?;
 
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
-			let channel = BasicInboundChannel::<T>::new(envelope.source);
-			channel.submit(&relayer, &envelope)
+			Self::submit_inbound(&envelope)
 		}
 	}
 }
 
-impl<T: Config> SubmitOutbound<T::AccountId> for Module<T> {
+impl<T: Config> Module<T> {
+	fn submit_inbound(envelope: &Envelope) -> DispatchResult {
+		InboundChannels::try_mutate(envelope.source, |nonce| {
+			if envelope.nonce != *nonce + 1 {
+				return Err(Error::<T>::BadNonce);
+			}
+			*nonce += 1;
+			Ok(())
+		})?;
+
+		let message_id = MessageId::new(ChannelId::Basic, envelope.source, envelope.nonce);
+		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
+
+		Ok(())
+	}
+
 	// Submit a message to Ethereum, taking the desired channel for delivery.
-	fn submit(account_id: T::AccountId, target: EthAddress, payload: &[u8]) -> DispatchResult {
-		// Construct channel object from storage
-		let channel = BasicOutboundChannel::<T>::new(account_id);
-		channel.submit(target, payload)
+	#[allow(dead_code)]
+	fn submit_outbound(
+		account_id: &T::AccountId,
+		target: EthAddress,
+		payload: &[u8],
+	) -> DispatchResult {
+		OutboundChannels::<T>::try_mutate(account_id, |nonce| {
+			*nonce += 1;
+			T::MessageCommitment::add(ChannelId::Basic, target, *nonce, payload)?;
+			<Module<T>>::deposit_event(Event::<T>::MessageAccepted(account_id.clone(), *nonce));
+			Ok(())
+		})
 	}
 }
