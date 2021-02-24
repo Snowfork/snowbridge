@@ -1,7 +1,7 @@
 use super::*;
 
 use frame_support::{dispatch::DispatchError, parameter_types};
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -9,12 +9,10 @@ use sp_runtime::{
 };
 use sp_std::convert::From;
 
-use artemis_core::{
-	ChannelId, MessageCommitment, MessageDispatch, MessageId, SourceChannel, SourceChannelConfig,
-};
+use artemis_core::{ChannelId, MessageCommitment, MessageDispatch, MessageId};
 use artemis_ethereum::Log;
 
-use crate as bridge;
+use crate as basic_channel;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -23,10 +21,10 @@ frame_support::construct_runtime!(
 	pub enum Test where
 		Block = Block,
 		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
+		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		System: frame_system::{Module, Call, Storage, Event<T>},
-		Bridge: bridge::{Module, Call, Storage, Event},
+		BasicChannel: basic_channel::{Module, Call, Storage, Event<T>},
 	}
 );
 
@@ -74,7 +72,7 @@ impl Verifier for MockVerifier {
 pub struct MockMessageCommitment;
 
 impl MessageCommitment for MockMessageCommitment {
-	fn add(channel_id: ChannelId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
+	fn add(_channel_id: ChannelId, _target: H160, _nonce: u64, _payload: &[u8]) -> DispatchResult {
 		Ok(())
 	}
 }
@@ -93,33 +91,18 @@ impl Config for Test {
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	new_tester_with_config(bridge::GenesisConfig {
-		source_channels: SourceChannelConfig {
-			basic: SourceChannel {
-				address: H160::zero(),
-			},
-			incentivized: SourceChannel {
-				address: H160::zero(),
-			},
-		},
+	new_tester_with_config(basic_channel::GenesisConfig {
+		source_channel: H160::zero(),
 	})
 }
 
-pub fn new_tester_with_source_channels(
-	basic: H160,
-	incentivized: H160,
-) -> sp_io::TestExternalities {
-	new_tester_with_config(bridge::GenesisConfig {
-		source_channels: SourceChannelConfig {
-			basic: SourceChannel { address: basic },
-			incentivized: SourceChannel {
-				address: incentivized,
-			},
-		},
+pub fn new_tester_with_source_channel(channel: H160) -> sp_io::TestExternalities {
+	new_tester_with_config(basic_channel::GenesisConfig {
+		source_channel: channel,
 	})
 }
 
-pub fn new_tester_with_config(config: bridge::GenesisConfig) -> sp_io::TestExternalities {
+pub fn new_tester_with_config(config: basic_channel::GenesisConfig) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default()
 		.build_storage::<Test>()
 		.unwrap();

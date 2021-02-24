@@ -17,19 +17,20 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
+};
 use frame_system::{self as system, ensure_signed};
 
 use artemis_core::{ChannelId, Message, MessageCommitment, MessageDispatch, MessageId, Verifier};
 use envelope::Envelope;
-use sp_core::H160 as EthAddress;
+use sp_core::H160;
 use sp_std::convert::TryFrom;
 use sp_std::prelude::*;
 
 mod envelope;
 #[cfg(test)]
 mod mock;
-mod primitives;
 #[cfg(test)]
 mod tests;
 
@@ -50,8 +51,10 @@ pub trait Config: system::Config {
 
 decl_storage! {
 	trait Store for Module<T: Config> as BasicChannelModule {
+		/// Outbound (source) channel on Ethereum from whom we will accept messages.
+		SourceChannel get(fn source_channel) config(): H160;
 		/// Storage for inbound channels.
-		pub InboundChannels: map hasher(identity) EthAddress => u64;
+		pub InboundChannels: map hasher(identity) H160 => u64;
 		/// Storage for outbound channels.
 		pub OutboundChannels: map hasher(identity) T::AccountId => u64;
 	}
@@ -69,6 +72,8 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
+		/// Message came from an invalid outbound channel on the Ethereum side.
+		InvalidSourceChannel,
 		/// Message has an invalid envelope.
 		InvalidEnvelope,
 		/// Message has an unexpected nonce.
@@ -87,6 +92,7 @@ decl_module! {
 
 		#[weight = 0]
 		pub fn submit(origin, message: Message) -> DispatchResult {
+			// Check that the extrinsic was signed and get the signer.
 			let _relayer = ensure_signed(origin)?;
 
 			// Submit message to verifier for verification
@@ -95,6 +101,10 @@ decl_module! {
 			// Decode log into an Envelope
 			let envelope = Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
 
+			// Verify that the message was submitted to us from a known
+			// outbound channel on the ethereum side
+			ensure!(envelope.channel == SourceChannel::get(), Error::<T>::InvalidSourceChannel);
+
 			Self::submit_inbound(&envelope)
 		}
 	}
@@ -102,11 +112,16 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 	fn submit_inbound(envelope: &Envelope) -> DispatchResult {
+		//
+		// TODO: we are using the source, but need to switch to tx.origin and do the
+		// corresponding changes in the Eth side first
+		//
 		InboundChannels::try_mutate(envelope.source, |nonce| {
 			if envelope.nonce != *nonce + 1 {
 				return Err(Error::<T>::BadNonce);
 			}
 			*nonce += 1;
+
 			Ok(())
 		})?;
 
@@ -118,15 +133,11 @@ impl<T: Config> Module<T> {
 
 	// Submit a message to Ethereum, taking the desired channel for delivery.
 	#[allow(dead_code)]
-	fn submit_outbound(
-		account_id: &T::AccountId,
-		target: EthAddress,
-		payload: &[u8],
-	) -> DispatchResult {
+	fn submit_outbound(account_id: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		OutboundChannels::<T>::try_mutate(account_id, |nonce| {
 			*nonce += 1;
 			T::MessageCommitment::add(ChannelId::Basic, target, *nonce, payload)?;
-			<Module<T>>::deposit_event(Event::<T>::MessageAccepted(account_id.clone(), *nonce));
+			Self::deposit_event(Event::<T>::MessageAccepted(account_id.clone(), *nonce));
 			Ok(())
 		})
 	}

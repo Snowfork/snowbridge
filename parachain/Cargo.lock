@@ -231,10 +231,13 @@ dependencies = [
  "ethabi-decode",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "parity-scale-codec",
+ "rlp",
  "serde",
  "sp-core",
  "sp-io",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]
