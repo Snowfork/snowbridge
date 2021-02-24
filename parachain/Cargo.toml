@@ -67,6 +67,7 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branc
 
 artemis-core = { path = "primitives/core" }
 artemis-runtime = { path = "runtime" }
+tarpaulin = "0.1.0"
 
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }

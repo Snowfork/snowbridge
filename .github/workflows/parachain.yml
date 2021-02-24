@@ -24,21 +24,24 @@ jobs:
       SKIP_WASM_BUILD: 1
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('parachain/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: nightly-2021-01-10
           target: wasm32-unknown-unknown
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-      - uses: Swatinem/rust-cache@v1
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
-          toolchain: stable
+          toolchain: nightly-2021-01-10
           args: --manifest-path parachain/Cargo.toml --workspace --exclude artemis
 
   test:
@@ -66,10 +69,6 @@ jobs:
           profile: minimal
           toolchain: nightly-2021-01-10
           target: wasm32-unknown-unknown
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
       - uses: actions-rs/install@v0.1.2
         with:
           crate: cargo-tarpaulin
@@ -78,11 +77,18 @@ jobs:
       - name: cargo test
         uses: actions-rs/cargo@v1
         with:
-          command: tarpaulin
-          args: >-
-            --manifest-path parachain/Cargo.toml
-            --verbose --workspace
-            --exclude artemis,artemis-runtime
-            --exclude-files 'src/command.rs,*/mock.rs,*/test.rs'
-            --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
+          command: test
           toolchain: stable
+          args: --manifest-path parachain/Cargo.toml --workspace --exclude artemis
+
+      # - name: cargo test
+      #   uses: actions-rs/cargo@v1
+      #   with:
+      #     command: tarpaulin
+      #     args: >-
+      #       --manifest-path parachain/Cargo.toml
+      #       --verbose --workspace
+      #       --exclude artemis,artemis-runtime
+      #       --exclude-files 'src/command.rs,*/mock.rs,*/test.rs'
+      #       --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
+      #     toolchain: nightly-2021-01-10
