@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "prepublish": "yarn build"
+    "prepack": "tsc"
   },
   "devDependencies": {
     "@polkadot/keyring": "^5.7.1",

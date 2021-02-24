@@ -11,8 +11,10 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
    yarn global add truffle
    (cd ../ethereum && yarn install)
     ```
+
 3. Development environment for Relayer. See relayer [requirements](../relayer/README.md#requirements).
 4. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
+5. Build the `@snowfork/snowbridge-types` package using these [steps](../types/README.md#development).
 
 ## Setup
 
@@ -55,7 +57,7 @@ yarn test
 
 Make sure to setup the E2E stack as described above.
 
-For interacting with Substrate, open [https://polkadot.js.org/apps/](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144&types=eNplkttOwkAQhl%2FF7JUmvZAqhKAhASUpCRCj4I0hZtkOsKHdafZgUNJ3d4YWOXi1OzP%2FfLtz2IlemlpwTnTEOGReH8xIjBA3oXjDYBX8jz6tpTGQDVPR2YlPMCHnS186rUTHhCyLxNAoMF5%2F6R8gFfvKMhJjypcrmCBFCRta90SrnRVNHdEnz0TCnKQcQZyRSi8p8A7qMbS7JC0s4pI8L%2FuTxNWFpIsM1SaRbk3RJG62SOy3Q5PClsl3Mdk17ZpxNbIbXZ1aN4wc%2BDVYCHkCMgXL7EJaKvgCrnNwXubFX63UqgXra1MGv0Y2k0brlhOsNE4qr9G4V0R%2FRGGeg3XneNiS%2FvmyfHrQw3myBQW68BfIDFf9DJFmJ6ozEivpZo4HJmaVhhwjnWvOqj2pXi61on34PvocyKz%2Bw6FLdZPov%2FvuV7%2FkYa0mmAJv3EfSbMQPV%2FH8ZGScnTRiqoPS68%2FRhrE6tEnbbM050nMO%2FMX2DabJYfemuAFzaGpZlr%2BYV%2Bf6) in your browser (Make sure to use this link specifically).
+For interacting with Substrate, open [https://polkadot.js.org/apps/](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144#/explorer) in your browser (Make sure to use this link specifically).
 
 #### Locking up ETH to mint PolkaETH on Substrate
 
