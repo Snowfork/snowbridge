@@ -2,7 +2,7 @@
 use sp_core::{H160, H256};
 use frame_support::{
 	parameter_types,
-	dispatch::DispatchResult,
+	dispatch::{DispatchError, DispatchResult},
 };
 use sp_runtime::{
 	traits::{
@@ -78,7 +78,10 @@ impl artemis_dispatch::Config for Test {
 pub struct MockSubmitOutbound;
 
 impl SubmitOutbound for MockSubmitOutbound {
-	fn submit(_: ChannelId, _: H160, _: &[u8]) -> DispatchResult {
+	fn submit(channel: ChannelId, _: H160, _: &[u8]) -> DispatchResult {
+		if channel == ChannelId::Basic {
+			return Err(DispatchError::Other("some error!"))
+		}
 		Ok(())
 	}
 }
