@@ -56,8 +56,7 @@ contract DOTApp {
     }
 
     function burnFee(address _user, uint256 _amount) external {
-        require(msg.sender == c2.outbound, "Invalid caller channel");
-
+        // TODO: Ensure message sender is a known outbound channel
         token.burn(_user, _amount, "");
     }
 
