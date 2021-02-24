@@ -9,9 +9,12 @@ const { ApiPromise, WsProvider } = require('@polkadot/api');
 const WebSocket = require('ws');
 const { base58Decode, addressToEvm, secp256k1Expand, secp256k1Compress, decodeAddress, encodeAddress, ethereumEncode, blake2AsHex, keccakAsHex } = require("@polkadot/util-crypto");
 const { hexToU8a, u8aToHex, u8aToU8a } = require("@polkadot/util");
+let { bundle } = require("@snowfork/snowbridge-types");
 
 const RELAY_CHAIN_RPC_ENDPOINT = 'ws://localhost:9944';
 const RELAY_CHAIN_HTTP_RPC_ENDPOINT = 'http://localhost:30444';
+const PARACHAIN_ID = 200;
+const PARACHAIN_RPC_ENDPOINT = 'ws://localhost:11144';
 
 async function start() {
   const wsProvider = new WsProvider(RELAY_CHAIN_RPC_ENDPOINT);
@@ -36,7 +39,7 @@ async function start() {
       },
       MMRProof: {
         blockHash: 'BlockHash',
-        leaf: 'Vec<u8>',
+        leaf: 'MMRLeaf',
         proof: 'ActualMMRProof',
       },
       BlockHash: 'H256',
@@ -48,8 +51,9 @@ async function start() {
         /// Proof elements (hashes of siblings of inner nodes on the path to the leaf).
         items: 'Vec<Hash>',
       },
+      MMRLeafVec: 'Vec<MMRLeaf>',
       MMRLeaf: {
-        parent_number_and_hash: 'ParentNumberAndHash',
+        parentNumberAndHash: 'ParentNumberAndHash',
         parachainHeads: 'H256',
         beefyNextAuthoritySet: 'BeefyNextAuthoritySet',
       },
@@ -59,13 +63,22 @@ async function start() {
       },
       // TODO: The MMRLeaf is a Vec<u8>, so double-scale encoded which messes this first variable up.
       // Should fix
-      ParentNumber: { idk: '[u8; 2]', blockNumber: 'u32' },
+      ParentNumber: '[u8; 6]',
       BeefyNextAuthoritySet: {
         id: 'u64',
         /// Number of validators in the set.
         len: 'u32',
         /// Merkle Root Hash build from BEEFY uncompressed AuthorityIds.
         root: 'H256',
+      },
+      ParachainHeader: {
+        parentHash: 'H256',
+        number: 'u32',
+        stateRoot: 'H256',
+        extrinsicsRoot: 'H256',
+        digest: {
+          logs: []
+        }
       }
     },
     rpc: {
@@ -94,15 +107,18 @@ async function start() {
     }
   });
 
+  console.log("Getting initial relay chain beefy authorities...");
   await getAuthorities(api);
+  console.log("Subscribing to new beefy justifications...");
   await subscribeJustifications(api);
 }
 
 async function getAuthorities(api) {
-  const authoritiesResponse = await getAuthoritiesDirect();
-  let authorities = api.createType('Authorities', authoritiesResponse);
+  const authoritiesResponse = await getAuthoritiesDirect(api);
+  let authorities = api.createType('Authorities', authoritiesResponse.toHex());
 
   const authoritiesEthereum = authorities.map(a => ethereumEncode(a));
+  console.log("Starting authorities: ");
   console.log({
     authoritiesEthereum
   });
@@ -112,10 +128,11 @@ async function getAuthorities(api) {
 
 async function subscribeJustifications(api) {
   api.rpc.beefy.subscribeJustifications(justification => {
+    console.log("New beefy justification received:");
     const commitment = justification.commitment;
     const commitmentBytes = commitment.toHex();
     const hashedCommitment = blake2AsHex(commitmentBytes, 256);
-    console.log({ justification: justification.toString(), commitmentBytes, hashedCommitment });
+    console.log({ justification: justification.toHuman(), commitmentBytes, hashedCommitment });
     getLatestMMRInJustification(justification, api)
   });
 }
@@ -127,44 +144,63 @@ async function getLatestMMRInJustification(justification, api) {
     blockNumber,
     mmrRoot
   });
-
-  latestMMRLeaf = getMMRLeafForBlock(blockNumber, api)
-
-  // TODO Extract para_heads from MMR
-  // TODO Get proof and para_head of our parachain in para_heads
+  console.log(`Justification is for block ${blockNumber}, getting MMR Leaf for that block...`);
+  // Note: This just gets the MMR leaf for that block in the latest MMR.
+  // We actually want to be getting the MMR leaf in this particulat justification's MMR
+  // If there is a newer one, this may fail
+  // TODO: Address this (may require adding to the generateProof RPC endpoint?)
+  latestMMRLeaf = await getMMRLeafForBlock(blockNumber, api)
+  paraHead = await getParaheads(blockNumber, api, PARACHAIN_ID);
+  paraHeadData = await getParaHeadData(paraHead);
 }
 
 async function getMMRLeafForBlock(blockNumber, api) {
+  console.log(`Getting proof and leaf for block ${blockNumber}...`);
   const mmrProof = await api.rpc.mmr.generateProof(blockNumber);
-  console.log({ mmrProof: mmrProof.toString() });
+  console.log({ mmrProof: mmrProof.toHuman() });
 
-  decodedLeaf = api.createType('MMRLeaf', mmrProof.leaf.toHex());
-  console.log({ decodedLeaf: decodedLeaf.toString() })
+  leaf = mmrProof.leaf;
+  console.log({ leaf: leaf.toHuman() });
 }
 
-async function getAuthoritiesDirect() {
+async function getParaheads(blockNumber, api, parachainID) {
+  // Note: This just gets the paraheads for that block in the latest MMR.
+  // We actually want to be getting the paraheads in this particular leaf's para_heads commitments
+  // If there is a newer one, this may fail
+  // TODO: Address this
+
+  // Also, for some reason the polkadot-js query.paras.heads api does not work
+  // with no paramater to retrieve all heads, so we just use the raw state query
+  console.log(`Getting parachain heads for ${blockNumber}...`);
+  const allParaHeadsStorageKey = '0xcd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c30a31c34bd88c539ec8000000';
+  const allParaHeadsRaw = await api.rpc.state.getStorage(allParaHeadsStorageKey);
+  console.log({ allParaHeadsRaw: allParaHeadsRaw.toHuman() });
+
+  console.log(`Getting parachain head for ${PARACHAIN_ID} only...`);
+  const paraHead = await api.query.paras.heads(parachainID);
+  console.log({ paraHead: paraHead.toHuman() });
+  return paraHead
+}
+
+async function getAuthoritiesDirect(api) {
   // For some reason the polkadot-js beefy.authorities function is not returning enough bytes.
   // This function just manually gets them.
-  return new Promise(resolve => {
-    const ws = new WebSocket(RELAY_CHAIN_RPC_ENDPOINT);
-    const beefyStorageQuery = "0x08c41974a97dbf15cfbec28365bea2da5e0621c4869aa60c02be9adcc98a0d1d";
-    const getBeefyAuthorities = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: "state_getStorage",
-      params: [beefyStorageQuery]
-    };
+  const beefyStorageQuery = "0x08c41974a97dbf15cfbec28365bea2da5e0621c4869aa60c02be9adcc98a0d1d";
+  const authorities = await api.rpc.state.getStorage(beefyStorageQuery);
+  return authorities;
+}
 
-    ws.on('open', function open() {
-      ws.send(JSON.stringify(getBeefyAuthorities));
-    });
-
-
-    ws.on('message', function incoming(data) {
-      resolve(JSON.parse(data).result);
-      ws.terminate()
-    });
+async function getParaHeadData(paraHead) {
+  const parachainWsProvider = new WsProvider(PARACHAIN_RPC_ENDPOINT);
+  const parachainApi = await ApiPromise.create({
+    provider: parachainWsProvider,
+    typesBundle: bundle,
   });
+
+  const truncatedHead = paraHead.toHuman().slice(0, 66);
+  console.log({ truncatedHead })
+  const headData = await parachainApi.rpc.chain.getHeader(truncatedHead);
+  console.log({ headData: headData.toHuman() });
 }
 
 start();
