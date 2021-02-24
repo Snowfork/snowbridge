@@ -11,6 +11,7 @@ const { base58Decode, addressToEvm, secp256k1Expand, secp256k1Compress, decodeAd
 const { hexToU8a, u8aToHex, u8aToU8a } = require("@polkadot/util");
 
 const RELAY_CHAIN_RPC_ENDPOINT = 'ws://localhost:9944';
+const RELAY_CHAIN_HTTP_RPC_ENDPOINT = 'http://localhost:30444';
 
 async function start() {
   const wsProvider = new WsProvider(RELAY_CHAIN_RPC_ENDPOINT);
@@ -98,20 +99,8 @@ async function start() {
 }
 
 async function getAuthorities(api) {
-  const authoritiesResponse = await api.query.beefy.authorities();
+  const authoritiesResponse = await getAuthoritiesDirect();
   let authorities = api.createType('Authorities', authoritiesResponse);
-
-  // Currently, there is a bug in the Javascript decoding of the authority which results in it missing the last byte
-  // For now, we just replace this with the correct ones for testing purposes, but when integrated into the relayer
-  // we'll need to ensure the authorities are decoded correctly from the actual API. See the console.log for example.
-  const correctAuthorityAlice = '0x020a1091341fe5664bfa1782d5e04779689068c916b04cb365ec3153755684d9a1';
-  const correctAuthorityBob = '0x0390084fdbf27d2b79d26a4f13f0ccd982cb755a661969143c37cbc49ef5b91f27';
-  authoritiesCorrect = [correctAuthorityAlice, correctAuthorityBob];
-  console.log({
-    authoritiesWrong: authorities.map(a => u8aToHex(a)),
-    authoritiesCorrect,
-  })
-  authorities = authoritiesCorrect;
 
   const authoritiesEthereum = authorities.map(a => ethereumEncode(a));
   console.log({
@@ -151,6 +140,31 @@ async function getMMRLeafForBlock(blockNumber, api) {
 
   decodedLeaf = api.createType('MMRLeaf', mmrProof.leaf.toHex());
   console.log({ decodedLeaf: decodedLeaf.toString() })
+}
+
+async function getAuthoritiesDirect() {
+  // For some reason the polkadot-js beefy.authorities function is not returning enough bytes.
+  // This function just manually gets them.
+  return new Promise(resolve => {
+    const ws = new WebSocket(RELAY_CHAIN_RPC_ENDPOINT);
+    const beefyStorageQuery = "0x08c41974a97dbf15cfbec28365bea2da5e0621c4869aa60c02be9adcc98a0d1d";
+    const getBeefyAuthorities = {
+      jsonrpc: '2.0',
+      id: 1,
+      method: "state_getStorage",
+      params: [beefyStorageQuery]
+    };
+
+    ws.on('open', function open() {
+      ws.send(JSON.stringify(getBeefyAuthorities));
+    });
+
+
+    ws.on('message', function incoming(data) {
+      resolve(JSON.parse(data).result);
+      ws.terminate()
+    });
+  });
 }
 
 start();
