@@ -10,9 +10,10 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
    ```bash
    yarn global add truffle
    (cd ../ethereum && yarn install)
-    ```
+   ```
+
 3. Development environment for Relayer. See relayer [requirements](../relayer/README.md#requirements).
-4. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
+4. `timeout` - native package on Ubuntu, on macOS try `brew install coreutils`
 
 ## Setup
 
@@ -20,6 +21,9 @@ Download dependencies:
 
 ```bash
 yarn install
+
+# Build typescript bindings
+cd ./node_modules/@snowfork/snowbridge-types && yarn install
 ```
 
 Install our beefy-compatible fork of `polkadot-launch`:
@@ -79,7 +83,7 @@ In the substrate webapp (linked above), you should see an `Eth.Minted` event in 
 
 #### Burning PolkaETH to unlock ETH on Ethereum
 
-To see the PolkaETH  balance for `//Alice`:
+To see the PolkaETH balance for `//Alice`:
 
 1. Navigate to Developer > Chain state > Storage
 2. Select the `assets` module in the drop-down.
@@ -113,6 +117,6 @@ truffle exec scripts/getEthBalance.js 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD
 
 The `start-services.sh` script writes the following logs:
 
-* parachain.log
-* relayer.log
-* ganache.log
+- parachain.log
+- relayer.log
+- ganache.log
