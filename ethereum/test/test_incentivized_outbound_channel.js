@@ -20,13 +20,13 @@ contract("IncentivizedOutboundChannel", function (accounts) {
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
+      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo, userThree);
     });
   });
 
   describe("send", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
+      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo, userThree);
     });
 
     it("should send messages out with the correct event and fields", async function () {
@@ -63,7 +63,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
 
   describe("relayFee", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
+      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo, userThree);
     });
 
     it("should let feeController set relayFee", async function () {
