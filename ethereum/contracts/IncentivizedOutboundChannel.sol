@@ -3,17 +3,20 @@ pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "./OutboundChannel.sol";
+import "./DOTApp.sol";
 
 // IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have incentivization too.
 contract IncentivizedOutboundChannel is OutboundChannel {
 
     uint256 public relayFee;
     address public feeController;
+    DOTApp private _DOTApp;
 
-    constructor(uint256 _relayFee, address _feeControllerAddress) {
+    constructor(uint256 _relayFee, address _feeControllerAddress, address _DOTAppAddress) {
         nonce = 0;
         relayFee = _relayFee;
         feeController = _feeControllerAddress;
+        _DOTApp = DOTApp(_DOTAppAddress);
     }
 
     event Message(
@@ -31,7 +34,7 @@ contract IncentivizedOutboundChannel is OutboundChannel {
         override
     {
         nonce = nonce + 1;
-
+        _DOTApp.burnFee(msg.sender, relayFee);
 
         emit Message(msg.sender, nonce, payload, relayFee);
     }
