@@ -56,6 +56,11 @@ eth-app = { path = "../pallets/eth-app", package = "artemis-eth-app", default-fe
 erc20-app = { path = "../pallets/erc20-app", package = "artemis-erc20-app", default-features = false }
 commitments = { path = "../pallets/commitments", package = "artemis-commitments", default-features = false }
 
+# Used for runtime benchmarking
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false, optional = true }
+frame-system-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false, optional = true }
+hex-literal = { version = "0.3.1", optional = true }
+
 [build-dependencies]
 substrate-wasm-builder = "4.0.0"
 
@@ -101,5 +106,17 @@ std = [
     "commitments/std",
     "artemis-transfer/std",
     "artemis-xcm-support/std"
+]
+runtime-benchmarks = [
+    "sp-runtime/runtime-benchmarks",
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system-benchmarking",
+    "hex-literal",
+    "frame-system/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "pallet-timestamp/runtime-benchmarks",
+    # Artemis pallets
+    "dispatch/runtime-benchmarks",
 ]
 test-e2e = []
