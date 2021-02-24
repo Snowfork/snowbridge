@@ -46,9 +46,10 @@ func MakeMessageFromEvent(event *outbound.ContractMessage, receiptsTrie *etrie.T
 
 	value := hex.EncodeToString(message.Data)
 	log.WithFields(logrus.Fields{
-		"payload":    value,
-		"blockHash":  message.Proof.BlockHash.Hex(),
-		"eventIndex": message.Proof.TxIndex,
+		"payload":       value,
+		"blockHash":     message.Proof.BlockHash.Hex(),
+		"eventIndex":    message.Proof.TxIndex,
+		"outboundNonce": event.Nonce,
 	}).Debug("Generated message from Ethereum log")
 
 	msg := chain.EthereumOutboundMessage(message)
