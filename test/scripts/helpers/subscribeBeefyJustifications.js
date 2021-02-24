@@ -201,6 +201,13 @@ async function getParaHeadData(paraHead) {
   console.log({ truncatedHead })
   const headData = await parachainApi.rpc.chain.getHeader(truncatedHead);
   console.log({ headData: headData.toHuman() });
+
+  const headerLogs = headData.toJSON().digest && headData.toJSON().digest.logs;
+  const commitmentLog = headerLogs && headerLogs[0];
+  if (commitmentLog) {
+    console.log("Got new commitment: ");
+    console.log({ commitmentLog });
+  }
 }
 
 start();
