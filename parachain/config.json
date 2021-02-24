@@ -6,17 +6,21 @@
 			{
 				"name": "alice",
 				"wsPort": 9944,
-				"port": 30444
+				"port": 30444,
+				"flags": [
+					"--enable-offchain-indexing=true",
+					"--offchain-worker=Always"
+				]
 			},
 			{
 				"name": "bob",
 				"wsPort": 9955,
-				"port": 30555
+				"port": 30555,
+				"flags": [
+					"--enable-offchain-indexing=true",
+					"--offchain-worker=Always"
+				]
 			}
-		],
-		"flags": [
-			"--enable-offchain-indexing=true",
-			"--offchain-worker=Always"
 		]
 	},
 	"parachains": [
