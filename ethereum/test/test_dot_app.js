@@ -142,4 +142,39 @@ contract("DOTApp", function (accounts) {
       confirmChannelSend(receipt.rawLogs[2], this.channels.incentivized.outbound.address, this.app.address, 1)
     });
   });
+
+  describe("burnFee", function () {
+    beforeEach(async function () {
+      this.erc1820 = await singletons.ERC1820Registry(owner);
+      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp);
+      this.token = await Token.at(await this.app.token());
+
+      // Mint 2 wrapped DOT
+      let amountNative = BigNumber("20000000000"); // 2 DOT, uint128
+      let amountWrapped = wrapped(amountNative);
+      await this.app.mint(
+        addressBytes(POLKADOT_ADDRESS),
+        user,
+        amountWrapped.toString(),
+        {
+          from: owner,
+          value: 0
+        }
+      )
+    });
+
+    it("should burn funds", async function () {
+      const beforeTotalSupply = BigNumber(await this.token.totalSupply());
+      const beforeUserBalance = BigNumber(await this.token.balanceOf(user));
+      const amountWrapped = wrapped(BigNumber("10000000000"));
+
+      let tx = await this.app.burnFee(user, amountWrapped);
+
+      const afterTotalSupply = BigNumber(await this.token.totalSupply());
+      const afterUserBalance = BigNumber(await this.token.balanceOf(user));
+
+      beforeTotalSupply.minus(afterTotalSupply).should.be.bignumber.equal(amountWrapped);
+      beforeUserBalance.minus(afterUserBalance).should.be.bignumber.equal(amountWrapped);
+    });
+  });
 });
