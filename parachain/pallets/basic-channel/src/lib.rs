@@ -131,7 +131,7 @@ impl<T: Config> Module<T> {
 		Ok(())
 	}
 
-	// Submit a message to Ethereum, taking the desired channel for delivery.
+	// Submit a message to Ethereum
 	#[allow(dead_code)]
 	fn submit_outbound(account_id: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		OutboundChannels::<T>::try_mutate(account_id, |nonce| {
