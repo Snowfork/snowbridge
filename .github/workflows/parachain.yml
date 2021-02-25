@@ -80,7 +80,6 @@ jobs:
           command: test
           toolchain: stable
           args: --manifest-path parachain/Cargo.toml --workspace --exclude artemis
-
       # - name: cargo test
       #   uses: actions-rs/cargo@v1
       #   with:

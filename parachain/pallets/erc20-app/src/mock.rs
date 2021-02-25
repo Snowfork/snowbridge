@@ -1,17 +1,14 @@
 // Mock runtime
-use sp_core::{H160, H256};
-use frame_support::{
-	parameter_types,
-	dispatch::DispatchResult,
-};
-use sp_runtime::{
-	traits::{
-		BlakeTwo256, IdentityLookup, IdentifyAccount, Verify,
-	}, testing::Header, MultiSignature,
-};
+use frame_support::{dispatch::DispatchResult, parameter_types};
 use frame_system as system;
+use sp_core::{H160, H256};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	MultiSignature,
+};
 
-use artemis_core::{ChannelId, AssetId, SubmitOutbound};
+use artemis_core::{AssetId, ChannelId, SubmitOutboundChannel};
 
 use crate as erc20_app;
 
@@ -78,7 +75,7 @@ impl artemis_dispatch::Config for Test {
 
 pub struct MockSubmitOutbound;
 
-impl SubmitOutbound for MockSubmitOutbound {
+impl SubmitOutboundChannel for MockSubmitOutbound {
 	fn submit(_: ChannelId, _: H160, _: &[u8]) -> DispatchResult {
 		Ok(())
 	}
@@ -96,7 +93,9 @@ impl erc20_app::Config for Test {
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let mut storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut storage = system::GenesisConfig::default()
+		.build_storage::<Test>()
+		.unwrap();
 
 	let config = erc20_app::GenesisConfig {
 		address: H160::repeat_byte(1),
