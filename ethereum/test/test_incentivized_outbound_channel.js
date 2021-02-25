@@ -1,4 +1,5 @@
 const IncentivizedOutboundChannel = artifacts.require("IncentivizedOutboundChannel");
+const MockContract = artifacts.require("./test/MockContract.sol")
 
 const Web3Utils = require("web3-utils");
 const ethers = require("ethers");
@@ -13,6 +14,7 @@ require("chai")
 
 contract("IncentivizedOutboundChannel", function (accounts) {
   // Accounts
+  const owner = accounts[0];
   const userOne = accounts[1];
   const userTwo = accounts[2];
   const userThree = accounts[3];
@@ -20,13 +22,16 @@ contract("IncentivizedOutboundChannel", function (accounts) {
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo, userThree);
+      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
     });
   });
 
   describe("send", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo, userThree);
+      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
+      const mock = await MockContract.new()
+      await mock.givenAnyReturnBool(true)
+      this.channel.setDOTApp(mock.address, { from: owner })
     });
 
     it("should send messages out with the correct event and fields", async function () {
@@ -63,7 +68,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
 
   describe("relayFee", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo, userThree);
+      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
     });
 
     it("should let feeController set relayFee", async function () {

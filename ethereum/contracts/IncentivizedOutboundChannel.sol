@@ -12,11 +12,15 @@ contract IncentivizedOutboundChannel is OutboundChannel {
     address public feeController;
     DOTApp private _DOTApp;
 
-    constructor(uint256 _relayFee, address _feeControllerAddress, address _DOTAppAddress) {
+    constructor(uint256 _relayFee, address _feeControllerAddress) {
         nonce = 0;
         relayFee = _relayFee;
         feeController = _feeControllerAddress;
-        _DOTApp = DOTApp(_DOTAppAddress);
+    }
+
+    function setDOTApp(address _address) external {
+        // TODO: 1. Limit access to owner, 2. Should not reset if set
+        _DOTApp = DOTApp(_address);
     }
 
     event Message(
