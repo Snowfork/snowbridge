@@ -17,18 +17,19 @@ contract("IncentivizedOutboundChannel", function (accounts) {
   const owner = accounts[0];
   const userOne = accounts[1];
   const userTwo = accounts[2];
-  const userThree = accounts[3];
   const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
+  const relayFee = process.env.RELAY_FEE;
+  const feeController = process.env.FEE_CONTROLLER
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
+      this.channel = await IncentivizedOutboundChannel.new(relayFee, feeController);
     });
   });
 
   describe("send", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
+      this.channel = await IncentivizedOutboundChannel.new(relayFee, feeController);
       const mock = await MockContract.new()
       await mock.givenAnyReturnBool(true)
       this.channel.setDOTApp(mock.address, { from: owner })
@@ -68,29 +69,29 @@ contract("IncentivizedOutboundChannel", function (accounts) {
 
   describe("relayFee", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
+      this.channel = await IncentivizedOutboundChannel.new(relayFee, feeController);
     });
 
     it("should let feeController set relayFee", async function () {
-      await this.channel.setRelayFee(20000, {from: userTwo}).should.be.fulfilled;
+      await this.channel.setRelayFee(20000, {from: feeController}).should.be.fulfilled;
     })
 
     it("should not allow non feeController caller to set relayFee", async function () {
-      await this.channel.setRelayFee(20000, {from: userThree}).should.be.rejected;
+      await this.channel.setRelayFee(20000, {from: userTwo}).should.be.rejected;
     })
   })
 
   describe("feeController", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(1000, userTwo);
+      this.channel = await IncentivizedOutboundChannel.new(relayFee, feeController);
     });
 
     it("should let feeController set itself", async function () {
-      await this.channel.setFeeController(userThree, {from: userTwo}).should.be.fulfilled;
+      await this.channel.setFeeController(userOne, {from: feeController}).should.be.fulfilled;
     })
 
     it("should not allow non feeController caller to change feeController", async function () {
-      await this.channel.setFeeController(userThree, {from: userOne}).should.be.rejected;
+      await this.channel.setFeeController(userOne, {from: userTwo}).should.be.rejected;
     })
   })
 });

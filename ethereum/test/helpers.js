@@ -164,7 +164,7 @@ const deployAppContractWithChannels = async (appContract) => {
     },
     incentivized: {
       inbound: await channelContracts.incentivized.inbound.new(),
-      outbound: await channelContracts.incentivized.outbound.new(),
+      outbound: await channelContracts.incentivized.outbound.new(process.env.RELAY_FEE, process.env.FEE_CONTROLLER),
     },
   };
 

@@ -30,12 +30,10 @@ const channels = {
 
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
-    await deployer.deploy(FeeController)
     channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
     channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
     channels.incentivized.inbound.instance = await deployer.deploy(channels.incentivized.inbound.contract)
-    // TODO: Add fee and controller address in config/enviornments
-    channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract, 10000, FeeController.address)
+    channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract, process.env.RELAY_FEE, process.env.FEE_CONTROLLER)
 
     // Link libraries to applications
     await deployer.deploy(ScaleCodec);
