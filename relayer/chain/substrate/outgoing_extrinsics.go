@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const MaxWatchedExtrinsics = 200
+const MaxWatchedExtrinsics = 20
 
 type extrinsicPool struct {
 	sync.Mutex
