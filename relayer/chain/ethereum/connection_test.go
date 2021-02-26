@@ -16,7 +16,7 @@ import (
 func TestConnect(t *testing.T) {
 	log := logrus.NewEntry(logrus.New())
 
-	conn := ethereum.NewConnection("ws://localhost:9545", secp256k1.Alice(), log)
+	conn := ethereum.NewConnection("ws://localhost:8545", secp256k1.Alice(), log)
 	err := conn.Connect(context.Background())
 	if err != nil {
 		t.Fatal(err)
