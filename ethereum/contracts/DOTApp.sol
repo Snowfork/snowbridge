@@ -29,7 +29,7 @@ contract DOTApp {
 
     constructor(Channel memory _basic, Channel memory _incentivized) {
         address[] memory defaultOperators;
-        token = new WrappedToken("Wrapped DOT", "WDOT", defaultOperators);
+        token = new WrappedToken("Snowfork DOT", "SnowDOT", defaultOperators);
 
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
