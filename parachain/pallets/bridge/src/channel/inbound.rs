@@ -43,8 +43,6 @@ impl<T: Config> InboundChannel<T::AccountId> for BasicInboundChannel<T> {
 			Ok(())
 		})?;
 
-		T::RewardRelayer::pay_relayer(&T::RewardsAccount::get(), relayer, 10.into());
-
 		let message_id = MessageId::new(self.channel_id, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
@@ -77,7 +75,7 @@ impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 			Ok(())
 		})?;
 
-		T::RewardRelayer::pay_relayer(&T::RewardsAccount::get(), relayer, 10.into());
+		T::RewardRelayer::pay_relayer(&T::RewardsAccount::get(), relayer, 0.into());
 
 		let message_id = MessageId::new(self.channel_id, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
