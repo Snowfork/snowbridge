@@ -1,4 +1,5 @@
-use frame_support::traits::{Currency, ExistenceRequirement::KeepAlive};
+use frame_support::traits::{Currency, ExistenceRequirement::KeepAlive, WithdrawReasons};
+use frame_support::debug::native;
 use frame_system::Config;
 use sp_runtime::traits::Zero;
 use sp_std::marker::PhantomData;
@@ -20,12 +21,15 @@ where
 			return;
 		}
 
-		let _ = C::transfer(
-			source,
-			relayer,
-			reward,
-			// the relayer fund account must stay above ED (needs to be pre-funded)
-			KeepAlive,
-		);
+		// Using withdraw() & deposit() rather than transfer() to prevent a Transferred log from being emitted.
+		// The rewards fund account must stay above ED (needs to be pre-funded)
+		match C::withdraw(source, reward, WithdrawReasons::FEE, KeepAlive) {
+			Ok(imbalance) => {
+				C::resolve_creating(relayer, imbalance);
+			}
+			Err(err) => {
+				native::error!("Unable to withdraw from rewards account: {:?}", err);
+			}
+		}
 	}
 }
