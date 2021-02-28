@@ -43,7 +43,7 @@ use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 pub use artemis_core::{AssetId, ChannelId, MessageId};
 use dispatch::EnsureEthereumAccount;
 
-pub use verifier_lightclient::EthereumHeader;
+pub use verifier_lightclient::{EthereumHeader, EthereumDifficultyConfig};
 
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{Junction, MultiLocation, NetworkId};
@@ -366,21 +366,30 @@ impl bridge::Config for Runtime {
 	type MessageDispatch = dispatch::Module<Runtime>;
 }
 
+pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficultyConfig {
+	byzantium_fork_block: 1700000,
+	constantinople_fork_block: 4230000,
+	muir_glacier_fork_block: 7117117,
+};
+
 #[cfg(not(feature = "test-e2e"))]
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 3;
+	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
 	pub const VerifyPoW: bool = true;
 }
 
 #[cfg(feature = "test-e2e")]
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 1;
+	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
 	pub const VerifyPoW: bool = false;
 }
 
 impl verifier_lightclient::Config for Runtime {
 	type Event = Event;
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
+	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
 }
 

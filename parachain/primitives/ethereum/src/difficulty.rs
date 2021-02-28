@@ -22,11 +22,11 @@ pub enum BombDelay {
 #[derive(PartialEq, RuntimeDebug)]
 pub struct DifficultyConfig {
 	// Block number on which Byzantium (EIP-649) rules activated
-	byzantium_fork_block: u64,
+	pub byzantium_fork_block: u64,
 	// Block number on which Constantinople (EIP-1234) rules activated
-	constantinople_fork_block: u64,
+	pub constantinople_fork_block: u64,
 	// Block number on which MuirGlacier (EIP-2384) activated
-	muir_glacier_fork_block: u64,
+	pub muir_glacier_fork_block: u64,
 }
 
 impl DifficultyConfig {

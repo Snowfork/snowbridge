@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use ethbloom::Bloom as EthBloom;
 use hex_literal::hex;
 use parity_bytes::Bytes;
