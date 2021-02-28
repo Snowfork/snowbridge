@@ -127,7 +127,7 @@ impl Header {
 	}
 
 	pub fn has_ommers(&self) -> bool {
-		self.ommers_hash == EMPTY_OMMERS_HASH.into()
+		self.ommers_hash != EMPTY_OMMERS_HASH.into()
 	}
 
 	fn decoded_seal_field(&self, index: usize, max_len: usize) -> Option<Bytes> {
