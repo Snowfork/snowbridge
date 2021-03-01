@@ -12,10 +12,10 @@ contract IncentivizedOutboundChannel is OutboundChannel {
     address public feeController;
     DOTApp private dotApp;
 
-    constructor(uint256 _relayFee, address _feeControllerAddress) {
+    constructor() {
         nonce = 0;
-        relayFee = _relayFee;
-        feeController = _feeControllerAddress;
+        relayFee = 0;
+        feeController = msg.sender;
     }
 
     function setDOTApp(address _address) external {

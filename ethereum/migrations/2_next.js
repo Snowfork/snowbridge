@@ -33,7 +33,7 @@ module.exports = function(deployer, network, accounts) {
     channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
     channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
     channels.incentivized.inbound.instance = await deployer.deploy(channels.incentivized.inbound.contract)
-    channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract, process.env.RELAY_FEE, process.env.FEE_CONTROLLER)
+    channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract)
 
     // Link libraries to applications
     await deployer.deploy(ScaleCodec);

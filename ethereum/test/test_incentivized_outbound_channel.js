@@ -23,13 +23,13 @@ contract("IncentivizedOutboundChannel", function (accounts) {
 
   describe("deployment and initialization", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(relayFee, feeController);
+      this.channel = await IncentivizedOutboundChannel.new();
     });
   });
 
   describe("send", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(relayFee, feeController);
+      this.channel = await IncentivizedOutboundChannel.new();
       const mock = await MockContract.new()
       await mock.givenAnyReturnBool(true)
       await this.channel.setDOTApp(mock.address, { from: owner })
@@ -69,7 +69,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
 
   describe("relayFee", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(relayFee, feeController);
+      this.channel = await IncentivizedOutboundChannel.new();
     });
 
     it("should let feeController set relayFee", async function () {
@@ -83,7 +83,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
 
   describe("feeController", function () {
     beforeEach(async function () {
-      this.channel = await IncentivizedOutboundChannel.new(relayFee, feeController);
+      this.channel = await IncentivizedOutboundChannel.new();
     });
 
     it("should let feeController set itself", async function () {
