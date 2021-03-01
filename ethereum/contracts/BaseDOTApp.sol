@@ -48,6 +48,7 @@ abstract contract BaseDOTApp {
             _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
+        require(_amount % granularity() == 0, "Invalid Granularity");
 
         token.burn(msg.sender, _amount, abi.encodePacked(_recipient));
 
@@ -78,26 +79,48 @@ abstract contract BaseDOTApp {
     }
 
     /*
-        Conversion between native and wrapped DOT/KSM/ROC.
-        For example:
-        - Native DOT has 128 bits of precision and 10 decimal places.
-        - Wrapped DOT has 256 bits of precision and 18 decimal places.
+     *   Conversion between native and wrapped DOT/KSM/ROC.
+     *  For example:
+     *  - Native DOT has 10 decimal places.
+     *  - Wrapped DOT has 18 decimal places.
     */
 
+    /*
+     * Convert native DOT/KSM/ROC to the wrapped equivalent.
+     *
+     * SAFETY: No need for SafeMath.mul since its impossible to overflow
+     * when 0 <= granularity <= 10 ^ 8, as specified by DOTAppDecimals10.sol
+     * and DOTAppDecimals12.sol.
+     *
+     * Can verify in Rust using this snippet:
+     *
+     * 	 let granularity = U256::from(100000000u64);
+	 *   U256::from(u128::MAX).checked_mul(granularity).unwrap();
+     *
+     */
     function wrap(uint128 _value) pure internal returns (uint256) {
         // No need for SafeMath.div since granularity() resolves to a
         // compile-time constant that is not zero.
         return uint256(_value) * granularity();
     }
 
+    /*
+     * Convert wrapped DOT/KSM/ROC to its native equivalent.
+     *
+     * SAFETY: No need for SafeMath.div since granularity() resolves to a non-zero
+     * constant (See DOTAppDecimals10.sol and DOTAppDecimals12.sol)
+     */
     function unwrap(uint256 _value) pure internal returns (uint128) {
-        // No need for SafeMath.div since granularity() resolves to a
-        // compile-time constant that is not zero (See DOTAppDecimals10.sol and DOTAppDecimals12.sol)
+        //
         return uint128(_value / granularity());
     }
 
     /**
-     * Smallest part of DOT that is not divisible when increasing precision to 18 decimal places.
+     * Smallest part of DOT/KSM/ROC that is not divisible when increasing
+     * precision to 18 decimal places.
+     *
+     * This is used for converting between native and wrapped
+     * representations of DOT/KSM/ROC.
     */
     function granularity() pure internal virtual returns (uint256);
 

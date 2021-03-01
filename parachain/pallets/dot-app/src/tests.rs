@@ -6,7 +6,7 @@ use frame_support::{assert_noop, assert_ok,
 	traits::Currency
 };
 use sp_keyring::AccountKeyring as Keyring;
-use sp_core::H160;
+use sp_core::{H160, U256};
 use artemis_core::ChannelId;
 
 fn last_event() -> Event {
@@ -120,4 +120,12 @@ fn should_not_lock_on_add_commitment_failure() {
 			DispatchError::Other("some error!")
 		);
 	});
+}
+
+
+// Used to prove safety of conversion from DOT to wrapped DOT (See BaseDOTApp.sol)
+#[test]
+fn should_max_dot_convert_to_wrapped_dot() {
+	let granularity = U256::from(100000000u64); // 10 ** 8
+	U256::from(u128::MAX).checked_mul(granularity).unwrap();
 }

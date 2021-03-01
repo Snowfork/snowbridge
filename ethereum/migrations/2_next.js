@@ -1,6 +1,7 @@
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
+const DOTAppDecimals10 = artifacts.require("DOTAppDecimals10");
 const DOTAppDecimals12 = artifacts.require("DOTAppDecimals12");
 const TestToken = artifacts.require("TestToken");
 
@@ -36,7 +37,7 @@ module.exports = function(deployer, network, accounts) {
 
     // Link libraries to applications
     await deployer.deploy(ScaleCodec);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp]);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTAppDecimals10, DOTAppDecimals12]);
 
     // Deploy applications
     await deployer.deploy(
@@ -66,7 +67,7 @@ module.exports = function(deployer, network, accounts) {
     await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
 
     // Deploy ERC1820 Registry for our E2E stack.
-    if (network == 'e2e_test')  {
+    if (network === 'e2e_test')  {
 
       require('@openzeppelin/test-helpers/configure')({ web3 });
       const { singletons } = require('@openzeppelin/test-helpers');
