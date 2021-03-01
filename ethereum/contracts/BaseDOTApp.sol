@@ -8,7 +8,7 @@ import "./OutboundChannel.sol";
 
 enum ChannelId {Basic, Incentivized}
 
-contract BaseDotApp {
+abstract contract BaseDOTApp {
     using ScaleCodec for uint128;
 
     uint256 public balance;
@@ -19,17 +19,19 @@ contract BaseDotApp {
 
     WrappedToken public token;
 
-    uint256 constant internal DECIMALS = 18;
-    uint256 constant internal GRANULARITY = 10 ** (18 - DECIMALS);
-
     struct Channel {
         address inbound;
         address outbound;
     }
 
-    constructor(Channel memory _basic, Channel memory _incentivized) {
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        Channel memory _basic,
+        Channel memory _incentivized
+    ) {
         address[] memory defaultOperators;
-        token = new WrappedToken("Snowfork DOT", "SnowDOT", defaultOperators);
+        token = new WrappedToken(_name, _symbol, defaultOperators);
 
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
@@ -69,23 +71,34 @@ contract BaseDotApp {
             abi.encodePacked(
                 UNLOCK_CALL,
                 _sender,
-                byte(0x00), // Encode recipient as MultiAddress::Id
+                byte(0x00), // Encoding recipient as MultiAddress::Id
                 _recipient,
                 _amount.encode128()
             );
     }
 
-    /**
-        Conversion between native and wrapped DOT.
+    /*
+        Conversion between native and wrapped DOT/KSM/ROC.
+        For example:
         - Native DOT has 128 bits of precision and 10 decimal places.
         - Wrapped DOT has 256 bits of precision and 18 decimal places.
     */
 
     function wrap(uint128 _value) pure internal returns (uint256) {
-        return uint256(_value) * GRANULARITY;
+        // No need for SafeMath.div since granularity() resolves to a
+        // compile-time constant that is not zero.
+        return uint256(_value) * granularity();
     }
 
     function unwrap(uint256 _value) pure internal returns (uint128) {
-        return uint128(_value / GRANULARITY);
+        // No need for SafeMath.div since granularity() resolves to a
+        // compile-time constant that is not zero (See DOTAppDecimals10.sol and DOTAppDecimals12.sol)
+        return uint128(_value / granularity());
     }
+
+    /**
+     * Smallest part of DOT that is not divisible when increasing precision to 18 decimal places.
+    */
+    function granularity() pure internal virtual returns (uint256);
+
 }

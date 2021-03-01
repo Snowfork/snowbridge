@@ -15,7 +15,7 @@ require("chai")
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
-const DOTApp = artifacts.require("DOTApp");
+const DOTAppDecimals10 = artifacts.require("DOTAppDecimals10");
 const Token = artifacts.require("WrappedToken");
 
 const DOT_DECIMALS = 10;
@@ -50,7 +50,7 @@ contract("DOTApp", function (accounts) {
   describe("minting", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp);
+      [this.channels, this.app] = await deployAppContractWithChannels(DOTAppDecimals10);
       this.token = await Token.at(await this.app.token());
     });
 

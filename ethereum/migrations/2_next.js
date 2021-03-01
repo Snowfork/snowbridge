@@ -1,7 +1,7 @@
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
-const DOTApp = artifacts.require("DOTApp");
+const DOTAppDecimals12 = artifacts.require("DOTAppDecimals12");
 const TestToken = artifacts.require("TestToken");
 
 const channels = {
@@ -74,10 +74,12 @@ module.exports = function(deployer, network, accounts) {
       await singletons.ERC1820Registry(accounts[0]);
     }
 
-    // only deploy this contract to non-development networks
-    if (network !== 'development')  {
+    // only deploy this contract to non-development networks. The unit tests deploy this contract themselves.
+    if (network === 'ropsten' || network === 'e2e_test')  {
       await deployer.deploy(
-        DOTApp,
+        DOTAppDecimals12, // On Kusama and Rococo, KSM/ROC tokens have 12 decimal places
+        "Snowfork DOT",
+        "SnowDOT",
         {
           inbound: channels.basic.inbound.instance.address,
           outbound: channels.basic.outbound.instance.address,
