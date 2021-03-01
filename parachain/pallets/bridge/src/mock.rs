@@ -1,16 +1,17 @@
-
 use super::*;
 
+use frame_support::{dispatch::DispatchError, parameter_types};
 use sp_core::H256;
-use frame_support::{parameter_types,
-	dispatch::DispatchError
-};
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
+	testing::Header,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	MultiSignature,
 };
 use sp_std::convert::From;
 
-use artemis_core::{MessageCommitment, MessageDispatch, ChannelId, MessageId, SourceChannel, SourceChannelConfig};
+use artemis_core::{
+	ChannelId, MessageCommitment, MessageDispatch, MessageId, SourceChannel, SourceChannelConfig,
+};
 use artemis_ethereum::Log;
 
 use crate as bridge;
@@ -84,7 +85,6 @@ impl MessageDispatch<MessageId> for MockMessageDispatch {
 	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
 }
 
-
 impl Config for Test {
 	type Event = Event;
 	type Verifier = MockVerifier;
@@ -100,26 +100,29 @@ pub fn new_tester() -> sp_io::TestExternalities {
 			},
 			incentivized: SourceChannel {
 				address: H160::zero(),
-			}
-		}
+			},
+		},
 	})
 }
 
-pub fn new_tester_with_source_channels(basic: H160, incentivized: H160) -> sp_io::TestExternalities {
+pub fn new_tester_with_source_channels(
+	basic: H160,
+	incentivized: H160,
+) -> sp_io::TestExternalities {
 	new_tester_with_config(bridge::GenesisConfig {
 		source_channels: SourceChannelConfig {
-			basic: SourceChannel {
-				address: basic,
-			},
+			basic: SourceChannel { address: basic },
 			incentivized: SourceChannel {
 				address: incentivized,
-			}
-		}
+			},
+		},
 	})
 }
 
 pub fn new_tester_with_config(config: bridge::GenesisConfig) -> sp_io::TestExternalities {
-	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut storage = frame_system::GenesisConfig::default()
+		.build_storage::<Test>()
+		.unwrap();
 
 	config.assimilate_storage(&mut storage).unwrap();
 

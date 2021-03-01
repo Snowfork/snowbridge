@@ -16,24 +16,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(unused_variables)]
 
-use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::DispatchResult,
-	storage::StorageMap,
-};
-use frame_system::{self as system, ensure_signed};
-use sp_core::H160;
-use sp_std::prelude::*;
-use sp_std::convert::TryFrom;
 use artemis_core::{
-	ChannelId, SubmitOutboundChannel, Message, MessageId,
-	MessageCommitment, MessageDispatch, Verifier,
-	SourceChannelConfig,
+	BasicMessageCommitment, ChannelId, Message, MessageDispatch, MessageId, SourceChannelConfig,
+	SubmitOutboundChannel, Verifier,
 };
 use channel::inbound::make_inbound_channel;
 use channel::outbound::make_outbound_channel;
-use primitives::{InboundChannelData, OutboundChannelData};
 use envelope::Envelope;
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult,
+	storage::StorageMap,
+};
+use frame_system::{self as system, ensure_signed};
+use primitives::{InboundChannelData, OutboundChannelData};
+use sp_core::H160;
+use sp_std::convert::TryFrom;
+use sp_std::prelude::*;
 
 #[cfg(test)]
 mod mock;
@@ -42,8 +40,8 @@ mod mock;
 mod tests;
 
 mod channel;
-mod primitives;
 mod envelope;
+mod primitives;
 
 type MessageNonce = u64;
 
@@ -54,7 +52,7 @@ pub trait Config: system::Config {
 	type Verifier: Verifier;
 
 	/// Used by outbound channels to persist messages for outbound delivery.
-	type MessageCommitment: MessageCommitment;
+	type BasicMessageCommitment: BasicMessageCommitment<Self::AccountId>;
 
 	/// Verifier module for message verification.
 	type MessageDispatch: MessageDispatch<MessageId>;
@@ -80,7 +78,7 @@ decl_storage! {
 }
 
 decl_event! {
-    /// Events for the Bridge module.
+	/// Events for the Bridge module.
 	pub enum Event {
 		/// Message has been accepted by an outbound channel
 		MessageAccepted(ChannelId, MessageNonce),

@@ -22,7 +22,9 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_signed};
 
-use artemis_core::{ChannelId, Message, MessageCommitment, MessageDispatch, MessageId, Verifier};
+use artemis_core::{
+	BasicMessageCommitment, ChannelId, Message, MessageDispatch, MessageId, Verifier,
+};
 use envelope::Envelope;
 use sp_core::H160;
 use sp_std::convert::TryFrom;
@@ -43,7 +45,7 @@ pub trait Config: system::Config {
 	type Verifier: Verifier;
 
 	/// Used by outbound channels to persist messages for outbound delivery.
-	type MessageCommitment: MessageCommitment;
+	type BasicMessageCommitment: BasicMessageCommitment<Self::AccountId>;
 
 	/// Verifier module for message verification.
 	type MessageDispatch: MessageDispatch<MessageId>;
@@ -132,7 +134,7 @@ impl<T: Config> Module<T> {
 	fn submit_outbound(account_id: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		OutboundChannels::<T>::try_mutate(account_id, |nonce| {
 			*nonce += 1;
-			T::MessageCommitment::add(ChannelId::Basic, target, *nonce, payload)?;
+			T::BasicMessageCommitment::add_basic(account_id.clone(), target, *nonce, payload)?;
 			Self::deposit_event(Event::<T>::MessageAccepted(account_id.clone(), *nonce));
 			Ok(())
 		})
