@@ -1,59 +1,64 @@
 #![allow(clippy::all)]
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::{
-	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
-	transaction_validity::{TransactionValidity, TransactionSource},
-};
-use sp_runtime::traits::{
-	BlakeTwo256, Keccak256, Convert, Block as BlockT, AccountIdLookup, Verify, IdentifyAccount,
-};
 use sp_api::impl_runtime_apis;
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_runtime::traits::{
+	AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, IdentifyAccount, Keccak256, Verify,
+};
+use sp_runtime::{
+	create_runtime_str, generic, impl_opaque_keys,
+	transaction_validity::{TransactionSource, TransactionValidity},
+	ApplyExtrinsicResult, MultiSignature,
+};
 
 use sp_std::prelude::*;
 
-use sp_version::RuntimeVersion;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
+use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
-#[cfg(any(feature = "std", test))]
-pub use sp_runtime::BuildStorage;
-pub use pallet_timestamp::Call as TimestampCall;
-pub use pallet_balances::Call as BalancesCall;
-pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
-	construct_runtime, parameter_types, StorageValue,
-	traits::{KeyOwnerProofSystem, Randomness, Filter},
+	construct_runtime, parameter_types,
+	traits::{Filter, KeyOwnerProofSystem, Randomness},
 	weights::{
-		Weight, IdentityFee,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+		IdentityFee, Weight,
 	},
+	StorageValue,
 };
+pub use pallet_balances::Call as BalancesCall;
+pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+#[cfg(any(feature = "std", test))]
+pub use sp_runtime::BuildStorage;
+pub use sp_runtime::{Perbill, Permill};
 
 pub use artemis_core::{AssetId, ChannelId, MessageId};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::EthereumHeader;
 
+use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
-	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
-	CurrencyAdapter,
+	AccountId32Aliases, CurrencyAdapter, LocationInverter, ParentIsDefault, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SovereignSignedViaLocation,
 };
-use xcm_executor::{Config, XcmExecutor, traits::{NativeAsset, IsConcrete}};
-use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
+use xcm_executor::{
+	traits::{IsConcrete, NativeAsset},
+	Config, XcmExecutor,
+};
 
 use artemis_xcm_support::AssetsTransactor;
 
@@ -346,7 +351,7 @@ impl Filter<Call> for CallFilter {
 	fn filter(call: &Call) -> bool {
 		match call {
 			Call::ETH(_) | Call::ERC20(_) => true,
-			_ => false
+			_ => false,
 		}
 	}
 }
@@ -362,14 +367,14 @@ impl dispatch::Config for Runtime {
 impl bridge::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
-	type MessageCommitment = commitments::Module<Runtime>;
+	type BasicMessageCommitment = commitments::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
 }
 
 impl basic_channel::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
-	type MessageCommitment = commitments::Module<Runtime>;
+	type BasicMessageCommitment = commitments::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
 }
 
@@ -470,7 +475,7 @@ pub type SignedExtra = (
 	frame_system::CheckEra<Runtime>,
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
-	pallet_transaction_payment::ChargeTransactionPayment<Runtime>
+	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;

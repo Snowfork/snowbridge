@@ -47,12 +47,13 @@ sp-blockchain = { git = "https://github.com/paritytech/substrate.git", branch = 
 sp-consensus = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-inherents = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
-sp-trie = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+sp-trie = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
 cumulus-client-consensus-relay-chain = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
 cumulus-client-collator = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
@@ -93,6 +94,7 @@ members = [
     "primitives/ethereum",
     "primitives/testutils",
     "primitives/xcm-support",
+    "pallets/basic-channel",
     "pallets/bridge",
     "pallets/dispatch",
     "pallets/assets",

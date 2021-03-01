@@ -1,5 +1,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-use itertools::Itertools;
 
 use artemis_core::{BasicMessageCommitment, ChannelId, IncentivizedMessageCommitment};
 use codec::{Decode, Encode};
@@ -7,6 +6,7 @@ use ethabi::{self, Token};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, weights::Weight,
 };
+
 use sp_core::{RuntimeDebug, H160, H256};
 use sp_io::offchain_index;
 use sp_runtime::{
@@ -14,6 +14,7 @@ use sp_runtime::{
 	DigestItem,
 };
 use sp_std::prelude::*;
+use std::collections::BTreeMap;
 
 use merkle_tree::*;
 
@@ -50,8 +51,8 @@ pub struct Message {
 /// Wire-format for committed BasicChannel data
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 pub struct BasicChannelBlob<AccountId> {
-    messages: Vec<(AccountId, Message)>,
-    // TODO: store proofs
+	messages: Vec<(AccountId, Message)>,
+	// TODO: store proofs
 }
 
 pub trait Config: frame_system::Config {
@@ -77,8 +78,8 @@ decl_storage! {
 }
 
 decl_event! {
-    pub enum Event {
-    }
+	pub enum Event {
+	}
 }
 
 decl_error! {
@@ -106,133 +107,144 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-    // Generate a key for offchain storage
-    fn offchain_key(channel_id: ChannelId, hash: H256) -> Vec<u8> {
-        (T::INDEXING_PREFIX, channel_id, hash).encode()
-    }
+	// Generate a key for offchain storage
+	fn offchain_key(channel_id: ChannelId, hash: H256) -> Vec<u8> {
+		(T::INDEXING_PREFIX, channel_id, hash).encode()
+	}
 
-    // TODO: return proper weight
-    fn commit() -> Weight {
-        Self::commit_for_basic_channel() + Self::commit_for_incentivized_channel()
-    }
+	// TODO: return proper weight
+	fn commit() -> Weight {
+		Self::commit_for_basic_channel() + Self::commit_for_incentivized_channel()
+	}
 
-    fn commit_for_basic_channel() -> Weight {
-        let all_messages: Vec<(T::AccountId, Message)> = <Self as Store>::BasicMessageQueue::get();
-        if all_messages.is_empty() {
-            return 0;
-        }
+	fn commit_for_basic_channel() -> Weight {
+		let all_messages: Vec<(T::AccountId, Message)> = <Self as Store>::BasicMessageQueue::get();
+		if all_messages.is_empty() {
+			return 0;
+		}
 
-        //
-        // TODO: benchmark this grouping approach vs a sorting in-place solution
-        //
-        let subcommitments = all_messages
-            //.clone()
-            .iter()
-            .map(|(acc, v)| (acc.encode(), v))
-            .into_group_map_by(|x| x.0.clone())
-            .into_iter()
-            .map(|(_, msgs)| {
-                let msgs = msgs
-                    .into_iter()
-                    .map(|(_, msg)| msg)
-                    .collect::<Vec<&Message>>();
-                Self::encode_commitment(msgs)
-            });
+		//let msg_accounts = BTreeMap::new();
 
-        let subcom_hashes = subcommitments
-            .into_iter()
-            .map(|c| <T as Config>::Hashing::hash(&c));
+		//
+		// TODO: benchmark this grouping approach vs a sorting in-place solution
+		//
 
-        // Generate Merkle Tree
-        let mt = MerkleTree::new(subcom_hashes);
+		// let subcommitments = all_messages
+		// 	//.clone()
+		// 	.iter()
+		// 	.map(|(acc, v)| (acc.encode(), v))
+		// 	.into_group_map_by(|x| x.0.clone())
+		// 	.into_iter()
+		// 	.map(|(_, msgs)| {
+		// 		let msgs = msgs
+		// 			.into_iter()
+		// 			.map(|(_, msg)| msg)
+		// 			.collect::<Vec<&Message>>();
+		// 		Self::encode_commitment(msgs)
+		// 	});
 
-        // Deposit log with Merkle Tree Root
-        let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mt.root).into();
-        <frame_system::Module<T>>::deposit_log(digest_item);
+		// let subcom_hashes = subcommitments
+		// 	.into_iter()
+		// 	.map(|c| <T as Config>::Hashing::hash(&c));
 
-        // Store the messages blob off-chain
-        let blob = BasicChannelBlob {
-            messages: all_messages,
-        };
-        offchain_index::set(
-            &Self::offchain_key(ChannelId::Basic, mt.root),
-            &blob.encode(),
-        );
+		// // Generate Merkle Tree
+		// let mt = MerkleTree::new(subcom_hashes);
 
-        0
-    }
+		// // Deposit log with Merkle Tree Root
+		// let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mt.root).into();
+		// <frame_system::Module<T>>::deposit_log(digest_item);
 
-    fn commit_for_incentivized_channel() -> Weight {
-        let messages: Vec<Message> = <Self as Store>::IncentivizedMessageQueue::get();
-        if messages.len() == 0 {
-            return 0;
-        }
+		// // Store the messages blob off-chain
+		// let blob = BasicChannelBlob {
+		// 	messages: all_messages,
+		// };
+		// offchain_index::set(
+		// 	&Self::offchain_key(ChannelId::Basic, mt.root),
+		// 	&blob.encode(),
+		// );
 
-        let commitment = Self::encode_commitment(messages.iter().collect::<Vec<&Message>>());
-        let commitment_hash = <T as Config>::Hashing::hash(&commitment);
+		0
+	}
 
-        let digest_item =
-            AuxiliaryDigestItem::Commitment(ChannelId::Incentivized, commitment_hash.clone())
-                .into();
-        <frame_system::Module<T>>::deposit_log(digest_item);
+	fn commit_for_incentivized_channel() -> Weight {
+		let messages: Vec<Message> = <Self as Store>::IncentivizedMessageQueue::get();
+		if messages.len() == 0 {
+			return 0;
+		}
 
-        offchain_index::set(
-            &Self::offchain_key(ChannelId::Incentivized, commitment_hash),
-            &messages.encode(),
-        );
+		let commitment = Self::encode_commitment(messages.iter().collect::<Vec<&Message>>());
+		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
-        0
-    }
+		let digest_item =
+			AuxiliaryDigestItem::Commitment(ChannelId::Incentivized, commitment_hash.clone())
+				.into();
+		<frame_system::Module<T>>::deposit_log(digest_item);
 
-    // ABI-encode the commitment
-    fn encode_commitment(commitment: Vec<&Message>) -> Vec<u8> {
-        let messages: Vec<Token> = commitment
-            .iter()
-            .map(|message| {
-                Token::Tuple(vec![
-                    Token::Address(message.target),
-                    Token::Uint(message.nonce.into()),
-                    Token::Bytes(message.payload.clone()),
-                ])
-            })
-            .collect();
-        ethabi::encode(&vec![Token::Array(messages)])
-    }
+		offchain_index::set(
+			&Self::offchain_key(ChannelId::Incentivized, commitment_hash),
+			&messages.encode(),
+		);
+
+		0
+	}
+
+	// ABI-encode the commitment
+	fn encode_commitment(commitment: Vec<&Message>) -> Vec<u8> {
+		let messages: Vec<Token> = commitment
+			.iter()
+			.map(|message| {
+				Token::Tuple(vec![
+					Token::Address(message.target),
+					Token::Uint(message.nonce.into()),
+					Token::Bytes(message.payload.clone()),
+				])
+			})
+			.collect();
+		ethabi::encode(&vec![Token::Array(messages)])
+	}
 }
 
 impl<T: Config> BasicMessageCommitment<T::AccountId> for Module<T> {
-    fn add_basic(
-        account_id: T::AccountId,
-        target: H160,
-        nonce: u64,
-        payload: &[u8],
-    ) -> DispatchResult {
-        let mut mq = BasicMessageQueue::<T>::get();
-        mq.push((
-            account_id,
-            Message {
-                target,
-                nonce,
-                payload: payload.to_vec(),
-            },
-        ));
-        BasicMessageQueue::<T>::put(mq);
-        Ok(())
-    }
+	fn add_basic(
+		account_id: T::AccountId,
+		target: H160,
+		nonce: u64,
+		payload: &[u8],
+	) -> DispatchResult {
+		let mut mq = BasicMessageQueue::<T>::get();
+		let entry = (
+			account_id.clone(),
+			Message {
+				target,
+				nonce,
+				payload: payload.to_vec(),
+			},
+		);
+
+		let index;
+		match mq.binary_search_by_key(&account_id, |(acc, _)| acc.clone()) {
+			Ok(i) => index = i,
+			Err(i) => index = i,
+		}
+
+		mq.insert(index, entry);
+		BasicMessageQueue::<T>::put(mq);
+		Ok(())
+	}
 }
 
 impl<T: Config> IncentivizedMessageCommitment for Module<T> {
-    // Add a message for eventual inclusion in a commitment
-    // TODO (Security): Limit number of messages per commitment
-    //   https://github.com/Snowfork/polkadot-ethereum/issues/226
-    fn add_incentivized(target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
-        let mut mq = IncentivizedMessageQueue::get();
-        mq.push(Message {
-            target,
-            nonce,
-            payload: payload.to_vec(),
-        });
-        IncentivizedMessageQueue::put(mq);
-        Ok(())
-    }
+	// Add a message for eventual inclusion in a commitment
+	// TODO (Security): Limit number of messages per commitment
+	//   https://github.com/Snowfork/polkadot-ethereum/issues/226
+	fn add_incentivized(target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
+		let mut mq = IncentivizedMessageQueue::get();
+		mq.push(Message {
+			target,
+			nonce,
+			payload: payload.to_vec(),
+		});
+		IncentivizedMessageQueue::put(mq);
+		Ok(())
+	}
 }
