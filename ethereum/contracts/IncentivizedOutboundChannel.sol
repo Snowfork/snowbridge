@@ -10,7 +10,7 @@ contract IncentivizedOutboundChannel is OutboundChannel {
 
     uint256 public relayFee;
     address public feeController;
-    DOTApp private _DOTApp;
+    DOTApp private dotApp;
 
     constructor(uint256 _relayFee, address _feeControllerAddress) {
         nonce = 0;
@@ -20,7 +20,7 @@ contract IncentivizedOutboundChannel is OutboundChannel {
 
     function setDOTApp(address _address) external {
         // TODO: 1. Limit access to owner, 2. Should not reset if set
-        _DOTApp = DOTApp(_address);
+        dotApp = DOTApp(_address);
     }
 
     event Message(
@@ -38,7 +38,7 @@ contract IncentivizedOutboundChannel is OutboundChannel {
         override
     {
         nonce = nonce + 1;
-        _DOTApp.burnFee(msg.sender, relayFee);
+        dotApp.burnFee(msg.sender, relayFee);
 
         emit Message(msg.sender, nonce, payload, relayFee);
     }
