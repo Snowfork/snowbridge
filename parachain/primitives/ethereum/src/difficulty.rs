@@ -4,7 +4,7 @@ use sp_runtime::RuntimeDebug;
 use sp_std::convert::TryFrom;
 
 const DIFFICULTY_BOUND_DIVISOR: u32 = 11;  // right-shifts equivalent to division by 2048
-const EXP_DIFFICULTY_PERIOD: u32 = 100000;
+const EXP_DIFFICULTY_PERIOD: u64 = 100000;
 const MINIMUM_DIFFICULTY: u32 = 131072;
 
 #[derive(PartialEq, RuntimeDebug)]
@@ -71,26 +71,27 @@ pub fn calc_difficulty(
 	let bomb_delay = config.bomb_delay(parent.number + 1)
 		.ok_or("Cannot calculate difficulty for block number prior to Byzantium")?;
 
-	let block_time = time.checked_sub(parent.timestamp).ok_or("Invalid block time")?;
-	let block_time_div_9 = i32::try_from(block_time / 9).or(Err("Invalid block time"))?;
-	let sigma2 = match parent.has_ommers() {
+	let block_time_div_9: i64 = time.checked_sub(parent.timestamp)
+		.ok_or("Invalid block time")
+		.and_then(|x| {
+			i64::try_from(x / 9).or(Err("Invalid block time"))
+		})?;
+	let sigma2: i64 = match parent.has_ommers() {
 		true => 2 - block_time_div_9,
 		false => 1 - block_time_div_9,
 	}.max(-99);
 
 	let mut difficulty_without_exp = parent.difficulty;
 	if sigma2 < 0 {
-		difficulty_without_exp -= (parent.difficulty >> DIFFICULTY_BOUND_DIVISOR) * (sigma2 * -1) as u32;
+		difficulty_without_exp -= (parent.difficulty >> DIFFICULTY_BOUND_DIVISOR) * sigma2.abs() as u64;
 	} else {
-		difficulty_without_exp += (parent.difficulty >> DIFFICULTY_BOUND_DIVISOR) * sigma2 as u32;
+		difficulty_without_exp += (parent.difficulty >> DIFFICULTY_BOUND_DIVISOR) * sigma2 as u64;
 	}
 
 	difficulty_without_exp = difficulty_without_exp.max(MINIMUM_DIFFICULTY.into());
 
-	let fake_block_number: u32 = u32::try_from(parent.number)
-		.or(Err("Invalid parent number"))?
-		// Subtract 1 less since we're using the parent block
-		.saturating_sub(bomb_delay as u32 - 1);
+	// Subtract 1 less since we're using the parent block
+	let fake_block_number = parent.number.saturating_sub(bomb_delay as u64 - 1);
 	let period_count = fake_block_number / EXP_DIFFICULTY_PERIOD;
 
 	// If period_count < 2, exp is fractional and we can skip adding it
