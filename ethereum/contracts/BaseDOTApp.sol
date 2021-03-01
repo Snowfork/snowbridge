@@ -8,7 +8,7 @@ import "./OutboundChannel.sol";
 
 enum ChannelId {Basic, Incentivized}
 
-contract DOTApp {
+contract BaseDotApp {
     using ScaleCodec for uint128;
 
     uint256 public balance;
@@ -19,8 +19,8 @@ contract DOTApp {
 
     WrappedToken public token;
 
-    uint256 constant internal POLKADOT_DECIMALS = 10;
-    uint256 constant internal GRANULARITY = 10 ** (18 - POLKADOT_DECIMALS);
+    uint256 constant internal DECIMALS = 18;
+    uint256 constant internal GRANULARITY = 10 ** (18 - DECIMALS);
 
     struct Channel {
         address inbound;
