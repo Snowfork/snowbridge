@@ -1,7 +1,8 @@
+use frame_support::parameter_types;
 use sp_core::H256;
-use frame_support::{parameter_types};
 use sp_runtime::{
-	traits::{BlakeTwo256, Keccak256, IdentityLookup}, testing::Header,
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup, Keccak256},
 };
 
 use crate as commitments;
@@ -23,7 +24,6 @@ frame_support::construct_runtime!(
 		Commitments: commitments::{Module, Call, Storage, Event},
 	}
 );
-
 
 impl frame_system::Config for Test {
 	type BaseCallFilter = ();
@@ -62,10 +62,10 @@ impl commitments::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	let config: commitments::GenesisConfig<Test> = commitments::GenesisConfig {
-		interval: 1u64
-	};
+	let mut storage = frame_system::GenesisConfig::default()
+		.build_storage::<Test>()
+		.unwrap();
+	let config: commitments::GenesisConfig<Test> = commitments::GenesisConfig { interval: 1u64 };
 	config.assimilate_storage(&mut storage).unwrap();
 	storage.into()
 }

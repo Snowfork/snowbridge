@@ -9,16 +9,21 @@ edition = "2018"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+anyhow = "1.0.38"
 serde = { version = "1.0.101", optional = true }
 enum-iterator = "0.6.0"
+itertools = "0.10.0"
 codec = { version = "2.0.0", package = "parity-scale-codec", default-features = false, features = ["derive"] }
-
+trie-db = "0.22"
+hex = "0.4"
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+sp-trie = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+
 
 artemis-core = { path = "../../primitives/core", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
