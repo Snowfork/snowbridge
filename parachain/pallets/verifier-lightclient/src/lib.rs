@@ -13,9 +13,14 @@ use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
 use artemis_core::{Message, Verifier, Proof};
-use artemis_ethereum::{HeaderId as EthereumHeaderId, Log, Receipt, H256, U256};
-use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
-pub use artemis_ethereum::Header as EthereumHeader;
+use artemis_ethereum::{
+	HeaderId as EthereumHeaderId, Log, Receipt, H256, U256,
+	difficulty::calc_difficulty,
+	ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver},
+};
+pub use artemis_ethereum::{
+	Header as EthereumHeader, difficulty::DifficultyConfig as EthereumDifficultyConfig,
+};
 
 #[cfg(test)]
 mod mock;
@@ -56,8 +61,10 @@ pub trait Config: system::Config {
 	/// The number of descendants, in the highest difficulty chain, a block
 	/// needs to have in order to be considered final.
 	type DescendantsUntilFinalized: Get<u8>;
-	// Determines whether Ethash PoW is verified for headers
-	// NOTE: Should only be false for dev
+	/// Ethereum network parameters for header difficulty
+	type DifficultyConfig: Get<EthereumDifficultyConfig>;
+	/// Determines whether Ethash PoW is verified for headers
+	/// NOTE: Should only be false for dev
 	type VerifyPoW: Get<bool>;
 }
 
@@ -234,7 +241,6 @@ impl<T: Config> Module<T> {
 			return Ok(());
 		}
 
-		// Adapted from https://github.com/near/rainbow-bridge/blob/c6daf8a1dbf0bdb99a404a49c58263f25cd782fd/contracts/near/eth-client/src/lib.rs#L363
 		// See YellowPaper formula (50) in section 4.3.4
 		ensure!(
 			header.gas_used <= header.gas_limit
@@ -247,7 +253,14 @@ impl<T: Config> Module<T> {
 			Error::<T>::InvalidHeader,
 		);
 
-		// Simplified difficulty check to conform adjusting difficulty bomb
+		let difficulty_config = T::DifficultyConfig::get();
+		let header_difficulty = calc_difficulty(&difficulty_config, header.timestamp, &parent)
+			.map_err(|_| Error::<T>::InvalidHeader)?;
+		ensure!(
+			header.difficulty == header_difficulty,
+			Error::<T>::InvalidHeader,
+		);
+
 		let header_mix_hash = header.mix_hash().ok_or(Error::<T>::InvalidHeader)?;
 		let header_nonce = header.nonce().ok_or(Error::<T>::InvalidHeader)?;
 		let (mix_hash, result) = EthashProver::new().hashimoto_merkle(
@@ -258,9 +271,7 @@ impl<T: Config> Module<T> {
 		).map_err(|_| Error::<T>::InvalidHeader)?;
 		ensure!(
 			mix_hash == header_mix_hash
-			&& U256::from(result.0) < ethash::cross_boundary(header.difficulty)
-			&& header.difficulty < parent.difficulty * 101 / 100
-			&& header.difficulty > parent.difficulty * 99 / 100,
+			&& U256::from(result.0) < ethash::cross_boundary(header.difficulty),
 			Error::<T>::InvalidHeader,
 		);
 
