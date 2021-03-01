@@ -112,11 +112,7 @@ decl_module! {
 
 impl<T: Config> Module<T> {
 	fn submit_inbound(envelope: &Envelope) -> DispatchResult {
-		//
-		// TODO: we are using the source, but need to switch to tx.origin and do the
-		// corresponding changes in the Eth side first
-		//
-		InboundChannels::try_mutate(envelope.source, |nonce| {
+		InboundChannels::try_mutate(envelope.origin, |nonce| {
 			if envelope.nonce != *nonce + 1 {
 				return Err(Error::<T>::BadNonce);
 			}
@@ -125,7 +121,7 @@ impl<T: Config> Module<T> {
 			Ok(())
 		})?;
 
-		let message_id = MessageId::new(ChannelId::Basic, envelope.source, envelope.nonce);
+		let message_id = MessageId::new(ChannelId::Basic, envelope.origin, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 		Ok(())
