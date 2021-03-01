@@ -32,7 +32,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
       this.channel = await IncentivizedOutboundChannel.new(relayFee, feeController);
       const mock = await MockContract.new()
       await mock.givenAnyReturnBool(true)
-      this.channel.setDOTApp(mock.address, { from: owner })
+      await this.channel.setDOTApp(mock.address, { from: owner })
     });
 
     it("should send messages out with the correct event and fields", async function () {
