@@ -37,8 +37,8 @@ contract IncentivizedOutboundChannel is OutboundChannel {
         public
         override
     {
-        nonce = nonce + 1;
         dotApp.burnFee(msg.sender, relayFee);
+        nonce = nonce + 1;
 
         emit Message(msg.sender, nonce, payload, relayFee);
     }
