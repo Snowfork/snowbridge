@@ -1,6 +1,7 @@
-use frame_support::{dispatch::{DispatchError, DispatchResult}, storage::StorageMap};
+use frame_support::{dispatch::{DispatchError, DispatchResult}, traits::Get, storage::StorageMap};
 use sp_std::{cell::Cell, marker::PhantomData, boxed::Box};
 use artemis_core::{ChannelId, MessageId, MessageDispatch};
+use artemis_core::rewards::RewardRelayer;
 use crate::{
 	Config, Error, InboundChannels,
 	envelope::Envelope, primitives::{InboundChannel, InboundChannelData}
@@ -73,6 +74,8 @@ impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 			data.nonce += 1;
 			Ok(())
 		})?;
+
+		T::RewardRelayer::pay_relayer(&T::RewardsAccount::get(), relayer, 0.into());
 
 		let message_id = MessageId::new(self.channel_id, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
