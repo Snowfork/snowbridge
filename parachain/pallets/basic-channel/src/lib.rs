@@ -134,7 +134,7 @@ impl<T: Config> Module<T> {
 	fn submit_outbound(account_id: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		OutboundChannels::<T>::try_mutate(account_id, |nonce| {
 			*nonce += 1;
-			T::BasicMessageCommitment::add_basic(account_id.clone(), target, *nonce, payload)?;
+			T::BasicMessageCommitment::add(account_id.clone(), target, *nonce, payload)?;
 			Self::deposit_event(Event::<T>::MessageAccepted(account_id.clone(), *nonce));
 			Ok(())
 		})

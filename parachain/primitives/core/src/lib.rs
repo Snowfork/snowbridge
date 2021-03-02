@@ -34,13 +34,12 @@ pub trait SubmitOutboundChannel {
 }
 
 pub trait BasicMessageCommitment<AccountId> {
-	fn add_basic(account_id: AccountId, target: H160, nonce: u64, payload: &[u8])
-		-> DispatchResult;
+	fn add(account_id: AccountId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult;
 }
 
 /// Add a message to a commitment
 pub trait IncentivizedMessageCommitment {
-	fn add_incentivized(target: H160, nonce: u64, payload: &[u8]) -> DispatchResult;
+	fn add(target: H160, nonce: u64, payload: &[u8]) -> DispatchResult;
 }
 
 /// Dispatch a message
