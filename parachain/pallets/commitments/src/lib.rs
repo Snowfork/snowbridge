@@ -185,7 +185,6 @@ impl<T: Config> Module<T> {
 			return 0;
 		}
 
-		//let commitment = Self::encode_commitment(&messages.iter().collect::<Vec<&Message>>());
 		let commitment = Self::encode_commitment(&messages);
 		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
