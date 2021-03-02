@@ -79,13 +79,6 @@ abstract contract BaseDOTApp {
     }
 
     /*
-     *   Conversion between native and wrapped DOT/KSM/ROC.
-     *  For example:
-     *  - Native DOT has 10 decimal places.
-     *  - Wrapped DOT has 18 decimal places.
-    */
-
-    /*
      * Convert native DOT/KSM/ROC to the wrapped equivalent.
      *
      * SAFETY: No need for SafeMath.mul since its impossible to overflow
