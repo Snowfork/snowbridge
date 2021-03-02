@@ -46,7 +46,6 @@ class EthClient {
     const snowDotAddr = await this.appDOT.methods.token().call();
     const snowDOT = new this.web3.eth.Contract(WrappedToken.abi, snowDotAddr);
     this.snowDOT = snowDOT;
-
   };
 
   async getTx(txHash) {

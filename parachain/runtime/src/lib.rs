@@ -406,18 +406,6 @@ impl assets::Config for Runtime {
 }
 
 parameter_types! {
-	pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
-}
-
-impl dot_app::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type SubmitOutbound = bridge::Module<Runtime>;
-	type CallOrigin = EnsureEthereumAccount;
-	type ModuleId = DotModuleId;
-}
-
-parameter_types! {
 	pub const EthAssetId: AssetId = AssetId::ETH;
 }
 
@@ -433,6 +421,18 @@ impl erc20_app::Config for Runtime {
 	type Assets = assets::Module<Runtime>;
 	type SubmitOutbound = bridge::Module<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
+}
+
+parameter_types! {
+	pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
+}
+
+impl dot_app::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type SubmitOutbound = bridge::Module<Runtime>;
+	type CallOrigin = EnsureEthereumAccount;
+	type ModuleId = DotModuleId;
 }
 
 construct_runtime!(

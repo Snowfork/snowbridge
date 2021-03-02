@@ -155,14 +155,14 @@ fn testnet_genesis(
 		commitments: Some(CommitmentsConfig {
 			interval: 1,
 		}),
-		dot_app: Some(DOTConfig {
-			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into()
-		}),
 		eth_app: Some(ETHConfig {
 			address: hex!["774667629726ec1fabebcec0d9139bd1c8f72a23"].into()
 		}),
 		erc20_app: Some(ERC20Config {
 			address: hex!["83428c7db9815f482a39a1715684dCF755021997"].into()
+		}),
+		dot_app: Some(DOTConfig {
+			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into()
 		}),
 		parachain_info: Some(ParachainInfoConfig { parachain_id: para_id }),
 	}

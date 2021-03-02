@@ -46,7 +46,7 @@ pub trait Config: system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as EthModule {
+	trait Store for Module<T: Config> as DotModule {
 		/// Address of the peer application on the Ethereum side.
 		Address get(fn address) config(): H160;
 	}
