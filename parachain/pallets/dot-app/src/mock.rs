@@ -11,7 +11,7 @@ use sp_runtime::{
 	ModuleId, MultiSignature,
 };
 
-use artemis_core::{ChannelId, SubmitOutbound};
+use artemis_core::{ChannelId, SubmitOutboundChannel};
 
 use crate as dot_app;
 
@@ -76,7 +76,7 @@ impl artemis_dispatch::Config for Test {
 
 pub struct MockSubmitOutbound;
 
-impl SubmitOutbound for MockSubmitOutbound {
+impl SubmitOutboundChannel for MockSubmitOutbound {
 	fn submit(channel: ChannelId, _: H160, _: &[u8]) -> DispatchResult {
 		if channel == ChannelId::Basic {
 			return Err(DispatchError::Other("some error!"));

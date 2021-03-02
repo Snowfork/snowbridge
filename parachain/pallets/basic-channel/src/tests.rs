@@ -89,6 +89,7 @@ fn test_submit_inbound_invalid_source_channel() {
 }
 
 #[test]
+#[ignore] // TODO: create messages with 2 consecutive onces
 fn test_submit_inbound_basic() {
 	new_tester_with_source_channel(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
