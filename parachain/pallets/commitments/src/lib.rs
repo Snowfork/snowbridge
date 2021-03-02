@@ -14,7 +14,6 @@ use sp_runtime::{
 	DigestItem,
 };
 use sp_std::prelude::*;
-use std::collections::BTreeMap;
 
 use merkle_tree::*;
 
@@ -118,50 +117,54 @@ impl<T: Config> Module<T> {
 	}
 
 	fn commit_for_basic_channel() -> Weight {
-		let all_messages: Vec<(T::AccountId, Message)> = <Self as Store>::BasicMessageQueue::get();
+		let mut all_messages: Vec<(T::AccountId, Message)> =
+			<Self as Store>::BasicMessageQueue::get();
 		if all_messages.is_empty() {
 			return 0;
 		}
 
-		//let msg_accounts = BTreeMap::new();
-
 		//
-		// TODO: benchmark this grouping approach vs a sorting in-place solution
+		// The algorithm consists of sorting and then iterating over the contiguous
+		// account messages and creating subcommitments per user message groups.
+		// This algorithm is O(n log n).
+		// An alternative approach would be to use a hashmap (itertool's group-by
+		// won't work with Wasm). Even though it would be amortized O(n), the
+		// required allocations have an impact on effective performance.
+		// TODO: benchmark sorting vs a hash-map approach
 		//
+		all_messages.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+		let mut subcommitments = Vec::new();
+		let mut prev_acc = &all_messages[0].0;
+		let mut group = Vec::new();
+		for (acc, msg) in all_messages.iter() {
+			if acc != prev_acc {
+				subcommitments.push((acc, Self::encode_commitment(&group)));
+				group.clear();
+				prev_acc = acc;
+			}
+			group.push(msg);
+		}
+		subcommitments.push((prev_acc, Self::encode_commitment(&group)));
 
-		// let subcommitments = all_messages
-		// 	//.clone()
-		// 	.iter()
-		// 	.map(|(acc, v)| (acc.encode(), v))
-		// 	.into_group_map_by(|x| x.0.clone())
-		// 	.into_iter()
-		// 	.map(|(_, msgs)| {
-		// 		let msgs = msgs
-		// 			.into_iter()
-		// 			.map(|(_, msg)| msg)
-		// 			.collect::<Vec<&Message>>();
-		// 		Self::encode_commitment(msgs)
-		// 	});
+		let subcom_hashes = subcommitments
+			.iter()
+			.map(|(_, c)| <T as Config>::Hashing::hash(&c));
 
-		// let subcom_hashes = subcommitments
-		// 	.into_iter()
-		// 	.map(|c| <T as Config>::Hashing::hash(&c));
+		// Generate Merkle Tree
+		let mt = MerkleTree::new(subcom_hashes);
 
-		// // Generate Merkle Tree
-		// let mt = MerkleTree::new(subcom_hashes);
+		// Deposit log with Merkle Tree Root
+		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mt.root).into();
+		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		// // Deposit log with Merkle Tree Root
-		// let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mt.root).into();
-		// <frame_system::Module<T>>::deposit_log(digest_item);
-
-		// // Store the messages blob off-chain
-		// let blob = BasicChannelBlob {
-		// 	messages: all_messages,
-		// };
-		// offchain_index::set(
-		// 	&Self::offchain_key(ChannelId::Basic, mt.root),
-		// 	&blob.encode(),
-		// );
+		// Store the messages blob off-chain
+		let blob = BasicChannelBlob {
+			messages: all_messages,
+		};
+		offchain_index::set(
+			&Self::offchain_key(ChannelId::Basic, mt.root),
+			&blob.encode(),
+		);
 
 		0
 	}
@@ -172,7 +175,7 @@ impl<T: Config> Module<T> {
 			return 0;
 		}
 
-		let commitment = Self::encode_commitment(messages.iter().collect::<Vec<&Message>>());
+		let commitment = Self::encode_commitment(&messages.iter().collect::<Vec<&Message>>());
 		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
 		let digest_item =
@@ -189,7 +192,7 @@ impl<T: Config> Module<T> {
 	}
 
 	// ABI-encode the commitment
-	fn encode_commitment(commitment: Vec<&Message>) -> Vec<u8> {
+	fn encode_commitment(commitment: &Vec<&Message>) -> Vec<u8> {
 		let messages: Vec<Token> = commitment
 			.iter()
 			.map(|message| {
@@ -212,22 +215,14 @@ impl<T: Config> BasicMessageCommitment<T::AccountId> for Module<T> {
 		payload: &[u8],
 	) -> DispatchResult {
 		let mut mq = BasicMessageQueue::<T>::get();
-		let entry = (
-			account_id.clone(),
+		mq.push((
+			account_id,
 			Message {
 				target,
 				nonce,
 				payload: payload.to_vec(),
 			},
-		);
-
-		let index;
-		match mq.binary_search_by_key(&account_id, |(acc, _)| acc.clone()) {
-			Ok(i) => index = i,
-			Err(i) => index = i,
-		}
-
-		mq.insert(index, entry);
+		));
 		BasicMessageQueue::<T>::put(mq);
 		Ok(())
 	}
