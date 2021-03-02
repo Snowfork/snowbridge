@@ -1,5 +1,7 @@
 package ethereum
 
+import "github.com/ethereum/go-ethereum/common"
+
 type Config struct {
 	Endpoint              string         `mapstructure:"endpoint"`
 	PrivateKey            string         `mapstructure:"private-key"`
@@ -13,6 +15,8 @@ type ChannelsConfig struct {
 }
 
 type ChannelConfig struct {
-	Inbound  string `mapstructure:"inbound"`
-	Outbound string `mapstructure:"outbound"`
+	Inbound             string   `mapstructure:"inbound"`
+	Outbound            string   `mapstructure:"outbound"`
+	AccountWhitelist    []string `mapstructure:"account_whitelist"`
+	AccountWhitelistMap map[common.Address]bool
 }

@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate"
@@ -223,6 +224,16 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("environment variable not set: ARTEMIS_SUBSTRATE_KEY")
 	}
 	config.Sub.PrivateKey = value
+
+	accountWhitelist := &config.Eth.Channels.Basic.AccountWhitelist
+	accountWhitelistMap := make(map[common.Address]bool)
+
+	for i := 0; i < len(*accountWhitelist); i++ {
+		account := common.HexToAddress((*accountWhitelist)[i])
+		accountWhitelistMap[account] = true
+	}
+
+	config.Eth.Channels.Basic.AccountWhitelistMap = accountWhitelistMap
 
 	return &config, nil
 }
