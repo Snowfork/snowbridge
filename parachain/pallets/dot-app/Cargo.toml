@@ -1,10 +1,8 @@
 [package]
-name = "pallet-bridge"
-description = "Artemis Bridge Pallet"
+name = "artemis-dot-app"
 version = "0.1.1"
-edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
-repository = "https://github.com/Snowfork/polkadot-ethereum"
+edition = "2018"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -12,6 +10,9 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 serde = { version = "1.0.101", optional = true }
 codec = { version = "2.0.0", package = "parity-scale-codec", default-features = false, features = ["derive"] }
+hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
+rlp = { version = "0.5", default-features = false }
+hex-literal = { version = "0.3.1", default-features = false }
 
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
@@ -20,29 +21,32 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "rococo
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 
-artemis-core = { path = "../../primitives/core", default-features = false }
-artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
+artemis-core = { path = "../../primitives/core", default-features = false }
+artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
+
 [dev-dependencies]
-pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+artemis-assets = { path = "../../pallets/assets" }
+artemis-dispatch = { path = "../../pallets/dispatch"  }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
-hex-literal = { version = "0.3.1" }
-rlp = { version = "0.5" }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
 
 [features]
 default = ["std"]
 std = [
     "serde",
+    "hex/std",
     "codec/std",
     "frame-support/std",
     "frame-system/std",
     "sp-core/std",
+    "sp-std/std",
     "sp-io/std",
     "sp-runtime/std",
-    "sp-std/std",
     "artemis-core/std",
     "artemis-ethereum/std",
-    "ethabi/std"
+    "ethabi/std",
+    "rlp/std"
 ]

@@ -45,7 +45,6 @@ sp-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo
 sp-block-builder = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-consensus = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
-sp-consensus-aura = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-inherents = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
@@ -99,6 +98,7 @@ members = [
     "pallets/verifier-lightclient",
     "pallets/eth-app",
     "pallets/erc20-app",
+    "pallets/dot-app",
     "pallets/commitments",
     "pallets/transfer",
     "runtime",

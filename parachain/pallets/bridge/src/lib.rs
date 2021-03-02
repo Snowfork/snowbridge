@@ -20,6 +20,8 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
 	storage::StorageMap,
+	traits::Get,
+	Parameter,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_core::H160;
@@ -29,11 +31,14 @@ use artemis_core::{
 	ChannelId, SubmitOutboundChannel, Message, MessageId,
 	MessageCommitment, MessageDispatch, Verifier,
 	SourceChannelConfig,
+	rewards::RewardRelayer,
 };
 use channel::inbound::make_inbound_channel;
 use channel::outbound::make_outbound_channel;
 use primitives::{InboundChannelData, OutboundChannelData};
 use envelope::Envelope;
+
+use sp_runtime::traits::Zero;
 
 #[cfg(test)]
 mod mock;
@@ -58,6 +63,14 @@ pub trait Config: system::Config {
 
 	/// Verifier module for message verification.
 	type MessageDispatch: MessageDispatch<MessageId>;
+
+	/// Source of funds to pay relayers
+	type RewardsAccount: Get<Self::AccountId>;
+
+	/// Fee type
+	type InboundMessageFee: PartialOrd + Parameter + Zero + From<u64>;
+
+	type RewardRelayer: RewardRelayer<Self::AccountId, Self::InboundMessageFee>;
 }
 
 decl_storage! {

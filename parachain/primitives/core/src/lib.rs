@@ -12,6 +12,7 @@ use artemis_ethereum::Log;
 
 pub mod types;
 pub mod assets;
+pub mod rewards;
 
 pub use types::{
 	Message,

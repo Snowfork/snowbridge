@@ -3,10 +3,12 @@ use crate::{
 	primitives::{InboundChannel, InboundChannelData},
 	Config, Error, InboundChannels,
 };
+use artemis_core::rewards::RewardRelayer;
 use artemis_core::{ChannelId, MessageDispatch, MessageId};
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	storage::StorageMap,
+	traits::Get,
 };
 use sp_std::{boxed::Box, cell::Cell, marker::PhantomData};
 
@@ -77,6 +79,8 @@ impl<T: Config> InboundChannel<T::AccountId> for IncentivizedInboundChannel<T> {
 			data.nonce += 1;
 			Ok(())
 		})?;
+
+		T::RewardRelayer::pay_relayer(&T::RewardsAccount::get(), relayer, 0.into());
 
 		let message_id = MessageId::new(self.channel_id, envelope.source, envelope.nonce);
 		T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
