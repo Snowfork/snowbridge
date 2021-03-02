@@ -49,8 +49,8 @@ pub struct Message {
 
 /// Wire-format for committed BasicChannel data
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
-pub struct BasicChannelBlob<AccountId> {
-	messages: Vec<(AccountId, Message)>,
+pub struct BasicChannelBlob {
+	messages: Vec<Message>,
 	// TODO: store proofs
 }
 
@@ -106,9 +106,14 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-	// Generate a key for offchain storage
-	fn offchain_key(channel_id: ChannelId, hash: H256) -> Vec<u8> {
-		(T::INDEXING_PREFIX, channel_id, hash).encode()
+	// Generate a key for basic offchain storage
+	fn offchain_key_basic(account_id: T::AccountId, hash: H256) -> Vec<u8> {
+		(T::INDEXING_PREFIX, ChannelId::Basic, account_id, hash).encode()
+	}
+
+	// Generate a key for incentivized offchain storage
+	fn offchain_key_incentivized(hash: H256) -> Vec<u8> {
+		(T::INDEXING_PREFIX, ChannelId::Incentivized, hash).encode()
 	}
 
 	// TODO: return proper weight
@@ -134,17 +139,20 @@ impl<T: Config> Module<T> {
 		//
 		all_messages.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 		let mut subcommitments = Vec::new();
-		let mut prev_acc = &all_messages[0].0;
+		let mut messages_by_user = Vec::new();
 		let mut group = Vec::new();
+		let mut prev_acc = &all_messages[0].0;
 		for (acc, msg) in all_messages.iter() {
 			if acc != prev_acc {
 				subcommitments.push((acc, Self::encode_commitment(&group)));
+				messages_by_user.push((acc, group.clone()));
 				group.clear();
 				prev_acc = acc;
 			}
-			group.push(msg);
+			group.push(msg.clone());
 		}
 		subcommitments.push((prev_acc, Self::encode_commitment(&group)));
+		messages_by_user.push((prev_acc, group));
 
 		let subcom_hashes = subcommitments
 			.iter()
@@ -157,14 +165,16 @@ impl<T: Config> Module<T> {
 		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mt.root).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		// Store the messages blob off-chain
-		let blob = BasicChannelBlob {
-			messages: all_messages,
-		};
-		offchain_index::set(
-			&Self::offchain_key(ChannelId::Basic, mt.root),
-			&blob.encode(),
-		);
+		// Create an off-chain storage entry per user
+		messages_by_user.into_iter().for_each(|(acc, msgs)| {
+			// Store the messages blob off-chain
+			// TODO: store proofs?
+			let blob = BasicChannelBlob { messages: msgs };
+			offchain_index::set(
+				&Self::offchain_key_basic((*acc).clone(), mt.root),
+				&blob.encode(),
+			);
+		});
 
 		0
 	}
@@ -175,7 +185,8 @@ impl<T: Config> Module<T> {
 			return 0;
 		}
 
-		let commitment = Self::encode_commitment(&messages.iter().collect::<Vec<&Message>>());
+		//let commitment = Self::encode_commitment(&messages.iter().collect::<Vec<&Message>>());
+		let commitment = Self::encode_commitment(&messages);
 		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
 		let digest_item =
@@ -184,7 +195,7 @@ impl<T: Config> Module<T> {
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
 		offchain_index::set(
-			&Self::offchain_key(ChannelId::Incentivized, commitment_hash),
+			&Self::offchain_key_incentivized(commitment_hash),
 			&messages.encode(),
 		);
 
@@ -192,7 +203,7 @@ impl<T: Config> Module<T> {
 	}
 
 	// ABI-encode the commitment
-	fn encode_commitment(commitment: &Vec<&Message>) -> Vec<u8> {
+	fn encode_commitment(commitment: &Vec<Message>) -> Vec<u8> {
 		let messages: Vec<Token> = commitment
 			.iter()
 			.map(|message| {
