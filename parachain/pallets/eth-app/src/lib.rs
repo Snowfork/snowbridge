@@ -21,6 +21,7 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::{DispatchError, DispatchResult},
 	traits::EnsureOrigin,
+	transactional,
 };
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
@@ -82,6 +83,7 @@ decl_module! {
 		// Users should burn their holdings to release funds on the Ethereum side
 		// TODO: Calculate weights
 		#[weight = 0]
+		#[transactional]
 		pub fn burn(origin, channel_id: ChannelId, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -100,6 +102,7 @@ decl_module! {
 		}
 
 		#[weight = 0]
+		#[transactional]
 		pub fn mint(origin, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != Address::get() {
