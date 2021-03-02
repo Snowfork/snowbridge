@@ -2,6 +2,7 @@ use super::*;
 
 use frame_support::{dispatch::DispatchError, parameter_types};
 use sp_core::H256;
+use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -10,7 +11,8 @@ use sp_runtime::{
 use sp_std::convert::From;
 
 use artemis_core::{
-	ChannelId, MessageCommitment, MessageDispatch, MessageId, SourceChannel, SourceChannelConfig,
+	rewards::InstantRewards, ChannelId, MessageCommitment, MessageDispatch, SourceChannel,
+	SourceChannelConfig,
 };
 use artemis_ethereum::Log;
 
@@ -26,12 +28,14 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Event<T>},
 		Bridge: bridge::{Module, Call, Storage, Event},
 	}
 );
 
 pub type Signature = MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+pub type Balance = u128;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -55,13 +59,31 @@ impl system::Config for Test {
 	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 }
-// Mock verifier that gives the green light to all messages
+
+parameter_types! {
+	pub const ExistentialDeposit: u128 = 1;
+	pub const MaxLocks: u32 = 50;
+}
+
+impl pallet_balances::Config for Test {
+	/// The ubiquitous event type.
+	type Event = Event;
+	type MaxLocks = MaxLocks;
+	/// The type for recording an account's balance.
+	type Balance = Balance;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+}
+
+// Mock verifier
 pub struct MockVerifier;
 
 impl Verifier for MockVerifier {
@@ -71,6 +93,7 @@ impl Verifier for MockVerifier {
 	}
 }
 
+// Mock Commitments
 pub struct MockMessageCommitment;
 
 impl MessageCommitment for MockMessageCommitment {
@@ -79,17 +102,25 @@ impl MessageCommitment for MockMessageCommitment {
 	}
 }
 
+// Mock Dispatch
 pub struct MockMessageDispatch;
 
 impl MessageDispatch<MessageId> for MockMessageDispatch {
 	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
 }
 
-impl Config for Test {
+parameter_types! {
+	pub RewardsAccount: AccountId = Keyring::Eve.into();
+}
+
+impl bridge::Config for Test {
 	type Event = Event;
 	type Verifier = MockVerifier;
 	type MessageCommitment = MockMessageCommitment;
 	type MessageDispatch = MockMessageDispatch;
+	type RewardsAccount = RewardsAccount;
+	type InboundMessageFee = Balance;
+	type RewardRelayer = InstantRewards<Self, Balances>;
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {

@@ -40,12 +40,12 @@ use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
-pub use sp_runtime::{Perbill, Permill};
+pub use sp_runtime::{traits::AccountIdConversion, ModuleId, Perbill, Permill};
 
-pub use artemis_core::{AssetId, ChannelId, MessageId};
+pub use artemis_core::{rewards::InstantRewards, AssetId, ChannelId, MessageId};
 use dispatch::EnsureEthereumAccount;
 
-pub use verifier_lightclient::EthereumHeader;
+pub use verifier_lightclient::{EthereumDifficultyConfig, EthereumHeader};
 
 use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 use polkadot_parachain::primitives::Sibling;
@@ -350,7 +350,7 @@ pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(call: &Call) -> bool {
 		match call {
-			Call::ETH(_) | Call::ERC20(_) => true,
+			Call::ETH(_) | Call::ERC20(_) | Call::DOT(_) => true,
 			_ => false,
 		}
 	}
@@ -364,11 +364,18 @@ impl dispatch::Config for Runtime {
 	type CallFilter = CallFilter;
 }
 
+parameter_types! {
+	pub RewardsAccount: AccountId = DotModuleId::get().into_account();
+}
+
 impl bridge::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
 	type BasicMessageCommitment = commitments::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
+	type RewardsAccount = RewardsAccount;
+	type InboundMessageFee = Balance;
+	type RewardRelayer = InstantRewards<Self, Balances>;
 }
 
 impl basic_channel::Config for Runtime {
@@ -378,21 +385,30 @@ impl basic_channel::Config for Runtime {
 	type MessageDispatch = dispatch::Module<Runtime>;
 }
 
+pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficultyConfig {
+	byzantium_fork_block: 1700000,
+	constantinople_fork_block: 4230000,
+	muir_glacier_fork_block: 7117117,
+};
+
 #[cfg(not(feature = "test-e2e"))]
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 3;
+	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
 	pub const VerifyPoW: bool = true;
 }
 
 #[cfg(feature = "test-e2e")]
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 1;
+	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
 	pub const VerifyPoW: bool = false;
 }
 
 impl verifier_lightclient::Config for Runtime {
 	type Event = Event;
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
+	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
 }
 
@@ -428,6 +444,18 @@ impl erc20_app::Config for Runtime {
 	type CallOrigin = EnsureEthereumAccount;
 }
 
+parameter_types! {
+	pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
+}
+
+impl dot_app::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type SubmitOutbound = bridge::Module<Runtime>;
+	type CallOrigin = EnsureEthereumAccount;
+	type ModuleId = DotModuleId;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -451,6 +479,7 @@ construct_runtime!(
 		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>},
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
+		DOT: dot_app::{Module, Call, Config, Storage, Event<T>},
 
 		LocalXcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin},
 		Transfer: artemis_transfer::{Module, Call, Event<T>},

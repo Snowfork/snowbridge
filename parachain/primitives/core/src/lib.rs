@@ -11,6 +11,7 @@ use frame_support::dispatch::{DispatchError, DispatchResult};
 use sp_core::H160;
 
 pub mod assets;
+pub mod rewards;
 pub mod types;
 
 pub use types::{ChannelId, Message, MessageId, Proof, SourceChannel, SourceChannelConfig};
