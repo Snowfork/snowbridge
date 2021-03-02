@@ -11,8 +11,6 @@ enum ChannelId {Basic, Incentivized}
 abstract contract BaseDOTApp {
     using ScaleCodec for uint128;
 
-    uint256 public balance;
-
     mapping(ChannelId => Channel) public channels;
 
     bytes2 constant UNLOCK_CALL = 0x0e01;
@@ -87,13 +85,11 @@ abstract contract BaseDOTApp {
      *
      * Can verify in Rust using this snippet:
      *
-     * 	 let granularity = U256::from(100000000u64);
-	 *   U256::from(u128::MAX).checked_mul(granularity).unwrap();
+     *   let granularity = U256::from(100000000u64);
+     *   U256::from(u128::MAX).checked_mul(granularity).unwrap();
      *
      */
     function wrap(uint128 _value) pure internal returns (uint256) {
-        // No need for SafeMath.div since granularity() resolves to a
-        // compile-time constant that is not zero.
         return uint256(_value) * granularity();
     }
 
@@ -104,7 +100,6 @@ abstract contract BaseDOTApp {
      * constant (See DOTAppDecimals10.sol and DOTAppDecimals12.sol)
      */
     function unwrap(uint256 _value) pure internal returns (uint128) {
-        //
         return uint128(_value / granularity());
     }
 
