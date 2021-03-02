@@ -156,7 +156,7 @@ const encodeMessage = (message) => {
   );
 }
 
-const deployAppContractWithChannels = async (appContract) => {
+const deployAppContractWithChannels = async (appContract, ...appContractArgs) => {
   const channels = {
     basic: {
       inbound: await channelContracts.basic.inbound.new(),
@@ -169,6 +169,7 @@ const deployAppContractWithChannels = async (appContract) => {
   };
 
   const app = await appContract.new(
+    ...appContractArgs,
     {
       inbound: channels.basic.inbound.address,
       outbound: channels.basic.outbound.address,

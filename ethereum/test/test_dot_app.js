@@ -1,6 +1,7 @@
 const { singletons } = require('@openzeppelin/test-helpers');
 const { ethers } = require("ethers");
 const BigNumber = require('bignumber.js');
+const AssertionError = require('assert').AssertionError;
 const {
   confirmChannelSend,
   confirmUnlock,
@@ -15,17 +16,19 @@ require("chai")
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
-const DOTApp = artifacts.require("DOTApp");
+const DOTAppDecimals10 = artifacts.require("DOTAppDecimals10");
 const Token = artifacts.require("WrappedToken");
 
 const DOT_DECIMALS = 10;
 const ETHER_DECIMALS = 18;
 
+const granularity = Math.pow(10, ETHER_DECIMALS - DOT_DECIMALS);
+
 const wrapped = (amount) =>
-  amount.multipliedBy(BigNumber(10).exponentiatedBy(ETHER_DECIMALS - DOT_DECIMALS));
+  amount.multipliedBy(granularity);
 
 const unwrapped = (amount) =>
-  amount.dividedToIntegerBy(BigNumber(10).exponentiatedBy(ETHER_DECIMALS - DOT_DECIMALS));
+  amount.dividedToIntegerBy(granularity);
 
 const burnTokens = (contract, sender, recipient, amount, channel) => {
   return contract.burn(
@@ -50,7 +53,7 @@ contract("DOTApp", function (accounts) {
   describe("minting", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp);
+      [this.channels, this.app] = await deployAppContractWithChannels(DOTAppDecimals10, "Snowfork DOT", "SnowDOT");
       this.token = await Token.at(await this.app.token());
     });
 
@@ -90,7 +93,7 @@ contract("DOTApp", function (accounts) {
   describe("burning", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp);
+      [this.channels, this.app] = await deployAppContractWithChannels(DOTAppDecimals10, "Snowfork DOT", "SnowDOT");
       this.token = await Token.at(await this.app.token());
 
       // Mint 2 wrapped DOT
@@ -128,6 +131,15 @@ contract("DOTApp", function (accounts) {
 
       beforeTotalSupply.minus(afterTotalSupply).should.be.bignumber.equal(amountWrapped);
       beforeUserBalance.minus(afterUserBalance).should.be.bignumber.equal(amountWrapped);
+    });
+
+    it("should revert on bad granularity", async function () {
+      const amount = BigNumber("1");
+
+      const err = await burnTokens(this.app, user, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+        .should.be.rejected;
+
+      err.reason.should.be.equal("Invalid Granularity");
     });
 
     it("should send payload to the basic outbound channel", async function () {

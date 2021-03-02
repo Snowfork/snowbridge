@@ -15,13 +15,13 @@ pub struct OutboundPayload<AccountId: Encode> {
 
 impl<AccountId: Encode> OutboundPayload<AccountId> {
 	/// ABI-encode this payload
-	pub fn encode(&self) -> Option<Vec<u8>> {
+	pub fn encode(&self) -> Vec<u8> {
 
 		let tokens = vec![
 			Token::FixedBytes(self.sender.encode()),
 			Token::Address(self.recipient),
 			Token::Uint(self.amount.into())
 		];
-		Some(ethabi::encode_function("mint(bytes32,address,uint128)", tokens.as_ref()))
+		ethabi::encode_function("mint(bytes32,address,uint128)", tokens.as_ref())
 	}
 }

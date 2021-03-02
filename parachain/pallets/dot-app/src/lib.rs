@@ -3,6 +3,7 @@ use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::{DispatchError, DispatchResult},
+	transactional,
 	traits::{
 		Get,
 		EnsureOrigin,
@@ -45,7 +46,7 @@ pub trait Config: system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as EthModule {
+	trait Store for Module<T: Config> as DotModule {
 		/// Address of the peer application on the Ethereum side.
 		Address get(fn address) config(): H160;
 	}
@@ -77,6 +78,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 0]
+		#[transactional]
 		pub fn lock(origin, channel_id: ChannelId, recipient: H160, amount: BalanceOf<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -88,13 +90,13 @@ decl_module! {
 				amount: amount.saturated_into::<u128>(),
 			};
 
-			T::SubmitOutbound::submit(channel_id, Address::get(), &message.encode().unwrap())?;
+			T::SubmitOutbound::submit(channel_id, Address::get(), &message.encode())?;
 			Self::deposit_event(RawEvent::Locked(who.clone(), recipient, amount));
-
 			Ok(())
 		}
 
 		#[weight = 0]
+		#[transactional]
 		pub fn unlock(origin, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: BalanceOf<T>) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != Address::get() {

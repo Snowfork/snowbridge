@@ -8,6 +8,7 @@ Environment=ARTEMIS_ETHEREUM_KEY={{ keys.ethereum }}
 Environment=ARTEMIS_SUBSTRATE_KEY={{ keys.substrate }}
 ExecStart=/usr/local/bin/artemis-relay run --config /etc/artemis-relay/config.toml
 Restart=always
+RestartSec=60
 
 [Install]
 WantedBy=multi-user.target

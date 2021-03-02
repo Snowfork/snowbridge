@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@polkadot/api": "^3.8.1",
+    "@snowfork/snowbridge-types": "link:../types",
     "bignumber.js": "^9.0.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",

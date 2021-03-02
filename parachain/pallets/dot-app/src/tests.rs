@@ -6,7 +6,7 @@ use frame_support::{assert_noop, assert_ok,
 	traits::Currency
 };
 use sp_keyring::AccountKeyring as Keyring;
-use sp_core::H160;
+use sp_core::{H160, U256};
 use artemis_core::ChannelId;
 
 fn last_event() -> Event {
@@ -68,7 +68,7 @@ fn should_unlock() {
 }
 
 #[test]
-fn should_unlock_fail_on_bad_origin() {
+fn should_not_unlock_on_bad_origin_failure() {
 	new_tester().execute_with(|| {
 		let unknown_peer_contract = H160::repeat_byte(64);
 		let sender = H160::repeat_byte(7);
@@ -100,4 +100,32 @@ fn should_unlock_fail_on_bad_origin() {
 
 		assert_eq!(Balances::total_balance(&DOTApp::account_id()), balance);
 	});
+}
+
+#[test]
+fn should_not_lock_on_add_commitment_failure() {
+	new_tester().execute_with(|| {
+		let sender: AccountId = Keyring::Bob.into();
+		let recipient = H160::repeat_byte(9);
+		let amount = 100;
+
+		let _ = Balances::deposit_creating(&sender, amount * 10);
+
+		assert_noop!(
+			DOTApp::lock(
+				Origin::signed(sender.clone()),
+				ChannelId::Basic,
+				recipient.clone(),
+				amount),
+			DispatchError::Other("some error!")
+		);
+	});
+}
+
+
+// Used to prove safety of conversion from DOT to wrapped DOT (See BaseDOTApp.sol)
+#[test]
+fn should_max_dot_convert_to_wrapped_dot() {
+	let granularity = U256::from(100000000u64); // 10 ** 8
+	U256::from(u128::MAX).checked_mul(granularity).unwrap();
 }
