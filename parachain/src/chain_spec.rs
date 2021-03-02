@@ -1,7 +1,7 @@
 use artemis_runtime::{
-	AccountId, AssetsConfig, BalancesConfig, BasicChannelConfig, BridgeConfig, CommitmentsConfig,
-	DOTConfig, ERC20Config, ETHConfig, EthereumHeader, GenesisConfig, ParachainInfoConfig,
-	Signature, SystemConfig, VerifierLightclientConfig, WASM_BINARY,
+	AccountId, AssetsConfig, BalancesConfig, BridgeConfig, CommitmentsConfig, DOTConfig,
+	ERC20Config, ETHConfig, EthereumHeader, GenesisConfig, ParachainInfoConfig, Signature,
+	SystemConfig, VerifierLightclientConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
