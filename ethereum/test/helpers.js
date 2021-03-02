@@ -179,6 +179,7 @@ const deployAppContractWithChannels = async (appContract) => {
     },
   );
 
+  await channels.incentivized.outbound.setDOTApp(app.address);
   return [channels, app]
 }
 

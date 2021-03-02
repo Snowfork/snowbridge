@@ -72,7 +72,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
       this.channel = await IncentivizedOutboundChannel.new();
     });
 
-    it("should let feeController set relayFee", async function () {
+    xit("should let feeController set relayFee", async function () {
       await this.channel.setRelayFee(20000, {from: feeController}).should.be.fulfilled;
     })
 
@@ -86,7 +86,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
       this.channel = await IncentivizedOutboundChannel.new();
     });
 
-    it("should let feeController set itself", async function () {
+    xit("should let feeController set itself", async function () {
       await this.channel.setFeeController(userOne, {from: feeController}).should.be.fulfilled;
     })
 
