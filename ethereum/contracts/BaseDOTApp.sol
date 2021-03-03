@@ -56,6 +56,11 @@ abstract contract BaseDOTApp {
         channel.submit(call);
     }
 
+    function burnFee(address _user, uint256 _amount) external {
+        // TODO: Ensure message sender is a known outbound channel
+        token.burn(_user, _amount, "");
+    }
+
     function mint(bytes32 _sender, address _recipient, uint128 _amount) public {
         // TODO: Ensure message sender is a known inbound channel
         token.mint(_recipient, wrap(_amount), abi.encodePacked(_sender));

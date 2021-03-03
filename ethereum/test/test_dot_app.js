@@ -153,29 +153,8 @@ contract("DOTApp", function (accounts) {
       let { receipt } = await burnTokens(this.app, user, POLKADOT_ADDRESS, amountWrapped, ChannelId.Incentivized).should.be.fulfilled;
       confirmChannelSend(receipt.rawLogs[2], this.channels.incentivized.outbound.address, this.app.address, 1)
     });
-  });
 
-  describe("burnFee", function () {
-    beforeEach(async function () {
-      this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp);
-      this.token = await Token.at(await this.app.token());
-
-      // Mint 2 wrapped DOT
-      let amountNative = BigNumber("20000000000"); // 2 DOT, uint128
-      let amountWrapped = wrapped(amountNative);
-      await this.app.mint(
-        addressBytes(POLKADOT_ADDRESS),
-        user,
-        amountWrapped.toString(),
-        {
-          from: owner,
-          value: 0
-        }
-      )
-    });
-
-    it("should burn funds", async function () {
+    it("should burn fee", async function () {
       const beforeTotalSupply = BigNumber(await this.token.totalSupply());
       const beforeUserBalance = BigNumber(await this.token.balanceOf(user));
       const amountWrapped = wrapped(BigNumber("10000000000"));
