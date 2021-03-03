@@ -74,6 +74,11 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- c
 		return err
 	}
 
+	err = ch.queryCurrentEpoch()
+	if err != nil {
+		return err
+	}
+
 	// The Ethereum chain needs init params from Substrate
 	// to complete startup.
 	ethInitHeaderID, err := ch.queryEthereumInitParams()
@@ -128,4 +133,27 @@ func (ch *Chain) queryEthereumInitParams() (*ethereum.HeaderID, error) {
 
 	nextHeaderID := ethereum.HeaderID{Number: types.NewU64(uint64(headerID.Number) + 1)}
 	return &nextHeaderID, nil
+}
+
+func (ch *Chain) queryCurrentEpoch() error {
+	storageKey, err := types.CreateStorageKey(&ch.conn.metadata, "VerifierLightclient", "Epoch", nil, nil)
+	if err != nil {
+		return err
+	}
+
+	ch.log.Info("Attempting to query current epoch...")
+
+	// var headerID ethereum.HeaderID
+	var epochData interface{}
+	_, err = ch.conn.api.RPC.State.GetStorageLatest(storageKey, &epochData)
+	if err != nil {
+		return err
+	}
+
+	ch.log.Info("Retrieved current epoch data:", epochData)
+
+	// nextHeaderID := ethereum.HeaderID{Number: types.NewU64(uint64(headerID.Number) + 1)}
+	// return &nextHeaderID, nil
+
+	return nil
 }
