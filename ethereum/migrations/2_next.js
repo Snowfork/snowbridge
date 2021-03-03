@@ -1,8 +1,7 @@
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
-const DOTAppDecimals10 = artifacts.require("DOTAppDecimals10");
-const DOTAppDecimals12 = artifacts.require("DOTAppDecimals12");
+const DOTApp = artifacts.require("DOTApp");
 const TestToken = artifacts.require("TestToken");
 
 const channels = {
@@ -37,7 +36,7 @@ module.exports = function(deployer, network, accounts) {
 
     // Link libraries to applications
     await deployer.deploy(ScaleCodec);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTAppDecimals10, DOTAppDecimals12]);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp]);
 
     // Deploy applications
     await deployer.deploy(
@@ -78,9 +77,10 @@ module.exports = function(deployer, network, accounts) {
     // only deploy this contract to non-development networks. The unit tests deploy this contract themselves.
     if (network === 'ropsten' || network === 'e2e_test')  {
       await deployer.deploy(
-        DOTAppDecimals12, // On Kusama and Rococo, KSM/ROC tokens have 12 decimal places
+        DOTApp,
         "Snowfork DOT",
         "SnowDOT",
+        12, // On Kusama and Rococo, KSM/ROC tokens have 12 decimal places
         {
           inbound: channels.basic.inbound.instance.address,
           outbound: channels.basic.outbound.instance.address,

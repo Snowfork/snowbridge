@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
@@ -22,22 +23,24 @@ const MaxMessagesPerSend = 10
 
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
-	config    *Config
-	conn      *Connection
-	contracts []*outbound.Contract
-	messages  chan<- []chain.Message
-	headers   chan<- chain.Header
-	log       *logrus.Entry
+	config                      *Config
+	conn                        *Connection
+	basicOutboundChannel        *outbound.BasicOutboundChannel
+	incentivizedOutboundChannel *outbound.IncentivizedOutboundChannel
+	messages                    chan<- []chain.Message
+	headers                     chan<- chain.Header
+	log                         *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, messages chan<- []chain.Message, headers chan<- chain.Header, contracts []*outbound.Contract, log *logrus.Entry) (*Listener, error) {
+func NewListener(config *Config, conn *Connection, messages chan<- []chain.Message, headers chan<- chain.Header, log *logrus.Entry) (*Listener, error) {
 	return &Listener{
-		config:    config,
-		conn:      conn,
-		contracts: contracts,
-		messages:  messages,
-		headers:   headers,
-		log:       log,
+		config:                      config,
+		conn:                        conn,
+		basicOutboundChannel:        nil,
+		incentivizedOutboundChannel: nil,
+		messages:                    messages,
+		headers:                     headers,
+		log:                         log,
 	}, nil
 }
 
@@ -52,17 +55,17 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 		return err
 	}
 
-	contract, err := outbound.NewContract(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.client)
+	basicOutboundChannel, err := outbound.NewBasicOutboundChannel(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.client)
 	if err != nil {
 		return err
 	}
-	li.contracts = append(li.contracts, contract)
+	li.basicOutboundChannel = basicOutboundChannel
 
-	contract, err = outbound.NewContract(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.client)
+	incentivizedOutboundChannel, err := outbound.NewIncentivizedOutboundChannel(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.client)
 	if err != nil {
 		return err
 	}
-	li.contracts = append(li.contracts, contract)
+	li.incentivizedOutboundChannel = incentivizedOutboundChannel
 
 	eg.Go(func() error {
 		return li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
@@ -117,27 +120,31 @@ func (li *Listener) pollEventsAndHeaders(
 			}
 
 			finalizedBlockNumber := gethheader.Number.Uint64() - descendantsUntilFinal
-			var events []*outbound.ContractMessage
+			var events []*etypes.Log
 
-			for _, channelContract := range li.contracts {
-				channelEvents, err := li.queryEvents(ctx, channelContract, finalizedBlockNumber, &finalizedBlockNumber)
-				if err != nil {
-					li.log.WithError(err).Error("Failure fetching event logs")
-				}
+			filterOptions := bind.FilterOpts{Start: finalizedBlockNumber, End: &finalizedBlockNumber, Context: ctx}
 
-				events = append(events, channelEvents...)
+			basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
+			if err != nil {
+				li.log.WithError(err).Error("Failure fetching event logs")
 			}
+			events = append(events, basicEvents...)
+
+			incentivizedEvents, err := li.queryIncentivizedEvents(li.basicOutboundChannel, &filterOptions)
+			if err != nil {
+				li.log.WithError(err).Error("Failure fetching event logs")
+			}
+			events = append(events, incentivizedEvents...)
 
 			li.forwardEvents(ctx, hcs, events)
 		}
 	}
 }
 
-func (li *Listener) queryEvents(ctx context.Context, contract *outbound.Contract, start uint64, end *uint64) ([]*outbound.ContractMessage, error) {
-	var events []*outbound.ContractMessage
-	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
+func (li *Listener) queryBasicEvents(contract *outbound.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
+	var events []*etypes.Log
 
-	iter, err := contract.FilterMessage(&filterOps)
+	iter, err := contract.FilterMessage(options)
 	if err != nil {
 		return nil, err
 	}
@@ -151,23 +158,43 @@ func (li *Listener) queryEvents(ctx context.Context, contract *outbound.Contract
 			}
 			break
 		}
-
-		events = append(events, iter.Event)
+		events = append(events, &iter.Event.Raw)
 	}
-
 	return events, nil
 }
 
-func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, events []*outbound.ContractMessage) {
+func (li *Listener) queryIncentivizedEvents(contract *outbound.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
+	var events []*etypes.Log
+
+	iter, err := contract.FilterMessage(options)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+		events = append(events, &iter.Event.Raw)
+	}
+	return events, nil
+}
+
+func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, events []*etypes.Log) {
 	messages := make([]chain.Message, len(events))
 
 	for i, event := range events {
-		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.Raw.BlockHash)
+		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
 		if err != nil {
 			li.log.WithFields(logrus.Fields{
-				"blockHash":   event.Raw.BlockHash.Hex(),
-				"blockNumber": event.Raw.BlockNumber,
-				"txHash":      event.Raw.TxHash.Hex(),
+				"blockHash":   event.BlockHash.Hex(),
+				"blockNumber": event.BlockNumber,
+				"txHash":      event.TxHash.Hex(),
 			}).WithError(err).Error("Failed to get receipt trie for event")
 			return
 		}
@@ -175,10 +202,10 @@ func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, ev
 		msg, err := MakeMessageFromEvent(event, receiptTrie, li.log)
 		if err != nil {
 			li.log.WithFields(logrus.Fields{
-				"address":     event.Raw.Address.Hex(),
-				"blockHash":   event.Raw.BlockHash.Hex(),
-				"blockNumber": event.Raw.BlockNumber,
-				"txHash":      event.Raw.TxHash.Hex(),
+				"address":     event.Address.Hex(),
+				"blockHash":   event.BlockHash.Hex(),
+				"blockNumber": event.BlockNumber,
+				"txHash":      event.TxHash.Hex(),
 			}).WithError(err).Error("Failed to generate message from ethereum event")
 			return
 		}

@@ -7,24 +7,24 @@ import (
 	"bytes"
 	"encoding/hex"
 
+	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	etrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
-func MakeMessageFromEvent(event *outbound.ContractMessage, receiptsTrie *etrie.Trie, log *logrus.Entry) (*chain.EthereumOutboundMessage, error) {
+func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie, log *logrus.Entry) (*chain.EthereumOutboundMessage, error) {
 	// RLP encode event log's Address, Topics, and Data
 	var buf bytes.Buffer
-	err := event.Raw.EncodeRLP(&buf)
+	err := event.EncodeRLP(&buf)
 	if err != nil {
 		return nil, err
 	}
 
-	receiptKey, err := rlp.EncodeToBytes(event.Raw.TxIndex)
+	receiptKey, err := rlp.EncodeToBytes(event.TxIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +38,8 @@ func MakeMessageFromEvent(event *outbound.ContractMessage, receiptsTrie *etrie.T
 	message := substrate.Message{
 		Data: buf.Bytes(),
 		Proof: substrate.Proof{
-			BlockHash: types.NewH256(event.Raw.BlockHash.Bytes()),
-			TxIndex:   types.NewU32(uint32(event.Raw.TxIndex)),
+			BlockHash: types.NewH256(event.BlockHash.Bytes()),
+			TxIndex:   types.NewU32(uint32(event.TxIndex)),
 			Data:      proof,
 		},
 	}

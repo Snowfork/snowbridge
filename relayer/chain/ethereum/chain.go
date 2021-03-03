@@ -9,7 +9,6 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"golang.org/x/sync/errgroup"
 
@@ -59,8 +58,7 @@ func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.
 }
 
 func (ch *Chain) SetSender(ethMessages chan<- []chain.Message, ethHeaders chan<- chain.Header) error {
-	var contracts []*outbound.Contract
-	listener, err := NewListener(ch.config, ch.conn, ethMessages, ethHeaders, contracts, ch.log)
+	listener, err := NewListener(ch.config, ch.conn, ethMessages, ethHeaders, ch.log)
 	if err != nil {
 		return err
 	}

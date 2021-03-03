@@ -9,7 +9,6 @@ import (
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"github.com/stretchr/testify/assert"
 )
@@ -38,7 +37,7 @@ func TestMessage_Proof(t *testing.T) {
 	// We'll prove inclusion for this event by proving inclusion for
 	// the encapsulating receipt
 
-	event5_5 := outbound.ContractMessage{Raw: *receipts[5].Logs[5]}
+	event5_5 := receipts[5].Logs[5]
 
 	receipt5Encoded, err := rlp.EncodeToBytes(receipts[5])
 	if err != nil {
@@ -58,7 +57,7 @@ func TestMessage_Proof(t *testing.T) {
 	}
 
 	logger, _ := test.NewNullLogger()
-	msg, err := ethereum.MakeMessageFromEvent(&event5_5, receiptTrie, logger.WithField("test", "ing"))
+	msg, err := ethereum.MakeMessageFromEvent(event5_5, receiptTrie, logger.WithField("test", "ing"))
 	assert.Nil(t, err)
 	assert.NotNil(t, msg)
 

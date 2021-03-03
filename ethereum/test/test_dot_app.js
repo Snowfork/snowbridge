@@ -3,7 +3,8 @@ const { ethers } = require("ethers");
 const BigNumber = require('bignumber.js');
 const AssertionError = require('assert').AssertionError;
 const {
-  confirmChannelSend,
+  confirmBasicChannelSend,
+  confirmIncentivizedChannelSend,
   confirmUnlock,
   deployAppContractWithChannels,
   addressBytes,
@@ -16,7 +17,7 @@ require("chai")
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
-const DOTAppDecimals10 = artifacts.require("DOTAppDecimals10");
+const DOTApp = artifacts.require("DOTApp");
 const Token = artifacts.require("WrappedToken");
 
 const DOT_DECIMALS = 10;
@@ -53,7 +54,7 @@ contract("DOTApp", function (accounts) {
   describe("minting", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployAppContractWithChannels(DOTAppDecimals10, "Snowfork DOT", "SnowDOT");
+      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp, "Snowfork DOT", "SnowDOT", 10);
       this.token = await Token.at(await this.app.token());
     });
 
@@ -93,8 +94,19 @@ contract("DOTApp", function (accounts) {
   describe("burning", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployAppContractWithChannels(DOTAppDecimals10, "Snowfork DOT", "SnowDOT");
+      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp, "Snowfork DOT", "SnowDOT", 10);
       this.token = await Token.at(await this.app.token());
+
+      let fee = wrapped(BigNumber("100000000")).toString() // 0.001 DOT
+
+      await this.channels.incentivized.outbound.setDOTApp(this.app.address);
+      await this.channels.incentivized.outbound.updateRelayFee(
+        fee,
+        {
+          from: owner,
+          value: 0
+        }
+      );
 
       // Mint 2 wrapped DOT
       let amountNative = BigNumber("20000000000"); // 2 DOT, uint128
@@ -145,13 +157,13 @@ contract("DOTApp", function (accounts) {
     it("should send payload to the basic outbound channel", async function () {
       const amountWrapped = wrapped(BigNumber("10000000000"));
       let { receipt } = await burnTokens(this.app, user, POLKADOT_ADDRESS, amountWrapped, ChannelId.Basic).should.be.fulfilled;
-      confirmChannelSend(receipt.rawLogs[2], this.channels.basic.outbound.address, this.app.address, 1)
+      confirmBasicChannelSend(receipt.rawLogs[2], this.channels.basic.outbound.address, this.app.address, 1)
     });
 
     it("should send payload to the incentivized outbound channel", async function () {
       const amountWrapped = wrapped(BigNumber("10000000000"));
       let { receipt } = await burnTokens(this.app, user, POLKADOT_ADDRESS, amountWrapped, ChannelId.Incentivized).should.be.fulfilled;
-      confirmChannelSend(receipt.rawLogs[2], this.channels.incentivized.outbound.address, this.app.address, 1)
+      confirmIncentivizedChannelSend(receipt.rawLogs[4], this.channels.incentivized.outbound.address, this.app.address, 1)
     });
   });
 });
