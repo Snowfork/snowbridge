@@ -24,6 +24,8 @@ impl MessageId {
 	}
 }
 
+pub type MessageNonce = u64;
+
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug)]
 pub enum ChannelId {
 	Basic,

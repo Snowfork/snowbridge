@@ -43,11 +43,11 @@ xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1"
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
-
 artemis-core = { path = "../primitives/core", default-features = false }
 artemis-transfer = { path = "../pallets/transfer", default-features = false }
 artemis-xcm-support = { path = "../primitives/xcm-support", default-features = false }
-bridge = { path = "../pallets/bridge", package = "pallet-bridge", default-features = false }
+rialto-channel = { path = "../pallets/rialto-channel", package = "artemis-rialto-channel", default-features = false }
+millau-channel = { path = "../pallets/millau-channel", package = "artemis-millau-channel", default-features = false }
 dispatch = { path = "../pallets/dispatch", package = "artemis-dispatch", default-features = false }
 verifier-lightclient = { path = "../pallets/verifier-lightclient", package = "pallet-verifier-lightclient", default-features = false }
 assets = { path = "../pallets/assets", package = "artemis-assets", default-features = false }
@@ -96,7 +96,8 @@ std = [
 	"xcm-executor/std",
 	"xcm-builder/std",
 	"polkadot-parachain/std",
-    "bridge/std",
+    "rialto-channel/std",
+    "millau-channel/std",
     "verifier-lightclient/std",
     "assets/std",
     "dispatch/std",

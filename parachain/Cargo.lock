@@ -370,6 +370,48 @@ dependencies = [
 ]
 
 [[package]]
+name = "artemis-millau-channel"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "artemis-ethereum",
+ "ethabi-decode",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "pallet-balances",
+ "parity-scale-codec",
+ "rlp",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "artemis-rialto-channel"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "artemis-ethereum",
+ "ethabi-decode",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "pallet-balances",
+ "parity-scale-codec",
+ "rlp",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-runtime"
 version = "0.1.1"
 dependencies = [
@@ -380,6 +422,8 @@ dependencies = [
  "artemis-dot-app",
  "artemis-erc20-app",
  "artemis-eth-app",
+ "artemis-millau-channel",
+ "artemis-rialto-channel",
  "artemis-transfer",
  "artemis-xcm-support",
  "cumulus-pallet-parachain-system",
@@ -394,7 +438,6 @@ dependencies = [
  "getrandom 0.2.2",
  "hex-literal",
  "pallet-balances",
- "pallet-bridge",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
  "pallet-transaction-payment",

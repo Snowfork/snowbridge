@@ -30,7 +30,9 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill, ModuleId, traits::AccountIdConversion};
 pub use frame_support::{
-	construct_runtime, parameter_types, StorageValue,
+	construct_runtime,
+	dispatch::DispatchResult,
+	parameter_types, StorageValue,
 	traits::{KeyOwnerProofSystem, Randomness, Filter},
 	weights::{
 		Weight, IdentityFee,
@@ -40,7 +42,7 @@ pub use frame_support::{
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId, ChannelId, MessageId, rewards::InstantRewards};
+pub use artemis_core::{AssetId, OutboundRouter, ChannelId, MessageId, rewards::InstantRewards};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::{EthereumHeader, EthereumDifficultyConfig};
@@ -363,14 +365,52 @@ parameter_types! {
 	pub RewardsAccount: AccountId = DotModuleId::get().into_account();
 }
 
-impl bridge::Config for Runtime {
+use rialto_channel::inbound as rialto_channel_inbound;
+use millau_channel::inbound as millau_channel_inbound;
+use rialto_channel::outbound as rialto_channel_outbound;
+use millau_channel::outbound as millau_channel_outbound;
+
+
+impl rialto_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
+	type MessageDispatch = dispatch::Module<Runtime>;
+}
+
+impl rialto_channel_outbound::Config for Runtime {
+	type Event = Event;
 	type MessageCommitment = commitments::Module<Runtime>;
+}
+
+impl millau_channel_inbound::Config for Runtime {
+	type Event = Event;
+	type Verifier = verifier_lightclient::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
 	type RewardsAccount = RewardsAccount;
 	type InboundMessageFee = Balance;
 	type RewardRelayer = InstantRewards<Self, Balances>;
+}
+
+impl millau_channel_outbound::Config for Runtime {
+	type Event = Event;
+	type MessageCommitment = commitments::Module<Runtime>;
+}
+
+use sp_std::marker::PhantomData;
+use sp_core::H160;
+
+pub struct SimpleOutboundRouter<T>(PhantomData<T>);
+
+impl<T> OutboundRouter for SimpleOutboundRouter<T>
+where
+	T: rialto_channel_outbound::Config + millau_channel_outbound::Config
+{
+	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult {
+		match channel_id {
+			ChannelId::Basic => rialto_channel_outbound::Module::<T>::submit(target, payload),
+			ChannelId::Incentivized => millau_channel_outbound::Module::<T>::submit(target, payload),
+		}
+	}
 }
 
 pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficultyConfig {
@@ -421,14 +461,14 @@ parameter_types! {
 impl eth_app::Config for Runtime {
 	type Event = Event;
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
-	type SubmitOutbound = bridge::Module<Runtime>;
+	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 }
 
 impl erc20_app::Config for Runtime {
 	type Event = Event;
 	type Assets = assets::Module<Runtime>;
-	type SubmitOutbound = bridge::Module<Runtime>;
+	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 }
 
@@ -439,7 +479,7 @@ parameter_types! {
 impl dot_app::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
-	type SubmitOutbound = bridge::Module<Runtime>;
+	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type ModuleId = DotModuleId;
 }
@@ -459,7 +499,10 @@ construct_runtime!(
 		ParachainInfo: parachain_info::{Module, Storage, Config},
 		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
 
-		Bridge: bridge::{Module, Call, Config, Storage, Event},
+		RialtoInboundChannel: rialto_channel_inbound::{Module, Call, Config, Storage, Event},
+		RialtoOutboundChannel: rialto_channel_outbound::{Module, Storage, Event},
+		MillauInboundChannel: millau_channel_inbound::{Module, Call, Config, Storage, Event},
+		MillauOutboundChannel: millau_channel_outbound::{Module, Storage, Event},
 		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin},
 		Commitments: commitments::{Module, Call, Config<T>, Storage, Event},
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},

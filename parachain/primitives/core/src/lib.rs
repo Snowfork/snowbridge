@@ -19,6 +19,7 @@ pub use types::{
 	Proof,
 	ChannelId,
 	MessageId,
+	MessageNonce,
 	SourceChannelConfig,
 	SourceChannel,
 };
@@ -32,7 +33,7 @@ pub trait Verifier {
 }
 
 /// Outbound submission for applications
-pub trait SubmitOutbound {
+pub trait OutboundRouter {
 	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult;
 }
 

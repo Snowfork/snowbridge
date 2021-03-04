@@ -100,5 +100,7 @@ members = [
     "pallets/dot-app",
     "pallets/commitments",
     "pallets/transfer",
+    "pallets/millau-channel",
+    "pallets/rialto-channel",
     "runtime",
 ]
