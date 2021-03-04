@@ -130,7 +130,7 @@ func (li *Listener) pollEventsAndHeaders(
 			}
 			events = append(events, basicEvents...)
 
-			incentivizedEvents, err := li.queryIncentivizedEvents(li.basicOutboundChannel, &filterOptions)
+			incentivizedEvents, err := li.queryIncentivizedEvents(li.incentivizedOutboundChannel, &filterOptions)
 			if err != nil {
 				li.log.WithError(err).Error("Failure fetching event logs")
 			}
@@ -163,7 +163,7 @@ func (li *Listener) queryBasicEvents(contract *outbound.BasicOutboundChannel, op
 	return events, nil
 }
 
-func (li *Listener) queryIncentivizedEvents(contract *outbound.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
+func (li *Listener) queryIncentivizedEvents(contract *outbound.IncentivizedOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
 	var events []*etypes.Log
 
 	iter, err := contract.FilterMessage(options)
