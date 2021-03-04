@@ -43,7 +43,7 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-	pub fn submit(target: H160, payload: &[u8]) -> DispatchResult {
+	pub fn submit(_: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		Nonce::try_mutate(|nonce| -> DispatchResult {
 			*nonce += 1;
 			T::MessageCommitment::add(ChannelId::Incentivized, target, *nonce, payload)?;

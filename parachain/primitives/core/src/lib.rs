@@ -33,8 +33,8 @@ pub trait Verifier {
 }
 
 /// Outbound submission for applications
-pub trait OutboundRouter {
-	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult;
+pub trait OutboundRouter<AccountId> {
+	fn submit(channel_id: ChannelId, who: &AccountId, target: H160, payload: &[u8]) -> DispatchResult;
 }
 
 /// Add a message to a commitment

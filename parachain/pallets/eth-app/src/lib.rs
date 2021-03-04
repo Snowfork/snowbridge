@@ -43,7 +43,7 @@ pub trait Config: system::Config {
 
 	type Asset: SingleAsset<<Self as system::Config>::AccountId>;
 
-	type OutboundRouter: OutboundRouter;
+	type OutboundRouter: OutboundRouter<Self::AccountId>;
 
 	type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
 }
@@ -95,7 +95,7 @@ decl_module! {
 				amount: amount
 			};
 
-			T::OutboundRouter::submit(channel_id, Address::get(), &message.encode())?;
+			T::OutboundRouter::submit(channel_id, &who, Address::get(), &message.encode())?;
 			Self::deposit_event(RawEvent::Burned(who.clone(), recipient, amount));
 
 			Ok(())

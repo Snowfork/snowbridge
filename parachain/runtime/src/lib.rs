@@ -401,14 +401,14 @@ use sp_core::H160;
 
 pub struct SimpleOutboundRouter<T>(PhantomData<T>);
 
-impl<T> OutboundRouter for SimpleOutboundRouter<T>
+impl<T> OutboundRouter<T::AccountId> for SimpleOutboundRouter<T>
 where
 	T: rialto_channel_outbound::Config + millau_channel_outbound::Config
 {
-	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult {
+	fn submit(channel_id: ChannelId, who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		match channel_id {
-			ChannelId::Basic => rialto_channel_outbound::Module::<T>::submit(target, payload),
-			ChannelId::Incentivized => millau_channel_outbound::Module::<T>::submit(target, payload),
+			ChannelId::Basic => rialto_channel_outbound::Module::<T>::submit(who, target, payload),
+			ChannelId::Incentivized => millau_channel_outbound::Module::<T>::submit(who, target, payload),
 		}
 	}
 }
