@@ -21,7 +21,10 @@ type SubstrateOutboundMessage struct {
 }
 
 // Message from ethereum
-type EthereumOutboundMessage substrate.Message
+type EthereumOutboundMessage struct {
+	Call string
+	Args []interface{}
+}
 
 type Header struct {
 	HeaderData interface{}

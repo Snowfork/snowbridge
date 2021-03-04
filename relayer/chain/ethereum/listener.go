@@ -27,6 +27,7 @@ type Listener struct {
 	conn                        *Connection
 	basicOutboundChannel        *outbound.BasicOutboundChannel
 	incentivizedOutboundChannel *outbound.IncentivizedOutboundChannel
+	mapping                     map[common.Address]string
 	messages                    chan<- []chain.Message
 	headers                     chan<- chain.Header
 	log                         *logrus.Entry
@@ -38,6 +39,7 @@ func NewListener(config *Config, conn *Connection, messages chan<- []chain.Messa
 		conn:                        conn,
 		basicOutboundChannel:        nil,
 		incentivizedOutboundChannel: nil,
+		mapping:                     make(map[common.Address]string),
 		messages:                    messages,
 		headers:                     headers,
 		log:                         log,
@@ -66,6 +68,9 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 		return err
 	}
 	li.incentivizedOutboundChannel = incentivizedOutboundChannel
+
+	li.mapping[common.HexToAddress(li.config.Channels.Basic.Outbound)] = "RialtoInboundChannel.submit"
+	li.mapping[common.HexToAddress(li.config.Channels.Incentivized.Outbound)] = "MillauInboundChannel.submit"
 
 	eg.Go(func() error {
 		return li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
@@ -199,7 +204,7 @@ func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, ev
 			return
 		}
 
-		msg, err := MakeMessageFromEvent(event, receiptTrie, li.log)
+		msg, err := MakeMessageFromEvent(li.mapping, event, receiptTrie, li.log)
 		if err != nil {
 			li.log.WithFields(logrus.Fields{
 				"address":     event.Address.Hex(),

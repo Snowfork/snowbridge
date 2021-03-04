@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -57,16 +58,24 @@ func TestMessage_Proof(t *testing.T) {
 	}
 
 	logger, _ := test.NewNullLogger()
-	msg, err := ethereum.MakeMessageFromEvent(event5_5, receiptTrie, logger.WithField("test", "ing"))
+	mapping := make(map[common.Address]string)
+	mapping[event5_5.Address] = "InboundChannel.submit"
+
+	msg, err := ethereum.MakeMessageFromEvent(mapping, event5_5, receiptTrie, logger.WithField("test", "ing"))
 	assert.Nil(t, err)
 	assert.NotNil(t, msg)
 
-	assert.Equal(t, block.Hash().Hex(), msg.Proof.BlockHash.Hex())
-	key, err := rlp.EncodeToBytes(uint(msg.Proof.TxIndex))
+	msgInner, ok := msg.Args[0].(substrate.Message)
+	if !ok {
+		panic("unexpected type")
+	}
+
+	assert.Equal(t, block.Hash().Hex(), msgInner.Proof.BlockHash.Hex())
+	key, err := rlp.EncodeToBytes(uint(msgInner.Proof.TxIndex))
 	if err != nil {
 		panic(err)
 	}
-	proofNodes := TestProof(*msg.Proof.Data)
+	proofNodes := TestProof(*msgInner.Proof.Data)
 	provenReceipt, err := gethTrie.VerifyProof(block.ReceiptHash(), key, &proofNodes)
 	assert.Nil(t, err)
 	assert.Equal(t, provenReceipt, receipt5Encoded)
