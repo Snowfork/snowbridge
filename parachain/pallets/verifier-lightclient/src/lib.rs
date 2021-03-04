@@ -22,6 +22,8 @@ pub use artemis_ethereum::{
 	Header as EthereumHeader, difficulty::DifficultyConfig as EthereumDifficultyConfig,
 };
 
+mod benchmarking;
+
 #[cfg(test)]
 mod mock;
 
@@ -419,6 +421,9 @@ impl<T: Config> Module<T> {
 		new_pruning_range
 	}
 
+	// Verifies that the receipt encoded in proof.data is included
+	// in the block given by proof.block_hash. Inclusion is only
+	// recognized if the block has been finalized.
 	fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
 		let header = Headers::<T>::get(proof.block_hash)
 			.ok_or(Error::<T>::MissingHeader)?
