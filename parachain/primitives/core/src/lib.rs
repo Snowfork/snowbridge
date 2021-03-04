@@ -20,8 +20,6 @@ pub use types::{
 	ChannelId,
 	MessageId,
 	MessageNonce,
-	SourceChannelConfig,
-	SourceChannel,
 };
 
 pub use assets::{AssetId, MultiAsset, SingleAsset};

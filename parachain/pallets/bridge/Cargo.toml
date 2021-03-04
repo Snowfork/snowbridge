@@ -30,7 +30,6 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "ro
 hex-literal = { version = "0.3.1" }
 rlp = { version = "0.5" }
 
-
 [features]
 default = ["std"]
 std = [

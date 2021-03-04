@@ -4,7 +4,8 @@ use artemis_runtime::{
 	AccountId, EthereumHeader,
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
-	BridgeConfig, ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
+	RialtoInboundChannelConfig, MillauInboundChannelConfig,
+	ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
 	CommitmentsConfig,
 	ParachainInfoConfig,
 	WASM_BINARY, Signature,
@@ -18,7 +19,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
-use artemis_core::{AssetId, SourceChannelConfig, SourceChannel};
+use artemis_core::AssetId;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -111,15 +112,11 @@ fn testnet_genesis(
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		}),
-		bridge: Some(BridgeConfig {
-			source_channels: SourceChannelConfig {
-				basic: SourceChannel {
-					address: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
-				},
-				incentivized: SourceChannel {
-					address: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
-				}
-			},
+		rialto_channel_inbound: Some(RialtoInboundChannelConfig {
+			source_channel: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
+		}),
+		millau_channel_inbound: Some(MillauInboundChannelConfig {
+			source_channel: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
 		}),
 		assets: Some(AssetsConfig {
 			balances: vec![

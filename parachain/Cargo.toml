@@ -92,6 +92,8 @@ members = [
     "primitives/testutils",
     "primitives/xcm-support",
     "pallets/bridge",
+    "pallets/millau-channel",
+    "pallets/rialto-channel",
     "pallets/dispatch",
     "pallets/assets",
     "pallets/verifier-lightclient",
@@ -100,7 +102,5 @@ members = [
     "pallets/dot-app",
     "pallets/commitments",
     "pallets/transfer",
-    "pallets/millau-channel",
-    "pallets/rialto-channel",
     "runtime",
 ]

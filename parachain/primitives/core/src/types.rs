@@ -2,13 +2,9 @@
 
 use frame_support::RuntimeDebug;
 use sp_std::vec::Vec;
-use sp_core::{H160, H256};
+use sp_core::H256;
 use enum_iterator::IntoEnumIterator;
 use codec::{Encode, Decode};
-
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct MessageId {
@@ -53,17 +49,4 @@ pub struct Proof {
 	pub tx_index: u32,
 	// Proof keys and values
 	pub data: (Vec<Vec<u8>>, Vec<Vec<u8>>),
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct SourceChannelConfig {
-	pub basic: SourceChannel,
-	pub incentivized: SourceChannel,
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct SourceChannel {
-	pub address: H160
 }
