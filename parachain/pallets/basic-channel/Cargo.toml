@@ -1,6 +1,6 @@
 [package]
-name = "artemis-rialto-channel"
-description = "Artemis Rialto Channel"
+name = "artemis-basic-channel"
+description = "Artemis Basic Channel"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]

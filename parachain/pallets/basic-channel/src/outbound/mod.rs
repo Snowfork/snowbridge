@@ -19,7 +19,7 @@ pub trait Config: system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as RialtoOutboundModule {
+	trait Store for Module<T: Config> as BasicOutboundModule {
 		pub Nonce: u64;
 	}
 }

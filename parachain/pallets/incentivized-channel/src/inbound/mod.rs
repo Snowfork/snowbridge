@@ -42,7 +42,7 @@ pub trait Config: system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as MillauInboundModule {
+	trait Store for Module<T: Config> as IncentivizedInboundModule {
 		pub SourceChannel get(fn source_channel) config(): H160;
 		pub Nonce: u64;
 	}

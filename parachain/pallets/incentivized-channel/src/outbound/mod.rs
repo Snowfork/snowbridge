@@ -19,7 +19,7 @@ pub trait Config: system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as MillauOutboundModule {
+	trait Store for Module<T: Config> as IncentivizedOutboundModule {
 		pub Nonce: u64;
 	}
 }

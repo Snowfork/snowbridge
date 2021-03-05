@@ -1,6 +1,6 @@
 [package]
-name = "artemis-millau-channel"
-description = "Artemis Millau Channel"
+name = "artemis-incentivized-channel"
+description = "Artemis Incentivized Channel"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]

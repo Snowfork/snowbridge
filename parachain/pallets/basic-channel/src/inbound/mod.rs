@@ -29,7 +29,7 @@ pub trait Config: system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as RialtoInboundModule {
+	trait Store for Module<T: Config> as BasicInboundModule {
 		pub SourceChannel get(fn source_channel) config(): H160;
 		pub Nonce: u64;
 	}

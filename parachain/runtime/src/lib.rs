@@ -365,24 +365,24 @@ parameter_types! {
 	pub RewardsAccount: AccountId = DotModuleId::get().into_account();
 }
 
-use rialto_channel::inbound as rialto_channel_inbound;
-use millau_channel::inbound as millau_channel_inbound;
-use rialto_channel::outbound as rialto_channel_outbound;
-use millau_channel::outbound as millau_channel_outbound;
+use basic_channel::inbound as basic_channel_inbound;
+use incentivized_channel::inbound as incentivized_channel_inbound;
+use basic_channel::outbound as basic_channel_outbound;
+use incentivized_channel::outbound as incentivized_channel_outbound;
 
 
-impl rialto_channel_inbound::Config for Runtime {
+impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
 }
 
-impl rialto_channel_outbound::Config for Runtime {
+impl basic_channel_outbound::Config for Runtime {
 	type Event = Event;
 	type MessageCommitment = commitments::Module<Runtime>;
 }
 
-impl millau_channel_inbound::Config for Runtime {
+impl incentivized_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
@@ -391,7 +391,7 @@ impl millau_channel_inbound::Config for Runtime {
 	type RewardRelayer = InstantRewards<Self, Balances>;
 }
 
-impl millau_channel_outbound::Config for Runtime {
+impl incentivized_channel_outbound::Config for Runtime {
 	type Event = Event;
 	type MessageCommitment = commitments::Module<Runtime>;
 }
@@ -403,12 +403,12 @@ pub struct SimpleOutboundRouter<T>(PhantomData<T>);
 
 impl<T> OutboundRouter<T::AccountId> for SimpleOutboundRouter<T>
 where
-	T: rialto_channel_outbound::Config + millau_channel_outbound::Config
+	T: basic_channel_outbound::Config + incentivized_channel_outbound::Config
 {
 	fn submit(channel_id: ChannelId, who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		match channel_id {
-			ChannelId::Basic => rialto_channel_outbound::Module::<T>::submit(who, target, payload),
-			ChannelId::Incentivized => millau_channel_outbound::Module::<T>::submit(who, target, payload),
+			ChannelId::Basic => basic_channel_outbound::Module::<T>::submit(who, target, payload),
+			ChannelId::Incentivized => incentivized_channel_outbound::Module::<T>::submit(who, target, payload),
 		}
 	}
 }
@@ -499,10 +499,10 @@ construct_runtime!(
 		ParachainInfo: parachain_info::{Module, Storage, Config} = 5,
 		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
 
-		RialtoInboundChannel: rialto_channel_inbound::{Module, Call, Config, Storage, Event} = 7,
-		RialtoOutboundChannel: rialto_channel_outbound::{Module, Storage, Event} = 8,
-		MillauInboundChannel: millau_channel_inbound::{Module, Call, Config, Storage, Event} = 9,
-		MillauOutboundChannel: millau_channel_outbound::{Module, Storage, Event} = 10,
+		BasicInboundChannel: basic_channel_inbound::{Module, Call, Config, Storage, Event} = 7,
+		BasicOutboundChannel: basic_channel_outbound::{Module, Storage, Event} = 8,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Module, Call, Config, Storage, Event} = 9,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Module, Storage, Event} = 10,
 		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin} = 11,
 		Commitments: commitments::{Module, Call, Config<T>, Storage, Event} = 15,
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config} = 16,
