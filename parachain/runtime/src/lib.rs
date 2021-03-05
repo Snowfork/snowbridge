@@ -474,6 +474,7 @@ impl erc20_app::Config for Runtime {
 
 parameter_types! {
 	pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
+	pub const Decimals: u32 = 12;
 }
 
 impl dot_app::Config for Runtime {
@@ -482,6 +483,7 @@ impl dot_app::Config for Runtime {
 	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type ModuleId = DotModuleId;
+	type Decimals = Decimals;
 }
 
 construct_runtime!(
