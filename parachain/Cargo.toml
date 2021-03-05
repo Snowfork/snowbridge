@@ -21,6 +21,8 @@ futures = { version = "0.3.1", features = ["compat"] }
 hex-literal = "0.3.1"
 jsonrpc-core = "15.1.0"
 jsonrpc-pubsub = "14.2.0"
+jsonrpc-core-client = "15.0"
+jsonrpc-derive = "15.0"
 log = "0.4.8"
 rand = "0.7.2"
 structopt = "0.3.8"

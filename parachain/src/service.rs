@@ -86,20 +86,13 @@ pub fn new_partial(
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
-async fn start_node_impl<RB>(
+async fn start_node_impl(
 	parachain_config: Configuration,
 	collator_key: CollatorPair,
 	polkadot_config: Configuration,
 	id: ParaId,
 	validator: bool,
-	rpc_ext_builder: RB,
 ) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)>
-where
-	RB: Fn(
-			Arc<TFullClient<Block, RuntimeApi, Executor>>,
-		) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
-		+ Send
-		+ 'static,
 {
 	if matches!(parachain_config.role, Role::Light) {
 		return Err("Light client not supported!".into());
@@ -144,8 +137,22 @@ where
 			block_announce_validator_builder: Some(Box::new(|_| block_announce_validator)),
 		})?;
 
-	let rpc_client = client.clone();
-	let rpc_extensions_builder = Box::new(move |_, _| rpc_ext_builder(rpc_client.clone()));
+	let rpc_extensions_builder = {
+    		let client = client.clone();
+    		let pool = transaction_pool.clone();
+    		Box::new(move |deny_unsafe, _| {
+        		let deps = crate::rpc::FullDeps {
+            			client: client.clone(),
+            			pool: pool.clone(),
+            			deny_unsafe,
+        		};
+
+
+			println!("*********************************** EXTENSION BUILDER CREATION");
+
+        		crate::rpc::create_full(deps)
+    		})
+	};
 
 	let telemetry_span = TelemetrySpan::new();
 	let _telemetry_span_entered = telemetry_span.enter();
@@ -234,7 +241,6 @@ pub async fn start_node(
 		polkadot_config,
 		id,
 		validator,
-		|_| Default::default(),
 	)
 	.await
 }

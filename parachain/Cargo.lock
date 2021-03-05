@@ -164,6 +164,8 @@ dependencies = [
  "futures 0.3.12",
  "hex-literal",
  "jsonrpc-core 15.1.0",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
  "jsonrpc-pubsub 14.2.0",
  "log",
  "parity-scale-codec",
