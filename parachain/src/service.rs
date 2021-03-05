@@ -147,9 +147,6 @@ async fn start_node_impl(
             			deny_unsafe,
         		};
 
-
-			println!("*********************************** EXTENSION BUILDER CREATION");
-
         		crate::rpc::create_full(deps)
     		})
 	};

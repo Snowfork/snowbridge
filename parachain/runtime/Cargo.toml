@@ -47,6 +47,7 @@ artemis-core = { path = "../primitives/core", default-features = false }
 artemis-transfer = { path = "../pallets/transfer", default-features = false }
 artemis-xcm-support = { path = "../primitives/xcm-support", default-features = false }
 rialto-channel = { path = "../pallets/rialto-channel", package = "artemis-rialto-channel", default-features = false }
+rialto-channel-api = { path = "../pallets/rialto-channel/runtime-api", package = "artemis-rialto-channel-runtime-api", default-features = false }
 millau-channel = { path = "../pallets/millau-channel", package = "artemis-millau-channel", default-features = false }
 dispatch = { path = "../pallets/dispatch", package = "artemis-dispatch", default-features = false }
 verifier-lightclient = { path = "../pallets/verifier-lightclient", package = "pallet-verifier-lightclient", default-features = false }

@@ -1,16 +1,18 @@
 #![warn(missing_docs)]
 
-use artemis_runtime::opaque::Block;
-pub use sc_rpc_api::DenyUnsafe;
+use std::sync::Arc;
+
+use sc_rpc_api::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
-use std::sync::Arc;
+
+use artemis_runtime::opaque::Block;
+use artemis_rialto_channel_rpc::{RialtoChannel, RialtoChannelApi, RialtoChannelRuntimeApi};
 
 pub use jsonrpc_core;
 
-mod merkle_proofs_rpc;
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -29,24 +31,18 @@ where
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
 	C: Send + Sync + 'static,
 	C::Api: BlockBuilder<Block>,
+	C::Api: RialtoChannelRuntimeApi<Block>,
 	P: TransactionPool + 'static,
 {
 	let mut io = jsonrpc_core::IoHandler::default();
-    // let FullDeps {
-    //     client,
-    //     pool,
-    //     deny_unsafe,
-    // } = deps;
+	let FullDeps {
+		client,
+		..
+	} = deps;
 
-	io.extend_with(merkle_proofs_rpc::SillyRpc::to_delegate(
-		merkle_proofs_rpc::Silly{},
+	io.extend_with(RialtoChannelApi::to_delegate(
+		RialtoChannel::new(client),
 	));
-	println!("*********************************** RPC EXTENDED");
-    // io.extend_with(SystemApi::to_delegate(FullSystem::new(
-    //     client.clone(),
-    //     pool,
-    //     deny_unsafe,
-    // )));
 
 	io
 }
