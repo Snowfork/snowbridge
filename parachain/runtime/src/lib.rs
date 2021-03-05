@@ -507,12 +507,13 @@ construct_runtime!(
 		Commitments: commitments::{Module, Call, Config<T>, Storage, Event} = 15,
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config} = 16,
 		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>} = 17,
-		ETH: eth_app::{Module, Call, Config, Storage, Event<T>} = 12,
-		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>} = 13,
-		DOT: dot_app::{Module, Call, Config, Storage, Event<T>} = 14,
 
 		LocalXcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin} = 18,
 		Transfer: artemis_transfer::{Module, Call, Event<T>} = 19,
+
+		ETH: eth_app::{Module, Call, Config, Storage, Event<T>} = 12,
+		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>} = 13,
+		DOT: dot_app::{Module, Call, Config, Storage, Event<T>} = 14,
 	}
 );
 
