@@ -1,6 +1,6 @@
 [package]
-name = "artemis-runtime"
-description = "Artemis Runtime"
+name = "rococo-runtime"
+description = "Artemis Rococo Runtime"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
@@ -43,18 +43,18 @@ xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1"
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1", default-features = false }
-artemis-core = { path = "../primitives/core", default-features = false }
-artemis-transfer = { path = "../pallets/transfer", default-features = false }
-artemis-xcm-support = { path = "../primitives/xcm-support", default-features = false }
-basic-channel = { path = "../pallets/basic-channel", package = "artemis-basic-channel", default-features = false }
-incentivized-channel = { path = "../pallets/incentivized-channel", package = "artemis-incentivized-channel", default-features = false }
-dispatch = { path = "../pallets/dispatch", package = "artemis-dispatch", default-features = false }
-verifier-lightclient = { path = "../pallets/verifier-lightclient", package = "pallet-verifier-lightclient", default-features = false }
-assets = { path = "../pallets/assets", package = "artemis-assets", default-features = false }
-dot-app = { path = "../pallets/dot-app", package = "artemis-dot-app", default-features = false }
-eth-app = { path = "../pallets/eth-app", package = "artemis-eth-app", default-features = false }
-erc20-app = { path = "../pallets/erc20-app", package = "artemis-erc20-app", default-features = false }
-commitments = { path = "../pallets/commitments", package = "artemis-commitments", default-features = false }
+artemis-core = { path = "../../primitives/core", default-features = false }
+artemis-transfer = { path = "../../pallets/transfer", default-features = false }
+artemis-xcm-support = { path = "../../primitives/xcm-support", default-features = false }
+basic-channel = { path = "../../pallets/basic-channel", package = "artemis-basic-channel", default-features = false }
+incentivized-channel = { path = "../../pallets/incentivized-channel", package = "artemis-incentivized-channel", default-features = false }
+dispatch = { path = "../../pallets/dispatch", package = "artemis-dispatch", default-features = false }
+verifier-lightclient = { path = "../../pallets/verifier-lightclient", package = "pallet-verifier-lightclient", default-features = false }
+assets = { path = "../../pallets/assets", package = "artemis-assets", default-features = false }
+dot-app = { path = "../../pallets/dot-app", package = "artemis-dot-app", default-features = false }
+eth-app = { path = "../../pallets/eth-app", package = "artemis-eth-app", default-features = false }
+erc20-app = { path = "../../pallets/erc20-app", package = "artemis-erc20-app", default-features = false }
+commitments = { path = "../../pallets/commitments", package = "artemis-commitments", default-features = false }
 
 # Used for runtime benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false, optional = true }

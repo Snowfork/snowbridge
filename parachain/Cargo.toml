@@ -65,7 +65,8 @@ polkadot-cli = { git = "https://github.com/paritytech/polkadot.git", branch = "r
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1" }
 
 artemis-core = { path = "primitives/core" }
-artemis-runtime = { path = "runtime" }
+snowbridge-runtime = { path = "runtime/snowbridge" }
+rococo-runtime = { path = "runtime/rococo" }
 
 # These dependencies are used for runtime benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
@@ -75,12 +76,14 @@ frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate.git", 
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
 [features]
-default = []
+default = ["with-snowbridge-runtime"]
 runtime-benchmarks = [
-    "artemis-runtime/runtime-benchmarks",
+    "snowbridge-runtime/runtime-benchmarks",
+    "rococo-runtime/runtime-benchmarks",
     "polkadot-service/runtime-benchmarks",
 ]
-test-e2e = ["artemis-runtime/test-e2e"]
+with-snowbridge-runtime = []
+with-karura-runtime = []
 
 [profile.release]
 panic = "unwind"
@@ -101,5 +104,6 @@ members = [
     "pallets/dot-app",
     "pallets/commitments",
     "pallets/transfer",
-    "runtime",
+    "runtime/snowbridge",
+    "runtime/rococo",
 ]

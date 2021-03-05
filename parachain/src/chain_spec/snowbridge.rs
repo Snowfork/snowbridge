@@ -1,6 +1,6 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use artemis_runtime::{
+use snowbridge_runtime::{
 	AccountId, EthereumHeader,
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
