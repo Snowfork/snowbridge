@@ -122,7 +122,6 @@ fn should_not_lock_on_add_commitment_failure() {
 	});
 }
 
-
 // Used to prove safety of conversion from DOT to wrapped DOT (See BaseDOTApp.sol)
 #[test]
 fn should_max_dot_convert_to_wrapped_dot() {
