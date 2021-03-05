@@ -120,4 +120,3 @@ runtime-benchmarks = [
     # Artemis pallets
     "dispatch/runtime-benchmarks",
 ]
-test-e2e = []
