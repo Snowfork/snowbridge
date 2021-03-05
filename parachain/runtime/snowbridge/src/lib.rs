@@ -419,18 +419,10 @@ pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficul
 	muir_glacier_fork_block: 7117117,
 };
 
-#[cfg(not(feature = "test-e2e"))]
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 3;
 	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
 	pub const VerifyPoW: bool = true;
-}
-
-#[cfg(feature = "test-e2e")]
-parameter_types! {
-	pub const DescendantsUntilFinalized: u8 = 1;
-	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
-	pub const VerifyPoW: bool = false;
 }
 
 impl verifier_lightclient::Config for Runtime {

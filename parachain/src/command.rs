@@ -17,6 +17,10 @@ use rococo_runtime::opaque::Block;
 #[cfg(feature = "with-rococo-runtime")]
 use crate::chain_spec::snowbridge::{get_chain_spec, ChainSpec, Extensions};
 
+#[cfg(feature = "with-local-runtime")]
+use local_runtime::opaque::Block;
+#[cfg(feature = "with-local-runtime")]
+use crate::chain_spec::local::{get_chain_spec, ChainSpec, Extensions};
 
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{

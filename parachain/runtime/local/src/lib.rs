@@ -420,9 +420,9 @@ pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficul
 };
 
 parameter_types! {
-	pub const DescendantsUntilFinalized: u8 = 3;
+	pub const DescendantsUntilFinalized: u8 = 1;
 	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
-	pub const VerifyPoW: bool = true;
+	pub const VerifyPoW: bool = false;
 }
 
 impl verifier_lightclient::Config for Runtime {

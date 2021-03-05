@@ -22,6 +22,9 @@ use snowbridge_runtime::{RuntimeApi, opaque::Block};
 #[cfg(feature = "with-rococo-runtime")]
 use rococo_runtime::{RuntimeApi, opaque::Block};
 
+#[cfg(feature = "with-local-runtime")]
+use local_runtime::{RuntimeApi, opaque::Block};
+
 // Native executor instance.
 #[cfg(feature = "with-snowbridge-runtime")]
 native_executor_instance!(
@@ -32,6 +35,14 @@ native_executor_instance!(
 );
 
 #[cfg(feature = "with-rococo-runtime")]
+native_executor_instance!(
+	pub Executor,
+	rococo_runtime::api::dispatch,
+	rococo_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
+);
+
+#[cfg(feature = "with-local-runtime")]
 native_executor_instance!(
 	pub Executor,
 	rococo_runtime::api::dispatch,
