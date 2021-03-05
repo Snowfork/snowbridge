@@ -10,6 +10,9 @@ use artemis_core::{
 	ChannelId, MessageNonce, MessageCommitment,
 };
 
+#[cfg(test)]
+mod test;
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 

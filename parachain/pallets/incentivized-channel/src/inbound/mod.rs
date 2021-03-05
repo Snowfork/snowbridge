@@ -21,6 +21,9 @@ use envelope::Envelope;
 
 use sp_runtime::traits::Zero;
 
+#[cfg(test)]
+mod test;
+
 mod envelope;
 
 pub trait Config: system::Config {

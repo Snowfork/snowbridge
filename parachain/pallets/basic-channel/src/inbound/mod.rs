@@ -16,6 +16,9 @@ use artemis_core::{
 
 use envelope::Envelope;
 
+#[cfg(test)]
+mod test;
+
 mod envelope;
 
 pub trait Config: system::Config {
