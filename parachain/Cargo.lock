@@ -4966,6 +4966,7 @@ dependencies = [
  "artemis-ethereum",
  "artemis-testutils",
  "ethash",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex-literal",
