@@ -23,6 +23,8 @@ pub use artemis_ethereum::{
 };
 
 mod benchmarking;
+pub mod weights;
+pub use weights::WeightInfo;
 
 #[cfg(test)]
 mod mock;
@@ -158,7 +160,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		// TODO: Calculate weight
-		#[weight = 0]
+		#[weight = WeightInfo::import_header_new_finalized_with_max_prune()]
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
