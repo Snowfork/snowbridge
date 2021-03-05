@@ -1,6 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-#![allow(unused_variables)]
-
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
@@ -64,7 +61,7 @@ decl_module! {
 
 		#[weight = 0]
 		pub fn submit(origin, message: Message) -> DispatchResult {
-			let relayer = ensure_signed(origin)?;
+			ensure_signed(origin)?;
 			// submit message to verifier for verification
 			let log = T::Verifier::verify(&message)?;
 
