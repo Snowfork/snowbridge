@@ -45,8 +45,8 @@ native_executor_instance!(
 #[cfg(feature = "with-local-runtime")]
 native_executor_instance!(
 	pub Executor,
-	rococo_runtime::api::dispatch,
-	rococo_runtime::native_version,
+	local_runtime::api::dispatch,
+	local_runtime::native_version,
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 

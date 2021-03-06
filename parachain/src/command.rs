@@ -89,6 +89,11 @@ impl SubstrateCli for Cli {
 	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
 		&rococo_runtime::VERSION
 	}
+
+	#[cfg(feature = "with-local-runtime")]
+	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
+		&local_runtime::VERSION
+	}
 }
 
 impl SubstrateCli for RelayChainCli {
