@@ -466,7 +466,7 @@ impl erc20_app::Config for Runtime {
 
 parameter_types! {
 	pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
-	pub const Decimals: u32 = 12;
+	pub const Decimals: u32 = 10;
 }
 
 impl dot_app::Config for Runtime {
