@@ -14,10 +14,7 @@ pub fn unwrap<T: Config>(value: U256, decimals: u32) -> Option<BalanceOf<T>> {
 		None => return None,
 	};
 
-	match unwrapped.low_u128().checked_into() {
-		Some(value) => Some(value),
-		None => None,
-	}
+	unwrapped.low_u128().checked_into()
 }
 
 pub fn wrap<T: Config>(value: BalanceOf<T>, decimals: u32) -> Option<U256> {
@@ -31,10 +28,7 @@ pub fn wrap<T: Config>(value: BalanceOf<T>, decimals: u32) -> Option<U256> {
 		None => return None,
 	};
 
-	match value_u256.checked_mul(granularity) {
-		Some(value) => Some(value),
-		None => None,
-	}
+	value_u256.checked_mul(granularity)
 }
 
 fn granularity(decimals: u32) -> Option<U256> {
@@ -57,7 +51,7 @@ mod tests {
 		);
 
 		// smallest possible value
-		let min_possible_amount = Balance::MAX;
+		let min_possible_amount = 1;
 		let max_possible_decimals = 18;
 		assert_ne!(
 			wrap::<Test>(min_possible_amount, max_possible_decimals),
