@@ -85,7 +85,7 @@ runtime-benchmarks = [
     "polkadot-service/runtime-benchmarks",
 ]
 with-snowbridge-runtime = ["snowbridge-runtime"]
-with-karura-runtime = ["rococo-runtime"]
+with-rococo-runtime = ["rococo-runtime"]
 with-local-runtime = ["local-runtime"]
 
 [profile.release]
