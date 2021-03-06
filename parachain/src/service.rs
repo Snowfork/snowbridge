@@ -25,7 +25,6 @@ use rococo_runtime::{RuntimeApi, opaque::Block};
 #[cfg(feature = "with-local-runtime")]
 use local_runtime::{RuntimeApi, opaque::Block};
 
-// Native executor instance.
 #[cfg(feature = "with-snowbridge-runtime")]
 native_executor_instance!(
 	pub Executor,
@@ -49,7 +48,6 @@ native_executor_instance!(
 	local_runtime::native_version,
 	frame_benchmarking::benchmarking::HostFunctions,
 );
-
 
 /// Starts a `ServiceBuilder` for a full service.
 ///
