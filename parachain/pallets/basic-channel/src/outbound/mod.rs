@@ -37,9 +37,9 @@ pub struct Message {
 
 /// Wire-format for committed BasicChannel data
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
-pub struct BasicChannelBlob {
-	messages: Vec<Message>,
-	// TODO: store proofs
+pub struct BasicChannelBlob<T: Config> {
+	messages: Vec<(T::AccountId, Message)>,
+	subcommitments: Vec<Vec<u8>>,
 }
 
 pub trait Config: system::Config {
@@ -105,8 +105,8 @@ impl<T: Config> Module<T> {
 		})
 	}
 
-	fn offchain_key(account_id: T::AccountId, hash: H256) -> Vec<u8> {
-		(T::INDEXING_PREFIX, ChannelId::Basic, account_id, hash).encode()
+	fn offchain_key(hash: H256) -> Vec<u8> {
+		(T::INDEXING_PREFIX, ChannelId::Basic, hash).encode()
 	}
 
 	fn push_message(account_id: &T::AccountId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
@@ -149,7 +149,7 @@ impl<T: Config> Module<T> {
 				subcommitments.push((acc, Self::encode_commitment(&group)));
 				messages_by_user.push((acc, group.clone()));
 				group.clear();
-				prev_acc = acc;
+				prev_acc = &acc;
 			}
 			group.push(msg.clone());
 		}
@@ -160,23 +160,23 @@ impl<T: Config> Module<T> {
 			.iter()
 			.map(|(_, c)| <T as Config>::Hashing::hash(&c));
 
+	    	let subc_enc = subcom_hashes.map(|x| Encode::encode(&x));
+
 		// Generate Merkle Tree
-		let mroot = generate_merkle_root(subcom_hashes);
+		let mroot = generate_merkle_root(subc_enc.clone());
 
 		// Deposit log with Merkle Tree Root
 		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mroot).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		// Create an off-chain storage entry per user
-		messages_by_user.into_iter().for_each(|(acc, msgs)| {
-			// Store the messages blob off-chain
-			// TODO: store proofs?
-			let blob = BasicChannelBlob { messages: msgs };
-			offchain_index::set(
-				&Self::offchain_key((*acc).clone(), mroot),
-				&blob.encode(),
-			);
-		});
+		let blob = BasicChannelBlob::<T> {
+			messages: all_messages.clone(),
+			subcommitments: subc_enc.collect::<Vec<Vec<u8>>>(),
+		};
+		offchain_index::set(
+			&Self::offchain_key(mroot),
+			&blob.encode(),
+		);
 
 		0
 	}
