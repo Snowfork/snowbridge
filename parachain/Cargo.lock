@@ -233,6 +233,7 @@ dependencies = [
  "ethabi-decode",
  "frame-support",
  "frame-system",
+ "hash256-std-hasher",
  "hex-literal",
  "parity-scale-codec 2.0.0",
  "rlp",
@@ -242,6 +243,8 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std",
+ "sp-trie",
+ "trie-db",
 ]
 
 [[package]]

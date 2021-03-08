@@ -10,10 +10,9 @@ use sp_io::offchain_index;
 use sp_core::{H160, H256, RuntimeDebug};
 use sp_runtime::{
 	traits::{Hash, Zero},
-	DigestItem
 };
 use codec::{Encode, Decode};
-use artemis_core::{ChannelId, MessageCommitment};
+use artemis_core::{ChannelId, MessageCommitment, types::AuxiliaryDigestItem};
 use ethabi::{self, Token};
 use enum_iterator::IntoEnumIterator;
 
@@ -22,20 +21,6 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
-
-/// Auxiliary [`DigestItem`] to include in header digest.
-#[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
-pub enum AuxiliaryDigestItem {
-	/// A batch of messages has been committed.
-	Commitment(ChannelId, H256)
-}
-
-impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
-    fn into(self) -> DigestItem<T> {
-        DigestItem::Other(self.encode())
-    }
-}
-
 
 /// Wire-format for committed messages
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
