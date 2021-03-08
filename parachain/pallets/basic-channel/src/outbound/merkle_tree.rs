@@ -20,45 +20,35 @@ impl Hasher for KeccakHasher {
 	}
 }
 
-type Proof = Vec<Vec<u8>>;
+pub struct MerkleProofError;
+pub type EncodedItems = Vec<(Vec<u8>, Vec<u8>)>;
+
 type Layout = sp_trie::Layout<KeccakHasher>;
 
-pub struct MerkleTree {
-	pub root: H256,
-	items: Vec<(Vec<u8>, Vec<u8>)>,
-	db: sp_trie::MemoryDB<KeccakHasher>,
+pub fn generate_merkle_root<T: Encode>(items: impl Iterator<Item = T>) -> H256 {
+	let encoded_items = items
+		.map(|x| Encode::encode(&x))
+		.enumerate()
+		.map(|(i, v)| (Layout::encode_index(i as u32), v))
+		.collect::<Vec<(Vec<u8>, Vec<u8>)>>();
+
+	let mut db = sp_trie::MemoryDB::<KeccakHasher>::default();
+	let mut cb = trie_db::TrieBuilder::new(&mut db);
+	trie_db::trie_visit::<Layout, _, _, _, _>(encoded_items.into_iter(), &mut cb);
+
+	cb.root.unwrap_or_default()
 }
 
-impl MerkleTree {
-	pub fn new<T: Encode>(items: impl Iterator<Item = T>) -> Self {
-		let ordered_items = items
-			.map(|x| Encode::encode(&x))
-			.enumerate()
-			.map(|(i, v)| (Layout::encode_index(i as u32), v))
-			.collect::<Vec<(Vec<u8>, Vec<u8>)>>();
-
-		let mut db = sp_trie::MemoryDB::<KeccakHasher>::default();
-		let mut cb = trie_db::TrieBuilder::new(&mut db);
-		let trie_items = ordered_items.clone();
-		trie_db::trie_visit::<Layout, _, _, _, _>(trie_items.into_iter(), &mut cb);
-
-		Self {
-			root: cb.root.unwrap_or_default(),
-			items: ordered_items,
-			db,
-		}
-	}
-
-	// #[allow(dead_code)]
-	// pub fn generate_proof(&self, leaf_index: usize) -> anyhow::Result<Proof> {
-	// 	let leaf = self
-	// 		.items
-	// 		.get(leaf_index)
-	// 		.cloned()
-	// 		.ok_or_else(|| anyhow::format_err!("Leaf index out of bounds"))?;
-	// 	let proof: Proof =
-	// 		sp_trie::generate_trie_proof::<Layout, _, _, _>(&self.db, self.root, vec![&leaf.0])?;
-	// 	Ok(proof)
-	// }
+pub fn generate_merkle_proofs(encoded_items: EncodedItems) -> Result<Vec<Vec<u8>>, MerkleProofError> {
+	let leafs = encoded_items.iter().map(|(k, _)| k.clone()).collect::<Vec<Vec<u8>>>();
+	let mut db = sp_trie::MemoryDB::<KeccakHasher>::default();
+	let mut cb = trie_db::TrieBuilder::new(&mut db);
+	trie_db::trie_visit::<Layout, _, _, _, _>(encoded_items.into_iter(), &mut cb);
+	let root = cb.root.unwrap_or_default();
+ 	let proofs = sp_trie::generate_trie_proof::<Layout, _, _, _>(
+		&db,
+		root,
+		leafs.iter().collect::<Vec<&Vec<u8>>>());
+    	proofs.map_err(|_| MerkleProofError{})
 }
 

@@ -161,10 +161,10 @@ impl<T: Config> Module<T> {
 			.map(|(_, c)| <T as Config>::Hashing::hash(&c));
 
 		// Generate Merkle Tree
-		let mt = MerkleTree::new(subcom_hashes);
+		let mroot = generate_merkle_root(subcom_hashes);
 
 		// Deposit log with Merkle Tree Root
-		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mt.root).into();
+		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mroot).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
 		// Create an off-chain storage entry per user
@@ -173,7 +173,7 @@ impl<T: Config> Module<T> {
 			// TODO: store proofs?
 			let blob = BasicChannelBlob { messages: msgs };
 			offchain_index::set(
-				&Self::offchain_key((*acc).clone(), mt.root),
+				&Self::offchain_key((*acc).clone(), mroot),
 				&blob.encode(),
 			);
 		});
