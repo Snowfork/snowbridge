@@ -5,32 +5,32 @@ use sp_blockchain::HeaderBackend;
 use sp_runtime::{traits::Block as BlockT};
 use std::sync::Arc;
 
-pub use artemis_rialto_channel_runtime_api::RialtoChannelApi as RialtoChannelRuntimeApi;
+pub use artemis_basic_channel_runtime_api::BasicChannelApi as BasicChannelRuntimeApi;
 
 #[rpc]
-pub trait RialtoChannelApi {
+pub trait BasicChannelApi {
 	#[rpc(name = "get_merkle_roots")]
 	fn get_merkle_roots(&self) -> Result<u64>;
 }
 
-pub struct RialtoChannel<C, M> {
+pub struct BasicChannel<C, M> {
     client: Arc<C>,
     _marker: std::marker::PhantomData<M>,
 }
 
-impl<C, M> RialtoChannel<C, M> {
+impl<C, M> BasicChannel<C, M> {
     pub fn new(client: Arc<C>) -> Self {
         Self { client, _marker: Default::default() }
     }
 }
 
-impl<C, Block> RialtoChannelApi for RialtoChannel<C, Block>
+impl<C, Block> BasicChannelApi for BasicChannel<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static,
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block>,
-	C::Api: RialtoChannelRuntimeApi<Block>,
+	C::Api: BasicChannelRuntimeApi<Block>,
 {
 	fn get_merkle_roots(&self) -> Result<u64> {
 		Ok(999999)

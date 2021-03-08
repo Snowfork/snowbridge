@@ -152,8 +152,8 @@ checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 name = "artemis"
 version = "0.1.1"
 dependencies = [
+ "artemis-basic-channel-rpc",
  "artemis-core",
- "artemis-rialto-channel-rpc",
  "artemis-runtime",
  "cumulus-client-collator",
  "cumulus-client-consensus-relay-chain",
@@ -221,6 +221,51 @@ dependencies = [
  "sp-io",
  "sp-keyring",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "artemis-basic-channel"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "artemis-ethereum",
+ "ethabi-decode",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec 2.0.0",
+ "rlp",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "artemis-basic-channel-rpc"
+version = "0.1.0"
+dependencies = [
+ "artemis-basic-channel-runtime-api",
+ "jsonrpc-core 15.1.0",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec 1.3.7",
+ "sc-rpc",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "artemis-basic-channel-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec 2.0.0",
+ "sp-api",
  "sp-std",
 ]
 
@@ -373,7 +418,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "artemis-millau-channel"
+name = "artemis-incentivized-channel"
 version = "0.1.1"
 dependencies = [
  "artemis-core",
@@ -381,51 +426,15 @@ dependencies = [
  "ethabi-decode",
  "frame-support",
  "frame-system",
+ "hex-literal",
+ "pallet-balances",
  "parity-scale-codec 2.0.0",
+ "rlp",
  "serde",
  "sp-core",
+ "sp-io",
+ "sp-keyring",
  "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "artemis-rialto-channel"
-version = "0.1.1"
-dependencies = [
- "artemis-core",
- "artemis-ethereum",
- "ethabi-decode",
- "frame-support",
- "frame-system",
- "parity-scale-codec 2.0.0",
- "serde",
- "sp-core",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "artemis-rialto-channel-rpc"
-version = "0.1.0"
-dependencies = [
- "artemis-rialto-channel-runtime-api",
- "jsonrpc-core 15.1.0",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "parity-scale-codec 1.3.7",
- "sc-rpc",
- "sp-api",
- "sp-blockchain",
- "sp-runtime",
-]
-
-[[package]]
-name = "artemis-rialto-channel-runtime-api"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "parity-scale-codec 2.0.0",
- "sp-api",
  "sp-std",
 ]
 
@@ -434,15 +443,15 @@ name = "artemis-runtime"
 version = "0.1.1"
 dependencies = [
  "artemis-assets",
+ "artemis-basic-channel",
+ "artemis-basic-channel-runtime-api",
  "artemis-commitments",
  "artemis-core",
  "artemis-dispatch",
  "artemis-dot-app",
  "artemis-erc20-app",
  "artemis-eth-app",
- "artemis-millau-channel",
- "artemis-rialto-channel",
- "artemis-rialto-channel-runtime-api",
+ "artemis-incentivized-channel",
  "artemis-transfer",
  "artemis-xcm-support",
  "cumulus-pallet-parachain-system",
@@ -4571,27 +4580,6 @@ dependencies = [
  "pallet-treasury",
  "parity-scale-codec 2.0.0",
  "serde",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-bridge"
-version = "0.1.1"
-dependencies = [
- "artemis-core",
- "artemis-ethereum",
- "ethabi-decode",
- "frame-support",
- "frame-system",
- "hex-literal",
- "pallet-balances",
- "parity-scale-codec 2.0.0",
- "rlp",
- "serde",
- "sp-core",
- "sp-io",
- "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]

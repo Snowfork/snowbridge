@@ -69,8 +69,8 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	}
 	li.incentivizedOutboundChannel = incentivizedOutboundChannel
 
-	li.mapping[common.HexToAddress(li.config.Channels.Basic.Outbound)] = "RialtoInboundChannel.submit"
-	li.mapping[common.HexToAddress(li.config.Channels.Incentivized.Outbound)] = "MillauInboundChannel.submit"
+	li.mapping[common.HexToAddress(li.config.Channels.Basic.Outbound)] = "BasicInboundChannel.submit"
+	li.mapping[common.HexToAddress(li.config.Channels.Incentivized.Outbound)] = "IncentivizedInboundChannel.submit"
 
 	eg.Go(func() error {
 		return li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)

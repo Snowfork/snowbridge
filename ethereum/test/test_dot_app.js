@@ -97,17 +97,6 @@ contract("DOTApp", function (accounts) {
       [this.channels, this.app] = await deployAppContractWithChannels(DOTApp, "Snowfork DOT", "SnowDOT", 10);
       this.token = await Token.at(await this.app.token());
 
-      let fee = wrapped(BigNumber("100000000")).toString() // 0.001 DOT
-
-      await this.channels.incentivized.outbound.setDOTApp(this.app.address);
-      await this.channels.incentivized.outbound.updateRelayFee(
-        fee,
-        {
-          from: owner,
-          value: 0
-        }
-      );
-
       // Mint 2 wrapped DOT
       let amountNative = BigNumber("20000000000"); // 2 DOT, uint128
       let amountWrapped = wrapped(amountNative);
@@ -163,7 +152,7 @@ contract("DOTApp", function (accounts) {
     it("should send payload to the incentivized outbound channel", async function () {
       const amountWrapped = wrapped(BigNumber("10000000000"));
       let { receipt } = await burnTokens(this.app, user, POLKADOT_ADDRESS, amountWrapped, ChannelId.Incentivized).should.be.fulfilled;
-      confirmIncentivizedChannelSend(receipt.rawLogs[4], this.channels.incentivized.outbound.address, this.app.address, 1)
+      confirmIncentivizedChannelSend(receipt.rawLogs[2], this.channels.incentivized.outbound.address, this.app.address, 1)
     });
   });
 });

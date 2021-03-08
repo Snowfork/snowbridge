@@ -1,5 +1,5 @@
 [package]
-name = "artemis-rialto-channel-rpc"
+name = "artemis-basic-channel-rpc"
 version = "0.1.0"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
@@ -20,4 +20,4 @@ sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "roc
 
 # Project packages
 
-artemis-rialto-channel-runtime-api = { path = "../runtime-api" }
+artemis-basic-channel-runtime-api = { path = "../runtime-api" }

@@ -25,6 +25,8 @@ pub struct Envelope {
 	pub source: H160,
 	/// A nonce for enforcing replay protection and ordering.
 	pub nonce: u64,
+	/// Fee paid by user for relaying the message
+//	pub fee: u128,
 	/// The inner payload generated from the source application.
 	pub payload: Vec<u8>,
 }
@@ -52,6 +54,13 @@ impl TryFrom<Log> for Envelope {
 			}
 			_ => return Err(EnvelopeDecodeError)
 		};
+
+		// let fee = match iter.next().ok_or(EnvelopeDecodeError)? {
+		// 	Token::Uint(value) => {
+		// 		value.low_u128()
+		// 	}
+		// 	_ => return Err(EnvelopeDecodeError)
+		// };
 
 		let payload = match iter.next().ok_or(EnvelopeDecodeError)? {
 			Token::Bytes(payload) => payload,
@@ -94,6 +103,7 @@ mod tests {
 				channel: hex!["30d2da52e36f80b17fe2694a5e4900b81cf26344"].into(),
 				source: hex!["abe98e5ef4dc7a5c4f317823986fe48649f0edbb"].into(),
 				nonce: 0,
+//				fee: 0,
 				payload: hex!("
 					1ed28b61269a6d3d28d07b1fd834ebe4e703368ed43593c715fdd31c61141abd
 					04a99fd6822c8558854ccde39a5684e7a56da27d000100000000000000000000

@@ -4,7 +4,7 @@ use artemis_runtime::{
 	AccountId, EthereumHeader,
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
-	RialtoInboundChannelConfig, MillauInboundChannelConfig,
+	BasicInboundChannelConfig, IncentivizedInboundChannelConfig,
 	ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
 	CommitmentsConfig,
 	ParachainInfoConfig,
@@ -112,10 +112,10 @@ fn testnet_genesis(
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		}),
-		rialto_channel_inbound: Some(RialtoInboundChannelConfig {
+		basic_channel_inbound: Some(BasicInboundChannelConfig {
 			source_channel: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
 		}),
-		millau_channel_inbound: Some(MillauInboundChannelConfig {
+		incentivized_channel_inbound: Some(IncentivizedInboundChannelConfig {
 			source_channel: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
 		}),
 		assets: Some(AssetsConfig {

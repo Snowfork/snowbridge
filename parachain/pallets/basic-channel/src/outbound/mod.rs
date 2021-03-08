@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use frame_support::{decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
 };
@@ -10,6 +8,9 @@ use artemis_core::{
 	ChannelId, MessageNonce, MessageCommitment,
 };
 
+#[cfg(test)]
+mod test;
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
@@ -19,7 +20,7 @@ pub trait Config: system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as MillauOutboundModule {
+	trait Store for Module<T: Config> as BasicOutboundModule {
 		pub Nonce: u64;
 	}
 }

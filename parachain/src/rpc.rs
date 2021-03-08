@@ -9,7 +9,7 @@ use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
 
 use artemis_runtime::opaque::Block;
-use artemis_rialto_channel_rpc::{RialtoChannel, RialtoChannelApi, RialtoChannelRuntimeApi};
+use artemis_basic_channel_rpc::{BasicChannel, BasicChannelApi, BasicChannelRuntimeApi};
 
 pub use jsonrpc_core;
 
@@ -31,7 +31,7 @@ where
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
 	C: Send + Sync + 'static,
 	C::Api: BlockBuilder<Block>,
-	C::Api: RialtoChannelRuntimeApi<Block>,
+	C::Api: BasicChannelRuntimeApi<Block>,
 	P: TransactionPool + 'static,
 {
 	let mut io = jsonrpc_core::IoHandler::default();
@@ -40,8 +40,8 @@ where
 		..
 	} = deps;
 
-	io.extend_with(RialtoChannelApi::to_delegate(
-		RialtoChannel::new(client),
+	io.extend_with(BasicChannelApi::to_delegate(
+		BasicChannel::new(client),
 	));
 
 	io

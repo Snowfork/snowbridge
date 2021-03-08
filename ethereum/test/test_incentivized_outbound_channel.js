@@ -36,7 +36,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
       ).should.be.fulfilled;
 
       const rawLog = tx.receipt.rawLogs[0];
-      confirmIncentivizedChannelSend(rawLog, this.channel.address, userOne, 1, testPayload)
+      confirmIncentivizedChannelSend(rawLog, this.channel.address, appAddress, 1, testPayload)
     });
 
     it("should increment nonces correctly", async function () {

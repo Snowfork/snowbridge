@@ -68,7 +68,7 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branc
 
 artemis-core = { path = "primitives/core" }
 artemis-runtime = { path = "runtime" }
-artemis-rialto-channel-rpc = { path = "pallets/rialto-channel/rpc" }
+artemis-basic-channel-rpc = { path = "pallets/basic-channel/rpc" }
 
 # These dependencies are used for runtime benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
@@ -94,11 +94,9 @@ members = [
     "primitives/ethereum",
     "primitives/testutils",
     "primitives/xcm-support",
-    "pallets/bridge",
-    "pallets/millau-channel",
-    "pallets/rialto-channel",
-    "pallets/rialto-channel/runtime-api",
-    "pallets/rialto-channel/rpc",
+    "pallets/basic-channel",
+    "pallets/basic-channel/runtime-api",
+    "pallets/incentivized-channel",
     "pallets/dispatch",
     "pallets/assets",
     "pallets/verifier-lightclient",

@@ -1,6 +1,6 @@
 [package]
-name = "artemis-millau-channel"
-description = "Artemis Millau Channel"
+name = "artemis-incentivized-channel"
+description = "Artemis Incentivized Channel"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
@@ -22,6 +22,13 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ro
 artemis-core = { path = "../../primitives/core", default-features = false }
 artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
+
+[dev-dependencies]
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+hex-literal = { version = "0.3.1" }
+rlp = { version = "0.5" }
 
 [features]
 default = ["std"]

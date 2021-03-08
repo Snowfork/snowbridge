@@ -16,36 +16,23 @@ const channelContracts = {
 };
 
 const confirmBasicChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
-  outChannelLogFields = [
-    {
-      type: 'address',
-      name: 'source'
-    },
-    {
-      type: 'uint64',
-      name: 'nonce'
-    },
-    {
-      type: 'bytes',
-      name: 'payload',
-    }
-  ];
-
-  const decodedEvent = web3.eth.abi.decodeLog(outChannelLogFields, channelEvent.data, channelEvent.topics);
+  var abi = ["event Message(address source, uint64 nonce, bytes payload)"];
+  var iface = new ethers.utils.Interface(abi);
+  let decodedEvent = iface.decodeEventLog('Message(address,uint64,bytes)', channelEvent.data, channelEvent.topics);
 
   channelEvent.address.should.be.equal(channelAddress);
   decodedEvent.source.should.be.equal(sendingAppAddress);
-  decodedEvent.nonce.should.equal('' + expectedNonce);
+
+  assert(decodedEvent.nonce.eq(ethers.BigNumber.from(expectedNonce)));
   if (expectedPayload) {
     decodedEvent.payload.should.be.equal(expectedPayload);
   }
 };
 
 const confirmIncentivizedChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
-
-  var abi = ["event Message(address source, uint64 nonce, uint128 fee, bytes payload)"];
+  var abi = ["event Message(address source, uint64 nonce, bytes payload)"];
   var iface = new ethers.utils.Interface(abi);
-  let decodedEvent = iface.decodeEventLog('Message(address,uint64,uint128,bytes)', channelEvent.data, channelEvent.topics);
+  let decodedEvent = iface.decodeEventLog('Message(address,uint64,bytes)', channelEvent.data, channelEvent.topics);
 
   channelEvent.address.should.be.equal(channelAddress);
   decodedEvent.source.should.be.equal(sendingAppAddress);

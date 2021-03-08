@@ -1,5 +1,5 @@
 [package]
-name = "artemis-rialto-channel-runtime-api"
+name = "artemis-basic-channel-runtime-api"
 version = "0.1.0"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
