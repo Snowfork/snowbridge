@@ -21,7 +21,8 @@ pub trait Config: system::Config {
 
 decl_storage! {
 	trait Store for Module<T: Config> as BasicOutboundModule {
-		pub Nonce: u64;
+		/// A nonce is assigned to each origin identity
+		pub Nonces: map hasher(identity) T::AccountId => u64;
 	}
 }
 
@@ -44,8 +45,8 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-	pub fn submit(_: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
-		Nonce::try_mutate(|nonce| -> DispatchResult {
+	pub fn submit(account_id: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
+		Nonces::<T>::try_mutate(account_id, |nonce| -> DispatchResult {
 			*nonce += 1;
 			T::MessageCommitment::add(ChannelId::Basic, target, *nonce, payload)?;
 			<Module<T>>::deposit_event(Event::MessageAccepted(*nonce));

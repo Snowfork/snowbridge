@@ -7,8 +7,9 @@ use sp_std::convert::TryFrom;
 
 // Used to decode a raw Ethereum log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
-	signature: "Message(address,uint64,bytes)",
+	signature: "Message(address,address,uint64,bytes)",
 	inputs: &[
+		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Uint(64), indexed: false },
 		Param { kind: ParamKind::Bytes, indexed: false },
@@ -21,6 +22,8 @@ static EVENT_ABI: &Event = &Event {
 pub struct Envelope {
 	/// The address of the outbound channel on Ethereum that forwarded this message.
 	pub channel: H160,
+	/// The address on Ethereum where the message originated from
+	pub origin: H160,
 	/// The application on Ethereum where the message originated from.
 	pub source: H160,
 	/// A nonce for enforcing replay protection and ordering.
@@ -41,6 +44,11 @@ impl TryFrom<Log> for Envelope {
 
 		let mut iter = tokens.into_iter();
 
+		let origin = match iter.next().ok_or(EnvelopeDecodeError)? {
+			Token::Address(origin) => origin,
+			_ => return Err(EnvelopeDecodeError),
+		};
+
 		let source = match iter.next().ok_or(EnvelopeDecodeError)? {
 			Token::Address(source) => source,
 			_ => return Err(EnvelopeDecodeError)
@@ -60,6 +68,7 @@ impl TryFrom<Log> for Envelope {
 
 		Ok(Self {
 			channel: log.address,
+			origin,
 			source,
 			nonce,
 			payload,
@@ -72,33 +81,33 @@ mod tests {
 	use super::*;
 	use hex_literal::hex;
 
-	const LOG: [u8; 284] = hex!("
-		f901199430d2da52e36f80b17fe2694a5e4900b81cf26344e1a0779b38144a38
-		cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
-		0000000000000000abe98e5ef4dc7a5c4f317823986fe48649f0edbb00000000
-		0000000000000000000000000000000000000000000000000000000000000000
-		0000000000000000000000000000000000000000000000000000006000000000
-		000000000000000000000000000000000000000000000000000000541ed28b61
-		269a6d3d28d07b1fd834ebe4e703368ed43593c715fdd31c61141abd04a99fd6
-		822c8558854ccde39a5684e7a56da27d00010000000000000000000000000000
-		00000000000000000000000000000000000000000000000000000000
-	");
+	const LOG: [u8; 317] = hex!(
+		"
+                f9013a942ffa5ecdbe006d30397c7636d3e015eee251369fe1a0daab80e89869
+                997d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562fb90100000000
+                00000000000000000089b4ab1ef20763630df9743acf155865600daff2000000
+                000000000000000000774667629726ec1fabebcec0d9139bd1c8f72a23000000
+                0000000000000000000000000000000000000000000000000000000001000000
+                0000000000000000000000000000000000000000000000000000000080000000
+                00000000000000000000000000000000000000000000000000000000570c0189
+                b4ab1ef20763630df9743acf155865600daff200d43593c715fdd31c61141abd
+                04a99fd6822c8558854ccde39a5684e7a56da27d0000c16ff286230000000000
+                0000000000000000000000000000000000000000000000000000000000
+	"
+	);
 
 	#[test]
 	fn test_try_from_log() {
 		let log: Log = rlp::decode(&LOG).unwrap();
 		let envelope = Envelope::try_from(log).unwrap();
 
-		assert_eq!(envelope,
+		assert_eq!(envelope.clone(),
 			Envelope {
-				channel: hex!["30d2da52e36f80b17fe2694a5e4900b81cf26344"].into(),
-				source: hex!["abe98e5ef4dc7a5c4f317823986fe48649f0edbb"].into(),
-				nonce: 0,
-				payload: hex!("
-					1ed28b61269a6d3d28d07b1fd834ebe4e703368ed43593c715fdd31c61141abd
-					04a99fd6822c8558854ccde39a5684e7a56da27d000100000000000000000000
-					0000000000000000000000000000000000000000"
-				).into(),
+				channel: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
+				origin: hex!["89b4ab1ef20763630df9743acf155865600daff2"].into(),
+				source: hex!["774667629726ec1fabebcec0d9139bd1c8f72a23"].into(),
+				nonce: 1,
+				payload: envelope.payload,
 			})
 	}
 }

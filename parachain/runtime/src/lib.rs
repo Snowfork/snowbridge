@@ -639,9 +639,8 @@ impl_runtime_apis! {
 	}
 
 	impl basic_channel_api::BasicChannelApi<Block> for Runtime {
-		fn get_merkle_roots() -> u64 {
-			// TODO
-			88888
+		fn get_merkle_proofs() -> u64 {
+			0
 		}
 	}
 

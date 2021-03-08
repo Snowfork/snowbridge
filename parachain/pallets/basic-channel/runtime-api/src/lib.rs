@@ -4,6 +4,6 @@
 
 sp_api::decl_runtime_apis! {
     pub trait BasicChannelApi {
-        fn get_merkle_roots() -> u64;
+        fn get_merkle_proofs() -> u64;
     }
 }

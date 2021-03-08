@@ -9,8 +9,8 @@ pub use artemis_basic_channel_runtime_api::BasicChannelApi as BasicChannelRuntim
 
 #[rpc]
 pub trait BasicChannelApi {
-	#[rpc(name = "get_merkle_roots")]
-	fn get_merkle_roots(&self) -> Result<u64>;
+	#[rpc(name = "get_merkle_proofs")]
+	fn get_merkle_proofs(&self) -> Result<u64>;
 }
 
 pub struct BasicChannel<C, M> {
@@ -32,7 +32,7 @@ where
 	C: HeaderBackend<Block>,
 	C::Api: BasicChannelRuntimeApi<Block>,
 {
-	fn get_merkle_roots(&self) -> Result<u64> {
+	fn get_merkle_proofs(&self) -> Result<u64> {
 		Ok(999999)
 	}
 }

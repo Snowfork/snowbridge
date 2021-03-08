@@ -13,7 +13,7 @@ use sp_runtime::{
 use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
 
-use artemis_core::{MessageDispatch, ChannelId, Message, Proof};
+use artemis_core::{MessageDispatch, Message, Proof};
 use artemis_ethereum::Log;
 
 use hex_literal::hex;
@@ -108,45 +108,37 @@ pub fn new_tester_with_config(config: basic_inbound_channel::GenesisConfig) -> s
 
 
 // The originating channel address for the messages below
-const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["2d02f2234d0B6e35D8d8fD77705f535ACe681327"];
+const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"];
 
-// Ethereum Log:
-//   address: 0xe4ab635d0bdc5668b3fcb4eaee1dec587998f4af (outbound channel contract)
-//   topics: ...
-//   data:
-//     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
-//     nonce: 1
-//     payload ...
-const MESSAGE_DATA_0: [u8; 284] = hex!("
-	f90119942d02f2234d0b6e35d8d8fd77705f535ace681327e1a0779b38144a38
-	cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
-	00000000000000000a42cba2b7960a0ce216ade5d6a82574257023d800000000
-	0000000000000000000000000000000000000000000000000000000100000000
-	0000000000000000000000000000000000000000000000000000006000000000
-	000000000000000000000000000000000000000000000000000000570c018213
-	dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd04
-	a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d78030000000000
-	00000000000000000000000000000000000000000000000000000000
-");
+const MESSAGE_DATA_0: [u8; 317] = hex!(
+	"
+	f9013a942ffa5ecdbe006d30397c7636d3e015eee251369fe1a0daab80e898699
+	97d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562fb9010000000000
+	000000000000000089b4ab1ef20763630df9743acf155865600daff2000000000
+	000000000000000774667629726ec1fabebcec0d9139bd1c8f72a230000000000
+	00000000000000000000000000000000000000000000000000000100000000000
+	00000000000000000000000000000000000000000000000000080000000000000
+	00000000000000000000000000000000000000000000000000570c0189b4ab1ef
+	20763630df9743acf155865600daff200d43593c715fdd31c61141abd04a99fd6
+	822c8558854ccde39a5684e7a56da27d0000c16ff286230000000000000000000
+	0000000000000000000000000000000000000000000000000
+"
+);
 
-// Ethereum Log:
-//   address: 0xe4ab635d0bdc5668b3fcb4eaee1dec587998f4af (outbound channel contract)
-//   topics: ...
-//   data:
-//     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
-//     nonce: 1
-//     payload ...
-const MESSAGE_DATA_1: [u8; 284] = hex!("
-	f90119942d02f2234d0b6e35d8d8fd77705f535ace681327e1a0779b38144a38
-	cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
-	00000000000000000a42cba2b7960a0ce216ade5d6a82574257023d800000000
-	0000000000000000000000000000000000000000000000000000000200000000
-	0000000000000000000000000000000000000000000000000000006000000000
-	000000000000000000000000000000000000000000000000000000570c018213
-	dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd04
-	a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d78030000000000
-	00000000000000000000000000000000000000000000000000000000
-");
+const MESSAGE_DATA_1: [u8; 317] = hex!(
+	"
+	f9013a942ffa5ecdbe006d30397c7636d3e015eee251369fe1a0daab80e898699
+	97d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562fb9010000000000
+	000000000000000089b4ab1ef20763630df9743acf155865600daff2000000000
+	000000000000000774667629726ec1fabebcec0d9139bd1c8f72a230000000000
+	00000000000000000000000000000000000000000000000000000200000000000
+	00000000000000000000000000000000000000000000000000080000000000000
+	00000000000000000000000000000000000000000000000000570c0189b4ab1ef
+	20763630df9743acf155865600daff200d43593c715fdd31c61141abd04a99fd6
+	822c8558854ccde39a5684e7a56da27d0000c16ff286230000000000000000000
+	0000000000000000000000000000000000000000000000000
+"
+);
 
 #[test]
 fn test_submit_with_invalid_source_channel() {
@@ -173,9 +165,9 @@ fn test_submit_with_invalid_source_channel() {
 #[test]
 fn test_submit() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
-		let chan_id = ChannelId::Basic;
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = Origin::signed(relayer);
+		let eth_origin = H160::from_slice(&hex!("89b4ab1ef20763630df9743acf155865600daff2")[..]);
 
 		// Submit message 1
 		let message_1 = Message {
@@ -187,7 +179,7 @@ fn test_submit() {
 			},
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_1));
-		let nonce: u64 = Nonce::get();
+		let nonce: u64 = Nonces::get(eth_origin);
 		assert_eq!(nonce, 1);
 
 		// Submit message 2
@@ -200,7 +192,7 @@ fn test_submit() {
 			},
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_2));
-		let nonce: u64 = Nonce::get();
+		let nonce: u64 = Nonces::get(eth_origin);
 		assert_eq!(nonce, 2);
 	});
 }
@@ -208,9 +200,9 @@ fn test_submit() {
 #[test]
 fn test_submit_with_invalid_nonce() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
-		let chan_id = ChannelId::Basic;
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = Origin::signed(relayer);
+		let eth_origin = H160::from_slice(&hex!("89b4ab1ef20763630df9743acf155865600daff2")[..]);
 
 		// Submit message
 		let message = Message {
@@ -222,7 +214,7 @@ fn test_submit_with_invalid_nonce() {
 			},
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message.clone()));
-		let nonce: u64 = Nonce::get();
+		let nonce: u64 = Nonces::get(eth_origin);
 		assert_eq!(nonce, 1);
 
 		// Submit the same again
