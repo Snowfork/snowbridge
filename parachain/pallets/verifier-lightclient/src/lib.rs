@@ -69,6 +69,13 @@ pub trait WeightInfo {
 	fn import_header_not_new_finalized_with_single_prune() -> Weight;
 }
 
+impl WeightInfo for () {
+	fn import_header_new_finalized_with_max_prune() -> Weight { 0 }
+	fn import_header_not_new_finalized_with_max_prune() -> Weight { 0 }
+	fn import_header_new_finalized_with_single_prune() -> Weight { 0 }
+	fn import_header_not_new_finalized_with_single_prune() -> Weight { 0 }
+}
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 	/// The number of descendants, in the highest difficulty chain, a block
