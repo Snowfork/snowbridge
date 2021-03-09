@@ -17,7 +17,9 @@ impl Hasher for KeccakHasher {
 	}
 }
 
-pub struct MerkleProofError;
+pub enum Error {
+    MerkleProofError,
+}
 
 type Layout = sp_trie::Layout<KeccakHasher>;
 type EnumeratedItems = Vec<(Vec<u8>, Vec<u8>)>;
@@ -35,7 +37,7 @@ pub fn generate_merkle_root(items: impl Iterator<Item = Vec<u8>>) -> H256 {
 	cb.root.unwrap_or_default()
 }
 
-pub fn generate_merkle_proofs(encoded_items: impl Iterator<Item = Vec<u8>>) -> Result<Vec<Vec<u8>>, MerkleProofError> {
+pub fn generate_merkle_proofs(encoded_items: impl Iterator<Item = Vec<u8>>) -> Result<Vec<Vec<u8>>, Error> {
 	let enumerated_items = encoded_items
 		.enumerate()
 		.map(|(i, v)| (Layout::encode_index(i as u32), v))
@@ -50,5 +52,5 @@ pub fn generate_merkle_proofs(encoded_items: impl Iterator<Item = Vec<u8>>) -> R
 		&db,
 		root,
 		leafs.iter().collect::<Vec<&Vec<u8>>>());
-    	proofs.map_err(|_| MerkleProofError{})
+    	proofs.map_err(|_| Error::MerkleProofError{})
 }

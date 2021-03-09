@@ -1,4 +1,4 @@
-use codec::{Decode, Encode};
+use codec::{Codec, Decode, Encode, Input};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
 	weights::Weight,
@@ -6,8 +6,10 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage,
 use ethabi::{self, Token};
 use frame_system::{self as system};
 use sp_core::{RuntimeDebug, H160, H256};
-use sp_io::offchain_index;
 use sp_runtime::{
+	offchain::{
+		storage::StorageValueRef,
+	},
 	traits::{Hash, Zero},
 };
 use sp_std::prelude::*;
@@ -37,13 +39,13 @@ pub struct Message {
 
 /// Wire-format for committed BasicChannel data
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
-pub struct CommitmentData<T: Config> {
+pub struct CommitmentData<AccountId> {
 	/// A list of tuples with messages and their origin account Id
-	messages: Vec<(T::AccountId, Message)>,
+	messages: Vec<(AccountId, Message)>,
 
 	/// A list of subcommitments, also associated to their account Id.
 	/// These are built as a flat commitment from its respective message list
-	subcommitments: Vec<(T::AccountId, Vec<u8>)>,
+	subcommitments: Vec<(AccountId, Vec<u8>)>,
 }
 
 pub trait Config: system::Config {
@@ -176,14 +178,26 @@ impl<T: Config> Module<T> {
 		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mroot).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		let data = CommitmentData::<T> {
-			messages: all_messages,
-			subcommitments: subc_enc,
-		};
-		offchain_index::set(
-			&Self::offchain_key(mroot),
-			&data.encode(),
-		);
+		// let data = CommitmentData::<T::AccountId> {
+		// 	messages: all_messages,
+		// 	subcommitments: subc_enc,
+		// };
+
+		// let key = Self::offchain_key(mroot);
+		// let storage = StorageValueRef::persistent(&key);
+		// storage.set(&data.encode());
+
+		// let mut enc = &data.encode()[..];
+		// let _ = CommitmentData::<T::AccountId>::decode(&mut enc);
+
+
+
+
+
+		// offchain_index::set(
+		// 	&Self::offchain_key(mroot),
+		// 	&data.encode(),
+		// );
 
 		0
 	}
@@ -201,5 +215,9 @@ impl<T: Config> Module<T> {
 			})
 			.collect();
 		ethabi::encode(&vec![Token::Array(messages)])
+	}
+
+	pub fn get_merkle_proofs(_root: H256) -> u64 {
+		7777
 	}
 }

@@ -639,9 +639,9 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl basic_channel_api::BasicChannelApi<Block> for Runtime {
-		fn get_merkle_proofs() -> u64 {
-			0
+	impl basic_channel_rpc_runtime_api::BasicChannelApi<Block, AccountId> for Runtime {
+		fn get_merkle_proofs(root: sp_core::H256) -> u64 {
+			BasicOutboundChannel::get_merkle_proofs(root)
 		}
 	}
 
