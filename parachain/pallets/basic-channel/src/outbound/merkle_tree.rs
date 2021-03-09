@@ -1,10 +1,7 @@
-use codec::Encode;
 use sp_core::{Hasher, H256};
 use sp_std::prelude::*;
 use sp_trie::TrieConfiguration;
 use hash256_std_hasher::Hash256StdHasher;
-
-//use hash256_std_hasher::Hash256StdHasher;
 
 /// Concrete implementation of Hasher using Keccak 256-bit hashes
 #[derive(Debug)]
@@ -28,7 +25,6 @@ type EnumeratedItems = Vec<(Vec<u8>, Vec<u8>)>;
 
 pub fn generate_merkle_root(items: impl Iterator<Item = Vec<u8>>) -> H256 {
 	let enumerated_items = items
-		//.map(|x| Encode::encode(&x))
 		.enumerate()
 		.map(|(i, v)| (Layout::encode_index(i as u32), v))
 		.collect::<EnumeratedItems>();
@@ -57,4 +53,3 @@ pub fn generate_merkle_proofs(encoded_items: impl Iterator<Item = Vec<u8>>) -> R
 		leafs.iter().collect::<Vec<&Vec<u8>>>());
     	proofs.map_err(|_| MerkleProofError{})
 }
-

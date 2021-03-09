@@ -156,22 +156,22 @@ impl<T: Config> Module<T> {
 		subcommitments.push((prev_acc, Self::encode_commitment(&group)));
 		messages_by_user.push((prev_acc, group));
 
-		let subcom_hashes = subcommitments
+		let subc_hashes = subcommitments
 			.iter()
 			.map(|(_, c)| <T as Config>::Hashing::hash(&c));
 
-	    	let subc_enc = subcom_hashes.map(|x| Encode::encode(&x));
+		let subc_enc: Vec<Vec<u8>> = subc_hashes.map(|x| Encode::encode(&x)).collect();
 
 		// Generate Merkle Tree
-		let mroot = generate_merkle_root(subc_enc.clone());
+		let mroot = generate_merkle_root(subc_enc.iter().cloned());
 
 		// Deposit log with Merkle Tree Root
 		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mroot).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
 		let blob = BasicChannelBlob::<T> {
-			messages: all_messages.clone(),
-			subcommitments: subc_enc.collect::<Vec<Vec<u8>>>(),
+			messages: all_messages,
+			subcommitments: subc_enc,
 		};
 		offchain_index::set(
 			&Self::offchain_key(mroot),
