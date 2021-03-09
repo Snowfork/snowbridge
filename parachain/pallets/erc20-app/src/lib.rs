@@ -27,7 +27,7 @@ use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
-use artemis_core::{ChannelId, SubmitOutbound, AssetId, MultiAsset};
+use artemis_core::{ChannelId, OutboundRouter, AssetId, MultiAsset};
 
 mod payload;
 use payload::OutboundPayload;
@@ -37,12 +37,13 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
+
 pub trait Config: system::Config {
 	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	type Assets: MultiAsset<<Self as system::Config>::AccountId>;
 
-	type SubmitOutbound: SubmitOutbound;
+	type OutboundRouter: OutboundRouter<Self::AccountId>;
 
 	type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
 }
@@ -95,7 +96,7 @@ decl_module! {
 				amount: amount
 			};
 
-			T::SubmitOutbound::submit(channel_id, Address::get(), &message.encode())?;
+			T::OutboundRouter::submit(channel_id, &who, Address::get(), &message.encode())?;
 			Self::deposit_event(RawEvent::Burned(token, who.clone(), recipient, amount));
 
 			Ok(())

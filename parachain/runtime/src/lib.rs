@@ -30,7 +30,9 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill, ModuleId, traits::AccountIdConversion};
 pub use frame_support::{
-	construct_runtime, parameter_types, StorageValue,
+	construct_runtime,
+	dispatch::DispatchResult,
+	parameter_types, StorageValue,
 	traits::{KeyOwnerProofSystem, Randomness, Filter},
 	weights::{
 		Weight, IdentityFee,
@@ -40,7 +42,7 @@ pub use frame_support::{
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId, ChannelId, MessageId, rewards::InstantRewards};
+pub use artemis_core::{AssetId, OutboundRouter, ChannelId, MessageId, rewards::InstantRewards};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::{EthereumHeader, EthereumDifficultyConfig};
@@ -365,14 +367,52 @@ parameter_types! {
 	pub RewardsAccount: AccountId = DotModuleId::get().into_account();
 }
 
-impl bridge::Config for Runtime {
+use basic_channel::inbound as basic_channel_inbound;
+use incentivized_channel::inbound as incentivized_channel_inbound;
+use basic_channel::outbound as basic_channel_outbound;
+use incentivized_channel::outbound as incentivized_channel_outbound;
+
+
+impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
+	type MessageDispatch = dispatch::Module<Runtime>;
+}
+
+impl basic_channel_outbound::Config for Runtime {
+	type Event = Event;
 	type MessageCommitment = commitments::Module<Runtime>;
+}
+
+impl incentivized_channel_inbound::Config for Runtime {
+	type Event = Event;
+	type Verifier = verifier_lightclient::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
 	type RewardsAccount = RewardsAccount;
 	type InboundMessageFee = Balance;
 	type RewardRelayer = InstantRewards<Self, Balances>;
+}
+
+impl incentivized_channel_outbound::Config for Runtime {
+	type Event = Event;
+	type MessageCommitment = commitments::Module<Runtime>;
+}
+
+use sp_std::marker::PhantomData;
+use sp_core::H160;
+
+pub struct SimpleOutboundRouter<T>(PhantomData<T>);
+
+impl<T> OutboundRouter<T::AccountId> for SimpleOutboundRouter<T>
+where
+	T: basic_channel_outbound::Config + incentivized_channel_outbound::Config
+{
+	fn submit(channel_id: ChannelId, who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
+		match channel_id {
+			ChannelId::Basic => basic_channel_outbound::Module::<T>::submit(who, target, payload),
+			ChannelId::Incentivized => incentivized_channel_outbound::Module::<T>::submit(who, target, payload),
+		}
+	}
 }
 
 pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficultyConfig {
@@ -424,14 +464,14 @@ parameter_types! {
 impl eth_app::Config for Runtime {
 	type Event = Event;
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
-	type SubmitOutbound = bridge::Module<Runtime>;
+	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 }
 
 impl erc20_app::Config for Runtime {
 	type Event = Event;
 	type Assets = assets::Module<Runtime>;
-	type SubmitOutbound = bridge::Module<Runtime>;
+	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 }
 
@@ -442,7 +482,7 @@ parameter_types! {
 impl dot_app::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
-	type SubmitOutbound = bridge::Module<Runtime>;
+	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type ModuleId = DotModuleId;
 }
@@ -453,26 +493,30 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		TransactionPayment: pallet_transaction_payment::{Module, Storage},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
+		System: frame_system::{Module, Call, Config, Storage, Event<T>} = 0,
+		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent} = 1,
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 2,
+		TransactionPayment: pallet_transaction_payment::{Module, Storage} = 3,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage} = 4,
 
-		ParachainInfo: parachain_info::{Module, Storage, Config},
-		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
+		ParachainInfo: parachain_info::{Module, Storage, Config} = 5,
+		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
 
-		Bridge: bridge::{Module, Call, Config, Storage, Event},
-		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin},
-		Commitments: commitments::{Module, Call, Config<T>, Storage, Event},
-		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config},
-		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>},
-		ETH: eth_app::{Module, Call, Config, Storage, Event<T>},
-		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>},
-		DOT: dot_app::{Module, Call, Config, Storage, Event<T>},
+		BasicInboundChannel: basic_channel_inbound::{Module, Call, Config, Storage, Event} = 7,
+		BasicOutboundChannel: basic_channel_outbound::{Module, Storage, Event} = 8,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Module, Call, Config, Storage, Event} = 9,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Module, Storage, Event} = 10,
+		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin} = 11,
+		Commitments: commitments::{Module, Call, Config<T>, Storage, Event} = 15,
+		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config} = 16,
+		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>} = 17,
 
-		LocalXcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin},
-		Transfer: artemis_transfer::{Module, Call, Event<T>},
+		LocalXcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin} = 18,
+		Transfer: artemis_transfer::{Module, Call, Event<T>} = 19,
+
+		ETH: eth_app::{Module, Call, Config, Storage, Event<T>} = 12,
+		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>} = 13,
+		DOT: dot_app::{Module, Call, Config, Storage, Event<T>} = 14,
 	}
 );
 

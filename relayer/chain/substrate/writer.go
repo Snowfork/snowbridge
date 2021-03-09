@@ -14,7 +14,6 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type Writer struct {
@@ -170,7 +169,7 @@ func (wr *Writer) write(ctx context.Context, c types.Call) error {
 func (wr *Writer) WriteMessages(ctx context.Context, msgs []*chain.EthereumOutboundMessage) error {
 	for _, msg := range msgs {
 
-		c, err := types.NewCall(&wr.conn.metadata, "Bridge.submit", substrate.Message(*msg))
+		c, err := types.NewCall(&wr.conn.metadata, msg.Call, msg.Args...)
 		if err != nil {
 			return err
 		}

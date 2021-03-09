@@ -1,6 +1,8 @@
-const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
 const rlp = require("rlp");
+const { ethers } = require("ethers");
+
+const assert = require('chai').assert;
 
 const channelContracts = {
   basic: {
@@ -13,31 +15,34 @@ const channelContracts = {
   },
 };
 
-const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
-  outChannelLogFields = [
-    {
-      type: 'address',
-      name: 'source'
-    },
-    {
-      type: 'uint64',
-      name: 'nonce'
-    },
-    {
-      type: 'bytes',
-      name: 'payload',
-    }
-  ];
-
-  const decodedEvent = web3.eth.abi.decodeLog(outChannelLogFields, channelEvent.data, channelEvent.topics);
+const confirmBasicChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
+  var abi = ["event Message(address source, uint64 nonce, bytes payload)"];
+  var iface = new ethers.utils.Interface(abi);
+  let decodedEvent = iface.decodeEventLog('Message(address,uint64,bytes)', channelEvent.data, channelEvent.topics);
 
   channelEvent.address.should.be.equal(channelAddress);
   decodedEvent.source.should.be.equal(sendingAppAddress);
-  decodedEvent.nonce.should.be.equal('' + expectedNonce);
+
+  assert(decodedEvent.nonce.eq(ethers.BigNumber.from(expectedNonce)));
   if (expectedPayload) {
     decodedEvent.payload.should.be.equal(expectedPayload);
   }
 };
+
+const confirmIncentivizedChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
+  var abi = ["event Message(address source, uint64 nonce, bytes payload)"];
+  var iface = new ethers.utils.Interface(abi);
+  let decodedEvent = iface.decodeEventLog('Message(address,uint64,bytes)', channelEvent.data, channelEvent.topics);
+
+  channelEvent.address.should.be.equal(channelAddress);
+  decodedEvent.source.should.be.equal(sendingAppAddress);
+
+  assert(decodedEvent.nonce.eq(ethers.BigNumber.from(expectedNonce)));
+  if (expectedPayload) {
+    decodedEvent.payload.should.be.equal(expectedPayload);
+  }
+};
+
 
 const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmount) => {
   unlockLogFields = [
@@ -198,7 +203,8 @@ const encodeLog = (log) => {
 }
 
 module.exports = {
-  confirmChannelSend,
+  confirmBasicChannelSend,
+  confirmIncentivizedChannelSend,
   confirmUnlock,
   confirmUnlockTokens,
   confirmMessageDispatched,

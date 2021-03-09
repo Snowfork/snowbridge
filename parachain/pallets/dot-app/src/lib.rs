@@ -20,7 +20,7 @@ use sp_runtime::{
 	SaturatedConversion,
 };
 
-use artemis_core::{ChannelId, SubmitOutbound};
+use artemis_core::{ChannelId, OutboundRouter};
 
 mod payload;
 use payload::OutboundPayload;
@@ -38,7 +38,7 @@ pub trait Config: system::Config {
 
 	type Currency: Currency<Self::AccountId>;
 
-	type SubmitOutbound: SubmitOutbound;
+	type OutboundRouter: OutboundRouter<Self::AccountId>;
 
 	type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
 
@@ -90,7 +90,7 @@ decl_module! {
 				amount: amount.saturated_into::<u128>(),
 			};
 
-			T::SubmitOutbound::submit(channel_id, Address::get(), &message.encode())?;
+			T::OutboundRouter::submit(channel_id, &who, Address::get(), &message.encode())?;
 			Self::deposit_event(RawEvent::Locked(who.clone(), recipient, amount));
 			Ok(())
 		}

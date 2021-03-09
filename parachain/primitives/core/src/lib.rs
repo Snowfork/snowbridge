@@ -19,8 +19,7 @@ pub use types::{
 	Proof,
 	ChannelId,
 	MessageId,
-	SourceChannelConfig,
-	SourceChannel,
+	MessageNonce,
 };
 
 pub use assets::{AssetId, MultiAsset, SingleAsset};
@@ -32,8 +31,8 @@ pub trait Verifier {
 }
 
 /// Outbound submission for applications
-pub trait SubmitOutbound {
-	fn submit(channel_id: ChannelId, target: H160, payload: &[u8]) -> DispatchResult;
+pub trait OutboundRouter<AccountId> {
+	fn submit(channel_id: ChannelId, who: &AccountId, target: H160, payload: &[u8]) -> DispatchResult;
 }
 
 /// Add a message to a commitment

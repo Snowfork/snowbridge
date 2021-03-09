@@ -5,7 +5,7 @@ const ETHApp = require('../../../ethereum/build/contracts/ETHApp.json');
 const ERC20App = require('../../../ethereum/build/contracts/ERC20App.json');
 const ERC20 = require('../../../ethereum/build/contracts/ERC20.json');
 const TestToken = require('../../../ethereum/build/contracts/TestToken.json');
-const DOTAppDecimals12 = require('../../../ethereum/build/contracts/DOTAppDecimals12.json');
+const DOTApp = require('../../../ethereum/build/contracts/DOTApp.json');
 const WrappedToken = require('../../../ethereum/build/contracts/WrappedToken.json');
 
 
@@ -31,7 +31,7 @@ class EthClient {
     const appERC20 = new this.web3.eth.Contract(ERC20App.abi, ERC20App.networks[networkID].address);
     this.appERC20 = appERC20;
 
-    const appDOT = new this.web3.eth.Contract(DOTAppDecimals12.abi, DOTAppDecimals12.networks[networkID].address);
+    const appDOT = new this.web3.eth.Contract(DOTApp.abi, DOTApp.networks[networkID].address);
     this.appDOT = appDOT;
   };
 

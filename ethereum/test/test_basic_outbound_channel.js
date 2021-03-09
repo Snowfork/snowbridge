@@ -4,7 +4,7 @@ const Web3Utils = require("web3-utils");
 const ethers = require("ethers");
 const BigNumber = web3.BigNumber;
 
-const { confirmChannelSend } = require("./helpers");
+const { confirmBasicChannelSend } = require("./helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -13,7 +13,8 @@ require("chai")
 
 contract("BasicOutboundChannel", function (accounts) {
   // Accounts
-  const userOne = accounts[1];
+  const appAddress = accounts[1];
+  const origin = accounts[2];
   const payload = ethers.utils.formatBytes32String("arbitrary-payload");
 
   describe("submit messages", function () {
@@ -23,12 +24,13 @@ contract("BasicOutboundChannel", function (accounts) {
 
     it("should send messages out with the correct event and fields", async function () {
       const tx = await this.channel.submit(
+        origin,
         payload,
-        { from: userOne, value: 0 }
+        { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
       const rawLog = tx.receipt.rawLogs[0];
-      confirmChannelSend(rawLog, this.channel.address, userOne, 1, payload)
+      confirmBasicChannelSend(rawLog, this.channel.address, appAddress, 1, payload)
     });
 
   });

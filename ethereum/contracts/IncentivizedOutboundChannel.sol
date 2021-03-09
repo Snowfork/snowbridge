@@ -7,17 +7,19 @@ import "./OutboundChannel.sol";
 // IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have incentivization too.
 contract IncentivizedOutboundChannel is OutboundChannel {
 
-    constructor() {
-        nonce = 0;
-    }
+    // Nonce for last submitted message
+    uint64 public nonce;
+
+    event Message(
+        address source,
+        uint64  nonce,
+        bytes   payload
+    );
 
     /**
      * @dev Sends a message across the channel
      */
-    function submit(bytes memory payload)
-        public
-        override
-    {
+    function submit(address, bytes calldata payload) external override {
         nonce = nonce + 1;
         emit Message(msg.sender, nonce, payload);
     }

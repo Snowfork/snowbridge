@@ -222,6 +222,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "artemis-basic-channel"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "artemis-ethereum",
+ "ethabi-decode",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec",
+ "rlp",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-commitments"
 version = "0.1.0"
 dependencies = [
@@ -370,16 +390,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "artemis-incentivized-channel"
+version = "0.1.1"
+dependencies = [
+ "artemis-core",
+ "artemis-ethereum",
+ "ethabi-decode",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "pallet-balances",
+ "parity-scale-codec",
+ "rlp",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-runtime"
 version = "0.1.1"
 dependencies = [
  "artemis-assets",
+ "artemis-basic-channel",
  "artemis-commitments",
  "artemis-core",
  "artemis-dispatch",
  "artemis-dot-app",
  "artemis-erc20-app",
  "artemis-eth-app",
+ "artemis-incentivized-channel",
  "artemis-transfer",
  "artemis-xcm-support",
  "cumulus-pallet-parachain-system",
@@ -394,7 +437,6 @@ dependencies = [
  "getrandom 0.2.2",
  "hex-literal",
  "pallet-balances",
- "pallet-bridge",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -4493,27 +4535,6 @@ dependencies = [
  "pallet-treasury",
  "parity-scale-codec",
  "serde",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-bridge"
-version = "0.1.1"
-dependencies = [
- "artemis-core",
- "artemis-ethereum",
- "ethabi-decode",
- "frame-support",
- "frame-system",
- "hex-literal",
- "pallet-balances",
- "parity-scale-codec",
- "rlp",
- "serde",
- "sp-core",
- "sp-io",
- "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]
