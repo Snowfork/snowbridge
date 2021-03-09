@@ -23,8 +23,8 @@ contract WrappedToken is ERC777, Ownable {
         _mint(recipient, amount, data, "");
     }
 
-    // Don't allow users to directly burn their SnowDOT via the IERC777 burn API, as it won't redeem
-    // DOT on substrate.
+    // Don't allow users to directly burn their wrapped tokens via the IERC777 burn API, as it won't redeem
+    // the native tokens on substrate.
 
     function burn(uint256, bytes memory) public pure override  {
         revert("not-supported");
