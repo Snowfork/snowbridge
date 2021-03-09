@@ -37,9 +37,13 @@ pub struct Message {
 
 /// Wire-format for committed BasicChannel data
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
-pub struct BasicChannelBlob<T: Config> {
+pub struct CommitmentData<T: Config> {
+	/// A list of tuples with messages and their origin account Id
 	messages: Vec<(T::AccountId, Message)>,
-	subcommitments: Vec<Vec<u8>>,
+
+	/// A list of subcommitments, also associated to their account Id.
+	/// These are built as a flat commitment from its respective message list
+	subcommitments: Vec<(T::AccountId, Vec<u8>)>,
 }
 
 pub trait Config: system::Config {
@@ -78,8 +82,8 @@ decl_error! {
 decl_module! {
 	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
-		fn deposit_event() = default;
 
+		fn deposit_event() = default;
 
 		// Generate a message commitment every [`Interval`] blocks.
 		//
@@ -156,26 +160,29 @@ impl<T: Config> Module<T> {
 		subcommitments.push((prev_acc, Self::encode_commitment(&group)));
 		messages_by_user.push((prev_acc, group));
 
-		let subc_hashes = subcommitments
+		let subc_enc  = subcommitments
 			.iter()
-			.map(|(_, c)| <T as Config>::Hashing::hash(&c));
-
-		let subc_enc: Vec<Vec<u8>> = subc_hashes.map(|x| Encode::encode(&x)).collect();
+			.map(|(acc, comm)| {
+				// Flat commitment scheme for all messages of the same user
+				let hash = <T as Config>::Hashing::hash(&comm);
+				((*acc).clone(), Encode::encode(&hash))
+                        })
+			.collect::<Vec<(T::AccountId, Vec<u8>)>>();
 
 		// Generate Merkle Tree
-		let mroot = generate_merkle_root(subc_enc.iter().cloned());
+		let mroot = generate_merkle_root(subc_enc.iter().cloned().map(|(_, t)| t));
 
 		// Deposit log with Merkle Tree Root
 		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mroot).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		let blob = BasicChannelBlob::<T> {
+		let data = CommitmentData::<T> {
 			messages: all_messages,
 			subcommitments: subc_enc,
 		};
 		offchain_index::set(
 			&Self::offchain_key(mroot),
-			&blob.encode(),
+			&data.encode(),
 		);
 
 		0

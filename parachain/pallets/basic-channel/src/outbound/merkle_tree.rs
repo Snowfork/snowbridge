@@ -18,7 +18,6 @@ impl Hasher for KeccakHasher {
 }
 
 pub struct MerkleProofError;
-pub type EncodedItems = Vec<Vec<u8>>;
 
 type Layout = sp_trie::Layout<KeccakHasher>;
 type EnumeratedItems = Vec<(Vec<u8>, Vec<u8>)>;
