@@ -57,6 +57,8 @@ use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 
 use artemis_xcm_support::AssetsTransactor;
 
+mod weights;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -391,6 +393,7 @@ impl verifier_lightclient::Config for Runtime {
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
+	type WeightInfo = weights::verifier_lightclient_weights::WeightInfo<Runtime>;
 }
 
 parameter_types! {

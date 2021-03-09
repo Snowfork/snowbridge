@@ -6,8 +6,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_system::{self as system, ensure_signed};
-use frame_support::{debug, decl_module, decl_storage, decl_event, decl_error,
-	dispatch::DispatchResult, dispatch::DispatchError, ensure, traits::Get};
+use frame_support::{
+	debug, decl_module, decl_storage, decl_event, decl_error, ensure,
+	dispatch::{DispatchError, DispatchResult},
+	traits::Get, weights::Weight,
+};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
@@ -23,8 +26,6 @@ pub use artemis_ethereum::{
 };
 
 mod benchmarking;
-pub mod weights;
-pub use weights::WeightInfo;
 
 #[cfg(test)]
 mod mock;
@@ -60,6 +61,14 @@ struct PruningRange {
 	pub oldest_block_to_keep: u64,
 }
 
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn import_header_new_finalized_with_max_prune() -> Weight;
+	fn import_header_not_new_finalized_with_max_prune() -> Weight;
+	fn import_header_new_finalized_with_single_prune() -> Weight;
+	fn import_header_not_new_finalized_with_single_prune() -> Weight;
+}
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 	/// The number of descendants, in the highest difficulty chain, a block
@@ -70,6 +79,8 @@ pub trait Config: system::Config {
 	/// Determines whether Ethash PoW is verified for headers
 	/// NOTE: Should only be false for dev
 	type VerifyPoW: Get<bool>;
+	/// Weight information for extrinsics in this pallet
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -159,8 +170,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// TODO: Calculate weight
-		#[weight = WeightInfo::import_header_new_finalized_with_max_prune()]
+		#[weight = T::WeightInfo::import_header_new_finalized_with_max_prune()]
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
