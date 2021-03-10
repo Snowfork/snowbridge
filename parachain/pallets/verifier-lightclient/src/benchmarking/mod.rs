@@ -1,0 +1,314 @@
+//! VerifierLightclient pallet benchmarking
+
+#![cfg(feature = "runtime-benchmarks")]
+
+use super::*;
+
+use frame_system::RawOrigin;
+use frame_benchmarking::{benchmarks, whitelisted_caller, impl_benchmark_test_suite};
+
+use crate::Module as VerifierLightclient;
+
+mod data;
+
+/// The index up until which headers are reserved for pruning. The header at
+/// `data::headers_11963025_to_11963069()[RESERVED_FOR_PRUNING]` is specially
+/// chosen to be a sibling of the previous header. Indices 0 to RESERVED_FOR_PRUNING - 1
+/// contain strictly increasing block numbers.
+const RESERVED_FOR_PRUNING: usize = HEADERS_TO_PRUNE_IN_SINGLE_IMPORT as usize;
+
+fn get_best_block() -> (EthereumHeaderId, U256) {
+	BestBlock::get()
+}
+
+fn get_blocks_to_prune() -> PruningRange {
+	BlocksToPrune::get()
+}
+
+fn set_blocks_to_prune(oldest_unpruned: u64, oldest_to_keep: u64) {
+	BlocksToPrune::put(PruningRange {
+		oldest_unpruned_block: oldest_unpruned,
+		oldest_block_to_keep: oldest_to_keep,
+	});
+}
+
+fn assert_header_pruned<T: Config>(hash: H256, number: u64) {
+	assert!(Headers::<T>::get(hash).is_none());
+
+	let hashes_at_number = HeadersByNumber::get(number);
+	assert!(
+		hashes_at_number.is_none() || !hashes_at_number.unwrap().contains(&hash),
+	);
+}	
+
+fn initialize_storage<T: Config>(
+	headers: Vec<EthereumHeader>,
+	initial_difficulty: U256,
+) -> Result<(), &'static str> {
+	let oldest_block_num = headers.get(0).ok_or("Need at least one header")?.number;
+	let mut best_block_id_opt: Option<EthereumHeaderId> = None;
+	let mut best_block_difficulty = initial_difficulty;
+
+	for (i, header) in headers.iter().enumerate() {
+		let hash = header.compute_hash();
+		let prev_block_num = if i == 0 { header.number } else { headers[i - 1].number };
+		ensure!(
+			header.number == prev_block_num || header.number == prev_block_num + 1,
+			"Headers must be in order",
+		);
+	
+		let total_difficulty = {
+			if oldest_block_num == header.number {
+				initial_difficulty + header.difficulty
+			} else {
+				let parent = Headers::<T>::get(header.parent_hash).ok_or("Missing parent header")?;
+				parent.total_difficulty + header.difficulty
+			}
+		};
+
+		if total_difficulty > best_block_difficulty {
+			best_block_difficulty = total_difficulty;
+			best_block_id_opt = Some(EthereumHeaderId {
+				number: header.number,
+				hash: hash,
+			});
+		}
+
+		Headers::<T>::insert(
+			hash,
+			StoredHeader {
+				submitter: None,
+				header: header.clone(),
+				total_difficulty: total_difficulty, 
+			},
+		);
+		HeadersByNumber::append(header.number, hash);
+	}
+
+	let best_block_id = best_block_id_opt.ok_or("Need highest difficulty block")?;
+	BestBlock::put((
+		best_block_id,
+		best_block_difficulty,
+	));
+
+	let required_descendants = T::DescendantsUntilFinalized::get() as usize;
+	let maybe_finalized_ancestor = ancestry::<T>(best_block_id.hash)
+		.enumerate()
+		.find_map(|(i, pair)| if i < required_descendants { None } else { Some(pair) });
+	if let Some((hash, header)) = maybe_finalized_ancestor {
+		FinalizedBlock::put(EthereumHeaderId {
+			hash: hash,
+			number: header.number,
+		});
+	}
+
+	Ok(())
+}
+
+benchmarks! {
+	// Benchmark `import_header` extrinsic under worst case conditions:
+	// * Import will set a new best block.
+	// * Import will set a new finalized header.
+	// * Import will iterate over the max value of DescendantsUntilFinalized headers
+	//   in the chain.
+	// * Import will prune HEADERS_TO_PRUNE_IN_SINGLE_IMPORT headers.
+	// * Pruned headers will come from distinct block numbers so that we have the max
+	//   number of HeaderByNumber::take calls.
+	// * The last pruned header will have siblings that we don't prune and have to
+	//   re-insert using HeadersByNumber::insert.
+	import_header_new_finalized_with_max_prune {
+		let caller: T::AccountId = whitelisted_caller();
+		let descendants_until_final = T::DescendantsUntilFinalized::get();
+
+		let next_finalized_idx = RESERVED_FOR_PRUNING + 1;
+		let next_tip_idx = next_finalized_idx + descendants_until_final as usize;
+		let headers = data::headers_11963025_to_11963069();
+		let header = headers[next_tip_idx].clone();
+		let header_proof = data::header_proof(header.compute_hash()).unwrap();
+	
+		initialize_storage::<T>(headers[0..next_tip_idx].to_vec(), U256::zero())?;
+
+		set_blocks_to_prune(
+			headers[0].number,
+			headers[next_finalized_idx].number,
+		);
+
+	}: import_header(RawOrigin::Signed(caller.clone()), header, header_proof)
+	verify {
+		// Check that the best header has been updated
+		let best = &headers[next_tip_idx];
+		assert_eq!(
+			get_best_block().0,
+			EthereumHeaderId {
+				number: best.number,
+				hash: best.compute_hash(),
+			},
+		);
+
+		// Check that `RESERVED_FOR_PRUNING` headers have been pruned
+		// while leaving 1 sibling behind
+		headers[0..RESERVED_FOR_PRUNING]
+			.iter()
+			.for_each(|h| assert_header_pruned::<T>(h.compute_hash(), h.number));
+		let last_pruned_sibling = &headers[RESERVED_FOR_PRUNING];
+		assert_eq!(
+			get_blocks_to_prune().oldest_unpruned_block,
+			last_pruned_sibling.number,
+		);
+	}
+
+	// Benchmark `import_header` extrinsic under worst case conditions:
+	// * Import will set a new best block.
+	// * Import will *not* set a new finalized header because its sibling was imported first.
+	// * Import will iterate over the max value of DescendantsUntilFinalized headers
+	//   in the chain.
+	// * Import will prune HEADERS_TO_PRUNE_IN_SINGLE_IMPORT headers.
+	// * Pruned headers will come from distinct block numbers so that we have the max
+	//   number of HeaderByNumber::take calls.
+	// * The last pruned header will have siblings that we don't prune and have to
+	//   re-insert using HeadersByNumber::insert.
+	import_header_not_new_finalized_with_max_prune {
+		let caller: T::AccountId = whitelisted_caller();
+		let descendants_until_final = T::DescendantsUntilFinalized::get();
+
+		let finalized_idx = RESERVED_FOR_PRUNING + 1;
+		let next_tip_idx = finalized_idx + descendants_until_final as usize;
+		let headers = data::headers_11963025_to_11963069();
+		let header = headers[next_tip_idx].clone();
+		let header_proof = data::header_proof(header.compute_hash()).unwrap();
+
+		let mut header_sibling = header.clone();
+		header_sibling.difficulty -= 1.into();
+		let mut init_headers = headers[0..next_tip_idx].to_vec();
+		init_headers.append(&mut vec![header_sibling]);
+	
+		initialize_storage::<T>(init_headers, U256::zero())?;
+
+		set_blocks_to_prune(
+			headers[0].number,
+			headers[finalized_idx].number,
+		);
+
+	}: import_header(RawOrigin::Signed(caller.clone()), header, header_proof)
+	verify {
+		// Check that the best header has been updated
+		let best = &headers[next_tip_idx];
+		assert_eq!(
+			get_best_block().0,
+			EthereumHeaderId {
+				number: best.number,
+				hash: best.compute_hash(),
+			},
+		);
+
+		// Check that `RESERVED_FOR_PRUNING` headers have been pruned
+		// while leaving 1 sibling behind
+		headers[0..RESERVED_FOR_PRUNING]
+			.iter()
+			.for_each(|h| assert_header_pruned::<T>(h.compute_hash(), h.number));
+		let last_pruned_sibling = &headers[RESERVED_FOR_PRUNING];
+		assert_eq!(
+			get_blocks_to_prune().oldest_unpruned_block,
+			last_pruned_sibling.number,
+		);
+	}
+
+	// Benchmark `import_header` extrinsic under average case conditions:
+	// * Import will set a new best block.
+	// * Import will set a new finalized header.
+	// * Import will iterate over the max value of DescendantsUntilFinalized headers
+	//   in the chain.
+	// * Import will prune a single old header with no siblings.
+	import_header_new_finalized_with_single_prune {
+		let caller: T::AccountId = whitelisted_caller();
+		let descendants_until_final = T::DescendantsUntilFinalized::get();
+
+		let finalized_idx = RESERVED_FOR_PRUNING + 1;
+		let next_tip_idx = finalized_idx + descendants_until_final as usize;
+		let headers = data::headers_11963025_to_11963069();
+		let header = headers[next_tip_idx].clone();
+		let header_proof = data::header_proof(header.compute_hash()).unwrap();
+	
+		initialize_storage::<T>(headers[0..next_tip_idx].to_vec(), U256::zero())?;
+
+		set_blocks_to_prune(
+			headers[0].number,
+			headers[0].number + 1,
+		);
+
+	}: import_header(RawOrigin::Signed(caller.clone()), header, header_proof)
+	verify {
+		// Check that the best header has been updated
+		let best = &headers[next_tip_idx];
+		assert_eq!(
+			get_best_block().0,
+			EthereumHeaderId {
+				number: best.number,
+				hash: best.compute_hash(),
+			},
+		);
+
+		// Check that 1 header has been pruned
+		let oldest_header = &headers[0];
+		assert_header_pruned::<T>(oldest_header.compute_hash(), oldest_header.number);
+		assert_eq!(
+			get_blocks_to_prune().oldest_unpruned_block,
+			oldest_header.number + 1,
+		);
+	}
+
+	// Benchmark `import_header` extrinsic under average case conditions:
+	// * Import will set a new best block.
+	// * Import will *not* set a new finalized header because its sibling was imported first.
+	// * Import will iterate over the max value of DescendantsUntilFinalized headers
+	//   in the chain.
+	// * Import will prune a single old header with no siblings.
+	import_header_not_new_finalized_with_single_prune {
+		let caller: T::AccountId = whitelisted_caller();
+		let descendants_until_final = T::DescendantsUntilFinalized::get();
+
+		let finalized_idx = RESERVED_FOR_PRUNING + 1;
+		let next_tip_idx = finalized_idx + descendants_until_final as usize;
+		let headers = data::headers_11963025_to_11963069();
+		let header = headers[next_tip_idx].clone();
+		let header_proof = data::header_proof(header.compute_hash()).unwrap();
+
+		let mut header_sibling = header.clone();
+		header_sibling.difficulty -= 1.into();
+		let mut init_headers = headers[0..next_tip_idx].to_vec();
+		init_headers.append(&mut vec![header_sibling]);
+	
+		initialize_storage::<T>(init_headers, U256::zero())?;
+
+		set_blocks_to_prune(
+			headers[0].number,
+			headers[0].number + 1,
+		);
+
+	}: import_header(RawOrigin::Signed(caller.clone()), header, header_proof)
+	verify {
+		// Check that the best header has been updated
+		let best = &headers[next_tip_idx];
+		assert_eq!(
+			get_best_block().0,
+			EthereumHeaderId {
+				number: best.number,
+				hash: best.compute_hash(),
+			},
+		);
+
+		// Check that 1 header has been pruned
+		let oldest_header = &headers[0];
+		assert_header_pruned::<T>(oldest_header.compute_hash(), oldest_header.number);
+		assert_eq!(
+			get_blocks_to_prune().oldest_unpruned_block,
+			oldest_header.number + 1,
+		);
+	}
+}
+
+impl_benchmark_test_suite!(
+	VerifierLightclient,
+	crate::mock::new_tester::<crate::mock::mock_verifier_with_pow::Test>(),
+	crate::mock::mock_verifier_with_pow::Test,
+);

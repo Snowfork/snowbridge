@@ -59,6 +59,8 @@ use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 
 use artemis_xcm_support::AssetsTransactor;
 
+mod weights;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -441,6 +443,7 @@ impl verifier_lightclient::Config for Runtime {
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
+	type WeightInfo = weights::verifier_lightclient_weights::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -670,6 +673,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

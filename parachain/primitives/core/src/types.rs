@@ -64,4 +64,3 @@ impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
         DigestItem::Other(self.encode())
     }
 }
-

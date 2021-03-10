@@ -82,6 +82,7 @@ pub mod mock_verifier {
 		type DescendantsUntilFinalized = DescendantsUntilFinalized;
 		type DifficultyConfig = DifficultyConfig;
 		type VerifyPoW = VerifyPoW;
+		type WeightInfo = ();
 	}
 }
 
@@ -139,6 +140,7 @@ pub mod mock_verifier_with_pow {
 		type DescendantsUntilFinalized = DescendantsUntilFinalized;
 		type DifficultyConfig = DifficultyConfig;
 		type VerifyPoW = VerifyPoW;
+		type WeightInfo = ();
 	}
 }
 
