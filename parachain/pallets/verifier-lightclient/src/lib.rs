@@ -6,8 +6,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_system::{self as system, ensure_signed};
-use frame_support::{debug, decl_module, decl_storage, decl_event, decl_error,
-	dispatch::DispatchResult, dispatch::DispatchError, ensure, traits::Get};
+use frame_support::{
+	debug, decl_module, decl_storage, decl_event, decl_error, ensure,
+	dispatch::{DispatchError, DispatchResult},
+	traits::Get, weights::Weight,
+};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
@@ -21,6 +24,8 @@ use artemis_ethereum::{
 pub use artemis_ethereum::{
 	Header as EthereumHeader, difficulty::DifficultyConfig as EthereumDifficultyConfig,
 };
+
+mod benchmarking;
 
 #[cfg(test)]
 mod mock;
@@ -56,6 +61,21 @@ struct PruningRange {
 	pub oldest_block_to_keep: u64,
 }
 
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn import_header_new_finalized_with_max_prune() -> Weight;
+	fn import_header_not_new_finalized_with_max_prune() -> Weight;
+	fn import_header_new_finalized_with_single_prune() -> Weight;
+	fn import_header_not_new_finalized_with_single_prune() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn import_header_new_finalized_with_max_prune() -> Weight { 0 }
+	fn import_header_not_new_finalized_with_max_prune() -> Weight { 0 }
+	fn import_header_new_finalized_with_single_prune() -> Weight { 0 }
+	fn import_header_not_new_finalized_with_single_prune() -> Weight { 0 }
+}
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 	/// The number of descendants, in the highest difficulty chain, a block
@@ -66,6 +86,8 @@ pub trait Config: system::Config {
 	/// Determines whether Ethash PoW is verified for headers
 	/// NOTE: Should only be false for dev
 	type VerifyPoW: Get<bool>;
+	/// Weight information for extrinsics in this pallet
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -155,8 +177,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// TODO: Calculate weight
-		#[weight = 0]
+		#[weight = T::WeightInfo::import_header_new_finalized_with_max_prune()]
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -419,6 +440,9 @@ impl<T: Config> Module<T> {
 		new_pruning_range
 	}
 
+	// Verifies that the receipt encoded in proof.data is included
+	// in the block given by proof.block_hash. Inclusion is only
+	// recognized if the block has been finalized.
 	fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
 		let header = Headers::<T>::get(proof.block_hash)
 			.ok_or(Error::<T>::MissingHeader)?

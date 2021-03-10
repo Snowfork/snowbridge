@@ -4,11 +4,13 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -16,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
 )
@@ -42,6 +45,12 @@ func getBlockCmd() *cobra.Command {
 		"rust",
 		"The output format. Options are 'rust' and 'json'. They correspond to the Substrate genesis config formats.",
 	)
+	cmd.Flags().BoolP(
+		"include-proof",
+		"i",
+		false,
+		"Whether to also retrieve the header's PoW Merkle proofs. The output is SCALE-encoded. It will take several minutes to generate the DAG if it hasn't been cached.",
+	)
 	return cmd
 }
 
@@ -62,13 +71,31 @@ func GetBlockFn(cmd *cobra.Command, _ []string) error {
 		blockHash = &hash
 	}
 	format := Format(cmd.Flags().Lookup("format").Value.String())
+	includeProof, err := strconv.ParseBool(cmd.Flags().Lookup("include-proof").Value.String())
+	if err != nil {
+		return err
+	}
 
 	header, err := getEthBlock(&config.Eth, blockHash)
 	if err != nil {
 		return err
 	}
 
-	return printEthBlockForSub(header, format)
+	err = printEthBlockForSub(header, format)
+	if err != nil {
+		return err
+	}
+
+	if !includeProof {
+		return nil
+	}
+
+	proof, err := getEthHeaderProof(header)
+	if err != nil {
+		return err
+	}
+
+	return printEthHeaderProofForSub(proof)
 }
 
 func getEthBlock(config *ethereum.Config, blockHash *gethCommon.Hash) (*gethTypes.Header, error) {
@@ -103,6 +130,16 @@ func getEthBlock(config *ethereum.Config, blockHash *gethCommon.Hash) (*gethType
 	}
 
 	return header, nil
+}
+
+func getEthHeaderProof(header *gethTypes.Header) ([]ethereum.DoubleNodeWithMerkleProof, error) {
+	ethashproofCacheLoader := &ethereum.DefaultCacheLoader{}
+	cache, err := ethashproofCacheLoader.MakeCache(header.Number.Uint64() / 30000)
+	if err != nil {
+		return nil, err
+	}
+
+	return ethereum.MakeProofData(header, cache)
 }
 
 func printEthBlockForSub(header *gethTypes.Header, format Format) error {
@@ -207,6 +244,17 @@ func printEthBlockForSub(header *gethTypes.Header, format Format) error {
 		fmt.Println("")
 	}
 
+	return nil
+}
+
+func printEthHeaderProofForSub(proof []ethereum.DoubleNodeWithMerkleProof) error {
+	var buffer = bytes.Buffer{}
+	err := scale.NewEncoder(&buffer).Encode(proof)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(gethCommon.Bytes2Hex(buffer.Bytes()))
 	return nil
 }
 

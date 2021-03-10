@@ -11,9 +11,20 @@ enum ChannelId {Basic, Incentivized}
 contract DOTApp {
     using ScaleCodec for uint256;
 
+    bytes32 public constant FEE_BURNER_ROLE = keccak256("FEE_BURNER_ROLE");
+
     mapping(ChannelId => Channel) public channels;
 
     bytes2 constant UNLOCK_CALL = 0x0e01;
+
+    /*
+     * Smallest part of DOT/KSM/ROC that is not divisible when increasing
+     * precision to 18 decimal places.
+     *
+     * This is used for converting between native and wrapped
+     * representations of DOT/KSM/ROC.
+    */
+    uint256 private granularity;
 
     WrappedToken public token;
 
@@ -25,6 +36,7 @@ contract DOTApp {
     constructor(
         string memory _name,
         string memory _symbol,
+        uint256 _decimals,
         Channel memory _basic,
         Channel memory _incentivized
     ) {
@@ -38,6 +50,8 @@ contract DOTApp {
         Channel storage c2 = channels[ChannelId.Incentivized];
         c2.inbound = _incentivized.inbound;
         c2.outbound = _incentivized.outbound;
+
+        granularity = 10 ** (18 - _decimals);
     }
 
     function burn(bytes32 _recipient, uint256 _amount, ChannelId _channelId) external {
