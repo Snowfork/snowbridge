@@ -24,6 +24,7 @@ Refer to the instructions at the
 [Substrate Developer Hub](https://substrate.dev/docs/en/knowledgebase/getting-started/#manual-installation).
 
 To add context to the above instructions, the parachain is known to compile with the following versions of Rust:
+
 - stable: 1.50.0
 - nightly: 1.52.0-nightly
 
@@ -34,7 +35,7 @@ Once the development environment is set up, build the parachain. This command wi
 [native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
 
 ```bash
-cargo build --release
+--no-default-features --features with-local-runtime
 ```
 
 ### Run
@@ -73,6 +74,7 @@ For a fully operational chain, further configuration may be required.
 The parachain needs to be synced with the Ethereum chain before it can verify and dispatch Ethereum events. To bootstrap / sync the parachain quickly, it's advisable to set a newly finalized Ethereum block in the chain spec.
 
 To get a newly finalized Ethereum block in a format compatible with Substrate's chain spec, use the `getblock` relayer command:
+
 ```bash
 cd ../relayer
 # Alternatively, use '--format rust' to get the Rust code

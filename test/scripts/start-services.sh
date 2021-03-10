@@ -40,7 +40,7 @@ start_parachain()
     pushd ../parachain
     bin=$(pwd)/target/release/artemis
 
-    cargo build --release --features "test-e2e"
+    cargo build --release --no-default-features --features with-local-runtime
 
     echo "Generating Parachain spec"
     target/release/artemis build-spec --disable-default-bootnode > $configdir/spec.json

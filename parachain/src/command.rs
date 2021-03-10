@@ -1,15 +1,30 @@
 use crate::{
-	chain_spec, service,
+	service,
 	cli::{Cli, RelayChainCli, Subcommand},
 };
 use codec::Encode;
 use cumulus_primitives_core::ParaId;
 use cumulus_client_service::genesis::generate_genesis_block;
 use log::info;
-use artemis_runtime::opaque::Block;
+
+#[cfg(feature = "with-snowbridge-runtime")]
+use snowbridge_runtime::opaque::Block;
+#[cfg(feature = "with-snowbridge-runtime")]
+use crate::chain_spec::snowbridge::{get_chain_spec, ChainSpec, Extensions};
+
+#[cfg(feature = "with-rococo-runtime")]
+use rococo_runtime::opaque::Block;
+#[cfg(feature = "with-rococo-runtime")]
+use crate::chain_spec::rococo::{get_chain_spec, ChainSpec, Extensions};
+
+#[cfg(feature = "with-local-runtime")]
+use local_runtime::opaque::Block;
+#[cfg(feature = "with-local-runtime")]
+use crate::chain_spec::local::{get_chain_spec, ChainSpec, Extensions};
+
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
-	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
+	CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
 	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::{
@@ -25,8 +40,8 @@ fn load_spec(
 	para_id: ParaId,
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	match id {
-		"" => Ok(Box::new(chain_spec::get_chain_spec(para_id))),
-		path => Ok(Box::new(chain_spec::ChainSpec::from_json_file(path.into())?)),
+		"" => Ok(Box::new(get_chain_spec(para_id))),
+		path => Ok(Box::new(ChainSpec::from_json_file(path.into())?)),
 	}
 }
 
@@ -65,8 +80,19 @@ impl SubstrateCli for Cli {
 		load_spec(id, self.run.parachain_id.unwrap_or(100).into())
 	}
 
-	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		&artemis_runtime::VERSION
+	#[cfg(feature = "with-snowbridge-runtime")]
+	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
+		&snowbridge_runtime::VERSION
+	}
+
+	#[cfg(feature = "with-rococo-runtime")]
+	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
+		&rococo_runtime::VERSION
+	}
+
+	#[cfg(feature = "with-local-runtime")]
+	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
+		&local_runtime::VERSION
 	}
 }
 
@@ -104,7 +130,7 @@ impl SubstrateCli for RelayChainCli {
 			.load_spec(id)
 	}
 
-	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+	fn native_runtime_version(chain_spec: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
 		polkadot_cli::Cli::native_runtime_version(chain_spec)
 	}
 }
@@ -251,7 +277,7 @@ pub fn run() -> Result<()> {
 				// TODO
 				let key = sp_core::Pair::generate().0;
 
-				let extension = chain_spec::Extensions::try_get(&*config.chain_spec);
+				let extension = Extensions::try_get(&*config.chain_spec);
 				let relay_chain_id = extension.map(|e| e.relay_chain.clone());
 				let para_id = extension.map(|e| e.para_id);
 
@@ -418,7 +444,7 @@ impl CliConfiguration<Self> for RelayChainCli {
 
 	fn telemetry_endpoints(
 		&self,
-		chain_spec: &Box<dyn ChainSpec>,
+		chain_spec: &Box<dyn sc_cli::ChainSpec>,
 	) -> Result<Option<sc_telemetry::TelemetryEndpoints>> {
 		self.base.base.telemetry_endpoints(chain_spec)
 	}

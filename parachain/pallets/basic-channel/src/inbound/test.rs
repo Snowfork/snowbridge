@@ -13,7 +13,7 @@ use sp_runtime::{
 use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
 
-use artemis_core::{MessageDispatch, ChannelId, Message, Proof};
+use artemis_core::{MessageDispatch, Message, Proof};
 use artemis_ethereum::Log;
 
 use hex_literal::hex;
@@ -173,7 +173,6 @@ fn test_submit_with_invalid_source_channel() {
 #[test]
 fn test_submit() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
-		let chan_id = ChannelId::Basic;
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = Origin::signed(relayer);
 
@@ -208,7 +207,6 @@ fn test_submit() {
 #[test]
 fn test_submit_with_invalid_nonce() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
-		let chan_id = ChannelId::Basic;
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = Origin::signed(relayer);
 
