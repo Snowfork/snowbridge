@@ -40,11 +40,11 @@ pub struct Message {
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 pub struct CommitmentData<AccountId> {
 	/// A list of tuples with messages and their origin account Id
-	messages: Vec<(AccountId, Message)>,
+	pub messages: Vec<(AccountId, Message)>,
 
 	/// A list of subcommitments, also associated to their account Id.
 	/// These are built as a flat commitment from its respective message list
-	subcommitments: Vec<(AccountId, Vec<u8>)>,
+	pub subcommitments: Vec<(AccountId, Vec<u8>)>,
 }
 
 pub trait Config: system::Config {

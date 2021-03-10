@@ -25,7 +25,7 @@ pub struct FullDeps<C, P> {
 }
 
 /// Instantiate all full RPC extensions.
-pub fn create_full<C, P>(deps: FullDeps<C, P>) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
+pub fn create_full<C, P>(_deps: FullDeps<C, P>) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
@@ -34,10 +34,6 @@ where
 	P: TransactionPool + 'static,
 {
 	let mut io = jsonrpc_core::IoHandler::default();
-	let FullDeps {
-		client,
-		..
-	} = deps;
 
 	io.extend_with(BasicChannelApi::to_delegate(
 		BasicChannel::<AccountId>::new(COMMITMENTS_INDEXING_PREFIX)

@@ -25,14 +25,11 @@ type Layout = sp_trie::Layout<KeccakHasher>;
 type EnumeratedItems = Vec<(Vec<u8>, Vec<u8>)>;
 
 pub fn generate_merkle_root(items: impl Iterator<Item = Vec<u8>>) -> H256 {
-	let enumerated_items = items
-		.enumerate()
-		.map(|(i, v)| (Layout::encode_index(i as u32), v))
-		.collect::<EnumeratedItems>();
-
 	let mut db = sp_trie::MemoryDB::<KeccakHasher>::default();
 	let mut cb = trie_db::TrieBuilder::new(&mut db);
-	trie_db::trie_visit::<Layout, _, _, _, _>(enumerated_items.into_iter(), &mut cb);
+	trie_db::trie_visit::<Layout, _, _, _, _>(items
+		.enumerate()
+		.map(|(i, v)| (Layout::encode_index(i as u32), v)), &mut cb);
 
 	cb.root.unwrap_or_default()
 }
