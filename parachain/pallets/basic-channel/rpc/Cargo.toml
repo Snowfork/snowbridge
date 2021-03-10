@@ -22,5 +22,4 @@ sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "roc
 
 # Project packages
 
-artemis-basic-channel-runtime-api = { path = "../runtime-api" }
 artemis-basic-channel = { path = "../" }

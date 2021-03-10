@@ -47,7 +47,6 @@ artemis-core = { path = "../primitives/core", default-features = false }
 artemis-transfer = { path = "../pallets/transfer", default-features = false }
 artemis-xcm-support = { path = "../primitives/xcm-support", default-features = false }
 basic-channel = { path = "../pallets/basic-channel", package = "artemis-basic-channel", default-features = false }
-basic-channel-rpc-runtime-api = { path = "../pallets/basic-channel/runtime-api", package = "artemis-basic-channel-runtime-api", default-features = false }
 incentivized-channel = { path = "../pallets/incentivized-channel", package = "artemis-incentivized-channel", default-features = false }
 dispatch = { path = "../pallets/dispatch", package = "artemis-dispatch", default-features = false }
 verifier-lightclient = { path = "../pallets/verifier-lightclient", package = "pallet-verifier-lightclient", default-features = false }
@@ -98,7 +97,6 @@ std = [
 	"xcm-builder/std",
 	"polkadot-parachain/std",
     "basic-channel/std",
-    "basic-channel-rpc-runtime-api/std",
     "incentivized-channel/std",
     "verifier-lightclient/std",
     "assets/std",

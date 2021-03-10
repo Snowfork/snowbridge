@@ -252,7 +252,6 @@ name = "artemis-basic-channel-rpc"
 version = "0.1.0"
 dependencies = [
  "artemis-basic-channel",
- "artemis-basic-channel-runtime-api",
  "jsonrpc-core 15.1.0",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -263,17 +262,6 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
-]
-
-[[package]]
-name = "artemis-basic-channel-runtime-api"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "parity-scale-codec",
- "sp-api",
- "sp-core",
- "sp-std",
 ]
 
 [[package]]
@@ -451,7 +439,6 @@ version = "0.1.1"
 dependencies = [
  "artemis-assets",
  "artemis-basic-channel",
- "artemis-basic-channel-runtime-api",
  "artemis-commitments",
  "artemis-core",
  "artemis-dispatch",

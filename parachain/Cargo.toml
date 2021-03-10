@@ -95,7 +95,6 @@ members = [
     "primitives/testutils",
     "primitives/xcm-support",
     "pallets/basic-channel",
-    "pallets/basic-channel/runtime-api",
     "pallets/incentivized-channel",
     "pallets/dispatch",
     "pallets/assets",

@@ -8,8 +8,8 @@ use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
 
-use artemis_runtime::{opaque::Block, AccountId};
-use artemis_basic_channel_rpc::{BasicChannel, BasicChannelApi, BasicChannelRuntimeApi};
+use artemis_runtime::{opaque::Block, AccountId, COMMITMENTS_INDEXING_PREFIX};
+use artemis_basic_channel_rpc::{BasicChannel, BasicChannelApi};
 
 pub use jsonrpc_core;
 
@@ -31,7 +31,6 @@ where
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
 	C: Send + Sync + 'static,
 	C::Api: BlockBuilder<Block>,
-	C::Api: BasicChannelRuntimeApi<Block, AccountId>,
 	P: TransactionPool + 'static,
 {
 	let mut io = jsonrpc_core::IoHandler::default();
@@ -41,7 +40,7 @@ where
 	} = deps;
 
 	io.extend_with(BasicChannelApi::to_delegate(
-		BasicChannel::new(client),
+		BasicChannel::<AccountId>::new(COMMITMENTS_INDEXING_PREFIX)
 	));
 
 	io

@@ -377,9 +377,11 @@ impl basic_channel_inbound::Config for Runtime {
 	type MessageDispatch = dispatch::Module<Runtime>;
 }
 
+pub const COMMITMENTS_INDEXING_PREFIX: &'static [u8] = b"commitment";
+
 impl basic_channel_outbound::Config for Runtime {
 	type Event = Event;
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+	const INDEXING_PREFIX: &'static [u8] = COMMITMENTS_INDEXING_PREFIX;
 	type Hashing = Keccak256;
 }
 
@@ -446,7 +448,7 @@ parameter_types! {
 }
 
 impl commitments::Config for Runtime {
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+	const INDEXING_PREFIX: &'static [u8] = COMMITMENTS_INDEXING_PREFIX;
 	type Event = Event;
 	type Hashing = Keccak256;
 }
@@ -636,12 +638,6 @@ impl_runtime_apis! {
 		}
 		fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> FeeDetails<Balance> {
 			TransactionPayment::query_fee_details(uxt, len)
-		}
-	}
-
-	impl basic_channel_rpc_runtime_api::BasicChannelApi<Block, AccountId> for Runtime {
-		fn get_merkle_proofs(root: sp_core::H256) -> u64 {
-			BasicOutboundChannel::get_merkle_proofs(root)
 		}
 	}
 

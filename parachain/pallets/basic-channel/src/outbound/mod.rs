@@ -1,4 +1,4 @@
-use codec::{Codec, Decode, Encode, Input};
+use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
 	weights::Weight,
@@ -7,9 +7,7 @@ use ethabi::{self, Token};
 use frame_system::{self as system};
 use sp_core::{RuntimeDebug, H160, H256};
 use sp_runtime::{
-	offchain::{
-		storage::StorageValueRef,
-	},
+	offchain::storage::StorageValueRef,
 	traits::{Hash, Zero},
 };
 use sp_std::prelude::*;
@@ -25,6 +23,7 @@ use merkle_tree::*;
 mod test;
 
 mod merkle_tree;
+pub use merkle_tree::generate_merkle_proofs;
 
 /// Wire-format for committed messages
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
@@ -101,6 +100,10 @@ decl_module! {
 	}
 }
 
+pub fn offchain_key(prefix: &[u8], hash: H256) -> Vec<u8> {
+	(prefix, ChannelId::Basic, hash).encode()
+}
+
 impl<T: Config> Module<T> {
 	pub fn submit(account_id: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		Nonces::<T>::try_mutate(account_id, |nonce| -> DispatchResult {
@@ -109,10 +112,6 @@ impl<T: Config> Module<T> {
 			<Module<T>>::deposit_event(Event::MessageAccepted(*nonce));
 			Ok(())
 		})
-	}
-
-	fn offchain_key(hash: H256) -> Vec<u8> {
-		(T::INDEXING_PREFIX, ChannelId::Basic, hash).encode()
 	}
 
 	fn push_message(account_id: &T::AccountId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
@@ -178,26 +177,14 @@ impl<T: Config> Module<T> {
 		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Basic, mroot).into();
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
-		// let data = CommitmentData::<T::AccountId> {
-		// 	messages: all_messages,
-		// 	subcommitments: subc_enc,
-		// };
+		let data = CommitmentData::<T::AccountId> {
+			messages: all_messages,
+			subcommitments: subc_enc,
+		};
 
-		// let key = Self::offchain_key(mroot);
-		// let storage = StorageValueRef::persistent(&key);
-		// storage.set(&data.encode());
-
-		// let mut enc = &data.encode()[..];
-		// let _ = CommitmentData::<T::AccountId>::decode(&mut enc);
-
-
-
-
-
-		// offchain_index::set(
-		// 	&Self::offchain_key(mroot),
-		// 	&data.encode(),
-		// );
+		let key = offchain_key(T::INDEXING_PREFIX, mroot);
+		let storage = StorageValueRef::persistent(&key);
+		storage.set(&data.encode());
 
 		0
 	}
@@ -215,9 +202,5 @@ impl<T: Config> Module<T> {
 			})
 			.collect();
 		ethabi::encode(&vec![Token::Array(messages)])
-	}
-
-	pub fn get_merkle_proofs(_root: H256) -> u64 {
-		7777
 	}
 }

@@ -12,37 +12,35 @@ use sp_runtime::{
 };
 use std::sync::Arc;
 
-use artemis_basic_channel::outbound::{CommitmentData, Message};
-pub use artemis_basic_channel_runtime_api::BasicChannelApi as BasicChannelRuntimeApi;
+use artemis_basic_channel::outbound::{CommitmentData, Message, generate_merkle_proofs, offchain_key};
 
 #[rpc]
-pub trait BasicChannelApi<AccountId>
+pub trait BasicChannelApi
 {
 	#[rpc(name = "get_merkle_proofs")]
 	fn get_merkle_proofs(&self, root: H256) -> Result<u64>;
 }
 
-pub struct BasicChannel<C, M> {
-    client: Arc<C>,
-    _marker: std::marker::PhantomData<M>,
+pub struct BasicChannel<AccountId> {
+	indexing_prefix: &'static [u8],
+	_marker: std::marker::PhantomData<AccountId>
 }
 
-impl<C, M> BasicChannel<C, M> {
-    pub fn new(client: Arc<C>) -> Self {
-        Self { client, _marker: Default::default() }
-    }
+impl<AccountId> BasicChannel<AccountId> {
+	pub fn new(indexing_prefix: &'static [u8]) -> Self {
+		Self {
+			indexing_prefix,
+			_marker: Default::default(),
+		}
+	}
 }
 
-impl<C, Block, AccountId> BasicChannelApi<AccountId> for BasicChannel<C, Block>
+impl<AccountId> BasicChannelApi for BasicChannel<AccountId>
 where
-	Block: BlockT,
-	C: Send + Sync + 'static,
-	C: ProvideRuntimeApi<Block>,
-	C: HeaderBackend<Block>,
-	C::Api: BasicChannelRuntimeApi<Block, AccountId>,
-	AccountId: Codec,
+	AccountId: Codec + Send + Sync + 'static,
 {
 	fn get_merkle_proofs(&self, root: H256) -> Result<u64> {
+		let key = offchain_key(self.indexing_prefix, root);
 		let stored_data = StorageValueRef::persistent(b"offchain-demo::gh-info");
 
 		if let Some(Some(raw_data)) = stored_data.get::<CommitmentData<AccountId>>() {
