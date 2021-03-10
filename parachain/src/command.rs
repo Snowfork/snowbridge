@@ -15,7 +15,7 @@ use crate::chain_spec::snowbridge::{get_chain_spec, ChainSpec, Extensions};
 #[cfg(feature = "with-rococo-runtime")]
 use rococo_runtime::opaque::Block;
 #[cfg(feature = "with-rococo-runtime")]
-use crate::chain_spec::snowbridge::{get_chain_spec, ChainSpec, Extensions};
+use crate::chain_spec::rococo::{get_chain_spec, ChainSpec, Extensions};
 
 #[cfg(feature = "with-local-runtime")]
 use local_runtime::opaque::Block;
