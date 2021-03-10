@@ -54,7 +54,7 @@ contract("DOTApp", function (accounts) {
   describe("minting", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp, "Snowfork DOT", "SnowDOT", 10);
+      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp, "Snowfork DOT", "SnowDOT");
       this.token = await Token.at(await this.app.token());
     });
 
@@ -67,7 +67,7 @@ contract("DOTApp", function (accounts) {
       let tx = await this.app.mint(
         addressBytes(POLKADOT_ADDRESS),
         user,
-        amountNative.toString(),
+        amountWrapped.toString(),
         {
           from: owner,
           value: 0
@@ -94,7 +94,7 @@ contract("DOTApp", function (accounts) {
   describe("burning", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp, "Snowfork DOT", "SnowDOT", 10);
+      [this.channels, this.app] = await deployAppContractWithChannels(DOTApp, "Snowfork DOT", "SnowDOT");
       this.token = await Token.at(await this.app.token());
 
       // Mint 2 wrapped DOT
@@ -132,15 +132,6 @@ contract("DOTApp", function (accounts) {
 
       beforeTotalSupply.minus(afterTotalSupply).should.be.bignumber.equal(amountWrapped);
       beforeUserBalance.minus(afterUserBalance).should.be.bignumber.equal(amountWrapped);
-    });
-
-    it("should revert on bad granularity", async function () {
-      const amount = BigNumber("1");
-
-      const err = await burnTokens(this.app, user, POLKADOT_ADDRESS, amount, ChannelId.Basic)
-        .should.be.rejected;
-
-      err.reason.should.be.equal("Invalid Granularity");
     });
 
     it("should send payload to the basic outbound channel", async function () {
