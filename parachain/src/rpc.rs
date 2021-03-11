@@ -8,7 +8,15 @@ use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
 
-use artemis_runtime::{opaque::Block, AccountId, COMMITMENTS_INDEXING_PREFIX};
+#[cfg(feature = "with-snowbridge-runtime")]
+use snowbridge_runtime::{opaque::Block, AccountId, COMMITMENTS_INDEXING_PREFIX};
+
+#[cfg(feature = "with-rococo-runtime")]
+use rococo_runtime::{opaque::Block, AccountId, COMMITMENTS_INDEXING_PREFIX};
+
+#[cfg(feature = "with-local-runtime")]
+use local_runtime::{opaque::Block, AccountId, COMMITMENTS_INDEXING_PREFIX};
+
 use artemis_basic_channel_rpc::{BasicChannel, BasicChannelApi};
 
 pub use jsonrpc_core;

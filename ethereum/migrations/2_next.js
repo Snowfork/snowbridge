@@ -80,7 +80,6 @@ module.exports = function(deployer, network, accounts) {
         DOTApp,
         "Snowfork DOT",
         "SnowDOT",
-        12, // On Kusama and Rococo, KSM/ROC tokens have 12 decimal places
         {
           inbound: channels.basic.inbound.instance.address,
           outbound: channels.basic.outbound.instance.address,

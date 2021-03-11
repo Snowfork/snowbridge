@@ -1,12 +1,13 @@
+use crate::Config;
 use crate::mock::{Test, AccountId, Balances, DOTApp, Event, Origin, System, new_tester};
 use frame_support::{assert_noop, assert_ok,
 	dispatch::{
 		DispatchError,
 	},
-	traits::Currency
+	traits::Currency,
 };
 use sp_keyring::AccountKeyring as Keyring;
-use sp_core::{H160, U256};
+use sp_core::H160;
 use artemis_core::ChannelId;
 
 fn last_event() -> Event {
@@ -44,8 +45,9 @@ fn should_unlock() {
 		let peer_contract = H160::repeat_byte(1);
 		let sender = H160::repeat_byte(7);
 		let recipient: AccountId = Keyring::Bob.into();
-		let amount = 100;
 		let balance = 500;
+		let amount = 100;
+		let amount_wrapped = crate::primitives::wrap::<Test>(amount, <Test as Config>::Decimals::get()).unwrap();
 
 		let _ = Balances::deposit_creating(&DOTApp::account_id(), balance);
 
@@ -54,14 +56,14 @@ fn should_unlock() {
 				artemis_dispatch::Origin(peer_contract).into(),
 				sender,
 				recipient.clone(),
-				amount
+				amount_wrapped,
 			)
 		);
 		assert_eq!(Balances::total_balance(&recipient), amount);
 		assert_eq!(Balances::total_balance(&DOTApp::account_id()), balance - amount);
 
 		assert_eq!(
-			Event::dot_app(crate::Event::<Test>::Unlocked(sender, recipient, amount.into())),
+			Event::dot_app(crate::Event::<Test>::Unlocked(sender, recipient, amount)),
 			last_event()
 		);
 	});
@@ -73,8 +75,9 @@ fn should_not_unlock_on_bad_origin_failure() {
 		let unknown_peer_contract = H160::repeat_byte(64);
 		let sender = H160::repeat_byte(7);
 		let recipient: AccountId = Keyring::Bob.into();
-		let amount = 100;
 		let balance = 500;
+		let amount = 100;
+		let amount_wrapped = crate::primitives::wrap::<Test>(amount, <Test as Config>::Decimals::get()).unwrap();
 
 		let _ = Balances::deposit_creating(&DOTApp::account_id(), balance);
 
@@ -83,7 +86,7 @@ fn should_not_unlock_on_bad_origin_failure() {
 				artemis_dispatch::Origin(unknown_peer_contract).into(),
 				sender,
 				recipient.clone(),
-				amount
+				amount_wrapped,
 			),
 			DispatchError::BadOrigin
 		);
@@ -93,12 +96,10 @@ fn should_not_unlock_on_bad_origin_failure() {
 				Origin::signed(Keyring::Alice.into()),
 				sender,
 				recipient.clone(),
-				amount
+				amount_wrapped,
 			),
 			DispatchError::BadOrigin
 		);
-
-		assert_eq!(Balances::total_balance(&DOTApp::account_id()), balance);
 	});
 }
 
@@ -116,15 +117,9 @@ fn should_not_lock_on_add_commitment_failure() {
 				Origin::signed(sender.clone()),
 				ChannelId::Basic,
 				recipient.clone(),
-				amount),
+				amount.into()
+			),
 			DispatchError::Other("some error!")
 		);
 	});
-}
-
-// Used to prove safety of conversion from DOT to wrapped DOT (See BaseDOTApp.sol)
-#[test]
-fn should_max_dot_convert_to_wrapped_dot() {
-	let granularity = U256::from(100000000u64); // 10 ** 8
-	U256::from(u128::MAX).checked_mul(granularity).unwrap();
 }

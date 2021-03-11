@@ -13,7 +13,7 @@ use sp_runtime::{
 use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
 
-use artemis_core::{MessageCommitment, MessageDispatch, ChannelId, Message, Proof, rewards::InstantRewards};
+use artemis_core::{MessageDispatch, Message, Proof, rewards::InstantRewards};
 use artemis_ethereum::Log;
 
 use hex_literal::hex;
@@ -95,15 +95,6 @@ impl Verifier for MockVerifier {
 	fn verify(message: &Message) -> Result<Log, DispatchError> {
 		let log: Log = rlp::decode(&message.data).unwrap();
 		Ok(log)
-	}
-}
-
-// Mock Commitments
-pub struct MockMessageCommitment;
-
-impl MessageCommitment for MockMessageCommitment {
-	fn add(channel_id: ChannelId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
-		Ok(())
 	}
 }
 
@@ -211,7 +202,6 @@ fn test_submit_with_invalid_source_channel() {
 #[test]
 fn test_submit() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
-		let chan_id = ChannelId::Basic;
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = Origin::signed(relayer);
 
@@ -246,7 +236,6 @@ fn test_submit() {
 #[test]
 fn test_submit_with_invalid_nonce() {
 	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
-		let chan_id = ChannelId::Basic;
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = Origin::signed(relayer);
 

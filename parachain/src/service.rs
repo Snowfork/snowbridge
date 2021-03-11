@@ -1,4 +1,3 @@
-
 use cumulus_client_consensus_relay_chain::{
 	build_relay_chain_consensus, BuildRelayChainConsensusParams,
 };
@@ -8,7 +7,6 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use polkadot_primitives::v0::CollatorPair;
-use artemis_runtime::{RuntimeApi, opaque::Block};
 use sc_executor::native_executor_instance;
 pub use sc_executor::NativeExecutor;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
@@ -18,11 +16,36 @@ use sp_runtime::traits::BlakeTwo256;
 use sp_trie::PrefixedMemoryDB;
 use std::sync::Arc;
 
-// Native executor instance.
+#[cfg(feature = "with-snowbridge-runtime")]
+use snowbridge_runtime::{RuntimeApi, opaque::Block};
+
+#[cfg(feature = "with-rococo-runtime")]
+use rococo_runtime::{RuntimeApi, opaque::Block};
+
+#[cfg(feature = "with-local-runtime")]
+use local_runtime::{RuntimeApi, opaque::Block};
+
+#[cfg(feature = "with-snowbridge-runtime")]
 native_executor_instance!(
 	pub Executor,
-	artemis_runtime::api::dispatch,
-	artemis_runtime::native_version,
+	snowbridge_runtime::api::dispatch,
+	snowbridge_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
+);
+
+#[cfg(feature = "with-rococo-runtime")]
+native_executor_instance!(
+	pub Executor,
+	rococo_runtime::api::dispatch,
+	rococo_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
+);
+
+#[cfg(feature = "with-local-runtime")]
+native_executor_instance!(
+	pub Executor,
+	local_runtime::api::dispatch,
+	local_runtime::native_version,
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 

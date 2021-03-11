@@ -11,19 +11,23 @@ use frame_support::{
 		ExistenceRequirement::{KeepAlive, AllowDeath},
 	}
 };
-use sp_runtime::traits::StaticLookup;
-use sp_std::prelude::*;
-use sp_core::H160;
+use sp_std::{
+	prelude::*,
+};
+use sp_core::{H160, U256};
 use sp_runtime::{
 	ModuleId,
-	traits::AccountIdConversion,
-	SaturatedConversion,
+	traits::{StaticLookup, AccountIdConversion},
 };
 
 use artemis_core::{ChannelId, OutboundRouter};
 
-mod payload;
+use primitives::{wrap, unwrap};
+
 use payload::OutboundPayload;
+
+mod payload;
+mod primitives;
 
 #[cfg(test)]
 mod mock;
@@ -43,6 +47,8 @@ pub trait Config: system::Config {
 	type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
 
 	type ModuleId: Get<ModuleId>;
+
+	type Decimals: Get<u32>;
 }
 
 decl_storage! {
@@ -77,6 +83,16 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		fn integrity_test() {
+			sp_io::TestExternalities::new_empty().execute_with(|| {
+				let allowed_decimals: &[u32] = &[10, 12];
+				let decimals = T::Decimals::get();
+				assert!(
+					allowed_decimals.contains(&decimals)
+				)
+			});
+		}
+
 		#[weight = 0]
 		#[transactional]
 		pub fn lock(origin, channel_id: ChannelId, recipient: H160, amount: BalanceOf<T>) -> DispatchResult {
@@ -84,10 +100,15 @@ decl_module! {
 
 			T::Currency::transfer(&who, &Self::account_id(), amount, AllowDeath)?;
 
+			let amount_wrapped = match wrap::<T>(amount, T::Decimals::get()) {
+				Some(value) => value,
+				None => panic!("Runtime is misconfigured"),
+			};
+
 			let message = OutboundPayload {
 				sender: who.clone(),
 				recipient: recipient.clone(),
-				amount: amount.saturated_into::<u128>(),
+				amount: amount_wrapped,
 			};
 
 			T::OutboundRouter::submit(channel_id, &who, Address::get(), &message.encode())?;
@@ -97,15 +118,20 @@ decl_module! {
 
 		#[weight = 0]
 		#[transactional]
-		pub fn unlock(origin, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: BalanceOf<T>) -> DispatchResult {
+		pub fn unlock(origin, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != Address::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
+			let amount_unwrapped = match unwrap::<T>(amount, T::Decimals::get()) {
+				Some(value) => value,
+				None => panic!("Runtime is misconfigured"),
+			};
+
 			let recipient = T::Lookup::lookup(recipient)?;
-			T::Currency::transfer(&Self::account_id(), &recipient, amount, KeepAlive)?;
-			Self::deposit_event(RawEvent::Unlocked(sender, recipient, amount));
+			T::Currency::transfer(&Self::account_id(), &recipient, amount_unwrapped, KeepAlive)?;
+			Self::deposit_event(RawEvent::Unlocked(sender, recipient, amount_unwrapped));
 			Ok(())
 		}
 	}

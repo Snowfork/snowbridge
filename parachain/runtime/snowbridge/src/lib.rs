@@ -424,18 +424,10 @@ pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficul
 	muir_glacier_fork_block: 7117117,
 };
 
-#[cfg(not(feature = "test-e2e"))]
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 3;
 	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
 	pub const VerifyPoW: bool = true;
-}
-
-#[cfg(feature = "test-e2e")]
-parameter_types! {
-	pub const DescendantsUntilFinalized: u8 = 1;
-	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
-	pub const VerifyPoW: bool = false;
 }
 
 impl verifier_lightclient::Config for Runtime {
@@ -451,7 +443,7 @@ parameter_types! {
 }
 
 impl commitments::Config for Runtime {
-	const INDEXING_PREFIX: &'static [u8] = COMMITMENTS_INDEXING_PREFIX;
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
 }
@@ -480,6 +472,7 @@ impl erc20_app::Config for Runtime {
 
 parameter_types! {
 	pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
+	pub const Decimals: u32 = 10;
 }
 
 impl dot_app::Config for Runtime {
@@ -488,6 +481,7 @@ impl dot_app::Config for Runtime {
 	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type ModuleId = DotModuleId;
+	type Decimals = Decimals;
 }
 
 construct_runtime!(

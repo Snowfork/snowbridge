@@ -1,4 +1,4 @@
-use sp_core::RuntimeDebug;
+use sp_core::{U256, RuntimeDebug};
 use sp_std::prelude::*;
 use codec::Encode;
 
@@ -10,7 +10,7 @@ use artemis_ethereum::H160;
 pub struct OutboundPayload<AccountId: Encode> {
 	pub sender: AccountId,
 	pub recipient: H160,
-	pub amount: u128,
+	pub amount: U256,
 }
 
 impl<AccountId: Encode> OutboundPayload<AccountId> {
@@ -20,8 +20,8 @@ impl<AccountId: Encode> OutboundPayload<AccountId> {
 		let tokens = vec![
 			Token::FixedBytes(self.sender.encode()),
 			Token::Address(self.recipient),
-			Token::Uint(self.amount.into())
+			Token::Uint(self.amount)
 		];
-		ethabi::encode_function("mint(bytes32,address,uint128)", tokens.as_ref())
+		ethabi::encode_function("mint(bytes32,address,uint256)", tokens.as_ref())
 	}
 }
