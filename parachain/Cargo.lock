@@ -170,7 +170,7 @@ dependencies = [
  "jsonrpc-pubsub 14.2.0",
  "log",
  "parity-scale-codec",
- "parking_lot 0.10.2",
+ "parking_lot 0.11.1",
  "polkadot-cli",
  "polkadot-parachain",
  "polkadot-primitives",
@@ -257,11 +257,13 @@ dependencies = [
  "jsonrpc-core-client",
  "jsonrpc-derive",
  "parity-scale-codec",
+ "parking_lot 0.11.1",
  "sc-rpc",
  "sp-api",
  "sp-blockchain",
  "sp-core",
  "sp-io",
+ "sp-offchain",
  "sp-runtime",
 ]
 

@@ -15,7 +15,9 @@ pub use jsonrpc_core;
 
 
 /// Full client dependencies.
-pub struct FullDeps<C, P> {
+pub struct FullDeps<C, P, TBackend> {
+	/// Backend, used for storage
+	pub backend: Arc<TBackend>,
 	/// The client instance to use.
 	pub client: Arc<C>,
 	/// Transaction pool instance.
@@ -25,18 +27,28 @@ pub struct FullDeps<C, P> {
 }
 
 /// Instantiate all full RPC extensions.
-pub fn create_full<C, P>(_deps: FullDeps<C, P>) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
+pub fn create_full<C, P, TBackend>(deps: FullDeps<C, P, TBackend>) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
 	C: Send + Sync + 'static,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
+	TBackend: sc_client_api::Backend<Block> + 'static,
 {
 	let mut io = jsonrpc_core::IoHandler::default();
 
+	let FullDeps {
+		backend,
+		deny_unsafe,
+		..
+	} = deps;
+
 	io.extend_with(BasicChannelApi::to_delegate(
-		BasicChannel::<AccountId>::new(COMMITMENTS_INDEXING_PREFIX)
+		BasicChannel::<_, AccountId>::new(
+			backend.offchain_storage().expect("requires backend with offchain storage"),
+			deny_unsafe,
+			COMMITMENTS_INDEXING_PREFIX)
 	));
 
 	io

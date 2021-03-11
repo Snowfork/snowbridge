@@ -138,13 +138,15 @@ async fn start_node_impl(
 		})?;
 
 	let rpc_extensions_builder = {
+		let backend = backend.clone();
     		let client = client.clone();
     		let pool = transaction_pool.clone();
-    		Box::new(move |deny_unsafe, _| {
+		Box::new( move |deny_unsafe, _| {
         		let deps = crate::rpc::FullDeps {
+				backend: backend.clone(),
             			client: client.clone(),
             			pool: pool.clone(),
-            			deny_unsafe,
+				deny_unsafe,
         		};
 
         		crate::rpc::create_full(deps)

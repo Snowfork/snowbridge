@@ -11,6 +11,7 @@ jsonrpc-core = "15.0"
 jsonrpc-core-client = "15.0"
 jsonrpc-derive = "15.0"
 itertools = "0.10.0"
+parking_lot = "0.11.1"
 
 # Substrate packages
 
@@ -20,6 +21,7 @@ sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-
 sc-rpc = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-offchain = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
 # Project packages
 

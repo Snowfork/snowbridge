@@ -27,7 +27,7 @@ log = "0.4.8"
 rand = "0.7.2"
 structopt = "0.3.8"
 tracing = "0.1.22"
-parking_lot = "0.10.0"
+parking_lot = "0.11.1"
 
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sc-cli = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", features = ["wasmtime"] }
