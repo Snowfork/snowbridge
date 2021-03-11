@@ -379,9 +379,12 @@ impl basic_channel_inbound::Config for Runtime {
 	type MessageDispatch = dispatch::Module<Runtime>;
 }
 
+pub const COMMITMENTS_INDEXING_PREFIX: &'static [u8] = b"commitment";
+
 impl basic_channel_outbound::Config for Runtime {
 	type Event = Event;
-	type MessageCommitment = commitments::Module<Runtime>;
+	const INDEXING_PREFIX: &'static [u8] = COMMITMENTS_INDEXING_PREFIX;
+	type Hashing = Keccak256;
 }
 
 impl incentivized_channel_inbound::Config for Runtime {
@@ -440,7 +443,7 @@ parameter_types! {
 }
 
 impl commitments::Config for Runtime {
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+	const INDEXING_PREFIX: &'static [u8] = COMMITMENTS_INDEXING_PREFIX;
 	type Event = Event;
 	type Hashing = Keccak256;
 }

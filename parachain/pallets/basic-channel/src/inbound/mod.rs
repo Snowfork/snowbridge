@@ -31,7 +31,9 @@ pub trait Config: system::Config {
 decl_storage! {
 	trait Store for Module<T: Config> as BasicInboundModule {
 		pub SourceChannel get(fn source_channel) config(): H160;
-		pub Nonce: u64;
+
+		/// A nonce is assigned to each Ethereum origin address
+		pub Nonces: map hasher(identity) H160 => u64;
 	}
 }
 
@@ -74,14 +76,12 @@ decl_module! {
 				return Err(Error::<T>::InvalidSourceChannel.into())
 			}
 
-			// Verify message nonce
-			Nonce::try_mutate(|nonce| -> DispatchResult {
+			Nonces::try_mutate(envelope.origin, |nonce| {
 				if envelope.nonce != *nonce + 1 {
-					Err(Error::<T>::InvalidNonce.into())
-				} else {
-					*nonce += 1;
-					Ok(())
+					return Err(Error::<T>::InvalidNonce)
 				}
+				*nonce += 1;
+				Ok(())
 			})?;
 
 			let message_id = MessageId::new(ChannelId::Basic, envelope.nonce);

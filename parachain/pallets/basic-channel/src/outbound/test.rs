@@ -90,9 +90,9 @@ fn test_submit() {
 		let who: AccountId = Keyring::Bob.into();
 
 		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-		assert_eq!(Nonce::get(), 1);
+		assert_eq!(Nonces::<Test>::get(&who), 1);
 
 		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-		assert_eq!(Nonce::get(), 2);
+		assert_eq!(Nonces::<Test>::get(&who), 2);
 	});
 }

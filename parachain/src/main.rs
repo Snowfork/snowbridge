@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Snowfork
+// Copyright 2019-2021 Snowfork
 // This file is part of Snowbridge
 
 //! Artemis parachain collator
@@ -12,6 +12,7 @@ mod chain_spec;
 mod service;
 mod cli;
 mod command;
+mod rpc;
 
 fn main() -> sc_cli::Result<()> {
 	command::run()
