@@ -27,7 +27,7 @@ var (
 )
 
 // BasicOutboundChannelABI is the input ABI used to generate the binding from.
-const BasicOutboundChannelABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"source\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"Message\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const BasicOutboundChannelABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"origin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"source\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"Message\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"origin\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // BasicOutboundChannel is an auto generated Go binding around an Ethereum contract.
 type BasicOutboundChannel struct {
@@ -171,56 +171,25 @@ func (_BasicOutboundChannel *BasicOutboundChannelTransactorRaw) Transact(opts *b
 	return _BasicOutboundChannel.Contract.contract.Transact(opts, method, params...)
 }
 
-// Nonce is a free data retrieval call binding the contract method 0xaffed0e0.
+// Submit is a paid mutator transaction binding the contract method 0x76846edd.
 //
-// Solidity: function nonce() view returns(uint64)
-func (_BasicOutboundChannel *BasicOutboundChannelCaller) Nonce(opts *bind.CallOpts) (uint64, error) {
-	var out []interface{}
-	err := _BasicOutboundChannel.contract.Call(opts, &out, "nonce")
-
-	if err != nil {
-		return *new(uint64), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
-
-	return out0, err
-
-}
-
-// Nonce is a free data retrieval call binding the contract method 0xaffed0e0.
-//
-// Solidity: function nonce() view returns(uint64)
-func (_BasicOutboundChannel *BasicOutboundChannelSession) Nonce() (uint64, error) {
-	return _BasicOutboundChannel.Contract.Nonce(&_BasicOutboundChannel.CallOpts)
-}
-
-// Nonce is a free data retrieval call binding the contract method 0xaffed0e0.
-//
-// Solidity: function nonce() view returns(uint64)
-func (_BasicOutboundChannel *BasicOutboundChannelCallerSession) Nonce() (uint64, error) {
-	return _BasicOutboundChannel.Contract.Nonce(&_BasicOutboundChannel.CallOpts)
+// Solidity: function submit(address origin, bytes payload) returns()
+func (_BasicOutboundChannel *BasicOutboundChannelTransactor) Submit(opts *bind.TransactOpts, origin common.Address, payload []byte) (*types.Transaction, error) {
+	return _BasicOutboundChannel.contract.Transact(opts, "submit", origin, payload)
 }
 
 // Submit is a paid mutator transaction binding the contract method 0x76846edd.
 //
-// Solidity: function submit(address , bytes payload) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelTransactor) Submit(opts *bind.TransactOpts, arg0 common.Address, payload []byte) (*types.Transaction, error) {
-	return _BasicOutboundChannel.contract.Transact(opts, "submit", arg0, payload)
+// Solidity: function submit(address origin, bytes payload) returns()
+func (_BasicOutboundChannel *BasicOutboundChannelSession) Submit(origin common.Address, payload []byte) (*types.Transaction, error) {
+	return _BasicOutboundChannel.Contract.Submit(&_BasicOutboundChannel.TransactOpts, origin, payload)
 }
 
 // Submit is a paid mutator transaction binding the contract method 0x76846edd.
 //
-// Solidity: function submit(address , bytes payload) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelSession) Submit(arg0 common.Address, payload []byte) (*types.Transaction, error) {
-	return _BasicOutboundChannel.Contract.Submit(&_BasicOutboundChannel.TransactOpts, arg0, payload)
-}
-
-// Submit is a paid mutator transaction binding the contract method 0x76846edd.
-//
-// Solidity: function submit(address , bytes payload) returns()
-func (_BasicOutboundChannel *BasicOutboundChannelTransactorSession) Submit(arg0 common.Address, payload []byte) (*types.Transaction, error) {
-	return _BasicOutboundChannel.Contract.Submit(&_BasicOutboundChannel.TransactOpts, arg0, payload)
+// Solidity: function submit(address origin, bytes payload) returns()
+func (_BasicOutboundChannel *BasicOutboundChannelTransactorSession) Submit(origin common.Address, payload []byte) (*types.Transaction, error) {
+	return _BasicOutboundChannel.Contract.Submit(&_BasicOutboundChannel.TransactOpts, origin, payload)
 }
 
 // BasicOutboundChannelMessageIterator is returned from FilterMessage and is used to iterate over the raw logs and unpacked data for Message events raised by the BasicOutboundChannel contract.
@@ -292,15 +261,16 @@ func (it *BasicOutboundChannelMessageIterator) Close() error {
 
 // BasicOutboundChannelMessage represents a Message event raised by the BasicOutboundChannel contract.
 type BasicOutboundChannelMessage struct {
+	Origin  common.Address
 	Source  common.Address
 	Nonce   uint64
 	Payload []byte
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterMessage is a free log retrieval operation binding the contract event 0x779b38144a38cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15b.
+// FilterMessage is a free log retrieval operation binding the contract event 0xdaab80e89869997d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562f.
 //
-// Solidity: event Message(address source, uint64 nonce, bytes payload)
+// Solidity: event Message(address origin, address source, uint64 nonce, bytes payload)
 func (_BasicOutboundChannel *BasicOutboundChannelFilterer) FilterMessage(opts *bind.FilterOpts) (*BasicOutboundChannelMessageIterator, error) {
 
 	logs, sub, err := _BasicOutboundChannel.contract.FilterLogs(opts, "Message")
@@ -310,9 +280,9 @@ func (_BasicOutboundChannel *BasicOutboundChannelFilterer) FilterMessage(opts *b
 	return &BasicOutboundChannelMessageIterator{contract: _BasicOutboundChannel.contract, event: "Message", logs: logs, sub: sub}, nil
 }
 
-// WatchMessage is a free log subscription operation binding the contract event 0x779b38144a38cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15b.
+// WatchMessage is a free log subscription operation binding the contract event 0xdaab80e89869997d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562f.
 //
-// Solidity: event Message(address source, uint64 nonce, bytes payload)
+// Solidity: event Message(address origin, address source, uint64 nonce, bytes payload)
 func (_BasicOutboundChannel *BasicOutboundChannelFilterer) WatchMessage(opts *bind.WatchOpts, sink chan<- *BasicOutboundChannelMessage) (event.Subscription, error) {
 
 	logs, sub, err := _BasicOutboundChannel.contract.WatchLogs(opts, "Message")
@@ -347,9 +317,9 @@ func (_BasicOutboundChannel *BasicOutboundChannelFilterer) WatchMessage(opts *bi
 	}), nil
 }
 
-// ParseMessage is a log parse operation binding the contract event 0x779b38144a38cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15b.
+// ParseMessage is a log parse operation binding the contract event 0xdaab80e89869997d1cabbe1122788e90fe72b9234ff97a9217dcbb5126f3562f.
 //
-// Solidity: event Message(address source, uint64 nonce, bytes payload)
+// Solidity: event Message(address origin, address source, uint64 nonce, bytes payload)
 func (_BasicOutboundChannel *BasicOutboundChannelFilterer) ParseMessage(log types.Log) (*BasicOutboundChannelMessage, error) {
 	event := new(BasicOutboundChannelMessage)
 	if err := _BasicOutboundChannel.contract.UnpackLog(event, "Message", log); err != nil {

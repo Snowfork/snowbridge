@@ -163,7 +163,10 @@ func (li *Listener) queryBasicEvents(contract *outbound.BasicOutboundChannel, op
 			}
 			break
 		}
-		events = append(events, &iter.Event.Raw)
+
+		if li.config.Channels.Basic.AccountWhitelistMap[iter.Event.Origin] {
+			events = append(events, &iter.Event.Raw)
+		}
 	}
 	return events, nil
 }
@@ -185,6 +188,7 @@ func (li *Listener) queryIncentivizedEvents(contract *outbound.IncentivizedOutbo
 			}
 			break
 		}
+
 		events = append(events, &iter.Event.Raw)
 	}
 	return events, nil

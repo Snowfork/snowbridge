@@ -81,7 +81,26 @@ describe('Bridge', function () {
       // conservation of value
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance));
 
-    })
+    });
+
+    it('should not transfer ETH from Ethereum to Substrate when address is not found in whitelist', async function () {
+      const amount = BigNumber(Web3.utils.toWei('0.01', "ether"));
+
+      const account = ethClient.accounts[3];
+
+      const beforeEthBalance = await ethClient.getEthBalance(account);
+      const beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.ethAssetId);
+
+      const { gasCost } = await ethClient.lockETH(account, amount, polkadotRecipient);
+
+      await sleep(50000);
+
+      const afterEthBalance = await ethClient.getEthBalance(account);
+      const afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.ethAssetId);
+
+      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
+      expect(afterSubBalance).to.be.bignumber.equal(beforeSubBalance);
+    });
   });
 
   describe('ERC20 App', function () {
