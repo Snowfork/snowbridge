@@ -85,6 +85,6 @@ jobs:
             --exclude snowbridge-runtime
             --exclude rococo-runtime
             --exclude local-runtime
-            --exclude-files 'src/command.rs,*/mock.rs,*/test.rs'
+            --exclude-files '*/mock.rs,*/tests.rs'
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
           toolchain: nightly-2021-01-10
