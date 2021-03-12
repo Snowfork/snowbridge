@@ -6,7 +6,7 @@ use frame_support::{
 	parameter_types,
 };
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
+	traits::{BlakeTwo256, Keccak256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
 };
 use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
@@ -61,18 +61,10 @@ impl system::Config for Test {
 	type SS58Prefix = ();
 }
 
-// Mock Commitments
-pub struct MockMessageCommitment;
-
-impl MessageCommitment for MockMessageCommitment {
-	fn add(_: ChannelId, _: H160, _: u64, _: &[u8]) -> DispatchResult {
-		Ok(())
-	}
-}
-
 impl basic_outbound_channel::Config for Test {
 	type Event = Event;
-	type MessageCommitment = MockMessageCommitment;
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+	type Hashing = Keccak256;
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {

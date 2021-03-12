@@ -22,7 +22,12 @@ sc-rpc = { git = "https://github.com/paritytech/substrate.git", branch = "rococo
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-offchain = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+artemis-core = { path = "../../../primitives/core", default-features = false }
 
 # Project packages
 
 artemis-basic-channel = { path = "../" }
+
+[dev-dependencies]
+assert_matches = "1.3.0"
+hex-literal = "0.3.1"
