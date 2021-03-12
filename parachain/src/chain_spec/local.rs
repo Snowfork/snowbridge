@@ -4,7 +4,8 @@ use local_runtime::{
 	AccountId, EthereumHeader,
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
-	BasicInboundChannelConfig, IncentivizedInboundChannelConfig,
+	BasicInboundChannelConfig, BasicOutboundChannelConfig,
+	IncentivizedInboundChannelConfig,
 	ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
 	CommitmentsConfig,
 	ParachainInfoConfig,
@@ -114,6 +115,9 @@ fn testnet_genesis(
 		}),
 		basic_channel_inbound: Some(BasicInboundChannelConfig {
 			source_channel: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
+		}),
+		basic_channel_outbound: Some(BasicOutboundChannelConfig {
+			interval: 1,
 		}),
 		incentivized_channel_inbound: Some(IncentivizedInboundChannelConfig {
 			source_channel: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),

@@ -500,7 +500,7 @@ construct_runtime!(
 		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
 
 		BasicInboundChannel: basic_channel_inbound::{Module, Call, Config, Storage, Event} = 7,
-		BasicOutboundChannel: basic_channel_outbound::{Module, Storage, Event} = 8,
+		BasicOutboundChannel: basic_channel_outbound::{Module, Config<T>, Storage, Event} = 8,
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Module, Call, Config, Storage, Event} = 9,
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Module, Storage, Event} = 10,
 		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin} = 11,

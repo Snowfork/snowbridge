@@ -1,22 +1,25 @@
 use std::sync::Arc;
 
 use itertools::zip;
+use parking_lot::RwLock;
 
 use codec::{Codec,Decode};
 use jsonrpc_core::{Result, Error as JsonError};
 use jsonrpc_derive::rpc;
 use sc_rpc::DenyUnsafe;
 use sp_core::{H256, offchain::OffchainStorage};
-use parking_lot::RwLock;
 
 use artemis_basic_channel::outbound::{CommitmentData, generate_merkle_proofs, offchain_key};
+
+#[cfg(test)]
+mod tests;
 
 type Proofs<TAccountId> = Vec<(TAccountId, Vec<u8>)>;
 
 #[rpc]
 pub trait BasicChannelApi<TAccountId>
 {
-	#[rpc(name = "get_merkle_proofs")]
+	#[rpc(name = "basicChannel_getMerkleProofs")]
 	fn get_merkle_proofs(&self, root: H256) -> Result<Proofs<TAccountId>>;
 }
 
