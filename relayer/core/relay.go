@@ -15,6 +15,7 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -23,8 +24,9 @@ import (
 )
 
 type Relay struct {
-	ethChain chain.Chain
-	subChain chain.Chain
+	subChain    chain.Chain
+	ethSubChain chain.Chain
+	paraChain   chain.Chain
 }
 
 type Direction int
@@ -41,18 +43,14 @@ type RelayConfig struct {
 }
 
 type Config struct {
-	Relay RelayConfig      `mapstructure:"relay"`
-	Eth   ethereum.Config  `mapstructure:"ethereum"`
-	Sub   substrate.Config `mapstructure:"substrate"`
+	Relay     RelayConfig      `mapstructure:"relay"`
+	Eth       ethereum.Config  `mapstructure:"ethereum"`
+	Sub       substrate.Config `mapstructure:"substrate"`
+	Parachain parachain.Config `mapstructure:"parachain"`
 }
 
 func NewRelay() (*Relay, error) {
 	config, err := LoadConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	ethChain, err := ethereum.NewChain(&config.Eth)
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +60,15 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
+	ethSubChain, err := ethereum.NewChain(&config.Eth)
+	if err != nil {
+		return nil, err
+	}
+
+	paraChain, err := parachain.NewChain(&config.Parachain)
+	if err != nil {
+		return nil, err
+	}
 	direction := config.Relay.Direction
 	headersOnly := config.Relay.HeadersOnly
 	if direction == Bidirectional || direction == EthToSub {
@@ -74,11 +81,16 @@ func NewRelay() (*Relay, error) {
 		// can guarantee that a header is forwarded before we send dependent messages)
 		ethHeaders := make(chan chain.Header)
 
-		err := ethChain.SetSender(ethMessages, ethHeaders)
+		err = subChain.SetReceiver(ethMessages, ethHeaders)
 		if err != nil {
 			return nil, err
 		}
-		err = subChain.SetReceiver(ethMessages, ethHeaders)
+		err = ethSubChain.SetSender(ethMessages, ethHeaders)
+		if err != nil {
+			return nil, err
+		}
+
+		err = paraChain.SetReceiver(ethMessages, ethHeaders)
 		if err != nil {
 			return nil, err
 		}
@@ -87,23 +99,30 @@ func NewRelay() (*Relay, error) {
 	if direction == Bidirectional || direction == SubToEth {
 		// channel for messages from substrate
 		var subMessages chan []chain.Message
+		var paraMessages chan []chain.Message
 		if !headersOnly {
 			subMessages = make(chan []chain.Message, 1)
+			paraMessages = make(chan []chain.Message, 1)
 		}
 
 		err := subChain.SetSender(subMessages, nil)
 		if err != nil {
 			return nil, err
 		}
-		err = ethChain.SetReceiver(subMessages, nil)
+		err = ethSubChain.SetReceiver(subMessages, nil)
+		if err != nil {
+			return nil, err
+		}
+		err = paraChain.SetSender(paraMessages, nil)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return &Relay{
-		ethChain: ethChain,
-		subChain: subChain,
+		subChain:    subChain,
+		ethSubChain: ethSubChain,
+		paraChain:   paraChain,
 	}, nil
 }
 
@@ -131,21 +150,24 @@ func (re *Relay) Start() {
 
 	// Short-lived channels that communicate initialization parameters
 	// between the two chains. The chains close them after startup.
-	ethInit := make(chan chain.Init, 1)
 	subInit := make(chan chain.Init, 1)
+	ethSubInit := make(chan chain.Init, 1)
 
-	err := re.ethChain.Start(ctx, eg, subInit, ethInit)
+	paraInit := make(chan chain.Init, 1)
+	ethParaInit := make(chan chain.Init, 1)
+
+	err := re.ethSubChain.Start(ctx, eg, subInit, ethSubInit)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"chain": re.ethChain.Name(),
+			"chain": re.ethSubChain.Name(),
 			"error": err,
 		}).Error("Failed to start chain")
 		return
 	}
-	log.WithField("name", re.ethChain.Name()).Info("Started chain")
-	defer re.ethChain.Stop()
+	log.WithField("name", re.ethSubChain.Name()).Info("Started chain")
+	defer re.ethSubChain.Stop()
 
-	err = re.subChain.Start(ctx, eg, ethInit, subInit)
+	err = re.subChain.Start(ctx, eg, ethSubInit, subInit)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"chain": re.subChain.Name(),
@@ -155,6 +177,17 @@ func (re *Relay) Start() {
 	}
 	log.WithField("name", re.subChain.Name()).Info("Started chain")
 	defer re.subChain.Stop()
+
+	err = re.paraChain.Start(ctx, eg, ethParaInit, paraInit)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"chain": re.paraChain.Name(),
+			"error": err,
+		}).Error("Failed to start chain")
+		return
+	}
+	log.WithField("name", re.paraChain.Name()).Info("Started chain")
+	defer re.paraChain.Stop()
 
 	notifyWaitDone := make(chan struct{})
 
@@ -184,8 +217,10 @@ func (re *Relay) Start() {
 		}
 
 		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
-		re.ethChain.Stop()
+		re.ethSubChain.Stop()
 		re.subChain.Stop()
+		// re.ethParaChain.Stop()
+		re.paraChain.Stop()
 		relayProc, err := os.FindProcess(os.Getpid())
 		if err != nil {
 			log.WithError(err).Error("Failed to kill this process")
@@ -223,6 +258,14 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("environment variable not set: ARTEMIS_SUBSTRATE_KEY")
 	}
 	config.Sub.PrivateKey = value
+
+	// TODO: use actual config
+	config.Parachain.Parachain.Endpoint = "ws://127.0.0.1:9944"
+	config.Parachain.Parachain.PrivateKey = "//Alice"
+	config.Parachain.Ethereum.Endpoint = config.Eth.Endpoint
+	config.Parachain.Ethereum.PrivateKey = config.Eth.PrivateKey
+	// TODO: auto populate contract address
+	config.Parachain.Ethereum.Contracts.RelayBridgeLightClient = "0x2387dbfd23473f6b6e38183b81711d7e2512f515ee0cc4190972af4565766ca7"
 
 	return &config, nil
 }

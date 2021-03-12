@@ -5,6 +5,9 @@ package chain
 
 import (
 	"context"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
@@ -22,6 +25,15 @@ type SubstrateOutboundMessage struct {
 
 // Message from ethereum
 type EthereumOutboundMessage substrate.Message
+
+// Message from Parachain
+type NewSignatureCommitmentMessage struct {
+	Payload                       [32]byte
+	ValidatorClaimsBitfield       *big.Int
+	ValidatorSignatureCommitment  []byte
+	ValidatorPublicKey            common.Address
+	ValidatorPublicKeyMerkleProof [][32]byte
+}
 
 type Header struct {
 	HeaderData interface{}
