@@ -85,6 +85,11 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- c
 		return err
 	}
 
+	err = ch.econn.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
 	// The Ethereum chain needs init params from Parachain
 	// to complete startup.
 	ethInitHeaderID, err := ch.queryEthereumInitParams()

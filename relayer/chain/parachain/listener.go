@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	// "github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/sirupsen/logrus"
 	merkletree "github.com/wealdtech/go-merkletree"
 	"golang.org/x/sync/errgroup"
@@ -71,7 +71,6 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 		case <-ctx.Done():
 			return li.onDone(ctx)
 		case msg := <-ch:
-			li.log.Info("encoded msg: %#v\n", msg)
 
 			// TODO: var messages []chainTypes.BeefyMessage
 			signedCommitment := &SignedCommitment{}
@@ -81,7 +80,13 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 			}
 
 			received++
-			li.log.Info("Msg number:", received)
+			li.log.Info("--------------------------------------------------------------")
+			li.log.Info("BEEFY commitment received: ", received)
+
+			if len(signedCommitment.Signatures) == 0 {
+				li.log.Info("BEEFY commitment has no signatures, skipping...")
+				continue
+			}
 
 			// Construct BEEFY merkle tree
 			beefyValidatorAddresses := []string{
@@ -92,12 +97,11 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 			var beefyTreeData [][]byte
 			for _, valAddr := range beefyValidatorAddresses {
 				h := sha256.New()
-
 				if _, err := h.Write([]byte(valAddr)); err != nil {
 					li.log.Info("err:", err)
 				}
-
-				beefyTreeData = append(beefyTreeData, h.Sum(nil))
+				hashedData := h.Sum(nil)
+				beefyTreeData = append(beefyTreeData, hashedData)
 			}
 
 			// Create the tree
@@ -125,7 +129,7 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 				panic("failed to verify proof")
 			}
 
-			var sig0ProofContents [][32]byte
+			sig0ProofContents := make([][32]byte, len(sig0Proof.Hashes))
 			for i, hash := range sig0Proof.Hashes {
 				var hash32Byte [32]byte
 				copy(hash32Byte[:], hash)
@@ -142,25 +146,29 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 			var hashedCommitment32Byte [32]byte
 			copy(hashedCommitment32Byte[:], hashedCommitment)
 
-			// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
-			recIdIncrement := big.NewInt(27)
+			// // Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
+			// recIdIncrement := big.NewInt(27)
 			ok, sig0 := signedCommitment.Signatures[0].Unwrap()
 			if !ok {
 				li.log.Info("err:", err)
 			}
 
-			sig0HexStr := hexutil.Encode(sig0[:])             // bytes -> 0x string
-			recoveryId0, err := hexutil.DecodeBig(sig0HexStr) // 0x string -> big.Int
-			if err != nil {
-				li.log.Info("err:", err)
-			}
-			incrementedRecoveryId0 := recoveryId0.Add(recoveryId0, recIdIncrement)
-			newRecoveryId0 := hexutil.EncodeBig(incrementedRecoveryId0) // big.Int -> 0x string
-			newRecoveryId0Bytes, err := hexutil.Decode(newRecoveryId0)  // 0x string -> []byte
-			if err != nil {
-				li.log.Info("err:", err)
-			}
-			valSigCommitment := append(sig0[:], newRecoveryId0Bytes...)
+			// sig0HexStr := hexutil.Encode(sig0[:])             // bytes -> 0x string
+			// recoveryId0, err := hexutil.DecodeBig(sig0HexStr) // 0x string -> big.Int
+			// if err != nil {
+			// 	li.log.Info("err:", err)
+			// }
+			// incrementedRecoveryId0 := recoveryId0.Add(recoveryId0, recIdIncrement)
+			// newRecoveryId0 := hexutil.EncodeBig(incrementedRecoveryId0) // big.Int -> 0x string
+			// newRecoveryId0Bytes, err := hexutil.Decode(newRecoveryId0)  // 0x string -> []byte
+			// if err != nil {
+			// 	li.log.Info("err:", err)
+			// }
+			// valSigCommitment := append(sig0[:], newRecoveryId0Bytes...)
+
+			// TODO: increment recovery ID properly
+			valSigCommitment := sig0[:]
+
 			sig0ValAddr := common.HexToAddress(beefyValidatorAddresses[0])
 
 			message := chain.NewSignatureCommitmentMessage{

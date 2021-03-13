@@ -79,7 +79,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 						return fmt.Errorf("Invalid message")
 					}
 
-					err := wr.Write(ctx, &concreteMsg)
+					err := wr.WriteNewSignatureCommitment(ctx, &concreteMsg)
 					if err != nil {
 						wr.log.WithError(err).Error("Error submitting message to ethereum")
 					}
@@ -101,7 +101,9 @@ func (wr *Writer) signerFn(_ common.Address, tx *types.Transaction) (*types.Tran
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *Writer) Write(ctx context.Context, msg *chain.NewSignatureCommitmentMessage) error {
+func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, msg *chain.NewSignatureCommitmentMessage) error {
+	wr.log.Info("Parachain writer received msg")
+
 	contract := wr.contracts[LightClientBridgeContractID] // TODO: don't hardcode this
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")
@@ -111,7 +113,7 @@ func (wr *Writer) Write(ctx context.Context, msg *chain.NewSignatureCommitmentMe
 		From:     wr.conn.GetKeyPair().CommonAddress(),
 		Signer:   wr.signerFn,
 		Context:  ctx,
-		GasLimit: 500000,
+		GasLimit: 5000000, // TODO: reasonable gas limit
 	}
 
 	tx, err := contract.NewSignatureCommitment(&options, msg.Payload,

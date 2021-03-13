@@ -89,20 +89,13 @@ func NewRelay() (*Relay, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		err = paraChain.SetReceiver(ethMessages, ethHeaders)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	if direction == Bidirectional || direction == SubToEth {
 		// channel for messages from substrate
 		var subMessages chan []chain.Message
-		var paraMessages chan []chain.Message
 		if !headersOnly {
 			subMessages = make(chan []chain.Message, 1)
-			paraMessages = make(chan []chain.Message, 1)
 		}
 
 		err := subChain.SetSender(subMessages, nil)
@@ -113,10 +106,23 @@ func NewRelay() (*Relay, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = paraChain.SetSender(paraMessages, nil)
-		if err != nil {
-			return nil, err
-		}
+	}
+
+	// Listen to messages from parachain
+	var paraMessages chan []chain.Message
+	if !headersOnly {
+		paraMessages = make(chan []chain.Message, 1)
+	}
+	err = paraChain.SetSender(paraMessages, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write to LightClientBridge contract on Ethereum
+	ethHeadersTwo := make(chan chain.Header)
+	err = paraChain.SetReceiver(paraMessages, ethHeadersTwo)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Relay{
@@ -219,7 +225,6 @@ func (re *Relay) Start() {
 		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
 		re.ethSubChain.Stop()
 		re.subChain.Stop()
-		// re.ethParaChain.Stop()
 		re.paraChain.Stop()
 		relayProc, err := os.FindProcess(os.Getpid())
 		if err != nil {
