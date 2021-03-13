@@ -265,7 +265,7 @@ func LoadConfig() (*Config, error) {
 	config.Parachain.Ethereum.Endpoint = config.Eth.Endpoint
 	config.Parachain.Ethereum.PrivateKey = config.Eth.PrivateKey
 	// TODO: auto populate contract address
-	config.Parachain.Ethereum.Contracts.RelayBridgeLightClient = "0x2387dbfd23473f6b6e38183b81711d7e2512f515ee0cc4190972af4565766ca7"
+	config.Parachain.Ethereum.Contracts.RelayBridgeLightClient = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305"
 
 	return &config, nil
 }
