@@ -116,7 +116,7 @@ benchmarks! {
 	//   number of HeaderByNumber::take calls.
 	// * The last pruned header will have siblings that we don't prune and have to
 	//   re-insert using HeadersByNumber::insert.
-	import_header_new_finalized_with_max_prune {
+	import_header {
 		let caller: T::AccountId = whitelisted_caller();
 		let descendants_until_final = T::DescendantsUntilFinalized::get();
 
@@ -133,7 +133,7 @@ benchmarks! {
 			headers[next_finalized_idx].number,
 		);
 
-	}: import_header(RawOrigin::Signed(caller.clone()), header, header_proof)
+	}: _(RawOrigin::Signed(caller.clone()), header, header_proof)
 	verify {
 		// Check that the best header has been updated
 		let best = &headers[next_tip_idx];

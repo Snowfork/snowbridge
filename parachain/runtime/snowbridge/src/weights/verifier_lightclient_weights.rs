@@ -31,7 +31,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions for verifier_lightclient.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> verifier_lightclient::WeightInfo for WeightInfo<T> {
-	fn import_header_new_finalized_with_max_prune() -> Weight {
+	fn import_header() -> Weight {
 		(1_042_232_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(17 as Weight))
 			.saturating_add(T::DbWeight::get().writes(21 as Weight))
