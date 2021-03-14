@@ -11,9 +11,10 @@ type ParachainConfig struct {
 }
 
 type EthereumConfig struct {
-	Endpoint   string    `mapstructure:"endpoint"`
-	PrivateKey string    `mapstructure:"private-key"`
-	Contracts  Contracts `mapstructure:"contracts"`
+	Endpoint        string    `mapstructure:"endpoint"`
+	PrivateKey      string    `mapstructure:"private-key"`
+	Contracts       Contracts `mapstructure:"contracts"`
+	BeefyBlockDelay uint64    `mapstructure:"beefy-block-delay"`
 }
 
 type Contracts struct {
