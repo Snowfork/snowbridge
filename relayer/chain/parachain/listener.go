@@ -5,44 +5,62 @@ package parachain
 
 import (
 	"context"
-	"crypto/sha256"
-	"fmt"
-	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	// "github.com/ethereum/go-ethereum/common/hexutil"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
-	merkletree "github.com/wealdtech/go-merkletree"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/polkadot-ethereum/relayer/parachain"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type Listener struct {
 	config   *Config
 	conn     *Connection
+	econn    *ethereum.Connection
+	contract *lightclientbridge.Contract
 	messages chan<- []chain.Message
+	beefy    chan parachain.BeefyCommitmentInfo
 	log      *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, messages chan<- []chain.Message, log *logrus.Entry) *Listener {
+func NewListener(config *Config, conn *Connection, econn *ethereum.Connection, messages chan<- []chain.Message,
+	beefy chan parachain.BeefyCommitmentInfo, log *logrus.Entry) *Listener {
 	return &Listener{
 		config:   config,
 		conn:     conn,
+		econn:    econn,
 		messages: messages,
+		beefy:    beefy,
 		log:      log,
 	}
 }
 
 func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
-	li.log.Infof("\n\nParachain listener empty start function\n\n")
+	contract, err := lightclientbridge.NewContract(common.HexToAddress(li.config.Ethereum.Contracts.RelayBridgeLightClient), li.econn.GetClient())
+	if err != nil {
+		return err
+	}
+	li.contract = contract
 
 	eg.Go(func() error {
 		return li.subBeefyJustifications(ctx)
+	})
+
+	eg.Go(func() error {
+		return li.pollEthereumBlocks(ctx)
+	})
+
+	eg.Go(func() error {
+		return li.pollLightBridgeEvents(ctx)
 	})
 
 	return nil
@@ -63,25 +81,22 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 	}
 	defer sub.Unsubscribe()
 
-	// timeout := time.After(40 * time.Second)
 	received := 0
-
 	for {
 		select {
 		case <-ctx.Done():
 			return li.onDone(ctx)
 		case msg := <-ch:
 
-			// TODO: var messages []chainTypes.BeefyMessage
-			signedCommitment := &SignedCommitment{}
+			signedCommitment := &parachain.SignedCommitment{}
 			err := types.DecodeFromHexString(msg.(string), signedCommitment)
 			if err != nil {
-				li.log.WithError(err).Error("Faild to decode beefy commitment messages")
+				li.log.WithError(err).Error("Failed to decode beefy commitment messages")
 			}
 
 			received++
 			li.log.Info("--------------------------------------------------------------")
-			li.log.Info("BEEFY commitment received: ", received)
+			li.log.Info("Witnessed new BEEFY commitment: ", received)
 
 			if len(signedCommitment.Signatures) == 0 {
 				li.log.Info("BEEFY commitment has no signatures, skipping...")
@@ -89,98 +104,35 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 			}
 
 			// Construct BEEFY merkle tree
-			beefyValidatorAddresses := []string{
-				"0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b",
-				"0x25451A4de12dcCc2D166922fA938E900fCc4ED24",
+			beefyValidatorAddresses := []common.Address{
+				common.HexToAddress("0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b"),
+				common.HexToAddress("0x25451A4de12dcCc2D166922fA938E900fCc4ED24"),
 			}
 
-			var beefyTreeData [][]byte
-			for _, valAddr := range beefyValidatorAddresses {
-				h := sha256.New()
-				if _, err := h.Write([]byte(valAddr)); err != nil {
-					li.log.Info("err:", err)
-				}
-				hashedData := h.Sum(nil)
-				beefyTreeData = append(beefyTreeData, hashedData)
-			}
-
-			// Create the tree
-			beefyMerkleTree, err := merkletree.New(beefyTreeData)
-			if err != nil {
-				li.log.Info("err:", err)
-			}
-
-			// Fetch the root hash of the tree
-			root := beefyMerkleTree.Root()
-
-			// Generate a proof
-			sig0ProofData := beefyTreeData[0]
-			sig0Proof, err := beefyMerkleTree.GenerateProof(sig0ProofData)
-			if err != nil {
-				li.log.Info("err:", err)
-			}
-
-			// Verify the proof
-			verified, err := merkletree.VerifyProof(sig0ProofData, sig0Proof, root)
-			if err != nil {
-				li.log.Info("err:", err)
-			}
-			if !verified {
-				panic("failed to verify proof")
-			}
-
-			sig0ProofContents := make([][32]byte, len(sig0Proof.Hashes))
-			for i, hash := range sig0Proof.Hashes {
-				var hash32Byte [32]byte
-				copy(hash32Byte[:], hash)
-				sig0ProofContents[i] = hash32Byte
-			}
-
-			// Build hashed commitment
-			h := sha256.New()
-			commitmentBytes := []byte(fmt.Sprintf("%v", signedCommitment.Commitment))
-			if _, err := h.Write(commitmentBytes); err != nil {
-				li.log.Info("err:", err)
-			}
-			hashedCommitment := h.Sum(nil)
-			var hashedCommitment32Byte [32]byte
-			copy(hashedCommitment32Byte[:], hashedCommitment)
-
-			// // Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
-			// recIdIncrement := big.NewInt(27)
-			ok, sig0 := signedCommitment.Signatures[0].Unwrap()
-			if !ok {
-				li.log.Info("err:", err)
-			}
-
-			// sig0HexStr := hexutil.Encode(sig0[:])             // bytes -> 0x string
-			// recoveryId0, err := hexutil.DecodeBig(sig0HexStr) // 0x string -> big.Int
-			// if err != nil {
-			// 	li.log.Info("err:", err)
+			// TODO: query beefy authorities
+			// var output interface{}
+			// var blockNumber *uint64
+			// if blockNumber == nil {
+			// 	err = li.conn.api.Client.Call(&output, "beefy_getAuthorities")
+			// } else {
+			// 	err = li.conn.api.Client.Call(&output, "beefy_Authorities", *blockNumber)
 			// }
-			// incrementedRecoveryId0 := recoveryId0.Add(recoveryId0, recIdIncrement)
-			// newRecoveryId0 := hexutil.EncodeBig(incrementedRecoveryId0) // big.Int -> 0x string
-			// newRecoveryId0Bytes, err := hexutil.Decode(newRecoveryId0)  // 0x string -> []byte
 			// if err != nil {
-			// 	li.log.Info("err:", err)
+			// 	panic(err)
 			// }
-			// valSigCommitment := append(sig0[:], newRecoveryId0Bytes...)
 
-			// TODO: increment recovery ID properly
-			valSigCommitment := sig0[:]
+			// JavaScript query beefy authorities:
+			// async function getAuthoritiesDirect(api) {
+			// // For some reason the polkadot-js beefy.authorities function is not returning enough bytes.
+			// // This function just manually gets them.
+			// const beefyStorageQuery = "0x08c41974a97dbf15cfbec28365bea2da5e0621c4869aa60c02be9adcc98a0d1d";
+			// const authorities = await api.rpc.state.getStorage(beefyStorageQuery);
+			// return authorities;
+			// }
 
-			sig0ValAddr := common.HexToAddress(beefyValidatorAddresses[0])
+			beefyCommitmentInfo := parachain.NewBeefyCommitmentInfo(beefyValidatorAddresses, signedCommitment)
 
-			message := chain.NewSignatureCommitmentMessage{
-				Payload:                       hashedCommitment32Byte,
-				ValidatorClaimsBitfield:       big.NewInt(123), // TODO: add bitfield stuff properly
-				ValidatorSignatureCommitment:  valSigCommitment,
-				ValidatorPublicKey:            sig0ValAddr,
-				ValidatorPublicKeyMerkleProof: sig0ProofContents,
-			}
-
-			li.log.Info("Sending BEEFY commitment message to Ethereum messages chan")
-			li.messages <- []chain.Message{message}
+			li.messages <- []chain.Message{beefyCommitmentInfo}
 		}
 	}
 }
@@ -206,75 +158,99 @@ func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestIte
 	return nil, nil
 }
 
-// TODO: use these types from GSRPC's types/beefy.go once it's merged/published
-
-// Commitment is a beefy commitment
-type Commitment struct {
-	Payload        types.H256
-	BlockNumber    types.BlockNumber
-	ValidatorSetID types.U64
+// pollEthereumBlocks transitions BEEFY commitments from InitialVerificationTxConfirmed to ReadyToComplete status
+func (li *Listener) pollEthereumBlocks(ctx context.Context) error {
+	headers := make(chan *gethTypes.Header, 5)
+	_, headerCtx := errgroup.WithContext(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			return li.onDone(ctx)
+		case <-headerCtx.Done():
+			return li.onDone(ctx)
+		case gethheader := <-headers:
+			blockNumber := gethheader.Number.Uint64()
+			for beefyCommitment := range li.beefy {
+				if beefyCommitment.Status == parachain.InitialVerificationTxConfirmed {
+					if beefyCommitment.CompleteOnBlock >= blockNumber {
+						beefyCommitment.Status = parachain.ReadyToComplete
+						li.messages <- []chain.Message{beefyCommitment}
+					}
+				}
+			}
+		}
+	}
 }
 
-// SignedCommitment is a beefy commitment with optional signatures from the set of validators
-type SignedCommitment struct {
-	Commitment Commitment
-	Signatures []OptionBeefySignature
+// pollLightBridgeEvents fetches events from the LightClientBridge every block
+func (li *Listener) pollLightBridgeEvents(ctx context.Context) error {
+	headers := make(chan *gethTypes.Header, 5)
+	_, headerCtx := errgroup.WithContext(ctx)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return li.onDone(ctx)
+		case <-headerCtx.Done():
+			return li.onDone(ctx)
+		case gethheader := <-headers:
+			if li.beefy == nil {
+				li.log.Info("Not polling block details since channel is nil") // TODO: 'continue' here?
+			}
+
+			blockNumber := gethheader.Number.Uint64()
+
+			// Query ContractInitialVerificationSuccessful events
+			var events []*lightclientbridge.ContractInitialVerificationSuccessful
+			contractEvents, err := li.queryEvents(ctx, li.contract, blockNumber, &blockNumber)
+			if err != nil {
+				li.log.WithError(err).Error("Failure fetching event logs")
+			}
+			events = append(events, contractEvents...)
+
+			li.processEvents(ctx, events)
+		}
+	}
 }
 
-// BeefySignature is a beefy signature
-type BeefySignature [65]byte
+// queryEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
+func (li *Listener) queryEvents(ctx context.Context, contract *lightclientbridge.Contract, start uint64,
+	end *uint64) ([]*lightclientbridge.ContractInitialVerificationSuccessful, error) {
+	var events []*lightclientbridge.ContractInitialVerificationSuccessful
+	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-// OptionBeefySignature is a structure that can store a BeefySignature or a missing value
-type OptionBeefySignature struct {
-	option
-	value BeefySignature
+	iter, err := contract.FilterInitialVerificationSuccessful(&filterOps)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+
+		events = append(events, iter.Event)
+	}
+
+	return events, nil
 }
 
-// NewOptionBeefySignature creates an OptionBeefySignature with a value
-func NewOptionBeefySignature(value BeefySignature) OptionBeefySignature {
-	return OptionBeefySignature{option{true}, value}
-}
-
-// NewOptionBeefySignatureEmpty creates an OptionBeefySignature without a value
-func NewOptionBeefySignatureEmpty() OptionBeefySignature {
-	return OptionBeefySignature{option: option{false}}
-}
-
-func (o OptionBeefySignature) Encode(encoder scale.Encoder) error {
-	return encoder.EncodeOption(o.hasValue, o.value)
-}
-
-func (o *OptionBeefySignature) Decode(decoder scale.Decoder) error {
-	return decoder.DecodeOption(&o.hasValue, &o.value)
-}
-
-// SetSome sets a value
-func (o *OptionBeefySignature) SetSome(value BeefySignature) {
-	o.hasValue = true
-	o.value = value
-}
-
-// SetNone removes a value and marks it as missing
-func (o *OptionBeefySignature) SetNone() {
-	o.hasValue = false
-	o.value = BeefySignature{}
-}
-
-// Unwrap returns a flag that indicates whether a value is present and the stored value
-func (o OptionBeefySignature) Unwrap() (ok bool, value BeefySignature) {
-	return o.hasValue, o.value
-}
-
-type option struct {
-	hasValue bool
-}
-
-// IsNone returns true if the value is missing
-func (o option) IsNone() bool {
-	return !o.hasValue
-}
-
-// IsNone returns true if a value is present
-func (o option) IsSome() bool {
-	return o.hasValue
+// processEvents matches events to BEEFY commitment info by transaction hash
+func (li *Listener) processEvents(ctx context.Context, events []*lightclientbridge.ContractInitialVerificationSuccessful) {
+	for _, event := range events {
+		for beefyCommitment := range li.beefy {
+			if beefyCommitment.Status == parachain.InitialVerificationTxSent {
+				if beefyCommitment.InitialVerificationTxHash.Hex() == event.Raw.TxHash.Hex() {
+					beefyCommitment.Status = parachain.InitialVerificationTxConfirmed
+					beefyCommitment.CompleteOnBlock = event.Raw.BlockNumber + li.config.Ethereum.BeefyBlockDelay
+				}
+			}
+			li.beefy <- beefyCommitment // TODO: do we need any additional event info?
+		}
+	}
 }
