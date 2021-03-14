@@ -14,6 +14,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
+	"github.com/snowfork/polkadot-ethereum/relayer/parachain"
 )
 
 type Chain struct {
@@ -44,7 +45,8 @@ func NewChain(config *Config) (*Chain, error) {
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header) error {
+func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header,
+	beefy chan parachain.BeefyCommitmentInfo) error {
 	writer, err := NewWriter(ch.conn, ethMessages, ethHeaders, ch.log)
 	if err != nil {
 		return err
@@ -53,7 +55,8 @@ func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-ch
 	return nil
 }
 
-func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header) error {
+func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header,
+	beefy chan parachain.BeefyCommitmentInfo) error {
 	listener := NewListener(
 		ch.config,
 		ch.conn,
@@ -70,11 +73,6 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- c
 	}
 
 	err := ch.conn.Connect(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = ch.queryCurrentEpoch()
 	if err != nil {
 		return err
 	}
@@ -135,8 +133,10 @@ func (ch *Chain) queryEthereumInitParams() (*ethereum.HeaderID, error) {
 	return &nextHeaderID, nil
 }
 
-func (ch *Chain) queryCurrentEpoch() error {
-	storageKey, err := types.CreateStorageKey(&ch.conn.metadata, "VerifierLightclient", "Epoch", nil, nil)
+func (ch *Chain) QueryCurrentEpoch() error {
+	ch.log.Info("Creating storage key...")
+
+	storageKey, err := types.CreateStorageKey(&ch.conn.metadata, "Babe", "Epoch", nil, nil)
 	if err != nil {
 		return err
 	}

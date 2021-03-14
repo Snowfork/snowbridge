@@ -16,6 +16,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
+	"github.com/snowfork/polkadot-ethereum/relayer/parachain"
 )
 
 type Chain struct {
@@ -53,10 +54,11 @@ func NewChain(config *Config) (*Chain, error) {
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(messages <-chan []chain.Message, ethHeaders <-chan chain.Header) error {
-	contracts := make(map[string]*lightclientbridge.Contract) // TODO: empty mapping?
+func (ch *Chain) SetReceiver(messages <-chan []chain.Message, ethHeaders <-chan chain.Header,
+	beefy chan parachain.BeefyCommitmentInfo) error {
 
-	writer, err := NewWriter(ch.config, ch.econn, messages, contracts, ch.log)
+	contracts := make(map[string]*lightclientbridge.Contract)
+	writer, err := NewWriter(ch.config, ch.econn, messages, beefy, contracts, ch.log)
 	if err != nil {
 		return err
 	}
@@ -64,11 +66,14 @@ func (ch *Chain) SetReceiver(messages <-chan []chain.Message, ethHeaders <-chan 
 	return nil
 }
 
-func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header) error {
+func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header,
+	beefy chan parachain.BeefyCommitmentInfo) error {
 	listener := NewListener(
 		ch.config,
 		ch.conn,
+		ch.econn,
 		subMessages,
+		beefy,
 		ch.log,
 	)
 	ch.listener = listener

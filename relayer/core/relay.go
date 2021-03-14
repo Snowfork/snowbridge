@@ -13,14 +13,15 @@ import (
 	"syscall"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate"
-	"github.com/spf13/viper"
-	"golang.org/x/sync/errgroup"
-
-	log "github.com/sirupsen/logrus"
+	parachaintypes "github.com/snowfork/polkadot-ethereum/relayer/parachain"
 )
 
 type Relay struct {
@@ -81,11 +82,11 @@ func NewRelay() (*Relay, error) {
 		// can guarantee that a header is forwarded before we send dependent messages)
 		ethHeaders := make(chan chain.Header)
 
-		err = subChain.SetReceiver(ethMessages, ethHeaders)
+		err = subChain.SetReceiver(ethMessages, ethHeaders, nil)
 		if err != nil {
 			return nil, err
 		}
-		err = ethSubChain.SetSender(ethMessages, ethHeaders)
+		err = ethSubChain.SetSender(ethMessages, ethHeaders, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -98,29 +99,30 @@ func NewRelay() (*Relay, error) {
 			subMessages = make(chan []chain.Message, 1)
 		}
 
-		err := subChain.SetSender(subMessages, nil)
+		err := subChain.SetSender(subMessages, nil, nil)
 		if err != nil {
 			return nil, err
 		}
-		err = ethSubChain.SetReceiver(subMessages, nil)
+		err = ethSubChain.SetReceiver(subMessages, nil, nil)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// Listen to messages from parachain
+	beefyMessages := make(chan parachaintypes.BeefyCommitmentInfo, 1)
+
 	var paraMessages chan []chain.Message
 	if !headersOnly {
 		paraMessages = make(chan []chain.Message, 1)
 	}
-	err = paraChain.SetSender(paraMessages, nil)
+	err = paraChain.SetSender(paraMessages, nil, beefyMessages)
 	if err != nil {
 		return nil, err
 	}
 
 	// Write to LightClientBridge contract on Ethereum
 	ethHeadersTwo := make(chan chain.Header)
-	err = paraChain.SetReceiver(paraMessages, ethHeadersTwo)
+	err = paraChain.SetReceiver(paraMessages, ethHeadersTwo, beefyMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -271,6 +273,8 @@ func LoadConfig() (*Config, error) {
 	config.Parachain.Ethereum.PrivateKey = config.Eth.PrivateKey
 	// TODO: auto populate contract address
 	config.Parachain.Ethereum.Contracts.RelayBridgeLightClient = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305"
+	// TODO: query from 'BLOCK_WAIT_PERIOD' on RelayBridgeLightClient contract
+	config.Parachain.Ethereum.BeefyBlockDelay = 50
 
 	return &config, nil
 }
