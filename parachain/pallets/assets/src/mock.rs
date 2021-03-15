@@ -58,6 +58,7 @@ impl system::Config for Test {
 
 impl assets::Config for Test {
 	type Event = Event;
+	type WeightInfo = ();
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {

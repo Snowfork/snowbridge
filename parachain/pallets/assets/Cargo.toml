@@ -12,6 +12,7 @@ codec = { version = "2.0.0", package = "parity-scale-codec", default-features = 
 hex = { version = "2.1.0", package = "rustc-hex", default-features = false }
 serde = { version = "1.0.101", optional = true }
 
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
@@ -37,4 +38,9 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "artemis-core/std"
+]
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
 ]

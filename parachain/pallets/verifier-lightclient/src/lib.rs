@@ -63,14 +63,14 @@ struct PruningRange {
 
 /// Weight functions needed for this pallet.
 pub trait WeightInfo {
-	fn import_header_new_finalized_with_max_prune() -> Weight;
+	fn import_header() -> Weight;
 	fn import_header_not_new_finalized_with_max_prune() -> Weight;
 	fn import_header_new_finalized_with_single_prune() -> Weight;
 	fn import_header_not_new_finalized_with_single_prune() -> Weight;
 }
 
 impl WeightInfo for () {
-	fn import_header_new_finalized_with_max_prune() -> Weight { 0 }
+	fn import_header() -> Weight { 0 }
 	fn import_header_not_new_finalized_with_max_prune() -> Weight { 0 }
 	fn import_header_new_finalized_with_single_prune() -> Weight { 0 }
 	fn import_header_not_new_finalized_with_single_prune() -> Weight { 0 }
@@ -177,7 +177,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = T::WeightInfo::import_header_new_finalized_with_max_prune()]
+		#[weight = T::WeightInfo::import_header()]
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 

@@ -19,10 +19,9 @@ echo "Building runtime with features $RUNTIME_FEATURE,runtime-benchmarks"
 
 cargo build --release \
     --no-default-features \
-    --features runtime-benchmarks \
-    --features $RUNTIME_FEATURE
+    --features runtime-benchmarks,$RUNTIME_FEATURE
 
-PALLETS="pallet_balances pallet_timestamp verifier_lightclient"
+PALLETS="assets pallet_balances pallet_timestamp verifier_lightclient"
 
 echo "Generating weights module for $RUNTIME_DIR with pallets $PALLETS"
 

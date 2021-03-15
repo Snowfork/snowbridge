@@ -445,6 +445,7 @@ impl commitments::Config for Runtime {
 
 impl assets::Config for Runtime {
 	type Event = Event;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -663,6 +664,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
+			add_benchmark!(params, batches, assets, Assets);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

@@ -211,6 +211,7 @@ name = "artemis-assets"
 version = "0.1.1"
 dependencies = [
  "artemis-core",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
