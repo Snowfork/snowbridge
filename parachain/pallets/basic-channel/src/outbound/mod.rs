@@ -1,9 +1,9 @@
 use codec::{Decode, Encode};
+use ethabi::{self, Token};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
 	weights::Weight,
 };
-use ethabi::{self, Token};
 use frame_system::{self as system};
 use sp_core::{RuntimeDebug, H160, H256};
 use sp_io::offchain_index;
@@ -20,18 +20,18 @@ use merkle_tree::*;
 #[cfg(test)]
 mod test;
 
-mod merkle_tree;
+pub mod merkle_tree;
 pub use merkle_tree::generate_merkle_proofs;
 
 /// Wire-format for committed messages
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 pub struct Message {
 	/// Target application on the Ethereum side.
-	target: H160,
+	pub target: H160,
 	/// A nonce for replay protection and ordering.
-	nonce: u64,
+	pub nonce: u64,
 	/// Payload for target application.
-	payload: Vec<u8>,
+	pub payload: Vec<u8>,
 }
 
 /// Wire-format for committed BasicChannel data
@@ -182,6 +182,9 @@ impl<T: Config> Module<T> {
 
 		let key = offchain_key(T::INDEXING_PREFIX, mroot);
 		offchain_index::set(&*key, &data.encode());
+
+		// Clear queue
+		<Self as Store>::MessageQueue::put(<Vec<(T::AccountId, Message)>>::new());
 
 		0
 	}

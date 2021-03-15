@@ -256,6 +256,8 @@ dependencies = [
  "artemis-basic-channel",
  "artemis-core",
  "assert_matches",
+ "frame-support",
+ "frame-system",
  "hex-literal",
  "itertools 0.10.0",
  "jsonrpc-core 15.1.0",
@@ -264,12 +266,15 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.11.1",
  "sc-rpc",
+ "serde",
  "sp-api",
  "sp-blockchain",
  "sp-core",
+ "sp-externalities",
  "sp-io",
  "sp-offchain",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
