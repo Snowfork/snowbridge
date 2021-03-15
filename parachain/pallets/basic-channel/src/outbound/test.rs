@@ -11,8 +11,6 @@ use sp_runtime::{
 use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
 
-use artemis_core::MessageCommitment;
-
 use crate::outbound as basic_outbound_channel;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
