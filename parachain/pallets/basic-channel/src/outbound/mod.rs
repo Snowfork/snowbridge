@@ -6,10 +6,8 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage,
 use ethabi::{self, Token};
 use frame_system::{self as system};
 use sp_core::{RuntimeDebug, H160, H256};
-use sp_runtime::{
-	offchain::storage::StorageValueRef,
-	traits::{Hash, Zero},
-};
+use sp_io::offchain_index;
+use sp_runtime::traits::{Hash, Zero};
 use sp_std::prelude::*;
 
 use artemis_core::{
@@ -183,8 +181,7 @@ impl<T: Config> Module<T> {
 		};
 
 		let key = offchain_key(T::INDEXING_PREFIX, mroot);
-		let storage = StorageValueRef::persistent(&key);
-		storage.set(&data.encode());
+		offchain_index::set(&*key, &data.encode());
 
 		0
 	}
