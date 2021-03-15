@@ -12,6 +12,11 @@
 				"name": "bob",
 				"wsPort": 9955,
 				"port": 30555
+			},
+			{
+				"name": "charlie",
+				"wsPort": 9966,
+				"port": 30666
 			}
 		]
 	},
@@ -19,9 +24,10 @@
 		{
 			"bin": "target/release/artemis",
 			"id": "200",
-			"wsPort": 9966,
-			"port": 30666,
+			"wsPort": 9977,
+			"port": 30777,
 			"flags": [
+				"-lruntime=debug",
 				"--rpc-port=9980",
 				"--offchain-worker=Always",
 				"--enable-offchain-indexing=true",
@@ -32,9 +38,10 @@
 		{
 			"bin": "target/release/artemis",
 			"id": "300",
-			"wsPort": 9977,
-			"port": 30777,
+			"wsPort": 9988,
+			"port": 30888,
 			"flags": [
+				"-lruntime=debug",
 				"--rpc-port=9990",
 				"--offchain-worker=Always",
 				"--enable-offchain-indexing=true",
