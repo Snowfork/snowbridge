@@ -10,7 +10,7 @@ type AccountId = u64;
 fn local_storage_should_work() {
 	let storage = InMemOffchainStorage::default();
 	let channel = BasicChannel::<_, AccountId>::new(storage, DenyUnsafe::No, b"testing");
-	let root = H256::from_slice(&hex!["aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbcccccccccccccccdddddddddddddddd"]); // = Bytes(b"offchain_storage".to_vec());
+	let root = H256::repeat_byte(1);
 	let key = offchain_key(channel.indexing_prefix, root);
 	let account_id = 1234u64;
 
@@ -37,7 +37,7 @@ fn local_storage_should_work() {
 fn offchain_calls_considered_unsafe() {
 	let storage = InMemOffchainStorage::default();
 	let channel = BasicChannel::<_, AccountId>::new(storage, DenyUnsafe::Yes, b"testing");
-	let root = H256::from_slice(&hex!["aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbcccccccccccccccdddddddddddddddd"]); // = Bytes(b"offchain_storage".to_vec());
+	let root = H256::repeat_byte(2);
 	let key = offchain_key(channel.indexing_prefix, root);
 	let account_id = 1234u64;
 
