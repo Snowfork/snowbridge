@@ -59,8 +59,6 @@ use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 
 use artemis_xcm_support::AssetsTransactor;
 
-mod weights;
-
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -210,7 +208,7 @@ impl pallet_timestamp::Config for Runtime {
 	type Moment = u64;
 	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
-	type WeightInfo = weights::pallet_timestamp_weights::WeightInfo<Runtime>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -227,7 +225,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = weights::pallet_balances_weights::WeightInfo<Runtime>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -432,7 +430,7 @@ impl verifier_lightclient::Config for Runtime {
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
-	type WeightInfo = weights::verifier_lightclient_weights::WeightInfo<Runtime>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
