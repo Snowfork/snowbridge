@@ -146,16 +146,12 @@ fn test_commit_and_read() {
 	config.assimilate_storage(&mut storage).unwrap();
 
 	let mut t = TestExternalities::from(storage);
-	let offchain_ext = OffchainExt::new(offchain);
-	t.register_extension(offchain_ext);
-
-	let offchain_db = t.offchain_db();
-
-	const CONTRACT_A: H160 =  H160::repeat_byte(1);
-	const CONTRACT_B: H160 =  H160::repeat_byte(2);
-	const WHO: u64 = 5555;
+	t.register_extension(OffchainExt::new(offchain));
 
 	t.execute_with(|| {
+		const CONTRACT_A: H160 =  H160::repeat_byte(1);
+		const CONTRACT_B: H160 =  H160::repeat_byte(2);
+		const WHO: u64 = 5555;
 
 		let messages = vec![
 			outbound_channel::Message {
@@ -176,7 +172,7 @@ fn test_commit_and_read() {
 		run_to_block(2);
 	});
 
-	let channel = BasicChannel::<_, AccountId>::new(offchain_db, DenyUnsafe::No, INDEXING_PREFIX);
+	let channel = BasicChannel::<_, AccountId>::new(t.offchain_db(), DenyUnsafe::No, INDEXING_PREFIX);
 	let mroot = H256::from_slice(&hex!["b844173465763db27a0006c077aa14d8d089cb4d9a6f8a903754664f0bbe6bdd"][..]);
 	let key = offchain_key(channel.indexing_prefix, mroot);
 	let data = t.overlayed_changes().clone().offchain_drain_committed()

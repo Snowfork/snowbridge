@@ -270,7 +270,6 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-core",
- "sp-externalities",
  "sp-io",
  "sp-offchain",
  "sp-runtime",
