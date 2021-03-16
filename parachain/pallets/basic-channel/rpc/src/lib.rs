@@ -23,7 +23,7 @@ pub trait BasicChannelApi<TAccountId>
 	fn get_merkle_proofs(&self, root: H256) -> Result<Proofs<TAccountId>>;
 }
 
-pub struct BasicChannel<TStorage, TAccountId> {
+pub struct BasicChannel<TStorage: OffchainStorage, TAccountId> {
 	_marker: std::marker::PhantomData<TAccountId>,
 	/// Offchain storage
 	storage: Arc<RwLock<TStorage>>,
@@ -33,7 +33,10 @@ pub struct BasicChannel<TStorage, TAccountId> {
 	indexing_prefix: &'static [u8],
 }
 
-impl<TStorage, TAccountId> BasicChannel<TStorage, TAccountId> {
+impl<TStorage, TAccountId> BasicChannel<TStorage, TAccountId>
+where
+	TStorage: OffchainStorage,
+{
 	pub fn new(storage: TStorage, deny_unsafe: DenyUnsafe, indexing_prefix: &'static [u8]) -> Self {
 		Self {
 			_marker: Default::default(),
@@ -53,7 +56,11 @@ where
 		self.deny_unsafe.check_if_safe()?;
 
 		let key = offchain_key(self.indexing_prefix, root);
-		if let Some(data) = self.storage.read().get(sp_offchain::STORAGE_PREFIX, &*key) {
+
+		// Note that while the default RPCs shipping with Substrate use the sp_offchain::STORAGE_PREFIX
+		// as prefix for the storage, keys are only found using no prefix, if they are stored
+		// using offchain_index() in the on-chain code.
+		if let Some(data) = self.storage.read().get(b"", &*key) {
 			if let Ok(cdata) = <CommitmentData<TAccountId>>::decode(&mut data.as_slice()) {
 				let num_coms = cdata.subcommitments.len();
 				let mut accounts = Vec::with_capacity(num_coms);

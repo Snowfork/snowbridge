@@ -30,7 +30,8 @@ fn local_storage_should_work() {
 	};
 	let value = value.encode();
 
-	channel.storage.write().set(sp_offchain::STORAGE_PREFIX, &*key, &*value.clone());
+	//channel.storage.write().set(sp_offchain::STORAGE_PREFIX, &*key, &*value.clone());
+	channel.storage.write().set(b"", &*key, &*value.clone());
 
 	assert!(channel.get_merkle_proofs(root).is_ok());
 
@@ -146,14 +147,12 @@ fn test_commit_and_read() {
 	config.assimilate_storage(&mut storage).unwrap();
 
 	let mut t = TestExternalities::from(storage);
-	let offchain_ext = OffchainExt::new(offchain);
-	t.register_extension(offchain_ext);
+	t.register_extension(OffchainExt::new(offchain));
 
-	let offchain_db = t.offchain_db();
+		const CONTRACT_A: H160 =  H160::repeat_byte(1);
+		const CONTRACT_B: H160 =  H160::repeat_byte(2);
+		const WHO: u64 = 5555;
 
-	const CONTRACT_A: H160 =  H160::repeat_byte(1);
-	const CONTRACT_B: H160 =  H160::repeat_byte(2);
-	const WHO: u64 = 5555;
 
 	t.execute_with(|| {
 
@@ -176,7 +175,9 @@ fn test_commit_and_read() {
 		run_to_block(2);
 	});
 
-	let channel = BasicChannel::<_, AccountId>::new(offchain_db, DenyUnsafe::No, INDEXING_PREFIX);
+	// Test offchain overlay changes
+
+	let channel = BasicChannel::<_, AccountId>::new(t.offchain_db(), DenyUnsafe::No, INDEXING_PREFIX);
 	let mroot = H256::from_slice(&hex!["b844173465763db27a0006c077aa14d8d089cb4d9a6f8a903754664f0bbe6bdd"][..]);
 	let key = offchain_key(channel.indexing_prefix, mroot);
 	let data = t.overlayed_changes().clone().offchain_drain_committed()
@@ -186,4 +187,13 @@ fn test_commit_and_read() {
 
 	use sp_core::offchain::OffchainOverlayedChange;
 	assert_matches!(data.map(|data| data.1), Some(OffchainOverlayedChange::SetValue(_)));
+
+	// Persist and test persistent data
+
+	t.persist_offchain_overlay();
+
+	assert_matches!(
+		channel.get_merkle_proofs(mroot),
+		Ok(ref proofs) if proofs[0].0 == WHO
+	);
 }
