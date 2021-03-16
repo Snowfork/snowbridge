@@ -119,6 +119,7 @@ runtime-benchmarks = [
     "pallet-timestamp/runtime-benchmarks",
     # Artemis pallets
     "assets/runtime-benchmarks",
+    "dot-app/runtime-benchmarks",
     "dispatch/runtime-benchmarks",
     "verifier-lightclient/runtime-benchmarks",
 ]

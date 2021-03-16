@@ -108,6 +108,6 @@ members = [
     "pallets/commitments",
     "pallets/transfer",
     "runtime/snowbridge",
-    "runtime/rococo",
-    "runtime/local",
+    # "runtime/rococo",
+    # "runtime/local",
 ]

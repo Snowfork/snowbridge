@@ -304,6 +304,7 @@ dependencies = [
  "artemis-dispatch",
  "artemis-ethereum",
  "ethabi-decode",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex-literal",
