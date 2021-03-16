@@ -478,6 +478,7 @@ impl dot_app::Config for Runtime {
 	type CallOrigin = EnsureEthereumAccount;
 	type ModuleId = DotModuleId;
 	type Decimals = Decimals;
+	type WeightInfo = ();
 }
 
 construct_runtime!(
@@ -665,6 +666,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
 			add_benchmark!(params, batches, assets, Assets);
+			add_benchmark!(params, batches, dot_app, DOT);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
