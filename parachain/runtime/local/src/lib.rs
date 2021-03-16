@@ -464,6 +464,7 @@ impl erc20_app::Config for Runtime {
 	type Assets = assets::Module<Runtime>;
 	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -667,6 +668,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, dot_app, DOT);
+			add_benchmark!(params, batches, erc20_app, ERC20);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
