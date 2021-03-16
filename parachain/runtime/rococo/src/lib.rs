@@ -497,7 +497,7 @@ construct_runtime!(
 		BasicInboundChannel: basic_channel_inbound::{Module, Call, Config, Storage, Event} = 7,
 		BasicOutboundChannel: basic_channel_outbound::{Module, Config<T>, Storage, Event} = 8,
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Module, Call, Config, Storage, Event} = 9,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Module, Storage, Event} = 10,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Module, Config<T>, Storage, Event} = 10,
 		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin} = 11,
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config} = 16,
 		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>} = 17,
