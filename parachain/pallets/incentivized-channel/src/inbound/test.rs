@@ -8,12 +8,13 @@ use frame_support::{
 	dispatch::DispatchError
 };
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
+	Perbill,
+	traits::{Convert, BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
 };
 use sp_keyring::AccountKeyring as Keyring;
-use sp_std::convert::From;
+use sp_std::{marker::PhantomData, convert::From};
 
-use artemis_core::{MessageDispatch, Message, Proof, rewards::InstantRewards};
+use artemis_core::{MessageDispatch, Message, Proof};
 use artemis_ethereum::Log;
 
 use hex_literal::hex;
@@ -106,22 +107,32 @@ impl MessageDispatch<MessageId> for MockMessageDispatch {
 }
 
 parameter_types! {
-	pub RewardsAccount: AccountId = Keyring::Eve.into();
+	pub SourceAccount: AccountId = Keyring::Eve.into();
+	pub TreasuryAccount: AccountId = Keyring::Dave.into();
 }
 
+pub struct FeeConverter<T: Config>(PhantomData<T>);
+
+impl<T: Config> Convert<U256, BalanceOf<T>> for FeeConverter<T> {
+	fn convert(_: U256) -> BalanceOf<T> {
+		100u32.into()
+	}
+}
 
 impl incentivized_inbound_channel::Config for Test {
 	type Event = Event;
 	type Verifier = MockVerifier;
 	type MessageDispatch = MockMessageDispatch;
-	type RewardsAccount = RewardsAccount;
-	type InboundMessageFee = Balance;
-	type RewardRelayer = InstantRewards<Self, Balances>;
+	type Currency = Balances;
+	type SourceAccount = SourceAccount;
+	type TreasuryAccount = TreasuryAccount;
+	type FeeConverter = FeeConverter<Self>;
 }
 
 pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
 	new_tester_with_config(incentivized_inbound_channel::GenesisConfig {
 		source_channel,
+		reward_fraction: Perbill::from_percent(80)
 	})
 }
 

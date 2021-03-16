@@ -17,7 +17,7 @@ use sp_std::{
 use sp_core::{H160, U256};
 use sp_runtime::{
 	ModuleId,
-	traits::{StaticLookup, AccountIdConversion},
+	traits::{Convert, StaticLookup, AccountIdConversion},
 };
 
 use artemis_core::{ChannelId, OutboundRouter};
@@ -140,5 +140,14 @@ decl_module! {
 impl<T: Config> Module<T> {
 	pub fn account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
+	}
+}
+
+impl<T: Config> Convert<U256,BalanceOf<T>> for Module<T> {
+	fn convert(amount: U256) -> BalanceOf<T> {
+		match unwrap::<T>(amount, T::Decimals::get()) {
+			Some(value) => value,
+			None => panic!("Runtime is misconfigured"),
+		};
 	}
 }
