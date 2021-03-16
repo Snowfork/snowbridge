@@ -13,8 +13,6 @@ use sp_runtime::traits::Zero;
 
 use crate::Module as DotApp;
 
-const ETH_CONTRACT_ADDRESS: [u8; 20] = hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"];
-
 benchmarks! {
     // Benchmark `lock` extrinsic under worst case conditions:
     // * The amount is successfully locked
@@ -66,8 +64,7 @@ benchmarks! {
     // Benchmark `unlock` extrinsic under worst case conditions:
     // * The amount is successfully unlocked
 	unlock {
-        let caller: H160 = ETH_CONTRACT_ADDRESS.into();
-        Address::put(caller);
+        Address::set(Default::default());
 
         let existential_deposit = T::Currency::minimum_balance();
         let lock_account = DotApp::<T>::account_id();
@@ -75,7 +72,7 @@ benchmarks! {
         let recipient_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(recipient.clone());
         let sender = H160::zero();
 
-        let balance = existential_deposit * 10u32.into();
+        let balance = existential_deposit * 20u32.into();
         // The balance remaining after unlock will be < existential deposit.
         // This shouldn't trigger account reaping because we're using
         // the 'KeepAlive' flag. But just in case that ever changes...
