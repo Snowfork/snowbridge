@@ -1,17 +1,19 @@
 use super::*;
 
-use sp_core::{H160, H256};
 use frame_support::{
 	assert_ok,
 	parameter_types,
 };
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
-};
+use sp_core::{H160, H256};
+use sp_io::TestExternalities;
 use sp_keyring::AccountKeyring as Keyring;
+use sp_runtime::{
+	DigestItem,
+	MultiSignature,
+	traits::{BlakeTwo256, Keccak256, IdentityLookup, IdentifyAccount, Verify},
+	testing::Header,
+};
 use sp_std::convert::From;
-
-use artemis_core::MessageCommitment;
 
 use crate::outbound as incentivized_outbound_channel;
 
@@ -61,18 +63,11 @@ impl system::Config for Test {
 	type SS58Prefix = ();
 }
 
-// Mock Commitments
-pub struct MockMessageCommitment;
-
-impl MessageCommitment for MockMessageCommitment {
-	fn add(_: ChannelId, _: H160, _: u64, _: &[u8]) -> DispatchResult {
-		Ok(())
-	}
-}
-
 impl incentivized_outbound_channel::Config for Test {
+	//type MessageCommitment = MockMessageCommitment;
 	type Event = Event;
-	type MessageCommitment = MockMessageCommitment;
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+	type Hashing = Keccak256;
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
@@ -94,5 +89,63 @@ fn test_submit() {
 
 		assert_ok!(IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
 		assert_eq!(Nonce::get(), 2);
+	});
+}
+
+// Test commitments
+
+use frame_support::traits::OnInitialize;
+
+fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		System::set_block_number(System::block_number() + 1);
+		IncentivizedOutboundChannel::on_initialize(System::block_number());
+	}
+}
+
+
+const CONTRACT_A: H160 =  H160::repeat_byte(1);
+const CONTRACT_B: H160 =  H160::repeat_byte(2);
+
+
+#[test]
+fn test_add_message() {
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let config: incentivized_outbound_channel::GenesisConfig<Test> = incentivized_outbound_channel::GenesisConfig {
+		interval: 1u64
+	};
+	config.assimilate_storage(&mut storage).unwrap();
+	let mut t = TestExternalities::from(storage);
+
+	t.execute_with(|| {
+		System::set_block_number(1);
+
+		IncentivizedOutboundChannel::push_message(CONTRACT_A, 0, &vec![0, 1, 2]).unwrap();
+		IncentivizedOutboundChannel::push_message(CONTRACT_B, 1, &vec![3, 4, 5]).unwrap();
+
+		let messages = vec![
+			Message {
+				target: CONTRACT_A,
+				nonce: 0,
+				payload: vec![0, 1, 2],
+			},
+			Message {
+				target: CONTRACT_B,
+				nonce: 1,
+				payload: vec![3, 4, 5],
+			},
+		];
+
+		assert_eq!(MessageQueue::get(), messages);
+
+		// Run to block 5 where a commitment will be generated
+		run_to_block(5);
+
+		assert_eq!(
+			System::digest().logs(),
+			vec![
+				DigestItem::Other(vec![0, 1, 75, 224, 75, 115, 209, 7, 157, 71, 172, 222, 139, 122, 150, 76, 83, 255, 213, 213, 15, 233, 253, 193, 12, 4, 71, 27, 94, 86, 44, 150, 225, 60])
+			]
+		);
 	});
 }

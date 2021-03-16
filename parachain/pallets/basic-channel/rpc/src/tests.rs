@@ -1,13 +1,14 @@
 use assert_matches::assert_matches;
 use codec::Encode;
 use hex_literal::hex;
-use sp_core::{H160, H256};
-use sp_core::offchain::testing::{self, TestPersistentOffchainDB};
 use frame_support::{assert_ok, parameter_types};
+use sp_core::{H160, H256, offchain::{OffchainExt, testing::{self, TestPersistentOffchainDB}}};
+use sp_io::TestExternalities;
 use sp_runtime::{
 	traits::{BlakeTwo256, Keccak256, IdentityLookup},
 	testing::Header,
 };
+
 use artemis_basic_channel::outbound as outbound_channel;
 
 type AccountId = u64;
@@ -127,9 +128,6 @@ fn run_to_block(n: u64) {
 		BasicOutboundChannel::on_initialize(System::block_number());
 	}
 }
-
-use sp_core::offchain::OffchainExt;
-use sp_io::TestExternalities;
 
 #[test]
 fn test_commit_and_read() {
