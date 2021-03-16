@@ -372,6 +372,8 @@ use incentivized_channel::inbound as incentivized_channel_inbound;
 use basic_channel::outbound as basic_channel_outbound;
 use incentivized_channel::outbound as incentivized_channel_outbound;
 
+pub const BASIC_COMMITMENTS_INDEXING_PREFIX: &'static [u8] = b"basic";
+pub const INCENTIVIZED_COMMITMENTS_INDEXING_PREFIX: &'static [u8] = b"incentivized";
 
 impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
@@ -379,12 +381,14 @@ impl basic_channel_inbound::Config for Runtime {
 	type MessageDispatch = dispatch::Module<Runtime>;
 }
 
-pub const COMMITMENTS_INDEXING_PREFIX: &'static [u8] = b"commitment";
-
 impl basic_channel_outbound::Config for Runtime {
 	type Event = Event;
-	const INDEXING_PREFIX: &'static [u8] = COMMITMENTS_INDEXING_PREFIX;
+	const INDEXING_PREFIX: &'static [u8] = BASIC_COMMITMENTS_INDEXING_PREFIX;
 	type Hashing = Keccak256;
+}
+
+parameter_types! {
+	pub const CommitInterval: BlockNumber = 5;
 }
 
 impl incentivized_channel_inbound::Config for Runtime {
@@ -398,7 +402,8 @@ impl incentivized_channel_inbound::Config for Runtime {
 
 impl incentivized_channel_outbound::Config for Runtime {
 	type Event = Event;
-	type MessageCommitment = commitments::Module<Runtime>;
+	const INDEXING_PREFIX: &'static [u8] = INCENTIVIZED_COMMITMENTS_INDEXING_PREFIX;
+ 	type Hashing = Keccak256;
 }
 
 use sp_std::marker::PhantomData;
@@ -436,16 +441,6 @@ impl verifier_lightclient::Config for Runtime {
 	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
 	type WeightInfo = weights::verifier_lightclient_weights::WeightInfo<Runtime>;
-}
-
-parameter_types! {
-	pub const CommitInterval: BlockNumber = 5;
-}
-
-impl commitments::Config for Runtime {
-	const INDEXING_PREFIX: &'static [u8] = COMMITMENTS_INDEXING_PREFIX;
-	type Event = Event;
-	type Hashing = Keccak256;
 }
 
 impl assets::Config for Runtime {
@@ -504,7 +499,6 @@ construct_runtime!(
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Module, Call, Config, Storage, Event} = 9,
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Module, Storage, Event} = 10,
 		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin} = 11,
-		Commitments: commitments::{Module, Call, Config<T>, Storage, Event} = 15,
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config} = 16,
 		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>} = 17,
 

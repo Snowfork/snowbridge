@@ -54,7 +54,6 @@ assets = { path = "../../pallets/assets", package = "artemis-assets", default-fe
 dot-app = { path = "../../pallets/dot-app", package = "artemis-dot-app", default-features = false }
 eth-app = { path = "../../pallets/eth-app", package = "artemis-eth-app", default-features = false }
 erc20-app = { path = "../../pallets/erc20-app", package = "artemis-erc20-app", default-features = false }
-commitments = { path = "../../pallets/commitments", package = "artemis-commitments", default-features = false }
 
 # Used for runtime benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false, optional = true }
@@ -104,7 +103,6 @@ std = [
     "dot-app/std",
     "eth-app/std",
     "erc20-app/std",
-    "commitments/std",
     "artemis-transfer/std",
     "artemis-xcm-support/std"
 ]

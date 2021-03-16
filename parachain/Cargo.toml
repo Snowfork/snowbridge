@@ -108,7 +108,6 @@ members = [
     "pallets/eth-app",
     "pallets/erc20-app",
     "pallets/dot-app",
-    "pallets/commitments",
     "pallets/transfer",
     "runtime/snowbridge",
     "runtime/rococo",
