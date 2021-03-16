@@ -5,6 +5,7 @@
 use super::*;
 
 use frame_system::{RawOrigin};
+use frame_support::traits::UnfilteredDispatchable;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 use hex_literal::hex;
 use sp_core::H160;
@@ -29,7 +30,7 @@ benchmarks! {
         // The amount is chosen such that balance - amount < existential_deposit
         // so that the account is reaped
         let amount = existential_deposit * 9u32.into() + 1u32.into();
-        
+
         T::Currency::make_free_balance_be(&caller, balance);
 
 	}: _(RawOrigin::Signed(caller.clone()), ChannelId::Incentivized, recipient, amount)
@@ -52,7 +53,7 @@ benchmarks! {
 
         let balance = existential_deposit * 10u32.into();
         let amount = existential_deposit * 8u32.into();
-        
+
         T::Currency::make_free_balance_be(&caller, balance);
 
 	}: lock(RawOrigin::Signed(caller.clone()), ChannelId::Incentivized, recipient, amount)
@@ -73,16 +74,20 @@ benchmarks! {
         let recipient: T::AccountId = account("recipient", 0, 0);
         let recipient_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(recipient.clone());
         let sender = H160::zero();
-        
+
         let balance = existential_deposit * 10u32.into();
         // The balance remaining after unlock will be < existential deposit.
         // This shouldn't trigger account reaping because we're using
         // the 'KeepAlive' flag. But just in case that ever changes...
         let amount = existential_deposit * 9u32.into() + 1u32.into();
         let amount_wrapped = wrap::<T>(amount, T::Decimals::get()).unwrap();
-        
+
         T::Currency::make_free_balance_be(&lock_account, balance);
-	}: _(artemis_dispatch::Origin(caller).into(), sender, recipient_lookup, amount_wrapped)
+
+        let call = Call::<T>::unlock(sender, recipient_lookup, amount_wrapped);
+        let origin = T::CallOrigin::successful_origin();
+
+	}: { call.dispatch_bypass_filter(origin)? }
 	verify {
         assert!(!balance.is_zero() && !amount.is_zero());
         assert_eq!(T::Currency::free_balance(&lock_account), balance - amount);

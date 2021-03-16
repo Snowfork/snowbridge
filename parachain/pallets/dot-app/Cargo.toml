@@ -25,7 +25,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "ro
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 artemis-core = { path = "../../primitives/core", default-features = false }
-artemis-dispatch = { path = "../../pallets/dispatch", optional = true }
+artemis-dispatch = { path = "../../pallets/dispatch", default-features = false, optional = true }
 artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
 
 [dev-dependencies]
