@@ -132,7 +132,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 
 				err = types.DecodeFromBytes(*data, &messages)
 				if err != nil {
-					li.log.WithError(err).Error("Faild to decode commitment messages")
+					li.log.WithError(err).Error("Failed to decode commitment messages")
 				}
 
 				message := chain.SubstrateOutboundMessage{
