@@ -21,6 +21,7 @@ cargo build --release \
     --no-default-features \
     --features runtime-benchmarks,$RUNTIME_FEATURE
 
+# TODO: add frame_system here once invalid WeightInfo impl is resolved
 PALLETS="assets dot_app erc20_app eth_app pallet_balances pallet_timestamp verifier_lightclient"
 
 echo "Generating weights module for $RUNTIME_DIR with pallets $PALLETS"
