@@ -122,5 +122,6 @@ runtime-benchmarks = [
     "dot-app/runtime-benchmarks",
     "dispatch/runtime-benchmarks",
     "erc20-app/runtime-benchmarks",
+    "eth-app/runtime-benchmarks",
     "verifier-lightclient/runtime-benchmarks",
 ]

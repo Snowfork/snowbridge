@@ -459,6 +459,7 @@ impl eth_app::Config for Runtime {
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
 	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
+	type WeightInfo = ();
 }
 
 impl erc20_app::Config for Runtime {
@@ -671,6 +672,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, dot_app, DOT);
 			add_benchmark!(params, batches, erc20_app, ERC20);
+			add_benchmark!(params, batches, eth_app, ETH);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
