@@ -9,7 +9,8 @@ use frame_support::{
 		EnsureOrigin,
 		Currency,
 		ExistenceRequirement::{KeepAlive, AllowDeath},
-	}
+	},
+	weights::Weight,
 };
 use sp_std::{
 	prelude::*,
@@ -26,6 +27,7 @@ use primitives::{wrap, unwrap};
 
 use payload::OutboundPayload;
 
+mod benchmarking;
 mod payload;
 mod primitives;
 
@@ -34,6 +36,17 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
+
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn lock() -> Weight;
+	fn unlock() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn lock() -> Weight { 0 }
+	fn unlock() -> Weight { 0 }
+}
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
@@ -49,6 +62,8 @@ pub trait Config: system::Config {
 	type ModuleId: Get<ModuleId>;
 
 	type Decimals: Get<u32>;
+	/// Weight information for extrinsics in this pallet
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -93,7 +108,7 @@ decl_module! {
 			});
 		}
 
-		#[weight = 0]
+		#[weight = T::WeightInfo::lock()]
 		#[transactional]
 		pub fn lock(origin, channel_id: ChannelId, recipient: H160, amount: BalanceOf<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -116,7 +131,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = 0]
+		#[weight = T::WeightInfo::unlock()]
 		#[transactional]
 		pub fn unlock(origin, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;

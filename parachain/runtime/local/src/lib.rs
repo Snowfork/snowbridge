@@ -457,6 +457,7 @@ impl eth_app::Config for Runtime {
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
 	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
+	type WeightInfo = ();
 }
 
 impl erc20_app::Config for Runtime {
@@ -464,6 +465,7 @@ impl erc20_app::Config for Runtime {
 	type Assets = assets::Module<Runtime>;
 	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -478,6 +480,7 @@ impl dot_app::Config for Runtime {
 	type CallOrigin = EnsureEthereumAccount;
 	type ModuleId = DotModuleId;
 	type Decimals = Decimals;
+	type WeightInfo = ();
 }
 
 construct_runtime!(
@@ -665,6 +668,9 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
 			add_benchmark!(params, batches, assets, Assets);
+			add_benchmark!(params, batches, dot_app, DOT);
+			add_benchmark!(params, batches, erc20_app, ERC20);
+			add_benchmark!(params, batches, eth_app, ETH);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

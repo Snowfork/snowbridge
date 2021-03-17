@@ -99,6 +99,7 @@ impl erc20_app::Config for Test {
 	type Assets = Assets;
 	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
 	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
+	type WeightInfo = ();
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {

@@ -8,6 +8,7 @@ use frame_system::RawOrigin;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 use sp_core::H160;
 
+#[allow(unused_imports)]
 use crate::Module as Assets;
 
 fn set_balance<T: Config>(asset_id: &AssetId, who: &T::AccountId, amount: &U256) {

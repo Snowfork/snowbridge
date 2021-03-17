@@ -40,7 +40,7 @@ where
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> OuterOrigin {
-		OuterOrigin::from(Origin(Default::default()))
+		OuterOrigin::from(Origin(H160::repeat_byte(2)))
 	}
 }
 
