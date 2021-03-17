@@ -21,7 +21,7 @@ cargo build --release \
     --no-default-features \
     --features runtime-benchmarks,$RUNTIME_FEATURE
 
-PALLETS="assets dot_app pallet_balances pallet_timestamp verifier_lightclient"
+PALLETS="assets dot_app erc20_app eth_app pallet_balances pallet_timestamp verifier_lightclient"
 
 echo "Generating weights module for $RUNTIME_DIR with pallets $PALLETS"
 

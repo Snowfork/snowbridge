@@ -459,7 +459,7 @@ impl eth_app::Config for Runtime {
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
 	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
-	type WeightInfo = ();
+	type WeightInfo = weights::eth_app_weights::WeightInfo<Runtime>;
 }
 
 impl erc20_app::Config for Runtime {
@@ -467,7 +467,7 @@ impl erc20_app::Config for Runtime {
 	type Assets = assets::Module<Runtime>;
 	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
-	type WeightInfo = ();
+	type WeightInfo = weights::erc20_app_weights::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -482,7 +482,7 @@ impl dot_app::Config for Runtime {
 	type CallOrigin = EnsureEthereumAccount;
 	type ModuleId = DotModuleId;
 	type Decimals = Decimals;
-	type WeightInfo = ();
+	type WeightInfo = weights::dot_app_weights::WeightInfo<Runtime>;
 }
 
 construct_runtime!(

@@ -7,6 +7,7 @@ use super::*;
 use frame_system::RawOrigin;
 use frame_benchmarking::{benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 
+#[allow(unused_imports)]
 use crate::Module as VerifierLightclient;
 
 mod data;

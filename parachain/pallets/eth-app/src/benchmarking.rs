@@ -9,6 +9,7 @@ use frame_support::traits::UnfilteredDispatchable;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 use sp_core::H160;
 
+#[allow(unused_imports)]
 use crate::Module as ETHApp;
 
 benchmarks! {
