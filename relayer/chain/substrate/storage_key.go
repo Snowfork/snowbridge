@@ -9,17 +9,10 @@ import (
 )
 
 func MakeStorageKey(channelID chainTypes.ChannelID, hash types.H256) ([]byte, error) {
-	var indexingPrefix []byte
-	if channelID.IsBasic {
-		indexingPrefix = []byte("basic")
-	} else {
-		indexingPrefix = []byte("incentivized")
-	}
-
 	var buffer = bytes.Buffer{}
 	encoder := scale.NewEncoder(&buffer)
 
-	err := encoder.Encode(indexingPrefix)
+	err := encoder.Encode(channelID.GetType())
 	if err != nil {
 		return nil, err
 	}

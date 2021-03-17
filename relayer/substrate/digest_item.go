@@ -43,6 +43,17 @@ type ChannelID struct {
 	IsIncentivized bool
 }
 
+func (c *ChannelID) GetType() []byte {
+	switch {
+	case c.IsBasic:
+		return []byte("basic")
+	case c.IsIncentivized:
+		return []byte("incentivized")
+	default:
+		return []byte("basic")
+	}
+}
+
 func (c *ChannelID) Decode(decoder scale.Decoder) error {
 	tag, err := decoder.ReadOneByte()
 	if err != nil {
