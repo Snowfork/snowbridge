@@ -8,13 +8,18 @@ import (
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
-var IndexingPrefix = []byte("commitment")
-
 func MakeStorageKey(channelID chainTypes.ChannelID, hash types.H256) ([]byte, error) {
+	var indexingPrefix []byte
+	if channelID.IsBasic {
+		indexingPrefix = []byte("basic")
+	} else {
+		indexingPrefix = []byte("incentivized")
+	}
+
 	var buffer = bytes.Buffer{}
 	encoder := scale.NewEncoder(&buffer)
 
-	err := encoder.Encode(IndexingPrefix)
+	err := encoder.Encode(indexingPrefix)
 	if err != nil {
 		return nil, err
 	}

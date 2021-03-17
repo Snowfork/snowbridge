@@ -65,10 +65,10 @@ where
 				let num_coms = cdata.subcommitments.len();
 				let mut accounts = Vec::with_capacity(num_coms);
 				let mut commitments = Vec::with_capacity(num_coms);
-				for (acc, com) in cdata.subcommitments {
-					accounts.push(acc);
-					commitments.push(com);
-				};
+				cdata.subcommitments.into_iter().for_each(|s| {
+					accounts.push(s.account_id);
+					commitments.push(s.flat_commitment);
+				});
 				match generate_merkle_proofs(commitments.into_iter()) {
 					Ok(proofs) => Ok(zip(accounts, proofs).collect::<Proofs<TAccountId>>()),
 					Err(_) => Err(JsonError::invalid_request()),

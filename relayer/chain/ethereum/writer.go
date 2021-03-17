@@ -112,7 +112,7 @@ func (wr *Writer) Write(ctx context.Context, msg *chain.SubstrateOutboundMessage
 	}
 
 	var messages []inbound.InboundChannelMessage
-	for _, m := range msg.Commitment {
+	for _, m := range msg.Messages {
 		messages = append(messages,
 			inbound.InboundChannelMessage{
 				Target:  m.Target,

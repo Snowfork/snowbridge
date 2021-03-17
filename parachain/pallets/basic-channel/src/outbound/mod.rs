@@ -34,15 +34,21 @@ pub struct Message {
 	pub payload: Vec<u8>,
 }
 
-/// Wire-format for committed BasicChannel data
+/// Wire-format for subcommitment
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+pub struct SubCommitment<AccountId> {
+	/// The user account ID
+	pub account_id: AccountId,
+ 	/// A list of the user messages
+	pub messages: Vec<Message>,
+	/// A flat commitment of the user messages
+	pub flat_commitment: Vec<u8>,
+}
+
+/// Wire-format for committed Basic Channel data
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 pub struct CommitmentData<AccountId> {
-	/// A list of tuples with messages and their origin account Id
-	pub messages: Vec<(AccountId, Message)>,
-
-	/// A list of subcommitments, also associated to their account Id.
-	/// These are built as a flat commitment from its respective message list
-	pub subcommitments: Vec<(AccountId, Vec<u8>)>,
+    pub subcommitments: Vec<SubCommitment<AccountId>>
 }
 
 pub trait Config: system::Config {
@@ -144,27 +150,39 @@ impl<T: Config> Module<T> {
 		//
 		all_messages.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 		let mut subcommitments = Vec::new();
-		let mut messages_by_user = Vec::new();
-		let mut group = Vec::new();
+		let mut group: Option<Vec<_>> = Some(Vec::new());
 		let mut prev_acc = &all_messages[0].0;
 		for (acc, msg) in all_messages.iter() {
-			if acc != prev_acc {
-				subcommitments.push((acc, Self::encode_commitment(&group)));
-				messages_by_user.push((acc, group.clone()));
-				group.clear();
-				prev_acc = &acc;
+			if *acc != *prev_acc {
+				let messages = group.take().unwrap();
+				let flat_commitment = Self::encode_commitment(&messages);
+				subcommitments.push(SubCommitment{
+					account_id: acc.clone(),
+					messages,
+					flat_commitment,
+				});
+				group = Some(Vec::new());
+				prev_acc = acc;
 			}
-			group.push(msg.clone());
+			group.as_mut().map(|v| v.push(msg.clone()));
 		}
-		subcommitments.push((prev_acc, Self::encode_commitment(&group)));
-		messages_by_user.push((prev_acc, group));
+		{
+			let messages = group.take().unwrap();
+			let flat_commitment = Self::encode_commitment(&messages);
+			//let owned_group = &group.take().unwrap();
+			subcommitments.push(SubCommitment{
+				account_id: prev_acc.clone(),
+				messages,
+				flat_commitment,
+			});
+		}
 
 		let subc_enc  = subcommitments
 			.iter()
-			.map(|(acc, comm)| {
+			.map(|subc| {
 				// Flat commitment scheme for all messages of the same user
-				let hash = <T as Config>::Hashing::hash(&comm);
-				((*acc).clone(), Encode::encode(&hash))
+				let hash = <T as Config>::Hashing::hash(&subc.flat_commitment);
+				(subc.account_id.clone(), Encode::encode(&hash))
                         })
 			.collect::<Vec<(T::AccountId, Vec<u8>)>>();
 
@@ -176,8 +194,7 @@ impl<T: Config> Module<T> {
 		<frame_system::Module<T>>::deposit_log(digest_item);
 
 		let data = CommitmentData::<T::AccountId> {
-			messages: all_messages,
-			subcommitments: subc_enc,
+			subcommitments,
 		};
 
 		let key = offchain_key(T::INDEXING_PREFIX, mroot);

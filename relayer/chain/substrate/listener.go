@@ -128,20 +128,31 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					continue
 				}
 
-				var messages []chainTypes.CommitmentMessage
+				if digestItem.AsCommitment.ChannelID.IsBasic {
+					var commitment chainTypes.BasicChannelCommitment
 
-				err = types.DecodeFromBytes(*data, &messages)
-				if err != nil {
-					li.log.WithError(err).Error("Faild to decode commitment messages")
+					err = types.DecodeFromBytes(*data, &commitment)
+					if err != nil {
+						li.log.WithError(err).Error("Failed to decode commitment messages")
+						continue
+					}
+
+					for _, subc := range commitment.Subcommitments {
+						// TODO: Whitelisting: filter out bad origins
+						message := chain.SubstrateOutboundMessage{
+							OriginID:       subc.AccountID,
+							ChannelID:      digestItem.AsCommitment.ChannelID,
+							CommitmentHash: digestItem.AsCommitment.Hash,
+							Messages:       subc.Messages,
+							// MerkleProofs: todo
+						}
+
+						li.messages <- []chain.Message{message}
+					}
+				} else {
+					// TODO: incentivizied channel
+					panic("unimplemented")
 				}
-
-				message := chain.SubstrateOutboundMessage{
-					ChannelID:      digestItem.AsCommitment.ChannelID,
-					CommitmentHash: digestItem.AsCommitment.Hash,
-					Commitment:     messages,
-				}
-
-				li.messages <- []chain.Message{message}
 			}
 
 			currentBlock++
