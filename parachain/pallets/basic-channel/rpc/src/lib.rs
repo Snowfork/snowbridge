@@ -7,9 +7,9 @@ use codec::{Codec,Decode};
 use jsonrpc_core::{Result, Error as JsonError};
 use jsonrpc_derive::rpc;
 use sc_rpc::DenyUnsafe;
-use sp_core::{H256, offchain::OffchainStorage};
+use sp_core::{Bytes, offchain::OffchainStorage};
 
-use artemis_basic_channel::outbound::{CommitmentData, generate_merkle_proofs, offchain_key};
+use artemis_basic_channel::outbound::{CommitmentData, generate_merkle_proofs};
 
 #[cfg(test)]
 mod tests;
@@ -20,7 +20,7 @@ type Proofs<TAccountId> = Vec<(TAccountId, Vec<u8>)>;
 pub trait BasicChannelApi<TAccountId>
 {
 	#[rpc(name = "basicChannel_getMerkleProofs")]
-	fn get_merkle_proofs(&self, root: H256) -> Result<Proofs<TAccountId>>;
+	fn get_merkle_proofs(&self, key: Bytes) -> Result<Proofs<TAccountId>>;
 }
 
 pub struct BasicChannel<TStorage: OffchainStorage, TAccountId> {
@@ -29,20 +29,17 @@ pub struct BasicChannel<TStorage: OffchainStorage, TAccountId> {
 	storage: Arc<RwLock<TStorage>>,
 	/// Standard Substrate RPC check
 	deny_unsafe: DenyUnsafe,
-	/// Used for the storage indexing keys
-	indexing_prefix: &'static [u8],
 }
 
 impl<TStorage, TAccountId> BasicChannel<TStorage, TAccountId>
 where
 	TStorage: OffchainStorage,
 {
-	pub fn new(storage: TStorage, deny_unsafe: DenyUnsafe, indexing_prefix: &'static [u8]) -> Self {
+	pub fn new(storage: TStorage, deny_unsafe: DenyUnsafe) -> Self {
 		Self {
 			_marker: Default::default(),
 			deny_unsafe,
 			storage: Arc::new(RwLock::new(storage)),
-			indexing_prefix,
 		}
 	}
 }
@@ -52,15 +49,20 @@ where
 	TAccountId: Codec + Send + Sync + 'static,
 	TStorage: OffchainStorage + Send + Sync + 'static,
 {
-	fn get_merkle_proofs(&self, root: H256) -> Result<Proofs<TAccountId>> {
+	fn get_merkle_proofs(&self, key: Bytes) -> Result<Proofs<TAccountId>> {
 		self.deny_unsafe.check_if_safe()?;
 
-		let key = offchain_key(self.indexing_prefix, root);
+		// For some reason, the TestPersistentOffchainDB used for testing this, removes the prefixes
+		// when persisting the offchain overlay.
+		#[cfg(test)]
+		let prefix = b"";
+		#[cfg(not(test))]
+		let prefix = &sp_core::offchain::STORAGE_PREFIX;
 
 		// Note that while the default RPCs shipping with Substrate use the sp_offchain::STORAGE_PREFIX
 		// as prefix for the storage, keys are only found using no prefix, if they are stored
 		// using offchain_index() in the on-chain code.
-		if let Some(data) = self.storage.read().get(b"", &*key) {
+		if let Some(data) = self.storage.read().get(prefix, &*key) {
 			if let Ok(cdata) = <CommitmentData<TAccountId>>::decode(&mut data.as_slice()) {
 				let num_coms = cdata.subcommitments.len();
 				let mut accounts = Vec::with_capacity(num_coms);
@@ -74,10 +76,10 @@ where
 					Err(_) => Err(JsonError::invalid_request()),
 				}
 			} else {
-				Err(JsonError::invalid_request())
+				Err(JsonError::internal_error())
 			}
 		} else {
-			Err(JsonError::invalid_request())
+			Err(JsonError::invalid_params("Key not found"))
 		}
 	}
 }

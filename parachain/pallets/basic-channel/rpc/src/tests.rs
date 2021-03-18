@@ -9,7 +9,7 @@ use sp_runtime::{
 	testing::Header,
 };
 
-use artemis_basic_channel::outbound as outbound_channel;
+use artemis_basic_channel::outbound::{self as outbound_channel, SubCommitment, offchain_key};
 
 type AccountId = u64;
 
@@ -20,29 +20,32 @@ fn local_storage_should_work() {
 	use super::*;
 
 	let storage = TestPersistentOffchainDB::new();
-	let channel = BasicChannel::<_, AccountId>::new(storage, DenyUnsafe::No, b"testing");
+	let channel = BasicChannel::<_, AccountId>::new(storage, DenyUnsafe::No);
 	let root = H256::repeat_byte(1);
-	let key = offchain_key(channel.indexing_prefix, root);
+	let key = sp_core::Bytes(offchain_key(b"testing", root));
 	let account_id = 1234u64;
 
 	let value = CommitmentData{
-		messages: Vec::new(),
-		subcommitments: vec![(account_id, b"some_data".to_vec())],
+		subcommitments: vec![SubCommitment{
+			account_id,
+			messages: Vec::new(),
+			flat_commitment: vec![1,1,1],
+		}],
 	};
 	let value = value.encode();
 
-	//channel.storage.write().set(sp_offchain::STORAGE_PREFIX, &*key, &*value.clone());
 	channel.storage.write().set(b"", &*key, &*value.clone());
 
-	assert!(channel.get_merkle_proofs(root).is_ok());
+	assert!(channel.get_merkle_proofs(key.clone()).is_ok());
 
 	assert_matches!(
-		channel.get_merkle_proofs(root),
+		channel.get_merkle_proofs(key),
 		Ok(ref proofs) if proofs[0].0 == account_id
 	);
 
 	let root2 = H256::from_slice(&hex!["0aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbcccccccccccccccdddddddddddddddd"]); // = Bytes(b"offchain_storage".to_vec());
-	assert!(!channel.get_merkle_proofs(root2).is_ok());
+	let key2 = sp_core::Bytes(offchain_key(b"testing", root2));
+	assert!(!channel.get_merkle_proofs(key2).is_ok());
 }
 
 #[test]
@@ -50,21 +53,24 @@ fn offchain_calls_considered_unsafe() {
 	use super::*;
 
 	let storage = TestPersistentOffchainDB::new();
-	let channel = BasicChannel::<_, AccountId>::new(storage, DenyUnsafe::Yes, b"testing");
-	let root = H256::repeat_byte(2);
-	let key = offchain_key(channel.indexing_prefix, root);
+	let channel = BasicChannel::<_, AccountId>::new(storage, DenyUnsafe::Yes);
+	let root = H256::repeat_byte(1);
+	let key = sp_core::Bytes(offchain_key(b"testing", root));
 	let account_id = 1234u64;
 
 	let value = CommitmentData{
-		messages: Vec::new(),
-		subcommitments: vec![(account_id, b"some_data".to_vec())],
+		subcommitments: vec![SubCommitment{
+			account_id,
+			messages: Vec::new(),
+			flat_commitment: vec![1,1,1],
+		}],
 	};
 	let value = value.encode();
 
 	channel.storage.write().set(sp_offchain::STORAGE_PREFIX, &*key, &*value.clone());
 
 	assert_matches!(
-		channel.get_merkle_proofs(root),
+		channel.get_merkle_proofs(key),
 	    	Err(jsonrpc_core::Error{..})
 	);
 }
@@ -131,8 +137,6 @@ fn run_to_block(n: u64) {
 
 #[test]
 fn test_commit_and_read() {
-	use super::*;
-
 	let (offchain, _offchain_state) = testing::TestOffchainExt::new();
 
 	let mut storage = frame_system::GenesisConfig::default()
@@ -175,12 +179,12 @@ fn test_commit_and_read() {
 
 	// Test offchain overlay changes
 
-	let channel = BasicChannel::<_, AccountId>::new(t.offchain_db(), DenyUnsafe::No, INDEXING_PREFIX);
 	let mroot = H256::from_slice(&hex!["b844173465763db27a0006c077aa14d8d089cb4d9a6f8a903754664f0bbe6bdd"][..]);
-	let key = offchain_key(channel.indexing_prefix, mroot);
+	let key = sp_core::Bytes(offchain_key(INDEXING_PREFIX, mroot));
+
 	let data = t.overlayed_changes().clone().offchain_drain_committed()
  		.find(|(k, _v)| {
- 			k == &(sp_core::offchain::STORAGE_PREFIX.to_vec(), key.clone())
+			k == &(sp_core::offchain::STORAGE_PREFIX.to_vec(), key.clone().to_vec())
  		});
 
 	use sp_core::offchain::OffchainOverlayedChange;
@@ -190,8 +194,10 @@ fn test_commit_and_read() {
 
 	t.persist_offchain_overlay();
 
+	use super::*;
+	let channel: BasicChannel<TestPersistentOffchainDB, u64> = BasicChannel::<_, AccountId>::new(t.offchain_db(), DenyUnsafe::No);
 	assert_matches!(
-		channel.get_merkle_proofs(mroot),
+		channel.get_merkle_proofs(key),
 		Ok(ref proofs) if proofs[0].0 == WHO
 	);
 }
