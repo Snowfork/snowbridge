@@ -169,7 +169,6 @@ impl<T: Config> Module<T> {
 		{
 			let messages = group.take().unwrap();
 			let flat_commitment = Self::encode_commitment(&messages);
-			//let owned_group = &group.take().unwrap();
 			subcommitments.push(SubCommitment{
 				account_id: prev_acc.clone(),
 				messages,

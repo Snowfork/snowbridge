@@ -73,7 +73,7 @@ where
 						let pairs = zip(accounts, proofs).collect::<Proofs<TAccountId>>();
 						Ok(Bytes::from(Encode::encode(&pairs)))
 					}
-					Err(_) => Err(JsonError::invalid_request()),
+					Err(_) => Err(JsonError::internal_error()),
 				}
 			} else {
 				Err(JsonError::internal_error())
