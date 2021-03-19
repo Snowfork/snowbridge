@@ -49,7 +49,7 @@ fn local_storage_should_work() {
 
     let root2 = H256::from_slice(&hex![
         "0aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbcccccccccccccccdddddddddddddddd"
-    ]); // = Bytes(b"offchain_storage".to_vec());
+    ]);
     let key2 = sp_core::Bytes(offchain_key(b"testing", root2));
     assert!(!channel.get_merkle_proofs(key2).is_ok());
 }
