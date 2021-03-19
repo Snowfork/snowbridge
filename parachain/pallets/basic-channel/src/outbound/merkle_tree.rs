@@ -17,6 +17,7 @@ impl Hasher for KeccakHasher {
 	}
 }
 
+#[derive(Debug)]
 pub enum Error {
     MerkleProofError,
 }
@@ -39,15 +40,37 @@ pub fn generate_merkle_proofs(encoded_items: impl Iterator<Item = Vec<u8>>) -> R
 		.enumerate()
 		.map(|(i, v)| (Layout::encode_index(i as u32), v))
 		.collect::<EnumeratedItems>();
-    	let leafs = enumerated_items.iter().map(|(i, _)| i.clone()).collect::<Vec<Vec<u8>>>();
 
 	let mut db = sp_trie::MemoryDB::<KeccakHasher>::default();
 	let mut cb = trie_db::TrieBuilder::new(&mut db);
-	trie_db::trie_visit::<Layout, _, _, _, _>(enumerated_items.into_iter(), &mut cb);
+	trie_db::trie_visit::<Layout, _, _, _, _>(enumerated_items.iter().cloned(), &mut cb);
 	let root = cb.root.unwrap_or_default();
- 	let proofs = sp_trie::generate_trie_proof::<Layout, _, _, _>(
-		&db,
-		root,
-		leafs.iter().collect::<Vec<&Vec<u8>>>());
-    	proofs.map_err(|_| Error::MerkleProofError{})
+	let proofs: Result<Vec<Vec<u8>>, _> = enumerated_items
+		.iter()
+		.map( |(idx, _)| {
+			sp_trie::generate_trie_proof::<Layout, _, _, _>(&db, root, vec![&idx])
+				.map(|v| v[0].clone())
+		})
+		.collect();
+	proofs.or(Err(Error::MerkleProofError{}))
+}
+
+#[test]
+fn merkle_proofs_should_work() {
+	let items = vec![
+		vec![1,1,1,1u8],
+		vec![2,2,2,2u8],
+		vec![3,3,3,3u8],
+	];
+
+	let root = generate_merkle_root(items.clone().into_iter());
+	let proofs = generate_merkle_proofs(items.clone().into_iter()).map_err(|_| Error::MerkleProofError{}).unwrap();
+
+	for i in 0..3 {
+		assert!(sp_trie::verify_trie_proof::<Layout, _, _, _>(
+				&root,
+				&[proofs[i].clone()],
+				vec![(Layout::encode_index(i as u32), Some(items[i].clone()))].iter(),
+			).is_ok());
+	};
 }
