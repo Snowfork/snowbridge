@@ -59,9 +59,6 @@ where
 		#[cfg(not(test))]
 		let prefix = &sp_core::offchain::STORAGE_PREFIX;
 
-		// Note that while the default RPCs shipping with Substrate use the sp_offchain::STORAGE_PREFIX
-		// as prefix for the storage, keys are only found using no prefix, if they are stored
-		// using offchain_index() in the on-chain code.
 		if let Some(data) = self.storage.read().get(prefix, &*key) {
 			if let Ok(cdata) = <CommitmentData<TAccountId>>::decode(&mut data.as_slice()) {
 				let num_coms = cdata.subcommitments.len();
