@@ -19,6 +19,7 @@ type SubstrateOutboundMessage struct {
 	ChannelID      substrate.ChannelID
 	CommitmentHash types.H256
 	Messages       []substrate.BasicChannelMessage
+	Proofs         []substrate.MerkleProof
 }
 
 // Message from ethereum

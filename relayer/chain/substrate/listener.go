@@ -129,6 +129,13 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 				}
 
 				if digestItem.AsCommitment.ChannelID.IsBasic {
+					merkleProofs, err := GetMerkleProofs(li.conn.api.Client, storageKey)
+					if err != nil {
+						li.log.WithError(err).Error("Failed to read Merkle Proofs from offchain storage")
+						sleep(ctx, retryInterval)
+						continue
+					}
+
 					var commitment chainTypes.BasicChannelCommitment
 
 					err = types.DecodeFromBytes(*data, &commitment)
@@ -144,7 +151,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 							ChannelID:      digestItem.AsCommitment.ChannelID,
 							CommitmentHash: digestItem.AsCommitment.Hash,
 							Messages:       subc.Messages,
-							// MerkleProofs: todo
+							Proofs:         merkleProofs,
 						}
 
 						li.messages <- []chain.Message{message}
