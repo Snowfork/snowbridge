@@ -3,7 +3,7 @@ use std::sync::Arc;
 use itertools::zip;
 use parking_lot::RwLock;
 
-use codec::{Codec,Decode};
+use codec::{Codec, Decode, Encode};
 use jsonrpc_core::{Result, Error as JsonError};
 use jsonrpc_derive::rpc;
 use sc_rpc::DenyUnsafe;
@@ -20,7 +20,7 @@ type Proofs<TAccountId> = Vec<(TAccountId, Vec<u8>)>;
 pub trait BasicChannelApi<TAccountId>
 {
 	#[rpc(name = "basicChannel_getMerkleProofs")]
-	fn get_merkle_proofs(&self, key: Bytes) -> Result<Proofs<TAccountId>>;
+	fn get_merkle_proofs(&self, key: Bytes) -> Result<Bytes>;
 }
 
 pub struct BasicChannel<TStorage: OffchainStorage, TAccountId> {
@@ -49,7 +49,7 @@ where
 	TAccountId: Codec + Send + Sync + 'static,
 	TStorage: OffchainStorage + Send + Sync + 'static,
 {
-	fn get_merkle_proofs(&self, key: Bytes) -> Result<Proofs<TAccountId>> {
+	fn get_merkle_proofs(&self, key: Bytes) -> Result<Bytes> {
 		self.deny_unsafe.check_if_safe()?;
 
 		// For some reason, the TestPersistentOffchainDB used for testing this, removes the prefixes
@@ -72,7 +72,10 @@ where
 					commitments.push(s.flat_commitment);
 				});
 				match generate_merkle_proofs(commitments.into_iter()) {
-					Ok(proofs) => Ok(zip(accounts, proofs).collect::<Proofs<TAccountId>>()),
+					Ok(proofs) => {
+						let pairs = zip(accounts, proofs).collect::<Proofs<TAccountId>>();
+						Ok(Bytes::from(Encode::encode(&pairs)))
+					}
 					Err(_) => Err(JsonError::invalid_request()),
 				}
 			} else {
