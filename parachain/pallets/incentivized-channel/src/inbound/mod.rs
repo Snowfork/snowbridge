@@ -121,7 +121,7 @@ impl<T: Config> Module<T> {
 			return;
 		}
 
-		let imbalance = match T::Currency::withdraw(&T::SourceAccount::get(), amount, WithdrawReasons::FEE, KeepAlive) {
+		let imbalance = match T::Currency::withdraw(&T::SourceAccount::get(), amount, WithdrawReasons::TRANSFER, KeepAlive) {
 			Ok(imbalance) => imbalance,
 			Err(err) => {
 				debug::error!("Unable to withdraw from source account: {:?}", err);
