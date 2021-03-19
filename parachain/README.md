@@ -35,7 +35,7 @@ Once the development environment is set up, build the parachain. This command wi
 [native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
 
 ```bash
---no-default-features --features with-local-runtime
+cargo build --release --no-default-features --features with-local-runtime
 ```
 
 ### Run
