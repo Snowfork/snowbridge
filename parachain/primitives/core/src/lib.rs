@@ -8,7 +8,8 @@
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
 use sp_core::H160;
-use artemis_ethereum::Log;
+use sp_std::prelude::*;
+use artemis_ethereum::{Header, Log, U256};
 
 pub mod types;
 pub mod assets;
@@ -28,6 +29,11 @@ pub use assets::{AssetId, MultiAsset, SingleAsset};
 /// This trait should be implemented by runtime modules that wish to provide message verification functionality.
 pub trait Verifier {
 	fn verify(message: &Message) -> Result<Log, DispatchError>;
+	fn initialize_storage(
+		headers: Vec<Header>,
+		initial_difficulty: U256,
+		descendants_until_final: u8,
+	) -> Result<(), &'static str>;
 }
 
 /// Outbound submission for applications

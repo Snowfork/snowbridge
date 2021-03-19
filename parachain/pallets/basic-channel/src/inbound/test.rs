@@ -14,7 +14,7 @@ use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
 
 use artemis_core::{MessageDispatch, Message, Proof};
-use artemis_ethereum::Log;
+use artemis_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
 
@@ -74,6 +74,10 @@ impl Verifier for MockVerifier {
 	fn verify(message: &Message) -> Result<Log, DispatchError> {
 		let log: Log = rlp::decode(&message.data).unwrap();
 		Ok(log)
+	}
+
+	fn initialize_storage(_: Vec<EthereumHeader>, _: U256, _: u8) -> Result<(), &'static str> {
+		Ok(())
 	}
 }
 
