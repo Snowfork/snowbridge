@@ -5,10 +5,12 @@ pragma experimental ABIEncoderV2;
 import "./WrappedToken.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
+import "./FeeSource.sol";
+
 
 enum ChannelId {Basic, Incentivized}
 
-contract DOTApp {
+contract DOTApp is FeeSource {
     using ScaleCodec for uint256;
 
     mapping(ChannelId => Channel) public channels;
@@ -57,6 +59,10 @@ contract DOTApp {
     function mint(bytes32 _sender, address _recipient, uint256 _amount) external {
         // TODO: Ensure message sender is a known inbound channel
         token.mint(_recipient, _amount, abi.encodePacked(_sender));
+    }
+
+    function burnFee(address feePayer, uint256 _amount) external override {
+        token.burn(feePayer, _amount, "");
     }
 
     function encodeCall(address _sender, bytes32 _recipient, uint256 _amount)

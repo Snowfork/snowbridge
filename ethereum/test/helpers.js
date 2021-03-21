@@ -212,4 +212,5 @@ module.exports = {
   addressBytes,
   ChannelId,
   buildCommitment,
+  encodeLog,
 };
