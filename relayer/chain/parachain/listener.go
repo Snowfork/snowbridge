@@ -17,6 +17,7 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
 	"github.com/snowfork/polkadot-ethereum/relayer/parachain"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
@@ -44,7 +45,9 @@ func NewListener(config *Config, conn *Connection, econn *ethereum.Connection, m
 	}
 }
 
-func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
+func (li *Listener) Start(ctx context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
+	li.log.Info("Starting Parachain Listener")
+
 	contract, err := lightclientbridge.NewContract(common.HexToAddress(li.config.Ethereum.Contracts.RelayBridgeLightClient), li.econn.GetClient())
 	if err != nil {
 		return err
@@ -55,13 +58,24 @@ func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 		return li.subBeefyJustifications(ctx)
 	})
 
-	eg.Go(func() error {
-		return li.pollEthereumBlocks(ctx)
-	})
+	// Ethereum facing information
+	hcs, err := ethereum.NewHeaderCacheState(
+		eg,
+		initBlockHeight,
+		&ethereum.DefaultBlockLoader{Conn: li.econn},
+		nil,
+	)
+	if err != nil {
+		return err
+	}
 
 	eg.Go(func() error {
-		return li.pollLightBridgeEvents(ctx)
+		return li.pollEthereumBlocks(ctx, initBlockHeight, 0, hcs)
 	})
+
+	// eg.Go(func() error {
+	// 	return li.pollLightBridgeEvents(ctx, initBlockHeight, descendantsUntilFinal, hcs)
+	// })
 
 	return nil
 }
@@ -94,9 +108,7 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 				li.log.WithError(err).Error("Failed to decode beefy commitment messages")
 			}
 
-			received++
-			li.log.Info("--------------------------------------------------------------")
-			li.log.Info("Witnessed new BEEFY commitment: ", received)
+			li.log.Info("Parachain Listener witnessed a new BEEFY commitment: \n", msg.(string))
 
 			if len(signedCommitment.Signatures) == 0 {
 				li.log.Info("BEEFY commitment has no signatures, skipping...")
@@ -119,15 +131,6 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 			// }
 			// if err != nil {
 			// 	panic(err)
-			// }
-
-			// JavaScript query beefy authorities:
-			// async function getAuthoritiesDirect(api) {
-			// // For some reason the polkadot-js beefy.authorities function is not returning enough bytes.
-			// // This function just manually gets them.
-			// const beefyStorageQuery = "0x08c41974a97dbf15cfbec28365bea2da5e0621c4869aa60c02be9adcc98a0d1d";
-			// const authorities = await api.rpc.state.getStorage(beefyStorageQuery);
-			// return authorities;
 			// }
 
 			beefyCommitmentInfo := parachain.NewBeefyCommitmentInfo(beefyValidatorAddresses, signedCommitment)
@@ -159,9 +162,26 @@ func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestIte
 }
 
 // pollEthereumBlocks transitions BEEFY commitments from InitialVerificationTxConfirmed to ReadyToComplete status
-func (li *Listener) pollEthereumBlocks(ctx context.Context) error {
+func (li *Listener) pollEthereumBlocks(
+	ctx context.Context,
+	initBlockHeight uint64,
+	descendantsUntilFinal uint64,
+	hcs *ethereum.HeaderCacheState,
+) error {
 	headers := make(chan *gethTypes.Header, 5)
-	_, headerCtx := errgroup.WithContext(ctx)
+	headerEg, headerCtx := errgroup.WithContext(ctx)
+
+	headerSyncer := syncer.NewSyncer(descendantsUntilFinal, syncer.NewHeaderLoader(li.econn.GetClient()), headers, li.log)
+
+	li.log.Info("Syncing headers starting...")
+	err := headerSyncer.StartSync(headerCtx, headerEg, initBlockHeight-1)
+	if err != nil {
+		li.log.WithError(err).Error("Failed to start header sync")
+		return err
+	}
+
+	li.log.Info("Headers synced!")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -169,10 +189,14 @@ func (li *Listener) pollEthereumBlocks(ctx context.Context) error {
 		case <-headerCtx.Done():
 			return li.onDone(ctx)
 		case gethheader := <-headers:
+			li.log.Info("Parachain Listener pollEthereumBlocks() received a new header")
+
 			blockNumber := gethheader.Number.Uint64()
 			for beefyCommitment := range li.beefy {
 				if beefyCommitment.Status == parachain.InitialVerificationTxConfirmed {
 					if beefyCommitment.CompleteOnBlock >= blockNumber {
+						li.log.Info("pollEthereumBlocks marked BEEFY commitment ReadyToComplete")
+
 						beefyCommitment.Status = parachain.ReadyToComplete
 						li.messages <- []chain.Message{beefyCommitment}
 					}
@@ -187,6 +211,8 @@ func (li *Listener) pollLightBridgeEvents(ctx context.Context) error {
 	headers := make(chan *gethTypes.Header, 5)
 	_, headerCtx := errgroup.WithContext(ctx)
 
+	li.log.Info("Starting pollLightBridgeEvents()")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -194,8 +220,11 @@ func (li *Listener) pollLightBridgeEvents(ctx context.Context) error {
 		case <-headerCtx.Done():
 			return li.onDone(ctx)
 		case gethheader := <-headers:
+			li.log.Info("Parachain Listener pollLightBridgeEvents() received a new header")
+
 			if li.beefy == nil {
-				li.log.Info("Not polling block details since channel is nil") // TODO: 'continue' here?
+				li.log.Info("Not polling block details since channel is nil")
+				continue
 			}
 
 			blockNumber := gethheader.Number.Uint64()
@@ -208,6 +237,7 @@ func (li *Listener) pollLightBridgeEvents(ctx context.Context) error {
 			}
 			events = append(events, contractEvents...)
 
+			li.log.Info("pollEthereumBlocks found events: ", len(events))
 			li.processEvents(ctx, events)
 		}
 	}
