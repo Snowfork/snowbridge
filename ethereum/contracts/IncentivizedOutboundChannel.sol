@@ -11,6 +11,13 @@ contract IncentivizedOutboundChannel is OutboundChannel {
     // Nonce for last submitted message
     uint64 public nonce;
 
+    uint256 private fee;
+    FeeSource private feeSource;
+
+    mapping(address => bool) private defaultOperators;
+    mapping(address => mapping(address => bool)) private operators;
+    mapping(address => mapping(address => bool)) private revokedDefaultOperators;
+
     event Message(
         address source,
         uint64  nonce,
@@ -18,16 +25,15 @@ contract IncentivizedOutboundChannel is OutboundChannel {
         bytes   payload
     );
 
-    uint256 private fee;
-    FeeSource private feeSource;
+    event OperatorAuthorized(
+        address operator,
+        address feePayer
+    );
 
-    event OperatorAuthorized(address operator, address feePayer);
-
-    event FeeChanged(uint256 oldFee, uint256 newFee);
-
-    mapping(address => bool) private defaultOperators;
-    mapping(address => mapping(address => bool)) private operators;
-    mapping(address => mapping(address => bool)) private revokedDefaultOperators;
+    event FeeChanged(
+        uint256 oldFee,
+        uint256 newFee
+    );
 
     function setFeeSource(address _feeSource) external {
         feeSource = FeeSource(_feeSource);
