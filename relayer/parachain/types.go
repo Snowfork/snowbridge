@@ -4,15 +4,16 @@
 package parachain
 
 import (
-	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
-
-	"github.com/ethereum/go-ethereum/common"
 	merkletree "github.com/wealdtech/go-merkletree"
+	"golang.org/x/crypto/blake2b"
+	"golang.org/x/crypto/sha3"
 )
 
 type Status int
@@ -58,94 +59,80 @@ type CompleteSignatureCommitmentMessage struct {
 }
 
 func (b BeefyCommitmentInfo) BuildNewSignatureCommitmentMessage() (NewSignatureCommitmentMessage, error) {
-	// Hash validator addresses for leaf input data
-	var beefyTreeData [][]byte
-	for _, valAddr := range b.ValidatorAddresses {
-		h := sha256.New()
-		if _, err := h.Write(valAddr.Bytes()); err != nil {
-			return NewSignatureCommitmentMessage{}, err
-		}
-		hashedData := h.Sum(nil)
-		beefyTreeData = append(beefyTreeData, hashedData)
-	}
-
-	// Create the tree
-	beefyMerkleTree, err := merkletree.New(beefyTreeData)
+	valAddrIndex := 0
+	sig0ProofContents, err := b.GenerateMmrProofOffchain(valAddrIndex)
 	if err != nil {
 		return NewSignatureCommitmentMessage{}, err
 	}
 
-	// Generate a proof
-	sig0ProofData := beefyTreeData[0]
-	sig0Proof, err := beefyMerkleTree.GenerateProof(sig0ProofData)
-	if err != nil {
-		return NewSignatureCommitmentMessage{}, err
-	}
-
-	// TODO: Verify the proof
-	// root := beefyMerkleTree.Root()
-	// verified, err := beefyMerkleTree.VerifyProof(sig0ProofData, sig0Proof, root)
-	// if err != nil {
-	// 	return NewSignatureCommitmentMessage{}, err
-	// }
-	// if !verified {
-	// 	return NewSignatureCommitmentMessage{}, fmt.Errorf("failed to verify proof")
-	// }
-
-	sig0ProofContents := make([][32]byte, len(sig0Proof.Hashes))
-	for i, hash := range sig0Proof.Hashes {
-		var hash32Byte [32]byte
-		copy(hash32Byte[:], hash)
-		sig0ProofContents[i] = hash32Byte
-	}
-
-	hashedCommitment, err := b.GetHashedCommitment()
-	if err != nil {
-		return NewSignatureCommitmentMessage{}, err
-	}
-
-	// // Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
-	// recIdIncrement := big.NewInt(27)
-	ok, sig0 := b.SignedCommitment.Signatures[0].Unwrap()
+	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
+	ok, sig0 := b.SignedCommitment.Signatures[valAddrIndex].Unwrap()
 	if !ok {
-		return NewSignatureCommitmentMessage{}, err
+		return NewSignatureCommitmentMessage{}, fmt.Errorf("failed to unwrap signature")
 	}
+	sig0Commitment := sig0[:] // TODO: increment recovery ID properly
 
-	// TODO: increment recovery ID properly
-	valSigCommitment := sig0[:]
-	// sig0HexStr := hexutil.Encode(sig0[:])             // bytes -> 0x string
-	// recoveryId0, err := hexutil.DecodeBig(sig0HexStr) // 0x string -> big.Int
-	// if err != nil {
-	// 	li.log.Info("err:", err)
-	// }
-	// incrementedRecoveryId0 := recoveryId0.Add(recoveryId0, recIdIncrement)
-	// newRecoveryId0 := hexutil.EncodeBig(incrementedRecoveryId0) // big.Int -> 0x string
-	// newRecoveryId0Bytes, err := hexutil.Decode(newRecoveryId0)  // 0x string -> []byte
-	// if err != nil {
-	// 	li.log.Info("err:", err)
-	// }
-	// valSigCommitment := append(sig0[:], newRecoveryId0Bytes...)
-
-	sig0ValAddr := b.ValidatorAddresses[0]
+	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
 
 	msg := NewSignatureCommitmentMessage{
-		Payload:                       hashedCommitment,
+		Payload:                       commitmentHash,
 		ValidatorClaimsBitfield:       big.NewInt(123), // TODO: add bitfield stuff properly
-		ValidatorSignatureCommitment:  valSigCommitment,
-		ValidatorPublicKey:            sig0ValAddr,
+		ValidatorSignatureCommitment:  sig0Commitment,
+		ValidatorPublicKey:            b.ValidatorAddresses[valAddrIndex],
 		ValidatorPublicKeyMerkleProof: sig0ProofContents,
 	}
 
 	return msg, nil
 }
 
-func (b BeefyCommitmentInfo) BuildCompleteSignatureCommitmentMessage() (CompleteSignatureCommitmentMessage, error) {
-	hashedCommitment, err := b.GetHashedCommitment()
-	if err != nil {
-		return CompleteSignatureCommitmentMessage{}, err
+func (b BeefyCommitmentInfo) GenerateMmrProofOffchain(valAddrIndex int) ([][32]byte, error) {
+	// Hash validator addresses for leaf input data
+	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
+	for i, valAddr := range b.ValidatorAddresses {
+		h := sha3.New256()
+		if _, err := h.Write(valAddr.Bytes()); err != nil {
+			return [][32]byte{}, err
+		}
+		hashedData := h.Sum(nil)
+		beefyTreeData[i] = hashedData
 	}
 
-	validationDataID := big.NewInt(0)
+	// Create the tree
+	beefyMerkleTree, err := merkletree.New(beefyTreeData)
+	if err != nil {
+		return [][32]byte{}, err
+	}
+
+	// Generate MMR proof for validator at index valAddrIndex
+	sigProof, err := beefyMerkleTree.GenerateProof(beefyTreeData[valAddrIndex])
+	if err != nil {
+		return [][32]byte{}, err
+	}
+
+	// Verify the proof
+	root := beefyMerkleTree.Root()
+	verified, err := merkletree.VerifyProof(beefyTreeData[valAddrIndex], sigProof, root)
+	if err != nil {
+		return [][32]byte{}, err
+	}
+	if !verified {
+		return [][32]byte{}, fmt.Errorf("failed to verify proof")
+	}
+
+	sigProofContents := make([][32]byte, len(sigProof.Hashes))
+	for i, hash := range sigProof.Hashes {
+		var hash32Byte [32]byte
+		copy(hash32Byte[:], hash)
+		sigProofContents[i] = hash32Byte
+	}
+
+	return sigProofContents, nil
+}
+
+func (b BeefyCommitmentInfo) BuildCompleteSignatureCommitmentMessage() (CompleteSignatureCommitmentMessage, error) {
+	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
+
+	validationDataID := big.NewInt(int64(b.SignedCommitment.Commitment.ValidatorSetID))
 
 	//TODO: Generate randomSignatureBitfieldPositions properly
 	randomSignatureBitfieldPositions := []uint8{}
@@ -157,7 +144,7 @@ func (b BeefyCommitmentInfo) BuildCompleteSignatureCommitmentMessage() (Complete
 
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                               validationDataID,
-		Payload:                          hashedCommitment,
+		Payload:                          commitmentHash,
 		RandomSignatureCommitments:       randomSignatureCommitments,
 		RandomSignatureBitfieldPositions: randomSignatureBitfieldPositions,
 		RandomValidatorAddresses:         randomValidatorAddresses,
@@ -166,25 +153,25 @@ func (b BeefyCommitmentInfo) BuildCompleteSignatureCommitmentMessage() (Complete
 	return msg, nil
 }
 
-func (b BeefyCommitmentInfo) GetHashedCommitment() ([32]byte, error) {
-	var hashedCommitment32Byte [32]byte
-	h := sha256.New()
-	commitmentBytes := []byte(fmt.Sprintf("%v", b.SignedCommitment.Commitment))
-	if _, err := h.Write(commitmentBytes); err != nil {
-		return hashedCommitment32Byte, err
-	}
-	hashedCommitment := h.Sum(nil)
-	copy(hashedCommitment32Byte[:], hashedCommitment)
-	return hashedCommitment32Byte, nil
-}
-
-// TODO: use these types from GSRPC's types/beefy.go once it's merged/published
+// ---------------------------------------------------------------------------------------------
+// 			Use following types from GSRPC's types/beefy.go once it's merged/published
+// ---------------------------------------------------------------------------------------------
 
 // Commitment is a beefy commitment
 type Commitment struct {
 	Payload        types.H256
 	BlockNumber    types.BlockNumber
 	ValidatorSetID types.U64
+}
+
+// Bytes gets the Bytes representation of a Commitment TODO: new function that needs to be added to GSRPC
+func (c Commitment) Bytes() []byte {
+	blockNumber := make([]byte, 4)
+	binary.LittleEndian.PutUint32(blockNumber, uint32(c.BlockNumber))
+	valSetID := make([]byte, 8)
+	binary.LittleEndian.PutUint64(valSetID, uint64(c.ValidatorSetID))
+	x := append(c.Payload[:], blockNumber...)
+	return append(x, valSetID...)
 }
 
 // SignedCommitment is a beefy commitment with optional signatures from the set of validators
