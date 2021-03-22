@@ -19,4 +19,5 @@ type EthereumConfig struct {
 
 type Contracts struct {
 	RelayBridgeLightClient string `mapstructure:"relay-bridge-light-client"`
+	ValidatorRegistry      string `mapstructure:"validator-registry"`
 }

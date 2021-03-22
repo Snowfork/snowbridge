@@ -271,10 +271,11 @@ func LoadConfig() (*Config, error) {
 	config.Parachain.Parachain.PrivateKey = "//Alice"
 	config.Parachain.Ethereum.Endpoint = config.Eth.Endpoint
 	config.Parachain.Ethereum.PrivateKey = config.Eth.PrivateKey
-	// TODO: auto populate contract address
+	// TODO: auto populate contract addresses
 	config.Parachain.Ethereum.Contracts.RelayBridgeLightClient = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305"
+	config.Parachain.Ethereum.Contracts.ValidatorRegistry = "0xEE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"
 	// TODO: query from 'BLOCK_WAIT_PERIOD' on RelayBridgeLightClient contract
-	config.Parachain.Ethereum.BeefyBlockDelay = 50
+	config.Parachain.Ethereum.BeefyBlockDelay = 5
 
 	return &config, nil
 }

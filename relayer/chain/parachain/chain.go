@@ -13,7 +13,6 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
 	"github.com/snowfork/polkadot-ethereum/relayer/parachain"
@@ -57,8 +56,7 @@ func NewChain(config *Config) (*Chain, error) {
 func (ch *Chain) SetReceiver(messages <-chan []chain.Message, ethHeaders <-chan chain.Header,
 	beefy chan parachain.BeefyCommitmentInfo) error {
 
-	contracts := make(map[string]*lightclientbridge.Contract)
-	writer, err := NewWriter(ch.config, ch.econn, messages, beefy, contracts, ch.log)
+	writer, err := NewWriter(ch.config, ch.conn, ch.econn, messages, beefy, ch.log)
 	if err != nil {
 		return err
 	}
@@ -110,7 +108,7 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- c
 	close(ethInit)
 
 	if ch.listener != nil {
-		err = ch.listener.Start(ctx, eg)
+		err = ch.listener.Start(ctx, eg, uint64(ethInitHeaderID.Number), uint64(ch.config.Ethereum.BeefyBlockDelay))
 		if err != nil {
 			return err
 		}
