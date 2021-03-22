@@ -60,6 +60,14 @@ func (co *Connection) Connect(_ context.Context) error {
 	return nil
 }
 
+func (co *Connection) GetBlockHash(blockNumber uint64) (types.Hash, error) {
+	hash, err := co.api.RPC.Chain.GetBlockHash(blockNumber)
+	if err != nil {
+		return hash, err
+	}
+	return hash, nil
+}
+
 func (co *Connection) Close() {
 	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
 }
