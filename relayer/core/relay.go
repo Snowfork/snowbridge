@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate"
@@ -225,15 +227,29 @@ func LoadConfig() (*Config, error) {
 	}
 	config.Sub.PrivateKey = value
 
-	accountWhitelist := &config.Eth.Channels.Basic.AccountWhitelist
-	accountWhitelistMap := make(map[common.Address]bool)
+	ethAccountWhitelist := &config.Eth.Channels.Basic.AccountWhitelist
+	ethAccountWhitelistMap := make(map[common.Address]bool)
 
-	for i := 0; i < len(*accountWhitelist); i++ {
-		account := common.HexToAddress((*accountWhitelist)[i])
-		accountWhitelistMap[account] = true
+	for i := 0; i < len(*ethAccountWhitelist); i++ {
+		account := common.HexToAddress((*ethAccountWhitelist)[i])
+		ethAccountWhitelistMap[account] = true
 	}
 
-	config.Eth.Channels.Basic.AccountWhitelistMap = accountWhitelistMap
+	config.Eth.Channels.Basic.AccountWhitelistMap = ethAccountWhitelistMap
+
+	subAccountWhitelist := &config.Sub.AccountWhitelist
+	subAccountWhitelistMap := make(map[types.AccountID]bool)
+
+	for i := 0; i < len(*subAccountWhitelist); i++ {
+		account, err := hexutil.Decode((*subAccountWhitelist)[i])
+		if err != nil {
+			return nil, err
+		}
+
+		subAccountWhitelistMap[types.NewAccountID(account)] = true
+	}
+
+	config.Sub.AccountWhitelistMap = subAccountWhitelistMap
 
 	return &config, nil
 }

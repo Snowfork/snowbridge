@@ -16,7 +16,7 @@ func GetMerkleProofs(client client.Client, key []byte) ([]chainTypes.MerkleProof
 		return nil, err
 	}
 	if len(res) == 0 {
-		return nil, errors.New("No data received")
+		return nil, errors.New("no data received")
 	}
 
 	var proofs []chainTypes.MerkleProof

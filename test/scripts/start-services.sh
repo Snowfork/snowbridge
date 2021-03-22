@@ -25,12 +25,7 @@ deploy_contracts()
     pushd ../ethereum
 
     truffle deploy --network e2e_test
-
-    echo "Generating configuration from contracts"
-    truffle exec scripts/dumpTestConfig.js $configdir --network e2e_test
     popd
-
-    echo "Wrote configuration to $configdir"
 }
 
 
@@ -89,6 +84,14 @@ start_parachain()
 
 start_relayer()
 {
+    pushd ../ethereum
+
+    echo "Generating configuration from contracts"
+    truffle exec scripts/dumpTestConfig.js $configdir --network e2e_test
+    popd
+
+    echo "Wrote configuration to $configdir"
+
     echo "Starting Relay"
     logfile=$(pwd)/relay.log
     pushd ../relayer

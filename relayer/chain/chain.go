@@ -15,7 +15,7 @@ type Message interface{}
 
 // Message from Substrate
 type SubstrateOutboundMessage struct {
-	OriginID       [32]byte
+	OriginID       types.AccountID
 	ChannelID      substrate.ChannelID
 	CommitmentHash types.H256
 	Messages       []substrate.BasicChannelMessage

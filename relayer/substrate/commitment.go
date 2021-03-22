@@ -1,13 +1,13 @@
 package substrate
 
-type AccountIDType = [32]byte
+import "github.com/snowfork/go-substrate-rpc-client/v2/types"
 
 type BasicChannelCommitment struct {
 	Subcommitments []BasicChannelAccountSubcommitment
 }
 
 type BasicChannelAccountSubcommitment struct {
-	AccountID      AccountIDType
+	AccountID      types.AccountID
 	Messages       []BasicChannelMessage
 	FlatCommitment []byte
 }

@@ -1,6 +1,8 @@
 const TOML = require('@iarna/toml');
 const fs = require('fs');
 const path = require('path');
+const { SubClient } = require('../../test/src/subclient');
+const u8a = require('@polkadot/util/u8a');
 
 const channelContracts = {
     basic: {
@@ -24,7 +26,12 @@ const channels = {
     },
 }
 
-const dump = (tmpDir, channels) => {
+const substrate = {
+    endpoint: "ws://localhost:11144",
+    account_whitelist: null,
+}
+
+const dump = (tmpDir, channels, substrate) => {
     const config = {
         ethereum: {
             endpoint: "ws://localhost:8545/",
@@ -42,7 +49,8 @@ const dump = (tmpDir, channels) => {
             },
         },
         substrate: {
-            endpoint: "ws://127.0.0.1:11144/"
+            endpoint: substrate.endpoint,
+            account_whitelist: substrate.account_whitelist,
         }
     }
     fs.writeFileSync(path.join(tmpDir, "config.toml"), TOML.stringify(config));
@@ -51,12 +59,21 @@ const dump = (tmpDir, channels) => {
 module.exports = async (callback) => {
     try {
         let configDir = process.argv[4].toString();
+        let subClient = new SubClient(substrate.endpoint);
+        await subClient.connect();
+        let subAccounts = await subClient.api.query.system.account.entries();
+
         channels.basic.inbound = await channelContracts.basic.inbound.deployed();
         channels.basic.outbound = await channelContracts.basic.outbound.deployed();
         channels.basic.account_whitelist = await web3.eth.getAccounts();
         channels.incentivized.inbound = await channelContracts.incentivized.inbound.deployed();
         channels.incentivized.outbound = await channelContracts.incentivized.outbound.deployed();
-        await dump(configDir, channels);
+        substrate.account_whitelist = subAccounts.map(account => {
+            return u8a.u8aToHex(account[0].slice(-32));
+        });
+        subClient.disconnect();
+
+        dump(configDir, channels, substrate);
     } catch (error) {
         callback(error)
     }

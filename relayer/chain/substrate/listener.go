@@ -122,6 +122,7 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					li.log.WithFields(logrus.Fields{
 						"block":               finalizedHeader.Number,
 						"commitmentSizeBytes": len(*data),
+						"commitment":          data.Hex(),
 					}).Debug("Retrieved commitment from offchain storage")
 				} else {
 					li.log.WithError(err).Error("Commitment not found in offchain storage")
@@ -145,7 +146,6 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 					}
 
 					for _, subc := range commitment.Subcommitments {
-						// TODO: Whitelisting: filter out bad origins
 						message := chain.SubstrateOutboundMessage{
 							OriginID:       subc.AccountID,
 							ChannelID:      digestItem.AsCommitment.ChannelID,
@@ -154,7 +154,9 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 							Proofs:         merkleProofs,
 						}
 
-						li.messages <- []chain.Message{message}
+						if li.config.AccountWhitelistMap[subc.AccountID] {
+							li.messages <- []chain.Message{message}
+						}
 					}
 				} else {
 					// TODO: incentivizied channel

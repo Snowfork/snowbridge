@@ -6,19 +6,23 @@ class SubClient {
 
   constructor(endpoint) {
     this.endpoint = endpoint;
+    this.provider = new WsProvider(this.endpoint);
     this.api = null;
     this.keyring = null;
   }
 
   async connect() {
-    const provider = new WsProvider(this.endpoint);
     this.api = await ApiPromise.create({
-      provider,
+      provider: this.provider,
       typesBundle: bundle
-    })
+    });
 
     this.keyring = new Keyring({ type: 'sr25519' });
     this.alice = this.keyring.addFromUri('//Alice', { name: 'Alice' });
+  }
+
+  async disconnect() {
+    this.provider.disconnect();
   }
 
   async queryAssetBalance(accountId, assetId) {
