@@ -99,10 +99,10 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 				case parachain.InitialVerificationTxSent, parachain.InitialVerificationTxConfirmed:
 					continue // Ethereum listener is responsible for checking tx confirmation
 				case parachain.ReadyToComplete:
-					// err := wr.WriteCompleteSignatureCommitment(ctx, beefyInfo)
-					// if err != nil {
-					// 	wr.log.WithError(err).Error("Error submitting message to ethereum")
-					// }
+					err := wr.WriteCompleteSignatureCommitment(ctx, beefyInfo)
+					if err != nil {
+						wr.log.WithError(err).Error("Error submitting message to ethereum")
+					}
 				default:
 					wr.log.Info("Invalid beefy commitment status")
 				}
@@ -160,6 +160,42 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo par
 	beefyInfo.Status = parachain.InitialVerificationTxSent
 	beefyInfo.InitialVerificationTxHash = tx.Hash()
 	wr.beefy <- beefyInfo
+
+	return nil
+}
+
+// WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the LightClientBridge contract
+func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, beefyInfo parachain.BeefyCommitmentInfo) error {
+	wr.log.Info("Parachain WriteCompleteSignatureCommitment()")
+
+	msg, err := beefyInfo.BuildCompleteSignatureCommitmentMessage()
+	if err != nil {
+		return err
+	}
+
+	contract := wr.lightclientbridge
+	if contract == nil {
+		return fmt.Errorf("Unknown contract")
+	}
+
+	options := bind.TransactOpts{
+		From:     wr.econn.GetKeyPair().CommonAddress(),
+		Signer:   wr.signerFn,
+		Context:  ctx,
+		GasLimit: 500000, // TODO: reasonable gas limit
+	}
+
+	tx, err := contract.CompleteSignatureCommitment(&options, msg.ID, msg.Payload, msg.RandomSignatureCommitments,
+		msg.RandomSignatureBitfieldPositions, msg.RandomValidatorAddresses, msg.RandomPublicKeyMerkleProofs)
+
+	if err != nil {
+		wr.log.WithError(err).Error("Failed to submit transaction")
+		return err
+	}
+
+	wr.log.WithFields(logrus.Fields{
+		"txHash": tx.Hash().Hex(),
+	}).Info("Complete Signature Commitment transaction submitted")
 
 	return nil
 }
