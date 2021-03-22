@@ -95,7 +95,6 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 	}
 	defer sub.Unsubscribe()
 
-	received := 0
 	for {
 		select {
 		case <-ctx.Done():
@@ -115,12 +114,6 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 				continue
 			}
 
-			// Construct BEEFY merkle tree
-			beefyValidatorAddresses := []common.Address{
-				common.HexToAddress("0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b"),
-				common.HexToAddress("0x25451A4de12dcCc2D166922fA938E900fCc4ED24"),
-			}
-
 			// TODO: query beefy authorities
 			// var output interface{}
 			// var blockNumber *uint64
@@ -132,6 +125,10 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 			// if err != nil {
 			// 	panic(err)
 			// }
+			beefyValidatorAddresses := []common.Address{
+				common.HexToAddress("0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b"),
+				common.HexToAddress("0x25451A4de12dcCc2D166922fA938E900fCc4ED24"),
+			}
 
 			beefyCommitmentInfo := parachain.NewBeefyCommitmentInfo(beefyValidatorAddresses, signedCommitment)
 
