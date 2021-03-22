@@ -73,7 +73,7 @@ module.exports = function (deployer, network, accounts) {
 
     await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
 
-    const valRegistry = await deployer.deploy(ValidatorRegistry, Web3Utils.fromUtf8("0x12345678"));
+    const valRegistry = await deployer.deploy(ValidatorRegistry, "0x383e21111d06dbc3ec0e3030b530ca766d6a821cc1203ce4d253321b5e88b045");
     contracts.lightclientbridge.instance = await deployer.deploy(contracts.lightclientbridge.contract, valRegistry.address)
   })
 };
