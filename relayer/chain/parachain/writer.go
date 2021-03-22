@@ -3,8 +3,6 @@
 
 package parachain
 
-// TODO: this is a copy of Ethereum writer and should be refactored
-
 import (
 	"context"
 	"fmt"
@@ -13,45 +11,54 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/sirupsen/logrus"
 
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/validatorregistry"
 	"github.com/snowfork/polkadot-ethereum/relayer/parachain"
 )
 
-const LightClientBridgeContractID = "lightclientbridge"
-
 type Writer struct {
-	config    *Config
-	conn      *ethereum.Connection
-	contracts map[string]*lightclientbridge.Contract
-	messages  <-chan []chain.Message
-	beefy     chan parachain.BeefyCommitmentInfo
-	log       *logrus.Entry
+	config   *Config
+	econn    *ethereum.Connection
+	conn     *Connection
+	messages <-chan []chain.Message
+	beefy    chan parachain.BeefyCommitmentInfo
+	log      *logrus.Entry
+	// TODO: generalize contracts
+	lightclientbridge *lightclientbridge.Contract
+	valregistry       *validatorregistry.Contract
 }
 
-func NewWriter(config *Config, conn *ethereum.Connection, messages <-chan []chain.Message, beefy chan parachain.BeefyCommitmentInfo,
-	contracts map[string]*lightclientbridge.Contract, log *logrus.Entry) (*Writer, error) {
+func NewWriter(config *Config, conn *Connection, econn *ethereum.Connection, messages <-chan []chain.Message,
+	beefy chan parachain.BeefyCommitmentInfo, log *logrus.Entry) (*Writer, error) {
 	return &Writer{
-		config:    config,
-		conn:      conn,
-		contracts: contracts,
-		messages:  messages,
-		beefy:     beefy,
-		log:       log,
+		config:   config,
+		conn:     conn,
+		econn:    econn,
+		messages: messages,
+		beefy:    beefy,
+		log:      log,
 	}, nil
 }
 
 func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
-
-	contract, err := lightclientbridge.NewContract(common.HexToAddress(wr.config.Ethereum.Contracts.RelayBridgeLightClient), wr.conn.GetClient())
+	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(wr.config.Ethereum.Contracts.RelayBridgeLightClient), wr.econn.GetClient())
 	if err != nil {
 		return err
 	}
-	wr.contracts[LightClientBridgeContractID] = contract
+	wr.lightclientbridge = lightClientBridgeContract
+
+	validatorRegistryContract, err := validatorregistry.NewContract(common.HexToAddress(wr.config.Ethereum.Contracts.ValidatorRegistry), wr.econn.GetClient())
+	if err != nil {
+		return err
+	}
+	wr.valregistry = validatorRegistryContract
 
 	eg.Go(func() error {
 		return wr.writeLoop(ctx)
@@ -81,20 +88,21 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 					return fmt.Errorf("Invalid message")
 				}
 
+				wr.log.Info("Parachain writer: processing new beefyInfo with status: ", beefyInfo.Status)
+
 				switch beefyInfo.Status {
 				case parachain.CommitmentWitnessed:
 					err := wr.WriteNewSignatureCommitment(ctx, beefyInfo)
 					if err != nil {
 						wr.log.WithError(err).Error("Error submitting message to ethereum")
 					}
-				// TODO: will these cases even be hit? it's in a different channel.
 				case parachain.InitialVerificationTxSent, parachain.InitialVerificationTxConfirmed:
 					continue // Ethereum listener is responsible for checking tx confirmation
 				case parachain.ReadyToComplete:
-					err := wr.WriteCompleteSignatureCommitment(ctx, beefyInfo)
-					if err != nil {
-						wr.log.WithError(err).Error("Error submitting message to ethereum")
-					}
+					// err := wr.WriteCompleteSignatureCommitment(ctx, beefyInfo)
+					// if err != nil {
+					// 	wr.log.WithError(err).Error("Error submitting message to ethereum")
+					// }
 				default:
 					wr.log.Info("Invalid beefy commitment status")
 				}
@@ -103,8 +111,8 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 	}
 }
 
-func (wr *Writer) signerFn(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
-	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, wr.conn.GetKeyPair().PrivateKey())
+func (wr *Writer) signerFn(_ common.Address, tx *gethTypes.Transaction) (*gethTypes.Transaction, error) {
+	signedTx, err := gethTypes.SignTx(tx, gethTypes.HomesteadSigner{}, wr.econn.GetKeyPair().PrivateKey())
 	if err != nil {
 		return nil, err
 	}
@@ -112,20 +120,26 @@ func (wr *Writer) signerFn(_ common.Address, tx *types.Transaction) (*types.Tran
 }
 
 func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo parachain.BeefyCommitmentInfo) error {
-	wr.log.Info("Parachain writer received msg")
-
 	msg, err := beefyInfo.BuildNewSignatureCommitmentMessage()
 	if err != nil {
 		return err
 	}
 
-	contract := wr.contracts[LightClientBridgeContractID] // TODO: don't hardcode this
+	inSet, err := wr.CheckValidatorInSet(ctx, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
+	if err != nil {
+		return err
+	}
+	if !inSet {
+		return fmt.Errorf("validator address merkle proof failed verification")
+	}
+
+	contract := wr.lightclientbridge
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")
 	}
 
 	options := bind.TransactOpts{
-		From:     wr.conn.GetKeyPair().CommonAddress(),
+		From:     wr.econn.GetKeyPair().CommonAddress(),
 		Signer:   wr.signerFn,
 		Context:  ctx,
 		GasLimit: 5000000, // TODO: reasonable gas limit
@@ -150,38 +164,98 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo par
 	return nil
 }
 
-// WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the LightClientBridge contract
-func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, beefyInfo parachain.BeefyCommitmentInfo) error {
-	wr.log.Info("Parachain writer received msg")
+// CheckValidatorInSet checks if a validator address is in the validator set
+func (wr *Writer) CheckValidatorInSet(ctx context.Context, valAddr common.Address, valAddrMerkleProof [][32]byte) (bool, error) {
+	wr.log.Info("Parachain CheckValidatorInSet()")
 
-	msg, err := beefyInfo.BuildCompleteSignatureCommitmentMessage()
-	if err != nil {
-		return err
-	}
-
-	contract := wr.contracts[LightClientBridgeContractID] // TODO: don't hardcode this
+	contract := wr.valregistry
 	if contract == nil {
-		return fmt.Errorf("Unknown contract")
+		return false, fmt.Errorf("Unknown contract")
 	}
 
-	options := bind.TransactOpts{
-		From:     wr.conn.GetKeyPair().CommonAddress(),
-		Signer:   wr.signerFn,
-		Context:  ctx,
-		GasLimit: 5000000, // TODO: reasonable gas limit
-	}
-
-	tx, err := contract.CompleteSignatureCommitment(&options, msg.ID, msg.Payload, msg.RandomSignatureCommitments,
-		msg.RandomSignatureBitfieldPositions, msg.RandomValidatorAddresses, msg.RandomPublicKeyMerkleProofs)
-
+	res, err := contract.CheckValidatorInSet(&bind.CallOpts{}, valAddr, valAddrMerkleProof)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to submit transaction")
-		return err
+		return false, err
 	}
 
-	wr.log.WithFields(logrus.Fields{
-		"txHash": tx.Hash().Hex(),
-	}).Info("Complete Signature Commitment transaction submitted")
+	return res, nil
+}
 
-	return nil
+type LeafProof struct {
+	BlockHash types.Hash
+	Leaf      types.Bytes
+	Proof     types.Data
+}
+
+// GenerateMMRProof generates an MMR proof onchain
+func (wr *Writer) GenerateMmrProofOnchain(ctx context.Context, beefyInfo parachain.BeefyCommitmentInfo, valAddrIndex int) (LeafProof, error) {
+	leafProof := LeafProof{}
+
+	blockNumber := uint64(beefyInfo.SignedCommitment.Commitment.BlockNumber)
+	blockHash, err := wr.conn.GetBlockHash(blockNumber)
+	if err != nil {
+		return leafProof, err
+	}
+
+	// TODO: Approach 1: Use Substrate client.
+	// 		 Complete example here: https://github.com/Snowfork/go-substrate-rpc-client/pull/3/files
+
+	err = wr.conn.api.Client.Call(&leafProof, "mmr_generateProof", valAddrIndex, blockHash.Hex())
+	if err != nil {
+		return leafProof, err
+	}
+	return leafProof, nil
+
+	// TODO: Approach 2: Execute curl cmd. This cmd works from terminal:
+	// $ curl -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "mmr_generateProof",  "params": [0, "0xb02a5671922f1b68b16e6e89628a41aabf0813adc09100161c3b8a68b9ecddb5"]}' http://localhost:9933/
+
+	// curl := exec.Command("curl", "-H", "Content-Type: application/json", "-d", "'{\"id\":1, \"jsonrpc\":\"2.0\", \"method\": \"mmr_generateProof\",  \"params\": [0, \"0xb02a5671922f1b68b16e6e89628a41aabf0813adc09100161c3b8a68b9ecddb5\"]}'", "http://localhost:9933/")
+	// output, err := curl.Output()
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// leafProof := LeafProof{}
+	// err = json.Unmarshal(output, &leafProof)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// return leafProof, nil
+
+	// TODO: Approach 3: HTTP GET request.
+
+	// var localClient = &http.Client{Timeout: 10 * time.Second}
+	// url := "http://localhost:9933/mmr_generateProof"
+	// req, err := http.NewRequest(http.MethodGet, url, nil)
+	// if err != nil {
+	// 	wr.log.Error(err)
+	// }
+
+	// req.Header.Set("Content-Type", "application/json")
+	// q := req.URL.Query()
+	// q.Add("index", "0")
+	// q.Add("blockHash", "0xb02a5671922f1b68b16e6e89628a41aabf0813adc09100161c3b8a68b9ecddb5")
+	// req.URL.RawQuery = q.Encode()
+
+	// res, getErr := localClient.Do(req)
+	// if getErr != nil {
+	// 	wr.log.Error(err)
+	// }
+
+	// if res.Body != nil {
+	// 	defer res.Body.Close()
+	// }
+
+	// body, readErr := ioutil.ReadAll(res.Body)
+	// if readErr != nil {
+	// 	wr.log.Error(err)
+	// }
+
+	// proof1 := LeafProof{}
+	// jsonErr := json.Unmarshal(body, &proof1)
+	// if jsonErr != nil {
+	// 	wr.log.Error(err)
+	// }
+
+	// return proof1, nil
 }
