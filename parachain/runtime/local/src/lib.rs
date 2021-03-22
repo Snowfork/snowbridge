@@ -211,6 +211,12 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl pallet_utility::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
@@ -509,6 +515,7 @@ construct_runtime!(
 
 		LocalXcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin} = 18,
 		Transfer: artemis_transfer::{Module, Call, Event<T>} = 19,
+		Utility: pallet_utility::{Module, Call, Event, Storage} = 20,
 
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>} = 12,
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>} = 13,
