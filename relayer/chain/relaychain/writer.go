@@ -6,6 +6,7 @@ package relaychain
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"golang.org/x/sync/errgroup"
 
@@ -125,7 +126,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo rel
 		return err
 	}
 
-	inSet, err := wr.CheckValidatorInSet(ctx, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
+	inSet, err := wr.CheckValidatorInSet(ctx, msg.ValidatorPublicKey, msg.ValidatorPosition, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
 		return err
 	}
@@ -147,7 +148,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo rel
 
 	tx, err := contract.NewSignatureCommitment(&options, msg.Payload,
 		msg.ValidatorClaimsBitfield, msg.ValidatorSignatureCommitment,
-		msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
+		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err
@@ -201,7 +202,7 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, beefyInf
 }
 
 // CheckValidatorInSet checks if a validator address is in the validator set
-func (wr *Writer) CheckValidatorInSet(ctx context.Context, valAddr common.Address, valAddrMerkleProof [][32]byte) (bool, error) {
+func (wr *Writer) CheckValidatorInSet(ctx context.Context, valAddr common.Address, pos *big.Int, valAddrMerkleProof [][32]byte) (bool, error) {
 	wr.log.Info("Relaychain CheckValidatorInSet()")
 
 	contract := wr.valregistry
@@ -209,7 +210,7 @@ func (wr *Writer) CheckValidatorInSet(ctx context.Context, valAddr common.Addres
 		return false, fmt.Errorf("Unknown contract")
 	}
 
-	res, err := contract.CheckValidatorInSet(&bind.CallOpts{}, valAddr, valAddrMerkleProof)
+	res, err := contract.CheckValidatorInSet(&bind.CallOpts{}, valAddr, pos, valAddrMerkleProof)
 	if err != nil {
 		return false, err
 	}

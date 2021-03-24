@@ -3,6 +3,8 @@ const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
 const TestToken = artifacts.require("TestToken");
 const ValidatorRegistry = artifacts.require("ValidatorRegistry");
+const MerkleProof = artifacts.require("MerkleProof");
+const Bitfield = artifacts.require("Bitfield");
 const Web3Utils = require("web3-utils");
 
 const channels = {
@@ -73,7 +75,19 @@ module.exports = function (deployer, network, accounts) {
 
     await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
 
-    const valRegistry = await deployer.deploy(ValidatorRegistry, "0x383e21111d06dbc3ec0e3030b530ca766d6a821cc1203ce4d253321b5e88b045");
+    // Link MerkleProof library to ValidatorRegistry
+    await deployer.deploy(MerkleProof);
+    deployer.link(MerkleProof, [ValidatorRegistry]);
+
+    // TODO: Hardcoded for testing
+    const root = "0xc1490f71b21f5700063d93546dbe860cc190e883734ee3f490b76de9e028db99";
+    const numValidators = 2;
+    const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators);
+
+    // Link Bitfield library to LightClientBridge
+    await deployer.deploy(Bitfield);
+    deployer.link(Bitfield, [contracts.lightclientbridge.contract]);
+
     contracts.lightclientbridge.instance = await deployer.deploy(contracts.lightclientbridge.contract, valRegistry.address)
   })
 };

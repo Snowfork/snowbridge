@@ -9,11 +9,12 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	merkletree "github.com/wealdtech/go-merkletree"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 )
 
 type Status int
@@ -43,8 +44,9 @@ func NewBeefyCommitmentInfo(valAddrs []common.Address, commitment *SignedCommitm
 
 type NewSignatureCommitmentMessage struct {
 	Payload                       [32]byte
-	ValidatorClaimsBitfield       *big.Int
+	ValidatorClaimsBitfield       []*big.Int
 	ValidatorSignatureCommitment  []byte
+	ValidatorPosition             *big.Int
 	ValidatorPublicKey            common.Address
 	ValidatorPublicKeyMerkleProof [][32]byte
 }
@@ -53,7 +55,7 @@ type CompleteSignatureCommitmentMessage struct {
 	ID                               *big.Int
 	Payload                          [32]byte
 	RandomSignatureCommitments       [][]byte
-	RandomSignatureBitfieldPositions []uint8
+	RandomSignatureBitfieldPositions []*big.Int
 	RandomValidatorAddresses         []common.Address
 	RandomPublicKeyMerkleProofs      [][][32]byte
 }
@@ -74,11 +76,14 @@ func (b BeefyCommitmentInfo) BuildNewSignatureCommitmentMessage() (NewSignatureC
 
 	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
 
+	validatorClaimsBitfield := []*big.Int{big.NewInt(123)} // TODO: add bitfield stuff properly
+
 	msg := NewSignatureCommitmentMessage{
 		Payload:                       commitmentHash,
-		ValidatorClaimsBitfield:       big.NewInt(123), // TODO: add bitfield stuff properly
+		ValidatorClaimsBitfield:       validatorClaimsBitfield,
 		ValidatorSignatureCommitment:  sig0Commitment,
 		ValidatorPublicKey:            b.ValidatorAddresses[valAddrIndex],
+		ValidatorPosition:             big.NewInt(int64(valAddrIndex)),
 		ValidatorPublicKeyMerkleProof: sig0ProofContents,
 	}
 
@@ -89,12 +94,12 @@ func (b BeefyCommitmentInfo) GenerateMmrProofOffchain(valAddrIndex int) ([][32]b
 	// Hash validator addresses for leaf input data
 	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
 	for i, valAddr := range b.ValidatorAddresses {
-		h := sha3.New256()
-		if _, err := h.Write(valAddr.Bytes()); err != nil {
+		hash := sha3.New256()
+		if _, err := hash.Write(valAddr.Bytes()); err != nil {
 			return [][32]byte{}, err
 		}
-		hashedData := h.Sum(nil)
-		beefyTreeData[i] = hashedData
+		buf := hash.Sum(nil)
+		beefyTreeData[i] = buf
 	}
 
 	// Create the tree
@@ -135,7 +140,7 @@ func (b BeefyCommitmentInfo) BuildCompleteSignatureCommitmentMessage() (Complete
 	validationDataID := big.NewInt(int64(b.SignedCommitment.Commitment.ValidatorSetID))
 
 	//TODO: Generate randomSignatureBitfieldPositions properly
-	randomSignatureBitfieldPositions := []uint8{}
+	randomSignatureBitfieldPositions := []*big.Int{}
 
 	//TODO: Populate randomSignatureCommitments, randomValidatorAddresses, and based on randomSignatureBitfieldPositions
 	randomSignatureCommitments := [][]byte{}

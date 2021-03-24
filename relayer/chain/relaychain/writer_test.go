@@ -38,8 +38,8 @@ func TestWriter(t *testing.T) {
 	config.Relaychain.PrivateKey = "//Alice"
 	config.Ethereum.Endpoint = "ws://localhost:8545/"
 	config.Ethereum.PrivateKey = "4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
-	config.Ethereum.Contracts.RelayBridgeLightClient = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305"
-	config.Ethereum.Contracts.ValidatorRegistry = "0xEE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"
+	config.Ethereum.Contracts.RelayBridgeLightClient = "0xa9DB236F2D8Bd19b357550718cFfce279397E71C"
+	config.Ethereum.Contracts.ValidatorRegistry = "0xf4efca5540a4e606A44Ae492443411df1BB68804"
 	config.Ethereum.BeefyBlockDelay = 5
 
 	// Generate keypair from secret

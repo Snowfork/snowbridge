@@ -27,7 +27,7 @@ var (
 )
 
 // ContractABI is the input ABI used to generate the binding from.
-const ContractABI = "[{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"validatorSetMerkleRoot\",\"type\":\"bytes32\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"ValidatorRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"ValidatorUnregistered\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"root\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validatorSetBitfield\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"verify\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"validatorAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"validatorAddressMerkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"checkValidatorInSet\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true}]"
+const ContractABI = "[{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"_numOfValidators\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"numOfValidators\",\"type\":\"uint256\"}],\"name\":\"ValidatorRegistryUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"numOfValidators\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"root\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"_numOfValidators\",\"type\":\"uint256\"}],\"name\":\"update\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"checkValidatorInSet\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true}]"
 
 // Contract is an auto generated Go binding around an Ethereum contract.
 type Contract struct {
@@ -171,12 +171,12 @@ func (_Contract *ContractTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _Contract.Contract.contract.Transact(opts, method, params...)
 }
 
-// CheckValidatorInSet is a free data retrieval call binding the contract method 0x67b52d8c.
+// CheckValidatorInSet is a free data retrieval call binding the contract method 0x5d325d71.
 //
-// Solidity: function checkValidatorInSet(address validatorAddress, bytes32[] validatorAddressMerkleProof) view returns(bool)
-func (_Contract *ContractCaller) CheckValidatorInSet(opts *bind.CallOpts, validatorAddress common.Address, validatorAddressMerkleProof [][32]byte) (bool, error) {
+// Solidity: function checkValidatorInSet(address addr, uint256 pos, bytes32[] proof) view returns(bool)
+func (_Contract *ContractCaller) CheckValidatorInSet(opts *bind.CallOpts, addr common.Address, pos *big.Int, proof [][32]byte) (bool, error) {
 	var out []interface{}
-	err := _Contract.contract.Call(opts, &out, "checkValidatorInSet", validatorAddress, validatorAddressMerkleProof)
+	err := _Contract.contract.Call(opts, &out, "checkValidatorInSet", addr, pos, proof)
 
 	if err != nil {
 		return *new(bool), err
@@ -188,18 +188,49 @@ func (_Contract *ContractCaller) CheckValidatorInSet(opts *bind.CallOpts, valida
 
 }
 
-// CheckValidatorInSet is a free data retrieval call binding the contract method 0x67b52d8c.
+// CheckValidatorInSet is a free data retrieval call binding the contract method 0x5d325d71.
 //
-// Solidity: function checkValidatorInSet(address validatorAddress, bytes32[] validatorAddressMerkleProof) view returns(bool)
-func (_Contract *ContractSession) CheckValidatorInSet(validatorAddress common.Address, validatorAddressMerkleProof [][32]byte) (bool, error) {
-	return _Contract.Contract.CheckValidatorInSet(&_Contract.CallOpts, validatorAddress, validatorAddressMerkleProof)
+// Solidity: function checkValidatorInSet(address addr, uint256 pos, bytes32[] proof) view returns(bool)
+func (_Contract *ContractSession) CheckValidatorInSet(addr common.Address, pos *big.Int, proof [][32]byte) (bool, error) {
+	return _Contract.Contract.CheckValidatorInSet(&_Contract.CallOpts, addr, pos, proof)
 }
 
-// CheckValidatorInSet is a free data retrieval call binding the contract method 0x67b52d8c.
+// CheckValidatorInSet is a free data retrieval call binding the contract method 0x5d325d71.
 //
-// Solidity: function checkValidatorInSet(address validatorAddress, bytes32[] validatorAddressMerkleProof) view returns(bool)
-func (_Contract *ContractCallerSession) CheckValidatorInSet(validatorAddress common.Address, validatorAddressMerkleProof [][32]byte) (bool, error) {
-	return _Contract.Contract.CheckValidatorInSet(&_Contract.CallOpts, validatorAddress, validatorAddressMerkleProof)
+// Solidity: function checkValidatorInSet(address addr, uint256 pos, bytes32[] proof) view returns(bool)
+func (_Contract *ContractCallerSession) CheckValidatorInSet(addr common.Address, pos *big.Int, proof [][32]byte) (bool, error) {
+	return _Contract.Contract.CheckValidatorInSet(&_Contract.CallOpts, addr, pos, proof)
+}
+
+// NumOfValidators is a free data retrieval call binding the contract method 0x1e526e45.
+//
+// Solidity: function numOfValidators() view returns(uint256)
+func (_Contract *ContractCaller) NumOfValidators(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "numOfValidators")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// NumOfValidators is a free data retrieval call binding the contract method 0x1e526e45.
+//
+// Solidity: function numOfValidators() view returns(uint256)
+func (_Contract *ContractSession) NumOfValidators() (*big.Int, error) {
+	return _Contract.Contract.NumOfValidators(&_Contract.CallOpts)
+}
+
+// NumOfValidators is a free data retrieval call binding the contract method 0x1e526e45.
+//
+// Solidity: function numOfValidators() view returns(uint256)
+func (_Contract *ContractCallerSession) NumOfValidators() (*big.Int, error) {
+	return _Contract.Contract.NumOfValidators(&_Contract.CallOpts)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -264,68 +295,6 @@ func (_Contract *ContractCallerSession) Root() ([32]byte, error) {
 	return _Contract.Contract.Root(&_Contract.CallOpts)
 }
 
-// ValidatorSetBitfield is a free data retrieval call binding the contract method 0x139ec11b.
-//
-// Solidity: function validatorSetBitfield() view returns(uint256)
-func (_Contract *ContractCaller) ValidatorSetBitfield(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _Contract.contract.Call(opts, &out, "validatorSetBitfield")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// ValidatorSetBitfield is a free data retrieval call binding the contract method 0x139ec11b.
-//
-// Solidity: function validatorSetBitfield() view returns(uint256)
-func (_Contract *ContractSession) ValidatorSetBitfield() (*big.Int, error) {
-	return _Contract.Contract.ValidatorSetBitfield(&_Contract.CallOpts)
-}
-
-// ValidatorSetBitfield is a free data retrieval call binding the contract method 0x139ec11b.
-//
-// Solidity: function validatorSetBitfield() view returns(uint256)
-func (_Contract *ContractCallerSession) ValidatorSetBitfield() (*big.Int, error) {
-	return _Contract.Contract.ValidatorSetBitfield(&_Contract.CallOpts)
-}
-
-// Verify is a free data retrieval call binding the contract method 0x6df4d241.
-//
-// Solidity: function verify(bytes32 leaf, bytes32[] proof) view returns(bool)
-func (_Contract *ContractCaller) Verify(opts *bind.CallOpts, leaf [32]byte, proof [][32]byte) (bool, error) {
-	var out []interface{}
-	err := _Contract.contract.Call(opts, &out, "verify", leaf, proof)
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// Verify is a free data retrieval call binding the contract method 0x6df4d241.
-//
-// Solidity: function verify(bytes32 leaf, bytes32[] proof) view returns(bool)
-func (_Contract *ContractSession) Verify(leaf [32]byte, proof [][32]byte) (bool, error) {
-	return _Contract.Contract.Verify(&_Contract.CallOpts, leaf, proof)
-}
-
-// Verify is a free data retrieval call binding the contract method 0x6df4d241.
-//
-// Solidity: function verify(bytes32 leaf, bytes32[] proof) view returns(bool)
-func (_Contract *ContractCallerSession) Verify(leaf [32]byte, proof [][32]byte) (bool, error) {
-	return _Contract.Contract.Verify(&_Contract.CallOpts, leaf, proof)
-}
-
 // RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
 //
 // Solidity: function renounceOwnership() returns()
@@ -366,6 +335,27 @@ func (_Contract *ContractSession) TransferOwnership(newOwner common.Address) (*t
 // Solidity: function transferOwnership(address newOwner) returns()
 func (_Contract *ContractTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
 	return _Contract.Contract.TransferOwnership(&_Contract.TransactOpts, newOwner)
+}
+
+// Update is a paid mutator transaction binding the contract method 0xa58bb84a.
+//
+// Solidity: function update(bytes32 _root, uint256 _numOfValidators) returns()
+func (_Contract *ContractTransactor) Update(opts *bind.TransactOpts, _root [32]byte, _numOfValidators *big.Int) (*types.Transaction, error) {
+	return _Contract.contract.Transact(opts, "update", _root, _numOfValidators)
+}
+
+// Update is a paid mutator transaction binding the contract method 0xa58bb84a.
+//
+// Solidity: function update(bytes32 _root, uint256 _numOfValidators) returns()
+func (_Contract *ContractSession) Update(_root [32]byte, _numOfValidators *big.Int) (*types.Transaction, error) {
+	return _Contract.Contract.Update(&_Contract.TransactOpts, _root, _numOfValidators)
+}
+
+// Update is a paid mutator transaction binding the contract method 0xa58bb84a.
+//
+// Solidity: function update(bytes32 _root, uint256 _numOfValidators) returns()
+func (_Contract *ContractTransactorSession) Update(_root [32]byte, _numOfValidators *big.Int) (*types.Transaction, error) {
+	return _Contract.Contract.Update(&_Contract.TransactOpts, _root, _numOfValidators)
 }
 
 // ContractOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the Contract contract.
@@ -521,9 +511,9 @@ func (_Contract *ContractFilterer) ParseOwnershipTransferred(log types.Log) (*Co
 	return event, nil
 }
 
-// ContractValidatorRegisteredIterator is returned from FilterValidatorRegistered and is used to iterate over the raw logs and unpacked data for ValidatorRegistered events raised by the Contract contract.
-type ContractValidatorRegisteredIterator struct {
-	Event *ContractValidatorRegistered // Event containing the contract specifics and raw log
+// ContractValidatorRegistryUpdatedIterator is returned from FilterValidatorRegistryUpdated and is used to iterate over the raw logs and unpacked data for ValidatorRegistryUpdated events raised by the Contract contract.
+type ContractValidatorRegistryUpdatedIterator struct {
+	Event *ContractValidatorRegistryUpdated // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -537,7 +527,7 @@ type ContractValidatorRegisteredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *ContractValidatorRegisteredIterator) Next() bool {
+func (it *ContractValidatorRegistryUpdatedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -546,7 +536,7 @@ func (it *ContractValidatorRegisteredIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(ContractValidatorRegistered)
+			it.Event = new(ContractValidatorRegistryUpdated)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -561,7 +551,7 @@ func (it *ContractValidatorRegisteredIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(ContractValidatorRegistered)
+		it.Event = new(ContractValidatorRegistryUpdated)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -577,41 +567,42 @@ func (it *ContractValidatorRegisteredIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *ContractValidatorRegisteredIterator) Error() error {
+func (it *ContractValidatorRegistryUpdatedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *ContractValidatorRegisteredIterator) Close() error {
+func (it *ContractValidatorRegistryUpdatedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// ContractValidatorRegistered represents a ValidatorRegistered event raised by the Contract contract.
-type ContractValidatorRegistered struct {
-	Validator common.Address
-	Raw       types.Log // Blockchain specific contextual infos
+// ContractValidatorRegistryUpdated represents a ValidatorRegistryUpdated event raised by the Contract contract.
+type ContractValidatorRegistryUpdated struct {
+	Root            [32]byte
+	NumOfValidators *big.Int
+	Raw             types.Log // Blockchain specific contextual infos
 }
 
-// FilterValidatorRegistered is a free log retrieval operation binding the contract event 0xd09501348473474a20c772c79c653e1fd7e8b437e418fe235d277d2c88853251.
+// FilterValidatorRegistryUpdated is a free log retrieval operation binding the contract event 0x83a5633002d658781598993abc2a6704ef84b9dca6cbcbf6b709bb86c36145e4.
 //
-// Solidity: event ValidatorRegistered(address validator)
-func (_Contract *ContractFilterer) FilterValidatorRegistered(opts *bind.FilterOpts) (*ContractValidatorRegisteredIterator, error) {
+// Solidity: event ValidatorRegistryUpdated(bytes32 root, uint256 numOfValidators)
+func (_Contract *ContractFilterer) FilterValidatorRegistryUpdated(opts *bind.FilterOpts) (*ContractValidatorRegistryUpdatedIterator, error) {
 
-	logs, sub, err := _Contract.contract.FilterLogs(opts, "ValidatorRegistered")
+	logs, sub, err := _Contract.contract.FilterLogs(opts, "ValidatorRegistryUpdated")
 	if err != nil {
 		return nil, err
 	}
-	return &ContractValidatorRegisteredIterator{contract: _Contract.contract, event: "ValidatorRegistered", logs: logs, sub: sub}, nil
+	return &ContractValidatorRegistryUpdatedIterator{contract: _Contract.contract, event: "ValidatorRegistryUpdated", logs: logs, sub: sub}, nil
 }
 
-// WatchValidatorRegistered is a free log subscription operation binding the contract event 0xd09501348473474a20c772c79c653e1fd7e8b437e418fe235d277d2c88853251.
+// WatchValidatorRegistryUpdated is a free log subscription operation binding the contract event 0x83a5633002d658781598993abc2a6704ef84b9dca6cbcbf6b709bb86c36145e4.
 //
-// Solidity: event ValidatorRegistered(address validator)
-func (_Contract *ContractFilterer) WatchValidatorRegistered(opts *bind.WatchOpts, sink chan<- *ContractValidatorRegistered) (event.Subscription, error) {
+// Solidity: event ValidatorRegistryUpdated(bytes32 root, uint256 numOfValidators)
+func (_Contract *ContractFilterer) WatchValidatorRegistryUpdated(opts *bind.WatchOpts, sink chan<- *ContractValidatorRegistryUpdated) (event.Subscription, error) {
 
-	logs, sub, err := _Contract.contract.WatchLogs(opts, "ValidatorRegistered")
+	logs, sub, err := _Contract.contract.WatchLogs(opts, "ValidatorRegistryUpdated")
 	if err != nil {
 		return nil, err
 	}
@@ -621,8 +612,8 @@ func (_Contract *ContractFilterer) WatchValidatorRegistered(opts *bind.WatchOpts
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(ContractValidatorRegistered)
-				if err := _Contract.contract.UnpackLog(event, "ValidatorRegistered", log); err != nil {
+				event := new(ContractValidatorRegistryUpdated)
+				if err := _Contract.contract.UnpackLog(event, "ValidatorRegistryUpdated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -643,146 +634,12 @@ func (_Contract *ContractFilterer) WatchValidatorRegistered(opts *bind.WatchOpts
 	}), nil
 }
 
-// ParseValidatorRegistered is a log parse operation binding the contract event 0xd09501348473474a20c772c79c653e1fd7e8b437e418fe235d277d2c88853251.
+// ParseValidatorRegistryUpdated is a log parse operation binding the contract event 0x83a5633002d658781598993abc2a6704ef84b9dca6cbcbf6b709bb86c36145e4.
 //
-// Solidity: event ValidatorRegistered(address validator)
-func (_Contract *ContractFilterer) ParseValidatorRegistered(log types.Log) (*ContractValidatorRegistered, error) {
-	event := new(ContractValidatorRegistered)
-	if err := _Contract.contract.UnpackLog(event, "ValidatorRegistered", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// ContractValidatorUnregisteredIterator is returned from FilterValidatorUnregistered and is used to iterate over the raw logs and unpacked data for ValidatorUnregistered events raised by the Contract contract.
-type ContractValidatorUnregisteredIterator struct {
-	Event *ContractValidatorUnregistered // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ContractValidatorUnregisteredIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ContractValidatorUnregistered)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ContractValidatorUnregistered)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ContractValidatorUnregisteredIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ContractValidatorUnregisteredIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ContractValidatorUnregistered represents a ValidatorUnregistered event raised by the Contract contract.
-type ContractValidatorUnregistered struct {
-	Validator common.Address
-	Raw       types.Log // Blockchain specific contextual infos
-}
-
-// FilterValidatorUnregistered is a free log retrieval operation binding the contract event 0x182459ce960ec1c3689f209ad11c4d033c4133fd0f9653ee36f58b30359f3d98.
-//
-// Solidity: event ValidatorUnregistered(address validator)
-func (_Contract *ContractFilterer) FilterValidatorUnregistered(opts *bind.FilterOpts) (*ContractValidatorUnregisteredIterator, error) {
-
-	logs, sub, err := _Contract.contract.FilterLogs(opts, "ValidatorUnregistered")
-	if err != nil {
-		return nil, err
-	}
-	return &ContractValidatorUnregisteredIterator{contract: _Contract.contract, event: "ValidatorUnregistered", logs: logs, sub: sub}, nil
-}
-
-// WatchValidatorUnregistered is a free log subscription operation binding the contract event 0x182459ce960ec1c3689f209ad11c4d033c4133fd0f9653ee36f58b30359f3d98.
-//
-// Solidity: event ValidatorUnregistered(address validator)
-func (_Contract *ContractFilterer) WatchValidatorUnregistered(opts *bind.WatchOpts, sink chan<- *ContractValidatorUnregistered) (event.Subscription, error) {
-
-	logs, sub, err := _Contract.contract.WatchLogs(opts, "ValidatorUnregistered")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ContractValidatorUnregistered)
-				if err := _Contract.contract.UnpackLog(event, "ValidatorUnregistered", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseValidatorUnregistered is a log parse operation binding the contract event 0x182459ce960ec1c3689f209ad11c4d033c4133fd0f9653ee36f58b30359f3d98.
-//
-// Solidity: event ValidatorUnregistered(address validator)
-func (_Contract *ContractFilterer) ParseValidatorUnregistered(log types.Log) (*ContractValidatorUnregistered, error) {
-	event := new(ContractValidatorUnregistered)
-	if err := _Contract.contract.UnpackLog(event, "ValidatorUnregistered", log); err != nil {
+// Solidity: event ValidatorRegistryUpdated(bytes32 root, uint256 numOfValidators)
+func (_Contract *ContractFilterer) ParseValidatorRegistryUpdated(log types.Log) (*ContractValidatorRegistryUpdated, error) {
+	event := new(ContractValidatorRegistryUpdated)
+	if err := _Contract.contract.UnpackLog(event, "ValidatorRegistryUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
