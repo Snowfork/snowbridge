@@ -29,6 +29,10 @@ const channels = {
 
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
+
+    // Account of governance contract (to be implemented...)
+    const administrator = accounts[0];
+
     channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
     channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
     channels.incentivized.inbound.instance = await deployer.deploy(channels.incentivized.inbound.contract)
@@ -39,7 +43,7 @@ module.exports = function(deployer, network, accounts) {
     deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp]);
 
     // Deploy applications
-    await deployer.deploy(
+    const ethApp = await deployer.deploy(
       ETHApp,
       {
         inbound: channels.basic.inbound.instance.address,
@@ -51,7 +55,7 @@ module.exports = function(deployer, network, accounts) {
       },
     );
 
-    await deployer.deploy(
+    const erc20App = await deployer.deploy(
       ERC20App,
       {
         inbound: channels.basic.inbound.instance.address,
@@ -76,7 +80,7 @@ module.exports = function(deployer, network, accounts) {
 
     // only deploy this contract to non-development networks. The unit tests deploy this contract themselves.
     if (network === 'ropsten' || network === 'e2e_test')  {
-      await deployer.deploy(
+      const dotApp = await deployer.deploy(
         DOTApp,
         "Snowfork DOT",
         "SnowDOT",
@@ -89,7 +93,16 @@ module.exports = function(deployer, network, accounts) {
           outbound: channels.incentivized.outbound.instance.address,
         },
       );
-    }
 
+      // Do post-construction initialization.
+      let foo = await channels.incentivized.outbound.instance.initialize(administrator, dotApp.address);
+      let bar = await channels.incentivized.outbound.instance.setFee(
+        "1000000000000000000", // 1 SnowDOT
+        { from: administrator }
+      );
+      await channels.incentivized.outbound.instance.authorizeDefaultOperator(dotApp.address);
+      await channels.incentivized.outbound.instance.authorizeDefaultOperator(ethApp.address);
+      await channels.incentivized.outbound.instance.authorizeDefaultOperator(erc20App.address);
+    }
   })
 };

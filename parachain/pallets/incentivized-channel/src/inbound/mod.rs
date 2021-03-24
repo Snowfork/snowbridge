@@ -143,9 +143,7 @@ impl<T: Config> Module<T> {
 			}
 		};
 
-		if let Err(_) = T::Currency::resolve_into_existing(&T::TreasuryAccount::get(), adjusted_imbalance) {
-			debug::error!("Treasury account does not exist");
-		}
+		T::Currency::resolve_creating(&T::TreasuryAccount::get(), adjusted_imbalance);
 	}
 
 }

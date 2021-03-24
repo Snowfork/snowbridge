@@ -7,7 +7,6 @@ import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 import "./FeeSource.sol";
 
-
 enum ChannelId {Basic, Incentivized}
 
 contract DOTApp is FeeSource {

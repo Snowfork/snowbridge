@@ -17,7 +17,7 @@ use sp_std::{
 use sp_core::{H160, U256};
 use sp_runtime::{
 	ModuleId,
-	traits::{Convert, StaticLookup, AccountIdConversion},
+	traits::{StaticLookup, AccountIdConversion},
 };
 
 use artemis_core::{ChannelId, OutboundRouter};
@@ -27,7 +27,7 @@ use primitives::{wrap, unwrap};
 use payload::OutboundPayload;
 
 mod payload;
-mod primitives;
+pub mod primitives;
 
 #[cfg(test)]
 mod mock;
@@ -140,14 +140,5 @@ decl_module! {
 impl<T: Config> Module<T> {
 	pub fn account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
-	}
-}
-
-impl<T: Config> Convert<U256,BalanceOf<T>> for Module<T> {
-	fn convert(amount: U256) -> BalanceOf<T> {
-		match unwrap::<T>(amount, T::Decimals::get()) {
-			Some(value) => value,
-			None => panic!("Runtime is misconfigured"),
-		};
 	}
 }

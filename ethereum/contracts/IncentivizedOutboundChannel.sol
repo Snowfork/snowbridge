@@ -2,21 +2,22 @@
 pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./OutboundChannel.sol";
-import "./FeeSource.sol"
+import "./ChannelAccess.sol";
+import "./FeeSource.sol";
 
 // IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have incentivization too.
-contract IncentivizedOutboundChannel is OutboundChannel {
+contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
+
+    // Governance contracts will administer using this role.
+    bytes32 public constant CONFIG_UPDATE_ROLE = keccak256("CONFIG_UPDATE_ROLE");
 
     // Nonce for last submitted message
     uint64 public nonce;
 
     uint256 private fee;
     FeeSource private feeSource;
-
-    mapping(address => bool) private defaultOperators;
-    mapping(address => mapping(address => bool)) private operators;
-    mapping(address => mapping(address => bool)) private revokedDefaultOperators;
 
     event Message(
         address source,
@@ -25,46 +26,44 @@ contract IncentivizedOutboundChannel is OutboundChannel {
         bytes   payload
     );
 
-    event OperatorAuthorized(
-        address operator,
-        address feePayer
-    );
-
     event FeeChanged(
         uint256 oldFee,
         uint256 newFee
     );
 
-    function setFeeSource(address _feeSource) external {
+    constructor() {
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    // Once-off post-construction call to set initial configuration.
+    function initialize(address _configUpdater, address _feeSource) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is unauthorized");
+
+        // Set initial configuration
         feeSource = FeeSource(_feeSource);
+        grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
+
+        // drop admin privileges
+        renounceRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
+    // Update message submission fee.
     function setFee(uint256 _amount) external {
-        let _oldFee = fee;
+        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+        emit FeeChanged(fee, _amount);
         fee = _amount;
-        emit FeeChanged(oldFee, _amount);
     }
 
-    function addDefaultOperator(address app) external {
-        defaultOperators[app] = true;
+    // Authorize an operator/app to submit messages for *all* users.
+    function authorizeDefaultOperator(address operator) external {
+        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+        _authorizeDefaultOperator(operator);
     }
 
-    function authorizeOperator(address operator) external {
-        require(msg.sender != operator, "Authorizing self as operator");
-
-        if (defaultOperators[operator]) {
-            delete revokedDefaultOperators[msg.sender][operator];
-        } else {
-            operators[msg.sender][operator] = true;
-        }
-
-        emit OperatorAuthorized(operator, msg.sender);
-    }
-
-    function isOperatorFor(address _operator, address _origin) public view returns (bool) {
-        return _operator == _origin ||
-            (defaultOperators[_operator] && !revokedDefaultOperators[_origin][_operator]) ||
-            operators[_origin][_operator];
+    // Revoke authorization.
+    function revokeDefaultOperator(address operator) external {
+        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+        _revokeDefaultOperator(operator);
     }
 
     /**
