@@ -1,7 +1,7 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package parachain
+package relaychain
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
-	"github.com/snowfork/polkadot-ethereum/relayer/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/relaychain"
 )
 
 type Chain struct {
@@ -27,13 +27,13 @@ type Chain struct {
 	log      *logrus.Entry
 }
 
-const Name = "Parachain"
+const Name = "Relaychain"
 
 func NewChain(config *Config) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
 
 	// Generate keypair from secret
-	kpPara, err := sr25519.NewKeypairFromSeed(config.Parachain.PrivateKey, "")
+	kpPara, err := sr25519.NewKeypairFromSeed(config.Relaychain.PrivateKey, "")
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func NewChain(config *Config) (*Chain, error) {
 
 	return &Chain{
 		config:   config,
-		conn:     NewConnection(config.Parachain.Endpoint, kpPara.AsKeyringPair(), log),
+		conn:     NewConnection(config.Relaychain.Endpoint, kpPara.AsKeyringPair(), log),
 		econn:    ethereum.NewConnection(config.Ethereum.Endpoint, kpEth, log),
 		listener: nil,
 		writer:   nil,
@@ -54,7 +54,7 @@ func NewChain(config *Config) (*Chain, error) {
 }
 
 func (ch *Chain) SetReceiver(messages <-chan []chain.Message, ethHeaders <-chan chain.Header,
-	beefy chan parachain.BeefyCommitmentInfo) error {
+	beefy chan relaychain.BeefyCommitmentInfo) error {
 
 	writer, err := NewWriter(ch.config, ch.conn, ch.econn, messages, beefy, ch.log)
 	if err != nil {
@@ -65,7 +65,7 @@ func (ch *Chain) SetReceiver(messages <-chan []chain.Message, ethHeaders <-chan 
 }
 
 func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header,
-	beefy chan parachain.BeefyCommitmentInfo) error {
+	beefy chan relaychain.BeefyCommitmentInfo) error {
 	listener := NewListener(
 		ch.config,
 		ch.conn,
@@ -103,7 +103,7 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- c
 	ch.log.WithFields(logrus.Fields{
 		"blockNumber": ethInitHeaderID.Number,
 		"blockHash":   ethInitHeaderID.Hash.Hex(),
-	}).Info("Retrieved init params for Ethereum from Parachain")
+	}).Info("Retrieved init params for Ethereum from Relaychain")
 	ethInit <- ethInitHeaderID
 	close(ethInit)
 
@@ -153,7 +153,7 @@ func (ch *Chain) queryEthereumInitParams() (*ethereum.HeaderID, error) {
 		Hash:   finalizedHashEncoded,
 	}
 
-	fmt.Printf("\nPARACHAIN header ID: %v\n", headerID)
+	fmt.Printf("\nRelaychain header ID: %v\n", headerID)
 	return &headerID, nil
 }
 

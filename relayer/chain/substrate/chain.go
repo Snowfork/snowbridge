@@ -14,7 +14,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
-	"github.com/snowfork/polkadot-ethereum/relayer/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/relaychain"
 )
 
 type Chain struct {
@@ -46,7 +46,7 @@ func NewChain(config *Config) (*Chain, error) {
 }
 
 func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header,
-	beefy chan parachain.BeefyCommitmentInfo) error {
+	beefy chan relaychain.BeefyCommitmentInfo) error {
 	writer, err := NewWriter(ch.conn, ethMessages, ethHeaders, ch.log)
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-ch
 }
 
 func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header,
-	beefy chan parachain.BeefyCommitmentInfo) error {
+	beefy chan relaychain.BeefyCommitmentInfo) error {
 	listener := NewListener(
 		ch.config,
 		ch.conn,

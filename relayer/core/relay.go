@@ -19,15 +19,15 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate"
-	parachaintypes "github.com/snowfork/polkadot-ethereum/relayer/parachain"
+	relaychaintypes "github.com/snowfork/polkadot-ethereum/relayer/relaychain"
 )
 
 type Relay struct {
 	subChain    chain.Chain
 	ethSubChain chain.Chain
-	paraChain   chain.Chain
+	relayChain  chain.Chain
 }
 
 type Direction int
@@ -44,10 +44,10 @@ type RelayConfig struct {
 }
 
 type Config struct {
-	Relay     RelayConfig      `mapstructure:"relay"`
-	Eth       ethereum.Config  `mapstructure:"ethereum"`
-	Sub       substrate.Config `mapstructure:"substrate"`
-	Parachain parachain.Config `mapstructure:"parachain"`
+	Relay      RelayConfig       `mapstructure:"relay"`
+	Eth        ethereum.Config   `mapstructure:"ethereum"`
+	Sub        substrate.Config  `mapstructure:"substrate"`
+	Relaychain relaychain.Config `mapstructure:"relaychain"`
 }
 
 func NewRelay() (*Relay, error) {
@@ -66,7 +66,7 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
-	paraChain, err := parachain.NewChain(&config.Parachain)
+	relayChain, err := relaychain.NewChain(&config.Relaychain)
 	if err != nil {
 		return nil, err
 	}
@@ -109,20 +109,20 @@ func NewRelay() (*Relay, error) {
 		}
 	}
 
-	beefyMessages := make(chan parachaintypes.BeefyCommitmentInfo, 1)
+	beefyMessages := make(chan relaychaintypes.BeefyCommitmentInfo, 1)
 
-	var paraMessages chan []chain.Message
+	var relayMessages chan []chain.Message
 	if !headersOnly {
-		paraMessages = make(chan []chain.Message, 1)
+		relayMessages = make(chan []chain.Message, 1)
 	}
-	err = paraChain.SetSender(paraMessages, nil, beefyMessages)
+	err = relayChain.SetSender(relayMessages, nil, beefyMessages)
 	if err != nil {
 		return nil, err
 	}
 
 	// Write to LightClientBridge contract on Ethereum
 	ethHeadersTwo := make(chan chain.Header)
-	err = paraChain.SetReceiver(paraMessages, ethHeadersTwo, beefyMessages)
+	err = relayChain.SetReceiver(relayMessages, ethHeadersTwo, beefyMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func NewRelay() (*Relay, error) {
 	return &Relay{
 		subChain:    subChain,
 		ethSubChain: ethSubChain,
-		paraChain:   paraChain,
+		relayChain:  relayChain,
 	}, nil
 }
 
@@ -186,16 +186,16 @@ func (re *Relay) Start() {
 	log.WithField("name", re.subChain.Name()).Info("Started chain")
 	defer re.subChain.Stop()
 
-	err = re.paraChain.Start(ctx, eg, ethParaInit, paraInit)
+	err = re.relayChain.Start(ctx, eg, ethParaInit, paraInit)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"chain": re.paraChain.Name(),
+			"chain": re.relayChain.Name(),
 			"error": err,
 		}).Error("Failed to start chain")
 		return
 	}
-	log.WithField("name", re.paraChain.Name()).Info("Started chain")
-	defer re.paraChain.Stop()
+	log.WithField("name", re.relayChain.Name()).Info("Started chain")
+	defer re.relayChain.Stop()
 
 	notifyWaitDone := make(chan struct{})
 
@@ -227,7 +227,7 @@ func (re *Relay) Start() {
 		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
 		re.ethSubChain.Stop()
 		re.subChain.Stop()
-		re.paraChain.Stop()
+		re.relayChain.Stop()
 		relayProc, err := os.FindProcess(os.Getpid())
 		if err != nil {
 			log.WithError(err).Error("Failed to kill this process")
@@ -267,15 +267,15 @@ func LoadConfig() (*Config, error) {
 	config.Sub.PrivateKey = value
 
 	// TODO: use actual config
-	config.Parachain.Parachain.Endpoint = "ws://127.0.0.1:9944"
-	config.Parachain.Parachain.PrivateKey = "//Alice"
-	config.Parachain.Ethereum.Endpoint = config.Eth.Endpoint
-	config.Parachain.Ethereum.PrivateKey = config.Eth.PrivateKey
+	config.Relaychain.Relaychain.Endpoint = "ws://127.0.0.1:9944"
+	config.Relaychain.Relaychain.PrivateKey = "//Alice"
+	config.Relaychain.Ethereum.Endpoint = config.Eth.Endpoint
+	config.Relaychain.Ethereum.PrivateKey = config.Eth.PrivateKey
 	// TODO: auto populate contract addresses
-	config.Parachain.Ethereum.Contracts.RelayBridgeLightClient = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305"
-	config.Parachain.Ethereum.Contracts.ValidatorRegistry = "0xEE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"
+	config.Relaychain.Ethereum.Contracts.RelayBridgeLightClient = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305"
+	config.Relaychain.Ethereum.Contracts.ValidatorRegistry = "0xEE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"
 	// TODO: query from 'BLOCK_WAIT_PERIOD' on RelayBridgeLightClient contract
-	config.Parachain.Ethereum.BeefyBlockDelay = 5
+	config.Relaychain.Ethereum.BeefyBlockDelay = 5
 
 	return &config, nil
 }

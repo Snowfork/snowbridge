@@ -1,4 +1,4 @@
-package parachain
+package relaychain
 
 import (
 	"bytes"

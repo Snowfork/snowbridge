@@ -1,7 +1,7 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package parachain
+package relaychain
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
-	"github.com/snowfork/polkadot-ethereum/relayer/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/relaychain"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
@@ -29,12 +29,12 @@ type Listener struct {
 	econn    *ethereum.Connection
 	contract *lightclientbridge.Contract
 	messages chan<- []chain.Message
-	beefy    chan parachain.BeefyCommitmentInfo
+	beefy    chan relaychain.BeefyCommitmentInfo
 	log      *logrus.Entry
 }
 
 func NewListener(config *Config, conn *Connection, econn *ethereum.Connection, messages chan<- []chain.Message,
-	beefy chan parachain.BeefyCommitmentInfo, log *logrus.Entry) *Listener {
+	beefy chan relaychain.BeefyCommitmentInfo, log *logrus.Entry) *Listener {
 	return &Listener{
 		config:   config,
 		conn:     conn,
@@ -46,7 +46,7 @@ func NewListener(config *Config, conn *Connection, econn *ethereum.Connection, m
 }
 
 func (li *Listener) Start(ctx context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
-	li.log.Info("Starting Parachain Listener")
+	li.log.Info("Starting Relaychain Listener")
 
 	contract, err := lightclientbridge.NewContract(common.HexToAddress(li.config.Ethereum.Contracts.RelayBridgeLightClient), li.econn.GetClient())
 	if err != nil {
@@ -101,13 +101,13 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 			return li.onDone(ctx)
 		case msg := <-ch:
 
-			signedCommitment := &parachain.SignedCommitment{}
+			signedCommitment := &relaychain.SignedCommitment{}
 			err := types.DecodeFromHexString(msg.(string), signedCommitment)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to decode beefy commitment messages")
 			}
 
-			li.log.Info("Parachain Listener witnessed a new BEEFY commitment: \n", msg.(string))
+			li.log.Info("Relaychain Listener witnessed a new BEEFY commitment: \n", msg.(string))
 
 			if len(signedCommitment.Signatures) == 0 {
 				li.log.Info("BEEFY commitment has no signatures, skipping...")
@@ -130,7 +130,7 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 				common.HexToAddress("0x25451A4de12dcCc2D166922fA938E900fCc4ED24"),
 			}
 
-			beefyCommitmentInfo := parachain.NewBeefyCommitmentInfo(beefyValidatorAddresses, signedCommitment)
+			beefyCommitmentInfo := relaychain.NewBeefyCommitmentInfo(beefyValidatorAddresses, signedCommitment)
 
 			li.messages <- []chain.Message{beefyCommitmentInfo}
 		}
@@ -186,15 +186,15 @@ func (li *Listener) pollEthereumBlocks(
 		case <-headerCtx.Done():
 			return li.onDone(ctx)
 		case gethheader := <-headers:
-			li.log.Info("Parachain Listener pollEthereumBlocks() received a new header")
+			li.log.Info("Relaychain Listener pollEthereumBlocks() received a new header")
 
 			blockNumber := gethheader.Number.Uint64()
 			for beefyCommitment := range li.beefy {
-				if beefyCommitment.Status == parachain.InitialVerificationTxConfirmed {
+				if beefyCommitment.Status == relaychain.InitialVerificationTxConfirmed {
 					if beefyCommitment.CompleteOnBlock >= blockNumber {
 						li.log.Info("pollEthereumBlocks marked BEEFY commitment ReadyToComplete")
 
-						beefyCommitment.Status = parachain.ReadyToComplete
+						beefyCommitment.Status = relaychain.ReadyToComplete
 						li.messages <- []chain.Message{beefyCommitment}
 					}
 				}
@@ -217,7 +217,7 @@ func (li *Listener) pollLightBridgeEvents(ctx context.Context) error {
 		case <-headerCtx.Done():
 			return li.onDone(ctx)
 		case gethheader := <-headers:
-			li.log.Info("Parachain Listener pollLightBridgeEvents() received a new header")
+			li.log.Info("Relaychain Listener pollLightBridgeEvents() received a new header")
 
 			if li.beefy == nil {
 				li.log.Info("Not polling block details since channel is nil")
@@ -271,9 +271,9 @@ func (li *Listener) queryEvents(ctx context.Context, contract *lightclientbridge
 func (li *Listener) processEvents(ctx context.Context, events []*lightclientbridge.ContractInitialVerificationSuccessful) {
 	for _, event := range events {
 		for beefyCommitment := range li.beefy {
-			if beefyCommitment.Status == parachain.InitialVerificationTxSent {
+			if beefyCommitment.Status == relaychain.InitialVerificationTxSent {
 				if beefyCommitment.InitialVerificationTxHash.Hex() == event.Raw.TxHash.Hex() {
-					beefyCommitment.Status = parachain.InitialVerificationTxConfirmed
+					beefyCommitment.Status = relaychain.InitialVerificationTxConfirmed
 					beefyCommitment.CompleteOnBlock = event.Raw.BlockNumber + li.config.Ethereum.BeefyBlockDelay
 				}
 			}

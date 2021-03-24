@@ -1,7 +1,7 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package parachain_test
+package relaychain_test
 
 import (
 	"context"
@@ -18,24 +18,24 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
-	parachaintypes "github.com/snowfork/polkadot-ethereum/relayer/parachain"
+	relaychaintypes "github.com/snowfork/polkadot-ethereum/relayer/relaychain"
 )
 
 func TestWriter(t *testing.T) {
 	logger, hook := test.NewNullLogger()
-	log := logger.WithField("chain", "Parachain")
+	log := logger.WithField("chain", "Relaychain")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 	defer cancel()
 
 	// Set up config
-	config := parachain.Config{}
-	config.Parachain.Endpoint = "ws://127.0.0.1:9944"
-	config.Parachain.PrivateKey = "//Alice"
+	config := relaychain.Config{}
+	config.Relaychain.Endpoint = "ws://127.0.0.1:9944"
+	config.Relaychain.PrivateKey = "//Alice"
 	config.Ethereum.Endpoint = "ws://localhost:8545/"
 	config.Ethereum.PrivateKey = "4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
 	config.Ethereum.Contracts.RelayBridgeLightClient = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305"
@@ -43,12 +43,12 @@ func TestWriter(t *testing.T) {
 	config.Ethereum.BeefyBlockDelay = 5
 
 	// Generate keypair from secret
-	kpPara, err := sr25519.NewKeypairFromSeed(config.Parachain.PrivateKey, "")
+	kpPara, err := sr25519.NewKeypairFromSeed(config.Relaychain.PrivateKey, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	conn := parachain.NewConnection(config.Parachain.Endpoint, kpPara.AsKeyringPair(), log)
+	conn := relaychain.NewConnection(config.Relaychain.Endpoint, kpPara.AsKeyringPair(), log)
 	err = conn.Connect(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -66,10 +66,10 @@ func TestWriter(t *testing.T) {
 	}
 
 	// Channels
-	beefy := make(chan parachaintypes.BeefyCommitmentInfo, 1)
+	beefy := make(chan relaychaintypes.BeefyCommitmentInfo, 1)
 	messages := make(chan []chain.Message, 1)
 
-	writer, err := parachain.NewWriter(&config, conn, econn, messages, beefy, log)
+	writer, err := relaychain.NewWriter(&config, conn, econn, messages, beefy, log)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestGenerateMmrProofOffchain(t *testing.T) {
 
 // loadSampleBeefyCommitmentInfo generates a sample BeefyCommitmentInfo for testing, hardcoded values
 // are from test/scripts/helpers/subscribeBeefyJustifications.js.
-func loadSampleBeefyCommitmentInfo() parachaintypes.BeefyCommitmentInfo {
+func loadSampleBeefyCommitmentInfo() relaychaintypes.BeefyCommitmentInfo {
 	// Sample BEEFY commitment: validator addresses
 	beefyValidatorAddresses := []common.Address{
 		common.HexToAddress("0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b"),
@@ -168,7 +168,7 @@ func loadSampleBeefyCommitmentInfo() parachaintypes.BeefyCommitmentInfo {
 	}
 	var sig1Input [65]byte
 	copy(sig1Input[:], sig1Bytes)
-	beefySig1 := parachaintypes.BeefySignature(sig1Input)
+	beefySig1 := relaychaintypes.BeefySignature(sig1Input)
 
 	sig2 := "daf339e4e248cdc46b4b84640ffc3987ab843ab336b9e39fcf7cc9bb65841b2a0b224d5116c8b0e7b7bb3a99df92d53d4ffe0f7857a753ada3d28be130585ab801"
 	sig2Bytes, err := hex.DecodeString(sig2)
@@ -177,19 +177,19 @@ func loadSampleBeefyCommitmentInfo() parachaintypes.BeefyCommitmentInfo {
 	}
 	var sig2Input [65]byte
 	copy(sig2Input[:], sig2Bytes)
-	beefySig2 := parachaintypes.BeefySignature(sig2Input)
+	beefySig2 := relaychaintypes.BeefySignature(sig2Input)
 
-	signedCommitment := parachaintypes.SignedCommitment{
-		Commitment: parachaintypes.Commitment{
+	signedCommitment := relaychaintypes.SignedCommitment{
+		Commitment: relaychaintypes.Commitment{
 			Payload:        types.NewH256(payloadBytes),
 			BlockNumber:    types.BlockNumber(930),
 			ValidatorSetID: types.NewU64(0),
 		},
-		Signatures: []parachaintypes.OptionBeefySignature{
-			parachaintypes.NewOptionBeefySignature(beefySig1),
-			parachaintypes.NewOptionBeefySignature(beefySig2),
+		Signatures: []relaychaintypes.OptionBeefySignature{
+			relaychaintypes.NewOptionBeefySignature(beefySig1),
+			relaychaintypes.NewOptionBeefySignature(beefySig2),
 		},
 	}
 
-	return parachaintypes.NewBeefyCommitmentInfo(beefyValidatorAddresses, &signedCommitment)
+	return relaychaintypes.NewBeefyCommitmentInfo(beefyValidatorAddresses, &signedCommitment)
 }

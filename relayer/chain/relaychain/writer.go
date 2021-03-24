@@ -1,7 +1,7 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package parachain
+package relaychain
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/validatorregistry"
-	"github.com/snowfork/polkadot-ethereum/relayer/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/relaychain"
 )
 
 type Writer struct {
@@ -28,7 +28,7 @@ type Writer struct {
 	econn    *ethereum.Connection
 	conn     *Connection
 	messages <-chan []chain.Message
-	beefy    chan parachain.BeefyCommitmentInfo
+	beefy    chan relaychain.BeefyCommitmentInfo
 	log      *logrus.Entry
 	// TODO: generalize contracts
 	lightclientbridge *lightclientbridge.Contract
@@ -36,7 +36,7 @@ type Writer struct {
 }
 
 func NewWriter(config *Config, conn *Connection, econn *ethereum.Connection, messages <-chan []chain.Message,
-	beefy chan parachain.BeefyCommitmentInfo, log *logrus.Entry) (*Writer, error) {
+	beefy chan relaychain.BeefyCommitmentInfo, log *logrus.Entry) (*Writer, error) {
 	return &Writer{
 		config:   config,
 		conn:     conn,
@@ -83,22 +83,22 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 			return wr.onDone(ctx)
 		case msgs := <-wr.messages:
 			for _, msg := range msgs {
-				beefyInfo, ok := msg.(parachain.BeefyCommitmentInfo)
+				beefyInfo, ok := msg.(relaychain.BeefyCommitmentInfo)
 				if !ok {
 					return fmt.Errorf("Invalid message")
 				}
 
-				wr.log.Info("Parachain writer: processing new beefyInfo with status: ", beefyInfo.Status)
+				wr.log.Info("Relaychain writer: processing new beefyInfo with status: ", beefyInfo.Status)
 
 				switch beefyInfo.Status {
-				case parachain.CommitmentWitnessed:
+				case relaychain.CommitmentWitnessed:
 					err := wr.WriteNewSignatureCommitment(ctx, beefyInfo)
 					if err != nil {
 						wr.log.WithError(err).Error("Error submitting message to ethereum")
 					}
-				case parachain.InitialVerificationTxSent, parachain.InitialVerificationTxConfirmed:
+				case relaychain.InitialVerificationTxSent, relaychain.InitialVerificationTxConfirmed:
 					continue // Ethereum listener is responsible for checking tx confirmation
-				case parachain.ReadyToComplete:
+				case relaychain.ReadyToComplete:
 					err := wr.WriteCompleteSignatureCommitment(ctx, beefyInfo)
 					if err != nil {
 						wr.log.WithError(err).Error("Error submitting message to ethereum")
@@ -119,7 +119,7 @@ func (wr *Writer) signerFn(_ common.Address, tx *gethTypes.Transaction) (*gethTy
 	return signedTx, nil
 }
 
-func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo parachain.BeefyCommitmentInfo) error {
+func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo relaychain.BeefyCommitmentInfo) error {
 	msg, err := beefyInfo.BuildNewSignatureCommitmentMessage()
 	if err != nil {
 		return err
@@ -157,7 +157,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo par
 		"txHash": tx.Hash().Hex(),
 	}).Info("New Signature Commitment transaction submitted")
 
-	beefyInfo.Status = parachain.InitialVerificationTxSent
+	beefyInfo.Status = relaychain.InitialVerificationTxSent
 	beefyInfo.InitialVerificationTxHash = tx.Hash()
 	wr.beefy <- beefyInfo
 
@@ -165,8 +165,8 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo par
 }
 
 // WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the LightClientBridge contract
-func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, beefyInfo parachain.BeefyCommitmentInfo) error {
-	wr.log.Info("Parachain WriteCompleteSignatureCommitment()")
+func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, beefyInfo relaychain.BeefyCommitmentInfo) error {
+	wr.log.Info("Relaychain WriteCompleteSignatureCommitment()")
 
 	msg, err := beefyInfo.BuildCompleteSignatureCommitmentMessage()
 	if err != nil {
@@ -202,7 +202,7 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, beefyInf
 
 // CheckValidatorInSet checks if a validator address is in the validator set
 func (wr *Writer) CheckValidatorInSet(ctx context.Context, valAddr common.Address, valAddrMerkleProof [][32]byte) (bool, error) {
-	wr.log.Info("Parachain CheckValidatorInSet()")
+	wr.log.Info("Relaychain CheckValidatorInSet()")
 
 	contract := wr.valregistry
 	if contract == nil {
@@ -224,7 +224,7 @@ type LeafProof struct {
 }
 
 // GenerateMMRProof generates an MMR proof onchain
-func (wr *Writer) GenerateMmrProofOnchain(ctx context.Context, beefyInfo parachain.BeefyCommitmentInfo, valAddrIndex int) (LeafProof, error) {
+func (wr *Writer) GenerateMmrProofOnchain(ctx context.Context, beefyInfo relaychain.BeefyCommitmentInfo, valAddrIndex int) (LeafProof, error) {
 	leafProof := LeafProof{}
 
 	blockNumber := uint64(beefyInfo.SignedCommitment.Commitment.BlockNumber)

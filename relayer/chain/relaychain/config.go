@@ -1,11 +1,11 @@
-package parachain
+package relaychain
 
 type Config struct {
-	Parachain ParachainConfig `mapstructure:"parachain"`
-	Ethereum  EthereumConfig  `mapstructure:"ethereum"`
+	Relaychain RelaychainConfig `mapstructure:"relaychain"`
+	Ethereum   EthereumConfig   `mapstructure:"ethereum"`
 }
 
-type ParachainConfig struct {
+type RelaychainConfig struct {
 	Endpoint   string `mapstructure:"endpoint"`
 	PrivateKey string `mapstructure:"private-key"`
 }
