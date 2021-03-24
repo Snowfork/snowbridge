@@ -120,7 +120,7 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
-	// Write to LightClientBridge contract on Ethereum
+	// Write to PolkadotRelayChainBridge contract on Ethereum
 	ethHeadersTwo := make(chan chain.Header)
 	err = relayChain.SetReceiver(relayMessages, ethHeadersTwo, beefyMessages)
 	if err != nil {

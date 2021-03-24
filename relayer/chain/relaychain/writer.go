@@ -19,7 +19,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/polkadotrelaychainbridge"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/validatorregistry"
 	"github.com/snowfork/polkadot-ethereum/relayer/relaychain"
 )
@@ -32,8 +32,8 @@ type Writer struct {
 	beefy    chan relaychain.BeefyCommitmentInfo
 	log      *logrus.Entry
 	// TODO: generalize contracts
-	lightclientbridge *lightclientbridge.Contract
-	valregistry       *validatorregistry.Contract
+	polkadotrelaychainbridge *polkadotrelaychainbridge.Contract
+	valregistry              *validatorregistry.Contract
 }
 
 func NewWriter(config *Config, conn *Connection, econn *ethereum.Connection, messages <-chan []chain.Message,
@@ -49,11 +49,11 @@ func NewWriter(config *Config, conn *Connection, econn *ethereum.Connection, mes
 }
 
 func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
-	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(wr.config.Ethereum.Contracts.RelayBridgeLightClient), wr.econn.GetClient())
+	PolkadotRelayChainBridgeContract, err := polkadotrelaychainbridge.NewContract(common.HexToAddress(wr.config.Ethereum.Contracts.RelayBridgeLightClient), wr.econn.GetClient())
 	if err != nil {
 		return err
 	}
-	wr.lightclientbridge = lightClientBridgeContract
+	wr.polkadotrelaychainbridge = PolkadotRelayChainBridgeContract
 
 	validatorRegistryContract, err := validatorregistry.NewContract(common.HexToAddress(wr.config.Ethereum.Contracts.ValidatorRegistry), wr.econn.GetClient())
 	if err != nil {
@@ -134,7 +134,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo rel
 		return fmt.Errorf("validator address merkle proof failed verification")
 	}
 
-	contract := wr.lightclientbridge
+	contract := wr.polkadotrelaychainbridge
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")
 	}
@@ -165,7 +165,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo rel
 	return nil
 }
 
-// WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the LightClientBridge contract
+// WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the PolkadotRelayChainBridge contract
 func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, beefyInfo relaychain.BeefyCommitmentInfo) error {
 	wr.log.Info("Relaychain WriteCompleteSignatureCommitment()")
 
@@ -174,7 +174,7 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, beefyInf
 		return err
 	}
 
-	contract := wr.lightclientbridge
+	contract := wr.polkadotrelaychainbridge
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")
 	}

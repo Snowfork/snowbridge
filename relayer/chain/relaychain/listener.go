@@ -18,7 +18,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/polkadotrelaychainbridge"
 	"github.com/snowfork/polkadot-ethereum/relayer/relaychain"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
@@ -27,7 +27,7 @@ type Listener struct {
 	config   *Config
 	conn     *Connection
 	econn    *ethereum.Connection
-	contract *lightclientbridge.Contract
+	contract *polkadotrelaychainbridge.Contract
 	messages chan<- []chain.Message
 	beefy    chan relaychain.BeefyCommitmentInfo
 	log      *logrus.Entry
@@ -48,7 +48,7 @@ func NewListener(config *Config, conn *Connection, econn *ethereum.Connection, m
 func (li *Listener) Start(ctx context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
 	li.log.Info("Starting Relaychain Listener")
 
-	contract, err := lightclientbridge.NewContract(common.HexToAddress(li.config.Ethereum.Contracts.RelayBridgeLightClient), li.econn.GetClient())
+	contract, err := polkadotrelaychainbridge.NewContract(common.HexToAddress(li.config.Ethereum.Contracts.RelayBridgeLightClient), li.econn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (li *Listener) pollEthereumBlocks(
 	}
 }
 
-// pollLightBridgeEvents fetches events from the LightClientBridge every block
+// pollLightBridgeEvents fetches events from the PolkadotRelayChainBridge every block
 func (li *Listener) pollLightBridgeEvents(ctx context.Context) error {
 	headers := make(chan *gethTypes.Header, 5)
 	_, headerCtx := errgroup.WithContext(ctx)
@@ -227,7 +227,7 @@ func (li *Listener) pollLightBridgeEvents(ctx context.Context) error {
 			blockNumber := gethheader.Number.Uint64()
 
 			// Query ContractInitialVerificationSuccessful events
-			var events []*lightclientbridge.ContractInitialVerificationSuccessful
+			var events []*polkadotrelaychainbridge.ContractInitialVerificationSuccessful
 			contractEvents, err := li.queryEvents(ctx, li.contract, blockNumber, &blockNumber)
 			if err != nil {
 				li.log.WithError(err).Error("Failure fetching event logs")
@@ -240,10 +240,10 @@ func (li *Listener) pollLightBridgeEvents(ctx context.Context) error {
 	}
 }
 
-// queryEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
-func (li *Listener) queryEvents(ctx context.Context, contract *lightclientbridge.Contract, start uint64,
-	end *uint64) ([]*lightclientbridge.ContractInitialVerificationSuccessful, error) {
-	var events []*lightclientbridge.ContractInitialVerificationSuccessful
+// queryEvents queries ContractInitialVerificationSuccessful events from the PolkadotRelayChainBridge contract
+func (li *Listener) queryEvents(ctx context.Context, contract *polkadotrelaychainbridge.Contract, start uint64,
+	end *uint64) ([]*polkadotrelaychainbridge.ContractInitialVerificationSuccessful, error) {
+	var events []*polkadotrelaychainbridge.ContractInitialVerificationSuccessful
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
 	iter, err := contract.FilterInitialVerificationSuccessful(&filterOps)
@@ -268,7 +268,7 @@ func (li *Listener) queryEvents(ctx context.Context, contract *lightclientbridge
 }
 
 // processEvents matches events to BEEFY commitment info by transaction hash
-func (li *Listener) processEvents(ctx context.Context, events []*lightclientbridge.ContractInitialVerificationSuccessful) {
+func (li *Listener) processEvents(ctx context.Context, events []*polkadotrelaychainbridge.ContractInitialVerificationSuccessful) {
 	for _, event := range events {
 		for beefyCommitment := range li.beefy {
 			if beefyCommitment.Status == relaychain.InitialVerificationTxSent {

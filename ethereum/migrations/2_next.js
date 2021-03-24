@@ -31,8 +31,8 @@ const channels = {
 }
 
 const contracts = {
-  lightclientbridge: {
-    contract: artifacts.require("LightClientBridge"),
+  polkadotrelaychainbridge: {
+    contract: artifacts.require("PolkadotRelayChainBridge"),
     instance: null
   }
 }
@@ -84,10 +84,10 @@ module.exports = function (deployer, network, accounts) {
     const numValidators = 2;
     const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators);
 
-    // Link Bitfield library to LightClientBridge
+    // Link Bitfield library to PolkadotRelayChainBridge
     await deployer.deploy(Bitfield);
-    deployer.link(Bitfield, [contracts.lightclientbridge.contract]);
+    deployer.link(Bitfield, [contracts.polkadotrelaychainbridge.contract]);
 
-    contracts.lightclientbridge.instance = await deployer.deploy(contracts.lightclientbridge.contract, valRegistry.address)
+    contracts.polkadotrelaychainbridge.instance = await deployer.deploy(contracts.polkadotrelaychainbridge.contract, valRegistry.address)
   })
 };

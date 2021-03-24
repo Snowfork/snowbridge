@@ -11,7 +11,7 @@ import "./ValidatorRegistry.sol";
 /**
  * @title A entry contract for the Ethereum light client
  */
-contract LightClientBridge {
+contract PolkadotRelayChainBridge {
     using SafeMath for uint256;
     using Bits for uint256;
     using Bitfield for uint256[];
