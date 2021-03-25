@@ -84,6 +84,7 @@ module.exports = function(deployer, network, accounts) {
         DOTApp,
         "Snowfork DOT",
         "SnowDOT",
+        channels.incentivized.outbound.instance.address,
         {
           inbound: channels.basic.inbound.instance.address,
           outbound: channels.basic.outbound.instance.address,

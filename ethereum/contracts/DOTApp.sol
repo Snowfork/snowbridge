@@ -2,6 +2,7 @@
 pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WrappedToken.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
@@ -9,7 +10,7 @@ import "./FeeSource.sol";
 
 enum ChannelId {Basic, Incentivized}
 
-contract DOTApp is FeeSource {
+contract DOTApp is FeeSource, AccessControl {
     using ScaleCodec for uint256;
 
     mapping(ChannelId => Channel) public channels;
@@ -17,6 +18,8 @@ contract DOTApp is FeeSource {
     bytes2 constant UNLOCK_CALL = 0x0e01;
 
     WrappedToken public token;
+
+    bytes32 public constant FEE_BURNER_ROLE = keccak256("FEE_BURNER_ROLE");
 
     struct Channel {
         address inbound;
@@ -26,6 +29,7 @@ contract DOTApp is FeeSource {
     constructor(
         string memory _name,
         string memory _symbol,
+        address feeBurner,
         Channel memory _basic,
         Channel memory _incentivized
     ) {
@@ -39,6 +43,8 @@ contract DOTApp is FeeSource {
         Channel storage c2 = channels[ChannelId.Incentivized];
         c2.inbound = _incentivized.inbound;
         c2.outbound = _incentivized.outbound;
+
+        _setupRole(FEE_BURNER_ROLE, feeBurner);
     }
 
     function burn(bytes32 _recipient, uint256 _amount, ChannelId _channelId) external {
@@ -60,7 +66,9 @@ contract DOTApp is FeeSource {
         token.mint(_recipient, _amount, abi.encodePacked(_sender));
     }
 
+    // Incentivized channel calls this to charge (burn) fees
     function burnFee(address feePayer, uint256 _amount) external override {
+        require(hasRole(FEE_BURNER_ROLE, msg.sender), "Caller is unauthorized");
         token.burn(feePayer, _amount, "");
     }
 

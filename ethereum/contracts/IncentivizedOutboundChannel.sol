@@ -36,12 +36,20 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     }
 
     // Once-off post-construction call to set initial configuration.
-    function initialize(address _configUpdater, address _feeSource) external {
+    function initialize(
+        address _configUpdater,
+        address _feeSource,
+        address[] memory defaultOperators
+    )
+    external {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is unauthorized");
 
         // Set initial configuration
         feeSource = FeeSource(_feeSource);
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
+        for (uint i = 0; i < defaultOperators.length; i++) {
+            _authorizeDefaultOperator(operator);
+        }
 
         // drop admin privileges
         renounceRole(DEFAULT_ADMIN_ROLE, msg.sender);
