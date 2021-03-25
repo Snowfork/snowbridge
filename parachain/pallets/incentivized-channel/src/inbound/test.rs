@@ -105,7 +105,7 @@ impl Verifier for MockVerifier {
 // Mock Dispatch
 pub struct MockMessageDispatch;
 
-impl MessageDispatch<MessageId> for MockMessageDispatch {
+impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
 	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
 }
 

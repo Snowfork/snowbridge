@@ -93,7 +93,7 @@ decl_module! {
 
 pub type MessageIdOf<T> = <T as Config>::MessageId;
 
-impl<T: Config> MessageDispatch<MessageIdOf<T>> for Module<T> {
+impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Module<T> {
 	fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8]) {
 		let call = match <T as Config>::Call::decode(&mut &payload[..]) {
 			Ok(call) => call,
@@ -115,6 +115,12 @@ impl<T: Config> MessageDispatch<MessageIdOf<T>> for Module<T> {
 			id,
 			result.map(drop).map_err(|e| e.error),
 		));
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_dispatch_event(id: MessageIdOf<T>) -> <T as system::Config>::Event {
+		let event: <T as Config>::Event = RawEvent::MessageDispatched(id, Ok(())).into();
+		event.into()
 	}
 }
 

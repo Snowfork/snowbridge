@@ -7,6 +7,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
+use frame_system::Config;
 use sp_core::H160;
 use sp_std::prelude::*;
 use artemis_ethereum::{Header, Log, U256};
@@ -47,6 +48,8 @@ pub trait MessageCommitment {
 }
 
 /// Dispatch a message
-pub trait MessageDispatch<MessageId> {
+pub trait MessageDispatch<T: Config, MessageId> {
 	fn dispatch(source: H160, id: MessageId, payload: &[u8]);
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_dispatch_event(id: MessageId) -> <T as Config>::Event;
 }
