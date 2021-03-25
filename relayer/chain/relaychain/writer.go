@@ -93,7 +93,7 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 
 				switch beefyInfo.Status {
 				case relaychain.CommitmentWitnessed:
-					err := wr.WriteNewSignatureCommitment(ctx, beefyInfo)
+					err := wr.WriteNewSignatureCommitment(ctx, beefyInfo, 0)
 					if err != nil {
 						wr.log.WithError(err).Error("Error submitting message to ethereum")
 					}
@@ -120,8 +120,8 @@ func (wr *Writer) signerFn(_ common.Address, tx *gethTypes.Transaction) (*gethTy
 	return signedTx, nil
 }
 
-func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo relaychain.BeefyCommitmentInfo) error {
-	msg, err := beefyInfo.BuildNewSignatureCommitmentMessage()
+func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, beefyInfo relaychain.BeefyCommitmentInfo, valIndex int) error {
+	msg, err := beefyInfo.BuildNewSignatureCommitmentMessage(valIndex)
 	if err != nil {
 		return err
 	}

@@ -5,6 +5,7 @@ package relaychain
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -114,17 +115,60 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 				continue
 			}
 
-			// TODO: query beefy authorities
-			// var output interface{}
-			// var blockNumber *uint64
-			// if blockNumber == nil {
-			// 	err = li.conn.api.Client.Call(&output, "beefy_getAuthorities")
+			type Authorities = [][33]uint8
+
+			blockHash, err := li.conn.api.RPC.Chain.GetBlockHash(uint64(signedCommitment.Commitment.BlockNumber))
+			if err != nil {
+				panic(err)
+			}
+
+			meta, err := li.conn.api.RPC.State.GetMetadataLatest()
+			if err != nil {
+				panic(err)
+			}
+
+			storageKey, err := types.CreateStorageKey(meta, "Beefy", "Authorities", nil, nil)
+			if err != nil {
+				panic(err)
+			}
+
+			storageChangeSet, err := li.conn.api.RPC.State.QueryStorage([]types.StorageKey{storageKey}, blockHash, blockHash)
+			if err != nil {
+				li.log.WithError(err).Error("Failed to read authorities from storage")
+				// sleep(ctx, retryInterval)
+				continue
+			}
+
+			authorities := Authorities{}
+			for _, storageChange := range storageChangeSet {
+				for _, keyValueOption := range storageChange.Changes {
+					bz, err := keyValueOption.MarshalJSON()
+					if err != nil {
+						panic(err)
+					}
+
+					fmt.Println("attempting to decode bz")
+					err = types.DecodeFromBytes(bz, authorities)
+					if err != nil {
+						panic(err)
+					}
+
+				}
+			}
+
+			fmt.Println("authorities:", authorities)
+			// TODO: Decode authorities using @polkadot/util-crypto/ethereum/encode.js ethereumEncode() method
+
+			// if data != nil {
+			// 	li.log.WithFields(logrus.Fields{
+			// 		"block":               signedCommitment.Commitment.BlockNumber,
+			// 		"commitmentSizeBytes": len(*data),
+			// 	}).Debug("Retrieved authorities from storage")
 			// } else {
-			// 	err = li.conn.api.Client.Call(&output, "beefy_Authorities", *blockNumber)
+			// 	li.log.WithError(err).Error("Authorities not found in storage")
+			// 	continue
 			// }
-			// if err != nil {
-			// 	panic(err)
-			// }
+
 			beefyValidatorAddresses := []common.Address{
 				common.HexToAddress("0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b"),
 				common.HexToAddress("0x25451A4de12dcCc2D166922fA938E900fCc4ED24"),

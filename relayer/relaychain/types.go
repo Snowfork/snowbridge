@@ -5,6 +5,7 @@ package relaychain
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -60,8 +61,7 @@ type CompleteSignatureCommitmentMessage struct {
 	RandomPublicKeyMerkleProofs      [][][32]byte
 }
 
-func (b BeefyCommitmentInfo) BuildNewSignatureCommitmentMessage() (NewSignatureCommitmentMessage, error) {
-	valAddrIndex := 0
+func (b BeefyCommitmentInfo) BuildNewSignatureCommitmentMessage(valAddrIndex int) (NewSignatureCommitmentMessage, error) {
 	sig0ProofContents, err := b.GenerateMmrProofOffchain(valAddrIndex)
 	if err != nil {
 		return NewSignatureCommitmentMessage{}, err
@@ -114,8 +114,12 @@ func (b BeefyCommitmentInfo) GenerateMmrProofOffchain(valAddrIndex int) ([][32]b
 		return [][32]byte{}, err
 	}
 
+	fmt.Println("sigProof:", sigProof)
+
 	// Verify the proof
 	root := beefyMerkleTree.Root()
+	fmt.Println("root:", root)
+
 	verified, err := merkletree.VerifyProof(beefyTreeData[valAddrIndex], sigProof, root)
 	if err != nil {
 		return [][32]byte{}, err
@@ -123,6 +127,9 @@ func (b BeefyCommitmentInfo) GenerateMmrProofOffchain(valAddrIndex int) ([][32]b
 	if !verified {
 		return [][32]byte{}, fmt.Errorf("failed to verify proof")
 	}
+
+	hexRoot := hex.EncodeToString(root)
+	fmt.Println("hexRoot:", hexRoot)
 
 	sigProofContents := make([][32]byte, len(sigProof.Hashes))
 	for i, hash := range sigProof.Hashes {
