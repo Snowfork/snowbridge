@@ -18,6 +18,8 @@ use envelope::Envelope;
 
 use sp_runtime::{Perbill, traits::{Zero, Convert}};
 
+mod benchmarking;
+
 #[cfg(test)]
 mod test;
 

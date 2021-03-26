@@ -707,6 +707,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel_inbound, BasicInboundChannel);
+			add_benchmark!(params, batches, incentivized_channel_inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, dot_app, DOT);
 			add_benchmark!(params, batches, erc20_app, ERC20);
 			add_benchmark!(params, batches, eth_app, ETH);
