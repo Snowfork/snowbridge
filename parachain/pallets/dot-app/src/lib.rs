@@ -71,6 +71,16 @@ decl_storage! {
 		/// Address of the peer application on the Ethereum side.
 		Address get(fn address) config(): H160;
 	}
+
+	add_extra_genesis {
+		config(initial_module_balance): BalanceOf<T>;
+		build(|config| {
+			T::Currency::make_free_balance_be(
+				&Module::<T>::account_id(),
+				config.initial_module_balance,
+			);
+		})
+	}
 }
 
 decl_event!(

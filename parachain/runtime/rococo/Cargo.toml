@@ -117,11 +117,14 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
-    # Artemis pallets
+    # Artemis pallets & support
+    "artemis-core/runtime-benchmarks",
     "assets/runtime-benchmarks",
+    "basic-channel/runtime-benchmarks",
     "dot-app/runtime-benchmarks",
     "dispatch/runtime-benchmarks",
     "erc20-app/runtime-benchmarks",
     "eth-app/runtime-benchmarks",
+    "incentivized-channel/runtime-benchmarks",
     "verifier-lightclient/runtime-benchmarks",
 ]

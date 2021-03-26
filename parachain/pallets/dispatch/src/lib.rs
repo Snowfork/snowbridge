@@ -118,9 +118,9 @@ impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Module<T> {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_dispatch_event(id: MessageIdOf<T>) -> <T as system::Config>::Event {
+	fn successful_dispatch_event(id: MessageIdOf<T>) -> Option<<T as system::Config>::Event> {
 		let event: <T as Config>::Event = RawEvent::MessageDispatched(id, Ok(())).into();
-		event.into()
+		Some(event.into())
 	}
 }
 

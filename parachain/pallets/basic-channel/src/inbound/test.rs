@@ -86,6 +86,11 @@ pub struct MockMessageDispatch;
 
 impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
 	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_dispatch_event(_: MessageId) -> Option<<Test as system::Config>::Event> {
+		None
+	}
 }
 
 impl basic_inbound_channel::Config for Test {

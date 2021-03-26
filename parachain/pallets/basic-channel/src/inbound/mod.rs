@@ -13,6 +13,8 @@ use artemis_core::{
 
 use envelope::Envelope;
 
+mod benchmarking;
+
 #[cfg(test)]
 mod test;
 
