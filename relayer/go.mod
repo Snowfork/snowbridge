@@ -9,15 +9,19 @@ require (
 	github.com/cbergoon/merkletree v0.2.0 // indirect
 	github.com/ethereum/go-ethereum v1.9.25
 	github.com/go-ole/go-ole v1.2.5 // indirect
+	github.com/hashicorp/go-memdb v1.3.2
 	github.com/influxdata/influxdb v1.2.3-0.20180221223340-01288bdb0883
+	github.com/jinzhu/gorm v1.9.16
 	github.com/magefile/mage v1.11.0
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-runewidth v0.0.10 // indirect
+	github.com/mattn/go-sqlite3 v1.14.5
 	github.com/mgechev/revive v1.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
@@ -39,4 +43,6 @@ require (
 	golang.org/x/text v0.3.5 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gorm.io/driver/sqlite v1.1.4
+	gorm.io/gorm v1.21.6
 )
