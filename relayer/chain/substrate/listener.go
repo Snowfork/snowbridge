@@ -7,34 +7,45 @@ import (
 	"context"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/store"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type Listener struct {
-	config   *Config
-	conn     *Connection
-	messages chan<- []chain.Message
-	log      *logrus.Entry
+	config        *Config
+	conn          *Connection
+	relayconn     *Connection
+	messages      chan<- []chain.Message
+	beefyMessages chan<- store.DatabaseCmd
+	log           *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, messages chan<- []chain.Message, log *logrus.Entry) *Listener {
+func NewListener(config *Config, conn *Connection, relayconn *Connection, messages chan<- []chain.Message,
+	beefyMessages chan<- store.DatabaseCmd, log *logrus.Entry) *Listener {
 	return &Listener{
-		config:   config,
-		conn:     conn,
-		messages: messages,
-		log:      log,
+		config:        config,
+		conn:          conn,
+		relayconn:     relayconn,
+		messages:      messages,
+		beefyMessages: beefyMessages,
+		log:           log,
 	}
 }
 
 func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
 		return li.pollBlocks(ctx)
+	})
+
+	eg.Go(func() error {
+		return li.subBeefyJustifications(ctx)
 	})
 
 	return nil
@@ -147,6 +158,111 @@ func (li *Listener) pollBlocks(ctx context.Context) error {
 			currentBlock++
 		}
 	}
+}
+
+func (li *Listener) subBeefyJustifications(ctx context.Context) error {
+	ch := make(chan interface{})
+
+	sub, err := li.relayconn.api.Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
+	if err != nil {
+		panic(err)
+	}
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return li.onDone(ctx)
+		case msg := <-ch:
+
+			signedCommitment := &store.SignedCommitment{}
+			err := types.DecodeFromHexString(msg.(string), signedCommitment)
+			if err != nil {
+				li.log.WithError(err).Error("failed to decode beefy commitment messages")
+			}
+
+			li.log.Info("Relaychain Listener witnessed a new Beefy commitment: \n", msg.(string))
+			if len(signedCommitment.Signatures) == 0 {
+				li.log.Info("BEEFY commitment has no signatures, skipping...")
+				continue
+			}
+
+			// TODO:
+			// beefyAuthorities, err := li.getBeefyAuthorities(uint64(signedCommitment.Commitment.BlockNumber))
+			// if err != nil {
+			// 	li.log.WithError(err).Error("Failed to get Beefy authorities from on-chain storage")
+			// }
+
+			beefyAuthorities := []common.Address{
+				common.HexToAddress("0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b"),
+				common.HexToAddress("0x25451A4de12dcCc2D166922fA938E900fCc4ED24"),
+			}
+
+			beefy := store.NewBeefy(beefyAuthorities, *signedCommitment, store.CommitmentWitnessed, common.Hash{}, 0)
+			item, err := beefy.ToItem()
+			if err != nil {
+				li.log.Error(err)
+				continue
+			}
+
+			li.log.Info("1: Writing BeefyItem to database with status 'WitnessedCommitment'")
+			cmd := store.NewDatabaseCmd(&item, false, nil)
+			li.beefyMessages <- cmd
+		}
+	}
+}
+
+type Authorities = [][33]uint8
+
+func (li *Listener) getBeefyAuthorities(blockNumber uint64) (Authorities, error) {
+	blockHash, err := li.relayconn.api.RPC.Chain.GetBlockHash(blockNumber)
+	if err != nil {
+		return Authorities{}, err
+	}
+
+	meta, err := li.relayconn.api.RPC.State.GetMetadataLatest()
+	if err != nil {
+		return Authorities{}, err
+	}
+
+	storageKey, err := types.CreateStorageKey(meta, "Beefy", "Authorities", nil, nil)
+	if err != nil {
+		return Authorities{}, err
+	}
+
+	storageChangeSet, err := li.relayconn.api.RPC.State.QueryStorage([]types.StorageKey{storageKey}, blockHash, blockHash)
+	if err != nil {
+		return Authorities{}, err
+	}
+
+	authorities := Authorities{}
+	for _, storageChange := range storageChangeSet {
+		for _, keyValueOption := range storageChange.Changes {
+			bz, err := keyValueOption.MarshalJSON()
+			if err != nil {
+				return Authorities{}, err
+			}
+
+			err = types.DecodeFromBytes(bz, &authorities)
+			if err != nil {
+				return Authorities{}, err
+			}
+
+		}
+	}
+	// TODO: Decode authorities using @polkadot/util-crypto/ethereum/encode.js ethereumEncode() method
+
+	// if data != nil {
+	// 	li.log.WithFields(logrus.Fields{
+	// 		"block":               signedCommitment.Commitment.BlockNumber,
+	// 		"commitmentSizeBytes": len(*data),
+	// 	}).Debug("Retrieved authorities from storage")
+	// } else {
+	// 	li.log.WithError(err).Error("Authorities not found in storage")
+	// 	continue
+	// }
+
+	return authorities, nil
 }
 
 func sleep(ctx context.Context, delay time.Duration) {

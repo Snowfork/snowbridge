@@ -14,15 +14,16 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
-	"github.com/snowfork/polkadot-ethereum/relayer/relaychain"
+	"github.com/snowfork/polkadot-ethereum/relayer/store"
 )
 
 type Chain struct {
-	config   *Config
-	listener *Listener
-	writer   *Writer
-	conn     *Connection
-	log      *logrus.Entry
+	config    *Config
+	listener  *Listener
+	writer    *Writer
+	conn      *Connection
+	relayconn *Connection
+	log       *logrus.Entry
 }
 
 const Name = "Substrate"
@@ -31,22 +32,27 @@ func NewChain(config *Config) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
 
 	// Generate keypair from secret
-	kp, err := sr25519.NewKeypairFromSeed(config.PrivateKey, "")
+	kpParachain, err := sr25519.NewKeypairFromSeed(config.Parachain.PrivateKey, "")
+	if err != nil {
+		return nil, err
+	}
+
+	kpRelaychain, err := sr25519.NewKeypairFromSeed(config.Relaychain.PrivateKey, "")
 	if err != nil {
 		return nil, err
 	}
 
 	return &Chain{
-		config:   config,
-		conn:     NewConnection(config.Endpoint, kp.AsKeyringPair(), log),
-		listener: nil,
-		writer:   nil,
-		log:      log,
+		config:    config,
+		conn:      NewConnection(config.Parachain.Endpoint, kpParachain.AsKeyringPair(), log),
+		relayconn: NewConnection(config.Relaychain.Endpoint, kpRelaychain.AsKeyringPair(), log),
+		listener:  nil,
+		writer:    nil,
+		log:       log,
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header,
-	beefy chan relaychain.BeefyCommitmentInfo) error {
+func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header, _ chan<- store.DatabaseCmd) error {
 	writer, err := NewWriter(ch.conn, ethMessages, ethHeaders, ch.log)
 	if err != nil {
 		return err
@@ -55,12 +61,13 @@ func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-ch
 	return nil
 }
 
-func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header,
-	beefy chan relaychain.BeefyCommitmentInfo) error {
+func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header, beefyMessages chan<- store.DatabaseCmd) error {
 	listener := NewListener(
 		ch.config,
 		ch.conn,
+		ch.relayconn,
 		subMessages,
+		beefyMessages,
 		ch.log,
 	)
 	ch.listener = listener
@@ -73,6 +80,11 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- c
 	}
 
 	err := ch.conn.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = ch.relayconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
