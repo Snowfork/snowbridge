@@ -1,0 +1,6 @@
+{
+    "db_config": {
+        "dialect": "sqlite3",
+        "db_path": "./tmp.db"
+    }
+}
