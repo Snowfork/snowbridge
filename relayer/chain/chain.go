@@ -7,9 +7,10 @@ import (
 	"context"
 
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/snowfork/polkadot-ethereum/relayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type Message interface{}
@@ -35,6 +36,6 @@ type Chain interface {
 	Name() string
 	Start(ctx context.Context, eg *errgroup.Group, initOut chan<- Init, initIn <-chan Init) error
 	Stop()
-	SetReceiver(messages <-chan []Message, headers <-chan Header, beefy chan relaychain.BeefyCommitmentInfo) error
-	SetSender(messages chan<- []Message, headers chan<- Header, beefy chan relaychain.BeefyCommitmentInfo) error
+	SetReceiver(messages <-chan []Message, headers <-chan Header, beefy chan<- store.DatabaseCmd) error
+	SetSender(messages chan<- []Message, headers chan<- Header, beefy chan<- store.DatabaseCmd) error
 }
