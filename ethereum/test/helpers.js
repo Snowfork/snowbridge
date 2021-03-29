@@ -194,8 +194,7 @@ const deployAppContractWithChannels = async (deployer, appContract, ...appContra
   );
 
   const feeSource = await MockFeeSource.new();
-  await channels.incentivized.outbound.initialize(deployer, feeSource.address);
-  await channels.incentivized.outbound.authorizeDefaultOperator(app.address);
+  await channels.incentivized.outbound.initialize(deployer, feeSource.address, [app.address]);
 
   return [channels, app]
 }

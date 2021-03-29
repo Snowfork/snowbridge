@@ -96,14 +96,15 @@ module.exports = function(deployer, network, accounts) {
       );
 
       // Do post-construction initialization.
-      let foo = await channels.incentivized.outbound.instance.initialize(administrator, dotApp.address);
-      let bar = await channels.incentivized.outbound.instance.setFee(
+      await channels.incentivized.outbound.instance.initialize(
+        administrator,
+        dotApp.address,
+        [dotApp.address, ethApp.address, erc20App.address]
+      );
+      await channels.incentivized.outbound.instance.setFee(
         "1000000000000000000", // 1 SnowDOT
         { from: administrator }
       );
-      await channels.incentivized.outbound.instance.authorizeDefaultOperator(dotApp.address);
-      await channels.incentivized.outbound.instance.authorizeDefaultOperator(ethApp.address);
-      await channels.incentivized.outbound.instance.authorizeDefaultOperator(erc20App.address);
     }
   })
 };

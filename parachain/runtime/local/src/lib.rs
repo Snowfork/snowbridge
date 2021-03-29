@@ -378,7 +378,6 @@ use incentivized_channel::inbound as incentivized_channel_inbound;
 use basic_channel::outbound as basic_channel_outbound;
 use incentivized_channel::outbound as incentivized_channel_outbound;
 
-
 impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
