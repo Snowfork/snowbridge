@@ -103,33 +103,33 @@ contract PolkadotRelayChainBridge {
         /**
          * @dev Check if validatorPublicKeyMerkleProof is valid based on ValidatorRegistry merkle root
          */
-        require(
-            validatorRegistry.checkValidatorInSet(
-                validatorPublicKey,
-                validatorPosition,
-                validatorPublicKeyMerkleProof
-            ),
-            "Error: Sender must be in validator set"
-        );
+        // require(
+        //     validatorRegistry.checkValidatorInSet(
+        //         validatorPublicKey,
+        //         validatorPosition,
+        //         validatorPublicKeyMerkleProof
+        //     ),
+        //     "Error: Sender must be in validator set"
+        // );
 
         /**
          * @dev Check if validatorSignature is correct, ie. check if it matches
          * the signature of senderPublicKey on the payload
          */
-        require(
-            ECDSA.recover(payload, validatorSignature) == validatorPublicKey,
-            "Error: Invalid Signature"
-        );
+        // require(
+        //     ECDSA.recover(payload, validatorSignature) == validatorPublicKey,
+        //     "Error: Invalid Signature"
+        // );
 
-        /**
-         * @dev Check that the bitfield actually contains enough claims to be succesful, ie, > 2/3
-         */
-        require(
-            validatorClaimsBitfield.countSetBits() >
-                (validatorRegistry.numOfValidators() * THRESHOLD_NOM) /
-                    THRESHOLD_DENOM,
-            "Error: Bitfield not enough validators"
-        );
+        // /**
+        //  * @dev Check that the bitfield actually contains enough claims to be succesful, ie, > 2/3
+        //  */
+        // require(
+        //     validatorClaimsBitfield.countSetBits() >
+        //         (validatorRegistry.numOfValidators() * THRESHOLD_NOM) /
+        //             THRESHOLD_DENOM,
+        //     "Error: Bitfield not enough validators"
+        // );
 
         /**
          * @todo Lock up the sender stake as collateral
