@@ -15,21 +15,23 @@ import (
 
 type BeefyItem struct {
 	gorm.Model
-	ValidatorAddresses        []byte
-	SignedCommitment          []byte
-	Status                    Status
-	InitialVerificationTxHash common.Hash
-	CompleteOnBlock           uint64
+	ValidatorAddresses         []byte
+	SignedCommitment           []byte
+	Status                     Status
+	InitialVerificationTxHash  common.Hash
+	CompleteOnBlock            uint64
+	CompleteVerificationTxHash common.Hash
 }
 
 func NewBeefyItem(validatorAddresses, signedCommitment []byte, status Status,
-	initialVerificationTxHash common.Hash, completeOnBlock uint64) BeefyItem {
+	initialVerificationTxHash common.Hash, completeOnBlock uint64, completeVerificationTxHash common.Hash) BeefyItem {
 	return BeefyItem{
-		ValidatorAddresses:        validatorAddresses,
-		SignedCommitment:          signedCommitment,
-		Status:                    status,
-		InitialVerificationTxHash: initialVerificationTxHash,
-		CompleteOnBlock:           completeOnBlock,
+		ValidatorAddresses:         validatorAddresses,
+		SignedCommitment:           signedCommitment,
+		Status:                     status,
+		InitialVerificationTxHash:  initialVerificationTxHash,
+		CompleteOnBlock:            completeOnBlock,
+		CompleteVerificationTxHash: completeVerificationTxHash,
 	}
 }
 
@@ -45,11 +47,12 @@ func (b *BeefyItem) ToBeefy() (Beefy, error) {
 	}
 
 	return Beefy{
-		ValidatorAddresses:        validatorAddresses,
-		SignedCommitment:          signedCommitment,
-		Status:                    b.Status,
-		InitialVerificationTxHash: b.InitialVerificationTxHash,
-		CompleteOnBlock:           b.CompleteOnBlock,
+		ValidatorAddresses:         validatorAddresses,
+		SignedCommitment:           signedCommitment,
+		Status:                     b.Status,
+		InitialVerificationTxHash:  b.InitialVerificationTxHash,
+		CompleteOnBlock:            b.CompleteOnBlock,
+		CompleteVerificationTxHash: b.CompleteVerificationTxHash,
 	}, nil
 }
 
@@ -57,16 +60,23 @@ func (BeefyItem) TableName() string {
 	return "beefy_item"
 }
 
+type CmdType int
+
+const (
+	Create CmdType = iota // 0
+	Update CmdType = iota // 1
+)
+
 type DatabaseCmd struct {
 	Item         *BeefyItem
-	IsUpdate     bool
+	Type         CmdType
 	Instructions map[string]interface{}
 }
 
-func NewDatabaseCmd(item *BeefyItem, isUpdate bool, instructions map[string]interface{}) DatabaseCmd {
+func NewDatabaseCmd(item *BeefyItem, cmdType CmdType, instructions map[string]interface{}) DatabaseCmd {
 	return DatabaseCmd{
 		Item:         item,
-		IsUpdate:     isUpdate,
+		Type:         cmdType,
 		Instructions: instructions,
 	}
 }
@@ -133,10 +143,8 @@ func (d *Database) writeLoop(ctx context.Context) error {
 			return d.onDone(ctx)
 		case cmd := <-d.messages:
 			mutex.Lock()
-			if cmd.IsUpdate {
-				d.log.Info("Updating item in database...")
-				d.DB.Model(&cmd.Item).Updates(cmd.Instructions)
-			} else {
+			switch cmd.Type {
+			case Create:
 				d.log.Info("Creating item in database...")
 				tx := d.DB.Begin()
 				if err := tx.Error; err != nil {
@@ -151,6 +159,9 @@ func (d *Database) writeLoop(ctx context.Context) error {
 				if err := tx.Commit().Error; err != nil {
 					d.log.Error(err)
 				}
+			case Update:
+				d.log.Info("Updating item in database...")
+				d.DB.Model(&cmd.Item).Updates(cmd.Instructions)
 			}
 			mutex.Unlock()
 		}

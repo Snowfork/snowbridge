@@ -6,7 +6,6 @@ package ethereum
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -87,14 +86,10 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 		return wr.writeMessagesLoop(ctx)
 	})
 
-	// TODO: resolve tx nonce conflict edge case
 	eg.Go(func() error {
-		return wr.writeBeefyCreateLoop(ctx)
+		return wr.writeBeefyLoop(ctx)
 	})
 
-	eg.Go(func() error {
-		return wr.writeBeefyCompleteLoop(ctx)
-	})
 	return nil
 }
 
@@ -128,7 +123,7 @@ func (wr *Writer) writeMessagesLoop(ctx context.Context) error {
 	}
 }
 
-func (wr *Writer) writeBeefyCreateLoop(ctx context.Context) error {
+func (wr *Writer) writeBeefyLoop(ctx context.Context) error {
 	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
@@ -143,17 +138,7 @@ func (wr *Writer) writeBeefyCreateLoop(ctx context.Context) error {
 					wr.log.WithError(err).Error("Error submitting message to ethereum")
 				}
 			}
-		}
-	}
-}
 
-func (wr *Writer) writeBeefyCompleteLoop(ctx context.Context) error {
-	ticker := time.NewTicker(11 * time.Second)
-	for {
-		select {
-		case <-ctx.Done():
-			return wr.onDone(ctx)
-		case <-ticker.C:
 			// Send complete verification txs for items that are ready to complete
 			completeItems := wr.db.GetItemsByStatus(store.ReadyToComplete)
 			for _, item := range completeItems {
@@ -267,7 +252,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, item *store.B
 		"status":                       store.InitialVerificationTxSent,
 		"initial_verification_tx_hash": tx.Hash(),
 	}
-	updateCmd := store.NewDatabaseCmd(item, true, instructions)
+	updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
 	wr.beefyMessages <- updateCmd
 
 	return nil
@@ -290,19 +275,8 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, item *st
 		return fmt.Errorf("Unknown contract")
 	}
 
-	blockNumber, err := wr.conn.client.BlockNumber(ctx)
-	if err != nil {
-		return err
-	}
-
-	currAccNonce, err := wr.conn.client.NonceAt(ctx, wr.conn.GetKeyPair().CommonAddress(), big.NewInt(int64(blockNumber)))
-	if err != nil {
-		return err
-	}
-
 	options := bind.TransactOpts{
 		From:     wr.conn.GetKeyPair().CommonAddress(),
-		Nonce:    big.NewInt(int64(currAccNonce)),
 		Signer:   wr.signerFn,
 		Context:  ctx,
 		GasLimit: 500000,
@@ -318,9 +292,17 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, item *st
 
 	wr.log.WithFields(logrus.Fields{
 		"txHash": tx.Hash().Hex(),
-	}).Info("5. Complete Signature Commitment transaction submitted")
+	}).Info("Complete Signature Commitment transaction submitted")
 
-	// TODO: delete from database
+	// Update item's status in database
+	wr.log.Info("5: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
+	instructions := map[string]interface{}{
+		"status":                        store.CompleteVerificationTxSent,
+		"complete_verification_tx_hash": tx.Hash(),
+	}
+	updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
+	wr.beefyMessages <- updateCmd
 
+	// TODO: delete from database after confirming
 	return nil
 }

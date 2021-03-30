@@ -37,24 +37,27 @@ const (
 	InitialVerificationTxSent      Status = iota // 1
 	InitialVerificationTxConfirmed Status = iota // 2
 	ReadyToComplete                Status = iota // 3
+	CompleteVerificationTxSent     Status = iota // 4
 )
 
 type Beefy struct {
-	ValidatorAddresses        []common.Address
-	SignedCommitment          SignedCommitment
-	Status                    Status
-	InitialVerificationTxHash common.Hash
-	CompleteOnBlock           uint64
+	ValidatorAddresses         []common.Address
+	SignedCommitment           SignedCommitment
+	Status                     Status
+	InitialVerificationTxHash  common.Hash
+	CompleteOnBlock            uint64
+	CompleteVerificationTxHash common.Hash
 }
 
 func NewBeefy(validatorAddresses []common.Address, signedCommitment SignedCommitment, status Status,
-	initialVerificationTxHash common.Hash, completeOnBlock uint64) Beefy {
+	initialVerificationTxHash common.Hash, completeOnBlock uint64, completeVerificationTxHash common.Hash) Beefy {
 	return Beefy{
-		ValidatorAddresses:        validatorAddresses,
-		SignedCommitment:          signedCommitment,
-		Status:                    status,
-		InitialVerificationTxHash: initialVerificationTxHash,
-		CompleteOnBlock:           completeOnBlock,
+		ValidatorAddresses:         validatorAddresses,
+		SignedCommitment:           signedCommitment,
+		Status:                     status,
+		InitialVerificationTxHash:  initialVerificationTxHash,
+		CompleteOnBlock:            completeOnBlock,
+		CompleteVerificationTxHash: completeVerificationTxHash,
 	}
 }
 
@@ -70,7 +73,7 @@ func (b *Beefy) ToItem() (BeefyItem, error) {
 	}
 
 	beefyItem := NewBeefyItem(validatorAddressesBytes, signedCommitmentBytes,
-		b.Status, b.InitialVerificationTxHash, b.CompleteOnBlock)
+		b.Status, b.InitialVerificationTxHash, b.CompleteOnBlock, b.CompleteVerificationTxHash)
 
 	return beefyItem, nil
 }

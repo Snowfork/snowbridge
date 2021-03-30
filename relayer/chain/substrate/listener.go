@@ -198,7 +198,9 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 				common.HexToAddress("0x25451A4de12dcCc2D166922fA938E900fCc4ED24"),
 			}
 
-			beefy := store.NewBeefy(beefyAuthorities, *signedCommitment, store.CommitmentWitnessed, common.Hash{}, 0)
+			beefy := store.NewBeefy(beefyAuthorities, *signedCommitment,
+				store.CommitmentWitnessed, common.Hash{}, 0, common.Hash{},
+			)
 			item, err := beefy.ToItem()
 			if err != nil {
 				li.log.Error(err)
@@ -206,7 +208,7 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 			}
 
 			li.log.Info("1: Writing BeefyItem to database with status 'WitnessedCommitment'")
-			cmd := store.NewDatabaseCmd(&item, false, nil)
+			cmd := store.NewDatabaseCmd(&item, store.Create, nil)
 			li.beefyMessages <- cmd
 		}
 	}

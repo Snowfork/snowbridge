@@ -176,7 +176,7 @@ func (li *Listener) pollEventsAndHeaders(
 					instructions := map[string]interface{}{
 						"status": store.ReadyToComplete,
 					}
-					updateCmd := store.NewDatabaseCmd(item, true, instructions)
+					updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
 					li.beefyMessages <- updateCmd
 				}
 			}
@@ -313,7 +313,7 @@ func (li *Listener) processLightClientEvents(ctx context.Context, events []*polk
 			"status":            store.InitialVerificationTxConfirmed,
 			"complete_on_block": event.Raw.BlockNumber + li.config.BeefyBlockDelay,
 		}
-		updateCmd := store.NewDatabaseCmd(item, true, instructions)
+		updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
 		li.beefyMessages <- updateCmd
 	}
 }
