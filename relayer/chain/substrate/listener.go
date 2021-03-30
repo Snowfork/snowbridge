@@ -5,6 +5,7 @@ package substrate
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -178,12 +179,18 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 			signedCommitment := &store.SignedCommitment{}
 			err := types.DecodeFromHexString(msg.(string), signedCommitment)
 			if err != nil {
-				li.log.WithError(err).Error("failed to decode beefy commitment messages")
+				li.log.WithError(err).Error("Failed to decode BEEFY commitment messages")
 			}
 
-			li.log.Info("Relaychain Listener witnessed a new Beefy commitment: \n", msg.(string))
+			li.log.Info("Witnessed a new BEEFY commitment: \n", msg.(string))
 			if len(signedCommitment.Signatures) == 0 {
 				li.log.Info("BEEFY commitment has no signatures, skipping...")
+				continue
+			}
+
+			signedCommitmentBytes, err := json.Marshal(signedCommitment)
+			if err != nil {
+				li.log.WithError(err).Error("Failed to marshal signed commitment:", signedCommitment)
 				continue
 			}
 
@@ -198,16 +205,19 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 				common.HexToAddress("0x25451A4de12dcCc2D166922fA938E900fCc4ED24"),
 			}
 
-			beefy := store.NewBeefy(beefyAuthorities, *signedCommitment,
-				store.CommitmentWitnessed, common.Hash{}, 0, common.Hash{}, common.Hash{},
-			)
-			item, err := beefy.ToItem()
+			beefyAuthoritiesBytes, err := json.Marshal(beefyAuthorities)
 			if err != nil {
-				li.log.Error(err)
+				li.log.WithError(err).Error("Failed to marshal BEEFY authorities:", beefyAuthorities)
 				continue
 			}
 
-			li.log.Info("1: Writing BeefyItem to database with status 'WitnessedCommitment'")
+			item := store.BeefyItem{
+				ValidatorAddresses: beefyAuthoritiesBytes,
+				SignedCommitment:   signedCommitmentBytes,
+				Status:             store.CommitmentWitnessed,
+			}
+
+			li.log.Info("1: Writing BEEFY item to database with status 'WitnessedCommitment'")
 			cmd := store.NewDatabaseCmd(&item, store.Create, nil)
 			li.beefyMessages <- cmd
 		}

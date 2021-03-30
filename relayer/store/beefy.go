@@ -2,7 +2,6 @@ package store
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -30,55 +29,16 @@ type CompleteSignatureCommitmentMessage struct {
 	RandomPublicKeyMerkleProofs      [][][32]byte
 }
 
-type Status int
-
-const (
-	CommitmentWitnessed            Status = iota // 0
-	InitialVerificationTxSent      Status = iota // 1
-	InitialVerificationTxConfirmed Status = iota // 2
-	ReadyToComplete                Status = iota // 3
-	CompleteVerificationTxSent     Status = iota // 4
-)
-
 type Beefy struct {
-	ValidatorAddresses         []common.Address
-	SignedCommitment           SignedCommitment
-	Status                     Status
-	InitialVerificationTxHash  common.Hash
-	CompleteOnBlock            uint64
-	RandomSeed                 common.Hash
-	CompleteVerificationTxHash common.Hash
+	ValidatorAddresses []common.Address
+	SignedCommitment   SignedCommitment
 }
 
-func NewBeefy(validatorAddresses []common.Address, signedCommitment SignedCommitment,
-	status Status, initialVerificationTxHash common.Hash, completeOnBlock uint64,
-	randomSeed, completeVerificationTxHash common.Hash) Beefy {
+func NewBeefy(validatorAddresses []common.Address, signedCommitment SignedCommitment) Beefy {
 	return Beefy{
-		ValidatorAddresses:         validatorAddresses,
-		SignedCommitment:           signedCommitment,
-		Status:                     status,
-		InitialVerificationTxHash:  initialVerificationTxHash,
-		CompleteOnBlock:            completeOnBlock,
-		RandomSeed:                 randomSeed,
-		CompleteVerificationTxHash: completeVerificationTxHash,
+		ValidatorAddresses: validatorAddresses,
+		SignedCommitment:   signedCommitment,
 	}
-}
-
-func (b *Beefy) ToItem() (BeefyItem, error) {
-	validatorAddressesBytes, err := json.Marshal(b.ValidatorAddresses)
-	if err != nil {
-		return BeefyItem{}, err
-	}
-
-	signedCommitmentBytes, err := json.Marshal(b.SignedCommitment)
-	if err != nil {
-		return BeefyItem{}, err
-	}
-
-	beefyItem := NewBeefyItem(validatorAddressesBytes, signedCommitmentBytes, b.Status,
-		b.InitialVerificationTxHash, b.CompleteOnBlock, b.RandomSeed, b.CompleteVerificationTxHash)
-
-	return beefyItem, nil
 }
 
 func (b *Beefy) BuildNewSignatureCommitmentMessage(valAddrIndex int) (NewSignatureCommitmentMessage, error) {

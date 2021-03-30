@@ -13,6 +13,16 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type Status int
+
+const (
+	CommitmentWitnessed            Status = iota // 0
+	InitialVerificationTxSent      Status = iota // 1
+	InitialVerificationTxConfirmed Status = iota // 2
+	ReadyToComplete                Status = iota // 3
+	CompleteVerificationTxSent     Status = iota // 4
+)
+
 type BeefyItem struct {
 	gorm.Model
 	ValidatorAddresses         []byte
@@ -50,13 +60,8 @@ func (b *BeefyItem) ToBeefy() (Beefy, error) {
 	}
 
 	return Beefy{
-		ValidatorAddresses:         validatorAddresses,
-		SignedCommitment:           signedCommitment,
-		Status:                     b.Status,
-		InitialVerificationTxHash:  b.InitialVerificationTxHash,
-		CompleteOnBlock:            b.CompleteOnBlock,
-		RandomSeed:                 b.RandomSeed,
-		CompleteVerificationTxHash: b.CompleteVerificationTxHash,
+		ValidatorAddresses: validatorAddresses,
+		SignedCommitment:   signedCommitment,
 	}, nil
 }
 
