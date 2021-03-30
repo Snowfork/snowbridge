@@ -22,20 +22,6 @@ fn assert_last_event<T: Config>(system_event: <T as frame_system::Config>::Event
 	assert_eq!(event, &system_event);
 }
 
-fn make_header_chain(parent: Header, length: u32) -> Vec<Header> {
-	let mut chain = vec![parent.clone()];
-	(0..length).fold(parent, |ancestor, _| {
-		let mut header: Header = Default::default();
-		header.parent_hash = ancestor.compute_hash();
-		header.number = ancestor.number.saturating_add(1);
-		header.difficulty = 1.into();
-		chain.push(header.clone());
-		header
-	});
-
-	chain
-}
-
 // This collection of benchmarks should include a benchmark for each
 // call dispatched by the channel, i.e. each "app" pallet function
 // that can be invoked by MessageDispatch. The most expensive call
@@ -48,8 +34,6 @@ benchmarks! {
 	// * `submit` dispatches the DotApp::unlock call
 	// * `unlock` call successfully unlocks DOT
 	submit {
-		let h in 0 .. 20;
-
 		let caller: T::AccountId = whitelisted_caller();
 		let (header, message) = dot_unlock_data();
 		let envelope: envelope::Envelope = rlp::decode::<Log>(&message.data)
@@ -59,7 +43,7 @@ benchmarks! {
 		SourceChannel::put(envelope.channel);
 
 		T::Verifier::initialize_storage(
-			make_header_chain(header, h),
+			vec![header],
 			0.into(),
 			0, // forces all headers to be finalized
 		)?;
@@ -76,8 +60,6 @@ benchmarks! {
 
 	#[extra]
 	submit_eth_mint {
-		let h in 0 .. 20;
-
 		let caller: T::AccountId = whitelisted_caller();
 		let (header, message) = eth_mint_data();
 		let envelope: envelope::Envelope = rlp::decode::<Log>(&message.data)
@@ -87,7 +69,7 @@ benchmarks! {
 		SourceChannel::put(envelope.channel);
 
 		T::Verifier::initialize_storage(
-			make_header_chain(header, h),
+			vec![header],
 			0.into(),
 			0, // forces all headers to be finalized
 		)?;
@@ -104,8 +86,6 @@ benchmarks! {
 
 	#[extra]
 	submit_erc20_mint {
-		let h in 0 .. 20;
-
 		let caller: T::AccountId = whitelisted_caller();
 		let (header, message) = erc20_mint_data();
 		let envelope: envelope::Envelope = rlp::decode::<Log>(&message.data)
@@ -115,7 +95,7 @@ benchmarks! {
 		SourceChannel::put(envelope.channel);
 
 		T::Verifier::initialize_storage(
-			make_header_chain(header, h),
+			vec![header],
 			0.into(),
 			0, // forces all headers to be finalized
 		)?;
