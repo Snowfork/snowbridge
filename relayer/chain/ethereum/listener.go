@@ -6,6 +6,7 @@ package ethereum
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -173,9 +174,20 @@ func (li *Listener) pollEventsAndHeaders(
 			for _, item := range items {
 				if item.CompleteOnBlock >= blockNumber {
 					li.log.Info("4: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
+
+					// Fetch intended completion block's hash
+					blockHash := gethheader.Hash()
+					if item.CompleteOnBlock > blockNumber {
+						block, err := li.conn.client.BlockByNumber(ctx, big.NewInt(int64(item.CompleteOnBlock)))
+						if err != nil {
+							li.log.WithError(err).Error("Failure fetching inclusion block")
+						}
+						blockHash = block.Hash()
+					}
+
 					instructions := map[string]interface{}{
 						"status":      store.ReadyToComplete,
-						"random_seed": gethheader.Hash(),
+						"random_seed": blockHash,
 					}
 					updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
 					li.beefyMessages <- updateCmd
