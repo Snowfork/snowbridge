@@ -41,7 +41,6 @@ func TestWriter(t *testing.T) {
 	db, err := store.PrepareDatabase(dbConfig)
 	if err != nil {
 		t.Fatal(err)
-		t.Fail()
 	}
 
 	beefyMessages := make(chan store.DatabaseCmd, 1)
@@ -68,7 +67,7 @@ func TestWriter(t *testing.T) {
 	// Start database update loop
 	err = database.Start(ctx, eg)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	// ------------------------- Set up Ethereum writer -------------------------
@@ -115,10 +114,13 @@ func TestWriter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
-	assert.Equal(t, "New Signature Commitment transaction submitted", hook.LastEntry().Message)
+	entries := hook.AllEntries()
+	txSendEntry := entries[len(entries)-2]
 
-	txHash := common.HexToHash(hook.LastEntry().Data["txHash"].(string))
+	assert.Equal(t, txSendEntry.Level, logrus.InfoLevel)
+	assert.Equal(t, txSendEntry.Message, "New Signature Commitment transaction submitted")
+
+	txHash := common.HexToHash(txSendEntry.Data["txHash"].(string))
 
 	// Wait for the tx to be confirmed
 	isPending := true
@@ -128,7 +130,6 @@ func TestWriter(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		t.Log("calling TransactionByHash()...")
 		time.Sleep(5 * time.Second)
 	}
 
@@ -137,12 +138,8 @@ func TestWriter(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	t.Log("Tx Hash:", receipt.TxHash)
-	t.Log("Status:", receipt.Status)
-	t.Log("Cumulative Gas Used:", receipt.CumulativeGasUsed)
-	t.Log("Logs:", receipt.Logs)
-
-	t.Fail()
+	assert.Equal(t, receipt.TxHash, txHash)
+	assert.Equal(t, receipt.Status, uint64(1)) // Successful tx status
 }
 
 func loadSampleBeefyCommitmentInfo() store.BeefyItem {
@@ -199,10 +196,11 @@ func loadSampleBeefyCommitmentInfo() store.BeefyItem {
 	}
 
 	return store.BeefyItem{
-		ValidatorAddresses:        valAddrBytes,
-		SignedCommitment:          signedCommitmentBytes,
-		Status:                    store.CommitmentWitnessed,
-		InitialVerificationTxHash: common.Hash{},
-		CompleteOnBlock:           22,
+		ValidatorAddresses:         valAddrBytes,
+		SignedCommitment:           signedCommitmentBytes,
+		Status:                     store.CommitmentWitnessed,
+		InitialVerificationTxHash:  common.Hash{},
+		CompleteOnBlock:            22,
+		CompleteVerificationTxHash: common.Hash{},
 	}
 }

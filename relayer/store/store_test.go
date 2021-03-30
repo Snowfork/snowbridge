@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/influxdata/influxdb/pkg/testing/assert"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"golang.org/x/sync/errgroup"
@@ -63,31 +64,30 @@ func TestStore(t *testing.T) {
 
 	item := loadSampleBeefyCommitmentInfo()
 
-	createCmd := store.NewDatabaseCmd(&item, false, nil)
+	// Pass create command to write loop
+	createCmd := store.NewDatabaseCmd(&item, store.Create, nil)
 	messages <- createCmd
 
 	time.Sleep(2 * time.Second)
 
 	items := database.GetItemsByStatus(store.CommitmentWitnessed)
 	beefyItem := items[0]
+	assert.Equal(t, beefyItem.Status, store.CommitmentWitnessed)
 
+	// Pass update instruction to write loop
 	hash := common.BytesToHash([]byte("0x25451A4de12dcCc2D166922fA938E900fCc4ED24"))
-
-	// Create update instruction and pass to write loop
 	instructions := map[string]interface{}{
 		"status":                    store.InitialVerificationTxSent,
 		"InitialVerificationTxHash": hash,
 	}
-	updateCmd := store.NewDatabaseCmd(beefyItem, true, instructions)
+	updateCmd := store.NewDatabaseCmd(beefyItem, store.Update, instructions)
 	messages <- updateCmd
 
 	time.Sleep(2 * time.Second)
 
 	newItem := database.GetItemByInitialVerificationTxHash(hash)
-	t.Log("status", newItem.Status)
-	t.Log("hash", newItem.InitialVerificationTxHash)
-
-	t.Fail()
+	assert.Equal(t, newItem.Status, store.InitialVerificationTxSent)
+	assert.Equal(t, newItem.InitialVerificationTxHash, hash)
 }
 
 func getTestConfig() *store.Config {
