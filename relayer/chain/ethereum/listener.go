@@ -172,7 +172,7 @@ func (li *Listener) pollEventsAndHeaders(
 				li.log.Info(fmt.Sprintf("Found %d InitialVerificationTxConfirmed items", len(items)))
 			}
 			for _, item := range items {
-				if item.CompleteOnBlock >= blockNumber {
+				if item.CompleteOnBlock <= blockNumber {
 					li.log.Info("4: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
 
 					// Fetch intended completion block's hash
