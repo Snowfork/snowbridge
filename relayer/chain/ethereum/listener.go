@@ -174,7 +174,8 @@ func (li *Listener) pollEventsAndHeaders(
 				if item.CompleteOnBlock >= blockNumber {
 					li.log.Info("4: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
 					instructions := map[string]interface{}{
-						"status": store.ReadyToComplete,
+						"status":      store.ReadyToComplete,
+						"random_seed": gethheader.Hash(),
 					}
 					updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
 					li.beefyMessages <- updateCmd

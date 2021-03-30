@@ -6,6 +6,7 @@ package ethereum
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -133,7 +134,7 @@ func (wr *Writer) writeBeefyLoop(ctx context.Context) error {
 			// Send initial verification txs for witnessed commitments
 			witnessedItems := wr.db.GetItemsByStatus(store.CommitmentWitnessed)
 			for _, item := range witnessedItems {
-				err := wr.WriteNewSignatureCommitment(ctx, item, 0) // TODO: match validator address to index
+				err := wr.WriteNewSignatureCommitment(ctx, item, 0) // TODO: pick val addr
 				if err != nil {
 					wr.log.WithError(err).Error("Error submitting message to ethereum")
 				}
@@ -265,7 +266,12 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, item *st
 		wr.log.WithError(err).Error("Error converting database item to Beefy")
 	}
 
-	msg, err := beefy.BuildCompleteSignatureCommitmentMessage()
+	// Select validator index based on random seed
+	input := item.RandomSeed.Big()
+	scaleFactor := big.NewInt(int64(len(beefy.ValidatorAddresses) - 1))
+	randIndex := input.Mod(input, scaleFactor)
+
+	msg, err := beefy.BuildCompleteSignatureCommitmentMessage(randIndex.Int64())
 	if err != nil {
 		return err
 	}

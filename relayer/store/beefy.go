@@ -46,17 +46,20 @@ type Beefy struct {
 	Status                     Status
 	InitialVerificationTxHash  common.Hash
 	CompleteOnBlock            uint64
+	RandomSeed                 common.Hash
 	CompleteVerificationTxHash common.Hash
 }
 
-func NewBeefy(validatorAddresses []common.Address, signedCommitment SignedCommitment, status Status,
-	initialVerificationTxHash common.Hash, completeOnBlock uint64, completeVerificationTxHash common.Hash) Beefy {
+func NewBeefy(validatorAddresses []common.Address, signedCommitment SignedCommitment,
+	status Status, initialVerificationTxHash common.Hash, completeOnBlock uint64,
+	randomSeed, completeVerificationTxHash common.Hash) Beefy {
 	return Beefy{
 		ValidatorAddresses:         validatorAddresses,
 		SignedCommitment:           signedCommitment,
 		Status:                     status,
 		InitialVerificationTxHash:  initialVerificationTxHash,
 		CompleteOnBlock:            completeOnBlock,
+		RandomSeed:                 randomSeed,
 		CompleteVerificationTxHash: completeVerificationTxHash,
 	}
 }
@@ -72,8 +75,8 @@ func (b *Beefy) ToItem() (BeefyItem, error) {
 		return BeefyItem{}, err
 	}
 
-	beefyItem := NewBeefyItem(validatorAddressesBytes, signedCommitmentBytes,
-		b.Status, b.InitialVerificationTxHash, b.CompleteOnBlock, b.CompleteVerificationTxHash)
+	beefyItem := NewBeefyItem(validatorAddressesBytes, signedCommitmentBytes, b.Status,
+		b.InitialVerificationTxHash, b.CompleteOnBlock, b.RandomSeed, b.CompleteVerificationTxHash)
 
 	return beefyItem, nil
 }
@@ -151,7 +154,7 @@ func (b *Beefy) GenerateMmrProofOffchain(valAddrIndex int) ([][32]byte, error) {
 	return sigProofContents, nil
 }
 
-func (b *Beefy) BuildCompleteSignatureCommitmentMessage() (CompleteSignatureCommitmentMessage, error) {
+func (b *Beefy) BuildCompleteSignatureCommitmentMessage(randIndex int64) (CompleteSignatureCommitmentMessage, error) {
 	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
 
 	validationDataID := big.NewInt(int64(b.SignedCommitment.Commitment.ValidatorSetID))
@@ -163,6 +166,8 @@ func (b *Beefy) BuildCompleteSignatureCommitmentMessage() (CompleteSignatureComm
 	randomSignatureCommitments := [][]byte{}
 	randomValidatorAddresses := b.ValidatorAddresses
 	randomPublicKeyMerkleProofs := [][][32]byte{}
+
+	// TODO: select addresses and proofs using randIndex
 
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                               validationDataID,

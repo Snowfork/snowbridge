@@ -20,17 +20,20 @@ type BeefyItem struct {
 	Status                     Status
 	InitialVerificationTxHash  common.Hash
 	CompleteOnBlock            uint64
+	RandomSeed                 common.Hash
 	CompleteVerificationTxHash common.Hash
 }
 
 func NewBeefyItem(validatorAddresses, signedCommitment []byte, status Status,
-	initialVerificationTxHash common.Hash, completeOnBlock uint64, completeVerificationTxHash common.Hash) BeefyItem {
+	initialVerificationTxHash common.Hash, completeOnBlock uint64, randomSeed,
+	completeVerificationTxHash common.Hash) BeefyItem {
 	return BeefyItem{
 		ValidatorAddresses:         validatorAddresses,
 		SignedCommitment:           signedCommitment,
 		Status:                     status,
 		InitialVerificationTxHash:  initialVerificationTxHash,
 		CompleteOnBlock:            completeOnBlock,
+		RandomSeed:                 randomSeed,
 		CompleteVerificationTxHash: completeVerificationTxHash,
 	}
 }
@@ -52,6 +55,7 @@ func (b *BeefyItem) ToBeefy() (Beefy, error) {
 		Status:                     b.Status,
 		InitialVerificationTxHash:  b.InitialVerificationTxHash,
 		CompleteOnBlock:            b.CompleteOnBlock,
+		RandomSeed:                 b.RandomSeed,
 		CompleteVerificationTxHash: b.CompleteVerificationTxHash,
 	}, nil
 }

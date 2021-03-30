@@ -199,7 +199,7 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 			}
 
 			beefy := store.NewBeefy(beefyAuthorities, *signedCommitment,
-				store.CommitmentWitnessed, common.Hash{}, 0, common.Hash{},
+				store.CommitmentWitnessed, common.Hash{}, 0, common.Hash{}, common.Hash{},
 			)
 			item, err := beefy.ToItem()
 			if err != nil {
