@@ -87,7 +87,10 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
-
+		// This error will never be raised, unless
+		// 1) The runtime is misconfigured (See the integrity test below)
+		// 2) The peer Ethereum contract is misconfigured or exploited.
+		Overflow
 	}
 }
 
@@ -115,10 +118,7 @@ decl_module! {
 
 			T::Currency::transfer(&who, &Self::account_id(), amount, AllowDeath)?;
 
-			let amount_wrapped = match wrap::<T>(amount, T::Decimals::get()) {
-				Some(value) => value,
-				None => panic!("Runtime is misconfigured"),
-			};
+			let amount_wrapped = wrap::<T>(amount, T::Decimals::get()).ok_or(Error::<T>::Overflow)?;
 
 			let message = OutboundPayload {
 				sender: who.clone(),
@@ -139,10 +139,7 @@ decl_module! {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
-			let amount_unwrapped = match unwrap::<T>(amount, T::Decimals::get()) {
-				Some(value) => value,
-				None => panic!("Runtime is misconfigured"),
-			};
+			let amount_unwrapped = unwrap::<T>(amount, T::Decimals::get()).ok_or(Error::<T>::Overflow)?;
 
 			let recipient = T::Lookup::lookup(recipient)?;
 			T::Currency::transfer(&Self::account_id(), &recipient, amount_unwrapped, KeepAlive)?;
