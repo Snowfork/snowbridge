@@ -345,6 +345,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "artemis-erc721-app"
+version = "0.0.1"
+dependencies = [
+ "artemis-assets",
+ "artemis-core",
+ "artemis-dispatch",
+ "artemis-ethereum",
+ "ethabi-decode",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-eth-app"
 version = "0.1.1"
 dependencies = [

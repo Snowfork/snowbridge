@@ -104,6 +104,7 @@ members = [
     "pallets/verifier-lightclient",
     "pallets/eth-app",
     "pallets/erc20-app",
+    "pallets/erc721-app",
     "pallets/dot-app",
     "pallets/commitments",
     "pallets/transfer",
