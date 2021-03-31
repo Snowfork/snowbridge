@@ -4,6 +4,7 @@ use frame_support::{
 	traits::{Currency, Get, ExistenceRequirement::KeepAlive, WithdrawReasons, Imbalance},
 	storage::StorageValue,
 	log,
+	weights::Weight,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_core::{U256, H160};
@@ -28,6 +29,16 @@ mod envelope;
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type PositiveImbalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::PositiveImbalance;
 
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn submit() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn submit() -> Weight { 0 }
+}
+
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
@@ -46,6 +57,9 @@ pub trait Config: system::Config {
 	type TreasuryAccount: Get<Self::AccountId>;
 
 	type FeeConverter: Convert<U256, BalanceOf<Self>>;
+
+	/// Weight information for extrinsics in this pallet
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -81,7 +95,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = 0]
+		#[weight = T::WeightInfo::submit()]
 		pub fn submit(origin, message: Message) -> DispatchResult {
 			let relayer = ensure_signed(origin)?;
 			// submit message to verifier for verification
