@@ -29,7 +29,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Module, Call, Storage, Event<T>},
         Balances: pallet_balances::{Module, Call, Storage, Event<T>},
         Dispatch: artemis_dispatch::{Module, Call, Storage, Origin, Event<T>},
-        DOTApp: dot_app::{Module, Call, Config<T>, Storage, Event<T>},
+        DOTApp: dot_app::{Module, Call, Config, Storage, Event<T>},
     }
 );
 
@@ -124,9 +124,8 @@ pub fn new_tester() -> sp_io::TestExternalities {
         .build_storage::<Test>()
         .unwrap();
 
-    let config = dot_app::GenesisConfig::<Test> {
+    let config = dot_app::GenesisConfig {
         address: H160::repeat_byte(1),
-        initial_module_balance: 0u128,
     };
     config.assimilate_storage(&mut storage).unwrap();
 
