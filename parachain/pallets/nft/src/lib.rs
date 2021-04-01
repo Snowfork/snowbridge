@@ -26,8 +26,8 @@ use sp_runtime::{
 };
 use sp_std::vec::Vec;
 
-// mod mock;
-// mod tests;
+mod mock;
+mod tests;
 
 /// Token info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]

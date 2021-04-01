@@ -1,136 +1,153 @@
-use crate::mock::{new_tester, AccountId, Assets, Test};
-use frame_support::{assert_ok, assert_noop};
-use sp_keyring::AccountKeyring as Keyring;
-use crate::{Balances, TotalIssuance};
-use artemis_core::{AssetId, MultiAsset};
+//! Unit tests for the non-fungible-token module.
+
+#![cfg(test)]
 
 use super::*;
+use frame_support::{assert_noop, assert_ok};
+use mock::*;
 
-fn set_balance<T>(asset_id: AssetId, account_id: &AccountId, amount: T)
-	where T : Into<U256> + Copy
-{
-	let value = amount.into();
-	Balances::<Test>::insert(asset_id, &account_id, &value);
-	TotalIssuance::insert(asset_id, value);
-}
+// #[test]
+// fn mint_should_work() {
+// 	ExtBuilder::default().build().execute_with(|| {
+// 		assert_eq!(NonFungibleTokenModule::next_token_id(), 0);
+// 		assert_ok!(NonFungibleTokenModule::mint(&BOB, vec![1], ()));
+// 		assert_eq!(NonFungibleTokenModule::next_token_id(), 1);
+// 		assert_ok!(NonFungibleTokenModule::mint(&BOB, vec![1], ()));
+// 		assert_eq!(NonFungibleTokenModule::next_token_id(), 2);
+// 		assert_ok!(NonFungibleTokenModule::mint(&ALICE, vec![1], ()));
+// 		assert_eq!(NonFungibleTokenModule::next_token_id(), 3);
+// 	});
+// }
 
-#[test]
-fn deposit_should_increase_balance_and_total_issuance() {
-	new_tester().execute_with(|| {
-		let asset_id = AssetId::ETH;
-		let alice: AccountId = Keyring::Alice.into();
-		assert_ok!(<Assets as MultiAsset<_>>::deposit(asset_id, &alice, 500.into()));
-		assert_eq!(Balances::<Test>::get(&asset_id, &alice), 500.into());
-		assert_eq!(TotalIssuance::get(&asset_id), 500.into());
+// #[test]
+// fn mint_should_fail() {
+// 	ExtBuilder::default().build().execute_with(|| {
+// 		assert_ok!(NonFungibleTokenModule::create_class(&ALICE, vec![1], ()));
+// 		Classes::<Runtime>::mutate(CLASS_ID, |class_info| {
+// 			class_info.as_mut().unwrap().total_issuance = <Runtime as Config>::TokenId::max_value();
+// 		});
+// 		assert_noop!(
+// 			NonFungibleTokenModule::mint(&BOB, vec![1], ()),
+// 			Error::<Runtime>::NumOverflow
+// 		);
 
-		assert_ok!(<Assets as MultiAsset<_>>::deposit(asset_id, &alice, 20.into()));
-		assert_eq!(Balances::<Test>::get(&asset_id, &alice), 520.into());
-		assert_eq!(TotalIssuance::get(&asset_id), 520.into());
-	});
-}
+// 		NextTokenId::<Runtime>::mutate(CLASS_ID, |id| *id = <Runtime as Config>::TokenId::max_value());
+// 		assert_noop!(
+// 			NonFungibleTokenModule::mint(&BOB, vec![1], ()),
+// 			Error::<Runtime>::NoAvailableTokenId
+// 		);
+// 	});
+// }
 
-#[test]
-fn deposit_should_raise_total_issuance_overflow_error() {
-	new_tester().execute_with(|| {
-		let asset_id = AssetId::ETH;
-		let alice: AccountId = Keyring::Alice.into();
-		TotalIssuance::insert(&asset_id, U256::MAX);
+// #[test]
+// fn transfer_should_work() {
+// 	ExtBuilder::default().build().execute_with(|| {
+// 		assert_ok!(NonFungibleTokenModule::create_class(&ALICE, vec![1], ()));
+// 		assert_ok!(NonFungibleTokenModule::mint(&BOB, CLASS_ID, vec![1], ()));
+// 		assert_ok!(NonFungibleTokenModule::transfer(&BOB, &BOB, (CLASS_ID, TOKEN_ID)));
+// 		assert_ok!(NonFungibleTokenModule::transfer(&BOB, &ALICE, (CLASS_ID, TOKEN_ID)));
+// 		assert_ok!(NonFungibleTokenModule::transfer(&ALICE, &BOB, (CLASS_ID, TOKEN_ID)));
+// 		assert!(NonFungibleTokenModule::is_owner(&BOB, (CLASS_ID, TOKEN_ID)));
+// 	});
+// }
 
-		assert_noop!(
-			<Assets as MultiAsset<_>>::deposit(asset_id, &alice, U256::one()),
-			Error::<Test>::TotalIssuanceOverflow
-		);
-	});
-}
+// #[test]
+// fn transfer_should_fail() {
+// 	ExtBuilder::default().build().execute_with(|| {
+// 		assert_ok!(NonFungibleTokenModule::create_class(&ALICE, vec![1], ()));
+// 		assert_ok!(NonFungibleTokenModule::mint(&BOB, CLASS_ID, vec![1], ()));
+// 		assert_noop!(
+// 			NonFungibleTokenModule::transfer(&BOB, &ALICE, (CLASS_ID, TOKEN_ID_NOT_EXIST)),
+// 			Error::<Runtime>::TokenNotFound
+// 		);
+// 		assert_noop!(
+// 			NonFungibleTokenModule::transfer(&ALICE, &BOB, (CLASS_ID, TOKEN_ID)),
+// 			Error::<Runtime>::NoPermission
+// 		);
+// 		assert_noop!(
+// 			NonFungibleTokenModule::mint(&BOB, CLASS_ID_NOT_EXIST, vec![1], ()),
+// 			Error::<Runtime>::ClassNotFound
+// 		);
+// 		assert_noop!(
+// 			NonFungibleTokenModule::transfer(&ALICE, &ALICE, (CLASS_ID, TOKEN_ID)),
+// 			Error::<Runtime>::NoPermission
+// 		);
+// 	});
+// }
 
-#[test]
-fn deposit_should_raise_balance_overflow_error() {
-	new_tester().execute_with(|| {
-		let asset_id = AssetId::ETH;
-		let alice: AccountId = Keyring::Alice.into();
-		Balances::<Test>::insert(&asset_id, &alice, U256::MAX);
+// #[test]
+// fn burn_should_work() {
+// 	ExtBuilder::default().build().execute_with(|| {
+// 		assert_ok!(NonFungibleTokenModule::create_class(&ALICE, vec![1], ()));
+// 		assert_ok!(NonFungibleTokenModule::mint(&BOB, CLASS_ID, vec![1], ()));
+// 		assert_ok!(NonFungibleTokenModule::burn(&BOB, (CLASS_ID, TOKEN_ID)));
+// 	});
+// }
 
-		assert_noop!(
-			<Assets as MultiAsset<_>>::deposit(asset_id, &alice, U256::one()),
-			Error::<Test>::BalanceOverflow
-		);
-	});
-}
+// #[test]
+// fn burn_should_fail() {
+// 	ExtBuilder::default().build().execute_with(|| {
+// 		assert_ok!(NonFungibleTokenModule::create_class(&ALICE, vec![1], ()));
+// 		assert_ok!(NonFungibleTokenModule::mint(&BOB, CLASS_ID, vec![1], ()));
+// 		assert_noop!(
+// 			NonFungibleTokenModule::burn(&BOB, (CLASS_ID, TOKEN_ID_NOT_EXIST)),
+// 			Error::<Runtime>::TokenNotFound
+// 		);
 
-#[test]
-fn withdrawal_should_decrease_balance_and_total_issuance() {
-	new_tester().execute_with(|| {
-		let alice: AccountId = Keyring::Alice.into();
-		set_balance(AssetId::ETH, &alice, 500);
+// 		assert_noop!(
+// 			NonFungibleTokenModule::burn(&ALICE, (CLASS_ID, TOKEN_ID)),
+// 			Error::<Runtime>::NoPermission
+// 		);
+// 	});
 
-		assert_ok!(<Assets as MultiAsset<_>>::withdraw(AssetId::ETH, &alice, 20.into()));
-		assert_eq!(Balances::<Test>::get(AssetId::ETH, &alice), 480.into());
-		assert_eq!(TotalIssuance::get(AssetId::ETH), 480.into());
-	});
-}
+// 	ExtBuilder::default().build().execute_with(|| {
+// 		assert_ok!(NonFungibleTokenModule::create_class(&ALICE, vec![1], ()));
+// 		assert_ok!(NonFungibleTokenModule::mint(&BOB, CLASS_ID, vec![1], ()));
 
-#[test]
-fn withdrawal_should_raise_total_issuance_underflow_error() {
-	new_tester().execute_with(|| {
-		let asset_id = AssetId::ETH;
-		let alice: AccountId = Keyring::Alice.into();
-		TotalIssuance::insert(&asset_id, U256::one());
+// 		Classes::<Runtime>::mutate(CLASS_ID, |class_info| {
+// 			class_info.as_mut().unwrap().total_issuance = 0;
+// 		});
+// 		assert_noop!(
+// 			NonFungibleTokenModule::burn(&BOB, (CLASS_ID, TOKEN_ID)),
+// 			Error::<Runtime>::NumOverflow
+// 		);
+// 	});
+// }
 
-		assert_noop!(
-			<Assets as MultiAsset<_>>::withdraw(asset_id, &alice, 10.into()),
-			Error::<Test>::TotalIssuanceUnderflow
-		);
+// #[test]
+// fn destroy_class_should_work() {
+// 	ExtBuilder::default().build().execute_with(|| {
+// 		assert_ok!(NonFungibleTokenModule::create_class(&ALICE, vec![1], ()));
+// 		assert_ok!(NonFungibleTokenModule::mint(&BOB, CLASS_ID, vec![1], ()));
+// 		assert_ok!(NonFungibleTokenModule::burn(&BOB, (CLASS_ID, TOKEN_ID)));
+// 		assert_ok!(NonFungibleTokenModule::destroy_class(&ALICE, CLASS_ID));
+// 		assert_eq!(Classes::<Runtime>::contains_key(CLASS_ID), false);
+// 		assert_eq!(NextTokenId::<Runtime>::contains_key(CLASS_ID), false);
+// 	});
+// }
 
-	});
-}
+// #[test]
+// fn destroy_class_should_fail() {
+// 	ExtBuilder::default().build().execute_with(|| {
+// 		assert_ok!(NonFungibleTokenModule::create_class(&ALICE, vec![1], ()));
+// 		assert_ok!(NonFungibleTokenModule::mint(&BOB, CLASS_ID, vec![1], ()));
+// 		assert_noop!(
+// 			NonFungibleTokenModule::destroy_class(&ALICE, CLASS_ID_NOT_EXIST),
+// 			Error::<Runtime>::ClassNotFound
+// 		);
 
-#[test]
-fn withdrawal_should_raise_balance_underflow_error() {
-	new_tester().execute_with(|| {
-		let asset_id = AssetId::ETH;
-		let alice: AccountId = Keyring::Alice.into();
-		TotalIssuance::insert(&asset_id, U256::from(500));
+// 		assert_noop!(
+// 			NonFungibleTokenModule::destroy_class(&BOB, CLASS_ID),
+// 			Error::<Runtime>::NoPermission
+// 		);
 
-		assert_noop!(
-			<Assets as MultiAsset<_>>::withdraw(asset_id, &alice, 10.into()),
-			Error::<Test>::InsufficientBalance
-		);
+// 		assert_noop!(
+// 			NonFungibleTokenModule::destroy_class(&ALICE, CLASS_ID),
+// 			Error::<Runtime>::CannotDestroyClass
+// 		);
 
-	});
-}
-
-#[test]
-fn transfer_free_balance() {
-	new_tester().execute_with(|| {
-
-		let asset_id = AssetId::ETH;
-		let alice: AccountId = Keyring::Alice.into();
-		let bob: AccountId = Keyring::Bob.into();
-
-		assert_ok!(<Assets as MultiAsset<_>>::deposit(asset_id, &alice, 500.into()));
-		assert_ok!(<Assets as MultiAsset<_>>::deposit(asset_id, &bob, 500.into()));
-		assert_ok!(<Assets as MultiAsset<_>>::transfer(asset_id, &alice, &bob, 250.into()));
-
-		assert_eq!(Balances::<Test>::get(&asset_id, &alice), 250.into());
-		assert_eq!(Balances::<Test>::get(&asset_id, &bob), 750.into());
-		assert_eq!(TotalIssuance::get(&asset_id), 1000.into());
-	});
-}
-
-#[test]
-fn transfer_should_raise_insufficient_balance() {
-	new_tester().execute_with(|| {
-
-		let asset_id = AssetId::ETH;
-		let alice: AccountId = Keyring::Alice.into();
-		let bob: AccountId = Keyring::Bob.into();
-
-		assert_ok!(<Assets as MultiAsset<_>>::deposit(asset_id, &alice, 500.into()));
-		assert_ok!(<Assets as MultiAsset<_>>::deposit(asset_id, &bob, 500.into()));
-
-		assert_noop!(
-			<Assets as MultiAsset<_>>::transfer(asset_id, &alice, &bob, 1000.into()),
-			Error::<Test>::InsufficientBalance,
-		);
-	});
-}
+// 		assert_ok!(NonFungibleTokenModule::burn(&BOB, (CLASS_ID, TOKEN_ID)));
+// 		assert_ok!(NonFungibleTokenModule::destroy_class(&ALICE, CLASS_ID));
+// 		assert_eq!(Classes::<Runtime>::contains_key(CLASS_ID), false);
+// 	});
+// }
