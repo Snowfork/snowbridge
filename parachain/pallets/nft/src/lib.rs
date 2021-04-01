@@ -67,7 +67,7 @@ pub mod module {
 	pub enum Error<T> {
 		/// No available token ID
 		NoAvailableTokenId,
-		/// Token(ClassId, TokenId) not found
+		/// Token not found
 		TokenNotFound,
 		/// The operator is not the owner of the token and has no permission
 		NoPermission,
@@ -152,7 +152,8 @@ impl<T: Config> Pallet<T> {
 	) -> Result<T::TokenId, DispatchError> {
 		NextTokenId::<T>::try_mutate(|id| -> Result<T::TokenId, DispatchError> {
 			let token_id = *id;
-			*id = id.checked_add(&One::one()).ok_or(Error::<T>::NoAvailableTokenId)?;
+			// Should never happen with a sufficiently wide integer, but we check for overflow
+			*id = id.checked_add(&One::one()).ok_or(Error::<T>::NumOverflow)?;
 
 			let token_info = TokenInfo {
 				metadata,
@@ -176,5 +177,9 @@ impl<T: Config> Pallet<T> {
 
 			Ok(())
 		})
+	}
+
+	pub fn is_owner(account: &T::AccountId, token: T::TokenId) -> bool {
+		TokensByOwner::<T>::contains_key(account, token)
 	}
 }
