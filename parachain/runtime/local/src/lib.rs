@@ -441,7 +441,7 @@ impl verifier_lightclient::Config for Runtime {
 
 parameter_types! {
 	pub const CommitInterval: BlockNumber = 5;
-	pub const MaxMessagesPerCommit: usize = 100;
+	pub const MaxMessagesPerCommit: usize = 20;
 }
 
 impl commitments::Config for Runtime {

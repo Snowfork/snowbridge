@@ -2,7 +2,7 @@
 
 use sp_std::prelude::*;
 use frame_support::{
-	decl_module, decl_storage, decl_event, decl_error,
+	decl_module, decl_storage, decl_event, decl_error, ensure,
 	weights::Weight,
 	dispatch::DispatchResult,
 	traits::Get,
@@ -158,20 +158,19 @@ impl<T: Config> MessageCommitment for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
 	fn add(channel_id: ChannelId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
-		MessageQueues::try_mutate(
-			channel_id,
-			|queue| {
-				if queue.len() >= T::MaxMessagesPerCommit::get() {
-					return Err(Error::<T>::QueueSizeLimitReached.into());
-				}
+		ensure!(
+			MessageQueues::decode_len(channel_id).unwrap_or(0) < T::MaxMessagesPerCommit::get(),
+			Error::<T>::QueueSizeLimitReached,
+		);
 
-				queue.append(&mut vec![Message {
-					target,
-					nonce,
-					payload: payload.to_vec(),
-				}]);
-				Ok(())
+		MessageQueues::append(
+			channel_id,
+			Message {
+				target,
+				nonce,
+				payload: payload.to_vec(),
 			},
-		)
+		);
+		Ok(())
 	}
 }
