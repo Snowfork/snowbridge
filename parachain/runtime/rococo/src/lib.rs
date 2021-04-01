@@ -443,12 +443,14 @@ impl verifier_lightclient::Config for Runtime {
 
 parameter_types! {
 	pub const CommitInterval: BlockNumber = 5;
+	pub const MaxMessagesPerCommit: usize = 100;
 }
 
 impl commitments::Config for Runtime {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 }
 
 impl assets::Config for Runtime {
