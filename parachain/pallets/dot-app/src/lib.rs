@@ -87,9 +87,11 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
-		// This error will never be raised, unless
-		// 1) The runtime is misconfigured (See the integrity test below)
-		// 2) The peer Ethereum contract is misconfigured or exploited.
+		/// Illegal conversion between native and wrapped DOT.
+		///
+		/// In practice, this error should never occur under the conditions
+		/// we've tested. If however the bridge or the peer Ethereum contract
+		/// is exploited, then all bets are off.
 		Overflow
 	}
 }
@@ -101,6 +103,8 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		// Verify that `T::Decimals` is 10 (DOT), or 12 (KSM) to guarantee
+		// safe conversions between native and wrapped DOT.
 		fn integrity_test() {
 			sp_io::TestExternalities::new_empty().execute_with(|| {
 				let allowed_decimals: &[u32] = &[10, 12];
