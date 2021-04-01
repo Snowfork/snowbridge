@@ -440,6 +440,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "artemis-nft"
+version = "0.0.1"
+dependencies = [
+ "artemis-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "rustc-hex",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-testutils"
 version = "0.1.0"
 dependencies = [

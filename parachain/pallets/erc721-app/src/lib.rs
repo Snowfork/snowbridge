@@ -30,8 +30,8 @@ use payload::OutboundPayload;
 #[cfg(test)]
 mod mock;
 
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod tests;
 
 
 pub use module::*;

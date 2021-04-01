@@ -101,6 +101,7 @@ members = [
     "pallets/incentivized-channel",
     "pallets/dispatch",
     "pallets/assets",
+    "pallets/nft",
     "pallets/verifier-lightclient",
     "pallets/eth-app",
     "pallets/erc20-app",
