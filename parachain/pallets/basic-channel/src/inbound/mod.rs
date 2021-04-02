@@ -13,6 +13,8 @@ use artemis_core::{
 
 use envelope::Envelope;
 
+mod benchmarking;
+
 #[cfg(test)]
 mod test;
 
@@ -25,7 +27,7 @@ pub trait Config: system::Config {
 	type Verifier: Verifier;
 
 	/// Verifier module for message verification.
-	type MessageDispatch: MessageDispatch<MessageId>;
+	type MessageDispatch: MessageDispatch<Self, MessageId>;
 }
 
 decl_storage! {

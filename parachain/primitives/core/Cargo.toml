@@ -30,3 +30,4 @@ std = [
     "sp-runtime/std",
     "artemis-ethereum/std",
 ]
+runtime-benchmarks = []

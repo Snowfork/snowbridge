@@ -41,6 +41,7 @@ std = [
     "artemis-core/std",
 ]
 runtime-benchmarks = [
+    "artemis-core/runtime-benchmarks",
     "frame-benchmarking",
     "sp-runtime/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
