@@ -18,29 +18,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 
-use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::*, Parameter};
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
-	DispatchError, DispatchResult, RuntimeDebug,
+	DispatchError, DispatchResult,
 };
 use sp_std::vec::Vec;
 
-use artemis_core::nft::Nft;
+use artemis_core::nft::{TokenInfo, Nft};
 
 mod mock;
 mod tests;
-
-/// Token info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
-pub struct TokenInfo<AccountId, Data> {
-	/// Token owner
-	pub owner: AccountId,
-	/// Token metadata
-	pub metadata: Vec<u8>,
-	/// Token Properties
-	pub data: Data,
-}
 
 pub use module::*;
 
@@ -184,5 +172,9 @@ impl<T: Config> Nft<T::AccountId, T::TokenId, T::TokenData> for Pallet<T>
 
 	fn is_owner(account: &T::AccountId, token: T::TokenId) -> bool {
 		TokensByOwner::<T>::contains_key(account, token)
+	}
+
+	fn get_token_data(token: T::TokenId) -> Option<TokenInfoOf<T>> {
+		Tokens::<T>::get(token)
 	}
 }
