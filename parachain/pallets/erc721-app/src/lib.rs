@@ -17,12 +17,14 @@ use frame_support::{
 };
 use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, pallet_prelude::*};
+
 use sp_std::prelude::*;
 
-use sp_runtime::traits::StaticLookup;
+use sp_runtime::traits::{AtLeast32BitUnsigned, StaticLookup};
 use sp_core::H160;
 
-use artemis_core::{ChannelId, OutboundRouter};
+use artemis_core::{ChannelId, OutboundRouter, nft::Nft};
+use artemis_ethereum::U256;
 
 mod payload;
 use payload::OutboundPayload;
@@ -51,6 +53,10 @@ pub mod module {
 		fn mint() -> Weight { 0 }
 	}
 
+	pub struct TokenInfo {
+		pub erc721_id: H160,
+	}
+
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -61,12 +67,18 @@ pub mod module {
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
+
+		/// The Substrate token ID type
+		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+
+		/// The NFT pallet trait
+		type Nft: Nft<Self::AccountId, Self::TokenId, ()>;
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// The submitted payload could not be decoded.
-		InvalidPayload,
+		/// The token is already minted
+		TokenAlreadyMinted
 	}
 
 	#[pallet::event]
@@ -83,6 +95,13 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn address)]
 	pub type Address<T: Config> = StorageValue<_, H160, ValueQuery>;
+
+	/// Store ERC721 (contractAddr, contractTokenId) -> Substrate tokenId mapping
+	///
+	/// Returns `None` if tokenId not set or removed.
+	#[pallet::storage]
+	#[pallet::getter(fn tokens_by_erc721)]
+	pub type TokensByERC721Id<T: Config> = StorageMap<_, Twox64Concat, (H160, U256), T::TokenId>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -117,40 +136,50 @@ pub mod module {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
-
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Burn an ERC721 token balance
 		#[pallet::weight(T::WeightInfo::burn())]
 		#[transactional]
-		pub fn burn(origin: OriginFor<T>, channel_id: ChannelId, token: H160, recipient: H160) -> DispatchResultWithPostInfo {
+		pub fn burn(origin: OriginFor<T>, channel_id: ChannelId, token: T::TokenId, sender: T::AccountId, recipient: H160) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			// TODO: tightly coupled with the nft pallet
-			//T::Nft::withdraw(AssetId::Token(token), &who)?;
+			T::Nft::burn(&sender, token)?;
 
-			let message = OutboundPayload {
-				token,
-				sender: who.clone(),
-				recipient,
-			};
+			// 1. Find the ERC721 token from the token info of this token
+			// TODO: delete from TokensByERC721 and from TokensInfo
 
-			T::OutboundRouter::submit(channel_id, &who, Address::<T>::get(), &message.encode())?;
-			Self::deposit_event(Event::<T>::Burned(token, who, recipient));
+			// let message = OutboundPayload {
+			// 	token,
+			// 	sender: who.clone(),
+			// 	recipient,
+			// };
+			// T::OutboundRouter::submit(channel_id, &who, Address::<T>::get(), &message.encode())?;
+			// Self::deposit_event(Event::<T>::Burned(erc721_token, who, recipient));
 
 			Ok(().into())
 		}
 
 		#[pallet::weight(T::WeightInfo::mint())]
 		#[transactional]
-		pub fn mint(origin: OriginFor<T>, token: H160, sender: H160, recipient: <T::Lookup as StaticLookup>::Source) -> DispatchResultWithPostInfo {
+		pub fn mint(origin: OriginFor<T>, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, token: H160, token_id: U256, token_uri: Vec<u8>) -> DispatchResultWithPostInfo {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != Address::<T>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
+			if TokensByERC721Id::<T>::contains_key((token, token_id)) {
+				return Err(Error::<T>::TokenAlreadyMinted.into());
+			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
-			//T::Assets::deposit(AssetId::Token(token), &recipient)?;
+			let token_info = TokenInfo{
+				erc721_id: token,
+			};
+			let nft_token_id = T::Nft::mint(&recipient, token_uri, ())?;
+			TokensByERC721Id::<T>::insert((token, token_id), nft_token_id);
+
+			// TODO: insert into TokensByERC721 and into TokensInfo (in this pallet or in TokenData - how's that extreacted when burning?)
+
 			Self::deposit_event(Event::<T>::Minted(token, sender, recipient));
 
 			Ok(().into())

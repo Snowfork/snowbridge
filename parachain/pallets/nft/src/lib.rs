@@ -26,6 +26,8 @@ use sp_runtime::{
 };
 use sp_std::vec::Vec;
 
+use artemis_core::nft::Nft;
+
 mod mock;
 mod tests;
 
@@ -125,27 +127,10 @@ pub mod module {
 	impl<T: Config> Pallet<T> {}
 }
 
-impl<T: Config> Pallet<T> {
-	/// Transfer NFT(non fungible token) from `from` account to `to` account
-	pub fn transfer(from: &T::AccountId, to: &T::AccountId, token: T::TokenId) -> DispatchResult {
-		Tokens::<T>::try_mutate(token, |token_info| -> DispatchResult {
-			let mut info = token_info.as_mut().ok_or(Error::<T>::TokenNotFound)?;
-			ensure!(info.owner == *from, Error::<T>::NoPermission);
-			if from == to {
-				// no change needed
-				return Ok(());
-			}
-
-			info.owner = to.clone();
-			TokensByOwner::<T>::remove(from, token);
-			TokensByOwner::<T>::insert(to, token, ());
-
-			Ok(())
-		})
-	}
-
+impl<T: Config> Nft<T::AccountId, T::TokenId, T::TokenData> for Pallet<T>
+{
 	/// Mint NFT(non fungible token) to `owner`
-	pub fn mint(
+	fn mint(
 		owner: &T::AccountId,
 		metadata: Vec<u8>,
 		data: T::TokenData,
@@ -168,7 +153,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Burn NFT(non fungible token) from `owner`
-	pub fn burn(owner: &T::AccountId, token: T::TokenId) -> DispatchResult {
+	fn burn(owner: &T::AccountId, token: T::TokenId) -> DispatchResult {
 		Tokens::<T>::try_mutate_exists(token, |token_info| -> DispatchResult {
 			let t = token_info.take().ok_or(Error::<T>::TokenNotFound)?;
 			ensure!(t.owner == *owner, Error::<T>::NoPermission);
@@ -179,7 +164,25 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn is_owner(account: &T::AccountId, token: T::TokenId) -> bool {
+	/// Transfer NFT(non fungible token) from `from` account to `to` account
+	fn transfer(from: &T::AccountId, to: &T::AccountId, token: T::TokenId) -> DispatchResult {
+		Tokens::<T>::try_mutate(token, |token_info| -> DispatchResult {
+			let mut info = token_info.as_mut().ok_or(Error::<T>::TokenNotFound)?;
+			ensure!(info.owner == *from, Error::<T>::NoPermission);
+			if from == to {
+				// no change needed
+				return Ok(());
+			}
+
+			info.owner = to.clone();
+			TokensByOwner::<T>::remove(from, token);
+			TokensByOwner::<T>::insert(to, token, ());
+
+			Ok(())
+		})
+	}
+
+	fn is_owner(account: &T::AccountId, token: T::TokenId) -> bool {
 		TokensByOwner::<T>::contains_key(account, token)
 	}
 }

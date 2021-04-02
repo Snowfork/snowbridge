@@ -352,6 +352,7 @@ dependencies = [
  "artemis-core",
  "artemis-dispatch",
  "artemis-ethereum",
+ "artemis-nft",
  "ethabi-decode",
  "frame-support",
  "frame-system",
