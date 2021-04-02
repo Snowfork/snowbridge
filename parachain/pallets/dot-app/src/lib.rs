@@ -9,7 +9,8 @@ use frame_support::{
 		EnsureOrigin,
 		Currency,
 		ExistenceRequirement::{KeepAlive, AllowDeath},
-	}
+	},
+	weights::Weight,
 };
 use sp_std::{
 	prelude::*,
@@ -26,6 +27,7 @@ use primitives::{wrap, unwrap};
 
 use payload::OutboundPayload;
 
+mod benchmarking;
 mod payload;
 mod primitives;
 
@@ -34,6 +36,17 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
+
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn lock() -> Weight;
+	fn unlock() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn lock() -> Weight { 0 }
+	fn unlock() -> Weight { 0 }
+}
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
@@ -49,6 +62,8 @@ pub trait Config: system::Config {
 	type ModuleId: Get<ModuleId>;
 
 	type Decimals: Get<u32>;
+	/// Weight information for extrinsics in this pallet
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -72,7 +87,12 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
-
+		/// Illegal conversion between native and wrapped DOT.
+		///
+		/// In practice, this error should never occur under the conditions
+		/// we've tested. If however the bridge or the peer Ethereum contract
+		/// is exploited, then all bets are off.
+		Overflow
 	}
 }
 
@@ -83,6 +103,8 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		// Verify that `T::Decimals` is 10 (DOT), or 12 (KSM) to guarantee
+		// safe conversions between native and wrapped DOT.
 		fn integrity_test() {
 			sp_io::TestExternalities::new_empty().execute_with(|| {
 				let allowed_decimals: &[u32] = &[10, 12];
@@ -93,17 +115,14 @@ decl_module! {
 			});
 		}
 
-		#[weight = 0]
+		#[weight = T::WeightInfo::lock()]
 		#[transactional]
 		pub fn lock(origin, channel_id: ChannelId, recipient: H160, amount: BalanceOf<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Currency::transfer(&who, &Self::account_id(), amount, AllowDeath)?;
 
-			let amount_wrapped = match wrap::<T>(amount, T::Decimals::get()) {
-				Some(value) => value,
-				None => panic!("Runtime is misconfigured"),
-			};
+			let amount_wrapped = wrap::<T>(amount, T::Decimals::get()).ok_or(Error::<T>::Overflow)?;
 
 			let message = OutboundPayload {
 				sender: who.clone(),
@@ -116,7 +135,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = 0]
+		#[weight = T::WeightInfo::unlock()]
 		#[transactional]
 		pub fn unlock(origin, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
@@ -124,10 +143,7 @@ decl_module! {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
-			let amount_unwrapped = match unwrap::<T>(amount, T::Decimals::get()) {
-				Some(value) => value,
-				None => panic!("Runtime is misconfigured"),
-			};
+			let amount_unwrapped = unwrap::<T>(amount, T::Decimals::get()).ok_or(Error::<T>::Overflow)?;
 
 			let recipient = T::Lookup::lookup(recipient)?;
 			T::Currency::transfer(&Self::account_id(), &recipient, amount_unwrapped, KeepAlive)?;

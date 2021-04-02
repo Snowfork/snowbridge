@@ -35,7 +35,7 @@ Once the development environment is set up, build the parachain. This command wi
 [native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
 
 ```bash
---no-default-features --features with-local-runtime
+cargo build --release --no-default-features --features with-local-runtime
 ```
 
 ### Run
@@ -51,7 +51,7 @@ Build Polkadot:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout rococo-v1
+git checkout 8daf97
 cargo build --release --features=real-overseer
 ```
 

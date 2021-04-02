@@ -45,3 +45,6 @@ std = [
     "artemis-ethereum/std",
     "ethabi/std"
 ]
+runtime-benchmarks = [
+    "artemis-core/runtime-benchmarks",
+]

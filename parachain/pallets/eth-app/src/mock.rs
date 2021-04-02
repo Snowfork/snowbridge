@@ -69,6 +69,7 @@ impl system::Config for Test {
 
 impl artemis_assets::Config for Test {
 	type Event = Event;
+	type WeightInfo = ();
 }
 
 impl artemis_dispatch::Config for Test {
@@ -99,6 +100,7 @@ impl eth_app::Config for Test {
 	type Asset = Asset;
 	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
 	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
+	type WeightInfo = ();
 }
 
 pub type Asset = SingleAssetAdaptor<Test, EthAssetId>;

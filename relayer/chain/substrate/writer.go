@@ -17,12 +17,13 @@ import (
 )
 
 type Writer struct {
-	conn     *Connection
-	messages <-chan []chain.Message
-	headers  <-chan chain.Header
-	log      *logrus.Entry
-	nonce    uint32
-	pool     *extrinsicPool
+	conn        *Connection
+	messages    <-chan []chain.Message
+	headers     <-chan chain.Header
+	log         *logrus.Entry
+	nonce       uint32
+	pool        *extrinsicPool
+	genesisHash types.Hash
 }
 
 func NewWriter(conn *Connection, messages <-chan []chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
@@ -40,6 +41,12 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 	wr.nonce = nonce
+
+	genesisHash, err := wr.conn.api.RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return err
+	}
+	wr.genesisHash = genesisHash
 
 	wr.pool = newExtrinsicPool(eg, wr.conn, wr.log)
 
@@ -121,22 +128,17 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 func (wr *Writer) write(ctx context.Context, c types.Call) error {
 	ext := types.NewExtrinsic(c)
 
-	latestBlock, err := wr.conn.api.RPC.Chain.GetBlockLatest()
+	latestHash, err := wr.conn.api.RPC.Chain.GetFinalizedHead()
+	if err != nil {
+		return err
+	}
+
+	latestBlock, err := wr.conn.api.RPC.Chain.GetBlock(latestHash)
 	if err != nil {
 		return err
 	}
 
 	era := NewMortalEra(uint64(latestBlock.Block.Header.Number))
-
-	genesisHash, err := wr.conn.api.RPC.Chain.GetBlockHash(0)
-	if err != nil {
-		return err
-	}
-
-	latestHash, err := wr.conn.api.RPC.Chain.GetBlockHashLatest()
-	if err != nil {
-		return err
-	}
 
 	rv, err := wr.conn.api.RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
@@ -146,7 +148,7 @@ func (wr *Writer) write(ctx context.Context, c types.Call) error {
 	o := types.SignatureOptions{
 		BlockHash:          latestHash,
 		Era:                era,
-		GenesisHash:        genesisHash,
+		GenesisHash:        wr.genesisHash,
 		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
 		SpecVersion:        rv.SpecVersion,
 		Tip:                types.NewUCompactFromUInt(0),

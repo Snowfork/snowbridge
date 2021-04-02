@@ -7,8 +7,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
+use frame_system::Config;
 use sp_core::H160;
-use artemis_ethereum::Log;
+use sp_std::prelude::*;
+use artemis_ethereum::{Header, Log, U256};
 
 pub mod types;
 pub mod assets;
@@ -28,6 +30,11 @@ pub use assets::{AssetId, MultiAsset, SingleAsset};
 /// This trait should be implemented by runtime modules that wish to provide message verification functionality.
 pub trait Verifier {
 	fn verify(message: &Message) -> Result<Log, DispatchError>;
+	fn initialize_storage(
+		headers: Vec<Header>,
+		initial_difficulty: U256,
+		descendants_until_final: u8,
+	) -> Result<(), &'static str>;
 }
 
 /// Outbound submission for applications
@@ -36,6 +43,8 @@ pub trait OutboundRouter<AccountId> {
 }
 
 /// Dispatch a message
-pub trait MessageDispatch<MessageId> {
+pub trait MessageDispatch<T: Config, MessageId> {
 	fn dispatch(source: H160, id: MessageId, payload: &[u8]);
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_dispatch_event(id: MessageId) -> Option<<T as Config>::Event>;
 }

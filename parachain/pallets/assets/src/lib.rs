@@ -32,6 +32,7 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	traits::Get,
 	dispatch::{DispatchResult, DispatchError},
+	weights::Weight,
 };
 
 use sp_runtime::traits::StaticLookup;
@@ -40,14 +41,27 @@ use sp_core::U256;
 use artemis_core::assets::{AssetId, MultiAsset, SingleAsset};
 use sp_std::marker;
 
+mod benchmarking;
+
 #[cfg(test)]
 mod mock;
 
 #[cfg(test)]
 mod tests;
 
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn transfer() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn transfer() -> Weight { 0 }
+}
+
 pub trait Config: system::Config {
 	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
+	/// Weight information for extrinsics in this pallet
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -93,8 +107,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		/// Transfer some free balance to another account.
-		// TODO: Calculate weights (#161)
-		#[weight = 10]
+		#[weight = T::WeightInfo::transfer()]
 		pub fn transfer(origin,
 						asset_id: AssetId,
 						dest: <T::Lookup as StaticLookup>::Source,

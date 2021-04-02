@@ -116,6 +116,7 @@ impl dot_app::Config for Test {
     type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
     type ModuleId = DotModuleId;
     type Decimals = Decimals;
+    type WeightInfo = ();
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {

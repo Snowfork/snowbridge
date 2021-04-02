@@ -25,7 +25,6 @@ use artemis_core::assets::{MultiAsset as ArtemisMultiAsset, AssetId};
 
 use codec::Decode;
 
-
 pub struct AssetsTransactor<Assets, AccountIdConverter, AccountId>(
 	PhantomData<(Assets, AccountIdConverter, AccountId)>,
 );
@@ -41,17 +40,14 @@ impl<
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
 
 		if let MultiAsset::ConcreteFungible { id, amount } = asset {
-			match id {
-				MultiLocation::X1(Junction::GeneralKey(key)) => {
-					let asset_id: AssetId = AssetId::decode(&mut key.as_ref())
-						.map_err(|_| XcmError::Undefined)?;
-					let value: U256 = (*amount).into();
-					Assets::deposit(asset_id, &who, value).map_err(|_| XcmError::Undefined)?;
-					Ok(())
-				},
-				_ => {
-					Err(XcmError::Undefined)
-				}
+			if let Some(Junction::GeneralKey(key)) = id.last() {
+				let asset_id: AssetId = AssetId::decode(&mut key.as_ref())
+					.map_err(|_| XcmError::Undefined)?;
+				let value: U256 = (*amount).into();
+				Assets::deposit(asset_id, &who, value).map_err(|_| XcmError::Undefined)?;
+				Ok(())
+			} else {
+				Err(XcmError::Undefined)
 			}
 		} else {
 			Err(XcmError::Undefined)
@@ -62,17 +58,14 @@ impl<
 		let who = AccountIdConverter::from_location(location).ok_or(())?;
 
 		if let MultiAsset::ConcreteFungible { id, amount } = asset {
-			match id {
-				MultiLocation::X1(Junction::GeneralKey(key)) => {
-					let asset_id: AssetId = AssetId::decode(&mut key.as_ref())
-						.map_err(|_| XcmError::Undefined)?;
-					let value: U256 = (*amount).into();
-					Assets::withdraw(asset_id, &who, value).map_err(|_| XcmError::Undefined)?;
-					Ok(asset.clone())
-				},
-				_ => {
-					Err(XcmError::Undefined)
-				}
+			if let Some(Junction::GeneralKey(key)) = id.last() {
+				let asset_id: AssetId = AssetId::decode(&mut key.as_ref())
+					.map_err(|_| XcmError::Undefined)?;
+				let value: U256 = (*amount).into();
+				Assets::withdraw(asset_id, &who, value).map_err(|_| XcmError::Undefined)?;
+				Ok(asset.clone())
+			} else {
+				Err(XcmError::Undefined)
 			}
 		} else {
 			Err(XcmError::Undefined)

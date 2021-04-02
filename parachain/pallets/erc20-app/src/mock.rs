@@ -68,6 +68,7 @@ impl system::Config for Test {
 
 impl artemis_assets::Config for Test {
 	type Event = Event;
+	type WeightInfo = ();
 }
 
 impl artemis_dispatch::Config for Test {
@@ -98,6 +99,7 @@ impl erc20_app::Config for Test {
 	type Assets = Assets;
 	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
 	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
+	type WeightInfo = ();
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {

@@ -59,8 +59,6 @@ use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 
 use artemis_xcm_support::AssetsTransactor;
 
-mod weights;
-
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -213,6 +211,12 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl pallet_utility::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
@@ -227,7 +231,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -440,11 +444,12 @@ impl verifier_lightclient::Config for Runtime {
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
-	type WeightInfo = weights::verifier_lightclient_weights::WeightInfo<Runtime>;
+	type WeightInfo = ();
 }
 
 impl assets::Config for Runtime {
 	type Event = Event;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -456,6 +461,7 @@ impl eth_app::Config for Runtime {
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
 	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
+	type WeightInfo = ();
 }
 
 impl erc20_app::Config for Runtime {
@@ -463,6 +469,7 @@ impl erc20_app::Config for Runtime {
 	type Assets = assets::Module<Runtime>;
 	type OutboundRouter = SimpleOutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -477,6 +484,7 @@ impl dot_app::Config for Runtime {
 	type CallOrigin = EnsureEthereumAccount;
 	type ModuleId = DotModuleId;
 	type Decimals = Decimals;
+	type WeightInfo = ();
 }
 
 construct_runtime!(
@@ -504,6 +512,7 @@ construct_runtime!(
 
 		LocalXcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin} = 18,
 		Transfer: artemis_transfer::{Module, Call, Event<T>} = 19,
+		Utility: pallet_utility::{Module, Call, Event, Storage} = 20,
 
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>} = 12,
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>} = 13,
@@ -662,6 +671,11 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
+			add_benchmark!(params, batches, assets, Assets);
+			add_benchmark!(params, batches, basic_channel_inbound, BasicInboundChannel);
+			add_benchmark!(params, batches, dot_app, DOT);
+			add_benchmark!(params, batches, erc20_app, ERC20);
+			add_benchmark!(params, batches, eth_app, ETH);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
