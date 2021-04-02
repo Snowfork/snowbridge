@@ -146,7 +146,7 @@ impl<T: Config> Module<T> {
 
 	fn commit_messages() -> Weight {
 		let mut all_messages: Vec<(T::AccountId, Message)> =
-			<Self as Store>::MessageQueue::get();
+			<Self as Store>::MessageQueue::take();
 		if all_messages.is_empty() {
 			return 0;
 		}
@@ -210,9 +210,6 @@ impl<T: Config> Module<T> {
 
 		let key = offchain_key(T::INDEXING_PREFIX, mroot);
 		offchain_index::set(&*key, &data.encode());
-
-		// Clear queue
-		<Self as Store>::MessageQueue::put(<Vec<(T::AccountId, Message)>>::new());
 
 		0
 	}
