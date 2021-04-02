@@ -1,7 +1,9 @@
 use codec::{Decode, Encode};
 use ethabi::{self, Token};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage,
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, ensure,
 	dispatch::DispatchResult,
+	traits::Get,
 	weights::Weight,
 };
 use frame_system::{self as system};
@@ -58,6 +60,9 @@ pub trait Config: system::Config {
 	const INDEXING_PREFIX: &'static [u8];
 
 	type Hashing: Hash<Output = H256>;
+
+	/// Max number of messages that can be queued and committed in one go
+	type MaxMessagesPerCommit: Get<usize>;
 }
 
 decl_storage! {
@@ -81,6 +86,8 @@ decl_event! {
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
+		/// No more messages can be queued for the channel during this commit cycle.
+		QueueSizeLimitReached,
 	}
 }
 
@@ -119,6 +126,11 @@ impl<T: Config> Module<T> {
 	}
 
 	fn push_message(account_id: &T::AccountId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
+		ensure!(
+			MessageQueue::<T>::decode_len().unwrap_or(0) < T::MaxMessagesPerCommit::get(),
+			Error::<T>::QueueSizeLimitReached,
+		);
+
 		let mut mq = MessageQueue::<T>::get();
 		mq.push((
 			account_id.clone(),

@@ -381,6 +381,11 @@ use incentivized_channel::outbound as incentivized_channel_outbound;
 pub const BASIC_COMMITMENTS_INDEXING_PREFIX: &'static [u8] = b"basic";
 pub const INCENTIVIZED_COMMITMENTS_INDEXING_PREFIX: &'static [u8] = b"incentivized";
 
+parameter_types! {
+	pub const CommitInterval: BlockNumber = 5;
+	pub const MaxMessagesPerCommit: usize = 20;
+}
+
 impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
@@ -391,10 +396,7 @@ impl basic_channel_outbound::Config for Runtime {
 	type Event = Event;
 	const INDEXING_PREFIX: &'static [u8] = BASIC_COMMITMENTS_INDEXING_PREFIX;
 	type Hashing = Keccak256;
-}
-
-parameter_types! {
-	pub const CommitInterval: BlockNumber = 5;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 }
 
 impl incentivized_channel_inbound::Config for Runtime {
@@ -410,6 +412,7 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type Event = Event;
 	const INDEXING_PREFIX: &'static [u8] = INCENTIVIZED_COMMITMENTS_INDEXING_PREFIX;
  	type Hashing = Keccak256;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 }
 
 use sp_std::marker::PhantomData;

@@ -1,8 +1,9 @@
 use codec::{Encode, Decode};
 use ethabi::{self, Token};
 use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage,
+	decl_error, decl_event, decl_module, decl_storage, ensure,
 	weights::Weight,
+	traits::Get,
 	dispatch::DispatchResult,
 };
 use frame_system::{self as system};
@@ -36,6 +37,9 @@ pub trait Config: system::Config {
 	const INDEXING_PREFIX: &'static [u8];
 
 	type Hashing: Hash<Output = H256>;
+
+	/// Max number of messages that can be queued and committed in one go
+	type MaxMessagesPerCommit: Get<usize>;
 }
 
 decl_storage! {
@@ -58,6 +62,8 @@ decl_event! {
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
+		/// No more messages can be queued for the channel during this commit cycle.
+		QueueSizeLimitReached,
 	}
 }
 
@@ -98,6 +104,11 @@ impl<T: Config> Module<T> {
 	// TODO (Security): Limit number of messages per commitment
 	//   https://github.com/Snowfork/polkadot-ethereum/issues/226
 	fn push_message(target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
+		ensure!(
+			MessageQueue::decode_len().unwrap_or(0) < T::MaxMessagesPerCommit::get(),
+			Error::<T>::QueueSizeLimitReached,
+		);
+
 		let mut mq = MessageQueue::get();
 		mq.push(Message {
 				target,

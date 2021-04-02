@@ -2,7 +2,7 @@ use super::*;
 
 use sp_core::{H160, H256};
 use frame_support::{
-	assert_ok,
+	assert_ok, assert_err,
 	parameter_types,
 };
 use sp_runtime::{
@@ -32,6 +32,7 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
+	pub const MaxMessagesPerCommit: usize = 2;
 }
 
 impl system::Config for Test {
@@ -63,6 +64,7 @@ impl basic_outbound_channel::Config for Test {
 	type Event = Event;
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Hashing = Keccak256;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
@@ -85,4 +87,21 @@ fn test_submit() {
 		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
 		assert_eq!(Nonces::<Test>::get(&who), 2);
 	});
+}
+
+#[test]
+fn test_add_message_exceeds_limit() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let who: AccountId = Keyring::Bob.into();
+		let max_messages = <Test as basic_outbound_channel::Config>::MaxMessagesPerCommit::get();
+		(0..max_messages).for_each(
+			|_| BasicOutboundChannel::push_message(&who, target, 0, &vec![0, 1, 2]).unwrap()
+		);
+
+		assert_err!(
+			BasicOutboundChannel::push_message(&who, target, 0, &vec![0, 1, 2]),
+			basic_outbound_channel::Error::<Test>::QueueSizeLimitReached,
+		);
+	})
 }

@@ -1,7 +1,7 @@
 use super::*;
 
 use frame_support::{
-	assert_ok,
+	assert_ok, assert_err,
 	parameter_types,
 };
 use sp_core::{H160, H256};
@@ -36,6 +36,7 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
+	pub const MaxMessagesPerCommit: usize = 2;
 }
 
 impl system::Config for Test {
@@ -68,6 +69,7 @@ impl incentivized_outbound_channel::Config for Test {
 	type Event = Event;
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Hashing = Keccak256;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
@@ -148,4 +150,20 @@ fn test_add_message() {
 			]
 		);
 	});
+}
+
+#[test]
+fn test_add_message_exceeds_limit() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let max_messages = <Test as incentivized_outbound_channel::Config>::MaxMessagesPerCommit::get();
+		(0..max_messages).for_each(
+			|_| IncentivizedOutboundChannel::push_message(target, 0, &vec![0, 1, 2]).unwrap()
+		);
+
+		assert_err!(
+			IncentivizedOutboundChannel::push_message(target, 0, &vec![0, 1, 2]),
+			incentivized_outbound_channel::Error::<Test>::QueueSizeLimitReached,
+		);
+	})
 }
