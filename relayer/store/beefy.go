@@ -42,7 +42,7 @@ func NewBeefy(validatorAddresses []common.Address, signedCommitment SignedCommit
 }
 
 func (b *Beefy) BuildNewSignatureCommitmentMessage(valAddrIndex int) (NewSignatureCommitmentMessage, error) {
-	sig0ProofContents, err := b.GenerateMmrProofOffchain(valAddrIndex)
+	sig0ProofContents, err := b.GenerateMerkleProofOffchain(valAddrIndex)
 	if err != nil {
 		return NewSignatureCommitmentMessage{}, err
 	}
@@ -67,7 +67,7 @@ func (b *Beefy) BuildNewSignatureCommitmentMessage(valAddrIndex int) (NewSignatu
 	return msg, nil
 }
 
-func (b *Beefy) GenerateMmrProofOffchain(valAddrIndex int) ([][32]byte, error) {
+func (b *Beefy) GenerateMerkleProofOffchain(valAddrIndex int) ([][32]byte, error) {
 	// Hash validator addresses for leaf input data
 	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
 	for i, valAddr := range b.ValidatorAddresses {
@@ -85,7 +85,7 @@ func (b *Beefy) GenerateMmrProofOffchain(valAddrIndex int) ([][32]byte, error) {
 		return [][32]byte{}, err
 	}
 
-	// Generate MMR proof for validator at index valAddrIndex
+	// Generate Merkle Proof for validator at index valAddrIndex
 	sigProof, err := beefyMerkleTree.GenerateProof(beefyTreeData[valAddrIndex])
 	if err != nil {
 		return [][32]byte{}, err
