@@ -280,8 +280,7 @@ func LoadConfig() (*Config, error) {
 	}
 	config.Eth.PrivateKey = strings.TrimPrefix(value, "0x")
 	// TODO: auto populate contract addresses
-	config.Eth.Contracts.PolkadotRelayChainBridge = "0x8cF6147918A5CBb672703F879f385036f8793a24"
-	config.Eth.Contracts.ValidatorRegistry = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305"
+	config.Eth.PolkadotRelayChainBridge = "0x8cF6147918A5CBb672703F879f385036f8793a24"
 	// TODO: query from 'BLOCK_WAIT_PERIOD' on RelayBridgeLightClient contract
 	config.Eth.BeefyBlockDelay = 5
 

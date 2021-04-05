@@ -219,7 +219,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, item *store.B
 	}
 
 	options := bind.TransactOpts{
-		From:     wr.conn.GetKeyPair().CommonAddress(),
+		From:     wr.conn.kp.CommonAddress(),
 		Signer:   wr.signerFn,
 		Context:  ctx,
 		GasLimit: 5000000,
@@ -273,7 +273,7 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, item *st
 	}
 
 	options := bind.TransactOpts{
-		From:     wr.conn.GetKeyPair().CommonAddress(),
+		From:     wr.conn.kp.CommonAddress(),
 		Signer:   wr.signerFn,
 		Context:  ctx,
 		GasLimit: 500000,

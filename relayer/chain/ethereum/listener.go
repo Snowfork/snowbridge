@@ -145,18 +145,18 @@ func (li *Listener) pollEventsAndHeaders(
 
 			// Query PolkadotRelayChainBridge contract's InitialVerificationSuccessful events
 			blockNumber := gethheader.Number.Uint64()
-			var events []*polkadotrelaychainbridge.ContractInitialVerificationSuccessful
+			var relayChainBridgeEvents []*polkadotrelaychainbridge.ContractInitialVerificationSuccessful
 
 			contractEvents, err := li.queryLightClientEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
 				li.log.WithError(err).Error("Failure fetching event logs")
 			}
-			events = append(events, contractEvents...)
+			relayChainBridgeEvents = append(relayChainBridgeEvents, contractEvents...)
 
-			if len(events) > 0 {
-				li.log.Info(fmt.Sprintf("Found %d PolkadotRelayChainBridge contract events on block %d", len(events), blockNumber))
+			if len(relayChainBridgeEvents) > 0 {
+				li.log.Info(fmt.Sprintf("Found %d PolkadotRelayChainBridge contract events on block %d", len(relayChainBridgeEvents), blockNumber))
 			}
-			li.processLightClientEvents(ctx, events)
+			li.processLightClientEvents(ctx, relayChainBridgeEvents)
 
 			// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
 			items := li.db.GetItemsByStatus(store.InitialVerificationTxConfirmed)
@@ -169,7 +169,7 @@ func (li *Listener) pollEventsAndHeaders(
 
 					// Fetch intended completion block's hash
 					blockHash := gethheader.Hash()
-					if item.CompleteOnBlock > blockNumber {
+					if item.CompleteOnBlock < blockNumber {
 						block, err := li.conn.client.BlockByNumber(ctx, big.NewInt(int64(item.CompleteOnBlock)))
 						if err != nil {
 							li.log.WithError(err).Error("Failure fetching inclusion block")
