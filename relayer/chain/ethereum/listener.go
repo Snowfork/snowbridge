@@ -19,7 +19,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/polkadotrelaychainbridge"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/validatorregistry"
 	"github.com/snowfork/polkadot-ethereum/relayer/store"
 )
 
@@ -32,7 +31,6 @@ type Listener struct {
 	db                       *store.Database
 	contracts                []*outbound.Contract
 	polkadotRelayChainBridge *polkadotrelaychainbridge.Contract
-	validatorRegistry        *validatorregistry.Contract
 	messages                 chan<- []chain.Message
 	beefyMessages            chan<- store.DatabaseCmd
 	headers                  chan<- chain.Header
@@ -75,17 +73,11 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	}
 	li.contracts = append(li.contracts, contract)
 
-	polkadotRelayChainBridgeContract, err := polkadotrelaychainbridge.NewContract(common.HexToAddress(li.config.Contracts.PolkadotRelayChainBridge), li.conn.client)
+	polkadotRelayChainBridgeContract, err := polkadotrelaychainbridge.NewContract(common.HexToAddress(li.config.PolkadotRelayChainBridge), li.conn.client)
 	if err != nil {
 		return err
 	}
 	li.polkadotRelayChainBridge = polkadotRelayChainBridgeContract
-
-	validatorRegistryContract, err := validatorregistry.NewContract(common.HexToAddress(li.config.Contracts.ValidatorRegistry), li.conn.client)
-	if err != nil {
-		return err
-	}
-	li.validatorRegistry = validatorRegistryContract
 
 	eg.Go(func() error {
 		return li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)

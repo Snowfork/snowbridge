@@ -19,14 +19,12 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/polkadotrelaychainbridge"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/validatorregistry"
 	"github.com/snowfork/polkadot-ethereum/relayer/store"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 const (
 	PolkadotRelayChainBridge = "polkadot_relay_chain_bridge"
-	ValidatorRegistry        = "validator_registry"
 )
 
 type Writer struct {
@@ -35,7 +33,6 @@ type Writer struct {
 	db                       *store.Database
 	contracts                map[substrate.ChannelID]*inbound.Contract
 	polkadotRelayChainBridge *polkadotrelaychainbridge.Contract
-	validatorRegistry        *validatorregistry.Contract
 	messages                 <-chan []chain.Message
 	beefyMessages            chan<- store.DatabaseCmd
 	log                      *logrus.Entry
@@ -71,17 +68,11 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	wr.contracts[id] = contract
 
-	polkadotRelayChainBridgeContract, err := polkadotrelaychainbridge.NewContract(common.HexToAddress(wr.config.Contracts.PolkadotRelayChainBridge), wr.conn.client)
+	polkadotRelayChainBridgeContract, err := polkadotrelaychainbridge.NewContract(common.HexToAddress(wr.config.PolkadotRelayChainBridge), wr.conn.client)
 	if err != nil {
 		return err
 	}
 	wr.polkadotRelayChainBridge = polkadotRelayChainBridgeContract
-
-	validatorRegistryContract, err := validatorregistry.NewContract(common.HexToAddress(wr.config.Contracts.ValidatorRegistry), wr.conn.client)
-	if err != nil {
-		return err
-	}
-	wr.validatorRegistry = validatorRegistryContract
 
 	eg.Go(func() error {
 		return wr.writeMessagesLoop(ctx)
