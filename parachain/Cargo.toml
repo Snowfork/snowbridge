@@ -73,7 +73,7 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branc
 
 artemis-core = { path = "primitives/core" }
 snowbridge-runtime = { path = "runtime/snowbridge", optional = true }
-rococo-runtime = { path = "runtime/rococo", optional = true }
+rococo-runtime = { path = "runtime/rococo", package = "artemis-rococo-runtime", optional = true }
 local-runtime = { path = "runtime/local", optional = true }
 
 # These dependencies are used for runtime benchmarking
