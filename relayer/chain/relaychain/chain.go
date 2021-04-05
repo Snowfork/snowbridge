@@ -18,11 +18,10 @@ import (
 )
 
 type Chain struct {
-	config    *Config
-	listener  *Listener
-	conn      *Connection
-	relayconn *Connection
-	log       *logrus.Entry
+	config   *Config
+	listener *Listener
+	conn     *Connection
+	log      *logrus.Entry
 }
 
 const Name = "Relaychain"
