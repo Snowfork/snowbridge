@@ -1,40 +1,42 @@
-use crate::mock::{new_tester, Event, System, AccountId, Origin, ERC721App};
+use crate::mock::{self, new_tester, System, AccountId, Origin, ERC721App, NftApp};
 use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
-use artemis_core::{ChannelId, AssetId, MultiAsset};
 
-//use crate::RawEvent;
+use artemis_ethereum::U256;
+use artemis_core::nft::Nft;
 
-fn last_event() -> Event {
+use crate::Event;
+
+fn last_event() -> mock::Event {
 	System::events().pop().expect("Event expected").event
 }
 
-// #[test]
-// fn mints_after_handling_ethereum_event() {
-// 	new_tester().execute_with(|| {
-// 		let peer_contract = H160::repeat_byte(1);
-// 		let token = H160::repeat_byte(2);
-// 		let sender = H160::repeat_byte(3);
-// 		let recipient: AccountId = Keyring::Bob.into();
-// 		let amount = 10;
-// 		assert_ok!(
-// 			ERC20App::mint(
-// 				artemis_dispatch::Origin(peer_contract).into(),
-// 				token,
-// 				sender,
-// 				recipient.clone(),
-// 				amount.into()
-// 			)
-// 		);
-// 		assert_eq!(Assets::balance(AssetId::Token(token), &recipient), amount.into());
+#[test]
+fn mints_after_handling_ethereum_event() {
+	new_tester().execute_with(|| {
+		let peer_contract = H160::repeat_byte(1);
+		let token = H160::repeat_byte(2);
+		let token_id = U256::from(1);
+		let sender = H160::repeat_byte(3);
+		let recipient: AccountId = Keyring::Bob.into();
 
-// 		assert_eq!(
-// 			Event::erc20_app(RawEvent::Minted(token, sender, recipient, amount.into())),
-// 			last_event()
-// 		);
-// 	});
-// }
+		assert_ok!(ERC721App::mint(
+			artemis_dispatch::Origin(peer_contract).into(),
+			sender,
+			recipient.clone(),
+			token,
+			token_id,
+			"http uri".into(),
+		));
+		assert!(NftApp::is_owner(&recipient, 0));
+
+		assert_eq!(
+			mock::Event::erc721_app(Event::Minted(token, sender, recipient)),
+			last_event()
+		);
+	});
+}
 
 // #[test]
 // fn burn_should_emit_bridge_event() {

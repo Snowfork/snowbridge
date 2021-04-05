@@ -272,6 +272,7 @@ dependencies = [
  "parity-scale-codec",
  "rustc-hex",
  "serde",
+ "serde_derive",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -348,7 +349,6 @@ dependencies = [
 name = "artemis-erc721-app"
 version = "0.0.1"
 dependencies = [
- "artemis-assets",
  "artemis-core",
  "artemis-dispatch",
  "artemis-ethereum",

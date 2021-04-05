@@ -14,7 +14,7 @@ use sp_runtime::{
 	}, testing::Header, MultiSignature,
 };
 
-use artemis_core::{ChannelId, OutboundRouter};
+use artemis_core::{ChannelId, OutboundRouter, nft::ERC721TokenData};
 
 use crate as erc721_app;
 
@@ -29,6 +29,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Module, Call, Storage, Event<T>},
 		Dispatch: artemis_dispatch::{Module, Call, Storage, Origin, Event<T>},
+		NftApp: artemis_nft::{Module, Call, Config<T>, Storage},
 		ERC721App: erc721_app::{Module, Call, Config<T>, Storage, Event<T>},
 	}
 );
@@ -66,10 +67,11 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ();
 }
 
-// impl artemis_assets::Config for Test {
-// 	type Event = Event;
-// 	type WeightInfo = ();
-// }
+
+impl artemis_nft::Config for Test {
+	type TokenId = u64;
+	type TokenData = ERC721TokenData;
+}
 
 impl artemis_dispatch::Config for Test {
 	type Origin = Origin;
@@ -90,16 +92,13 @@ impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
 	}
 }
 
-// parameter_types! {
-// 	pub const EthAssetId: AssetId = AssetId::ETH;
-// }
-
 impl erc721_app::Config for Test {
 	type Event = Event;
-	//type Assets = Assets;
 	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
 	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
 	type WeightInfo = ();
+	type TokenId = <Test as artemis_nft::Config>::TokenId;
+	type Nft = NftApp;
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {

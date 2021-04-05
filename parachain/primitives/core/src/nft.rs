@@ -1,6 +1,11 @@
 use codec::{Decode, Encode};
+use serde::{Serialize, Deserialize};
 use frame_support::dispatch::{DispatchError, DispatchResult};
 use sp_runtime::RuntimeDebug;
+use sp_core::H160;
+use sp_runtime::sp_std::prelude::Vec;
+
+use artemis_ethereum::U256;
 
 /// Token info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
@@ -11,6 +16,14 @@ pub struct TokenInfo<AccountId, Data> {
 	pub metadata: Vec<u8>,
 	/// Token Properties
 	pub data: Data,
+}
+
+#[derive(Encode, Decode, Serialize, Deserialize, Clone, Eq, PartialEq, RuntimeDebug)]
+pub struct ERC721TokenData {
+	/// The ERC721-based app in Ethereum
+	pub token: H160,
+	/// The token id according to ERC721
+	pub token_id: U256,
 }
 
 pub trait Nft<AccountId, TokenId, TokenData>

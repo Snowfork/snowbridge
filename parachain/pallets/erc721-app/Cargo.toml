@@ -25,10 +25,9 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 
 artemis-core = { path = "../../primitives/core", default-features = false }
 artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
-artemis-nft = { path = "../nft", default-features = false }
 
 [dev-dependencies]
-artemis-assets = { path = "../../pallets/assets" }
+artemis-nft = { path = "../../pallets/nft" }
 artemis-dispatch = { path = "../../pallets/dispatch" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
