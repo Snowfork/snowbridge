@@ -205,11 +205,6 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, item *store.B
 		return fmt.Errorf("Unknown contract")
 	}
 
-	blockNumber, err := wr.conn.client.BlockNumber(ctx)
-	if err != nil {
-		return err
-	}
-
 	options := bind.TransactOpts{
 		From:     wr.conn.kp.CommonAddress(),
 		Signer:   wr.signerFn,
@@ -226,8 +221,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, item *store.B
 	}
 
 	wr.log.WithFields(logrus.Fields{
-		"txHash":      tx.Hash().Hex(),
-		"blockNumber": blockNumber,
+		"txHash": tx.Hash().Hex(),
 	}).Info("New Signature Commitment transaction submitted")
 
 	// Update item's status in database
