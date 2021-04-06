@@ -200,14 +200,6 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, item *store.B
 		return err
 	}
 
-	// inSet, err := wr.CheckValidatorInSet(ctx, msg.ValidatorPublicKey, msg.ValidatorPosition, msg.ValidatorPublicKeyMerkleProof)
-	// if err != nil {
-	// 	return err
-	// }
-	// if !inSet {
-	// 	return fmt.Errorf("validator address merkle proof failed verification")
-	// }
-
 	contract := wr.polkadotRelayChainBridge
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")

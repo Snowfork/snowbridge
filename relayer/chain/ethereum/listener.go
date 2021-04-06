@@ -34,19 +34,21 @@ type Listener struct {
 	messages                 chan<- []chain.Message
 	beefyMessages            chan<- store.DatabaseCmd
 	headers                  chan<- chain.Header
+	blockWaitPeriod          uint64
 	log                      *logrus.Entry
 }
 
 func NewListener(config *Config, conn *Connection, db *store.Database, messages chan<- []chain.Message, beefyMessages chan<- store.DatabaseCmd, headers chan<- chain.Header, contracts []*outbound.Contract, log *logrus.Entry) (*Listener, error) {
 	return &Listener{
-		config:        config,
-		conn:          conn,
-		db:            db,
-		contracts:     contracts,
-		messages:      messages,
-		beefyMessages: beefyMessages,
-		headers:       headers,
-		log:           log,
+		config:          config,
+		conn:            conn,
+		db:              db,
+		contracts:       contracts,
+		messages:        messages,
+		beefyMessages:   beefyMessages,
+		headers:         headers,
+		blockWaitPeriod: 0,
+		log:             log,
 	}, nil
 }
 
@@ -61,23 +63,33 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 		return err
 	}
 
+	// Set up basic outbound channel contract
 	contract, err := outbound.NewContract(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.client)
 	if err != nil {
 		return err
 	}
 	li.contracts = append(li.contracts, contract)
 
+	// Set up incentivized outbound channel contract
 	contract, err = outbound.NewContract(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.client)
 	if err != nil {
 		return err
 	}
 	li.contracts = append(li.contracts, contract)
 
+	// Set up relay chain bridge contract
 	polkadotRelayChainBridgeContract, err := polkadotrelaychainbridge.NewContract(common.HexToAddress(li.config.PolkadotRelayChainBridge), li.conn.client)
 	if err != nil {
 		return err
 	}
 	li.polkadotRelayChainBridge = polkadotRelayChainBridgeContract
+
+	// Fetch BLOCK_WAIT_PERIOD from relay chain bridge contract
+	blockWaitPeriod, err := li.polkadotRelayChainBridge.ContractCaller.BLOCKWAITPERIOD(nil)
+	if err != nil {
+		return err
+	}
+	li.blockWaitPeriod = blockWaitPeriod.Uint64()
 
 	eg.Go(func() error {
 		return li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
@@ -316,7 +328,7 @@ func (li *Listener) processLightClientEvents(ctx context.Context, events []*polk
 		li.log.Info("3: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
 		instructions := map[string]interface{}{
 			"status":            store.InitialVerificationTxConfirmed,
-			"complete_on_block": event.Raw.BlockNumber + li.config.BeefyBlockDelay,
+			"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
 		}
 		updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
 		li.beefyMessages <- updateCmd

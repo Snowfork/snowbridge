@@ -6,7 +6,6 @@ type Config struct {
 	DescendantsUntilFinal    byte           `mapstructure:"descendants-until-final"`
 	Channels                 ChannelsConfig `mapstructure:"channels"`
 	PolkadotRelayChainBridge string         `mapstructure:"polkadotrelaychainbridge"`
-	BeefyBlockDelay          uint64         `mapstructure:"beefy_block_delay"`
 }
 
 type ChannelsConfig struct {

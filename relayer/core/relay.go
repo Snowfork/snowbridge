@@ -270,8 +270,6 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("environment variable not set: ARTEMIS_ETHEREUM_KEY")
 	}
 	config.Eth.PrivateKey = strings.TrimPrefix(value, "0x")
-	// TODO: query from 'BLOCK_WAIT_PERIOD' on RelayBridgeLightClient contract
-	config.Eth.BeefyBlockDelay = 5
 
 	// Parachain configuration
 	value, ok = os.LookupEnv("ARTEMIS_PARACHAIN_KEY")
