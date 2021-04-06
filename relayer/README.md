@@ -92,7 +92,7 @@ endpoint = "ws://127.0.0.1:9944/"
 
 [database]
 dialect = "sqlite3"
-db_path = "tmp.db"
+dbpath = "tmp.db"
 ```
 
 NOTE: For development and testing, we use our E2E test stack described [here](../test/README.md). It automatically generates a suitable configuration for testing.

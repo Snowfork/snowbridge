@@ -161,7 +161,7 @@ func (li *Listener) pollEventsAndHeaders(
 			// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
 			items := li.db.GetItemsByStatus(store.InitialVerificationTxConfirmed)
 			if len(items) > 0 {
-				li.log.Info(fmt.Sprintf("Found %d InitialVerificationTxConfirmed items", len(items)))
+				li.log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(items)))
 			}
 			for _, item := range items {
 				if item.CompleteOnBlock <= blockNumber {

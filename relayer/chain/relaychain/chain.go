@@ -12,7 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
 	"github.com/snowfork/polkadot-ethereum/relayer/store"
 )
@@ -67,19 +66,6 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- c
 		return err
 	}
 
-	// The Ethereum chain needs init params from Substrate
-	// to complete startup.
-	ethInitHeaderID, err := ch.queryEthereumInitParams()
-	if err != nil {
-		return err
-	}
-	ch.log.WithFields(logrus.Fields{
-		"blockNumber": ethInitHeaderID.Number,
-		"blockHash":   ethInitHeaderID.Hash.Hex(),
-	}).Info("Retrieved init params for Ethereum from Substrate")
-	ethInit <- ethInitHeaderID
-	close(ethInit)
-
 	if ch.listener != nil {
 		err = ch.listener.Start(ctx, eg)
 		if err != nil {
@@ -98,22 +84,6 @@ func (ch *Chain) Stop() {
 
 func (ch *Chain) Name() string {
 	return Name
-}
-
-func (ch *Chain) queryEthereumInitParams() (*ethereum.HeaderID, error) {
-	storageKey, err := types.CreateStorageKey(&ch.conn.metadata, "VerifierLightclient", "FinalizedBlock", nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var headerID ethereum.HeaderID
-	_, err = ch.conn.api.RPC.State.GetStorageLatest(storageKey, &headerID)
-	if err != nil {
-		return nil, err
-	}
-
-	nextHeaderID := ethereum.HeaderID{Number: types.NewU64(uint64(headerID.Number) + 1)}
-	return &nextHeaderID, nil
 }
 
 func (ch *Chain) QueryCurrentEpoch() error {

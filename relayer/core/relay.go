@@ -152,7 +152,6 @@ func (re *Relay) Start() {
 		case sig := <-notify:
 			log.WithField("signal", sig.String()).Info("Received signal")
 			cancel()
-
 		}
 
 		return nil
