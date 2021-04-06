@@ -236,7 +236,7 @@ func (re *Relay) Start() {
 		re.ethChain.Stop()
 		re.paraChain.Stop()
 		re.relayChain.Stop()
-		// re.database.Stop() // TODO: graceful shutdown
+		re.database.Stop()
 
 		relayProc, err := os.FindProcess(os.Getpid())
 		if err != nil {

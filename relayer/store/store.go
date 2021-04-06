@@ -145,6 +145,11 @@ func (d *Database) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
+// Stop is used to handle shut down logic
+func (d *Database) Stop() {
+	// Should automatically close. The database.close() method was removed in gorm 1.20.
+}
+
 func (d *Database) writeLoop(ctx context.Context) error {
 	var mutex = &sync.Mutex{}
 
