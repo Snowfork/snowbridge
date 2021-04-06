@@ -8,6 +8,7 @@ use snowbridge_runtime::{
 	ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
 	CommitmentsConfig,
 	ParachainInfoConfig,
+	IncentivizedOutboundChannelConfig,
 	WASM_BINARY, Signature,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -117,6 +118,9 @@ fn testnet_genesis(
 		}),
 		incentivized_channel_inbound: Some(IncentivizedInboundChannelConfig {
 			source_channel: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
+		}),
+		incentivized_channel_outbound: Some(IncentivizedOutboundChannelConfig {
+			interval: 1,
 		}),
 		assets: Some(AssetsConfig {
 			balances: vec![

@@ -398,8 +398,10 @@ impl incentivized_channel_inbound::Config for Runtime {
 }
 
 impl incentivized_channel_outbound::Config for Runtime {
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
-	type MessageCommitment = commitments::Module<Runtime>;
+	type Hashing = Keccak256;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 }
 
 use sp_std::marker::PhantomData;
@@ -509,7 +511,7 @@ construct_runtime!(
 		BasicInboundChannel: basic_channel_inbound::{Module, Call, Config, Storage, Event} = 7,
 		BasicOutboundChannel: basic_channel_outbound::{Module, Storage, Event} = 8,
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Module, Call, Config, Storage, Event} = 9,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Module, Storage, Event} = 10,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Module, Config<T>, Storage, Event} = 10,
 		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin} = 11,
 		Commitments: commitments::{Module, Call, Config<T>, Storage, Event} = 15,
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config} = 16,

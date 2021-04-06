@@ -40,7 +40,7 @@ class SubClient {
   }
 
   async burnERC20(account, assetId, recipient, amount) {
-    const txHash = await this.api.tx.erc20.burn(0, assetId, recipient, amount).signAndSend(account);
+    const txHash = await this.api.tx.erc20.burn(1, assetId, recipient, amount).signAndSend(account);
   }
 
   async lockDOT(account, recipient, amount) {

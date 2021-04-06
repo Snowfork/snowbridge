@@ -6,12 +6,10 @@ use frame_support::{
 	parameter_types,
 };
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
+	traits::{BlakeTwo256, Keccak256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
 };
 use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
-
-use artemis_core::MessageCommitment;
 
 use crate::outbound as incentivized_outbound_channel;
 
@@ -61,24 +59,28 @@ impl system::Config for Test {
 	type SS58Prefix = ();
 }
 
-// Mock Commitments
-pub struct MockMessageCommitment;
-
-impl MessageCommitment for MockMessageCommitment {
-	fn add(_: ChannelId, _: H160, _: u64, _: &[u8]) -> DispatchResult {
-		Ok(())
-	}
+parameter_types! {
+	pub const CommitInterval: u64 = 5;
+	pub const MaxMessagesPerCommit: usize = 5;
 }
 
 impl incentivized_outbound_channel::Config for Test {
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
-	type MessageCommitment = MockMessageCommitment;
+	type Hashing = Keccak256;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+	let config: incentivized_outbound_channel::GenesisConfig<Test> = incentivized_outbound_channel::GenesisConfig {
+		interval: 1u64
+	};
+	config.assimilate_storage(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
+
 	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
