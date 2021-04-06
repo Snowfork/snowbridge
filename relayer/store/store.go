@@ -24,7 +24,7 @@ const (
 	CompleteVerificationTxSent     Status = iota // 4
 )
 
-type BeefyItem struct {
+type BeefyRelayInfo struct {
 	gorm.Model
 	ValidatorAddresses         []byte
 	SignedCommitment           []byte
@@ -35,10 +35,10 @@ type BeefyItem struct {
 	CompleteVerificationTxHash common.Hash
 }
 
-func NewBeefyItem(validatorAddresses, signedCommitment []byte, status Status,
+func NewBeefyRelayInfo(validatorAddresses, signedCommitment []byte, status Status,
 	initialVerificationTxHash common.Hash, completeOnBlock uint64, randomSeed,
-	completeVerificationTxHash common.Hash) BeefyItem {
-	return BeefyItem{
+	completeVerificationTxHash common.Hash) BeefyRelayInfo {
+	return BeefyRelayInfo{
 		ValidatorAddresses:         validatorAddresses,
 		SignedCommitment:           signedCommitment,
 		Status:                     status,
@@ -49,25 +49,25 @@ func NewBeefyItem(validatorAddresses, signedCommitment []byte, status Status,
 	}
 }
 
-func (b *BeefyItem) ToBeefy() (Beefy, error) {
+func (b *BeefyRelayInfo) ToBeefyJustification() (BeefyJustification, error) {
 	var validatorAddresses []common.Address
 	if err := json.Unmarshal(b.ValidatorAddresses, &validatorAddresses); err != nil {
-		return Beefy{}, err
+		return BeefyJustification{}, err
 	}
 
 	var signedCommitment SignedCommitment
 	if err := json.Unmarshal(b.SignedCommitment, &signedCommitment); err != nil {
-		return Beefy{}, err
+		return BeefyJustification{}, err
 	}
 
-	return Beefy{
+	return BeefyJustification{
 		ValidatorAddresses: validatorAddresses,
 		SignedCommitment:   signedCommitment,
 	}, nil
 }
 
-func (BeefyItem) TableName() string {
-	return "beefy_item"
+func (BeefyRelayInfo) TableName() string {
+	return "beefy_relay_info"
 }
 
 type CmdType int
@@ -78,14 +78,14 @@ const (
 )
 
 type DatabaseCmd struct {
-	Item         *BeefyItem
+	Info         *BeefyRelayInfo
 	Type         CmdType
 	Instructions map[string]interface{}
 }
 
-func NewDatabaseCmd(item *BeefyItem, cmdType CmdType, instructions map[string]interface{}) DatabaseCmd {
+func NewDatabaseCmd(info *BeefyRelayInfo, cmdType CmdType, instructions map[string]interface{}) DatabaseCmd {
 	return DatabaseCmd{
-		Item:         item,
+		Info:         info,
 		Type:         cmdType,
 		Instructions: instructions,
 	}
@@ -125,10 +125,10 @@ func PrepareDatabase(config *Config) (*gorm.DB, error) {
 }
 
 func InitTables(db *gorm.DB) {
-	var beefyItem BeefyItem
-	if !db.HasTable(&beefyItem) {
-		db.CreateTable(&beefyItem)
-		db.Model(&beefyItem)
+	var beefyRelayInfo BeefyRelayInfo
+	if !db.HasTable(&beefyRelayInfo) {
+		db.CreateTable(&beefyRelayInfo)
+		db.Model(&beefyRelayInfo)
 	}
 }
 
@@ -167,7 +167,7 @@ func (d *Database) writeLoop(ctx context.Context) error {
 					d.log.Error(err)
 				}
 
-				if err := tx.Create(&cmd.Item).Error; err != nil {
+				if err := tx.Create(&cmd.Info).Error; err != nil {
 					tx.Rollback()
 					d.log.Error(err)
 				}
@@ -177,21 +177,21 @@ func (d *Database) writeLoop(ctx context.Context) error {
 				}
 			case Update:
 				d.log.Info("Updating item in database...")
-				d.DB.Model(&cmd.Item).Updates(cmd.Instructions)
+				d.DB.Model(&cmd.Info).Updates(cmd.Instructions)
 			}
 			mutex.Unlock()
 		}
 	}
 }
 
-func (d *Database) GetItemsByStatus(status Status) []*BeefyItem {
-	items := make([]*BeefyItem, 0)
+func (d *Database) GetItemsByStatus(status Status) []*BeefyRelayInfo {
+	items := make([]*BeefyRelayInfo, 0)
 	d.DB.Where("status = ?", status).Find(&items)
 	return items
 }
 
-func (d *Database) GetItemByInitialVerificationTxHash(txHash common.Hash) *BeefyItem {
-	var item BeefyItem
+func (d *Database) GetItemByInitialVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
+	var item BeefyRelayInfo
 	d.DB.Take(&item, "initial_verification_tx_hash = ?", txHash)
 	return &item
 }

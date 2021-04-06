@@ -189,13 +189,13 @@ func (wr *Writer) WriteChannel(ctx context.Context, msg *chain.SubstrateOutbound
 	return nil
 }
 
-func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, item *store.BeefyItem, valIndex int) error {
-	beefy, err := item.ToBeefy()
+func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, info *store.BeefyRelayInfo, valIndex int) error {
+	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
-		wr.log.WithError(err).Error("Error converting database item to Beefy")
+		wr.log.WithError(err).Error("Error converting BeefyRelayInfo to BeefyJustification")
 	}
 
-	msg, err := beefy.BuildNewSignatureCommitmentMessage(valIndex)
+	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(valIndex)
 	if err != nil {
 		return err
 	}
@@ -230,25 +230,25 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, item *store.B
 		"status":                       store.InitialVerificationTxSent,
 		"initial_verification_tx_hash": tx.Hash(),
 	}
-	updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
+	updateCmd := store.NewDatabaseCmd(info, store.Update, instructions)
 	wr.beefyMessages <- updateCmd
 
 	return nil
 }
 
 // WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the PolkadotRelayChainBridge contract
-func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, item *store.BeefyItem) error {
-	beefy, err := item.ToBeefy()
+func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, info *store.BeefyRelayInfo) error {
+	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
-		wr.log.WithError(err).Error("Error converting database item to Beefy")
+		wr.log.WithError(err).Error("Error converting BeefyRelayInfo to BeefyJustification")
 	}
 
 	// Select validator index based on random seed
-	input := item.RandomSeed.Big()
-	scaleFactor := big.NewInt(int64(len(beefy.ValidatorAddresses) - 1))
+	input := info.RandomSeed.Big()
+	scaleFactor := big.NewInt(int64(len(beefyJustification.ValidatorAddresses) - 1))
 	randIndex := input.Mod(input, scaleFactor)
 
-	msg, err := beefy.BuildCompleteSignatureCommitmentMessage(randIndex.Int64())
+	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage(randIndex.Int64())
 	if err != nil {
 		return err
 	}
@@ -283,7 +283,7 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, item *st
 		"status":                        store.CompleteVerificationTxSent,
 		"complete_verification_tx_hash": tx.Hash(),
 	}
-	updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
+	updateCmd := store.NewDatabaseCmd(info, store.Update, instructions)
 	wr.beefyMessages <- updateCmd
 
 	// TODO: delete from database after confirming

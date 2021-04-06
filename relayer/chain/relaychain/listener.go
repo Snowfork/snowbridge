@@ -98,14 +98,14 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 				continue
 			}
 
-			item := store.BeefyItem{
+			info := store.BeefyRelayInfo{
 				ValidatorAddresses: beefyAuthoritiesBytes,
 				SignedCommitment:   signedCommitmentBytes,
 				Status:             store.CommitmentWitnessed,
 			}
 
-			li.log.Info("1: Writing BEEFY item to database with status 'WitnessedCommitment'")
-			cmd := store.NewDatabaseCmd(&item, store.Create, nil)
+			li.log.Info("1: Writing BEEFY info to database with status 'WitnessedCommitment'")
+			cmd := store.NewDatabaseCmd(&info, store.Create, nil)
 			li.beefyMessages <- cmd
 		}
 	}

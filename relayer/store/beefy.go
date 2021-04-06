@@ -29,19 +29,19 @@ type CompleteSignatureCommitmentMessage struct {
 	RandomPublicKeyMerkleProofs      [][][32]byte
 }
 
-type Beefy struct {
+type BeefyJustification struct {
 	ValidatorAddresses []common.Address
 	SignedCommitment   SignedCommitment
 }
 
-func NewBeefy(validatorAddresses []common.Address, signedCommitment SignedCommitment) Beefy {
-	return Beefy{
+func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment SignedCommitment) BeefyJustification {
+	return BeefyJustification{
 		ValidatorAddresses: validatorAddresses,
 		SignedCommitment:   signedCommitment,
 	}
 }
 
-func (b *Beefy) BuildNewSignatureCommitmentMessage(valAddrIndex int) (NewSignatureCommitmentMessage, error) {
+func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int) (NewSignatureCommitmentMessage, error) {
 	sig0ProofContents, err := b.GenerateMerkleProofOffchain(valAddrIndex)
 	if err != nil {
 		return NewSignatureCommitmentMessage{}, err
@@ -67,7 +67,7 @@ func (b *Beefy) BuildNewSignatureCommitmentMessage(valAddrIndex int) (NewSignatu
 	return msg, nil
 }
 
-func (b *Beefy) GenerateMerkleProofOffchain(valAddrIndex int) ([][32]byte, error) {
+func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][32]byte, error) {
 	// Hash validator addresses for leaf input data
 	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
 	for i, valAddr := range b.ValidatorAddresses {
@@ -114,7 +114,7 @@ func (b *Beefy) GenerateMerkleProofOffchain(valAddrIndex int) ([][32]byte, error
 	return sigProofContents, nil
 }
 
-func (b *Beefy) BuildCompleteSignatureCommitmentMessage(randIndex int64) (CompleteSignatureCommitmentMessage, error) {
+func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(randIndex int64) (CompleteSignatureCommitmentMessage, error) {
 	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
 
 	validationDataID := big.NewInt(int64(b.SignedCommitment.Commitment.ValidatorSetID))

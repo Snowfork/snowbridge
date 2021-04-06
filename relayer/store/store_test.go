@@ -58,7 +58,7 @@ func TestStore(t *testing.T) {
 		panic(err)
 	}
 
-	item := loadSampleBeefyCommitmentInfo()
+	item := loadSampleBeefyRelayInfo()
 
 	// Pass create command to write loop
 	createCmd := store.NewDatabaseCmd(&item, store.Create, nil)
@@ -86,7 +86,7 @@ func TestStore(t *testing.T) {
 	assert.Equal(t, newItem.InitialVerificationTxHash, hash)
 }
 
-func loadSampleBeefyCommitmentInfo() store.BeefyItem {
+func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
 	// Sample BEEFY commitment: validator addresses
 	beefyValidatorAddresses := []common.Address{
 		common.HexToAddress("0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b"),
@@ -139,7 +139,7 @@ func loadSampleBeefyCommitmentInfo() store.BeefyItem {
 		panic(err)
 	}
 
-	return store.BeefyItem{
+	return store.BeefyRelayInfo{
 		ValidatorAddresses:        valAddrBytes,
 		SignedCommitment:          signedCommitmentBytes,
 		Status:                    store.CommitmentWitnessed,

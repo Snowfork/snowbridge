@@ -77,7 +77,6 @@ func TestWriter(t *testing.T) {
 	config.Endpoint = "ws://localhost:8545/"
 	config.PrivateKey = "4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
 	config.PolkadotRelayChainBridge = "0x8cF6147918A5CBb672703F879f385036f8793a24"
-	config.BeefyBlockDelay = 5
 
 	kpEth, err := secp256k1.NewKeypairFromString(config.PrivateKey)
 	if err != nil {
@@ -103,7 +102,7 @@ func TestWriter(t *testing.T) {
 	}
 
 	// ------------------------- Write Beefy Info to contract -------------------------
-	beefyItem := loadSampleBeefyCommitmentInfo()
+	beefyItem := loadSampleBeefyRelayInfo()
 
 	// Send NewSignatureCommitment tx
 	err = writer.WriteNewSignatureCommitment(ctx, &beefyItem, 0)
@@ -139,7 +138,7 @@ func TestWriter(t *testing.T) {
 	assert.Equal(t, receipt.Status, uint64(1)) // Successful tx status
 }
 
-func loadSampleBeefyCommitmentInfo() store.BeefyItem {
+func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
 	// Sample BEEFY commitment: validator addresses
 	beefyValidatorAddresses := []common.Address{
 		common.HexToAddress("0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b"),
@@ -192,7 +191,7 @@ func loadSampleBeefyCommitmentInfo() store.BeefyItem {
 		panic(err)
 	}
 
-	return store.BeefyItem{
+	return store.BeefyRelayInfo{
 		ValidatorAddresses:         valAddrBytes,
 		SignedCommitment:           signedCommitmentBytes,
 		Status:                     store.CommitmentWitnessed,
