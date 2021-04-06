@@ -134,7 +134,6 @@ func InitTables(db *gorm.DB) {
 
 func (d *Database) onDone(ctx context.Context) error {
 	d.log.Info("Shutting down database...")
-	// close(d.messages) TODO: properly close channels
 	return ctx.Err()
 }
 

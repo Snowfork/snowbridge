@@ -42,8 +42,9 @@ func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 func (li *Listener) onDone(ctx context.Context) error {
 	li.log.Info("Shutting down listener...")
-	// TODO: properly shut down channel
-	// close(li.messages)
+	if li.beefyMessages != nil {
+		close(li.beefyMessages)
+	}
 	return ctx.Err()
 }
 
