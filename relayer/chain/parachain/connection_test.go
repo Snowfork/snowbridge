@@ -16,7 +16,7 @@ import (
 func TestConnect(t *testing.T) {
 	log := logrus.NewEntry(logrus.New())
 
-	conn := parachain.NewConnection("ws://127.0.0.1:9944/", sr25519.Alice().AsKeyringPair(), log)
+	conn := parachain.NewConnection("ws://127.0.0.1:11144/", sr25519.Alice().AsKeyringPair(), log)
 	err := conn.Connect(context.Background())
 	if err != nil {
 		t.Fatal(err)

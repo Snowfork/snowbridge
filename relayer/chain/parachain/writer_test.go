@@ -23,7 +23,7 @@ func TestWrite(t *testing.T) {
 	logger, hook := test.NewNullLogger()
 	log := logger.WithField("chain", "Parachain")
 
-	conn := parachain.NewConnection("ws://127.0.0.1:9944/", sr25519.Alice().AsKeyringPair(), log)
+	conn := parachain.NewConnection("ws://127.0.0.1:11144/", sr25519.Alice().AsKeyringPair(), log)
 
 	messages := make(chan []chain.Message, 1)
 	headers := make(chan chain.Header, 1)
