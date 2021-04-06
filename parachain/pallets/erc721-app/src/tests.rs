@@ -4,7 +4,7 @@ use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
 
 use artemis_ethereum::U256;
-use artemis_core::nft::Nft;
+use artemis_core::{ChannelId, nft::{ERC721TokenData, Nft}};
 
 use crate::Event;
 
@@ -38,46 +38,57 @@ fn mints_after_handling_ethereum_event() {
 	});
 }
 
-// #[test]
-// fn burn_should_emit_bridge_event() {
-// 	new_tester().execute_with(|| {
-// 		let token_id = H160::repeat_byte(1);
-// 		let recipient = H160::repeat_byte(2);
-// 		let bob: AccountId = Keyring::Bob.into();
-// 		Assets::deposit(AssetId::Token(token_id), &bob, 500.into()).unwrap();
+#[test]
+fn burn_should_emit_bridge_event() {
+	new_tester().execute_with(|| {
+		let token_id = 0u64;
+		let recipient = H160::repeat_byte(2);
+		let token = H160::repeat_byte(4);
+		let bob: AccountId = Keyring::Bob.into();
+		let data = ERC721TokenData {
+			token,
+			token_id: U256::one(),
+		};
 
-// 		assert_ok!(ERC20App::burn(
-// 			Origin::signed(bob.clone()),
-// 			ChannelId::Incentivized,
-// 			token_id,
-// 			recipient.clone(),
-// 			20.into()));
+		NftApp::mint(&bob, Vec::<u8>::new(), data).unwrap();
 
-// 		assert_eq!(
-// 			Event::erc20_app(RawEvent::Burned(token_id, bob, recipient, 20.into())),
-// 			last_event()
-// 		);
-// 	});
-// }
+		assert_ok!(ERC721App::burn(
+			Origin::signed(bob.clone()),
+			ChannelId::Incentivized,
+			token_id,
+			bob.clone(),
+			recipient.clone()));
 
-// #[test]
-// fn should_not_burn_on_commitment_failure() {
-// 	new_tester().execute_with(|| {
-// 		let token_id = H160::repeat_byte(1);
-// 		let sender: AccountId = Keyring::Bob.into();
-// 		let recipient = H160::repeat_byte(9);
+		assert_eq!(
+			mock::Event::erc721_app(Event::Burned(token, bob, recipient)),
+			last_event()
+		);
+	});
+}
 
-// 		Assets::deposit(AssetId::Token(token_id), &sender, 500.into()).unwrap();
+#[test]
+fn should_not_burn_on_commitment_failure() {
+	new_tester().execute_with(|| {
+		let token_id = 0u64;
+		let sender: AccountId = Keyring::Bob.into();
+		let recipient = H160::repeat_byte(9);
+		let token = H160::repeat_byte(3);
+		let data = ERC721TokenData {
+			token,
+			token_id: U256::one(),
+		};
 
-// 		assert_noop!(
-// 			ERC20App::burn(
-// 				Origin::signed(sender.clone()),
-// 				ChannelId::Basic,
-// 				token_id,
-// 				recipient.clone(),
-// 				20.into()
-// 			),
-// 			DispatchError::Other("some error!")
-// 		);
-// 	});
-// }
+		NftApp::mint(&sender, vec![0,1,2], data).unwrap();
+
+		assert_noop!(
+			ERC721App::burn(
+				Origin::signed(sender.clone()),
+				ChannelId::Basic,
+				token_id,
+				sender.clone(),
+				recipient.clone()
+			),
+			DispatchError::Other("some error!")
+		);
+	});
+}
