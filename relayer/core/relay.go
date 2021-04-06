@@ -63,7 +63,7 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
-	beefyMessages := make(chan store.DatabaseCmd, 1)
+	beefyMessages := make(chan store.DatabaseCmd)
 	logger := log.WithField("database", "Beefy")
 	database := store.NewDatabase(db, beefyMessages, logger)
 
@@ -169,8 +169,8 @@ func (re *Relay) Start() {
 
 	// Short-lived channels that communicate initialization parameters
 	// between the two chains. The chains close them after startup.
-	subInit := make(chan chain.Init, 1)
-	ethSubInit := make(chan chain.Init, 1)
+	subInit := make(chan chain.Init)
+	ethSubInit := make(chan chain.Init)
 
 	err = re.ethChain.Start(ctx, eg, subInit, ethSubInit)
 	if err != nil {
