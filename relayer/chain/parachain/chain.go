@@ -25,7 +25,7 @@ type Chain struct {
 	log      *logrus.Entry
 }
 
-const Name = "Substrate"
+const Name = "Parachain"
 
 func NewChain(config *Config) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
