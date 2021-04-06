@@ -49,6 +49,7 @@ type Config struct {
 	Eth        ethereum.Config   `mapstructure:"ethereum"`
 	Parachain  parachain.Config  `mapstructure:"parachain"`
 	Relaychain relaychain.Config `mapstructure:"relaychain"`
+	Database   store.Config      `mapstructure:"database"`
 }
 
 func NewRelay() (*Relay, error) {
@@ -57,16 +58,7 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
-	// TODO: integrate with config
-	configJson := `
-	{"db_config": {
-			"dialect": "sqlite3",
-			"db_path": "./tmp.db"
-		}
-	}`
-	dbConfig := store.ParseConfigFromJson(configJson)
-
-	db, err := store.PrepareDatabase(dbConfig)
+	db, err := store.PrepareDatabase(&config.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -279,22 +271,22 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("environment variable not set: ARTEMIS_ETHEREUM_KEY")
 	}
 	config.Eth.PrivateKey = strings.TrimPrefix(value, "0x")
-	// TODO: auto populate contract addresses
-	config.Eth.PolkadotRelayChainBridge = "0x8cF6147918A5CBb672703F879f385036f8793a24"
 	// TODO: query from 'BLOCK_WAIT_PERIOD' on RelayBridgeLightClient contract
 	config.Eth.BeefyBlockDelay = 5
 
 	// Parachain configuration
-	value, ok = os.LookupEnv("ARTEMIS_SUBSTRATE_KEY")
+	value, ok = os.LookupEnv("ARTEMIS_PARACHAIN_KEY")
 	if !ok {
-		return nil, fmt.Errorf("environment variable not set: ARTEMIS_SUBSTRATE_KEY")
+		return nil, fmt.Errorf("environment variable not set: ARTEMIS_PARACHAIN_KEY")
 	}
 	config.Parachain.PrivateKey = value
-	config.Parachain.Endpoint = "ws://127.0.0.1:11144"
 
 	// Relaychain configuration
-	config.Relaychain.PrivateKey = "//Alice"
-	config.Relaychain.Endpoint = "ws://127.0.0.1:9944"
+	value, ok = os.LookupEnv("ARTEMIS_RELAYCHAIN_KEY")
+	if !ok {
+		return nil, fmt.Errorf("environment variable not set: ARTEMIS_RELAYCHAIN_KEY")
+	}
+	config.Relaychain.PrivateKey = value
 
 	return &config, nil
 }

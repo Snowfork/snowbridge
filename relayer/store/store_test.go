@@ -20,16 +20,12 @@ import (
 )
 
 func TestStore(t *testing.T) {
-	configJson := `
-	{"db_config": {
-			"dialect": "sqlite3",
-			"db_path": "./tmp.db"
-		}
-	}`
+	config := store.Config{
+		Dialect: "sqlite3",
+		DBPath:  "tmp.db",
+	}
 
-	config := store.ParseConfigFromJson(configJson)
-
-	db, err := store.PrepareDatabase(config)
+	db, err := store.PrepareDatabase(&config)
 	if err != nil {
 		t.Fatal(err)
 		t.Fail()
@@ -88,11 +84,6 @@ func TestStore(t *testing.T) {
 	newItem := database.GetItemByInitialVerificationTxHash(hash)
 	assert.Equal(t, newItem.Status, store.InitialVerificationTxSent)
 	assert.Equal(t, newItem.InitialVerificationTxHash, hash)
-}
-
-func getTestConfig() *store.Config {
-	config := store.ParseConfigFromFile("./test_config.json")
-	return config
 }
 
 func loadSampleBeefyCommitmentInfo() store.BeefyItem {

@@ -74,6 +74,7 @@ Example Configuration:
 [ethereum]
 endpoint = "ws://localhost:8545/"
 descendants-until-final = 3
+polkadotrelaychainbridge = "0x8cF6147918A5CBb672703F879f385036f8793a24"
 
 [ethereum.channels.basic]
 inbound = "0x992B9df075935E522EC7950F37eC8557e86f6fdb"
@@ -83,8 +84,15 @@ outbound = "0x2ffA5ecdBe006d30397c7636d3e015EEE251369F"
 inbound = "0xFc97A6197dc90bef6bbEFD672742Ed75E9768553"
 outbound = "0xEDa338E4dC46038493b885327842fD3E301CaB39"
 
-[substrate]
+[parachain]
+endpoint = "ws://127.0.0.1:11144/"
+
+[relaychain]
 endpoint = "ws://127.0.0.1:9944/"
+
+[database]
+dialect = "sqlite3"
+db_path = "tmp.db"
 ```
 
 NOTE: For development and testing, we use our E2E test stack described [here](../test/README.md). It automatically generates a suitable configuration for testing.
@@ -97,7 +105,8 @@ Example:
 
 ```bash
 export ARTEMIS_ETHEREUM_KEY="0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
-export ARTEMIS_SUBSTRATE_KEY="//Relay"
+export ARTEMIS_PARACHAIN_KEY="//Relay"
+export ARTEMIS_RELAYCHAIN_KEY="//Alice"
 ```
 
 ## Build

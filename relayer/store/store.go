@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"sync"
 
@@ -105,13 +106,15 @@ func NewDatabase(db *gorm.DB, messages <-chan DatabaseCmd, log *logrus.Entry) *D
 }
 
 func PrepareDatabase(config *Config) (*gorm.DB, error) {
-	config.DBConfig.DBPath = "tmp.db"
-	tmpDBFile, err := ioutil.TempFile("", config.DBConfig.DBPath)
+	if len(config.DBPath) == 0 {
+		return nil, fmt.Errorf("invalid database path: %s", config.DBPath)
+	}
+	tmpDBFile, err := ioutil.TempFile("", config.DBPath)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := gorm.Open(config.DBConfig.Dialect, tmpDBFile.Name())
+	db, err := gorm.Open(config.Dialect, tmpDBFile.Name())
 	if err != nil {
 		return nil, err
 	}

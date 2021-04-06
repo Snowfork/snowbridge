@@ -13,6 +13,10 @@ const channelContracts = {
     },
 }
 
+const bridgeContracts = {
+    polkadotrelaychainbridge: artifacts.require("PolkadotRelayChainBridge"),
+}
+
 const channels = {
     basic: {
         inbound: null,
@@ -24,7 +28,11 @@ const channels = {
     },
 }
 
-const dump = (tmpDir, channels) => {
+const bridge = {
+    polkadotrelaychainbridge: null
+}
+
+const dump = (tmpDir, channels, bridge) => {
     const config = {
         ethereum: {
             endpoint: "ws://localhost:8545/",
@@ -39,9 +47,17 @@ const dump = (tmpDir, channels) => {
                     outbound: channels.incentivized.outbound.address,
                 },
             },
+            polkadotrelaychainbridge: bridge.polkadotrelaychainbridge.address
         },
-        substrate: {
+        parachain: {
             endpoint: "ws://127.0.0.1:11144/"
+        },
+        relaychain: {
+            endpoint: "ws://127.0.0.1:9944/"
+        },
+        database: {
+            dialect: "sqlite3",
+            db_path: "tmp.db",
         }
     }
     fs.writeFileSync(path.join(tmpDir, "config.toml"), TOML.stringify(config));
@@ -50,11 +66,12 @@ const dump = (tmpDir, channels) => {
 module.exports = async (callback) => {
     try {
         let configDir = process.argv[4].toString();
+        bridge.polkadotrelaychainbridge = await bridgeContracts.polkadotrelaychainbridge.deployed();
         channels.basic.inbound = await channelContracts.basic.inbound.deployed();
         channels.basic.outbound = await channelContracts.basic.outbound.deployed();
         channels.incentivized.inbound = await channelContracts.incentivized.inbound.deployed();
         channels.incentivized.outbound = await channelContracts.incentivized.outbound.deployed();
-        await dump(configDir, channels);
+        await dump(configDir, channels, bridge);
     } catch (error) {
         callback(error)
     }

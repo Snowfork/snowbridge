@@ -30,17 +30,15 @@ import (
 
 func TestWriter(t *testing.T) {
 	// ------------------------- Set up Database -------------------------
-	configJson := `
-	{"db_config": {
-			"dialect": "sqlite3",
-			"db_path": "./tmp.db"
-		}
-	}`
+	dbConfig := store.Config{
+		Dialect: "sqlite3",
+		DBPath:  "tmp.db",
+	}
 
-	dbConfig := store.ParseConfigFromJson(configJson)
-	db, err := store.PrepareDatabase(dbConfig)
+	db, err := store.PrepareDatabase(&dbConfig)
 	if err != nil {
 		t.Fatal(err)
+		t.Fail()
 	}
 
 	beefyMessages := make(chan store.DatabaseCmd, 1)
@@ -78,8 +76,7 @@ func TestWriter(t *testing.T) {
 	config := ethereum.Config{}
 	config.Endpoint = "ws://localhost:8545/"
 	config.PrivateKey = "4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
-	config.Contracts.PolkadotRelayChainBridge = "0x8cF6147918A5CBb672703F879f385036f8793a24"
-	config.Contracts.ValidatorRegistry = "0xB1185EDE04202fE62D38F5db72F71e38Ff3E8305"
+	config.PolkadotRelayChainBridge = "0x8cF6147918A5CBb672703F879f385036f8793a24"
 	config.BeefyBlockDelay = 5
 
 	kpEth, err := secp256k1.NewKeypairFromString(config.PrivateKey)
