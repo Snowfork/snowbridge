@@ -42,7 +42,7 @@ pub use frame_support::{
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId, OutboundRouter, ChannelId, MessageId, rewards::InstantRewards};
+pub use artemis_core::{AssetId, OutboundRouter, ChannelId, MessageId, rewards::InstantRewards, nft::ERC721TokenData};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::{EthereumHeader, EthereumDifficultyConfig};
@@ -491,6 +491,20 @@ impl dot_app::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl nft::Config for Runtime {
+	type TokenId = u128;
+	type TokenData = ERC721TokenData;
+}
+
+impl erc721_app::Config for Runtime {
+	type Event = Event;
+	type OutboundRouter = SimpleOutboundRouter<Runtime>;
+	type CallOrigin = EnsureEthereumAccount;
+	type WeightInfo = ();
+	type TokenId = <Runtime as nft::Config>::TokenId;
+	type Nft = nft::Module<Runtime>;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -514,6 +528,7 @@ construct_runtime!(
 		Commitments: commitments::{Module, Call, Config<T>, Storage, Event} = 15,
 		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config} = 16,
 		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>} = 17,
+		Nft: nft::{Module, Call, Config<T>, Storage} = 21,
 
 		LocalXcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin} = 18,
 		Transfer: artemis_transfer::{Module, Call, Event<T>} = 19,
@@ -522,6 +537,7 @@ construct_runtime!(
 		ETH: eth_app::{Module, Call, Config, Storage, Event<T>} = 12,
 		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>} = 13,
 		DOT: dot_app::{Module, Call, Config, Storage, Event<T>} = 14,
+		ERC721: erc721_app::{Module, Call, Config, Storage, Event<T>} = 22,
 	}
 );
 

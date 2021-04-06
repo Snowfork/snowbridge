@@ -102,23 +102,21 @@ pub mod module {
 	pub type TokensByERC721Id<T: Config> = StorageMap<_, Twox64Concat, (H160, U256), T::TokenId>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
-		pub _marker: PhantomData<T>,
+	pub struct GenesisConfig {
 		pub address: H160,
 	}
 
 	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
+	impl Default for GenesisConfig {
 		fn default() -> Self {
 			GenesisConfig {
-				_marker: PhantomData::<T>,
 				address: H160::default(),
 			}
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
 			Address::<T>::try_mutate(|addr| -> Result<H160, DispatchError> {
 				*addr = self.address;
@@ -165,7 +163,7 @@ pub mod module {
 
 		#[pallet::weight(T::WeightInfo::mint())]
 		#[transactional]
-		pub fn mint(origin: OriginFor<T>, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, token: H160, token_id: U256, token_uri: String) -> DispatchResultWithPostInfo {
+		pub fn mint(origin: OriginFor<T>, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, token: H160, token_id: U256, token_uri: Vec<u8>) -> DispatchResultWithPostInfo {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != Address::<T>::get() {
 				return Err(DispatchError::BadOrigin.into());
@@ -179,7 +177,7 @@ pub mod module {
 				token,
 				token_id,
 			};
-			let nft_token_id = T::Nft::mint(&recipient, token_uri.as_bytes().to_vec(), token_data)?;
+			let nft_token_id = T::Nft::mint(&recipient, token_uri, token_data)?;
 			TokensByERC721Id::<T>::insert((token, token_id), nft_token_id);
 
 			Self::deposit_event(Event::<T>::Minted(token, sender, recipient));

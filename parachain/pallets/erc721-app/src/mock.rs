@@ -30,7 +30,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Module, Call, Storage, Event<T>},
 		Dispatch: artemis_dispatch::{Module, Call, Storage, Origin, Event<T>},
 		NftApp: artemis_nft::{Module, Call, Config<T>, Storage},
-		ERC721App: erc721_app::{Module, Call, Config<T>, Storage, Event<T>},
+		ERC721App: erc721_app::{Module, Call, Config, Storage, Event<T>},
 	}
 );
 
@@ -106,11 +106,10 @@ pub fn new_tester() -> sp_io::TestExternalities {
 		.build_storage::<Test>()
 		.unwrap();
 
-	let config = erc721_app::GenesisConfig::<Test> {
-		_marker: PhantomData::<Test>,
+	let config = erc721_app::GenesisConfig {
 		address: H160::repeat_byte(1),
 	};
-	config.assimilate_storage(&mut storage).unwrap();
+	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));

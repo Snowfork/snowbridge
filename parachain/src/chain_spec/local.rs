@@ -5,7 +5,8 @@ use local_runtime::{
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
 	BasicInboundChannelConfig, IncentivizedInboundChannelConfig,
-	ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
+	ETHConfig, ERC20Config, DOTConfig,
+	AssetsConfig, NftConfig,
 	CommitmentsConfig,
 	ParachainInfoConfig,
 	WASM_BINARY, Signature,
@@ -127,6 +128,9 @@ fn testnet_genesis(
 				)
 			]
 		}),
+		nft: Some(NftConfig {
+			tokens: vec![]
+		}),
 		verifier_lightclient: Some(VerifierLightclientConfig {
 			initial_header: EthereumHeader {
 				parent_hash: hex!("3be6a44fc5933721d257099178fa7c228fc74f1870e61bb074047eda1021d2cd").into(),
@@ -159,6 +163,10 @@ fn testnet_genesis(
 			address: hex!["83428c7db9815f482a39a1715684dCF755021997"].into()
 		}),
 		dot_app: Some(DOTConfig {
+			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into()
+		}),
+		erc721_app: Some(ERC721Config {
+			// TODO: fill proper address
 			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into()
 		}),
 		parachain_info: Some(ParachainInfoConfig { parachain_id: para_id }),
