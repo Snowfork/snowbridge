@@ -52,12 +52,14 @@ impl frame_system::Config for Test {
 
 parameter_types! {
 	pub const CommitInterval: u64 = 5;
+	pub const MaxMessagesPerCommit: usize = 2;
 }
 
 impl commitments::Config for Test {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 }
 
 // Build genesis storage according to the mock runtime.

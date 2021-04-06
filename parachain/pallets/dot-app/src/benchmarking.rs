@@ -29,6 +29,7 @@ benchmarks! {
 		let amount = existential_deposit * 9u32.into() + 1u32.into();
 		
 		T::Currency::make_free_balance_be(&caller, balance);
+		T::Currency::make_free_balance_be(&lock_account, 0u32.into());
 
 	}: _(RawOrigin::Signed(caller.clone()), ChannelId::Incentivized, recipient, amount)
 	verify {
@@ -52,6 +53,7 @@ benchmarks! {
 		let amount = existential_deposit * 8u32.into();
 		
 		T::Currency::make_free_balance_be(&caller, balance);
+		T::Currency::make_free_balance_be(&lock_account, 0u32.into());
 
 	}: lock(RawOrigin::Signed(caller.clone()), ChannelId::Incentivized, recipient, amount)
 	verify {

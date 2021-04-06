@@ -110,33 +110,17 @@ decl_storage! {
 
 		build(|config| {
 			let initial_header = &config.initial_header;
-			let initial_hash = initial_header.compute_hash();
-			let initial_id = EthereumHeaderId {
-				number: initial_header.number,
-				hash: initial_hash,
-			};
 
-			BestBlock::put((
-				initial_id,
+			Module::<T>::initialize_storage(
+				vec![initial_header.clone()],
 				config.initial_difficulty,
-			));
+				0, // descendants_until_final = 0 forces the initial header to be finalized
+			).unwrap();
+
 			BlocksToPrune::put(PruningRange {
-				oldest_unpruned_block: initial_id.number,
-				oldest_block_to_keep: initial_id.number,
+				oldest_unpruned_block: initial_header.number,
+				oldest_block_to_keep: initial_header.number,
 			});
-			FinalizedBlock::put(initial_id);
-			Headers::<T>::insert(
-				initial_hash,
-				StoredHeader {
-					submitter: None,
-					header: initial_header.clone(),
-					total_difficulty: config.initial_difficulty,
-				},
-			);
-			HeadersByNumber::insert(
-				initial_header.number,
-				vec![initial_hash],
-			);
 		})
 	}
 }
@@ -243,8 +227,10 @@ impl<T: Config> Module<T> {
 			Error::<T>::AncientHeader,
 		);
 
-		// TODO: limit N where N = header.number - finalized_header.number
-		// to avoid iterating over long chains here
+		// This iterates over DescendantsUntilFinalized headers in both the worst and
+		// average case. Since we know that the parent header was imported successfully,
+		// we know that the newest finalized header is at most, and on average,
+		// DescendantsUntilFinalized headers before the parent.
 		let ancestor_at_finalized_number = ancestry::<T>(header.parent_hash)
 			.find(|(_, ancestor)| ancestor.number == finalized_header_id.number);
 		// We must find a matching ancestor above since AncientHeader check ensures
@@ -513,5 +499,67 @@ impl<T: Config> Verifier for Module<T> {
 		}
 
 		Ok(log)
+	}
+
+	fn initialize_storage(
+		headers: Vec<EthereumHeader>,
+		initial_difficulty: U256,
+		descendants_until_final: u8,
+	) -> Result<(), &'static str> {
+		let insert_header_fn = |header: &EthereumHeader, total_difficulty: U256| {
+			let hash = header.compute_hash();
+			Headers::<T>::insert(
+				hash,
+				StoredHeader {
+					submitter: None,
+					header: header.clone(),
+					total_difficulty: total_difficulty,
+				},
+			);
+			HeadersByNumber::append(header.number, hash);
+
+			EthereumHeaderId {
+				number: header.number,
+				hash: hash,
+			}
+		};
+
+		let oldest_header = headers.get(0).ok_or("Need at least one header")?;
+		let mut best_block_difficulty = initial_difficulty;
+		let mut best_block_id = insert_header_fn(&oldest_header, best_block_difficulty);
+
+		for (i, header) in headers.iter().enumerate().skip(1) {
+			let prev_block_num = headers[i - 1].number;
+			ensure!(
+				header.number == prev_block_num || header.number == prev_block_num + 1,
+				"Headers must be in order",
+			);
+
+			let total_difficulty = {
+				let parent = Headers::<T>::get(header.parent_hash).ok_or("Missing parent header")?;
+				parent.total_difficulty + header.difficulty
+			};
+
+			let block_id = insert_header_fn(&header, total_difficulty);
+
+			if total_difficulty > best_block_difficulty {
+				best_block_difficulty = total_difficulty;
+				best_block_id = block_id;
+			}
+		}
+
+		BestBlock::put((best_block_id, best_block_difficulty));
+
+		let maybe_finalized_ancestor = ancestry::<T>(best_block_id.hash)
+			.enumerate()
+			.find_map(|(i, pair)| if i < descendants_until_final as usize { None } else { Some(pair) });
+		if let Some((hash, header)) = maybe_finalized_ancestor {
+			FinalizedBlock::put(EthereumHeaderId {
+				hash: hash,
+				number: header.number,
+			});
+		}
+
+		Ok(())
 	}
 }

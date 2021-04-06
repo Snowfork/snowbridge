@@ -443,12 +443,14 @@ impl verifier_lightclient::Config for Runtime {
 
 parameter_types! {
 	pub const CommitInterval: BlockNumber = 5;
+	pub const MaxMessagesPerCommit: usize = 20;
 }
 
 impl commitments::Config for Runtime {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 }
 
 impl assets::Config for Runtime {
@@ -677,6 +679,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
 			add_benchmark!(params, batches, assets, Assets);
+			add_benchmark!(params, batches, basic_channel_inbound, BasicInboundChannel);
 			add_benchmark!(params, batches, dot_app, DOT);
 			add_benchmark!(params, batches, erc20_app, ERC20);
 			add_benchmark!(params, batches, eth_app, ETH);

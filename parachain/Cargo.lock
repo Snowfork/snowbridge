@@ -231,6 +231,7 @@ dependencies = [
  "artemis-core",
  "artemis-ethereum",
  "ethabi-decode",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex-literal",

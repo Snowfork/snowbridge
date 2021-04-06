@@ -30,7 +30,7 @@ pub trait Config: system::Config {
 	type Verifier: Verifier;
 
 	/// Verifier module for message verification.
-	type MessageDispatch: MessageDispatch<MessageId>;
+	type MessageDispatch: MessageDispatch<Self, MessageId>;
 
 	/// Source of funds to pay relayers
 	type RewardsAccount: Get<Self::AccountId>;

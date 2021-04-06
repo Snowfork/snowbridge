@@ -42,70 +42,6 @@ fn assert_header_pruned<T: Config>(hash: H256, number: u64) {
 	);
 }	
 
-fn initialize_storage<T: Config>(
-	headers: Vec<EthereumHeader>,
-	initial_difficulty: U256,
-) -> Result<(), &'static str> {
-	let oldest_block_num = headers.get(0).ok_or("Need at least one header")?.number;
-	let mut best_block_id_opt: Option<EthereumHeaderId> = None;
-	let mut best_block_difficulty = initial_difficulty;
-
-	for (i, header) in headers.iter().enumerate() {
-		let hash = header.compute_hash();
-		let prev_block_num = if i == 0 { header.number } else { headers[i - 1].number };
-		ensure!(
-			header.number == prev_block_num || header.number == prev_block_num + 1,
-			"Headers must be in order",
-		);
-	
-		let total_difficulty = {
-			if oldest_block_num == header.number {
-				initial_difficulty + header.difficulty
-			} else {
-				let parent = Headers::<T>::get(header.parent_hash).ok_or("Missing parent header")?;
-				parent.total_difficulty + header.difficulty
-			}
-		};
-
-		if total_difficulty > best_block_difficulty {
-			best_block_difficulty = total_difficulty;
-			best_block_id_opt = Some(EthereumHeaderId {
-				number: header.number,
-				hash: hash,
-			});
-		}
-
-		Headers::<T>::insert(
-			hash,
-			StoredHeader {
-				submitter: None,
-				header: header.clone(),
-				total_difficulty: total_difficulty, 
-			},
-		);
-		HeadersByNumber::append(header.number, hash);
-	}
-
-	let best_block_id = best_block_id_opt.ok_or("Need highest difficulty block")?;
-	BestBlock::put((
-		best_block_id,
-		best_block_difficulty,
-	));
-
-	let required_descendants = T::DescendantsUntilFinalized::get() as usize;
-	let maybe_finalized_ancestor = ancestry::<T>(best_block_id.hash)
-		.enumerate()
-		.find_map(|(i, pair)| if i < required_descendants { None } else { Some(pair) });
-	if let Some((hash, header)) = maybe_finalized_ancestor {
-		FinalizedBlock::put(EthereumHeaderId {
-			hash: hash,
-			number: header.number,
-		});
-	}
-
-	Ok(())
-}
-
 benchmarks! {
 	// Benchmark `import_header` extrinsic under worst case conditions:
 	// * Import will set a new best block.
@@ -126,8 +62,12 @@ benchmarks! {
 		let headers = data::headers_11963025_to_11963069();
 		let header = headers[next_tip_idx].clone();
 		let header_proof = data::header_proof(header.compute_hash()).unwrap();
-	
-		initialize_storage::<T>(headers[0..next_tip_idx].to_vec(), U256::zero())?;
+
+		VerifierLightclient::<T>::initialize_storage(
+			headers[0..next_tip_idx].to_vec(),
+			U256::zero(),
+			descendants_until_final,
+		)?;
 
 		set_blocks_to_prune(
 			headers[0].number,
@@ -182,8 +122,12 @@ benchmarks! {
 		header_sibling.difficulty -= 1.into();
 		let mut init_headers = headers[0..next_tip_idx].to_vec();
 		init_headers.append(&mut vec![header_sibling]);
-	
-		initialize_storage::<T>(init_headers, U256::zero())?;
+
+		VerifierLightclient::<T>::initialize_storage(
+			init_headers,
+			U256::zero(),
+			descendants_until_final,
+		)?;
 
 		set_blocks_to_prune(
 			headers[0].number,
@@ -229,8 +173,12 @@ benchmarks! {
 		let headers = data::headers_11963025_to_11963069();
 		let header = headers[next_tip_idx].clone();
 		let header_proof = data::header_proof(header.compute_hash()).unwrap();
-	
-		initialize_storage::<T>(headers[0..next_tip_idx].to_vec(), U256::zero())?;
+
+		VerifierLightclient::<T>::initialize_storage(
+			headers[0..next_tip_idx].to_vec(),
+			U256::zero(),
+			descendants_until_final,
+		)?;
 
 		set_blocks_to_prune(
 			headers[0].number,
@@ -278,8 +226,12 @@ benchmarks! {
 		header_sibling.difficulty -= 1.into();
 		let mut init_headers = headers[0..next_tip_idx].to_vec();
 		init_headers.append(&mut vec![header_sibling]);
-	
-		initialize_storage::<T>(init_headers, U256::zero())?;
+
+		VerifierLightclient::<T>::initialize_storage(
+			init_headers,
+			U256::zero(),
+			descendants_until_final,
+		)?;
 
 		set_blocks_to_prune(
 			headers[0].number,
