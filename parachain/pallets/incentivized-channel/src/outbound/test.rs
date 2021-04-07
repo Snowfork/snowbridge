@@ -2,7 +2,7 @@ use super::*;
 
 use sp_core::{H160, H256};
 use frame_support::{
-	assert_ok,
+	assert_ok, assert_err,
 	parameter_types,
 };
 use sp_runtime::{
@@ -102,14 +102,17 @@ fn test_submit() {
 
 #[test]
 fn test_add_message_exceeds_limit() {
-	new_test_ext().execute_with(|| {
-		let max_messages = <Test as commitments::Config>::MaxMessagesPerCommit::get();
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let who: AccountId = Keyring::Bob.into();
+
+		let max_messages = MaxMessagesPerCommit::get();
 		(0..max_messages).for_each(
-			|_| Commitments::add(ChannelId::Basic, CONTRACT_A, 0, &vec![0, 1, 2]).unwrap()
+			|_| IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]).unwrap()
 		);
 
 		assert_err!(
-			Commitments::add(ChannelId::Basic, CONTRACT_A, 0, &vec![0, 1, 2]),
+			IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
 			Error::<Test>::QueueSizeLimitReached,
 		);
 	})
