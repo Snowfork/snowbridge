@@ -43,7 +43,7 @@ use frame_system::EnsureRoot;
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId, OutboundRouter, ChannelId, MessageId, rewards::InstantRewards};
+pub use artemis_core::{AssetId, OutboundRouter, ChannelId, MessageId};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::{EthereumHeader, EthereumDifficultyConfig};
