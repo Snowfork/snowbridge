@@ -35,16 +35,16 @@ class SubClient {
     return BigNumber(balance.toBigInt())
   }
 
-  async burnETH(account, recipient, amount) {
-    const txHash = await this.api.tx.eth.burn(0, recipient, amount).signAndSend(account);
+  async burnETH(account, recipient, amount, channel) {
+    const txHash = await this.api.tx.eth.burn(channel, recipient, amount).signAndSend(account);
   }
 
-  async burnERC20(account, assetId, recipient, amount) {
-    const txHash = await this.api.tx.erc20.burn(1, assetId, recipient, amount).signAndSend(account);
+  async burnERC20(account, assetId, recipient, amount, channel) {
+    const txHash = await this.api.tx.erc20.burn(channel, assetId, recipient, amount).signAndSend(account);
   }
 
-  async lockDOT(account, recipient, amount) {
-    const txHash = await this.api.tx.dot.lock(0, recipient, amount).signAndSend(account);
+  async lockDOT(account, recipient, amount, channel) {
+    const txHash = await this.api.tx.dot.lock(channel, recipient, amount).signAndSend(account);
   }
 
 }

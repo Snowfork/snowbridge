@@ -7,7 +7,7 @@
 
 use frame_system::{self as system, ensure_signed};
 use frame_support::{
-	debug, decl_module, decl_storage, decl_event, decl_error, ensure,
+	decl_module, decl_storage, decl_event, decl_error, ensure, log,
 	dispatch::{DispatchError, DispatchResult},
 	traits::Get, weights::Weight,
 };
@@ -165,16 +165,14 @@ decl_module! {
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			debug::RuntimeLogger::init();
-
-			debug::trace!(
+			log::trace!(
 				target: "import_header",
 				"Received header {}. Starting validation",
 				header.number,
 			);
 
 			if let Err(err) = Self::validate_header_to_import(&header, &proof) {
-				debug::trace!(
+				log::trace!(
 					target: "import_header",
 					"Validation for header {} returned error. Skipping import",
 					header.number,
@@ -182,14 +180,14 @@ decl_module! {
 				return Err(err);
 			}
 
-			debug::trace!(
+			log::trace!(
 				target: "import_header",
 				"Validation succeeded. Starting import of header {}",
 				header.number,
 			);
 
 			if let Err(err) = Self::import_validated_header(&sender, &header) {
-				debug::trace!(
+				log::trace!(
 					target: "import_header",
 					"Import of header {} failed",
 					header.number,
@@ -197,7 +195,7 @@ decl_module! {
 				return Err(err);
 			}
 
-			debug::trace!(
+			log::trace!(
 				target: "import_header",
 				"Import of header {} succeeded!",
 				header.number,

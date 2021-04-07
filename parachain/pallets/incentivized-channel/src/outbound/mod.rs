@@ -5,6 +5,7 @@ use frame_support::{
 	weights::Weight,
 	dispatch::DispatchResult,
 	traits::Get,
+	ensure,
 };
 use frame_system::{self as system};
 use sp_core::{H160, H256, RuntimeDebug};
@@ -48,7 +49,7 @@ decl_storage! {
 		Interval get(fn interval) config(): T::BlockNumber;
 
 		/// Messages waiting to be committed.
-		MessageQueue get(fn incentivized_mq): Vec<Message>;
+		MessageQueue: Vec<Message>;
 
 		pub Nonce: u64;
 	}
@@ -62,6 +63,8 @@ decl_event! {
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
+		/// No more messages can be queued for the channel during this commit cycle.
+		QueueSizeLimitReached,
 	}
 }
 
@@ -93,23 +96,24 @@ impl<T: Config> Module<T> {
 	pub fn submit(_: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		Nonce::try_mutate(|nonce| -> DispatchResult {
 			*nonce += 1;
-			Self::push_message(target, *nonce, payload)?;
+			Self::try_add_message(target, *nonce, payload)?;
 			<Module<T>>::deposit_event(Event::MessageAccepted(*nonce));
 			Ok(())
 		})
 	}
 
-	// Add a message for eventual inclusion in a commitment
-	// TODO (Security): Limit number of messages per commitment
-	//   https://github.com/Snowfork/polkadot-ethereum/issues/226
-	fn push_message(target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
-		let mut mq = MessageQueue::get();
-		mq.push(Message {
+	fn try_add_message(target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
+		ensure!(
+			MessageQueue::decode_len().unwrap_or(0) < T::MaxMessagesPerCommit::get(),
+			Error::<T>::QueueSizeLimitReached,
+		);
+		MessageQueue::append(
+			Message {
 				target,
 				nonce,
 				payload: payload.to_vec(),
-			});
-		MessageQueue::put(mq);
+			},
+		);
 		Ok(())
 	}
 
@@ -123,7 +127,7 @@ impl<T: Config> Module<T> {
 		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
 		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Incentivized, commitment_hash.clone()).into();
-		<frame_system::Module<T>>::deposit_log(digest_item);
+		<frame_system::Pallet<T>>::deposit_log(digest_item);
 
 		let key = offchain_key(T::INDEXING_PREFIX, commitment_hash);
 		offchain_index::set(&*key, &messages.encode());

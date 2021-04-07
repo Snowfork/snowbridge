@@ -22,8 +22,8 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Storage, Event<T>},
-		IncentivizedOutboundChannel: incentivized_outbound_channel::{Module, Call, Storage, Event},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		IncentivizedOutboundChannel: incentivized_outbound_channel::{Pallet, Call, Storage, Event},
 	}
 );
 
@@ -57,6 +57,7 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
 parameter_types! {
@@ -97,4 +98,19 @@ fn test_submit() {
 		assert_ok!(IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
 		assert_eq!(Nonce::get(), 2);
 	});
+}
+
+#[test]
+fn test_add_message_exceeds_limit() {
+	new_test_ext().execute_with(|| {
+		let max_messages = <Test as commitments::Config>::MaxMessagesPerCommit::get();
+		(0..max_messages).for_each(
+			|_| Commitments::add(ChannelId::Basic, CONTRACT_A, 0, &vec![0, 1, 2]).unwrap()
+		);
+
+		assert_err!(
+			Commitments::add(ChannelId::Basic, CONTRACT_A, 0, &vec![0, 1, 2]),
+			Error::<Test>::QueueSizeLimitReached,
+		);
+	})
 }
