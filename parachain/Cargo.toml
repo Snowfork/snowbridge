@@ -16,16 +16,22 @@ path = "src/main.rs"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0" }
-serde = { version = "1.0.102", features = ["derive"] }
+serde = { version = "1.0.119", features = ["derive"] }
 futures = { version = "0.3.1", features = ["compat"] }
 hex-literal = "0.3.1"
 jsonrpc-core = "15.1.0"
 jsonrpc-pubsub = "14.2.0"
-log = "0.4.8"
+log = "0.4.13"
 rand = "0.7.2"
 structopt = "0.3.8"
-tracing = "0.1.22"
+tracing = "0.1.25"
 parking_lot = "0.10.0"
+
+# NOTE: remote-externalities requires these jsonrpsee crates but it doesn't pin the precise
+# version. 0.2.0-alpha.4 doesn't compile. 
+jsonrpsee-http-client = { version = "=0.2.0-alpha", default-features = false, features = ["tokio02"] }
+jsonrpsee-types = "=0.2.0-alpha.2"
+jsonrpsee-proc-macros = "=0.2.0-alpha.2"
 
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sc-cli = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", features = ["wasmtime"] }
@@ -53,6 +59,7 @@ sp-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "
 sp-trie = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
+cumulus-client-cli = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
 cumulus-client-consensus-relay-chain = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
 cumulus-client-collator = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
 cumulus-client-service = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
@@ -66,7 +73,7 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branc
 
 artemis-core = { path = "primitives/core" }
 snowbridge-runtime = { path = "runtime/snowbridge", optional = true }
-rococo-runtime = { path = "runtime/rococo", optional = true }
+rococo-runtime = { path = "runtime/rococo", package = "artemis-rococo-runtime", optional = true }
 local-runtime = { path = "runtime/local", optional = true }
 
 # These dependencies are used for runtime benchmarking

@@ -22,6 +22,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::EnsureOrigin,
 	transactional,
+	weights::Weight,
 };
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
@@ -32,11 +33,24 @@ use artemis_core::{ChannelId, OutboundRouter, AssetId, MultiAsset};
 mod payload;
 use payload::OutboundPayload;
 
+mod benchmarking;
+
 #[cfg(test)]
 mod mock;
 
 #[cfg(test)]
 mod tests;
+
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn burn() -> Weight;
+	fn mint() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn burn() -> Weight { 0 }
+	fn mint() -> Weight { 0 }
+}
 
 pub trait Config: system::Config {
 	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
@@ -46,6 +60,8 @@ pub trait Config: system::Config {
 	type OutboundRouter: OutboundRouter<Self::AccountId>;
 
 	type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
+
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -82,7 +98,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		/// Burn an ERC20 token balance
-		#[weight = 0]
+		#[weight = T::WeightInfo::burn()]
 		#[transactional]
 		pub fn burn(origin, channel_id: ChannelId, token: H160, recipient: H160, amount: U256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -102,7 +118,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = 0]
+		#[weight = T::WeightInfo::mint()]
 		#[transactional]
 		pub fn mint(origin, token: H160, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;

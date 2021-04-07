@@ -1,5 +1,5 @@
 use frame_support::traits::{Currency, ExistenceRequirement::KeepAlive, WithdrawReasons};
-use frame_support::debug::native;
+use frame_support::log;
 use frame_system::Config;
 use sp_runtime::traits::Zero;
 use sp_std::marker::PhantomData;
@@ -28,7 +28,7 @@ where
 				C::resolve_creating(relayer, imbalance);
 			}
 			Err(err) => {
-				native::error!("Unable to withdraw from rewards account: {:?}", err);
+				log::error!("Unable to withdraw from rewards account: {:?}", err);
 			}
 		}
 	}

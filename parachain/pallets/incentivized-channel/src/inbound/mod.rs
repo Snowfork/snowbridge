@@ -3,7 +3,7 @@ use frame_support::{
 	dispatch::DispatchResult,
 	traits::{Currency, Get, ExistenceRequirement::KeepAlive, WithdrawReasons, Imbalance},
 	storage::StorageValue,
-	debug,
+	log,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_core::{U256, H160};
@@ -33,7 +33,7 @@ pub trait Config: system::Config {
 	type Verifier: Verifier;
 
 	/// Verifier module for message verification.
-	type MessageDispatch: MessageDispatch<MessageId>;
+	type MessageDispatch: MessageDispatch<Self, MessageId>;
 
 	type Currency: Currency<Self::AccountId>;
 
@@ -124,7 +124,7 @@ impl<T: Config> Module<T> {
 		let imbalance = match T::Currency::withdraw(&T::SourceAccount::get(), amount, WithdrawReasons::TRANSFER, KeepAlive) {
 			Ok(imbalance) => imbalance,
 			Err(err) => {
-				debug::error!("Unable to withdraw from source account: {:?}", err);
+				log::error!("Unable to withdraw from source account: {:?}", err);
 				return;
 			}
 		};
@@ -138,7 +138,7 @@ impl<T: Config> Module<T> {
 		let adjusted_imbalance = match imbalance.offset(rewarded) {
 			Ok(imbalance) => imbalance,
 			Err(_) => {
-				debug::error!("Unable to offset imbalance");
+				log::error!("Unable to offset imbalance");
 				return;
 			}
 		};

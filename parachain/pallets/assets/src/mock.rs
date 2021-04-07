@@ -19,8 +19,8 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Storage, Event<T>},
-		Assets: assets::{Module, Call, Storage, Event<T>},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Assets: assets::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -54,10 +54,12 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
 impl assets::Config for Test {
 	type Event = Event;
+	type WeightInfo = ();
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {

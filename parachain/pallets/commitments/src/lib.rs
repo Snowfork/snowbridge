@@ -2,9 +2,10 @@
 
 use sp_std::prelude::*;
 use frame_support::{
-	decl_module, decl_storage, decl_event, decl_error,
+	decl_module, decl_storage, decl_event, decl_error, ensure,
 	weights::Weight,
 	dispatch::DispatchResult,
+	traits::Get,
 };
 use sp_io::offchain_index;
 use sp_core::{H160, H256, RuntimeDebug};
@@ -55,6 +56,9 @@ pub trait Config: frame_system::Config {
 	type Hashing: Hash<Output = H256>;
 
 	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
+
+	/// Max number of messages that can be queued and committed in one go for a given channel.
+	type MaxMessagesPerCommit: Get<usize>;
 }
 
 decl_storage! {
@@ -74,7 +78,10 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Config> {}
+	pub enum Error for Module<T: Config> {
+		/// No more messages can be queued for the channel during this commit cycle.
+		QueueSizeLimitReached,
+	}
 }
 
 decl_module! {
@@ -125,7 +132,7 @@ impl<T: Config> Module<T> {
 		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
 		let digest_item = AuxiliaryDigestItem::Commitment(channel_id, commitment_hash.clone()).into();
-		<frame_system::Module<T>>::deposit_log(digest_item);
+		<frame_system::Pallet<T>>::deposit_log(digest_item);
 
 		offchain_index::set(&Self::offchain_key(channel_id, commitment_hash), &messages.encode());
 
@@ -150,16 +157,19 @@ impl<T: Config> Module<T> {
 impl<T: Config> MessageCommitment for Module<T> {
 
 	// Add a message for eventual inclusion in a commitment
-	// TODO (Security): Limit number of messages per commitment
-	//   https://github.com/Snowfork/polkadot-ethereum/issues/226
 	fn add(channel_id: ChannelId, target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
+		ensure!(
+			MessageQueues::decode_len(channel_id).unwrap_or(0) < T::MaxMessagesPerCommit::get(),
+			Error::<T>::QueueSizeLimitReached,
+		);
+
 		MessageQueues::append(
 			channel_id,
 			Message {
 				target,
 				nonce,
-				payload: payload.to_vec()
-			}
+				payload: payload.to_vec(),
+			},
 		);
 		Ok(())
 	}

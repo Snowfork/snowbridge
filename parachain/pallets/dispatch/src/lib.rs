@@ -40,7 +40,7 @@ where
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> OuterOrigin {
-		OuterOrigin::from(Origin(Default::default()))
+		OuterOrigin::from(Origin(H160::repeat_byte(2)))
 	}
 }
 
@@ -93,7 +93,7 @@ decl_module! {
 
 pub type MessageIdOf<T> = <T as Config>::MessageId;
 
-impl<T: Config> MessageDispatch<MessageIdOf<T>> for Module<T> {
+impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Module<T> {
 	fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8]) {
 		let call = match <T as Config>::Call::decode(&mut &payload[..]) {
 			Ok(call) => call,
@@ -115,6 +115,12 @@ impl<T: Config> MessageDispatch<MessageIdOf<T>> for Module<T> {
 			id,
 			result.map(drop).map_err(|e| e.error),
 		));
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_dispatch_event(id: MessageIdOf<T>) -> Option<<T as system::Config>::Event> {
+		let event: <T as Config>::Event = RawEvent::MessageDispatched(id, Ok(())).into();
+		Some(event.into())
 	}
 }
 
@@ -143,8 +149,8 @@ mod tests {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Module, Call, Storage, Event<T>},
-			Dispatch: dispatch::{Module, Call, Storage, Origin, Event<T>},
+			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Dispatch: dispatch::{Pallet, Call, Storage, Origin, Event<T>},
 		}
 	);
 
@@ -177,6 +183,7 @@ mod tests {
 		type BlockLength = ();
 		type DbWeight = ();
 		type SS58Prefix = ();
+		type OnSetCode = ();
 	}
 
 	pub struct CallFilter;

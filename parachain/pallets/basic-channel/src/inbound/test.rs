@@ -14,7 +14,7 @@ use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
 
 use artemis_core::{MessageDispatch, Message, Proof};
-use artemis_ethereum::Log;
+use artemis_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
 
@@ -31,8 +31,8 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Storage, Event<T>},
-		BasicInboundChannel: basic_inbound_channel::{Module, Call, Storage, Event},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		BasicInboundChannel: basic_inbound_channel::{Pallet, Call, Storage, Event},
 	}
 );
 
@@ -66,6 +66,7 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 // Mock verifier
 pub struct MockVerifier;
@@ -75,13 +76,22 @@ impl Verifier for MockVerifier {
 		let log: Log = rlp::decode(&message.data).unwrap();
 		Ok(log)
 	}
+
+	fn initialize_storage(_: Vec<EthereumHeader>, _: U256, _: u8) -> Result<(), &'static str> {
+		Ok(())
+	}
 }
 
 // Mock Dispatch
 pub struct MockMessageDispatch;
 
-impl MessageDispatch<MessageId> for MockMessageDispatch {
+impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
 	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_dispatch_event(_: MessageId) -> Option<<Test as system::Config>::Event> {
+		None
+	}
 }
 
 impl basic_inbound_channel::Config for Test {

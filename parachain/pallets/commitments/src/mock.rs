@@ -19,8 +19,8 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Storage, Event<T>},
-		Commitments: commitments::{Module, Call, Storage, Event},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Commitments: commitments::{Pallet, Call, Storage, Event},
 	}
 );
 
@@ -48,16 +48,19 @@ impl frame_system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
 parameter_types! {
 	pub const CommitInterval: u64 = 5;
+	pub const MaxMessagesPerCommit: usize = 2;
 }
 
 impl commitments::Config for Test {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 }
 
 // Build genesis storage according to the mock runtime.

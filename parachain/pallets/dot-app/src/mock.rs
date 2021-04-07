@@ -26,10 +26,10 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Storage, Event<T>},
-        Dispatch: artemis_dispatch::{Module, Call, Storage, Origin, Event<T>},
-        DOTApp: dot_app::{Module, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+        Dispatch: artemis_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
+        DOTApp: dot_app::{Pallet, Call, Config, Storage, Event<T>},
     }
 );
 
@@ -66,6 +66,7 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
 }
 
 impl artemis_dispatch::Config for Test {
@@ -116,6 +117,7 @@ impl dot_app::Config for Test {
     type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
     type ModuleId = DotModuleId;
     type Decimals = Decimals;
+    type WeightInfo = ();
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
