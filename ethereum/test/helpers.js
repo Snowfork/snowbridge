@@ -4,6 +4,8 @@ const { ethers } = require("ethers");
 
 const assert = require('chai').assert;
 
+const MockFeeSource = artifacts.require("MockFeeSource");
+
 const channelContracts = {
   basic: {
     inbound: artifacts.require("BasicInboundChannel"),
@@ -30,9 +32,9 @@ const confirmBasicChannelSend = (channelEvent, channelAddress, sendingAppAddress
 };
 
 const confirmIncentivizedChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
-  var abi = ["event Message(address source, uint64 nonce, bytes payload)"];
+  var abi = ["event Message(address source, uint64 nonce, uint256 fee, bytes payload)"];
   var iface = new ethers.utils.Interface(abi);
-  let decodedEvent = iface.decodeEventLog('Message(address,uint64,bytes)', channelEvent.data, channelEvent.topics);
+  let decodedEvent = iface.decodeEventLog('Message(address,uint64,uint256,bytes)', channelEvent.data, channelEvent.topics);
 
   channelEvent.address.should.be.equal(channelAddress);
   decodedEvent.source.should.be.equal(sendingAppAddress);
@@ -161,15 +163,20 @@ const encodeMessage = (message) => {
   );
 }
 
-const deployAppContractWithChannels = async (appContract, ...appContractArgs) => {
+const deployAppContractWithChannels = async (deployer, appContract, ...appContractArgs) => {
+
+  const defaults = {
+    from: deployer
+  };
+
   const channels = {
     basic: {
-      inbound: await channelContracts.basic.inbound.new(),
-      outbound: await channelContracts.basic.outbound.new(),
+      inbound: await channelContracts.basic.inbound.new(defaults),
+      outbound: await channelContracts.basic.outbound.new(defaults),
     },
     incentivized: {
-      inbound: await channelContracts.incentivized.inbound.new(),
-      outbound: await channelContracts.incentivized.outbound.new(),
+      inbound: await channelContracts.incentivized.inbound.new(defaults),
+      outbound: await channelContracts.incentivized.outbound.new(defaults),
     },
   };
 
@@ -183,7 +190,11 @@ const deployAppContractWithChannels = async (appContract, ...appContractArgs) =>
       inbound: channels.incentivized.inbound.address,
       outbound: channels.incentivized.outbound.address,
     },
+    defaults
   );
+
+  const feeSource = await MockFeeSource.new();
+  await channels.incentivized.outbound.initialize(deployer, feeSource.address, [app.address]);
 
   return [channels, app]
 }
@@ -212,4 +223,5 @@ module.exports = {
   addressBytes,
   ChannelId,
   buildCommitment,
+  encodeLog,
 };

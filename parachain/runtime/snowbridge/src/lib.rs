@@ -7,7 +7,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{U256, crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
 	transaction_validity::{TransactionValidity, TransactionSource},
@@ -43,7 +43,7 @@ use frame_system::EnsureRoot;
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId, OutboundRouter, ChannelId, MessageId, rewards::InstantRewards};
+pub use artemis_core::{AssetId, OutboundRouter, ChannelId, MessageId};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::{EthereumHeader, EthereumDifficultyConfig};
@@ -355,6 +355,18 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 
 // Our pallets
 
+// Module accounts
+parameter_types! {
+	pub const TreasuryModuleId: ModuleId = ModuleId(*b"s/treasy");
+	pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
+}
+
+pub fn module_accounts() -> Vec<AccountId> {
+	vec![
+		TreasuryModuleId::get().into_account()
+	]
+}
+
 pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(call: &Call) -> bool {
@@ -371,10 +383,6 @@ impl dispatch::Config for Runtime {
 	type MessageId = MessageId;
 	type Call = Call;
 	type CallFilter = CallFilter;
-}
-
-parameter_types! {
-	pub RewardsAccount: AccountId = DotModuleId::get().into_account();
 }
 
 use basic_channel::inbound as basic_channel_inbound;
@@ -394,13 +402,28 @@ impl basic_channel_outbound::Config for Runtime {
 	type MessageCommitment = commitments::Module<Runtime>;
 }
 
+parameter_types! {
+	pub SourceAccount: AccountId = DotModuleId::get().into_account();
+	pub TreasuryAccount: AccountId = TreasuryModuleId::get().into_account();
+
+}
+
+pub struct FeeConverter;
+
+impl Convert<U256, Balance> for FeeConverter {
+	fn convert(amount: U256) -> Balance {
+		dot_app::primitives::unwrap::<Runtime>(amount, Decimals::get()).expect("Should not panic unless runtime is misconfigured")
+	}
+}
+
 impl incentivized_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
-	type RewardsAccount = RewardsAccount;
-	type InboundMessageFee = Balance;
-	type RewardRelayer = InstantRewards<Self, Balances>;
+	type Currency = Balances;
+	type SourceAccount = SourceAccount;
+	type TreasuryAccount = TreasuryAccount;
+	type FeeConverter = FeeConverter;
 }
 
 impl incentivized_channel_outbound::Config for Runtime {
@@ -483,7 +506,6 @@ impl erc20_app::Config for Runtime {
 }
 
 parameter_types! {
-	pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
 	pub const Decimals: u32 = 10;
 }
 

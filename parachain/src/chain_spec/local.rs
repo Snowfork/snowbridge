@@ -14,7 +14,7 @@ use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public, U256};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::{Perbill, traits::{IdentifyAccount, Verify}};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
@@ -117,6 +117,7 @@ fn testnet_genesis(
 		},
 		incentivized_channel_inbound: IncentivizedInboundChannelConfig {
 			source_channel: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
+			reward_fraction: Perbill::from_percent(80)
 		},
 		assets: AssetsConfig {
 			balances: vec![
