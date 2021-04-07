@@ -15,11 +15,22 @@ Install dependencies with yarn:
 yarn install
 ```
 
-Set up `.env` file. Note that deploying to ropsten network requires modifying the INFURA_PROJECT_ID and MNEMONIC environment variables.
+Set up `.env` file using the template below. Note that deploying to ropsten network requires modifying the INFURA_PROJECT_ID and MNEMONIC environment variables.
+
+Example:
 
 ```bash
-cp .env.example .env
+# LOCAL_PROVIDER is the local http Ethereum network connection
+LOCAL_PROVIDER="http://localhost:9545"
+
+# MNEMONIC is the mnemonic associated with your Ethereum address
+MNEMONIC=
+
+# INFURA_PROJECT_ID is the project's Infura ID
+INFURA_PROJECT_ID=
 ```
+
+
 
 Start a local Ethereum chain using truffle:
 
