@@ -48,7 +48,7 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
         feeSource = FeeSource(_feeSource);
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
         for (uint i = 0; i < defaultOperators.length; i++) {
-            _authorizeDefaultOperator(operator);
+            _authorizeDefaultOperator(defaultOperators[i]);
         }
 
         // drop admin privileges

@@ -86,27 +86,24 @@ describe('Bridge', function () {
       let amountWrapped = BigNumber(Web3.utils.toWei('1', "ether")); // 1 SnowDOT (18 decimal places)
 
       let fee = BigNumber(Web3.utils.toWei('1', "ether")) // 1 SnowDOT
-      let treasuryReward = BigNumber("200000000000000000") // 0.2 SnowDOT
+      let treasuryReward = BigNumber("200000000000") // 0.2 DOT
 
       const account = ethClient.accounts[1];
 
       let beforeEthBalance = await ethClient.getDotBalance(account);
       let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58);
-      let beforeTreasuryBalance = await ethClient.getDotBalance("5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS");
-
+      let beforeTreasuryBalance = await subClient.queryAccountBalance("5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS");
 
       await ethClient.burnDOT(account, amountWrapped, polkadotRecipient, 1);
       await sleep(70000);
 
       let afterEthBalance = await ethClient.getDotBalance(account);
       let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58);
-      let afterTreasuryBalance = await ethClient.getDotBalance("5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS");
+      let afterTreasuryBalance = await subClient.queryAccountBalance("5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS");
 
       expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amountWrapped.plus(fee));
       expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
       expect(afterTreasuryBalance.minus(beforeTreasuryBalance)).to.be.bignumber.equal(treasuryReward);
-
-
     })
 
   })
