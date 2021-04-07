@@ -8,6 +8,7 @@ use local_runtime::{
 	ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
 	CommitmentsConfig,
 	ParachainInfoConfig,
+	IncentivizedOutboundChannelConfig,
 	WASM_BINARY, Signature,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -118,6 +119,9 @@ fn testnet_genesis(
 		incentivized_channel_inbound: IncentivizedInboundChannelConfig {
 			source_channel: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
 			reward_fraction: Perbill::from_percent(80)
+		},
+		incentivized_channel_outbound: IncentivizedOutboundChannelConfig {
+			interval: 1,
 		},
 		assets: AssetsConfig {
 			balances: vec![
