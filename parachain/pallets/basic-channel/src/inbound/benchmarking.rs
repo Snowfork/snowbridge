@@ -4,7 +4,7 @@
 
 use super::*;
 
-use frame_system::{RawOrigin, Pallet, self, EventRecord};
+use frame_system::{RawOrigin, self, EventRecord};
 use frame_benchmarking::{benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 use hex_literal::hex;
 use sp_std::convert::TryInto;
@@ -16,7 +16,7 @@ use artemis_ethereum::{Log, Header};
 use crate::inbound::Module as BasicInboundChannel;
 
 fn assert_last_event<T: Config>(system_event: <T as frame_system::Config>::Event) {
-	let events = Pallet::<T>::events();
+	let events = frame_system::Pallet::<T>::events();
 	// compare to the last event record
 	let EventRecord { event, .. } = &events[events.len() - 1];
 	assert_eq!(event, &system_event);

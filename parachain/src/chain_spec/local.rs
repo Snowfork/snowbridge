@@ -101,24 +101,24 @@ fn testnet_genesis(
 	para_id: ParaId
 ) -> GenesisConfig {
 	GenesisConfig {
-		frame_system: Some(SystemConfig {
+		frame_system: SystemConfig {
 			// Add Wasm runtime to storage.
 			code: WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(BalancesConfig {
+		},
+		pallet_balances: BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
-		}),
-		basic_channel_inbound: Some(BasicInboundChannelConfig {
+		},
+		basic_channel_inbound: BasicInboundChannelConfig {
 			source_channel: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
-		}),
-		incentivized_channel_inbound: Some(IncentivizedInboundChannelConfig {
+		},
+		incentivized_channel_inbound: IncentivizedInboundChannelConfig {
 			source_channel: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
-		}),
-		assets: Some(AssetsConfig {
+		},
+		assets: AssetsConfig {
 			balances: vec![
 				(
 					AssetId::ETH,
@@ -126,8 +126,8 @@ fn testnet_genesis(
 					U256::from_str_radix("1000000000000000000", 10).unwrap()
 				)
 			]
-		}),
-		verifier_lightclient: Some(VerifierLightclientConfig {
+		},
+		verifier_lightclient: VerifierLightclientConfig {
 			initial_header: EthereumHeader {
 				parent_hash: hex!("3be6a44fc5933721d257099178fa7c228fc74f1870e61bb074047eda1021d2cd").into(),
 				timestamp: 1609259210u64.into(),
@@ -148,19 +148,19 @@ fn testnet_genesis(
 				],
 			},
 			initial_difficulty: 19755084633726428633088u128.into(),
-		}),
-		commitments: Some(CommitmentsConfig {
+		},
+		commitments: CommitmentsConfig {
 			interval: 1,
-		}),
-		eth_app: Some(ETHConfig {
+		},
+		eth_app: ETHConfig {
 			address: hex!["774667629726ec1fabebcec0d9139bd1c8f72a23"].into()
-		}),
-		erc20_app: Some(ERC20Config {
+		},
+		erc20_app: ERC20Config {
 			address: hex!["83428c7db9815f482a39a1715684dCF755021997"].into()
-		}),
-		dot_app: Some(DOTConfig {
+		},
+		dot_app: DOTConfig {
 			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into()
-		}),
-		parachain_info: Some(ParachainInfoConfig { parachain_id: para_id }),
+		},
+		parachain_info: ParachainInfoConfig { parachain_id: para_id },
 	}
 }

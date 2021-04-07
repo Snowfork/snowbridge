@@ -132,7 +132,7 @@ impl<T: Config> Module<T> {
 		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
 		let digest_item = AuxiliaryDigestItem::Commitment(channel_id, commitment_hash.clone()).into();
-		<frame_system::Module<T>>::deposit_log(digest_item);
+		<frame_system::Pallet<T>>::deposit_log(digest_item);
 
 		offchain_index::set(&Self::offchain_key(channel_id, commitment_hash), &messages.encode());
 

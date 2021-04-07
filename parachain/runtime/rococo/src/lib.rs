@@ -39,6 +39,7 @@ pub use frame_support::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
 };
+use frame_system::EnsureRoot;
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
@@ -199,6 +200,7 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = ();
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
+	type OnSetCode = ParachainSystem;
 }
 
 parameter_types! {
@@ -254,7 +256,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type OnValidationData = ();
 	type SelfParaId = parachain_info::Module<Runtime>;
 	type DownwardMessageHandlers = LocalXcmHandler;
-	type HrmpMessageHandlers = LocalXcmHandler;
+	type XcmpMessageHandlers = LocalXcmHandler;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -346,7 +348,9 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
-	type HrmpMessageSender = ParachainSystem;
+	type XcmpMessageSender = ParachainSystem;
+	type SendXcmOrigin = EnsureRoot<AccountId>;
+	type AccountIdConverter = LocationConverter;
 }
 
 // Our pallets
@@ -499,31 +503,31 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>} = 0,
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent} = 1,
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 2,
-		TransactionPayment: pallet_transaction_payment::{Module, Storage} = 3,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage} = 4,
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 4,
 
-		ParachainInfo: parachain_info::{Module, Storage, Config} = 5,
-		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 5,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event} = 6,
 
-		BasicInboundChannel: basic_channel_inbound::{Module, Call, Config, Storage, Event} = 7,
-		BasicOutboundChannel: basic_channel_outbound::{Module, Storage, Event} = 8,
-		IncentivizedInboundChannel: incentivized_channel_inbound::{Module, Call, Config, Storage, Event} = 9,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Module, Storage, Event} = 10,
-		Dispatch: dispatch::{Module, Call, Storage, Event<T>, Origin} = 11,
-		Commitments: commitments::{Module, Call, Config<T>, Storage, Event} = 15,
-		VerifierLightclient: verifier_lightclient::{Module, Call, Storage, Event, Config} = 16,
-		Assets: assets::{Module, Call, Config<T>, Storage, Event<T>} = 17,
+		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event} = 7,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Storage, Event} = 8,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 9,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Storage, Event} = 10,
+		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 11,
+		Commitments: commitments::{Pallet, Call, Config<T>, Storage, Event} = 15,
+		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 16,
+		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 17,
 
-		LocalXcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin} = 18,
-		Transfer: artemis_transfer::{Module, Call, Event<T>} = 19,
-		Utility: pallet_utility::{Module, Call, Event, Storage} = 20,
+		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 18,
+		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 19,
+		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 20,
 
-		ETH: eth_app::{Module, Call, Config, Storage, Event<T>} = 12,
-		ERC20: erc20_app::{Module, Call, Config, Storage, Event<T>} = 13,
-		DOT: dot_app::{Module, Call, Config, Storage, Event<T>} = 14,
+		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 12,
+		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 13,
+		DOT: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 14,
 	}
 );
 
@@ -557,7 +561,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllModules,
+	AllPallets,
 >;
 
 impl_runtime_apis! {
@@ -602,7 +606,7 @@ impl_runtime_apis! {
 		}
 
 		fn random_seed() -> <Block as BlockT>::Hash {
-			RandomnessCollectiveFlip::random_seed()
+			RandomnessCollectiveFlip::random_seed().0
 		}
 	}
 
@@ -655,7 +659,7 @@ impl_runtime_apis! {
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
 			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
 
-			use frame_system_benchmarking::Module as SystemBench;
+			use frame_system_benchmarking::Pallet as SystemBench;
 			impl frame_system_benchmarking::Config for Runtime {}
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
@@ -690,4 +694,4 @@ impl_runtime_apis! {
 	}
 }
 
-cumulus_pallet_parachain_system::register_validate_block!(Block, Executive);
+cumulus_pallet_parachain_system::register_validate_block!(Runtime, Executive);

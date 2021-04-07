@@ -1,6 +1,14 @@
-use std::path::PathBuf;
+#[cfg(feature = "with-snowbridge-runtime")]
+use crate::chain_spec::snowbridge::Extensions;
+
+#[cfg(feature = "with-rococo-runtime")]
+use crate::chain_spec::rococo::Extensions;
+
+#[cfg(feature = "with-local-runtime")]
+use crate::chain_spec::local::Extensions;
 
 use sc_cli;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 /// Sub-commands supported by the collator.
@@ -30,7 +38,7 @@ pub enum Subcommand {
 	ImportBlocks(sc_cli::ImportBlocksCmd),
 
 	/// Remove the whole chain.
-	PurgeChain(sc_cli::PurgeChainCmd),
+	PurgeChain(cumulus_client_cli::PurgeChainCmd),
 
 	/// Revert the chain to a previous state.
 	Revert(sc_cli::RevertCmd),
@@ -131,12 +139,17 @@ pub struct RelayChainCli {
 }
 
 impl RelayChainCli {
-	/// Create a new instance of `Self`.
+	/// Parse the relay chain CLI parameters using the para chain `Configuration`.
 	pub fn new<'a>(
-		base_path: Option<PathBuf>,
-		chain_id: Option<String>,
+		para_config: &sc_service::Configuration,
 		relay_chain_args: impl Iterator<Item = &'a String>,
 	) -> Self {
+		let extension = Extensions::try_get(&*para_config.chain_spec);
+		let chain_id = extension.map(|e| e.relay_chain.clone());
+		let base_path = para_config
+			.base_path
+			.as_ref()
+			.map(|x| x.path().join("polkadot"));
 		Self {
 			base_path,
 			chain_id,

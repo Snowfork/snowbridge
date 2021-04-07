@@ -31,9 +31,9 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Event<T>},
-		IncentivizedInboundChannel: incentivized_inbound_channel::{Module, Call, Storage, Event},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+		IncentivizedInboundChannel: incentivized_inbound_channel::{Pallet, Call, Storage, Event},
 	}
 );
 
@@ -68,6 +68,7 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
 
