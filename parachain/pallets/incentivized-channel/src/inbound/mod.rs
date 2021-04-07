@@ -115,7 +115,16 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-
+	/*
+	* Pay the message submission fee into the relayer and treasury account.
+	*
+	* - If the fee is zero, do nothing
+	* - Otherwise, withdraw the fee amount from the DotApp module account, returning a negative imbalance
+	* - Figure out the fraction of the fee amount that should be paid to the relayer
+	* - Pay the relayer if their account exists, returning a positive imbalance.
+	* - Adjust the negative imbalance by offsetting the amount paid to the relayer
+	* - Resolve the negative imbalance by depositing it into the treasury account
+	*/
 	fn handle_fee(amount: BalanceOf<T>, relayer: &T::AccountId) {
 		if amount.is_zero() {
 			return;

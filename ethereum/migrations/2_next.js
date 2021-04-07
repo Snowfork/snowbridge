@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
@@ -30,8 +32,15 @@ const channels = {
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
 
-    // Account of governance contract (to be implemented...)
-    const administrator = accounts[0];
+    // Account of governance contract
+    // TODO: deploy the contract in this migration and use its address
+    let administrator = accounts[0];
+
+   // Fee for incentivized channel
+    if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
+      throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
+    }
+    const fee = process.env.INCENTIVIZED_CHANNEL_FEE
 
     channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
     channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
@@ -102,7 +111,7 @@ module.exports = function(deployer, network, accounts) {
         [dotApp.address, ethApp.address, erc20App.address]
       );
       await channels.incentivized.outbound.instance.setFee(
-        "1000000000000000000", // 1 SnowDOT
+        fee,
         { from: administrator }
       );
     }
