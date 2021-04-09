@@ -3,6 +3,8 @@ const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
 const DOTApp = artifacts.require("DOTApp");
 const TestToken = artifacts.require("TestToken");
+const TestToken721 = artifacts.require("TestToken721");
+const ERC721App = artifacts.require("ERC721App");
 
 const channels = {
   basic: {
@@ -36,7 +38,7 @@ module.exports = function(deployer, network, accounts) {
 
     // Link libraries to applications
     await deployer.deploy(ScaleCodec);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp]);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, ERC721App]);
 
     // Deploy applications
     await deployer.deploy(
@@ -63,7 +65,20 @@ module.exports = function(deployer, network, accounts) {
       },
     );
 
+    await deployer.deploy(
+      ERC721App,
+      {
+        inbound: channels.basic.inbound.instance.address,
+        outbound: channels.basic.outbound.instance.address,
+      },
+      {
+        inbound: channels.incentivized.inbound.instance.address,
+        outbound: channels.incentivized.outbound.instance.address,
+      },
+    );
+
     await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
+    await deployer.deploy(TestToken721, "Test Token 721", "TEST721");
 
     // Deploy ERC1820 Registry for our E2E stack.
     if (network === 'e2e_test')  {
