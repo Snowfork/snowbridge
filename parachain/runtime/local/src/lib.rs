@@ -529,7 +529,7 @@ impl erc721_app::Config for Runtime {
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = ();
 	type TokenId = <Runtime as nft::Config>::TokenId;
-	type Nft = nft::Module<Runtime>;
+	type Nft = nft::Pallet<Runtime>;
 }
 
 construct_runtime!(
