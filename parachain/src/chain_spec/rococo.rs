@@ -5,7 +5,7 @@ use rococo_runtime::{
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
 	BasicInboundChannelConfig, IncentivizedInboundChannelConfig,
-	ETHConfig, ERC20Config, DOTConfig,
+	ETHConfig, ERC20Config, DOTConfig, ERC721Config,
 	AssetsConfig, NftConfig,
 	CommitmentsConfig,
 	ParachainInfoConfig,
