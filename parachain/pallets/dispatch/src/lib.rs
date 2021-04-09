@@ -149,8 +149,8 @@ mod tests {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Module, Call, Storage, Event<T>},
-			Dispatch: dispatch::{Module, Call, Storage, Origin, Event<T>},
+			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Dispatch: dispatch::{Pallet, Call, Storage, Origin, Event<T>},
 		}
 	);
 
@@ -183,6 +183,7 @@ mod tests {
 		type BlockLength = ();
 		type DbWeight = ();
 		type SS58Prefix = ();
+		type OnSetCode = ();
 	}
 
 	pub struct CallFilter;
