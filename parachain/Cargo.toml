@@ -28,10 +28,10 @@ tracing = "0.1.25"
 parking_lot = "0.10.0"
 
 # NOTE: remote-externalities requires these jsonrpsee crates but it doesn't pin the precise
-# version. 0.2.0-alpha.4 doesn't compile. 
-jsonrpsee-http-client = { version = "=0.2.0-alpha", default-features = false, features = ["tokio02"] }
-jsonrpsee-types = "=0.2.0-alpha.2"
-jsonrpsee-proc-macros = "=0.2.0-alpha.2"
+# version. 0.2.0-alpha.4 doesn't compile.
+#jsonrpsee-http-client = { version = "=0.2.0-alpha", default-features = false, features = ["tokio02"] }
+#jsonrpsee-types = "=0.2.0-alpha.2"
+#jsonrpsee-proc-macros = "=0.2.0-alpha.2"
 
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sc-cli = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", features = ["wasmtime"] }

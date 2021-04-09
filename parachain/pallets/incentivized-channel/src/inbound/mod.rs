@@ -144,7 +144,7 @@ impl<T: Config> Module<T> {
 		let rewarded = T::Currency::deposit_into_existing(relayer, reward_amount)
 			.unwrap_or_else(|_| PositiveImbalanceOf::<T>::zero());
 
-		let adjusted_imbalance = match imbalance.offset(rewarded) {
+		let adjusted_imbalance = match imbalance.offset(rewarded).same() {
 			Ok(imbalance) => imbalance,
 			Err(_) => {
 				log::error!("Unable to offset imbalance");
