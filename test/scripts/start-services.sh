@@ -96,7 +96,8 @@ start_relayer()
     mage build
 
     export ARTEMIS_ETHEREUM_KEY="0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
-    export ARTEMIS_SUBSTRATE_KEY="//Relay"
+    export ARTEMIS_PARACHAIN_KEY="//Relay"
+    export ARTEMIS_RELAYCHAIN_KEY="//Alice"
 
     build/artemis-relay run --config $configdir/config.toml >$logfile 2>&1 &
 
@@ -110,21 +111,21 @@ trap 'kill $(jobs -p)' SIGINT SIGTERM EXIT
 start_ganache
 deploy_contracts
 start_parachain
-# start_relayer
+start_relayer
 
 echo "Process Tree:"
 pstree $$
 
-# sleep 3
-# until $(grep "Syncing headers starting..." $(pwd)/relay.log > /dev/null); do
-#     echo "Waiting for relayer to generate the DAG cache. This can take up to 20 minutes."
-#     sleep 20
-# done
+sleep 3
+until $(grep "Syncing headers starting..." $(pwd)/relay.log > /dev/null); do
+    echo "Waiting for relayer to generate the DAG cache. This can take up to 20 minutes."
+    sleep 20
+done
 
-# until $(grep "Done retrieving finalized headers" $(pwd)/relay.log > /dev/null); do
-#     echo "Waiting for relayer to sync headers..."
-#     sleep 5
-# done
+until $(grep "Done retrieving finalized headers" $(pwd)/relay.log > /dev/null); do
+    echo "Waiting for relayer to sync headers..."
+    sleep 5
+done
 
 echo "System has been initialized"
 
