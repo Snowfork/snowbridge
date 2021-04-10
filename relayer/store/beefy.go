@@ -114,20 +114,18 @@ func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][3
 	return sigProofContents, nil
 }
 
-func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(randIndex int64) (CompleteSignatureCommitmentMessage, error) {
+func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage() (CompleteSignatureCommitmentMessage, error) {
 	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
 
 	validationDataID := big.NewInt(int64(b.SignedCommitment.Commitment.ValidatorSetID))
 
-	//TODO: Generate randomSignatureBitfieldPositions properly
+	//TODO: Generate randomSignatureBitfieldPositions from info.RandomSeed.Big()
 	randomSignatureBitfieldPositions := []*big.Int{}
 
 	//TODO: Populate randomSignatureCommitments, randomValidatorAddresses, and based on randomSignatureBitfieldPositions
 	randomSignatureCommitments := [][]byte{}
 	randomValidatorAddresses := b.ValidatorAddresses
 	randomPublicKeyMerkleProofs := [][][32]byte{}
-
-	// TODO: select addresses and proofs using randIndex
 
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                               validationDataID,

@@ -5,10 +5,8 @@ package ethereum
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
@@ -64,20 +62,8 @@ func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.
 }
 
 func (ch *Chain) SetSender(ethMessages chan<- []chain.Message, ethHeaders chan<- chain.Header, beefyMessages chan<- store.DatabaseCmd) error {
-	// Get address from private key
-	privateKey, err := crypto.HexToECDSA(ch.config.PrivateKey)
-	if err != nil {
-		return err
-	}
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return fmt.Errorf("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
-	}
-	address := crypto.PubkeyToAddress(*publicKeyECDSA)
-
 	var contracts []*outbound.Contract
-	listener, err := NewListener(ch.config, ch.conn, ch.db, address, ethMessages, beefyMessages, ethHeaders, contracts, ch.log)
+	listener, err := NewListener(ch.config, ch.conn, ch.db, ethMessages, beefyMessages, ethHeaders, contracts, ch.log)
 	if err != nil {
 		return err
 	}

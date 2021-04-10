@@ -6,7 +6,6 @@ package ethereum
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -243,12 +242,7 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, info *st
 		wr.log.WithError(err).Error("Error converting BeefyRelayInfo to BeefyJustification")
 	}
 
-	// Select validator index based on random seed
-	input := info.RandomSeed.Big()
-	scaleFactor := big.NewInt(int64(len(beefyJustification.ValidatorAddresses) - 1))
-	randIndex := input.Mod(input, scaleFactor)
-
-	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage(randIndex.Int64())
+	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage()
 	if err != nil {
 		return err
 	}
