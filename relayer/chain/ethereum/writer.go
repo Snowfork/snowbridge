@@ -17,7 +17,7 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/polkadotrelaychainbridge"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
 	"github.com/snowfork/polkadot-ethereum/relayer/store"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
@@ -27,14 +27,14 @@ const (
 )
 
 type Writer struct {
-	config                   *Config
-	conn                     *Connection
-	db                       *store.Database
-	contracts                map[substrate.ChannelID]*inbound.Contract
-	polkadotRelayChainBridge *polkadotrelaychainbridge.Contract
-	messages                 <-chan []chain.Message
-	beefyMessages            chan<- store.DatabaseCmd
-	log                      *logrus.Entry
+	config            *Config
+	conn              *Connection
+	db                *store.Database
+	contracts         map[substrate.ChannelID]*inbound.Contract
+	lightClientBridge *lightclientbridge.Contract
+	messages          <-chan []chain.Message
+	beefyMessages     chan<- store.DatabaseCmd
+	log               *logrus.Entry
 }
 
 func NewWriter(config *Config, conn *Connection, db *store.Database, messages <-chan []chain.Message,
@@ -67,11 +67,11 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	wr.contracts[id] = contract
 
-	polkadotRelayChainBridgeContract, err := polkadotrelaychainbridge.NewContract(common.HexToAddress(wr.config.PolkadotRelayChainBridge), wr.conn.client)
+	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(wr.config.LightClientBridge), wr.conn.client)
 	if err != nil {
 		return err
 	}
-	wr.polkadotRelayChainBridge = polkadotRelayChainBridgeContract
+	wr.lightClientBridge = lightClientBridgeContract
 
 	eg.Go(func() error {
 		return wr.writeMessagesLoop(ctx)
@@ -199,7 +199,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, info *store.B
 		return err
 	}
 
-	contract := wr.polkadotRelayChainBridge
+	contract := wr.lightClientBridge
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")
 	}
@@ -235,7 +235,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, info *store.B
 	return nil
 }
 
-// WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the PolkadotRelayChainBridge contract
+// WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the LightClientBridge contract
 func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, info *store.BeefyRelayInfo) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
@@ -247,7 +247,7 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, info *st
 		return err
 	}
 
-	contract := wr.polkadotRelayChainBridge
+	contract := wr.lightClientBridge
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")
 	}
@@ -259,8 +259,8 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, info *st
 		GasLimit: 500000,
 	}
 
-	tx, err := contract.CompleteSignatureCommitment(&options, msg.ID, msg.Payload, msg.RandomSignatureCommitments,
-		msg.RandomSignatureBitfieldPositions, msg.RandomValidatorAddresses, msg.RandomPublicKeyMerkleProofs)
+	tx, err := contract.CompleteSignatureCommitment(&options, msg.ID, msg.Payload, msg.Signatures,
+		msg.ValidatorPositions, msg.ValidatorPublicKeys, msg.ValidatorPublicKeyMerkleProofs)
 
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")

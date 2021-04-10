@@ -1,9 +1,13 @@
 // "SPDX-License-Identifier: Apache-2.0"
-pragma solidity >=0.7.6;
+pragma solidity ^0.7.0;
 
 import "./Bits.sol";
 
 library Bitfield {
+    /**
+     * @dev Constants used to efficiently calculate the hamming weight of a bitfield. See
+     * https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation for an explanation of those constants.
+     */
     uint256 internal constant M1 =
         0x5555555555555555555555555555555555555555555555555555555555555555;
     uint256 internal constant M2 =
@@ -20,15 +24,13 @@ library Bitfield {
         0x0000000000000000ffffffffffffffff0000000000000000ffffffffffffffff;
     uint256 internal constant M128 =
         0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
-    uint256 internal constant H01 =
-        0x0101010101010101010101010101010101010101010101010101010101010101;
 
     uint256 internal constant ONE = uint256(1);
     using Bits for uint256;
 
     /**
-     * Draws a random number, derives an index in the bitfield, and sets the bit if it is in the `prior` and not yet
-     * set. Repeats that `n` times.
+     * @notice Draws a random number, derives an index in the bitfield, and sets the bit if it is in the `prior` and not
+     * yet set. Repeats that `n` times.
      */
     function randomNBitsFromPrior(
         uint256 seed,
@@ -66,6 +68,11 @@ library Bitfield {
         return bitfield;
     }
 
+    /**
+     * @notice Calculates the number of set bits by using the hamming weight of the bitfield.
+     * The alogrithm below is implemented after https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation.
+     * Further improvements are possible, see the article above.
+     */
     function countSetBits(uint256[] memory self) public pure returns (uint256) {
         uint256 count = 0;
         for (uint256 i = 0; i < self.length; i++) {

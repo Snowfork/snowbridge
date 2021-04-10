@@ -76,7 +76,7 @@ func TestWriter(t *testing.T) {
 	config := ethereum.Config{}
 	config.Endpoint = "ws://localhost:8545/"
 	config.PrivateKey = "4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
-	config.PolkadotRelayChainBridge = "0x8cF6147918A5CBb672703F879f385036f8793a24"
+	config.LightClientBridge = "0x8cF6147918A5CBb672703F879f385036f8793a24"
 
 	kpEth, err := secp256k1.NewKeypairFromString(config.PrivateKey)
 	if err != nil {

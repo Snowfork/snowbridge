@@ -1,11 +1,11 @@
 package ethereum
 
 type Config struct {
-	Endpoint                 string         `mapstructure:"endpoint"`
-	PrivateKey               string         `mapstructure:"private-key"`
-	DescendantsUntilFinal    byte           `mapstructure:"descendants-until-final"`
-	Channels                 ChannelsConfig `mapstructure:"channels"`
-	PolkadotRelayChainBridge string         `mapstructure:"polkadotrelaychainbridge"`
+	Endpoint              string         `mapstructure:"endpoint"`
+	PrivateKey            string         `mapstructure:"private-key"`
+	DescendantsUntilFinal byte           `mapstructure:"descendants-until-final"`
+	Channels              ChannelsConfig `mapstructure:"channels"`
+	LightClientBridge     string         `mapstructure:"lightclientbridge"`
 }
 
 type ChannelsConfig struct {

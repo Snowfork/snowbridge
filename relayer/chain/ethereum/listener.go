@@ -17,8 +17,8 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/polkadotrelaychainbridge"
 	"github.com/snowfork/polkadot-ethereum/relayer/store"
 )
 
@@ -26,17 +26,17 @@ const MaxMessagesPerSend = 10
 
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
-	config                   *Config
-	conn                     *Connection
-	db                       *store.Database
-	address                  common.Address
-	contracts                []*outbound.Contract
-	polkadotRelayChainBridge *polkadotrelaychainbridge.Contract
-	messages                 chan<- []chain.Message
-	beefyMessages            chan<- store.DatabaseCmd
-	headers                  chan<- chain.Header
-	blockWaitPeriod          uint64
-	log                      *logrus.Entry
+	config            *Config
+	conn              *Connection
+	db                *store.Database
+	address           common.Address
+	contracts         []*outbound.Contract
+	lightClientBridge *lightclientbridge.Contract
+	messages          chan<- []chain.Message
+	beefyMessages     chan<- store.DatabaseCmd
+	headers           chan<- chain.Header
+	blockWaitPeriod   uint64
+	log               *logrus.Entry
 }
 
 func NewListener(config *Config, conn *Connection, db *store.Database, messages chan<- []chain.Message,
@@ -80,15 +80,15 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	}
 	li.contracts = append(li.contracts, contract)
 
-	// Set up relay chain bridge contract
-	polkadotRelayChainBridgeContract, err := polkadotrelaychainbridge.NewContract(common.HexToAddress(li.config.PolkadotRelayChainBridge), li.conn.client)
+	// Set up light client bridge contract
+	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(li.config.LightClientBridge), li.conn.client)
 	if err != nil {
 		return err
 	}
-	li.polkadotRelayChainBridge = polkadotRelayChainBridgeContract
+	li.lightClientBridge = lightClientBridgeContract
 
-	// Fetch BLOCK_WAIT_PERIOD from relay chain bridge contract
-	blockWaitPeriod, err := li.polkadotRelayChainBridge.ContractCaller.BLOCKWAITPERIOD(nil)
+	// Fetch BLOCK_WAIT_PERIOD from light client bridge contract
+	blockWaitPeriod, err := li.lightClientBridge.ContractCaller.BLOCKWAITPERIOD(nil)
 	if err != nil {
 		return err
 	}
@@ -158,20 +158,24 @@ func (li *Listener) pollEventsAndHeaders(
 			}
 			li.forwardChannelEvents(ctx, hcs, channelEvents)
 
-			// Query PolkadotRelayChainBridge contract's InitialVerificationSuccessful events
+			// Query LightClientBridge contract's InitialVerificationSuccessful events
 			blockNumber := gethheader.Number.Uint64()
-			var relayChainBridgeEvents []*polkadotrelaychainbridge.ContractInitialVerificationSuccessful
+			var lightClientBridgeEvents []*lightclientbridge.ContractInitialVerificationSuccessful
 
 			contractEvents, err := li.queryLightClientEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
 				li.log.WithError(err).Error("Failure fetching event logs")
 			}
-			relayChainBridgeEvents = append(relayChainBridgeEvents, contractEvents...)
+			lightClientBridgeEvents = append(lightClientBridgeEvents, contractEvents...)
 
-			if len(relayChainBridgeEvents) > 0 {
-				li.log.Info(fmt.Sprintf("Found %d PolkadotRelayChainBridge contract events on block %d", len(relayChainBridgeEvents), blockNumber))
+			if len(lightClientBridgeEvents) > 0 {
+				li.log.Info(fmt.Sprintf("Found %d LightClientBridge contract events on block %d", len(lightClientBridgeEvents), blockNumber))
+			} else {
+				// TODO: remove this print
+				li.log.Info(fmt.Sprintf("Found 0 LightClientBridge contract events on block %d", blockNumber))
 			}
-			li.processLightClientEvents(ctx, relayChainBridgeEvents)
+
+			li.processLightClientEvents(ctx, lightClientBridgeEvents)
 
 			// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
 			items := li.db.GetItemsByStatus(store.InitialVerificationTxConfirmed)
@@ -286,13 +290,13 @@ func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.H
 	}
 }
 
-// queryLightClientEvents queries ContractInitialVerificationSuccessful events from the PolkadotRelayChainBridge contract
+// queryLightClientEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
 func (li *Listener) queryLightClientEvents(ctx context.Context, start uint64,
-	end *uint64) ([]*polkadotrelaychainbridge.ContractInitialVerificationSuccessful, error) {
-	var events []*polkadotrelaychainbridge.ContractInitialVerificationSuccessful
+	end *uint64) ([]*lightclientbridge.ContractInitialVerificationSuccessful, error) {
+	var events []*lightclientbridge.ContractInitialVerificationSuccessful
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-	iter, err := li.polkadotRelayChainBridge.FilterInitialVerificationSuccessful(&filterOps)
+	iter, err := li.lightClientBridge.FilterInitialVerificationSuccessful(&filterOps)
 	if err != nil {
 		return nil, err
 	}
@@ -314,8 +318,13 @@ func (li *Listener) queryLightClientEvents(ctx context.Context, start uint64,
 }
 
 // processLightClientEvents matches events to BEEFY commitment info by transaction hash
-func (li *Listener) processLightClientEvents(ctx context.Context, events []*polkadotrelaychainbridge.ContractInitialVerificationSuccessful) {
+func (li *Listener) processLightClientEvents(ctx context.Context, events []*lightclientbridge.ContractInitialVerificationSuccessful) {
 	for _, event := range events {
+
+		fmt.Println("EVENT")
+		fmt.Println("event.Prover:", event.Prover)
+		fmt.Println("li.conn.kp.CommonAddress():", li.conn.kp.CommonAddress())
+
 		// Only process events emitted by transactions sent from our node
 		if event.Prover != li.conn.kp.CommonAddress() {
 			continue
@@ -328,6 +337,10 @@ func (li *Listener) processLightClientEvents(ctx context.Context, events []*polk
 		}).Info("event information")
 
 		item := li.db.GetItemByInitialVerificationTxHash(event.Raw.TxHash)
+
+		fmt.Println("item:", item)
+		fmt.Println("item.Status:", item.Status)
+		fmt.Println("store.InitialVerificationTxSent:", store.InitialVerificationTxSent)
 
 		if item.Status != store.InitialVerificationTxSent {
 			continue

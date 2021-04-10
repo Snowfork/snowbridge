@@ -1,7 +1,7 @@
 // Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
 
-package polkadotrelaychainbridge
+package lightclientbridge
 
 import (
 	"math/big"
@@ -27,7 +27,7 @@ var (
 )
 
 // ContractABI is the input ABI used to generate the binding from.
-const ContractABI = "[{\"inputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"_validatorRegistry\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"FinalVerificationSuccessful\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"InitialVerificationSuccessful\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"BLOCK_WAIT_PERIOD\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAXIMUM_NUM_SIGNERS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_DENOM\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_NOM\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"validationData\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"senderAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validatorRegistry\",\"outputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorClaimsBitfield\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"validatorSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"validatorPosition\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"validatorPublicKey\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"validatorPublicKeyMerkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"newSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorPositionsBitfield\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"validatorPublicKeys\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"validatorPublicKeyMerkleProofs\",\"type\":\"bytes32[][]\"}],\"name\":\"completeSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ContractABI = "[{\"inputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"_validatorRegistry\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"FinalVerificationSuccessful\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"InitialVerificationSuccessful\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"BLOCK_WAIT_PERIOD\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_DENOMINATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_NUMERATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"validationData\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"senderAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validatorRegistry\",\"outputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorClaimsBitfield\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"validatorSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"validatorPosition\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"validatorPublicKey\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"validatorPublicKeyMerkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"newSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorPositions\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"validatorPublicKeys\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"validatorPublicKeyMerkleProofs\",\"type\":\"bytes32[][]\"}],\"name\":\"completeSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // Contract is an auto generated Go binding around an Ethereum contract.
 type Contract struct {
@@ -202,12 +202,12 @@ func (_Contract *ContractCallerSession) BLOCKWAITPERIOD() (*big.Int, error) {
 	return _Contract.Contract.BLOCKWAITPERIOD(&_Contract.CallOpts)
 }
 
-// MAXIMUMNUMSIGNERS is a free data retrieval call binding the contract method 0x1cbb3307.
+// THRESHOLDDENOMINATOR is a free data retrieval call binding the contract method 0xef024458.
 //
-// Solidity: function MAXIMUM_NUM_SIGNERS() view returns(uint256)
-func (_Contract *ContractCaller) MAXIMUMNUMSIGNERS(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function THRESHOLD_DENOMINATOR() view returns(uint256)
+func (_Contract *ContractCaller) THRESHOLDDENOMINATOR(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _Contract.contract.Call(opts, &out, "MAXIMUM_NUM_SIGNERS")
+	err := _Contract.contract.Call(opts, &out, "THRESHOLD_DENOMINATOR")
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -219,26 +219,26 @@ func (_Contract *ContractCaller) MAXIMUMNUMSIGNERS(opts *bind.CallOpts) (*big.In
 
 }
 
-// MAXIMUMNUMSIGNERS is a free data retrieval call binding the contract method 0x1cbb3307.
+// THRESHOLDDENOMINATOR is a free data retrieval call binding the contract method 0xef024458.
 //
-// Solidity: function MAXIMUM_NUM_SIGNERS() view returns(uint256)
-func (_Contract *ContractSession) MAXIMUMNUMSIGNERS() (*big.Int, error) {
-	return _Contract.Contract.MAXIMUMNUMSIGNERS(&_Contract.CallOpts)
+// Solidity: function THRESHOLD_DENOMINATOR() view returns(uint256)
+func (_Contract *ContractSession) THRESHOLDDENOMINATOR() (*big.Int, error) {
+	return _Contract.Contract.THRESHOLDDENOMINATOR(&_Contract.CallOpts)
 }
 
-// MAXIMUMNUMSIGNERS is a free data retrieval call binding the contract method 0x1cbb3307.
+// THRESHOLDDENOMINATOR is a free data retrieval call binding the contract method 0xef024458.
 //
-// Solidity: function MAXIMUM_NUM_SIGNERS() view returns(uint256)
-func (_Contract *ContractCallerSession) MAXIMUMNUMSIGNERS() (*big.Int, error) {
-	return _Contract.Contract.MAXIMUMNUMSIGNERS(&_Contract.CallOpts)
+// Solidity: function THRESHOLD_DENOMINATOR() view returns(uint256)
+func (_Contract *ContractCallerSession) THRESHOLDDENOMINATOR() (*big.Int, error) {
+	return _Contract.Contract.THRESHOLDDENOMINATOR(&_Contract.CallOpts)
 }
 
-// THRESHOLDDENOM is a free data retrieval call binding the contract method 0x0028a35a.
+// THRESHOLDNUMERATOR is a free data retrieval call binding the contract method 0x5a8d2f0e.
 //
-// Solidity: function THRESHOLD_DENOM() view returns(uint256)
-func (_Contract *ContractCaller) THRESHOLDDENOM(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function THRESHOLD_NUMERATOR() view returns(uint256)
+func (_Contract *ContractCaller) THRESHOLDNUMERATOR(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _Contract.contract.Call(opts, &out, "THRESHOLD_DENOM")
+	err := _Contract.contract.Call(opts, &out, "THRESHOLD_NUMERATOR")
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -250,49 +250,18 @@ func (_Contract *ContractCaller) THRESHOLDDENOM(opts *bind.CallOpts) (*big.Int, 
 
 }
 
-// THRESHOLDDENOM is a free data retrieval call binding the contract method 0x0028a35a.
+// THRESHOLDNUMERATOR is a free data retrieval call binding the contract method 0x5a8d2f0e.
 //
-// Solidity: function THRESHOLD_DENOM() view returns(uint256)
-func (_Contract *ContractSession) THRESHOLDDENOM() (*big.Int, error) {
-	return _Contract.Contract.THRESHOLDDENOM(&_Contract.CallOpts)
+// Solidity: function THRESHOLD_NUMERATOR() view returns(uint256)
+func (_Contract *ContractSession) THRESHOLDNUMERATOR() (*big.Int, error) {
+	return _Contract.Contract.THRESHOLDNUMERATOR(&_Contract.CallOpts)
 }
 
-// THRESHOLDDENOM is a free data retrieval call binding the contract method 0x0028a35a.
+// THRESHOLDNUMERATOR is a free data retrieval call binding the contract method 0x5a8d2f0e.
 //
-// Solidity: function THRESHOLD_DENOM() view returns(uint256)
-func (_Contract *ContractCallerSession) THRESHOLDDENOM() (*big.Int, error) {
-	return _Contract.Contract.THRESHOLDDENOM(&_Contract.CallOpts)
-}
-
-// THRESHOLDNOM is a free data retrieval call binding the contract method 0x87c5a7e6.
-//
-// Solidity: function THRESHOLD_NOM() view returns(uint256)
-func (_Contract *ContractCaller) THRESHOLDNOM(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _Contract.contract.Call(opts, &out, "THRESHOLD_NOM")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// THRESHOLDNOM is a free data retrieval call binding the contract method 0x87c5a7e6.
-//
-// Solidity: function THRESHOLD_NOM() view returns(uint256)
-func (_Contract *ContractSession) THRESHOLDNOM() (*big.Int, error) {
-	return _Contract.Contract.THRESHOLDNOM(&_Contract.CallOpts)
-}
-
-// THRESHOLDNOM is a free data retrieval call binding the contract method 0x87c5a7e6.
-//
-// Solidity: function THRESHOLD_NOM() view returns(uint256)
-func (_Contract *ContractCallerSession) THRESHOLDNOM() (*big.Int, error) {
-	return _Contract.Contract.THRESHOLDNOM(&_Contract.CallOpts)
+// Solidity: function THRESHOLD_NUMERATOR() view returns(uint256)
+func (_Contract *ContractCallerSession) THRESHOLDNUMERATOR() (*big.Int, error) {
+	return _Contract.Contract.THRESHOLDNUMERATOR(&_Contract.CallOpts)
 }
 
 // CurrentId is a free data retrieval call binding the contract method 0xe00dd161.
@@ -406,23 +375,23 @@ func (_Contract *ContractCallerSession) ValidatorRegistry() (common.Address, err
 
 // CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0x352a51db.
 //
-// Solidity: function completeSignatureCommitment(uint256 id, bytes32 payload, bytes[] signatures, uint256[] validatorPositionsBitfield, address[] validatorPublicKeys, bytes32[][] validatorPublicKeyMerkleProofs) returns()
-func (_Contract *ContractTransactor) CompleteSignatureCommitment(opts *bind.TransactOpts, id *big.Int, payload [32]byte, signatures [][]byte, validatorPositionsBitfield []*big.Int, validatorPublicKeys []common.Address, validatorPublicKeyMerkleProofs [][][32]byte) (*types.Transaction, error) {
-	return _Contract.contract.Transact(opts, "completeSignatureCommitment", id, payload, signatures, validatorPositionsBitfield, validatorPublicKeys, validatorPublicKeyMerkleProofs)
+// Solidity: function completeSignatureCommitment(uint256 id, bytes32 payload, bytes[] signatures, uint256[] validatorPositions, address[] validatorPublicKeys, bytes32[][] validatorPublicKeyMerkleProofs) returns()
+func (_Contract *ContractTransactor) CompleteSignatureCommitment(opts *bind.TransactOpts, id *big.Int, payload [32]byte, signatures [][]byte, validatorPositions []*big.Int, validatorPublicKeys []common.Address, validatorPublicKeyMerkleProofs [][][32]byte) (*types.Transaction, error) {
+	return _Contract.contract.Transact(opts, "completeSignatureCommitment", id, payload, signatures, validatorPositions, validatorPublicKeys, validatorPublicKeyMerkleProofs)
 }
 
 // CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0x352a51db.
 //
-// Solidity: function completeSignatureCommitment(uint256 id, bytes32 payload, bytes[] signatures, uint256[] validatorPositionsBitfield, address[] validatorPublicKeys, bytes32[][] validatorPublicKeyMerkleProofs) returns()
-func (_Contract *ContractSession) CompleteSignatureCommitment(id *big.Int, payload [32]byte, signatures [][]byte, validatorPositionsBitfield []*big.Int, validatorPublicKeys []common.Address, validatorPublicKeyMerkleProofs [][][32]byte) (*types.Transaction, error) {
-	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, payload, signatures, validatorPositionsBitfield, validatorPublicKeys, validatorPublicKeyMerkleProofs)
+// Solidity: function completeSignatureCommitment(uint256 id, bytes32 payload, bytes[] signatures, uint256[] validatorPositions, address[] validatorPublicKeys, bytes32[][] validatorPublicKeyMerkleProofs) returns()
+func (_Contract *ContractSession) CompleteSignatureCommitment(id *big.Int, payload [32]byte, signatures [][]byte, validatorPositions []*big.Int, validatorPublicKeys []common.Address, validatorPublicKeyMerkleProofs [][][32]byte) (*types.Transaction, error) {
+	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, payload, signatures, validatorPositions, validatorPublicKeys, validatorPublicKeyMerkleProofs)
 }
 
 // CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0x352a51db.
 //
-// Solidity: function completeSignatureCommitment(uint256 id, bytes32 payload, bytes[] signatures, uint256[] validatorPositionsBitfield, address[] validatorPublicKeys, bytes32[][] validatorPublicKeyMerkleProofs) returns()
-func (_Contract *ContractTransactorSession) CompleteSignatureCommitment(id *big.Int, payload [32]byte, signatures [][]byte, validatorPositionsBitfield []*big.Int, validatorPublicKeys []common.Address, validatorPublicKeyMerkleProofs [][][32]byte) (*types.Transaction, error) {
-	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, payload, signatures, validatorPositionsBitfield, validatorPublicKeys, validatorPublicKeyMerkleProofs)
+// Solidity: function completeSignatureCommitment(uint256 id, bytes32 payload, bytes[] signatures, uint256[] validatorPositions, address[] validatorPublicKeys, bytes32[][] validatorPublicKeyMerkleProofs) returns()
+func (_Contract *ContractTransactorSession) CompleteSignatureCommitment(id *big.Int, payload [32]byte, signatures [][]byte, validatorPositions []*big.Int, validatorPublicKeys []common.Address, validatorPublicKeyMerkleProofs [][][32]byte) (*types.Transaction, error) {
+	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, payload, signatures, validatorPositions, validatorPublicKeys, validatorPublicKeyMerkleProofs)
 }
 
 // NewSignatureCommitment is a paid mutator transaction binding the contract method 0xe54d1543.

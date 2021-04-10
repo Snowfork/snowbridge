@@ -14,7 +14,7 @@ const channelContracts = {
 }
 
 const bridgeContracts = {
-    polkadotrelaychainbridge: artifacts.require("PolkadotRelayChainBridge"),
+    lightclientbridge: artifacts.require("LightClientBridge"),
 }
 
 const channels = {
@@ -29,7 +29,7 @@ const channels = {
 }
 
 const bridge = {
-    polkadotrelaychainbridge: null
+    lightclientbridge: null
 }
 
 const dump = (tmpDir, channels, bridge) => {
@@ -47,7 +47,7 @@ const dump = (tmpDir, channels, bridge) => {
                     outbound: channels.incentivized.outbound.address,
                 },
             },
-            polkadotrelaychainbridge: bridge.polkadotrelaychainbridge.address
+            lightclientbridge: bridge.lightclientbridge.address
         },
         parachain: {
             endpoint: "ws://127.0.0.1:11144/"
@@ -66,7 +66,7 @@ const dump = (tmpDir, channels, bridge) => {
 module.exports = async (callback) => {
     try {
         let configDir = process.argv[4].toString();
-        bridge.polkadotrelaychainbridge = await bridgeContracts.polkadotrelaychainbridge.deployed();
+        bridge.lightclientbridge = await bridgeContracts.lightclientbridge.deployed();
         channels.basic.inbound = await channelContracts.basic.inbound.deployed();
         channels.basic.outbound = await channelContracts.basic.outbound.deployed();
         channels.incentivized.inbound = await channelContracts.incentivized.inbound.deployed();

@@ -21,12 +21,12 @@ type NewSignatureCommitmentMessage struct {
 }
 
 type CompleteSignatureCommitmentMessage struct {
-	ID                               *big.Int
-	Payload                          [32]byte
-	RandomSignatureCommitments       [][]byte
-	RandomSignatureBitfieldPositions []*big.Int
-	RandomValidatorAddresses         []common.Address
-	RandomPublicKeyMerkleProofs      [][][32]byte
+	ID                             *big.Int
+	Payload                        [32]byte
+	Signatures                     [][]byte
+	ValidatorPositions             []*big.Int
+	ValidatorPublicKeys            []common.Address
+	ValidatorPublicKeyMerkleProofs [][][32]byte
 }
 
 type BeefyJustification struct {
@@ -119,21 +119,21 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage() (Complete
 
 	validationDataID := big.NewInt(int64(b.SignedCommitment.Commitment.ValidatorSetID))
 
-	//TODO: Generate randomSignatureBitfieldPositions from info.RandomSeed.Big()
-	randomSignatureBitfieldPositions := []*big.Int{}
+	//TODO: Use info.RandomSeed.Big() to generate validatorPositions
+	validatorPositions := []*big.Int{}
 
-	//TODO: Populate randomSignatureCommitments, randomValidatorAddresses, and based on randomSignatureBitfieldPositions
-	randomSignatureCommitments := [][]byte{}
-	randomValidatorAddresses := b.ValidatorAddresses
-	randomPublicKeyMerkleProofs := [][][32]byte{}
+	//TODO: Populate signatures, validatorPublicKeys, and based on validatorPositions
+	signatures := [][]byte{}
+	validatorPublicKeys := b.ValidatorAddresses
+	validatorPublicKeyMerkleProofs := [][][32]byte{}
 
 	msg := CompleteSignatureCommitmentMessage{
-		ID:                               validationDataID,
-		Payload:                          commitmentHash,
-		RandomSignatureCommitments:       randomSignatureCommitments,
-		RandomSignatureBitfieldPositions: randomSignatureBitfieldPositions,
-		RandomValidatorAddresses:         randomValidatorAddresses,
-		RandomPublicKeyMerkleProofs:      randomPublicKeyMerkleProofs,
+		ID:                             validationDataID,
+		Payload:                        commitmentHash,
+		Signatures:                     signatures,
+		ValidatorPositions:             validatorPositions,
+		ValidatorPublicKeys:            validatorPublicKeys,
+		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
 	}
 	return msg, nil
 }
