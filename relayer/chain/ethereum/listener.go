@@ -29,6 +29,7 @@ type Listener struct {
 	config                   *Config
 	conn                     *Connection
 	db                       *store.Database
+	address                  common.Address
 	contracts                []*outbound.Contract
 	polkadotRelayChainBridge *polkadotrelaychainbridge.Contract
 	messages                 chan<- []chain.Message
@@ -38,11 +39,14 @@ type Listener struct {
 	log                      *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, db *store.Database, messages chan<- []chain.Message, beefyMessages chan<- store.DatabaseCmd, headers chan<- chain.Header, contracts []*outbound.Contract, log *logrus.Entry) (*Listener, error) {
+func NewListener(config *Config, conn *Connection, db *store.Database, address common.Address,
+	messages chan<- []chain.Message, beefyMessages chan<- store.DatabaseCmd, headers chan<- chain.Header,
+	contracts []*outbound.Contract, log *logrus.Entry) (*Listener, error) {
 	return &Listener{
 		config:          config,
 		conn:            conn,
 		db:              db,
+		address:         address,
 		contracts:       contracts,
 		messages:        messages,
 		beefyMessages:   beefyMessages,
@@ -313,6 +317,12 @@ func (li *Listener) queryLightClientEvents(ctx context.Context, start uint64,
 // processLightClientEvents matches events to BEEFY commitment info by transaction hash
 func (li *Listener) processLightClientEvents(ctx context.Context, events []*polkadotrelaychainbridge.ContractInitialVerificationSuccessful) {
 	for _, event := range events {
+
+		// Only process events emitted by transactions sent from our node
+		if event.Raw.Address != li.address {
+			continue
+		}
+
 		li.log.WithFields(logrus.Fields{
 			"blockHash":   event.Raw.BlockHash.Hex(),
 			"blockNumber": event.Raw.BlockNumber,
