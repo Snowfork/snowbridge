@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type Listener struct {
@@ -111,40 +112,38 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 	}
 }
 
-type Authorities = [][33]uint8
-
-func (li *Listener) getBeefyAuthorities(blockNumber uint64) (Authorities, error) {
+func (li *Listener) getBeefyAuthorities(blockNumber uint64) (substrate.Authorities, error) {
 	blockHash, err := li.conn.api.RPC.Chain.GetBlockHash(blockNumber)
 	if err != nil {
-		return Authorities{}, err
+		return substrate.Authorities{}, err
 	}
 
 	meta, err := li.conn.api.RPC.State.GetMetadataLatest()
 	if err != nil {
-		return Authorities{}, err
+		return substrate.Authorities{}, err
 	}
 
 	storageKey, err := types.CreateStorageKey(meta, "Beefy", "Authorities", nil, nil)
 	if err != nil {
-		return Authorities{}, err
+		return substrate.Authorities{}, err
 	}
 
 	storageChangeSet, err := li.conn.api.RPC.State.QueryStorage([]types.StorageKey{storageKey}, blockHash, blockHash)
 	if err != nil {
-		return Authorities{}, err
+		return substrate.Authorities{}, err
 	}
 
-	authorities := Authorities{}
+	authorities := substrate.Authorities{}
 	for _, storageChange := range storageChangeSet {
 		for _, keyValueOption := range storageChange.Changes {
 			bz, err := keyValueOption.MarshalJSON()
 			if err != nil {
-				return Authorities{}, err
+				return substrate.Authorities{}, err
 			}
 
 			err = types.DecodeFromBytes(bz, &authorities)
 			if err != nil {
-				return Authorities{}, err
+				return substrate.Authorities{}, err
 			}
 
 		}
