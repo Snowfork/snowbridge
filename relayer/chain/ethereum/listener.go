@@ -170,11 +170,7 @@ func (li *Listener) pollEventsAndHeaders(
 
 			if len(lightClientBridgeEvents) > 0 {
 				li.log.Info(fmt.Sprintf("Found %d LightClientBridge contract events on block %d", len(lightClientBridgeEvents), blockNumber))
-			} else {
-				// TODO: remove this print
-				li.log.Info(fmt.Sprintf("Found 0 LightClientBridge contract events on block %d", blockNumber))
 			}
-
 			li.processLightClientEvents(ctx, lightClientBridgeEvents)
 
 			// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
@@ -320,11 +316,6 @@ func (li *Listener) queryLightClientEvents(ctx context.Context, start uint64,
 // processLightClientEvents matches events to BEEFY commitment info by transaction hash
 func (li *Listener) processLightClientEvents(ctx context.Context, events []*lightclientbridge.ContractInitialVerificationSuccessful) {
 	for _, event := range events {
-
-		fmt.Println("EVENT")
-		fmt.Println("event.Prover:", event.Prover)
-		fmt.Println("li.conn.kp.CommonAddress():", li.conn.kp.CommonAddress())
-
 		// Only process events emitted by transactions sent from our node
 		if event.Prover != li.conn.kp.CommonAddress() {
 			continue
@@ -337,10 +328,6 @@ func (li *Listener) processLightClientEvents(ctx context.Context, events []*ligh
 		}).Info("event information")
 
 		item := li.db.GetItemByInitialVerificationTxHash(event.Raw.TxHash)
-
-		fmt.Println("item:", item)
-		fmt.Println("item.Status:", item.Status)
-		fmt.Println("store.InitialVerificationTxSent:", store.InitialVerificationTxSent)
 
 		if item.Status != store.InitialVerificationTxSent {
 			continue
