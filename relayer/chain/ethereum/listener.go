@@ -179,22 +179,18 @@ func (li *Listener) pollEventsAndHeaders(
 				li.log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(items)))
 			}
 			for _, item := range items {
-				if item.CompleteOnBlock <= blockNumber {
+				if item.CompleteOnBlock+descendantsUntilFinal <= blockNumber {
 					li.log.Info("4: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
 
 					// Fetch intended completion block's hash
-					blockHash := gethheader.Hash()
-					if item.CompleteOnBlock < blockNumber {
-						block, err := li.conn.client.BlockByNumber(ctx, big.NewInt(int64(item.CompleteOnBlock)))
-						if err != nil {
-							li.log.WithError(err).Error("Failure fetching inclusion block")
-						}
-						blockHash = block.Hash()
+					block, err := li.conn.client.BlockByNumber(ctx, big.NewInt(int64(item.CompleteOnBlock)))
+					if err != nil {
+						li.log.WithError(err).Error("Failure fetching inclusion block")
 					}
 
 					instructions := map[string]interface{}{
 						"status":      store.ReadyToComplete,
-						"random_seed": blockHash,
+						"random_seed": block.Hash(),
 					}
 					updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
 					li.beefyMessages <- updateCmd
