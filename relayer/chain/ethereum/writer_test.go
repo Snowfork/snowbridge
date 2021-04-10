@@ -41,9 +41,9 @@ func TestWriter(t *testing.T) {
 		t.Fail()
 	}
 
-	beefyMessages := make(chan store.DatabaseCmd, 1)
+	dbMessages := make(chan store.DatabaseCmd, 1)
 	dbLogger := logrus.WithField("database", "Beefy")
-	database := store.NewDatabase(db, beefyMessages, dbLogger)
+	database := store.NewDatabase(db, dbMessages, dbLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
@@ -90,8 +90,9 @@ func TestWriter(t *testing.T) {
 	}
 
 	ethMessages := make(chan []chain.Message, 1)
+	beefyMessages := make(chan store.BeefyRelayInfo, 1)
 	contracts := make(map[substrateTypes.ChannelID]*inbound.Contract)
-	writer, err := ethereum.NewWriter(&config, econn, database, ethMessages, beefyMessages, contracts, log)
+	writer, err := ethereum.NewWriter(&config, econn, database, ethMessages, dbMessages, beefyMessages, contracts, log)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +106,7 @@ func TestWriter(t *testing.T) {
 	beefyItem := loadSampleBeefyRelayInfo()
 
 	// Send NewSignatureCommitment tx
-	err = writer.WriteNewSignatureCommitment(ctx, &beefyItem, 0)
+	err = writer.WriteNewSignatureCommitment(ctx, beefyItem, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
