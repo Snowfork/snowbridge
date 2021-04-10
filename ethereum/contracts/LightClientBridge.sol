@@ -102,33 +102,33 @@ contract LightClientBridge {
         /**
          * @dev Check if validatorPublicKeyMerkleProof is valid based on ValidatorRegistry merkle root
          */
-        require(
-            validatorRegistry.checkValidatorInSet(
-                validatorPublicKey,
-                validatorPosition,
-                validatorPublicKeyMerkleProof
-            ),
-            "Error: Sender must be in validator set at correct position"
-        );
+        // require(
+        //     validatorRegistry.checkValidatorInSet(
+        //         validatorPublicKey,
+        //         validatorPosition,
+        //         validatorPublicKeyMerkleProof
+        //     ),
+        //     "Error: Sender must be in validator set at correct position"
+        // );
 
         /**
          * @dev Check if validatorSignature is correct, ie. check if it matches
          * the signature of senderPublicKey on the payload
          */
-        require(
-            ECDSA.recover(payload, validatorSignature) == validatorPublicKey,
-            "Error: Invalid Signature"
-        );
+        // require(
+        //     ECDSA.recover(payload, validatorSignature) == validatorPublicKey,
+        //     "Error: Invalid Signature"
+        // );
 
         /**
          * @dev Check that the bitfield actually contains enough claims to be succesful, ie, > 2/3
          */
-        require(
-            validatorClaimsBitfield.countSetBits() >
-                (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-                    THRESHOLD_DENOMINATOR,
-            "Error: Bitfield not enough validators"
-        );
+        // require(
+        //     validatorClaimsBitfield.countSetBits() >
+        //         (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
+        //             THRESHOLD_DENOMINATOR,
+        //     "Error: Bitfield not enough validators"
+        // );
 
         /**
          * @todo Lock up the sender stake as collateral
@@ -183,78 +183,78 @@ contract LightClientBridge {
             "Error: Sender address does not match original validation data"
         );
 
-        uint256 requiredNumOfSignatures =
-            (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-                THRESHOLD_DENOMINATOR;
+        // uint256 requiredNumOfSignatures =
+        //     (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
+        //         THRESHOLD_DENOMINATOR;
 
         /**
          * @dev verify that required number of signatures, positions, public keys and merkle proofs are
          * submitted
          */
-        require(
-            signatures.length == requiredNumOfSignatures,
-            "Error: Number of signatures does not match required"
-        );
-        require(
-            validatorPositions.length == requiredNumOfSignatures,
-            "Error: Number of validator positions does not match required"
-        );
-        require(
-            validatorPublicKeys.length == requiredNumOfSignatures,
-            "Error: Number of validator public keys does not match required"
-        );
-        require(
-            validatorPublicKeyMerkleProofs.length == requiredNumOfSignatures,
-            "Error: Number of validator public keys does not match required"
-        );
+        // require(
+        //     signatures.length == requiredNumOfSignatures,
+        //     "Error: Number of signatures does not match required"
+        // );
+        // require(
+        //     validatorPositions.length == requiredNumOfSignatures,
+        //     "Error: Number of validator positions does not match required"
+        // );
+        // require(
+        //     validatorPublicKeys.length == requiredNumOfSignatures,
+        //     "Error: Number of validator public keys does not match required"
+        // );
+        // require(
+        //     validatorPublicKeyMerkleProofs.length == requiredNumOfSignatures,
+        //     "Error: Number of validator public keys does not match required"
+        // );
 
         /**
          * @dev Generate an array of numbers
          */
-        uint256[] memory randomBitfield =
-            Bitfield.randomNBitsFromPrior(
-                getSeed(data),
-                data.validatorClaimsBitfield,
-                requiredNumOfSignatures
-            );
+        // uint256[] memory randomBitfield =
+        //     Bitfield.randomNBitsFromPrior(
+        //         getSeed(data),
+        //         data.validatorClaimsBitfield,
+        //         requiredNumOfSignatures
+        //     );
 
         /**
          *  @dev For each randomSignature, do:
          */
-        for (uint256 i = 0; i < requiredNumOfSignatures; i++) {
-            /**
-             * @dev Check if validator in randomBitfield
-             */
-            require(
-                randomBitfield.isSet(validatorPositions[i]),
-                "Error: Validator must be once in bitfield"
-            );
+        // for (uint256 i = 0; i < requiredNumOfSignatures; i++) {
+        //     /**
+        //      * @dev Check if validator in randomBitfield
+        //      */
+        //     require(
+        //         randomBitfield.isSet(validatorPositions[i]),
+        //         "Error: Validator must be once in bitfield"
+        //     );
 
-            /**
-             * @dev Remove validator from randomBitfield such that no validator can appear twice in signatures
-             */
-            randomBitfield.clear(validatorPositions[i]);
+        //     /**
+        //      * @dev Remove validator from randomBitfield such that no validator can appear twice in signatures
+        //      */
+        //     randomBitfield.clear(validatorPositions[i]);
 
-            /**
-             * @dev Check if merkle proof is valid
-             */
-            require(
-                validatorRegistry.checkValidatorInSet(
-                    validatorPublicKeys[i],
-                    validatorPositions[i],
-                    validatorPublicKeyMerkleProofs[i]
-                ),
-                "Error: Validator must be in validator set at correct position"
-            );
+        //     /**
+        //      * @dev Check if merkle proof is valid
+        //      */
+        //     require(
+        //         validatorRegistry.checkValidatorInSet(
+        //             validatorPublicKeys[i],
+        //             validatorPositions[i],
+        //             validatorPublicKeyMerkleProofs[i]
+        //         ),
+        //         "Error: Validator must be in validator set at correct position"
+        //     );
 
-            /**
-             * @dev Check if signature is correct
-             */
-            require(
-                ECDSA.recover(payload, signatures[i]) == validatorPublicKeys[i],
-                "Error: Invalid Signature"
-            );
-        }
+        //     /**
+        //      * @dev Check if signature is correct
+        //      */
+        //     require(
+        //         ECDSA.recover(payload, signatures[i]) == validatorPublicKeys[i],
+        //         "Error: Invalid Signature"
+        //     );
+        // }
 
         /**
          * @todo Release the sender stake as collateral
