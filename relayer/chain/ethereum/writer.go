@@ -6,7 +6,6 @@ package ethereum
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -22,10 +21,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
-const (
-	PolkadotRelayChainBridge = "polkadot_relay_chain_bridge"
-)
-
 type Writer struct {
 	config            *Config
 	conn              *Connection
@@ -33,21 +28,24 @@ type Writer struct {
 	contracts         map[substrate.ChannelID]*inbound.Contract
 	lightClientBridge *lightclientbridge.Contract
 	messages          <-chan []chain.Message
-	beefyMessages     chan<- store.DatabaseCmd
+	databaseMessages  chan<- store.DatabaseCmd
+	beefyMessages     <-chan store.BeefyRelayInfo
 	log               *logrus.Entry
 }
 
 func NewWriter(config *Config, conn *Connection, db *store.Database, messages <-chan []chain.Message,
-	beefyMessages chan<- store.DatabaseCmd, contracts map[substrate.ChannelID]*inbound.Contract,
+	databaseMessages chan<- store.DatabaseCmd, beefyMessages <-chan store.BeefyRelayInfo,
+	contracts map[substrate.ChannelID]*inbound.Contract,
 	log *logrus.Entry) (*Writer, error) {
 	return &Writer{
-		config:        config,
-		conn:          conn,
-		db:            db,
-		contracts:     contracts,
-		messages:      messages,
-		beefyMessages: beefyMessages,
-		log:           log,
+		config:           config,
+		conn:             conn,
+		db:               db,
+		contracts:        contracts,
+		messages:         messages,
+		databaseMessages: databaseMessages,
+		beefyMessages:    beefyMessages,
+		log:              log,
 	}, nil
 }
 
@@ -115,25 +113,19 @@ func (wr *Writer) writeMessagesLoop(ctx context.Context) error {
 }
 
 func (wr *Writer) writeBeefyLoop(ctx context.Context) error {
-	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():
 			return wr.onDone(ctx)
-		case <-ticker.C:
-			// Send initial verification txs for witnessed commitments
-			witnessedItems := wr.db.GetItemsByStatus(store.CommitmentWitnessed)
-			for _, item := range witnessedItems {
-				err := wr.WriteNewSignatureCommitment(ctx, item, 0) // TODO: pick val addr
+		case msg := <-wr.beefyMessages:
+			switch msg.Status {
+			case store.CommitmentWitnessed:
+				err := wr.WriteNewSignatureCommitment(ctx, msg, 0) // TODO: pick val addr
 				if err != nil {
 					wr.log.WithError(err).Error("Error submitting message to ethereum")
 				}
-			}
-
-			// Send complete verification txs for items that are ready to complete
-			completeItems := wr.db.GetItemsByStatus(store.ReadyToComplete)
-			for _, item := range completeItems {
-				err := wr.WriteCompleteSignatureCommitment(ctx, item)
+			case store.ReadyToComplete:
+				err := wr.WriteCompleteSignatureCommitment(ctx, msg)
 				if err != nil {
 					wr.log.WithError(err).Error("Error submitting message to ethereum")
 				}
@@ -188,10 +180,10 @@ func (wr *Writer) WriteChannel(ctx context.Context, msg *chain.SubstrateOutbound
 	return nil
 }
 
-func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, info *store.BeefyRelayInfo, valIndex int) error {
+func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo, valIndex int) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
-		wr.log.WithError(err).Error("Error converting BeefyRelayInfo to BeefyJustification")
+		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
 	}
 
 	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(valIndex)
@@ -223,23 +215,20 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, info *store.B
 		"txHash": tx.Hash().Hex(),
 	}).Info("New Signature Commitment transaction submitted")
 
-	// Update item's status in database
-	wr.log.Info("2: Updating item status from 'WitnessedCommitment' to 'InitialVerificationTxSent'")
-	instructions := map[string]interface{}{
-		"status":                       store.InitialVerificationTxSent,
-		"initial_verification_tx_hash": tx.Hash(),
-	}
-	updateCmd := store.NewDatabaseCmd(info, store.Update, instructions)
-	wr.beefyMessages <- updateCmd
+	wr.log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
+	info.Status = store.InitialVerificationTxSent
+	info.InitialVerificationTxHash = tx.Hash()
+	cmd := store.NewDatabaseCmd(&info, store.Create, nil)
+	wr.databaseMessages <- cmd
 
 	return nil
 }
 
 // WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the LightClientBridge contract
-func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, info *store.BeefyRelayInfo) error {
+func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
-		wr.log.WithError(err).Error("Error converting BeefyRelayInfo to BeefyJustification")
+		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
 	}
 
 	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage()
@@ -272,13 +261,13 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, info *st
 	}).Info("Complete Signature Commitment transaction submitted")
 
 	// Update item's status in database
-	wr.log.Info("5: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
+	wr.log.Info("4: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
 	instructions := map[string]interface{}{
 		"status":                        store.CompleteVerificationTxSent,
 		"complete_verification_tx_hash": tx.Hash(),
 	}
-	updateCmd := store.NewDatabaseCmd(info, store.Update, instructions)
-	wr.beefyMessages <- updateCmd
+	updateCmd := store.NewDatabaseCmd(&info, store.Update, instructions)
+	wr.databaseMessages <- updateCmd
 
 	// TODO: delete from database after confirming
 	return nil

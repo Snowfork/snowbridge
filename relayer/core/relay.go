@@ -63,9 +63,9 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
-	beefyMessages := make(chan store.DatabaseCmd)
+	dbMessages := make(chan store.DatabaseCmd)
 	logger := log.WithField("database", "Beefy")
-	database := store.NewDatabase(db, beefyMessages, logger)
+	database := store.NewDatabase(db, dbMessages, logger)
 
 	ethChain, err := ethereum.NewChain(&config.Eth, database)
 	if err != nil {
@@ -82,6 +82,8 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
+	beefyMessages := make(chan store.BeefyRelayInfo)
+
 	direction := config.Relay.Direction
 	headersOnly := config.Relay.HeadersOnly
 	if direction == Bidirectional || direction == EthToSub {
@@ -94,12 +96,12 @@ func NewRelay() (*Relay, error) {
 		// can guarantee that a header is forwarded before we send dependent messages)
 		ethHeaders := make(chan chain.Header)
 
-		err = ethChain.SetSender(ethMessages, ethHeaders, beefyMessages)
+		err = ethChain.SetSender(ethMessages, ethHeaders, dbMessages, beefyMessages)
 		if err != nil {
 			return nil, err
 		}
 
-		err = paraChain.SetReceiver(ethMessages, ethHeaders, beefyMessages)
+		err = paraChain.SetReceiver(ethMessages, ethHeaders, dbMessages)
 		if err != nil {
 			return nil, err
 		}
@@ -112,12 +114,12 @@ func NewRelay() (*Relay, error) {
 			subMessages = make(chan []chain.Message, 1)
 		}
 
-		err = ethChain.SetReceiver(subMessages, nil, beefyMessages)
+		err = ethChain.SetReceiver(subMessages, nil, dbMessages, beefyMessages)
 		if err != nil {
 			return nil, err
 		}
 
-		err = paraChain.SetSender(subMessages, nil, beefyMessages)
+		err = paraChain.SetSender(subMessages, nil, dbMessages)
 		if err != nil {
 			return nil, err
 		}

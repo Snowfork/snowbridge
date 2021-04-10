@@ -33,21 +33,23 @@ type Listener struct {
 	contracts         []*outbound.Contract
 	lightClientBridge *lightclientbridge.Contract
 	messages          chan<- []chain.Message
-	beefyMessages     chan<- store.DatabaseCmd
+	beefyMessages     chan<- store.BeefyRelayInfo
+	dbMessages        chan<- store.DatabaseCmd
 	headers           chan<- chain.Header
 	blockWaitPeriod   uint64
 	log               *logrus.Entry
 }
 
 func NewListener(config *Config, conn *Connection, db *store.Database, messages chan<- []chain.Message,
-	beefyMessages chan<- store.DatabaseCmd, headers chan<- chain.Header, contracts []*outbound.Contract,
-	log *logrus.Entry) (*Listener, error) {
+	beefyMessages chan<- store.BeefyRelayInfo, dbMessages chan<- store.DatabaseCmd, headers chan<- chain.Header,
+	contracts []*outbound.Contract, log *logrus.Entry) (*Listener, error) {
 	return &Listener{
 		config:          config,
 		conn:            conn,
 		db:              db,
 		contracts:       contracts,
 		messages:        messages,
+		dbMessages:      dbMessages,
 		beefyMessages:   beefyMessages,
 		headers:         headers,
 		blockWaitPeriod: 0,
@@ -93,7 +95,6 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 		return err
 	}
 	li.blockWaitPeriod = blockWaitPeriod.Uint64()
-
 	eg.Go(func() error {
 		return li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
 	})
@@ -180,20 +181,16 @@ func (li *Listener) pollEventsAndHeaders(
 			}
 			for _, item := range items {
 				if item.CompleteOnBlock+descendantsUntilFinal <= blockNumber {
-					li.log.Info("4: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
-
 					// Fetch intended completion block's hash
 					block, err := li.conn.client.BlockByNumber(ctx, big.NewInt(int64(item.CompleteOnBlock)))
 					if err != nil {
 						li.log.WithError(err).Error("Failure fetching inclusion block")
 					}
 
-					instructions := map[string]interface{}{
-						"status":      store.ReadyToComplete,
-						"random_seed": block.Hash(),
-					}
-					updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
-					li.beefyMessages <- updateCmd
+					li.log.Info("3: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
+					item.Status = store.ReadyToComplete
+					item.RandomSeed = block.Hash()
+					li.beefyMessages <- *item
 				}
 			}
 		}
@@ -324,17 +321,16 @@ func (li *Listener) processLightClientEvents(ctx context.Context, events []*ligh
 		}).Info("event information")
 
 		item := li.db.GetItemByInitialVerificationTxHash(event.Raw.TxHash)
-
 		if item.Status != store.InitialVerificationTxSent {
 			continue
 		}
 
-		li.log.Info("3: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
+		li.log.Info("2: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
 		instructions := map[string]interface{}{
 			"status":            store.InitialVerificationTxConfirmed,
 			"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
 		}
 		updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
-		li.beefyMessages <- updateCmd
+		li.dbMessages <- updateCmd
 	}
 }

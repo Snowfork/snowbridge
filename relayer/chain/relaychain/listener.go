@@ -19,11 +19,11 @@ import (
 type Listener struct {
 	config        *Config
 	conn          *Connection
-	beefyMessages chan<- store.DatabaseCmd
+	beefyMessages chan<- store.BeefyRelayInfo
 	log           *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, beefyMessages chan<- store.DatabaseCmd, log *logrus.Entry) *Listener {
+func NewListener(config *Config, conn *Connection, beefyMessages chan<- store.BeefyRelayInfo, log *logrus.Entry) *Listener {
 	return &Listener{
 		config:        config,
 		conn:          conn,
@@ -104,10 +104,7 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 				SignedCommitment:   signedCommitmentBytes,
 				Status:             store.CommitmentWitnessed,
 			}
-
-			li.log.Info("1: Writing BEEFY info to database with status 'WitnessedCommitment'")
-			cmd := store.NewDatabaseCmd(&info, store.Create, nil)
-			li.beefyMessages <- cmd
+			li.beefyMessages <- info
 		}
 	}
 }

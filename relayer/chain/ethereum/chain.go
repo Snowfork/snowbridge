@@ -49,10 +49,11 @@ func NewChain(config *Config, db *store.Database) (*Chain, error) {
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.Header, beefyMessages chan<- store.DatabaseCmd) error {
+func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.Header,
+	dbMessages chan<- store.DatabaseCmd, beefyMessages <-chan store.BeefyRelayInfo) error {
 	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
-	writer, err := NewWriter(ch.config, ch.conn, ch.db, subMessages, beefyMessages, contracts, ch.log)
+	writer, err := NewWriter(ch.config, ch.conn, ch.db, subMessages, dbMessages, beefyMessages, contracts, ch.log)
 	if err != nil {
 		return err
 	}
@@ -61,9 +62,11 @@ func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.
 	return nil
 }
 
-func (ch *Chain) SetSender(ethMessages chan<- []chain.Message, ethHeaders chan<- chain.Header, beefyMessages chan<- store.DatabaseCmd) error {
+func (ch *Chain) SetSender(ethMessages chan<- []chain.Message, ethHeaders chan<- chain.Header,
+	dbMessages chan<- store.DatabaseCmd, beefyMessages chan<- store.BeefyRelayInfo) error {
 	var contracts []*outbound.Contract
-	listener, err := NewListener(ch.config, ch.conn, ch.db, ethMessages, beefyMessages, ethHeaders, contracts, ch.log)
+	listener, err := NewListener(ch.config, ch.conn, ch.db, ethMessages,
+		beefyMessages, dbMessages, ethHeaders, contracts, ch.log)
 	if err != nil {
 		return err
 	}

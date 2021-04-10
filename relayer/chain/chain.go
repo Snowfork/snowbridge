@@ -9,7 +9,6 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
@@ -36,6 +35,6 @@ type Chain interface {
 	Name() string
 	Start(ctx context.Context, eg *errgroup.Group, initOut chan<- Init, initIn <-chan Init) error
 	Stop()
-	SetReceiver(messages <-chan []Message, headers <-chan Header, beefy chan<- store.DatabaseCmd) error
-	SetSender(messages chan<- []Message, headers chan<- Header, beefy chan<- store.DatabaseCmd) error
+	// TODO: SetReceiver method
+	// TODO: SetSender method
 }

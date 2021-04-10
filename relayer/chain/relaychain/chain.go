@@ -45,7 +45,7 @@ func (ch *Chain) SetReceiver(_ <-chan []chain.Message, ethHeaders <-chan chain.H
 	return nil
 }
 
-func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header, beefyMessages chan<- store.DatabaseCmd) error {
+func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header, beefyMessages chan<- store.BeefyRelayInfo) error {
 	listener := NewListener(
 		ch.config,
 		ch.conn,
