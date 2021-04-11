@@ -27,7 +27,11 @@ yarn install
 Install `polkadot-launch`:
 
 ```bash
-yarn global add polkadot-launch
+git clone https://github.com/Snowfork/polkadot-launch.git
+git checkout beefy_tmpfix
+yarn install
+yarn build
+yarn global add file:$(pwd)
 ```
 
 Build polkadot:
