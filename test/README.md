@@ -39,7 +39,7 @@ Build polkadot:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout f0d5c3
+git checkout c4a0772
 cargo build --release --features=real-overseer
 ```
 

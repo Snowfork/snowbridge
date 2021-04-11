@@ -83,7 +83,7 @@ jobs:
             --verbose --workspace
             --exclude artemis
             --exclude snowbridge-runtime
-            --exclude rococo-runtime
+            --exclude artemis-rococo-runtime
             --exclude local-runtime
             --exclude-files '*/mock.rs,*/tests.rs'
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
