@@ -200,7 +200,7 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = weights::frame_system_weights::WeightInfo<Runtime>;
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
-	type OnSetCode = ParachainSystem;
+	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 }
 
 parameter_types! {
