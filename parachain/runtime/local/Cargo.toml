@@ -24,6 +24,8 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", branch
 pallet-utility = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }

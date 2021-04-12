@@ -7,7 +7,10 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use sp_core::{U256, crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{
+	U256, crypto::KeyTypeId, OpaqueMetadata,
+	u32_trait::{_1, _2, _3, _4},
+};
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
 	transaction_validity::{TransactionValidity, TransactionSource},
@@ -351,6 +354,51 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type AccountIdConverter = LocationConverter;
 }
 
+
+// Governance
+
+#[allow(dead_code)]
+type EnsureHalfGeneralCouncil = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
+
+#[allow(dead_code)]
+type EnsureOneThirdGeneralCouncil = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
+
+#[allow(dead_code)]
+type EnsureTwoThirdsGeneralCouncil = pallet_collective::EnsureProportionMoreThan<_2, _3, AccountId, GeneralCouncilInstance>;
+
+type EnsureThreeFourthsGeneralCouncil = pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>;
+
+parameter_types! {
+	pub const GeneralCouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const GeneralCouncilMaxProposals: u32 = 100;
+	pub const GeneralCouncilMaxMembers: u32 = 4;
+}
+
+type GeneralCouncilInstance = pallet_collective::Instance1;
+impl pallet_collective::Config<GeneralCouncilInstance> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = GeneralCouncilMotionDuration;
+	type MaxProposals = GeneralCouncilMaxProposals;
+	type MaxMembers = GeneralCouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = ();
+}
+
+type GeneralCouncilMembershipInstance = pallet_membership::Instance1;
+impl pallet_membership::Config<GeneralCouncilMembershipInstance> for Runtime {
+	type Event = Event;
+	type AddOrigin = EnsureThreeFourthsGeneralCouncil;
+	type RemoveOrigin = EnsureThreeFourthsGeneralCouncil;
+	type SwapOrigin = EnsureThreeFourthsGeneralCouncil;
+	type ResetOrigin = EnsureThreeFourthsGeneralCouncil;
+	type PrimeOrigin = EnsureThreeFourthsGeneralCouncil;
+	type MembershipInitialized = GeneralCouncil;
+	type MembershipChanged = GeneralCouncil;
+}
+
+
 // Our pallets
 
 // Module accounts
@@ -532,6 +580,9 @@ construct_runtime!(
 
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 5,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event} = 6,
+
+		GeneralCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 21,
+		GeneralCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 22,
 
 		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event} = 7,
 		BasicOutboundChannel: basic_channel_outbound::{Pallet, Storage, Event} = 8,
