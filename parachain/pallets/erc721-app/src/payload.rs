@@ -3,7 +3,7 @@ use sp_std::prelude::*;
 use codec::Encode;
 
 use ethabi::{self, Token};
-use artemis_ethereum::{H160};
+use artemis_ethereum::{H160, U256};
 
 // Message to Ethereum (ABI-encoded)
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]
@@ -11,6 +11,7 @@ pub struct OutboundPayload<AccountId: Encode> {
 	pub token: H160,
 	pub sender: AccountId,
 	pub recipient: H160,
+	pub token_id: U256,
 }
 
 impl<AccountId: Encode> OutboundPayload<AccountId> {
@@ -20,6 +21,7 @@ impl<AccountId: Encode> OutboundPayload<AccountId> {
 			Token::Address(self.token),
 			Token::FixedBytes(self.sender.encode()),
 			Token::Address(self.recipient),
+			Token::Uint(self.token_id)
 		];
 		ethabi::encode_function("unlock(address,bytes32,address,uint256)", tokens.as_ref())
 	}
@@ -37,6 +39,7 @@ mod tests {
 			token: hex!["e1638d0a9f5349bb7d3d748b514b8553dfddb46c"].into(),
 			sender: hex!["1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50"],
 			recipient: hex!["ccb3c82493ac988cebe552779e7195a3a9dc651f"].into(),
+			token_id: U256::from_str_radix("100", 10).unwrap(),
 		};
 
 		println!("Payload:");
