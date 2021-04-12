@@ -21,7 +21,31 @@ function extractWeights(benchOutput) {
         );
 }
 
+function calculateUnits(weights, transactionsInBlock) {
+  return Object.entries(weights)
+    .reduce(
+      (obj, [key, value]) => {
+        if (key === 'extrinsic_base_weight') {
+          value = value / transactionsInBlock;
+        }
+
+        return {
+          ...obj,
+          [key + '_in_nanos']: value,
+          [key + '_in_micros']: Math.ceil(value / 1000),
+          [key + '_in_millis']: Math.ceil(value / 1000000),
+        };
+      },
+      {},
+    );
+}
+
 function run() {
+  const transactionsInBlock = parseInt(process.argv[2]);
+  if (!transactionsInBlock) {
+      throw Error("Expected number of transactions in block as argument");
+  }
+
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -34,8 +58,10 @@ function run() {
   });
 
   rl.on('close', function() {
+    const weights = extractWeights(JSON.parse(buffer));
+
     console.log(JSON.stringify(
-      extractWeights(JSON.parse(buffer)),
+      calculateUnits(weights, transactionsInBlock),
       null, // replacer
       4, // spaces
     ));

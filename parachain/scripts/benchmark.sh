@@ -39,6 +39,9 @@ benchmark_pallets()
 
     echo "Generating weights module for $RUNTIME_DIR with pallets $PALLETS"
 
+    echo "pub mod constants;" >> $TMP_DIR/mod.rs
+    echo "" >> $TMP_DIR/mod.rs
+
     for pallet in $PALLETS
     do
         MODULE_NAME="$(tr -s [:] _ <<< $pallet)_weights"
@@ -61,7 +64,7 @@ benchmark_pallets()
 
 benchmark_node()
 {
-    echo "Benchmarking node. This will take a few minutes..."
+    echo "Benchmarking node. This can take 1 to 2 hours"
 
     cargo install node-bench --version 0.8.0
     yarn global add handlebars-cmd@0.1.4
@@ -69,9 +72,9 @@ benchmark_node()
     echo "[
         $(node-bench -j ::trie::read::large),
         $(node-bench -j ::trie::write::large),
-        $(node-bench -j ::node::import::wasm::sr25519::noop::rocksdb::custom --transactions 10000),
+        $(node-bench -j ::node::import::wasm::sr25519::noop::rocksdb::custom --transactions 5000),
         $(node-bench -j ::node::import::wasm::sr25519::noop::rocksdb::empty)
-    ]" | node scripts/helpers/parseNodeBenchOutput.js > $TMP_DIR/node_bench_results.json
+    ]" | node scripts/helpers/parseNodeBenchOutput.js 5000 > $TMP_DIR/node_bench_results.json
 
     echo "Generating weight constants for node"
 

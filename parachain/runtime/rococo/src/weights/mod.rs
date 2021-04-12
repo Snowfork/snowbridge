@@ -1,3 +1,5 @@
+pub mod constants;
+
 pub mod assets_weights;
 pub mod basic_channel_inbound_weights;
 pub mod dot_app_weights;
