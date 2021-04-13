@@ -40,7 +40,7 @@ Build polkadot:
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
 git checkout c4a0772
-cargo build --release --features=real-overseer
+cargo build --release
 ```
 
 Start all services (parachain, relayer, ganache, etc):
