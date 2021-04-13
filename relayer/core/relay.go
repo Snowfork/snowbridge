@@ -196,7 +196,7 @@ func (re *Relay) Start() {
 	log.WithField("name", re.paraChain.Name()).Info("Started chain")
 	defer re.paraChain.Stop()
 
-	err = re.relayChain.Start(ctx, eg, ethSubInit, subInit)
+	err = re.relayChain.Start(ctx, eg, make(chan chain.Init), make(chan chain.Init))
 	if err != nil {
 		log.WithFields(log.Fields{
 			"chain": re.relayChain.Name(),
@@ -235,6 +235,7 @@ func (re *Relay) Start() {
 		}
 
 		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
+		// TODO: is this shutdown order correct?
 		re.ethChain.Stop()
 		re.paraChain.Stop()
 		re.relayChain.Stop()

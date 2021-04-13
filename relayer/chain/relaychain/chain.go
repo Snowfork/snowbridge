@@ -56,7 +56,7 @@ func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.He
 	return nil
 }
 
-func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- chain.Init, _ <-chan chain.Init) error {
+func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, _ chan<- chain.Init, _ <-chan chain.Init) error {
 	if ch.listener == nil {
 		return fmt.Errorf("Sender needs to be set before starting chain")
 	}
