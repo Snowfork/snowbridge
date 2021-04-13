@@ -235,7 +235,6 @@ func (re *Relay) Start() {
 		}
 
 		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
-		// TODO: is this shutdown order correct?
 		re.ethChain.Stop()
 		re.paraChain.Stop()
 		re.relayChain.Stop()
