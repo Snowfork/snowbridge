@@ -75,10 +75,6 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 		return wr.writeMessagesLoop(ctx)
 	})
 
-	eg.Go(func() error {
-		return wr.writeBeefyLoop(ctx)
-	})
-
 	return nil
 }
 
@@ -87,6 +83,9 @@ func (wr *Writer) onDone(ctx context.Context) error {
 	// Avoid deadlock if a listener is still trying to send to a channel
 	for range wr.messages {
 		wr.log.Debug("Discarded message")
+	}
+	for range wr.beefyMessages {
+		wr.log.Debug("Discarded BEEFY message")
 	}
 	return ctx.Err()
 }
@@ -108,15 +107,6 @@ func (wr *Writer) writeMessagesLoop(ctx context.Context) error {
 					wr.log.WithError(err).Error("Error submitting message to ethereum")
 				}
 			}
-		}
-	}
-}
-
-func (wr *Writer) writeBeefyLoop(ctx context.Context) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return wr.onDone(ctx)
 		case msg := <-wr.beefyMessages:
 			switch msg.Status {
 			case store.CommitmentWitnessed:
