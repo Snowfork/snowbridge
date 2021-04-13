@@ -98,6 +98,7 @@ impl basic_inbound_channel::Config for Test {
 	type Event = Event;
 	type Verifier = MockVerifier;
 	type MessageDispatch = MockMessageDispatch;
+	type WeightInfo = ();
 }
 
 pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {

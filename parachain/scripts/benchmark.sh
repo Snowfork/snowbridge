@@ -33,12 +33,13 @@ DOT_MODULE_ENDOWMENT="[
 node ../test/scripts/helpers/overrideParachainSpec.js $TMP_DIR/spec.json \
     genesis.runtime.palletBalances.balances.0 "$DOT_MODULE_ENDOWMENT"
 
-PALLETS="assets dot_app erc20_app eth_app frame_system pallet_balances pallet_timestamp verifier_lightclient"
+PALLETS="assets basic_channel::inbound dot_app erc20_app eth_app frame_system incentivized_channel::inbound pallet_balances pallet_timestamp verifier_lightclient"
 
 echo "Generating weights module for $RUNTIME_DIR with pallets $PALLETS"
 
 for pallet in $PALLETS
 do
+    MODULE_NAME="$(tr -s [:] _ <<< $pallet)_weights"
     target/release/artemis benchmark \
         --chain $TMP_DIR/spec.json \
         --execution wasm \
@@ -47,8 +48,8 @@ do
         --extrinsic "*" \
         --repeat 20 \
         --steps 50 \
-        --output $RUNTIME_DIR/src/weights/${pallet}_weights.rs
-    echo "pub mod ${pallet}_weights;" >> $TMP_DIR/mod.rs
+        --output $RUNTIME_DIR/src/weights/$MODULE_NAME.rs
+    echo "pub mod $MODULE_NAME;" >> $TMP_DIR/mod.rs
 done
 
 mv $TMP_DIR/mod.rs $RUNTIME_DIR/src/weights/mod.rs
