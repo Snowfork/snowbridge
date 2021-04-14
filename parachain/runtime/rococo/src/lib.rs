@@ -222,7 +222,7 @@ impl pallet_timestamp::Config for Runtime {
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_utility_weights::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -711,6 +711,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel::inbound, BasicInboundChannel);
