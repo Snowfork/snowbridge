@@ -17,6 +17,8 @@ use sp_std::prelude::*;
 
 use artemis_core::{ChannelId, MessageNonce, types::AuxiliaryDigestItem};
 
+mod benchmarking;
+
 #[cfg(test)]
 mod test;
 
@@ -31,6 +33,19 @@ pub struct Message {
 	payload: Vec<u8>,
 }
 
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn on_initialize(num_messages: u32) -> Weight;
+	fn on_initialize_non_interval() -> Weight;
+	fn on_initialize_no_messages() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn on_initialize(_: u32) -> Weight { 0 }
+	fn on_initialize_non_interval() -> Weight { 0 }
+	fn on_initialize_no_messages() -> Weight { 0 }
+}
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
@@ -41,6 +56,9 @@ pub trait Config: system::Config {
 
 	/// Max number of messages that can be queued and committed in one go for a given channel.
 	type MaxMessagesPerCommit: Get<usize>;
+
+	/// Weight information for extrinsics in this pallet
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -81,7 +99,7 @@ decl_module! {
 			if (now % Self::interval()).is_zero() {
 				Self::commit()
 			} else {
-				0
+				T::WeightInfo::on_initialize_non_interval()
 			}
 		}
 	}
@@ -120,7 +138,7 @@ impl<T: Config> Module<T> {
 	fn commit() -> Weight {
 		let messages: Vec<Message> = <Self as Store>::MessageQueue::take();
 		if messages.is_empty() {
-			return 0
+			return T::WeightInfo::on_initialize_no_messages();
 		}
 
 		let commitment = Self::encode_commitment(&messages);
@@ -132,8 +150,7 @@ impl<T: Config> Module<T> {
 		let key = offchain_key(T::INDEXING_PREFIX, commitment_hash);
 		offchain_index::set(&*key, &messages.encode());
 
-		// TODO: calculate the real weight instead of returning max block weight
-		T::BlockWeights::get().max_block
+		T::WeightInfo::on_initialize(messages.len() as u32)
 	}
 
 	// ABI-encode the commitment

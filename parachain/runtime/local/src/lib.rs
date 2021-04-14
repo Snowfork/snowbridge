@@ -434,6 +434,7 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type WeightInfo = ();
 }
 
 use sp_std::marker::PhantomData;
@@ -712,6 +713,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel::inbound, BasicInboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
+			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
 			add_benchmark!(params, batches, dot_app, DOT);
 			add_benchmark!(params, batches, erc20_app, ERC20);
 			add_benchmark!(params, batches, eth_app, ETH);
