@@ -40,9 +40,9 @@ yarn global add file:$(pwd)
 Build polkadot:
 
 ```bash
-git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
+git clone -n https://github.com/snowfork/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout c4a0772
+git checkout enable_beefy_on_rococo
 cargo build --release
 ```
 
