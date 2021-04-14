@@ -170,6 +170,8 @@ func (li *Listener) pollEventsAndHeaders(
 			}
 			events = append(events, incentivizedEvents...)
 
+			li.forwardEvents(ctx, hcs, events)
+
 			// Query LightClientBridge contract's InitialVerificationSuccessful events
 			blockNumber := gethheader.Number.Uint64()
 			var lightClientBridgeEvents []*lightclientbridge.ContractInitialVerificationSuccessful
