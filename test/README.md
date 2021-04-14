@@ -42,6 +42,7 @@ Build polkadot:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
+git checkout c4a0772
 cargo build --release
 ```
 
