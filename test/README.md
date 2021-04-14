@@ -22,13 +22,16 @@ Download dependencies:
 
 ```bash
 yarn install
+
+# Build typescript bindings
+cd ./node_modules/@snowfork/snowbridge-types && yarn install
 ```
 
 Install `polkadot-launch`:
 
 ```bash
-git clone https://github.com/Snowfork/polkadot-launch.git
-git checkout beefy_tmpfix
+git clone -n https://github.com/snowfork/polkadot-launch.git /tmp/polkadot-launch
+cd /tmp/polkadot-launch
 yarn install
 yarn build
 yarn global add file:$(pwd)
@@ -37,9 +40,9 @@ yarn global add file:$(pwd)
 Build polkadot:
 
 ```bash
-git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
+git clone -n https://github.com/snowfork/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout c4a0772
+git checkout enable_beefy_on_rococo
 cargo build --release
 ```
 
@@ -80,7 +83,7 @@ In the substrate webapp (linked above), you should see an `Eth.Minted` event in 
 
 #### Burning PolkaETH to unlock ETH on Ethereum
 
-To see the PolkaETH  balance for `//Alice`:
+To see the PolkaETH balance for `//Alice`:
 
 1. Navigate to Developer > Chain state > Storage
 2. Select the `assets` module in the drop-down.
@@ -114,6 +117,6 @@ truffle exec scripts/getEthBalance.js 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD
 
 The `start-services.sh` script writes the following logs:
 
-* parachain.log
-* relayer.log
-* ganache.log
+- parachain.log
+- relayer.log
+- ganache.log

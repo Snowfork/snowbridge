@@ -5,6 +5,7 @@ type Config struct {
 	PrivateKey            string         `mapstructure:"private-key"`
 	DescendantsUntilFinal byte           `mapstructure:"descendants-until-final"`
 	Channels              ChannelsConfig `mapstructure:"channels"`
+	LightClientBridge     string         `mapstructure:"lightclientbridge"`
 }
 
 type ChannelsConfig struct {

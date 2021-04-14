@@ -96,7 +96,8 @@ start_relayer()
     mage build
 
     export ARTEMIS_ETHEREUM_KEY="0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
-    export ARTEMIS_SUBSTRATE_KEY="//Relay"
+    export ARTEMIS_PARACHAIN_KEY="//Relay"
+    export ARTEMIS_RELAYCHAIN_KEY="//Alice"
 
     build/artemis-relay run --config $configdir/config.toml >$logfile 2>&1 &
 
