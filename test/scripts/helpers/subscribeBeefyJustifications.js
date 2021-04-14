@@ -37,6 +37,7 @@ async function start() {
         prefix: 'Vec<u8>',
         pos: 'u64'
       },
+      PalletId: 'u64',
       MMRProof: {
         blockHash: 'BlockHash',
         leaf: 'MMRLeaf',
