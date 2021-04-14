@@ -1,5 +1,5 @@
 use crate::mock::{new_tester, AccountId, Origin, Event, System, Asset, ETHApp};
-use frame_support::{assert_ok};
+use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
 use crate::RawEvent;
@@ -50,6 +50,26 @@ fn burn_should_emit_bridge_event() {
 		assert_eq!(
 			Event::eth_app(RawEvent::Burned(bob, recipient, 20.into())),
 			last_event()
+		);
+	});
+}
+
+#[test]
+fn should_not_burn_on_commitment_failure() {
+	new_tester().execute_with(|| {
+		let sender: AccountId = Keyring::Bob.into();
+		let recipient = H160::repeat_byte(9);
+
+		Asset::deposit(&sender, 500.into()).unwrap();
+
+		assert_noop!(
+			ETHApp::burn(
+				Origin::signed(sender.clone()),
+				ChannelId::Basic,
+				recipient.clone(),
+				20.into()
+			),
+			DispatchError::Other("some error!")
 		);
 	});
 }

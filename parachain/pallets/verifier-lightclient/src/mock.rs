@@ -1,7 +1,7 @@
 // Mock runtime
 use artemis_core::{Message, Proof};
 use artemis_testutils::BlockWithProofs;
-use crate::{EthashProofData, EthereumHeader};
+use crate::{EthashProofData, EthereumHeader, EthereumDifficultyConfig};
 use sp_core::H256;
 use frame_support::{parameter_types};
 use sp_runtime::{
@@ -22,6 +22,12 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
+pub const MAINNET_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficultyConfig {
+	byzantium_fork_block: 4370000,
+	constantinople_fork_block: 7280000,
+	muir_glacier_fork_block: 9200000,
+};
+
 pub mod mock_verifier {
 
 	use super::*;
@@ -35,8 +41,8 @@ pub mod mock_verifier {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Module, Call, Storage, Event<T>},
-			Verifier: verifier::{Module, Call, Storage, Event},
+			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Verifier: verifier::{Pallet, Call, Storage, Event},
 		}
 	);
 
@@ -63,17 +69,21 @@ pub mod mock_verifier {
 		type OnKilledAccount = ();
 		type SystemWeightInfo = ();
 		type SS58Prefix = ();
+		type OnSetCode = ();
 	}
 
 	parameter_types! {
 		pub const DescendantsUntilFinalized: u8 = 2;
+		pub const DifficultyConfig: EthereumDifficultyConfig = MAINNET_DIFFICULTY_CONFIG;
 		pub const VerifyPoW: bool = false;
 	}
 
 	impl verifier::Config for Test {
 		type Event = Event;
 		type DescendantsUntilFinalized = DescendantsUntilFinalized;
+		type DifficultyConfig = DifficultyConfig;
 		type VerifyPoW = VerifyPoW;
+		type WeightInfo = ();
 	}
 }
 
@@ -90,8 +100,8 @@ pub mod mock_verifier_with_pow {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Module, Call, Storage, Event<T>},
-			Verifier: verifier::{Module, Call, Storage, Event},
+			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Verifier: verifier::{Pallet, Call, Storage, Event},
 		}
 	);
 
@@ -118,17 +128,21 @@ pub mod mock_verifier_with_pow {
 		type OnKilledAccount = ();
 		type SystemWeightInfo = ();
 		type SS58Prefix = ();
+		type OnSetCode = ();
 	}
 
 	parameter_types! {
 		pub const DescendantsUntilFinalized: u8 = 2;
+		pub const DifficultyConfig: EthereumDifficultyConfig = MAINNET_DIFFICULTY_CONFIG;
 		pub const VerifyPoW: bool = true;
 	}
 
 	impl verifier::Config for Test {
 		type Event = Event;
 		type DescendantsUntilFinalized = DescendantsUntilFinalized;
+		type DifficultyConfig = DifficultyConfig;
 		type VerifyPoW = VerifyPoW;
+		type WeightInfo = ();
 	}
 }
 

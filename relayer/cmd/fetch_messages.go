@@ -15,9 +15,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
@@ -63,22 +63,25 @@ func FetchMessagesFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	contractEvents, trie, err := getEthContractEventsAndTrie(&config.Eth, blockHash, index)
+	mapping := make(map[common.Address]string)
+
+	contractEvents, trie, err := getEthContractEventsAndTrie(&config.Eth, mapping, blockHash, index)
 	if err != nil {
 		return err
 	}
 
 	for _, event := range contractEvents {
-		printEthContractEventForSub(event, trie)
+		printEthContractEventForSub(mapping, event, trie)
 	}
 	return nil
 }
 
 func getEthContractEventsAndTrie(
 	config *ethereum.Config,
+	mapping map[common.Address]string,
 	blockHash gethCommon.Hash,
 	index uint64,
-) ([]*outbound.ContractMessage, *gethTrie.Trie, error) {
+) ([]*gethTypes.Log, *gethTrie.Trie, error) {
 	ctx := context.Background()
 	kp, err := secp256k1.NewKeypairFromString(config.PrivateKey)
 	if err != nil {
@@ -92,6 +95,19 @@ func getEthContractEventsAndTrie(
 	}
 	defer conn.Close()
 
+	basicOutboundChannel, err := outbound.NewBasicOutboundChannel(common.HexToAddress(config.Channels.Basic.Outbound), conn.GetClient())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	incentivizedOutboundChannel, err := outbound.NewIncentivizedOutboundChannel(common.HexToAddress(config.Channels.Incentivized.Outbound), conn.GetClient())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	mapping[common.HexToAddress(config.Channels.Basic.Outbound)] = "BasicInboundChannel.submit"
+	mapping[common.HexToAddress(config.Channels.Incentivized.Outbound)] = "IncentivizedInboundChannel.submit"
+
 	loader := ethereum.DefaultBlockLoader{Conn: conn}
 	block, err := loader.GetBlock(ctx, blockHash)
 	if err != nil {
@@ -104,75 +120,99 @@ func getEthContractEventsAndTrie(
 	}
 	trie := makeTrie(receipts)
 
-	contracts, err := getEthContractsFromConfig(config, conn.GetClient())
+	allEvents := make([]*gethTypes.Log, 0)
+
+	basicEvents, err := getEthBasicMessages(ctx, basicOutboundChannel, block.NumberU64(), index)
 	if err != nil {
 		return nil, nil, err
 	}
+	allEvents = append(allEvents, basicEvents...)
 
-	contractMessages, err := getEthContractMessages(ctx, contracts, block.NumberU64(), index)
+	incentivizedEvents, err := getEthIncentivizedMessages(ctx, incentivizedOutboundChannel, block.NumberU64(), index)
 	if err != nil {
 		return nil, nil, err
 	}
+	allEvents = append(allEvents, incentivizedEvents...)
 
-	return contractMessages, trie, nil
+	return allEvents, trie, nil
 }
 
-func getEthContractsFromConfig(config *ethereum.Config, client *ethclient.Client) ([]*outbound.Contract, error) {
-	contractBasic, err := outbound.NewContract(gethCommon.HexToAddress(config.Channels.Basic.Outbound), client)
-	if err != nil {
-		return nil, err
-	}
-
-	contractIncentivized, err := outbound.NewContract(gethCommon.HexToAddress(config.Channels.Incentivized.Outbound), client)
-	if err != nil {
-		return nil, err
-	}
-
-	return []*outbound.Contract{contractBasic, contractIncentivized}, nil
-}
-
-func getEthContractMessages(
+func getEthBasicMessages(
 	ctx context.Context,
-	contracts []*outbound.Contract,
+	contract *outbound.BasicOutboundChannel,
 	blockNumber uint64,
 	index uint64,
-) ([]*outbound.ContractMessage, error) {
-	events := make([]*outbound.ContractMessage, 0)
+) ([]*gethTypes.Log, error) {
+	events := make([]*gethTypes.Log, 0)
 	filterOps := bind.FilterOpts{Start: blockNumber, End: &blockNumber, Context: ctx}
-	for _, contract := range contracts {
-		iter, err := contract.FilterMessage(&filterOps)
-		if err != nil {
-			return nil, err
+
+	iter, err := contract.FilterMessage(&filterOps)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return nil, err
+			}
+			break
 		}
 
-		for {
-			more := iter.Next()
-			if !more {
-				err = iter.Error()
-				if err != nil {
-					return nil, err
-				}
-				break
-			}
-
-			if uint64(iter.Event.Raw.TxIndex) != index {
-				continue
-			}
-			events = append(events, iter.Event)
+		if uint64(iter.Event.Raw.TxIndex) != index {
+			continue
 		}
+		events = append(events, &iter.Event.Raw)
 	}
 
 	return events, nil
 }
 
-func printEthContractEventForSub(contractMsg *outbound.ContractMessage, trie *gethTrie.Trie) error {
-	message, err := ethereum.MakeMessageFromEvent(contractMsg, trie, logrus.WithField("chain", "Ethereum"))
+func getEthIncentivizedMessages(
+	ctx context.Context,
+	contract *outbound.IncentivizedOutboundChannel,
+	blockNumber uint64,
+	index uint64,
+) ([]*gethTypes.Log, error) {
+	events := make([]*gethTypes.Log, 0)
+	filterOps := bind.FilterOpts{Start: blockNumber, End: &blockNumber, Context: ctx}
+
+	iter, err := contract.FilterMessage(&filterOps)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+
+		if uint64(iter.Event.Raw.TxIndex) != index {
+			continue
+		}
+		events = append(events, &iter.Event.Raw)
+	}
+
+	return events, nil
+}
+
+func printEthContractEventForSub(mapping map[common.Address]string, event *gethTypes.Log, trie *gethTrie.Trie) error {
+	message, err := ethereum.MakeMessageFromEvent(mapping, event, trie, logrus.WithField("chain", "Ethereum"))
 	if err != nil {
 		return err
 	}
 
-	messageForSub := substrate.Message(*message)
-	proof := messageForSub.Proof
+	msgInner, ok := message.Args[0].(substrate.Message)
+	if !ok {
+		return err
+	}
 
 	formatProofVec := func(data []types.Bytes) string {
 		hexRep := make([]string, len(data))
@@ -197,11 +237,11 @@ func printEthContractEventForSub(contractMsg *outbound.ContractMessage, trie *ge
 				),
 			},
 		}`,
-		hex.EncodeToString(messageForSub.Data),
-		proof.BlockHash,
-		proof.TxIndex,
-		formatProofVec(proof.Data.Keys),
-		formatProofVec(proof.Data.Values),
+		hex.EncodeToString(msgInner.Data),
+		msgInner.Proof.BlockHash,
+		msgInner.Proof.TxIndex,
+		formatProofVec(msgInner.Proof.Data.Keys),
+		formatProofVec(msgInner.Proof.Data.Values),
 	)
 	fmt.Println("")
 	return nil

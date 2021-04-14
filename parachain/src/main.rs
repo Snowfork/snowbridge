@@ -7,6 +7,7 @@
 #![warn(unused_extern_crates)]
 
 mod chain_spec;
+
 #[macro_use]
 mod service;
 mod cli;

@@ -1,8 +1,10 @@
+use sp_std::marker::PhantomData;
+
 // Mock runtime
 use sp_core::{H160, H256};
 use frame_support::{
 	parameter_types,
-	dispatch::DispatchResult,
+	dispatch::{DispatchError, DispatchResult},
 };
 use sp_runtime::{
 	traits::{
@@ -11,10 +13,10 @@ use sp_runtime::{
 };
 use frame_system as system;
 
-use artemis_core::{ChannelId, AssetId, SubmitOutbound};
+use artemis_core::{ChannelId, AssetId, OutboundRouter};
 use artemis_assets::SingleAssetAdaptor;
 
-use crate as  eth_app;
+use crate as eth_app;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -25,10 +27,10 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Storage, Event<T>},
-		Assets: artemis_assets::{Module, Call, Storage, Event<T>},
-		Dispatch: artemis_dispatch::{Module, Call, Storage, Origin, Event<T>},
-		ETHApp: eth_app::{Module, Call, Config, Storage, Event<T>},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Assets: artemis_assets::{Pallet, Call, Storage, Event<T>},
+		Dispatch: artemis_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
+		ETHApp: eth_app::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
 
@@ -63,10 +65,12 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
 impl artemis_assets::Config for Test {
 	type Event = Event;
+	type WeightInfo = ();
 }
 
 impl artemis_dispatch::Config for Test {
@@ -77,10 +81,13 @@ impl artemis_dispatch::Config for Test {
 	type CallFilter = ();
 }
 
-pub struct MockSubmitOutbound;
+pub struct MockOutboundRouter<AccountId>(PhantomData<AccountId>);
 
-impl SubmitOutbound for MockSubmitOutbound {
-	fn submit(_: ChannelId, _: H160, _: &[u8]) -> DispatchResult {
+impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
+	fn submit(channel: ChannelId, _: &AccountId, _: H160, _: &[u8]) -> DispatchResult {
+        if channel == ChannelId::Basic {
+            return Err(DispatchError::Other("some error!"));
+        }
 		Ok(())
 	}
 }
@@ -92,8 +99,9 @@ parameter_types! {
 impl eth_app::Config for Test {
 	type Event = Event;
 	type Asset = Asset;
-	type SubmitOutbound = MockSubmitOutbound;
+	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
 	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
+	type WeightInfo = ();
 }
 
 pub type Asset = SingleAssetAdaptor<Test, EthAssetId>;

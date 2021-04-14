@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
@@ -26,34 +27,38 @@ const MaxMessagesPerSend = 10
 
 // Listener streams the Ethereum blockchain for application events
 type Listener struct {
-	config            *Config
-	conn              *Connection
-	db                *store.Database
-	address           common.Address
-	contracts         []*outbound.Contract
-	lightClientBridge *lightclientbridge.Contract
-	messages          chan<- []chain.Message
-	beefyMessages     chan<- store.BeefyRelayInfo
-	dbMessages        chan<- store.DatabaseCmd
-	headers           chan<- chain.Header
-	blockWaitPeriod   uint64
-	log               *logrus.Entry
+	config                      *Config
+	conn                        *Connection
+	basicOutboundChannel        *outbound.BasicOutboundChannel
+	incentivizedOutboundChannel *outbound.IncentivizedOutboundChannel
+	mapping                     map[common.Address]string
+	db                          *store.Database
+	address                     common.Address
+	lightClientBridge           *lightclientbridge.Contract
+	messages                    chan<- []chain.Message
+	beefyMessages               chan<- store.BeefyRelayInfo
+	dbMessages                  chan<- store.DatabaseCmd
+	headers                     chan<- chain.Header
+	blockWaitPeriod             uint64
+	log                         *logrus.Entry
 }
 
 func NewListener(config *Config, conn *Connection, db *store.Database, messages chan<- []chain.Message,
 	beefyMessages chan<- store.BeefyRelayInfo, dbMessages chan<- store.DatabaseCmd, headers chan<- chain.Header,
-	contracts []*outbound.Contract, log *logrus.Entry) (*Listener, error) {
+	log *logrus.Entry) (*Listener, error) {
 	return &Listener{
-		config:          config,
-		conn:            conn,
-		db:              db,
-		contracts:       contracts,
-		messages:        messages,
-		dbMessages:      dbMessages,
-		beefyMessages:   beefyMessages,
-		headers:         headers,
-		blockWaitPeriod: 0,
-		log:             log,
+		config:                      config,
+		conn:                        conn,
+		basicOutboundChannel:        nil,
+		incentivizedOutboundChannel: nil,
+		mapping:                     make(map[common.Address]string),
+		db:                          db,
+		messages:                    messages,
+		dbMessages:                  dbMessages,
+		beefyMessages:               beefyMessages,
+		headers:                     headers,
+		blockWaitPeriod:             0,
+		log:                         log,
 	}, nil
 }
 
@@ -68,19 +73,20 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 		return err
 	}
 
-	// Set up basic outbound channel contract
-	contract, err := outbound.NewContract(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.client)
+	basicOutboundChannel, err := outbound.NewBasicOutboundChannel(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.client)
 	if err != nil {
 		return err
 	}
-	li.contracts = append(li.contracts, contract)
+	li.basicOutboundChannel = basicOutboundChannel
 
-	// Set up incentivized outbound channel contract
-	contract, err = outbound.NewContract(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.client)
+	incentivizedOutboundChannel, err := outbound.NewIncentivizedOutboundChannel(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.client)
 	if err != nil {
 		return err
 	}
-	li.contracts = append(li.contracts, contract)
+	li.incentivizedOutboundChannel = incentivizedOutboundChannel
+
+	li.mapping[common.HexToAddress(li.config.Channels.Basic.Outbound)] = "BasicInboundChannel.submit"
+	li.mapping[common.HexToAddress(li.config.Channels.Incentivized.Outbound)] = "IncentivizedInboundChannel.submit"
 
 	// Set up light client bridge contract
 	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(li.config.LightClientBridge), li.conn.client)
@@ -148,16 +154,21 @@ func (li *Listener) pollEventsAndHeaders(
 			}
 
 			finalizedBlockNumber := gethheader.Number.Uint64() - descendantsUntilFinal
-			var channelEvents []*outbound.ContractMessage
-			for _, channelContract := range li.contracts {
-				contractEvents, err := li.queryChannelEvents(ctx, channelContract, finalizedBlockNumber, &finalizedBlockNumber)
-				if err != nil {
-					li.log.WithError(err).Error("Failure fetching event logs")
-				}
+			var events []*etypes.Log
 
-				channelEvents = append(channelEvents, contractEvents...)
+			filterOptions := bind.FilterOpts{Start: finalizedBlockNumber, End: &finalizedBlockNumber, Context: ctx}
+
+			basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
+			if err != nil {
+				li.log.WithError(err).Error("Failure fetching event logs")
 			}
-			li.forwardChannelEvents(ctx, hcs, channelEvents)
+			events = append(events, basicEvents...)
+
+			incentivizedEvents, err := li.queryIncentivizedEvents(li.incentivizedOutboundChannel, &filterOptions)
+			if err != nil {
+				li.log.WithError(err).Error("Failure fetching event logs")
+			}
+			events = append(events, incentivizedEvents...)
 
 			// Query LightClientBridge contract's InitialVerificationSuccessful events
 			blockNumber := gethheader.Number.Uint64()
@@ -197,11 +208,10 @@ func (li *Listener) pollEventsAndHeaders(
 	}
 }
 
-func (li *Listener) queryChannelEvents(ctx context.Context, contract *outbound.Contract, start uint64, end *uint64) ([]*outbound.ContractMessage, error) {
-	var events []*outbound.ContractMessage
-	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
+func (li *Listener) queryBasicEvents(contract *outbound.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
+	var events []*etypes.Log
 
-	iter, err := contract.FilterMessage(&filterOps)
+	iter, err := contract.FilterMessage(options)
 	if err != nil {
 		return nil, err
 	}
@@ -215,34 +225,54 @@ func (li *Listener) queryChannelEvents(ctx context.Context, contract *outbound.C
 			}
 			break
 		}
-
-		events = append(events, iter.Event)
+		events = append(events, &iter.Event.Raw)
 	}
-
 	return events, nil
 }
 
-func (li *Listener) forwardChannelEvents(ctx context.Context, hcs *HeaderCacheState, events []*outbound.ContractMessage) {
+func (li *Listener) queryIncentivizedEvents(contract *outbound.IncentivizedOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
+	var events []*etypes.Log
+
+	iter, err := contract.FilterMessage(options)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+		events = append(events, &iter.Event.Raw)
+	}
+	return events, nil
+}
+
+func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, events []*etypes.Log) {
 	messages := make([]chain.Message, len(events))
 
 	for i, event := range events {
-		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.Raw.BlockHash)
+		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
 		if err != nil {
 			li.log.WithFields(logrus.Fields{
-				"blockHash":   event.Raw.BlockHash.Hex(),
-				"blockNumber": event.Raw.BlockNumber,
-				"txHash":      event.Raw.TxHash.Hex(),
+				"blockHash":   event.BlockHash.Hex(),
+				"blockNumber": event.BlockNumber,
+				"txHash":      event.TxHash.Hex(),
 			}).WithError(err).Error("Failed to get receipt trie for event")
 			return
 		}
 
-		msg, err := MakeMessageFromEvent(event, receiptTrie, li.log)
+		msg, err := MakeMessageFromEvent(li.mapping, event, receiptTrie, li.log)
 		if err != nil {
 			li.log.WithFields(logrus.Fields{
-				"address":     event.Raw.Address.Hex(),
-				"blockHash":   event.Raw.BlockHash.Hex(),
-				"blockNumber": event.Raw.BlockNumber,
-				"txHash":      event.Raw.TxHash.Hex(),
+				"address":     event.Address.Hex(),
+				"blockHash":   event.BlockHash.Hex(),
+				"blockNumber": event.BlockNumber,
+				"txHash":      event.TxHash.Hex(),
 			}).WithError(err).Error("Failed to generate message from ethereum event")
 			return
 		}

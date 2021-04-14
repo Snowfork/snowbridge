@@ -19,22 +19,33 @@ class SubClient {
 
     this.keyring = new Keyring({ type: 'sr25519' });
     this.alice = this.keyring.addFromUri('//Alice', { name: 'Alice' });
-
   }
 
-  async queryAccountBalance(accountId, assetId) {
+  async queryAssetBalance(accountId, assetId) {
     let balance = await this.api.query.assets.balances(assetId, accountId);
     return BigNumber(balance.toBigInt())
   }
 
-  async burnETH(account, recipient, amount) {
-    const txHash = await this.api.tx.eth.burn(0, recipient, amount).signAndSend(account);
+  async queryAccountBalance(accountId) {
+    let {
+      data: {
+        free: balance
+      }
+    } = await this.api.query.system.account(accountId);
+    return BigNumber(balance.toBigInt())
   }
 
-  async burnERC20(account, assetId, recipient, amount) {
-    const txHash = await this.api.tx.erc20.burn(0, assetId, recipient, amount).signAndSend(account);
+  async burnETH(account, recipient, amount, channel) {
+    const txHash = await this.api.tx.eth.burn(channel, recipient, amount).signAndSend(account);
   }
 
+  async burnERC20(account, assetId, recipient, amount, channel) {
+    const txHash = await this.api.tx.erc20.burn(channel, assetId, recipient, amount).signAndSend(account);
+  }
+
+  async lockDOT(account, recipient, amount, channel) {
+    const txHash = await this.api.tx.dot.lock(channel, recipient, amount).signAndSend(account);
+  }
 
 }
 

@@ -6,16 +6,26 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_system::{self as system, ensure_signed};
-use frame_support::{debug, decl_module, decl_storage, decl_event, decl_error,
-	dispatch::DispatchResult, dispatch::DispatchError, ensure, traits::Get};
+use frame_support::{
+	decl_module, decl_storage, decl_event, decl_error, ensure, log,
+	dispatch::{DispatchError, DispatchResult},
+	traits::Get, weights::Weight,
+};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
 use artemis_core::{Message, Verifier, Proof};
-use artemis_ethereum::{HeaderId as EthereumHeaderId, Log, Receipt, H256, U256};
-use artemis_ethereum::ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver};
-pub use artemis_ethereum::Header as EthereumHeader;
+use artemis_ethereum::{
+	HeaderId as EthereumHeaderId, Log, Receipt, H256, U256,
+	difficulty::calc_difficulty,
+	ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver},
+};
+pub use artemis_ethereum::{
+	Header as EthereumHeader, difficulty::DifficultyConfig as EthereumDifficultyConfig,
+};
+
+mod benchmarking;
 
 #[cfg(test)]
 mod mock;
@@ -51,14 +61,33 @@ struct PruningRange {
 	pub oldest_block_to_keep: u64,
 }
 
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn import_header() -> Weight;
+	fn import_header_not_new_finalized_with_max_prune() -> Weight;
+	fn import_header_new_finalized_with_single_prune() -> Weight;
+	fn import_header_not_new_finalized_with_single_prune() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn import_header() -> Weight { 0 }
+	fn import_header_not_new_finalized_with_max_prune() -> Weight { 0 }
+	fn import_header_new_finalized_with_single_prune() -> Weight { 0 }
+	fn import_header_not_new_finalized_with_single_prune() -> Weight { 0 }
+}
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 	/// The number of descendants, in the highest difficulty chain, a block
 	/// needs to have in order to be considered final.
 	type DescendantsUntilFinalized: Get<u8>;
-	// Determines whether Ethash PoW is verified for headers
-	// NOTE: Should only be false for dev
+	/// Ethereum network parameters for header difficulty
+	type DifficultyConfig: Get<EthereumDifficultyConfig>;
+	/// Determines whether Ethash PoW is verified for headers
+	/// NOTE: Should only be false for dev
 	type VerifyPoW: Get<bool>;
+	/// Weight information for extrinsics in this pallet
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -81,33 +110,17 @@ decl_storage! {
 
 		build(|config| {
 			let initial_header = &config.initial_header;
-			let initial_hash = initial_header.compute_hash();
-			let initial_id = EthereumHeaderId {
-				number: initial_header.number,
-				hash: initial_hash,
-			};
 
-			BestBlock::put((
-				initial_id,
+			Module::<T>::initialize_storage(
+				vec![initial_header.clone()],
 				config.initial_difficulty,
-			));
+				0, // descendants_until_final = 0 forces the initial header to be finalized
+			).unwrap();
+
 			BlocksToPrune::put(PruningRange {
-				oldest_unpruned_block: initial_id.number,
-				oldest_block_to_keep: initial_id.number,
+				oldest_unpruned_block: initial_header.number,
+				oldest_block_to_keep: initial_header.number,
 			});
-			FinalizedBlock::put(initial_id);
-			Headers::<T>::insert(
-				initial_hash,
-				StoredHeader {
-					submitter: None,
-					header: initial_header.clone(),
-					total_difficulty: config.initial_difficulty,
-				},
-			);
-			HeadersByNumber::insert(
-				initial_header.number,
-				vec![initial_hash],
-			);
 		})
 	}
 }
@@ -148,21 +161,18 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// TODO: Calculate weight
-		#[weight = 0]
+		#[weight = T::WeightInfo::import_header()]
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			debug::RuntimeLogger::init();
-
-			debug::trace!(
+			log::trace!(
 				target: "import_header",
 				"Received header {}. Starting validation",
 				header.number,
 			);
 
 			if let Err(err) = Self::validate_header_to_import(&header, &proof) {
-				debug::trace!(
+				log::trace!(
 					target: "import_header",
 					"Validation for header {} returned error. Skipping import",
 					header.number,
@@ -170,14 +180,14 @@ decl_module! {
 				return Err(err);
 			}
 
-			debug::trace!(
+			log::trace!(
 				target: "import_header",
 				"Validation succeeded. Starting import of header {}",
 				header.number,
 			);
 
 			if let Err(err) = Self::import_validated_header(&sender, &header) {
-				debug::trace!(
+				log::trace!(
 					target: "import_header",
 					"Import of header {} failed",
 					header.number,
@@ -185,7 +195,7 @@ decl_module! {
 				return Err(err);
 			}
 
-			debug::trace!(
+			log::trace!(
 				target: "import_header",
 				"Import of header {} succeeded!",
 				header.number,
@@ -215,8 +225,10 @@ impl<T: Config> Module<T> {
 			Error::<T>::AncientHeader,
 		);
 
-		// TODO: limit N where N = header.number - finalized_header.number
-		// to avoid iterating over long chains here
+		// This iterates over DescendantsUntilFinalized headers in both the worst and
+		// average case. Since we know that the parent header was imported successfully,
+		// we know that the newest finalized header is at most, and on average,
+		// DescendantsUntilFinalized headers before the parent.
 		let ancestor_at_finalized_number = ancestry::<T>(header.parent_hash)
 			.find(|(_, ancestor)| ancestor.number == finalized_header_id.number);
 		// We must find a matching ancestor above since AncientHeader check ensures
@@ -234,7 +246,6 @@ impl<T: Config> Module<T> {
 			return Ok(());
 		}
 
-		// Adapted from https://github.com/near/rainbow-bridge/blob/c6daf8a1dbf0bdb99a404a49c58263f25cd782fd/contracts/near/eth-client/src/lib.rs#L363
 		// See YellowPaper formula (50) in section 4.3.4
 		ensure!(
 			header.gas_used <= header.gas_limit
@@ -247,7 +258,14 @@ impl<T: Config> Module<T> {
 			Error::<T>::InvalidHeader,
 		);
 
-		// Simplified difficulty check to conform adjusting difficulty bomb
+		let difficulty_config = T::DifficultyConfig::get();
+		let header_difficulty = calc_difficulty(&difficulty_config, header.timestamp, &parent)
+			.map_err(|_| Error::<T>::InvalidHeader)?;
+		ensure!(
+			header.difficulty == header_difficulty,
+			Error::<T>::InvalidHeader,
+		);
+
 		let header_mix_hash = header.mix_hash().ok_or(Error::<T>::InvalidHeader)?;
 		let header_nonce = header.nonce().ok_or(Error::<T>::InvalidHeader)?;
 		let (mix_hash, result) = EthashProver::new().hashimoto_merkle(
@@ -258,9 +276,7 @@ impl<T: Config> Module<T> {
 		).map_err(|_| Error::<T>::InvalidHeader)?;
 		ensure!(
 			mix_hash == header_mix_hash
-			&& U256::from(result.0) < ethash::cross_boundary(header.difficulty)
-			&& header.difficulty < parent.difficulty * 101 / 100
-			&& header.difficulty > parent.difficulty * 99 / 100,
+			&& U256::from(result.0) < ethash::cross_boundary(header.difficulty),
 			Error::<T>::InvalidHeader,
 		);
 
@@ -408,6 +424,9 @@ impl<T: Config> Module<T> {
 		new_pruning_range
 	}
 
+	// Verifies that the receipt encoded in proof.data is included
+	// in the block given by proof.block_hash. Inclusion is only
+	// recognized if the block has been finalized.
 	fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
 		let header = Headers::<T>::get(proof.block_hash)
 			.ok_or(Error::<T>::MissingHeader)?
@@ -478,5 +497,67 @@ impl<T: Config> Verifier for Module<T> {
 		}
 
 		Ok(log)
+	}
+
+	fn initialize_storage(
+		headers: Vec<EthereumHeader>,
+		initial_difficulty: U256,
+		descendants_until_final: u8,
+	) -> Result<(), &'static str> {
+		let insert_header_fn = |header: &EthereumHeader, total_difficulty: U256| {
+			let hash = header.compute_hash();
+			Headers::<T>::insert(
+				hash,
+				StoredHeader {
+					submitter: None,
+					header: header.clone(),
+					total_difficulty: total_difficulty,
+				},
+			);
+			HeadersByNumber::append(header.number, hash);
+
+			EthereumHeaderId {
+				number: header.number,
+				hash: hash,
+			}
+		};
+
+		let oldest_header = headers.get(0).ok_or("Need at least one header")?;
+		let mut best_block_difficulty = initial_difficulty;
+		let mut best_block_id = insert_header_fn(&oldest_header, best_block_difficulty);
+
+		for (i, header) in headers.iter().enumerate().skip(1) {
+			let prev_block_num = headers[i - 1].number;
+			ensure!(
+				header.number == prev_block_num || header.number == prev_block_num + 1,
+				"Headers must be in order",
+			);
+
+			let total_difficulty = {
+				let parent = Headers::<T>::get(header.parent_hash).ok_or("Missing parent header")?;
+				parent.total_difficulty + header.difficulty
+			};
+
+			let block_id = insert_header_fn(&header, total_difficulty);
+
+			if total_difficulty > best_block_difficulty {
+				best_block_difficulty = total_difficulty;
+				best_block_id = block_id;
+			}
+		}
+
+		BestBlock::put((best_block_id, best_block_difficulty));
+
+		let maybe_finalized_ancestor = ancestry::<T>(best_block_id.hash)
+			.enumerate()
+			.find_map(|(i, pair)| if i < descendants_until_final as usize { None } else { Some(pair) });
+		if let Some((hash, header)) = maybe_finalized_ancestor {
+			FinalizedBlock::put(EthereumHeaderId {
+				hash: hash,
+				number: header.number,
+			});
+		}
+
+		Ok(())
 	}
 }

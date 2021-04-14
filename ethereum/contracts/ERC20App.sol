@@ -72,7 +72,7 @@ contract ERC20App {
 
         OutboundChannel channel =
             OutboundChannel(channels[_channelId].outbound);
-        channel.submit(call);
+        channel.submit(msg.sender, call);
     }
 
     function unlock(

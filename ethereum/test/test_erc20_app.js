@@ -1,6 +1,7 @@
 const BigNumber = require('bignumber.js');
 const {
-  confirmChannelSend,
+  confirmBasicChannelSend,
+  confirmIncentivizedChannelSend,
   confirmUnlockTokens,
   deployAppContractWithChannels,
   addressBytes,
@@ -43,7 +44,7 @@ contract("ERC20App", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(ERC20App);
+      [this.channels, this.app] = await deployAppContractWithChannels(owner, ERC20App);
       this.symbol = "TEST";
       this.token = await TestToken.new(100000, "Test Token", this.symbol);
 
@@ -89,7 +90,7 @@ contract("ERC20App", function (accounts) {
       let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
 
-      confirmChannelSend(tx.receipt.rawLogs[3], this.channels.basic.outbound.address, this.app.address, 1)
+      confirmBasicChannelSend(tx.receipt.rawLogs[3], this.channels.basic.outbound.address, this.app.address, 1)
     });
 
     it("should send payload to the incentivized outbound channel", async function () {
@@ -101,14 +102,14 @@ contract("ERC20App", function (accounts) {
       let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Incentivized)
         .should.be.fulfilled;
 
-      confirmChannelSend(tx.receipt.rawLogs[3], this.channels.incentivized.outbound.address, this.app.address, 1)
+      confirmIncentivizedChannelSend(tx.receipt.rawLogs[3], this.channels.incentivized.outbound.address, this.app.address, 1)
     });
   })
 
   describe("withdrawals", function () {
 
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(ERC20App);
+      [this.channels, this.app] = await deployAppContractWithChannels(owner, ERC20App);
       this.symbol = "TEST";
       this.token = await TestToken.new(100000, "Test Token", this.symbol);
 

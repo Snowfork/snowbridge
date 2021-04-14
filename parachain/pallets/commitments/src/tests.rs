@@ -1,13 +1,11 @@
-use crate::mock::{new_test_ext, System, Commitments};
+use crate::mock::{new_test_ext, System, Commitments, Test};
 
-use crate::{Message, MessageQueues};
+use crate::{self as commitments, Error, Message, MessageQueues};
 
 use sp_runtime::DigestItem;
 use sp_core::H160;
 
-use frame_support::traits::OnInitialize;
-
-use frame_support::storage::StorageMap;
+use frame_support::{assert_err, storage::StorageMap, traits::OnInitialize};
 
 use artemis_core::{ChannelId, MessageCommitment};
 
@@ -59,4 +57,19 @@ fn test_add_message() {
 		);
 
 	});
+}
+
+#[test]
+fn test_add_message_exceeds_limit() {
+	new_test_ext().execute_with(|| {
+		let max_messages = <Test as commitments::Config>::MaxMessagesPerCommit::get();
+		(0..max_messages).for_each(
+			|_| Commitments::add(ChannelId::Basic, CONTRACT_A, 0, &vec![0, 1, 2]).unwrap()
+		);
+
+		assert_err!(
+			Commitments::add(ChannelId::Basic, CONTRACT_A, 0, &vec![0, 1, 2]),
+			Error::<Test>::QueueSizeLimitReached,
+		);
+	})
 }

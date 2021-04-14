@@ -16,15 +16,15 @@ path = "src/main.rs"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0" }
-serde = { version = "1.0.102", features = ["derive"] }
+serde = { version = "1.0.119", features = ["derive"] }
 futures = { version = "0.3.1", features = ["compat"] }
 hex-literal = "0.3.1"
 jsonrpc-core = "15.1.0"
 jsonrpc-pubsub = "14.2.0"
-log = "0.4.8"
+log = "0.4.13"
 rand = "0.7.2"
 structopt = "0.3.8"
-tracing = "0.1.22"
+tracing = "0.1.25"
 parking_lot = "0.10.0"
 
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
@@ -45,7 +45,6 @@ sp-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo
 sp-block-builder = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-consensus = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
-sp-consensus-aura = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-inherents = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
@@ -54,6 +53,7 @@ sp-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "
 sp-trie = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
+cumulus-client-cli = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
 cumulus-client-consensus-relay-chain = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
 cumulus-client-collator = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
 cumulus-client-service = { git = "https://github.com/paritytech/cumulus.git", branch = "rococo-v1" }
@@ -66,13 +66,28 @@ polkadot-cli = { git = "https://github.com/paritytech/polkadot.git", branch = "r
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "rococo-v1" }
 
 artemis-core = { path = "primitives/core" }
-artemis-runtime = { path = "runtime" }
+snowbridge-runtime = { path = "runtime/snowbridge", optional = true }
+rococo-runtime = { path = "runtime/rococo", package = "artemis-rococo-runtime", optional = true }
+local-runtime = { path = "runtime/local", optional = true }
+
+# These dependencies are used for runtime benchmarking
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
 [features]
-test-e2e = ["artemis-runtime/test-e2e"]
+default = ["with-snowbridge-runtime"]
+runtime-benchmarks = [
+    "snowbridge-runtime/runtime-benchmarks",
+    "rococo-runtime/runtime-benchmarks",
+    "local-runtime/runtime-benchmarks",
+    "polkadot-service/runtime-benchmarks",
+]
+with-snowbridge-runtime = ["snowbridge-runtime"]
+with-rococo-runtime = ["rococo-runtime"]
+with-local-runtime = ["local-runtime"]
 
 [profile.release]
 panic = "unwind"
@@ -83,13 +98,17 @@ members = [
     "primitives/ethereum",
     "primitives/testutils",
     "primitives/xcm-support",
-    "pallets/bridge",
+    "pallets/basic-channel",
+    "pallets/incentivized-channel",
     "pallets/dispatch",
     "pallets/assets",
     "pallets/verifier-lightclient",
     "pallets/eth-app",
     "pallets/erc20-app",
+    "pallets/dot-app",
     "pallets/commitments",
     "pallets/transfer",
-    "runtime",
+    "runtime/snowbridge",
+    "runtime/rococo",
+    "runtime/local",
 ]

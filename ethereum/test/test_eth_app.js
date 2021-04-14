@@ -1,6 +1,7 @@
 const BigNumber = require('bignumber.js');
 const {
-  confirmChannelSend,
+  confirmBasicChannelSend,
+  confirmIncentivizedChannelSend,
   confirmUnlock,
   deployAppContractWithChannels,
   addressBytes,
@@ -39,7 +40,7 @@ contract("ETHApp", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(ETHApp);
+      [this.channels, this.app] = await deployAppContractWithChannels(owner, ETHApp);
     });
 
     it("should lock funds", async function () {
@@ -77,7 +78,7 @@ contract("ETHApp", function (accounts) {
       // console.log(tx.receipt.rawLogs[1])
       // console.log(encodeLog(tx.receipt.rawLogs[1]));
 
-      confirmChannelSend(tx.receipt.rawLogs[1], this.channels.basic.outbound.address, this.app.address, 1)
+      confirmBasicChannelSend(tx.receipt.rawLogs[1], this.channels.basic.outbound.address, this.app.address, 1)
     });
 
     it("should send payload to the incentivized outbound channel", async function () {
@@ -86,7 +87,7 @@ contract("ETHApp", function (accounts) {
       const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Incentivized)
         .should.be.fulfilled;
 
-      confirmChannelSend(tx.receipt.rawLogs[1], this.channels.incentivized.outbound.address, this.app.address, 1)
+      confirmIncentivizedChannelSend(tx.receipt.rawLogs[1], this.channels.incentivized.outbound.address, this.app.address, 1)
     });
 
   })
@@ -94,7 +95,7 @@ contract("ETHApp", function (accounts) {
   describe("withdrawals", function () {
 
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(ETHApp);
+      [this.channels, this.app] = await deployAppContractWithChannels(owner, ETHApp);
     });
 
     it("should unlock via the basic inbound channel", async function () {

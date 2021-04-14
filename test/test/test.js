@@ -3,7 +3,7 @@ const EthClient = require('../src/ethclient').EthClient;
 const SubClient = require('../src/subclient').SubClient;
 const Web3 = require('web3');
 
-const { sleep } = require('../src/helpers');
+const { sleep, unwrapped } = require('../src/helpers');
 const Web3Utils = require("web3-utils");
 const BigNumber = require('bignumber.js');
 
@@ -23,6 +23,7 @@ describe('Incentivized Bridge', function () {
   // Address for //Alice on Substrate
   const polkadotRecipient = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
   const polkadotRecipientSS58 = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
+  const polkadotSenderSS58 = polkadotRecipientSS58;
 
   before(async function () {
     ethClient = new EthClient("ws://localhost:8545", networkID);
@@ -36,6 +37,77 @@ describe('Incentivized Bridge', function () {
     );
   });
 
+  describe('DOT App', function () {
+
+    it('should transfer DOT from Substrate to Ethereum', async function () {
+
+      let amount = BigNumber('100000000000000'); // 100 DOT (12 decimal places in this environment)
+      let amountWrapped = BigNumber(Web3.utils.toWei('100', "ether")); // 100 SnowDOT (18 decimal places)
+
+      const account = ethClient.accounts[1];
+
+      let beforeEthBalance = await ethClient.getDotBalance(account);
+      let beforeSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
+
+      // lock DOT using basic channel
+      await subClient.lockDOT(subClient.alice, account, amount.toFixed(), 0)
+      await sleep(70000);
+
+      let afterEthBalance = await ethClient.getDotBalance(account);
+      let afterSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
+
+      expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amountWrapped);
+      expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.greaterThan(amount);
+    })
+
+    it('should transfer DOT from Ethereum to Substrate (basic channel)', async function () {
+
+      let amount = BigNumber('1000000000000'); // 1 DOT (12 decimal places in this environment)
+      let amountWrapped = BigNumber(Web3.utils.toWei('1', "ether")); // 1 SnowDOT (18 decimal places)
+
+      const account = ethClient.accounts[1];
+
+      let beforeEthBalance = await ethClient.getDotBalance(account);
+      let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58);
+
+      await ethClient.burnDOT(account, amountWrapped, polkadotRecipient, 0);
+      await sleep(70000);
+
+      let afterEthBalance = await ethClient.getDotBalance(account);
+      let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58);
+
+      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amountWrapped);
+      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
+    })
+
+    it('should transfer DOT from Ethereum to Substrate (incentivized channel)', async function () {
+
+      let amount = BigNumber('1000000000000'); // 1 DOT (12 decimal places in this environment)
+      let amountWrapped = BigNumber(Web3.utils.toWei('1', "ether")); // 1 SnowDOT (18 decimal places)
+
+      let fee = BigNumber(Web3.utils.toWei('1', "ether")) // 1 SnowDOT
+      let treasuryReward = BigNumber("200000000000") // 0.2 DOT
+
+      const account = ethClient.accounts[1];
+
+      let beforeEthBalance = await ethClient.getDotBalance(account);
+      let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58);
+      let beforeTreasuryBalance = await subClient.queryAccountBalance("5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS");
+
+      await ethClient.burnDOT(account, amountWrapped, polkadotRecipient, 1);
+      await sleep(70000);
+
+      let afterEthBalance = await ethClient.getDotBalance(account);
+      let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58);
+      let afterTreasuryBalance = await subClient.queryAccountBalance("5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS");
+
+      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amountWrapped.plus(fee));
+      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
+      expect(afterTreasuryBalance.minus(beforeTreasuryBalance)).to.be.bignumber.equal(treasuryReward);
+    })
+
+  })
+
   describe('ETH App', function () {
     it('should transfer ETH from Ethereum to Substrate', async function () {
       const amount = BigNumber(Web3.utils.toWei('0.01', "ether"));
@@ -43,20 +115,20 @@ describe('Incentivized Bridge', function () {
       const account = ethClient.accounts[1];
 
       const beforeEthBalance = await ethClient.getEthBalance(account);
-      const beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.ethAssetId);
+      const beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
 
       const { gasCost } = await ethClient.lockETH(account, amount, polkadotRecipient);
 
       await sleep(40000);
 
       const afterEthBalance = await ethClient.getEthBalance(account);
-      const afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.ethAssetId);
+      const afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
 
       expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
       expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
 
       // conservation of value
-      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost))
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
     });
 
     it('should transfer ETH from Substrate to Ethereum', async function () {
@@ -66,19 +138,19 @@ describe('Incentivized Bridge', function () {
       const account = ethClient.accounts[1];
 
       let beforeEthBalance = await ethClient.getEthBalance(account);
-      let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.ethAssetId);
+      let beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
 
-      await subClient.burnETH(subClient.alice, account, amount.toFixed())
+      await subClient.burnETH(subClient.alice, account, amount.toFixed(), 0)
       await sleep(70000);
 
       let afterEthBalance = await ethClient.getEthBalance(account);
-      let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.ethAssetId);
+      let afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
 
       expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amount);
       expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.equal(amount);
 
       // conservation of value
-      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance))
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance));
 
     })
   });
@@ -90,7 +162,7 @@ describe('Incentivized Bridge', function () {
       const account = ethClient.accounts[0];
 
       let beforeEthBalance = await ethClient.getErc20Balance(account);
-      let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.erc20AssetId);
+      let beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
 
       await ethClient.approveERC20(account, amount);
       await ethClient.lockERC20(account, amount, polkadotRecipient);
@@ -98,13 +170,13 @@ describe('Incentivized Bridge', function () {
       await sleep(40000);
 
       let afterEthBalance = await ethClient.getErc20Balance(account);
-      let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.erc20AssetId);
+      let afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
 
       expect(afterEthBalance).to.be.bignumber.equal(beforeEthBalance.minus(amount));
       expect(afterSubBalance).to.be.bignumber.equal(beforeSubBalance.plus(amount));
 
       // conservation of value
-      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance))
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance));
     });
 
     it('should transfer ERC20 from Substrate to Ethereum', async function () {
@@ -113,19 +185,20 @@ describe('Incentivized Bridge', function () {
       const account = ethClient.accounts[0];
 
       let beforeEthBalance = await ethClient.getErc20Balance(account);
-      let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.erc20AssetId);
+      let beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
 
-      await subClient.burnERC20(subClient.alice, TestTokenAddress, account, amount.toFixed())
+      await subClient.burnERC20(subClient.alice, TestTokenAddress, account, amount.toFixed(), 1)
       await sleep(70000);
 
       let afterEthBalance = await ethClient.getErc20Balance(account);
-      let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58, this.erc20AssetId);
+      let afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
 
       expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amount);
       expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.equal(amount);
 
       // conservation of value
-      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance))
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance));
     })
   })
+
 });

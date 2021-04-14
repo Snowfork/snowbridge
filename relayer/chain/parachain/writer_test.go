@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
@@ -47,7 +48,22 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	message := chain.EthereumOutboundMessage(chainTypes.Message{})
+	var args []interface{}
+	args = append(args,
+		chainTypes.Message{
+			Data: []byte{1, 2, 3},
+			Proof: chainTypes.Proof{
+				BlockHash: types.NewH256([]byte{1, 2, 3}),
+				TxIndex:   1,
+				Data:      chainTypes.NewProofData(),
+			},
+		},
+	)
+
+	message := chain.EthereumOutboundMessage{
+		Call: "BasicInboundChannel.submit",
+		Args: args,
+	}
 
 	err = writer.WriteMessages(ctx, []*chain.EthereumOutboundMessage{&message})
 	if err != nil {
@@ -55,6 +71,6 @@ func TestWrite(t *testing.T) {
 	}
 
 	assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
-	assert.Equal(t, "Submitted message to Substrate", hook.LastEntry().Message)
+	assert.Equal(t, "Submitted messages to Substrate", hook.LastEntry().Message)
 
 }

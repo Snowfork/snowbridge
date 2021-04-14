@@ -5,6 +5,10 @@ const ETHApp = require('../../../ethereum/build/contracts/ETHApp.json');
 const ERC20App = require('../../../ethereum/build/contracts/ERC20App.json');
 const ERC20 = require('../../../ethereum/build/contracts/ERC20.json');
 const TestToken = require('../../../ethereum/build/contracts/TestToken.json');
+const DOTApp = require('../../../ethereum/build/contracts/DOTApp.json');
+const WrappedToken = require('../../../ethereum/build/contracts/WrappedToken.json');
+
+
 
 const INCENTIVIZED_CHANNEL_ID = 1;
 
@@ -28,6 +32,9 @@ class EthClient {
 
     const appERC20 = new this.web3.eth.Contract(ERC20App.abi, ERC20App.networks[networkID].address);
     this.appERC20 = appERC20;
+
+    const appDOT = new this.web3.eth.Contract(DOTApp.abi, DOTApp.networks[networkID].address);
+    this.appDOT = appDOT;
   };
 
   loadERC20Contract() {
@@ -36,7 +43,11 @@ class EthClient {
 
   async initialize() {
     this.accounts = await this.web3.eth.getAccounts();
-    this.web3.eth.defaultAccount = this.accounts[0]
+    this.web3.eth.defaultAccount = this.accounts[0];
+
+    const snowDotAddr = await this.appDOT.methods.token().call();
+    const snowDOT = new this.web3.eth.Contract(WrappedToken.abi, snowDotAddr);
+    this.snowDOT = snowDOT;
   };
 
   async getTx(txHash) {
@@ -50,6 +61,10 @@ class EthClient {
   async getErc20Balance(account) {
     const instance = this.loadERC20Contract();
     return BigNumber(await instance.methods.balanceOf(account).call());
+  }
+
+  async getDotBalance(account) {
+    return BigNumber(await this.snowDOT.methods.balanceOf(account).call());
   }
 
   async getErc20Allowance(account) {
@@ -90,6 +105,18 @@ class EthClient {
         value: 0
       });
   }
+
+  async burnDOT(from, amount, polkadotRecipient, channel) {
+    const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
+
+    return await this.appDOT.methods.burn(recipientBytes, this.web3.utils.toBN(amount), channel)
+      .send({
+        from,
+        gas: 500000,
+        value: 0
+      });
+  }
 }
+
 
 module.exports.EthClient = EthClient;

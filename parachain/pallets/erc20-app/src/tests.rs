@@ -1,5 +1,5 @@
 use crate::mock::{new_tester, Event, System, AccountId, Origin, Assets, ERC20App};
-use frame_support::{assert_ok};
+use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
 use artemis_core::{ChannelId, AssetId, MultiAsset};
@@ -54,6 +54,28 @@ fn burn_should_emit_bridge_event() {
 		assert_eq!(
 			Event::erc20_app(RawEvent::Burned(token_id, bob, recipient, 20.into())),
 			last_event()
+		);
+	});
+}
+
+#[test]
+fn should_not_burn_on_commitment_failure() {
+	new_tester().execute_with(|| {
+		let token_id = H160::repeat_byte(1);
+		let sender: AccountId = Keyring::Bob.into();
+		let recipient = H160::repeat_byte(9);
+
+		Assets::deposit(AssetId::Token(token_id), &sender, 500.into()).unwrap();
+
+		assert_noop!(
+			ERC20App::burn(
+				Origin::signed(sender.clone()),
+				ChannelId::Basic,
+				token_id,
+				recipient.clone(),
+				20.into()
+			),
+			DispatchError::Other("some error!")
 		);
 	});
 }

@@ -1,6 +1,10 @@
-const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
 const rlp = require("rlp");
+const { ethers } = require("ethers");
+
+const assert = require('chai').assert;
+
+const MockFeeSource = artifacts.require("MockFeeSource");
 
 const channelContracts = {
   basic: {
@@ -13,31 +17,34 @@ const channelContracts = {
   },
 };
 
-const confirmChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
-  outChannelLogFields = [
-    {
-      type: 'address',
-      name: 'source'
-    },
-    {
-      type: 'uint64',
-      name: 'nonce'
-    },
-    {
-      type: 'bytes',
-      name: 'payload',
-    }
-  ];
-
-  const decodedEvent = web3.eth.abi.decodeLog(outChannelLogFields, channelEvent.data, channelEvent.topics);
+const confirmBasicChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
+  var abi = ["event Message(address source, uint64 nonce, bytes payload)"];
+  var iface = new ethers.utils.Interface(abi);
+  let decodedEvent = iface.decodeEventLog('Message(address,uint64,bytes)', channelEvent.data, channelEvent.topics);
 
   channelEvent.address.should.be.equal(channelAddress);
   decodedEvent.source.should.be.equal(sendingAppAddress);
-  decodedEvent.nonce.should.be.equal('' + expectedNonce);
+
+  assert(decodedEvent.nonce.eq(ethers.BigNumber.from(expectedNonce)));
   if (expectedPayload) {
     decodedEvent.payload.should.be.equal(expectedPayload);
   }
 };
+
+const confirmIncentivizedChannelSend = (channelEvent, channelAddress, sendingAppAddress, expectedNonce = 0, expectedPayload) => {
+  var abi = ["event Message(address source, uint64 nonce, uint256 fee, bytes payload)"];
+  var iface = new ethers.utils.Interface(abi);
+  let decodedEvent = iface.decodeEventLog('Message(address,uint64,uint256,bytes)', channelEvent.data, channelEvent.topics);
+
+  channelEvent.address.should.be.equal(channelAddress);
+  decodedEvent.source.should.be.equal(sendingAppAddress);
+
+  assert(decodedEvent.nonce.eq(ethers.BigNumber.from(expectedNonce)));
+  if (expectedPayload) {
+    decodedEvent.payload.should.be.equal(expectedPayload);
+  }
+};
+
 
 const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmount) => {
   unlockLogFields = [
@@ -156,19 +163,25 @@ const encodeMessage = (message) => {
   );
 }
 
-const deployAppContractWithChannels = async (appContract) => {
+const deployAppContractWithChannels = async (deployer, appContract, ...appContractArgs) => {
+
+  const defaults = {
+    from: deployer
+  };
+
   const channels = {
     basic: {
-      inbound: await channelContracts.basic.inbound.new(),
-      outbound: await channelContracts.basic.outbound.new(),
+      inbound: await channelContracts.basic.inbound.new(defaults),
+      outbound: await channelContracts.basic.outbound.new(defaults),
     },
     incentivized: {
-      inbound: await channelContracts.incentivized.inbound.new(),
-      outbound: await channelContracts.incentivized.outbound.new(),
+      inbound: await channelContracts.incentivized.inbound.new(defaults),
+      outbound: await channelContracts.incentivized.outbound.new(defaults),
     },
   };
 
   const app = await appContract.new(
+    ...appContractArgs,
     {
       inbound: channels.basic.inbound.address,
       outbound: channels.basic.outbound.address,
@@ -177,7 +190,11 @@ const deployAppContractWithChannels = async (appContract) => {
       inbound: channels.incentivized.inbound.address,
       outbound: channels.incentivized.outbound.address,
     },
+    defaults
   );
+
+  const feeSource = await MockFeeSource.new();
+  await channels.incentivized.outbound.initialize(deployer, feeSource.address, [app.address]);
 
   return [channels, app]
 }
@@ -197,7 +214,8 @@ const encodeLog = (log) => {
 }
 
 module.exports = {
-  confirmChannelSend,
+  confirmBasicChannelSend,
+  confirmIncentivizedChannelSend,
   confirmUnlock,
   confirmUnlockTokens,
   confirmMessageDispatched,
@@ -205,4 +223,5 @@ module.exports = {
   addressBytes,
   ChannelId,
   buildCommitment,
+  encodeLog,
 };

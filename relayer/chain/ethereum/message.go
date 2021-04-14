@@ -7,24 +7,25 @@ import (
 	"bytes"
 	"encoding/hex"
 
+	"github.com/ethereum/go-ethereum/common"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	etrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
-func MakeMessageFromEvent(event *outbound.ContractMessage, receiptsTrie *etrie.Trie, log *logrus.Entry) (*chain.EthereumOutboundMessage, error) {
+func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, receiptsTrie *etrie.Trie, log *logrus.Entry) (*chain.EthereumOutboundMessage, error) {
 	// RLP encode event log's Address, Topics, and Data
 	var buf bytes.Buffer
-	err := event.Raw.EncodeRLP(&buf)
+	err := event.EncodeRLP(&buf)
 	if err != nil {
 		return nil, err
 	}
 
-	receiptKey, err := rlp.EncodeToBytes(event.Raw.TxIndex)
+	receiptKey, err := rlp.EncodeToBytes(event.TxIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -35,24 +36,34 @@ func MakeMessageFromEvent(event *outbound.ContractMessage, receiptsTrie *etrie.T
 		return nil, err
 	}
 
-	message := substrate.Message{
+	m := substrate.Message{
 		Data: buf.Bytes(),
 		Proof: substrate.Proof{
-			BlockHash: types.NewH256(event.Raw.BlockHash.Bytes()),
-			TxIndex:   types.NewU32(uint32(event.Raw.TxIndex)),
+			BlockHash: types.NewH256(event.BlockHash.Bytes()),
+			TxIndex:   types.NewU32(uint32(event.TxIndex)),
 			Data:      proof,
 		},
 	}
 
-	value := hex.EncodeToString(message.Data)
+	value := hex.EncodeToString(m.Data)
 	log.WithFields(logrus.Fields{
-		"payload":       value,
-		"blockHash":     message.Proof.BlockHash.Hex(),
-		"eventIndex":    message.Proof.TxIndex,
-		"outboundNonce": event.Nonce,
+		"payload":    value,
+		"blockHash":  m.Proof.BlockHash.Hex(),
+		"eventIndex": m.Proof.TxIndex,
 	}).Debug("Generated message from Ethereum log")
 
-	msg := chain.EthereumOutboundMessage(message)
+	var args []interface{}
+	args = append(args, m)
 
-	return &msg, nil
+	call, ok := mapping[event.Address]
+	if !ok {
+		return nil, err
+	}
+
+	message := chain.EthereumOutboundMessage{
+		Call: call,
+		Args: args,
+	}
+
+	return &message, nil
 }
