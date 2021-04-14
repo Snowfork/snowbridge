@@ -440,6 +440,7 @@ dependencies = [
  "artemis-erc20-app",
  "artemis-eth-app",
  "artemis-incentivized-channel",
+ "artemis-runtime-common",
  "artemis-transfer",
  "artemis-xcm-support",
  "cumulus-pallet-parachain-system",
@@ -478,6 +479,15 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+]
+
+[[package]]
+name = "artemis-runtime-common"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -4249,6 +4259,7 @@ dependencies = [
  "artemis-erc20-app",
  "artemis-eth-app",
  "artemis-incentivized-channel",
+ "artemis-runtime-common",
  "artemis-transfer",
  "artemis-xcm-support",
  "cumulus-pallet-parachain-system",
@@ -9015,6 +9026,7 @@ dependencies = [
  "artemis-erc20-app",
  "artemis-eth-app",
  "artemis-incentivized-channel",
+ "artemis-runtime-common",
  "artemis-transfer",
  "artemis-xcm-support",
  "cumulus-pallet-parachain-system",
