@@ -138,6 +138,7 @@ impl incentivized_inbound_channel::Config for Test {
 	type SourceAccount = SourceAccount;
 	type TreasuryAccount = TreasuryAccount;
 	type FeeConverter = FeeConverter<Self>;
+	type WeightInfo = ();
 }
 
 pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {

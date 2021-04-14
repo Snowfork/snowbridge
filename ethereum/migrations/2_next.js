@@ -5,6 +5,9 @@ const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
 const DOTApp = artifacts.require("DOTApp");
 const TestToken = artifacts.require("TestToken");
+const ValidatorRegistry = artifacts.require("ValidatorRegistry");
+const MerkleProof = artifacts.require("MerkleProof");
+const Bitfield = artifacts.require("Bitfield");
 
 const channels = {
   basic: {
@@ -29,14 +32,21 @@ const channels = {
   },
 }
 
-module.exports = function(deployer, network, accounts) {
+const contracts = {
+  lightclientbridge: {
+    contract: artifacts.require("LightClientBridge"),
+    instance: null
+  }
+}
+
+module.exports = function (deployer, network, accounts) {
   deployer.then(async () => {
 
     // Account of governance contract
     // TODO: deploy the contract in this migration and use its address
     let administrator = accounts[0];
 
-   // Fee for incentivized channel
+    // Fee for incentivized channel
     if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
       throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
     }
@@ -79,7 +89,7 @@ module.exports = function(deployer, network, accounts) {
     await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
 
     // Deploy ERC1820 Registry for our E2E stack.
-    if (network === 'e2e_test')  {
+    if (network === 'e2e_test') {
 
       require('@openzeppelin/test-helpers/configure')({ web3 });
       const { singletons } = require('@openzeppelin/test-helpers');
@@ -88,7 +98,7 @@ module.exports = function(deployer, network, accounts) {
     }
 
     // only deploy this contract to non-development networks. The unit tests deploy this contract themselves.
-    if (network === 'ropsten' || network === 'e2e_test')  {
+    if (network === 'ropsten' || network === 'e2e_test') {
       const dotApp = await deployer.deploy(
         DOTApp,
         "Snowfork DOT",
@@ -115,5 +125,21 @@ module.exports = function(deployer, network, accounts) {
         { from: administrator }
       );
     }
+
+    // Link MerkleProof library to ValidatorRegistry
+    await deployer.deploy(MerkleProof);
+    deployer.link(MerkleProof, [ValidatorRegistry]);
+
+    // TODO: Hardcoded for testing
+    const root = "0xc1490f71b21f5700063d93546dbe860cc190e883734ee3f490b76de9e028db99";
+    const numValidators = 2;
+    const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators);
+
+    // Link Bitfield library to LightClientBridge
+    await deployer.deploy(Bitfield);
+    deployer.link(Bitfield, [contracts.lightclientbridge.contract]);
+
+    contracts.lightclientbridge.instance = await deployer.deploy(contracts.lightclientbridge.contract, valRegistry.address)
+
   })
 };

@@ -1,17 +1,17 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package substrate
+package parachain
 
 import (
 	"context"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/sirupsen/logrus"
 	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
