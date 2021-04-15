@@ -35,13 +35,13 @@ pub struct Message {
 
 /// Weight functions needed for this pallet.
 pub trait WeightInfo {
-	fn on_initialize(num_messages: u32) -> Weight;
+	fn on_initialize(num_messages: u32, avg_payload_bytes: u32) -> Weight;
 	fn on_initialize_non_interval() -> Weight;
 	fn on_initialize_no_messages() -> Weight;
 }
 
 impl WeightInfo for () {
-	fn on_initialize(_: u32) -> Weight { 0 }
+	fn on_initialize(_: u32, _: u32) -> Weight { 0 }
 	fn on_initialize_non_interval() -> Weight { 0 }
 	fn on_initialize_no_messages() -> Weight { 0 }
 }
@@ -141,7 +141,7 @@ impl<T: Config> Module<T> {
 			return T::WeightInfo::on_initialize_no_messages();
 		}
 
-		let commitment = Self::encode_commitment(&messages);
+		let (commitment, payload_byte_count) = Self::encode_commitment(&messages);
 		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
 		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Incentivized, commitment_hash.clone()).into();
@@ -150,21 +150,27 @@ impl<T: Config> Module<T> {
 		let key = offchain_key(T::INDEXING_PREFIX, commitment_hash);
 		offchain_index::set(&*key, &messages.encode());
 
-		T::WeightInfo::on_initialize(messages.len() as u32)
+		let message_count = messages.len();
+		T::WeightInfo::on_initialize(
+			message_count as u32,
+			(payload_byte_count / message_count).saturating_add(1) as u32,
+		)
 	}
 
 	// ABI-encode the commitment
-	fn encode_commitment(commitment: &[Message]) -> Vec<u8> {
+	fn encode_commitment(commitment: &[Message]) -> (Vec<u8>, usize) {
+		let mut payload_byte_count = 0usize;
 		let messages: Vec<Token> = commitment
 			.iter()
-			.map(|message|
+			.map(|message| {
+				payload_byte_count += message.payload.len();
 				Token::Tuple(vec![
 					Token::Address(message.target),
 					Token::Uint(message.nonce.into()),
 					Token::Bytes(message.payload.clone())
 				])
-			)
+			})
 			.collect();
-		ethabi::encode(&vec![Token::Array(messages)])
+		(ethabi::encode(&vec![Token::Array(messages)]), payload_byte_count)
 	}
 }
