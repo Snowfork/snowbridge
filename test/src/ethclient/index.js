@@ -10,8 +10,6 @@ const WrappedToken = require('../../../ethereum/build/contracts/WrappedToken.jso
 
 
 
-const INCENTIVIZED_CHANNEL_ID = 1;
-
 /**
  * The Ethereum client for Bridge interaction
  */
@@ -75,7 +73,7 @@ class EthClient {
   async lockETH(from, amount, polkadotRecipient) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
-    let receipt = await this.appETH.methods.lock(recipientBytes, INCENTIVIZED_CHANNEL_ID).send({
+    let receipt = await this.appETH.methods.lock(recipientBytes, 0).send({
       from: from,
       gas: 500000,
       value: this.web3.utils.toBN(amount)
@@ -98,7 +96,7 @@ class EthClient {
   async lockERC20(from, amount, polkadotRecipient) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
-    return await this.appERC20.methods.lock(this.TestTokenAddress, recipientBytes, this.web3.utils.toBN(amount), INCENTIVIZED_CHANNEL_ID)
+    return await this.appERC20.methods.lock(this.TestTokenAddress, recipientBytes, this.web3.utils.toBN(amount), 0)
       .send({
         from,
         gas: 500000,
