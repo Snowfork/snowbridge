@@ -544,17 +544,17 @@ construct_runtime!(
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 9,
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Config<T>, Storage, Event} = 10,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 11,
-		Commitments: commitments::{Pallet, Call, Config<T>, Storage, Event} = 15,
-		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 16,
-		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 17,
+		Commitments: commitments::{Pallet, Call, Config<T>, Storage, Event} = 12,
+		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 13,
+		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 14,
 
-		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 18,
-		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 19,
-		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 20,
+		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 15,
+		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 16,
+		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 17,
 
-		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 12,
-		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 13,
-		DOT: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 14,
+		DOT: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 64,
+		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
+		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
 	}
 );
 

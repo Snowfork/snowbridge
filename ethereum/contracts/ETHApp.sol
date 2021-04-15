@@ -20,7 +20,7 @@ contract ETHApp {
 
     event Unlocked(bytes32 sender, address recipient, uint256 amount);
 
-    bytes2 constant MINT_CALL = 0x0c01;
+    bytes2 constant MINT_CALL = 0x4101;
 
     struct Channel {
         address inbound;

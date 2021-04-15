@@ -15,7 +15,7 @@ contract DOTApp is FeeSource, AccessControl {
 
     mapping(ChannelId => Channel) public channels;
 
-    bytes2 constant UNLOCK_CALL = 0x0e01;
+    bytes2 constant UNLOCK_CALL = 0x4001;
 
     WrappedToken public token;
 
