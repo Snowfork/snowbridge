@@ -145,8 +145,12 @@ parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
 	pub const BlockHashCount: BlockNumber = 2400;
 	/// We allow for 2 seconds of compute with a 6 second average block time.
-	pub BlockWeights: frame_system::limits::BlockWeights = frame_system::limits::BlockWeights
-		::with_sensible_defaults(2 * WEIGHT_PER_SECOND, NORMAL_DISPATCH_RATIO);
+	pub BlockWeights: frame_system::limits::BlockWeights = runtime_common::build_block_weights(
+		BlockExecutionWeight::get(),
+		ExtrinsicBaseWeight::get(),
+		2 * WEIGHT_PER_SECOND,
+		NORMAL_DISPATCH_RATIO,
+	);
 	pub BlockLength: frame_system::limits::BlockLength = frame_system::limits::BlockLength
 		::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
 	pub const SS58Prefix: u8 = 42;
@@ -440,6 +444,7 @@ impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
+	type WeightInfo = ();
 }
 
 impl basic_channel_outbound::Config for Runtime {
@@ -469,6 +474,7 @@ impl incentivized_channel_inbound::Config for Runtime {
 	type SourceAccount = SourceAccount;
 	type TreasuryAccount = TreasuryAccount;
 	type FeeConverter = FeeConverter;
+	type WeightInfo = ();
 }
 
 impl incentivized_channel_outbound::Config for Runtime {
@@ -589,17 +595,17 @@ construct_runtime!(
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 9,
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Config<T>, Storage, Event} = 10,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 11,
-		Commitments: commitments::{Pallet, Call, Config<T>, Storage, Event} = 15,
-		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 16,
-		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 17,
+		Commitments: commitments::{Pallet, Call, Config<T>, Storage, Event} = 12,
+		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 13,
+		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 14,
 
-		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 18,
-		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 19,
-		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 20,
+		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 15,
+		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 16,
+		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 17,
 
-		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 12,
-		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 13,
-		DOT: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 14,
+		DOT: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 64,
+		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
+		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
 	}
 );
 
@@ -755,7 +761,8 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
 			add_benchmark!(params, batches, assets, Assets);
-			add_benchmark!(params, batches, basic_channel_inbound, BasicInboundChannel);
+			add_benchmark!(params, batches, basic_channel::inbound, BasicInboundChannel);
+			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, dot_app, DOT);
 			add_benchmark!(params, batches, erc20_app, ERC20);
 			add_benchmark!(params, batches, eth_app, ETH);

@@ -34,7 +34,7 @@ mod mock;
 mod tests;
 
 /// Max number of finalized headers to keep.
-const FINALIZED_HEADERS_TO_KEEP: u64 = 5_000;
+const FINALIZED_HEADERS_TO_KEEP: u64 = 50_000;
 /// Max number of headers we're pruning in single import call.
 const HEADERS_TO_PRUNE_IN_SINGLE_IMPORT: u64 = 8;
 
@@ -48,6 +48,9 @@ pub struct StoredHeader<Submitter> {
 	pub header: EthereumHeader,
 	/// Total difficulty of the chain.
 	pub total_difficulty: U256,
+	/// Indicates if the header is part of the canonical chain, i.e. has
+	/// at least DescendantsUntilFinalized descendants.
+	pub finalized: bool,
 }
 
 /// Blocks range that we want to prune.
@@ -295,19 +298,19 @@ impl<T: Config> Module<T> {
 			submitter: Some(sender.clone()),
 			header: header.clone(),
 			total_difficulty,
+			finalized: false,
 		};
 
 		Headers::<T>::insert(hash, header_to_store);
 
 		if HeadersByNumber::contains_key(header.number) {
-			let mut mutate_failed = false;
-			HeadersByNumber::mutate(header.number, |option| {
-				match option.as_mut() {
-					Some(hashes) => hashes.push(hash),
-					None => mutate_failed = true,
+			HeadersByNumber::mutate(header.number, |option| -> DispatchResult {
+				if let Some(hashes) = option {
+					hashes.push(hash);
+					return Ok(());
 				}
-			});
-			ensure!(!mutate_failed, Error::<T>::Unknown);
+				Err(Error::<T>::Unknown.into())
+			})?;
 		} else {
 			HeadersByNumber::insert(header.number, vec![hash]);
 		}
@@ -329,6 +332,13 @@ impl<T: Config> Module<T> {
 			)?;
 			if new_finalized_block_id != finalized_block_id {
 				FinalizedBlock::put(new_finalized_block_id);
+				Headers::<T>::mutate(new_finalized_block_id.hash, |option| -> DispatchResult {
+					if let Some(header) = option {
+						header.finalized = true;
+						return Ok(());
+					}
+					Err(Error::<T>::Unknown.into())
+				})?;
 			}
 
 			// Clean up old headers
@@ -428,49 +438,15 @@ impl<T: Config> Module<T> {
 	// in the block given by proof.block_hash. Inclusion is only
 	// recognized if the block has been finalized.
 	fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
-		let header = Headers::<T>::get(proof.block_hash)
-			.ok_or(Error::<T>::MissingHeader)?
-			.header;
+		let stored_header = Headers::<T>::get(proof.block_hash)
+			.ok_or(Error::<T>::MissingHeader)?;
 
-		let receipt = header.check_receipt_proof(&proof.data.1)
+		ensure!(stored_header.finalized, Error::<T>::HeaderNotFinalized);
+
+		let receipt = stored_header.header.check_receipt_proof(&proof.data.1)
 			.ok_or(Error::<T>::InvalidProof)?;
 
-		let finalized_block = FinalizedBlock::get();
-		Self::check_header_finality(
-			&EthereumHeaderId { hash: proof.block_hash, number: header.number },
-			&finalized_block,
-		)?;
-
 		Ok(receipt)
-	}
-
-	// Checks that the header is in the finalized chain
-	fn check_header_finality(
-		header: &EthereumHeaderId,
-		finalized_block: &EthereumHeaderId,
-	) -> DispatchResult {
-		if header.number == finalized_block.number {
-			return if header.hash == finalized_block.hash {
-				Ok(())
-			} else {
-				Err(Error::<T>::HeaderOnStaleFork.into())
-			}
-		}
-
-		ensure!(
-			header.number < finalized_block.number,
-			Error::<T>::HeaderNotFinalized,
-		);
-
-		let (finalized_hash_at_number, _) = ancestry::<T>(finalized_block.hash)
-			.find(|(_, ancestor)| ancestor.number == header.number)
-			.ok_or(Error::<T>::HeaderOnStaleFork)?;
-		ensure!(
-			header.hash == finalized_hash_at_number,
-			Error::<T>::HeaderOnStaleFork,
-		);
-
-		Ok(())
 	}
 }
 
@@ -512,6 +488,7 @@ impl<T: Config> Verifier for Module<T> {
 					submitter: None,
 					header: header.clone(),
 					total_difficulty: total_difficulty,
+					finalized: false,
 				},
 			);
 			HeadersByNumber::append(header.number, hash);
@@ -556,6 +533,19 @@ impl<T: Config> Verifier for Module<T> {
 				hash: hash,
 				number: header.number,
 			});
+			let mut next_hash = Ok(hash);
+			loop {
+				match next_hash {
+					Ok(hash) => next_hash = Headers::<T>::mutate(hash, |option| {
+						if let Some(header) = option {
+							header.finalized = true;
+							return Ok(header.header.parent_hash);
+						}
+						Err("No header at hash")
+					}),
+					_ => break,
+				}
+			}
 		}
 
 		Ok(())

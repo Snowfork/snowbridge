@@ -1,0 +1,20 @@
+[package]
+name = "artemis-runtime-common"
+description = "Artemis Runtime Common"
+version = "0.1.0"
+authors = ["Snowfork <contact@snowfork.com>"]
+edition = "2018"
+repository = "https://github.com/Snowfork/polkadot-ethereum"
+
+[dependencies]
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "frame-support/std",
+    "frame-system/std",
+    "sp-runtime/std",
+]

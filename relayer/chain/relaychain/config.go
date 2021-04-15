@@ -1,4 +1,4 @@
-package substrate
+package relaychain
 
 type Config struct {
 	Endpoint   string `mapstructure:"endpoint"`

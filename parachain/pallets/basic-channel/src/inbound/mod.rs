@@ -1,6 +1,7 @@
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
+	weights::Weight,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_core::H160;
@@ -20,6 +21,15 @@ mod test;
 
 mod envelope;
 
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn submit() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn submit() -> Weight { 0 }
+}
+
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
@@ -28,6 +38,9 @@ pub trait Config: system::Config {
 
 	/// Verifier module for message verification.
 	type MessageDispatch: MessageDispatch<Self, MessageId>;
+
+	/// Weight information for extrinsics in this pallet
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -61,7 +74,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = 0]
+		#[weight = T::WeightInfo::submit()]
 		pub fn submit(origin, message: Message) -> DispatchResult {
 			ensure_signed(origin)?;
 			// submit message to verifier for verification

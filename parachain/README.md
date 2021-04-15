@@ -43,7 +43,11 @@ cargo build --release --no-default-features --features with-local-runtime
 Install `polkadot-launch`:
 
 ```bash
-yarn global add polkadot-launch
+git clone https://github.com/Snowfork/polkadot-launch.git
+git checkout beefy_tmpfix
+yarn install
+yarn build
+yarn global add file:$(pwd)
 ```
 
 Build Polkadot:
@@ -51,8 +55,8 @@ Build Polkadot:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout f0d5c3
-cargo build --release --features=real-overseer
+git checkout c4a0772
+cargo build --release
 ```
 
 Launch Polkadot and the parachain:
@@ -111,73 +115,3 @@ Edit the generated spec file and replace the following addresses:
 ## API Documentation
 
 See our [Rustdocs](https://polkaeth-rustdocs.netlify.app) for an overview of the crates, APIs, and types that make up our parachain.
-
-## Custom Types
-
-For interacting with our chain using the Polkadot-JS API, you'll need to supply these custom types:
-
-```json
-{
-  "Address": "MultiAddress",
-  "LookupSource": "MultiAddress",
-  "ChannelId": {
-    "_enum": {
-      "Basic": null,
-      "Incentivized": null
-    }
-  },
-  "MessageNonce": "u64",
-  "MessageId": {
-    "channelId": "ChannelId",
-    "nonce": "u64"
-  },
-  "Message": {
-    "data": "Vec<u8>",
-    "proof": "Proof"
-  },
-  "Proof": {
-    "blockHash": "H256",
-    "txIndex": "u32",
-    "data": "(Vec<Vec<u8>>, Vec<Vec<u8>>)"
-  },
-  "EthereumHeader": {
-    "parentHash": "H256",
-    "timestamp": "u64",
-    "number": "u64",
-    "author": "H160",
-    "transactionsRoot": "H256",
-    "ommersHash": "H256",
-    "extraData": "Vec<u8>",
-    "stateRoot": "H256",
-    "receiptsRoot": "H256",
-    "logBloom": "Bloom",
-    "gasUsed": "U256",
-    "gasLimit": "U256",
-    "difficulty": "U256",
-    "seal": "Vec<Vec<u8>>"
-  },
-  "EthashProofData": {
-    "dagNodes": "[H512; 2]",
-    "proof": "Vec<H128>"
-  },
-  "Bloom": {
-    "_": "[u8; 256]"
-  },
-  "PruningRange": {
-    "oldestUnprunedBlock": "u64",
-    "oldestBlockToKeep": "u64"
-  },
-  "AssetId": {
-    "_enum": {
-      "ETH": null,
-      "Token": "H160"
-    }
-  },
-  "InboundChannelData": {
-    "nonce": "u64"
-  },
-  "OutboundChannelData": {
-    "nonce": "u64"
-  }
-}
-```

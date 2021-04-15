@@ -1,7 +1,7 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package substrate
+package parachain
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
+	"github.com/snowfork/polkadot-ethereum/relayer/store"
 )
 
 type Chain struct {
@@ -24,7 +25,7 @@ type Chain struct {
 	log      *logrus.Entry
 }
 
-const Name = "Substrate"
+const Name = "Parachain"
 
 func NewChain(config *Config) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
@@ -44,7 +45,7 @@ func NewChain(config *Config) (*Chain, error) {
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header) error {
+func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header, _ chan<- store.DatabaseCmd) error {
 	writer, err := NewWriter(ch.conn, ethMessages, ethHeaders, ch.log)
 	if err != nil {
 		return err
@@ -53,7 +54,7 @@ func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-ch
 	return nil
 }
 
-func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header) error {
+func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header, _ chan<- store.DatabaseCmd) error {
 	listener := NewListener(
 		ch.config,
 		ch.conn,
@@ -128,4 +129,29 @@ func (ch *Chain) queryEthereumInitParams() (*ethereum.HeaderID, error) {
 
 	nextHeaderID := ethereum.HeaderID{Number: types.NewU64(uint64(headerID.Number) + 1)}
 	return &nextHeaderID, nil
+}
+
+func (ch *Chain) QueryCurrentEpoch() error {
+	ch.log.Info("Creating storage key...")
+
+	storageKey, err := types.CreateStorageKey(&ch.conn.metadata, "Babe", "Epoch", nil, nil)
+	if err != nil {
+		return err
+	}
+
+	ch.log.Info("Attempting to query current epoch...")
+
+	// var headerID ethereum.HeaderID
+	var epochData interface{}
+	_, err = ch.conn.api.RPC.State.GetStorageLatest(storageKey, &epochData)
+	if err != nil {
+		return err
+	}
+
+	ch.log.Info("Retrieved current epoch data:", epochData)
+
+	// nextHeaderID := ethereum.HeaderID{Number: types.NewU64(uint64(headerID.Number) + 1)}
+	// return &nextHeaderID, nil
+
+	return nil
 }
