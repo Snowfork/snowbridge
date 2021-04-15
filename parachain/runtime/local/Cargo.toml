@@ -18,6 +18,7 @@ frame-executive = { git = "https://github.com/paritytech/substrate.git", branch 
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }

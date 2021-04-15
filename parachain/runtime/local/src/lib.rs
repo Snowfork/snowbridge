@@ -361,6 +361,11 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 
 // Governance
 
+impl pallet_sudo::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+}
+
 #[allow(dead_code)]
 type EnsureHalfGeneralCouncil = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
 
