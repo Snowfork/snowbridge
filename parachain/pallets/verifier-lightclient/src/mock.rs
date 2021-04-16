@@ -41,8 +41,8 @@ pub mod mock_verifier {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Module, Call, Storage, Event<T>},
-			Verifier: verifier::{Module, Call, Storage, Event},
+			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Verifier: verifier::{Pallet, Call, Storage, Event},
 		}
 	);
 
@@ -69,6 +69,7 @@ pub mod mock_verifier {
 		type OnKilledAccount = ();
 		type SystemWeightInfo = ();
 		type SS58Prefix = ();
+		type OnSetCode = ();
 	}
 
 	parameter_types! {
@@ -99,8 +100,8 @@ pub mod mock_verifier_with_pow {
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Module, Call, Storage, Event<T>},
-			Verifier: verifier::{Module, Call, Storage, Event},
+			System: frame_system::{Pallet, Call, Storage, Event<T>},
+			Verifier: verifier::{Pallet, Call, Storage, Event},
 		}
 	);
 
@@ -127,6 +128,7 @@ pub mod mock_verifier_with_pow {
 		type OnKilledAccount = ();
 		type SystemWeightInfo = ();
 		type SS58Prefix = ();
+		type OnSetCode = ();
 	}
 
 	parameter_types! {

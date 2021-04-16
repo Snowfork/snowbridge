@@ -40,7 +40,7 @@ contract("ETHApp", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(ETHApp);
+      [this.channels, this.app] = await deployAppContractWithChannels(owner, ETHApp);
     });
 
     it("should lock funds", async function () {
@@ -95,7 +95,7 @@ contract("ETHApp", function (accounts) {
   describe("withdrawals", function () {
 
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(ETHApp);
+      [this.channels, this.app] = await deployAppContractWithChannels(owner, ETHApp);
     });
 
     it("should unlock via the basic inbound channel", async function () {

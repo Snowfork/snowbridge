@@ -29,7 +29,7 @@ use payload::OutboundPayload;
 
 mod benchmarking;
 mod payload;
-mod primitives;
+pub mod primitives;
 
 #[cfg(test)]
 mod mock;

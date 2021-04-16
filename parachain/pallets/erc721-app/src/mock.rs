@@ -27,10 +27,10 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Storage, Event<T>},
-		Dispatch: artemis_dispatch::{Module, Call, Storage, Origin, Event<T>},
-		NftApp: artemis_nft::{Module, Call, Config<T>, Storage},
-		ERC721App: erc721_app::{Module, Call, Config, Storage, Event<T>},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Dispatch: artemis_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
+		NftApp: artemis_nft::{Pallet, Call, Config<T>, Storage},
+		ERC721App: erc721_app::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
 
@@ -63,6 +63,7 @@ impl frame_system::Config for Test {
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
+	type OnSetCode = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 }
