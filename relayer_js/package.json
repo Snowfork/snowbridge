@@ -1,0 +1,16 @@
+{
+  "name": "relayer_js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "eig": "node parachain_incentivized_commitments/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@polkadot/api": "^4.5.1",
+    "@snowfork/snowbridge-types": "link:../types",
+    "web3": "^1.3.5"
+  }
+}

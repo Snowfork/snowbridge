@@ -29,6 +29,7 @@ type Relay struct {
 	paraChain  chain.Chain
 	relayChain chain.Chain
 	database   *store.Database
+	direction  Direction
 }
 
 type Direction int
@@ -135,6 +136,7 @@ func NewRelay() (*Relay, error) {
 		paraChain:  paraChain,
 		relayChain: relayChain,
 		database:   database,
+		direction:  direction,
 	}, nil
 }
 
@@ -196,16 +198,18 @@ func (re *Relay) Start() {
 	log.WithField("name", re.paraChain.Name()).Info("Started chain")
 	defer re.paraChain.Stop()
 
-	err = re.relayChain.Start(ctx, eg, make(chan chain.Init), make(chan chain.Init))
-	if err != nil {
-		log.WithFields(log.Fields{
-			"chain": re.relayChain.Name(),
-			"error": err,
-		}).Error("Failed to start chain")
-		return
+	if re.direction != EthToSub {
+		err = re.relayChain.Start(ctx, eg, make(chan chain.Init), make(chan chain.Init))
+		if err != nil {
+			log.WithFields(log.Fields{
+				"chain": re.relayChain.Name(),
+				"error": err,
+			}).Error("Failed to start chain")
+			return
+		}
+		log.WithField("name", re.relayChain.Name()).Info("Started chain")
+		defer re.relayChain.Stop()
 	}
-	log.WithField("name", re.relayChain.Name()).Info("Started chain")
-	defer re.relayChain.Stop()
 
 	notifyWaitDone := make(chan struct{})
 
