@@ -67,7 +67,7 @@ const confirmUnlock = (rawEvent, ethAppAddress, expectedRecipient, expectedAmoun
   decodedEvent.amount.should.be.bignumber.equal(expectedAmount);
 };
 
-const confirmUnlockTokens = (rawEvent, erc20AppAddress, expectedRecipient, expectedAmount) => {
+const confirmUnlockTokens = (rawEvent, erc20AppAddress, expectedRecipient, expectedValue) => {
   unlockLogFields = [
     {
       type: 'address',
@@ -83,7 +83,7 @@ const confirmUnlockTokens = (rawEvent, erc20AppAddress, expectedRecipient, expec
     },
     {
       type: 'uint256',
-      name: 'amount'
+      name: 'value'
     }
   ];
 
@@ -91,7 +91,7 @@ const confirmUnlockTokens = (rawEvent, erc20AppAddress, expectedRecipient, expec
 
   rawEvent.address.should.be.equal(erc20AppAddress);
   decodedEvent.recipient.should.be.equal(expectedRecipient);
-  decodedEvent.amount.should.be.bignumber.equal(expectedAmount);
+  decodedEvent.value.should.be.bignumber.equal(expectedValue);
 };
 
 const confirmMessageDispatched = (rawEvent, expectedNonce, expectedResult) => {

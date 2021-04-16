@@ -22,6 +22,13 @@ contract ERC721App {
                  uint256 tokenId
                  );
 
+    event Unlocked(
+                   address token,
+                   bytes32 sender,
+                   address recipient,
+                   uint256 tokenId
+                   );
+
     struct Channel {
         address inbound;
         address outbound;
@@ -57,6 +64,18 @@ contract ERC721App {
             OutboundChannel(channels[_channelId].outbound);
         channel.submit(msg.sender, call);
 
+    }
+
+    function unlock(
+             address _token,
+             bytes32 _sender,
+             address _recipient,
+             uint256 _tokenId
+             ) public {
+        // TODO: Ensure message sender is a known inbound channel
+        IERC721Metadata token = IERC721Metadata(_token);
+        token.transferFrom(address(this), _recipient, _tokenId);
+        emit Unlocked(_token, _sender, _recipient, _tokenId);
     }
 
     // SCALE-encode payload

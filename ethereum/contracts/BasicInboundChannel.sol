@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./InboundChannel.sol";
 
 contract BasicInboundChannel is InboundChannel {
-    uint256 constant public MAX_GAS_PER_MESSAGE = 100000;
+    uint256 constant public MAX_GAS_PER_MESSAGE = 150000;
 
     constructor() {
         nonce = 0;
