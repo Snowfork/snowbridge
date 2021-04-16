@@ -44,7 +44,7 @@ contract("ERC20App", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(ERC20App);
+      [this.channels, this.app] = await deployAppContractWithChannels(owner, ERC20App);
       this.symbol = "TEST";
       this.token = await TestToken.new(100000, "Test Token", this.symbol);
 
@@ -109,7 +109,7 @@ contract("ERC20App", function (accounts) {
   describe("withdrawals", function () {
 
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(ERC20App);
+      [this.channels, this.app] = await deployAppContractWithChannels(owner, ERC20App);
       this.symbol = "TEST";
       this.token = await TestToken.new(100000, "Test Token", this.symbol);
 

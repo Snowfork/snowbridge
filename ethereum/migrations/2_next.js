@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
@@ -31,6 +33,17 @@ const channels = {
 
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
+
+    // Account of governance contract
+    // TODO: deploy the contract in this migration and use its address
+    let administrator = accounts[0];
+
+   // Fee for incentivized channel
+    if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
+      throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
+    }
+    const fee = process.env.INCENTIVIZED_CHANNEL_FEE
+
     channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
     channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
     channels.incentivized.inbound.instance = await deployer.deploy(channels.incentivized.inbound.contract)
@@ -41,7 +54,7 @@ module.exports = function(deployer, network, accounts) {
     deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, ERC721App]);
 
     // Deploy applications
-    await deployer.deploy(
+    const ethApp = await deployer.deploy(
       ETHApp,
       {
         inbound: channels.basic.inbound.instance.address,
@@ -53,7 +66,7 @@ module.exports = function(deployer, network, accounts) {
       },
     );
 
-    await deployer.deploy(
+    const erc20App = await deployer.deploy(
       ERC20App,
       {
         inbound: channels.basic.inbound.instance.address,
@@ -91,10 +104,11 @@ module.exports = function(deployer, network, accounts) {
 
     // only deploy this contract to non-development networks. The unit tests deploy this contract themselves.
     if (network === 'ropsten' || network === 'e2e_test')  {
-      await deployer.deploy(
+      const dotApp = await deployer.deploy(
         DOTApp,
         "Snowfork DOT",
         "SnowDOT",
+        channels.incentivized.outbound.instance.address,
         {
           inbound: channels.basic.inbound.instance.address,
           outbound: channels.basic.outbound.instance.address,
@@ -104,7 +118,17 @@ module.exports = function(deployer, network, accounts) {
           outbound: channels.incentivized.outbound.instance.address,
         },
       );
-    }
 
+      // Do post-construction initialization.
+      await channels.incentivized.outbound.instance.initialize(
+        administrator,
+        dotApp.address,
+        [dotApp.address, ethApp.address, erc20App.address]
+      );
+      await channels.incentivized.outbound.instance.setFee(
+        fee,
+        { from: administrator }
+      );
+    }
   })
 };

@@ -5,15 +5,17 @@ use sp_core::{H160, H256};
 use frame_support::{
 	assert_ok, assert_noop,
 	parameter_types,
-	dispatch::DispatchError
+	dispatch::DispatchError,
+	traits::Currency,
 };
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
+	Perbill,
+	traits::{Convert, BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
 };
 use sp_keyring::AccountKeyring as Keyring;
-use sp_std::convert::From;
+use sp_std::{marker::PhantomData, convert::From};
 
-use artemis_core::{MessageDispatch, Message, Proof, rewards::InstantRewards};
+use artemis_core::{MessageDispatch, Message, Proof};
 use artemis_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
@@ -31,9 +33,9 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Event<T>},
-		IncentivizedInboundChannel: incentivized_inbound_channel::{Module, Call, Storage, Event},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+		IncentivizedInboundChannel: incentivized_inbound_channel::{Pallet, Call, Storage, Event},
 	}
 );
 
@@ -68,6 +70,7 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
 
@@ -115,22 +118,32 @@ impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
 }
 
 parameter_types! {
-	pub RewardsAccount: AccountId = Keyring::Eve.into();
+	pub SourceAccount: AccountId = Keyring::Eve.into();
+	pub TreasuryAccount: AccountId = Keyring::Dave.into();
 }
 
+pub struct FeeConverter<T: Config>(PhantomData<T>);
+
+impl<T: Config> Convert<U256, BalanceOf<T>> for FeeConverter<T> {
+	fn convert(_: U256) -> BalanceOf<T> {
+		100u32.into()
+	}
+}
 
 impl incentivized_inbound_channel::Config for Test {
 	type Event = Event;
 	type Verifier = MockVerifier;
 	type MessageDispatch = MockMessageDispatch;
-	type RewardsAccount = RewardsAccount;
-	type InboundMessageFee = Balance;
-	type RewardRelayer = InstantRewards<Self, Balances>;
+	type Currency = Balances;
+	type SourceAccount = SourceAccount;
+	type TreasuryAccount = TreasuryAccount;
+	type FeeConverter = FeeConverter<Self>;
 }
 
 pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
 	new_tester_with_config(incentivized_inbound_channel::GenesisConfig {
 		source_channel,
+		reward_fraction: Perbill::from_percent(80)
 	})
 }
 
@@ -146,44 +159,34 @@ pub fn new_tester_with_config(config: incentivized_inbound_channel::GenesisConfi
 
 
 // The originating channel address for the messages below
-const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["2d02f2234d0B6e35D8d8fD77705f535ACe681327"];
+const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["4130819912a398f4eb84e7f16ed443232ba638b5"];
 
-// Ethereum Log:
-//   address: 0xe4ab635d0bdc5668b3fcb4eaee1dec587998f4af (outbound channel contract)
-//   topics: ...
-//   data:
-//     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
-//     nonce: 1
-//     payload ...
-const MESSAGE_DATA_0: [u8; 284] = hex!("
-	f90119942d02f2234d0b6e35d8d8fd77705f535ace681327e1a0779b38144a38
-	cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
-	00000000000000000a42cba2b7960a0ce216ade5d6a82574257023d800000000
-	0000000000000000000000000000000000000000000000000000000100000000
-	0000000000000000000000000000000000000000000000000000006000000000
-	000000000000000000000000000000000000000000000000000000570c018213
-	dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd04
-	a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d78030000000000
-	00000000000000000000000000000000000000000000000000000000
+// Message with nonce = 1
+const MESSAGE_DATA_0: [u8; 317] = hex!("
+	f9013a944130819912a398f4eb84e7f16ed443232ba638b5e1a05e9ae1d7c484
+	f74d554a503aa825e823725531d97e784dd9b1aacdb58d1f7076b90100000000
+	000000000000000000c2c5d46481c291be111d5e3a0b52114bdf212a01000000
+	0000000000000000000000000000000000000000000000000000000001000000
+	0000000000000000000000000000000000000000000de0b6b3a7640000000000
+	0000000000000000000000000000000000000000000000000000000080000000
+	00000000000000000000000000000000000000000000000000000000570c0182
+	13dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd
+	04a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d780300000000
+	0000000000000000000000000000000000000000000000000000000000
 ");
 
-// Ethereum Log:
-//   address: 0xe4ab635d0bdc5668b3fcb4eaee1dec587998f4af (outbound channel contract)
-//   topics: ...
-//   data:
-//     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
-//     nonce: 1
-//     payload ...
-const MESSAGE_DATA_1: [u8; 284] = hex!("
-	f90119942d02f2234d0b6e35d8d8fd77705f535ace681327e1a0779b38144a38
-	cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
-	00000000000000000a42cba2b7960a0ce216ade5d6a82574257023d800000000
-	0000000000000000000000000000000000000000000000000000000200000000
-	0000000000000000000000000000000000000000000000000000006000000000
-	000000000000000000000000000000000000000000000000000000570c018213
-	dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd04
-	a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d78030000000000
-	00000000000000000000000000000000000000000000000000000000
+// Message with nonce = 2
+const MESSAGE_DATA_1: [u8; 317] = hex!("
+	f9013a944130819912a398f4eb84e7f16ed443232ba638b5e1a05e9ae1d7c484
+	f74d554a503aa825e823725531d97e784dd9b1aacdb58d1f7076b90100000000
+	000000000000000000c2c5d46481c291be111d5e3a0b52114bdf212a01000000
+	0000000000000000000000000000000000000000000000000000000002000000
+	0000000000000000000000000000000000000000000de0b6b3a7640000000000
+	0000000000000000000000000000000000000000000000000000000080000000
+	00000000000000000000000000000000000000000000000000000000570c0182
+	13dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd
+	04a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d780300000000
+	0000000000000000000000000000000000000000000000000000000000
 ");
 
 #[test]
@@ -267,4 +270,22 @@ fn test_submit_with_invalid_nonce() {
 			Error::<Test>::InvalidNonce
 		);
 	});
+}
+
+#[test]
+fn test_handle_fee() {
+	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
+		let relayer: AccountId = Keyring::Bob.into();
+
+		let _ = Balances::deposit_creating(&SourceAccount::get(), 100000000000); // 10 DOT
+		let _ = Balances::deposit_creating(&TreasuryAccount::get(), Balances::minimum_balance());
+		let _ = Balances::deposit_creating(&relayer, Balances::minimum_balance());
+
+		let fee = 10000000000; // 1 DOT
+
+		IncentivizedInboundChannel::handle_fee(fee, &relayer);
+		assert_eq!(Balances::free_balance(&TreasuryAccount::get()), 2000000001);
+		assert_eq!(Balances::free_balance(&relayer), 8000000001);
+	});
+
 }

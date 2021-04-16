@@ -7,12 +7,13 @@
     "test": "mocha --timeout 80000 --exit"
   },
   "dependencies": {
-    "@polkadot/api": "^3.8.1",
+    "@polkadot/api": "^4.3.1",
     "@snowfork/snowbridge-types": "link:../types",
     "bignumber.js": "^9.0.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "chai-bignumber": "^3.0.0",
+    "esm": "^3.2.25",
     "ethers": "^5.0.14",
     "ganache-cli": "^6.12.1",
     "mocha": "^8.1.3",

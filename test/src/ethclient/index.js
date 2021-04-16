@@ -104,10 +104,10 @@ class EthClient {
       });
   }
 
-  async burnDOT(from, amount, polkadotRecipient) {
+  async burnDOT(from, amount, polkadotRecipient, channel) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
-    return await this.appDOT.methods.burn(recipientBytes, this.web3.utils.toBN(amount), 0)
+    return await this.appDOT.methods.burn(recipientBytes, this.web3.utils.toBN(amount), channel)
       .send({
         from,
         gas: 500000,

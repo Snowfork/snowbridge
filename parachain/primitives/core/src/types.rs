@@ -3,6 +3,7 @@
 use frame_support::RuntimeDebug;
 use sp_std::vec::Vec;
 use sp_core::H256;
+use sp_runtime::DigestItem;
 use enum_iterator::IntoEnumIterator;
 use codec::{Encode, Decode};
 
@@ -49,4 +50,17 @@ pub struct Proof {
 	pub tx_index: u32,
 	// Proof keys and values
 	pub data: (Vec<Vec<u8>>, Vec<Vec<u8>>),
+}
+
+/// Auxiliary [`DigestItem`] to include in header digest.
+#[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
+pub enum AuxiliaryDigestItem {
+	/// A batch of messages has been committed.
+	Commitment(ChannelId, H256)
+}
+
+impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
+    fn into(self) -> DigestItem<T> {
+        DigestItem::Other(self.encode())
+    }
 }

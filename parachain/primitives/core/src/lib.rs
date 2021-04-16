@@ -14,7 +14,6 @@ use artemis_ethereum::{Header, Log, U256};
 
 pub mod types;
 pub mod assets;
-pub mod rewards;
 pub mod nft;
 
 pub use types::{

@@ -153,6 +153,7 @@ pub mod module {
 				token: token,
 				sender: who.clone(),
 				recipient,
+				token_id: token_id_erc721,
 			};
 
 			T::OutboundRouter::submit(channel_id, &who, Address::<T>::get(), &message.encode())?;
