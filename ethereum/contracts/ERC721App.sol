@@ -51,13 +51,25 @@ contract ERC721App {
      * @param _tokenId The NFT to lock
      * @param _channelId The Channel to use to send token
      */
-    function lock(address _token, bytes32 _recipient, uint256 _tokenId, ChannelId _channelId) public payable {
+    function lock(address _token,
+                  bytes32 _recipient,
+                  uint256 _tokenId,
+                  ChannelId _channelId
+                  ) public payable {
+        require(
+                _channelId == ChannelId.Basic ||
+                _channelId == ChannelId.Incentivized,
+                "Invalid channel ID"
+                );
+
         IERC721Metadata token = IERC721Metadata(_token);
+
+        require(token.ownerOf(_tokenId) == msg.sender, "Transfer of token that is not own");
+
         token.transferFrom(msg.sender, address(this), _tokenId);
 
         emit Locked(_token, msg.sender, _recipient, _tokenId);
 
-        // send string as vector bytes, encode string as byte array
         bytes memory call = encodeCall(msg.sender, _recipient, _token, _tokenId, token.tokenURI(_tokenId));
 
         OutboundChannel channel =
@@ -66,6 +78,13 @@ contract ERC721App {
 
     }
 
+    /**
+     * @notice Unlocks ERC721 token from ERC721App contract
+     * @param _token The NFT contract
+     * @param _sender Polkadot address of the sender
+     * @param _recipient The ETHApp
+     * @param _tokenId The NFT to lock
+     */
     function unlock(
              address _token,
              bytes32 _sender,
@@ -74,6 +93,9 @@ contract ERC721App {
              ) public {
         // TODO: Ensure message sender is a known inbound channel
         IERC721Metadata token = IERC721Metadata(_token);
+
+        require(token.ownerOf(_tokenId) == address(this), "Transfer of token that is not own");
+
         token.transferFrom(address(this), _recipient, _tokenId);
         emit Unlocked(_token, _sender, _recipient, _tokenId);
     }
