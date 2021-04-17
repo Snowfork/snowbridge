@@ -7,6 +7,7 @@ do
   yarn relay-commitments-from-parachain 2>&1 &
   RELAY_PID=$!
   while kill -0 $RELAY_PID ; do
-      sleep 5
+      sleep 2
   done
+  sleep 5
 done
