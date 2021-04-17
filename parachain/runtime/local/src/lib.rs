@@ -473,6 +473,7 @@ impl incentivized_channel_inbound::Config for Runtime {
 	type SourceAccount = SourceAccount;
 	type TreasuryAccount = TreasuryAccount;
 	type FeeConverter = FeeConverter;
+	type UpdateOrigin = EnsureRootOrHalfLocalCouncil;
 	type WeightInfo = ();
 }
 
