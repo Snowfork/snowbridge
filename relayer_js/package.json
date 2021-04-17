@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "eig": "node parachain_incentivized_commitments/index.js"
+    "relay-commitments": "node incentivized_commitment_relayer/index.js"
   },
   "author": "",
   "license": "ISC",
