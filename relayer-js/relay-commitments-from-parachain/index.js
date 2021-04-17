@@ -1,7 +1,6 @@
 var Web3 = require('web3');
 let { bundle } = require("@snowfork/snowbridge-types");
 const { ApiPromise, WsProvider } = require('@polkadot/api');
-const { hexToU8a } = require("@polkadot/util");
 const IncentivizedInboundChannel = require('../../ethereum/build/contracts/IncentivizedInboundChannel.json');
 
 const endpoint = 'ws://localhost:8545';
@@ -10,9 +9,7 @@ const PARACHAIN_ID = 200;
 const PARACHAIN_RPC_ENDPOINT = 'ws://localhost:11144';
 const ethereumSenderKey = '0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77';
 
-start();
-
-async function start() {
+(async _ => {
 
   var web3 = new Web3(new Web3.providers.WebsocketProvider(endpoint));
   const incentivizedInboundChannel = await new web3.eth.Contract(IncentivizedInboundChannel.abi, IncentivizedInboundChannel.networks[networkID].address);
@@ -103,4 +100,6 @@ async function start() {
       console.dir(tx);
     }
   }
-}
+})().catch(e => {
+  process.exit(1);
+});
