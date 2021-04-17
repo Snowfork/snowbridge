@@ -67,7 +67,10 @@ export const types: RegistryTypes = {
     nonce: "u64"
   },
   IndexingPrefix: '[u8; 11]',
-  AuxiliaryDigestItem: { _enum: ["Commitment(ChannelId, H256)"] },
+  AuxiliaryDigestItem: {
+    isCommitment: 'bool',
+    commitment: 'Commitment'
+  },
   Commitment: '(ChannelId, H256)',
   OffchainCommitmentKey: '(IndexingPrefix, ChannelId, H256)',
   ChannelMessage: {

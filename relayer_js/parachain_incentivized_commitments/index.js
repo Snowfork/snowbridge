@@ -2,14 +2,13 @@ var Web3 = require('web3');
 let { bundle } = require("@snowfork/snowbridge-types");
 const { ApiPromise, WsProvider } = require('@polkadot/api');
 const { hexToU8a } = require("@polkadot/util");
-
 const IncentivizedInboundChannel = require('../../ethereum/build/contracts/IncentivizedInboundChannel.json');
 
 const endpoint = 'ws://localhost:8545';
 const networkID = 344;
-
 const PARACHAIN_ID = 200;
 const PARACHAIN_RPC_ENDPOINT = 'ws://localhost:11144';
+const ethereumSenderKey = '0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77';
 
 start();
 
@@ -23,11 +22,9 @@ async function start() {
     provider: parachainWsProvider,
     typesBundle: bundle,
   });
+  const indexingPrefix = parachainApi.createType('IndexingPrefix', '(commitment');
 
   let ethereumDeliveredNonce = parseInt(await incentivizedInboundChannel.methods.nonce().call());
-  if (ethereumDeliveredNonce === 0) {
-    ethereumDeliveredNonce++
-  }
   console.log(`Latest nonce delivered to ethereum is ${ethereumDeliveredNonce}`);
 
   const latestParachainBlockNumber = parseInt(await (await parachainApi.query.system.number()).toBigInt());
@@ -54,16 +51,17 @@ async function start() {
       if (digestLogs.length > 0) {
         console.log(`Found logs at block ${currentBlockNumber}`)
         const logs = digestLogs.toHuman();
-        console.log(logs)
+        const commitmentLog = logs[0]['Other'];
+        digestItem = parachainApi.createType('AuxiliaryDigestItem', commitmentLog);
+        console.log(digestItem.toHuman());
         console.log(`Querying offchain storage for messages`);
-        const commitment = logs[0]['Other'];
-        messages = await queryOffchainMessagesForCommitment(commitment)
+        messages = await queryOffchainMessagesForCommitment(digestItem)
         const nonces = messages.map(m => parseInt(m.nonce))
         console.log(`Found nonces: ${nonces}`)
         headerFound = nonces.includes(nonceToFind);
         if (!headerFound) {
           console.log(`Nonce not found in messages for commitment at block ${currentBlockNumber}`)
-          commitments.push({ block: currentBlockNumber, commitment, messages });
+          commitments.push({ block: currentBlockNumber, hash: digestItem.commitment[1].toString(), messages });
         }
       }
       currentBlockNumber--;
@@ -77,24 +75,22 @@ async function start() {
     return header.digest.logs
   }
 
-  async function queryOffchainMessagesForCommitment(commitment) {
-    indexingPrefix = parachainApi.createType('IndexingPrefix', '(commitment');
-    commitmentTyped = parachainApi.createType('Commitment', commitment);
+  async function queryOffchainMessagesForCommitment(digestItem) {
+    channel = digestItem.commitment[0];
+    hash = digestItem.commitment[1];
+    storageKey = parachainApi.createType('OffchainCommitmentKey', [indexingPrefix, channel, hash]);
 
-    // TODO: This is done manually for now, because the aux digest item type doesn't work properly.
-    const storageKey = Array.from(indexingPrefix.toU8a())
-      .concat(Array.from(commitmentTyped[0].toU8a()))
-      .concat(Array.from(hexToU8a(commitment).slice(2)));
-
-    messages = await parachainApi.rpc.offchain.localStorageGet('PERSISTENT', storageKey);
+    messages = await parachainApi.rpc.offchain.localStorageGet('PERSISTENT', Array.from(storageKey.toU8a()));
     channelMessages = parachainApi.createType('ChannelMessages', messages.toString()).toHuman();
+    console.log({ channelMessages })
     return channelMessages;
   }
 
   async function deliverMessages(commitments, incentivizedInboundChannel) {
+    const ethereumSenderAccount = web3.eth.accounts.privateKeyToAccount(ethereumSenderKey);
     for (const commitment of commitments) {
       console.log(`Delivering messages from parachain block ${commitment.block}`);
-      tx = await incentivizedInboundChannel.methods.submit(commitment.messages, commitment.commitment).send();
+      tx = await incentivizedInboundChannel.methods.submit(commitment.messages, commitment.hash).send({ from: ethereumSenderAccount.address, gas: 5000000 });
       console.log(`Delivered, tx:`);
       console.dir(tx);
     }
