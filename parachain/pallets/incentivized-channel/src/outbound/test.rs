@@ -70,6 +70,7 @@ impl incentivized_outbound_channel::Config for Test {
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type WeightInfo = ();
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {

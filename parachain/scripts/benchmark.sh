@@ -20,7 +20,7 @@ benchmark_pallets()
 {
     echo "Building runtime with features $RUNTIME_FEATURE,runtime-benchmarks"
 
-    FORCE_WASM_BUILD=$(date +%s) cargo build --release \
+    cargo build --release \
         --no-default-features \
         --features runtime-benchmarks,$RUNTIME_FEATURE
 
@@ -35,7 +35,9 @@ benchmark_pallets()
     node ../test/scripts/helpers/overrideParachainSpec.js $TMP_DIR/spec.json \
         genesis.runtime.palletBalances.balances.0 "$DOT_MODULE_ENDOWMENT"
 
-    PALLETS="assets basic_channel::inbound dot_app erc20_app eth_app frame_system incentivized_channel::inbound pallet_balances pallet_timestamp verifier_lightclient"
+    PALLETS="assets basic_channel::inbound dot_app erc20_app eth_app frame_system
+        incentivized_channel::inbound incentivized_channel::outbound pallet_balances
+        pallet_timestamp pallet_utility verifier_lightclient"
 
     echo "Generating weights module for $RUNTIME_DIR with pallets $PALLETS"
 
