@@ -27,6 +27,14 @@ async function start() {
   let ethereumDeliveredNonce = parseInt(await incentivizedInboundChannel.methods.nonce().call());
   console.log(`Latest nonce delivered to ethereum is ${ethereumDeliveredNonce}`);
 
+  const latestParachainNonce = parseInt(await (await parachainApi.query.basicOutboundChannel.nonce()).toBigInt());
+  console.log(`Latest nonce on parachain is: ${latestParachainNonce}`)
+
+  if (ethereumDeliveredNonce === latestParachainNonce) {
+    console.log(`All up to date`);
+    process.exit(0);
+  }
+
   const latestParachainBlockNumber = parseInt(await (await parachainApi.query.system.number()).toBigInt());
   console.log(`Latest block number on parachain is: ${latestParachainBlockNumber}`)
 
