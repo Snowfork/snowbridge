@@ -187,7 +187,7 @@ describe('Bridge', function () {
       let beforeEthBalance = await ethClient.getErc20Balance(account);
       let beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
 
-      await subClient.burnERC20(subClient.alice, TestTokenAddress, account, amount.toFixed(), 1)
+      await subClient.burnERC20(subClient.alice, TestTokenAddress, account, amount.toFixed(), 0)
       await sleep(70000);
 
       let afterEthBalance = await ethClient.getErc20Balance(account);
