@@ -9,7 +9,8 @@ use local_runtime::{
 	CommitmentsConfig,
 	ParachainInfoConfig,
 	IncentivizedOutboundChannelConfig,
-	GeneralCouncilMembershipConfig,
+	LocalCouncilMembershipConfig,
+	SudoConfig,
 	WASM_BINARY, Signature,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -114,8 +115,9 @@ fn testnet_genesis(
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		},
+		pallet_sudo: SudoConfig { key: get_account_id_from_seed::<sr25519::Public>("Alice") },
 		pallet_collective_Instance1: Default::default(),
-		pallet_membership_Instance1: GeneralCouncilMembershipConfig {
+		pallet_membership_Instance1: LocalCouncilMembershipConfig {
 			members: vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_account_id_from_seed::<sr25519::Public>("Bob"),

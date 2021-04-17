@@ -9,7 +9,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_core::{
 	U256, crypto::KeyTypeId, OpaqueMetadata,
-	u32_trait::{_1, _2, _3, _4},
+	u32_trait::{_1, _2},
 };
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
@@ -42,7 +42,7 @@ pub use frame_support::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
 };
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureOneOf};
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
@@ -366,47 +366,41 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
-#[allow(dead_code)]
-type EnsureHalfGeneralCouncil = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
-
-#[allow(dead_code)]
-type EnsureOneThirdGeneralCouncil = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
-
-#[allow(dead_code)]
-type EnsureTwoThirdsGeneralCouncil = pallet_collective::EnsureProportionMoreThan<_2, _3, AccountId, GeneralCouncilInstance>;
-
-type EnsureThreeFourthsGeneralCouncil = pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>;
+type EnsureRootOrHalfLocalCouncil = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, LocalCouncilInstance>,
+>;
 
 parameter_types! {
-	pub const GeneralCouncilMotionDuration: BlockNumber = 7 * DAYS;
-	pub const GeneralCouncilMaxProposals: u32 = 100;
-	pub const GeneralCouncilMaxMembers: u32 = 4;
+	pub const LocalCouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const LocalCouncilMaxProposals: u32 = 100;
+	pub const LocalCouncilMaxMembers: u32 = 4;
 }
 
-type GeneralCouncilInstance = pallet_collective::Instance1;
-impl pallet_collective::Config<GeneralCouncilInstance> for Runtime {
+type LocalCouncilInstance = pallet_collective::Instance1;
+impl pallet_collective::Config<LocalCouncilInstance> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
-	type MotionDuration = GeneralCouncilMotionDuration;
-	type MaxProposals = GeneralCouncilMaxProposals;
-	type MaxMembers = GeneralCouncilMaxMembers;
+	type MotionDuration = LocalCouncilMotionDuration;
+	type MaxProposals = LocalCouncilMaxProposals;
+	type MaxMembers = LocalCouncilMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = ();
 }
 
-type GeneralCouncilMembershipInstance = pallet_membership::Instance1;
-impl pallet_membership::Config<GeneralCouncilMembershipInstance> for Runtime {
+type LocalCouncilMembershipInstance = pallet_membership::Instance1;
+impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = EnsureThreeFourthsGeneralCouncil;
-	type RemoveOrigin = EnsureThreeFourthsGeneralCouncil;
-	type SwapOrigin = EnsureThreeFourthsGeneralCouncil;
-	type ResetOrigin = EnsureThreeFourthsGeneralCouncil;
-	type PrimeOrigin = EnsureThreeFourthsGeneralCouncil;
-	type MembershipInitialized = GeneralCouncil;
-	type MembershipChanged = GeneralCouncil;
+	type AddOrigin = EnsureRootOrHalfLocalCouncil;
+	type RemoveOrigin = EnsureRootOrHalfLocalCouncil;
+	type SwapOrigin = EnsureRootOrHalfLocalCouncil;
+	type ResetOrigin = EnsureRootOrHalfLocalCouncil;
+	type PrimeOrigin = EnsureRootOrHalfLocalCouncil;
+	type MembershipInitialized = LocalCouncil;
+	type MembershipChanged = LocalCouncil;
 }
-
 
 // Our pallets
 
@@ -592,21 +586,24 @@ construct_runtime!(
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 5,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event} = 6,
 
-		GeneralCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 21,
-		GeneralCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 22,
+		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
+		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 8,
 
-		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event} = 7,
-		BasicOutboundChannel: basic_channel_outbound::{Pallet, Storage, Event} = 8,
-		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 9,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Config<T>, Storage, Event} = 10,
-		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 11,
-		Commitments: commitments::{Pallet, Call, Config<T>, Storage, Event} = 12,
-		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 13,
-		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 14,
+		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event} = 9,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Storage, Event} = 10,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 11,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Config<T>, Storage, Event} = 12,
+		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 13,
+		Commitments: commitments::{Pallet, Call, Config<T>, Storage, Event} = 14,
+		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 15,
+		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
 
-		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 15,
-		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 16,
-		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 17,
+		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 17,
+		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 18,
+		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 19,
+
+		// For dev only, will be removed in production
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 20,
 
 		DOT: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 64,
 		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
