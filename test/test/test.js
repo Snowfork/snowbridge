@@ -15,7 +15,7 @@ const { expect } = require("chai")
 const networkID = '344';
 const TestTokenAddress = TestToken.networks[networkID].address;
 
-describe('Incentivized Bridge', function () {
+describe('Bridge', function () {
 
   let ethClient;
   let subClient;
@@ -119,7 +119,7 @@ describe('Incentivized Bridge', function () {
 
       const { gasCost } = await ethClient.lockETH(account, amount, polkadotRecipient);
 
-      await sleep(40000);
+      await sleep(50000);
 
       const afterEthBalance = await ethClient.getEthBalance(account);
       const afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
@@ -167,7 +167,7 @@ describe('Incentivized Bridge', function () {
       await ethClient.approveERC20(account, amount);
       await ethClient.lockERC20(account, amount, polkadotRecipient);
 
-      await sleep(40000);
+      await sleep(50000);
 
       let afterEthBalance = await ethClient.getErc20Balance(account);
       let afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
