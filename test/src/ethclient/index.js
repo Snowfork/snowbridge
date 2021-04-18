@@ -41,7 +41,7 @@ class EthClient {
 
   async initialize() {
     this.accounts = await this.web3.eth.getAccounts();
-    this.web3.eth.defaultAccount = this.accounts[0];
+    this.web3.eth.defaultAccount = this.accounts[1];
 
     const snowDotAddr = await this.appDOT.methods.token().call();
     const snowDOT = new this.web3.eth.Contract(WrappedToken.abi, snowDotAddr);

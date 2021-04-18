@@ -102,19 +102,15 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	}
 	li.blockWaitPeriod = blockWaitPeriod.Uint64()
 	eg.Go(func() error {
-		return li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
+		err := li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
+		if li.messages != nil {
+			close(li.messages)
+		}
+		close(li.headers)
+		return err
 	})
 
 	return nil
-}
-
-func (li *Listener) onDone(ctx context.Context) error {
-	li.log.Info("Shutting down listener...")
-	if li.messages != nil {
-		close(li.messages)
-	}
-	close(li.headers)
-	return ctx.Err()
 }
 
 func (li *Listener) pollEventsAndHeaders(
@@ -138,11 +134,16 @@ func (li *Listener) pollEventsAndHeaders(
 	for {
 		select {
 		case <-ctx.Done():
-			return li.onDone(ctx)
+			li.log.Info("Shutting down listener...")
+			return ctx.Err()
 		case <-headerCtx.Done():
-			return li.onDone(ctx)
+			li.log.Info("Shutting down listener...")
+			return ctx.Err()
 		case gethheader := <-headers:
-			li.forwardHeader(hcs, gethheader)
+			err := li.forwardHeader(hcs, gethheader)
+			if err != nil {
+				return err
+			}
 
 			if li.messages == nil {
 				li.log.Info("Not polling events since channel is nil")
@@ -161,12 +162,14 @@ func (li *Listener) pollEventsAndHeaders(
 			basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
 			if err != nil {
 				li.log.WithError(err).Error("Failure fetching event logs")
+				return err
 			}
 			events = append(events, basicEvents...)
 
 			incentivizedEvents, err := li.queryIncentivizedEvents(li.incentivizedOutboundChannel, &filterOptions)
 			if err != nil {
 				li.log.WithError(err).Error("Failure fetching event logs")
+				return err
 			}
 			events = append(events, incentivizedEvents...)
 
@@ -179,6 +182,7 @@ func (li *Listener) pollEventsAndHeaders(
 			contractEvents, err := li.queryLightClientEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
 				li.log.WithError(err).Error("Failure fetching event logs")
+				return err
 			}
 			lightClientBridgeEvents = append(lightClientBridgeEvents, contractEvents...)
 
@@ -254,7 +258,7 @@ func (li *Listener) queryIncentivizedEvents(contract *outbound.IncentivizedOutbo
 	return events, nil
 }
 
-func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, events []*etypes.Log) {
+func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, events []*etypes.Log) error {
 	messages := make([]chain.Message, len(events))
 
 	for i, event := range events {
@@ -265,7 +269,7 @@ func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, ev
 				"blockNumber": event.BlockNumber,
 				"txHash":      event.TxHash.Hex(),
 			}).WithError(err).Error("Failed to get receipt trie for event")
-			return
+			return err
 		}
 
 		msg, err := MakeMessageFromEvent(li.mapping, event, receiptTrie, li.log)
@@ -276,7 +280,7 @@ func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, ev
 				"blockNumber": event.BlockNumber,
 				"txHash":      event.TxHash.Hex(),
 			}).WithError(err).Error("Failed to generate message from ethereum event")
-			return
+			return err
 		}
 
 		messages[i] = msg
@@ -288,16 +292,18 @@ func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, ev
 			li.messages <- messages[start : i+1]
 		}
 	}
+
+	return nil
 }
 
-func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.Header) {
+func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.Header) error {
 	cache, err := hcs.GetEthashproofCache(gethheader.Number.Uint64())
 	if err != nil {
 		li.log.WithFields(logrus.Fields{
 			"blockHash":   gethheader.Hash().Hex(),
 			"blockNumber": gethheader.Number,
 		}).WithError(err).Error("Failed to get ethashproof cache for header")
-		return
+		return err
 	}
 
 	header, err := MakeHeaderFromEthHeader(gethheader, cache, li.log)
@@ -306,9 +312,12 @@ func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.H
 			"blockHash":   gethheader.Hash().Hex(),
 			"blockNumber": gethheader.Number,
 		}).WithError(err).Error("Failed to generate header from ethereum header")
+		return err
 	} else {
 		li.headers <- *header
 	}
+
+	return nil
 }
 
 // queryLightClientEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
