@@ -86,7 +86,7 @@ module.exports = function (deployer, network, accounts) {
       },
     );
 
-    await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
+    const token = await deployer.deploy(TestToken, "Test Token", "TEST");
 
     // Deploy ERC1820 Registry for our E2E stack.
     if (network === 'e2e_test') {
@@ -125,6 +125,13 @@ module.exports = function (deployer, network, accounts) {
         { from: administrator }
       );
     }
+
+    await token.mint("10000", {
+      from: accounts[0],
+    });
+    await token.mint("10000", {
+      from: accounts[1],
+    });
 
     // Link MerkleProof library to ValidatorRegistry
     await deployer.deploy(MerkleProof);
