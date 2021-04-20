@@ -46,11 +46,32 @@ git checkout enable_beefy_on_rococo
 cargo build --release
 ```
 
+Check that all related services are not running (eg: from a previous run):
+```
+ps -aux | grep polkadot
+ps -aux | grep ganache
+ps -aux | grep substrate
+```
+
+Kill all processes that are still running if needed
+```
+kill -9 ...
+```
+
 Start all services (parachain, relayer, ganache, etc):
 
 ```bash
 scripts/start-services.sh
 ```
+
+Wait until the "System has been initialized" message
+
+Go to polkadot-js and wait until the parachain has started producing blocks:
+https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A11144#/explorer
+
+Confirm the block number is > 2
+
+You should now be good to go!
 
 ## Run Tests
 
