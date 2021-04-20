@@ -15,7 +15,7 @@ start_ganache()
         --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
         >ganache.log 2>&1 &
 
-    scripts/wait-for-it.sh -t 20 localhost:8545
+    scripts/wait-for-it.sh -t 32 localhost:8545
     sleep 5
 }
 
@@ -82,7 +82,7 @@ start_parachain()
 
     popd
 
-    scripts/wait-for-it.sh -t 20 localhost:11144
+    scripts/wait-for-it.sh -t 32 localhost:11144
     echo "Waiting for consensus between polkadot and parachain"
     sleep 60
 }
