@@ -7,7 +7,7 @@ nav_order: 3
 ---
 
 # Relayer Architecture
-The relayer is a single golang binary that acts as a service container for various workers that are involved in the relaying process. As our bridge requires a mix of different kinds of data types and proofs to be relayed at different times, co-ordinated in different ways, we split up these responsibilities into different workers.
+The relayer is a single golang binary that acts as a worker container for various workers that are involved in the relaying process. As our bridge requires a mix of different kinds of data types and proofs to be relayed at different times, co-ordinated in different ways, we split up these responsibilities into different workers.
 
 ## Worker Goals
  - Each worker is expected to be stateless and functional
@@ -27,7 +27,7 @@ This worker is responsible for keeping the Ethereum-side Relay Chain Light Clien
 This worker is responsible for keeping the Ethereum-side channels/Parachain Light Clients up to date. It is responsible for taking parachain messages, parachain commitments, parachain-block-header-proofs and mmr-proofs from both the parachain and relay chain and submitting them to Ethereum.
 
 # Shared Interface
-The relayer as a service container starts up each worker with a shared interface for common functionality. It runs as a single Go process with threads for each worker. The interface provides the following shared functionality:
+The relayer as a worker container starts up each worker with a shared interface for common functionality. It runs as a single Go process with threads for each worker. The interface provides the following shared functionality:
  - metrics/monitoring
  - logging
  - config
