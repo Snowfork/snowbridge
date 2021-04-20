@@ -82,6 +82,9 @@ const ethereumSenderKey = '0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0
 
   async function queryOffchainMessagesForCommitment(digestItem) {
     channel = digestItem.commitment[0];
+    if (channel.toHuman() === 'Incentivized') {
+      return [];
+    }
     hash = digestItem.commitment[1];
     storageKey = parachainApi.createType('OffchainCommitmentKey', [indexingPrefix, channel, hash]);
 
