@@ -93,7 +93,11 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return wr.onDone(ctx)
-		case msgs := <-wr.messages:
+		case msgs, ok := <-wr.messages:
+			// check if channel is closed
+			if !ok {
+				return nil
+			}
 
 			var concreteMsgs []*chain.EthereumOutboundMessage
 			for _, msg := range msgs {
@@ -111,7 +115,12 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 				}).Error("Failure submitting message to substrate")
 				return err
 			}
-		case header := <-wr.headers:
+		case header, ok := <-wr.headers:
+			// check if channel is closed
+			if !ok {
+				return nil
+			}
+
 			err := wr.WriteHeader(ctx, &header)
 			if err != nil {
 				wr.log.WithFields(logrus.Fields{

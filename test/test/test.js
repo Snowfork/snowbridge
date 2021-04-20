@@ -51,7 +51,7 @@ describe('Bridge', function () {
 
       // lock DOT using basic channel
       await subClient.lockDOT(subClient.alice, account, amount.toFixed(), 0)
-      await sleep(70000);
+      await sleep(90000);
 
       let afterEthBalance = await ethClient.getDotBalance(account);
       let afterSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
@@ -71,7 +71,7 @@ describe('Bridge', function () {
       let beforeSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58);
 
       await ethClient.burnDOT(account, amountWrapped, polkadotRecipient, 0);
-      await sleep(70000);
+      await sleep(60000);
 
       let afterEthBalance = await ethClient.getDotBalance(account);
       let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58);
@@ -95,7 +95,7 @@ describe('Bridge', function () {
       let beforeTreasuryBalance = await subClient.queryAccountBalance("5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS");
 
       await ethClient.burnDOT(account, amountWrapped, polkadotRecipient, 1);
-      await sleep(70000);
+      await sleep(60000);
 
       let afterEthBalance = await ethClient.getDotBalance(account);
       let afterSubBalance = await subClient.queryAccountBalance(polkadotRecipientSS58);
@@ -118,8 +118,7 @@ describe('Bridge', function () {
       const beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
 
       const { gasCost } = await ethClient.lockETH(account, amount, polkadotRecipient);
-
-      await sleep(50000);
+      await sleep(60000);
 
       const afterEthBalance = await ethClient.getEthBalance(account);
       const afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
@@ -141,7 +140,7 @@ describe('Bridge', function () {
       let beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
 
       await subClient.burnETH(subClient.alice, account, amount.toFixed(), 0)
-      await sleep(70000);
+      await sleep(90000);
 
       let afterEthBalance = await ethClient.getEthBalance(account);
       let afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
@@ -159,15 +158,14 @@ describe('Bridge', function () {
     it('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
       let amount = BigNumber('1000');
 
-      const account = ethClient.accounts[0];
+      const account = ethClient.accounts[1];
 
       let beforeEthBalance = await ethClient.getErc20Balance(account);
       let beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
 
       await ethClient.approveERC20(account, amount);
       await ethClient.lockERC20(account, amount, polkadotRecipient);
-
-      await sleep(50000);
+      await sleep(60000);
 
       let afterEthBalance = await ethClient.getErc20Balance(account);
       let afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
@@ -182,13 +180,13 @@ describe('Bridge', function () {
     it('should transfer ERC20 from Substrate to Ethereum', async function () {
       let amount = BigNumber('1000');
 
-      const account = ethClient.accounts[0];
+      const account = ethClient.accounts[1];
 
       let beforeEthBalance = await ethClient.getErc20Balance(account);
       let beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
 
-      await subClient.burnERC20(subClient.alice, TestTokenAddress, account, amount.toFixed(), 1)
-      await sleep(70000);
+      await subClient.burnERC20(subClient.alice, TestTokenAddress, account, amount.toFixed(), 0)
+      await sleep(90000);
 
       let afterEthBalance = await ethClient.getErc20Balance(account);
       let afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);

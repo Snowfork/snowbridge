@@ -15,7 +15,7 @@ start_ganache()
         --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
         >ganache.log 2>&1 &
 
-    scripts/wait-for-it.sh -t 20 localhost:8545
+    scripts/wait-for-it.sh -t 32 localhost:8545
     sleep 5
 }
 
@@ -82,7 +82,7 @@ start_parachain()
 
     popd
 
-    scripts/wait-for-it.sh -t 20 localhost:11144
+    scripts/wait-for-it.sh -t 32 localhost:11144
     echo "Waiting for consensus between polkadot and parachain"
     sleep 60
 }
@@ -95,7 +95,7 @@ start_relayer()
 
     mage build
 
-    export ARTEMIS_ETHEREUM_KEY="0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
+    export ARTEMIS_ETHEREUM_KEY="0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109"
     export ARTEMIS_PARACHAIN_KEY="//Relay"
     export ARTEMIS_RELAYCHAIN_KEY="//Alice"
 
