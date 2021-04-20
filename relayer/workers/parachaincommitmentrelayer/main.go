@@ -16,13 +16,13 @@ import (
 )
 
 type Worker struct {
-	parachainConfig   *parachain.Config
-	ethereumConfig    *ethereum.Config
-	parachainConn     *parachain.Connection
-	parachainListener *parachain.Listener
-	ethereumConn      *ethereum.Connection
-	ethereumWriter    *EthereumWriter
-	log               *logrus.Entry
+	parachainConfig             *parachain.Config
+	ethereumConfig              *ethereum.Config
+	parachainConn               *parachain.Connection
+	parachainCommitmentListener *ParachainCommitmentListener
+	ethereumConn                *ethereum.Connection
+	ethereumChannelWriter       *EthereumChannelWriter
+	log                         *logrus.Entry
 }
 
 const Name = "parachain-commitment-relayer"
@@ -42,7 +42,7 @@ func NewWorker(parachainConfig *parachain.Config, ethereumConfig *ethereum.Confi
 	// channel for messages from substrate
 	var subMessages = make(chan []chain.Message, 1)
 
-	parachainListener := parachain.NewListener(
+	parachainCommitmentListener := NewParachainCommitmentListener(
 		parachainConfig,
 		parachainConn,
 		subMessages,
@@ -51,27 +51,27 @@ func NewWorker(parachainConfig *parachain.Config, ethereumConfig *ethereum.Confi
 
 	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
-	ethereumWriter, err := NewEthereumWriter(ethereumConfig, ethereumConn,
+	ethereumChannelWriter, err := NewEthereumChannelWriter(ethereumConfig, ethereumConn,
 		subMessages, contracts, log)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Worker{
-		parachainConfig:   parachainConfig,
-		ethereumConfig:    ethereumConfig,
-		parachainConn:     parachainConn,
-		parachainListener: parachainListener,
-		ethereumConn:      ethereumConn,
-		ethereumWriter:    ethereumWriter,
-		log:               log,
+		parachainConfig:             parachainConfig,
+		ethereumConfig:              ethereumConfig,
+		parachainConn:               parachainConn,
+		parachainCommitmentListener: parachainCommitmentListener,
+		ethereumConn:                ethereumConn,
+		ethereumChannelWriter:       ethereumChannelWriter,
+		log:                         log,
 	}, nil
 }
 
 func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	fmt.Println("Starting parachain-commitment-relayer")
 
-	if worker.parachainListener == nil || worker.ethereumWriter == nil {
+	if worker.parachainCommitmentListener == nil || worker.ethereumChannelWriter == nil {
 		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
 	}
 
@@ -85,16 +85,16 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	if worker.parachainListener != nil {
-		err = worker.parachainListener.Start(ctx, eg)
+	if worker.parachainCommitmentListener != nil {
+		err = worker.parachainCommitmentListener.Start(ctx, eg)
 		if err != nil {
 			return err
 		}
 	}
 
 	eg.Go(func() error {
-		if worker.ethereumWriter != nil {
-			err = worker.ethereumWriter.Start(ctx, eg)
+		if worker.ethereumChannelWriter != nil {
+			err = worker.ethereumChannelWriter.Start(ctx, eg)
 			if err != nil {
 				return err
 			}

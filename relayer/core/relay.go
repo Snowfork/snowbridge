@@ -21,8 +21,8 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/parachaincommitmentrelayer"
 	"github.com/snowfork/polkadot-ethereum/relayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer"
 )
 
 type Relay struct {
@@ -127,11 +127,6 @@ func NewRelay() (*Relay, error) {
 			return nil, err
 		}
 
-		err = paraChain.SetSender(subMessages, nil, dbMessages)
-		if err != nil {
-			return nil, err
-		}
-
 		err = relayChain.SetSender(subMessages, nil, beefyMessages)
 		if err != nil {
 			return nil, err
@@ -145,7 +140,6 @@ func NewRelay() (*Relay, error) {
 		if err != nil {
 			return nil, err
 		}
-
 	}
 
 	return &Relay{
