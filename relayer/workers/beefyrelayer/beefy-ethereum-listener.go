@@ -78,7 +78,7 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 ) error {
 	headers := make(chan *gethTypes.Header, 5)
 
-	//TODO: need to start watching for headers
+	li.ethereumConn.GetClient().SubscribeNewHead(ctx, headers)
 
 	for {
 		select {
