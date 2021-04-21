@@ -13,7 +13,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
 type Worker struct {
@@ -27,8 +27,7 @@ type Worker struct {
 	log                     *logrus.Entry
 	beefyDB                 *store.Database
 	beefyMessages           chan store.BeefyRelayInfo
-	ethHeaders              chan<- chain.Header
-	dbMessages              chan<- store.DatabaseCmd
+	ethHeaders              chan chain.Header
 }
 
 const Name = "beefy-relayer"
@@ -90,7 +89,6 @@ func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Con
 		beefyDB:                 beefyDB,
 		beefyMessages:           beefyMessages,
 		ethHeaders:              ethHeaders,
-		dbMessages:              dbMessages,
 	}, nil
 }
 
@@ -152,6 +150,9 @@ func (worker *Worker) Stop() {
 	}
 	if worker.ethereumConn != nil {
 		worker.ethereumConn.Close()
+	}
+	if worker.beefyDB != nil {
+		worker.beefyDB.Stop()
 	}
 }
 

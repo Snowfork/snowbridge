@@ -9,7 +9,6 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"golang.org/x/sync/errgroup"
 
@@ -20,7 +19,6 @@ import (
 // Chain streams the Ethereum blockchain and routes tx data packets
 type Chain struct {
 	config   *Config
-	db       *store.Database
 	listener *Listener
 	writer   *Writer
 	conn     *Connection

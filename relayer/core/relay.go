@@ -21,15 +21,14 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer"
 )
 
 type Relay struct {
 	ethChain                   chain.Chain
 	paraChain                  chain.Chain
-	database                   *store.Database
 	direction                  Direction
 	parachainCommitmentRelayer *parachaincommitmentrelayer.Worker
 	beefyRelayer               *beefyrelayer.Worker
@@ -54,12 +53,12 @@ type WorkerConfig struct {
 }
 
 type Config struct {
-	Relay      RelayConfig       `mapstructure:"relay"`
-	Eth        ethereum.Config   `mapstructure:"ethereum"`
-	Parachain  parachain.Config  `mapstructure:"parachain"`
-	Relaychain relaychain.Config `mapstructure:"relaychain"`
-	Database   store.Config      `mapstructure:"database"`
-	Workers    WorkerConfig      `mapstructure:"workers"`
+	Relay                RelayConfig       `mapstructure:"relay"`
+	Eth                  ethereum.Config   `mapstructure:"ethereum"`
+	Parachain            parachain.Config  `mapstructure:"parachain"`
+	Relaychain           relaychain.Config `mapstructure:"relaychain"`
+	BeefyRelayerDatabase store.Config      `mapstructure:"database"`
+	Workers              WorkerConfig      `mapstructure:"workers"`
 }
 
 func NewRelay() (*Relay, error) {
@@ -127,7 +126,7 @@ func NewRelay() (*Relay, error) {
 	beefyRelayer := &beefyrelayer.Worker{}
 
 	if config.Workers.BeefyRelayer == true {
-		beefyRelayer, err = beefyrelayer.NewWorker(&config.Relaychain, &config.Eth, &config.Database)
+		beefyRelayer, err = beefyrelayer.NewWorker(&config.Relaychain, &config.Eth, &config.BeefyRelayerDatabase)
 		if err != nil {
 			return nil, err
 		}
@@ -248,7 +247,6 @@ func (re *Relay) Start() {
 		re.paraChain.Stop()
 		re.parachainCommitmentRelayer.Stop()
 		re.beefyRelayer.Stop()
-		re.database.Stop()
 
 		relayProc, err := os.FindProcess(os.Getpid())
 		if err != nil {
