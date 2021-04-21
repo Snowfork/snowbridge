@@ -22,6 +22,10 @@ type Connection struct {
 	log         *logrus.Entry
 }
 
+func (co *Connection) GetAPI() *gsrpc.SubstrateAPI {
+	return co.api
+}
+
 func NewConnection(endpoint string, kp *signature.KeyringPair, log *logrus.Entry) *Connection {
 	return &Connection{
 		endpoint: endpoint,

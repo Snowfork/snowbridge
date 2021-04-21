@@ -5,8 +5,6 @@ package ethereum
 
 import (
 	"context"
-	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -18,9 +16,7 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
 )
 
 const MaxMessagesPerSend = 10
@@ -32,19 +28,15 @@ type Listener struct {
 	basicOutboundChannel        *outbound.BasicOutboundChannel
 	incentivizedOutboundChannel *outbound.IncentivizedOutboundChannel
 	mapping                     map[common.Address]string
-	db                          *store.Database
 	address                     common.Address
-	lightClientBridge           *lightclientbridge.Contract
 	messages                    chan<- []chain.Message
-	beefyMessages               chan<- store.BeefyRelayInfo
-	dbMessages                  chan<- store.DatabaseCmd
 	headers                     chan<- chain.Header
 	blockWaitPeriod             uint64
 	log                         *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, db *store.Database, messages chan<- []chain.Message,
-	beefyMessages chan<- store.BeefyRelayInfo, dbMessages chan<- store.DatabaseCmd, headers chan<- chain.Header,
+func NewListener(config *Config, conn *Connection, messages chan<- []chain.Message,
+	headers chan<- chain.Header,
 	log *logrus.Entry) (*Listener, error) {
 	return &Listener{
 		config:                      config,
@@ -52,10 +44,7 @@ func NewListener(config *Config, conn *Connection, db *store.Database, messages 
 		basicOutboundChannel:        nil,
 		incentivizedOutboundChannel: nil,
 		mapping:                     make(map[common.Address]string),
-		db:                          db,
 		messages:                    messages,
-		dbMessages:                  dbMessages,
-		beefyMessages:               beefyMessages,
 		headers:                     headers,
 		blockWaitPeriod:             0,
 		log:                         log,
@@ -88,19 +77,6 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	li.mapping[common.HexToAddress(li.config.Channels.Basic.Outbound)] = "BasicInboundChannel.submit"
 	li.mapping[common.HexToAddress(li.config.Channels.Incentivized.Outbound)] = "IncentivizedInboundChannel.submit"
 
-	// Set up light client bridge contract
-	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(li.config.LightClientBridge), li.conn.client)
-	if err != nil {
-		return err
-	}
-	li.lightClientBridge = lightClientBridgeContract
-
-	// Fetch BLOCK_WAIT_PERIOD from light client bridge contract
-	blockWaitPeriod, err := li.lightClientBridge.ContractCaller.BLOCKWAITPERIOD(nil)
-	if err != nil {
-		return err
-	}
-	li.blockWaitPeriod = blockWaitPeriod.Uint64()
 	eg.Go(func() error {
 		err := li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
 		if li.messages != nil {
@@ -174,42 +150,6 @@ func (li *Listener) pollEventsAndHeaders(
 			events = append(events, incentivizedEvents...)
 
 			li.forwardEvents(ctx, hcs, events)
-
-			// Query LightClientBridge contract's InitialVerificationSuccessful events
-			blockNumber := gethheader.Number.Uint64()
-			var lightClientBridgeEvents []*lightclientbridge.ContractInitialVerificationSuccessful
-
-			contractEvents, err := li.queryLightClientEvents(ctx, blockNumber, &blockNumber)
-			if err != nil {
-				li.log.WithError(err).Error("Failure fetching event logs")
-				return err
-			}
-			lightClientBridgeEvents = append(lightClientBridgeEvents, contractEvents...)
-
-			if len(lightClientBridgeEvents) > 0 {
-				li.log.Info(fmt.Sprintf("Found %d LightClientBridge contract events on block %d", len(lightClientBridgeEvents), blockNumber))
-			}
-			li.processLightClientEvents(ctx, lightClientBridgeEvents)
-
-			// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
-			items := li.db.GetItemsByStatus(store.InitialVerificationTxConfirmed)
-			if len(items) > 0 {
-				li.log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(items)))
-			}
-			for _, item := range items {
-				if item.CompleteOnBlock+descendantsUntilFinal <= blockNumber {
-					// Fetch intended completion block's hash
-					block, err := li.conn.client.BlockByNumber(ctx, big.NewInt(int64(item.CompleteOnBlock)))
-					if err != nil {
-						li.log.WithError(err).Error("Failure fetching inclusion block")
-					}
-
-					li.log.Info("3: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
-					item.Status = store.ReadyToComplete
-					item.RandomSeed = block.Hash()
-					li.beefyMessages <- *item
-				}
-			}
 		}
 	}
 }
@@ -318,60 +258,4 @@ func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.H
 	}
 
 	return nil
-}
-
-// queryLightClientEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
-func (li *Listener) queryLightClientEvents(ctx context.Context, start uint64,
-	end *uint64) ([]*lightclientbridge.ContractInitialVerificationSuccessful, error) {
-	var events []*lightclientbridge.ContractInitialVerificationSuccessful
-	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
-
-	iter, err := li.lightClientBridge.FilterInitialVerificationSuccessful(&filterOps)
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		more := iter.Next()
-		if !more {
-			err = iter.Error()
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
-
-		events = append(events, iter.Event)
-	}
-
-	return events, nil
-}
-
-// processLightClientEvents matches events to BEEFY commitment info by transaction hash
-func (li *Listener) processLightClientEvents(ctx context.Context, events []*lightclientbridge.ContractInitialVerificationSuccessful) {
-	for _, event := range events {
-		// Only process events emitted by transactions sent from our node
-		if event.Prover != li.conn.kp.CommonAddress() {
-			continue
-		}
-
-		li.log.WithFields(logrus.Fields{
-			"blockHash":   event.Raw.BlockHash.Hex(),
-			"blockNumber": event.Raw.BlockNumber,
-			"txHash":      event.Raw.TxHash.Hex(),
-		}).Info("event information")
-
-		item := li.db.GetItemByInitialVerificationTxHash(event.Raw.TxHash)
-		if item.Status != store.InitialVerificationTxSent {
-			continue
-		}
-
-		li.log.Info("2: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
-		instructions := map[string]interface{}{
-			"status":            store.InitialVerificationTxConfirmed,
-			"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
-		}
-		updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
-		li.dbMessages <- updateCmd
-	}
 }

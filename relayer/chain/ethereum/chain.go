@@ -9,7 +9,6 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"golang.org/x/sync/errgroup"
 
@@ -20,7 +19,6 @@ import (
 // Chain streams the Ethereum blockchain and routes tx data packets
 type Chain struct {
 	config   *Config
-	db       *store.Database
 	listener *Listener
 	writer   *Writer
 	conn     *Connection
@@ -30,7 +28,7 @@ type Chain struct {
 const Name = "Ethereum"
 
 // NewChain initializes a new instance of EthChain
-func NewChain(config *Config, db *store.Database) (*Chain, error) {
+func NewChain(config *Config) (*Chain, error) {
 	log := logrus.WithField("chain", Name)
 
 	kp, err := secp256k1.NewKeypairFromString(config.PrivateKey)
@@ -40,7 +38,6 @@ func NewChain(config *Config, db *store.Database) (*Chain, error) {
 
 	return &Chain{
 		config:   config,
-		db:       db,
 		listener: nil,
 		writer:   nil,
 		conn:     NewConnection(config.Endpoint, kp, log),
@@ -48,11 +45,10 @@ func NewChain(config *Config, db *store.Database) (*Chain, error) {
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.Header,
-	dbMessages chan<- store.DatabaseCmd, beefyMessages <-chan store.BeefyRelayInfo) error {
+func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.Header) error {
 	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
-	writer, err := NewWriter(ch.config, ch.conn, ch.db, subMessages, dbMessages, beefyMessages, contracts, ch.log)
+	writer, err := NewWriter(ch.config, ch.conn, subMessages, contracts, ch.log)
 	if err != nil {
 		return err
 	}
@@ -61,10 +57,9 @@ func (ch *Chain) SetReceiver(subMessages <-chan []chain.Message, _ <-chan chain.
 	return nil
 }
 
-func (ch *Chain) SetSender(ethMessages chan<- []chain.Message, ethHeaders chan<- chain.Header,
-	dbMessages chan<- store.DatabaseCmd, beefyMessages chan<- store.BeefyRelayInfo) error {
-	listener, err := NewListener(ch.config, ch.conn, ch.db, ethMessages,
-		beefyMessages, dbMessages, ethHeaders, ch.log)
+func (ch *Chain) SetSender(ethMessages chan<- []chain.Message, ethHeaders chan<- chain.Header) error {
+	listener, err := NewListener(ch.config, ch.conn, ethMessages,
+		ethHeaders, ch.log)
 	if err != nil {
 		return err
 	}

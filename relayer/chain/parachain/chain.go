@@ -14,15 +14,13 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
 )
 
 type Chain struct {
-	config   *Config
-	listener *Listener
-	writer   *Writer
-	conn     *Connection
-	log      *logrus.Entry
+	config *Config
+	writer *Writer
+	conn   *Connection
+	log    *logrus.Entry
 }
 
 const Name = "Parachain"
@@ -37,15 +35,14 @@ func NewChain(config *Config) (*Chain, error) {
 	}
 
 	return &Chain{
-		config:   config,
-		conn:     NewConnection(config.Endpoint, kp.AsKeyringPair(), log),
-		listener: nil,
-		writer:   nil,
-		log:      log,
+		config: config,
+		conn:   NewConnection(config.Endpoint, kp.AsKeyringPair(), log),
+		writer: nil,
+		log:    log,
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header, _ chan<- store.DatabaseCmd) error {
+func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header) error {
 	writer, err := NewWriter(ch.conn, ethMessages, ethHeaders, ch.log)
 	if err != nil {
 		return err
@@ -54,19 +51,8 @@ func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-ch
 	return nil
 }
 
-func (ch *Chain) SetSender(subMessages chan<- []chain.Message, _ chan<- chain.Header, _ chan<- store.DatabaseCmd) error {
-	listener := NewListener(
-		ch.config,
-		ch.conn,
-		subMessages,
-		ch.log,
-	)
-	ch.listener = listener
-	return nil
-}
-
 func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- chain.Init, _ <-chan chain.Init) error {
-	if ch.listener == nil && ch.writer == nil {
+	if ch.writer == nil {
 		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
 	}
 
@@ -87,13 +73,6 @@ func (ch *Chain) Start(ctx context.Context, eg *errgroup.Group, ethInit chan<- c
 	}).Info("Retrieved init params for Ethereum from Substrate")
 	ethInit <- ethInitHeaderID
 	close(ethInit)
-
-	if ch.listener != nil {
-		err = ch.listener.Start(ctx, eg)
-		if err != nil {
-			return err
-		}
-	}
 
 	if ch.writer != nil {
 		err = ch.writer.Start(ctx, eg)
