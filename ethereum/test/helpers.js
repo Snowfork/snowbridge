@@ -163,7 +163,7 @@ const encodeMessage = (message) => {
   );
 }
 
-const deployAppContractWithChannels = async (deployer, appContract, ...appContractArgs) => {
+const deployChannels = async (deployer) => {
 
   const defaults = {
     from: deployer
@@ -180,6 +180,42 @@ const deployAppContractWithChannels = async (deployer, appContract, ...appContra
     },
   };
 
+  return channels;
+}
+
+// Do post-construction initialization of incentivized outbound channel
+const initializeChannels = async (channels, app, deployer) => {
+  const feeSource = await MockFeeSource.new();
+  await channels.incentivized.outbound.initialize(deployer, feeSource.address, [app.address]);
+}
+
+const deployDOTAppWithChannels = async (deployer, appContract, ...appContractArgs) => {
+  let channels = await deployChannels(deployer)
+
+  const app = await appContract.new(
+    ...appContractArgs,
+    channels.incentivized.outbound.address,
+    {
+      inbound: channels.basic.inbound.address,
+      outbound: channels.basic.outbound.address,
+    },
+    {
+      inbound: channels.incentivized.inbound.address,
+      outbound: channels.incentivized.outbound.address,
+    },
+    {
+      from: deployer,
+    }
+  );
+
+  await initializeChannels(channels, app, deployer);
+
+  return [channels, app];
+}
+
+const deployGenericAppWithChannels = async (deployer, appContract, ...appContractArgs) => {
+  let channels = await deployChannels(deployer)
+
   const app = await appContract.new(
     ...appContractArgs,
     {
@@ -190,13 +226,14 @@ const deployAppContractWithChannels = async (deployer, appContract, ...appContra
       inbound: channels.incentivized.inbound.address,
       outbound: channels.incentivized.outbound.address,
     },
-    defaults
+    {
+      from: deployer,
+    }
   );
 
-  const feeSource = await MockFeeSource.new();
-  await channels.incentivized.outbound.initialize(deployer, feeSource.address, [app.address]);
+  await initializeChannels(channels, app, deployer);
 
-  return [channels, app]
+  return [channels, app];
 }
 
 const addressBytes = (address) => Buffer.from(address.replace(/^0x/, ""), "hex");
@@ -219,7 +256,8 @@ module.exports = {
   confirmUnlock,
   confirmUnlockTokens,
   confirmMessageDispatched,
-  deployAppContractWithChannels,
+  deployDOTAppWithChannels,
+  deployGenericAppWithChannels,
   addressBytes,
   ChannelId,
   buildCommitment,
