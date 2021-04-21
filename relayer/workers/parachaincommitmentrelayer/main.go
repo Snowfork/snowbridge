@@ -32,9 +32,9 @@ const Name = "parachain-commitment-relayer"
 
 func NewWorker(parachainConfig *parachain.Config,
 	relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config) (*Worker, error) {
-	log := logrus.WithField("parachain-commitment-relayer", Name)
+	log := logrus.WithField("worker", Name)
 
-	fmt.Println("Creating parachain-commitment-relayer")
+	log.Info("Creating worker")
 
 	ethereumKp, err := secp256k1.NewKeypairFromString(ethereumConfig.PrivateKey)
 	if err != nil {
@@ -78,7 +78,7 @@ func NewWorker(parachainConfig *parachain.Config,
 }
 
 func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
-	fmt.Println("Starting parachain-commitment-relayer")
+	worker.log.Info("Starting worker")
 
 	if worker.parachainCommitmentListener == nil || worker.ethereumChannelWriter == nil {
 		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
