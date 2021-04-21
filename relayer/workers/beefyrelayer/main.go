@@ -7,7 +7,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
@@ -91,7 +90,7 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	err := worker.beefyDB.Start(ctx, eg)
 	if err != nil {
-		worker.log.WithFields(log.Fields{
+		worker.log.WithFields(logrus.Fields{
 			"database": "Beefy",
 			"error":    err,
 		}).Error("Failed to start database")
