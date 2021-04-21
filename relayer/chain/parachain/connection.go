@@ -26,6 +26,14 @@ func (co *Connection) GetAPI() *gsrpc.SubstrateAPI {
 	return co.api
 }
 
+func (co *Connection) GetMetadata() *types.Metadata {
+	return &co.metadata
+}
+
+func (co *Connection) GetKeypair() *signature.KeyringPair {
+	return co.kp
+}
+
 func NewConnection(endpoint string, kp *signature.KeyringPair, log *logrus.Entry) *Connection {
 	return &Connection{
 		endpoint: endpoint,
