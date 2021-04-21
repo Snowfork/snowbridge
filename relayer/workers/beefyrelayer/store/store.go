@@ -153,8 +153,6 @@ func (d *Database) Stop() {
 func (d *Database) writeLoop(ctx context.Context) error {
 	var mutex = &sync.Mutex{}
 
-	fmt.Println("d.messages")
-	fmt.Println(d.messages)
 	for {
 		select {
 		case <-ctx.Done():
