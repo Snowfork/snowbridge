@@ -75,6 +75,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		// Verify that `T::Decimals` is 10 (DOT), or 12 (KSM) to guarantee
 		// safe conversions between native and wrapped DOT.
+		#[cfg(feature = "std")]
 		fn integrity_test() {
 			sp_io::TestExternalities::new_empty().execute_with(|| {
 				let allowed_decimals: &[u32] = &[10, 12];
