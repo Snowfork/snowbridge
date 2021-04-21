@@ -35,7 +35,7 @@ const Name = "beefy-relayer"
 func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, dbConfig *store.Config) (*Worker, error) {
 	log := logrus.WithField("beefy-relayer", Name)
 
-	fmt.Println("Creating beefy-relayer")
+	log.Info("Worker created")
 
 	db, err := store.PrepareDatabase(dbConfig)
 	if err != nil {
@@ -57,18 +57,12 @@ func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Con
 	beefyMessages := make(chan store.BeefyRelayInfo)
 	ethHeaders := make(chan chain.Header)
 
-	beefyEthereumListener, err := NewBeefyEthereumListener(ethereumConfig,
+	beefyEthereumListener := NewBeefyEthereumListener(ethereumConfig,
 		ethereumConn, beefyDB, beefyMessages, dbMessages, ethHeaders,
 		log)
-	if err != nil {
-		return nil, err
-	}
 
-	beefyEthereumWriter, err := NewBeefyEthereumWriter(ethereumConfig, ethereumConn,
+	beefyEthereumWriter := NewBeefyEthereumWriter(ethereumConfig, ethereumConn,
 		beefyDB, dbMessages, beefyMessages, log)
-	if err != nil {
-		return nil, err
-	}
 
 	beefyRelaychainListener := NewBeefyRelaychainListener(
 		relaychainConfig,
@@ -93,7 +87,7 @@ func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Con
 }
 
 func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
-	fmt.Println("Starting beefy-relayer")
+	worker.log.Info("Worker started")
 
 	err := worker.beefyDB.Start(ctx, eg)
 	if err != nil {

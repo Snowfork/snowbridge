@@ -35,7 +35,7 @@ type BeefyEthereumListener struct {
 
 func NewBeefyEthereumListener(ethereumConfig *ethereum.Config, ethereumConn *ethereum.Connection, beefyDB *store.Database,
 	beefyMessages chan<- store.BeefyRelayInfo, dbMessages chan<- store.DatabaseCmd, headers chan<- chain.Header,
-	log *logrus.Entry) (*BeefyEthereumListener, error) {
+	log *logrus.Entry) *BeefyEthereumListener {
 	return &BeefyEthereumListener{
 		ethereumConfig:  ethereumConfig,
 		ethereumConn:    ethereumConn,
@@ -45,7 +45,7 @@ func NewBeefyEthereumListener(ethereumConfig *ethereum.Config, ethereumConn *eth
 		headers:         headers,
 		blockWaitPeriod: 0,
 		log:             log,
-	}, nil
+	}
 }
 
 func (li *BeefyEthereumListener) Start(cxt context.Context, eg *errgroup.Group, descendantsUntilFinal uint64) error {
