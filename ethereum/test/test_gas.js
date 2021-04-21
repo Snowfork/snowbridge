@@ -1,14 +1,12 @@
 const ETHApp = artifacts.require('ETHApp');
 const ERC20App = artifacts.require('ERC20App');
-const BasicOutboundChannel = artifacts.require('BasicOutboundChannel');
-const IncentivizedOutboundChannel = artifacts.require('IncentivizedOutboundChannel');
 const TestToken = artifacts.require('TestToken');
 
 const BigNumber = web3.BigNumber;
 
 const { lockupETH } = require('./test_eth_app');
 const { lockupERC20 } = require('./test_erc20_app');
-const { deployAppContractWithChannels, ChannelId } = require("./helpers");
+const { deployGenericAppWithChannels, ChannelId } = require("./helpers");
 
 require('chai')
   .use(require('chai-as-promised'))
@@ -26,8 +24,8 @@ contract('Gas expenditures', function (accounts) {
   describe('Gas costs', function () {
 
     beforeEach(async function () {
-      [, this.ethApp] = await deployAppContractWithChannels(ETHApp);
-      [, this.erc20App] = await deployAppContractWithChannels(ERC20App);
+      [, this.ethApp] = await deployGenericAppWithChannels(owner, ETHApp);
+      [, this.erc20App] = await deployGenericAppWithChannels(owner, ERC20App);
     });
 
     it('lock eth gas usage', async function () {
@@ -45,11 +43,11 @@ contract('Gas expenditures', function (accounts) {
     // Set up an ERC20 token for testing token deposits
     before(async function () {
       this.symbol = "TEST";
-      this.token = await TestToken.new(100000, "Test Token", this.symbol);
+      this.token = await TestToken.new("Test Token", this.symbol);
 
       // Load user account with 'TEST' ERC20 tokens
-      await this.token.transfer(userOne, 1000, {
-        from: owner
+      await this.token.mint("1000", {
+        from: userOne
       }).should.be.fulfilled;
     });
 
