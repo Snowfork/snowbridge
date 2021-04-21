@@ -15,22 +15,25 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type ParachainCommitmentListener struct {
-	config   *parachain.Config
-	conn     *parachain.Connection
-	messages chan<- []chain.Message
-	log      *logrus.Entry
+	config               *parachain.Config
+	parachainConnection  *parachain.Connection
+	relaychainConnection *relaychain.Connection
+	messages             chan<- []chain.Message
+	log                  *logrus.Entry
 }
 
-func NewParachainCommitmentListener(config *parachain.Config, conn *parachain.Connection, messages chan<- []chain.Message, log *logrus.Entry) *ParachainCommitmentListener {
+func NewParachainCommitmentListener(config *parachain.Config, parachainConnection *parachain.Connection, relaychainConnection *relaychain.Connection, messages chan<- []chain.Message, log *logrus.Entry) *ParachainCommitmentListener {
 	return &ParachainCommitmentListener{
-		config:   config,
-		conn:     conn,
-		messages: messages,
-		log:      log,
+		config:               config,
+		parachainConnection:  parachainConnection,
+		relaychainConnection: relaychainConnection,
+		messages:             messages,
+		log:                  log,
 	}
 }
 
@@ -67,13 +70,13 @@ func sleep(ctx context.Context, delay time.Duration) {
 
 // Fetch the starting block
 func (li *ParachainCommitmentListener) fetchStartBlock() (uint64, error) {
-	hash, err := li.conn.GetAPI().RPC.Chain.GetFinalizedHead()
+	hash, err := li.parachainConnection.GetAPI().RPC.Chain.GetFinalizedHead()
 	if err != nil {
 		li.log.WithError(err).Error("Failed to fetch hash for starting block")
 		return 0, err
 	}
 
-	header, err := li.conn.GetAPI().RPC.Chain.GetHeader(hash)
+	header, err := li.parachainConnection.GetAPI().RPC.Chain.GetHeader(hash)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to fetch header for starting block")
 		return 0, err
@@ -93,13 +96,13 @@ func (li *ParachainCommitmentListener) produceFinalizedHeaders(ctx context.Conte
 			li.log.Info("Shutting down producer of finalized headers")
 			return ctx.Err()
 		default:
-			finalizedHash, err := li.conn.GetAPI().RPC.Chain.GetFinalizedHead()
+			finalizedHash, err := li.parachainConnection.GetAPI().RPC.Chain.GetFinalizedHead()
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch finalized head")
 				return err
 			}
 
-			finalizedHeader, err := li.conn.GetAPI().RPC.Chain.GetHeader(finalizedHash)
+			finalizedHeader, err := li.parachainConnection.GetAPI().RPC.Chain.GetHeader(finalizedHash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch header for finalized head")
 				return err
@@ -114,7 +117,7 @@ func (li *ParachainCommitmentListener) produceFinalizedHeaders(ctx context.Conte
 				continue
 			}
 
-			hash, err := li.conn.GetAPI().RPC.Chain.GetBlockHash(current)
+			hash, err := li.parachainConnection.GetAPI().RPC.Chain.GetBlockHash(current)
 			if err != nil {
 				if err.Error() == ErrBlockNotReady.Error() {
 					sleep(ctx, retryInterval)
@@ -125,7 +128,7 @@ func (li *ParachainCommitmentListener) produceFinalizedHeaders(ctx context.Conte
 				}
 			}
 
-			header, err := li.conn.GetAPI().RPC.Chain.GetHeader(hash)
+			header, err := li.parachainConnection.GetAPI().RPC.Chain.GetHeader(hash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch header")
 				return err
@@ -187,7 +190,7 @@ func (li *ParachainCommitmentListener) processHeader(ctx context.Context, header
 		return err
 	}
 
-	data, err := li.conn.GetAPI().RPC.Offchain.LocalStorageGet(rpcOffchain.Persistent, storageKey)
+	data, err := li.parachainConnection.GetAPI().RPC.Offchain.LocalStorageGet(rpcOffchain.Persistent, storageKey)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to read commitment from offchain storage")
 		return err
@@ -234,4 +237,8 @@ func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestIte
 		}
 	}
 	return nil, nil
+}
+
+func getParachainHeaderProof(parachainBlockNumber uint64) {
+
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
@@ -17,8 +18,10 @@ import (
 
 type Worker struct {
 	parachainConfig             *parachain.Config
+	relaychainConfig            *relaychain.Config
 	ethereumConfig              *ethereum.Config
 	parachainConn               *parachain.Connection
+	relaychainConn              *relaychain.Connection
 	parachainCommitmentListener *ParachainCommitmentListener
 	ethereumConn                *ethereum.Connection
 	ethereumChannelWriter       *EthereumChannelWriter
@@ -27,7 +30,8 @@ type Worker struct {
 
 const Name = "parachain-commitment-relayer"
 
-func NewWorker(parachainConfig *parachain.Config, ethereumConfig *ethereum.Config) (*Worker, error) {
+func NewWorker(parachainConfig *parachain.Config,
+	relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config) (*Worker, error) {
 	log := logrus.WithField("parachain-commitment-relayer", Name)
 
 	fmt.Println("Creating parachain-commitment-relayer")
@@ -38,13 +42,16 @@ func NewWorker(parachainConfig *parachain.Config, ethereumConfig *ethereum.Confi
 	}
 
 	parachainConn := parachain.NewConnection(parachainConfig.Endpoint, nil, log)
+	relaychainConn := relaychain.NewConnection(relaychainConfig.Endpoint, log)
 	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKp, log)
+
 	// channel for messages from substrate
 	var subMessages = make(chan []chain.Message, 1)
 
 	parachainCommitmentListener := NewParachainCommitmentListener(
 		parachainConfig,
 		parachainConn,
+		relaychainConn,
 		subMessages,
 		log,
 	)
@@ -59,8 +66,10 @@ func NewWorker(parachainConfig *parachain.Config, ethereumConfig *ethereum.Confi
 
 	return &Worker{
 		parachainConfig:             parachainConfig,
+		relaychainConfig:            relaychainConfig,
 		ethereumConfig:              ethereumConfig,
 		parachainConn:               parachainConn,
+		relaychainConn:              relaychainConn,
 		parachainCommitmentListener: parachainCommitmentListener,
 		ethereumConn:                ethereumConn,
 		ethereumChannelWriter:       ethereumChannelWriter,
@@ -109,6 +118,9 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 func (worker *Worker) Stop() {
 	if worker.parachainConn != nil {
 		worker.parachainConn.Close()
+	}
+	if worker.relaychainConn != nil {
+		worker.relaychainConn.Close()
 	}
 	if worker.ethereumConn != nil {
 		worker.ethereumConn.Close()

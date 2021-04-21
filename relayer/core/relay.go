@@ -22,16 +22,17 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer"
 )
 
 type Relay struct {
 	ethChain                   chain.Chain
 	paraChain                  chain.Chain
-	relayChain                 chain.Chain
 	database                   *store.Database
 	direction                  Direction
 	parachainCommitmentRelayer *parachaincommitmentrelayer.Worker
+	beefyRelayer               *beefyrelayer.Worker
 }
 
 type Direction int
@@ -49,6 +50,7 @@ type RelayConfig struct {
 
 type WorkerConfig struct {
 	ParachainCommitmentRelayer bool `mapstructure:"parachaincommitmentrrelayer"`
+	BeefyRelayer               bool `mapstructure:"beefyrelayer"`
 }
 
 type Config struct {
@@ -66,16 +68,7 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
-	db, err := store.PrepareDatabase(&config.Database)
-	if err != nil {
-		return nil, err
-	}
-
-	dbMessages := make(chan store.DatabaseCmd)
-	logger := log.WithField("database", "Beefy")
-	database := store.NewDatabase(db, dbMessages, logger)
-
-	ethChain, err := ethereum.NewChain(&config.Eth, database)
+	ethChain, err := ethereum.NewChain(&config.Eth)
 	if err != nil {
 		return nil, err
 	}
@@ -84,13 +77,6 @@ func NewRelay() (*Relay, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	relayChain, err := relaychain.NewChain(&config.Relaychain)
-	if err != nil {
-		return nil, err
-	}
-
-	beefyMessages := make(chan store.BeefyRelayInfo)
 
 	direction := config.Relay.Direction
 	headersOnly := config.Relay.HeadersOnly
@@ -104,12 +90,12 @@ func NewRelay() (*Relay, error) {
 		// can guarantee that a header is forwarded before we send dependent messages)
 		ethHeaders := make(chan chain.Header)
 
-		err = ethChain.SetSender(ethMessages, ethHeaders, dbMessages, beefyMessages)
+		err = ethChain.SetSender(ethMessages, ethHeaders)
 		if err != nil {
 			return nil, err
 		}
 
-		err = paraChain.SetReceiver(ethMessages, ethHeaders, dbMessages)
+		err = paraChain.SetReceiver(ethMessages, ethHeaders)
 		if err != nil {
 			return nil, err
 		}
@@ -122,21 +108,26 @@ func NewRelay() (*Relay, error) {
 			subMessages = make(chan []chain.Message, 1)
 		}
 
-		err = ethChain.SetReceiver(subMessages, nil, dbMessages, beefyMessages)
+		err = ethChain.SetReceiver(subMessages, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		err = relayChain.SetSender(subMessages, nil, beefyMessages)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	parachainCommitmentRelayer := &parachaincommitmentrelayer.Worker{}
 
 	if config.Workers.ParachainCommitmentRelayer == true {
-		parachainCommitmentRelayer, err = parachaincommitmentrelayer.NewWorker(&config.Parachain, &config.Eth)
+		parachainCommitmentRelayer, err = parachaincommitmentrelayer.NewWorker(&config.Parachain, &config.Relaychain, &config.Eth)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	beefyRelayer := &beefyrelayer.Worker{}
+
+	if config.Workers.BeefyRelayer == true {
+		beefyRelayer, err = beefyrelayer.NewWorker(&config.Relaychain, &config.Eth, &config.Database)
 		if err != nil {
 			return nil, err
 		}
@@ -145,10 +136,9 @@ func NewRelay() (*Relay, error) {
 	return &Relay{
 		ethChain:                   ethChain,
 		paraChain:                  paraChain,
-		relayChain:                 relayChain,
-		database:                   database,
 		direction:                  direction,
 		parachainCommitmentRelayer: parachainCommitmentRelayer,
+		beefyRelayer:               beefyRelayer,
 	}, nil
 }
 
@@ -173,22 +163,12 @@ func (re *Relay) Start() {
 		return nil
 	})
 
-	err := re.database.Start(ctx, eg)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"database": "Beefy",
-			"error":    err,
-		}).Error("Failed to start database")
-		return
-	}
-	log.WithField("database", "Beefy").Info("Started database")
-
 	// Short-lived channels that communicate initialization parameters
 	// between the two chains. The chains close them after startup.
 	subInit := make(chan chain.Init)
 	ethSubInit := make(chan chain.Init)
 
-	err = re.ethChain.Start(ctx, eg, subInit, ethSubInit)
+	err := re.ethChain.Start(ctx, eg, subInit, ethSubInit)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"chain": re.ethChain.Name(),
@@ -210,29 +190,31 @@ func (re *Relay) Start() {
 	log.WithField("name", re.paraChain.Name()).Info("Started chain")
 	defer re.paraChain.Stop()
 
-	if re.direction != EthToSub {
-		err = re.relayChain.Start(ctx, eg, make(chan chain.Init), make(chan chain.Init))
+	if re.beefyRelayer != nil {
+		err = re.beefyRelayer.Start(ctx, eg)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"chain": re.relayChain.Name(),
-				"error": err,
-			}).Error("Failed to start chain")
+				"worker": re.beefyRelayer.Name(),
+				"error":  err,
+			}).Error("Failed to start worker")
 			return
 		}
-		log.WithField("name", re.relayChain.Name()).Info("Started chain")
-		defer re.relayChain.Stop()
+		log.WithField("name", re.beefyRelayer.Name()).Info("Started worker")
+		defer re.beefyRelayer.Stop()
 	}
 
-	err = re.parachainCommitmentRelayer.Start(ctx, eg)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"chain": re.relayChain.Name(),
-			"error": err,
-		}).Error("Failed to start parachainCommitmentRelayer")
-		return
+	if re.parachainCommitmentRelayer != nil {
+		err = re.parachainCommitmentRelayer.Start(ctx, eg)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"worker": re.parachainCommitmentRelayer.Name(),
+				"error":  err,
+			}).Error("Failed to start worker")
+			return
+		}
+		log.WithField("name", re.parachainCommitmentRelayer.Name()).Info("Started worker")
+		defer re.parachainCommitmentRelayer.Stop()
 	}
-	log.WithField("name", re.relayChain.Name()).Info("Started parachainCommitmentRelayer")
-	defer re.parachainCommitmentRelayer.Stop()
 
 	notifyWaitDone := make(chan struct{})
 
@@ -264,7 +246,8 @@ func (re *Relay) Start() {
 		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
 		re.ethChain.Stop()
 		re.paraChain.Stop()
-		re.relayChain.Stop()
+		re.parachainCommitmentRelayer.Stop()
+		re.beefyRelayer.Stop()
 		re.database.Stop()
 
 		relayProc, err := os.FindProcess(os.Getpid())

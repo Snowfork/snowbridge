@@ -1,7 +1,4 @@
-// Copyright 2020 Snowfork
-// SPDX-License-Identifier: LGPL-3.0-only
-
-package relaychain
+package beefyrelayer
 
 import (
 	"context"
@@ -12,27 +9,30 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/store"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
-type Listener struct {
-	config        *Config
-	conn          *Connection
-	beefyMessages chan<- store.BeefyRelayInfo
-	log           *logrus.Entry
+type BeefyRelaychainListener struct {
+	relaychainConfig *relaychain.Config
+	relaychainConn   *relaychain.Connection
+	beefyMessages    chan<- store.BeefyRelayInfo
+	log              *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, beefyMessages chan<- store.BeefyRelayInfo, log *logrus.Entry) *Listener {
-	return &Listener{
-		config:        config,
-		conn:          conn,
-		beefyMessages: beefyMessages,
-		log:           log,
+func NewBeefyRelaychainListener(relaychainConfig *relaychain.Config,
+	relaychainConn *relaychain.Connection, beefyMessages chan<- store.BeefyRelayInfo,
+	log *logrus.Entry) *BeefyRelaychainListener {
+	return &BeefyRelaychainListener{
+		relaychainConfig: relaychainConfig,
+		relaychainConn:   relaychainConn,
+		beefyMessages:    beefyMessages,
+		log:              log,
 	}
 }
 
-func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
+func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	eg.Go(func() error {
 		return li.subBeefyJustifications(ctx)
@@ -41,7 +41,7 @@ func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (li *Listener) onDone(ctx context.Context) error {
+func (li *BeefyRelaychainListener) onDone(ctx context.Context) error {
 	li.log.Info("Shutting down listener...")
 	if li.beefyMessages != nil {
 		close(li.beefyMessages)
@@ -49,10 +49,10 @@ func (li *Listener) onDone(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (li *Listener) subBeefyJustifications(ctx context.Context) error {
+func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) error {
 	ch := make(chan interface{})
 
-	sub, err := li.conn.api.Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
+	sub, err := li.relaychainConn.GetAPI().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
 	if err != nil {
 		panic(err)
 	}
@@ -109,13 +109,13 @@ func (li *Listener) subBeefyJustifications(ctx context.Context) error {
 	}
 }
 
-func (li *Listener) getBeefyAuthorities(blockNumber uint64) (substrate.Authorities, error) {
-	blockHash, err := li.conn.api.RPC.Chain.GetBlockHash(blockNumber)
+func (li *BeefyRelaychainListener) getBeefyAuthorities(blockNumber uint64) (substrate.Authorities, error) {
+	blockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(blockNumber)
 	if err != nil {
 		return substrate.Authorities{}, err
 	}
 
-	meta, err := li.conn.api.RPC.State.GetMetadataLatest()
+	meta, err := li.relaychainConn.GetAPI().RPC.State.GetMetadataLatest()
 	if err != nil {
 		return substrate.Authorities{}, err
 	}
@@ -125,7 +125,7 @@ func (li *Listener) getBeefyAuthorities(blockNumber uint64) (substrate.Authoriti
 		return substrate.Authorities{}, err
 	}
 
-	storageChangeSet, err := li.conn.api.RPC.State.QueryStorage([]types.StorageKey{storageKey}, blockHash, blockHash)
+	storageChangeSet, err := li.relaychainConn.GetAPI().RPC.State.QueryStorage([]types.StorageKey{storageKey}, blockHash, blockHash)
 	if err != nil {
 		return substrate.Authorities{}, err
 	}

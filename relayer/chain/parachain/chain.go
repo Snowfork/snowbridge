@@ -14,7 +14,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
 )
 
 type Chain struct {
@@ -43,7 +42,7 @@ func NewChain(config *Config) (*Chain, error) {
 	}, nil
 }
 
-func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header, _ chan<- store.DatabaseCmd) error {
+func (ch *Chain) SetReceiver(ethMessages <-chan []chain.Message, ethHeaders <-chan chain.Header) error {
 	writer, err := NewWriter(ch.conn, ethMessages, ethHeaders, ch.log)
 	if err != nil {
 		return err

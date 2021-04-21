@@ -63,7 +63,8 @@ const dump = (tmpDir, channels, bridge) => {
             direction: 1,
         },
         workers: {
-            parachaincommitmentrrelayer: true
+            parachaincommitmentrrelayer: true,
+            beefyrelayer: true
         }
     }
     fs.writeFileSync(path.join(tmpDir, "config.toml"), TOML.stringify(config));
