@@ -1,34 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-use frame_system::{self as system, ensure_signed};
-use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::{DispatchError, DispatchResult},
-	transactional,
-	traits::{
-		Get,
-		EnsureOrigin,
-		Currency,
-		ExistenceRequirement::{KeepAlive, AllowDeath},
-	},
-	weights::Weight,
-};
-use sp_std::{
-	prelude::*,
-};
-use sp_core::{H160, U256};
-use sp_runtime::{
-	ModuleId,
-	traits::{StaticLookup, AccountIdConversion},
-};
-
-use artemis_core::{ChannelId, OutboundRouter};
-
-use primitives::{wrap, unwrap};
-
-use payload::OutboundPayload;
 
 mod benchmarking;
 mod payload;
+pub mod weights;
 pub mod primitives;
 
 #[cfg(test)]
@@ -37,72 +11,68 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// Weight functions needed for this pallet.
-pub trait WeightInfo {
-	fn lock() -> Weight;
-	fn unlock() -> Weight;
-}
+use frame_support::{
+	dispatch::{DispatchError, DispatchResult},
+	transactional,
+	traits::{
+		Get,
+		EnsureOrigin,
+		Currency,
+		ExistenceRequirement::{KeepAlive, AllowDeath},
+	},
+};
 
-impl WeightInfo for () {
-	fn lock() -> Weight { 0 }
-	fn unlock() -> Weight { 0 }
-}
+#[cfg(feature = "std")]
+use frame_support::traits::GenesisBuild;
+
+use sp_std::prelude::*;
+use sp_core::{H160, U256};
+use sp_runtime::{
+	ModuleId,
+	traits::{StaticLookup, AccountIdConversion},
+};
+use artemis_core::{ChannelId, OutboundRouter};
+
+use primitives::{wrap, unwrap};
+use payload::OutboundPayload;
+pub use weights::WeightInfo;
+
+pub use pallet::*;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-pub trait Config: system::Config {
-	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
+#[frame_support::pallet]
+pub mod pallet {
 
-	type Currency: Currency<Self::AccountId>;
+	use super::*;
 
-	type OutboundRouter: OutboundRouter<Self::AccountId>;
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 
-	type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
-	type ModuleId: Get<ModuleId>;
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-	type Decimals: Get<u32>;
-	/// Weight information for extrinsics in this pallet
-	type WeightInfo: WeightInfo;
-}
+		type Currency: Currency<Self::AccountId>;
 
-decl_storage! {
-	trait Store for Module<T: Config> as DotModule {
-		/// Address of the peer application on the Ethereum side.
-		Address get(fn address) config(): H160;
+		type OutboundRouter: OutboundRouter<Self::AccountId>;
+
+		type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
+
+		type ModuleId: Get<ModuleId>;
+
+		#[pallet::constant]
+		type Decimals: Get<u32>;
+
+		type WeightInfo: WeightInfo;
 	}
-}
 
-decl_event!(
-    /// Events for the ETH module.
-	pub enum Event<T>
-	where
-		AccountId = <T as system::Config>::AccountId,
-		Balance = BalanceOf<T>
-	{
-		Locked(AccountId, H160, Balance),
-		Unlocked(H160, AccountId, Balance),
-	}
-);
-
-decl_error! {
-	pub enum Error for Module<T: Config> {
-		/// Illegal conversion between native and wrapped DOT.
-		///
-		/// In practice, this error should never occur under the conditions
-		/// we've tested. If however the bridge or the peer Ethereum contract
-		/// is exploited, then all bets are off.
-		Overflow
-	}
-}
-
-decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
-
-		type Error = Error<T>;
-
-		fn deposit_event() = default;
-
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		// Verify that `T::Decimals` is 10 (DOT), or 12 (KSM) to guarantee
 		// safe conversions between native and wrapped DOT.
 		fn integrity_test() {
@@ -114,10 +84,59 @@ decl_module! {
 				)
 			});
 		}
+	}
 
-		#[weight = T::WeightInfo::lock()]
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	#[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
+	pub enum Event<T: Config>
+	{
+		Locked(T::AccountId, H160, BalanceOf<T>),
+		Unlocked(H160, T::AccountId, BalanceOf<T>),
+	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn address)]
+	pub(super) type Address<T: Config> = StorageValue<_, H160, ValueQuery>;
+
+	#[pallet::error]
+	pub enum Error<T> {
+		/// Illegal conversion between native and wrapped DOT.
+		///
+		/// In practice, this error should never occur under the conditions
+		/// we've tested. If however the bridge or the peer Ethereum contract
+		/// is exploited, then all bets are off.
+		Overflow
+	}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T> {
+		pub address: H160,
+		pub phantom: sp_std::marker::PhantomData<T>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self {
+				address: Default::default(),
+				phantom: Default::default(),
+			}
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			<Address<T>>::put(self.address);
+		 }
+	}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		#[pallet::weight(T::WeightInfo::lock())]
 		#[transactional]
-		pub fn lock(origin, channel_id: ChannelId, recipient: H160, amount: BalanceOf<T>) -> DispatchResult {
+		pub fn lock(origin: OriginFor<T>, channel_id: ChannelId, recipient: H160, amount: BalanceOf<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Currency::transfer(&who, &Self::account_id(), amount, AllowDeath)?;
@@ -130,16 +149,16 @@ decl_module! {
 				amount: amount_wrapped,
 			};
 
-			T::OutboundRouter::submit(channel_id, &who, Address::get(), &message.encode())?;
-			Self::deposit_event(RawEvent::Locked(who.clone(), recipient, amount));
+			T::OutboundRouter::submit(channel_id, &who, <Address<T>>::get(), &message.encode())?;
+			Self::deposit_event(Event::Locked(who.clone(), recipient, amount));
 			Ok(())
 		}
 
-		#[weight = T::WeightInfo::unlock()]
+		#[pallet::weight(T::WeightInfo::unlock())]
 		#[transactional]
-		pub fn unlock(origin, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
+		pub fn unlock(origin: OriginFor<T>, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
-			if who != Address::get() {
+			if who != <Address<T>>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
@@ -147,14 +166,14 @@ decl_module! {
 
 			let recipient = T::Lookup::lookup(recipient)?;
 			T::Currency::transfer(&Self::account_id(), &recipient, amount_unwrapped, KeepAlive)?;
-			Self::deposit_event(RawEvent::Unlocked(sender, recipient, amount_unwrapped));
+			Self::deposit_event(Event::Unlocked(sender, recipient, amount_unwrapped));
 			Ok(())
 		}
 	}
-}
 
-impl<T: Config> Module<T> {
-	pub fn account_id() -> T::AccountId {
-		T::ModuleId::get().into_account()
+	impl<T: Config> Pallet<T> {
+		pub fn account_id() -> T::AccountId {
+			T::ModuleId::get().into_account()
+		}
 	}
 }
