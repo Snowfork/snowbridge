@@ -163,7 +163,8 @@ contract LightClientBridge {
         bytes[] memory signatures,
         uint256[] memory validatorPositions,
         address[] memory validatorPublicKeys,
-        bytes32[][] memory validatorPublicKeyMerkleProofs
+        bytes32[][] memory validatorPublicKeyMerkleProofs,
+        uint256 relayChainBlockNumber
     ) public {
         ValidationData storage data = validationData[id];
 
