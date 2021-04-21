@@ -3,7 +3,7 @@ const {
   confirmBasicChannelSend,
   confirmIncentivizedChannelSend,
   confirmUnlockTokens,
-  deployAppContractWithChannels,
+  deployGenericAppWithChannels,
   addressBytes,
   ChannelId,
   buildCommitment
@@ -44,13 +44,12 @@ contract("ERC20App", function (accounts) {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(owner, ERC20App);
+      [this.channels, this.app] = await deployGenericAppWithChannels(owner, ERC20App);
       this.symbol = "TEST";
-      this.token = await TestToken.new(100000, "Test Token", this.symbol);
+      this.token = await TestToken.new("Test Token", this.symbol);
 
-      // Load user account with 'TEST' ERC20 tokens
-      await this.token.transfer(userOne, 1000, {
-        from: owner
+      await this.token.mint("10000", {
+        from: userOne,
       }).should.be.fulfilled;
     });
 
@@ -109,13 +108,12 @@ contract("ERC20App", function (accounts) {
   describe("withdrawals", function () {
 
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(owner, ERC20App);
+      [this.channels, this.app] = await deployGenericAppWithChannels(owner, ERC20App);
       this.symbol = "TEST";
-      this.token = await TestToken.new(100000, "Test Token", this.symbol);
+      this.token = await TestToken.new("Test Token", this.symbol);
 
-      // Load user account with 'TEST' ERC20 tokens
-      await this.token.transfer(userOne, 1000, {
-        from: owner
+      await this.token.mint("10000", {
+        from: userOne,
       }).should.be.fulfilled;
     });
 

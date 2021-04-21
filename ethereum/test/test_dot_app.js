@@ -6,7 +6,7 @@ const {
   confirmBasicChannelSend,
   confirmIncentivizedChannelSend,
   confirmUnlock,
-  deployAppContractWithChannels,
+  deployDOTAppWithChannels,
   addressBytes,
   ChannelId,
   encodeLog
@@ -54,7 +54,7 @@ contract("DOTApp", function (accounts) {
   describe("minting", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployAppContractWithChannels(owner, DOTApp, "Snowfork DOT", "SnowDOT");
+      [this.channels, this.app] = await deployDOTAppWithChannels(owner, DOTApp, "Snowfork DOT", "SnowDOT");
       this.token = await Token.at(await this.app.token());
     });
 
@@ -94,7 +94,7 @@ contract("DOTApp", function (accounts) {
   describe("burning", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployAppContractWithChannels(owner, DOTApp, "Snowfork DOT", "SnowDOT");
+      [this.channels, this.app] = await deployDOTAppWithChannels(owner, DOTApp, "Snowfork DOT", "SnowDOT");
       this.token = await Token.at(await this.app.token());
 
       // Mint 2 wrapped DOT
