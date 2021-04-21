@@ -37,15 +37,8 @@ func RunFn(cmd *cobra.Command, _ []string) error {
 	viper.BindPFlag("relay.direction", cmd.Flags().Lookup("direction"))
 	viper.BindPFlag("relay.headers-only", cmd.Flags().Lookup("headers-only"))
 
-	relay, err := core.NewRelay()
-	if err != nil {
-		logrus.WithField("error", err).Error("Failed to initialize relayer")
-		return err
-	}
-
-	relay.Start()
-
-	return nil
+	relay := &core.RelayV2{}
+	return relay.Run()
 }
 
 func setupLogging() {

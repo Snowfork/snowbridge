@@ -1,7 +1,7 @@
 // Copyright 2021 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package core
+package workers
 
 import (
 	"context"
@@ -19,10 +19,7 @@ type Worker interface {
 	TearDown()
 
 	Start(ctx context.Context, eg *errgroup.Group) error
-	Stop()
-
 }
-
 
 type WorkerPool struct {
 	workers []Worker
@@ -52,7 +49,7 @@ func (wp *WorkerPool) runWorker(ctx context.Context, worker Worker) error {
 	return childEg.Wait()
 }
 
-func (wp *WorkerPool) run() error {
+func (wp *WorkerPool) Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -73,7 +70,8 @@ func (wp *WorkerPool) run() error {
 		return nil
 	})
 
-	for _, worker := range wp.workers {
+	for _, w := range wp.workers {
+		worker := w
 		eg.Go(func() error {
 			for {
 				// TODO: log starting worker
