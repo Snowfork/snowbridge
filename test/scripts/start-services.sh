@@ -7,6 +7,8 @@ configdir=$(mktemp -d -t artemis-config-XXX)
 start_ganache()
 {
     echo "Starting Ganache"
+    
+    pushd ../ethereum
     yarn run ganache-cli \
         --port=8545 \
         --blockTime=4 \
@@ -14,6 +16,7 @@ start_ganache()
         --deterministic \
         --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
         >ganache.log 2>&1 &
+    popd    
 
     scripts/wait-for-it.sh -t 32 localhost:8545
     sleep 5
