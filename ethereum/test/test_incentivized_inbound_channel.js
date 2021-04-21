@@ -2,7 +2,7 @@ const ETHApp = artifacts.require("ETHApp");
 
 const BigNumber = web3.BigNumber;
 
-const { confirmUnlock, confirmMessageDispatched, deployAppContractWithChannels, ChannelId, buildCommitment } = require("./helpers");
+const { confirmUnlock, confirmMessageDispatched, deployGenericAppWithChannels, ChannelId, buildCommitment } = require("./helpers");
 const { lockupETH } = require('./test_eth_app');
 
 require("chai")
@@ -14,13 +14,14 @@ const ethers = require("ethers");
 
 contract("IncentivizedInboundChannel", function (accounts) {
   // Accounts
+  const owner = accounts[0];
   const userOne = accounts[1];
   const userTwo = accounts[2];
   const userThree = accounts[3];
 
   describe("newParachainCommitment", function () {
     beforeEach(async function () {
-      [channels, this.ethApp] = await deployAppContractWithChannels(ETHApp);
+      [channels, this.ethApp] = await deployGenericAppWithChannels(owner, ETHApp);
 
       this.incentivizedInboundChannel = channels.incentivized.inbound;
 
