@@ -7,13 +7,13 @@ nav_order: 3
 ---
 
 # Relayer Architecture
-The relayer is a single golang binary that acts as a worker container for various workers that are involved in the relaying process. As our bridge requires a mix of different kinds of data types and proofs to be relayed at different times, co-ordinated in different ways, we split up these responsibilities into different workers.
+The relayer is a single Go binary that acts as a container for various workers that are involved in the relaying process. As our bridge requires a mix of different kinds of data types and proofs to be relayed at different times, co-ordinated in different ways, we split up these responsibilities into different workers that separate concerns.
 
 ## Worker Goals
  - Each worker is expected to be stateless and functional
  - All transactions sent by workers should be idempotent (the on-chain logic does guarantee this in most scenarios, so usually the worker does not need to worry about this, but in the BEEFY relay process there may be some considerations)
  - Workers should not communicate with eachother directly. If they have any dependency on eachother's work, they should co-ordinate via [Stigmergy](https://en.wikipedia.org/wiki/Stigmergy) through querying on-chain data.
- - Workers should fail and recover gracefully. This means that they should not deadlock and should shut down cleanly upon any error. On startup, they should refresh their knowledge of the state of the world through on-chain queries, resume from that state, and catch themselves and the on-chain state up to date before any other behaviour.
+ - Workers should recover gracefully in case of failures. This means that they should shut down cleanly upon any error, deadlocks should never happen. On startup, they should refresh their knowledge of the state of the world through on-chain queries, resume from that state, and catch themselves and the on-chain state up to date before any other behaviour.
 
 # Current Workers
 
