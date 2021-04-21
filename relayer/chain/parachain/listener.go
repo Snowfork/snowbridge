@@ -1,7 +1,7 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package parachaincommitmentrelayer
+package parachain
 
 import (
 	"context"
@@ -14,19 +14,18 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
-type ParachainCommitmentListener struct {
-	config   *parachain.Config
-	conn     *parachain.Connection
+type Listener struct {
+	config   *Config
+	conn     *Connection
 	messages chan<- []chain.Message
 	log      *logrus.Entry
 }
 
-func NewParachainCommitmentListener(config *parachain.Config, conn *parachain.Connection, messages chan<- []chain.Message, log *logrus.Entry) *ParachainCommitmentListener {
-	return &ParachainCommitmentListener{
+func NewListener(config *Config, conn *Connection, messages chan<- []chain.Message, log *logrus.Entry) *Listener {
+	return &Listener{
 		config:   config,
 		conn:     conn,
 		messages: messages,
@@ -34,7 +33,7 @@ func NewParachainCommitmentListener(config *parachain.Config, conn *parachain.Co
 	}
 }
 
-func (li *ParachainCommitmentListener) Start(ctx context.Context, eg *errgroup.Group) error {
+func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	blockNumber, err := li.fetchStartBlock()
 	if err != nil {
@@ -66,14 +65,14 @@ func sleep(ctx context.Context, delay time.Duration) {
 }
 
 // Fetch the starting block
-func (li *ParachainCommitmentListener) fetchStartBlock() (uint64, error) {
-	hash, err := li.conn.GetAPI().RPC.Chain.GetFinalizedHead()
+func (li *Listener) fetchStartBlock() (uint64, error) {
+	hash, err := li.conn.api.RPC.Chain.GetFinalizedHead()
 	if err != nil {
 		li.log.WithError(err).Error("Failed to fetch hash for starting block")
 		return 0, err
 	}
 
-	header, err := li.conn.GetAPI().RPC.Chain.GetHeader(hash)
+	header, err := li.conn.api.RPC.Chain.GetHeader(hash)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to fetch header for starting block")
 		return 0, err
@@ -84,7 +83,7 @@ func (li *ParachainCommitmentListener) fetchStartBlock() (uint64, error) {
 
 var ErrBlockNotReady = errors.New("required result to be 32 bytes, but got 0")
 
-func (li *ParachainCommitmentListener) produceFinalizedHeaders(ctx context.Context, startBlock uint64, headers chan<- types.Header) error {
+func (li *Listener) produceFinalizedHeaders(ctx context.Context, startBlock uint64, headers chan<- types.Header) error {
 	current := startBlock
 	retryInterval := time.Duration(6) * time.Second
 	for {
@@ -93,13 +92,13 @@ func (li *ParachainCommitmentListener) produceFinalizedHeaders(ctx context.Conte
 			li.log.Info("Shutting down producer of finalized headers")
 			return ctx.Err()
 		default:
-			finalizedHash, err := li.conn.GetAPI().RPC.Chain.GetFinalizedHead()
+			finalizedHash, err := li.conn.api.RPC.Chain.GetFinalizedHead()
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch finalized head")
 				return err
 			}
 
-			finalizedHeader, err := li.conn.GetAPI().RPC.Chain.GetHeader(finalizedHash)
+			finalizedHeader, err := li.conn.api.RPC.Chain.GetHeader(finalizedHash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch header for finalized head")
 				return err
@@ -114,7 +113,7 @@ func (li *ParachainCommitmentListener) produceFinalizedHeaders(ctx context.Conte
 				continue
 			}
 
-			hash, err := li.conn.GetAPI().RPC.Chain.GetBlockHash(current)
+			hash, err := li.conn.api.RPC.Chain.GetBlockHash(current)
 			if err != nil {
 				if err.Error() == ErrBlockNotReady.Error() {
 					sleep(ctx, retryInterval)
@@ -125,7 +124,7 @@ func (li *ParachainCommitmentListener) produceFinalizedHeaders(ctx context.Conte
 				}
 			}
 
-			header, err := li.conn.GetAPI().RPC.Chain.GetHeader(hash)
+			header, err := li.conn.api.RPC.Chain.GetHeader(hash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to fetch header")
 				return err
@@ -137,7 +136,7 @@ func (li *ParachainCommitmentListener) produceFinalizedHeaders(ctx context.Conte
 	}
 }
 
-func (li *ParachainCommitmentListener) consumeFinalizedHeaders(ctx context.Context, headers <-chan types.Header) error {
+func (li *Listener) consumeFinalizedHeaders(ctx context.Context, headers <-chan types.Header) error {
 	if li.messages == nil {
 		li.log.Info("Not polling events since channel is nil")
 		return nil
@@ -161,7 +160,7 @@ func (li *ParachainCommitmentListener) consumeFinalizedHeaders(ctx context.Conte
 	}
 }
 
-func (li *ParachainCommitmentListener) processHeader(ctx context.Context, header types.Header) error {
+func (li *Listener) processHeader(ctx context.Context, header types.Header) error {
 
 	li.log.WithFields(logrus.Fields{
 		"blockNumber": header.Number,
@@ -182,12 +181,12 @@ func (li *ParachainCommitmentListener) processHeader(ctx context.Context, header
 		"commitmentHash": digestItem.AsCommitment.Hash.Hex(),
 	}).Debug("Found commitment hash in header digest")
 
-	storageKey, err := parachain.MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
+	storageKey, err := MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
 	if err != nil {
 		return err
 	}
 
-	data, err := li.conn.GetAPI().RPC.Offchain.LocalStorageGet(rpcOffchain.Persistent, storageKey)
+	data, err := li.conn.api.RPC.Offchain.LocalStorageGet(rpcOffchain.Persistent, storageKey)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to read commitment from offchain storage")
 		return err

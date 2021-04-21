@@ -58,12 +58,6 @@ const dump = (tmpDir, channels, bridge) => {
         database: {
             dialect: "sqlite3",
             dbpath: "tmp.db",
-        },
-        relay: {
-            direction: 1,
-        },
-        workers: {
-            parachaincommitmentrrelayer: true
         }
     }
     fs.writeFileSync(path.join(tmpDir, "config.toml"), TOML.stringify(config));
