@@ -33,7 +33,7 @@ type Worker struct {
 const Name = "beefy-relayer"
 
 func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, dbConfig *store.Config) (*Worker, error) {
-	log := logrus.WithField("beefy-relayer", Name)
+	log := logrus.WithField("worker", Name)
 
 	log.Info("Worker created")
 
