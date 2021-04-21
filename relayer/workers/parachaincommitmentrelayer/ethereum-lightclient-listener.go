@@ -63,7 +63,7 @@ func (li *EthereumLightClientListener) pollEventsAndHeaders(
 			li.log.Info("Shutting down listener...")
 			return ctx.Err()
 		case gethheader := <-headers:
-			// Query LightClientBridge contract's InitialVerificationSuccessful events
+			// Query LightClientBridge contract's ContractFinalVerificationSuccessful events
 			blockNumber := gethheader.Number.Uint64()
 			var lightClientBridgeEvents []*lightclientbridge.ContractFinalVerificationSuccessful
 
@@ -112,7 +112,6 @@ func (li *EthereumLightClientListener) queryLightClientEvents(ctx context.Contex
 // processLightClientEvents matches events to BEEFY commitment info by transaction hash
 func (li *EthereumLightClientListener) processLightClientEvents(ctx context.Context, events []*lightclientbridge.ContractFinalVerificationSuccessful) {
 	for _, event := range events {
-
 		li.log.WithFields(logrus.Fields{
 			"blockHash":   event.Raw.BlockHash.Hex(),
 			"blockNumber": event.Raw.BlockNumber,
