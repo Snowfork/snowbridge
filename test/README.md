@@ -50,7 +50,7 @@ Check that all related services are not running (eg: from a previous run):
 ```
 ps -aux | grep polkadot
 ps -aux | grep ganache
-ps -aux | grep substrate
+ps -aux | grep artemis
 ```
 
 Kill all processes that are still running if needed
