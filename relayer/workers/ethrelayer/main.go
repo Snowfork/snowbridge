@@ -82,12 +82,7 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	// Short-lived channels that communicate initialization parameters
 	// between the two chains. The chains close them after startup.
-	subInit := make(chan chain.Init)
 	ethInit := make(chan chain.Init)
-
-	// If the Substrate chain needs init params from Ethereum,
-	// retrieve them here and send to subInit before closing.
-	close(subInit)
 
 	eg.Go(func() error {
 		ethInitHeaderID := (<-ethInit).(*ethereum.HeaderID)
