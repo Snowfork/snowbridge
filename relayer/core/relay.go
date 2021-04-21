@@ -22,13 +22,16 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer"
 )
 
 type Relay struct {
-	ethChain   chain.Chain
-	paraChain  chain.Chain
-	relayChain chain.Chain
-	database   *store.Database
+	ethChain                   chain.Chain
+	paraChain                  chain.Chain
+	relayChain                 chain.Chain
+	database                   *store.Database
+	direction                  Direction
+	parachainCommitmentRelayer *parachaincommitmentrelayer.Worker
 }
 
 type Direction int
@@ -44,12 +47,17 @@ type RelayConfig struct {
 	HeadersOnly bool      `mapstructure:"headers-only"`
 }
 
+type WorkerConfig struct {
+	ParachainCommitmentRelayer bool `mapstructure:"parachaincommitmentrrelayer"`
+}
+
 type Config struct {
 	Relay      RelayConfig       `mapstructure:"relay"`
 	Eth        ethereum.Config   `mapstructure:"ethereum"`
 	Parachain  parachain.Config  `mapstructure:"parachain"`
 	Relaychain relaychain.Config `mapstructure:"relaychain"`
 	Database   store.Config      `mapstructure:"database"`
+	Workers    WorkerConfig      `mapstructure:"workers"`
 }
 
 func NewRelay() (*Relay, error) {
@@ -119,22 +127,28 @@ func NewRelay() (*Relay, error) {
 			return nil, err
 		}
 
-		err = paraChain.SetSender(subMessages, nil, dbMessages)
-		if err != nil {
-			return nil, err
-		}
-
 		err = relayChain.SetSender(subMessages, nil, beefyMessages)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	parachainCommitmentRelayer := &parachaincommitmentrelayer.Worker{}
+
+	if config.Workers.ParachainCommitmentRelayer == true {
+		parachainCommitmentRelayer, err = parachaincommitmentrelayer.NewWorker(&config.Parachain, &config.Eth)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &Relay{
-		ethChain:   ethChain,
-		paraChain:  paraChain,
-		relayChain: relayChain,
-		database:   database,
+		ethChain:                   ethChain,
+		paraChain:                  paraChain,
+		relayChain:                 relayChain,
+		database:                   database,
+		direction:                  direction,
+		parachainCommitmentRelayer: parachainCommitmentRelayer,
 	}, nil
 }
 
@@ -196,16 +210,29 @@ func (re *Relay) Start() {
 	log.WithField("name", re.paraChain.Name()).Info("Started chain")
 	defer re.paraChain.Stop()
 
-	err = re.relayChain.Start(ctx, eg, make(chan chain.Init), make(chan chain.Init))
+	if re.direction != EthToSub {
+		err = re.relayChain.Start(ctx, eg, make(chan chain.Init), make(chan chain.Init))
+		if err != nil {
+			log.WithFields(log.Fields{
+				"chain": re.relayChain.Name(),
+				"error": err,
+			}).Error("Failed to start chain")
+			return
+		}
+		log.WithField("name", re.relayChain.Name()).Info("Started chain")
+		defer re.relayChain.Stop()
+	}
+
+	err = re.parachainCommitmentRelayer.Start(ctx, eg)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"chain": re.relayChain.Name(),
 			"error": err,
-		}).Error("Failed to start chain")
+		}).Error("Failed to start parachainCommitmentRelayer")
 		return
 	}
-	log.WithField("name", re.relayChain.Name()).Info("Started chain")
-	defer re.relayChain.Stop()
+	log.WithField("name", re.relayChain.Name()).Info("Started parachainCommitmentRelayer")
+	defer re.parachainCommitmentRelayer.Stop()
 
 	notifyWaitDone := make(chan struct{})
 
