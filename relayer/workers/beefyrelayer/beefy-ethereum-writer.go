@@ -184,6 +184,5 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 	updateCmd := store.NewDatabaseCmd(&info, store.Update, instructions)
 	wr.databaseMessages <- updateCmd
 
-	// TODO: delete from database after confirming
 	return nil
 }

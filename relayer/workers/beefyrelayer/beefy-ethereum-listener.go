@@ -97,7 +97,7 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 			blockNumber := gethheader.Number.Uint64()
 			var lightClientBridgeEvents []*lightclientbridge.ContractInitialVerificationSuccessful
 
-			contractEvents, err := li.queryLightClientEvents(ctx, blockNumber, &blockNumber)
+			contractEvents, err := li.queryInitialVerificationSuccessfulEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
 				li.log.WithError(err).Error("Failure fetching event logs")
 				return err
@@ -107,7 +107,7 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 			if len(lightClientBridgeEvents) > 0 {
 				li.log.Info(fmt.Sprintf("Found %d LightClientBridge contract events on block %d", len(lightClientBridgeEvents), blockNumber))
 			}
-			li.processLightClientEvents(ctx, lightClientBridgeEvents)
+			li.processInitialVerificationSuccessfulEvents(ctx, lightClientBridgeEvents)
 
 			// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
 			initialVerificationItems := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
@@ -132,8 +132,8 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 	}
 }
 
-// queryLightClientEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
-func (li *BeefyEthereumListener) queryLightClientEvents(ctx context.Context, start uint64,
+// queryInitialVerificationSuccessfulEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
+func (li *BeefyEthereumListener) queryInitialVerificationSuccessfulEvents(ctx context.Context, start uint64,
 	end *uint64) ([]*lightclientbridge.ContractInitialVerificationSuccessful, error) {
 	var events []*lightclientbridge.ContractInitialVerificationSuccessful
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
@@ -159,8 +159,8 @@ func (li *BeefyEthereumListener) queryLightClientEvents(ctx context.Context, sta
 	return events, nil
 }
 
-// processLightClientEvents matches events to BEEFY commitment info by transaction hash
-func (li *BeefyEthereumListener) processLightClientEvents(ctx context.Context, events []*lightclientbridge.ContractInitialVerificationSuccessful) {
+// processInitialVerificationSuccessfulEvents matches events to BEEFY commitment info by transaction hash
+func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx context.Context, events []*lightclientbridge.ContractInitialVerificationSuccessful) {
 	for _, event := range events {
 		// Only process events emitted by transactions sent from our node
 		if event.Prover != li.ethereumConn.GetKP().CommonAddress() {
@@ -185,5 +185,57 @@ func (li *BeefyEthereumListener) processLightClientEvents(ctx context.Context, e
 		}
 		updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
 		li.dbMessages <- updateCmd
+	}
+}
+
+// queryFinalVerificationSuccessfulEvents queries ContractFinalVerificationSuccessful events from the LightClientBridge contract
+func (li *BeefyEthereumListener) queryFinalVerificationSuccessfulEvents(ctx context.Context, start uint64,
+	end *uint64) ([]*lightclientbridge.ContractFinalVerificationSuccessful, error) {
+	var events []*lightclientbridge.ContractFinalVerificationSuccessful
+	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
+
+	iter, err := li.lightClientBridge.FilterFinalVerificationSuccessful(&filterOps)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+
+		events = append(events, iter.Event)
+	}
+
+	return events, nil
+}
+
+// processFinalVerificationSuccessfulEvents removes finalized commitments from the relayer's BEEFY justification database
+func (li *BeefyEthereumListener) processFinalVerificationSuccessfulEvents(ctx context.Context, events []*lightclientbridge.ContractFinalVerificationSuccessful) {
+	for _, event := range events {
+		// Only process events emitted by transactions sent from our node
+		if event.Prover != li.ethereumConn.GetKP().CommonAddress() {
+			continue
+		}
+
+		li.log.WithFields(logrus.Fields{
+			"blockHash":   event.Raw.BlockHash.Hex(),
+			"blockNumber": event.Raw.BlockNumber,
+			"txHash":      event.Raw.TxHash.Hex(),
+		}).Info("event information")
+
+		item := li.beefyDB.GetItemByFinalVerificationTxHash(event.Raw.TxHash)
+		if item.Status != store.CompleteVerificationTxSent {
+			continue
+		}
+
+		li.log.Info("6: Deleting finalized item from the database'")
+		deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
+		li.dbMessages <- deleteCmd
 	}
 }
