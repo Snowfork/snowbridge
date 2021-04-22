@@ -26,6 +26,31 @@ class SubClient {
     return BigNumber(balance.toBigInt())
   }
 
+  async subscribeAssetBalances(accountId, assetId, length) {
+    // Create an array of promises and resolvers for the balances
+    const balancePromiseItems = new Array(length).fill().map(i => {
+      let resolver;
+      const promise = new Promise(async (resolve, reject) => {
+        resolver = resolve;
+      });
+      return { promise, resolver };
+    });
+    const balancePromises = balancePromiseItems.map(i => i.promise);
+    const resolveBalance = balancePromiseItems.map(i => i.resolver);
+
+    // Setup our balance subscription and resolve each promise one by one
+    let count = 0;
+    const unsubscribe = await this.api.query.assets.balances(assetId, accountId, newBalance => {
+      resolveBalance[count](BigNumber(newBalance.toBigInt()));
+      count++;
+      if (count === length) {
+        unsubscribe();
+      }
+    });
+
+    return balancePromises;
+  }
+
   async queryAccountBalance(accountId) {
     let {
       data: {
@@ -35,16 +60,84 @@ class SubClient {
     return BigNumber(balance.toBigInt())
   }
 
+  async subscribeAccountBalances(accountId, length) {
+    // Create an array of promises and resolvers for the balances
+    const balancePromiseItems = new Array(length).fill().map(i => {
+      let resolver;
+      const promise = new Promise(async (resolve, reject) => {
+        resolver = resolve;
+      });
+      return { promise, resolver };
+    });
+    const balancePromises = balancePromiseItems.map(i => i.promise);
+    const resolveBalance = balancePromiseItems.map(i => i.resolver);
+
+    // Setup our balance subscription and resolve each promise one by one
+    let count = 0;
+    const unsubscribe = await this.api.query.system.account(accountId, account => {
+      let {
+        data: {
+          free: balance
+        }
+      } = account;
+      resolveBalance[count](BigNumber(balance.toBigInt()));
+      count++;
+      if (count === length) {
+        unsubscribe();
+      }
+    });
+
+    return balancePromises;
+  }
+
+  async waitForNextEvent({ eventSection, eventMethod, eventDataType }) {
+    let foundData = new Promise(async (resolve, reject) => {
+      const unsubscribe = await this.api.query.system.events((events) => {
+        events.forEach((record) => {
+          const { event, phase } = record;
+          const types = event.typeDef;
+          if (event.section === eventSection && event.method === eventMethod) {
+            if (eventDataType === undefined) {
+              resolve(event.data);
+            } else {
+              event.data.forEach((data, index) => {
+                if (types[index].type === eventDataType) {
+                  unsubscribe();
+                  resolve(data);
+                }
+              });
+            }
+          }
+        });
+      });
+    });
+    return foundData;
+  }
+
   async burnETH(account, recipient, amount, channel) {
-    const txHash = await this.api.tx.eth.burn(channel, recipient, amount).signAndSend(account);
+    return await this.api.tx.eth.burn(channel, recipient, amount).signAndSend(account);
   }
 
   async burnERC20(account, assetId, recipient, amount, channel) {
-    const txHash = await this.api.tx.erc20.burn(channel, assetId, recipient, amount).signAndSend(account);
+    return await this.api.tx.erc20.burn(channel, assetId, recipient, amount).signAndSend(account);
   }
 
   async lockDOT(account, recipient, amount, channel) {
-    const txHash = await this.api.tx.dot.lock(channel, recipient, amount).signAndSend(account);
+    return await this.api.tx.dot.lock(channel, recipient, amount).signAndSend(account);
+  }
+
+  async waitForNextBlock() {
+    const wait = new Promise(async (resolve, reject) => {
+      let count = 0;
+      const unsubscribe = await this.api.rpc.chain.subscribeNewHeads((header) => {
+        count++
+        if (count === 2) {
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+    return wait;
   }
 
 }
