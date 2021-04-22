@@ -2,21 +2,43 @@
 set -eu
 
 # config directory
-configdir=$(mktemp -d -t artemis-config-XXX)
+configdir=/tmp/snowbridge-e2e-config
+rm -rf $configdir
+mkdir $configdir
+
+# kill all potentially old processes
+kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/artemis | awk '{print $2}') || true
 
 start_ganache()
 {
     echo "Starting Ganache"
-    
-    pushd ../ethereum
+
     yarn run ganache-cli \
         --port=8545 \
-        --blockTime=4 \
         --networkId=344 \
         --deterministic \
+        --db $configdir/ganachedb \
         --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
         >ganache.log 2>&1 &
-    popd    
+
+    scripts/wait-for-it.sh -t 32 localhost:8545
+    sleep 5
+}
+
+restart_ganache()
+{
+    echo "Restarting Ganache with a slower block time"
+
+    kill $(ps -aux | grep -e ganache-cli | awk '{print $2}') || true
+
+    yarn run ganache-cli \
+        --port=8545 \
+        --blockTime=6 \
+        --networkId=344 \
+        --deterministic \
+        --db $configdir/ganachedb \
+        --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
+        >ganache.log 2>&1 &
 
     scripts/wait-for-it.sh -t 32 localhost:8545
     sleep 5
@@ -61,33 +83,16 @@ start_parachain()
         para_id 200
 
     echo "Writing Polkadot configuration"
-    cp config.json $configdir/polkadotConfig.json
-    parachain_conf="{
-        \"bin\": \"$bin\",
-        \"id\": \"200\",
-        \"wsPort\": 11144,
-        \"port\": 31200,
-        \"flags\": [
-            \"--execution=native\",
-            \"-lruntime=debug,import_header=trace,bridge=trace\",
-            \"--rpc-cors=all\",
-            \"--offchain-worker=Always\",
-            \"--enable-offchain-indexing=true\",
-            \"--\",
-            \"--execution=wasm\"
-        ],
-        \"chain\": \"$configdir/spec.json\"
-    }"
-    node ../test/scripts/helpers/overrideParachainSpec.js $configdir/polkadotConfig.json \
-        parachains.0 "$parachain_conf"
+    jq  -s '.[0] * .[1]' config.json ../test/config/launchConfigOverrides.json \
+        | jq ".parachains[0].bin = \"$bin\"" \
+        | jq ".parachains[0].chain = \"$configdir/spec.json\"" \
+        > $configdir/polkadotLaunchConfig.json
 
-    polkadot-launch $configdir/polkadotConfig.json &
+    polkadot-launch $configdir/polkadotLaunchConfig.json &
 
     popd
 
     scripts/wait-for-it.sh -t 32 localhost:11144
-    echo "Waiting for consensus between polkadot and parachain"
-    sleep 60
 }
 
 start_relayer()
@@ -109,11 +114,19 @@ start_relayer()
 
 }
 
-trap 'kill $(jobs -p)' SIGINT SIGTERM EXIT
+cleanup() {
+    kill $(jobs -p)
+    kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/artemis | awk '{print $2}') || true
+}
+
+trap cleanup SIGINT SIGTERM EXIT
 
 start_ganache
 deploy_contracts
 start_parachain
+restart_ganache
+echo "Waiting for consensus between polkadot and parachain"
+sleep 60
 start_relayer
 
 echo "Process Tree:"

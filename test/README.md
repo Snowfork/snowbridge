@@ -14,6 +14,7 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
 
 3. Development environment for Relayer. See relayer [requirements](../relayer/README.md#requirements).
 4. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
+5. `jq` - https://stedolan.github.io/jq/download/
 5. Build the `@snowfork/snowbridge-types` package using these [steps](../types/README.md#development).
 
 ## Setup
@@ -44,18 +45,6 @@ git clone -n https://github.com/snowfork/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
 git checkout enable_beefy_on_rococo
 cargo build --release
-```
-
-Check that all related services are not running (eg: from a previous run):
-```
-ps -aux | grep polkadot
-ps -aux | grep ganache
-ps -aux | grep artemis
-```
-
-Kill all processes that are still running if needed
-```
-kill -9 ...
 ```
 
 Start all services (parachain, relayer, ganache, etc):
