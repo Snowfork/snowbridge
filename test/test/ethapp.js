@@ -1,6 +1,4 @@
 const Web3 = require('web3');
-
-const { sleep } = require('../src/helpers');
 const BigNumber = require('bignumber.js');
 
 const { expect } = require("chai")
