@@ -60,6 +60,36 @@ class SubClient {
     return BigNumber(balance.toBigInt())
   }
 
+  async subscribeAccountBalances(accountId, length) {
+    // Create an array of promises and resolvers for the balances
+    const balancePromiseItems = new Array(length).fill().map(i => {
+      let resolver;
+      const promise = new Promise(async (resolve, reject) => {
+        resolver = resolve;
+      });
+      return { promise, resolver };
+    });
+    const balancePromises = balancePromiseItems.map(i => i.promise);
+    const resolveBalance = balancePromiseItems.map(i => i.resolver);
+
+    // Setup our balance subscription and resolve each promise one by one
+    let count = 0;
+    const unsubscribe = await this.api.query.system.account(accountId, account => {
+      let {
+        data: {
+          free: balance
+        }
+      } = account;
+      resolveBalance[count](BigNumber(balance.toBigInt()));
+      count++;
+      if (count === length) {
+        unsubscribe();
+      }
+    });
+
+    return balancePromises;
+  }
+
   async waitForNextEvent({ eventSection, eventMethod, eventDataType }) {
     let foundData = new Promise(async (resolve, reject) => {
       const unsubscribe = await this.api.query.system.events((events) => {
