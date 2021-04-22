@@ -1,3 +1,6 @@
+// Copyright 2021 Snowfork
+// SPDX-License-Identifier: LGPL-3.0-only
+
 package ethrelayer
 
 import (
@@ -26,16 +29,18 @@ type EthereumListener struct {
 	basicOutboundChannel        *outbound.BasicOutboundChannel
 	incentivizedOutboundChannel *outbound.IncentivizedOutboundChannel
 	mapping                     map[common.Address]string
-	address                     common.Address
 	messages                    chan<- []chain.Message
 	headers                     chan<- chain.Header
-	blockWaitPeriod             uint64
 	log                         *logrus.Entry
 }
 
-func NewEthereumListener(config *ethereum.Config, conn *ethereum.Connection, messages chan<- []chain.Message,
+func NewEthereumListener(
+	config *ethereum.Config,
+	conn *ethereum.Connection,
+	messages chan<- []chain.Message,
 	headers chan<- chain.Header,
-	log *logrus.Entry) (*EthereumListener, error) {
+	log *logrus.Entry,
+) *EthereumListener {
 	return &EthereumListener{
 		config:                      config,
 		conn:                        conn,
@@ -44,9 +49,8 @@ func NewEthereumListener(config *ethereum.Config, conn *ethereum.Connection, mes
 		mapping:                     make(map[common.Address]string),
 		messages:                    messages,
 		headers:                     headers,
-		blockWaitPeriod:             0,
 		log:                         log,
-	}, nil
+	}
 }
 
 func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {

@@ -15,9 +15,6 @@ import (
 type Worker interface {
 	Name() string
 
-	SetUp() error
-	TearDown()
-
 	Start(ctx context.Context, eg *errgroup.Group) error
 }
 
@@ -32,16 +29,8 @@ func NewWorkerPool(workers []Worker) *WorkerPool {
 }
 
 func (wp *WorkerPool) runWorker(ctx context.Context, worker Worker) error {
-	// Ensure we always clean up after ourselves
-	defer worker.TearDown()
-
-	err := worker.SetUp()
-	if err != nil {
-		return err
-	}
-
 	childEg, childCtx := errgroup.WithContext(ctx)
-	err = worker.Start(childCtx, childEg)
+	err := worker.Start(childCtx, childEg)
 	if err != nil {
 		return err
 	}
