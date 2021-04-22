@@ -83,9 +83,11 @@ start_parachain()
         para_id 200
 
     echo "Writing Polkadot configuration"
+    source ../test/.env
     jq  -s '.[0] * .[1]' config.json ../test/config/launchConfigOverrides.json \
         | jq ".parachains[0].bin = \"$bin\"" \
         | jq ".parachains[0].chain = \"$configdir/spec.json\"" \
+        | jq ".relaychain.bin = \"$polkadotbinary\"" \
         > $configdir/polkadotLaunchConfig.json
 
     polkadot-launch $configdir/polkadotLaunchConfig.json &
