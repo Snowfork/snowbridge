@@ -1,7 +1,4 @@
-// Copyright 2020 Snowfork
-// SPDX-License-Identifier: LGPL-3.0-only
-
-package parachain
+package ethrelayer
 
 import (
 	"context"
@@ -14,20 +11,22 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 )
 
-type Writer struct {
-	conn        *Connection
+type ParachainWriter struct {
+	conn        *parachain.Connection
 	messages    <-chan []chain.Message
 	headers     <-chan chain.Header
 	log         *logrus.Entry
 	nonce       uint32
-	pool        *extrinsicPool
+	pool        *parachain.ExtrinsicPool
 	genesisHash types.Hash
 }
 
-func NewWriter(conn *Connection, messages <-chan []chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*Writer, error) {
-	return &Writer{
+func NewParachainWriter(conn *parachain.Connection,
+	messages <-chan []chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*ParachainWriter, error) {
+	return &ParachainWriter{
 		conn:     conn,
 		messages: messages,
 		headers:  headers,
@@ -35,20 +34,20 @@ func NewWriter(conn *Connection, messages <-chan []chain.Message, headers <-chan
 	}, nil
 }
 
-func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
+func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	nonce, err := wr.queryAccountNonce()
 	if err != nil {
 		return err
 	}
 	wr.nonce = nonce
 
-	genesisHash, err := wr.conn.api.RPC.Chain.GetBlockHash(0)
+	genesisHash, err := wr.conn.GetAPI().RPC.Chain.GetBlockHash(0)
 	if err != nil {
 		return err
 	}
 	wr.genesisHash = genesisHash
 
-	wr.pool = newExtrinsicPool(eg, wr.conn, wr.log)
+	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn, wr.log)
 
 	eg.Go(func() error {
 		return wr.writeLoop(ctx)
@@ -56,7 +55,7 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (wr *Writer) onDone(ctx context.Context) error {
+func (wr *ParachainWriter) onDone(ctx context.Context) error {
 	wr.log.Info("Shutting down writer...")
 	// Avoid deadlock if a listener is still trying to send to a channel
 	if wr.messages != nil {
@@ -70,25 +69,25 @@ func (wr *Writer) onDone(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (wr *Writer) queryAccountNonce() (uint32, error) {
-	key, err := types.CreateStorageKey(&wr.conn.metadata, "System", "Account", wr.conn.kp.PublicKey, nil)
+func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
+	key, err := types.CreateStorageKey(wr.conn.GetMetadata(), "System", "Account", wr.conn.GetKeypair().PublicKey, nil)
 	if err != nil {
 		return 0, err
 	}
 
 	var accountInfo types.AccountInfo
-	ok, err := wr.conn.api.RPC.State.GetStorageLatest(key, &accountInfo)
+	ok, err := wr.conn.GetAPI().RPC.State.GetStorageLatest(key, &accountInfo)
 	if err != nil {
 		return 0, err
 	}
 	if !ok {
-		return 0, fmt.Errorf("no account info found for %s", wr.conn.kp.URI)
+		return 0, fmt.Errorf("no account info found for %s", wr.conn.GetKeypair().URI)
 	}
 
 	return uint32(accountInfo.Nonce), nil
 }
 
-func (wr *Writer) writeLoop(ctx context.Context) error {
+func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -134,22 +133,22 @@ func (wr *Writer) writeLoop(ctx context.Context) error {
 }
 
 // Write submits a transaction to the chain
-func (wr *Writer) write(ctx context.Context, c types.Call) error {
+func (wr *ParachainWriter) write(ctx context.Context, c types.Call) error {
 	ext := types.NewExtrinsic(c)
 
-	latestHash, err := wr.conn.api.RPC.Chain.GetFinalizedHead()
+	latestHash, err := wr.conn.GetAPI().RPC.Chain.GetFinalizedHead()
 	if err != nil {
 		return err
 	}
 
-	latestBlock, err := wr.conn.api.RPC.Chain.GetBlock(latestHash)
+	latestBlock, err := wr.conn.GetAPI().RPC.Chain.GetBlock(latestHash)
 	if err != nil {
 		return err
 	}
 
-	era := NewMortalEra(uint64(latestBlock.Block.Header.Number))
+	era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
 
-	rv, err := wr.conn.api.RPC.State.GetRuntimeVersionLatest()
+	rv, err := wr.conn.GetAPI().RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
 		return err
 	}
@@ -165,7 +164,7 @@ func (wr *Writer) write(ctx context.Context, c types.Call) error {
 	}
 
 	extI := ext
-	err = extI.Sign(*wr.conn.kp, o)
+	err = extI.Sign(*wr.conn.GetKeypair(), o)
 	if err != nil {
 		return err
 	}
@@ -177,10 +176,10 @@ func (wr *Writer) write(ctx context.Context, c types.Call) error {
 	return nil
 }
 
-func (wr *Writer) WriteMessages(ctx context.Context, msgs []*chain.EthereumOutboundMessage) error {
+func (wr *ParachainWriter) WriteMessages(ctx context.Context, msgs []*chain.EthereumOutboundMessage) error {
 	for _, msg := range msgs {
 
-		c, err := types.NewCall(&wr.conn.metadata, msg.Call, msg.Args...)
+		c, err := types.NewCall(wr.conn.GetMetadata(), msg.Call, msg.Args...)
 		if err != nil {
 			return err
 		}
@@ -197,8 +196,8 @@ func (wr *Writer) WriteMessages(ctx context.Context, msgs []*chain.EthereumOutbo
 }
 
 // WriteHeader submits a "VerifierLightclient.import_header" call
-func (wr *Writer) WriteHeader(ctx context.Context, header *chain.Header) error {
-	c, err := types.NewCall(&wr.conn.metadata, "VerifierLightclient.import_header", header.HeaderData, header.ProofData)
+func (wr *ParachainWriter) WriteHeader(ctx context.Context, header *chain.Header) error {
+	c, err := types.NewCall(wr.conn.GetMetadata(), "VerifierLightclient.import_header", header.HeaderData, header.ProofData)
 	if err != nil {
 		return err
 	}

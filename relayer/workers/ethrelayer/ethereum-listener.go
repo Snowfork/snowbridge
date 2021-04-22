@@ -1,7 +1,4 @@
-// Copyright 2020 Snowfork
-// SPDX-License-Identifier: LGPL-3.0-only
-
-package ethereum
+package ethrelayer
 
 import (
 	"context"
@@ -15,16 +12,17 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
 )
 
 const MaxMessagesPerSend = 10
 
-// Listener streams the Ethereum blockchain for application events
-type Listener struct {
-	config                      *Config
-	conn                        *Connection
+// EthereumListener streams the Ethereum blockchain for application events
+type EthereumListener struct {
+	config                      *ethereum.Config
+	conn                        *ethereum.Connection
 	basicOutboundChannel        *outbound.BasicOutboundChannel
 	incentivizedOutboundChannel *outbound.IncentivizedOutboundChannel
 	mapping                     map[common.Address]string
@@ -35,10 +33,10 @@ type Listener struct {
 	log                         *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, messages chan<- []chain.Message,
+func NewEthereumListener(config *ethereum.Config, conn *ethereum.Connection, messages chan<- []chain.Message,
 	headers chan<- chain.Header,
-	log *logrus.Entry) (*Listener, error) {
-	return &Listener{
+	log *logrus.Entry) (*EthereumListener, error) {
+	return &EthereumListener{
 		config:                      config,
 		conn:                        conn,
 		basicOutboundChannel:        nil,
@@ -51,24 +49,24 @@ func NewListener(config *Config, conn *Connection, messages chan<- []chain.Messa
 	}, nil
 }
 
-func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
-	hcs, err := NewHeaderCacheState(
+func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
+	hcs, err := ethereum.NewHeaderCacheState(
 		eg,
 		initBlockHeight,
-		&DefaultBlockLoader{Conn: li.conn},
+		&ethereum.DefaultBlockLoader{Conn: li.conn},
 		nil,
 	)
 	if err != nil {
 		return err
 	}
 
-	basicOutboundChannel, err := outbound.NewBasicOutboundChannel(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.client)
+	basicOutboundChannel, err := outbound.NewBasicOutboundChannel(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.GetClient())
 	if err != nil {
 		return err
 	}
 	li.basicOutboundChannel = basicOutboundChannel
 
-	incentivizedOutboundChannel, err := outbound.NewIncentivizedOutboundChannel(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.client)
+	incentivizedOutboundChannel, err := outbound.NewIncentivizedOutboundChannel(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -89,16 +87,16 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	return nil
 }
 
-func (li *Listener) pollEventsAndHeaders(
+func (li *EthereumListener) pollEventsAndHeaders(
 	ctx context.Context,
 	initBlockHeight uint64,
 	descendantsUntilFinal uint64,
-	hcs *HeaderCacheState,
+	hcs *ethereum.HeaderCacheState,
 ) error {
 	headers := make(chan *gethTypes.Header, 5)
 	headerEg, headerCtx := errgroup.WithContext(ctx)
 
-	headerSyncer := syncer.NewSyncer(descendantsUntilFinal, syncer.NewHeaderLoader(li.conn.client), headers, li.log)
+	headerSyncer := syncer.NewSyncer(descendantsUntilFinal, syncer.NewHeaderLoader(li.conn.GetClient()), headers, li.log)
 
 	li.log.Info("Syncing headers starting...")
 	err := headerSyncer.StartSync(headerCtx, headerEg, initBlockHeight-1)
@@ -154,7 +152,7 @@ func (li *Listener) pollEventsAndHeaders(
 	}
 }
 
-func (li *Listener) queryBasicEvents(contract *outbound.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
+func (li *EthereumListener) queryBasicEvents(contract *outbound.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
 	var events []*etypes.Log
 
 	iter, err := contract.FilterMessage(options)
@@ -176,7 +174,7 @@ func (li *Listener) queryBasicEvents(contract *outbound.BasicOutboundChannel, op
 	return events, nil
 }
 
-func (li *Listener) queryIncentivizedEvents(contract *outbound.IncentivizedOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
+func (li *EthereumListener) queryIncentivizedEvents(contract *outbound.IncentivizedOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
 	var events []*etypes.Log
 
 	iter, err := contract.FilterMessage(options)
@@ -198,7 +196,7 @@ func (li *Listener) queryIncentivizedEvents(contract *outbound.IncentivizedOutbo
 	return events, nil
 }
 
-func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, events []*etypes.Log) error {
+func (li *EthereumListener) forwardEvents(ctx context.Context, hcs *ethereum.HeaderCacheState, events []*etypes.Log) error {
 	messages := make([]chain.Message, len(events))
 
 	for i, event := range events {
@@ -212,7 +210,7 @@ func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, ev
 			return err
 		}
 
-		msg, err := MakeMessageFromEvent(li.mapping, event, receiptTrie, li.log)
+		msg, err := ethereum.MakeMessageFromEvent(li.mapping, event, receiptTrie, li.log)
 		if err != nil {
 			li.log.WithFields(logrus.Fields{
 				"address":     event.Address.Hex(),
@@ -236,7 +234,7 @@ func (li *Listener) forwardEvents(ctx context.Context, hcs *HeaderCacheState, ev
 	return nil
 }
 
-func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.Header) error {
+func (li *EthereumListener) forwardHeader(hcs *ethereum.HeaderCacheState, gethheader *gethTypes.Header) error {
 	cache, err := hcs.GetEthashproofCache(gethheader.Number.Uint64())
 	if err != nil {
 		li.log.WithFields(logrus.Fields{
@@ -246,7 +244,7 @@ func (li *Listener) forwardHeader(hcs *HeaderCacheState, gethheader *gethTypes.H
 		return err
 	}
 
-	header, err := MakeHeaderFromEthHeader(gethheader, cache, li.log)
+	header, err := ethereum.MakeHeaderFromEthHeader(gethheader, cache, li.log)
 	if err != nil {
 		li.log.WithFields(logrus.Fields{
 			"blockHash":   gethheader.Hash().Hex(),

@@ -17,39 +17,33 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/ethrelayer"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer"
 )
 
 type Relay struct {
-	ethChain   chain.Chain
-	paraChain  chain.Chain
-	relayChain chain.Chain
-	database   *store.Database
+	parachainCommitmentRelayer *parachaincommitmentrelayer.Worker
+	beefyRelayer               *beefyrelayer.Worker
+	ethRelayer                 *ethrelayer.Worker
 }
 
-type Direction int
-
-const (
-	Bidirectional Direction = iota
-	EthToSub
-	SubToEth
-)
-
-type RelayConfig struct {
-	Direction   Direction `mapstructure:"direction"`
-	HeadersOnly bool      `mapstructure:"headers-only"`
+type WorkerConfig struct {
+	ParachainCommitmentRelayer bool `mapstructure:"parachaincommitmentrrelayer"`
+	BeefyRelayer               bool `mapstructure:"beefyrelayer"`
+	EthRelayer                 bool `mapstructure:"ethrelayer"`
 }
 
 type Config struct {
-	Relay      RelayConfig       `mapstructure:"relay"`
-	Eth        ethereum.Config   `mapstructure:"ethereum"`
-	Parachain  parachain.Config  `mapstructure:"parachain"`
-	Relaychain relaychain.Config `mapstructure:"relaychain"`
-	Database   store.Config      `mapstructure:"database"`
+	Eth                  ethereum.Config   `mapstructure:"ethereum"`
+	Parachain            parachain.Config  `mapstructure:"parachain"`
+	Relaychain           relaychain.Config `mapstructure:"relaychain"`
+	BeefyRelayerDatabase store.Config      `mapstructure:"database"`
+	Workers              WorkerConfig      `mapstructure:"workers"`
 }
 
 func NewRelay() (*Relay, error) {
@@ -58,83 +52,37 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
-	db, err := store.PrepareDatabase(&config.Database)
-	if err != nil {
-		return nil, err
-	}
+	parachainCommitmentRelayer := &parachaincommitmentrelayer.Worker{}
 
-	dbMessages := make(chan store.DatabaseCmd)
-	logger := log.WithField("database", "Beefy")
-	database := store.NewDatabase(db, dbMessages, logger)
-
-	ethChain, err := ethereum.NewChain(&config.Eth, database)
-	if err != nil {
-		return nil, err
-	}
-
-	paraChain, err := parachain.NewChain(&config.Parachain)
-	if err != nil {
-		return nil, err
-	}
-
-	relayChain, err := relaychain.NewChain(&config.Relaychain)
-	if err != nil {
-		return nil, err
-	}
-
-	beefyMessages := make(chan store.BeefyRelayInfo)
-
-	direction := config.Relay.Direction
-	headersOnly := config.Relay.HeadersOnly
-	if direction == Bidirectional || direction == EthToSub {
-		// channel for messages from ethereum
-		var ethMessages chan []chain.Message
-		if !headersOnly {
-			ethMessages = make(chan []chain.Message, 1)
-		}
-		// channel for headers from ethereum (it's a blocking channel so that we
-		// can guarantee that a header is forwarded before we send dependent messages)
-		ethHeaders := make(chan chain.Header)
-
-		err = ethChain.SetSender(ethMessages, ethHeaders, dbMessages, beefyMessages)
-		if err != nil {
-			return nil, err
-		}
-
-		err = paraChain.SetReceiver(ethMessages, ethHeaders, dbMessages)
+	if config.Workers.ParachainCommitmentRelayer == true {
+		parachainCommitmentRelayer, err = parachaincommitmentrelayer.NewWorker(&config.Parachain, &config.Relaychain, &config.Eth)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if direction == Bidirectional || direction == SubToEth {
-		// channel for messages from substrate
-		var subMessages chan []chain.Message
-		if !headersOnly {
-			subMessages = make(chan []chain.Message, 1)
-		}
+	beefyRelayer := &beefyrelayer.Worker{}
 
-		err = ethChain.SetReceiver(subMessages, nil, dbMessages, beefyMessages)
+	if config.Workers.BeefyRelayer == true {
+		beefyRelayer, err = beefyrelayer.NewWorker(&config.Relaychain, &config.Eth, &config.BeefyRelayerDatabase)
 		if err != nil {
 			return nil, err
 		}
+	}
 
-		err = paraChain.SetSender(subMessages, nil, dbMessages)
-		if err != nil {
-			return nil, err
-		}
+	ethRelayer := &ethrelayer.Worker{}
 
-		err = relayChain.SetSender(subMessages, nil, beefyMessages)
+	if config.Workers.EthRelayer == true {
+		ethRelayer, err = ethrelayer.NewWorker(&config.Eth, &config.Parachain)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return &Relay{
-		ethChain:   ethChain,
-		paraChain:  paraChain,
-		relayChain: relayChain,
-		database:   database,
+		parachainCommitmentRelayer: parachainCommitmentRelayer,
+		beefyRelayer:               beefyRelayer,
+		ethRelayer:                 ethRelayer,
 	}, nil
 }
 
@@ -159,53 +107,44 @@ func (re *Relay) Start() {
 		return nil
 	})
 
-	err := re.database.Start(ctx, eg)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"database": "Beefy",
-			"error":    err,
-		}).Error("Failed to start database")
-		return
+	if re.ethRelayer != nil {
+		err := re.ethRelayer.Start(ctx, eg)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"worker": re.ethRelayer.Name(),
+				"error":  err,
+			}).Error("Failed to start worker")
+			return
+		}
+		log.WithField("name", re.ethRelayer.Name()).Info("Started worker")
+		defer re.ethRelayer.Stop()
 	}
-	log.WithField("database", "Beefy").Info("Started database")
 
-	// Short-lived channels that communicate initialization parameters
-	// between the two chains. The chains close them after startup.
-	subInit := make(chan chain.Init)
-	ethSubInit := make(chan chain.Init)
-
-	err = re.ethChain.Start(ctx, eg, subInit, ethSubInit)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"chain": re.ethChain.Name(),
-			"error": err,
-		}).Error("Failed to start chain")
-		return
+	if re.beefyRelayer != nil {
+		err := re.beefyRelayer.Start(ctx, eg)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"worker": re.beefyRelayer.Name(),
+				"error":  err,
+			}).Error("Failed to start worker")
+			return
+		}
+		log.WithField("name", re.beefyRelayer.Name()).Info("Started worker")
+		defer re.beefyRelayer.Stop()
 	}
-	log.WithField("name", re.ethChain.Name()).Info("Started chain")
-	defer re.ethChain.Stop()
 
-	err = re.paraChain.Start(ctx, eg, ethSubInit, subInit)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"chain": re.paraChain.Name(),
-			"error": err,
-		}).Error("Failed to start chain")
-		return
+	if re.parachainCommitmentRelayer != nil {
+		err := re.parachainCommitmentRelayer.Start(ctx, eg)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"worker": re.parachainCommitmentRelayer.Name(),
+				"error":  err,
+			}).Error("Failed to start worker")
+			return
+		}
+		log.WithField("name", re.parachainCommitmentRelayer.Name()).Info("Started worker")
+		defer re.parachainCommitmentRelayer.Stop()
 	}
-	log.WithField("name", re.paraChain.Name()).Info("Started chain")
-	defer re.paraChain.Stop()
-
-	err = re.relayChain.Start(ctx, eg, make(chan chain.Init), make(chan chain.Init))
-	if err != nil {
-		log.WithFields(log.Fields{
-			"chain": re.relayChain.Name(),
-			"error": err,
-		}).Error("Failed to start chain")
-		return
-	}
-	log.WithField("name", re.relayChain.Name()).Info("Started chain")
-	defer re.relayChain.Stop()
 
 	notifyWaitDone := make(chan struct{})
 
@@ -235,10 +174,9 @@ func (re *Relay) Start() {
 		}
 
 		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
-		re.ethChain.Stop()
-		re.paraChain.Stop()
-		re.relayChain.Stop()
-		re.database.Stop()
+		re.ethRelayer.Stop()
+		re.parachainCommitmentRelayer.Stop()
+		re.beefyRelayer.Stop()
 
 		relayProc, err := os.FindProcess(os.Getpid())
 		if err != nil {
@@ -253,13 +191,6 @@ func LoadConfig() (*Config, error) {
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		return nil, err
-	}
-
-	var direction = config.Relay.Direction
-	if direction != Bidirectional &&
-		direction != EthToSub &&
-		direction != SubToEth {
-		return nil, fmt.Errorf("'direction' has invalid value %d", direction)
 	}
 
 	// Load secrets from environment variables

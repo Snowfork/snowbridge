@@ -1,7 +1,4 @@
-// Copyright 2020 Snowfork
-// SPDX-License-Identifier: LGPL-3.0-only
-
-package ethereum
+package parachaincommitmentrelayer
 
 import (
 	"context"
@@ -15,22 +12,23 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
-type Writer struct {
-	config    *Config
-	conn      *Connection
+type EthereumChannelWriter struct {
+	config    *ethereum.Config
+	conn      *ethereum.Connection
 	contracts map[substrate.ChannelID]*inbound.Contract
 	messages  <-chan []chain.Message
 	log       *logrus.Entry
 }
 
-func NewWriter(config *Config, conn *Connection, messages <-chan []chain.Message,
+func NewEthereumChannelWriter(config *ethereum.Config, conn *ethereum.Connection, messages <-chan []chain.Message,
 	contracts map[substrate.ChannelID]*inbound.Contract,
-	log *logrus.Entry) (*Writer, error) {
-	return &Writer{
+	log *logrus.Entry) (*EthereumChannelWriter, error) {
+	return &EthereumChannelWriter{
 		config:    config,
 		conn:      conn,
 		contracts: contracts,
@@ -39,17 +37,17 @@ func NewWriter(config *Config, conn *Connection, messages <-chan []chain.Message
 	}, nil
 }
 
-func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
+func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	id := substrate.ChannelID{IsBasic: true}
-	contract, err := inbound.NewContract(common.HexToAddress(wr.config.Channels.Basic.Inbound), wr.conn.client)
+	contract, err := inbound.NewContract(common.HexToAddress(wr.config.Channels.Basic.Inbound), wr.conn.GetClient())
 	if err != nil {
 		return err
 	}
 	wr.contracts[id] = contract
 
 	id = substrate.ChannelID{IsIncentivized: true}
-	contract, err = inbound.NewContract(common.HexToAddress(wr.config.Channels.Incentivized.Inbound), wr.conn.client)
+	contract, err = inbound.NewContract(common.HexToAddress(wr.config.Channels.Incentivized.Inbound), wr.conn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -62,7 +60,7 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (wr *Writer) onDone(ctx context.Context) error {
+func (wr *EthereumChannelWriter) onDone(ctx context.Context) error {
 	wr.log.Info("Shutting down writer...")
 	// Avoid deadlock if a listener is still trying to send to a channel
 	for range wr.messages {
@@ -71,7 +69,7 @@ func (wr *Writer) onDone(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (wr *Writer) writeMessagesLoop(ctx context.Context) error {
+func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -92,8 +90,8 @@ func (wr *Writer) writeMessagesLoop(ctx context.Context) error {
 	}
 }
 
-func (wr *Writer) signerFn(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
-	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, wr.conn.kp.PrivateKey())
+func (wr *EthereumChannelWriter) signerFn(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
+	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, wr.conn.GetKP().PrivateKey())
 	if err != nil {
 		return nil, err
 	}
@@ -101,14 +99,14 @@ func (wr *Writer) signerFn(_ common.Address, tx *types.Transaction) (*types.Tran
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *Writer) WriteChannel(ctx context.Context, msg *chain.SubstrateOutboundMessage) error {
+func (wr *EthereumChannelWriter) WriteChannel(ctx context.Context, msg *chain.SubstrateOutboundMessage) error {
 	contract := wr.contracts[msg.ChannelID]
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")
 	}
 
 	options := bind.TransactOpts{
-		From:     wr.conn.kp.CommonAddress(),
+		From:     wr.conn.GetKP().CommonAddress(),
 		Signer:   wr.signerFn,
 		Context:  ctx,
 		GasLimit: 500000,

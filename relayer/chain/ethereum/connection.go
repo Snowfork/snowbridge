@@ -57,3 +57,7 @@ func (co *Connection) Close() {
 func (co *Connection) GetClient() *ethclient.Client {
 	return co.client
 }
+
+func (co *Connection) GetKP() *secp256k1.Keypair {
+	return co.kp
+}
