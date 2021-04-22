@@ -38,7 +38,7 @@ yarn install
 Install `polkadot-launch`:
 
 ```bash
-git clone https://github.com/paritytech/polkadot-launch.git /tmp/polkadot-launch
+git clone -n https://github.com/paritytech/polkadot-launch.git /tmp/polkadot-launch
 cd /tmp/polkadot-launch
 git checkout 89e970
 yarn install
