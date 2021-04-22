@@ -18,14 +18,9 @@ describe('Bridge', function () {
     );
   });
 
-  afterEach(async function () {
-    // Wait for new substrate block between tests, as queries sometimes go to old blocks
-    await subClient.waitForNextBlock();
-  });
-
   describe('ERC20 App', function () {
     it('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
-      let amount = BigNumber('1000');
+      const amount = BigNumber('1000');
       const ethAccount = ethClient.accounts[1];
       const subBalances = await subClient.subscribeAssetBalances(
         polkadotRecipientSS58, this.erc20AssetId, 2
@@ -48,6 +43,9 @@ describe('Bridge', function () {
     });
 
     it('should transfer ERC20 from Substrate to Ethereum', async function () {
+      // Wait for new substrate block before tests, as queries may go to old block
+      await subClient.waitForNextBlock();
+
       const amount = BigNumber('1000');
       const ethAccount = ethClient.accounts[1];
 
