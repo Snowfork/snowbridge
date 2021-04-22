@@ -140,7 +140,7 @@ func (w *Worker) disconnect() {
 		w.ethconn = nil
 	}
 
-	if w.ethconn != nil {
+	if w.paraconn != nil {
 		w.paraconn.Close()
 		w.paraconn = nil
 	}
