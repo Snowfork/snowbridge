@@ -27,6 +27,7 @@ func runCmd() *cobra.Command {
 		"Relay messages bi-directionally (0), from Eth to Sub (1), or from Sub to Eth (2)",
 	)
 	cmd.PersistentFlags().Bool("headers-only", false, "Only forward headers")
+	cmd.PersistentFlags().Bool("v2", false, "Use the new relayer")
 	return cmd
 }
 
@@ -37,8 +38,21 @@ func RunFn(cmd *cobra.Command, _ []string) error {
 	viper.BindPFlag("relay.direction", cmd.Flags().Lookup("direction"))
 	viper.BindPFlag("relay.headers-only", cmd.Flags().Lookup("headers-only"))
 
-	relay := &core.RelayV2{}
-	return relay.Run()
+	useV2 := cmd.Flags().Lookup("v2").Value.String() == "true"
+	if useV2 {
+		relay := &core.RelayV2{}
+		return relay.Run()
+	}
+
+	relay, err := core.NewRelay()
+	if err != nil {
+		logrus.WithField("error", err).Error("Failed to initialize relayer")
+		return err
+	}
+
+	relay.Start()
+
+	return nil
 }
 
 func setupLogging() {
