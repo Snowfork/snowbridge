@@ -34,5 +34,5 @@ func Dev() error {
 		"ARTEMIS_PARACHAIN_KEY":  "//Relay",
 		"ARTEMIS_RELAYCHAIN_KEY": "//Alice",
 	}
-	return sh.RunWithV(env, cmd, "run", "./main.go", "run", "--config", "$configdir/config.toml")
+	return sh.RunWithV(env, cmd, "run", "./main.go", "run", "--config", "/tmp/snowbridge-e2e-config/config.toml")
 }
