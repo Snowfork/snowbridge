@@ -13,22 +13,14 @@ import (
 )
 
 type Worker interface {
-	Name() string
-
 	Start(ctx context.Context, eg *errgroup.Group) error
 }
 
-type WorkerPool struct {
-	workers []Worker
-}
+type WorkerFactory func() (Worker, error)
 
-func NewWorkerPool(workers []Worker) *WorkerPool {
-	return &WorkerPool{
-		workers,
-	}
-}
+type WorkerPool []WorkerFactory
 
-func (wp *WorkerPool) runWorker(ctx context.Context, worker Worker) error {
+func (wp WorkerPool) runWorker(ctx context.Context, worker Worker) error {
 	childEg, childCtx := errgroup.WithContext(ctx)
 	err := worker.Start(childCtx, childEg)
 	if err != nil {
@@ -38,7 +30,7 @@ func (wp *WorkerPool) runWorker(ctx context.Context, worker Worker) error {
 	return childEg.Wait()
 }
 
-func (wp *WorkerPool) Run() error {
+func (wp WorkerPool) Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -59,15 +51,28 @@ func (wp *WorkerPool) Run() error {
 		return nil
 	})
 
-	for _, w := range wp.workers {
-		worker := w
+	// TODO: add deadlock detection and warn devs
+
+	for _, f := range wp {
+		factory := f
+
 		eg.Go(func() error {
 			for {
-				// TODO: log starting worker
-				err := wp.runWorker(ctx, worker)
-				// TODO: log ending worker
+				worker, err := factory()
 				if err != nil {
-					// TODO: retry with backoff up to X retries
+					// It is unrecoverable if we cannot construct one of our workers
+					return err
+				}
+
+				// TODO: log starting worker
+				err = wp.runWorker(ctx, worker)
+				// TODO: log ending worker
+
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+					// TODO: instead retry with backoff up to X retries
 					return err
 				}
 			}

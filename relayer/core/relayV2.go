@@ -18,17 +18,18 @@ func (re *RelayV2) Run() error {
 		return err
 	}
 
-	ethrelayer := ethrelayer.NewWorker(
-		&config.Eth,
-		&config.Parachain,
-		logrus.WithField("worker", ethrelayer.Name),
-	)
+	ethrelayerFactory := func() (workers.Worker, error) {
+		return ethrelayer.NewWorker(
+			&config.Eth,
+			&config.Parachain,
+			logrus.WithField("worker", ethrelayer.Name),
+		), nil
+	}
 
-	relayWorkers := make([]workers.Worker, 0)
-	// TODO: add all workers here
-	relayWorkers = append(relayWorkers, ethrelayer)
-
-	pool := workers.NewWorkerPool(relayWorkers)
+	// TODO: add all workers
+	pool := workers.WorkerPool{
+		ethrelayerFactory,
+	}
 
 	return pool.Run()
 }
