@@ -7,6 +7,8 @@ configdir=$(mktemp -d -t artemis-config-XXX)
 start_ganache()
 {
     echo "Starting Ganache"
+    pushd ../ethereum
+    yarn install
     yarn run ganache-cli \
         --port=8545 \
         --blockTime=4 \
@@ -14,6 +16,7 @@ start_ganache()
         --deterministic \
         --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
         >ganache.log 2>&1 &
+    popd
 
     scripts/wait-for-it.sh -t 32 localhost:8545
     sleep 5
@@ -44,21 +47,25 @@ start_parachain()
 
     echo "Generating Parachain spec"
     target/release/artemis build-spec --disable-default-bootnode > $configdir/spec.json
+    popd
 
+    yarn install
     echo "Inserting Ganache chain info into genesis spec"
     ethereum_initial_header=$(curl http://localhost:8545 \
         -X POST \
         -H "Content-Type: application/json" \
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
-        | node ../test/scripts/helpers/transformEthHeader.js)
-    node ../test/scripts/helpers/overrideParachainSpec.js $configdir/spec.json \
+        | node scripts/helpers/transformEthHeader.js)
+
+
+    node scripts/helpers/overrideParachainSpec.js $configdir/spec.json \
         genesis.runtime.verifierLightclient.initialDifficulty 0x0 \
         genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header" \
         genesis.runtime.parachainInfo.parachainId 200 \
         para_id 200
 
     echo "Writing Polkadot configuration"
-    cp config.json $configdir/polkadotConfig.json
+    cp ../parachain/config.json $configdir/polkadotConfig.json
     parachain_conf="{
         \"bin\": \"$bin\",
         \"id\": \"200\",
@@ -75,12 +82,10 @@ start_parachain()
         ],
         \"chain\": \"$configdir/spec.json\"
     }"
-    node ../test/scripts/helpers/overrideParachainSpec.js $configdir/polkadotConfig.json \
+    node scripts/helpers/overrideParachainSpec.js $configdir/polkadotConfig.json \
         parachains.0 "$parachain_conf"
 
     polkadot-launch $configdir/polkadotConfig.json &
-
-    popd
 
     scripts/wait-for-it.sh -t 32 localhost:11144
     echo "Waiting for consensus between polkadot and parachain"
