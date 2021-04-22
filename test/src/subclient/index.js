@@ -35,16 +35,43 @@ class SubClient {
     return BigNumber(balance.toBigInt())
   }
 
+  async queryNextEventData({ eventSection, eventMethod, eventDataType }) {
+    let unsubscribe;
+    let foundData = new Promise(async (resolve, reject) => {
+      unsubscribe = await this.api.query.system.events((events) => {
+        events.forEach((record) => {
+          const { event, phase } = record;
+          const types = event.typeDef;
+          if (event.section === eventSection && event.method === eventMethod) {
+            if (eventDataType === undefined) {
+              resolve(event.data);
+            } else {
+              event.data.forEach((data, index) => {
+                if (types[index].type === eventDataType) {
+                  resolve(data);
+                }
+              });
+            }
+          }
+        });
+      });
+    });
+    return foundData.then(data => {
+      unsubscribe();
+      return data;
+    })
+  }
+
   async burnETH(account, recipient, amount, channel) {
-    const txHash = await this.api.tx.eth.burn(channel, recipient, amount).signAndSend(account);
+    return await this.api.tx.eth.burn(channel, recipient, amount).signAndSend(account);
   }
 
   async burnERC20(account, assetId, recipient, amount, channel) {
-    const txHash = await this.api.tx.erc20.burn(channel, assetId, recipient, amount).signAndSend(account);
+    return await this.api.tx.erc20.burn(channel, assetId, recipient, amount).signAndSend(account);
   }
 
   async lockDOT(account, recipient, amount, channel) {
-    const txHash = await this.api.tx.dot.lock(channel, recipient, amount).signAndSend(account);
+    return await this.api.tx.dot.lock(channel, recipient, amount).signAndSend(account);
   }
 
 }
