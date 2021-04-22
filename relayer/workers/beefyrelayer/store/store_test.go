@@ -16,7 +16,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
 func TestStore(t *testing.T) {
@@ -84,6 +84,15 @@ func TestStore(t *testing.T) {
 	newItem := database.GetItemByInitialVerificationTxHash(hash)
 	assert.Equal(t, newItem.Status, store.InitialVerificationTxSent)
 	assert.Equal(t, newItem.InitialVerificationTxHash, hash)
+
+	// Pass delete command to write loop
+	deleteCmd := store.NewDatabaseCmd(&item, store.Delete, nil)
+	messages <- deleteCmd
+
+	time.Sleep(2 * time.Second)
+
+	deletedItem := database.GetItemByInitialVerificationTxHash(hash)
+	assert.Equal(t, deletedItem, &store.BeefyRelayInfo{})
 }
 
 func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
