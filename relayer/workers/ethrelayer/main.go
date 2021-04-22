@@ -1,12 +1,15 @@
+// Copyright 2021 Snowfork
+// SPDX-License-Identifier: LGPL-3.0-only
+
 package ethrelayer
 
 import (
 	"context"
-	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
@@ -15,30 +18,39 @@ import (
 )
 
 type Worker struct {
-	parachainConfig  *parachain.Config
-	ethereumConfig   *ethereum.Config
-	parachainConn    *parachain.Connection
-	ethereumConn     *ethereum.Connection
-	ethereumListener *EthereumListener
-	parachainWriter  *ParachainWriter
-	log              *logrus.Entry
+	ethconfig  *ethereum.Config
+	ethconn    *ethereum.Connection
+	paraconfig *parachain.Config
+	paraconn   *parachain.Connection
+	log        *logrus.Entry
 }
 
 const Name = "eth-relayer"
 
-func NewWorker(ethereumConfig *ethereum.Config, parachainConfig *parachain.Config) (*Worker, error) {
-	log := logrus.WithField("worker", Name)
-
-	log.Info("Creating worker")
-
-	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, nil, log)
-
-	// Generate keypair from secret
-	parachainKeypair, err := sr25519.NewKeypairFromSeed(parachainConfig.PrivateKey, "")
-	if err != nil {
-		return nil, err
+func NewWorker(ethconfig *ethereum.Config, paraconfig *parachain.Config, log *logrus.Entry) *Worker {
+	return &Worker{
+		ethconfig:  ethconfig,
+		paraconfig: paraconfig,
+		log:        log,
 	}
-	parachainConn := parachain.NewConnection(parachainConfig.Endpoint, parachainKeypair.AsKeyringPair(), log)
+}
+
+func (w *Worker) Name() string {
+	return Name
+}
+
+func (w *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
+	err := w.connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Clean up after ourselves
+	eg.Go(func() error {
+		<-ctx.Done()
+		w.disconnect()
+		return nil
+	})
 
 	// channel for messages from ethereum
 	ethMessages := make(chan []chain.Message, 1)
@@ -46,115 +58,84 @@ func NewWorker(ethereumConfig *ethereum.Config, parachainConfig *parachain.Confi
 	// can guarantee that a header is forwarded before we send dependent messages)
 	ethHeaders := make(chan chain.Header)
 
-	ethereumListener, err := NewEthereumListener(ethereumConfig, ethereumConn, ethMessages, ethHeaders, log)
+	listener := NewEthereumListener(
+		w.ethconfig,
+		w.ethconn,
+		ethMessages,
+		ethHeaders,
+		w.log,
+	)
+	writer := NewParachainWriter(
+		w.paraconn,
+		ethMessages,
+		ethHeaders,
+		w.log,
+	)
+
+	finalizedBlockNumber, err := w.queryFinalizedBlockNumber()
 	if err != nil {
-		return nil, err
+		return err
 	}
+	w.log.WithField("blockNumber", finalizedBlockNumber).Debug("Retrieved finalized block number from parachain")
 
-	parachainWriter, err := NewParachainWriter(parachainConn, ethMessages, ethHeaders, log)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Worker{
-		ethereumConfig:   ethereumConfig,
-		ethereumConn:     ethereumConn,
-		parachainConfig:  parachainConfig,
-		parachainConn:    parachainConn,
-		ethereumListener: ethereumListener,
-		parachainWriter:  parachainWriter,
-		log:              log,
-	}, nil
-
-}
-
-func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
-	worker.log.Info("Starting worker")
-
-	if worker.ethereumListener == nil || worker.parachainWriter == nil {
-		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
-	}
-
-	err := worker.ethereumConn.Connect(ctx)
+	err = listener.Start(ctx, eg, finalizedBlockNumber+1, uint64(w.ethconfig.DescendantsUntilFinal))
 	if err != nil {
 		return err
 	}
 
-	// Short-lived channels that communicate initialization parameters
-	// between the two chains. The chains close them after startup.
-	ethInit := make(chan chain.Init)
-
-	eg.Go(func() error {
-		ethInitHeaderID := (<-ethInit).(*ethereum.HeaderID)
-		worker.log.WithFields(logrus.Fields{
-			"blockNumber": ethInitHeaderID.Number,
-			"blockHash":   ethInitHeaderID.Hash.Hex(),
-		}).Debug("Received init params for Ethereum from Substrate")
-
-		if worker.ethereumListener != nil {
-			err = worker.ethereumListener.Start(ctx, eg, uint64(ethInitHeaderID.Number),
-				uint64(worker.ethereumConfig.DescendantsUntilFinal))
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	err = worker.parachainConn.Connect(ctx)
+	err = writer.Start(ctx, eg)
 	if err != nil {
 		return err
-	}
-
-	// The Ethereum chain needs init params from Substrate
-	// to complete startup.
-	ethInitHeaderID, err := worker.queryEthereumInitParams()
-	if err != nil {
-		return err
-	}
-	worker.log.WithFields(logrus.Fields{
-		"blockNumber": ethInitHeaderID.Number,
-		"blockHash":   ethInitHeaderID.Hash.Hex(),
-	}).Info("Retrieved init params for Ethereum from Substrate")
-	ethInit <- ethInitHeaderID
-	close(ethInit)
-
-	if worker.parachainWriter != nil {
-		err = worker.parachainWriter.Start(ctx, eg)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
 }
 
-func (worker *Worker) Stop() {
-	if worker.parachainConn != nil {
-		worker.parachainConn.Close()
+func (w *Worker) queryFinalizedBlockNumber() (uint64, error) {
+	storageKey, err := types.CreateStorageKey(w.paraconn.Metadata(), "VerifierLightclient", "FinalizedBlock", nil, nil)
+	if err != nil {
+		return 0, err
 	}
-	if worker.ethereumConn != nil {
-		worker.ethereumConn.Close()
+
+	var finalizedHeader ethereum.HeaderID
+	_, err = w.paraconn.Api().RPC.State.GetStorageLatest(storageKey, &finalizedHeader)
+	if err != nil {
+		return 0, err
 	}
+
+	return uint64(finalizedHeader.Number), nil
 }
 
-func (ch *Worker) Name() string {
-	return Name
+func (w *Worker) connect(ctx context.Context) error {
+	kpForPara, err := sr25519.NewKeypairFromSeed(w.paraconfig.PrivateKey, "")
+	if err != nil {
+		return err
+	}
+
+	w.ethconn = ethereum.NewConnection(w.ethconfig.Endpoint, nil, w.log)
+	w.paraconn = parachain.NewConnection(w.paraconfig.Endpoint, kpForPara.AsKeyringPair(), w.log)
+
+	err = w.ethconn.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = w.paraconn.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (worker *Worker) queryEthereumInitParams() (*ethereum.HeaderID, error) {
-	storageKey, err := types.CreateStorageKey(worker.parachainConn.GetMetadata(), "VerifierLightclient", "FinalizedBlock", nil, nil)
-	if err != nil {
-		return nil, err
+func (w *Worker) disconnect() {
+	if w.ethconn != nil {
+		w.ethconn.Close()
+		w.ethconn = nil
 	}
 
-	var headerID ethereum.HeaderID
-	_, err = worker.parachainConn.GetAPI().RPC.State.GetStorageLatest(storageKey, &headerID)
-	if err != nil {
-		return nil, err
+	if w.paraconn != nil {
+		w.paraconn.Close()
+		w.paraconn = nil
 	}
-
-	nextHeaderID := ethereum.HeaderID{Number: types.NewU64(uint64(headerID.Number) + 1)}
-	return &nextHeaderID, nil
 }

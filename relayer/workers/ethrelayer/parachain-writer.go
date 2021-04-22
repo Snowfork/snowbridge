@@ -24,14 +24,18 @@ type ParachainWriter struct {
 	genesisHash types.Hash
 }
 
-func NewParachainWriter(conn *parachain.Connection,
-	messages <-chan []chain.Message, headers <-chan chain.Header, log *logrus.Entry) (*ParachainWriter, error) {
+func NewParachainWriter(
+	conn *parachain.Connection,
+	messages <-chan []chain.Message,
+	headers <-chan chain.Header,
+	log *logrus.Entry,
+) *ParachainWriter {
 	return &ParachainWriter{
 		conn:     conn,
 		messages: messages,
 		headers:  headers,
 		log:      log,
-	}, nil
+	}
 }
 
 func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error {

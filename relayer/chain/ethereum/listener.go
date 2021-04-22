@@ -28,16 +28,19 @@ type Listener struct {
 	basicOutboundChannel        *outbound.BasicOutboundChannel
 	incentivizedOutboundChannel *outbound.IncentivizedOutboundChannel
 	mapping                     map[common.Address]string
-	address                     common.Address
 	messages                    chan<- []chain.Message
 	headers                     chan<- chain.Header
 	blockWaitPeriod             uint64
 	log                         *logrus.Entry
 }
 
-func NewListener(config *Config, conn *Connection, messages chan<- []chain.Message,
+func NewListener(
+	config *Config,
+	conn *Connection,
+	messages chan<- []chain.Message,
 	headers chan<- chain.Header,
-	log *logrus.Entry) (*Listener, error) {
+	log *logrus.Entry,
+) (*Listener, error) {
 	return &Listener{
 		config:                      config,
 		conn:                        conn,
@@ -51,7 +54,7 @@ func NewListener(config *Config, conn *Connection, messages chan<- []chain.Messa
 	}, nil
 }
 
-func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
+func (li *Listener) Start(ctx context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
 	hcs, err := NewHeaderCacheState(
 		eg,
 		initBlockHeight,
@@ -78,7 +81,7 @@ func (li *Listener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeig
 	li.mapping[common.HexToAddress(li.config.Channels.Incentivized.Outbound)] = "IncentivizedInboundChannel.submit"
 
 	eg.Go(func() error {
-		err := li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
+		err := li.pollEventsAndHeaders(ctx, initBlockHeight, descendantsUntilFinal, hcs)
 		if li.messages != nil {
 			close(li.messages)
 		}
