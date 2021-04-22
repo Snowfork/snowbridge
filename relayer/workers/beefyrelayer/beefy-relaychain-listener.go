@@ -43,9 +43,9 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 
 func (li *BeefyRelaychainListener) onDone(ctx context.Context) error {
 	li.log.Info("Shutting down listener...")
-	// if li.databaseMessages != nil {
-	// 	close(li.databaseMessages)
-	// }
+	if li.databaseMessages != nil {
+		close(li.databaseMessages)
+	}
 	return ctx.Err()
 }
 
