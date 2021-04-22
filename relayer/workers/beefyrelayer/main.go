@@ -73,7 +73,7 @@ func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Con
 	beefyRelaychainListener := NewBeefyRelaychainListener(
 		relaychainConfig,
 		relaychainConn,
-		beefyMessages,
+		dbMessages,
 		log,
 	)
 

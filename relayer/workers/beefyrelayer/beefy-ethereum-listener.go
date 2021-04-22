@@ -87,6 +87,12 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 			return ctx.Err()
 		case gethheader := <-headers:
 
+			// Forward witnessed BEEFT commitments to the Ethereum writer
+			witnessedItems := li.beefyDB.GetItemsByStatus(store.CommitmentWitnessed)
+			for _, item := range witnessedItems {
+				li.beefyMessages <- *item
+			}
+
 			// Query LightClientBridge contract's InitialVerificationSuccessful events
 			blockNumber := gethheader.Number.Uint64()
 			var lightClientBridgeEvents []*lightclientbridge.ContractInitialVerificationSuccessful
@@ -104,11 +110,11 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 			li.processLightClientEvents(ctx, lightClientBridgeEvents)
 
 			// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
-			items := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
-			if len(items) > 0 {
-				li.log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(items)))
+			initialVerificationItems := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
+			if len(initialVerificationItems) > 0 {
+				li.log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(initialVerificationItems)))
 			}
-			for _, item := range items {
+			for _, item := range initialVerificationItems {
 				if item.CompleteOnBlock+descendantsUntilFinal <= blockNumber {
 					// Fetch intended completion block's hash
 					block, err := li.ethereumConn.GetClient().BlockByNumber(ctx, big.NewInt(int64(item.CompleteOnBlock)))
@@ -116,7 +122,7 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 						li.log.WithError(err).Error("Failure fetching inclusion block")
 					}
 
-					li.log.Info("3: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
+					li.log.Info("4: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
 					item.Status = store.ReadyToComplete
 					item.RandomSeed = block.Hash()
 					li.beefyMessages <- *item
@@ -172,7 +178,7 @@ func (li *BeefyEthereumListener) processLightClientEvents(ctx context.Context, e
 			continue
 		}
 
-		li.log.Info("2: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
+		li.log.Info("3: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
 		instructions := map[string]interface{}{
 			"status":            store.InitialVerificationTxConfirmed,
 			"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,

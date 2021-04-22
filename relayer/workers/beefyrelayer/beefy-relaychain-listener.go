@@ -17,17 +17,17 @@ import (
 type BeefyRelaychainListener struct {
 	relaychainConfig *relaychain.Config
 	relaychainConn   *relaychain.Connection
-	beefyMessages    chan<- store.BeefyRelayInfo
+	databaseMessages chan<- store.DatabaseCmd
 	log              *logrus.Entry
 }
 
 func NewBeefyRelaychainListener(relaychainConfig *relaychain.Config,
-	relaychainConn *relaychain.Connection, beefyMessages chan<- store.BeefyRelayInfo,
+	relaychainConn *relaychain.Connection, databaseMessages chan<- store.DatabaseCmd,
 	log *logrus.Entry) *BeefyRelaychainListener {
 	return &BeefyRelaychainListener{
 		relaychainConfig: relaychainConfig,
 		relaychainConn:   relaychainConn,
-		beefyMessages:    beefyMessages,
+		databaseMessages: databaseMessages,
 		log:              log,
 	}
 }
@@ -43,9 +43,9 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 
 func (li *BeefyRelaychainListener) onDone(ctx context.Context) error {
 	li.log.Info("Shutting down listener...")
-	if li.beefyMessages != nil {
-		close(li.beefyMessages)
-	}
+	// if li.databaseMessages != nil {
+	// 	close(li.databaseMessages)
+	// }
 	return ctx.Err()
 }
 
@@ -104,7 +104,10 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				SignedCommitment:   signedCommitmentBytes,
 				Status:             store.CommitmentWitnessed,
 			}
-			li.beefyMessages <- info
+
+			li.log.Info("1: Creating item in Database with status 'CommitmentWitnessed'")
+			cmd := store.NewDatabaseCmd(&info, store.Create, nil)
+			li.databaseMessages <- cmd
 		}
 	}
 }
