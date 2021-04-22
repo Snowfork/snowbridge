@@ -17,11 +17,6 @@ describe('Bridge', function () {
     this.ethAssetId = subClient.api.createType('AssetId', 'ETH');
   });
 
-  afterEach(async function () {
-    // Wait for new substrate block between tests, as queries sometimes go to old blocks
-    await subClient.waitForNextBlock();
-  });
-
   describe('ETH App', function () {
     it('should transfer ETH from Ethereum to Substrate', async function () {
       const amount = BigNumber(Web3.utils.toWei('0.01', "ether"));
@@ -46,6 +41,9 @@ describe('Bridge', function () {
     });
 
     it('should transfer ETH from Substrate to Ethereum', async function () {
+      // Wait for new substrate block before tests, as queries may go to old block
+      await subClient.waitForNextBlock();
+
       const amount = BigNumber(Web3.utils.toWei('0.01', "ether"));
       const ethAccount = ethClient.accounts[1];
 
