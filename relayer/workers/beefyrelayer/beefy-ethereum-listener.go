@@ -31,6 +31,7 @@ type BeefyEthereumListener struct {
 	headers           chan<- chain.Header
 	blockWaitPeriod   uint64
 	log               *logrus.Entry
+	mode              RelayMode
 }
 
 func NewBeefyEthereumListener(ethereumConfig *ethereum.Config, ethereumConn *ethereum.Connection, beefyDB *store.Database,
@@ -69,6 +70,10 @@ func (li *BeefyEthereumListener) Start(cxt context.Context, eg *errgroup.Group, 
 		return err
 	})
 
+	// TODO: If start block is defined in config, then fetch latest block and if(startBlock < latestBlock),
+	//		 then start the relayer in Sync mode. Otherwise start in live mode
+	li.mode = Sync
+
 	return nil
 }
 
@@ -87,12 +92,6 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 			return ctx.Err()
 		case gethheader := <-headers:
 
-			// Forward witnessed BEEFT commitments to the Ethereum writer
-			witnessedItems := li.beefyDB.GetItemsByStatus(store.CommitmentWitnessed)
-			for _, item := range witnessedItems {
-				li.beefyMessages <- *item
-			}
-
 			// Query LightClientBridge contract's InitialVerificationSuccessful events
 			blockNumber := gethheader.Number.Uint64()
 			var lightClientBridgeEvents []*lightclientbridge.ContractInitialVerificationSuccessful
@@ -109,23 +108,32 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 			}
 			li.processInitialVerificationSuccessfulEvents(ctx, lightClientBridgeEvents)
 
-			// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
-			initialVerificationItems := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
-			if len(initialVerificationItems) > 0 {
-				li.log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(initialVerificationItems)))
-			}
-			for _, item := range initialVerificationItems {
-				if item.CompleteOnBlock+descendantsUntilFinal <= blockNumber {
-					// Fetch intended completion block's hash
-					block, err := li.ethereumConn.GetClient().BlockByNumber(ctx, big.NewInt(int64(item.CompleteOnBlock)))
-					if err != nil {
-						li.log.WithError(err).Error("Failure fetching inclusion block")
-					}
-
-					li.log.Info("4: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
-					item.Status = store.ReadyToComplete
-					item.RandomSeed = block.Hash()
+			// TODO: Might make sense to isolate 'live' functionality into its own method
+			if li.mode == Live {
+				// Forward witnessed BEEFT commitments to the Ethereum writer
+				witnessedItems := li.beefyDB.GetItemsByStatus(store.CommitmentWitnessed)
+				for _, item := range witnessedItems {
 					li.beefyMessages <- *item
+				}
+
+				// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
+				initialVerificationItems := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
+				if len(initialVerificationItems) > 0 {
+					li.log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(initialVerificationItems)))
+				}
+				for _, item := range initialVerificationItems {
+					if item.CompleteOnBlock+descendantsUntilFinal <= blockNumber {
+						// Fetch intended completion block's hash
+						block, err := li.ethereumConn.GetClient().BlockByNumber(ctx, big.NewInt(int64(item.CompleteOnBlock)))
+						if err != nil {
+							li.log.WithError(err).Error("Failure fetching inclusion block")
+						}
+
+						li.log.Info("4: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
+						item.Status = store.ReadyToComplete
+						item.RandomSeed = block.Hash()
+						li.beefyMessages <- *item
+					}
 				}
 			}
 		}
@@ -160,31 +168,77 @@ func (li *BeefyEthereumListener) queryInitialVerificationSuccessfulEvents(ctx co
 }
 
 // processInitialVerificationSuccessfulEvents matches events to BEEFY commitment info by transaction hash
-func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx context.Context, events []*lightclientbridge.ContractInitialVerificationSuccessful) {
+func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx context.Context,
+	events []*lightclientbridge.ContractInitialVerificationSuccessful) {
 	for _, event := range events {
-		// Only process events emitted by transactions sent from our node
-		if event.Prover != li.ethereumConn.GetKP().CommonAddress() {
-			continue
-		}
+		switch li.mode {
+		case Sync:
+			// Fetch validation data from contract using event.ID
+			validationData, err := li.lightClientBridge.ContractCaller.ValidationData(nil, event.Id)
+			if err != nil {
+				li.log.WithError(err).Error(fmt.Sprintf("Error querying validation data for ID %d", event.Id))
+			}
 
-		li.log.WithFields(logrus.Fields{
-			"blockHash":   event.Raw.BlockHash.Hex(),
-			"blockNumber": event.Raw.BlockNumber,
-			"txHash":      event.Raw.TxHash.Hex(),
-		}).Info("event information")
+			// Attempt to match items in database based on their payload
+			items := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxSent)
 
-		item := li.beefyDB.GetItemByInitialVerificationTxHash(event.Raw.TxHash)
-		if item.Status != store.InitialVerificationTxSent {
-			continue
-		}
+			itemFoundInDatabase := false
+			for _, item := range items {
+				// Simulate msg building and payload generation
+				beefyJustification, err := item.ToBeefyJustification()
+				if err != nil {
+					li.log.WithError(fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error()))
+				}
 
-		li.log.Info("3: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
-		instructions := map[string]interface{}{
-			"status":            store.InitialVerificationTxConfirmed,
-			"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
+				msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(0)
+				if err != nil {
+					li.log.WithError(err).Error("Error building commitment message")
+				}
+
+				if msg.Payload == validationData.Payload {
+					// Update existing database item
+					li.log.Info("3: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
+					instructions := map[string]interface{}{
+						"status":            store.InitialVerificationTxConfirmed,
+						"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
+					}
+					updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
+					li.dbMessages <- updateCmd
+
+					itemFoundInDatabase = true
+					break
+				}
+			}
+			if !itemFoundInDatabase {
+				// TODO: We should create the item in the database, as we don't have an existing item to update.
+				//		 However, we won't be able to complete it because we don't have the ValidatorAddresses or
+				//		 SignedCommitment required for building the completion tx...
+			}
+		case Live:
+			// Only process events emitted by transactions sent from our node
+			if event.Prover != li.ethereumConn.GetKP().CommonAddress() {
+				continue
+			}
+
+			li.log.WithFields(logrus.Fields{
+				"blockHash":   event.Raw.BlockHash.Hex(),
+				"blockNumber": event.Raw.BlockNumber,
+				"txHash":      event.Raw.TxHash.Hex(),
+			}).Info("event information")
+
+			item := li.beefyDB.GetItemByInitialVerificationTxHash(event.Raw.TxHash)
+			if item.Status != store.InitialVerificationTxSent {
+				continue
+			}
+
+			li.log.Info("3: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
+			instructions := map[string]interface{}{
+				"status":            store.InitialVerificationTxConfirmed,
+				"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
+			}
+			updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
+			li.dbMessages <- updateCmd
 		}
-		updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
-		li.dbMessages <- updateCmd
 	}
 }
 
@@ -217,6 +271,10 @@ func (li *BeefyEthereumListener) queryFinalVerificationSuccessfulEvents(ctx cont
 
 // processFinalVerificationSuccessfulEvents removes finalized commitments from the relayer's BEEFY justification database
 func (li *BeefyEthereumListener) processFinalVerificationSuccessfulEvents(ctx context.Context, events []*lightclientbridge.ContractFinalVerificationSuccessful) {
+	// TODO: Simulate initial verification msg building for Payload generation as in processInitialVerificationSuccessfulEvents
+	//		 Refactor this functionality to a new method called 'MatchGeneratedPayload'.
+	//		 If we're in mode.Sync then delete it from the database
+
 	for _, event := range events {
 		// Only process events emitted by transactions sent from our node
 		if event.Prover != li.ethereumConn.GetKP().CommonAddress() {
