@@ -11,7 +11,7 @@ const testNetworkID = '344';
 
 const TestTokenAddress = TestToken.networks[testNetworkID].address;
 
-const ETH_TO_PARA_WAIT_TIME = 40000;
+const ETH_TO_PARA_WAIT_TIME = 60000;
 const PARA_TO_ETH_WAIT_TIME = 100000;
 
 async function bootstrap() {

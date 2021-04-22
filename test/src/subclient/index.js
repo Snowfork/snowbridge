@@ -60,39 +60,10 @@ class SubClient {
     return BigNumber(balance.toBigInt())
   }
 
-  async subscribeAccountBalances(accountId, length) {
-    // Create an array of promises and resolvers for the balances
-    const balancePromiseItems = new Array(length).fill().map(i => {
-      let resolver;
-      const promise = new Promise(async (resolve, reject) => {
-        resolver = resolve;
-      });
-      return { promise, resolver };
-    });
-    const balancePromises = balancePromiseItems.map(i => i.promise);
-    const resolveBalance = balancePromiseItems.map(i => i.resolver);
-
-    // Setup our balance subscription and resolve each promise one by one
-    let count = 0;
-    const unsubscribe = await this.api.query.system.account(accountId, account => {
-      let {
-        data: {
-          free: balance
-        }
-      } = account;
-      resolveBalance[count](BigNumber(balance.toBigInt()));
-      count++;
-      if (count === length) {
-        unsubscribe();
-      }
-    });
-
-    return balancePromises;
-  }
-
-  async waitForNextEvent({ eventSection, eventMethod, eventDataType }) {
+  async queryNextEventData({ eventSection, eventMethod, eventDataType }) {
+    let unsubscribe;
     let foundData = new Promise(async (resolve, reject) => {
-      const unsubscribe = await this.api.query.system.events((events) => {
+      unsubscribe = await this.api.query.system.events((events) => {
         events.forEach((record) => {
           const { event, phase } = record;
           const types = event.typeDef;
@@ -102,7 +73,6 @@ class SubClient {
             } else {
               event.data.forEach((data, index) => {
                 if (types[index].type === eventDataType) {
-                  unsubscribe();
                   resolve(data);
                 }
               });
@@ -111,7 +81,10 @@ class SubClient {
         });
       });
     });
-    return foundData;
+    return foundData.then(data => {
+      unsubscribe();
+      return data;
+    })
   }
 
   async burnETH(account, recipient, amount, channel) {
@@ -124,20 +97,6 @@ class SubClient {
 
   async lockDOT(account, recipient, amount, channel) {
     return await this.api.tx.dot.lock(channel, recipient, amount).signAndSend(account);
-  }
-
-  async waitForNextBlock() {
-    const wait = new Promise(async (resolve, reject) => {
-      let count = 0;
-      const unsubscribe = await this.api.rpc.chain.subscribeNewHeads((header) => {
-        count++
-        if (count === 2) {
-          unsubscribe();
-          resolve();
-        }
-      });
-    });
-    return wait;
   }
 
 }

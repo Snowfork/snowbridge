@@ -30,9 +30,18 @@ describe('Bridge', function () {
       let beforeEthBalance = await ethClient.getDotBalance(account);
       let beforeSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
 
+      nextNonce = subClient.queryNextEventData({
+        eventSection: 'basicOutboundChannel',
+        eventMethod: 'MessageAccepted',
+        eventDataType: 'MessageNonce'
+      });
+
       // lock DOT using basic channel
-      await subClient.lockDOT(subClient.alice, account, amount.toFixed(), 0)
-      await sleep(PARA_TO_ETH_WAIT_TIME);
+      lockTx = await subClient.lockDOT(subClient.alice, account, amount.toFixed(), 0)
+      nonce = await nextNonce;
+      console.log({ nonce });
+      await ethClient.waitForNextEvent({ appName: 'snowDOT', eventName: 'Minted' });
+      await sleep(5000);
 
       let afterEthBalance = await ethClient.getDotBalance(account);
       let afterSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
@@ -41,7 +50,7 @@ describe('Bridge', function () {
       expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.greaterThan(amount);
     })
 
-    it('should transfer DOT from Ethereum to Substrate (basic channel)', async function () {
+    xit('should transfer DOT from Ethereum to Substrate (basic channel)', async function () {
 
       let amount = BigNumber('1000000000000'); // 1 DOT (12 decimal places in this environment)
       let amountWrapped = BigNumber(Web3.utils.toWei('1', "ether")); // 1 SnowDOT (18 decimal places)
@@ -61,7 +70,7 @@ describe('Bridge', function () {
       expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
     })
 
-    it('should transfer DOT from Ethereum to Substrate (incentivized channel)', async function () {
+    xit('should transfer DOT from Ethereum to Substrate (incentivized channel)', async function () {
 
       let amount = BigNumber('1000000000000'); // 1 DOT (12 decimal places in this environment)
       let amountWrapped = BigNumber(Web3.utils.toWei('1', "ether")); // 1 SnowDOT (18 decimal places)
