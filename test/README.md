@@ -47,6 +47,12 @@ git checkout enable_beefy_on_rococo
 cargo build --release
 ```
 
+Create your test env file to set the directory where you installed the polkadot binary.
+You can modify it if you installed polkadot elsewhere.
+```bash
+cp ./.env-example .env
+```
+
 Start all services (parachain, relayer, ganache, etc):
 
 ```bash
