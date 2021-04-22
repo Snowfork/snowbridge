@@ -14,7 +14,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
-	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
 )
 
@@ -108,17 +107,12 @@ func (w *Worker) queryFinalizedBlockNumber() (uint64, error) {
 }
 
 func (w *Worker) connect(ctx context.Context) error {
-	kpForEth, err := secp256k1.NewKeypairFromString(w.ethconfig.PrivateKey)
-	if err != nil {
-		return err
-	}
-
 	kpForPara, err := sr25519.NewKeypairFromSeed(w.paraconfig.PrivateKey, "")
 	if err != nil {
 		return err
 	}
 
-	w.ethconn = ethereum.NewConnection(w.ethconfig.Endpoint, kpForEth, w.log)
+	w.ethconn = ethereum.NewConnection(w.ethconfig.Endpoint, nil, w.log)
 	w.paraconn = parachain.NewConnection(w.paraconfig.Endpoint, kpForPara.AsKeyringPair(), w.log)
 
 	err = w.ethconn.Connect(ctx)
