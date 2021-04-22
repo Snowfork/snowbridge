@@ -19,50 +19,51 @@ describe('Bridge', function () {
     this.ethAssetId = subClient.api.createType('AssetId', 'ETH');
   });
 
+  afterEach(async function () {
+    // Wait for new substrate block between tests, as queries sometimes go to old blocks
+    await subClient.waitForNextBlock();
+  });
+
   describe('ETH App', function () {
     it('should transfer ETH from Ethereum to Substrate', async function () {
-      const sendAmount = BigNumber(Web3.utils.toWei('0.01', "ether"));
-      const fromAccount = ethClient.accounts[1];
+      const amount = BigNumber(Web3.utils.toWei('0.01', "ether"));
+      const ethAccount = ethClient.accounts[1];
 
-      await ethClient.lockETH(fromAccount, sendAmount, polkadotRecipient);
+      const subBalances = await subClient.subscribeAssetBalances(
+        polkadotRecipientSS58, this.ethAssetId, 2
+      );
 
-      nextSubEvent = await subClient.queryNextEventData({
-        eventSection: 'eth',
-        eventMethod: 'Minted'
-      });
+      const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
+      const beforeSubBalance = await subBalances[0];
 
-      const receivedFromAccount = nextSubEvent.toHuman()[0];
-      expect(receivedFromAccount).to.be.equal(fromAccount.toLowerCase());
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient);
 
-      const receivedRecipient = nextSubEvent.toHuman()[1];
-      expect(receivedRecipient).to.be.equal(polkadotRecipientSS58);
+      const afterEthBalance = await ethClient.getEthBalance(ethAccount);
+      const afterSubBalance = await subBalances[1];
 
-      const receivedAmountHex = nextSubEvent.toJSON()[2];
-      const receivedAmount = new BigNumber(receivedAmountHex);
-      expect(receivedAmount).to.be.bignumber.equal(sendAmount);
+      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
+      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
+      // conservation of value
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
     });
 
     it('should transfer ETH from Substrate to Ethereum', async function () {
+      const amount = BigNumber(Web3.utils.toWei('0.01', "ether"));
+      const ethAccount = ethClient.accounts[1];
 
-      let amount = BigNumber('10000000000000000'); // 0.01 ETH
+      const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
+      const beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
 
-      const account = ethClient.accounts[1];
+      await subClient.burnETH(subClient.alice, ethAccount, amount.toFixed(), 0)
+      await ethClient.waitForNextEventData({ appName: 'appETH', eventName: 'Unlocked' });
 
-      let beforeEthBalance = await ethClient.getEthBalance(account);
-      let beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
-
-      await subClient.burnETH(subClient.alice, account, amount.toFixed(), 0)
-      await sleep(PARA_TO_ETH_WAIT_TIME);
-
-      let afterEthBalance = await ethClient.getEthBalance(account);
-      let afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
+      const afterEthBalance = await ethClient.getEthBalance(ethAccount);
+      const afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
 
       expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amount);
       expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.equal(amount);
-
       // conservation of value
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance));
-
     })
   });
 
