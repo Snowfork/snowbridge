@@ -5,7 +5,6 @@
   "license": "MIT",
   "scripts": {
     "test": "mocha --timeout 110000 --exit",
-    "testp": "mocha --timeout 110000 --parallel --exit"
   },
   "dependencies": {
     "@polkadot/api": "^4.4.1",
