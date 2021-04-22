@@ -8,11 +8,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
 type Worker interface {
+	Name() string
 	Start(ctx context.Context, eg *errgroup.Group) error
 }
 
@@ -27,10 +30,49 @@ func (wp WorkerPool) runWorker(ctx context.Context, worker Worker) error {
 		return err
 	}
 
-	return childEg.Wait()
+	// We wait for this worker to finish in an indepedent goroutine. This
+	// allows us to detect when a worker is deadlocked, i.e. all its
+	// goroutines are not terminating when childCtx.Done() is signaled.
+	// If a deadlock occurs, we have to kill the process to clean up
+	// the worker.
+	notifyWaitDone := make(chan struct{})
+	var terminalErr error = nil
+
+	go func() {
+		terminalErr = childEg.Wait()
+		close(notifyWaitDone)
+	}()
+
+	select {
+	case <-notifyWaitDone:
+		return terminalErr
+	case <-childCtx.Done():
+		// Goroutines are either shutting down or deadlocked.
+		// Give them a few seconds...
+		select {
+		case <-time.After(3 * time.Second):
+			break
+		case _, stillWaiting := <-notifyWaitDone:
+			if !stillWaiting {
+				// All goroutines have ended
+				return terminalErr
+			}
+		}
+
+		wp.getLogger().WithField(
+			"worker",
+			worker.Name(),
+		).Error("The worker's goroutines are deadlocked. Please fix")
+
+		relayProc, _ := os.FindProcess(os.Getpid())
+		relayProc.Kill()
+		return nil
+	}
 }
 
 func (wp WorkerPool) Run() error {
+	log := wp.getLogger()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -42,16 +84,13 @@ func (wp WorkerPool) Run() error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-notify:
-			// TODO: add logging back in
-			//log.WithField("signal", sig.String()).Info("Received signal")
+		case sig := <-notify:
+			log.WithField("signal", sig.String()).Info("Received signal")
 			cancel()
 		}
 
 		return nil
 	})
-
-	// TODO: add deadlock detection and warn devs
 
 	for _, f := range wp {
 		factory := f
@@ -64,9 +103,9 @@ func (wp WorkerPool) Run() error {
 					return err
 				}
 
-				// TODO: log starting worker
+				log.WithField("worker", worker.Name()).Debug("Starting worker")
 				err = wp.runWorker(ctx, worker)
-				// TODO: log ending worker
+				log.WithField("worker", worker.Name()).Debug("Worker terminated")
 
 				select {
 				case <-ctx.Done():
@@ -80,4 +119,8 @@ func (wp WorkerPool) Run() error {
 	}
 
 	return eg.Wait()
+}
+
+func (wp WorkerPool) getLogger() *logrus.Entry {
+	return logrus.WithField("source", "WorkerPool")
 }
