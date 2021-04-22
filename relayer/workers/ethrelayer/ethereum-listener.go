@@ -31,6 +31,7 @@ type EthereumListener struct {
 	mapping                     map[common.Address]string
 	messages                    chan<- []chain.Message
 	headers                     chan<- chain.Header
+	headerSyncer                *syncer.Syncer
 	log                         *logrus.Entry
 }
 
@@ -49,11 +50,21 @@ func NewEthereumListener(
 		mapping:                     make(map[common.Address]string),
 		messages:                    messages,
 		headers:                     headers,
+		headerSyncer:                nil,
 		log:                         log,
 	}
 }
 
 func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
+	closeWithError := func(err error) error {
+		li.log.Info("Shutting down listener...")
+		if li.messages != nil {
+			close(li.messages)
+		}
+		close(li.headers)
+		return err
+	}
+
 	hcs, err := ethereum.NewHeaderCacheState(
 		eg,
 		initBlockHeight,
@@ -61,49 +72,61 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 		nil,
 	)
 	if err != nil {
-		return err
+		return closeWithError(err)
 	}
 
 	basicOutboundChannel, err := outbound.NewBasicOutboundChannel(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.GetClient())
 	if err != nil {
-		return err
+		return closeWithError(err)
 	}
 	li.basicOutboundChannel = basicOutboundChannel
 
 	incentivizedOutboundChannel, err := outbound.NewIncentivizedOutboundChannel(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.GetClient())
 	if err != nil {
-		return err
+		return closeWithError(err)
 	}
 	li.incentivizedOutboundChannel = incentivizedOutboundChannel
 
 	li.mapping[common.HexToAddress(li.config.Channels.Basic.Outbound)] = "BasicInboundChannel.submit"
 	li.mapping[common.HexToAddress(li.config.Channels.Incentivized.Outbound)] = "IncentivizedInboundChannel.submit"
 
+	headersIn := make(chan *gethTypes.Header, 5)
+	li.headerSyncer = syncer.NewSyncer(
+		descendantsUntilFinal,
+		syncer.NewHeaderLoader(li.conn.GetClient()),
+		headersIn,
+		li.log,
+	)
+
 	eg.Go(func() error {
-		err := li.pollEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, hcs)
-		if li.messages != nil {
-			close(li.messages)
+		err := li.processEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, headersIn, hcs)
+
+		// Ensures the context is canceled so that the channel below is
+		// closed by the syncer
+		eg.Go(func() error { return err })
+
+		// Avoid deadlock if the syncer is still trying to send a header
+		for range headersIn {
+			li.log.Debug("Discarded header")
 		}
-		close(li.headers)
-		return err
+
+		return closeWithError(err)
 	})
 
 	return nil
 }
 
-func (li *EthereumListener) pollEventsAndHeaders(
+func (li *EthereumListener) processEventsAndHeaders(
 	ctx context.Context,
 	initBlockHeight uint64,
 	descendantsUntilFinal uint64,
+	headers <-chan *gethTypes.Header,
 	hcs *ethereum.HeaderCacheState,
 ) error {
-	headers := make(chan *gethTypes.Header, 5)
 	headerEg, headerCtx := errgroup.WithContext(ctx)
 
-	headerSyncer := syncer.NewSyncer(descendantsUntilFinal, syncer.NewHeaderLoader(li.conn.GetClient()), headers, li.log)
-
 	li.log.Info("Syncing headers starting...")
-	err := headerSyncer.StartSync(headerCtx, headerEg, initBlockHeight-1)
+	err := li.headerSyncer.StartSync(headerCtx, headerEg, initBlockHeight-1)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to start header sync")
 		return err
@@ -112,12 +135,14 @@ func (li *EthereumListener) pollEventsAndHeaders(
 	for {
 		select {
 		case <-ctx.Done():
-			li.log.Info("Shutting down listener...")
 			return ctx.Err()
 		case <-headerCtx.Done():
-			li.log.Info("Shutting down listener...")
-			return ctx.Err()
-		case gethheader := <-headers:
+			return headerCtx.Err()
+		case gethheader, ok := <-headers:
+			if !ok {
+				return nil
+			}
+
 			err := li.forwardHeader(hcs, gethheader)
 			if err != nil {
 				return err

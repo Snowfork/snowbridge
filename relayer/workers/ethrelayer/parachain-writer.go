@@ -39,27 +39,47 @@ func NewParachainWriter(
 }
 
 func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error {
+	cancelWithError := func(err error) error {
+		// Ensures the context is canceled so that the channels below are
+		// closed by the listener
+		eg.Go(func() error { return err })
+
+		wr.log.Info("Shutting down writer...")
+		// Avoid deadlock if the listener is still trying to send to a channel
+		if wr.messages != nil {
+			for range wr.messages {
+				wr.log.Debug("Discarded message")
+			}
+		}
+		for range wr.headers {
+			wr.log.Debug("Discarded header")
+		}
+
+		return err
+	}
+
 	nonce, err := wr.queryAccountNonce()
 	if err != nil {
-		return err
+		return cancelWithError(err)
 	}
 	wr.nonce = nonce
 
 	genesisHash, err := wr.conn.GetAPI().RPC.Chain.GetBlockHash(0)
 	if err != nil {
-		return err
+		return cancelWithError(err)
 	}
 	wr.genesisHash = genesisHash
 
 	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn, wr.log)
 
-	cancelWithError := func(err error) {
-		eg.Go(func() error { return err })
-	}
-
 	eg.Go(func() error {
-		return wr.writeLoop(ctx, cancelWithError)
+		err := wr.writeLoop(ctx)
+		if err != nil {
+			return cancelWithError(err)
+		}
+		return nil
 	})
+
 	return nil
 }
 
@@ -81,58 +101,35 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 	return uint32(accountInfo.Nonce), nil
 }
 
-func (wr *ParachainWriter) writeLoop(ctx context.Context, cancelWithError func(err error)) error {
-	// It's important this loop (i.e. the consumer) doesn't stop consuming headers
-	// & messages until it receives a signal that the producer has shut down. If an
-	// error occurs, we use `cancelWithError` and discard headers / messages until
-	// the producer closes the channels.
+func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 	for {
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case msgs, ok := <-wr.messages:
 			if !ok {
 				return nil
 			}
 
-			select {
-			case <-ctx.Done():
-				wr.log.Debug("Discarded message")
-				continue
-			default:
-			}
-
 			var concreteMsgs []*chain.EthereumOutboundMessage
-			var err error = nil
 			for _, msg := range msgs {
 				cmsg, ok := msg.(*chain.EthereumOutboundMessage)
 				if !ok {
-					err = fmt.Errorf("Invalid message")
-					cancelWithError(err)
-					break
+					return fmt.Errorf("Invalid message")
 				}
 				concreteMsgs = append(concreteMsgs, cmsg)
 			}
 
-			if err != nil {
-				continue
-			}
-
-			err = wr.WriteMessages(ctx, concreteMsgs)
+			err := wr.WriteMessages(ctx, concreteMsgs)
 			if err != nil {
 				wr.log.WithFields(logrus.Fields{
 					"error": err,
 				}).Error("Failure submitting message to substrate")
-				cancelWithError(err)
+				return err
 			}
 		case header, ok := <-wr.headers:
 			if !ok {
 				return nil
-			}
-
-			select {
-			case <-ctx.Done():
-				wr.log.Debug("Discarded header")
-				continue
-			default:
 			}
 
 			err := wr.WriteHeader(ctx, &header)
@@ -141,7 +138,7 @@ func (wr *ParachainWriter) writeLoop(ctx context.Context, cancelWithError func(e
 					"blockNumber": header.HeaderData.(ethereum.Header).Number,
 					"error":       err,
 				}).Error("Failure submitting header to substrate")
-				cancelWithError(err)
+				return err
 			}
 		}
 	}
