@@ -9,7 +9,6 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
-	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 // Catches up by searching for and relaying all missed commitments before the given block
@@ -113,7 +112,6 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 	currentBlockNumber := lastBlockNumber + 1
 	basicNonceFound := false
 	incentivizedNonceFound := false
-	var digestItems []*chainTypes.AuxiliaryDigestItem
 	for (basicNonceFound == false || incentivizedNonceFound == false) && currentBlockNumber != 0 {
 		currentBlockNumber--
 		li.log.WithFields(logrus.Fields{
@@ -142,57 +140,34 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 		if digestItem != nil && digestItem.IsCommitment {
 			channelID := digestItem.AsCommitment.ChannelID
 			if channelID == basicId && !basicNonceFound {
-				isRelayed, err := li.checkIfDigestItemContainsNonce(digestItem, basicNonceToFind)
+				isRelayed, err := li.checkDigestItem(digestItem, basicNonceToFind)
 				if err != nil {
 					return err
 				}
 				if isRelayed {
 					basicNonceFound = true
 				} else {
-					digestItems = append(digestItems, digestItem)
+					err = li.processDigestItem(ctx, digestItem)
+					if err != nil {
+						return err
+					}
 				}
 			}
 			if channelID == incentivizedId && !incentivizedNonceFound {
-				isRelayed, err := li.checkIfDigestItemContainsNonce(digestItem, incentivizedNonceToFind)
+				isRelayed, err := li.checkDigestItem(digestItem, incentivizedNonceToFind)
 				if err != nil {
 					return err
 				}
 				if isRelayed {
 					incentivizedNonceFound = true
 				} else {
-					digestItems = append(digestItems, digestItem)
+					err = li.processDigestItem(ctx, digestItem)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
-
 	}
-
-	// Reverse items
-	for i, j := 0, len(digestItems)-1; i < j; i, j = i+1, j-1 {
-		digestItems[i], digestItems[j] = digestItems[j], digestItems[i]
-	}
-
-	for _, digestItem := range digestItems {
-		err := li.processDigestItem(ctx, digestItem)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
-}
-
-func (li *Listener) checkIfDigestItemContainsNonce(
-	digestItem *chainTypes.AuxiliaryDigestItem, nonceToFind uint64) (bool, error) {
-	messages, err := li.getMessagesForDigestItem(digestItem)
-	if err != nil {
-		return false, err
-	}
-
-	for _, message := range messages {
-		if message.Nonce <= nonceToFind {
-			return true, nil
-		}
-	}
-	return false, nil
 }

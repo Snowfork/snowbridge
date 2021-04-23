@@ -50,7 +50,7 @@ func NewWorker(parachainConfig *parachain.Config,
 	var subMessages = make(chan []chain.Message, 1)
 	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
-	parachainCommitmentListener := NewParachainCommitmentListener(
+	parachainCommitmentListener := parachaincommitment.NewListener(
 		parachainConn,
 		relaychainConn,
 		ethereumConn,
