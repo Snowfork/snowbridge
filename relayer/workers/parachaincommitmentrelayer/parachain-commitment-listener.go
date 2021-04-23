@@ -128,8 +128,12 @@ func (li *ParachainCommitmentListener) fetchStartBlock(ctx context.Context) (uin
 	}
 	var paraBasicNonce types.U64
 	ok, err := li.parachainConnection.GetAPI().RPC.State.GetStorageLatest(paraBasicNonceKey, &paraBasicNonce)
-	if err != nil || !ok {
+	if err != nil {
+		li.log.Error(err)
 		panic(err)
+	}
+	if !ok {
+		paraBasicNonce = 0
 	}
 	li.log.WithFields(logrus.Fields{
 		"nonce": uint64(paraBasicNonce),
@@ -142,8 +146,12 @@ func (li *ParachainCommitmentListener) fetchStartBlock(ctx context.Context) (uin
 	}
 	var paraIncentivizedNonce types.U64
 	ok, err = li.parachainConnection.GetAPI().RPC.State.GetStorageLatest(paraIncentivizedNonceKey, &paraIncentivizedNonce)
-	if err != nil || !ok {
+	if err != nil {
+		li.log.Error(err)
 		panic(err)
+	}
+	if !ok {
+		paraBasicNonce = 0
 	}
 	li.log.WithFields(logrus.Fields{
 		"nonce": uint64(paraIncentivizedNonce),
