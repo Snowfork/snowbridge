@@ -48,7 +48,7 @@ func NewWorker(parachainConfig *parachain.Config,
 	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKp, log)
 
 	// channel for messages from substrate
-	var subMessages = make(chan []chain.Message, 10)
+	var subMessages = make(chan []chain.Message, 1)
 	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
 	parachainCommitmentListener := parachaincommitment.NewListener(
