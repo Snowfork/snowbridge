@@ -14,9 +14,8 @@ import (
 	"github.com/influxdata/influxdb/pkg/testing/assert"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
 )
 
 func TestStore(t *testing.T) {
