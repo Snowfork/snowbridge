@@ -47,16 +47,17 @@ func NewWorker(parachainConfig *parachain.Config,
 
 	// channel for messages from substrate
 	var subMessages = make(chan []chain.Message, 1)
+	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
 	parachainCommitmentListener := NewParachainCommitmentListener(
-		parachainConfig,
 		parachainConn,
 		relaychainConn,
+		ethereumConn,
+		ethereumConfig,
+		contracts,
 		subMessages,
 		log,
 	)
-
-	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
 	ethereumChannelWriter, err := NewEthereumChannelWriter(ethereumConfig, ethereumConn,
 		subMessages, contracts, log)
