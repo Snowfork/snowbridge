@@ -16,7 +16,7 @@ func BuildMain() error {
 }
 
 func Test() error {
-	return sh.Run("go", "test", "./...")
+	return sh.RunV("go", "test", "./...")
 }
 
 func Lint() error {
