@@ -48,7 +48,7 @@ func NewListener(parachainConnection *parachain.Connection,
 
 func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
 
-	blockNumber, err := li.fetchStartBlock(ctx)
+	blockNumber, err := li.fetchStartBlock()
 	if err != nil {
 		return nil
 	}
@@ -80,7 +80,7 @@ func sleep(ctx context.Context, delay time.Duration) {
 }
 
 // Fetch the starting block
-func (li *Listener) fetchStartBlock(ctx context.Context) (uint64, error) {
+func (li *Listener) fetchStartBlock() (uint64, error) {
 	header, err := li.parachainConnection.GetFinalizedHeader()
 	if err != nil {
 		li.log.WithError(err).Error("Failed to fetch hash for starting block")
