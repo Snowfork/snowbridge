@@ -82,6 +82,7 @@ func sleep(ctx context.Context, delay time.Duration) {
 }
 
 // Fetch the starting block
+<<<<<<< HEAD
 func (li *ParachainCommitmentListener) fetchStartBlock(ctx context.Context) (uint64, error) {
 	basicContract, err := inbound.NewContract(common.HexToAddress(
 		li.ethereumConfig.Channels.Basic.Inbound),
@@ -183,6 +184,15 @@ func (li *ParachainCommitmentListener) fetchStartBlock(ctx context.Context) (uin
 
 	li.log.Info("Stopped searching for lost commitments")
 
+=======
+func (li *Listener) fetchStartBlock(ctx context.Context) (uint64, error) {
+	header, err := li.parachainConnection.GetFinalizedHeader()
+	if err != nil {
+		li.log.WithError(err).Error("Failed to fetch hash for starting block")
+		return 0, err
+	}
+
+>>>>>>> 5b26e87... fixz
 	return uint64(header.Number), nil
 }
 
@@ -353,6 +363,7 @@ func (li *ParachainCommitmentListener) getMessagesForDigestItem(digestItem *chai
 
 	return messages, nil
 }
+<<<<<<< HEAD
 
 func (li *ParachainCommitmentListener) searchForLostCommitments(ctx context.Context, lastBlockNumber uint64, basicNonceToFind uint64, incentivizedNonceToFind uint64) error {
 	li.log.WithFields(logrus.Fields{
@@ -440,3 +451,5 @@ func (li *ParachainCommitmentListener) checkDigestItem(
 	}
 	return false, nil
 }
+=======
+>>>>>>> 5b26e87... fixz

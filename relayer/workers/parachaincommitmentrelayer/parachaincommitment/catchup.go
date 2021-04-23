@@ -9,6 +9,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
+	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 // Catches up by searching for and relaying all missed commitments before the given block
@@ -140,7 +141,7 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 		if digestItem != nil && digestItem.IsCommitment {
 			channelID := digestItem.AsCommitment.ChannelID
 			if channelID == basicId && !basicNonceFound {
-				isRelayed, err := li.checkDigestItem(digestItem, basicNonceToFind)
+				isRelayed, err := li.checkIfDigestItemContainsNonce(digestItem, basicNonceToFind)
 				if err != nil {
 					return err
 				}
@@ -154,7 +155,7 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 				}
 			}
 			if channelID == incentivizedId && !incentivizedNonceFound {
-				isRelayed, err := li.checkDigestItem(digestItem, incentivizedNonceToFind)
+				isRelayed, err := li.checkIfDigestItemContainsNonce(digestItem, incentivizedNonceToFind)
 				if err != nil {
 					return err
 				}
@@ -170,4 +171,19 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 		}
 	}
 	return nil
+}
+
+func (li *Listener) checkIfDigestItemContainsNonce(
+	digestItem *chainTypes.AuxiliaryDigestItem, nonceToFind uint64) (bool, error) {
+	messages, err := li.getMessagesForDigestItem(digestItem)
+	if err != nil {
+		return false, err
+	}
+
+	for _, message := range messages {
+		if message.Nonce <= nonceToFind {
+			return true, nil
+		}
+	}
+	return false, nil
 }
