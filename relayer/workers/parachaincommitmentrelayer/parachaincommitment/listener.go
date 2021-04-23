@@ -81,13 +81,13 @@ func sleep(ctx context.Context, delay time.Duration) {
 
 // Fetch the starting block
 func (li *Listener) fetchStartBlock(ctx context.Context) (uint64, error) {
-	finalizedHeader, err := li.parachainConnection.GetFinalizedHeader()
+	header, err := li.parachainConnection.GetFinalizedHeader()
 	if err != nil {
-		li.log.WithError(err).Error("Failed to fetch header for finalized head")
+		li.log.WithError(err).Error("Failed to fetch hash for starting block")
 		return 0, err
 	}
 
-	return uint64(finalizedHeader.Number), nil
+	return uint64(header.Number), nil
 }
 
 var ErrBlockNotReady = errors.New("required result to be 32 bytes, but got 0")
@@ -256,19 +256,4 @@ func (li *Listener) getMessagesForDigestItem(digestItem *chainTypes.AuxiliaryDig
 	}
 
 	return messages, nil
-}
-
-func (li *Listener) checkDigestItem(
-	digestItem *chainTypes.AuxiliaryDigestItem, nonceToFind uint64) (bool, error) {
-	messages, err := li.getMessagesForDigestItem(digestItem)
-	if err != nil {
-		return false, err
-	}
-
-	for _, message := range messages {
-		if message.Nonce <= nonceToFind {
-			return true, nil
-		}
-	}
-	return false, nil
 }
