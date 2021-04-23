@@ -47,7 +47,7 @@ func NewWorker(parachainConfig *parachain.Config,
 	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKp, log)
 
 	// channel for messages from substrate
-	var subMessages = make(chan []chain.Message, 10)
+	var subMessages = make(chan []chain.Message, 1)
 	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
 	parachainCommitmentListener := parachaincommitment.NewListener(
@@ -96,21 +96,25 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	if worker.parachainCommitmentListener != nil {
-		err = worker.parachainCommitmentListener.Start(ctx, eg)
-		if err != nil {
-			return err
+	eg.Go(func() error {
+		if worker.parachainCommitmentListener != nil {
+			worker.log.Info("Starting Parachain Commitment Listener")
+			err = worker.parachainCommitmentListener.Start(ctx, eg)
+			if err != nil {
+				return err
+			}
 		}
-	}
+		return nil
+	})
 
 	eg.Go(func() error {
 		if worker.ethereumChannelWriter != nil {
+			worker.log.Info("Starting Writer")
 			err = worker.ethereumChannelWriter.Start(ctx, eg)
 			if err != nil {
 				return err
 			}
 		}
-
 		return nil
 	})
 
