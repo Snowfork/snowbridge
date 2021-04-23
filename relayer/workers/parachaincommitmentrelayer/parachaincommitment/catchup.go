@@ -113,6 +113,7 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 	currentBlockNumber := lastBlockNumber + 1
 	basicNonceFound := false
 	incentivizedNonceFound := false
+	var digestItems []*chainTypes.AuxiliaryDigestItem
 	for (basicNonceFound == false || incentivizedNonceFound == false) && currentBlockNumber != 0 {
 		currentBlockNumber--
 		li.log.WithFields(logrus.Fields{
@@ -148,10 +149,7 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 				if isRelayed {
 					basicNonceFound = true
 				} else {
-					err = li.processDigestItem(ctx, digestItem)
-					if err != nil {
-						return err
-					}
+					digestItems = append(digestItems, digestItem)
 				}
 			}
 			if channelID == incentivizedId && !incentivizedNonceFound {
@@ -162,14 +160,25 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 				if isRelayed {
 					incentivizedNonceFound = true
 				} else {
-					err = li.processDigestItem(ctx, digestItem)
-					if err != nil {
-						return err
-					}
+					digestItems = append(digestItems, digestItem)
 				}
 			}
 		}
+
 	}
+
+	// Reverse items
+	for i, j := 0, len(digestItems)-1; i < j; i, j = i+1, j-1 {
+		digestItems[i], digestItems[j] = digestItems[j], digestItems[i]
+	}
+
+	for _, digestItem := range digestItems {
+		err := li.processDigestItem(ctx, digestItem)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
