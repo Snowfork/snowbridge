@@ -177,16 +177,14 @@ func (li *ParachainCommitmentListener) fetchStartBlock(ctx context.Context) (uin
 		return uint64(header.Number), nil
 	}
 
-	startingBlockNumber, err := li.searchForCommitment(uint64(header.Number), ethBasicNonce, ethIncentivizedNonce)
+	err = li.searchForLostCommitments(ctx, uint64(header.Number), ethBasicNonce, ethIncentivizedNonce)
 	if err != nil {
 		return 0, err
 	}
 
-	li.log.WithFields(logrus.Fields{
-		"blockNumber": startingBlockNumber,
-	}).Info("Starting block number found")
+	li.log.Info("Stopped searching for lost commitments")
 
-	return uint64(startingBlockNumber), nil
+	return uint64(header.Number), nil
 }
 
 var ErrBlockNotReady = errors.New("required result to be 32 bytes, but got 0")
@@ -289,6 +287,14 @@ func (li *ParachainCommitmentListener) processHeader(ctx context.Context, header
 		"commitmentHash": digestItem.AsCommitment.Hash.Hex(),
 	}).Debug("Found commitment hash in header digest")
 
+	err = li.processDigestItem(ctx, digestItem)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (li *ParachainCommitmentListener) processDigestItem(ctx context.Context, digestItem *chainTypes.AuxiliaryDigestItem) error {
 	messages, err := li.getMessagesForDigestItem(digestItem)
 	if err != nil {
 		return err
@@ -355,13 +361,12 @@ func (li *ParachainCommitmentListener) getMessagesForDigestItem(digestItem *chai
 	return messages, nil
 }
 
-func (li *ParachainCommitmentListener) searchForCommitment(lastBlockNumber uint64, basicNonceToFind uint64, incentivizedNonceToFind uint64) (uint64, error) {
+func (li *ParachainCommitmentListener) searchForLostCommitments(ctx context.Context, lastBlockNumber uint64, basicNonceToFind uint64, incentivizedNonceToFind uint64) error {
 	li.log.WithFields(logrus.Fields{
 		"basicNonce":        basicNonceToFind,
 		"incentivizedNonce": incentivizedNonceToFind,
 		"latestblockNumber": lastBlockNumber,
 	}).Debug("Searching backwards from latest block on parachain to find block with nonce")
-
 	basicId := substrate.ChannelID{IsBasic: true}
 	incentivizedId := substrate.ChannelID{IsIncentivized: true}
 
@@ -379,45 +384,66 @@ func (li *ParachainCommitmentListener) searchForCommitment(lastBlockNumber uint6
 			li.log.WithFields(logrus.Fields{
 				"blockNumber": currentBlockNumber,
 			}).WithError(err).Error("Failed to fetch blockhash")
-			return 0, err
+			return err
 		}
 
 		header, err := li.parachainConnection.GetAPI().RPC.Chain.GetHeader(blockHash)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to fetch header")
-			return 0, err
+			return err
 		}
 
 		digestItem, err := getAuxiliaryDigestItem(header.Digest)
 		if err != nil {
-			return 0, err
+			return err
 		}
 
 		if digestItem != nil && digestItem.IsCommitment {
-			messages, err := li.getMessagesForDigestItem(digestItem)
-			if err != nil {
-				return 0, err
-			}
-
-			for _, message := range messages {
-				if (message.Nonce == basicNonceToFind) && (digestItem.AsCommitment.ChannelID == basicId) {
+			channelID := digestItem.AsCommitment.ChannelID
+			if channelID == basicId && !basicNonceFound {
+				isRelayed, err := li.checkDigestItem(digestItem, basicNonceToFind)
+				if err != nil {
+					return err
+				}
+				if isRelayed {
 					basicNonceFound = true
+				} else {
+					err = li.processDigestItem(ctx, digestItem)
+					if err != nil {
+						return err
+					}
 				}
-				if (message.Nonce == incentivizedNonceToFind) && (digestItem.AsCommitment.ChannelID == incentivizedId) {
+			}
+			if channelID == incentivizedId && !incentivizedNonceFound {
+				isRelayed, err := li.checkDigestItem(digestItem, incentivizedNonceToFind)
+				if err != nil {
+					return err
+				}
+				if isRelayed {
 					incentivizedNonceFound = true
+				} else {
+					err = li.processDigestItem(ctx, digestItem)
+					if err != nil {
+						return err
+					}
 				}
-			}
-			if !(basicNonceFound) {
-				li.log.WithFields(logrus.Fields{
-					"blockNumber": currentBlockNumber,
-				}).Error("Basic nonce not found in messages for commitment")
-			}
-			if !(incentivizedNonceFound) {
-				li.log.WithFields(logrus.Fields{
-					"blockNumber": currentBlockNumber,
-				}).Error("Incentivized nonce not found in messages for commitment")
 			}
 		}
 	}
-	return currentBlockNumber, nil
+	return nil
+}
+
+func (li *ParachainCommitmentListener) checkDigestItem(
+	digestItem *chainTypes.AuxiliaryDigestItem, nonceToFind uint64) (bool, error) {
+	messages, err := li.getMessagesForDigestItem(digestItem)
+	if err != nil {
+		return false, err
+	}
+
+	for _, message := range messages {
+		if message.Nonce <= nonceToFind {
+			return true, nil
+		}
+	}
+	return false, nil
 }
