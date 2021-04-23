@@ -1,7 +1,7 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package ethereum_test
+package beefyrelayer
 
 import (
 	"context"
@@ -20,12 +20,9 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
-	substrateTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
 func TestWriter(t *testing.T) {
@@ -89,13 +86,9 @@ func TestWriter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ethMessages := make(chan []chain.Message, 1)
 	beefyMessages := make(chan store.BeefyRelayInfo, 1)
-	contracts := make(map[substrateTypes.ChannelID]*inbound.Contract)
-	writer, err := ethereum.NewWriter(&config, econn, database, ethMessages, dbMessages, beefyMessages, contracts, log)
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	writer := NewBeefyEthereumWriter(&config, econn, database, dbMessages, beefyMessages, log)
 
 	err = writer.Start(ctx, eg)
 	if err != nil {
