@@ -87,3 +87,17 @@ func (co *Connection) GenesisHash() types.Hash {
 func (co *Connection) Metadata() *types.Metadata {
 	return &co.metadata
 }
+
+func (co *Connection) GetFinalizedHeader() (*types.Header, error) {
+	finalizedHash, err := co.api.RPC.Chain.GetFinalizedHead()
+	if err != nil {
+		return nil, err
+	}
+
+	finalizedHeader, err := co.api.RPC.Chain.GetHeader(finalizedHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return finalizedHeader, nil
+}

@@ -14,6 +14,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer/parachaincommitment"
 )
 
 type Worker struct {
@@ -22,7 +23,7 @@ type Worker struct {
 	ethereumConfig              *ethereum.Config
 	parachainConn               *parachain.Connection
 	relaychainConn              *relaychain.Connection
-	parachainCommitmentListener *ParachainCommitmentListener
+	parachainCommitmentListener *parachaincommitment.Listener
 	ethereumConn                *ethereum.Connection
 	ethereumChannelWriter       *EthereumChannelWriter
 	log                         *logrus.Entry
@@ -49,7 +50,7 @@ func NewWorker(parachainConfig *parachain.Config,
 	var subMessages = make(chan []chain.Message, 1)
 	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
-	parachainCommitmentListener := NewParachainCommitmentListener(
+	parachainCommitmentListener := parachaincommitment.NewListener(
 		parachainConn,
 		relaychainConn,
 		ethereumConn,
