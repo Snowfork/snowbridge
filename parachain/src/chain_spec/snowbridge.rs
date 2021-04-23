@@ -164,7 +164,8 @@ fn testnet_genesis(
 			address: hex!["83428c7db9815f482a39a1715684dCF755021997"].into()
 		},
 		dot_app: DOTConfig {
-			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into()
+			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into(),
+			phantom: Default::default(),
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: para_id },
 	}

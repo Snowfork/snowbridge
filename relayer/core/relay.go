@@ -73,10 +73,11 @@ func NewRelay() (*Relay, error) {
 	ethRelayer := &ethrelayer.Worker{}
 
 	if config.Workers.EthRelayer == true {
-		ethRelayer, err = ethrelayer.NewWorker(&config.Eth, &config.Parachain)
-		if err != nil {
-			return nil, err
-		}
+		ethRelayer = ethrelayer.NewWorker(
+			&config.Eth,
+			&config.Parachain,
+			log.WithField("worker", ethrelayer.Name),
+		)
 	}
 
 	return &Relay{
@@ -117,7 +118,6 @@ func (re *Relay) Start() {
 			return
 		}
 		log.WithField("name", re.ethRelayer.Name()).Info("Started worker")
-		defer re.ethRelayer.Stop()
 	}
 
 	if re.beefyRelayer != nil {
@@ -174,7 +174,6 @@ func (re *Relay) Start() {
 		}
 
 		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
-		re.ethRelayer.Stop()
 		re.parachainCommitmentRelayer.Stop()
 		re.beefyRelayer.Stop()
 
