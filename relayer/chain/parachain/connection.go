@@ -75,3 +75,15 @@ func (co *Connection) Connect(_ context.Context) error {
 func (co *Connection) Close() {
 	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
 }
+
+func (co *Connection) Api() *gsrpc.SubstrateAPI {
+	return co.api
+}
+
+func (co *Connection) GenesisHash() types.Hash {
+	return co.genesisHash
+}
+
+func (co *Connection) Metadata() *types.Metadata {
+	return &co.metadata
+}

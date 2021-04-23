@@ -7,8 +7,8 @@ const ERC20 = require('../../../ethereum/build/contracts/ERC20.json');
 const TestToken = require('../../../ethereum/build/contracts/TestToken.json');
 const DOTApp = require('../../../ethereum/build/contracts/DOTApp.json');
 const WrappedToken = require('../../../ethereum/build/contracts/WrappedToken.json');
-
-
+const BasicOutboundChannel = require('../../../ethereum/build/contracts/BasicOutboundChannel.json');
+const IncentivizedOutboundChannel = require('../../../ethereum/build/contracts/IncentivizedOutboundChannel.json');
 
 /**
  * The Ethereum client for Bridge interaction
@@ -33,6 +33,14 @@ class EthClient {
 
     const appDOT = new this.web3.eth.Contract(DOTApp.abi, DOTApp.networks[networkID].address);
     this.appDOT = appDOT;
+
+    const appBasicOutChan = new this.web3.eth.Contract(BasicOutboundChannel.abi,
+      BasicOutboundChannel.networks[networkID].address);
+    this.appBasicOutChan = appBasicOutChan;
+
+    const appIncOutChan = new this.web3.eth.Contract(IncentivizedOutboundChannel.abi,
+      IncentivizedOutboundChannel.networks[networkID].address);
+    this.appIncOutChan = appIncOutChan;
   };
 
   loadERC20Contract() {
@@ -114,6 +122,16 @@ class EthClient {
         value: 0
       });
   }
+
+  async waitForNextEventData({ appName, eventName, eventData }) {
+    let foundEvent = new Promise(async (resolve, reject) => {
+      this[appName].once(eventName, (error, event) => {
+        resolve(event.returnValues[eventData]);
+      })
+    });
+    return foundEvent;
+  }
+
 }
 
 

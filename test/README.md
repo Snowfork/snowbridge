@@ -31,7 +31,7 @@ cd ./node_modules/@snowfork/snowbridge-types && yarn install
 Install `polkadot-launch`:
 
 ```bash
-git clone -n https://github.com/snowfork/polkadot-launch.git /tmp/polkadot-launch
+git clone -n https://github.com/paritytech/polkadot-launch.git /tmp/polkadot-launch
 cd /tmp/polkadot-launch
 yarn install
 yarn build
