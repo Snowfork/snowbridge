@@ -23,7 +23,7 @@ type WorkerFactory func() (Worker, error)
 
 type WorkerPool []WorkerFactory
 
-func (wp WorkerPool) runWorker(ctx context.Context, worker Worker) error {
+func (wp WorkerPool) runWorker(ctx context.Context, worker Worker, log *logrus.Entry) error {
 	childEg, childCtx := errgroup.WithContext(ctx)
 	err := worker.Start(childCtx, childEg)
 	if err != nil {
@@ -35,31 +35,28 @@ func (wp WorkerPool) runWorker(ctx context.Context, worker Worker) error {
 	// goroutines are not terminating when childCtx.Done() is signaled.
 	// If a deadlock occurs, we have to kill the process to clean up
 	// the worker.
-	notifyWaitDone := make(chan struct{})
-	var terminalErr error = nil
+	notifyWaitDone := make(chan error)
 
 	go func() {
-		terminalErr = childEg.Wait()
+		notifyWaitDone <- childEg.Wait()
 		close(notifyWaitDone)
 	}()
 
 	select {
-	case <-notifyWaitDone:
-		return terminalErr
+	case err := <-notifyWaitDone:
+		return err
 	case <-childCtx.Done():
 		// Goroutines are either shutting down or deadlocked.
 		// Give them a few seconds...
 		select {
 		case <-time.After(3 * time.Second):
 			break
-		case _, stillWaiting := <-notifyWaitDone:
-			if !stillWaiting {
-				// All goroutines have ended
-				return terminalErr
-			}
+		case err := <-notifyWaitDone:
+			// All goroutines have ended
+			return err
 		}
 
-		wp.getLogger().WithField(
+		log.WithField(
 			"worker",
 			worker.Name(),
 		).Error("The worker's goroutines are deadlocked. Please fix")
@@ -71,9 +68,15 @@ func (wp WorkerPool) runWorker(ctx context.Context, worker Worker) error {
 }
 
 func (wp WorkerPool) Run() error {
-	log := wp.getLogger()
+	return wp.run(context.Background(), wp.getDefaultLogger())
+}
 
-	ctx, cancel := context.WithCancel(context.Background())
+func (wp WorkerPool) RunWithContext(ctx context.Context, log *logrus.Entry) error {
+	return wp.run(ctx, log)
+}
+
+func (wp WorkerPool) run(ctx context.Context, log *logrus.Entry) error {
+	ctx, cancel := context.WithCancel(ctx)
 	eg, ctx := errgroup.WithContext(ctx)
 
 	// Ensure clean termination upon SIGINT, SIGTERM
@@ -104,7 +107,7 @@ func (wp WorkerPool) Run() error {
 				}
 
 				log.WithField("worker", worker.Name()).Debug("Starting worker")
-				err = wp.runWorker(ctx, worker)
+				err = wp.runWorker(ctx, worker, log)
 				log.WithField("worker", worker.Name()).Debug("Worker terminated")
 
 				select {
@@ -121,6 +124,6 @@ func (wp WorkerPool) Run() error {
 	return eg.Wait()
 }
 
-func (wp WorkerPool) getLogger() *logrus.Entry {
+func (wp WorkerPool) getDefaultLogger() *logrus.Entry {
 	return logrus.WithField("source", "WorkerPool")
 }
