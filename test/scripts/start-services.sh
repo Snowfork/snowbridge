@@ -4,10 +4,10 @@ set -eu
 # config directory
 configdir=/tmp/snowbridge-e2e-config
 rm -rf $configdir
-mkdir $configdir
+mkdir -p $configdir
 
 # kill all potentially old processes
-kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/artemis | awk '{print $2}') || true
+kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/artemis | grep -v grep |awk '{print $2}') || true
 
 start_ganache()
 {
@@ -22,7 +22,7 @@ start_ganache()
         --db $configdir/ganachedb \
         --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
         >ganache.log 2>&1 &
-
+    popd
     scripts/wait-for-it.sh -t 32 localhost:8545
     sleep 5
 }
@@ -30,8 +30,8 @@ start_ganache()
 restart_ganache()
 {
     echo "Restarting Ganache with a slower block time"
-
-    kill $(ps -aux | grep -e ganache-cli | awk '{print $2}') || true
+    pushd ../ethereum
+    kill $(ps -aux | grep -e ganache-cli | grep -v grep | awk '{print $2}') || true
 
     yarn run ganache-cli \
         --port=8545 \
@@ -64,10 +64,19 @@ deploy_contracts()
 
 start_parachain()
 {
-    echo "Starting Parachain"
+    echo "Build Relaychain"
+    if [ ! -d "/tmp/polkadot" ]
+    then
+        git clone https://github.com/snowfork/polkadot.git /tmp/polkadot
+        pushd /tmp/polkadot
+        git checkout enable_beefy_on_rococo
+        cargo build --release
+        popd
+    fi
+
+    echo "Build Parachain"
     pushd ../parachain
     bin=$(pwd)/target/release/artemis
-
     cargo build --release --no-default-features --features with-local-runtime
 
     echo "Generating Parachain spec"
@@ -90,14 +99,14 @@ start_parachain()
         para_id 200
 
     echo "Writing Polkadot configuration"
-    polkadotbinary=/tmp/polkadot
-    source ../test/.env
-    jq  -s '.[0] * .[1]' config.json ../test/config/launchConfigOverrides.json \
+    polkadotbinary=/tmp/polkadot/target/release/polkadot
+    jq  -s '.[0] * .[1]' ../parachain/config.json ./config/launchConfigOverrides.json \
         | jq ".parachains[0].bin = \"$bin\"" \
         | jq ".parachains[0].chain = \"$configdir/spec.json\"" \
         | jq ".relaychain.bin = \"$polkadotbinary\"" \
         > $configdir/polkadotLaunchConfig.json
 
+    echo "Start Relaychain and Parachain with polkadot-launch"
     polkadot-launch $configdir/polkadotLaunchConfig.json &
 
     scripts/wait-for-it.sh -t 32 localhost:11144
@@ -109,11 +118,22 @@ start_relayer()
     logfile=$(pwd)/relay.log
     pushd ../relayer
 
+    if ! command -v mage &> /dev/null
+    then
+        echo "mage could not be found"
+        exit
+    fi
     mage build
 
+    if ! command -v subkey &> /dev/null
+    then
+        echo "subkey could not be found"
+        exit
+    fi
+
     export ARTEMIS_ETHEREUM_KEY="0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109"
-    export ARTEMIS_PARACHAIN_KEY="//Relay"
-    export ARTEMIS_RELAYCHAIN_KEY="//Alice"
+    export ARTEMIS_PARACHAIN_KEY="//Alice"
+    export ARTEMIS_RELAYCHAIN_KEY="//Relay"
 
     build/artemis-relay run --config $configdir/config.toml >$logfile 2>&1 &
 
@@ -124,7 +144,7 @@ start_relayer()
 
 cleanup() {
     kill $(jobs -p)
-    kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/artemis | awk '{print $2}') || true
+    kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/artemis | grep -v grep | awk '{print $2}') || true
 }
 
 trap cleanup SIGINT SIGTERM EXIT
@@ -134,7 +154,7 @@ deploy_contracts
 start_parachain
 restart_ganache
 echo "Waiting for consensus between polkadot and parachain"
-sleep 60
+sleep 30
 start_relayer
 
 echo "Process Tree:"
