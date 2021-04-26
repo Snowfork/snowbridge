@@ -19,13 +19,12 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
 
 ## Setup
 
+Make sure to install/build all the requirements above.
+
 Download dependencies:
 
 ```bash
 yarn install
-
-# Build typescript bindings
-cd ./node_modules/@snowfork/snowbridge-types && yarn install
 ```
 
 Install `polkadot-launch`:
@@ -33,6 +32,7 @@ Install `polkadot-launch`:
 ```bash
 git clone -n https://github.com/paritytech/polkadot-launch.git /tmp/polkadot-launch
 cd /tmp/polkadot-launch
+git checkout 89e970
 yarn install
 yarn build
 yarn global add file:$(pwd)
@@ -47,8 +47,8 @@ git checkout enable_beefy_on_rococo
 cargo build --release
 ```
 
-Create your test env file to set the directory where you installed the polkadot binary.
-You can modify it if you installed polkadot elsewhere.
+Optional: If you cloned the polkadot repo in another location, Create an `.env` file to specify the directory where you installed the polkadot binary.
+
 ```bash
 cp ./.env-example .env
 ```
