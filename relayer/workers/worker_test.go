@@ -29,6 +29,26 @@ func (w *TestWorker) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
+type ConsumerWorker struct {
+	in <-chan struct{}
+}
+
+func NewConsumerWorker(in <-chan struct{}) *ConsumerWorker {
+	return &ConsumerWorker{in}
+}
+
+func (w *ConsumerWorker) Name() string { return "ConsumerWorker" }
+
+func (w *ConsumerWorker) Start(ctx context.Context, eg *errgroup.Group) error {
+	eg.Go(func() error {
+		for range w.in {
+			continue
+		}
+		return nil
+	})
+	return nil
+}
+
 func TestCanStopPool(t *testing.T) {
 	factory := func() (workers.Worker, error) { return &TestWorker{}, nil }
 	pool := workers.WorkerPool{
@@ -44,7 +64,7 @@ func TestCanStopPool(t *testing.T) {
 
 	errCh := make(chan error)
 	go func() {
-		errCh <- pool.RunWithContext(ctx, logger.WithField("source", "TestWorkerPool"))
+		errCh <- pool.RunWithContext(ctx, nil, logger.WithField("source", "TestWorkerPool"))
 	}()
 
 	<-time.After(100 * time.Millisecond)
@@ -56,4 +76,31 @@ func TestCanStopPool(t *testing.T) {
 	assert.Equal(t, 6, len(hook.AllEntries()))
 	assert.Equal(t, hook.AllEntries()[2].Message, "Starting worker")
 	assert.Equal(t, hook.LastEntry().Message, "Worker terminated")
+}
+
+func TestDetectsDeadlockedWorker(t *testing.T) {
+	ch := make(chan struct{})
+	// The consumer worker will run until the incoming channel is closed, ignoring
+	// context cancellation.
+	factoryConsumer := func() (workers.Worker, error) { return NewConsumerWorker(ch), nil }
+	pool := workers.WorkerPool{factoryConsumer}
+
+	logger, _ := logtest.NewNullLogger()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	deadlockSignal := make(chan struct{})
+	onDeadlock := func() error {
+		close(deadlockSignal)
+		return nil
+	}
+
+	go func() {
+		pool.RunWithContext(ctx, onDeadlock, logger.WithField("source", "TestWorkerPool"))
+	}()
+
+	cancel()
+	// NOTE: This will take several seconds
+	<-deadlockSignal
+	// Stop the deadlock so the test can exit
+	close(ch)
 }

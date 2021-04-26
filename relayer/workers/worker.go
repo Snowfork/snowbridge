@@ -5,6 +5,7 @@ package workers
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,7 +24,11 @@ type WorkerFactory func() (Worker, error)
 
 type WorkerPool []WorkerFactory
 
-func (wp WorkerPool) runWorker(ctx context.Context, worker Worker, log *logrus.Entry) error {
+var WorkerDeadlocked = errors.New("Worker deadlocked")
+
+type DeadlockHandler func() error
+
+func (wp WorkerPool) runWorker(ctx context.Context, worker Worker) error {
 	childEg, childCtx := errgroup.WithContext(ctx)
 	err := worker.Start(childCtx, childEg)
 	if err != nil {
@@ -56,28 +61,32 @@ func (wp WorkerPool) runWorker(ctx context.Context, worker Worker, log *logrus.E
 			return err
 		}
 
-		log.WithField(
-			"worker",
-			worker.Name(),
-		).Error("The worker's goroutines are deadlocked. Please fix")
-
-		relayProc, _ := os.FindProcess(os.Getpid())
-		relayProc.Kill()
-		return nil
+		return WorkerDeadlocked
 	}
 }
 
 func (wp WorkerPool) Run() error {
-	return wp.run(context.Background(), wp.defaultLogger())
+	return wp.run(context.Background(), nil, wp.defaultLogger())
 }
 
-func (wp WorkerPool) RunWithContext(ctx context.Context, log *logrus.Entry) error {
-	return wp.run(ctx, log)
+func (wp WorkerPool) RunWithContext(ctx context.Context, onDeadlock DeadlockHandler, log *logrus.Entry) error {
+	return wp.run(ctx, onDeadlock, log)
 }
 
-func (wp WorkerPool) run(ctx context.Context, log *logrus.Entry) error {
+func (wp WorkerPool) run(ctx context.Context, onDeadlock DeadlockHandler, log *logrus.Entry) error {
 	ctx, cancel := context.WithCancel(ctx)
 	eg, ctx := errgroup.WithContext(ctx)
+
+	if onDeadlock == nil {
+		onDeadlock = func() error {
+			cancel()
+			// Give other workers time to clean up
+			<-time.After(3 * time.Second)
+			relayProc, _ := os.FindProcess(os.Getpid())
+			relayProc.Kill()
+			return nil
+		}
+	}
 
 	// Ensure clean termination upon SIGINT, SIGTERM
 	eg.Go(func() error {
@@ -107,8 +116,17 @@ func (wp WorkerPool) run(ctx context.Context, log *logrus.Entry) error {
 				}
 
 				log.WithField("worker", worker.Name()).Debug("Starting worker")
-				err = wp.runWorker(ctx, worker, log)
-				log.WithField("worker", worker.Name()).Debug("Worker terminated")
+				err = wp.runWorker(ctx, worker)
+
+				if err == WorkerDeadlocked {
+					log.WithField(
+						"worker",
+						worker.Name(),
+					).Error("The worker's goroutines are deadlocked. Please fix")
+					return onDeadlock()
+				} else {
+					log.WithError(err).WithField("worker", worker.Name()).Debug("Worker terminated")
+				}
 
 				select {
 				case <-ctx.Done():
