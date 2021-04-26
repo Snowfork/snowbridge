@@ -68,7 +68,7 @@ func (wp WorkerPool) runWorker(ctx context.Context, worker Worker, log *logrus.E
 }
 
 func (wp WorkerPool) Run() error {
-	return wp.run(context.Background(), wp.getDefaultLogger())
+	return wp.run(context.Background(), wp.defaultLogger())
 }
 
 func (wp WorkerPool) RunWithContext(ctx context.Context, log *logrus.Entry) error {
@@ -124,6 +124,6 @@ func (wp WorkerPool) run(ctx context.Context, log *logrus.Entry) error {
 	return eg.Wait()
 }
 
-func (wp WorkerPool) getDefaultLogger() *logrus.Entry {
+func (wp WorkerPool) defaultLogger() *logrus.Entry {
 	return logrus.WithField("source", "WorkerPool")
 }
