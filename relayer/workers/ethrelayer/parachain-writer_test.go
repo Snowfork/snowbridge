@@ -27,13 +27,12 @@ func TestWrite(t *testing.T) {
 
 	conn := parachain.NewConnection("ws://127.0.0.1:11144/", sr25519.Alice().AsKeyringPair(), log)
 
-	messages := make(chan []chain.Message, 1)
-	headers := make(chan chain.Header, 1)
+	payloads := make(chan ethrelayer.ParachainPayload, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 	defer cancel()
 
-	writer := ethrelayer.NewParachainWriter(conn, messages, headers, log)
+	writer := ethrelayer.NewParachainWriter(conn, payloads, log)
 
 	err := conn.Connect(ctx)
 	if err != nil {

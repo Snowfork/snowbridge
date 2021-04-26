@@ -49,7 +49,7 @@ func (wp WorkerPool) runWorker(ctx context.Context, worker Worker, log *logrus.E
 		// Goroutines are either shutting down or deadlocked.
 		// Give them a few seconds...
 		select {
-		case <-time.After(3 * time.Second):
+		case <-time.After(10 * time.Second):
 			break
 		case err := <-notifyWaitDone:
 			// All goroutines have ended

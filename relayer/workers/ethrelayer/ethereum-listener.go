@@ -20,8 +20,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
 )
 
-const MaxMessagesPerSend = 10
-
 // EthereumListener streams the Ethereum blockchain for application events
 type EthereumListener struct {
 	config                      *ethereum.Config
@@ -29,8 +27,7 @@ type EthereumListener struct {
 	basicOutboundChannel        *outbound.BasicOutboundChannel
 	incentivizedOutboundChannel *outbound.IncentivizedOutboundChannel
 	mapping                     map[common.Address]string
-	messages                    chan<- []chain.Message
-	headers                     chan<- chain.Header
+	payloads                    chan<- ParachainPayload
 	headerSyncer                *syncer.Syncer
 	log                         *logrus.Entry
 }
@@ -38,8 +35,7 @@ type EthereumListener struct {
 func NewEthereumListener(
 	config *ethereum.Config,
 	conn *ethereum.Connection,
-	messages chan<- []chain.Message,
-	headers chan<- chain.Header,
+	payloads chan<- ParachainPayload,
 	log *logrus.Entry,
 ) *EthereumListener {
 	return &EthereumListener{
@@ -48,8 +44,7 @@ func NewEthereumListener(
 		basicOutboundChannel:        nil,
 		incentivizedOutboundChannel: nil,
 		mapping:                     make(map[common.Address]string),
-		messages:                    messages,
-		headers:                     headers,
+		payloads:                    payloads,
 		headerSyncer:                nil,
 		log:                         log,
 	}
@@ -58,10 +53,7 @@ func NewEthereumListener(
 func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
 	closeWithError := func(err error) error {
 		li.log.Info("Shutting down listener...")
-		if li.messages != nil {
-			close(li.messages)
-		}
-		close(li.headers)
+		close(li.payloads)
 		return err
 	}
 
@@ -143,17 +135,14 @@ func (li *EthereumListener) processEventsAndHeaders(
 				return nil
 			}
 
-			err := li.forwardHeader(hcs, gethheader)
+			header, err := li.makeOutgoingHeader(hcs, gethheader)
 			if err != nil {
 				return err
 			}
 
-			if li.messages == nil {
-				li.log.Info("Not polling events since channel is nil")
-			}
-
 			// Don't attempt to forward events prior to genesis block
 			if descendantsUntilFinal > gethheader.Number.Uint64() {
+				li.payloads <- ParachainPayload{header: header}
 				continue
 			}
 
@@ -176,7 +165,12 @@ func (li *EthereumListener) processEventsAndHeaders(
 			}
 			events = append(events, incentivizedEvents...)
 
-			li.forwardEvents(ctx, hcs, events)
+			messages, err := li.makeOutgoingMessages(ctx, hcs, events)
+			if err != nil {
+				return err
+			}
+
+			li.payloads <- ParachainPayload{header: header, messages: messages}
 		}
 	}
 }
@@ -225,8 +219,12 @@ func (li *EthereumListener) queryIncentivizedEvents(contract *outbound.Incentivi
 	return events, nil
 }
 
-func (li *EthereumListener) forwardEvents(ctx context.Context, hcs *ethereum.HeaderCacheState, events []*etypes.Log) error {
-	messages := make([]chain.Message, len(events))
+func (li *EthereumListener) makeOutgoingMessages(
+	ctx context.Context,
+	hcs *ethereum.HeaderCacheState,
+	events []*etypes.Log,
+) ([]*chain.EthereumOutboundMessage, error) {
+	messages := make([]*chain.EthereumOutboundMessage, len(events))
 
 	for i, event := range events {
 		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
@@ -236,7 +234,7 @@ func (li *EthereumListener) forwardEvents(ctx context.Context, hcs *ethereum.Hea
 				"blockNumber": event.BlockNumber,
 				"txHash":      event.TxHash.Hex(),
 			}).WithError(err).Error("Failed to get receipt trie for event")
-			return err
+			return nil, err
 		}
 
 		msg, err := ethereum.MakeMessageFromEvent(li.mapping, event, receiptTrie, li.log)
@@ -247,30 +245,26 @@ func (li *EthereumListener) forwardEvents(ctx context.Context, hcs *ethereum.Hea
 				"blockNumber": event.BlockNumber,
 				"txHash":      event.TxHash.Hex(),
 			}).WithError(err).Error("Failed to generate message from ethereum event")
-			return err
+			return nil, err
 		}
 
 		messages[i] = msg
-		if (i+1)%MaxMessagesPerSend == 0 || i == len(events)-1 {
-			start := i + 1 - MaxMessagesPerSend
-			if i == len(events)-1 {
-				start = i - (i % MaxMessagesPerSend)
-			}
-			li.messages <- messages[start : i+1]
-		}
 	}
 
-	return nil
+	return messages, nil
 }
 
-func (li *EthereumListener) forwardHeader(hcs *ethereum.HeaderCacheState, gethheader *gethTypes.Header) error {
+func (li *EthereumListener) makeOutgoingHeader(
+	hcs *ethereum.HeaderCacheState,
+	gethheader *gethTypes.Header,
+) (*chain.Header, error) {
 	cache, err := hcs.GetEthashproofCache(gethheader.Number.Uint64())
 	if err != nil {
 		li.log.WithFields(logrus.Fields{
 			"blockHash":   gethheader.Hash().Hex(),
 			"blockNumber": gethheader.Number,
 		}).WithError(err).Error("Failed to get ethashproof cache for header")
-		return err
+		return nil, err
 	}
 
 	header, err := ethereum.MakeHeaderFromEthHeader(gethheader, cache, li.log)
@@ -279,10 +273,7 @@ func (li *EthereumListener) forwardHeader(hcs *ethereum.HeaderCacheState, gethhe
 			"blockHash":   gethheader.Hash().Hex(),
 			"blockNumber": gethheader.Number,
 		}).WithError(err).Error("Failed to generate header from ethereum header")
-		return err
-	} else {
-		li.headers <- *header
+		return nil, err
 	}
-
-	return nil
+	return header, nil
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
@@ -52,23 +51,18 @@ func (w *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 		return nil
 	})
 
-	// channel for messages from ethereum
-	ethMessages := make(chan []chain.Message, 1)
-	// channel for headers from ethereum (it's a blocking channel so that we
-	// can guarantee that a header is forwarded before we send dependent messages)
-	ethHeaders := make(chan chain.Header)
+	// channel for payloads from ethereum
+	payloads := make(chan ParachainPayload, 1)
 
 	listener := NewEthereumListener(
 		w.ethconfig,
 		w.ethconn,
-		ethMessages,
-		ethHeaders,
+		payloads,
 		w.log,
 	)
 	writer := NewParachainWriter(
 		w.paraconn,
-		ethMessages,
-		ethHeaders,
+		payloads,
 		w.log,
 	)
 
