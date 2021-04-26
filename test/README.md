@@ -30,7 +30,12 @@ yarn install
 Install `polkadot-launch`:
 
 ```bash
-yarn global add polkadot-launch@1.4.0
+git clone -n https://github.com/paritytech/polkadot-launch.git /tmp/polkadot-launch
+cd /tmp/polkadot-launch
+git checkout 89e970
+yarn install
+yarn build
+yarn global add file:$(pwd)
 ```
 
 Build polkadot:
