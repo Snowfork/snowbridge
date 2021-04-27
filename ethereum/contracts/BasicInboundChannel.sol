@@ -4,21 +4,40 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./InboundChannel.sol";
+import "./LightClientBridge.sol";
 
 contract BasicInboundChannel is InboundChannel {
     uint256 constant public MAX_GAS_PER_MESSAGE = 100000;
+    LightClientBridge public lightClientBridge;
 
-    constructor() {
+    constructor(LightClientBridge _lightClientBridge) {
         nonce = 0;
+        lightClientBridge = _lightClientBridge;
     }
 
     // TODO: Submit should take in all inputs required for verification,
     // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
-    function submit(Message[] calldata _messages, bytes32 _commitment)
+    function submit(
+        Message[] calldata _messages,
+        bytes32 _commitment,
+        bytes32 _parachainMerkleLeaf,
+        uint256 _parachainMerkleLeafIndex,
+        uint256 _parachainMerkleLeafCount,
+        bytes32[] memory _parachainMerkleProof
+    )
         public
         override
     {
         verifyMessages(_messages, _commitment);
+        require(
+            lightClientBridge.verifyBeefyMerkleLeaf(
+                _parachainMerkleLeaf,
+                _parachainMerkleLeafIndex,
+                _parachainMerkleLeafCount,
+                _parachainMerkleProof
+            ),
+            "Invalid proof"
+        );
         processMessages(_messages);
     }
 

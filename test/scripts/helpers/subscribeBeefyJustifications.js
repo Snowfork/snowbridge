@@ -158,6 +158,7 @@ async function getLatestMMRInJustification(justification, api) {
 async function getMMRLeafForBlock(blockNumber, api) {
   console.log(`Getting proof and leaf for block ${blockNumber}...`);
   const mmrProof = await api.rpc.mmr.generateProof(blockNumber);
+  console.log(mmrProof);
   console.log({ mmrProof: mmrProof.toHuman() });
 
   leaf = mmrProof.leaf;
