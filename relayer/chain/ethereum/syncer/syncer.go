@@ -32,6 +32,8 @@ type Syncer struct {
 	headers               chan<- *gethTypes.Header
 	loader                HeaderLoader
 	log                   *logrus.Entry
+	newHeaders            chan *gethTypes.Header
+	oldHeaders            chan *gethTypes.Header
 }
 
 func NewSyncer(descendantsUntilFinal uint64, loader HeaderLoader, headers chan<- *gethTypes.Header, log *logrus.Entry) *Syncer {
@@ -41,6 +43,8 @@ func NewSyncer(descendantsUntilFinal uint64, loader HeaderLoader, headers chan<-
 		headers:               headers,
 		loader:                loader,
 		log:                   log,
+		newHeaders:            nil,
+		oldHeaders:            nil,
 	}
 }
 
@@ -49,9 +53,13 @@ func (s *Syncer) StartSync(ctx context.Context, eg *errgroup.Group, initBlockHei
 		fetchFinalizedDone: false,
 		height:             0,
 	}
+	s.newHeaders = make(chan *gethTypes.Header)
+	s.oldHeaders = make(chan *gethTypes.Header)
 
 	eg.Go(func() error {
-		return s.pollNewHeaders(ctx, lbi)
+		err := s.pollNewHeaders(ctx, lbi)
+		close(s.newHeaders)
+		return err
 	})
 
 	lbi.Lock()
@@ -59,6 +67,7 @@ func (s *Syncer) StartSync(ctx context.Context, eg *errgroup.Group, initBlockHei
 	latestHeader, err := s.loader.HeaderByNumber(ctx, nil)
 	if err != nil {
 		s.log.WithError(err).Error("Failed to retrieve latest header")
+		close(s.headers)
 		return err
 	}
 	if latestHeader.Number.Uint64() > lbi.height {
@@ -66,7 +75,22 @@ func (s *Syncer) StartSync(ctx context.Context, eg *errgroup.Group, initBlockHei
 	}
 
 	eg.Go(func() error {
-		return s.fetchFinalizedHeaders(ctx, initBlockHeight, lbi)
+		err := s.fetchFinalizedHeaders(ctx, initBlockHeight, lbi)
+		close(s.oldHeaders)
+		return err
+	})
+
+	eg.Go(func() error {
+		for header := range s.oldHeaders {
+			s.headers <- header
+		}
+
+		for header := range s.newHeaders {
+			s.headers <- header
+		}
+
+		close(s.headers)
+		return nil
 	})
 
 	return nil
@@ -106,7 +130,7 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			s.headers <- header
+			s.oldHeaders <- header
 		}
 		syncedUpUntil++
 	}
@@ -181,7 +205,7 @@ func (s *Syncer) forwardAncestry(ctx context.Context, hash gethCommon.Hash, olde
 		}
 	}
 
-	s.headers <- item.Header
+	s.newHeaders <- item.Header
 	item.Forwarded = true
 	return nil
 }

@@ -38,17 +38,18 @@ async function start() {
         pos: 'u64'
       },
       PalletId: 'u64',
-      MMRProof: {
+      GenerateMMRProofResponse: {
         blockHash: 'BlockHash',
-        leaf: 'MMRLeaf',
-        proof: 'ActualMMRProof',
+        leaf: 'MMREncodableOpaqueLeaf',
+        proof: 'MMRProof',
       },
       BlockHash: 'H256',
-      ActualMMRProof: {
+      MMREncodableOpaqueLeaf: 'Vec<u8>',
+      MMRProof: {
         /// The index of the leaf the proof is for.
-        leaf_index: 'u64',
+        leafIndex: 'u64',
         /// Number of leaves in MMR, when the proof was generated.
-        leaf_count: 'u64',
+        leafCount: 'u64',
         /// Proof elements (hashes of siblings of inner nodes on the path to the leaf).
         items: 'Vec<Hash>',
       },
@@ -62,9 +63,7 @@ async function start() {
         parentNumber: 'ParentNumber',
         hash: '[u8; 32]'
       },
-      // TODO: The MMRLeaf is a Vec<u8>, so double-scale encoded which messes this first variable up.
-      // Should fix
-      ParentNumber: '[u8; 6]',
+      ParentNumber: 'u32',
       BeefyNextAuthoritySet: {
         id: 'u64',
         /// Number of validators in the set.
@@ -102,7 +101,7 @@ async function start() {
             name: 'leaf_index',
             type: 'u64'
           }],
-          type: 'MMRProof'
+          type: 'GenerateMMRProofResponse'
         }
       }
     }
@@ -158,10 +157,12 @@ async function getLatestMMRInJustification(justification, api) {
 async function getMMRLeafForBlock(blockNumber, api) {
   console.log(`Getting proof and leaf for block ${blockNumber}...`);
   const mmrProof = await api.rpc.mmr.generateProof(blockNumber);
+
   console.log({ mmrProof: mmrProof.toHuman() });
 
-  leaf = mmrProof.leaf;
-  console.log({ leaf: leaf.toHuman() });
+  const mmrEncodableOpqueLeaf = api.createType('MMREncodableOpaqueLeaf', hexToU8a(mmrProof.leaf.toHex()))
+  console.log({ leaf: api.createType('MMRLeaf', mmrEncodableOpqueLeaf).toHuman() })
+  console.log({ proof: api.createType('MMRProof', mmrProof.proof).toHuman() })
 }
 
 async function getParaheads(blockNumber, api, parachainID) {
