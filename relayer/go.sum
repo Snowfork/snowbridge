@@ -548,6 +548,8 @@ github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892 h1:gxkgKQvLyZ
 github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892/go.mod h1:Yy1jPDuUtVPG1b3XnRGiEHWPs09Yd5UphOTqPhN9XPU=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122183154-789fecaf3a9b h1:QfSHfPVMe+j7dEzqay08XpsLAPQN00tif1xaB1yWNWo=
 github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122183154-789fecaf3a9b/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210427180040-e94edb32b57f h1:83W2UOZXeY2Ek0jPuOHeIE90/xUomHGN9ZeA0ibDqo4=
+github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210427180040-e94edb32b57f/go.mod h1:eG8mrKaHGdWEiSMPnI3/8A6ydYoMVYn6bFFaQJDyzz0=
 github.com/snowfork/polkadot-ethereum v0.2.1-alpha h1:o/HeqHe99/8OZdCgfj+tJW+6AmO7GWCOCNsTpMRcYVY=
 github.com/snowfork/polkadot-ethereum v0.3.2 h1:5ErAltUawAi1DuZXRx2g5UeS6tnjm5UPcm32F1k5fck=
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=

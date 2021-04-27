@@ -29,7 +29,7 @@ require (
 	github.com/shirou/gopsutil v3.20.12+incompatible // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892
-	github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210122183154-789fecaf3a9b
+	github.com/snowfork/go-substrate-rpc-client/v2 v2.0.2-0.20210427180040-e94edb32b57f
 	github.com/spf13/afero v1.5.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v1.1.1
