@@ -84,6 +84,7 @@ func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
 				err := wr.WriteChannel(ctx, &concreteMsg)
 				if err != nil {
 					wr.log.WithError(err).Error("Error submitting message to ethereum")
+					return err
 				}
 			}
 		}
@@ -130,7 +131,9 @@ func (wr *EthereumChannelWriter) WriteChannel(ctx context.Context, msg *chain.Su
 	}
 
 	wr.log.WithFields(logrus.Fields{
-		"txHash": tx.Hash().Hex(),
+		"txHash":       tx.Hash().Hex(),
+		"basic":        msg.ChannelID.IsBasic,
+		"incentivized": msg.ChannelID.IsIncentivized,
 	}).Info("Transaction submitted")
 
 	return nil
