@@ -18,17 +18,6 @@ const ethers = require("ethers");
 
 const ETHApp = artifacts.require("ETHApp");
 
-const lockupFunds = (contract, sender, recipient, amount, channel) => {
-  return contract.lock(
-    addressBytes(recipient),
-    channel,
-    {
-      from: sender,
-      value: amount.toString(),
-    }
-  )
-}
-
 contract("ETHApp", function (accounts) {
   // Accounts
   const owner = accounts[0];
@@ -185,5 +174,3 @@ contract("ETHApp", function (accounts) {
     });
   });
 });
-
-module.exports = { lockupETH: lockupFunds };
