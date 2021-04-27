@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const OUR_PARACHAIN_ID = 200
+const PARACHAIN_ID = 200
 
 func subBeefyCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -91,26 +91,31 @@ func subBeefyJustifications(ctx context.Context) error {
 			}
 			log.WithField("blockHash", nextBlockHash.Hex()).Info("Got blockhash")
 			GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash, relaychainConn)
-			allParaheads, ourParahead := GetAllParaheads(nextBlockHash, relaychainConn, OUR_PARACHAIN_ID)
-			log.WithFields(logrus.Fields{
-				"allParaheads": allParaheads,
-				"ourParahead":  ourParahead,
-			}).Info("Got all para heads")
-
-			// TODO6 - Update all above code to make sure to check all new parachain blocks that have been added to the MMR
-			// when there is a new beefy justification, not just the newest parachain block in the MMR
+			header, err := GetParaheads(nextBlockHash, relaychainConn)
+			if err != nil {
+				log.WithError(err).Error("Failed to get para heads")
+				return err
+			}
+			GetParaHeadData(header, parachainConn)
 		}
 	}
 }
 
-func GetAllParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection, ourParachainId uint32) ([]types.Header, types.Header) {
-	none := types.NewOptionU32Empty()
-	encoded, err := types.EncodeToBytes(none)
+func GetParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) (string, error) {
+	type ParaId types.U32
+
+	type ParaHeadsQuery struct {
+		ParaId ParaId
+	}
+
+	query := ParaHeadsQuery{ParaId: 200}
+
+	encoded, err := types.EncodeToBytes(query)
 	if err != nil {
 		log.WithError(err).Error("Error")
 	}
 
-	baseParaHeadsStorageKey, err := types.CreateStorageKey(
+	allParaHeadsStorageKey, err := types.CreateStorageKey(
 		relaychainConn.GetMetadata(),
 		"Paras",
 		"Heads", encoded, nil)
@@ -118,65 +123,60 @@ func GetAllParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection
 		log.WithError(err).Error("Failed to create parachain header storage key")
 	}
 
-	//TODO fix this manual slice.
-	// The above types.CreateStorageKey does not give the same base key as polkadotjs needs for getKeys.
-	// It has some extra bytes.
-	// maybe from the none u32 in golang being wrong, or maybe slightly off CreateStorageKey call? we slice it
-	// here as a hack.
-	actualBaseParaHeadsStorageKey := baseParaHeadsStorageKey[:32]
-	log.WithField("actualBaseParaHeadsStorageKey", actualBaseParaHeadsStorageKey.Hex()).Info("actualBaseParaHeadsStorageKey")
-
-	keysResponse, err := relaychainConn.GetAPI().RPC.State.GetKeys(actualBaseParaHeadsStorageKey, blockHash)
+	// TODO1 - in polkadotjs webapp it seems possible to query this state via paras.heads without specifying any option
+	// and get all parachain heads as a response. eg: trying it on Rococo returns a lot of paraheads.
+	// I think we'll need this (to be able to check against the parachain headers hash
+	// of all headers in MMRLeaf.ParachainHeads), so we should get this working too.
+	response, err := relaychainConn.GetAPI().RPC.State.GetStorageRaw(allParaHeadsStorageKey, blockHash)
 	if err != nil {
-		log.WithError(err).Error("Failed to get all parachain keys")
+		log.WithError(err).Error("Failed to get parachain header")
 	}
 
-	headersResponse, err := relaychainConn.GetAPI().RPC.State.QueryStorage(keysResponse, blockHash, blockHash)
+	// TODO2 - the above query returns some extra bytes, related the the HeadData type (try this state query in polkadotjs
+	// webapp for example). These extra bytes I think are the parachain ID, so the response type needs to account for
+	// this properly. the below is just a hack to get the actual header out. It's also not clear to me if the response
+	// contains the entire header, or just a hash of the header, or some truncated header?
+	header := response.Hex()
+	actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
+	log.WithField("actualHeader", actualHeader).Info("Sliced header response into actual header")
+
+	log.WithField("header", actualHeader).Info("Got parachain header")
+	return actualHeader, nil
+}
+
+func GetParaHeadData(header string, parachainConn *parachain.Connection) {
+	headerHash, err := types.NewHashFromHexString(header)
 	if err != nil {
-		log.WithError(err).Error("Failed to get all parachain headers")
+		log.WithError(err).Error("Failed to create header hash")
 	}
 
-	log.Info("Got all parachain headers")
-	var headers []types.Header
-	var ourParachainHeader types.Header
-	for _, headerResponse := range headersResponse {
-		for _, change := range headerResponse.Changes {
-
-			// TODO fix this manual slice with a proper type decode. only the last few bytes are for the ParaId,
-			// not sure what the early ones are for.
-			key := change.StorageKey[40:]
-			var parachainID types.U32
-			if err := types.DecodeFromBytes(key, &parachainID); err != nil {
-				log.WithError(err).Error("Failed to decode parachain ID")
-			}
-
-			log.WithField("parachainId", parachainID).Info("Decoding header for parachain")
-			var encodableOpaqueHeader types.Bytes
-			if err := types.DecodeFromBytes(change.StorageData, &encodableOpaqueHeader); err != nil {
-				log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
-			}
-
-			var header types.Header
-			if err := types.DecodeFromBytes(encodableOpaqueHeader, &header); err != nil {
-				log.WithError(err).Error("Failed to decode Header")
-			}
-			log.WithFields(logrus.Fields{
-				"headerBytes":           fmt.Sprintf("%#x", encodableOpaqueHeader),
-				"header.ParentHash":     header.ParentHash.Hex(),
-				"header.Number":         header.Number,
-				"header.StateRoot":      header.StateRoot.Hex(),
-				"header.ExtrinsicsRoot": header.ExtrinsicsRoot.Hex(),
-				"header.Digest":         header.Digest,
-				"parachainId":           parachainID,
-			}).Info("Decoded header for parachain")
-			headers = append(headers, header)
-
-			if parachainID == types.U32(ourParachainId) {
-				ourParachainHeader = header
-			}
-		}
+	log.WithFields(logrus.Fields{
+		"hash": headerHash.Hex(),
+	}).Info("Querying for parachain header")
+	headerData, err := parachainConn.Api().RPC.Chain.GetHeader(headerHash)
+	if err != nil {
+		log.WithError(err).Error("Failed to get parachain header")
+		// TODO3: This usually errors with "json: cannot unmarshal string into Go struct field Header.number of type uint32"
+		// Seems maybe related to the block number encoding thing on parachains vs relay chains, or maybe because our parachain
+		// header has a different type to the relay chain header and we need to setup that type?
 	}
-	return headers, ourParachainHeader
+
+	log.WithFields(logrus.Fields{
+		"headerData": headerData,
+	}).Info("Retrieved full parachain header")
+
+	// TODO4 - Get the header digest and commitment logs from this particular header once above is working.
+	// const headerLogs = headData.toJSON().digest && headData.toJSON().digest.logs;
+	// const commitmentLog = headerLogs && headerLogs[0];
+	// if (commitmentLog) {
+	//   console.log("Got new commitment: ");
+	//   console.log({ commitmentLog });
+	// }
+
+	// TODO5 - Get the messages in that commitments
+
+	// TODO6 - Update all above code to make sure to check all new parachain blocks that have been added to the MMR
+	// when there is a new beefy justification, not just the newest parachain block in the MMR
 }
 
 func GetMMRLeafForBlock(blockNumber uint64, blockHash types.Hash, relaychainConn *relaychain.Connection) {
