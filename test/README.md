@@ -44,6 +44,7 @@ git checkout 89e970
 yarn install
 yarn build
 yarn global add file:$(pwd)
+cd -
 ```
 
 Build polkadot:
@@ -53,6 +54,7 @@ git clone -n https://github.com/snowfork/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
 git checkout enable_beefy_on_rococo
 cargo build --release
+cd -
 ```
 
 Optional: If you cloned the polkadot repo in another location, Create an `.env` file to specify the directory where you installed the polkadot binary.
