@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
 import "./ValidatorRegistry.sol";
+import "./MMRVerification.sol";
 
 /**
  * @title A entry contract for the Ethereum light client
@@ -59,7 +60,9 @@ contract LightClientBridge {
     /* State */
 
     ValidatorRegistry public validatorRegistry;
+    MMRVerification public mmrVerification;
     uint256 public currentId;
+    bytes32 public latestMMRRoot;
     mapping(uint256 => ValidationData) public validationData;
 
     /* Constants */
@@ -73,10 +76,32 @@ contract LightClientBridge {
      * @dev If the validatorSetRegistry should be initialised with 0 entries, then input
      * 0x00 as validatorSetRoot
      * @param _validatorRegistry The contract to be used as the validator registry
+     * @param _mmrVerification The contract to be used for MMR verification
      */
-    constructor(ValidatorRegistry _validatorRegistry) {
+    constructor(ValidatorRegistry _validatorRegistry, MMRVerification _mmrVerification) {
         validatorRegistry = _validatorRegistry;
+        mmrVerification = _mmrVerification;
         currentId = 0;
+    }
+
+    /**
+     * @notice Executed by the incoming channel in order to verify commitment
+     * @param beefyMerkleLeaf contains the merkle leaf to be verified
+     * @param beefyMerkleProof contains the merkle proof to verify against
+     */
+    function verifyBeefyMerkleLeaf(
+        bytes32 beefyMerkleLeaf,
+        uint256 beefyMerkleLeafIndex,
+        uint256 beefyMerkleLeafCount,
+        bytes32[] calldata beefyMerkleProof
+    ) external returns (bool) {
+        return mmrVerification.verifyInclusionProof(
+            latestMMRRoot,
+            beefyMerkleLeaf,
+            beefyMerkleLeafIndex,
+            beefyMerkleLeafCount,
+            beefyMerkleProof
+        );
     }
 
     /* Public Functions */
@@ -91,6 +116,7 @@ contract LightClientBridge {
      * @param validatorPublicKey the public key of the validator
      * @param validatorPublicKeyMerkleProof proof required for validation of the public key in the validator merkle tree
      */
+
     function newSignatureCommitment(
         bytes32 payload,
         uint256[] memory validatorClaimsBitfield,
@@ -102,33 +128,33 @@ contract LightClientBridge {
         /**
          * @dev Check if validatorPublicKeyMerkleProof is valid based on ValidatorRegistry merkle root
          */
-        // require(
-        //     validatorRegistry.checkValidatorInSet(
-        //         validatorPublicKey,
-        //         validatorPosition,
-        //         validatorPublicKeyMerkleProof
-        //     ),
-        //     "Error: Sender must be in validator set at correct position"
-        // );
+        require(
+            validatorRegistry.checkValidatorInSet(
+                validatorPublicKey,
+                validatorPosition,
+                validatorPublicKeyMerkleProof
+            ),
+            "Error: Sender must be in validator set at correct position"
+        );
 
         /**
          * @dev Check if validatorSignature is correct, ie. check if it matches
          * the signature of senderPublicKey on the payload
          */
-        // require(
-        //     ECDSA.recover(payload, validatorSignature) == validatorPublicKey,
-        //     "Error: Invalid Signature"
-        // );
+        require(
+            ECDSA.recover(payload, validatorSignature) == validatorPublicKey,
+            "Error: Invalid Signature"
+        );
 
         /**
          * @dev Check that the bitfield actually contains enough claims to be succesful, ie, > 2/3
          */
-        // require(
-        //     validatorClaimsBitfield.countSetBits() >
-        //         (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-        //             THRESHOLD_DENOMINATOR,
-        //     "Error: Bitfield not enough validators"
-        // );
+        require(
+            validatorClaimsBitfield.countSetBits() >
+                (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
+                    THRESHOLD_DENOMINATOR,
+            "Error: Bitfield not enough validators"
+        );
 
         /**
          * @todo Lock up the sender stake as collateral
@@ -183,78 +209,78 @@ contract LightClientBridge {
             "Error: Sender address does not match original validation data"
         );
 
-        // uint256 requiredNumOfSignatures =
-        //     (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-        //         THRESHOLD_DENOMINATOR;
+        uint256 requiredNumOfSignatures =
+            (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
+                THRESHOLD_DENOMINATOR;
 
         /**
          * @dev verify that required number of signatures, positions, public keys and merkle proofs are
          * submitted
          */
-        // require(
-        //     signatures.length == requiredNumOfSignatures,
-        //     "Error: Number of signatures does not match required"
-        // );
-        // require(
-        //     validatorPositions.length == requiredNumOfSignatures,
-        //     "Error: Number of validator positions does not match required"
-        // );
-        // require(
-        //     validatorPublicKeys.length == requiredNumOfSignatures,
-        //     "Error: Number of validator public keys does not match required"
-        // );
-        // require(
-        //     validatorPublicKeyMerkleProofs.length == requiredNumOfSignatures,
-        //     "Error: Number of validator public keys does not match required"
-        // );
+        require(
+            signatures.length == requiredNumOfSignatures,
+            "Error: Number of signatures does not match required"
+        );
+        require(
+            validatorPositions.length == requiredNumOfSignatures,
+            "Error: Number of validator positions does not match required"
+        );
+        require(
+            validatorPublicKeys.length == requiredNumOfSignatures,
+            "Error: Number of validator public keys does not match required"
+        );
+        require(
+            validatorPublicKeyMerkleProofs.length == requiredNumOfSignatures,
+            "Error: Number of validator public keys does not match required"
+        );
 
         /**
          * @dev Generate an array of numbers
          */
-        // uint256[] memory randomBitfield =
-        //     Bitfield.randomNBitsFromPrior(
-        //         getSeed(data),
-        //         data.validatorClaimsBitfield,
-        //         requiredNumOfSignatures
-        //     );
+        uint256[] memory randomBitfield =
+            Bitfield.randomNBitsFromPrior(
+                getSeed(data),
+                data.validatorClaimsBitfield,
+                requiredNumOfSignatures
+            );
 
         /**
          *  @dev For each randomSignature, do:
          */
-        // for (uint256 i = 0; i < requiredNumOfSignatures; i++) {
-        //     /**
-        //      * @dev Check if validator in randomBitfield
-        //      */
-        //     require(
-        //         randomBitfield.isSet(validatorPositions[i]),
-        //         "Error: Validator must be once in bitfield"
-        //     );
+        for (uint256 i = 0; i < requiredNumOfSignatures; i++) {
+            /**
+             * @dev Check if validator in randomBitfield
+             */
+            require(
+                randomBitfield.isSet(validatorPositions[i]),
+                "Error: Validator must be once in bitfield"
+            );
 
-        //     /**
-        //      * @dev Remove validator from randomBitfield such that no validator can appear twice in signatures
-        //      */
-        //     randomBitfield.clear(validatorPositions[i]);
+            /**
+             * @dev Remove validator from randomBitfield such that no validator can appear twice in signatures
+             */
+            randomBitfield.clear(validatorPositions[i]);
 
-        //     /**
-        //      * @dev Check if merkle proof is valid
-        //      */
-        //     require(
-        //         validatorRegistry.checkValidatorInSet(
-        //             validatorPublicKeys[i],
-        //             validatorPositions[i],
-        //             validatorPublicKeyMerkleProofs[i]
-        //         ),
-        //         "Error: Validator must be in validator set at correct position"
-        //     );
+            /**
+             * @dev Check if merkle proof is valid
+             */
+            require(
+                validatorRegistry.checkValidatorInSet(
+                    validatorPublicKeys[i],
+                    validatorPositions[i],
+                    validatorPublicKeyMerkleProofs[i]
+                ),
+                "Error: Validator must be in validator set at correct position"
+            );
 
-        //     /**
-        //      * @dev Check if signature is correct
-        //      */
-        //     require(
-        //         ECDSA.recover(payload, signatures[i]) == validatorPublicKeys[i],
-        //         "Error: Invalid Signature"
-        //     );
-        // }
+            /**
+             * @dev Check if signature is correct
+             */
+            require(
+                ECDSA.recover(payload, signatures[i]) == validatorPublicKeys[i],
+                "Error: Invalid Signature"
+            );
+        }
 
         /**
          * @todo Release the sender stake as collateral
@@ -307,6 +333,7 @@ contract LightClientBridge {
         // Check that payload.leaf.block_number is > last_known_block_number;
 
         //update latestMMRRoot = payload.mmrRoot;
+        latestMMRRoot = payload;
 
         // if payload is in next epoch, then apply validatorset changes
         // if payload is not in current or next epoch, reject

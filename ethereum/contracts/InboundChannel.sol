@@ -13,7 +13,14 @@ abstract contract InboundChannel {
 
     event MessageDispatched(uint64 nonce, bool result);
 
-    function submit(Message[] calldata _messages, bytes32 _commitment)
+    function submit(
+        Message[] calldata _messages,
+        bytes32 _commitment,
+        bytes32 _parachainMerkleLeaf,
+        uint256 _parachainMerkleLeafIndex,
+        uint256 _parachainMerkleLeafCount,
+        bytes32[] memory _parachainMerkleProof
+    )
         public
         virtual;
 }
