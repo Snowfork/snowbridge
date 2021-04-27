@@ -135,7 +135,8 @@ func GetParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) (
 	// TODO2 - the above query returns some extra bytes, related the the HeadData type (try this state query in polkadotjs
 	// webapp for example). These extra bytes I think are the parachain ID, so the response type needs to account for
 	// this properly. the below is just a hack to get the actual header out. It's also not clear to me if the response
-	// contains the entire header, or just a hash of the header, or some truncated header?
+	// contains the entire header, or just a hash of the header, or some truncated header? If it's the entire header,
+	// then great we can use it entirely instead of querying for it in a follow up call
 	header := response.Hex()
 	actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
 	log.WithField("actualHeader", actualHeader).Info("Sliced header response into actual header")
