@@ -38,17 +38,17 @@ async function start() {
         pos: 'u64'
       },
       PalletId: 'u64',
-      MMRProof: {
+      GenerateMMRProofResponse: {
         blockHash: 'BlockHash',
         leaf: 'MMRLeaf',
-        proof: 'ActualMMRProof',
+        proof: 'MMRProof',
       },
       BlockHash: 'H256',
-      ActualMMRProof: {
+      MMRProof: {
         /// The index of the leaf the proof is for.
-        leaf_index: 'u64',
+        leafIndex: 'u64',
         /// Number of leaves in MMR, when the proof was generated.
-        leaf_count: 'u64',
+        leafCount: 'u64',
         /// Proof elements (hashes of siblings of inner nodes on the path to the leaf).
         items: 'Vec<Hash>',
       },
@@ -102,7 +102,7 @@ async function start() {
             name: 'leaf_index',
             type: 'u64'
           }],
-          type: 'MMRProof'
+          type: 'GenerateMMRProofResponse'
         }
       }
     }
@@ -158,10 +158,11 @@ async function getLatestMMRInJustification(justification, api) {
 async function getMMRLeafForBlock(blockNumber, api) {
   console.log(`Getting proof and leaf for block ${blockNumber}...`);
   const mmrProof = await api.rpc.mmr.generateProof(blockNumber);
+
   console.log({ mmrProof: mmrProof.toHuman() });
 
-  leaf = mmrProof.leaf;
-  console.log({ leaf: leaf.toHuman() });
+  console.log({ leaf: api.createType('MMRLeaf', mmrProof.leaf).toHuman() })
+  console.log({ proof: api.createType('MMRProof', mmrProof.proof).toHuman() })
 }
 
 async function getParaheads(blockNumber, api, parachainID) {
