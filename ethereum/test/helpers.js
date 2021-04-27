@@ -10,7 +10,7 @@ const { web3 } = require('@openzeppelin/test-helpers/src/setup');
 const MockFeeSource = artifacts.require("MockFeeSource");
 const LightClientBridge = artifacts.require("LightClientBridge");
 const ValidatorRegistry = artifacts.require("ValidatorRegistry");
-const MMRStatelessVerification = artifacts.require("MMRStatelessVerification");
+const MMRVerification = artifacts.require("MMRVerification");
 
 const channelContracts = {
   basic: {
@@ -247,7 +247,7 @@ const deployLightClientBridge = async (validatorsMerkleRoot) => {
     validatorsMerkleRoot,
     2
   );
-  const mmrVerification = await MMRStatelessVerification.new();
+  const mmrVerification = await MMRVerification.new();
   const lightClientBridge = await LightClientBridge.new(
     validator.address,
     mmrVerification.address
