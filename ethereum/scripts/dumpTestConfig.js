@@ -60,9 +60,16 @@ const dump = (tmpDir, channels, bridge) => {
             dbpath: "tmp.db",
         },
         workers: {
-            parachaincommitmentrrelayer: true,
-            beefyrelayer: true,
-            ethrelayer: true
+            parachaincommitmentrelayer: {
+                enabled: true,
+            },
+            beefyrelayer:  {
+                enabled: true,
+            },
+            ethrelayer:  {
+                enabled: true,
+                "restart-delay": 60,
+            },
         }
     }
     fs.writeFileSync(path.join(tmpDir, "config.toml"), TOML.stringify(config));

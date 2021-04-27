@@ -20,6 +20,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/ethrelayer"
@@ -33,9 +34,9 @@ type Relay struct {
 }
 
 type WorkerConfig struct {
-	ParachainCommitmentRelayer bool `mapstructure:"parachaincommitmentrrelayer"`
-	BeefyRelayer               bool `mapstructure:"beefyrelayer"`
-	EthRelayer                 bool `mapstructure:"ethrelayer"`
+	ParachainCommitmentRelayer workers.WorkerConfig `mapstructure:"parachaincommitmentrelayer"`
+	BeefyRelayer               workers.WorkerConfig `mapstructure:"beefyrelayer"`
+	EthRelayer                 workers.WorkerConfig `mapstructure:"ethrelayer"`
 }
 
 type Config struct {
@@ -54,7 +55,7 @@ func NewRelay() (*Relay, error) {
 
 	parachainCommitmentRelayer := &parachaincommitmentrelayer.Worker{}
 
-	if config.Workers.ParachainCommitmentRelayer == true {
+	if config.Workers.ParachainCommitmentRelayer.Enabled {
 		parachainCommitmentRelayer, err = parachaincommitmentrelayer.NewWorker(&config.Parachain, &config.Relaychain, &config.Eth)
 		if err != nil {
 			return nil, err
@@ -63,7 +64,7 @@ func NewRelay() (*Relay, error) {
 
 	beefyRelayer := &beefyrelayer.Worker{}
 
-	if config.Workers.BeefyRelayer == true {
+	if config.Workers.BeefyRelayer.Enabled {
 		beefyRelayer, err = beefyrelayer.NewWorker(&config.Relaychain, &config.Eth, &config.BeefyRelayerDatabase)
 		if err != nil {
 			return nil, err
@@ -72,7 +73,7 @@ func NewRelay() (*Relay, error) {
 
 	ethRelayer := &ethrelayer.Worker{}
 
-	if config.Workers.EthRelayer == true {
+	if config.Workers.EthRelayer.Enabled {
 		ethRelayer = ethrelayer.NewWorker(
 			&config.Eth,
 			&config.Parachain,

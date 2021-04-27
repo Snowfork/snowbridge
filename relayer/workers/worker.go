@@ -20,7 +20,7 @@ type Worker interface {
 	Start(ctx context.Context, eg *errgroup.Group) error
 }
 
-type WorkerFactory func() (Worker, error)
+type WorkerFactory func() (Worker, *WorkerConfig, error)
 
 type WorkerPool []WorkerFactory
 
@@ -108,14 +108,23 @@ func (wp WorkerPool) run(ctx context.Context, onDeadlock DeadlockHandler, log *l
 		factory := f
 
 		eg.Go(func() error {
+			restarts := 0
+
 			for {
-				worker, err := factory()
+				worker, config, err := factory()
 				if err != nil {
 					// It is unrecoverable if we cannot construct one of our workers
 					return err
 				}
 
-				log.WithField("worker", worker.Name()).Debug("Starting worker")
+				if !config.Enabled {
+					return nil
+				}
+
+				log.WithFields(logrus.Fields{
+					"restarts": restarts,
+					"worker":   worker.Name(),
+				}).Debug("Starting worker")
 				err = wp.runWorker(ctx, worker)
 
 				if err == WorkerDeadlocked {
@@ -132,8 +141,8 @@ func (wp WorkerPool) run(ctx context.Context, onDeadlock DeadlockHandler, log *l
 				case <-ctx.Done():
 					return ctx.Err()
 				default:
-					// TODO: instead retry with backoff up to X retries
-					return err
+					<-time.After(time.Duration(config.RestartDelay) * time.Second)
+					restarts += 1
 				}
 			}
 		})

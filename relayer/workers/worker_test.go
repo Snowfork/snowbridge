@@ -49,22 +49,52 @@ func (w *ConsumerWorker) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
+type TerminatingWorker struct{}
+
+func (w *TerminatingWorker) Name() string { return "TerminatingWorker" }
+
+func (w *TerminatingWorker) Start(ctx context.Context, eg *errgroup.Group) error {
+	eg.Go(func() error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			return nil
+		}
+	})
+	return nil
+}
+
+func testConfig() *workers.WorkerConfig {
+	return &workers.WorkerConfig{
+		Enabled:      true,
+		RestartDelay: 1,
+	}
+}
+
+func testLogger() (*logrus.Entry, *logtest.Hook) {
+	logger, hook := logtest.NewNullLogger()
+	logger.SetLevel(logrus.DebugLevel)
+	log := logger.WithField("source", "TestWorkerPool")
+	return log, hook
+}
+
 func TestCanStopPool(t *testing.T) {
-	factory := func() (workers.Worker, error) { return &TestWorker{}, nil }
+	factory := func() (workers.Worker, *workers.WorkerConfig, error) {
+		return &TestWorker{}, testConfig(), nil
+	}
 	pool := workers.WorkerPool{
 		factory,
 		factory,
 		factory,
 	}
 
-	logger, hook := logtest.NewNullLogger()
-	logger.SetLevel(logrus.DebugLevel)
-
+	log, hook := testLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	errCh := make(chan error)
 	go func() {
-		errCh <- pool.RunWithContext(ctx, nil, logger.WithField("source", "TestWorkerPool"))
+		errCh <- pool.RunWithContext(ctx, nil, log)
 	}()
 
 	<-time.After(100 * time.Millisecond)
@@ -82,10 +112,12 @@ func TestDetectsDeadlockedWorker(t *testing.T) {
 	ch := make(chan struct{})
 	// The consumer worker will run until the incoming channel is closed, ignoring
 	// context cancellation.
-	factoryConsumer := func() (workers.Worker, error) { return NewConsumerWorker(ch), nil }
+	factoryConsumer := func() (workers.Worker, *workers.WorkerConfig, error) {
+		return NewConsumerWorker(ch), testConfig(), nil
+	}
 	pool := workers.WorkerPool{factoryConsumer}
 
-	logger, _ := logtest.NewNullLogger()
+	log, _ := testLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	deadlockSignal := make(chan struct{})
@@ -95,7 +127,7 @@ func TestDetectsDeadlockedWorker(t *testing.T) {
 	}
 
 	go func() {
-		pool.RunWithContext(ctx, onDeadlock, logger.WithField("source", "TestWorkerPool"))
+		pool.RunWithContext(ctx, onDeadlock, log)
 	}()
 
 	cancel()
@@ -103,4 +135,25 @@ func TestDetectsDeadlockedWorker(t *testing.T) {
 	<-deadlockSignal
 	// Stop the deadlock so the test can exit
 	close(ch)
+}
+
+func TestRestartsTerminatedWorker(t *testing.T) {
+	factoryTerminating := func() (workers.Worker, *workers.WorkerConfig, error) {
+		return &TerminatingWorker{}, testConfig(), nil
+	}
+	pool := workers.WorkerPool{factoryTerminating}
+
+	log, hook := testLogger()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		pool.RunWithContext(ctx, nil, log)
+	}()
+
+	<-time.After(2 * time.Second)
+	cancel()
+
+	assert.Greater(t, len(hook.AllEntries()), 2)
+	assert.Equal(t, hook.AllEntries()[2].Message, "Starting worker")
+	assert.Equal(t, hook.AllEntries()[2].Data["restarts"], 1)
 }
