@@ -73,13 +73,21 @@ contract("IncentivizedInboundChannel", function (accounts) {
       };
       const messages = [messageOne, messageTwo];
       const commitment = buildCommitment(messages);
+      const leaf = "0xc101580000006b298847473d05ebb1f1922abe40c12090299230e100c255ddefddb3ed0de1e284e929d0d7e236cc27f2e17380609cdaa2290d1cea197d14408b72223ee293a401000000000000000200000007b13d25743592825cea32c9a24ba67b50b7e90d92cbd1d0f4eab2dc94dba5c6";
+      const proof = "0x58000000000000005a000000000000001006c6d6ef111e790dd52dd73b634046e52e10844a30db675bb076f101df4e578539ac2e734a4acd4dd720d218e59df8bb739df83904e2dd0e916dcf373a1e18bfb9102f03203bf2db14b09366c5e6ee08327490bda6287042a2698e36c951cbc2433e8086408f459e9951e50cb9e2537110ae7b25f3fb33022434403fd6fcd5ca";
+      const proofs = proof.split("0x")[1].match(/.{1,64}/g).map(function(proof) {
+        if (proof.length < 64) {
+          return `0x${proof.padEnd(64, "0")}`;
+        }
+        return `0x${proof}`;
+      });
       const tx = await this.inbound.submit(
         messages,
         commitment,
-        keccakFromHexString("0xc101580000006b298847473d05ebb1f1922abe40c12090299230e100c255ddefddb3ed0de1e284e929d0d7e236cc27f2e17380609cdaa2290d1cea197d14408b72223ee293a401000000000000000200000007b13d25743592825cea32c9a24ba67b50b7e90d92cbd1d0f4eab2dc94dba5c6"),
+        keccakFromHexString(leaf),
         1,
         1,
-        [keccakFromHexString("0x58000000000000005a000000000000001006c6d6ef111e790dd52dd73b634046e52e10844a30db675bb076f101df4e578539ac2e734a4acd4dd720d218e59df8bb739df83904e2dd0e916dcf373a1e18bfb9102f03203bf2db14b09366c5e6ee08327490bda6287042a2698e36c951cbc2433e8086408f459e9951e50cb9e2537110ae7b25f3fb33022434403fd6fcd5ca")],
+        proofs,
         { from: userOne }
       );
       console.log(tx);
