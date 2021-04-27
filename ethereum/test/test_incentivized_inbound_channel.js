@@ -2,8 +2,7 @@ const ETHApp = artifacts.require("ETHApp");
 
 const BigNumber = web3.BigNumber;
 
-const { confirmUnlock, confirmMessageDispatched, deployGenericAppWithChannels, ChannelId, buildCommitment } = require("./helpers");
-const { lockupETH } = require('./test_eth_app');
+const { confirmUnlock, confirmMessageDispatched, deployGenericAppWithChannels, ChannelId, buildCommitment, lockupFunds } = require("./helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -27,7 +26,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
 
       // Prepare ETHApp with some liquidity for testing
       this.POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
-      await lockupETH(this.ethApp, userOne, this.POLKADOT_ADDRESS, 5000, ChannelId.Incentivized)
+      await lockupFunds(this.ethApp, userOne, this.POLKADOT_ADDRESS, 5000, ChannelId.Incentivized)
     });
 
     it("should accept a new valid commitment and dispatch the contained messages to their respective destinations", async function () {

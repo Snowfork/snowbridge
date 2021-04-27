@@ -1,10 +1,16 @@
 const BigNumber = require('bignumber.js');
 const rlp = require("rlp");
 const { ethers } = require("ethers");
+const { keccakFromHexString, keccak } = require("ethereumjs-util");
+const MerkleTree = require("merkletreejs").MerkleTree;
 
 const assert = require('chai').assert;
+const { web3 } = require('@openzeppelin/test-helpers/src/setup');
 
 const MockFeeSource = artifacts.require("MockFeeSource");
+const LightClientBridge = artifacts.require("LightClientBridge");
+const ValidatorRegistry = artifacts.require("ValidatorRegistry");
+const MMRStatelessVerification = artifacts.require("MMRStatelessVerification");
 
 const channelContracts = {
   basic: {
@@ -163,7 +169,7 @@ const encodeMessage = (message) => {
   );
 }
 
-const deployChannels = async (deployer) => {
+const deployChannels = async (deployer, inbound_args) => {
 
   const defaults = {
     from: deployer
@@ -171,11 +177,11 @@ const deployChannels = async (deployer) => {
 
   const channels = {
     basic: {
-      inbound: await channelContracts.basic.inbound.new(defaults),
+      inbound: await channelContracts.basic.inbound.new(inbound_args, defaults),
       outbound: await channelContracts.basic.outbound.new(defaults),
     },
     incentivized: {
-      inbound: await channelContracts.incentivized.inbound.new(defaults),
+      inbound: await channelContracts.incentivized.inbound.new(inbound_args, defaults),
       outbound: await channelContracts.incentivized.outbound.new(defaults),
     },
   };
@@ -213,8 +219,8 @@ const deployDOTAppWithChannels = async (deployer, appContract, ...appContractArg
   return [channels, app];
 }
 
-const deployGenericAppWithChannels = async (deployer, appContract, ...appContractArgs) => {
-  let channels = await deployChannels(deployer)
+const deployGenericAppWithChannels = async (deployer, inbound_args, appContract, ...appContractArgs) => {
+  let channels = await deployChannels(deployer, inbound_args);
 
   const app = await appContract.new(
     ...appContractArgs,
@@ -234,6 +240,57 @@ const deployGenericAppWithChannels = async (deployer, appContract, ...appContrac
   await initializeChannels(channels, app, deployer);
 
   return [channels, app];
+}
+
+const deployLightClientBridge = async (validatorsMerkleRoot) => {
+  const validator = await ValidatorRegistry.new(
+    validatorsMerkleRoot,
+    2
+  );
+  const mmrVerification = await MMRStatelessVerification.new();
+  const lightClientBridge = await LightClientBridge.new(
+    validator.address,
+    mmrVerification.address
+  );
+
+  return lightClientBridge;
+}
+
+function signatureSubstrateToEthereum(sig) {
+  const recoveryId0 = web3.utils.hexToNumber(`0x${sig.slice(130)}`);
+  const newRecoveryId0 = web3.utils.numberToHex(recoveryId0 + 27);
+  const res = sig.slice(0, 130).concat(newRecoveryId0.slice(2));
+
+  return res;
+}
+
+function createMerkleTree(leavesHex) {
+  const leavesHashed = leavesHex.map(leaf => keccakFromHexString(leaf));
+  const merkleTree = new MerkleTree(leavesHashed, keccak, { sort: false });
+
+  return merkleTree;
+}
+
+async function mine(n) {
+  for (let i=0; i < n; i++) {
+    web3.currentProvider.send({
+      jsonrpc: '2.0',
+      method: 'evm_mine',
+      params: [],
+      id: new Date().getTime()
+    }, (err, res) => {});
+  }
+}
+
+const lockupFunds = (contract, sender, recipient, amount, channel) => {
+  return contract.lock(
+    addressBytes(recipient),
+    channel,
+    {
+      from: sender,
+      value: amount.toString(),
+    }
+  )
 }
 
 const addressBytes = (address) => Buffer.from(address.replace(/^0x/, ""), "hex");
@@ -258,6 +315,12 @@ module.exports = {
   confirmMessageDispatched,
   deployDOTAppWithChannels,
   deployGenericAppWithChannels,
+  deployLightClientBridge,
+  deployChannels,
+  signatureSubstrateToEthereum,
+  createMerkleTree,
+  mine,
+  lockupFunds,
   addressBytes,
   ChannelId,
   buildCommitment,
