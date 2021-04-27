@@ -40,10 +40,11 @@ async function start() {
       PalletId: 'u64',
       GenerateMMRProofResponse: {
         blockHash: 'BlockHash',
-        leaf: 'MMRLeaf',
+        leaf: 'MMREncodableOpaqueLeaf',
         proof: 'MMRProof',
       },
       BlockHash: 'H256',
+      MMREncodableOpaqueLeaf: 'Vec<u8>',
       MMRProof: {
         /// The index of the leaf the proof is for.
         leafIndex: 'u64',
@@ -62,9 +63,7 @@ async function start() {
         parentNumber: 'ParentNumber',
         hash: '[u8; 32]'
       },
-      // TODO: The MMRLeaf is a Vec<u8>, so double-scale encoded which messes this first variable up.
-      // Should fix
-      ParentNumber: '[u8; 6]',
+      ParentNumber: 'u32',
       BeefyNextAuthoritySet: {
         id: 'u64',
         /// Number of validators in the set.
@@ -161,7 +160,8 @@ async function getMMRLeafForBlock(blockNumber, api) {
 
   console.log({ mmrProof: mmrProof.toHuman() });
 
-  console.log({ leaf: api.createType('MMRLeaf', mmrProof.leaf).toHuman() })
+  const mmrEncodableOpqueLeaf = api.createType('MMREncodableOpaqueLeaf', hexToU8a(mmrProof.leaf.toHex()))
+  console.log({ leaf: api.createType('MMRLeaf', mmrEncodableOpqueLeaf).toHuman() })
   console.log({ proof: api.createType('MMRProof', mmrProof.proof).toHuman() })
 }
 
