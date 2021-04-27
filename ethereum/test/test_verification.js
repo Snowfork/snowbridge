@@ -31,7 +31,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       this.lightClientBridge = await deployLightClientBridge(validatorsMerkleTree.getHexRoot());
       const newCommitment = await this.lightClientBridge.newSignatureCommitment(
         "0xee236d6ab042180c67b3f4eb84d9ae3965497104b80b51cc0de1f72feb03d618",
-        [3],
+        [parseBitfield('11')],
         signatureSubstrateToEthereum("0x3b721631b6dc6610c96d0b46a800fc292872558debe53927fec1728e6113aa8b05541728a9209f784dc1e893b904e55773b2bcef6eaebba00a07e188d8287fb200"),
         0,
         "0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b",
@@ -86,3 +86,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
     });
   });
 });
+
+function parseBitfield (s) {
+  return parseInt(s, 2)
+}
