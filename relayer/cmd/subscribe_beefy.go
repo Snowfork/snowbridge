@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -123,10 +122,6 @@ func GetParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) (
 		log.WithError(err).Error("Failed to create parachain header storage key")
 	}
 
-	// TODO1 - in polkadotjs webapp it seems possible to query this state via paras.heads without specifying any option
-	// and get all parachain heads as a response. eg: trying it on Rococo returns a lot of paraheads.
-	// I think we'll need this (to be able to check against the parachain headers hash
-	// of all headers in MMRLeaf.ParachainHeads), so we should get this working too.
 	response, err := relaychainConn.GetAPI().RPC.State.GetStorageRaw(allParaHeadsStorageKey, blockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain headers")
@@ -137,12 +132,47 @@ func GetParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) (
 	// this properly. the below is just a hack to get the actual header out. It's also not clear to me if the response
 	// contains the entire header, or just a hash of the header, or some truncated header? If it's the entire header,
 	// then great we can use it entirely instead of querying for it in a follow up call
-	header := response.Hex()
-	actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
+	log.WithField("actualHeader", *response).Info("Got headers")
+	// header := response.Hex()
+	// actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
+	actualHeader := "0x03a46812b4b0d819add8e3e086409a3268f2b173f5b2cd79476a57943bbd9e8e"
 	log.WithField("actualHeader", actualHeader).Info("Sliced header response into actual header")
 
 	log.WithField("header", actualHeader).Info("Got parachain header")
 	return actualHeader, nil
+}
+
+func GetAllParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) {
+	// none := types.NewOptionU32Empty()
+	// encoded, err := types.EncodeToBytes(none)
+	// if err != nil {
+	// 	log.WithError(err).Error("Error")
+	// }
+	// allParaHeadsStorageKey, err := types.CreateStorageKey(
+	// 	relaychainConn.GetMetadata(),
+	// 	"Paras",
+	// 	"Heads", encoded, nil)
+	// if err != nil {
+	// 	log.WithError(err).Error("Failed to create parachain header storage key")
+	// }
+	// TODO the above gives
+	// 0xcd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c399e9d85137db46ef
+	// but we need
+	// 0xcd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c30a31c34bd88c539ec8000000
+	// Likely related to Twox64Concat hashing?
+
+	allParaHeadsStorageKey, err := types.HexDecodeString("0xcd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c30a31c34bd88c539ec8000000")
+	if err != nil {
+		log.WithError(err).Error("Failed to decode all parachain headers storage key")
+	}
+
+	response, err := relaychainConn.GetAPI().RPC.State.GetStorageRaw(allParaHeadsStorageKey, blockHash)
+	if err != nil {
+		log.WithError(err).Error("Failed to get all parachain headers")
+	}
+
+	allHeaders := response.Hex()
+	log.WithField("allHeaders", allHeaders).Info("Got all parachain headers")
 }
 
 func GetParaHeadData(header string, parachainConn *parachain.Connection) {
