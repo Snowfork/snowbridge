@@ -108,7 +108,7 @@ func GetParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) (
 		ParaId ParaId
 	}
 
-	query := ParaHeadsQuery{ParaId: 200}
+	query := ParaHeadsQuery{ParaId: ParaId(types.NewU32(200))}
 
 	encoded, err := types.EncodeToBytes(query)
 	if err != nil {
@@ -129,7 +129,7 @@ func GetParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) (
 	// of all headers in MMRLeaf.ParachainHeads), so we should get this working too.
 	response, err := relaychainConn.GetAPI().RPC.State.GetStorageRaw(allParaHeadsStorageKey, blockHash)
 	if err != nil {
-		log.WithError(err).Error("Failed to get parachain header")
+		log.WithError(err).Error("Failed to get all parachain headers")
 	}
 
 	// TODO2 - the above query returns some extra bytes, related the the HeadData type (try this state query in polkadotjs
@@ -157,9 +157,6 @@ func GetParaHeadData(header string, parachainConn *parachain.Connection) {
 	headerData, err := parachainConn.Api().RPC.Chain.GetHeader(headerHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to get parachain header")
-		// TODO3: This usually errors with "json: cannot unmarshal string into Go struct field Header.number of type uint32"
-		// Seems maybe related to the block number encoding thing on parachains vs relay chains, or maybe because our parachain
-		// header has a different type to the relay chain header and we need to setup that type?
 	}
 
 	log.WithFields(logrus.Fields{
