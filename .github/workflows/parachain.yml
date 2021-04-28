@@ -42,7 +42,11 @@ jobs:
         with:
           command: check
           toolchain: nightly-2021-03-24
-          args: --manifest-path parachain/Cargo.toml --workspace --exclude artemis
+          args: >-
+            --manifest-path parachain/Cargo.toml
+            --workspace
+            --exclude artemis
+            --features runtime-benchmarks
 
   test:
     needs: check
@@ -86,5 +90,6 @@ jobs:
             --exclude artemis-rococo-runtime
             --exclude local-runtime
             --exclude-files '*/mock.rs,*/tests.rs'
+            --features runtime-benchmarks
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
           toolchain: nightly-2021-03-24
