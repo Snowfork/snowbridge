@@ -2,14 +2,18 @@ use super::*;
 
 use sp_core::{H160, H256};
 use frame_support::{
-	assert_ok, assert_err,
+	assert_ok, assert_noop,
 	parameter_types,
+	dispatch::DispatchError
 };
 use sp_runtime::{
 	traits::{BlakeTwo256, Keccak256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
 };
 use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
+
+use artemis_core::{AssetId, SingleAsset};
+use artemis_assets::{SingleAssetAdaptor};
 
 use crate::outbound as incentivized_outbound_channel;
 
@@ -23,6 +27,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Assets: artemis_assets::{Pallet, Call, Storage, Event<T>},
 		IncentivizedOutboundChannel: incentivized_outbound_channel::{Pallet, Call, Storage, Event},
 	}
 );
@@ -60,16 +65,26 @@ impl system::Config for Test {
 	type OnSetCode = ();
 }
 
+impl artemis_assets::Config for Test {
+	type Event = Event;
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const CommitInterval: u64 = 5;
 	pub const MaxMessagesPerCommit: usize = 5;
+	pub const Ether: AssetId = AssetId::ETH;
 }
+
+type FeeCurrency = SingleAssetAdaptor<Test, Ether>;
 
 impl incentivized_outbound_channel::Config for Test {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type FeeCurrency = SingleAssetAdaptor<Test, Ether>;
+	type SetFeeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type WeightInfo = ();
 }
 
@@ -77,6 +92,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	let config: incentivized_outbound_channel::GenesisConfig<Test> = incentivized_outbound_channel::GenesisConfig {
+		fee: 100.into(),
 		interval: 1u64
 	};
 	config.assimilate_storage(&mut storage).unwrap();
@@ -93,6 +109,9 @@ fn test_submit() {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
 
+		// Deposit enough money to cover fees
+		FeeCurrency::deposit(&who, 300.into()).unwrap();
+
 		assert_ok!(IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
 		assert_eq!(Nonce::get(), 1);
 
@@ -102,19 +121,67 @@ fn test_submit() {
 }
 
 #[test]
+fn test_fees_burned() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let who: AccountId = Keyring::Bob.into();
+
+		// Deposit enough money to cover fees
+		FeeCurrency::deposit(&who, 300.into()).unwrap();
+
+		assert_ok!(IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
+
+		assert_eq!(FeeCurrency::balance(&who), 200.into());
+	})
+}
+
+#[test]
+fn test_not_enough_funds() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let who: AccountId = Keyring::Bob.into();
+
+		FeeCurrency::deposit(&who, 50.into()).unwrap();
+
+		assert_noop!(
+			IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
+			Error::<Test>::NoFunds
+		);
+
+	})
+}
+
+#[test]
 fn test_add_message_exceeds_limit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
+
+		// Deposit enough money to cover fees
+		FeeCurrency::deposit(&who, 1000.into()).unwrap();
 
 		let max_messages = MaxMessagesPerCommit::get();
 		(0..max_messages).for_each(
 			|_| IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]).unwrap()
 		);
 
-		assert_err!(
+		assert_noop!(
 			IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
 			Error::<Test>::QueueSizeLimitReached,
 		);
 	})
+}
+
+#[test]
+fn test_set_fee_not_authorized() {
+	new_tester().execute_with(|| {
+		let bob: AccountId = Keyring::Bob.into();
+		assert_noop!(
+			IncentivizedOutboundChannel::set_fee(
+				Origin::signed(bob),
+				1000.into()
+			),
+			DispatchError::BadOrigin
+		);
+	});
 }
