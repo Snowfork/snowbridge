@@ -1,7 +1,7 @@
-// Copyright 2020 Snowfork
+// Copyright 2021 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package parachain_test
+package ethrelayer_test
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/ethrelayer"
 )
 
 func TestWrite(t *testing.T) {
@@ -26,18 +27,14 @@ func TestWrite(t *testing.T) {
 
 	conn := parachain.NewConnection("ws://127.0.0.1:11144/", sr25519.Alice().AsKeyringPair(), log)
 
-	messages := make(chan []chain.Message, 1)
-	headers := make(chan chain.Header, 1)
+	payloads := make(chan ethrelayer.ParachainPayload, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 	defer cancel()
 
-	writer, err := parachain.NewWriter(conn, messages, headers, log)
-	if err != nil {
-		t.Fatal(err)
-	}
+	writer := ethrelayer.NewParachainWriter(conn, payloads, log)
 
-	err = conn.Connect(ctx)
+	err := conn.Connect(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

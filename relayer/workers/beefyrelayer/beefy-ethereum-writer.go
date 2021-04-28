@@ -1,7 +1,4 @@
-// Copyright 2020 Snowfork
-// SPDX-License-Identifier: LGPL-3.0-only
-
-package ethereum
+package beefyrelayer
 
 import (
 	"context"
@@ -14,58 +11,37 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
-	"github.com/snowfork/polkadot-ethereum/relayer/store"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
-type Writer struct {
-	config            *Config
-	conn              *Connection
-	db                *store.Database
-	contracts         map[substrate.ChannelID]*inbound.Contract
+type BeefyEthereumWriter struct {
+	ethereumConfig    *ethereum.Config
+	ethereumConn      *ethereum.Connection
+	beefyDB           *store.Database
 	lightClientBridge *lightclientbridge.Contract
-	messages          <-chan []chain.Message
 	databaseMessages  chan<- store.DatabaseCmd
 	beefyMessages     <-chan store.BeefyRelayInfo
 	log               *logrus.Entry
 }
 
-func NewWriter(config *Config, conn *Connection, db *store.Database, messages <-chan []chain.Message,
+func NewBeefyEthereumWriter(ethereumConfig *ethereum.Config, ethereumConn *ethereum.Connection, beefyDB *store.Database,
 	databaseMessages chan<- store.DatabaseCmd, beefyMessages <-chan store.BeefyRelayInfo,
-	contracts map[substrate.ChannelID]*inbound.Contract,
-	log *logrus.Entry) (*Writer, error) {
-	return &Writer{
-		config:           config,
-		conn:             conn,
-		db:               db,
-		contracts:        contracts,
-		messages:         messages,
+	log *logrus.Entry) *BeefyEthereumWriter {
+	return &BeefyEthereumWriter{
+		ethereumConfig:   ethereumConfig,
+		ethereumConn:     ethereumConn,
+		beefyDB:          beefyDB,
 		databaseMessages: databaseMessages,
 		beefyMessages:    beefyMessages,
 		log:              log,
-	}, nil
+	}
 }
 
-func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
+func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 
-	id := substrate.ChannelID{IsBasic: true}
-	contract, err := inbound.NewContract(common.HexToAddress(wr.config.Channels.Basic.Inbound), wr.conn.client)
-	if err != nil {
-		return err
-	}
-	wr.contracts[id] = contract
-
-	id = substrate.ChannelID{IsIncentivized: true}
-	contract, err = inbound.NewContract(common.HexToAddress(wr.config.Channels.Incentivized.Inbound), wr.conn.client)
-	if err != nil {
-		return err
-	}
-	wr.contracts[id] = contract
-
-	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(wr.config.LightClientBridge), wr.conn.client)
+	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(wr.ethereumConfig.LightClientBridge), wr.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -78,35 +54,20 @@ func (wr *Writer) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (wr *Writer) onDone(ctx context.Context) error {
+func (wr *BeefyEthereumWriter) onDone(ctx context.Context) error {
 	wr.log.Info("Shutting down writer...")
 	// Avoid deadlock if a listener is still trying to send to a channel
-	for range wr.messages {
-		wr.log.Debug("Discarded message")
-	}
 	for range wr.beefyMessages {
 		wr.log.Debug("Discarded BEEFY message")
 	}
 	return ctx.Err()
 }
 
-func (wr *Writer) writeMessagesLoop(ctx context.Context) error {
+func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return wr.onDone(ctx)
-		case msgs := <-wr.messages:
-			for _, msg := range msgs {
-				concreteMsg, ok := msg.(chain.SubstrateOutboundMessage)
-				if !ok {
-					return fmt.Errorf("Invalid message")
-				}
-
-				err := wr.WriteChannel(ctx, &concreteMsg)
-				if err != nil {
-					wr.log.WithError(err).Error("Error submitting message to ethereum")
-				}
-			}
 		case msg := <-wr.beefyMessages:
 			switch msg.Status {
 			case store.CommitmentWitnessed:
@@ -124,53 +85,15 @@ func (wr *Writer) writeMessagesLoop(ctx context.Context) error {
 	}
 }
 
-func (wr *Writer) signerFn(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
-	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, wr.conn.kp.PrivateKey())
+func (wr *BeefyEthereumWriter) signerFn(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
+	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, wr.ethereumConn.GetKP().PrivateKey())
 	if err != nil {
 		return nil, err
 	}
 	return signedTx, nil
 }
 
-// Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
-func (wr *Writer) WriteChannel(ctx context.Context, msg *chain.SubstrateOutboundMessage) error {
-	contract := wr.contracts[msg.ChannelID]
-	if contract == nil {
-		return fmt.Errorf("Unknown contract")
-	}
-
-	options := bind.TransactOpts{
-		From:     wr.conn.kp.CommonAddress(),
-		Signer:   wr.signerFn,
-		Context:  ctx,
-		GasLimit: 500000,
-	}
-
-	var messages []inbound.InboundChannelMessage
-	for _, m := range msg.Commitment {
-		messages = append(messages,
-			inbound.InboundChannelMessage{
-				Target:  m.Target,
-				Nonce:   m.Nonce,
-				Payload: m.Payload,
-			},
-		)
-	}
-
-	tx, err := contract.Submit(&options, messages, msg.CommitmentHash)
-	if err != nil {
-		wr.log.WithError(err).Error("Failed to submit transaction")
-		return err
-	}
-
-	wr.log.WithFields(logrus.Fields{
-		"txHash": tx.Hash().Hex(),
-	}).Info("Transaction submitted")
-
-	return nil
-}
-
-func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo, valIndex int) error {
+func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo, valIndex int) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
 		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
@@ -187,7 +110,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, info store.Be
 	}
 
 	options := bind.TransactOpts{
-		From:     wr.conn.kp.CommonAddress(),
+		From:     wr.ethereumConn.GetKP().CommonAddress(),
 		Signer:   wr.signerFn,
 		Context:  ctx,
 		GasLimit: 5000000,
@@ -215,7 +138,7 @@ func (wr *Writer) WriteNewSignatureCommitment(ctx context.Context, info store.Be
 }
 
 // WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the LightClientBridge contract
-func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
+func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
 		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
@@ -232,7 +155,7 @@ func (wr *Writer) WriteCompleteSignatureCommitment(ctx context.Context, info sto
 	}
 
 	options := bind.TransactOpts{
-		From:     wr.conn.kp.CommonAddress(),
+		From:     wr.ethereumConn.GetKP().CommonAddress(),
 		Signer:   wr.signerFn,
 		Context:  ctx,
 		GasLimit: 500000,

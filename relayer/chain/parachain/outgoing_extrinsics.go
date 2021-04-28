@@ -16,7 +16,7 @@ import (
 
 const MaxWatchedExtrinsics = 20
 
-type extrinsicPool struct {
+type ExtrinsicPool struct {
 	sync.Mutex
 	conn     *Connection
 	eg       *errgroup.Group
@@ -25,8 +25,8 @@ type extrinsicPool struct {
 	watched  chan struct{}
 }
 
-func newExtrinsicPool(eg *errgroup.Group, conn *Connection, log *logrus.Entry) *extrinsicPool {
-	ep := extrinsicPool{
+func NewExtrinsicPool(eg *errgroup.Group, conn *Connection, log *logrus.Entry) *ExtrinsicPool {
+	ep := ExtrinsicPool{
 		conn:    conn,
 		eg:      eg,
 		log:     log,
@@ -35,7 +35,7 @@ func newExtrinsicPool(eg *errgroup.Group, conn *Connection, log *logrus.Entry) *
 	return &ep
 }
 
-func (ep *extrinsicPool) WaitForSubmitAndWatch(ctx context.Context, nonce uint32, ext *types.Extrinsic) {
+func (ep *ExtrinsicPool) WaitForSubmitAndWatch(ctx context.Context, nonce uint32, ext *types.Extrinsic) {
 	select {
 	case ep.watched <- struct{}{}:
 		ep.eg.Go(func() error {
@@ -45,7 +45,7 @@ func (ep *extrinsicPool) WaitForSubmitAndWatch(ctx context.Context, nonce uint32
 	}
 }
 
-func (ep *extrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, ext *types.Extrinsic) error {
+func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, ext *types.Extrinsic) error {
 	sub, err := ep.conn.api.RPC.Author.SubmitAndWatchExtrinsic(*ext)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (ep *extrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 	}
 }
 
-func (ep *extrinsicPool) getStatusString(status *types.ExtrinsicStatus) string {
+func (ep *ExtrinsicPool) getStatusString(status *types.ExtrinsicStatus) string {
 	statusBytes, err := status.MarshalJSON()
 	if err != nil {
 		return "failed to serialize status"

@@ -22,6 +22,18 @@ type Connection struct {
 	log         *logrus.Entry
 }
 
+func (co *Connection) GetAPI() *gsrpc.SubstrateAPI {
+	return co.api
+}
+
+func (co *Connection) GetMetadata() *types.Metadata {
+	return &co.metadata
+}
+
+func (co *Connection) GetKeypair() *signature.KeyringPair {
+	return co.kp
+}
+
 func NewConnection(endpoint string, kp *signature.KeyringPair, log *logrus.Entry) *Connection {
 	return &Connection{
 		endpoint: endpoint,
@@ -62,4 +74,30 @@ func (co *Connection) Connect(_ context.Context) error {
 
 func (co *Connection) Close() {
 	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
+}
+
+func (co *Connection) Api() *gsrpc.SubstrateAPI {
+	return co.api
+}
+
+func (co *Connection) GenesisHash() types.Hash {
+	return co.genesisHash
+}
+
+func (co *Connection) Metadata() *types.Metadata {
+	return &co.metadata
+}
+
+func (co *Connection) GetFinalizedHeader() (*types.Header, error) {
+	finalizedHash, err := co.api.RPC.Chain.GetFinalizedHead()
+	if err != nil {
+		return nil, err
+	}
+
+	finalizedHeader, err := co.api.RPC.Chain.GetHeader(finalizedHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return finalizedHeader, nil
 }

@@ -9,25 +9,30 @@ import (
 	"github.com/sirupsen/logrus"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v2"
-	"github.com/snowfork/go-substrate-rpc-client/v2/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 )
 
 type Connection struct {
 	endpoint    string
-	kp          *signature.KeyringPair
 	api         *gsrpc.SubstrateAPI
 	metadata    types.Metadata
 	genesisHash types.Hash
 	log         *logrus.Entry
 }
 
-func NewConnection(endpoint string, kp *signature.KeyringPair, log *logrus.Entry) *Connection {
+func NewConnection(endpoint string, log *logrus.Entry) *Connection {
 	return &Connection{
 		endpoint: endpoint,
-		kp:       kp,
 		log:      log,
 	}
+}
+
+func (co *Connection) GetAPI() *gsrpc.SubstrateAPI {
+	return co.api
+}
+
+func (co *Connection) GetMetadata() *types.Metadata {
+	return &co.metadata
 }
 
 func (co *Connection) Connect(_ context.Context) error {

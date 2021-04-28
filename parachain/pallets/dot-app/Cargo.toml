@@ -33,7 +33,6 @@ artemis-dispatch = { path = "../../pallets/dispatch"  }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
-
 [features]
 default = ["std"]
 std = [

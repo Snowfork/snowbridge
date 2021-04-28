@@ -609,7 +609,7 @@ construct_runtime!(
 		// For dev only, will be removed in production
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 20,
 
-		DOT: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 64,
+		DOT: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
 		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
 		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
 	}

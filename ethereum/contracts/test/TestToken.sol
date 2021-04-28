@@ -5,10 +5,11 @@ import "../../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TestToken is ERC20 {
     constructor(
-        uint256 initialSupply,
         string memory _name,
         string memory _symbol
-    ) ERC20(_name, _symbol) {
-        _mint(msg.sender, initialSupply);
+    ) ERC20(_name, _symbol) { }
+
+    function mint(uint256 _amount) public {
+        _mint(msg.sender, _amount);
     }
 }

@@ -25,8 +25,8 @@ Refer to the instructions at the
 
 To add context to the above instructions, the parachain is known to compile with the following versions of Rust:
 
-- stable: 1.50.0
-- nightly: 1.52.0-nightly
+- stable: 1.51.0
+- nightly: 1.53.0-nightly
 
 ### Build
 
@@ -44,6 +44,7 @@ Install `polkadot-launch`:
 
 ```bash
 git clone https://github.com/Snowfork/polkadot-launch.git
+cd polkadot-launch
 git checkout beefy_tmpfix
 yarn install
 yarn build
@@ -62,6 +63,7 @@ cargo build --release
 Launch Polkadot and the parachain:
 
 ```bash
+cd -
 polkadot-launch config.json
 ```
 

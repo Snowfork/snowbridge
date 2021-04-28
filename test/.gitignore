@@ -6,3 +6,5 @@ relay.log
 alice.log
 bob.log
 200.log
+tmp
+.env
