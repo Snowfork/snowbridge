@@ -1,7 +1,11 @@
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
-	traits::{Currency, Get, ExistenceRequirement::KeepAlive, WithdrawReasons, Imbalance},
+	traits::{
+		Currency, Get, ExistenceRequirement::KeepAlive,
+		WithdrawReasons, Imbalance,
+		EnsureOrigin,
+	},
 	storage::StorageValue,
 	log,
 	weights::Weight,
@@ -38,7 +42,6 @@ impl WeightInfo for () {
 	fn submit() -> Weight { 0 }
 }
 
-
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
 
@@ -58,6 +61,9 @@ pub trait Config: system::Config {
 
 	type FeeConverter: Convert<U256, BalanceOf<Self>>;
 
+	/// The origin which may update reward related params
+	type UpdateOrigin: EnsureOrigin<Self::Origin>;
+
 	/// Weight information for extrinsics in this pallet
 	type WeightInfo: WeightInfo;
 }
@@ -73,7 +79,6 @@ decl_storage! {
 
 decl_event! {
 	pub enum Event {
-
 	}
 }
 
@@ -127,6 +132,15 @@ decl_module! {
 
 			Ok(())
 		}
+
+		// Weight = 0 is fine here (a single storage write). Also can only be called by governance.
+		#[weight = 0]
+		pub fn set_reward_fraction(origin, fraction: Perbill) -> DispatchResult {
+			T::UpdateOrigin::ensure_origin(origin)?;
+			RewardFraction::set(fraction);
+			Ok(())
+		}
+
 	}
 }
 

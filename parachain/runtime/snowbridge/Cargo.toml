@@ -18,12 +18,15 @@ frame-executive = { git = "https://github.com/paritytech/substrate.git", branch 
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
@@ -75,12 +78,15 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
+    "pallet-sudo/std",
     "pallet-balances/std",
     "pallet-randomness-collective-flip/std",
     "pallet-timestamp/std",
     "pallet-utility/std",
     "pallet-transaction-payment/std",
     "pallet-transaction-payment-rpc-runtime-api/std",
+    "pallet-collective/std",
+    "pallet-membership/std",
     "sp-api/std",
     "sp-block-builder/std",
     "sp-core/std",
@@ -121,6 +127,7 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
+    "pallet-collective/runtime-benchmarks",
     "pallet-utility/runtime-benchmarks",
     # Artemis pallets & support
     "artemis-core/runtime-benchmarks",
