@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -9,6 +10,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
+	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 	"github.com/spf13/cobra"
 )
@@ -91,6 +93,7 @@ func subBeefyJustifications(ctx context.Context) error {
 			log.WithField("blockHash", nextBlockHash.Hex()).Info("Got blockhash")
 			GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash, relaychainConn)
 			header, err := GetParaheads(nextBlockHash, relaychainConn)
+			GetAllParaheads(nextBlockHash, relaychainConn)
 			if err != nil {
 				log.WithError(err).Error("Failed to get para heads")
 				return err
@@ -126,16 +129,14 @@ func GetParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) (
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain headers")
 	}
-
-	// TODO2 - the above query returns some extra bytes, related the the HeadData type (try this state query in polkadotjs
-	// webapp for example). These extra bytes I think are the parachain ID, so the response type needs to account for
+	// TODO2 - the above query returns some extra bytes on each header, related the the HeadData type (try this state query in polkadotjs
+	// webapp for example). These extra bytes I think are for the option or maybe the parachain ID, so the response type needs to account for
 	// this properly. the below is just a hack to get the actual header out. It's also not clear to me if the response
 	// contains the entire header, or just a hash of the header, or some truncated header? If it's the entire header,
 	// then great we can use it entirely instead of querying for it in a follow up call
 	log.WithField("actualHeader", *response).Info("Got headers")
-	// header := response.Hex()
-	// actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
-	actualHeader := "0x03a46812b4b0d819add8e3e086409a3268f2b173f5b2cd79476a57943bbd9e8e"
+	header := response.Hex()
+	actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
 	log.WithField("actualHeader", actualHeader).Info("Sliced header response into actual header")
 
 	log.WithField("header", actualHeader).Info("Got parachain header")
@@ -143,36 +144,55 @@ func GetParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) (
 }
 
 func GetAllParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) {
-	// none := types.NewOptionU32Empty()
-	// encoded, err := types.EncodeToBytes(none)
-	// if err != nil {
-	// 	log.WithError(err).Error("Error")
-	// }
-	// allParaHeadsStorageKey, err := types.CreateStorageKey(
-	// 	relaychainConn.GetMetadata(),
-	// 	"Paras",
-	// 	"Heads", encoded, nil)
-	// if err != nil {
-	// 	log.WithError(err).Error("Failed to create parachain header storage key")
-	// }
-	// TODO the above gives
-	// 0xcd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c399e9d85137db46ef
-	// but we need
-	// 0xcd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c30a31c34bd88c539ec8000000
-	// Likely related to Twox64Concat hashing?
-
-	allParaHeadsStorageKey, err := types.HexDecodeString("0xcd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c30a31c34bd88c539ec8000000")
+	none := types.NewOptionU32Empty()
+	encoded, err := types.EncodeToBytes(none)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode all parachain headers storage key")
+		log.WithError(err).Error("Error")
 	}
 
-	response, err := relaychainConn.GetAPI().RPC.State.GetStorageRaw(allParaHeadsStorageKey, blockHash)
+	baseParaHeadsStorageKey, err := types.CreateStorageKey(
+		relaychainConn.GetMetadata(),
+		"Paras",
+		"Heads", encoded, nil)
+	if err != nil {
+		log.WithError(err).Error("Failed to create parachain header storage key")
+	}
+
+	//TODO The above does not give the same base key as polkadotjs needs for getKeys. It has some extra bytes.
+	// maybe from the none u32 in golang being wrong, or maybe slightly off CreateStorageKey call? we slice it
+	// here as a hack.
+	actualBaseParaHeadsStorageKey := baseParaHeadsStorageKey[:32]
+	log.WithField("actualBaseParaHeadsStorageKey", actualBaseParaHeadsStorageKey.Hex()).Info("actualBaseParaHeadsStorageKey")
+
+	keysResponse, err := relaychainConn.GetAPI().RPC.State.GetKeys(actualBaseParaHeadsStorageKey, blockHash)
+	if err != nil {
+		log.WithError(err).Error("Failed to get all parachain keys")
+	}
+
+	log.WithField("parachainKeys", keysResponse).Info("Got all parachain header keys")
+
+	headersResponse, err := relaychainConn.GetAPI().RPC.State.QueryStorage(keysResponse, blockHash, blockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain headers")
 	}
 
-	allHeaders := response.Hex()
-	log.WithField("allHeaders", allHeaders).Info("Got all parachain headers")
+	for _, header := range headersResponse {
+		for _, change := range header.Changes {
+
+			// TODO2 - the above query returns some extra bytes on each header, related the the HeadData type (try this state query in polkadotjs
+			// webapp for example). These extra bytes I think are for the option or maybe the parachain ID, so the response type needs to account for
+			// this properly. the below is just a hack to get the actual header out. It's also not clear to me if the response
+			// contains the entire header, or just a hash of the header, or some truncated header? If it's the entire header,
+			// then great we can use it entirely instead of querying for it in a follow up call
+			header := change.StorageData.Hex()
+			actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
+
+			log.WithFields(logrus.Fields{
+				"header.change.StorageKey":  change.StorageKey.Hex(),
+				"header.change.StorageData": actualHeader,
+			}).Info("Response contains parachain header")
+		}
+	}
 }
 
 func GetParaHeadData(header string, parachainConn *parachain.Connection) {
@@ -190,18 +210,32 @@ func GetParaHeadData(header string, parachainConn *parachain.Connection) {
 	}
 
 	log.WithFields(logrus.Fields{
-		"headerData": headerData,
+		"headerData":                headerData,
+		"headerData.ParentHash":     headerData.ParentHash.Hex(),
+		"headerData.Number":         headerData.Number,
+		"headerData.StateRoot":      headerData.StateRoot.Hex(),
+		"headerData.ExtrinsicsRoot": headerData.ExtrinsicsRoot.Hex(),
+		"headerData.Digest":         headerData.Digest,
 	}).Info("Retrieved full parachain header")
 
-	// TODO4 - Get the header digest and commitment logs from this particular header once above is working.
-	// const headerLogs = headData.toJSON().digest && headData.toJSON().digest.logs;
-	// const commitmentLog = headerLogs && headerLogs[0];
-	// if (commitmentLog) {
-	//   console.log("Got new commitment: ");
-	//   console.log({ commitmentLog });
-	// }
+	for i, digestItem := range headerData.Digest {
+		if digestItem.IsOther {
 
-	// TODO5 - Get the messages in that commitments
+			var auxDigestItem chainTypes.AuxiliaryDigestItem
+			err := types.DecodeFromBytes(digestItem.AsOther, &auxDigestItem)
+			if err != nil {
+				log.WithError(err).Error("Failed to get decode item")
+			}
+
+			log.WithFields(logrus.Fields{
+				"index":      i,
+				"commitment": auxDigestItem.AsCommitment,
+			}).Info("Found commitment in header")
+		}
+	}
+
+	// Remaining steps of getting relaying messages and such already implemented in listener, so can
+	// continue from there.
 
 	// TODO6 - Update all above code to make sure to check all new parachain blocks that have been added to the MMR
 	// when there is a new beefy justification, not just the newest parachain block in the MMR
