@@ -10,12 +10,11 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
-	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 	"github.com/spf13/cobra"
 )
 
-const PARACHAIN_ID = 200
+const OUR_PARACHAIN_ID = 200
 
 func subBeefyCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -92,71 +91,19 @@ func subBeefyJustifications(ctx context.Context) error {
 			}
 			log.WithField("blockHash", nextBlockHash.Hex()).Info("Got blockhash")
 			GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash, relaychainConn)
-			header, err := GetParaheads(nextBlockHash, relaychainConn)
-			if err != nil {
-				log.WithError(err).Error("Failed to get para heads")
-				return err
-			}
-			GetAllParaheads(nextBlockHash, relaychainConn)
-			GetParaHeadData(header, parachainConn)
+			allParaheads, ourParahead := GetAllParaheads(nextBlockHash, relaychainConn, OUR_PARACHAIN_ID)
+			log.WithFields(logrus.Fields{
+				"allParaheads": allParaheads,
+				"ourParahead":  ourParahead,
+			}).Info("Got all para heads")
+
+			// TODO6 - Update all above code to make sure to check all new parachain blocks that have been added to the MMR
+			// when there is a new beefy justification, not just the newest parachain block in the MMR
 		}
 	}
 }
 
-func GetParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) (string, error) {
-	type ParaId types.U32
-
-	type ParaHeadsQuery struct {
-		ParaId ParaId
-	}
-
-	query := ParaHeadsQuery{ParaId: ParaId(types.NewU32(200))}
-
-	encoded, err := types.EncodeToBytes(query)
-	if err != nil {
-		log.WithError(err).Error("Error")
-	}
-
-	allParaHeadsStorageKey, err := types.CreateStorageKey(
-		relaychainConn.GetMetadata(),
-		"Paras",
-		"Heads", encoded, nil)
-	if err != nil {
-		log.WithError(err).Error("Failed to create parachain header storage key")
-	}
-
-	response, err := relaychainConn.GetAPI().RPC.State.GetStorageRaw(allParaHeadsStorageKey, blockHash)
-	if err != nil {
-		log.WithError(err).Error("Failed to get all parachain headers")
-	}
-
-	var mmrEncodableOpaqueLeaf types.Bytes
-	if err := types.DecodeFromBytes(*response, &mmrEncodableOpaqueLeaf); err != nil {
-		log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
-	}
-	log.WithField("mmrEncodableOpaqueLeaf", fmt.Sprintf("%#x", mmrEncodableOpaqueLeaf)).Info("Decoded EncodableOpaqueLeaf")
-
-	var decHeader types.Header
-	if err := types.DecodeFromBytes(mmrEncodableOpaqueLeaf, &decHeader); err != nil {
-		log.WithError(err).Error("Failed to decode Header")
-	}
-	log.WithFields(logrus.Fields{
-		"decHeader.ParentHash":     decHeader.ParentHash.Hex(),
-		"decHeader.Number":         decHeader.Number,
-		"decHeader.StateRoot":      decHeader.StateRoot.Hex(),
-		"decHeader.ExtrinsicsRoot": decHeader.ExtrinsicsRoot.Hex(),
-		"decHeader.Digest":         decHeader.Digest,
-	}).Info("Decoded header")
-
-	header := response.Hex()
-	actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
-	log.WithField("actualHeader", actualHeader).Info("Sliced header response into actual header")
-
-	log.WithField("header", actualHeader).Info("Got parachain header")
-	return actualHeader, nil
-}
-
-func GetAllParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) {
+func GetAllParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection, ourParachainId uint32) ([]types.Header, types.Header) {
 	none := types.NewOptionU32Empty()
 	encoded, err := types.EncodeToBytes(none)
 	if err != nil {
@@ -171,7 +118,9 @@ func GetAllParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection
 		log.WithError(err).Error("Failed to create parachain header storage key")
 	}
 
-	//TODO The above does not give the same base key as polkadotjs needs for getKeys. It has some extra bytes.
+	//TODO fix this manual slice.
+	// The above types.CreateStorageKey does not give the same base key as polkadotjs needs for getKeys.
+	// It has some extra bytes.
 	// maybe from the none u32 in golang being wrong, or maybe slightly off CreateStorageKey call? we slice it
 	// here as a hack.
 	actualBaseParaHeadsStorageKey := baseParaHeadsStorageKey[:32]
@@ -182,89 +131,52 @@ func GetAllParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection
 		log.WithError(err).Error("Failed to get all parachain keys")
 	}
 
-	log.WithField("parachainKeys", keysResponse).Info("Got all parachain header keys")
-
 	headersResponse, err := relaychainConn.GetAPI().RPC.State.QueryStorage(keysResponse, blockHash, blockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain headers")
 	}
 
-	for _, header := range headersResponse {
-		for _, change := range header.Changes {
+	log.Info("Got all parachain headers")
+	var headers []types.Header
+	var ourParachainHeader types.Header
+	for _, headerResponse := range headersResponse {
+		for _, change := range headerResponse.Changes {
 
-			var mmrEncodableOpaqueLeaf types.Bytes
-			if err := types.DecodeFromBytes(change.StorageData, &mmrEncodableOpaqueLeaf); err != nil {
+			// TODO fix this manual slice with a proper type decode. only the last few bytes are for the ParaId,
+			// not sure what the early ones are for.
+			key := change.StorageKey[40:]
+			var parachainID types.U32
+			if err := types.DecodeFromBytes(key, &parachainID); err != nil {
+				log.WithError(err).Error("Failed to decode parachain ID")
+			}
+
+			log.WithField("parachainId", parachainID).Info("Decoding header for parachain")
+			var encodableOpaqueHeader types.Bytes
+			if err := types.DecodeFromBytes(change.StorageData, &encodableOpaqueHeader); err != nil {
 				log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
 			}
-			log.WithField("mmrEncodableOpaqueLeaf", fmt.Sprintf("%#x", mmrEncodableOpaqueLeaf)).Info("Decoded EncodableOpaqueLeaf")
 
-			var decHeader types.Header
-			if err := types.DecodeFromBytes(mmrEncodableOpaqueLeaf, &decHeader); err != nil {
+			var header types.Header
+			if err := types.DecodeFromBytes(encodableOpaqueHeader, &header); err != nil {
 				log.WithError(err).Error("Failed to decode Header")
 			}
 			log.WithFields(logrus.Fields{
-				"decHeader.ParentHash":     decHeader.ParentHash.Hex(),
-				"decHeader.Number":         decHeader.Number,
-				"decHeader.StateRoot":      decHeader.StateRoot.Hex(),
-				"decHeader.ExtrinsicsRoot": decHeader.ExtrinsicsRoot.Hex(),
-				"decHeader.Digest":         decHeader.Digest,
-			}).Info("Decoded header")
+				"headerBytes":           fmt.Sprintf("%#x", encodableOpaqueHeader),
+				"header.ParentHash":     header.ParentHash.Hex(),
+				"header.Number":         header.Number,
+				"header.StateRoot":      header.StateRoot.Hex(),
+				"header.ExtrinsicsRoot": header.ExtrinsicsRoot.Hex(),
+				"header.Digest":         header.Digest,
+				"parachainId":           parachainID,
+			}).Info("Decoded header for parachain")
+			headers = append(headers, header)
 
-			header := change.StorageData.Hex()
-			actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
-
-			log.WithFields(logrus.Fields{
-				"header.change.StorageKey":  change.StorageKey.Hex(),
-				"header.change.StorageData": actualHeader,
-			}).Info("Response contains parachain header")
-		}
-	}
-}
-
-func GetParaHeadData(header string, parachainConn *parachain.Connection) {
-	headerHash, err := types.NewHashFromHexString(header)
-	if err != nil {
-		log.WithError(err).Error("Failed to create header hash")
-	}
-
-	log.WithFields(logrus.Fields{
-		"hash": headerHash.Hex(),
-	}).Info("Querying for parachain header")
-	headerData, err := parachainConn.Api().RPC.Chain.GetHeader(headerHash)
-	if err != nil {
-		log.WithError(err).Error("Failed to get parachain header")
-	}
-
-	log.WithFields(logrus.Fields{
-		"headerData":                headerData,
-		"headerData.ParentHash":     headerData.ParentHash.Hex(),
-		"headerData.Number":         headerData.Number,
-		"headerData.StateRoot":      headerData.StateRoot.Hex(),
-		"headerData.ExtrinsicsRoot": headerData.ExtrinsicsRoot.Hex(),
-		"headerData.Digest":         headerData.Digest,
-	}).Info("Retrieved full parachain header")
-
-	for i, digestItem := range headerData.Digest {
-		if digestItem.IsOther {
-
-			var auxDigestItem chainTypes.AuxiliaryDigestItem
-			err := types.DecodeFromBytes(digestItem.AsOther, &auxDigestItem)
-			if err != nil {
-				log.WithError(err).Error("Failed to get decode item")
+			if parachainID == types.U32(ourParachainId) {
+				ourParachainHeader = header
 			}
-
-			log.WithFields(logrus.Fields{
-				"index":      i,
-				"commitment": auxDigestItem.AsCommitment,
-			}).Info("Found commitment in header")
 		}
 	}
-
-	// Remaining steps of getting relaying messages and such already implemented in listener, so can
-	// continue from there.
-
-	// TODO6 - Update all above code to make sure to check all new parachain blocks that have been added to the MMR
-	// when there is a new beefy justification, not just the newest parachain block in the MMR
+	return headers, ourParachainHeader
 }
 
 func GetMMRLeafForBlock(blockNumber uint64, blockHash types.Hash, relaychainConn *relaychain.Connection) {
