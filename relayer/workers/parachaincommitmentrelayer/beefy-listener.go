@@ -108,9 +108,10 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 			}
 			li.log.WithField("blockHash", nextBlockHash.Hex()).Info("Got blockhash")
 
-			// TODO this just queries the latest MMR leaf and our latest parahead in it.
-			// we should be querying all our paraheads in the MMR since the last one
-			// that has been fully processed on ethereum
+			// TODO this just queries the latest MMR leaf in the latest MMR and our latest parahead in that leaf.
+			// we should ideally be querying the last few leafs in the latest MMR until we find
+			// the first parachain block that has not yet been fully processed on ethereum,
+			// and then package and relay all newer heads/commitments
 			mmrProof := li.GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash)
 			allParaHeads, ourParaHead := li.GetAllParaheads(nextBlockHash, OUR_PARACHAIN_ID)
 
