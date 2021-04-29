@@ -93,11 +93,11 @@ func subBeefyJustifications(ctx context.Context) error {
 			log.WithField("blockHash", nextBlockHash.Hex()).Info("Got blockhash")
 			GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash, relaychainConn)
 			header, err := GetParaheads(nextBlockHash, relaychainConn)
-			GetAllParaheads(nextBlockHash, relaychainConn)
 			if err != nil {
 				log.WithError(err).Error("Failed to get para heads")
 				return err
 			}
+			GetAllParaheads(nextBlockHash, relaychainConn)
 			GetParaHeadData(header, parachainConn)
 		}
 	}
@@ -129,12 +129,25 @@ func GetParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection) (
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain headers")
 	}
-	// TODO2 - the above query returns some extra bytes on each header, related the the HeadData type (try this state query in polkadotjs
-	// webapp for example). These extra bytes I think are for the option or maybe the parachain ID, so the response type needs to account for
-	// this properly. the below is just a hack to get the actual header out. It's also not clear to me if the response
-	// contains the entire header, or just a hash of the header, or some truncated header? If it's the entire header,
-	// then great we can use it entirely instead of querying for it in a follow up call
-	log.WithField("actualHeader", *response).Info("Got headers")
+
+	var mmrEncodableOpaqueLeaf types.Bytes
+	if err := types.DecodeFromBytes(*response, &mmrEncodableOpaqueLeaf); err != nil {
+		log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
+	}
+	log.WithField("mmrEncodableOpaqueLeaf", fmt.Sprintf("%#x", mmrEncodableOpaqueLeaf)).Info("Decoded EncodableOpaqueLeaf")
+
+	var decHeader types.Header
+	if err := types.DecodeFromBytes(mmrEncodableOpaqueLeaf, &decHeader); err != nil {
+		log.WithError(err).Error("Failed to decode Header")
+	}
+	log.WithFields(logrus.Fields{
+		"decHeader.ParentHash":     decHeader.ParentHash.Hex(),
+		"decHeader.Number":         decHeader.Number,
+		"decHeader.StateRoot":      decHeader.StateRoot.Hex(),
+		"decHeader.ExtrinsicsRoot": decHeader.ExtrinsicsRoot.Hex(),
+		"decHeader.Digest":         decHeader.Digest,
+	}).Info("Decoded header")
+
 	header := response.Hex()
 	actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
 	log.WithField("actualHeader", actualHeader).Info("Sliced header response into actual header")
@@ -179,11 +192,24 @@ func GetAllParaheads(blockHash types.Hash, relaychainConn *relaychain.Connection
 	for _, header := range headersResponse {
 		for _, change := range header.Changes {
 
-			// TODO2 - the above query returns some extra bytes on each header, related the the HeadData type (try this state query in polkadotjs
-			// webapp for example). These extra bytes I think are for the option or maybe the parachain ID, so the response type needs to account for
-			// this properly. the below is just a hack to get the actual header out. It's also not clear to me if the response
-			// contains the entire header, or just a hash of the header, or some truncated header? If it's the entire header,
-			// then great we can use it entirely instead of querying for it in a follow up call
+			var mmrEncodableOpaqueLeaf types.Bytes
+			if err := types.DecodeFromBytes(change.StorageData, &mmrEncodableOpaqueLeaf); err != nil {
+				log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
+			}
+			log.WithField("mmrEncodableOpaqueLeaf", fmt.Sprintf("%#x", mmrEncodableOpaqueLeaf)).Info("Decoded EncodableOpaqueLeaf")
+
+			var decHeader types.Header
+			if err := types.DecodeFromBytes(mmrEncodableOpaqueLeaf, &decHeader); err != nil {
+				log.WithError(err).Error("Failed to decode Header")
+			}
+			log.WithFields(logrus.Fields{
+				"decHeader.ParentHash":     decHeader.ParentHash.Hex(),
+				"decHeader.Number":         decHeader.Number,
+				"decHeader.StateRoot":      decHeader.StateRoot.Hex(),
+				"decHeader.ExtrinsicsRoot": decHeader.ExtrinsicsRoot.Hex(),
+				"decHeader.Digest":         decHeader.Digest,
+			}).Info("Decoded header")
+
 			header := change.StorageData.Hex()
 			actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
 
