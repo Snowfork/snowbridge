@@ -26,6 +26,7 @@ type Worker struct {
 	parachainCommitmentListener *parachaincommitment.Listener
 	ethereumConn                *ethereum.Connection
 	ethereumChannelWriter       *EthereumChannelWriter
+	beefyRelaychainListener     *BeefyListener
 	log                         *logrus.Entry
 }
 
@@ -66,6 +67,16 @@ func NewWorker(parachainConfig *parachain.Config,
 		return nil, err
 	}
 
+	var messagePackages = make(chan MessagePackage, 1)
+
+	beefyRelaychainListener := NewBeefyListener(
+		relaychainConfig,
+		relaychainConn,
+		parachainConn,
+		messagePackages,
+		log,
+	)
+
 	return &Worker{
 		parachainConfig:             parachainConfig,
 		relaychainConfig:            relaychainConfig,
@@ -75,6 +86,7 @@ func NewWorker(parachainConfig *parachain.Config,
 		parachainCommitmentListener: parachainCommitmentListener,
 		ethereumConn:                ethereumConn,
 		ethereumChannelWriter:       ethereumChannelWriter,
+		beefyRelaychainListener:     beefyRelaychainListener,
 		log:                         log,
 	}, nil
 }
@@ -82,7 +94,8 @@ func NewWorker(parachainConfig *parachain.Config,
 func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	worker.log.Info("Starting worker")
 
-	if worker.parachainCommitmentListener == nil || worker.ethereumChannelWriter == nil {
+	if worker.beefyRelaychainListener == nil ||
+		worker.parachainCommitmentListener == nil || worker.ethereumChannelWriter == nil {
 		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
 	}
 
@@ -92,6 +105,11 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 
 	err = worker.ethereumConn.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = worker.relaychainConn.Connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -111,6 +129,17 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 		if worker.ethereumChannelWriter != nil {
 			worker.log.Info("Starting Writer")
 			err = worker.ethereumChannelWriter.Start(ctx, eg)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		if worker.beefyRelaychainListener != nil {
+			worker.log.Info("Starting Beefy Listener")
+			err = worker.beefyRelaychainListener.Start(ctx, eg)
 			if err != nil {
 				return err
 			}
