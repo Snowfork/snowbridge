@@ -15,13 +15,11 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
-//TODO - put in config
-const OUR_PARACHAIN_ID = 200
-
-// TODO: This file is currently listening to the relay chain for new beefy justifications. This is temporary, as in
-// a follow up PR, it will be changed to listen to Ethereum for new justifications.
-// This can't be done yet, as we still need to add block numbers to the Ethereum proofs being submitted
-// to the relay chain light client, but will be done once that's complete.
+// This file is intended to be temporary, just as a way for this worker to watch for beefy commitments
+// and get their block number to kickoff the parachain relay process. In a follow up PR, it will be replaced
+// with a listener that listens to those proofs once they're confirmed on ethereum, rather than directly on the
+// parachain. This can't be done yet, as we still need to add block numbers to the Ethereum proofs being submitted
+// to the relay chain light client.
 
 type MessagePackage struct {
 	channelID          chainTypes.ChannelID
@@ -106,14 +104,11 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 				li.log.WithError(err).Error("Failed to get block hash")
 			}
 			li.log.WithField("blockHash", nextBlockHash.Hex()).Info("Got blockhash")
+			mmrProof := li.GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash)
+			allParaHeads := li.GetAllParaheads(nextBlockHash)
 
-			// TODO this just queries the latest MMR leaf in the latest MMR and our latest parahead in that leaf.
-			// we should ideally be querying the last few leafs in the latest MMR until we find
-			// the first parachain block that has not yet been fully processed on ethereum,
-			// and then package and relay all newer heads/commitments
-			mmrProof := li.GetMMRProofForBlock(uint64(blockNumber), nextBlockHash)
-			allParaHeads, ourParaHead := li.GetAllParaheads(nextBlockHash, OUR_PARACHAIN_ID)
-
+			// Todo get our actual head, not 0, and then put it into a types.Header
+			ourParaHead := allParaHeads[0]
 			ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
 
 			channelID, commitmentHash, commitmentMessages, err := li.extractCommitment(ourParaHead)
@@ -133,20 +128,12 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 				mmrProof,
 			}
 
-			li.log.WithFields(logrus.Fields{
-				"channelID":          messagePackage.channelID,
-				"commitmentHash":     messagePackage.commitmentHash,
-				"commitmentMessages": messagePackage.commitmentMessages,
-				"ourParaHeadProof":   messagePackage.paraHeadProof,
-				"mmrProof":           messagePackage.mmrProof,
-			}).Info("Beefy Listener emmited new message packet")
-
 			li.messages <- messagePackage
 		}
 	}
 }
 
-func (li *BeefyListener) GetMMRProofForBlock(
+func (li *BeefyListener) GetMMRLeafForBlock(
 	blockNumber uint64,
 	blockHash types.Hash,
 ) types.GenerateMMRProofResponse {
@@ -159,11 +146,6 @@ func (li *BeefyListener) GetMMRProofForBlock(
 		li.log.WithError(err).Error("Failed to generate mmr proof")
 	}
 
-	var proofItemsHex = []string{}
-	for _, item := range proofResponse.Proof.Items {
-		proofItemsHex = append(proofItemsHex, item.Hex())
-	}
-
 	li.log.WithFields(logrus.Fields{
 		"BlockHash":                       proofResponse.BlockHash.Hex(),
 		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
@@ -174,12 +156,11 @@ func (li *BeefyListener) GetMMRProofForBlock(
 		"Leaf.BeefyNextAuthoritySet.Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
 		"Proof.LeafIndex":                 proofResponse.Proof.LeafIndex,
 		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
-		"Proof.Items":                     proofItemsHex,
 	}).Info("Generated MMR Proof")
 	return proofResponse
 }
 
-func (li *BeefyListener) GetAllParaheads(blockHash types.Hash, ourParachainId uint32) ([]types.Header, types.Header) {
+func (li *BeefyListener) GetAllParaheads(blockHash types.Hash) []string {
 	none := types.NewOptionU32Empty()
 	encoded, err := types.EncodeToBytes(none)
 	if err != nil {
@@ -194,9 +175,7 @@ func (li *BeefyListener) GetAllParaheads(blockHash types.Hash, ourParachainId ui
 		li.log.WithError(err).Error("Failed to create parachain header storage key")
 	}
 
-	//TODO fix this manual slice.
-	// The above types.CreateStorageKey does not give the same base key as polkadotjs needs for getKeys.
-	// It has some extra bytes.
+	//TODO The above does not give the same base key as polkadotjs needs for getKeys. It has some extra bytes.
 	// maybe from the none u32 in golang being wrong, or maybe slightly off CreateStorageKey call? we slice it
 	// here as a hack.
 	actualBaseParaHeadsStorageKey := baseParaHeadsStorageKey[:32]
@@ -207,55 +186,38 @@ func (li *BeefyListener) GetAllParaheads(blockHash types.Hash, ourParachainId ui
 		li.log.WithError(err).Error("Failed to get all parachain keys")
 	}
 
+	li.log.WithField("parachainKeys", keysResponse).Info("Got all parachain header keys")
+
 	headersResponse, err := li.relaychainConn.GetAPI().RPC.State.QueryStorage(keysResponse, blockHash, blockHash)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to get all parachain headers")
 	}
 
-	li.log.Info("Got all parachain headers")
-	var headers []types.Header
-	var ourParachainHeader types.Header
-	for _, headerResponse := range headersResponse {
-		for _, change := range headerResponse.Changes {
+	var headers []string
 
-			// TODO fix this manual slice with a proper type decode. only the last few bytes are for the ParaId,
-			// not sure what the early ones are for.
-			key := change.StorageKey[40:]
-			var parachainID types.U32
-			if err := types.DecodeFromBytes(key, &parachainID); err != nil {
-				li.log.WithError(err).Error("Failed to decode parachain ID")
-			}
+	for _, header := range headersResponse {
+		for _, change := range header.Changes {
+			// TODO2 - the above query returns some extra bytes on each header, related the the HeadData type (try this state query in polkadotjs
+			// webapp for example). These extra bytes I think are for the option or maybe the parachain ID, so the response type needs to account for
+			// this properly. the below is just a hack to get the actual header out. It's also not clear to me if the response
+			// contains the entire header, or just a hash of the header, or some truncated header? If it's the entire header,
+			// then great we can use it entirely instead of querying for it in a follow up call
+			header := change.StorageData.Hex()
+			actualHeader := fmt.Sprintf("%s%s", "0x", header[6:70])
 
-			li.log.WithField("parachainId", parachainID).Info("Decoding header for parachain")
-			var encodableOpaqueHeader types.Bytes
-			if err := types.DecodeFromBytes(change.StorageData, &encodableOpaqueHeader); err != nil {
-				li.log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
-			}
-
-			var header types.Header
-			if err := types.DecodeFromBytes(encodableOpaqueHeader, &header); err != nil {
-				li.log.WithError(err).Error("Failed to decode Header")
-			}
 			li.log.WithFields(logrus.Fields{
-				"headerBytes":           fmt.Sprintf("%#x", encodableOpaqueHeader),
-				"header.ParentHash":     header.ParentHash.Hex(),
-				"header.Number":         header.Number,
-				"header.StateRoot":      header.StateRoot.Hex(),
-				"header.ExtrinsicsRoot": header.ExtrinsicsRoot.Hex(),
-				"header.Digest":         header.Digest,
-				"parachainId":           parachainID,
-			}).Info("Decoded header for parachain")
-			headers = append(headers, header)
+				"header.change.StorageKey":  change.StorageKey.Hex(),
+				"header.change.StorageData": actualHeader,
+			}).Info("Response contains parachain header")
 
-			if parachainID == types.U32(ourParachainId) {
-				ourParachainHeader = header
-			}
+			headers = append(headers, actualHeader)
 		}
 	}
-	return headers, ourParachainHeader
+
+	return headers
 }
 
-func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.Header) string {
+func createParachainHeaderProof(allParaHeads []string, ourParaHead string) string {
 	//TODO: implement
 	return ""
 }
