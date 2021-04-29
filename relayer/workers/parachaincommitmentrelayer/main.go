@@ -14,6 +14,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer/parachaincommitment"
 )
 
 type Worker struct {
@@ -22,7 +23,7 @@ type Worker struct {
 	ethereumConfig              *ethereum.Config
 	parachainConn               *parachain.Connection
 	relaychainConn              *relaychain.Connection
-	parachainCommitmentListener *ParachainCommitmentListener
+	parachainCommitmentListener *parachaincommitment.Listener
 	ethereumConn                *ethereum.Connection
 	ethereumChannelWriter       *EthereumChannelWriter
 	log                         *logrus.Entry
@@ -47,16 +48,17 @@ func NewWorker(parachainConfig *parachain.Config,
 
 	// channel for messages from substrate
 	var subMessages = make(chan []chain.Message, 1)
+	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
-	parachainCommitmentListener := NewParachainCommitmentListener(
-		parachainConfig,
+	parachainCommitmentListener := parachaincommitment.NewListener(
 		parachainConn,
 		relaychainConn,
+		ethereumConn,
+		ethereumConfig,
+		contracts,
 		subMessages,
 		log,
 	)
-
-	contracts := make(map[substrate.ChannelID]*inbound.Contract)
 
 	ethereumChannelWriter, err := NewEthereumChannelWriter(ethereumConfig, ethereumConn,
 		subMessages, contracts, log)
@@ -94,21 +96,25 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	if worker.parachainCommitmentListener != nil {
-		err = worker.parachainCommitmentListener.Start(ctx, eg)
-		if err != nil {
-			return err
+	eg.Go(func() error {
+		if worker.parachainCommitmentListener != nil {
+			worker.log.Info("Starting Parachain Commitment Listener")
+			err = worker.parachainCommitmentListener.Start(ctx, eg)
+			if err != nil {
+				return err
+			}
 		}
-	}
+		return nil
+	})
 
 	eg.Go(func() error {
 		if worker.ethereumChannelWriter != nil {
+			worker.log.Info("Starting Writer")
 			err = worker.ethereumChannelWriter.Start(ctx, eg)
 			if err != nil {
 				return err
 			}
 		}
-
 		return nil
 	})
 
