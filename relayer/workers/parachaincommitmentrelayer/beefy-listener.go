@@ -193,6 +193,7 @@ func (li *BeefyListener) GetAllParaheads(blockHash types.Hash) []string {
 		li.log.WithError(err).Error("Failed to get all parachain headers")
 	}
 
+	//todo - type should be []types.Header ?
 	var headers []string
 
 	for _, header := range headersResponse {
