@@ -18,11 +18,10 @@ import (
 //TODO - put in config
 const OUR_PARACHAIN_ID = 200
 
-// This file is intended to be temporary, just as a way for this worker to watch for beefy commitments
-// and get their block number to kickoff the parachain relay process. In a follow up PR, it will be replaced
-// with a listener that listens to those proofs once they're confirmed on ethereum, rather than directly on the
-// parachain. This can't be done yet, as we still need to add block numbers to the Ethereum proofs being submitted
-// to the relay chain light client.
+// TODO: This file is currently listening to the relay chain for new beefy justifications. This is temporary, as in
+// a follow up PR, it will be changed to listen to Ethereum for new justifications.
+// This can't be done yet, as we still need to add block numbers to the Ethereum proofs being submitted
+// to the relay chain light client, but will be done once that's complete.
 
 type MessagePackage struct {
 	channelID          chainTypes.ChannelID
