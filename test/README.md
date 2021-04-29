@@ -74,6 +74,8 @@ Wait until the "System has been initialized" message
 Go to polkadot-js and wait until the parachain has started producing blocks:
 https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A11144#/explorer
 
+You can see the relay chain by connecting to https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9955#/explorer
+
 Confirm the block number is > 2
 
 You should now be good to go!
