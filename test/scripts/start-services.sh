@@ -13,6 +13,8 @@ start_ganache()
 {
     echo "Starting Ganache"
 
+    export INCENTIVIZED_CHANNEL_FEE="1"
+
     yarn run ganache-cli \
         --port=8545 \
         --networkId=344 \
@@ -132,21 +134,21 @@ start_parachain
 restart_ganache
 echo "Waiting for consensus between polkadot and parachain"
 sleep 60
-start_relayer
+# start_relayer
 
 echo "Process Tree:"
 pstree $$
 
 sleep 3
-until $(grep "Syncing headers starting..." $(pwd)/relay.log > /dev/null); do
-    echo "Waiting for relayer to generate the DAG cache. This can take up to 20 minutes."
-    sleep 20
-done
+# until $(grep "Syncing headers starting..." $(pwd)/relay.log > /dev/null); do
+#    echo "Waiting for relayer to generate the DAG cache. This can take up to 20 minutes."
+#    sleep 20
+#done
 
-until $(grep "Done retrieving finalized headers" $(pwd)/relay.log > /dev/null); do
-    echo "Waiting for relayer to sync headers..."
-    sleep 5
-done
+#until $(grep "Done retrieving finalized headers" $(pwd)/relay.log > /dev/null); do
+#    echo "Waiting for relayer to sync headers..."
+#    sleep 5
+#done
 
 echo "System has been initialized"
 
