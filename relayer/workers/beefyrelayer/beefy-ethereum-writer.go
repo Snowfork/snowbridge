@@ -28,7 +28,7 @@ type BeefyEthereumWriter struct {
 
 func NewBeefyEthereumWriter(ethereumConfig *ethereum.Config, ethereumConn *ethereum.Connection, beefyDB *store.Database,
 	databaseMessages chan<- store.DatabaseCmd, beefyMessages <-chan store.BeefyRelayInfo,
-	log *logrus.Entry) (*BeefyEthereumWriter, error) {
+	log *logrus.Entry) *BeefyEthereumWriter {
 	return &BeefyEthereumWriter{
 		ethereumConfig:   ethereumConfig,
 		ethereumConn:     ethereumConn,
@@ -36,7 +36,7 @@ func NewBeefyEthereumWriter(ethereumConfig *ethereum.Config, ethereumConn *ether
 		databaseMessages: databaseMessages,
 		beefyMessages:    beefyMessages,
 		log:              log,
-	}, nil
+	}
 }
 
 func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
