@@ -48,7 +48,7 @@ func NewBeefyEthereumListener(ethereumConfig *ethereum.Config, ethereumConn *eth
 	}
 }
 
-func (li *BeefyEthereumListener) Start(cxt context.Context, eg *errgroup.Group, descendantsUntilFinal uint64) error {
+func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group, descendantsUntilFinal uint64) error {
 
 	// Set up light client bridge contract
 	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(li.ethereumConfig.LightClientBridge), li.ethereumConn.GetClient())
@@ -65,13 +65,13 @@ func (li *BeefyEthereumListener) Start(cxt context.Context, eg *errgroup.Group, 
 	li.blockWaitPeriod = blockWaitPeriod.Uint64()
 
 	// If starting block < latest block, sync the Relayer to the latest block
-	blockNumber, err := li.ethereumConn.GetClient().BlockNumber(cxt)
+	blockNumber, err := li.ethereumConn.GetClient().BlockNumber(ctx)
 	if err != nil {
 		return err
 	}
 	if uint64(li.ethereumConfig.StartBlock) < blockNumber {
 		li.log.Info(fmt.Sprintf("Syncing Relayer from block %d...", li.ethereumConfig.StartBlock))
-		err := li.pollHistoricEventsAndHeaders(cxt)
+		err := li.pollHistoricEventsAndHeaders(ctx, descendantsUntilFinal)
 		if err != nil {
 			return err
 		}
@@ -80,7 +80,7 @@ func (li *BeefyEthereumListener) Start(cxt context.Context, eg *errgroup.Group, 
 
 	// In live mode the relayer processes blocks as they're mined and broadcast
 	eg.Go(func() error {
-		err := li.pollEventsAndHeaders(cxt, descendantsUntilFinal)
+		err := li.pollEventsAndHeaders(ctx, descendantsUntilFinal)
 		close(li.headers)
 		return err
 	})
@@ -88,17 +88,19 @@ func (li *BeefyEthereumListener) Start(cxt context.Context, eg *errgroup.Group, 
 	return nil
 }
 
-func (li *BeefyEthereumListener) pollHistoricEventsAndHeaders(ctx context.Context) error {
+func (li *BeefyEthereumListener) pollHistoricEventsAndHeaders(ctx context.Context, descendantsUntilFinal uint64) error {
 	// Load starting block number and latest block number
 	blockNumber := li.ethereumConfig.StartBlock
 	latestBlockNumber, err := li.ethereumConn.GetClient().BlockNumber(ctx)
 	if err != nil {
 		return err
 	}
-
+	// Populate database
 	li.processHistoricalInitialVerificationSuccessfulEvents(ctx, blockNumber, latestBlockNumber)
 	li.processHistoricalFinalVerificationSuccessfulEvents(ctx, blockNumber, latestBlockNumber)
-
+	// Send transactions for items in database based on their statuses
+	li.forwardWitnessedBeefyJustifications()
+	li.forwardReadyToCompleteItems(ctx, blockNumber, descendantsUntilFinal)
 	return nil
 }
 
@@ -114,9 +116,9 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(ctx context.Context, desce
 			return ctx.Err()
 		case gethheader := <-headers:
 			blockNumber := gethheader.Number.Uint64()
-
+			li.forwardWitnessedBeefyJustifications()
 			li.processInitialVerificationSuccessfulEvents(ctx, blockNumber)
-			li.forwardWitnessedBeefyCommitment(ctx, blockNumber, descendantsUntilFinal)
+			li.forwardReadyToCompleteItems(ctx, blockNumber, descendantsUntilFinal)
 			li.processFinalVerificationSuccessfulEvents(ctx, blockNumber)
 		}
 	}
@@ -357,13 +359,17 @@ func (li *BeefyEthereumListener) simulatePayloadGeneration(item store.BeefyRelay
 	return msg.Payload
 }
 
-// forwardWitnessedBeefyCommitment forwards witnessed BEEFY commitments to the Ethereum writer
-func (li *BeefyEthereumListener) forwardWitnessedBeefyCommitment(ctx context.Context, blockNumber, descendantsUntilFinal uint64) {
+// forwardWitnessedBeefyJustifications forwards witnessed BEEFY commitments to the Ethereum writer
+func (li *BeefyEthereumListener) forwardWitnessedBeefyJustifications() {
 	witnessedItems := li.beefyDB.GetItemsByStatus(store.CommitmentWitnessed)
 	for _, item := range witnessedItems {
 		li.beefyMessages <- *item
 	}
+}
 
+// forwardReadyToCompleteItems updates the status of items in the databse to ReadyToComplete if the
+// current block number has passed their CompleteOnBlock number
+func (li *BeefyEthereumListener) forwardReadyToCompleteItems(ctx context.Context, blockNumber, descendantsUntilFinal uint64) {
 	// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
 	initialVerificationItems := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
 	if len(initialVerificationItems) > 0 {
