@@ -58,6 +58,23 @@ benchmarks! {
 		}
 	}
 
+	// Benchmark `set_reward_fraction` under worst case conditions:
+	// * The origin is authorized, i.e. equals UpdateOrigin
+	set_reward_fraction {
+		let authorized_origin = match T::UpdateOrigin::successful_origin().into() {
+			Ok(raw) => raw,
+			Err(_) => return Err("Failed to get raw origin from origin"),
+		};
+
+		// Pick a value that is different from the initial RewardFraction
+		let fraction = Perbill::from_percent(50);
+		assert!(RewardFraction::get() != fraction);
+
+	}: _(authorized_origin, fraction)
+	verify {
+		assert_eq!(RewardFraction::get(), fraction);
+	}
+
 	#[extra]
 	submit_eth_mint {
 		let caller: T::AccountId = whitelisted_caller();

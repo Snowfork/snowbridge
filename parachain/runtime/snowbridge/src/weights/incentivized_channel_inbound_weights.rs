@@ -40,4 +40,6 @@ impl<T: frame_system::Config> incentivized_channel::inbound::WeightInfo for Weig
 			.saturating_add(T::DbWeight::get().reads(8 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
+
+	fn set_reward_fraction() -> Weight { 0 }
 }
