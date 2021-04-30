@@ -117,7 +117,7 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(ctx context.Context, desce
 
 			li.processInitialVerificationSuccessfulEvents(ctx, blockNumber)
 			li.forwardWitnessedBeefyCommitment(ctx, blockNumber, descendantsUntilFinal)
-			li.processInitialVerificationSuccessfulEvents(ctx, blockNumber)
+			li.processFinalVerificationSuccessfulEvents(ctx, blockNumber)
 		}
 	}
 }
@@ -290,7 +290,7 @@ func (li *BeefyEthereumListener) processHistoricalFinalVerificationSuccessfulEve
 
 		// Attempt to match items in database based on their payload
 		itemFoundInDatabase := false
-		items := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed) // TODO: list of statuses
+		items := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
 		for _, item := range items {
 			generatedPayload := li.simulatePayloadGeneration(*item)
 			if generatedPayload == validationData.Payload {
