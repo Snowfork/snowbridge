@@ -28,7 +28,7 @@ type BeefyEthereumWriter struct {
 
 func NewBeefyEthereumWriter(ethereumConfig *ethereum.Config, ethereumConn *ethereum.Connection, beefyDB *store.Database,
 	databaseMessages chan<- store.DatabaseCmd, beefyMessages <-chan store.BeefyRelayInfo,
-	log *logrus.Entry) *BeefyEthereumWriter {
+	log *logrus.Entry) (*BeefyEthereumWriter, error) {
 	return &BeefyEthereumWriter{
 		ethereumConfig:   ethereumConfig,
 		ethereumConn:     ethereumConn,
@@ -36,7 +36,7 @@ func NewBeefyEthereumWriter(ethereumConfig *ethereum.Config, ethereumConn *ether
 		databaseMessages: databaseMessages,
 		beefyMessages:    beefyMessages,
 		log:              log,
-	}
+	}, nil
 }
 
 func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
@@ -128,10 +128,12 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		"txHash": tx.Hash().Hex(),
 	}).Info("New Signature Commitment transaction submitted")
 
-	wr.log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
-	info.Status = store.InitialVerificationTxSent
-	info.InitialVerificationTxHash = tx.Hash()
-	cmd := store.NewDatabaseCmd(&info, store.Create, nil)
+	wr.log.Info("2: Updating item in Database with status 'InitialVerificationTxSent'")
+	instructions := map[string]interface{}{
+		"status":                       store.InitialVerificationTxSent,
+		"initial_verification_tx_hash": tx.Hash(),
+	}
+	cmd := store.NewDatabaseCmd(&info, store.Update, instructions)
 	wr.databaseMessages <- cmd
 
 	return nil
@@ -174,7 +176,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 	}).Info("Complete Signature Commitment transaction submitted")
 
 	// Update item's status in database
-	wr.log.Info("4: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
+	wr.log.Info("5: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
 	instructions := map[string]interface{}{
 		"status":                        store.CompleteVerificationTxSent,
 		"complete_verification_tx_hash": tx.Hash(),
@@ -182,6 +184,5 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 	updateCmd := store.NewDatabaseCmd(&info, store.Update, instructions)
 	wr.databaseMessages <- updateCmd
 
-	// TODO: delete from database after confirming
 	return nil
 }
