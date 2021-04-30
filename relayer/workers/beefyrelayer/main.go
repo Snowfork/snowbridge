@@ -56,12 +56,17 @@ func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Con
 	beefyMessages := make(chan store.BeefyRelayInfo)
 	ethHeaders := make(chan chain.Header)
 
-	beefyEthereumListener := NewBeefyEthereumListener(ethereumConfig,
-		ethereumConn, beefyDB, beefyMessages, dbMessages, ethHeaders,
-		log)
+	beefyEthereumListener, err := NewBeefyEthereumListener(ethereumConfig,
+		ethereumConn, beefyDB, beefyMessages, dbMessages, ethHeaders, log)
+	if err != nil {
+		return nil, err
+	}
 
-	beefyEthereumWriter := NewBeefyEthereumWriter(ethereumConfig, ethereumConn,
+	beefyEthereumWriter, err := NewBeefyEthereumWriter(ethereumConfig, ethereumConn,
 		beefyDB, dbMessages, beefyMessages, log)
+	if err != nil {
+		return nil, err
+	}
 
 	beefyRelaychainListener := NewBeefyRelaychainListener(
 		relaychainConfig,
