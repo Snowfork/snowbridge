@@ -28,15 +28,7 @@ type Worker struct {
 	beefyDB                 *store.Database
 	beefyMessages           chan store.BeefyRelayInfo
 	ethHeaders              chan chain.Header
-	mode                    RelayMode
 }
-
-type RelayMode int
-
-const (
-	Sync RelayMode = iota // 0
-	Live RelayMode = iota // 1
-)
 
 const Name = "beefy-relayer"
 

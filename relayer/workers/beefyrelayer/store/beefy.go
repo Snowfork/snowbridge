@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -100,9 +99,6 @@ func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][3
 	if !verified {
 		return [][32]byte{}, fmt.Errorf("failed to verify proof")
 	}
-
-	hexRoot := hex.EncodeToString(root)
-	fmt.Println("hexRoot:", hexRoot)
 
 	sigProofContents := make([][32]byte, len(sigProof.Hashes))
 	for i, hash := range sigProof.Hashes {
