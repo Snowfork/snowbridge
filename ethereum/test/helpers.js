@@ -5,6 +5,7 @@ const { ethers } = require("ethers");
 const assert = require('chai').assert;
 
 const MockFeeSource = artifacts.require("MockFeeSource");
+const MockRewardSource = artifacts.require("MockRewardSource");
 
 const channelContracts = {
   basic: {
@@ -158,13 +159,12 @@ const buildMessagesHead = (messages, msgsLength) => {
 
 const encodeMessage = (message) => {
   return ethers.utils.defaultAbiCoder.encode(
-    [ 'address', 'uint64', 'bytes' ],
-    [ message.target, message.nonce, message.payload ]
+    [ 'address', 'uint64', 'uint256', 'bytes' ],
+    [ message.target, message.nonce, message.fee, message.payload ]
   );
 }
 
 const deployChannels = async (deployer) => {
-
   const defaults = {
     from: deployer
   };
@@ -183,10 +183,13 @@ const deployChannels = async (deployer) => {
   return channels;
 }
 
-// Do post-construction initialization of incentivized outbound channel
-const initializeChannels = async (channels, app, deployer) => {
+// Do post-construction initialization of incentivized channels
+const initializeIncentivizedChannels = async (channels, app, deployer) => {
   const feeSource = await MockFeeSource.new();
   await channels.incentivized.outbound.initialize(deployer, feeSource.address, [app.address]);
+
+  const rewardSource = await MockRewardSource.new();
+  await channels.incentivized.inbound.initialize(deployer, rewardSource.address);
 }
 
 const deployDOTAppWithChannels = async (deployer, appContract, ...appContractArgs) => {
@@ -208,7 +211,7 @@ const deployDOTAppWithChannels = async (deployer, appContract, ...appContractArg
     }
   );
 
-  await initializeChannels(channels, app, deployer);
+  await initializeIncentivizedChannels(channels, app, deployer);
 
   return [channels, app];
 }
@@ -231,7 +234,7 @@ const deployGenericAppWithChannels = async (deployer, appContract, ...appContrac
     }
   );
 
-  await initializeChannels(channels, app, deployer);
+  await initializeIncentivizedChannels(channels, app, deployer);
 
   return [channels, app];
 }

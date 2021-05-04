@@ -3,14 +3,17 @@ pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./InboundChannel.sol";
 
-contract BasicInboundChannel is InboundChannel {
+contract BasicInboundChannel {
     uint256 constant public MAX_GAS_PER_MESSAGE = 100000;
 
-    constructor() {
-        nonce = 0;
+    struct Message {
+        address target;
+        uint64 nonce;
+        bytes payload;
     }
+
+    event MessageDispatched(uint64 nonce, bool result);
 
     // TODO: Submit should take in all inputs required for verification,
     // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
@@ -28,25 +31,6 @@ contract BasicInboundChannel is InboundChannel {
         view
         returns (bool success)
     {
-        // Prove we can get the MMRLeaf that is claimed to contain our Parachain Block Header
-        // BEEFYLightClient.verifyMMRLeaf(parachainHeadsMMRProof)
-        // BeefyLightClient{
-        //   verifyMMRLeaf(parachainHeadsMMRProof) {
-        //   MMRVerification.verifyInclusionProof(latestMMRRoot, parachainHeadsMMRProof)
-        // }
-        //}
-        //}
-        // returns mmrLeaf;
-
-        // Prove we can get the claimed parachain block header from the MMRLeaf
-        // allParachainHeadsMerkleTreeRoot = mmrLeaf.parachain_heads;
-        // MerkeTree.verify(allParachainHeadsMerkleTreeRoot, ourParachainMerkleProof)
-        // returns parachainBlockHeader
-
-        // Prove that the commitment is in fact in the parachain block header
-        // require(parachainBlockHeader.commitment == commitment)
-
-        // Validate that the commitment matches the commitment contents
         require(
             validateMessagesMatchCommitment(_messages, _commitment),
             "invalid commitment"
