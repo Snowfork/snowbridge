@@ -166,9 +166,6 @@ contract("ERC20App", function (accounts) {
       // expected amount to unlock
       const amount = BigNumber(100);
 
-      // Commitment payload generated using:
-      //   cd parachain/pallets/erc20-app
-      //   cargo test test_outbound_payload_encode -- --nocapture
       token_addr = this.token.address.replace(/^0x/, "");
       const messages = [
         {

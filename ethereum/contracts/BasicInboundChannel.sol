@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 contract BasicInboundChannel {
     uint256 constant public MAX_GAS_PER_MESSAGE = 100000;
 
+    uint64 public nonce;
+
     struct Message {
         address target;
         uint64 nonce;
@@ -19,7 +21,6 @@ contract BasicInboundChannel {
     // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
     function submit(Message[] calldata _messages, bytes32 _commitment)
         public
-        override
     {
         verifyMessages(_messages, _commitment);
         processMessages(_messages);

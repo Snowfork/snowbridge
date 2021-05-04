@@ -48,11 +48,9 @@ contract IncentivizedInboundChannel is AccessControl {
         renounceRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    // TODO: Submit should take in all inputs required for verification,
-    // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
+    // TODO: Submit should take in all inputs required for verification
     function submit(Message[] calldata _messages, bytes32 _commitment)
         public
-        override
     {
         verifyMessages(_messages, _commitment);
         processMessages(msg.sender, _messages);
