@@ -36,10 +36,12 @@ type PositiveImbalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_s
 /// Weight functions needed for this pallet.
 pub trait WeightInfo {
 	fn submit() -> Weight;
+	fn set_reward_fraction() -> Weight;
 }
 
 impl WeightInfo for () {
 	fn submit() -> Weight { 0 }
+	fn set_reward_fraction() -> Weight { 0 }
 }
 
 pub trait Config: system::Config {
@@ -133,8 +135,7 @@ decl_module! {
 			Ok(())
 		}
 
-		// Weight = 0 is fine here (a single storage write). Also can only be called by governance.
-		#[weight = 0]
+		#[weight = T::WeightInfo::set_reward_fraction()]
 		pub fn set_reward_fraction(origin, fraction: Perbill) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			RewardFraction::set(fraction);

@@ -58,6 +58,23 @@ benchmarks! {
 		}
 	}
 
+	// Benchmark `set_reward_fraction` under worst case conditions:
+	// * The origin is authorized, i.e. equals UpdateOrigin
+	set_reward_fraction {
+		let authorized_origin = match T::UpdateOrigin::successful_origin().into() {
+			Ok(raw) => raw,
+			Err(_) => return Err("Failed to get raw origin from origin"),
+		};
+
+		// Pick a value that is different from the initial RewardFraction
+		let fraction = Perbill::from_percent(50);
+		assert!(RewardFraction::get() != fraction);
+
+	}: _(authorized_origin, fraction)
+	verify {
+		assert_eq!(RewardFraction::get(), fraction);
+	}
+
 	#[extra]
 	submit_eth_mint {
 		let caller: T::AccountId = whitelisted_caller();
@@ -113,6 +130,7 @@ benchmarks! {
 
 // ETH mint
 // Channel = 0xeda338e4dc46038493b885327842fd3e301cab39
+// Fee = 10000000000
 // Nonce = 3
 // Source = 0x774667629726ec1fabebcec0d9139bd1c8f72a23
 fn eth_mint_data() -> (Header, Message) {
@@ -152,6 +170,7 @@ fn eth_mint_data() -> (Header, Message) {
 
 // ERC20 mint
 // Channel = 0xeda338e4dc46038493b885327842fd3e301cab39
+// Fee = 10000000000
 // Nonce = 2
 // Source = 0x83428c7db9815f482a39a1715684dcf755021997
 fn erc20_mint_data() -> (Header, Message) {
@@ -191,6 +210,7 @@ fn erc20_mint_data() -> (Header, Message) {
 
 // DOT unlock
 // Channel = 0xeda338e4dc46038493b885327842fd3e301cab39
+// Fee = 10000000000
 // Nonce = 1
 // Source = 0xb1185ede04202fe62d38f5db72f71e38ff3e8305
 fn dot_unlock_data() -> (Header, Message) {

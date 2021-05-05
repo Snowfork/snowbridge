@@ -376,7 +376,7 @@ type EnsureRootOrHalfLocalCouncil = EnsureOneOf<
 parameter_types! {
 	pub const LocalCouncilMotionDuration: BlockNumber = 7 * DAYS;
 	pub const LocalCouncilMaxProposals: u32 = 100;
-	pub const LocalCouncilMaxMembers: u32 = 4;
+	pub const LocalCouncilMaxMembers: u32 = 8;
 }
 
 type LocalCouncilInstance = pallet_collective::Instance1;
@@ -388,7 +388,7 @@ impl pallet_collective::Config<LocalCouncilInstance> for Runtime {
 	type MaxProposals = LocalCouncilMaxProposals;
 	type MaxMembers = LocalCouncilMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_collective_weights::WeightInfo<Runtime>;
 }
 
 type LocalCouncilMembershipInstance = pallet_membership::Instance1;
@@ -764,6 +764,7 @@ impl_runtime_apis! {
 
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
+			add_benchmark!(params, batches, pallet_collective, LocalCouncil);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
