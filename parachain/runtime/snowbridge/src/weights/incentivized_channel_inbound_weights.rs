@@ -3,13 +3,13 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 3.0.0
 //! DATE: 2021-05-04, STEPS: `[50, ]`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("/tmp/artemis-benchmark-ZsQ/spec.json"), DB CACHE: 128
+//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("/tmp/artemis-benchmark-Oso/spec.json"), DB CACHE: 128
 
 // Executed Command:
 // target/release/artemis
 // benchmark
 // --chain
-// /tmp/artemis-benchmark-ZsQ/spec.json
+// /tmp/artemis-benchmark-Oso/spec.json
 // --execution
 // wasm
 // --wasm-execution
@@ -36,12 +36,12 @@ use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> incentivized_channel::inbound::WeightInfo for WeightInfo<T> {
 	fn submit() -> Weight {
-		(258_636_000 as Weight)
+		(253_932_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(8 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	fn set_reward_fraction() -> Weight {
-		(2_950_000 as Weight)
+		(3_128_000 as Weight)
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 }
