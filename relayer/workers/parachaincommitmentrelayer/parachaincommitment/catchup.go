@@ -6,7 +6,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
+	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
@@ -14,7 +16,7 @@ import (
 
 // Catches up by searching for and relaying all missed commitments before the given block
 func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock uint64) error {
-	basicContract, err := inbound.NewContract(common.HexToAddress(
+	basicContract, err := inbound.NewBasicInboundChannel(common.HexToAddress(
 		li.ethereumConfig.Channels.Basic.Inbound),
 		li.ethereumConnection.GetClient(),
 	)
@@ -22,7 +24,7 @@ func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock ui
 		return err
 	}
 
-	incentivizedContract, err := inbound.NewContract(common.HexToAddress(
+	incentivizedContract, err := inbound.NewIncentivizedInboundChannel(common.HexToAddress(
 		li.ethereumConfig.Channels.Incentivized.Inbound),
 		li.ethereumConnection.GetClient(),
 	)
@@ -91,7 +93,7 @@ func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock ui
 		return nil
 	}
 
-	err = li.searchForLostCommitments(ctx, latestBlock, ethBasicNonce, ethIncentivizedNonce)
+	err = li.searchForLostCommitments(latestBlock, ethBasicNonce, ethIncentivizedNonce)
 	if err != nil {
 		return err
 	}
@@ -101,7 +103,7 @@ func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock ui
 	return nil
 }
 
-func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumber uint64, basicNonceToFind uint64, incentivizedNonceToFind uint64) error {
+func (li *Listener) searchForLostCommitments(lastBlockNumber uint64, basicNonceToFind uint64, incentivizedNonceToFind uint64) error {
 	li.log.WithFields(logrus.Fields{
 		"basicNonce":        basicNonceToFind,
 		"incentivizedNonce": incentivizedNonceToFind,
@@ -142,7 +144,7 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 		if digestItem != nil && digestItem.IsCommitment {
 			channelID := digestItem.AsCommitment.ChannelID
 			if channelID == basicId && !basicNonceFound {
-				isRelayed, err := li.checkIfDigestItemContainsNonce(digestItem, basicNonceToFind)
+				isRelayed, err := li.checkBasicMessageNonces(digestItem, basicNonceToFind)
 				if err != nil {
 					return err
 				}
@@ -153,7 +155,7 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 				}
 			}
 			if channelID == incentivizedId && !incentivizedNonceFound {
-				isRelayed, err := li.checkIfDigestItemContainsNonce(digestItem, incentivizedNonceToFind)
+				isRelayed, err := li.checkIncentivizedMessageNonces(digestItem, incentivizedNonceToFind)
 				if err != nil {
 					return err
 				}
@@ -173,7 +175,7 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 	}
 
 	for _, digestItem := range digestItems {
-		err := li.processDigestItem(ctx, digestItem)
+		err := li.processCommitment(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
 		if err != nil {
 			return err
 		}
@@ -182,9 +184,11 @@ func (li *Listener) searchForLostCommitments(ctx context.Context, lastBlockNumbe
 	return nil
 }
 
-func (li *Listener) checkIfDigestItemContainsNonce(
-	digestItem *chainTypes.AuxiliaryDigestItem, nonceToFind uint64) (bool, error) {
-	messages, err := li.getMessagesForDigestItem(digestItem)
+func (li *Listener) checkBasicMessageNonces(
+	digestItem *chainTypes.AuxiliaryDigestItem,
+	nonceToFind uint64,
+) (bool, error) {
+	messages, err := li.getBasicMessages(digestItem.AsCommitment.Hash)
 	if err != nil {
 		return false, err
 	}
@@ -195,4 +199,85 @@ func (li *Listener) checkIfDigestItemContainsNonce(
 		}
 	}
 	return false, nil
+}
+
+func (li *Listener) checkIncentivizedMessageNonces(
+	digestItem *chainTypes.AuxiliaryDigestItem,
+	nonceToFind uint64,
+) (bool, error) {
+	messages, err := li.getIncentivizedMessages(digestItem.AsCommitment.Hash)
+	if err != nil {
+		return false, err
+	}
+
+	for _, message := range messages {
+		if message.Nonce <= nonceToFind {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (li *Listener) getBasicMessages(commitment types.H256) ([]chainTypes.BasicOutboundChannelMessage, error) {
+	storageKey, err := parachain.MakeStorageKey(substrate.ChannelID{IsBasic: true}, commitment)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := li.parachainConnection.GetAPI().RPC.Offchain.LocalStorageGet(rpcOffchain.Persistent, storageKey)
+	if err != nil {
+		li.log.WithError(err).Error("Failed to read commitment from offchain storage")
+		return nil, err
+	}
+
+	if data != nil {
+		li.log.WithFields(logrus.Fields{
+			"commitmentSizeBytes": len(*data),
+		}).Debug("Retrieved commitment from offchain storage")
+	} else {
+		li.log.WithError(err).Error("Commitment not found in offchain storage")
+		return nil, err
+	}
+
+	var messages []chainTypes.BasicOutboundChannelMessage
+
+	err = types.DecodeFromBytes(*data, &messages)
+	if err != nil {
+		li.log.WithError(err).Error("Failed to decode commitment messages")
+		return nil, err
+	}
+
+	return messages, nil
+}
+
+func (li *Listener) getIncentivizedMessages(commitment types.H256) ([]chainTypes.IncentivizedOutboundChannelMessage, error) {
+	storageKey, err := parachain.MakeStorageKey(substrate.ChannelID{IsBasic: true}, commitment)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := li.parachainConnection.GetAPI().RPC.Offchain.LocalStorageGet(rpcOffchain.Persistent, storageKey)
+	if err != nil {
+		li.log.WithError(err).Error("Failed to read commitment from offchain storage")
+		return nil, err
+	}
+
+	if data != nil {
+		li.log.WithFields(logrus.Fields{
+			"commitmentSizeBytes": len(*data),
+		}).Debug("Retrieved commitment from offchain storage")
+	} else {
+		li.log.WithError(err).Error("Commitment not found in offchain storage")
+		return nil, err
+	}
+
+	var messages []chainTypes.IncentivizedOutboundChannelMessage
+
+	err = types.DecodeFromBytes(*data, &messages)
+	if err != nil {
+		li.log.WithError(err).Error("Failed to decode commitment messages")
+		return nil, err
+	}
+
+	return messages, nil
 }

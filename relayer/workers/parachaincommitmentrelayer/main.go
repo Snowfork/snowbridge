@@ -7,13 +7,10 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer/parachaincommitment"
 )
 
@@ -47,21 +44,23 @@ func NewWorker(parachainConfig *parachain.Config,
 	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKp, log)
 
 	// channel for messages from substrate
-	var subMessages = make(chan []chain.Message, 1)
-	contracts := make(map[substrate.ChannelID]*inbound.Contract)
+	messages := make(chan interface{}, 1)
 
 	parachainCommitmentListener := parachaincommitment.NewListener(
 		parachainConn,
 		relaychainConn,
 		ethereumConn,
 		ethereumConfig,
-		contracts,
-		subMessages,
+		messages,
 		log,
 	)
 
-	ethereumChannelWriter, err := NewEthereumChannelWriter(ethereumConfig, ethereumConn,
-		subMessages, contracts, log)
+	ethereumChannelWriter, err := NewEthereumChannelWriter(
+		ethereumConfig,
+		ethereumConn,
+		messages,
+		log,
+	)
 	if err != nil {
 		return nil, err
 	}
