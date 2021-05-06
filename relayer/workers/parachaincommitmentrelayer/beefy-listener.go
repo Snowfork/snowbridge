@@ -133,6 +133,14 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 				mmrProof,
 			}
 
+			li.log.WithFields(logrus.Fields{
+				"channelID":          messagePackage.channelID,
+				"commitmentHash":     messagePackage.commitmentHash,
+				"commitmentMessages": messagePackage.commitmentMessages,
+				"ourParaHeadProof":   messagePackage.paraHeadProof,
+				"mmrProof":           messagePackage.mmrProof,
+			}).Info("Beefy Listener emmited new message packet")
+
 			li.messages <- messagePackage
 		}
 	}
@@ -151,6 +159,11 @@ func (li *BeefyListener) GetMMRLeafForBlock(
 		li.log.WithError(err).Error("Failed to generate mmr proof")
 	}
 
+	var proofItemsHex = []string{}
+	for _, item := range proofResponse.Proof.Items {
+		proofItemsHex = append(proofItemsHex, item.Hex())
+	}
+
 	li.log.WithFields(logrus.Fields{
 		"BlockHash":                       proofResponse.BlockHash.Hex(),
 		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
@@ -161,6 +174,7 @@ func (li *BeefyListener) GetMMRLeafForBlock(
 		"Leaf.BeefyNextAuthoritySet.Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
 		"Proof.LeafIndex":                 proofResponse.Proof.LeafIndex,
 		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
+		"Proof.Items":                     proofItemsHex,
 	}).Info("Generated MMR Proof")
 	return proofResponse
 }
