@@ -1,0 +1,9 @@
+{
+  "commitmentHash": "asd",
+  "commitment": {
+    "payload": ,
+    "blockNumber": ,
+    "validatorSetId":
+  },
+  "bitfield": 3
+}

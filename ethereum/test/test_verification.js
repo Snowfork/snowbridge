@@ -31,6 +31,11 @@ contract("IncentivizedInboundChannel", function (accounts) {
       this.validator1PubKeyMerkleProof = validatorsMerkleTree.getHexProof(this.validatorsLeaf1);
 
       this.lightClientBridge = await deployLightClientBridge(validatorsMerkleTree.getHexRoot());
+      const commitment = {
+        payload:,
+        blockNumber:,
+        validatorSetId:,
+      }
       const newCommitment = await this.lightClientBridge.newSignatureCommitment(
         blake2AsHex("0x8f667b0d8050a5d544d6fb139485847ea3f654bbbd065b08aad2f04d93ba2b7cae0000000000000000000000", 256),
         [parseBitfield("11")],
@@ -56,7 +61,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
       await lockupFunds(this.ethApp, userOne, this.POLKADOT_ADDRESS, 5000, ChannelId.Incentivized);
     });
 
-    it("should successfully verify a commitment", async function() {
+    it("should successfully verify a commitment", async function () {
       const abi = this.ethApp.abi;
       const iChannel = new ethers.utils.Interface(abi);
       const polkadotSender = ethers.utils.formatBytes32String('fake-polkadot-address');
@@ -97,6 +102,6 @@ contract("IncentivizedInboundChannel", function (accounts) {
   });
 });
 
-function parseBitfield (s) {
+function parseBitfield(s) {
   return parseInt(s, 2)
 }

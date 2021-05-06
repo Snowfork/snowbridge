@@ -37,22 +37,28 @@ contract LightClientBridge {
 
     /**
      * @notice Notifies an observer that the complete verification process has
-     *  finished successfuly and the new payload will be accepted
+     *  finished successfuly and the new commitmentHash will be accepted
      * @param prover The address of the successful prover
-     * @param payload the payload which was approved for inclusion
+     * @param commitmentHash the commitmentHash which was approved for inclusion
      * @param id the identifier used
      */
     event FinalVerificationSuccessful(
         address prover,
-        bytes32 payload,
+        bytes32 commitmentHash,
         uint256 id
     );
 
     /* Types */
 
+    struct Commitment {
+        bytes32 payload;
+        uint64 blockNumber;
+        uint64 validatorSetId;
+    }
+
     struct ValidationData {
         address senderAddress;
-        bytes32 payload;
+        bytes32 commitmentHash;
         uint256[] validatorClaimsBitfield;
         uint256 blockNumber;
     }
@@ -78,7 +84,10 @@ contract LightClientBridge {
      * @param _validatorRegistry The contract to be used as the validator registry
      * @param _mmrVerification The contract to be used for MMR verification
      */
-    constructor(ValidatorRegistry _validatorRegistry, MMRVerification _mmrVerification) {
+    constructor(
+        ValidatorRegistry _validatorRegistry,
+        MMRVerification _mmrVerification
+    ) {
         validatorRegistry = _validatorRegistry;
         mmrVerification = _mmrVerification;
         currentId = 0;
@@ -95,22 +104,23 @@ contract LightClientBridge {
         uint256 beefyMerkleLeafCount,
         bytes32[] calldata beefyMerkleProof
     ) external returns (bool) {
-        return mmrVerification.verifyInclusionProof(
-            latestMMRRoot,
-            beefyMerkleLeaf,
-            beefyMerkleLeafIndex,
-            beefyMerkleLeafCount,
-            beefyMerkleProof
-        );
+        return
+            mmrVerification.verifyInclusionProof(
+                latestMMRRoot,
+                beefyMerkleLeaf,
+                beefyMerkleLeafIndex,
+                beefyMerkleLeafCount,
+                beefyMerkleProof
+            );
     }
 
     /* Public Functions */
     /**
      * @notice Executed by the prover in order to begin the process of block
      * acceptance by the light client
-     * @param payload contains the payload signed by the validator(s)
+     * @param commitmentHash contains the commitmentHash signed by the validator(s)
      * @param validatorClaimsBitfield a bitfield containing a membership status of each
-     * validator who has claimed to have signed the payload
+     * validator who has claimed to have signed the commitmentHash
      * @param validatorSignature the signature of one validator
      * @param validatorPosition the position of the validator, index starting at 0
      * @param validatorPublicKey the public key of the validator
@@ -118,7 +128,7 @@ contract LightClientBridge {
      */
 
     function newSignatureCommitment(
-        bytes32 payload,
+        bytes32 commitmentHash,
         uint256[] memory validatorClaimsBitfield,
         bytes memory validatorSignature,
         uint256 validatorPosition,
@@ -139,10 +149,11 @@ contract LightClientBridge {
 
         /**
          * @dev Check if validatorSignature is correct, ie. check if it matches
-         * the signature of senderPublicKey on the payload
+         * the signature of senderPublicKey on the commitmentHash
          */
         require(
-            ECDSA.recover(payload, validatorSignature) == validatorPublicKey,
+            ECDSA.recover(commitmentHash, validatorSignature) ==
+                validatorPublicKey,
             "Error: Invalid Signature"
         );
 
@@ -164,7 +175,7 @@ contract LightClientBridge {
         // Accept and save the commitment
         validationData[currentId] = ValidationData(
             msg.sender,
-            payload,
+            commitmentHash,
             validatorClaimsBitfield,
             block.number
         );
@@ -177,7 +188,8 @@ contract LightClientBridge {
     /**
      * @notice Performs the second step in the validation logic
      * @param id an identifying value generated in the previous transaction
-     * @param payload contains the payload signed by the validator(s)
+     * @param commitmentHash contains the commitmentHash signed by the validator(s)
+     * @param commitment contains the full commitment that was used for the commitmentHash
      * @param signatures an array of signatures from the randomly chosen validators
      * @param validatorPositions an array of bitfields from the chosen validators
      * @param validatorPublicKeys an array of the public key of each signer
@@ -185,7 +197,8 @@ contract LightClientBridge {
      */
     function completeSignatureCommitment(
         uint256 id,
-        bytes32 payload,
+        bytes32 commitmentHash,
+        Commitment memory commitment,
         bytes[] memory signatures,
         uint256[] memory validatorPositions,
         address[] memory validatorPublicKeys,
@@ -277,7 +290,8 @@ contract LightClientBridge {
              * @dev Check if signature is correct
              */
             require(
-                ECDSA.recover(payload, signatures[i]) == validatorPublicKeys[i],
+                ECDSA.recover(commitmentHash, signatures[i]) ==
+                    validatorPublicKeys[i],
                 "Error: Invalid Signature"
             );
         }
@@ -287,12 +301,18 @@ contract LightClientBridge {
          */
         // TODO
 
+        // Verify the commitment
+        require(
+            keccak256(abi.encode(commitment)) == commitmentHash,
+            "Error: Commitment must match commitment hash"
+        );
+        bytes32 payload = commitment.payload;
         /**
          * @follow-up Do we need a try-catch block here?
          */
-        processPayload(data.payload);
+        processPayload(payload);
 
-        emit FinalVerificationSuccessful(msg.sender, payload, id);
+        emit FinalVerificationSuccessful(msg.sender, commitmentHash, id);
 
         /**
          * @dev We no longer need the data held in state, so delete it for a gas refund
@@ -332,7 +352,6 @@ contract LightClientBridge {
         // Check the payload is newer than the latest
         // Check that payload.leaf.block_number is > last_known_block_number;
 
-        //update latestMMRRoot = payload.mmrRoot;
         latestMMRRoot = payload;
 
         // if payload is in next epoch, then apply validatorset changes
