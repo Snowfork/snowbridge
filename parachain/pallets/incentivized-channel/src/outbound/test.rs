@@ -71,7 +71,6 @@ impl artemis_assets::Config for Test {
 }
 
 parameter_types! {
-	pub const CommitInterval: u64 = 5;
 	pub const MaxMessagesPerCommit: usize = 5;
 	pub const Ether: AssetId = AssetId::ETH;
 }
