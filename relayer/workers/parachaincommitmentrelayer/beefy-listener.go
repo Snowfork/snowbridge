@@ -95,7 +95,11 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 
 			blockNumber := signedCommitment.Commitment.BlockNumber
 
-			li.log.WithField("commitmentBlockNumber", blockNumber).Info("Witnessed a new BEEFY commitment: \n")
+			li.log.WithFields(logrus.Fields{
+				"commitmentBlockNumber": blockNumber,
+				"payload":               signedCommitment.Commitment.Payload,
+				"validatorSetID":        signedCommitment.Commitment.ValidatorSetID,
+			}).Info("Witnessed a new BEEFY commitment: \n")
 			if len(signedCommitment.Signatures) == 0 {
 				li.log.Info("BEEFY commitment has no signatures, skipping...")
 				continue

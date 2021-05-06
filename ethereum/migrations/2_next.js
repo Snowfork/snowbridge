@@ -153,10 +153,10 @@ module.exports = function (deployer, network, accounts) {
       );
     }
 
-    await token.mint("10000", {
+    await token.mint('100' + '000000000000000000', {
       from: accounts[0],
     });
-    await token.mint("10000", {
+    await token.mint('100' + '000000000000000000', {
       from: accounts[1],
     });
   })
