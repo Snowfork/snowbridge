@@ -53,6 +53,7 @@ contract LightClientBridge {
     struct ValidationData {
         address senderAddress;
         bytes32 payload;
+        bytes32 mmrRoot;
         uint256[] validatorClaimsBitfield;
         uint256 blockNumber;
     }
@@ -119,6 +120,7 @@ contract LightClientBridge {
 
     function newSignatureCommitment(
         bytes32 payload,
+        bytes32 mmrRoot,
         uint256[] memory validatorClaimsBitfield,
         bytes memory validatorSignature,
         uint256 validatorPosition,
@@ -165,6 +167,7 @@ contract LightClientBridge {
         validationData[currentId] = ValidationData(
             msg.sender,
             payload,
+            mmrRoot,
             validatorClaimsBitfield,
             block.number
         );
@@ -290,7 +293,7 @@ contract LightClientBridge {
         /**
          * @follow-up Do we need a try-catch block here?
          */
-        processPayload(data.payload);
+        processPayload(data);
 
         emit FinalVerificationSuccessful(msg.sender, payload, id);
 
@@ -326,19 +329,19 @@ contract LightClientBridge {
 
     /**
      * @notice Perform some operation[s] using the payload
-     * @param payload The payload variable passed in via the initial function
+     * @param data The payload variable passed in via the initial function
      */
-    function processPayload(bytes32 payload) private {
+    function processPayload(ValidationData storage data) private {
         // Check the payload is newer than the latest
         // Check that payload.leaf.block_number is > last_known_block_number;
 
         //update latestMMRRoot = payload.mmrRoot;
-        latestMMRRoot = payload;
+        latestMMRRoot = data.mmrRoot;
 
         // if payload is in next epoch, then apply validatorset changes
         // if payload is not in current or next epoch, reject
 
-        applyValidatorSetChanges(payload);
+        applyValidatorSetChanges(data.payload);
     }
 
     /**

@@ -32,9 +32,10 @@ contract("IncentivizedInboundChannel", function (accounts) {
 
       this.lightClientBridge = await deployLightClientBridge(validatorsMerkleTree.getHexRoot());
       const newCommitment = await this.lightClientBridge.newSignatureCommitment(
-        blake2AsHex("0x8f667b0d8050a5d544d6fb139485847ea3f654bbbd065b08aad2f04d93ba2b7cae0000000000000000000000", 256),
+        blake2AsHex("0x3f1cbcda605962d8d409020591364c90014d048c590d233e639b02ed6bf27d150a0000000000000000000000", 256),
+        "0x3f1cbcda605962d8d409020591364c90014d048c590d233e639b02ed6bf27d15",
         [parseBitfield("11")],
-        signatureSubstrateToEthereum("0xbf866f5a4c66d5716e736d8e4737c8386c59e47fb618a03fc4cc3716f8e0a0987eec8076ee5824600d6f84825d693e4e5dac8f90ca27d639b520ab435e2d221900"),
+        signatureSubstrateToEthereum("0x7d19a8bda8914787cc73dfc4ca4580b579c099d5799c92ee9fc32452b50c2fd47828377cd3ccdcf7d2e578bec821fff23e48630f32bda9001785829f942d32c201"),
         0,
         "0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b",
         this.validator0PubKeyMerkleProof
@@ -43,8 +44,8 @@ contract("IncentivizedInboundChannel", function (accounts) {
       const currentId = await this.lightClientBridge.currentId();
       const completeCommitment = await this.lightClientBridge.completeSignatureCommitment(
         currentId.sub(new web3.utils.BN(1)),
-        blake2AsHex("0x8f667b0d8050a5d544d6fb139485847ea3f654bbbd065b08aad2f04d93ba2b7cae0000000000000000000000", 256),
-        [signatureSubstrateToEthereum("0x9646258c491fc1d32c03521d468b530ca0eb9f3acd0de9fea7255dc21ff63ddb2a45c06552a0f5cc079c9df7b320eca99c9819619a4efa816f1593cb908cd40901")],
+        blake2AsHex("0x3f1cbcda605962d8d409020591364c90014d048c590d233e639b02ed6bf27d150a0000000000000000000000", 256),
+        [signatureSubstrateToEthereum("0xbeb718a5f6e109750b06a6c741ba6443b821b23d58899f71b16833f41429a2426f42838873a484e894b53cc8d8179ec387b6d612125bedc686a329b18ba9ec0d00")],
         [1],
         ["0x25451A4de12dcCc2D166922fA938E900fCc4ED24"],
         [this.validator1PubKeyMerkleProof]
@@ -75,20 +76,17 @@ contract("IncentivizedInboundChannel", function (accounts) {
       };
       const messages = [messageOne, messageTwo];
       const commitment = buildCommitment(messages);
-      const leaf = "0x3c390519c0130a826f3b96ec71ef9ce43f9fbc67fb0fc22ab4aaa1b3293394f7";
+      const leaf = "0x691847389270c5a694cb03842e1948a6908da32330491d6446f0b2bde54ff0ed";
       const proofs = [
-        "0xfe4a3df5f147d73b9edd54b6f665f68738a475243b0f5c583495b7fc34d7e127",
-        "0x890fc5d842bac18f3af8ddabea7a28e39cd05fe13a5132460aaa5ef5c27c5969",
-        "0xbe855ba734eef6617931c4bab11ce648892cad733df6a1c8287872eef656528a",
-        "0x4bcd5e2699bd1870f4a85e0c91ebab5198b419b71b89c81b14e251b57b0f4348",
-        "0xc1aad420d483a83b4dce6bf5e44c7af18653b46b0f6ca875ca0cb0ef6371adf7"
+        "0xdb88e2974042621e001e27d98ed92b371c799bb44ff3ca1f5c5302b0b5de3f97",
+        "0xa91d9032932c55fd562b886b21e1c235b8084f1e53216d2adf54c49d5f03c030",
       ];
       const tx = await this.inbound.submit(
         messages,
         commitment,
         leaf,
-        174,
-        175,
+        10,
+        11,
         proofs,
         { from: userOne }
       );
