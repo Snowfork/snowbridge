@@ -88,7 +88,7 @@ describe("BasicInboundChannel", function () {
         receipt.rawLogs[3].data,
         receipt.rawLogs[3].topics
       );
-      event.nonce.eq(ethers.BigNumber.from(1)).should.be.true;
+      event.nonce.eq(ethers.BigNumber.from(2)).should.be.true;
 
     });
 
