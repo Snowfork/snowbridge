@@ -1,19 +1,18 @@
 const BigNumber = require('bignumber.js');
+const { ethers } = require("ethers");
 const {
-  confirmBasicChannelSend,
-  confirmIncentivizedChannelSend,
-  confirmUnlockTokens,
-  deployGenericAppWithChannels,
+  deployAppWithMockChannels,
   addressBytes,
   ChannelId,
-  buildCommitment
 } = require("./helpers");
-
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
+const MockOutboundChannel = artifacts.require("MockOutboundChannel");
+
+const ScaleCodec = artifacts.require("ScaleCodec");
 const ERC20App = artifacts.require("ERC20App");
 const TestToken = artifacts.require("TestToken");
 
@@ -34,17 +33,27 @@ const lockupFunds = (contract, token, sender, recipient, amount, channel) => {
   )
 }
 
-contract("ERC20App", function (accounts) {
+describe("ERC20App", function () {
   // Accounts
-  const owner = accounts[0];
-  const userOne = accounts[1];
+  let accounts;
+  let owner;
+  let userOne;
 
   // Constants
   const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
+  before(async function() {
+    const codec = await ScaleCodec.new();
+    ERC20App.link(codec);
+    accounts = await web3.eth.getAccounts();
+    owner = accounts[0];
+    userOne = accounts[1];
+  });
+
   describe("deposits", function () {
     beforeEach(async function () {
-      [this.channels, this.app] = await deployGenericAppWithChannels(owner, ERC20App);
+      let outboundChannel = await MockOutboundChannel.new()
+      this.app = await deployAppWithMockChannels(owner, [owner, outboundChannel.address], ERC20App);
       this.symbol = "TEST";
       this.token = await TestToken.new("Test Token", this.symbol);
 
@@ -79,36 +88,13 @@ contract("ERC20App", function (accounts) {
       afterVaultBalance.should.be.bignumber.equal(beforeVaultBalance.plus(100));
       afterUserBalance.should.be.bignumber.equal(beforeUserBalance.minus(100));
     });
-
-    it("should send payload to the basic outbound channel", async function () {
-      const amount = 100;
-
-      await approveFunds(this.token, this.app, userOne, amount * 2)
-        .should.be.fulfilled;
-
-      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
-        .should.be.fulfilled;
-
-      confirmBasicChannelSend(tx.receipt.rawLogs[3], this.channels.basic.outbound.address, this.app.address, 1)
-    });
-
-    it("should send payload to the incentivized outbound channel", async function () {
-      const amount = 100;
-
-      await approveFunds(this.token, this.app, userOne, amount * 2)
-        .should.be.fulfilled;
-
-      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Incentivized)
-        .should.be.fulfilled;
-
-      confirmIncentivizedChannelSend(tx.receipt.rawLogs[3], this.channels.incentivized.outbound.address, this.app.address, 1)
-    });
   })
 
   describe("withdrawals", function () {
 
     beforeEach(async function () {
-      [this.channels, this.app] = await deployGenericAppWithChannels(owner, ERC20App);
+      let outboundChannel = await MockOutboundChannel.new()
+      this.app = await deployAppWithMockChannels(owner, [owner, outboundChannel.address], ERC20App);
       this.symbol = "TEST";
       this.token = await TestToken.new("Test Token", this.symbol);
 
@@ -117,7 +103,7 @@ contract("ERC20App", function (accounts) {
       }).should.be.fulfilled;
     });
 
-    it("should unlock via the basic inbound channel", async function () {
+    it("should unlock funds", async function () {
       const lockupAmount = 200;
       await approveFunds(this.token, this.app, userOne, lockupAmount * 2)
         .should.be.fulfilled;
@@ -128,64 +114,27 @@ contract("ERC20App", function (accounts) {
       const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
 
       // expected amount to unlock
-      const amount = BigNumber(100);
+      const amount = ethers.BigNumber.from(100);
 
-      // Commitment payload generated using:
-      //   cd parachain/pallets/erc20-app
-      //   cargo test test_outbound_payload_encode -- --nocapture
-      token_addr = this.token.address.replace(/^0x/, "");
-      const messages = [
-        {
-          target: this.app.address,
-          nonce: 1,
-          payload: `0x010ce3c7000000000000000000000000${token_addr}1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000000000000000064`,
-        }
-      ]
-      const commitment = buildCommitment(messages);
-
-      tx = await this.channels.basic.inbound.submit(messages, commitment).should.be.fulfilled;
-
-      confirmUnlockTokens(
-        tx.receipt.rawLogs[1],
-        this.app.address,
+      let { receipt } = await this.app.unlock(
+        this.token.address,
+        addressBytes(POLKADOT_ADDRESS),
         recipient,
-        amount,
+        amount.toString()
+      ).should.be.fulfilled;
+
+      // decode event
+      var iface = new ethers.utils.Interface(ERC20App.abi);
+      let event = iface.decodeEventLog(
+        'Unlocked(address,bytes32,address,uint256)',
+        receipt.rawLogs[1].data,
+        receipt.rawLogs[1].topics
       );
+
+      event.recipient.should.be.equal(recipient);
+      event.amount.eq(amount).should.be.true;
     });
 
-    it("should unlock via the incentivized inbound channel", async function () {
-      const lockupAmount = 200;
-      await approveFunds(this.token, this.app, userOne, lockupAmount * 2)
-        .should.be.fulfilled;
-      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Incentivized)
-        .should.be.fulfilled;
-
-      // recipient on the ethereum side
-      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
-
-      // expected amount to unlock
-      const amount = BigNumber(100);
-
-      token_addr = this.token.address.replace(/^0x/, "");
-      const messages = [
-        {
-          target: this.app.address,
-          nonce: 1,
-          fee: 1,
-          payload: `0x010ce3c7000000000000000000000000${token_addr}1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000000000000000064`,
-        }
-      ]
-      const commitment = buildCommitment(messages);
-
-      tx = await this.channels.incentivized.inbound.submit(messages, commitment).should.be.fulfilled;
-
-      confirmUnlockTokens(
-        tx.receipt.rawLogs[1],
-        this.app.address,
-        recipient,
-        amount,
-      );
-    });
   });
 });
 

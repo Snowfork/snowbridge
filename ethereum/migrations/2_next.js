@@ -42,13 +42,13 @@ const contracts = {
 module.exports = function (deployer, network, accounts) {
   deployer.then(async () => {
 
-    // Deploy & link libraries
-    await deployer.deploy(ScaleCodec);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp]);
-
     if (network === 'development') {
       return
     }
+
+    // Deploy & link libraries
+    await deployer.deploy(ScaleCodec);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp]);
 
     // Account of governance contract
     // TODO: deploy the contract in this migration and use its address
