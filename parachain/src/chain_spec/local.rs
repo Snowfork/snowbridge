@@ -127,10 +127,10 @@ fn testnet_genesis(
 			phantom: Default::default()
 		},
 		basic_channel_inbound: BasicInboundChannelConfig {
-			source_channel: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
+			source_channel: hex!["fc97a6197dc90bef6bbefd672742ed75e9768553"].into(),
 		},
 		incentivized_channel_inbound: IncentivizedInboundChannelConfig {
-			source_channel: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
+			source_channel: hex!["87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d"].into(),
 			reward_fraction: Perbill::from_percent(80)
 		},
 		incentivized_channel_outbound: IncentivizedOutboundChannelConfig {
