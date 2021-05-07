@@ -62,6 +62,7 @@ impl system::Config for Test {
 
 parameter_types! {
 	pub const CommitInterval: u64 = 5;
+	pub const MaxMessagePayloadSize: usize = 128;
 	pub const MaxMessagesPerCommit: usize = 5;
 }
 
@@ -69,6 +70,7 @@ impl incentivized_outbound_channel::Config for Test {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 	type WeightInfo = ();
 }
@@ -102,7 +104,7 @@ fn test_submit() {
 }
 
 #[test]
-fn test_add_message_exceeds_limit() {
+fn test_add_message_exceeds_queue_limit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
@@ -115,6 +117,22 @@ fn test_add_message_exceeds_limit() {
 		assert_err!(
 			IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
 			Error::<Test>::QueueSizeLimitReached,
+		);
+	})
+}
+
+#[test]
+fn test_add_message_exceeds_payload_limit() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let who: AccountId = Keyring::Bob.into();
+
+		let max_payload_bytes = MaxMessagePayloadSize::get();
+		let payload: Vec<u8> = (0..).take(max_payload_bytes + 1).collect();
+
+		assert_err!(
+			IncentivizedOutboundChannel::submit(&who, target, payload.as_slice()),
+			Error::<Test>::PayloadTooLarge,
 		);
 	})
 }
