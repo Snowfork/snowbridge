@@ -7,7 +7,10 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use sp_core::{U256, crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{
+	U256, crypto::KeyTypeId, OpaqueMetadata,
+	u32_trait::{_1, _2},
+};
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
 	transaction_validity::{TransactionValidity, TransactionSource},
@@ -36,10 +39,10 @@ pub use frame_support::{
 	traits::{KeyOwnerProofSystem, Randomness, Filter},
 	weights::{
 		Weight, IdentityFee,
-		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+		constants::WEIGHT_PER_SECOND,
 	},
 };
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureOneOf};
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
@@ -144,8 +147,12 @@ parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
 	pub const BlockHashCount: BlockNumber = 2400;
 	/// We allow for 2 seconds of compute with a 6 second average block time.
-	pub BlockWeights: frame_system::limits::BlockWeights = frame_system::limits::BlockWeights
-		::with_sensible_defaults(2 * WEIGHT_PER_SECOND, NORMAL_DISPATCH_RATIO);
+	pub BlockWeights: frame_system::limits::BlockWeights = runtime_common::build_block_weights(
+		weights::constants::BlockExecutionWeight::get(),
+		weights::constants::ExtrinsicBaseWeight::get(),
+		2 * WEIGHT_PER_SECOND,
+		NORMAL_DISPATCH_RATIO,
+	);
 	pub BlockLength: frame_system::limits::BlockLength = frame_system::limits::BlockLength
 		::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
 	pub const SS58Prefix: u8 = 42;
@@ -183,7 +190,7 @@ impl frame_system::Config for Runtime {
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 	type BlockHashCount = BlockHashCount;
 	/// The weight of database operations that the runtime can invoke.
-	type DbWeight = RocksDbWeight;
+	type DbWeight = weights::constants::RocksDbWeight;
 	/// Version of the runtime.
 	type Version = Version;
 	/// Converts a module to the index of the module in `construct_runtime!`.
@@ -200,7 +207,7 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = weights::frame_system_weights::WeightInfo<Runtime>;
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
-	type OnSetCode = ParachainSystem;
+	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 }
 
 parameter_types! {
@@ -218,7 +225,7 @@ impl pallet_timestamp::Config for Runtime {
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_utility_weights::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -353,6 +360,49 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type AccountIdConverter = LocationConverter;
 }
 
+// Governance
+
+impl pallet_sudo::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+}
+
+type EnsureRootOrHalfLocalCouncil = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, LocalCouncilInstance>,
+>;
+
+parameter_types! {
+	pub const LocalCouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const LocalCouncilMaxProposals: u32 = 100;
+	pub const LocalCouncilMaxMembers: u32 = 8;
+}
+
+type LocalCouncilInstance = pallet_collective::Instance1;
+impl pallet_collective::Config<LocalCouncilInstance> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = LocalCouncilMotionDuration;
+	type MaxProposals = LocalCouncilMaxProposals;
+	type MaxMembers = LocalCouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = weights::pallet_collective_weights::WeightInfo<Runtime>;
+}
+
+type LocalCouncilMembershipInstance = pallet_membership::Instance1;
+impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
+	type Event = Event;
+	type AddOrigin = EnsureRootOrHalfLocalCouncil;
+	type RemoveOrigin = EnsureRootOrHalfLocalCouncil;
+	type SwapOrigin = EnsureRootOrHalfLocalCouncil;
+	type ResetOrigin = EnsureRootOrHalfLocalCouncil;
+	type PrimeOrigin = EnsureRootOrHalfLocalCouncil;
+	type MembershipInitialized = LocalCouncil;
+	type MembershipChanged = LocalCouncil;
+}
+
 // Our pallets
 
 // Module accounts
@@ -394,6 +444,7 @@ impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = verifier_lightclient::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
+	type WeightInfo = weights::basic_channel_inbound_weights::WeightInfo<Runtime>;
 }
 
 impl basic_channel_outbound::Config for Runtime {
@@ -423,6 +474,8 @@ impl incentivized_channel_inbound::Config for Runtime {
 	type SourceAccount = SourceAccount;
 	type TreasuryAccount = TreasuryAccount;
 	type FeeConverter = FeeConverter;
+	type UpdateOrigin = EnsureRootOrHalfLocalCouncil;
+	type WeightInfo = weights::incentivized_channel_inbound_weights::WeightInfo<Runtime>;
 }
 
 impl incentivized_channel_outbound::Config for Runtime {
@@ -430,6 +483,7 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type WeightInfo = weights::incentivized_channel_outbound_weights::WeightInfo<Runtime>;
 }
 
 use sp_std::marker::PhantomData;
@@ -549,24 +603,30 @@ construct_runtime!(
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 5,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event} = 6,
 
-		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event} = 7,
-		BasicOutboundChannel: basic_channel_outbound::{Pallet, Storage, Event} = 8,
-		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 9,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Config<T>, Storage, Event} = 10,
-		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 11,
-		Commitments: commitments::{Pallet, Call, Config<T>, Storage, Event} = 15,
-		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 16,
-		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 17,
+		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
+		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 8,
+
+		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event} = 9,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Storage, Event} = 10,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 11,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Config<T>, Storage, Event} = 12,
+		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 13,
+		Commitments: commitments::{Pallet, Call, Config<T>, Storage, Event} = 14,
+		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 15,
+		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
 		Nft: nft::{Pallet, Call, Config<T>, Storage} = 21,
 
-		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 18,
-		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 19,
-		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 20,
+		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 17,
+		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 18,
+		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 19,
 
-		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 12,
-		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 13,
-		DOT: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 14,
-		ERC721: erc721_app::{Pallet, Call, Config, Storage, Event<T>} = 22,
+		// For dev only, will be removed in production
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 20,
+
+		DOT: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
+		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
+		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
+		ERC721: erc721_app::{Pallet, Call, Config, Storage, Event<T>} = 67,
 	}
 );
 
@@ -719,10 +779,14 @@ impl_runtime_apis! {
 
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
+			add_benchmark!(params, batches, pallet_collective, LocalCouncil);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
 			add_benchmark!(params, batches, assets, Assets);
-			add_benchmark!(params, batches, basic_channel_inbound, BasicInboundChannel);
+			add_benchmark!(params, batches, basic_channel::inbound, BasicInboundChannel);
+			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
+			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
 			add_benchmark!(params, batches, dot_app, DOT);
 			add_benchmark!(params, batches, erc20_app, ERC20);
 			add_benchmark!(params, batches, eth_app, ETH);

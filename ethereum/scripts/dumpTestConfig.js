@@ -13,6 +13,10 @@ const channelContracts = {
     },
 }
 
+const bridgeContracts = {
+    lightclientbridge: artifacts.require("LightClientBridge"),
+}
+
 const channels = {
     basic: {
         inbound: null,
@@ -24,7 +28,11 @@ const channels = {
     },
 }
 
-const dump = (tmpDir, channels) => {
+const bridge = {
+    lightclientbridge: null
+}
+
+const dump = (tmpDir, channels, bridge) => {
     const config = {
         ethereum: {
             endpoint: "ws://localhost:8545/",
@@ -39,9 +47,29 @@ const dump = (tmpDir, channels) => {
                     outbound: channels.incentivized.outbound.address,
                 },
             },
+            lightclientbridge: bridge.lightclientbridge.address
         },
-        substrate: {
+        parachain: {
             endpoint: "ws://127.0.0.1:11144/"
+        },
+        relaychain: {
+            endpoint: "ws://127.0.0.1:9944/"
+        },
+        database: {
+            dialect: "sqlite3",
+            dbpath: "tmp.db",
+        },
+        workers: {
+            parachaincommitmentrelayer: {
+                enabled: true,
+            },
+            beefyrelayer:  {
+                enabled: true,
+            },
+            ethrelayer:  {
+                enabled: true,
+                "restart-delay": 60,
+            },
         }
     }
     fs.writeFileSync(path.join(tmpDir, "config.toml"), TOML.stringify(config));
@@ -50,11 +78,12 @@ const dump = (tmpDir, channels) => {
 module.exports = async (callback) => {
     try {
         let configDir = process.argv[4].toString();
+        bridge.lightclientbridge = await bridgeContracts.lightclientbridge.deployed();
         channels.basic.inbound = await channelContracts.basic.inbound.deployed();
         channels.basic.outbound = await channelContracts.basic.outbound.deployed();
         channels.incentivized.inbound = await channelContracts.incentivized.inbound.deployed();
         channels.incentivized.outbound = await channelContracts.incentivized.outbound.deployed();
-        await dump(configDir, channels);
+        await dump(configDir, channels, bridge);
     } catch (error) {
         callback(error)
     }

@@ -10,6 +10,8 @@ use local_runtime::{
 	CommitmentsConfig,
 	ParachainInfoConfig,
 	IncentivizedOutboundChannelConfig,
+	LocalCouncilMembershipConfig,
+	SudoConfig,
 	WASM_BINARY, Signature,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -114,6 +116,17 @@ fn testnet_genesis(
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		},
+		pallet_sudo: SudoConfig { key: get_account_id_from_seed::<sr25519::Public>("Alice") },
+		pallet_collective_Instance1: Default::default(),
+		pallet_membership_Instance1: LocalCouncilMembershipConfig {
+			members: vec![
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				get_account_id_from_seed::<sr25519::Public>("Bob"),
+				get_account_id_from_seed::<sr25519::Public>("Charlie"),
+				get_account_id_from_seed::<sr25519::Public>("Dave"),
+			],
+			phantom: Default::default()
+		},
 		basic_channel_inbound: BasicInboundChannelConfig {
 			source_channel: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
 		},
@@ -168,7 +181,8 @@ fn testnet_genesis(
 			address: hex!["83428c7db9815f482a39a1715684dCF755021997"].into()
 		},
 		dot_app: DOTConfig {
-			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into()
+			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into(),
+			phantom: Default::default(),
 		},
 		erc721_app: ERC721Config {
 			// TODO: fill proper address

@@ -1,9 +1,14 @@
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
-	traits::{Currency, Get, ExistenceRequirement::KeepAlive, WithdrawReasons, Imbalance},
+	traits::{
+		Currency, Get, ExistenceRequirement::KeepAlive,
+		WithdrawReasons, Imbalance,
+		EnsureOrigin,
+	},
 	storage::StorageValue,
 	log,
+	weights::Weight,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_core::{U256, H160};
@@ -18,6 +23,8 @@ use envelope::Envelope;
 
 use sp_runtime::{Perbill, traits::{Zero, Convert}};
 
+mod benchmarking;
+
 #[cfg(test)]
 mod test;
 
@@ -25,6 +32,17 @@ mod envelope;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type PositiveImbalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::PositiveImbalance;
+
+/// Weight functions needed for this pallet.
+pub trait WeightInfo {
+	fn submit() -> Weight;
+	fn set_reward_fraction() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn submit() -> Weight { 0 }
+	fn set_reward_fraction() -> Weight { 0 }
+}
 
 pub trait Config: system::Config {
 	type Event: From<Event> + Into<<Self as system::Config>::Event>;
@@ -44,6 +62,12 @@ pub trait Config: system::Config {
 	type TreasuryAccount: Get<Self::AccountId>;
 
 	type FeeConverter: Convert<U256, BalanceOf<Self>>;
+
+	/// The origin which may update reward related params
+	type UpdateOrigin: EnsureOrigin<Self::Origin>;
+
+	/// Weight information for extrinsics in this pallet
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -57,7 +81,6 @@ decl_storage! {
 
 decl_event! {
 	pub enum Event {
-
 	}
 }
 
@@ -79,7 +102,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = 0]
+		#[weight = T::WeightInfo::submit()]
 		pub fn submit(origin, message: Message) -> DispatchResult {
 			let relayer = ensure_signed(origin)?;
 			// submit message to verifier for verification
@@ -111,6 +134,14 @@ decl_module! {
 
 			Ok(())
 		}
+
+		#[weight = T::WeightInfo::set_reward_fraction()]
+		pub fn set_reward_fraction(origin, fraction: Perbill) -> DispatchResult {
+			T::UpdateOrigin::ensure_origin(origin)?;
+			RewardFraction::set(fraction);
+			Ok(())
+		}
+
 	}
 }
 
@@ -144,7 +175,7 @@ impl<T: Config> Module<T> {
 		let rewarded = T::Currency::deposit_into_existing(relayer, reward_amount)
 			.unwrap_or_else(|_| PositiveImbalanceOf::<T>::zero());
 
-		let adjusted_imbalance = match imbalance.offset(rewarded) {
+		let adjusted_imbalance = match imbalance.offset(rewarded).same() {
 			Ok(imbalance) => imbalance,
 			Err(_) => {
 				log::error!("Unable to offset imbalance");

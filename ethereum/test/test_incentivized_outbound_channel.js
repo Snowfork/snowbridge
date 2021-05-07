@@ -24,8 +24,7 @@ contract("IncentivizedOutboundChannel", function (accounts) {
       this.channel = await IncentivizedOutboundChannel.new();
 
       const feeSource = await MockFeeSource.new();
-      await this.channel.initialize(owner, feeSource.address).should.be.fulfilled;
-      await this.channel.authorizeDefaultOperator(appAddress).should.be.fulfilled;
+      await this.channel.initialize(owner, feeSource.address, [appAddress]).should.be.fulfilled;
     });
 
     it("should send messages out with the correct event and fields", async function () {

@@ -10,7 +10,7 @@ use frame_benchmarking::{account, benchmarks, whitelisted_caller, impl_benchmark
 use sp_core::H160;
 use sp_runtime::traits::Zero;
 
-use crate::Module as DotApp;
+use crate::Pallet as DotApp;
 
 benchmarks! {
 	// Benchmark `lock` extrinsic under worst case conditions:
@@ -67,7 +67,7 @@ benchmarks! {
 	unlock {
 		let origin = T::CallOrigin::successful_origin();
 		if let Ok(caller) = T::CallOrigin::try_origin(origin.clone()) {
-			Address::put(caller);
+			<Address<T>>::put(caller);
 		} else {
 			return Err("Failed to extract caller address from origin");
 		}

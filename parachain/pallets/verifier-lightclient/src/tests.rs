@@ -85,6 +85,7 @@ fn it_tracks_only_one_finalized_ethereum_fork() {
 		let block1 = child_of_genesis_ethereum_header();
 		let block1_hash = block1.compute_hash();
 		let block2 = child_of_header(&block1);
+		let block2_hash = block2.compute_hash();
 		let block3 = child_of_header(&block2);
 		let block3_hash = block3.compute_hash();
 		let mut block4 = child_of_genesis_ethereum_header();
@@ -112,6 +113,8 @@ fn it_tracks_only_one_finalized_ethereum_fork() {
 		}
 		// Relies on DescendantsUntilFinalized = 2
 		assert_eq!(FinalizedBlock::get().hash, block1_hash);
+		assert!(Headers::<Test>::get(block1_hash).unwrap().finalized);
+		assert!(Headers::<Test>::get(block2_hash).unwrap().finalized == false);
 		assert_eq!(BestBlock::get().0.hash, block3_hash);
 
 		// With invalid forks (invalid since B1 is final):
@@ -441,7 +444,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 			Verifier::verify(
 				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
-			Error::<Test>::HeaderOnStaleFork,
+			Error::<Test>::HeaderNotFinalized,
 		);
 
 		assert_ok!(Verifier::import_header(
@@ -455,7 +458,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 			Verifier::verify(
 				&message_with_receipt_proof(log.clone(), block1_hash, receipt_proof.clone()),
 			),
-			Error::<Test>::HeaderOnStaleFork,
+			Error::<Test>::HeaderNotFinalized,
 		);
 		// Verification works for an ancestor of the finalized header
 		assert_ok!(Verifier::verify(

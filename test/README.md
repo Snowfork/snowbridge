@@ -5,18 +5,29 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
 ## Requirements
 
 1. Development environment for Rust and Substrate. See parachain [requirements](../parachain/README.md#requirements).
-2. Development environment for Ethereum smart contracts.
+2. Make sure you use a recent node version, e. g. with [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
 
-   ```bash
-   yarn global add truffle
-   (cd ../ethereum && yarn install)
-    ```
+  ```bash
+  nvm install 14.16.1
+  nvm use 14.16.1
+  ```
 
-3. Development environment for Relayer. See relayer [requirements](../relayer/README.md#requirements).
-4. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
-5. Build the `@snowfork/snowbridge-types` package using these [steps](../types/README.md#development).
+3. Development environment for Ethereum smart contracts.
+
+  ```bash
+  yarn global add truffle
+  (cd ../ethereum && yarn install)
+  cp env.template .env
+  ```
+
+4. Development environment for Relayer. See relayer [requirements](../relayer/README.md#development).
+5. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
+6. `jq` - https://stedolan.github.io/jq/download/
+7. Build the `@snowfork/snowbridge-types` package using these [steps](../types/README.md#development).
 
 ## Setup
+
+Make sure to install/build all the requirements above.
 
 Download dependencies:
 
@@ -27,16 +38,29 @@ yarn install
 Install `polkadot-launch`:
 
 ```bash
-yarn global add polkadot-launch
+git clone https://github.com/paritytech/polkadot-launch.git /tmp/polkadot-launch
+cd /tmp/polkadot-launch
+git checkout 89e970
+yarn install
+yarn build
+yarn global add file:$(pwd)
+cd -
 ```
 
 Build polkadot:
 
 ```bash
-git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
+git clone -n https://github.com/snowfork/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout f0d5c3
-cargo build --release --features=real-overseer
+git checkout enable_beefy_on_rococo
+cargo build --release
+cd -
+```
+
+Optional: If you cloned the polkadot repo in another location, Create an `.env` file to specify the directory where you installed the polkadot binary.
+
+```bash
+cp ./.env-example .env
 ```
 
 Start all services (parachain, relayer, ganache, etc):
@@ -44,6 +68,15 @@ Start all services (parachain, relayer, ganache, etc):
 ```bash
 scripts/start-services.sh
 ```
+
+Wait until the "System has been initialized" message
+
+Go to polkadot-js and wait until the parachain has started producing blocks:
+https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A11144#/explorer
+
+Confirm the block number is > 2
+
+You should now be good to go!
 
 ## Run Tests
 
@@ -76,7 +109,7 @@ In the substrate webapp (linked above), you should see an `Eth.Minted` event in 
 
 #### Burning PolkaETH to unlock ETH on Ethereum
 
-To see the PolkaETH  balance for `//Alice`:
+To see the PolkaETH balance for `//Alice`:
 
 1. Navigate to Developer > Chain state > Storage
 2. Select the `assets` module in the drop-down.
@@ -110,6 +143,6 @@ truffle exec scripts/getEthBalance.js 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD
 
 The `start-services.sh` script writes the following logs:
 
-* parachain.log
-* relayer.log
-* ganache.log
+- parachain.log
+- relayer.log
+- ganache.log

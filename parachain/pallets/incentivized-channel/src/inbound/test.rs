@@ -138,6 +138,8 @@ impl incentivized_inbound_channel::Config for Test {
 	type SourceAccount = SourceAccount;
 	type TreasuryAccount = TreasuryAccount;
 	type FeeConverter = FeeConverter<Self>;
+	type UpdateOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type WeightInfo = ();
 }
 
 pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
@@ -287,5 +289,18 @@ fn test_handle_fee() {
 		assert_eq!(Balances::free_balance(&TreasuryAccount::get()), 2000000001);
 		assert_eq!(Balances::free_balance(&relayer), 8000000001);
 	});
+}
 
+#[test]
+fn test_set_reward_fraction_not_authorized() {
+	new_tester(SOURCE_CHANNEL_ADDR.into()).execute_with(|| {
+		let bob: AccountId = Keyring::Bob.into();
+		assert_noop!(
+			IncentivizedInboundChannel::set_reward_fraction(
+				Origin::signed(bob),
+				Perbill::from_percent(60)
+			),
+			DispatchError::BadOrigin
+		);
+	});
 }

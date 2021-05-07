@@ -13,37 +13,38 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/substrate"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/ethrelayer"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer"
 )
 
 type Relay struct {
-	ethChain chain.Chain
-	subChain chain.Chain
+	parachainCommitmentRelayer *parachaincommitmentrelayer.Worker
+	beefyRelayer               *beefyrelayer.Worker
+	ethRelayer                 *ethrelayer.Worker
 }
 
-type Direction int
-
-const (
-	Bidirectional Direction = iota
-	EthToSub
-	SubToEth
-)
-
-type RelayConfig struct {
-	Direction   Direction `mapstructure:"direction"`
-	HeadersOnly bool      `mapstructure:"headers-only"`
+type WorkerConfig struct {
+	ParachainCommitmentRelayer workers.WorkerConfig `mapstructure:"parachaincommitmentrelayer"`
+	BeefyRelayer               workers.WorkerConfig `mapstructure:"beefyrelayer"`
+	EthRelayer                 workers.WorkerConfig `mapstructure:"ethrelayer"`
 }
 
 type Config struct {
-	Relay RelayConfig      `mapstructure:"relay"`
-	Eth   ethereum.Config  `mapstructure:"ethereum"`
-	Sub   substrate.Config `mapstructure:"substrate"`
+	Eth                  ethereum.Config   `mapstructure:"ethereum"`
+	Parachain            parachain.Config  `mapstructure:"parachain"`
+	Relaychain           relaychain.Config `mapstructure:"relaychain"`
+	BeefyRelayerDatabase store.Config      `mapstructure:"database"`
+	Workers              WorkerConfig      `mapstructure:"workers"`
 }
 
 func NewRelay() (*Relay, error) {
@@ -52,58 +53,38 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
-	ethChain, err := ethereum.NewChain(&config.Eth)
-	if err != nil {
-		return nil, err
-	}
+	parachainCommitmentRelayer := &parachaincommitmentrelayer.Worker{}
 
-	subChain, err := substrate.NewChain(&config.Sub)
-	if err != nil {
-		return nil, err
-	}
-
-	direction := config.Relay.Direction
-	headersOnly := config.Relay.HeadersOnly
-	if direction == Bidirectional || direction == EthToSub {
-		// channel for messages from ethereum
-		var ethMessages chan []chain.Message
-		if !headersOnly {
-			ethMessages = make(chan []chain.Message, 1)
-		}
-		// channel for headers from ethereum (it's a blocking channel so that we
-		// can guarantee that a header is forwarded before we send dependent messages)
-		ethHeaders := make(chan chain.Header)
-
-		err := ethChain.SetSender(ethMessages, ethHeaders)
-		if err != nil {
-			return nil, err
-		}
-		err = subChain.SetReceiver(ethMessages, ethHeaders)
+	if config.Workers.ParachainCommitmentRelayer.Enabled {
+		parachainCommitmentRelayer, err = parachaincommitmentrelayer.NewWorker(&config.Parachain, &config.Relaychain, &config.Eth)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if direction == Bidirectional || direction == SubToEth {
-		// channel for messages from substrate
-		var subMessages chan []chain.Message
-		if !headersOnly {
-			subMessages = make(chan []chain.Message, 1)
-		}
+	beefyRelayer := &beefyrelayer.Worker{}
 
-		err := subChain.SetSender(subMessages, nil)
+	if config.Workers.BeefyRelayer.Enabled {
+		beefyRelayer, err = beefyrelayer.NewWorker(&config.Relaychain, &config.Eth, &config.BeefyRelayerDatabase)
 		if err != nil {
 			return nil, err
 		}
-		err = ethChain.SetReceiver(subMessages, nil)
-		if err != nil {
-			return nil, err
-		}
+	}
+
+	ethRelayer := &ethrelayer.Worker{}
+
+	if config.Workers.EthRelayer.Enabled {
+		ethRelayer = ethrelayer.NewWorker(
+			&config.Eth,
+			&config.Parachain,
+			log.WithField("worker", ethrelayer.Name),
+		)
 	}
 
 	return &Relay{
-		ethChain: ethChain,
-		subChain: subChain,
+		parachainCommitmentRelayer: parachainCommitmentRelayer,
+		beefyRelayer:               beefyRelayer,
+		ethRelayer:                 ethRelayer,
 	}, nil
 }
 
@@ -123,38 +104,48 @@ func (re *Relay) Start() {
 		case sig := <-notify:
 			log.WithField("signal", sig.String()).Info("Received signal")
 			cancel()
-
 		}
 
 		return nil
 	})
 
-	// Short-lived channels that communicate initialization parameters
-	// between the two chains. The chains close them after startup.
-	ethInit := make(chan chain.Init, 1)
-	subInit := make(chan chain.Init, 1)
-
-	err := re.ethChain.Start(ctx, eg, subInit, ethInit)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"chain": re.ethChain.Name(),
-			"error": err,
-		}).Error("Failed to start chain")
-		return
+	if re.ethRelayer != nil {
+		err := re.ethRelayer.Start(ctx, eg)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"worker": re.ethRelayer.Name(),
+				"error":  err,
+			}).Error("Failed to start worker")
+			return
+		}
+		log.WithField("name", re.ethRelayer.Name()).Info("Started worker")
 	}
-	log.WithField("name", re.ethChain.Name()).Info("Started chain")
-	defer re.ethChain.Stop()
 
-	err = re.subChain.Start(ctx, eg, ethInit, subInit)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"chain": re.subChain.Name(),
-			"error": err,
-		}).Error("Failed to start chain")
-		return
+	if re.beefyRelayer != nil {
+		err := re.beefyRelayer.Start(ctx, eg)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"worker": re.beefyRelayer.Name(),
+				"error":  err,
+			}).Error("Failed to start worker")
+			return
+		}
+		log.WithField("name", re.beefyRelayer.Name()).Info("Started worker")
+		defer re.beefyRelayer.Stop()
 	}
-	log.WithField("name", re.subChain.Name()).Info("Started chain")
-	defer re.subChain.Stop()
+
+	if re.parachainCommitmentRelayer != nil {
+		err := re.parachainCommitmentRelayer.Start(ctx, eg)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"worker": re.parachainCommitmentRelayer.Name(),
+				"error":  err,
+			}).Error("Failed to start worker")
+			return
+		}
+		log.WithField("name", re.parachainCommitmentRelayer.Name()).Info("Started worker")
+		defer re.parachainCommitmentRelayer.Stop()
+	}
 
 	notifyWaitDone := make(chan struct{})
 
@@ -184,8 +175,9 @@ func (re *Relay) Start() {
 		}
 
 		log.WithError(ctx.Err()).Error("Goroutines appear deadlocked. Killing process")
-		re.ethChain.Stop()
-		re.subChain.Stop()
+		re.parachainCommitmentRelayer.Stop()
+		re.beefyRelayer.Stop()
+
 		relayProc, err := os.FindProcess(os.Getpid())
 		if err != nil {
 			log.WithError(err).Error("Failed to kill this process")
@@ -201,28 +193,30 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
-	var direction = config.Relay.Direction
-	if direction != Bidirectional &&
-		direction != EthToSub &&
-		direction != SubToEth {
-		return nil, fmt.Errorf("'direction' has invalid value %d", direction)
-	}
-
 	// Load secrets from environment variables
 	var value string
 	var ok bool
 
+	// Ethereum configuration
 	value, ok = os.LookupEnv("ARTEMIS_ETHEREUM_KEY")
 	if !ok {
 		return nil, fmt.Errorf("environment variable not set: ARTEMIS_ETHEREUM_KEY")
 	}
 	config.Eth.PrivateKey = strings.TrimPrefix(value, "0x")
 
-	value, ok = os.LookupEnv("ARTEMIS_SUBSTRATE_KEY")
+	// Parachain configuration
+	value, ok = os.LookupEnv("ARTEMIS_PARACHAIN_KEY")
 	if !ok {
-		return nil, fmt.Errorf("environment variable not set: ARTEMIS_SUBSTRATE_KEY")
+		return nil, fmt.Errorf("environment variable not set: ARTEMIS_PARACHAIN_KEY")
 	}
-	config.Sub.PrivateKey = value
+	config.Parachain.PrivateKey = value
+
+	// Relaychain configuration
+	value, ok = os.LookupEnv("ARTEMIS_RELAYCHAIN_KEY")
+	if !ok {
+		return nil, fmt.Errorf("environment variable not set: ARTEMIS_RELAYCHAIN_KEY")
+	}
+	config.Relaychain.PrivateKey = value
 
 	return &config, nil
 }

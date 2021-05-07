@@ -12,6 +12,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
     ModuleId, MultiSignature,
 };
+use frame_support::traits::GenesisBuild;
 
 use artemis_core::{ChannelId, OutboundRouter};
 
@@ -29,7 +30,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
         Dispatch: artemis_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
-        DOTApp: dot_app::{Pallet, Call, Config, Storage, Event<T>},
+        DOTApp: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>},
     }
 );
 
@@ -125,9 +126,11 @@ pub fn new_tester() -> sp_io::TestExternalities {
         .build_storage::<Test>()
         .unwrap();
 
-    let config = dot_app::GenesisConfig {
+    let config: dot_app::GenesisConfig<Test> = dot_app::GenesisConfig {
         address: H160::repeat_byte(1),
+        phantom: Default::default(),
     };
+
     config.assimilate_storage(&mut storage).unwrap();
 
     let mut ext: sp_io::TestExternalities = storage.into();
