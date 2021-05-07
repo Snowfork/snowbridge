@@ -54,6 +54,9 @@ pub trait Config: system::Config {
 
 	type Hashing: Hash<Output = H256>;
 
+	// Max bytes in a message payload
+	type MaxMessagePayloadSize: Get<usize>;
+
 	/// Max number of messages that can be queued and committed in one go for a given channel.
 	type MaxMessagesPerCommit: Get<usize>;
 
@@ -81,6 +84,8 @@ decl_event! {
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
+		/// The message payload exceeds byte limit.
+		PayloadTooLarge,
 		/// No more messages can be queued for the channel during this commit cycle.
 		QueueSizeLimitReached,
 	}
@@ -125,6 +130,12 @@ impl<T: Config> Module<T> {
 			MessageQueue::decode_len().unwrap_or(0) < T::MaxMessagesPerCommit::get(),
 			Error::<T>::QueueSizeLimitReached,
 		);
+
+		ensure!(
+			payload.len() <= T::MaxMessagePayloadSize::get(),
+			Error::<T>::PayloadTooLarge,
+		);
+
 		MessageQueue::append(
 			Message {
 				target,
@@ -153,6 +164,8 @@ impl<T: Config> Module<T> {
 		let message_count = messages.len();
 		T::WeightInfo::on_initialize(
 			message_count as u32,
+			// We overestimate message payload size rather than underestimate.
+			// So add 1 here to account for integer division truncation.
 			(payload_byte_count / message_count).saturating_add(1) as u32,
 		)
 	}

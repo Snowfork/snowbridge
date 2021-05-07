@@ -15,7 +15,7 @@ benchmarks! {
 	// in queue are committed.
 	on_initialize {
 		let m in 1 .. T::MaxMessagesPerCommit::get() as u32;
-		let p in 0 .. 128;
+		let p in 0 .. T::MaxMessagePayloadSize::get() as u32;
 
 		for _ in 0 .. m {
 			let payload: Vec<u8> = (0..).take(p as usize).collect();
@@ -39,7 +39,7 @@ benchmarks! {
 		MessageQueue::append(Message {
 			target: H160::zero(),
 			nonce: 0u64,
-			payload: vec![1u8, 128],
+			payload: vec![1u8; T::MaxMessagePayloadSize::get()],
 		});
 
 		Interval::<T>::put::<T::BlockNumber>(10u32.into());
