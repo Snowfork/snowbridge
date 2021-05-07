@@ -62,6 +62,7 @@ use xcm_executor::{Config, XcmExecutor, traits::{NativeAsset, IsConcrete}};
 use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 
 use artemis_xcm_support::AssetsTransactor;
+use assets::SingleAssetAdaptor;
 
 mod weights;
 
@@ -479,11 +480,17 @@ impl incentivized_channel_inbound::Config for Runtime {
 	type WeightInfo = weights::incentivized_channel_inbound_weights::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub const Ether: AssetId = AssetId::ETH;
+}
+
 impl incentivized_channel_outbound::Config for Runtime {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type FeeCurrency = SingleAssetAdaptor<Runtime, Ether>;
+	type SetFeeOrigin = EnsureRootOrHalfLocalCouncil;
 	type WeightInfo = weights::incentivized_channel_outbound_weights::WeightInfo<Runtime>;
 }
 

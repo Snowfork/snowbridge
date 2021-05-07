@@ -359,7 +359,6 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type AccountIdConverter = LocationConverter;
 }
 
-
 // Governance
 
 impl pallet_sudo::Config for Runtime {
