@@ -122,5 +122,31 @@ describe("IncentivizedInboundChannel", function () {
       ).should.not.be.fulfilled;
 
     });
+
+    it("should not revert commitment submission if relayer cannot be rewarded", async function () {
+      const message = {
+        target: this.app.address,
+        nonce: 1,
+        fee: 1024,
+        payload: mockAppInterface.encodeFunctionData(mockAppUnlock, [100])
+      }
+
+      // Construct commitment hash from messages
+      const commitment = makeCommitment([message]);
+
+      // Send commitment
+      const { receipt } = await this.channel.submit(
+        [message],
+        commitment,
+        { from: userOne }
+      ).should.be.fulfilled;
+
+      let event = interface.decodeEventLog(
+        'RelayerNotRewarded(address,uint256)',
+        receipt.rawLogs[2].data,
+        receipt.rawLogs[2].topics
+      );
+      (event.relayer === userOne).should.be.true
+    });
   });
 });

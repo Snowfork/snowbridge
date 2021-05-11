@@ -31,6 +31,7 @@ describe("ETHApp", function () {
   // Accounts
   let accounts;
   let owner;
+  let inboundChannel;
   let userOne;
 
   // Constants
@@ -41,13 +42,14 @@ describe("ETHApp", function () {
     ETHApp.link(codec);
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
+    inboundChannel = accounts[0];
     userOne = accounts[1];
   });
 
   describe("deposits", function () {
     beforeEach(async function () {
       let outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(owner, [owner, outboundChannel.address], ETHApp);
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel);
     });
 
     it("should lock funds", async function () {
@@ -80,7 +82,7 @@ describe("ETHApp", function () {
 
     beforeEach(async function () {
       let outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(owner, [owner, outboundChannel.address], ETHApp);
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ETHApp, inboundChannel);
     });
 
     it("should unlock", async function () {
@@ -103,7 +105,7 @@ describe("ETHApp", function () {
         recipient,
         amount.toString(),
         {
-          from: owner,
+          from: inboundChannel,
         }
       ).should.be.fulfilled;
 
@@ -123,8 +125,6 @@ describe("ETHApp", function () {
 
       afterBalance.should.be.bignumber.equal(beforeBalance.minus(amount));
       afterRecipientBalance.minus(beforeRecipientBalance).should.be.bignumber.equal(amount);
-
-
     });
   });
 });
