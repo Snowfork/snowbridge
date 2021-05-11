@@ -37,6 +37,7 @@ describe("ERC20App", function () {
   // Accounts
   let accounts;
   let owner;
+  let inboundChannel;
   let userOne;
 
   // Constants
@@ -47,13 +48,14 @@ describe("ERC20App", function () {
     ERC20App.link(codec);
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
+    inboundChannel = accounts[0];
     userOne = accounts[1];
   });
 
   describe("deposits", function () {
     beforeEach(async function () {
       let outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(owner, [owner, outboundChannel.address], ERC20App);
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ERC20App);
       this.symbol = "TEST";
       this.token = await TestToken.new("Test Token", this.symbol);
 
@@ -120,7 +122,10 @@ describe("ERC20App", function () {
         this.token.address,
         addressBytes(POLKADOT_ADDRESS),
         recipient,
-        amount.toString()
+        amount.toString(),
+        {
+          from: inboundChannel,
+        }
       ).should.be.fulfilled;
 
       // decode event

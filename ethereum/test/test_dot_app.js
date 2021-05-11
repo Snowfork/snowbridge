@@ -44,6 +44,7 @@ describe("DOTApp", function () {
   // Accounts
   let accounts;
   let owner;
+  let inboundChannel;
   let user;
 
   const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
@@ -53,6 +54,7 @@ describe("DOTApp", function () {
     DOTApp.link(codec);
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
+    inboundChannel =  accounts[0];
     user = accounts[1];
   });
 
@@ -62,7 +64,7 @@ describe("DOTApp", function () {
       let outboundChannel = await MockOutboundChannel.new()
       this.app = await deployAppWithMockChannels(
         owner,
-        [owner, outboundChannel.address],
+        [inboundChannel, outboundChannel.address],
         DOTApp,
         "Snowfork DOT", "SnowDOT", outboundChannel.address
       );
@@ -81,8 +83,7 @@ describe("DOTApp", function () {
         user,
         amountWrapped.toString(),
         {
-          from: owner,
-          value: 0
+          from: inboundChannel,
         }
       ).should.be.fulfilled;
 
