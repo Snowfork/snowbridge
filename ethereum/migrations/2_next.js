@@ -68,6 +68,7 @@ module.exports = function (deployer, network, accounts) {
     // Deploy applications
     const ethApp = await deployer.deploy(
       ETHApp,
+      channels.incentivized.inbound.instance.address,
       {
         inbound: channels.basic.inbound.instance.address,
         outbound: channels.basic.outbound.instance.address,

@@ -10,6 +10,8 @@ const WrappedToken = require('../../../ethereum/build/contracts/WrappedToken.jso
 const BasicOutboundChannel = require('../../../ethereum/build/contracts/BasicOutboundChannel.json');
 const IncentivizedOutboundChannel = require('../../../ethereum/build/contracts/IncentivizedOutboundChannel.json');
 
+const { ChannelId } = require("../helpers");
+
 /**
  * The Ethereum client for Bridge interaction
  */
@@ -78,10 +80,10 @@ class EthClient {
     return BigNumber(await instance.methods.allowance(account, this.appERC20._address).call());
   }
 
-  async lockETH(from, amount, polkadotRecipient) {
+  async lockETH(from, amount, polkadotRecipient, channelId) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
-    let receipt = await this.appETH.methods.lock(recipientBytes, 0).send({
+    let receipt = await this.appETH.methods.lock(recipientBytes, channelId).send({
       from: from,
       gas: 500000,
       value: this.web3.utils.toBN(amount)
@@ -101,21 +103,25 @@ class EthClient {
       });
   }
 
-  async lockERC20(from, amount, polkadotRecipient) {
+  async lockERC20(from, amount, polkadotRecipient, channelId) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
-    return await this.appERC20.methods.lock(this.TestTokenAddress, recipientBytes, this.web3.utils.toBN(amount), 0)
-      .send({
+    return await this.appERC20.methods.lock(
+      this.TestTokenAddress,
+      recipientBytes,
+      this.web3.utils.toBN(amount),
+      channelId
+      ).send({
         from,
         gas: 500000,
         value: 0
       });
   }
 
-  async burnDOT(from, amount, polkadotRecipient, channel) {
+  async burnDOT(from, amount, polkadotRecipient, channelId) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
-    return await this.appDOT.methods.burn(recipientBytes, this.web3.utils.toBN(amount), channel)
+    return await this.appDOT.methods.burn(recipientBytes, this.web3.utils.toBN(amount), channelId)
       .send({
         from,
         gas: 500000,
@@ -133,6 +139,5 @@ class EthClient {
   }
 
 }
-
 
 module.exports.EthClient = EthClient;

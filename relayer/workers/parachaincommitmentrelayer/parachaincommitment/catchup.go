@@ -251,7 +251,7 @@ func (li *Listener) getBasicMessages(commitment types.H256) ([]chainTypes.BasicO
 }
 
 func (li *Listener) getIncentivizedMessages(commitment types.H256) ([]chainTypes.IncentivizedOutboundChannelMessage, error) {
-	storageKey, err := parachain.MakeStorageKey(substrate.ChannelID{IsBasic: true}, commitment)
+	storageKey, err := parachain.MakeStorageKey(substrate.ChannelID{IsIncentivized: true}, commitment)
 	if err != nil {
 		return nil, err
 	}
