@@ -131,8 +131,9 @@ async function subscribeJustifications(api) {
     console.log("New beefy justification received:");
     const commitment = justification.commitment;
     const commitmentBytes = commitment.toHex();
+    const rawCommitmentBytes = hexToU8a(commitmentBytes)
     const hashedCommitment = blake2AsHex(commitmentBytes, 256);
-    console.log({ justification: justification.toHuman(), commitmentBytes, hashedCommitment });
+    console.log({ justification: justification.toHuman(), commitmentBytes, rawCommitmentBytes, hashedCommitment });
     getLatestMMRInJustification(justification, api)
   });
 }
