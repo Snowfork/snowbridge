@@ -111,7 +111,7 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 			// we should ideally be querying the last few leafs in the latest MMR until we find
 			// the first parachain block that has not yet been fully processed on ethereum,
 			// and then package and relay all newer heads/commitments
-			mmrProof := li.GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash)
+			mmrProof := li.GetMMRProofForBlock(uint64(blockNumber), nextBlockHash)
 			allParaHeads, ourParaHead := li.GetAllParaheads(nextBlockHash, OUR_PARACHAIN_ID)
 
 			ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
@@ -146,7 +146,7 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 	}
 }
 
-func (li *BeefyListener) GetMMRLeafForBlock(
+func (li *BeefyListener) GetMMRProofForBlock(
 	blockNumber uint64,
 	blockHash types.Hash,
 ) types.GenerateMMRProofResponse {
