@@ -481,12 +481,14 @@ impl incentivized_channel_inbound::Config for Runtime {
 
 parameter_types! {
 	pub const Ether: AssetId = AssetId::ETH;
+	pub const MaxMessagePayloadSize: usize = 256;
 }
 
 impl incentivized_channel_outbound::Config for Runtime {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 	type FeeCurrency = SingleAssetAdaptor<Runtime, Ether>;
 	type SetFeeOrigin = EnsureRootOrHalfLocalCouncil;

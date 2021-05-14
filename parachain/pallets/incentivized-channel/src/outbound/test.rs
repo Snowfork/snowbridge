@@ -71,6 +71,7 @@ impl artemis_assets::Config for Test {
 }
 
 parameter_types! {
+	pub const MaxMessagePayloadSize: usize = 128;
 	pub const MaxMessagesPerCommit: usize = 5;
 	pub const Ether: AssetId = AssetId::ETH;
 }
@@ -81,6 +82,7 @@ impl incentivized_outbound_channel::Config for Test {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 	type FeeCurrency = SingleAssetAdaptor<Test, Ether>;
 	type SetFeeOrigin = frame_system::EnsureRoot<Self::AccountId>;
@@ -183,4 +185,19 @@ fn test_set_fee_not_authorized() {
 			DispatchError::BadOrigin
 		);
 	});
+}
+
+fn test_add_message_exceeds_payload_limit() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let who: AccountId = Keyring::Bob.into();
+
+		let max_payload_bytes = MaxMessagePayloadSize::get();
+		let payload: Vec<u8> = (0..).take(max_payload_bytes + 1).collect();
+
+		assert_err!(
+			IncentivizedOutboundChannel::submit(&who, target, payload.as_slice()),
+			Error::<Test>::PayloadTooLarge,
+		);
+	})
 }
