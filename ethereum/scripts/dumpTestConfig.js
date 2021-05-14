@@ -64,7 +64,7 @@ const dump = (tmpDir, channels, bridge) => {
                 enabled: true,
             },
             beefyrelayer:  {
-                enabled: false,
+                enabled: true,
             },
             ethrelayer:  {
                 enabled: true,
