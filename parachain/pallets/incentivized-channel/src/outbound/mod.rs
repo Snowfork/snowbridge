@@ -40,12 +40,14 @@ pub trait WeightInfo {
 	fn on_initialize(num_messages: u32, avg_payload_bytes: u32) -> Weight;
 	fn on_initialize_non_interval() -> Weight;
 	fn on_initialize_no_messages() -> Weight;
+	fn set_fee() -> Weight;
 }
 
 impl WeightInfo for () {
 	fn on_initialize(_: u32, _: u32) -> Weight { 0 }
 	fn on_initialize_non_interval() -> Weight { 0 }
 	fn on_initialize_no_messages() -> Weight { 0 }
+	fn set_fee() -> Weight { 0 }
 }
 
 pub trait Config: system::Config {
@@ -119,8 +121,7 @@ decl_module! {
 			}
 		}
 
-		// Weight = 0 is fine here (a single storage write). Also can only be called by governance.
-		#[weight = 0]
+		#[weight = T::WeightInfo::set_fee()]
 		pub fn set_fee(origin, amount: U256) -> DispatchResult {
 			T::SetFeeOrigin::ensure_origin(origin)?;
 			Fee::set(amount);

@@ -187,6 +187,7 @@ fn test_set_fee_not_authorized() {
 	});
 }
 
+#[test]
 fn test_add_message_exceeds_payload_limit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
@@ -195,7 +196,7 @@ fn test_add_message_exceeds_payload_limit() {
 		let max_payload_bytes = MaxMessagePayloadSize::get();
 		let payload: Vec<u8> = (0..).take(max_payload_bytes + 1).collect();
 
-		assert_err!(
+		assert_noop!(
 			IncentivizedOutboundChannel::submit(&who, target, payload.as_slice()),
 			Error::<Test>::PayloadTooLarge,
 		);
