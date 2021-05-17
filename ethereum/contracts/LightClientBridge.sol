@@ -197,7 +197,7 @@ contract LightClientBridge {
      */
     function completeSignatureCommitment(
         uint256 id,
-        bytes32 commitmentHash,
+        bytes32 commitmentHash, // not needed, we have to create that from the commitment below
         Commitment memory commitment,
         bytes[] memory signatures,
         uint256[] memory validatorPositions,
@@ -256,6 +256,16 @@ contract LightClientBridge {
                 data.validatorClaimsBitfield,
                 requiredNumOfSignatures
             );
+
+        /**
+         * @dev Encode the commitment
+         * @TODO
+         */
+
+        /**
+         * @dev Hash the encoded commitment
+         * @TODO
+         */
 
         /**
          *  @dev For each randomSignature, do:
