@@ -6,8 +6,8 @@ use snowbridge_runtime::{
 	SystemConfig, VerifierLightclientConfig,
 	BasicInboundChannelConfig, IncentivizedInboundChannelConfig,
 	ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
-	CommitmentsConfig,
 	ParachainInfoConfig,
+	BasicOutboundChannelConfig,
 	IncentivizedOutboundChannelConfig,
 	LocalCouncilMembershipConfig,
 	SudoConfig,
@@ -129,6 +129,9 @@ fn testnet_genesis(
 		basic_channel_inbound: BasicInboundChannelConfig {
 			source_channel: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
 		},
+		basic_channel_outbound: BasicOutboundChannelConfig {
+			interval: 1,
+		},
 		incentivized_channel_inbound: IncentivizedInboundChannelConfig {
 			source_channel: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
 			reward_fraction: Perbill::from_percent(80)
@@ -167,9 +170,6 @@ fn testnet_genesis(
 				],
 			},
 			initial_difficulty: 19755084633726428633088u128.into(),
-		},
-		commitments: CommitmentsConfig {
-			interval: 1,
 		},
 		eth_app: ETHConfig {
 			address: hex!["774667629726ec1fabebcec0d9139bd1c8f72a23"].into()

@@ -17,6 +17,7 @@ use sp_std::prelude::*;
 
 use artemis_core::{SingleAsset, ChannelId, MessageNonce, types::AuxiliaryDigestItem};
 
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
 #[cfg(test)]
@@ -100,7 +101,9 @@ decl_error! {
 		/// No more messages can be queued for the channel during this commit cycle.
 		QueueSizeLimitReached,
 		/// Cannot pay the fee to submit a message.
-		NoFunds
+		NoFunds,
+		/// Cannot increment nonce
+		Overflow,
 	}
 }
 
@@ -130,13 +133,9 @@ decl_module! {
 	}
 }
 
-pub fn offchain_key(prefix: &[u8], hash: H256) -> Vec<u8> {
-	(prefix, ChannelId::Incentivized, hash).encode()
-}
-
-
 impl<T: Config> Module<T> {
 
+	/// Submit message on the outbound channel
 	pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		ensure!(
 			MessageQueue::decode_len().unwrap_or(0) < T::MaxMessagesPerCommit::get(),
@@ -147,11 +146,17 @@ impl<T: Config> Module<T> {
 			Error::<T>::PayloadTooLarge,
 		);
 
-		let fee = Self::fee();
-		T::FeeCurrency::withdraw(who, fee).map_err(|_| Error::<T>::NoFunds)?;
-
 		Nonce::try_mutate(|nonce| -> DispatchResult {
-			*nonce += 1;
+			if let Some(v) = nonce.checked_add(1) {
+				*nonce = v;
+			} else {
+				return Err(Error::<T>::Overflow.into())
+			}
+
+			// Attempt to charge a fee for message submission
+			let fee = Self::fee();
+			T::FeeCurrency::withdraw(who, fee).map_err(|_| Error::<T>::NoFunds)?;
+
 			MessageQueue::append(
 				Message {
 					target,
@@ -166,36 +171,35 @@ impl<T: Config> Module<T> {
 	}
 
 	fn commit() -> Weight {
-		let messages: Vec<Message> = <Self as Store>::MessageQueue::take();
+		let messages: Vec<Message> = MessageQueue::take();
 		if messages.is_empty() {
 			return T::WeightInfo::on_initialize_no_messages();
 		}
 
-		let (commitment, payload_byte_count) = Self::encode_commitment(&messages);
-		let commitment_hash = <T as Config>::Hashing::hash(&commitment);
+		let commitment_hash = Self::make_commitment_hash(&messages);
+		let average_payload_size = Self::average_payload_size(&messages);
 
-		let digest_item = AuxiliaryDigestItem::Commitment(ChannelId::Incentivized, commitment_hash.clone()).into();
+		let digest_item = AuxiliaryDigestItem::Commitment(
+			ChannelId::Incentivized,
+			commitment_hash.clone()
+		).into();
 		<frame_system::Pallet<T>>::deposit_log(digest_item);
 
-		let key = offchain_key(T::INDEXING_PREFIX, commitment_hash);
+		let key = Self::make_offchain_key(commitment_hash);
 		offchain_index::set(&*key, &messages.encode());
 
-		let message_count = messages.len();
 		T::WeightInfo::on_initialize(
-			message_count as u32,
-			// We overestimate message payload size rather than underestimate.
-			// So add 1 here to account for integer division truncation.
-			(payload_byte_count / message_count).saturating_add(1) as u32,
+			messages.len() as u32,
+			average_payload_size as u32
 		)
 	}
 
-	// ABI-encode the commitment
-	fn encode_commitment(commitment: &[Message]) -> (Vec<u8>, usize) {
-		let mut payload_byte_count = 0usize;
-		let messages: Vec<Token> = commitment
+	fn make_commitment_hash(messages: &[Message]) -> H256 {
+		let mut payload_size: usize = 0;
+		let messages: Vec<Token> = messages
 			.iter()
 			.map(|message| {
-				payload_byte_count += message.payload.len();
+				payload_size += message.payload.len();
 				Token::Tuple(vec![
 					Token::Address(message.target),
 					Token::Uint(message.nonce.into()),
@@ -204,6 +208,19 @@ impl<T: Config> Module<T> {
 				])
 			})
 			.collect();
-		(ethabi::encode(&vec![Token::Array(messages)]), payload_byte_count)
+		let input = ethabi::encode(&vec![Token::Array(messages)]);
+		<T as Config>::Hashing::hash(&input)
+	}
+
+	fn average_payload_size(messages: &[Message]) -> usize {
+		let sum: usize = messages.iter()
+			.fold(0, |acc, x| acc + x.payload.len());
+		// We overestimate message payload size rather than underestimate.
+		// So add 1 here to account for integer division truncation.
+		(sum / messages.len()).saturating_add(1)
+	}
+
+	fn make_offchain_key(hash: H256) -> Vec<u8> {
+		(T::INDEXING_PREFIX, ChannelId::Incentivized, hash).encode()
 	}
 }

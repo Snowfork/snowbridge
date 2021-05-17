@@ -1,12 +1,11 @@
-//! IncentivizedOutboundChannel pallet benchmarking
+//! BasicOutboundChannel pallet benchmarking
 use super::*;
 
-use sp_core::U256;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
 use frame_support::traits::OnInitialize;
 
 #[allow(unused_imports)]
-use crate::outbound::Module as IncentivizedOutboundChannel;
+use crate::outbound::Module as BasicOutboundChannel;
 
 benchmarks! {
 	// Benchmark `on_initialize` under worst case conditions, i.e. messages
@@ -20,14 +19,13 @@ benchmarks! {
 			MessageQueue::append(Message {
 				target: H160::zero(),
 				nonce: 0u64,
-				fee: U256::zero(),
 				payload,
 			});
 		}
 
 		let block_number = Interval::<T>::get();
 
-	}: { IncentivizedOutboundChannel::<T>::on_initialize(block_number) }
+	}: { BasicOutboundChannel::<T>::on_initialize(block_number) }
 	verify {
 		assert_eq!(MessageQueue::get().len(), 0);
 	}
@@ -38,14 +36,13 @@ benchmarks! {
 		MessageQueue::append(Message {
 			target: H160::zero(),
 			nonce: 0u64,
-			fee: U256::zero(),
 			payload: vec![1u8; T::MaxMessagePayloadSize::get()],
 		});
 
 		Interval::<T>::put::<T::BlockNumber>(10u32.into());
 		let block_number: T::BlockNumber = 11u32.into();
 
-	}: { IncentivizedOutboundChannel::<T>::on_initialize(block_number) }
+	}: { BasicOutboundChannel::<T>::on_initialize(block_number) }
 	verify {
 		assert_eq!(MessageQueue::get().len(), 1);
 	}
@@ -57,27 +54,11 @@ benchmarks! {
 
 		let block_number = Interval::<T>::get();
 
-	}: { IncentivizedOutboundChannel::<T>::on_initialize(block_number) }
-
-	// Benchmark `set_fee` under worst case conditions:
-	// * The origin is authorized, i.e. equals SetFeeOrigin
-	set_fee {
-		let authorized_origin = match T::SetFeeOrigin::successful_origin().into() {
-			Ok(raw) => raw,
-			Err(_) => return Err("Failed to get raw origin from origin"),
-		};
-
-		let new_fee : U256 = 32000000.into();
-		assert!(Fee::get() != new_fee);
-
-	}: _(authorized_origin, new_fee)
-	verify {
-		assert_eq!(Fee::get(), new_fee);
-	}
+	}: { BasicOutboundChannel::<T>::on_initialize(block_number) }
 }
 
 impl_benchmark_test_suite!(
-	IncentivizedOutboundChannel,
+	BasicOutboundChannel,
 	crate::outbound::test::new_tester(),
 	crate::outbound::test::Test,
 );

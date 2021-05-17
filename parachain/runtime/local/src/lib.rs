@@ -46,7 +46,7 @@ use frame_system::{EnsureRoot, EnsureOneOf};
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId, OutboundRouter, ChannelId, MessageId};
+pub use artemis_core::{AssetId, ChannelId, MessageId};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::{EthereumHeader, EthereumDifficultyConfig};
@@ -63,6 +63,16 @@ use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 
 use artemis_xcm_support::AssetsTransactor;
 use assets::SingleAssetAdaptor;
+
+use runtime_common::{
+	INDEXING_PREFIX,
+	OutboundRouter,
+	Ether,
+	MaxMessagePayloadSize,
+	MaxMessagesPerCommit,
+	DotModuleId,
+	TreasuryModuleId,
+};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -404,18 +414,6 @@ impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
 
 // Our pallets
 
-// Module accounts
-parameter_types! {
-	pub const TreasuryModuleId: ModuleId = ModuleId(*b"s/treasy");
-	pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
-}
-
-pub fn module_accounts() -> Vec<AccountId> {
-	vec![
-		TreasuryModuleId::get().into_account()
-	]
-}
-
 pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(call: &Call) -> bool {
@@ -447,18 +445,20 @@ impl basic_channel_inbound::Config for Runtime {
 }
 
 impl basic_channel_outbound::Config for Runtime {
+	const INDEXING_PREFIX: &'static [u8] = INDEXING_PREFIX;
 	type Event = Event;
-	type MessageCommitment = commitments::Module<Runtime>;
+	type Hashing = Keccak256;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type WeightInfo = ();
 }
 
 parameter_types! {
 	pub SourceAccount: AccountId = DotModuleId::get().into_account();
 	pub TreasuryAccount: AccountId = TreasuryModuleId::get().into_account();
-
 }
 
 pub struct FeeConverter;
-
 impl Convert<U256, Balance> for FeeConverter {
 	fn convert(amount: U256) -> Balance {
 		dot_app::primitives::unwrap::<Runtime>(amount, Decimals::get()).expect("Should not panic unless runtime is misconfigured")
@@ -477,13 +477,8 @@ impl incentivized_channel_inbound::Config for Runtime {
 	type WeightInfo = ();
 }
 
-parameter_types! {
-	pub const Ether: AssetId = AssetId::ETH;
-	pub const MaxMessagePayloadSize: usize = 256;
-}
-
 impl incentivized_channel_outbound::Config for Runtime {
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+	const INDEXING_PREFIX: &'static [u8] = INDEXING_PREFIX;
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
@@ -491,23 +486,6 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type FeeCurrency = SingleAssetAdaptor<Runtime, Ether>;
 	type SetFeeOrigin = EnsureRootOrHalfLocalCouncil;
 	type WeightInfo = ();
-}
-
-use sp_std::marker::PhantomData;
-use sp_core::H160;
-
-pub struct SimpleOutboundRouter<T>(PhantomData<T>);
-
-impl<T> OutboundRouter<T::AccountId> for SimpleOutboundRouter<T>
-where
-	T: basic_channel_outbound::Config + incentivized_channel_outbound::Config
-{
-	fn submit(channel_id: ChannelId, who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
-		match channel_id {
-			ChannelId::Basic => basic_channel_outbound::Module::<T>::submit(who, target, payload),
-			ChannelId::Incentivized => incentivized_channel_outbound::Module::<T>::submit(who, target, payload),
-		}
-	}
 }
 
 pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficultyConfig {
@@ -530,18 +508,6 @@ impl verifier_lightclient::Config for Runtime {
 	type WeightInfo = ();
 }
 
-parameter_types! {
-	pub const CommitInterval: BlockNumber = 5;
-	pub const MaxMessagesPerCommit: usize = 20;
-}
-
-impl commitments::Config for Runtime {
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
-	type Event = Event;
-	type Hashing = Keccak256;
-	type MaxMessagesPerCommit = MaxMessagesPerCommit;
-}
-
 impl assets::Config for Runtime {
 	type Event = Event;
 	type WeightInfo = ();
@@ -554,7 +520,7 @@ parameter_types! {
 impl eth_app::Config for Runtime {
 	type Event = Event;
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
-	type OutboundRouter = SimpleOutboundRouter<Runtime>;
+	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = ();
 }
@@ -562,7 +528,7 @@ impl eth_app::Config for Runtime {
 impl erc20_app::Config for Runtime {
 	type Event = Event;
 	type Assets = assets::Module<Runtime>;
-	type OutboundRouter = SimpleOutboundRouter<Runtime>;
+	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = ();
 }
@@ -574,7 +540,7 @@ parameter_types! {
 impl dot_app::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
-	type OutboundRouter = SimpleOutboundRouter<Runtime>;
+	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type ModuleId = DotModuleId;
 	type Decimals = Decimals;
@@ -600,20 +566,19 @@ construct_runtime!(
 		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 8,
 
 		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event} = 9,
-		BasicOutboundChannel: basic_channel_outbound::{Pallet, Storage, Event} = 10,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Config<T>, Storage, Event} = 10,
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 11,
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Config<T>, Storage, Event} = 12,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 13,
-		Commitments: commitments::{Pallet, Call, Config<T>, Storage, Event} = 14,
-		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 15,
-		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
+		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 14,
+		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
 
-		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 17,
-		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 18,
-		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 19,
+		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 16,
+		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 17,
+		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 18,
 
 		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 20,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
 
 		DOT: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
 		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
@@ -776,6 +741,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel::inbound, BasicInboundChannel);
+			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
 			add_benchmark!(params, batches, dot_app, DOT);
