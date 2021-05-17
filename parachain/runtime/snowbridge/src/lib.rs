@@ -416,6 +416,16 @@ impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
 
 // Our pallets
 
+pub struct CallFilter;
+impl Filter<Call> for CallFilter {
+	fn filter(call: &Call) -> bool {
+		match call {
+			Call::ETH(_) | Call::ERC20(_) | Call::DOT(_) => true,
+			_ => false
+		}
+	}
+}
+
 impl dispatch::Config for Runtime {
 	type Origin = Origin;
 	type Event = Event;
@@ -428,6 +438,7 @@ use basic_channel::inbound as basic_channel_inbound;
 use incentivized_channel::inbound as incentivized_channel_inbound;
 use basic_channel::outbound as basic_channel_outbound;
 use incentivized_channel::outbound as incentivized_channel_outbound;
+
 
 impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
@@ -471,11 +482,6 @@ impl incentivized_channel_inbound::Config for Runtime {
 	type WeightInfo = weights::incentivized_channel_inbound_weights::WeightInfo<Runtime>;
 }
 
-parameter_types! {
-	pub const Ether: AssetId = AssetId::ETH;
-	pub const MaxMessagePayloadSize: usize = 256;
-}
-
 impl incentivized_channel_outbound::Config for Runtime {
 	const INDEXING_PREFIX: &'static [u8] = INDEXING_PREFIX;
 	type Event = Event;
@@ -505,11 +511,6 @@ impl verifier_lightclient::Config for Runtime {
 	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
 	type WeightInfo = weights::verifier_lightclient_weights::WeightInfo<Runtime>;
-}
-
-parameter_types! {
-	pub const CommitInterval: BlockNumber = 5;
-	pub const MaxMessagesPerCommit: usize = 20;
 }
 
 impl assets::Config for Runtime {

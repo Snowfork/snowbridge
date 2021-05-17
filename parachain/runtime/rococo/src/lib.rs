@@ -482,11 +482,6 @@ impl incentivized_channel_inbound::Config for Runtime {
 	type WeightInfo = weights::incentivized_channel_inbound_weights::WeightInfo<Runtime>;
 }
 
-parameter_types! {
-	pub const Ether: AssetId = AssetId::ETH;
-	pub const MaxMessagePayloadSize: usize = 256;
-}
-
 impl incentivized_channel_outbound::Config for Runtime {
 	const INDEXING_PREFIX: &'static [u8] = INDEXING_PREFIX;
 	type Event = Event;
@@ -516,11 +511,6 @@ impl verifier_lightclient::Config for Runtime {
 	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
 	type WeightInfo = weights::verifier_lightclient_weights::WeightInfo<Runtime>;
-}
-
-parameter_types! {
-	pub const CommitInterval: BlockNumber = 5;
-	pub const MaxMessagesPerCommit: usize = 20;
 }
 
 impl assets::Config for Runtime {
