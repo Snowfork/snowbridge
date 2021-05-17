@@ -8,6 +8,7 @@ import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
 import "./ValidatorRegistry.sol";
 import "./MMRVerification.sol";
+import "./Blake2b.sol";
 
 /**
  * @title A entry contract for the Ethereum light client
@@ -67,6 +68,7 @@ contract LightClientBridge {
 
     ValidatorRegistry public validatorRegistry;
     MMRVerification public mmrVerification;
+    Blake2b public blake2b;
     uint256 public currentId;
     bytes32 public latestMMRRoot;
     mapping(uint256 => ValidationData) public validationData;
@@ -86,10 +88,12 @@ contract LightClientBridge {
      */
     constructor(
         ValidatorRegistry _validatorRegistry,
-        MMRVerification _mmrVerification
+        MMRVerification _mmrVerification,
+        Blake2b _blake2b
     ) {
         validatorRegistry = _validatorRegistry;
         mmrVerification = _mmrVerification;
+        blake2b = _blake2b;
         currentId = 0;
     }
 
@@ -306,14 +310,12 @@ contract LightClientBridge {
             );
         }
 
-        /**
-         * @todo Release the sender stake as collateral
-         */
-        // TODO
-
         // Verify the commitment
+        bytes32[2] memory hashed = blake2b.formatOutput(
+            blake2b.blake2b(abi.encode(commitment), "", 256)
+        );
         require(
-            keccak256(abi.encode(commitment)) == commitmentHash,
+            hashed[1] == commitmentHash,
             "Error: Commitment must match commitment hash"
         );
         bytes32 payload = commitment.payload;
