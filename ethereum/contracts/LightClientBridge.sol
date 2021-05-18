@@ -9,6 +9,7 @@ import "./utils/Bitfield.sol";
 import "./ValidatorRegistry.sol";
 import "./MMRVerification.sol";
 import "./Blake2b.sol";
+import "./ScaleCodec.sol";
 
 /**
  * @title A entry contract for the Ethereum light client
@@ -17,6 +18,9 @@ contract LightClientBridge {
     using SafeMath for uint256;
     using Bits for uint256;
     using Bitfield for uint256[];
+    using ScaleCodec for uint256;
+    using ScaleCodec for uint64;
+    using ScaleCodec for uint32;
 
     /* Events */
 
@@ -54,7 +58,7 @@ contract LightClientBridge {
     struct Commitment {
         bytes32 payload;
         uint64 blockNumber;
-        uint64 validatorSetId;
+        uint32 validatorSetId;
     }
 
     struct ValidationData {
@@ -99,22 +103,24 @@ contract LightClientBridge {
 
     /**
      * @notice Executed by the incoming channel in order to verify commitment
-     * @param beefyMerkleLeaf contains the merkle leaf to be verified
-     * @param beefyMerkleProof contains the merkle proof to verify against
+     * @param beefyMMRLeaf contains the merkle leaf to be verified
+     * @param beefyMMRLeafIndex contains the merkle leaf index
+     * @param beefyMMRLeafCount contains the merkle leaf count
+     * @param beefyMMRLeafProof contains the merkle proof to verify against
      */
     function verifyBeefyMerkleLeaf(
-        bytes32 beefyMerkleLeaf,
-        uint256 beefyMerkleLeafIndex,
-        uint256 beefyMerkleLeafCount,
-        bytes32[] calldata beefyMerkleProof
+        bytes32 beefyMMRLeaf,
+        uint256 beefyMMRLeafIndex,
+        uint256 beefyMMRLeafCount,
+        bytes32[] calldata beefyMMRLeafProof
     ) external returns (bool) {
         return
             mmrVerification.verifyInclusionProof(
                 latestMMRRoot,
-                beefyMerkleLeaf,
-                beefyMerkleLeafIndex,
-                beefyMerkleLeafCount,
-                beefyMerkleProof
+                beefyMMRLeaf,
+                beefyMMRLeafIndex,
+                beefyMMRLeafCount,
+                beefyMMRLeafProof
             );
     }
 
@@ -312,17 +318,24 @@ contract LightClientBridge {
 
         // Verify the commitment
         bytes32[2] memory hashed = blake2b.formatOutput(
-            blake2b.blake2b(abi.encode(commitment), "", 256)
+            blake2b.blake2b(
+                abi.encodePacked(
+                    commitment.payload,
+                    commitment.blockNumber.encode64(),
+                    commitment.validatorSetId.encode32()
+                ),
+                "",
+                32
+            )
         );
         require(
-            hashed[1] == commitmentHash,
+            hashed[0] == commitmentHash,
             "Error: Commitment must match commitment hash"
         );
-        bytes32 payload = commitment.payload;
         /**
          * @follow-up Do we need a try-catch block here?
          */
-        processPayload(payload);
+        processPayload(commitment.payload);
 
         emit FinalVerificationSuccessful(msg.sender, commitmentHash, id);
 
