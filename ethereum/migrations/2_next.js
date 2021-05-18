@@ -9,6 +9,7 @@ const ValidatorRegistry = artifacts.require("ValidatorRegistry");
 const MMRVerification = artifacts.require("MMRVerification");
 const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
+const Blake2b = artifacts.require("Blake2b");
 
 const channels = {
   basic: {
@@ -37,6 +38,10 @@ const contracts = {
   lightclientbridge: {
     contract: artifacts.require("LightClientBridge"),
     instance: null
+  },
+  blake2b: {
+    contract: artifacts.require("Blake2b"),
+    instance: null
   }
 }
 
@@ -52,15 +57,20 @@ module.exports = function (deployer, network, accounts) {
     const numValidators = 2;
     const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators);
     const mmrVerification = await deployer.deploy(MMRVerification);
+    const blake2b = await deployer.deploy(Blake2b);
 
     // Link Bitfield library to LightClientBridge
     await deployer.deploy(Bitfield);
     deployer.link(Bitfield, [contracts.lightclientbridge.contract]);
+    // Link ScaleCodec library to LightClientBridge
+    await deployer.deploy(ScaleCodec);
+    deployer.link(ScaleCodec, [contracts.lightclientbridge.contract]);
 
     contracts.lightclientbridge.instance = await deployer.deploy(
       contracts.lightclientbridge.contract,
       valRegistry.address,
-      mmrVerification.address
+      mmrVerification.address,
+      blake2b.address
     );
 
     // Account of governance contract

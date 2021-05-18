@@ -20,10 +20,10 @@ contract BasicInboundChannel is InboundChannel {
     function submit(
         Message[] calldata _messages,
         bytes32 _commitment,
-        bytes32 _parachainMerkleLeaf,
-        uint256 _parachainMerkleLeafIndex,
-        uint256 _parachainMerkleLeafCount,
-        bytes32[] memory _parachainMerkleProof
+        bytes32 _beefyMMRLeaf,
+        uint256 _beefyMMRLeafIndex,
+        uint256 _beefyMMRLeafCount,
+        bytes32[] memory _beefyMMRLeafProof
     )
         public
         override
@@ -31,10 +31,10 @@ contract BasicInboundChannel is InboundChannel {
         verifyMessages(_messages, _commitment);
         require(
             lightClientBridge.verifyBeefyMerkleLeaf(
-                _parachainMerkleLeaf,
-                _parachainMerkleLeafIndex,
-                _parachainMerkleLeafCount,
-                _parachainMerkleProof
+                _beefyMMRLeaf,
+                _beefyMMRLeafIndex,
+                _beefyMMRLeafCount,
+                _beefyMMRLeafProof
             ),
             "Invalid proof"
         );

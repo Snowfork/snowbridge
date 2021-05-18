@@ -11,6 +11,7 @@ const MockFeeSource = artifacts.require("MockFeeSource");
 const LightClientBridge = artifacts.require("LightClientBridge");
 const ValidatorRegistry = artifacts.require("ValidatorRegistry");
 const MMRVerification = artifacts.require("MMRVerification");
+const Blake2b = artifacts.require("Blake2b");
 
 const channelContracts = {
   basic: {
@@ -248,9 +249,11 @@ const deployLightClientBridge = async (validatorsMerkleRoot) => {
     2
   );
   const mmrVerification = await MMRVerification.new();
+  const blake2b = await Blake2b.new();
   const lightClientBridge = await LightClientBridge.new(
     validator.address,
-    mmrVerification.address
+    mmrVerification.address,
+    blake2b.address
   );
 
   return lightClientBridge;
