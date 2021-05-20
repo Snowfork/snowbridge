@@ -1,6 +1,20 @@
 //! # Ethereum Light Client Verifier
 //!
-//! The verifier module implements verification of Ethereum transactions / events.
+//! The verifier module verifies `Message` objects by verifying the existence
+//! of their corresponding Ethereum log in a block in the Ethereum PoW network.
+//! More specifically, the module checks a Merkle proof to confirm the existence
+//! of a receipt, and the given log within the receipt, in a given block.
+//!
+//! This module relies on the relayer service which submits `import_header`
+//! extrinsics, in order, as new blocks in the Ethereum network are authored.
+//! It stores the most recent `FINALIZED_HEADERS_TO_KEEP` + `DescendantsUntilFinalized`
+//! headers and prunes older headers. This means verification will only succeed
+//! for messages from *finalized* blocks no older than `FINALIZED_HEADERS_TO_KEEP`.
+//!
+//! ## Usage
+//!
+//! This module implements the `Verifier` interface. Other modules should reference
+//! this module using the `Verifier` type and perform verification using `Verifier::verify`.
 //!
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -129,8 +143,8 @@ decl_storage! {
 }
 
 decl_event!(
+	/// This module has no events
 	pub enum Event {
-
 	}
 );
 
@@ -164,6 +178,18 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		/// Import a single Ethereum PoW header.
+		///
+		/// Note that this extrinsic has a very high weight. The weight is affected by the
+		/// value of `DescendantsUntilFinalized`. Regenerate weights if it changes.
+		///
+		/// The largest contributors to the worst case weight, in decreasing order, are:
+		/// - Pruning: max 2 writes per pruned header + 2 writes to finalize pruning state.
+		///   Up to `HEADERS_TO_PRUNE_IN_SINGLE_IMPORT` can be pruned in one call.
+		/// - Ethash validation: this cost is pure CPU. EthashProver checks a merkle proof
+		///   for each DAG node selected in the "hashimoto"-loop.
+		/// - Iterating over ancestors: min `DescendantsUntilFinalized` reads to find the
+		///   newly finalized ancestor of a header.
 		#[weight = T::WeightInfo::import_header()]
 		pub fn import_header(origin, header: EthereumHeader, proof: Vec<EthashProofData>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
@@ -462,6 +488,8 @@ fn ancestry<T: Config>(mut hash: H256) -> impl Iterator<Item = (H256, EthereumHe
 
 impl<T: Config> Verifier for Module<T> {
 
+	/// Verify a message by verifying the existence of the corresponding
+	/// Ethereum log in a block. Returns the log if successful.
 	fn verify(message: &Message) -> Result<Log, DispatchError> {
 		let receipt = Self::verify_receipt_inclusion(&message.proof)?;
 
@@ -475,6 +503,10 @@ impl<T: Config> Verifier for Module<T> {
 		Ok(log)
 	}
 
+	/// Import an ordered vec of Ethereum headers without performing
+	/// validation.
+	///
+	/// NOTE: This should only be used to initialize empty storage.
 	fn initialize_storage(
 		headers: Vec<EthereumHeader>,
 		initial_difficulty: U256,
