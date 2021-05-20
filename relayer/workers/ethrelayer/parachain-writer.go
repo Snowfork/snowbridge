@@ -15,8 +15,8 @@ import (
 )
 
 type ParachainPayload struct {
-	header   *chain.Header
-	messages []*chain.EthereumOutboundMessage
+	Header   *chain.Header
+	Messages []*chain.EthereumOutboundMessage
 }
 
 type ParachainWriter struct {
@@ -110,15 +110,15 @@ func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 			err := wr.WritePayload(ctx, &payload)
 			if err != nil {
 				wr.log.WithError(err).WithFields(logrus.Fields{
-					"blockNumber":  payload.header.HeaderData.(ethereum.Header).Number,
-					"messageCount": len(payload.messages),
+					"blockNumber":  payload.Header.HeaderData.(ethereum.Header).Number,
+					"messageCount": len(payload.Messages),
 				}).Error("Failure submitting header and messages to Substrate")
 				return err
 			}
 
 			wr.log.WithFields(logrus.Fields{
-				"blockNumber":  payload.header.HeaderData.(ethereum.Header).Number,
-				"messageCount": len(payload.messages),
+				"blockNumber":  payload.Header.HeaderData.(ethereum.Header).Number,
+				"messageCount": len(payload.Messages),
 			}).Info("Submitted header and messages to Substrate")
 		}
 	}
@@ -169,14 +169,14 @@ func (wr *ParachainWriter) write(ctx context.Context, c types.Call) error {
 }
 
 func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainPayload) error {
-	calls := make([]types.Call, 1+len(payload.messages))
-	call, err := wr.makeHeaderImportCall(ctx, payload.header)
+	calls := make([]types.Call, 1+len(payload.Messages))
+	call, err := wr.makeHeaderImportCall(ctx, payload.Header)
 	if err != nil {
 		return err
 	}
 	calls[0] = call
 
-	for i, msg := range payload.messages {
+	for i, msg := range payload.Messages {
 		call, err := wr.makeMessageSubmitCall(ctx, msg)
 		if err != nil {
 			return err
