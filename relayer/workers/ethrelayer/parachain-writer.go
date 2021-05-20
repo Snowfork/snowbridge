@@ -169,19 +169,19 @@ func (wr *ParachainWriter) write(ctx context.Context, c types.Call) error {
 }
 
 func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainPayload) error {
-	calls := make([]types.Call, 1+len(payload.Messages))
+	var calls []types.Call
 	call, err := wr.makeHeaderImportCall(ctx, payload.Header)
 	if err != nil {
 		return err
 	}
-	calls[0] = call
+	calls = append(calls, call)
 
-	for i, msg := range payload.Messages {
+	for _, msg := range payload.Messages {
 		call, err := wr.makeMessageSubmitCall(ctx, msg)
 		if err != nil {
 			return err
 		}
-		calls[i+1] = call
+		calls = append(calls, call)
 	}
 
 	call, err = types.NewCall(wr.conn.GetMetadata(), "Utility.batch_all", calls)
