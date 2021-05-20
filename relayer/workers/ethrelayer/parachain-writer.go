@@ -15,8 +15,8 @@ import (
 )
 
 type ParachainPayload struct {
-	header   *chain.Header
-	messages []*chain.EthereumOutboundMessage
+	Header   *chain.Header
+	Messages []*chain.EthereumOutboundMessage
 }
 
 type ParachainWriter struct {
@@ -107,22 +107,19 @@ func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 				return nil
 			}
 
-			err := wr.WriteHeader(ctx, payload.header)
+			err := wr.WritePayload(ctx, &payload)
 			if err != nil {
-				wr.log.WithFields(logrus.Fields{
-					"blockNumber": payload.header.HeaderData.(ethereum.Header).Number,
-					"error":       err,
-				}).Error("Failure submitting header to substrate")
+				wr.log.WithError(err).WithFields(logrus.Fields{
+					"blockNumber":  payload.Header.HeaderData.(ethereum.Header).Number,
+					"messageCount": len(payload.Messages),
+				}).Error("Failure submitting header and messages to Substrate")
 				return err
 			}
 
-			err = wr.WriteMessages(ctx, payload.messages)
-			if err != nil {
-				wr.log.WithFields(logrus.Fields{
-					"error": err,
-				}).Error("Failure submitting message to substrate")
-				return err
-			}
+			wr.log.WithFields(logrus.Fields{
+				"blockNumber":  payload.Header.HeaderData.(ethereum.Header).Number,
+				"messageCount": len(payload.Messages),
+			}).Info("Submitted header and messages to Substrate")
 		}
 	}
 }
@@ -171,44 +168,42 @@ func (wr *ParachainWriter) write(ctx context.Context, c types.Call) error {
 	return nil
 }
 
-func (wr *ParachainWriter) WriteMessages(ctx context.Context, msgs []*chain.EthereumOutboundMessage) error {
-	for _, msg := range msgs {
+func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainPayload) error {
+	var calls []types.Call
+	call, err := wr.makeHeaderImportCall(ctx, payload.Header)
+	if err != nil {
+		return err
+	}
+	calls = append(calls, call)
 
-		c, err := types.NewCall(wr.conn.GetMetadata(), msg.Call, msg.Args...)
+	for _, msg := range payload.Messages {
+		call, err := wr.makeMessageSubmitCall(ctx, msg)
 		if err != nil {
 			return err
 		}
-
-		err = wr.write(ctx, c)
-		if err != nil {
-			return err
-		}
+		calls = append(calls, call)
 	}
 
-	wr.log.WithField("count", len(msgs)).Info("Submitted messages to Substrate")
+	call, err = types.NewCall(wr.conn.GetMetadata(), "Utility.batch_all", calls)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	return wr.write(ctx, call)
 }
 
-// WriteHeader submits a "VerifierLightclient.import_header" call
-func (wr *ParachainWriter) WriteHeader(ctx context.Context, header *chain.Header) error {
+func (wr *ParachainWriter) makeMessageSubmitCall(ctx context.Context, msg *chain.EthereumOutboundMessage) (types.Call, error) {
+	if msg == (*chain.EthereumOutboundMessage)(nil) {
+		return types.Call{}, fmt.Errorf("Message is nil")
+	}
+
+	return types.NewCall(wr.conn.GetMetadata(), msg.Call, msg.Args...)
+}
+
+func (wr *ParachainWriter) makeHeaderImportCall(ctx context.Context, header *chain.Header) (types.Call, error) {
 	if header == (*chain.Header)(nil) {
-		return fmt.Errorf("Header is nil")
+		return types.Call{}, fmt.Errorf("Header is nil")
 	}
 
-	c, err := types.NewCall(wr.conn.GetMetadata(), "VerifierLightclient.import_header", header.HeaderData, header.ProofData)
-	if err != nil {
-		return err
-	}
-
-	err = wr.write(ctx, c)
-	if err != nil {
-		return err
-	}
-
-	wr.log.WithFields(logrus.Fields{
-		"blockNumber": header.HeaderData.(ethereum.Header).Number,
-	}).Info("Submitted header to Substrate")
-
-	return nil
+	return types.NewCall(wr.conn.GetMetadata(), "VerifierLightclient.import_header", header.HeaderData, header.ProofData)
 }
