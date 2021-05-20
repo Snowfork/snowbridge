@@ -52,4 +52,8 @@ impl<T: frame_system::Config> basic_channel::outbound::WeightInfo for WeightInfo
 		(8_651_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 	}
+	fn set_principal() -> Weight {
+		(3_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
 }
