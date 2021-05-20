@@ -4,14 +4,14 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	weights::Weight,
 	dispatch::DispatchResult,
-	traits::Get,
+	traits::{Get, EnsureOrigin},
 	ensure,
 };
 use frame_system::{self as system};
 use sp_core::{H160, H256, RuntimeDebug};
 use sp_io::offchain_index;
 use sp_runtime::{
-	traits::{Hash, Zero},
+	traits::{Hash, Zero, StaticLookup},
 };
 use sp_std::prelude::*;
 
@@ -39,12 +39,14 @@ pub trait WeightInfo {
 	fn on_initialize(num_messages: u32, avg_payload_bytes: u32) -> Weight;
 	fn on_initialize_non_interval() -> Weight;
 	fn on_initialize_no_messages() -> Weight;
+	fn set_principal() -> Weight;
 }
 
 impl WeightInfo for () {
 	fn on_initialize(_: u32, _: u32) -> Weight { 0 }
 	fn on_initialize_non_interval() -> Weight { 0 }
 	fn on_initialize_no_messages() -> Weight { 0 }
+	fn set_principal() -> Weight { 0 }
 }
 
 pub trait Config: system::Config {
@@ -61,6 +63,8 @@ pub trait Config: system::Config {
 	/// Max number of messages that can be queued and committed in one go for a given channel.
 	type MaxMessagesPerCommit: Get<usize>;
 
+	type SetPrincipalOrigin: EnsureOrigin<Self::Origin>;
+
 	/// Weight information for extrinsics in this pallet
 	type WeightInfo: WeightInfo;
 }
@@ -72,6 +76,9 @@ decl_storage! {
 
 		/// Messages waiting to be committed.
 		MessageQueue: Vec<Message>;
+
+		/// The Account authorized to submit messages
+		Principal get(fn principal) config(): T::AccountId;
 
 		pub Nonce: u64;
 	}
@@ -91,6 +98,8 @@ decl_error! {
 		QueueSizeLimitReached,
 		/// Cannot increment nonce
 		Overflow,
+		/// Not authorized to send message
+		NotAuthorized,
 	}
 }
 
@@ -110,13 +119,25 @@ decl_module! {
 				T::WeightInfo::on_initialize_non_interval()
 			}
 		}
+
+		#[weight = T::WeightInfo::set_principal()]
+		fn set_principal(origin, principal: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
+			T::SetPrincipalOrigin::ensure_origin(origin)?;
+			let principal = T::Lookup::lookup(principal)?;
+			<Principal<T>>::put(principal);
+			Ok(())
+		}
 	}
 }
 
 impl<T: Config> Module<T> {
 
 	/// Submit message on the outbound channel
-	pub fn submit(_: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
+	pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
+		ensure!(
+			*who == Self::principal(),
+			Error::<T>::NotAuthorized,
+		);
 		ensure!(
 			MessageQueue::decode_len().unwrap_or(0) < T::MaxMessagesPerCommit::get(),
 			Error::<T>::QueueSizeLimitReached,

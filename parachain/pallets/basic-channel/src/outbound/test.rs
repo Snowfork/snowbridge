@@ -4,6 +4,7 @@ use sp_core::{H160, H256};
 use frame_support::{
 	assert_ok, assert_noop,
 	parameter_types,
+	dispatch::DispatchError,
 };
 use sp_runtime::{
 	traits::{BlakeTwo256, Keccak256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
@@ -71,6 +72,7 @@ impl basic_outbound_channel::Config for Test {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type SetPrincipalOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type WeightInfo = ();
 }
 
@@ -78,6 +80,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	let config: basic_outbound_channel::GenesisConfig<Test> = basic_outbound_channel::GenesisConfig {
+		principal: Keyring::Bob.into(),
 		interval: 1u64
 	};
 	config.assimilate_storage(&mut storage).unwrap();
@@ -147,5 +150,43 @@ fn test_submit_fails_on_nonce_overflow() {
 			BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
 			Error::<Test>::Overflow,
 		);
+	});
+}
+
+#[test]
+fn test_submit_fails_not_authorized() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let who: AccountId = Keyring::Charlie.into();
+
+		assert_noop!(
+			BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
+			Error::<Test>::NotAuthorized,
+		);
+	});
+}
+
+#[test]
+fn test_set_principal_unauthorized() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let dave: AccountId = Keyring::Dave.into();
+
+		assert_noop!(
+			BasicOutboundChannel::set_principal(Origin::signed(dave), Keyring::Alice.into()),
+			DispatchError::BadOrigin
+		);
+	});
+}
+
+
+#[test]
+fn test_set_principal() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let alice: AccountId = Keyring::Alice.into();
+
+		assert_ok!(BasicOutboundChannel::set_principal(Origin::root(), alice.clone()));
+		assert_eq!(<Principal<Test>>::get(), alice);
 	});
 }

@@ -55,6 +55,20 @@ benchmarks! {
 		let block_number = Interval::<T>::get();
 
 	}: { BasicOutboundChannel::<T>::on_initialize(block_number) }
+
+	set_principal {
+		let authorized_origin = match T::SetPrincipalOrigin::successful_origin().into() {
+			Ok(raw) => raw,
+			Err(_) => return Err("Failed to get raw origin from origin"),
+		};
+
+		let new_fee : U256 = 32000000.into();
+		assert!(Fee::get() != new_fee);
+
+	}: _(authorized_origin, new_fee)
+	verify {
+		assert_eq!(Fee::get(), new_fee);
+	}
 }
 
 impl_benchmark_test_suite!(
