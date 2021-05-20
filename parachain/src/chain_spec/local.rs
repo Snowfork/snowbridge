@@ -130,6 +130,7 @@ fn testnet_genesis(
 			source_channel: hex!["fc97a6197dc90bef6bbefd672742ed75e9768553"].into(),
 		},
 		basic_channel_outbound: BasicOutboundChannelConfig {
+			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
 			interval: 1,
 		},
 		incentivized_channel_inbound: IncentivizedInboundChannelConfig {
