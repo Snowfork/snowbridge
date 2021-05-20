@@ -28,6 +28,7 @@ artemis-ethereum = { path = "../../primitives/ethereum", default-features = fals
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1"}
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 hex-literal = { version = "0.3.1" }
 rlp = { version = "0.5" }

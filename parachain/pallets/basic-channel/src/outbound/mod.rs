@@ -121,7 +121,7 @@ decl_module! {
 		}
 
 		#[weight = T::WeightInfo::set_principal()]
-		fn set_principal(origin, principal: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
+		pub fn set_principal(origin, principal: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
 			T::SetPrincipalOrigin::ensure_origin(origin)?;
 			let principal = T::Lookup::lookup(principal)?;
 			<Principal<T>>::put(principal);
@@ -191,11 +191,9 @@ impl<T: Config> Module<T> {
 	}
 
 	fn make_commitment_hash(messages: &[Message]) -> H256 {
-		let mut payload_size: usize = 0;
 		let messages: Vec<Token> = messages
 			.iter()
 			.map(|message| {
-				payload_size += message.payload.len();
 				Token::Tuple(vec![
 					Token::Address(message.target),
 					Token::Uint(message.nonce.into()),

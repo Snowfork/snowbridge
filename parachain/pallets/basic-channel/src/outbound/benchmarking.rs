@@ -1,11 +1,17 @@
 //! BasicOutboundChannel pallet benchmarking
 use super::*;
 
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
+use frame_benchmarking::{
+	benchmarks,
+	impl_benchmark_test_suite,
+	account,
+};
 use frame_support::traits::OnInitialize;
 
 #[allow(unused_imports)]
 use crate::outbound::Module as BasicOutboundChannel;
+
+const SEED: u32 = 0;
 
 benchmarks! {
 	// Benchmark `on_initialize` under worst case conditions, i.e. messages
@@ -61,13 +67,10 @@ benchmarks! {
 			Ok(raw) => raw,
 			Err(_) => return Err("Failed to get raw origin from origin"),
 		};
-
-		let new_fee : U256 = 32000000.into();
-		assert!(Fee::get() != new_fee);
-
-	}: _(authorized_origin, new_fee)
+		let alice = T::Lookup::unlookup(account("alice", 0, SEED));
+	}: _(authorized_origin, alice)
 	verify {
-		assert_eq!(Fee::get(), new_fee);
+		assert_eq!(<Principal<T>>::get(), account("alice", 0, SEED));
 	}
 }
 

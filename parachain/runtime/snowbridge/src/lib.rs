@@ -453,6 +453,7 @@ impl basic_channel_outbound::Config for Runtime {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type SetPrincipalOrigin = EnsureRootOrHalfLocalCouncil;
 	type WeightInfo = weights::basic_channel_outbound_weights::WeightInfo<Runtime>;
 }
 

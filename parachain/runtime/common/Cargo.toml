@@ -21,8 +21,9 @@ default = ["std"]
 std = [
     "frame-support/std",
     "frame-system/std",
-    "sp-runtime/std",
+    "sp-core/std",
     "sp-std/std",
+    "sp-runtime/std",
     "artemis-core/std",
     "basic-channel/std",
     "incentivized-channel/std",
