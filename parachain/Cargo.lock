@@ -409,6 +409,7 @@ dependencies = [
 name = "artemis-incentivized-channel"
 version = "0.1.1"
 dependencies = [
+ "artemis-assets",
  "artemis-core",
  "artemis-ethereum",
  "ethabi-decode",

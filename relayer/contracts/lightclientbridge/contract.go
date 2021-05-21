@@ -311,10 +311,13 @@ func (_Contract *ContractCaller) ValidationData(opts *bind.CallOpts, arg0 *big.I
 		Payload       [32]byte
 		BlockNumber   *big.Int
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.SenderAddress = out[0].(common.Address)
-	outstruct.Payload = out[1].([32]byte)
-	outstruct.BlockNumber = out[2].(*big.Int)
+	outstruct.SenderAddress = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Payload = *abi.ConvertType(out[1], new([32]byte)).(*[32]byte)
+	outstruct.BlockNumber = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
 

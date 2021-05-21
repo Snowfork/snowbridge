@@ -2,18 +2,14 @@ package parachaincommitmentrelayer
 
 import (
 	"context"
-	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer/parachaincommitment"
 )
 
@@ -26,8 +22,8 @@ type Worker struct {
 	parachainCommitmentListener *parachaincommitment.Listener
 	ethereumConn                *ethereum.Connection
 	ethereumChannelWriter       *EthereumChannelWriter
-	beefyRelaychainListener     *BeefyListener
-	log                         *logrus.Entry
+	//beefyRelaychainListener     *BeefyListener
+	log *logrus.Entry
 }
 
 const Name = "parachain-commitment-relayer"
@@ -48,34 +44,36 @@ func NewWorker(parachainConfig *parachain.Config,
 	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKp, log)
 
 	// channel for messages from substrate
-	var subMessages = make(chan []chain.Message, 1)
-	contracts := make(map[substrate.ChannelID]*inbound.Contract)
+	messages := make(chan interface{}, 1)
 
 	parachainCommitmentListener := parachaincommitment.NewListener(
 		parachainConn,
 		relaychainConn,
 		ethereumConn,
 		ethereumConfig,
-		contracts,
-		subMessages,
+		messages,
 		log,
 	)
 
-	ethereumChannelWriter, err := NewEthereumChannelWriter(ethereumConfig, ethereumConn,
-		subMessages, contracts, log)
+	ethereumChannelWriter, err := NewEthereumChannelWriter(
+		ethereumConfig,
+		ethereumConn,
+		messages,
+		log,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	var messagePackages = make(chan MessagePackage, 1)
+	// var messagePackages = make(chan MessagePackage, 1)
 
-	beefyRelaychainListener := NewBeefyListener(
-		relaychainConfig,
-		relaychainConn,
-		parachainConn,
-		messagePackages,
-		log,
-	)
+	// beefyRelaychainListener := NewBeefyListener(
+	// 	relaychainConfig,
+	// 	relaychainConn,
+	// 	parachainConn,
+	// 	messagePackages,
+	// 	log,
+	// )
 
 	return &Worker{
 		parachainConfig:             parachainConfig,
@@ -86,18 +84,18 @@ func NewWorker(parachainConfig *parachain.Config,
 		parachainCommitmentListener: parachainCommitmentListener,
 		ethereumConn:                ethereumConn,
 		ethereumChannelWriter:       ethereumChannelWriter,
-		beefyRelaychainListener:     beefyRelaychainListener,
-		log:                         log,
+		//beefyRelaychainListener:     beefyRelaychainListener,
+		log: log,
 	}, nil
 }
 
 func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	worker.log.Info("Starting worker")
 
-	if worker.beefyRelaychainListener == nil ||
-		worker.parachainCommitmentListener == nil || worker.ethereumChannelWriter == nil {
-		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
-	}
+	// if worker.beefyRelaychainListener == nil ||
+	// 	worker.parachainCommitmentListener == nil || worker.ethereumChannelWriter == nil {
+	// 	return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
+	// }
 
 	err := worker.parachainConn.Connect(ctx)
 	if err != nil {
@@ -136,16 +134,16 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 		return nil
 	})
 
-	eg.Go(func() error {
-		if worker.beefyRelaychainListener != nil {
-			worker.log.Info("Starting Beefy Listener")
-			err = worker.beefyRelaychainListener.Start(ctx, eg)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	// eg.Go(func() error {
+	// 	if worker.beefyRelaychainListener != nil {
+	// 		worker.log.Info("Starting Beefy Listener")
+	// 		err = worker.beefyRelaychainListener.Start(ctx, eg)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// 	return nil
+	// })
 
 	return nil
 }

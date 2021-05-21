@@ -2,13 +2,15 @@
 pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./RewardSource.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
 enum ChannelId {Basic, Incentivized}
 
-contract ETHApp {
+contract ETHApp is RewardSource, AccessControl {
     using SafeMath for uint256;
     using ScaleCodec for uint256;
 
@@ -22,12 +24,14 @@ contract ETHApp {
 
     bytes2 constant MINT_CALL = 0x4101;
 
+    bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
+
     struct Channel {
         address inbound;
         address outbound;
     }
 
-    constructor(Channel memory _basic, Channel memory _incentivized) {
+    constructor(address rewarder, Channel memory _basic, Channel memory _incentivized) {
         balance = 0;
 
         Channel storage c1 = channels[ChannelId.Basic];
@@ -37,6 +41,8 @@ contract ETHApp {
         Channel storage c2 = channels[ChannelId.Incentivized];
         c2.inbound = _incentivized.inbound;
         c2.outbound = _incentivized.outbound;
+
+        _setupRole(REWARD_ROLE, rewarder);
     }
 
     function lock(bytes32 _recipient, ChannelId _channelId) public payable {
@@ -90,4 +96,10 @@ contract ETHApp {
                 _amount.encode256()
             );
     }
+
+    function reward(address payable _recipient, uint256 _amount) external override {
+        require(hasRole(REWARD_ROLE, msg.sender), "Caller is unauthorized");
+        _recipient.transfer(_amount);
+    }
+
 }

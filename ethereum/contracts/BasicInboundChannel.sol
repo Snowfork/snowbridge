@@ -3,20 +3,24 @@ pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./InboundChannel.sol";
 
-contract BasicInboundChannel is InboundChannel {
+contract BasicInboundChannel {
     uint256 constant public MAX_GAS_PER_MESSAGE = 100000;
 
-    constructor() {
-        nonce = 0;
+    uint64 public nonce;
+
+    struct Message {
+        address target;
+        uint64 nonce;
+        bytes payload;
     }
+
+    event MessageDispatched(uint64 nonce, bool result);
 
     // TODO: Submit should take in all inputs required for verification,
     // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
     function submit(Message[] calldata _messages, bytes32 _commitment)
         public
-        override
     {
         verifyMessages(_messages, _commitment);
         processMessages(_messages);

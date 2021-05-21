@@ -53,7 +53,7 @@ func NewRelay() (*Relay, error) {
 		return nil, err
 	}
 
-	parachainCommitmentRelayer := &parachaincommitmentrelayer.Worker{}
+	var parachainCommitmentRelayer *parachaincommitmentrelayer.Worker
 
 	if config.Workers.ParachainCommitmentRelayer.Enabled {
 		parachainCommitmentRelayer, err = parachaincommitmentrelayer.NewWorker(&config.Parachain, &config.Relaychain, &config.Eth)
@@ -62,7 +62,7 @@ func NewRelay() (*Relay, error) {
 		}
 	}
 
-	beefyRelayer := &beefyrelayer.Worker{}
+	var beefyRelayer *beefyrelayer.Worker
 
 	if config.Workers.BeefyRelayer.Enabled {
 		beefyRelayer, err = beefyrelayer.NewWorker(&config.Relaychain, &config.Eth, &config.BeefyRelayerDatabase)
@@ -71,7 +71,7 @@ func NewRelay() (*Relay, error) {
 		}
 	}
 
-	ethRelayer := &ethrelayer.Worker{}
+	var ethRelayer *ethrelayer.Worker
 
 	if config.Workers.EthRelayer.Enabled {
 		ethRelayer = ethrelayer.NewWorker(

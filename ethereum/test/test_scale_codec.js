@@ -11,76 +11,66 @@ function toHexBytes(uint) {
   return "0x" + uint.split(" ").join("");
 }
 
-contract("ScaleCodec", function () {
+describe("ScaleCodec", function () {
 
-  describe("Scale contract deployment", function () {
-    beforeEach(async function () {
-      this.scale = await ScaleCodec.new();
+  let codec;
+
+  before(async function() {
+    codec = await ScaleCodec.new();
+  });
+
+  describe("decoding compact uints", async function () {
+    it("should decode case 0: [0, 63]", async function () {
+      const tests = [
+        {encoded: toHexBytes("00"), decoded: 0},
+        {encoded: toHexBytes("fc"), decoded: 63},
+      ];
+
+      for(test of tests) {
+        const output = Number(await codec.decodeUintCompact.call(test.encoded));
+        output.should.be.bignumber.equal(test.decoded);
+      }
     });
 
-    it("should deploy and initialize the contract", async function () {
-      this.scale.should.exist;
+    it("should decode case 1: [64, 16383]", async function () {
+      const tests = [
+        {encoded: toHexBytes("01 01"), decoded: 64},
+        {encoded: toHexBytes("fd ff"), decoded: 16383},
+      ];
+
+      for(test of tests) {
+        const output = Number(await codec.decodeUintCompact.call(test.encoded));
+        output.should.be.bignumber.equal(test.decoded);
+      }
     });
 
-    describe("decoding compact uints", async function () {
+    it("should decode case 2: [16384, 1073741823]", async function () {
+      const tests = [
+        {encoded: toHexBytes("02 00 01 00"), decoded: 16384},
+        {encoded: toHexBytes("fe ff ff ff"), decoded: 1073741823},
+      ];
 
-      it("should decode case 0: [0, 63]", async function () {
-        const tests = [
-          {encoded: toHexBytes("00"), decoded: 0},
-          {encoded: toHexBytes("fc"), decoded: 63},
-        ];
+      for(test of tests) {
+        const output = Number(await codec.decodeUintCompact.call(test.encoded));
+        output.should.be.bignumber.equal(test.decoded);
+      }
+    });
 
-        for(test of tests) {
-          const output = Number(await this.scale.decodeUintCompact.call(test.encoded));
-          output.should.be.bignumber.equal(test.decoded);
-        }
-      });
+    it("should reject case 3: [1073741824, 4503599627370496]", async function () {
+      const tests = [
+        {encoded: toHexBytes("03 00 00 00 40"), decoded: 1073741824},
+        {encoded: toHexBytes("07 00 00 00 00 01"), decoded: 1 << 32},
+        {encoded: toHexBytes("0f ff ff ff ff ff ff ff"), decoded: 1 << 48},
+        {encoded: toHexBytes("13 00 00 00 00 00 00 00 01"), decoded:  1 << 56},
+      ];
 
-      it("should decode case 1: [64, 16383]", async function () {
-        const tests = [
-          {encoded: toHexBytes("01 01"), decoded: 64},
-          {encoded: toHexBytes("fd ff"), decoded: 16383},
-        ];
-
-        for(test of tests) {
-          const output = Number(await this.scale.decodeUintCompact.call(test.encoded));
-          output.should.be.bignumber.equal(test.decoded);
-        }
-      });
-
-      it("should decode case 2: [16384, 1073741823]", async function () {
-        const tests = [
-          {encoded: toHexBytes("02 00 01 00"), decoded: 16384},
-          {encoded: toHexBytes("fe ff ff ff"), decoded: 1073741823},
-        ];
-
-        for(test of tests) {
-          const output = Number(await this.scale.decodeUintCompact.call(test.encoded));
-          output.should.be.bignumber.equal(test.decoded);
-        }
-      });
-
-      it("should reject case 3: [1073741824, 4503599627370496]", async function () {
-        const tests = [
-          {encoded: toHexBytes("03 00 00 00 40"), decoded: 1073741824},
-          {encoded: toHexBytes("07 00 00 00 00 01"), decoded: 1 << 32},
-          {encoded: toHexBytes("0f ff ff ff ff ff ff ff"), decoded: 1 << 48},
-          {encoded: toHexBytes("13 00 00 00 00 00 00 00 01"), decoded:  1 << 56},
-        ];
-
-        for(test of tests) {
-          await this.scale.decodeUintCompact.call(test.encoded).should.not.be.fulfilled;
-        }
-      });
+      for(test of tests) {
+        await codec.decodeUintCompact.call(test.encoded).should.not.be.fulfilled;
+      }
     });
   });
 
   describe("decoding uint256s", async function () {
-
-    beforeEach(async function () {
-      this.scale = await ScaleCodec.new();
-    });
-
     it("should decode uint256", async function () {
       const tests = [
         {encoded: toHexBytes("1d 00 00"), decoded: 29},
@@ -90,63 +80,49 @@ contract("ScaleCodec", function () {
       ];
 
       for(test of tests) {
-        const output = Number(await this.scale.decodeUint256.call(test.encoded));
+        const output = Number(await codec.decodeUint256.call(test.encoded));
         output.should.be.bignumber.equal(test.decoded);
       }
     });
   });
 
   describe("encoding unsigned integers", async function () {
-    beforeEach(async function () {
-      this.scale = await ScaleCodec.new();
-    });
-
     it("should encode uint256", async function () {
-      const output = await this.scale.methods["encode256(uint256)"].call("12063978950259949786323707366460749298097791896371638493358994162204017315152");
+      const output = await codec.methods["encode256(uint256)"].call("12063978950259949786323707366460749298097791896371638493358994162204017315152");
       output.should.be.equal("0x504d8a21dd3868465c8c9f2898b7f014036935fa9a1488629b109d3d59f8ab1a");
     });
 
     it("should encode uint128", async function () {
-      const output = await this.scale.methods["encode128(uint128)"].call("35452847761173902980759433963665451267");
+      const output = await codec.methods["encode128(uint128)"].call("35452847761173902980759433963665451267");
       output.should.be.equal("0x036935fa9a1488629b109d3d59f8ab1a");
     });
 
     it("should encode uint64", async function () {
-      const output = await this.scale.methods["encode64(uint64)"].call("1921902728173129883");
+      const output = await codec.methods["encode64(uint64)"].call("1921902728173129883");
       output.should.be.equal("0x9b109d3d59f8ab1a");
     });
 
     it("should encode uint32", async function () {
-      const output = await this.scale.methods["encode32(uint32)"].call("447477849");
+      const output = await codec.methods["encode32(uint32)"].call("447477849");
       output.should.be.equal("0x59f8ab1a");
     });
 
     it("should encode uint16", async function () {
-      const output = await this.scale.methods["encode16(uint16)"].call("6827");
+      const output = await codec.methods["encode16(uint16)"].call("6827");
       output.should.be.equal("0xab1a");
     });
   });
 
 
   describe("Gas costs (encoding)", async function () {
-
-    beforeEach(async function () {
-      this.scale = await ScaleCodec.new();
-    });
-
     it("uint256", async function () {
-      const gasUsed = await this.scale.encode256.estimateGas("12063978950259949786323707366460749298097791896371638493358994162204017315152");
+      const gasUsed = await codec.encode256.estimateGas("12063978950259949786323707366460749298097791896371638493358994162204017315152");
       console.log('\tEncoding uint256 average gas: ' + gasUsed);
     });
 
   });
 
   describe("Gas costs (decoding)", async function () {
-
-    beforeEach(async function () {
-      this.scale = await ScaleCodec.new();
-    });
-
     it("compact uints: [0, 63]", async function () {
       const tests = [
         {encoded: toHexBytes("00"), decoded: 0},
@@ -155,7 +131,7 @@ contract("ScaleCodec", function () {
 
       let totalGas = 0;
       for(test of tests) {
-        const gasCost = await this.scale.decodeUintCompact.estimateGas(test.encoded);
+        const gasCost = await codec.decodeUintCompact.estimateGas(test.encoded);
         totalGas += Number(gasCost);
       }
       totalGas = totalGas / tests.length;
@@ -170,7 +146,7 @@ contract("ScaleCodec", function () {
 
       let totalGas = 0;
       for(test of tests) {
-        const gasCost = await this.scale.decodeUintCompact.estimateGas(test.encoded);
+        const gasCost = await codec.decodeUintCompact.estimateGas(test.encoded);
         totalGas += Number(gasCost);
       }
       totalGas = totalGas / tests.length;
@@ -185,7 +161,7 @@ contract("ScaleCodec", function () {
 
       let totalGas = 0;
       for(test of tests) {
-        const gasCost = await this.scale.decodeUintCompact.estimateGas(test.encoded);
+        const gasCost = await codec.decodeUintCompact.estimateGas(test.encoded);
         totalGas += Number(gasCost);
       }
       totalGas = totalGas / tests.length;
@@ -201,7 +177,7 @@ contract("ScaleCodec", function () {
 
       let totalGas = 0;
       for(test of tests) {
-        const gasCost = await this.scale.decodeUint256.estimateGas(test.encoded);
+        const gasCost = await codec.decodeUint256.estimateGas(test.encoded);
         totalGas += Number(gasCost);
       }
       totalGas = totalGas / tests.length;

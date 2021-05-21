@@ -29,6 +29,7 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 
 [dev-dependencies]
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+artemis-assets = { path = "../assets" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 hex-literal = { version = "0.3.1" }
 rlp = { version = "0.5" }
