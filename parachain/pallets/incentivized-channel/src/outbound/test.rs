@@ -122,7 +122,6 @@ fn test_submit() {
 }
 
 #[test]
-<<<<<<< HEAD
 fn test_submit_fees_burned() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
@@ -139,31 +138,10 @@ fn test_submit_fees_burned() {
 
 #[test]
 fn test_submit_not_enough_funds() {
-=======
-fn test_fees_burned() {
->>>>>>> main
 	new_tester().execute_with(|| {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
 
-<<<<<<< HEAD
-=======
-		// Deposit enough money to cover fees
-		FeeCurrency::deposit(&who, 300.into()).unwrap();
-
-		assert_ok!(IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-
-		assert_eq!(FeeCurrency::balance(&who), 200.into());
-	})
-}
-
-#[test]
-fn test_not_enough_funds() {
-	new_tester().execute_with(|| {
-		let target = H160::zero();
-		let who: AccountId = Keyring::Bob.into();
-
->>>>>>> main
 		FeeCurrency::deposit(&who, 50.into()).unwrap();
 
 		assert_noop!(
@@ -175,11 +153,7 @@ fn test_not_enough_funds() {
 }
 
 #[test]
-<<<<<<< HEAD
 fn test_submit_exceeds_queue_limit() {
-=======
-fn test_add_message_exceeds_limit() {
->>>>>>> main
 	new_tester().execute_with(|| {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
@@ -214,11 +188,7 @@ fn test_set_fee_not_authorized() {
 }
 
 #[test]
-<<<<<<< HEAD
 fn test_submit_exceeds_payload_limit() {
-=======
-fn test_add_message_exceeds_payload_limit() {
->>>>>>> main
 	new_tester().execute_with(|| {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
