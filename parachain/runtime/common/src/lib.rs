@@ -40,7 +40,7 @@ pub fn build_block_weights(
         .expect("Weights must be valid")
 }
 
-pub const INDEXING_PREFIX: &'static [u8] = b"commitments";
+pub const INDEXING_PREFIX: &'static [u8] = b"commitment";
 
 pub struct OutboundRouter<T>(PhantomData<T>);
 

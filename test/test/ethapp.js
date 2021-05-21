@@ -12,7 +12,6 @@ const { ChannelId } = require("../src/helpers");
 describe('Bridge', function () {
 
   let ethClient, subClient;
-  let relayerAccount = "0x87D987206180B8f3807Dd90455606eEa85cdB87a";
 
   before(async function () {
     const clients = await bootstrap();
@@ -54,14 +53,12 @@ describe('Bridge', function () {
       const amount = BigNumber(Web3.utils.toWei('0.1', "ether"));
       const ethAccount = ethClient.accounts[1];
 
-      const beforeRelayerBalance = await ethClient.getEthBalance(relayerAccount);
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
       const beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
 
       await subClient.burnETH(subClient.alice, ethAccount, amount.toFixed(), ChannelId.INCENTIVIZED)
       await ethClient.waitForNextEventData({ appName: 'appETH', eventName: 'Unlocked' });
 
-      const afterRelayerBalance = await ethClient.getEthBalance(relayerAccount);
       const afterEthBalance = await ethClient.getEthBalance(ethAccount);
       const afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
 
@@ -71,11 +68,6 @@ describe('Bridge', function () {
       expect(beforeEthBalance.plus(beforeSubBalance))
         .to.be.bignumber
         .equal(afterEthBalance.plus(afterSubBalance).plus(fee));
-
-      // relayer should be rewarded fee
-      console.log(beforeRelayerBalance.toString());
-      console.log(afterRelayerBalance.toString());
-      expect(afterRelayerBalance.minus(beforeRelayerBalance)).to.be.bignumber.gte(fee);
     })
   });
 

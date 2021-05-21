@@ -2,7 +2,6 @@ package parachaincommitmentrelayer
 
 import (
 	"context"
-	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
@@ -23,8 +22,8 @@ type Worker struct {
 	parachainCommitmentListener *parachaincommitment.Listener
 	ethereumConn                *ethereum.Connection
 	ethereumChannelWriter       *EthereumChannelWriter
-	beefyRelaychainListener     *BeefyListener
-	log                         *logrus.Entry
+	//	beefyRelaychainListener     *BeefyListener
+	log *logrus.Entry
 }
 
 const Name = "parachain-commitment-relayer"
@@ -66,15 +65,15 @@ func NewWorker(parachainConfig *parachain.Config,
 		return nil, err
 	}
 
-	var messagePackages = make(chan MessagePackage, 1)
+	//	var messagePackages = make(chan MessagePackage, 1)
 
-	beefyRelaychainListener := NewBeefyListener(
-		relaychainConfig,
-		relaychainConn,
-		parachainConn,
-		messagePackages,
-		log,
-	)
+	// beefyRelaychainListener := NewBeefyListener(
+	// 	relaychainConfig,
+	// 	relaychainConn,
+	// 	parachainConn,
+	// 	messagePackages,
+	// 	log,
+	// )
 
 	return &Worker{
 		parachainConfig:             parachainConfig,
@@ -85,18 +84,18 @@ func NewWorker(parachainConfig *parachain.Config,
 		parachainCommitmentListener: parachainCommitmentListener,
 		ethereumConn:                ethereumConn,
 		ethereumChannelWriter:       ethereumChannelWriter,
-		beefyRelaychainListener:     beefyRelaychainListener,
-		log:                         log,
+		//		beefyRelaychainListener:     beefyRelaychainListener,
+		log: log,
 	}, nil
 }
 
 func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	worker.log.Info("Starting worker")
 
-	if worker.beefyRelaychainListener == nil ||
-		worker.parachainCommitmentListener == nil || worker.ethereumChannelWriter == nil {
-		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
-	}
+	// if worker.beefyRelaychainListener == nil ||
+	// 	worker.parachainCommitmentListener == nil || worker.ethereumChannelWriter == nil {
+	// 	return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
+	// }
 
 	err := worker.parachainConn.Connect(ctx)
 	if err != nil {
@@ -135,16 +134,16 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 		return nil
 	})
 
-	eg.Go(func() error {
-		if worker.beefyRelaychainListener != nil {
-			worker.log.Info("Starting Beefy Listener")
-			err = worker.beefyRelaychainListener.Start(ctx, eg)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	// eg.Go(func() error {
+	// 	if worker.beefyRelaychainListener != nil {
+	// 		worker.log.Info("Starting Beefy Listener")
+	// 		err = worker.beefyRelaychainListener.Start(ctx, eg)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// 	return nil
+	// })
 
 	return nil
 }
