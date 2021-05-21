@@ -32,6 +32,25 @@ contract BasicInboundChannel {
         view
         returns (bool success)
     {
+        // Prove we can get the MMRLeaf that is claimed to contain our Parachain Block Header
+        // BEEFYLightClient.verifyMMRLeaf(parachainHeadsMMRProof)
+        // BeefyLightClient{
+        //   verifyMMRLeaf(parachainHeadsMMRProof) {
+        //   MMRVerification.verifyInclusionProof(latestMMRRoot, parachainHeadsMMRProof)
+        // }
+        //}
+        //}
+        // returns mmrLeaf;
+
+        // Prove we can get the claimed parachain block header from the MMRLeaf
+        // allParachainHeadsMerkleTreeRoot = mmrLeaf.parachain_heads;
+        // MerkeTree.verify(allParachainHeadsMerkleTreeRoot, ourParachainMerkleProof)
+        // returns parachainBlockHeader
+
+        // Prove that the commitment is in fact in the parachain block header
+        // require(parachainBlockHeader.commitment == commitment)
+
+        // Validate that the commitment matches the commitment contents
         require(
             validateMessagesMatchCommitment(_messages, _commitment),
             "invalid commitment"
