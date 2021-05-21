@@ -22,7 +22,7 @@ type Worker struct {
 	parachainCommitmentListener *parachaincommitment.Listener
 	ethereumConn                *ethereum.Connection
 	ethereumChannelWriter       *EthereumChannelWriter
-	//	beefyRelaychainListener     *BeefyListener
+	//beefyRelaychainListener     *BeefyListener
 	log *logrus.Entry
 }
 
@@ -65,7 +65,7 @@ func NewWorker(parachainConfig *parachain.Config,
 		return nil, err
 	}
 
-	//	var messagePackages = make(chan MessagePackage, 1)
+	// var messagePackages = make(chan MessagePackage, 1)
 
 	// beefyRelaychainListener := NewBeefyListener(
 	// 	relaychainConfig,
@@ -84,7 +84,7 @@ func NewWorker(parachainConfig *parachain.Config,
 		parachainCommitmentListener: parachainCommitmentListener,
 		ethereumConn:                ethereumConn,
 		ethereumChannelWriter:       ethereumChannelWriter,
-		//		beefyRelaychainListener:     beefyRelaychainListener,
+		//beefyRelaychainListener:     beefyRelaychainListener,
 		log: log,
 	}, nil
 }

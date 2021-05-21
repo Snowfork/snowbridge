@@ -142,7 +142,7 @@ func (li *EthereumListener) processEventsAndHeaders(
 
 			// Don't attempt to forward events prior to genesis block
 			if descendantsUntilFinal > gethheader.Number.Uint64() {
-				li.payloads <- ParachainPayload{header: header}
+				li.payloads <- ParachainPayload{Header: header}
 				continue
 			}
 
@@ -170,7 +170,7 @@ func (li *EthereumListener) processEventsAndHeaders(
 				return err
 			}
 
-			li.payloads <- ParachainPayload{header: header, messages: messages}
+			li.payloads <- ParachainPayload{Header: header, Messages: messages}
 		}
 	}
 }
