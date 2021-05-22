@@ -1,7 +1,6 @@
-build**
-
+build/
 .env
-
 node_modules/
-
 ganache.log
+artifacts/
+cache/
