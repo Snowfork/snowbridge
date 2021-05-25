@@ -7,6 +7,10 @@ const MockApp = artifacts.require("MockApp");
 
 const { ethers } = require("ethers");
 
+const {
+  deployLightClientBridge
+} = require("./helpers");
+
 const makeCommitment = (messages) => {
   let encoded = ethers.utils.defaultAbiCoder.encode(
     ['tuple(address target, uint64 nonce, bytes payload)[]'],
@@ -24,15 +28,16 @@ describe("BasicInboundChannel", function () {
   const mockAppInterface = new ethers.utils.Interface(MockApp.abi);
   const mockAppUnlock = mockAppInterface.functions['unlock(uint256)'];
 
-  before(async function() {
+  before(async function () {
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
     userOne = accounts[1];
+    this.lightClientBridge = await deployLightClientBridge('0x0');
   });
 
   describe("submit", function () {
     beforeEach(async function () {
-      this.channel = await BasicInboundChannel.new(
+      this.channel = await BasicInboundChannel.new(this.lightClientBridge.address,
         { from: owner }
       );
       this.app = await MockApp.new();
@@ -56,7 +61,7 @@ describe("BasicInboundChannel", function () {
       // Send commitment
       const { receipt } = await this.channel.submit(
         [message1, message2],
-        commitment,
+        commitment, '0x0', 0, 0, [],
         { from: userOne }
       )
 
@@ -105,7 +110,7 @@ describe("BasicInboundChannel", function () {
       // Send commitment
       const { receipt } = await this.channel.submit(
         [message],
-        commitment,
+        commitment, '0x0', 0, 0, [],
         { from: userOne }
       ).should.be.fulfilled;
 
@@ -114,7 +119,7 @@ describe("BasicInboundChannel", function () {
       // Send commitment again - should revert
       await this.channel.submit(
         [message],
-        commitment,
+        commitment, '0x0', 0, 0, [],
         { from: userOne }
       ).should.not.be.fulfilled;
 

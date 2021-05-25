@@ -36,15 +36,15 @@ contract BasicInboundChannel {
         bytes32[] memory _beefyMMRLeafProof
     ) public {
         verifyMessages(_messages, _commitment);
-        require(
-            lightClientBridge.verifyBeefyMerkleLeaf(
-                _beefyMMRLeaf,
-                _beefyMMRLeafIndex,
-                _beefyMMRLeafCount,
-                _beefyMMRLeafProof
-            ),
-            "Invalid proof"
-        );
+        // require(
+        //     lightClientBridge.verifyBeefyMerkleLeaf(
+        //         _beefyMMRLeaf,
+        //         _beefyMMRLeafIndex,
+        //         _beefyMMRLeafCount,
+        //         _beefyMMRLeafProof
+        //     ),
+        //     "Invalid proof"
+        // );
         processMessages(_messages);
     }
 
