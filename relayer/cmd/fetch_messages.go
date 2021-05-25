@@ -24,7 +24,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
-	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
@@ -83,13 +82,9 @@ func getEthContractEventsAndTrie(
 	index uint64,
 ) ([]*gethTypes.Log, *gethTrie.Trie, error) {
 	ctx := context.Background()
-	kp, err := secp256k1.NewKeypairFromString(config.PrivateKey)
-	if err != nil {
-		return nil, nil, err
-	}
 
-	conn := ethereum.NewConnection(config.Endpoint, kp, logrus.WithField("chain", "Ethereum"))
-	err = conn.Connect(ctx)
+	conn := ethereum.NewConnection(config.Endpoint, nil, logrus.WithField("chain", "Ethereum"))
+	err := conn.Connect(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

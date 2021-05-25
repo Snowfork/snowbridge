@@ -29,12 +29,11 @@ type Worker struct {
 const Name = "parachain-commitment-relayer"
 
 func NewWorker(parachainConfig *parachain.Config,
-	relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config) (*Worker, error) {
-	log := logrus.WithField("worker", Name)
+	relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, log *logrus.Entry) (*Worker, error) {
 
 	log.Info("Creating worker")
 
-	ethereumKp, err := secp256k1.NewKeypairFromString(ethereumConfig.PrivateKey)
+	ethereumKp, err := secp256k1.NewKeypairFromString(ethereumConfig.ParachainCommitmentsPrivateKey)
 	if err != nil {
 		return nil, err
 	}
