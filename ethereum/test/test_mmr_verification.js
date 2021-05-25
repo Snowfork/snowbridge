@@ -10,6 +10,41 @@ const MMRVerification = artifacts.require("MMRVerification");
 
 describe("MMRVerification Contract", function () {
 
+    // context("Live Data", function () {
+
+    //     // before(function () {
+    //     //     console.log('                 1-leaf MMR:           ');
+    //     //     console.log('                                       ');
+    //     //     console.log('    Height 1 | 1                       ');
+    //     //     console.log('             | |                       ');
+    //     //     console.log('Leaf indexes | 0                       ');
+    //     // })
+
+    //     // ---------------------------- Tree contents ----------------------------
+    //     //  - For leaf nodes, node hash is the SCALE-encoding of the leaf data.
+    //     //  - For parent nodes, node hash is the hash of it's children (left, right).
+    //     //
+    //     // 0xda5e6d0616e05c6a6348605a37ca33493fc1a15ad1e6a405ee05c17843fdafed // 1  LEAF NODE
+
+    //     let mmrVerification;
+    //     beforeEach(async function () {
+    //         mmrVerification = await MMRVerification.new();
+    //     })
+
+    //     const root = ""
+
+    //     it('should verify valid proof for leaf index 0 (node 1)', async () => {
+    //         let leafNodeHash = ""
+    //         let proof = {
+    //             leaf_index: 0,
+    //             leaf_count: 1,
+    //             items: []
+    //         }
+
+    //         expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+    //     });
+    // })
+
     describe("7-leaf, 11-node MMR", function () {
         before(function () {
             console.log('                 7-leaf MMR:           ');
@@ -52,7 +87,8 @@ describe("MMRVerification Contract", function () {
                 items: [
                     "0xff5d891b28463a3440e1b650984685efdf260e482cb3807d53c49090841e755f",
                     "0x00b0046bd2d63fcb760cf50a262448bb2bbf9a264b0b0950d8744044edf00dc3",
-                    "0x16de0900b57bf359a0733674ebfbba0f494e95a8391b4bfeae850019399f3ec0"
+                    "0xdad09f50b41822fc5ecadc25b08c3a61531d4d60e962a5aa0b6998fad5c37c5e",
+                    "0xaf3327deed0515c8d1902c9b5cd375942d42f388f3bfe3d1cd6e1b86f9cc456c"
                 ]
             }
 
@@ -67,7 +103,8 @@ describe("MMRVerification Contract", function () {
                 items: [
                     "0xda5e6d0616e05c6a6348605a37ca33493fc1a15ad1e6a405ee05c17843fdafed", // node 1
                     "0x00b0046bd2d63fcb760cf50a262448bb2bbf9a264b0b0950d8744044edf00dc3", // node 6
-                    "0x16de0900b57bf359a0733674ebfbba0f494e95a8391b4bfeae850019399f3ec0"  // hash(node 11, node 10)
+                    "0xdad09f50b41822fc5ecadc25b08c3a61531d4d60e962a5aa0b6998fad5c37c5e",
+                    "0xaf3327deed0515c8d1902c9b5cd375942d42f388f3bfe3d1cd6e1b86f9cc456c"
                 ]
             }
 
@@ -82,7 +119,8 @@ describe("MMRVerification Contract", function () {
                 items: [
                     "0x27d8f4221cd6f7fc141ea20844c92aa8f647ac520853fbded619a46b1146ab8a",
                     "0xbc54778fab79f586f007bd408dca2c4aa07959b27d1f2c8f4f2549d1fcfac8f8",
-                    "0x16de0900b57bf359a0733674ebfbba0f494e95a8391b4bfeae850019399f3ec0"
+                    "0xdad09f50b41822fc5ecadc25b08c3a61531d4d60e962a5aa0b6998fad5c37c5e",
+                    "0xaf3327deed0515c8d1902c9b5cd375942d42f388f3bfe3d1cd6e1b86f9cc456c"
                 ]
             }
 
@@ -97,7 +135,8 @@ describe("MMRVerification Contract", function () {
                 items: [
                     "0x7a84d84807ce4bbff8fb84667edf82aff5f2c5eb62e835f32093ee19a43c2de7",
                     "0xbc54778fab79f586f007bd408dca2c4aa07959b27d1f2c8f4f2549d1fcfac8f8",
-                    "0x16de0900b57bf359a0733674ebfbba0f494e95a8391b4bfeae850019399f3ec0"
+                    "0xdad09f50b41822fc5ecadc25b08c3a61531d4d60e962a5aa0b6998fad5c37c5e",
+                    "0xaf3327deed0515c8d1902c9b5cd375942d42f388f3bfe3d1cd6e1b86f9cc456c"
                 ]
             }
 
@@ -221,10 +260,12 @@ describe("MMRVerification Contract", function () {
                 leaf_index: 7,
                 leaf_count: 15,
                 items: [
-                    "0xaf3327deed0515c8d1902c9b5cd375942d42f388f3bfe3d1cd6e1b86f9cc456c",
-                    "0xdad09f50b41822fc5ecadc25b08c3a61531d4d60e962a5aa0b6998fad5c37c5e",
-                    "0xe53ee36ba6c068b1a6cfef7862fed5005df55615e1c9fa6eeefe08329ac4b94b",
-                    "0x1dcff78957aa0e99e0fb8d47391fd561be59b1f5aaf6fdcd30ce6963a08cfb5a"
+                    "0xaf3327deed0515c8d1902c9b5cd375942d42f388f3bfe3d1cd6e1b86f9cc456c", // 11
+                    "0xdad09f50b41822fc5ecadc25b08c3a61531d4d60e962a5aa0b6998fad5c37c5e", // 10
+                    "0xe53ee36ba6c068b1a6cfef7862fed5005df55615e1c9fa6eeefe08329ac4b94b", // 7
+                    "0x16c5d5eb80eec816ca1804cd15705ac2418325b51b57a272e5e7f119e197c31f", // 22
+                    "0x1ce766309c74f07f3dc0839080f518ddcb6500d31fc4e0cf21534bad0785dfc4", // 25
+                    "0x0a73e5a8443de3fcb6f918d786ad6dece6733ec936aa6b1b79beaab19e269d68"  // 26
                 ]
             }
 
@@ -237,10 +278,11 @@ describe("MMRVerification Contract", function () {
                 leaf_index: 8,
                 leaf_count: 15,
                 items: [
-                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954",
-                    "0x7d8a0fe1021702eada6c608f3e09f833b63f21fdfe60f3bbb3401d5add4479af",
-                    "0x3f7b0534bf60f62057a1ab9a0bf4751014d4d464245b5a7ad86801c9bac21b15",
-                    "0x94c5fd953e693b727ca8cf3a54e9d978c1504240ee0f6960a337de0bf472ce77"
+                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954", // 15
+                    "0x7d8a0fe1021702eada6c608f3e09f833b63f21fdfe60f3bbb3401d5add4479af", // 17
+                    "0x3f7b0534bf60f62057a1ab9a0bf4751014d4d464245b5a7ad86801c9bac21b15", // 21
+                    "0x1ce766309c74f07f3dc0839080f518ddcb6500d31fc4e0cf21534bad0785dfc4", // 25
+                    "0x0a73e5a8443de3fcb6f918d786ad6dece6733ec936aa6b1b79beaab19e269d68"  // 26
                 ]
             }
 
@@ -253,10 +295,11 @@ describe("MMRVerification Contract", function () {
                 leaf_index: 9,
                 leaf_count: 15,
                 items: [
-                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954",
-                    "0xbf5f579a06beced3256538b161b5096839db4b94ea1d3862bbe1fa5a2182e074",
-                    "0x3f7b0534bf60f62057a1ab9a0bf4751014d4d464245b5a7ad86801c9bac21b15",
-                    "0x94c5fd953e693b727ca8cf3a54e9d978c1504240ee0f6960a337de0bf472ce77"
+                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954", // 15
+                    "0xbf5f579a06beced3256538b161b5096839db4b94ea1d3862bbe1fa5a2182e074", // 16
+                    "0x3f7b0534bf60f62057a1ab9a0bf4751014d4d464245b5a7ad86801c9bac21b15", // 21
+                    "0x1ce766309c74f07f3dc0839080f518ddcb6500d31fc4e0cf21534bad0785dfc4", // 25
+                    "0x0a73e5a8443de3fcb6f918d786ad6dece6733ec936aa6b1b79beaab19e269d68"  // 26
                 ]
             }
 
@@ -269,10 +312,11 @@ describe("MMRVerification Contract", function () {
                 leaf_index: 10,
                 leaf_count: 15,
                 items: [
-                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954",
-                    "0x365f9e095800bd03add9be88b7f7bb06ff644ac2b77ce5da6a7c77e2fb19f1fb",
-                    "0xa9ef6dd0b19d56f48a05c2475629c59713d0a992d335917135029432d611533d",
-                    "0x94c5fd953e693b727ca8cf3a54e9d978c1504240ee0f6960a337de0bf472ce77"
+                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954", // 15
+                    "0x365f9e095800bd03add9be88b7f7bb06ff644ac2b77ce5da6a7c77e2fb19f1fb", // 20
+                    "0xa9ef6dd0b19d56f48a05c2475629c59713d0a992d335917135029432d611533d", // 18
+                    "0x1ce766309c74f07f3dc0839080f518ddcb6500d31fc4e0cf21534bad0785dfc4", // 25
+                    "0x0a73e5a8443de3fcb6f918d786ad6dece6733ec936aa6b1b79beaab19e269d68"  // 26
                 ]
             }
 
@@ -285,10 +329,11 @@ describe("MMRVerification Contract", function () {
                 leaf_index: 11,
                 leaf_count: 15,
                 items: [
-                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954",
-                    "0x2fd49d6e84591c6cc1fc38189b806dec1a1cb00c62727b63ac1cb9a37022c0fe",
-                    "0xa9ef6dd0b19d56f48a05c2475629c59713d0a992d335917135029432d611533d",
-                    "0x94c5fd953e693b727ca8cf3a54e9d978c1504240ee0f6960a337de0bf472ce77"
+                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954", // 15
+                    "0x2fd49d6e84591c6cc1fc38189b806dec1a1cb00c62727b63ac1cb9a37022c0fe", // 19
+                    "0xa9ef6dd0b19d56f48a05c2475629c59713d0a992d335917135029432d611533d", // 18
+                    "0x1ce766309c74f07f3dc0839080f518ddcb6500d31fc4e0cf21534bad0785dfc4", // 25
+                    "0x0a73e5a8443de3fcb6f918d786ad6dece6733ec936aa6b1b79beaab19e269d68"  // 26
                 ]
             }
 
@@ -301,10 +346,10 @@ describe("MMRVerification Contract", function () {
                 leaf_index: 12,
                 leaf_count: 15,
                 items: [
-                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954",
-                    "0x16c5d5eb80eec816ca1804cd15705ac2418325b51b57a272e5e7f119e197c31f",
-                    "0x883f1aca23002690575957cc85663774bbd3b9549ba5f0ee0fcc8aed9c88cf99",
-                    "0x0a73e5a8443de3fcb6f918d786ad6dece6733ec936aa6b1b79beaab19e269d68"
+                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954", // 15
+                    "0x16c5d5eb80eec816ca1804cd15705ac2418325b51b57a272e5e7f119e197c31f", // 22
+                    "0x883f1aca23002690575957cc85663774bbd3b9549ba5f0ee0fcc8aed9c88cf99", // 24
+                    "0x0a73e5a8443de3fcb6f918d786ad6dece6733ec936aa6b1b79beaab19e269d68"  // 26
                 ]
             }
 
@@ -317,10 +362,10 @@ describe("MMRVerification Contract", function () {
                 leaf_index: 13,
                 leaf_count: 15,
                 items: [
-                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954",
-                    "0x16c5d5eb80eec816ca1804cd15705ac2418325b51b57a272e5e7f119e197c31f",
-                    "0x94014b81bc56d64cac8dcde8eee47da0ed9b1319dccd9e86ad8d2266d8ef060a",
-                    "0x0a73e5a8443de3fcb6f918d786ad6dece6733ec936aa6b1b79beaab19e269d68"
+                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954", // 15
+                    "0x16c5d5eb80eec816ca1804cd15705ac2418325b51b57a272e5e7f119e197c31f", // 22
+                    "0x94014b81bc56d64cac8dcde8eee47da0ed9b1319dccd9e86ad8d2266d8ef060a", // 23
+                    "0x0a73e5a8443de3fcb6f918d786ad6dece6733ec936aa6b1b79beaab19e269d68"  // 26
                 ]
             }
 
@@ -348,9 +393,9 @@ describe("MMRVerification Contract", function () {
                 leaf_index: 14,
                 leaf_count: 15,
                 items: [
-                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954",
-                    "0x16c5d5eb80eec816ca1804cd15705ac2418325b51b57a272e5e7f119e197c31f",
-                    "0x1ce766309c74f07f3dc0839080f518ddcb6500d31fc4e0cf21534bad0785dfc4"
+                    "0xea97f06e80ac768687e72d4224999a51d272e1b4cafcbc64bd3ce63357119954", // 15
+                    "0x16c5d5eb80eec816ca1804cd15705ac2418325b51b57a272e5e7f119e197c31f", // 22
+                    "0x1ce766309c74f07f3dc0839080f518ddcb6500d31fc4e0cf21534bad0785dfc4"  // 25
                 ]
             }
 
