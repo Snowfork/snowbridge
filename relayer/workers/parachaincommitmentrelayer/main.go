@@ -29,8 +29,7 @@ type Worker struct {
 const Name = "parachain-commitment-relayer"
 
 func NewWorker(parachainConfig *parachain.Config,
-	relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config) (*Worker, error) {
-	log := logrus.WithField("worker", Name)
+	relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, log *logrus.Entry) (*Worker, error) {
 
 	log.Info("Creating worker")
 
