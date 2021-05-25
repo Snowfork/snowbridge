@@ -1,4 +1,14 @@
 const rlp = require("rlp");
+const { keccakFromHexString, keccak } = require("ethereumjs-util");
+const MerkleTree = require("merkletreejs").MerkleTree;
+
+const MerkleProof = artifacts.require("MerkleProof");
+const Bitfield = artifacts.require("Bitfield");
+const ScaleCodec = artifacts.require("ScaleCodec");
+const ValidatorRegistry = artifacts.require("ValidatorRegistry");
+const MMRVerification = artifacts.require("MMRVerification");
+const Blake2b = artifacts.require("Blake2b");
+const LightClientBridge = artifacts.require("LightClientBridge");
 
 const deployAppWithMockChannels = async (deployer, channels, appContract, ...appContractArgs) => {
   const app = await appContract.new(
@@ -20,10 +30,17 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
 }
 
 const deployLightClientBridge = async (validatorsMerkleRoot) => {
+  const merkleProof = await MerkleProof.new();
+  ValidatorRegistry.link(merkleProof);
   const validator = await ValidatorRegistry.new(
     validatorsMerkleRoot,
     2
   );
+
+  const bitfield = await Bitfield.new();
+  const scaleCodec = await ScaleCodec.new();
+  LightClientBridge.link(bitfield);
+  LightClientBridge.link(scaleCodec);
   const mmrVerification = await MMRVerification.new();
   const blake2b = await Blake2b.new();
   const lightClientBridge = await LightClientBridge.new(
@@ -85,6 +102,10 @@ const ChannelId = {
 
 module.exports = {
   deployAppWithMockChannels,
+  deployLightClientBridge,
+  createMerkleTree,
+  signatureSubstrateToEthereum,
+  mine,
   addressBytes,
   ChannelId,
   encodeLog,

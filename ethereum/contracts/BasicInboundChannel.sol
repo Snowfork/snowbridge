@@ -7,7 +7,6 @@ import "./LightClientBridge.sol";
 
 contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
-    LightClientBridge public lightClientBridge;
 
     uint64 public nonce;
 
@@ -18,6 +17,8 @@ contract BasicInboundChannel {
     }
 
     event MessageDispatched(uint64 nonce, bool result);
+
+    LightClientBridge public lightClientBridge;
 
     constructor(LightClientBridge _lightClientBridge) {
         nonce = 0;

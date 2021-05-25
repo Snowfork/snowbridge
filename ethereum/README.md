@@ -11,11 +11,6 @@ nvm install 14.16.1
 nvm use 14.16.1
 ```
 
-Install truffle <sup id="a1">[1](#f1)</sup>
-```bash
-yarn global add truffle
-```
-
 Install dependencies with yarn:
 
 ```bash

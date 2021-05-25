@@ -18,6 +18,7 @@ contract IncentivizedInboundChannel is AccessControl {
     }
 
     event MessageDispatched(uint64 nonce, bool result);
+
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
 
     // Governance contracts will administer using this role.
@@ -27,6 +28,8 @@ contract IncentivizedInboundChannel is AccessControl {
     event RelayerNotRewarded(address relayer, uint256 amount);
 
     RewardSource private rewardSource;
+
+    LightClientBridge public lightClientBridge;
 
     constructor(LightClientBridge _lightClientBridge) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);

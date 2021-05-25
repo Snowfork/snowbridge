@@ -4,8 +4,6 @@ const {
   createMerkleTree, deployGenericAppWithChannels, ChannelId, mine, lockupFunds
 } = require("./helpers");
 const ETHApp = artifacts.require("ETHApp");
-const { keccakFromHexString, keccak } = require("ethereumjs-util");
-const { blake2AsHex } = require("@polkadot/util-crypto");
 const fixture = require('./fixtures/beefy-fixture-data.json');
 
 
