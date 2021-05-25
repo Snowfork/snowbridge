@@ -197,10 +197,16 @@ func (li *Listener) processDigestItem(ctx context.Context, digestItem *chainType
 		return err
 	}
 
+	latestBlockNumber, err := li.parachainConnection.GetLatestBlockNumber()
+	if err != nil {
+		return err
+	}
+
 	message := chain.SubstrateOutboundMessage{
 		ChannelID:      digestItem.AsCommitment.ChannelID,
 		CommitmentHash: digestItem.AsCommitment.Hash,
 		Commitment:     messages,
+		BlockNumber:    latestBlockNumber,
 	}
 
 	li.messages <- []chain.Message{message}

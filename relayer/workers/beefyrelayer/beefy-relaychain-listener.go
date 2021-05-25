@@ -103,6 +103,7 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				ValidatorAddresses: beefyAuthoritiesBytes,
 				SignedCommitment:   signedCommitmentBytes,
 				Status:             store.CommitmentWitnessed,
+				BlockNumber:        types.BlockNumber(signedCommitment.Commitment.BlockNumber),
 			}
 			li.beefyMessages <- info
 		}

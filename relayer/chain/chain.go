@@ -19,6 +19,7 @@ type SubstrateOutboundMessage struct {
 	ChannelID      substrate.ChannelID
 	CommitmentHash types.H256
 	Commitment     []substrate.CommitmentMessage
+	BlockNumber    *types.BlockNumber
 }
 
 // Message from ethereum

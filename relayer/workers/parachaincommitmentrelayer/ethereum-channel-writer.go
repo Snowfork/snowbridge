@@ -15,6 +15,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
 type EthereumChannelWriter struct {
@@ -23,6 +24,7 @@ type EthereumChannelWriter struct {
 	contracts map[substrate.ChannelID]*inbound.Contract
 	messages  <-chan []chain.Message
 	log       *logrus.Entry
+	beefyDB   *store.Database
 }
 
 func NewEthereumChannelWriter(config *ethereum.Config, conn *ethereum.Connection, messages <-chan []chain.Message,
@@ -115,16 +117,24 @@ func (wr *EthereumChannelWriter) WriteChannel(ctx context.Context, msg *chain.Su
 
 	var messages []inbound.InboundChannelMessage
 	for _, m := range msg.Commitment {
-		messages = append(messages,
-			inbound.InboundChannelMessage{
-				Target:  m.Target,
-				Nonce:   m.Nonce,
-				Payload: m.Payload,
-			},
-		)
+		// Check if block number exists in beefy database
+		beefyData := wr.beefyDB.GetItemByBlockNumber(*msg.BlockNumber)
+		if beefyData.Status == store.CompleteVerificationTxConfirmed {
+			messages = append(messages,
+				inbound.InboundChannelMessage{
+					Target:  m.Target,
+					Nonce:   m.Nonce,
+					Payload: m.Payload,
+				},
+			)
+		}
 	}
 
-	tx, err := contract.Submit(&options, messages, msg.CommitmentHash)
+	tx, err := contract.Submit(
+		&options,
+		messages,
+		msg.CommitmentHash,
+	)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err
