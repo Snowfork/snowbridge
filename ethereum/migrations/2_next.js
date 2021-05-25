@@ -48,6 +48,14 @@ const contracts = {
 module.exports = function (deployer, network, accounts) {
   deployer.then(async () => {
 
+    if (network === 'development') {
+      return
+    }
+
+    // Deploy & link libraries
+    await deployer.deploy(ScaleCodec);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp]);
+
     // Link MerkleProof library to ValidatorRegistry
     await deployer.deploy(MerkleProof);
     deployer.link(MerkleProof, [ValidatorRegistry]);
@@ -94,13 +102,10 @@ module.exports = function (deployer, network, accounts) {
     );
     channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract);
 
-    // Link libraries to applications
-    await deployer.deploy(ScaleCodec);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp]);
-
     // Deploy applications
     const ethApp = await deployer.deploy(
       ETHApp,
+      channels.incentivized.inbound.instance.address,
       {
         inbound: channels.basic.inbound.instance.address,
         outbound: channels.basic.outbound.instance.address,
@@ -127,41 +132,43 @@ module.exports = function (deployer, network, accounts) {
 
     // Deploy ERC1820 Registry for our E2E stack.
     if (network === 'e2e_test') {
-
       require('@openzeppelin/test-helpers/configure')({ web3 });
       const { singletons } = require('@openzeppelin/test-helpers');
 
       await singletons.ERC1820Registry(accounts[0]);
     }
 
-    // only deploy this contract to non-development networks. The unit tests deploy this contract themselves.
-    if (network === 'ropsten' || network === 'e2e_test') {
-      const dotApp = await deployer.deploy(
-        DOTApp,
-        "Snowfork DOT",
-        "SnowDOT",
-        channels.incentivized.outbound.instance.address,
-        {
-          inbound: channels.basic.inbound.instance.address,
-          outbound: channels.basic.outbound.instance.address,
-        },
-        {
-          inbound: channels.incentivized.inbound.instance.address,
-          outbound: channels.incentivized.outbound.instance.address,
-        },
-      );
+    const dotApp = await deployer.deploy(
+      DOTApp,
+      "Snowfork DOT",
+      "SnowDOT",
+      channels.incentivized.outbound.instance.address,
+      {
+        inbound: channels.basic.inbound.instance.address,
+        outbound: channels.basic.outbound.instance.address,
+      },
+      {
+        inbound: channels.incentivized.inbound.instance.address,
+        outbound: channels.incentivized.outbound.instance.address,
+      },
+    );
 
-      // Do post-construction initialization.
-      await channels.incentivized.outbound.instance.initialize(
-        administrator,
-        dotApp.address,
-        [dotApp.address, ethApp.address, erc20App.address]
-      );
-      await channels.incentivized.outbound.instance.setFee(
-        fee,
-        { from: administrator }
-      );
-    }
+    // Post-construction initialization for Incentivized outbound channel
+    await channels.incentivized.outbound.instance.initialize(
+      administrator,
+      dotApp.address,
+      [dotApp.address, ethApp.address, erc20App.address]
+    );
+    await channels.incentivized.outbound.instance.setFee(
+      fee,
+      { from: administrator }
+    );
+
+    // Post-construction initialization for Incentivized inbound channel
+    await channels.incentivized.inbound.instance.initialize(
+      administrator,
+      ethApp.address,
+    );
 
     await token.mint('100' + '000000000000000000', {
       from: accounts[0],

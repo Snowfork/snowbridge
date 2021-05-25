@@ -1,24 +1,21 @@
-const { singletons } = require('@openzeppelin/test-helpers');
 const { ethers } = require("ethers");
+const { singletons } = require('@openzeppelin/test-helpers');
 const BigNumber = require('bignumber.js');
-const AssertionError = require('assert').AssertionError;
-const {
-  confirmBasicChannelSend,
-  confirmIncentivizedChannelSend,
-  confirmUnlock,
-  deployDOTAppWithChannels,
-  addressBytes,
-  ChannelId,
-  encodeLog
-} = require("./helpers");
-
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
+const {
+  deployAppWithMockChannels,
+  addressBytes,
+  ChannelId,
+} = require("./helpers");
+
 const DOTApp = artifacts.require("DOTApp");
+const ScaleCodec = artifacts.require("ScaleCodec");
 const Token = artifacts.require("WrappedToken");
+const MockOutboundChannel = artifacts.require("MockOutboundChannel");
 
 const DOT_DECIMALS = 10;
 const ETHER_DECIMALS = 18;
@@ -43,18 +40,35 @@ const burnTokens = (contract, sender, recipient, amount, channel) => {
   )
 }
 
-
-contract("DOTApp", function (accounts) {
+describe("DOTApp", function () {
   // Accounts
-  const owner = accounts[0];
-  const user = accounts[1];
+  let accounts;
+  let owner;
+  let inboundChannel;
+  let user;
 
   const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+
+  before(async function() {
+    const codec = await ScaleCodec.new();
+    DOTApp.link(codec);
+    accounts = await web3.eth.getAccounts();
+    owner = accounts[0];
+    inboundChannel =  accounts[0];
+    user = accounts[1];
+  });
 
   describe("minting", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployDOTAppWithChannels(owner, DOTApp, "Snowfork DOT", "SnowDOT");
+      let outboundChannel = await MockOutboundChannel.new()
+      this.app = await deployAppWithMockChannels(
+        owner,
+        [inboundChannel, outboundChannel.address],
+        DOTApp,
+        "Snowfork DOT", "SnowDOT", outboundChannel.address
+      );
+
       this.token = await Token.at(await this.app.token());
     });
 
@@ -69,8 +83,7 @@ contract("DOTApp", function (accounts) {
         user,
         amountWrapped.toString(),
         {
-          from: owner,
-          value: 0
+          from: inboundChannel,
         }
       ).should.be.fulfilled;
 
@@ -94,7 +107,13 @@ contract("DOTApp", function (accounts) {
   describe("burning", function () {
     beforeEach(async function () {
       this.erc1820 = await singletons.ERC1820Registry(owner);
-      [this.channels, this.app] = await deployDOTAppWithChannels(owner, DOTApp, "Snowfork DOT", "SnowDOT");
+      let outboundChannel = await MockOutboundChannel.new()
+      this.app = await deployAppWithMockChannels(
+        owner,
+        [owner, outboundChannel.address],
+        DOTApp,
+        "Snowfork DOT", "SnowDOT", outboundChannel.address
+      );
       this.token = await Token.at(await this.app.token());
 
       // Mint 2 wrapped DOT
@@ -132,18 +151,6 @@ contract("DOTApp", function (accounts) {
 
       beforeTotalSupply.minus(afterTotalSupply).should.be.bignumber.equal(amountWrapped);
       beforeUserBalance.minus(afterUserBalance).should.be.bignumber.equal(amountWrapped);
-    });
-
-    it("should send payload to the basic outbound channel", async function () {
-      const amountWrapped = wrapped(BigNumber("10000000000"));
-      let { receipt } = await burnTokens(this.app, user, POLKADOT_ADDRESS, amountWrapped, ChannelId.Basic).should.be.fulfilled;
-      confirmBasicChannelSend(receipt.rawLogs[2], this.channels.basic.outbound.address, this.app.address, 1)
-    });
-
-    it("should send payload to the incentivized outbound channel", async function () {
-      const amountWrapped = wrapped(BigNumber("10000000000"));
-      let { receipt } = await burnTokens(this.app, user, POLKADOT_ADDRESS, amountWrapped, ChannelId.Incentivized).should.be.fulfilled;
-      confirmIncentivizedChannelSend(receipt.rawLogs[2], this.channels.incentivized.outbound.address, this.app.address, 1)
     });
   });
 });

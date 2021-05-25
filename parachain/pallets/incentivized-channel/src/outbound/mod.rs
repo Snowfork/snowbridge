@@ -4,18 +4,18 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	weights::Weight,
 	dispatch::DispatchResult,
-	traits::Get,
+	traits::{Get, EnsureOrigin},
 	ensure,
 };
 use frame_system::{self as system};
-use sp_core::{H160, H256, RuntimeDebug};
+use sp_core::{H160, H256, U256, RuntimeDebug};
 use sp_io::offchain_index;
 use sp_runtime::{
 	traits::{Hash, Zero},
 };
 use sp_std::prelude::*;
 
-use artemis_core::{ChannelId, MessageNonce, types::AuxiliaryDigestItem};
+use artemis_core::{SingleAsset, ChannelId, MessageNonce, types::AuxiliaryDigestItem};
 
 mod benchmarking;
 
@@ -29,6 +29,8 @@ pub struct Message {
 	target: H160,
 	/// A nonce for replay protection and ordering.
 	nonce: u64,
+	/// Fee for accepting message on this channel.
+	fee: U256,
 	/// Payload for target application.
 	payload: Vec<u8>,
 }
@@ -38,12 +40,14 @@ pub trait WeightInfo {
 	fn on_initialize(num_messages: u32, avg_payload_bytes: u32) -> Weight;
 	fn on_initialize_non_interval() -> Weight;
 	fn on_initialize_no_messages() -> Weight;
+	fn set_fee() -> Weight;
 }
 
 impl WeightInfo for () {
 	fn on_initialize(_: u32, _: u32) -> Weight { 0 }
 	fn on_initialize_non_interval() -> Weight { 0 }
 	fn on_initialize_no_messages() -> Weight { 0 }
+	fn set_fee() -> Weight { 0 }
 }
 
 pub trait Config: system::Config {
@@ -60,6 +64,11 @@ pub trait Config: system::Config {
 	/// Max number of messages that can be queued and committed in one go for a given channel.
 	type MaxMessagesPerCommit: Get<usize>;
 
+	type FeeCurrency: SingleAsset<<Self as system::Config>::AccountId>;
+
+	/// The origin which may update reward related params
+	type SetFeeOrigin: EnsureOrigin<Self::Origin>;
+
 	/// Weight information for extrinsics in this pallet
 	type WeightInfo: WeightInfo;
 }
@@ -73,6 +82,8 @@ decl_storage! {
 		MessageQueue: Vec<Message>;
 
 		pub Nonce: u64;
+
+		pub Fee get(fn fee) config(): U256;
 	}
 }
 
@@ -88,6 +99,8 @@ decl_error! {
 		PayloadTooLarge,
 		/// No more messages can be queued for the channel during this commit cycle.
 		QueueSizeLimitReached,
+		/// Cannot pay the fee to submit a message.
+		NoFunds
 	}
 }
 
@@ -107,6 +120,13 @@ decl_module! {
 				T::WeightInfo::on_initialize_non_interval()
 			}
 		}
+
+		#[weight = T::WeightInfo::set_fee()]
+		pub fn set_fee(origin, amount: U256) -> DispatchResult {
+			T::SetFeeOrigin::ensure_origin(origin)?;
+			Fee::set(amount);
+			Ok(())
+		}
 	}
 }
 
@@ -116,34 +136,33 @@ pub fn offchain_key(prefix: &[u8], hash: H256) -> Vec<u8> {
 
 
 impl<T: Config> Module<T> {
-	pub fn submit(_: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
-		Nonce::try_mutate(|nonce| -> DispatchResult {
-			*nonce += 1;
-			Self::try_add_message(target, *nonce, payload)?;
-			<Module<T>>::deposit_event(Event::MessageAccepted(*nonce));
-			Ok(())
-		})
-	}
 
-	fn try_add_message(target: H160, nonce: u64, payload: &[u8]) -> DispatchResult {
+	pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		ensure!(
 			MessageQueue::decode_len().unwrap_or(0) < T::MaxMessagesPerCommit::get(),
 			Error::<T>::QueueSizeLimitReached,
 		);
-
 		ensure!(
 			payload.len() <= T::MaxMessagePayloadSize::get(),
 			Error::<T>::PayloadTooLarge,
 		);
 
-		MessageQueue::append(
-			Message {
-				target,
-				nonce,
-				payload: payload.to_vec(),
-			},
-		);
-		Ok(())
+		let fee = Self::fee();
+		T::FeeCurrency::withdraw(who, fee).map_err(|_| Error::<T>::NoFunds)?;
+
+		Nonce::try_mutate(|nonce| -> DispatchResult {
+			*nonce += 1;
+			MessageQueue::append(
+				Message {
+					target,
+					nonce: *nonce,
+					fee,
+					payload: payload.to_vec(),
+				},
+			);
+			<Module<T>>::deposit_event(Event::MessageAccepted(*nonce));
+			Ok(())
+		})
 	}
 
 	fn commit() -> Weight {
@@ -180,6 +199,7 @@ impl<T: Config> Module<T> {
 				Token::Tuple(vec![
 					Token::Address(message.target),
 					Token::Uint(message.nonce.into()),
+					Token::Uint(message.fee.into()),
 					Token::Bytes(message.payload.clone())
 				])
 			})

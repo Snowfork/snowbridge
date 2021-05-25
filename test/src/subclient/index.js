@@ -114,16 +114,16 @@ class SubClient {
     return foundData;
   }
 
-  async burnETH(account, recipient, amount, channel) {
-    return await this.api.tx.eth.burn(channel, recipient, amount).signAndSend(account);
+  async burnETH(account, recipient, amount, channelId) {
+    return await this.api.tx.eth.burn(channelId, recipient, amount).signAndSend(account);
   }
 
-  async burnERC20(account, assetId, recipient, amount, channel) {
-    return await this.api.tx.erc20.burn(channel, assetId, recipient, amount).signAndSend(account);
+  async burnERC20(account, assetId, recipient, amount, channelId) {
+    return await this.api.tx.erc20.burn(channelId, assetId, recipient, amount).signAndSend(account);
   }
 
-  async lockDOT(account, recipient, amount, channel) {
-    return await this.api.tx.dot.lock(channel, recipient, amount).signAndSend(account);
+  async lockDOT(account, recipient, amount, channelId) {
+    return await this.api.tx.dot.lock(channelId, recipient, amount).signAndSend(account);
   }
 
   async waitForNextBlock() {
@@ -139,6 +139,12 @@ class SubClient {
     });
     return wait;
   }
+
+  async queryIncentivizedOutboundChannelFee() {
+    let fee = await this.api.query.incentivizedOutboundChannel.fee();
+    return BigNumber(fee.toBigInt())
+  }
+
 
 }
 

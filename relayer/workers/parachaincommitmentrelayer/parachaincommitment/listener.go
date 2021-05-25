@@ -3,6 +3,7 @@ package parachaincommitment
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -14,8 +15,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
@@ -24,8 +23,7 @@ type Listener struct {
 	relaychainConnection *relaychain.Connection
 	ethereumConnection   *ethereum.Connection
 	ethereumConfig       *ethereum.Config
-	contracts            map[substrate.ChannelID]*inbound.Contract
-	messages             chan<- []chain.Message
+	messages             chan<- interface{}
 	log                  *logrus.Entry
 }
 
@@ -33,14 +31,14 @@ func NewListener(parachainConnection *parachain.Connection,
 	relaychainConnection *relaychain.Connection,
 	ethereumConnection *ethereum.Connection,
 	ethereumConfig *ethereum.Config,
-	contracts map[substrate.ChannelID]*inbound.Contract,
-	messages chan<- []chain.Message, log *logrus.Entry) *Listener {
+	messages chan<- interface{},
+	log *logrus.Entry,
+) *Listener {
 	return &Listener{
 		parachainConnection:  parachainConnection,
 		relaychainConnection: relaychainConnection,
 		ethereumConnection:   ethereumConnection,
 		ethereumConfig:       ethereumConfig,
-		contracts:            contracts,
 		messages:             messages,
 		log:                  log,
 	}
@@ -179,37 +177,70 @@ func (li *Listener) processHeader(ctx context.Context, header types.Header) erro
 	}
 
 	li.log.WithFields(logrus.Fields{
-		"block":          header.Number,
-		"channelID":      digestItem.AsCommitment.ChannelID,
-		"commitmentHash": digestItem.AsCommitment.Hash.Hex(),
+		"block":      header.Number,
+		"channelID":  digestItem.AsCommitment.ChannelID,
+		"commitment": digestItem.AsCommitment.Hash.Hex(),
 	}).Debug("Found commitment hash in header digest")
 
-	err = li.processDigestItem(ctx, digestItem)
+	err = li.processCommitment(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (li *Listener) processDigestItem(ctx context.Context, digestItem *chainTypes.AuxiliaryDigestItem) error {
-	messages, err := li.getMessagesForDigestItem(digestItem)
+func (li *Listener) processCommitment(channel chainTypes.ChannelID, commitment types.H256) error {
+	data, err := li.getOffchainDataForCommitment(channel, commitment)
 	if err != nil {
+		li.log.WithError(err).Error("Failed to read commitment from offchain storage")
 		return err
 	}
 
-	latestBlockNumber, err := li.parachainConnection.GetLatestBlockNumber()
-	if err != nil {
+	if data != nil {
+		li.log.WithFields(logrus.Fields{
+			"commitmentSizeBytes": len(*data),
+		}).Debug("Retrieved commitment from offchain storage")
+	} else {
+		li.log.WithError(err).Error("Commitment not found in offchain storage")
 		return err
 	}
 
-	message := chain.SubstrateOutboundMessage{
-		ChannelID:      digestItem.AsCommitment.ChannelID,
-		CommitmentHash: digestItem.AsCommitment.Hash,
-		Commitment:     messages,
-		BlockNumber:    latestBlockNumber,
-	}
+	switch {
+	case channel.IsBasic:
+		var messages []chainTypes.BasicOutboundChannelMessage
 
-	li.messages <- []chain.Message{message}
+		err = types.DecodeFromBytes(*data, &messages)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to decode commitment messages")
+			return err
+		}
+
+		message := chain.SubstrateOutboundBasicMessage{
+			Commitment: commitment,
+			Messages:   messages,
+		}
+
+		li.messages <- message
+	case channel.IsIncentivized:
+		var messages []chainTypes.IncentivizedOutboundChannelMessage
+
+		err = types.DecodeFromBytes(*data, &messages)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to decode commitment messages")
+			return err
+		}
+
+		message := chain.SubstrateOutboundIncentivizedMessage{
+			Commitment: commitment,
+			Messages:   messages,
+		}
+
+		li.messages <- message
+
+	default:
+		return fmt.Errorf("Unknown channel")
+
+	}
 
 	return nil
 }
@@ -228,38 +259,16 @@ func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestIte
 	return nil, nil
 }
 
-func getParachainHeaderProof(parachainBlockNumber uint64) {
-
-}
-
-func (li *Listener) getMessagesForDigestItem(digestItem *chainTypes.AuxiliaryDigestItem) ([]chainTypes.CommitmentMessage, error) {
-	storageKey, err := parachain.MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
+func (li *Listener) getOffchainDataForCommitment(channel chainTypes.ChannelID, commitment types.H256) (*types.StorageDataRaw, error) {
+	storageKey, err := parachain.MakeStorageKey(channel, commitment)
 	if err != nil {
 		return nil, err
 	}
 
 	data, err := li.parachainConnection.GetAPI().RPC.Offchain.LocalStorageGet(rpcOffchain.Persistent, storageKey)
 	if err != nil {
-		li.log.WithError(err).Error("Failed to read commitment from offchain storage")
 		return nil, err
 	}
 
-	if data != nil {
-		li.log.WithFields(logrus.Fields{
-			"commitmentSizeBytes": len(*data),
-		}).Debug("Retrieved commitment from offchain storage")
-	} else {
-		li.log.WithError(err).Error("Commitment not found in offchain storage")
-		return nil, err
-	}
-
-	var messages []chainTypes.CommitmentMessage
-
-	err = types.DecodeFromBytes(*data, &messages)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, err
-	}
-
-	return messages, nil
+	return data, nil
 }

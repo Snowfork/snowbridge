@@ -4,6 +4,7 @@
 
 use super::*;
 
+use sp_core::U256;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
 use frame_support::traits::OnInitialize;
 
@@ -22,10 +23,11 @@ benchmarks! {
 			MessageQueue::append(Message {
 				target: H160::zero(),
 				nonce: 0u64,
+				fee: U256::zero(),
 				payload,
 			});
 		}
-		
+
 		let block_number = Interval::<T>::get();
 
 	}: { IncentivizedOutboundChannel::<T>::on_initialize(block_number) }
@@ -39,6 +41,7 @@ benchmarks! {
 		MessageQueue::append(Message {
 			target: H160::zero(),
 			nonce: 0u64,
+			fee: U256::zero(),
 			payload: vec![1u8; T::MaxMessagePayloadSize::get()],
 		});
 
@@ -58,6 +61,22 @@ benchmarks! {
 		let block_number = Interval::<T>::get();
 
 	}: { IncentivizedOutboundChannel::<T>::on_initialize(block_number) }
+
+	// Benchmark `set_fee` under worst case conditions:
+	// * The origin is authorized, i.e. equals SetFeeOrigin
+	set_fee {
+		let authorized_origin = match T::SetFeeOrigin::successful_origin().into() {
+			Ok(raw) => raw,
+			Err(_) => return Err("Failed to get raw origin from origin"),
+		};
+
+		let new_fee : U256 = 32000000.into();
+		assert!(Fee::get() != new_fee);
+
+	}: _(authorized_origin, new_fee)
+	verify {
+		assert_eq!(Fee::get(), new_fee);
+	}
 }
 
 impl_benchmark_test_suite!(

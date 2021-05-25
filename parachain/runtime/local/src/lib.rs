@@ -62,6 +62,7 @@ use xcm_executor::{Config, XcmExecutor, traits::{NativeAsset, IsConcrete}};
 use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 
 use artemis_xcm_support::AssetsTransactor;
+use assets::SingleAssetAdaptor;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -358,7 +359,6 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type AccountIdConverter = LocationConverter;
 }
 
-
 // Governance
 
 impl pallet_sudo::Config for Runtime {
@@ -478,6 +478,7 @@ impl incentivized_channel_inbound::Config for Runtime {
 }
 
 parameter_types! {
+	pub const Ether: AssetId = AssetId::ETH;
 	pub const MaxMessagePayloadSize: usize = 256;
 }
 
@@ -487,6 +488,8 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type FeeCurrency = SingleAssetAdaptor<Runtime, Ether>;
+	type SetFeeOrigin = EnsureRootOrHalfLocalCouncil;
 	type WeightInfo = ();
 }
 
