@@ -44,7 +44,7 @@ func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Con
 	logger := log.WithField("database", "Beefy")
 	beefyDB := store.NewDatabase(db, dbMessages, logger)
 
-	ethereumKeypair, err := secp256k1.NewKeypairFromString(ethereumConfig.PrivateKey)
+	ethereumKeypair, err := secp256k1.NewKeypairFromString(ethereumConfig.BeefyPrivateKey)
 	if err != nil {
 		return nil, err
 	}
