@@ -3,6 +3,7 @@ package parachaincommitmentrelayer
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"golang.org/x/sync/errgroup"
 
@@ -128,7 +129,7 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 	}
 
 	tx, err := wr.basicInboundChannel.Submit(options, messages, msg.Commitment,
-		[32]byte{}, nil, nil, nil)
+		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err
@@ -159,7 +160,7 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	}
 
 	tx, err := wr.incentivizedInboundChannel.Submit(options, messages, msg.Commitment,
-		[32]byte{}, nil, nil, nil)
+		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err
