@@ -53,6 +53,8 @@ contract LightClientBridge {
         uint256 id
     );
 
+    event NewMMRRoot(bytes32 mmrRoot);
+
     /* Types */
 
     struct Commitment {
@@ -101,6 +103,8 @@ contract LightClientBridge {
         currentId = 0;
     }
 
+    /* Public Functions */
+
     /**
      * @notice Executed by the incoming channel in order to verify commitment
      * @param beefyMMRLeaf contains the merkle leaf to be verified
@@ -124,7 +128,6 @@ contract LightClientBridge {
             );
     }
 
-    /* Public Functions */
     /**
      * @notice Executed by the prover in order to begin the process of block
      * acceptance by the light client
@@ -136,7 +139,6 @@ contract LightClientBridge {
      * @param validatorPublicKey the public key of the validator
      * @param validatorPublicKeyMerkleProof proof required for validation of the public key in the validator merkle tree
      */
-
     function newSignatureCommitment(
         bytes32 commitmentHash,
         uint256[] memory validatorClaimsBitfield,
@@ -207,7 +209,7 @@ contract LightClientBridge {
      */
     function completeSignatureCommitment(
         uint256 id,
-        bytes32 commitmentHash, // not needed, we have to create that from the commitment below
+        bytes32 commitmentHash, // TODO: not needed, we have to create that from the commitment below
         Commitment memory commitment,
         bytes[] memory signatures,
         uint256[] memory validatorPositions,
@@ -268,14 +270,25 @@ contract LightClientBridge {
             );
 
         /**
-         * @dev Encode the commitment
-         * @TODO
+         * @dev Encode and hash the commitment
          */
+        bytes32[2] memory commitmentHashB =
+            blake2b.formatOutput(
+                blake2b.blake2b(
+                    abi.encodePacked(
+                        commitment.payload,
+                        commitment.blockNumber.encode64(),
+                        commitment.validatorSetId.encode32()
+                    ),
+                    "",
+                    32
+                )
+            );
 
-        /**
-         * @dev Hash the encoded commitment
-         * @TODO
-         */
+        require(
+            commitmentHashB[0] == commitmentHash,
+            "Error: Commitment must match commitment hash"
+        );
 
         /**
          *  @dev For each randomSignature, do:
@@ -316,22 +329,6 @@ contract LightClientBridge {
             );
         }
 
-        // Verify the commitment
-        bytes32[2] memory hashed = blake2b.formatOutput(
-            blake2b.blake2b(
-                abi.encodePacked(
-                    commitment.payload,
-                    commitment.blockNumber.encode64(),
-                    commitment.validatorSetId.encode32()
-                ),
-                "",
-                32
-            )
-        );
-        require(
-            hashed[0] == commitmentHash,
-            "Error: Commitment must match commitment hash"
-        );
         /**
          * @follow-up Do we need a try-catch block here?
          */
@@ -378,6 +375,7 @@ contract LightClientBridge {
         // Check that payload.leaf.block_number is > last_known_block_number;
 
         latestMMRRoot = payload;
+        emit NewMMRRoot(latestMMRRoot);
 
         // if payload is in next epoch, then apply validatorset changes
         // if payload is not in current or next epoch, reject
