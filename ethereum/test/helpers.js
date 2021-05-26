@@ -10,6 +10,29 @@ const MMRVerification = artifacts.require("MMRVerification");
 const Blake2b = artifacts.require("Blake2b");
 const LightClientBridge = artifacts.require("LightClientBridge");
 
+let lazyInitComplete = false;
+let validatorRegistry;
+const lazyInit = async _ => {
+  if (lazyInitComplete) {
+    return
+  }
+  const merkleProof = await MerkleProof.new();
+  ValidatorRegistry.link(merkleProof);
+
+  const bitfield = await Bitfield.new();
+  const scaleCodec = await ScaleCodec.new();
+  LightClientBridge.link(bitfield);
+  LightClientBridge.link(scaleCodec);
+
+  validatorRegistry = await ValidatorRegistry.new(
+    '0x0',
+    2
+  );
+
+  lazyInitComplete = true;
+
+}
+
 const deployAppWithMockChannels = async (deployer, channels, appContract, ...appContractArgs) => {
   const app = await appContract.new(
     ...appContractArgs,
@@ -29,22 +52,12 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployLightClientBridge = async (validatorsMerkleRoot) => {
-  const merkleProof = await MerkleProof.new();
-  ValidatorRegistry.link(merkleProof);
-  const validator = await ValidatorRegistry.new(
-    validatorsMerkleRoot,
-    2
-  );
-
-  const bitfield = await Bitfield.new();
-  const scaleCodec = await ScaleCodec.new();
-  LightClientBridge.link(bitfield);
-  LightClientBridge.link(scaleCodec);
+const deployLightClientBridge = async _ => {
+  await lazyInit();
   const mmrVerification = await MMRVerification.new();
   const blake2b = await Blake2b.new();
   const lightClientBridge = await LightClientBridge.new(
-    validator.address,
+    validatorRegistry.address,
     mmrVerification.address,
     blake2b.address
   );
@@ -76,17 +89,6 @@ async function mine(n) {
       id: new Date().getTime()
     }, (err, res) => { });
   }
-}
-
-const lockupFunds = (contract, sender, recipient, amount, channel) => {
-  return contract.lock(
-    addressBytes(recipient),
-    channel,
-    {
-      from: sender,
-      value: amount.toString(),
-    }
-  )
 }
 
 const addressBytes = (address) => Buffer.from(address.replace(/^0x/, ""), "hex");

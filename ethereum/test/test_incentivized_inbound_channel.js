@@ -29,7 +29,7 @@ describe("IncentivizedInboundChannel", function () {
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
     userOne = accounts[1];
-    this.lightClientBridge = await deployLightClientBridge('0x0');
+    this.lightClientBridge = await deployLightClientBridge();
   });
 
   describe("submit", function () {

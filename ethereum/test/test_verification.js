@@ -6,7 +6,6 @@ const {
 const ETHApp = artifacts.require("ETHApp");
 const fixture = require('./fixtures/beefy-fixture-data.json');
 
-
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
@@ -14,12 +13,20 @@ require("chai")
 
 const ethers = require("ethers");
 
-contract("IncentivizedInboundChannel", function (accounts) {
-  // Accounts
-  const owner = accounts[0];
-  const userOne = accounts[1];
-  const userTwo = accounts[2];
-  const userThree = accounts[3];
+describe("Verification tests", function () {
+  let accounts;
+  let owner;
+  let userOne;
+  let userTwo;
+  let userThree;
+
+  before(async function () {
+    accounts = await web3.eth.getAccounts();
+    owner = accounts[0];
+    userOne = accounts[1];
+    userTwo = accounts[2];
+    userThree = accounts[3];
+  });
 
   describe("initialize LightClientBridge", function () {
     beforeEach(async function () {
@@ -52,8 +59,6 @@ contract("IncentivizedInboundChannel", function (accounts) {
       console.log(await this.lightClientBridge.latestMMRRoot());
       [channels, this.ethApp] = await deployGenericAppWithChannels(owner, this.lightClientBridge.address, ETHApp);
       this.inbound = channels.incentivized.inbound;
-      this.POLKADOT_ADDRESS = "38j4dG5GzsL1bw2U2AVgeyAk6QTxq43V7zPbdXAmbVLjvDCK"
-      await lockupFunds(this.ethApp, userOne, this.POLKADOT_ADDRESS, 5000, ChannelId.Incentivized);
     });
 
     it("should successfully verify a commitment", async function () {
