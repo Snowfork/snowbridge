@@ -127,7 +127,8 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		)
 	}
 
-	tx, err := wr.basicInboundChannel.Submit(options, messages, msg.Commitment)
+	tx, err := wr.basicInboundChannel.Submit(options, messages, msg.Commitment,
+		[32]byte{}, nil, nil, nil)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err
@@ -157,7 +158,8 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		)
 	}
 
-	tx, err := wr.incentivizedInboundChannel.Submit(options, messages, msg.Commitment)
+	tx, err := wr.incentivizedInboundChannel.Submit(options, messages, msg.Commitment,
+		[32]byte{}, nil, nil, nil)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err

@@ -116,7 +116,7 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		GasLimit: 5000000,
 	}
 
-	tx, err := contract.NewSignatureCommitment(&options, msg.Payload,
+	tx, err := contract.NewSignatureCommitment(&options, msg.CommitmentHash,
 		msg.ValidatorClaimsBitfield, msg.ValidatorSignatureCommitment,
 		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
@@ -161,7 +161,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		GasLimit: 500000,
 	}
 
-	tx, err := contract.CompleteSignatureCommitment(&options, msg.ID, msg.Payload, msg.Signatures,
+	tx, err := contract.CompleteSignatureCommitment(&options, msg.ID, msg.CommitmentHash, msg.Commitment, msg.Signatures,
 		msg.ValidatorPositions, msg.ValidatorPublicKeys, msg.ValidatorPublicKeyMerkleProofs)
 
 	if err != nil {

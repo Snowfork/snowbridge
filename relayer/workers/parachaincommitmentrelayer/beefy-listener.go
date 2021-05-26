@@ -78,7 +78,7 @@ func (li *BeefyListener) onDone(ctx context.Context) error {
 func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 	ch := make(chan interface{})
 
-	li.log.Info("Subscribing to beefy justifications")
+	li.log.Info("Subscribing to relay chain light client for new mmr payloads")
 	sub, err := li.relaychainConn.GetAPI().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
 	if err != nil {
 		panic(err)
