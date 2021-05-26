@@ -54,11 +54,11 @@ module.exports = function (deployer, network, accounts) {
 
     // Deploy & link libraries
     await deployer.deploy(ScaleCodec);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp]);
-
-    // Link MerkleProof library to ValidatorRegistry
     await deployer.deploy(MerkleProof);
+    await deployer.deploy(Bitfield);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, contracts.lightclientbridge.contract]);
     deployer.link(MerkleProof, [ValidatorRegistry]);
+    deployer.link(Bitfield, [contracts.lightclientbridge.contract]);
 
     // TODO: Hardcoded for testing
     const root = "0xc1490f71b21f5700063d93546dbe860cc190e883734ee3f490b76de9e028db99";
@@ -66,13 +66,6 @@ module.exports = function (deployer, network, accounts) {
     const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators);
     const mmrVerification = await deployer.deploy(MMRVerification);
     const blake2b = await deployer.deploy(Blake2b);
-
-    // Link Bitfield library to LightClientBridge
-    await deployer.deploy(Bitfield);
-    deployer.link(Bitfield, [contracts.lightclientbridge.contract]);
-    // Link ScaleCodec library to LightClientBridge
-    await deployer.deploy(ScaleCodec);
-    deployer.link(ScaleCodec, [contracts.lightclientbridge.contract]);
 
     contracts.lightclientbridge.instance = await deployer.deploy(
       contracts.lightclientbridge.contract,
