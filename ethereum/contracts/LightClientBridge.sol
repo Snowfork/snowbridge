@@ -53,7 +53,7 @@ contract LightClientBridge {
         uint256 id
     );
 
-    event NewMMRRoot(bytes32 mmrRoot);
+    event NewMMRRoot(bytes32 mmrRoot, uint64 blockNumber);
 
     /* Types */
 
@@ -332,7 +332,7 @@ contract LightClientBridge {
         /**
          * @follow-up Do we need a try-catch block here?
          */
-        processPayload(commitment.payload);
+        processPayload(commitment.payload, commitment.blockNumber);
 
         emit FinalVerificationSuccessful(msg.sender, commitmentHash, id);
 
@@ -370,12 +370,12 @@ contract LightClientBridge {
      * @notice Perform some operation[s] using the payload
      * @param payload The payload variable passed in via the initial function
      */
-    function processPayload(bytes32 payload) private {
+    function processPayload(bytes32 payload, uint64 blockNumber) private {
         // Check the payload is newer than the latest
         // Check that payload.leaf.block_number is > last_known_block_number;
 
         latestMMRRoot = payload;
-        emit NewMMRRoot(latestMMRRoot);
+        emit NewMMRRoot(latestMMRRoot, blockNumber);
 
         // if payload is in next epoch, then apply validatorset changes
         // if payload is not in current or next epoch, reject
