@@ -5,26 +5,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"golang.org/x/sync/errgroup"
 )
 
 type Status int
 
 const (
-	CommitmentWitnessed             Status = iota // 0
-	InitialVerificationTxSent       Status = iota // 1
-	InitialVerificationTxConfirmed  Status = iota // 2
-	ReadyToComplete                 Status = iota // 3
-	CompleteVerificationTxSent      Status = iota // 4
-	CompleteVerificationTxConfirmed Status = iota // 5
+	CommitmentWitnessed            Status = iota // 0
+	InitialVerificationTxSent      Status = iota // 1
+	InitialVerificationTxConfirmed Status = iota // 2
+	ReadyToComplete                Status = iota // 3
+	CompleteVerificationTxSent     Status = iota // 4
 )
 
 type BeefyRelayInfo struct {
@@ -36,8 +33,6 @@ type BeefyRelayInfo struct {
 	CompleteOnBlock            uint64
 	RandomSeed                 common.Hash
 	CompleteVerificationTxHash common.Hash
-	ValidationId               *big.Int
-	BlockNumber                types.BlockNumber
 }
 
 func NewBeefyRelayInfo(validatorAddresses, signedCommitment []byte, status Status,
@@ -198,17 +193,5 @@ func (d *Database) GetItemsByStatus(status Status) []*BeefyRelayInfo {
 func (d *Database) GetItemByInitialVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
 	var item BeefyRelayInfo
 	d.DB.Take(&item, "initial_verification_tx_hash = ?", txHash)
-	return &item
-}
-
-func (d *Database) GetItemByInitialVerificationId(validationId *big.Int) *BeefyRelayInfo {
-	var item BeefyRelayInfo
-	d.DB.Take(&item, "validation_id = ?", validationId)
-	return &item
-}
-
-func (d *Database) GetItemByBlockNumber(blockNumber types.BlockNumber) *BeefyRelayInfo {
-	var item BeefyRelayInfo
-	d.DB.Take(&item, "block_number = ?", blockNumber)
 	return &item
 }

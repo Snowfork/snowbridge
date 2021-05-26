@@ -89,42 +89,19 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 
 			// Query LightClientBridge contract's InitialVerificationSuccessful events
 			blockNumber := gethheader.Number.Uint64()
-			var lightClientBridgeInitialVerificationEvents []*lightclientbridge.ContractInitialVerificationSuccessful
-			var lightClientBridgeFianlVerificationEvents []*lightclientbridge.ContractFinalVerificationSuccessful
+			var lightClientBridgeEvents []*lightclientbridge.ContractInitialVerificationSuccessful
 
-			// Fetch and process initial verification events
-			contractInitialVerificationEvents, err := li.queryLightClientInitialVerificationEvents(ctx, blockNumber, &blockNumber)
+			contractEvents, err := li.queryLightClientEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
 				li.log.WithError(err).Error("Failure fetching event logs")
 				return err
 			}
-			lightClientBridgeInitialVerificationEvents = append(lightClientBridgeInitialVerificationEvents, contractInitialVerificationEvents...)
+			lightClientBridgeEvents = append(lightClientBridgeEvents, contractEvents...)
 
-			if len(lightClientBridgeInitialVerificationEvents) > 0 {
-				li.log.Info(fmt.Sprintf(
-					"Found %d LightClientBridge contract events on block %d",
-					len(lightClientBridgeInitialVerificationEvents),
-					blockNumber,
-				))
+			if len(lightClientBridgeEvents) > 0 {
+				li.log.Info(fmt.Sprintf("Found %d LightClientBridge contract events on block %d", len(lightClientBridgeEvents), blockNumber))
 			}
-			li.processLightClientInitialVerificationEvents(ctx, lightClientBridgeInitialVerificationEvents)
-
-			// Fetch and process final verification events
-			contractFinalVerificationEvents, err := li.queryLightClientFinalVerificationEvents(ctx, blockNumber, &blockNumber)
-			if err != nil {
-				li.log.WithError(err).Error("Failure fetching event logs")
-				return err
-			}
-			lightClientBridgeFianlVerificationEvents = append(lightClientBridgeFianlVerificationEvents, contractFinalVerificationEvents...)
-
-			if len(lightClientBridgeFianlVerificationEvents) > 0 {
-				li.log.Info(fmt.Sprintf(
-					"Found %d LightClientBridge contract events on block %d",
-					len(lightClientBridgeFianlVerificationEvents),
-					blockNumber,
-				))
-			}
-			li.processLightClientFinalVerificationEvents(ctx, lightClientBridgeFianlVerificationEvents)
+			li.processLightClientEvents(ctx, lightClientBridgeEvents)
 
 			// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
 			items := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
@@ -150,7 +127,7 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(
 }
 
 // queryLightClientEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
-func (li *BeefyEthereumListener) queryLightClientInitialVerificationEvents(ctx context.Context, start uint64,
+func (li *BeefyEthereumListener) queryLightClientEvents(ctx context.Context, start uint64,
 	end *uint64) ([]*lightclientbridge.ContractInitialVerificationSuccessful, error) {
 	var events []*lightclientbridge.ContractInitialVerificationSuccessful
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
@@ -176,41 +153,8 @@ func (li *BeefyEthereumListener) queryLightClientInitialVerificationEvents(ctx c
 	return events, nil
 }
 
-// queryLightClientEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
-func (li *BeefyEthereumListener) queryLightClientFinalVerificationEvents(
-	ctx context.Context,
-	start uint64,
-	end *uint64,
-) ([]*lightclientbridge.ContractFinalVerificationSuccessful, error) {
-	var events []*lightclientbridge.ContractFinalVerificationSuccessful
-	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
-
-	iter, err := li.lightClientBridge.FilterFinalVerificationSuccessful(&filterOps)
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		more := iter.Next()
-		if !more {
-			err = iter.Error()
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
-
-		events = append(events, iter.Event)
-	}
-
-	return events, nil
-}
-
-// processLightClientInitialVerificationEvents matches events to BEEFY commitment info by transaction hash
-func (li *BeefyEthereumListener) processLightClientInitialVerificationEvents(
-	ctx context.Context,
-	events []*lightclientbridge.ContractInitialVerificationSuccessful,
-) {
+// processLightClientEvents matches events to BEEFY commitment info by transaction hash
+func (li *BeefyEthereumListener) processLightClientEvents(ctx context.Context, events []*lightclientbridge.ContractInitialVerificationSuccessful) {
 	for _, event := range events {
 		// Only process events emitted by transactions sent from our node
 		if event.Prover != li.ethereumConn.GetKP().CommonAddress() {
@@ -231,38 +175,6 @@ func (li *BeefyEthereumListener) processLightClientInitialVerificationEvents(
 		li.log.Info("2: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
 		instructions := map[string]interface{}{
 			"status":            store.InitialVerificationTxConfirmed,
-			"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
-		}
-		updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)
-		li.dbMessages <- updateCmd
-	}
-}
-
-// processLightClientFinalVerificationEvents matches events to BEEFY commitment info by transaction hash
-func (li *BeefyEthereumListener) processLightClientFinalVerificationEvents(
-	ctx context.Context,
-	events []*lightclientbridge.ContractFinalVerificationSuccessful,
-) {
-	for _, event := range events {
-		// Only process events emitted by transactions sent from our node
-		if event.Prover != li.ethereumConn.GetKP().CommonAddress() {
-			continue
-		}
-
-		li.log.WithFields(logrus.Fields{
-			"blockHash":   event.Raw.BlockHash.Hex(),
-			"blockNumber": event.Raw.BlockNumber,
-			"txHash":      event.Raw.TxHash.Hex(),
-		}).Info("event information")
-
-		item := li.beefyDB.GetItemByInitialVerificationId(event.Id)
-		if item.Status != store.CompleteVerificationTxSent {
-			continue
-		}
-
-		li.log.Info("2: Updating item status from 'CompleteVerificationTxSent' to 'CompleteVerificationTxConfirmed'")
-		instructions := map[string]interface{}{
-			"status":            store.CompleteVerificationTxConfirmed,
 			"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
 		}
 		updateCmd := store.NewDatabaseCmd(item, store.Update, instructions)

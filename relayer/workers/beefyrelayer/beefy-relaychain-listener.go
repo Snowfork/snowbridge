@@ -70,7 +70,7 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				li.log.WithError(err).Error("Failed to decode BEEFY commitment messages")
 			}
 
-			li.log.Info("Witnessed a new BEEFY commitment:", msg.(string))
+			li.log.Info("Witnessed a new BEEFY commitment: \n", msg.(string))
 			if len(signedCommitment.Signatures) == 0 {
 				li.log.Info("BEEFY commitment has no signatures, skipping...")
 				continue
@@ -103,7 +103,6 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				ValidatorAddresses: beefyAuthoritiesBytes,
 				SignedCommitment:   signedCommitmentBytes,
 				Status:             store.CommitmentWitnessed,
-				BlockNumber:        types.BlockNumber(signedCommitment.Commitment.BlockNumber),
 			}
 			li.beefyMessages <- info
 		}
