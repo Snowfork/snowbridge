@@ -86,11 +86,6 @@ func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][3
 	// Hash validator addresses for leaf input data
 	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
 	for i, valAddr := range b.ValidatorAddresses {
-		// hash := sha3.NewLegacyKeccak256()
-		// if _, err := hash.Write(valAddr.Bytes()); err != nil {
-		// 	return [][32]byte{}, err
-		// }
-		// buf := hash.Sum(nil)
 		beefyTreeData[i] = valAddr.Bytes()
 	}
 
