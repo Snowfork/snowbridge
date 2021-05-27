@@ -33,7 +33,7 @@ func NewWorker(parachainConfig *parachain.Config,
 
 	log.Info("Creating worker")
 
-	ethereumKp, err := secp256k1.NewKeypairFromString(ethereumConfig.PrivateKey)
+	ethereumKp, err := secp256k1.NewKeypairFromString(ethereumConfig.ParachainCommitmentsPrivateKey)
 	if err != nil {
 		return nil, err
 	}

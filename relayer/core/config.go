@@ -39,11 +39,17 @@ func LoadConfig() (*Config, error) {
 	var ok bool
 
 	// Ethereum configuration
-	value, ok = os.LookupEnv("ARTEMIS_ETHEREUM_KEY")
+	value, ok = os.LookupEnv("BEEFY_RELAYER_ETHEREUM_KEY")
 	if !ok {
-		return nil, fmt.Errorf("environment variable not set: ARTEMIS_ETHEREUM_KEY")
+		return nil, fmt.Errorf("environment variable not set: BEEFY_RELAYER_ETHEREUM_KEY")
 	}
-	config.Eth.PrivateKey = strings.TrimPrefix(value, "0x")
+	config.Eth.BeefyPrivateKey = strings.TrimPrefix(value, "0x")
+
+	value, ok = os.LookupEnv("PARACHAIN_COMMITMENT_RELAYER_ETHEREUM_KEY")
+	if !ok {
+		return nil, fmt.Errorf("environment variable not set: PARACHAIN_COMMITMENT_RELAYER_ETHEREUM_KEY")
+	}
+	config.Eth.ParachainCommitmentsPrivateKey = strings.TrimPrefix(value, "0x")
 
 	// Parachain configuration
 	value, ok = os.LookupEnv("ARTEMIS_PARACHAIN_KEY")

@@ -104,7 +104,8 @@ The relayer requires secret keys for submitting transactions to both chains. It 
 Example:
 
 ```bash
-export ARTEMIS_ETHEREUM_KEY="0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77"
+export BEEFY_RELAYER_ETHEREUM_KEY="0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109"
+export PARACHAIN_COMMITMENT_RELAYER_ETHEREUM_KEY="0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a"
 export ARTEMIS_PARACHAIN_KEY="//Relay"
 export ARTEMIS_RELAYCHAIN_KEY="//Alice"
 ```
