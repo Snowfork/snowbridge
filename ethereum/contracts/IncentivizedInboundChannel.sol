@@ -4,10 +4,10 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./LightClientBridge.sol";
 import "./RewardSource.sol";
 
 contract IncentivizedInboundChannel is AccessControl {
-
     uint64 public nonce;
 
     struct Message {
@@ -19,26 +19,32 @@ contract IncentivizedInboundChannel is AccessControl {
 
     event MessageDispatched(uint64 nonce, bool result);
 
-    uint256 constant public MAX_GAS_PER_MESSAGE = 100000;
+    uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
 
     // Governance contracts will administer using this role.
-    bytes32 public constant CONFIG_UPDATE_ROLE = keccak256("CONFIG_UPDATE_ROLE");
+    bytes32 public constant CONFIG_UPDATE_ROLE =
+        keccak256("CONFIG_UPDATE_ROLE");
 
     event RelayerNotRewarded(address relayer, uint256 amount);
 
     RewardSource private rewardSource;
 
-    constructor() {
+    LightClientBridge public lightClientBridge;
+
+    constructor(LightClientBridge _lightClientBridge) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        nonce = 0;
+        lightClientBridge = _lightClientBridge;
     }
 
     // Once-off post-construction call to set initial configuration.
-    function initialize(
-        address _configUpdater,
-        address _rewardSource
-    )
-    external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is unauthorized");
+    function initialize(address _configUpdater, address _rewardSource)
+        external
+    {
+        require(
+            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+            "Caller is unauthorized"
+        );
 
         // Set initial configuration
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
@@ -48,11 +54,26 @@ contract IncentivizedInboundChannel is AccessControl {
         renounceRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    // TODO: Submit should take in all inputs required for verification
-    function submit(Message[] calldata _messages, bytes32 _commitment)
-        public
-    {
+    // TODO: Submit should take in all inputs required for verification,
+    // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
+    function submit(
+        Message[] calldata _messages,
+        bytes32 _commitment,
+        bytes32 _beefyMMRLeaf,
+        uint256 _beefyMMRLeafIndex,
+        uint256 _beefyMMRLeafCount,
+        bytes32[] memory _beefyMMRLeafProof
+    ) public {
         verifyMessages(_messages, _commitment);
+        // TODO: require(
+        //     lightClientBridge.verifyBeefyMerkleLeaf(
+        //         _beefyMMRLeaf,
+        //         _beefyMMRLeafIndex,
+        //         _beefyMMRLeafCount,
+        //         _beefyMMRLeafProof
+        //     ),
+        //     "Invalid proof"
+        // );
         processMessages(msg.sender, _messages);
     }
 
@@ -92,11 +113,13 @@ contract IncentivizedInboundChannel is AccessControl {
             "insufficient gas for delivery of all messages"
         );
 
-
         return true;
     }
 
-    function processMessages(address payable _relayer, Message[] calldata _messages) internal {
+    function processMessages(
+        address payable _relayer,
+        Message[] calldata _messages
+    ) internal {
         uint256 _rewardAmount = 0;
 
         for (uint256 i = 0; i < _messages.length; i++) {
@@ -108,15 +131,16 @@ contract IncentivizedInboundChannel is AccessControl {
             // Deliver the message to the target
             // Delivery will have fixed maximum gas allowed for the target app
             (bool success, ) =
-                _messages[i].target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(_messages[i].payload);
+                _messages[i].target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(
+                    _messages[i].payload
+                );
 
             _rewardAmount = _rewardAmount + _messages[i].fee;
             emit MessageDispatched(_messages[i].nonce, success);
         }
 
         // Attempt to reward the relayer
-        try rewardSource.reward(_relayer, _rewardAmount) { }
-        catch {
+        try rewardSource.reward(_relayer, _rewardAmount) {} catch {
             emit RelayerNotRewarded(_relayer, _rewardAmount);
         }
     }

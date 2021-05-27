@@ -4,8 +4,10 @@ package parachaincommitmentrelayer
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto/blake2b"
 	"github.com/sirupsen/logrus"
 	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
@@ -76,7 +78,7 @@ func (li *BeefyListener) onDone(ctx context.Context) error {
 func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 	ch := make(chan interface{})
 
-	li.log.Info("Subscribing to beefy justifications")
+	li.log.Info("Subscribing to relay chain light client for new mmr payloads")
 	sub, err := li.relaychainConn.GetAPI().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
 	if err != nil {
 		panic(err)
@@ -97,10 +99,24 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 
 			blockNumber := signedCommitment.Commitment.BlockNumber
 
-			li.log.WithField("commitmentBlockNumber", blockNumber).Info("Witnessed a new BEEFY commitment: \n")
+			li.log.WithFields(logrus.Fields{
+				"commitmentBlockNumber": blockNumber,
+				"payload":               signedCommitment.Commitment.Payload.Hex(),
+				"validatorSetID":        signedCommitment.Commitment.ValidatorSetID,
+			}).Info("Witnessed a new BEEFY commitment:")
 			if len(signedCommitment.Signatures) == 0 {
 				li.log.Info("BEEFY commitment has no signatures, skipping...")
 				continue
+			} else {
+				hash := blake2b.Sum256(signedCommitment.Commitment.Bytes())
+				signature0 := signedCommitment.Signatures[0].Value
+				signature1 := signedCommitment.Signatures[1].Value
+				li.log.WithFields(logrus.Fields{
+					"commitment":       hex.EncodeToString(signedCommitment.Commitment.Bytes()),
+					"hashedCommitment": hex.EncodeToString(hash[:]),
+					"signature0":       hex.EncodeToString(signature0[:]),
+					"signature1":       hex.EncodeToString(signature1[:]),
+				}).Info("Commitment with signatures:")
 			}
 			li.log.WithField("blockNumber", blockNumber+1).Info("Getting hash for next block")
 			nextBlockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(blockNumber + 1))
@@ -113,7 +129,7 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 			// we should ideally be querying the last few leafs in the latest MMR until we find
 			// the first parachain block that has not yet been fully processed on ethereum,
 			// and then package and relay all newer heads/commitments
-			mmrProof := li.GetMMRProofForBlock(uint64(blockNumber), nextBlockHash)
+			mmrProof := li.GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash)
 			allParaHeads, ourParaHead := li.GetAllParaheads(nextBlockHash, OUR_PARACHAIN_ID)
 
 			ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
@@ -148,7 +164,7 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 	}
 }
 
-func (li *BeefyListener) GetMMRProofForBlock(
+func (li *BeefyListener) GetMMRLeafForBlock(
 	blockNumber uint64,
 	blockHash types.Hash,
 ) types.GenerateMMRProofResponse {

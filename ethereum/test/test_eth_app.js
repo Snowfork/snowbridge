@@ -37,7 +37,7 @@ describe("ETHApp", function () {
   // Constants
   const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
-  before(async function() {
+  before(async function () {
     const codec = await ScaleCodec.new();
     ETHApp.link(codec);
     accounts = await web3.eth.getAccounts();
@@ -128,5 +128,3 @@ describe("ETHApp", function () {
     });
   });
 });
-
-module.exports = { lockupETH: lockupFunds };

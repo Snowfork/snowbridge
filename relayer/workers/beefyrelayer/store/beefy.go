@@ -6,13 +6,14 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
 	merkletree "github.com/wealdtech/go-merkletree"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/sha3"
 )
 
 type NewSignatureCommitmentMessage struct {
-	Payload                       [32]byte
+	CommitmentHash                [32]byte
 	ValidatorClaimsBitfield       []*big.Int
 	ValidatorSignatureCommitment  []byte
 	ValidatorPosition             *big.Int
@@ -22,7 +23,8 @@ type NewSignatureCommitmentMessage struct {
 
 type CompleteSignatureCommitmentMessage struct {
 	ID                             *big.Int
-	Payload                        [32]byte
+	CommitmentHash                 [32]byte
+	Commitment                     lightclientbridge.LightClientBridgeCommitment
 	Signatures                     [][]byte
 	ValidatorPositions             []*big.Int
 	ValidatorPublicKeys            []common.Address
@@ -56,7 +58,7 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 	validatorClaimsBitfield := []*big.Int{big.NewInt(123)} // TODO: add bitfield stuff properly
 
 	msg := NewSignatureCommitmentMessage{
-		Payload:                       commitmentHash,
+		CommitmentHash:                commitmentHash,
 		ValidatorClaimsBitfield:       validatorClaimsBitfield,
 		ValidatorSignatureCommitment:  sig0Commitment,
 		ValidatorPublicKey:            b.ValidatorAddresses[valAddrIndex],
@@ -127,9 +129,16 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage() (Complete
 	validatorPublicKeys := b.ValidatorAddresses
 	validatorPublicKeyMerkleProofs := [][][32]byte{}
 
+	commitment := lightclientbridge.LightClientBridgeCommitment{
+		Payload:        b.SignedCommitment.Commitment.Payload,
+		BlockNumber:    uint64(b.SignedCommitment.Commitment.BlockNumber),
+		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),
+	}
+
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                             validationDataID,
-		Payload:                        commitmentHash,
+		CommitmentHash:                 commitmentHash,
+		Commitment:                     commitment,
 		Signatures:                     signatures,
 		ValidatorPositions:             validatorPositions,
 		ValidatorPublicKeys:            validatorPublicKeys,

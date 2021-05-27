@@ -5,6 +5,9 @@ require("chai")
 const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
 const MockApp = artifacts.require("MockApp");
 const MockRewardSource = artifacts.require("MockRewardSource");
+const {
+  deployLightClientBridge
+} = require("./helpers");
 
 const makeCommitment = (messages) => {
   let encoded = ethers.utils.defaultAbiCoder.encode(
@@ -22,16 +25,17 @@ describe("IncentivizedInboundChannel", function () {
   const mockAppInterface = new ethers.utils.Interface(MockApp.abi);
   const mockAppUnlock = mockAppInterface.functions['unlock(uint256)'];
 
-  before(async function() {
+  before(async function () {
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
     userOne = accounts[1];
+    this.lightClientBridge = await deployLightClientBridge();
   });
 
   describe("submit", function () {
     beforeEach(async function () {
       const rewardSource = await MockRewardSource.new();
-      this.channel = await IncentivizedInboundChannel.new(
+      this.channel = await IncentivizedInboundChannel.new(this.lightClientBridge.address,
         { from: owner }
       );
       await this.channel.initialize(owner, rewardSource.address);
@@ -58,7 +62,7 @@ describe("IncentivizedInboundChannel", function () {
       // Send commitment
       const { receipt } = await this.channel.submit(
         [message1, message2],
-        commitment,
+        commitment, '0x0', 0, 0, [],
         { from: userOne }
       )
 
@@ -108,7 +112,7 @@ describe("IncentivizedInboundChannel", function () {
       // Send commitment
       const { receipt } = await this.channel.submit(
         [message],
-        commitment,
+        commitment, '0x0', 0, 0, [],
         { from: userOne }
       ).should.be.fulfilled;
 
@@ -117,7 +121,7 @@ describe("IncentivizedInboundChannel", function () {
       // Send commitment again - should revert
       await this.channel.submit(
         [message],
-        commitment,
+        commitment, '0x0', 0, 0, [],
         { from: userOne }
       ).should.not.be.fulfilled;
 
@@ -137,7 +141,7 @@ describe("IncentivizedInboundChannel", function () {
       // Send commitment
       const { receipt } = await this.channel.submit(
         [message],
-        commitment,
+        commitment, '0x0', 0, 0, [],
         { from: userOne }
       ).should.be.fulfilled;
 
