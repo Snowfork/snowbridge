@@ -49,8 +49,12 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 	}
 
 	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
-	sigVal := b.SignedCommitment.Signatures[valAddrIndex].Value
-	sig0Commitment := sigVal[:] // TODO: increment recovery ID properly
+	// Split signature into r, s, v and add 27 to v
+	sigValPolkadot := b.SignedCommitment.Signatures[valAddrIndex].Value
+	sigValrs := sigValPolkadot[:64]
+	sigValv := sigValPolkadot[64]
+	sigValvAdded := byte(uint8(sigValv) + 27)
+	sigValEthereum := append(sigValrs, sigValvAdded)
 
 	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
 
@@ -59,7 +63,7 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 	msg := NewSignatureCommitmentMessage{
 		CommitmentHash:                commitmentHash,
 		ValidatorClaimsBitfield:       validatorClaimsBitfield,
-		ValidatorSignatureCommitment:  sig0Commitment,
+		ValidatorSignatureCommitment:  sigValEthereum,
 		ValidatorPublicKey:            b.ValidatorAddresses[valAddrIndex],
 		ValidatorPosition:             big.NewInt(int64(valAddrIndex)),
 		ValidatorPublicKeyMerkleProof: sig0ProofContents,
