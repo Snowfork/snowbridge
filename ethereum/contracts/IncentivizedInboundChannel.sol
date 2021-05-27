@@ -65,7 +65,7 @@ contract IncentivizedInboundChannel is AccessControl {
         bytes32[] memory _beefyMMRLeafProof
     ) public {
         verifyMessages(_messages, _commitment);
-        // require(
+        // TODO: require(
         //     lightClientBridge.verifyBeefyMerkleLeaf(
         //         _beefyMMRLeaf,
         //         _beefyMMRLeafIndex,
