@@ -127,10 +127,10 @@ fn testnet_genesis(
 			phantom: Default::default()
 		},
 		basic_channel_inbound: BasicInboundChannelConfig {
-			source_channel: hex!["2ffa5ecdbe006d30397c7636d3e015eee251369f"].into(),
+			source_channel: hex!["EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"].into(),
 		},
 		incentivized_channel_inbound: IncentivizedInboundChannelConfig {
-			source_channel: hex!["eda338e4dc46038493b885327842fd3e301cab39"].into(),
+			source_channel: hex!["B8EA8cB425d85536b158d661da1ef0895Bb92F1D"].into(),
 			reward_fraction: Perbill::from_percent(80)
 		},
 		incentivized_channel_outbound: IncentivizedOutboundChannelConfig {
@@ -172,13 +172,13 @@ fn testnet_genesis(
 			interval: 1,
 		},
 		eth_app: ETHConfig {
-			address: hex!["774667629726ec1fabebcec0d9139bd1c8f72a23"].into()
+			address: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into()
 		},
 		erc20_app: ERC20Config {
-			address: hex!["83428c7db9815f482a39a1715684dCF755021997"].into()
+			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into()
 		},
 		dot_app: DOTConfig {
-			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into(),
+			address: hex!["4283d8996E5a7F4BEa58c6052b1471a2a9524C87"].into(),
 			phantom: Default::default(),
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: para_id },
