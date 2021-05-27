@@ -72,7 +72,7 @@ module.exports = function (deployer, network, accounts) {
     deployer.link(Bitfield, [contracts.lightclientbridge.contract]);
 
     // TODO: Hardcoded for testing
-    const root = "0xc1490f71b21f5700063d93546dbe860cc190e883734ee3f490b76de9e028db99";
+    const root = "0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402";
     const numValidators = 2;
     const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators);
     const mmrVerification = await deployer.deploy(MMRVerification);

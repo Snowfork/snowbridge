@@ -1,15 +1,14 @@
 package store
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
 	merkletree "github.com/wealdtech/go-merkletree"
 	"golang.org/x/crypto/blake2b"
-	"golang.org/x/crypto/sha3"
 )
 
 type NewSignatureCommitmentMessage struct {
@@ -69,20 +68,34 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 	return msg, nil
 }
 
+// Keccak256 is the Keccak256 hashing method
+type Keccak256 struct{}
+
+// New creates a new Keccak256 hashing method
+func New() *Keccak256 {
+	return &Keccak256{}
+}
+
+// Hash generates a Keccak256 hash from a byte array
+func (h *Keccak256) Hash(data []byte) []byte {
+	hash := crypto.Keccak256(data)
+	return hash[:]
+}
+
 func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][32]byte, error) {
 	// Hash validator addresses for leaf input data
 	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
 	for i, valAddr := range b.ValidatorAddresses {
-		hash := sha3.New256()
-		if _, err := hash.Write(valAddr.Bytes()); err != nil {
-			return [][32]byte{}, err
-		}
-		buf := hash.Sum(nil)
-		beefyTreeData[i] = buf
+		// hash := sha3.NewLegacyKeccak256()
+		// if _, err := hash.Write(valAddr.Bytes()); err != nil {
+		// 	return [][32]byte{}, err
+		// }
+		// buf := hash.Sum(nil)
+		beefyTreeData[i] = valAddr.Bytes()
 	}
 
 	// Create the tree
-	beefyMerkleTree, err := merkletree.New(beefyTreeData)
+	beefyMerkleTree, err := merkletree.NewUsing(beefyTreeData, &Keccak256{}, nil)
 	if err != nil {
 		return [][32]byte{}, err
 	}
@@ -95,16 +108,13 @@ func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][3
 
 	// Verify the proof
 	root := beefyMerkleTree.Root()
-	verified, err := merkletree.VerifyProof(beefyTreeData[valAddrIndex], sigProof, root)
+	verified, err := merkletree.VerifyProofUsing(beefyTreeData[valAddrIndex], sigProof, root, &Keccak256{}, nil)
 	if err != nil {
 		return [][32]byte{}, err
 	}
 	if !verified {
 		return [][32]byte{}, fmt.Errorf("failed to verify proof")
 	}
-
-	hexRoot := hex.EncodeToString(root)
-	fmt.Println("hexRoot:", hexRoot)
 
 	sigProofContents := make([][32]byte, len(sigProof.Hashes))
 	for i, hash := range sigProof.Hashes {
