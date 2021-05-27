@@ -54,10 +54,21 @@ module.exports = function (deployer, network, accounts) {
 
     // Deploy & link libraries
     await deployer.deploy(ScaleCodec);
-    await deployer.deploy(MerkleProof);
-    await deployer.deploy(Bitfield);
     deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, contracts.lightclientbridge.contract]);
+
+    // Account of governance contract
+    // TODO: deploy the contract in this migration and use its address
+    let administrator = accounts[0];
+
+    // Fee for incentivized channel
+    if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
+      throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
+    }
+    const fee = process.env.INCENTIVIZED_CHANNEL_FEE
+
+    await deployer.deploy(MerkleProof);
     deployer.link(MerkleProof, [ValidatorRegistry]);
+    await deployer.deploy(Bitfield);
     deployer.link(Bitfield, [contracts.lightclientbridge.contract]);
 
     // TODO: Hardcoded for testing
@@ -73,16 +84,6 @@ module.exports = function (deployer, network, accounts) {
       mmrVerification.address,
       blake2b.address
     );
-
-    // Account of governance contract
-    // TODO: deploy the contract in this migration and use its address
-    let administrator = accounts[0];
-
-    // Fee for incentivized channel
-    if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
-      throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
-    }
-    const fee = process.env.INCENTIVIZED_CHANNEL_FEE
 
     channels.basic.inbound.instance = await deployer.deploy(
       channels.basic.inbound.contract,

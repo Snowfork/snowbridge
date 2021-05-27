@@ -76,7 +76,7 @@ func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
 		From:     wr.conn.GetKP().CommonAddress(),
 		Signer:   wr.signerFn,
 		Context:  ctx,
-		GasLimit: 500000,
+		GasLimit: 2000000,
 	}
 
 	for {
