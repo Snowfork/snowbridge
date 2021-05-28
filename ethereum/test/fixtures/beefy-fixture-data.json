@@ -1,0 +1,18 @@
+{
+  "commitmentHash": "0x12eaf73e5881c40748a34786ebfc79daef0ab4b8108b0da9fbed2168f81e8574",
+  "commitment": {
+    "payload": "0xfab049d511b54f8d1169f85fe8add36c54a76c36d20737a80b1f0e72179b7d5f",
+    "blockNumber": 12,
+    "validatorSetId": 0
+  },
+  "signature0": "0xf5aca779c28ccf34cd66c6cee059e52d64aafd7f4c42ad4bb3c0d30e8e4a4d8b4285d639eaae75281c7f42beda75d3d19e8517ecf53cd26aec560ce47f5f578001",
+  "signature1": "0x1b7059633cd0ce53607a91f864929e26a7a9c986f6d0e93ab265ed4c271e88147b00ff58e423df58c71f2938f1c67780ffe569ec6a60fe875242f66f120554f400",
+  "bitfield": [3],
+  "proofs": [
+    "0xd2c83375e5b21c7800af4959a04246f338c5fdaa1a82a6c5eedd668ad8a17770",
+    "0xb3e7dfbc7feae8b58ba3f6a8f76101a5ce745bda1bcaa8ee3b7396566dad56bb"
+  ],
+  "leaf": "0xec98912f89f30da25512fcfed10132411caa230b71b47e66769228b946dee6ba",
+  "leafIndex": 12,
+  "leafCount": 13
+}

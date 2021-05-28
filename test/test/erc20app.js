@@ -6,6 +6,8 @@ const { expect } = require("chai")
 
 const { TestTokenAddress, polkadotRecipientSS58, polkadotRecipient, bootstrap } = require('../src/fixtures');
 
+const { ChannelId } = require("../src/helpers");
+
 describe('Bridge', function () {
 
   let ethClient, subClient;
@@ -30,7 +32,7 @@ describe('Bridge', function () {
       const beforeSubBalance = await subBalances[0];
 
       await ethClient.approveERC20(ethAccount, amount);
-      await ethClient.lockERC20(ethAccount, amount, polkadotRecipient);
+      await ethClient.lockERC20(ethAccount, amount, polkadotRecipient, ChannelId.BASIC);
 
       const afterEthBalance = await ethClient.getErc20Balance(ethAccount);
       const afterSubBalance = await subBalances[1];
@@ -52,7 +54,7 @@ describe('Bridge', function () {
       const beforeEthBalance = await ethClient.getErc20Balance(ethAccount);
       const beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
 
-      await subClient.burnERC20(subClient.alice, TestTokenAddress, ethAccount, amount.toFixed(), 1)
+      await subClient.burnERC20(subClient.alice, TestTokenAddress, ethAccount, amount.toFixed(), ChannelId.BASIC);
       await ethClient.waitForNextEventData({ appName: 'appERC20', eventName: 'Unlocked' });
 
       const afterEthBalance = await ethClient.getErc20Balance(ethAccount);

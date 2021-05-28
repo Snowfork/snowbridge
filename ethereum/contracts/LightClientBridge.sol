@@ -7,6 +7,9 @@ import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
 import "./ValidatorRegistry.sol";
+import "./MMRVerification.sol";
+import "./Blake2b.sol";
+import "./ScaleCodec.sol";
 
 /**
  * @title A entry contract for the Ethereum light client
@@ -15,6 +18,9 @@ contract LightClientBridge {
     using SafeMath for uint256;
     using Bits for uint256;
     using Bitfield for uint256[];
+    using ScaleCodec for uint256;
+    using ScaleCodec for uint64;
+    using ScaleCodec for uint32;
 
     /* Events */
 
@@ -36,22 +42,30 @@ contract LightClientBridge {
 
     /**
      * @notice Notifies an observer that the complete verification process has
-     *  finished successfuly and the new payload will be accepted
+     *  finished successfuly and the new commitmentHash will be accepted
      * @param prover The address of the successful prover
-     * @param payload the payload which was approved for inclusion
+     * @param commitmentHash the commitmentHash which was approved for inclusion
      * @param id the identifier used
      */
     event FinalVerificationSuccessful(
         address prover,
-        bytes32 payload,
+        bytes32 commitmentHash,
         uint256 id
     );
 
+    event NewMMRRoot(bytes32 mmrRoot, uint64 blockNumber);
+
     /* Types */
+
+    struct Commitment {
+        bytes32 payload;
+        uint64 blockNumber;
+        uint32 validatorSetId;
+    }
 
     struct ValidationData {
         address senderAddress;
-        bytes32 payload;
+        bytes32 commitmentHash;
         uint256[] validatorClaimsBitfield;
         uint256 blockNumber;
     }
@@ -59,7 +73,10 @@ contract LightClientBridge {
     /* State */
 
     ValidatorRegistry public validatorRegistry;
+    MMRVerification public mmrVerification;
+    Blake2b public blake2b;
     uint256 public currentId;
+    bytes32 public latestMMRRoot;
     mapping(uint256 => ValidationData) public validationData;
 
     /* Constants */
@@ -73,26 +90,57 @@ contract LightClientBridge {
      * @dev If the validatorSetRegistry should be initialised with 0 entries, then input
      * 0x00 as validatorSetRoot
      * @param _validatorRegistry The contract to be used as the validator registry
+     * @param _mmrVerification The contract to be used for MMR verification
      */
-    constructor(ValidatorRegistry _validatorRegistry) {
+    constructor(
+        ValidatorRegistry _validatorRegistry,
+        MMRVerification _mmrVerification,
+        Blake2b _blake2b
+    ) {
         validatorRegistry = _validatorRegistry;
+        mmrVerification = _mmrVerification;
+        blake2b = _blake2b;
         currentId = 0;
     }
 
     /* Public Functions */
+
+    /**
+     * @notice Executed by the incoming channel in order to verify commitment
+     * @param beefyMMRLeaf contains the merkle leaf to be verified
+     * @param beefyMMRLeafIndex contains the merkle leaf index
+     * @param beefyMMRLeafCount contains the merkle leaf count
+     * @param beefyMMRLeafProof contains the merkle proof to verify against
+     */
+    function verifyBeefyMerkleLeaf(
+        bytes32 beefyMMRLeaf,
+        uint256 beefyMMRLeafIndex,
+        uint256 beefyMMRLeafCount,
+        bytes32[] calldata beefyMMRLeafProof
+    ) external returns (bool) {
+        return
+            mmrVerification.verifyInclusionProof(
+                latestMMRRoot,
+                beefyMMRLeaf,
+                beefyMMRLeafIndex,
+                beefyMMRLeafCount,
+                beefyMMRLeafProof
+            );
+    }
+
     /**
      * @notice Executed by the prover in order to begin the process of block
      * acceptance by the light client
-     * @param payload contains the payload signed by the validator(s)
+     * @param commitmentHash contains the commitmentHash signed by the validator(s)
      * @param validatorClaimsBitfield a bitfield containing a membership status of each
-     * validator who has claimed to have signed the payload
+     * validator who has claimed to have signed the commitmentHash
      * @param validatorSignature the signature of one validator
      * @param validatorPosition the position of the validator, index starting at 0
      * @param validatorPublicKey the public key of the validator
      * @param validatorPublicKeyMerkleProof proof required for validation of the public key in the validator merkle tree
      */
     function newSignatureCommitment(
-        bytes32 payload,
+        bytes32 commitmentHash,
         uint256[] memory validatorClaimsBitfield,
         bytes memory validatorSignature,
         uint256 validatorPosition,
@@ -102,33 +150,34 @@ contract LightClientBridge {
         /**
          * @dev Check if validatorPublicKeyMerkleProof is valid based on ValidatorRegistry merkle root
          */
-        // require(
-        //     validatorRegistry.checkValidatorInSet(
-        //         validatorPublicKey,
-        //         validatorPosition,
-        //         validatorPublicKeyMerkleProof
-        //     ),
-        //     "Error: Sender must be in validator set at correct position"
-        // );
+        require(
+            validatorRegistry.checkValidatorInSet(
+                validatorPublicKey,
+                validatorPosition,
+                validatorPublicKeyMerkleProof
+            ),
+            "Error: Sender must be in validator set at correct position"
+        );
 
         /**
          * @dev Check if validatorSignature is correct, ie. check if it matches
-         * the signature of senderPublicKey on the payload
+         * the signature of senderPublicKey on the commitmentHash
          */
-        // require(
-        //     ECDSA.recover(payload, validatorSignature) == validatorPublicKey,
-        //     "Error: Invalid Signature"
-        // );
+        require(
+            ECDSA.recover(commitmentHash, validatorSignature) ==
+                validatorPublicKey,
+            "Error: Invalid Signature"
+        );
 
         /**
          * @dev Check that the bitfield actually contains enough claims to be succesful, ie, > 2/3
          */
-        // require(
-        //     validatorClaimsBitfield.countSetBits() >
-        //         (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-        //             THRESHOLD_DENOMINATOR,
-        //     "Error: Bitfield not enough validators"
-        // );
+        require(
+            validatorClaimsBitfield.countSetBits() >
+                (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
+                    THRESHOLD_DENOMINATOR,
+            "Error: Bitfield not enough validators"
+        );
 
         /**
          * @todo Lock up the sender stake as collateral
@@ -138,7 +187,7 @@ contract LightClientBridge {
         // Accept and save the commitment
         validationData[currentId] = ValidationData(
             msg.sender,
-            payload,
+            commitmentHash,
             validatorClaimsBitfield,
             block.number
         );
@@ -151,7 +200,8 @@ contract LightClientBridge {
     /**
      * @notice Performs the second step in the validation logic
      * @param id an identifying value generated in the previous transaction
-     * @param payload contains the payload signed by the validator(s)
+     * @param commitmentHash contains the commitmentHash signed by the validator(s)
+     * @param commitment contains the full commitment that was used for the commitmentHash
      * @param signatures an array of signatures from the randomly chosen validators
      * @param validatorPositions an array of bitfields from the chosen validators
      * @param validatorPublicKeys an array of the public key of each signer
@@ -159,7 +209,8 @@ contract LightClientBridge {
      */
     function completeSignatureCommitment(
         uint256 id,
-        bytes32 payload,
+        bytes32 commitmentHash, // TODO: not needed, we have to create that from the commitment below
+        Commitment memory commitment,
         bytes[] memory signatures,
         uint256[] memory validatorPositions,
         address[] memory validatorPublicKeys,
@@ -183,90 +234,107 @@ contract LightClientBridge {
             "Error: Sender address does not match original validation data"
         );
 
-        // uint256 requiredNumOfSignatures =
-        //     (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-        //         THRESHOLD_DENOMINATOR;
+        uint256 requiredNumOfSignatures =
+            (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
+                THRESHOLD_DENOMINATOR;
 
         /**
          * @dev verify that required number of signatures, positions, public keys and merkle proofs are
          * submitted
          */
-        // require(
-        //     signatures.length == requiredNumOfSignatures,
-        //     "Error: Number of signatures does not match required"
-        // );
-        // require(
-        //     validatorPositions.length == requiredNumOfSignatures,
-        //     "Error: Number of validator positions does not match required"
-        // );
-        // require(
-        //     validatorPublicKeys.length == requiredNumOfSignatures,
-        //     "Error: Number of validator public keys does not match required"
-        // );
-        // require(
-        //     validatorPublicKeyMerkleProofs.length == requiredNumOfSignatures,
-        //     "Error: Number of validator public keys does not match required"
-        // );
+        require(
+            signatures.length == requiredNumOfSignatures,
+            "Error: Number of signatures does not match required"
+        );
+        require(
+            validatorPositions.length == requiredNumOfSignatures,
+            "Error: Number of validator positions does not match required"
+        );
+        require(
+            validatorPublicKeys.length == requiredNumOfSignatures,
+            "Error: Number of validator public keys does not match required"
+        );
+        require(
+            validatorPublicKeyMerkleProofs.length == requiredNumOfSignatures,
+            "Error: Number of validator public keys does not match required"
+        );
 
         /**
          * @dev Generate an array of numbers
          */
-        // uint256[] memory randomBitfield =
-        //     Bitfield.randomNBitsFromPrior(
-        //         getSeed(data),
-        //         data.validatorClaimsBitfield,
-        //         requiredNumOfSignatures
-        //     );
+        uint256[] memory randomBitfield =
+            Bitfield.randomNBitsFromPrior(
+                getSeed(data),
+                data.validatorClaimsBitfield,
+                requiredNumOfSignatures
+            );
+
+        /**
+         * @dev Encode and hash the commitment
+         */
+        bytes32[2] memory commitmentHashB =
+            blake2b.formatOutput(
+                blake2b.blake2b(
+                    abi.encodePacked(
+                        commitment.payload,
+                        commitment.blockNumber.encode64(),
+                        commitment.validatorSetId.encode32()
+                    ),
+                    "",
+                    32
+                )
+            );
+
+        require(
+            commitmentHashB[0] == commitmentHash,
+            "Error: Commitment must match commitment hash"
+        );
 
         /**
          *  @dev For each randomSignature, do:
          */
-        // for (uint256 i = 0; i < requiredNumOfSignatures; i++) {
-        //     /**
-        //      * @dev Check if validator in randomBitfield
-        //      */
-        //     require(
-        //         randomBitfield.isSet(validatorPositions[i]),
-        //         "Error: Validator must be once in bitfield"
-        //     );
+        for (uint256 i = 0; i < requiredNumOfSignatures; i++) {
+            /**
+             * @dev Check if validator in randomBitfield
+             */
+            require(
+                randomBitfield.isSet(validatorPositions[i]),
+                "Error: Validator must be once in bitfield"
+            );
 
-        //     /**
-        //      * @dev Remove validator from randomBitfield such that no validator can appear twice in signatures
-        //      */
-        //     randomBitfield.clear(validatorPositions[i]);
+            /**
+             * @dev Remove validator from randomBitfield such that no validator can appear twice in signatures
+             */
+            randomBitfield.clear(validatorPositions[i]);
 
-        //     /**
-        //      * @dev Check if merkle proof is valid
-        //      */
-        //     require(
-        //         validatorRegistry.checkValidatorInSet(
-        //             validatorPublicKeys[i],
-        //             validatorPositions[i],
-        //             validatorPublicKeyMerkleProofs[i]
-        //         ),
-        //         "Error: Validator must be in validator set at correct position"
-        //     );
+            /**
+             * @dev Check if merkle proof is valid
+             */
+            require(
+                validatorRegistry.checkValidatorInSet(
+                    validatorPublicKeys[i],
+                    validatorPositions[i],
+                    validatorPublicKeyMerkleProofs[i]
+                ),
+                "Error: Validator must be in validator set at correct position"
+            );
 
-        //     /**
-        //      * @dev Check if signature is correct
-        //      */
-        //     require(
-        //         ECDSA.recover(payload, signatures[i]) == validatorPublicKeys[i],
-        //         "Error: Invalid Signature"
-        //     );
-        // }
-
-        /**
-         * @todo Release the sender stake as collateral
-         */
-        // TODO
+            /**
+             * @dev Check if signature is correct
+             */
+            require(
+                ECDSA.recover(commitmentHash, signatures[i]) ==
+                    validatorPublicKeys[i],
+                "Error: Invalid Signature"
+            );
+        }
 
         /**
          * @follow-up Do we need a try-catch block here?
          */
-        processPayload(data.payload);
+        processPayload(commitment.payload, commitment.blockNumber);
 
-        emit FinalVerificationSuccessful(msg.sender, payload, id);
+        emit FinalVerificationSuccessful(msg.sender, commitmentHash, id);
 
         /**
          * @dev We no longer need the data held in state, so delete it for a gas refund
@@ -302,11 +370,12 @@ contract LightClientBridge {
      * @notice Perform some operation[s] using the payload
      * @param payload The payload variable passed in via the initial function
      */
-    function processPayload(bytes32 payload) private {
+    function processPayload(bytes32 payload, uint64 blockNumber) private {
         // Check the payload is newer than the latest
         // Check that payload.leaf.block_number is > last_known_block_number;
 
-        //update latestMMRRoot = payload.mmrRoot;
+        latestMMRRoot = payload;
+        emit NewMMRRoot(latestMMRRoot, blockNumber);
 
         // if payload is in next epoch, then apply validatorset changes
         // if payload is not in current or next epoch, reject

@@ -6,8 +6,10 @@ const ERC20App = artifacts.require("ERC20App");
 const DOTApp = artifacts.require("DOTApp");
 const TestToken = artifacts.require("TestToken");
 const ValidatorRegistry = artifacts.require("ValidatorRegistry");
+const MMRVerification = artifacts.require("MMRVerification");
 const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
+const Blake2b = artifacts.require("Blake2b");
 
 const channels = {
   basic: {
@@ -36,11 +38,23 @@ const contracts = {
   lightclientbridge: {
     contract: artifacts.require("LightClientBridge"),
     instance: null
+  },
+  blake2b: {
+    contract: artifacts.require("Blake2b"),
+    instance: null
   }
 }
 
 module.exports = function (deployer, network, accounts) {
   deployer.then(async () => {
+
+    if (network === 'development') {
+      return
+    }
+
+    // Deploy & link libraries
+    await deployer.deploy(ScaleCodec);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, contracts.lightclientbridge.contract]);
 
     // Account of governance contract
     // TODO: deploy the contract in this migration and use its address
@@ -52,18 +66,40 @@ module.exports = function (deployer, network, accounts) {
     }
     const fee = process.env.INCENTIVIZED_CHANNEL_FEE
 
-    channels.basic.inbound.instance = await deployer.deploy(channels.basic.inbound.contract)
-    channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract)
-    channels.incentivized.inbound.instance = await deployer.deploy(channels.incentivized.inbound.contract)
-    channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract)
+    await deployer.deploy(MerkleProof);
+    deployer.link(MerkleProof, [ValidatorRegistry]);
+    await deployer.deploy(Bitfield);
+    deployer.link(Bitfield, [contracts.lightclientbridge.contract]);
 
-    // Link libraries to applications
-    await deployer.deploy(ScaleCodec);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp]);
+    // TODO: Hardcoded for testing
+    const root = "0xc1490f71b21f5700063d93546dbe860cc190e883734ee3f490b76de9e028db99";
+    const numValidators = 2;
+    const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators);
+    const mmrVerification = await deployer.deploy(MMRVerification);
+    const blake2b = await deployer.deploy(Blake2b);
+
+    contracts.lightclientbridge.instance = await deployer.deploy(
+      contracts.lightclientbridge.contract,
+      valRegistry.address,
+      mmrVerification.address,
+      blake2b.address
+    );
+
+    channels.basic.inbound.instance = await deployer.deploy(
+      channels.basic.inbound.contract,
+      contracts.lightclientbridge.instance.address
+    );
+    channels.basic.outbound.instance = await deployer.deploy(channels.basic.outbound.contract);
+    channels.incentivized.inbound.instance = await deployer.deploy(
+      channels.incentivized.inbound.contract,
+      contracts.lightclientbridge.instance.address
+    );
+    channels.incentivized.outbound.instance = await deployer.deploy(channels.incentivized.outbound.contract);
 
     // Deploy applications
     const ethApp = await deployer.deploy(
       ETHApp,
+      channels.incentivized.inbound.instance.address,
       {
         inbound: channels.basic.inbound.instance.address,
         outbound: channels.basic.outbound.instance.address,
@@ -90,41 +126,43 @@ module.exports = function (deployer, network, accounts) {
 
     // Deploy ERC1820 Registry for our E2E stack.
     if (network === 'e2e_test') {
-
       require('@openzeppelin/test-helpers/configure')({ web3 });
       const { singletons } = require('@openzeppelin/test-helpers');
 
       await singletons.ERC1820Registry(accounts[0]);
     }
 
-    // only deploy this contract to non-development networks. The unit tests deploy this contract themselves.
-    if (network === 'ropsten' || network === 'e2e_test') {
-      const dotApp = await deployer.deploy(
-        DOTApp,
-        "Snowfork DOT",
-        "SnowDOT",
-        channels.incentivized.outbound.instance.address,
-        {
-          inbound: channels.basic.inbound.instance.address,
-          outbound: channels.basic.outbound.instance.address,
-        },
-        {
-          inbound: channels.incentivized.inbound.instance.address,
-          outbound: channels.incentivized.outbound.instance.address,
-        },
-      );
+    const dotApp = await deployer.deploy(
+      DOTApp,
+      "Snowfork DOT",
+      "SnowDOT",
+      channels.incentivized.outbound.instance.address,
+      {
+        inbound: channels.basic.inbound.instance.address,
+        outbound: channels.basic.outbound.instance.address,
+      },
+      {
+        inbound: channels.incentivized.inbound.instance.address,
+        outbound: channels.incentivized.outbound.instance.address,
+      },
+    );
 
-      // Do post-construction initialization.
-      await channels.incentivized.outbound.instance.initialize(
-        administrator,
-        dotApp.address,
-        [dotApp.address, ethApp.address, erc20App.address]
-      );
-      await channels.incentivized.outbound.instance.setFee(
-        fee,
-        { from: administrator }
-      );
-    }
+    // Post-construction initialization for Incentivized outbound channel
+    await channels.incentivized.outbound.instance.initialize(
+      administrator,
+      dotApp.address,
+      [dotApp.address, ethApp.address, erc20App.address]
+    );
+    await channels.incentivized.outbound.instance.setFee(
+      fee,
+      { from: administrator }
+    );
+
+    // Post-construction initialization for Incentivized inbound channel
+    await channels.incentivized.inbound.instance.initialize(
+      administrator,
+      ethApp.address,
+    );
 
     await token.mint("10000", {
       from: accounts[0],
@@ -132,21 +170,6 @@ module.exports = function (deployer, network, accounts) {
     await token.mint("10000", {
       from: accounts[1],
     });
-
-    // Link MerkleProof library to ValidatorRegistry
-    await deployer.deploy(MerkleProof);
-    deployer.link(MerkleProof, [ValidatorRegistry]);
-
-    // TODO: Hardcoded for testing
-    const root = "0xc1490f71b21f5700063d93546dbe860cc190e883734ee3f490b76de9e028db99";
-    const numValidators = 2;
-    const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators);
-
-    // Link Bitfield library to LightClientBridge
-    await deployer.deploy(Bitfield);
-    deployer.link(Bitfield, [contracts.lightclientbridge.contract]);
-
-    contracts.lightclientbridge.instance = await deployer.deploy(contracts.lightclientbridge.contract, valRegistry.address)
 
   })
 };

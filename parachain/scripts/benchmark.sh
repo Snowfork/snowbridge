@@ -37,7 +37,7 @@ benchmark_pallets()
 
     PALLETS="assets basic_channel::inbound dot_app erc20_app eth_app frame_system
         incentivized_channel::inbound incentivized_channel::outbound pallet_balances
-        pallet_timestamp pallet_utility verifier_lightclient"
+        pallet_collective pallet_timestamp pallet_utility verifier_lightclient"
 
     echo "Generating weights module for $RUNTIME_DIR with pallets $PALLETS"
 

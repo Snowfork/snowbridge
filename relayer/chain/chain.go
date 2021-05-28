@@ -14,11 +14,15 @@ import (
 
 type Message interface{}
 
-// Message from Substrate
-type SubstrateOutboundMessage struct {
-	ChannelID      substrate.ChannelID
-	CommitmentHash types.H256
-	Commitment     []substrate.CommitmentMessage
+// Messages from Substrate
+type SubstrateOutboundBasicMessage struct {
+	Messages   []substrate.BasicOutboundChannelMessage
+	Commitment types.H256
+}
+
+type SubstrateOutboundIncentivizedMessage struct {
+	Messages   []substrate.IncentivizedOutboundChannelMessage
+	Commitment types.H256
 }
 
 // Message from ethereum

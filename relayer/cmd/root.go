@@ -27,6 +27,7 @@ func init() {
 	rootCmd.AddCommand(runCmd())
 	rootCmd.AddCommand(getBlockCmd())
 	rootCmd.AddCommand(fetchMessagesCmd())
+	rootCmd.AddCommand(subBeefyCmd())
 }
 
 func initConfig() {

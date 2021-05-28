@@ -3,22 +3,48 @@ pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./InboundChannel.sol";
+import "./LightClientBridge.sol";
 
-contract BasicInboundChannel is InboundChannel {
-    uint256 constant public MAX_GAS_PER_MESSAGE = 100000;
+contract BasicInboundChannel {
+    uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
 
-    constructor() {
+    uint64 public nonce;
+
+    struct Message {
+        address target;
+        uint64 nonce;
+        bytes payload;
+    }
+
+    event MessageDispatched(uint64 nonce, bool result);
+
+    LightClientBridge public lightClientBridge;
+
+    constructor(LightClientBridge _lightClientBridge) {
         nonce = 0;
+        lightClientBridge = _lightClientBridge;
     }
 
     // TODO: Submit should take in all inputs required for verification,
     // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
-    function submit(Message[] calldata _messages, bytes32 _commitment)
-        public
-        override
-    {
+    function submit(
+        Message[] calldata _messages,
+        bytes32 _commitment,
+        bytes32 _beefyMMRLeaf,
+        uint256 _beefyMMRLeafIndex,
+        uint256 _beefyMMRLeafCount,
+        bytes32[] memory _beefyMMRLeafProof
+    ) public {
         verifyMessages(_messages, _commitment);
+        // TODO: require(
+        //     lightClientBridge.verifyBeefyMerkleLeaf(
+        //         _beefyMMRLeaf,
+        //         _beefyMMRLeafIndex,
+        //         _beefyMMRLeafCount,
+        //         _beefyMMRLeafProof
+        //     ),
+        //     "Invalid proof"
+        // );
         processMessages(_messages);
     }
 
@@ -70,7 +96,9 @@ contract BasicInboundChannel is InboundChannel {
 
             // Deliver the message to the target
             (bool success, ) =
-                _messages[i].target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(_messages[i].payload);
+                _messages[i].target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(
+                    _messages[i].payload
+                );
 
             emit MessageDispatched(_messages[i].nonce, success);
         }
