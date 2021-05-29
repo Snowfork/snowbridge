@@ -1,34 +1,39 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Encode;
-use frame_support::{decl_event, decl_error, decl_module, decl_storage,
-	dispatch::DispatchResult,
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
 	traits::Get, Parameter,
 };
 use frame_system::ensure_signed;
 
-use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, Convert, MaybeSerializeDeserialize, Member, StaticLookup},
+use sp_runtime::traits::{
+	AtLeast32BitUnsigned, Convert, MaybeSerializeDeserialize, Member, StaticLookup,
 };
 use sp_std::prelude::*;
 use sp_std::vec;
 
 use cumulus_primitives_core::{relay_chain::Balance as RelayChainBalance, ParaId};
-use xcm::v0::{Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm, ExecuteXcm};
-
-use xcm_executor::traits::LocationConversion;
+use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm};
+use xcm_executor::traits::Convert as XcmConvert;
 
 use artemis_core::AssetId;
 
 pub trait Config: frame_system::Config {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-	type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Into<u128>;
+	type Balance: Parameter
+		+ Member
+		+ AtLeast32BitUnsigned
+		+ Default
+		+ Copy
+		+ MaybeSerializeDeserialize
+		+ Into<u128>;
 	type ToRelayChainBalance: Convert<Self::Balance, RelayChainBalance>;
-	type AccountIdConverter: LocationConversion<Self::AccountId>;
+	type AccountIdConverter: XcmConvert<Self::Origin, MultiLocation>;
 	type AccountId32Converter: Convert<Self::AccountId, [u8; 32]>;
 	type RelayChainNetworkId: Get<NetworkId>;
 	type ParaId: Get<ParaId>;
-	type XcmExecutor: ExecuteXcm;
+	type XcmExecutor: ExecuteXcm<Self::Call>;
 }
 
 decl_storage! {
@@ -71,11 +76,12 @@ decl_module! {
 			let recipient = T::Lookup::lookup(recipient)?;
 
 			let xcm = Self::make_xcm_upward_transfer(&recipient, amount);
-			let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
+			let xcm_origin = T::AccountIdConverter::convert_ref(origin.clone())
 				.map_err(|_| Error::<T>::BadLocation)?;
 
-			T::XcmExecutor::execute_xcm(xcm_origin, xcm)
-				.map_err(|_| Error::<T>::ExecutionFailed)?;
+			let outcome = T::XcmExecutor::execute_xcm(xcm_origin, xcm, 10);
+
+			ensure!(!matches!(outcome, xcm::v0::Outcome::Error(_)), Error::<T>::ExecutionFailed);
 
 			Self::deposit_event(Event::<T>::TransferredUpwards(who, recipient, amount));
 
@@ -118,11 +124,12 @@ decl_module! {
 						&recipient,
 						amount);
 
-			let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
+			let xcm_origin = T::AccountIdConverter::convert_ref(origin.clone())
 				.map_err(|_| Error::<T>::BadLocation)?;
 
-			T::XcmExecutor::execute_xcm(xcm_origin, xcm)
-				.map_err(|_| Error::<T>::ExecutionFailed)?;
+			let outcome = T::XcmExecutor::execute_xcm(xcm_origin, xcm, 10);
+
+			ensure!(!matches!(outcome, xcm::v0::Outcome::Error(_)), Error::<T>::ExecutionFailed);
 
 			Self::deposit_event(
 				Event::<T>::Transferred(asset, who, para_id, recipient, network, amount)
@@ -134,9 +141,8 @@ decl_module! {
 }
 
 impl<T: Config> Module<T> {
-
 	// Transfer DOT upwards to relay chain
-	fn make_xcm_upward_transfer(recipient: &T::AccountId, amount: T::Balance) -> Xcm {
+	fn make_xcm_upward_transfer(recipient: &T::AccountId, amount: T::Balance) -> Xcm<T::Call> {
 		Xcm::WithdrawAsset {
 			assets: vec![MultiAsset::ConcreteFungible {
 				id: MultiLocation::X1(Junction::Parent),
@@ -163,7 +169,7 @@ impl<T: Config> Module<T> {
 		network: &NetworkId,
 		recipient: &T::AccountId,
 		amount: T::Balance,
-	) -> Xcm {
+	) -> Xcm<T::Call> {
 		Xcm::WithdrawAsset {
 			assets: vec![MultiAsset::ConcreteFungible {
 				id: location,
@@ -171,7 +177,10 @@ impl<T: Config> Module<T> {
 			}],
 			effects: vec![Order::DepositReserveAsset {
 				assets: vec![MultiAsset::All],
-				dest: MultiLocation::X2(Junction::Parent, Junction::Parachain { id: para_id.into() }),
+				dest: MultiLocation::X2(
+					Junction::Parent,
+					Junction::Parachain { id: para_id.into() },
+				),
 				effects: vec![Order::DepositAsset {
 					assets: vec![MultiAsset::All],
 					dest: MultiLocation::X1(Junction::AccountId32 {
