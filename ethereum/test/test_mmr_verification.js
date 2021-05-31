@@ -7,6 +7,8 @@ require("chai")
     .should();
 
 const MMRVerification = artifacts.require("MMRVerification");
+const fixture7leaves = require('./fixtures/mmr-fixture-data-7-leaves.json');
+const fixture15leaves = require('./fixtures/mmr-fixture-data-15-leaves.json');
 
 describe("MMRVerification Contract", function () {
 
@@ -45,7 +47,7 @@ describe("MMRVerification Contract", function () {
     //     });
     // })
 
-    describe("7-leaf, 11-node MMR", function () {
+    describe.skip("7-leaf, 11-node MMR", function () {
         before(function () {
             console.log('                 7-leaf MMR:           ');
             console.log('                                       ');
@@ -204,7 +206,7 @@ describe("MMRVerification Contract", function () {
         });
     })
 
-    describe("15-leaf, 26-node MMR", function () {
+    describe.skip("15-leaf, 26-node MMR", function () {
         before(function () {
             console.log('                                    15-leaf MMR:                            ');
             console.log('                                                                            ');
@@ -437,4 +439,32 @@ describe("MMRVerification Contract", function () {
             expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
     })
-})
+
+    context("7-leaf MMR from fixture", function () {
+        let mmrVerification;
+        beforeEach(async function () {
+            mmrVerification = await MMRVerification.new();
+        })
+
+        fixture7leaves.proofs.forEach((proof, i) => {
+            it(`should verify valid proof for leaf index ${i}`, async () => {
+                expect(await mmrVerification.verifyInclusionProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
+                    proof.leafIndex, proof.leafCount, proof.items)).to.be.true;
+            });
+        });
+    });
+
+    context("15-leaf MMR from fixture", function () {
+        let mmrVerification;
+        beforeEach(async function () {
+            mmrVerification = await MMRVerification.new();
+        })
+
+        fixture15leaves.proofs.forEach((proof, i) => {
+            it(`should verify valid proof for leaf index ${i}`, async () => {
+                expect(await mmrVerification.verifyInclusionProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
+                    proof.leafIndex, proof.leafCount, proof.items)).to.be.true;
+            });
+        });
+    });
+});

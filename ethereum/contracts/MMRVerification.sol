@@ -15,6 +15,7 @@ pragma solidity ^0.7.0;
  *
  *      General definitions:
  *      - Height:         the height of the tree.
+ *      - Width:          the number of leaves in the tree.
  *      - Size:           the number of nodes in the tree.
  *      - Nodes:          an item in the tree. A node is a leaf or a parent. Nodes' positions are ordered from 1
  *                        to size in the order that they were added to the tree.
@@ -71,14 +72,14 @@ contract MMRVerification {
         uint256 targetPeakIndex;
         uint256 numLeftPeaks;
         uint256 numRightPeaks;
-        uint256[] memory peakIndexes = getPeakIndexes(leafCount);
-        for (uint256 i = 0; i < peakIndexes.length; i++) {
-            if (peakIndexes[i] >= leafPos) {
-                targetPeakIndex = peakIndexes[i];
-                numRightPeaks = peakIndexes.length-1-i;
+        uint256[] memory peakPositions = getPeakPositions(leafCount);
+        for (uint256 i = 0; i < peakPositions.length; i++) {
+            if (peakPositions[i] >= leafPos) {
+                targetPeakIndex = peakPositions[i];
+                numRightPeaks = peakPositions.length-1-i;
                 break;
             }
-             numLeftPeaks = numLeftPeaks + 1;
+            numLeftPeaks++;
         }
 
         // Calculate our leaf's mountain peak hash
@@ -92,17 +93,7 @@ contract MMRVerification {
         // TODO: Make this more elegant
         bytes32 rightPeaksHash;
         if (numRightPeaks > 0) {
-            if (numRightPeaks == 1) {
                 bagger = keccak256(abi.encodePacked(proofItems[proofItems.length-1], bagger));
-            } else {
-                bytes32 baggedRightPeaks = proofItems[proofItems.length-1]; // Right most hash
-
-                // Bag right peaks from right to left one-by-one
-                for(uint i = proofItems.length-2; i >= proofItems.length-numRightPeaks; i--) {
-                    baggedRightPeaks = keccak256(abi.encodePacked(baggedRightPeaks, proofItems[i]));
-                }
-                bagger = keccak256(abi.encodePacked(baggedRightPeaks, bagger));
-            }
         }
 
         // Bag left peaks one-by-one
@@ -220,25 +211,24 @@ contract MMRVerification {
     }
 
     /**
-     * @dev It returns all peaks of the smallest merkle mountain range tree which includes
-     *      the given index(size)
+     * @dev It returns positions of all peaks
      */
-    function getPeakIndexes(uint256 width)
+    function getPeakPositions(uint256 width)
         public
         pure
-        returns (uint256[] memory peakIndexes)
+        returns (uint256[] memory peakPositions)
     {
-        peakIndexes = new uint256[](numOfPeaks(width));
+        peakPositions = new uint256[](numOfPeaks(width));
         uint256 count;
         uint256 size;
         for (uint256 i = 255; i > 0; i--) {
             if (width & (1 << (i - 1)) != 0) {
                 // peak exists
                 size = size + (1 << i) - 1;
-                peakIndexes[count++] = size;
+                peakPositions[count++] = size;
             }
         }
-        require(count == peakIndexes.length, "Invalid bit calculation");
+        require(count == peakPositions.length, "Invalid bit calculation");
     }
 
     /**
