@@ -102,6 +102,15 @@ const ChannelId = {
   Incentivized: 1,
 }
 
+const encodeLog = (log) => {
+  return rlp.encode([log.address, log.topics, log.data]).toString("hex")
+}
+
+const hexPrefix = /^(0x)/i
+
+const mergeKeccak256 = (left, right) =>
+  '0x' + keccakFromHexString('0x' + left.replace(hexPrefix, "") + right.replace(hexPrefix, ''), 256).toString('hex')
+
 module.exports = {
   deployAppWithMockChannels,
   deployLightClientBridge,
@@ -111,4 +120,5 @@ module.exports = {
   addressBytes,
   ChannelId,
   encodeLog,
+  mergeKeccak256,
 };
