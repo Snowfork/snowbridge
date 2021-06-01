@@ -128,12 +128,10 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		"txHash": tx.Hash().Hex(),
 	}).Info("New Signature Commitment transaction submitted")
 
-	wr.log.Info("2: Updating item in Database with status 'InitialVerificationTxSent'")
-	instructions := map[string]interface{}{
-		"status":                       store.InitialVerificationTxSent,
-		"initial_verification_tx_hash": tx.Hash(),
-	}
-	cmd := store.NewDatabaseCmd(&info, store.Update, instructions)
+	wr.log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
+	info.Status = store.InitialVerificationTxSent
+	info.InitialVerificationTxHash = tx.Hash()
+	cmd := store.NewDatabaseCmd(&info, store.Create, nil)
 	wr.databaseMessages <- cmd
 
 	return nil
