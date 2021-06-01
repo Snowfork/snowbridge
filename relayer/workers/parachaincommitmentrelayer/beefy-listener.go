@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
