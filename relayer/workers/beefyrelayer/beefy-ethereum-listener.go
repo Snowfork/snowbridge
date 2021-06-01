@@ -69,7 +69,7 @@ func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group, 
 	if err != nil {
 		return err
 	}
-	// Relayer's operator must update the StartBlock config variable to the latest Ethereum block number
+	// Relayer config StartBlock config variable must be updated to the latest Ethereum block number
 	if uint64(li.ethereumConfig.StartBlock) < blockNumber {
 		li.log.Info(fmt.Sprintf("Syncing Relayer from block %d...", li.ethereumConfig.StartBlock))
 		err := li.pollHistoricEventsAndHeaders(ctx, descendantsUntilFinal)
@@ -357,7 +357,7 @@ func (li *BeefyEthereumListener) simulatePayloadGeneration(item store.BeefyRelay
 		li.log.WithError(err).Error("Error building commitment message")
 	}
 
-	return msg.Payload
+	return msg.CommitmentHash
 }
 
 // forwardWitnessedBeefyJustifications forwards witnessed BEEFY commitments to the Ethereum writer

@@ -13,8 +13,6 @@ start_ganache()
 {
     echo "Starting Ganache"
 
-    export INCENTIVIZED_CHANNEL_FEE="1"
-
     yarn run ganache-cli \
         --port=8545 \
         --networkId=344 \
