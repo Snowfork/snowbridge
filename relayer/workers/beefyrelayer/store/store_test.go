@@ -128,7 +128,7 @@ func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
 	signedCommitment := store.SignedCommitment{
 		Commitment: store.Commitment{
 			Payload:        types.NewH256(payloadBytes),
-			BlockNumber:    types.BlockNumber(930),
+			BlockNumber:    types.NewU32(930),
 			ValidatorSetID: types.NewU64(0),
 		},
 		Signatures: []store.OptionBeefySignature{

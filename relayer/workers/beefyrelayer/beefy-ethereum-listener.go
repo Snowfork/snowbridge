@@ -179,7 +179,7 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 		items := li.beefyDB.GetItemsByStatus(store.CommitmentWitnessed)
 		for _, item := range items {
 			generatedPayload := li.simulatePayloadGeneration(*item)
-			if generatedPayload == validationData.Payload {
+			if generatedPayload == validationData.CommitmentHash {
 				// Update existing database item
 				li.log.Info("Updating item status from 'CommitmentWitnessed' to 'InitialVerificationTxConfirmed'")
 				instructions := map[string]interface{}{
@@ -295,7 +295,7 @@ func (li *BeefyEthereumListener) processHistoricalFinalVerificationSuccessfulEve
 		items := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
 		for _, item := range items {
 			generatedPayload := li.simulatePayloadGeneration(*item)
-			if generatedPayload == validationData.Payload {
+			if generatedPayload == validationData.CommitmentHash {
 				li.log.Info("Deleting finalized item from the database'")
 				deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
 				li.dbMessages <- deleteCmd
