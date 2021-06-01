@@ -69,6 +69,8 @@ func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group, 
 	if err != nil {
 		return err
 	}
+
+	// Relayer's operator must update the StartBlock config variable to the latest Ethereum block number
 	if uint64(li.ethereumConfig.StartBlock) < blockNumber {
 		li.log.Info(fmt.Sprintf("Syncing Relayer from block %d...", li.ethereumConfig.StartBlock))
 		err := li.pollHistoricEventsAndHeaders(ctx, descendantsUntilFinal)
