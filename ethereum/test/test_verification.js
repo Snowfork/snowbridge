@@ -1,7 +1,7 @@
 const BigNumber = web3.BigNumber;
 const {
   deployLightClientBridge, signatureSubstrateToEthereum, buildCommitment,
-  createMerkleTree, deployGenericAppWithChannels, ChannelId, mine, lockupFunds
+  createMerkleTree, deployGenericAppWithChannels, ChannelId, mine, lockupFunds, catchRevert
 } = require("./helpers");
 const ETHApp = artifacts.require("ETHApp");
 const { keccakFromHexString, keccak } = require("ethereumjs-util");
@@ -15,6 +15,7 @@ require("chai")
   .should();
 
 const ethers = require("ethers");
+const { expect } = require("chai");
 
 contract("IncentivizedInboundChannel", function (accounts) {
   // Accounts
@@ -23,7 +24,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
   const userTwo = accounts[2];
   const userThree = accounts[3];
 
-  describe("initialize LightClientBridge", function () {
+  describe.only("initialize LightClientBridge", function () {
     beforeEach(async function () {
       const validatorsMerkleTree = createMerkleTree(["0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b", "0x25451A4de12dcCc2D166922fA938E900fCc4ED24"]);
       this.validatorsLeaf0 = validatorsMerkleTree.getHexLeaves()[0];
@@ -40,10 +41,18 @@ contract("IncentivizedInboundChannel", function (accounts) {
         "0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b",
         this.validator0PubKeyMerkleProof
       );
+
+      const lastId = (await this.lightClientBridge.currentId()).sub(new web3.utils.BN(1));
+
+      await catchRevert(this.lightClientBridge.validatorBitfield(lastId), 'Error: Block wait period not over');
+
       await mine(45);
-      const currentId = await this.lightClientBridge.currentId();
+
+      const bitfield = await this.lightClientBridge.validatorBitfield(lastId);
+      expect(printBitfield(bitfield)).to.eq('10')
+
       const completeCommitment = await this.lightClientBridge.completeSignatureCommitment(
-        currentId.sub(new web3.utils.BN(1)),
+        lastId,
         fixture.commitmentHash,
         fixture.commitment,
         [signatureSubstrateToEthereum(fixture.signature1)],
@@ -93,4 +102,8 @@ contract("IncentivizedInboundChannel", function (accounts) {
 
 function parseBitfield(s) {
   return parseInt(s, 2)
+}
+
+function printBitfield(s) {
+  return parseInt(s.toString(), 10).toString(2)
 }

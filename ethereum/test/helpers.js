@@ -310,6 +310,23 @@ const encodeLog = (log) => {
   return rlp.encode([log.address, log.topics, log.data]).toString("hex")
 }
 
+const PREFIX = "Returned error: VM Exception while processing transaction: ";
+
+async function tryCatch(promise, type, message) {
+    try {
+        await promise;
+        throw null;
+    }
+    catch (error) {
+      assert(error, "Expected an error but did not get one");
+      if (message) {
+        assert(error.message === (PREFIX + type + ' ' + message), "Expected error '" + PREFIX + type + ' ' + message + "' but got '" + error.message + "' instead");
+      } else {
+        assert(error.message.startsWith(PREFIX + type), "Expected an error starting with '" + PREFIX + type + "' but got '" + error.message + "' instead");
+      }
+    }
+};
+
 module.exports = {
   confirmBasicChannelSend,
   confirmIncentivizedChannelSend,
@@ -328,4 +345,12 @@ module.exports = {
   ChannelId,
   buildCommitment,
   encodeLog,
+  catchRevert: async (promise, message) => await tryCatch(promise, "revert", message),
+  catchOutOfGas: async (promise, message) => await tryCatch(promise, "out of gas", message),
+  catchInvalidJump: async (promise, message) => await tryCatch(promise, "invalid JUMP", message),
+  catchInvalidOpcode: async (promise, message) => await tryCatch(promise, "invalid opcode", message),
+  catchStackOverflow: async (promise, message) => await tryCatch(promise, "stack overflow", message),
+  catchStackUnderflow: async (promise, message) => await tryCatch(promise, "stack underflow", message),
+  catchStaticStateChange: async (promise, message) => await tryCatch(promise, "static state change", message),
 };
+
