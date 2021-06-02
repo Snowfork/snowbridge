@@ -24,7 +24,7 @@ contract("IncentivizedInboundChannel", function (accounts) {
   const userTwo = accounts[2];
   const userThree = accounts[3];
 
-  describe.only("initialize LightClientBridge", function () {
+  describe("initialize LightClientBridge", function () {
     beforeEach(async function () {
       const validatorsMerkleTree = createMerkleTree(["0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b", "0x25451A4de12dcCc2D166922fA938E900fCc4ED24"]);
       this.validatorsLeaf0 = validatorsMerkleTree.getHexLeaves()[0];
