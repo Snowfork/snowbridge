@@ -255,23 +255,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "artemis-commitments"
-version = "0.1.0"
-dependencies = [
- "artemis-core",
- "enum-iterator",
- "ethabi-decode",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "artemis-core"
 version = "0.1.1"
 dependencies = [
@@ -434,7 +417,6 @@ version = "0.1.1"
 dependencies = [
  "artemis-assets",
  "artemis-basic-channel",
- "artemis-commitments",
  "artemis-core",
  "artemis-dispatch",
  "artemis-dot-app",
@@ -489,9 +471,14 @@ dependencies = [
 name = "artemis-runtime-common"
 version = "0.1.0"
 dependencies = [
+ "artemis-basic-channel",
+ "artemis-core",
+ "artemis-incentivized-channel",
  "frame-support",
  "frame-system",
+ "sp-core",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -4256,7 +4243,6 @@ version = "0.1.1"
 dependencies = [
  "artemis-assets",
  "artemis-basic-channel",
- "artemis-commitments",
  "artemis-core",
  "artemis-dispatch",
  "artemis-dot-app",
@@ -9026,7 +9012,6 @@ version = "0.1.1"
 dependencies = [
  "artemis-assets",
  "artemis-basic-channel",
- "artemis-commitments",
  "artemis-core",
  "artemis-dispatch",
  "artemis-dot-app",

@@ -2,6 +2,7 @@ pub mod constants;
 
 pub mod assets_weights;
 pub mod basic_channel_inbound_weights;
+pub mod basic_channel_outbound_weights;
 pub mod dot_app_weights;
 pub mod erc20_app_weights;
 pub mod eth_app_weights;

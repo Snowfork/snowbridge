@@ -122,7 +122,7 @@ fn test_submit() {
 }
 
 #[test]
-fn test_fees_burned() {
+fn test_submit_fees_burned() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
@@ -137,7 +137,7 @@ fn test_fees_burned() {
 }
 
 #[test]
-fn test_not_enough_funds() {
+fn test_submit_not_enough_funds() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
@@ -153,7 +153,7 @@ fn test_not_enough_funds() {
 }
 
 #[test]
-fn test_add_message_exceeds_limit() {
+fn test_submit_exceeds_queue_limit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
@@ -188,7 +188,7 @@ fn test_set_fee_not_authorized() {
 }
 
 #[test]
-fn test_add_message_exceeds_payload_limit() {
+fn test_submit_exceeds_payload_limit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
@@ -201,4 +201,18 @@ fn test_add_message_exceeds_payload_limit() {
 			Error::<Test>::PayloadTooLarge,
 		);
 	})
+}
+
+#[test]
+fn test_submit_fails_on_nonce_overflow() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let who: AccountId = Keyring::Bob.into();
+
+		Nonce::set(u64::MAX);
+		assert_noop!(
+			IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
+			Error::<Test>::Overflow,
+		);
+	});
 }
