@@ -135,7 +135,6 @@ runtime-benchmarks = [
     "dispatch/runtime-benchmarks",
     "erc20-app/runtime-benchmarks",
     "eth-app/runtime-benchmarks",
-    "basic-channel/runtime-benchmarks",
     "incentivized-channel/runtime-benchmarks",
     "verifier-lightclient/runtime-benchmarks",
 ]
