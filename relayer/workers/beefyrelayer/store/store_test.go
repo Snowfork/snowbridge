@@ -83,6 +83,15 @@ func TestStore(t *testing.T) {
 	newItem := database.GetItemByInitialVerificationTxHash(hash)
 	assert.Equal(t, newItem.Status, store.InitialVerificationTxSent)
 	assert.Equal(t, newItem.InitialVerificationTxHash, hash)
+
+	// Pass delete command to write loop
+	deleteCmd := store.NewDatabaseCmd(&item, store.Delete, nil)
+	messages <- deleteCmd
+
+	time.Sleep(2 * time.Second)
+
+	deletedItem := database.GetItemByInitialVerificationTxHash(hash)
+	assert.Equal(t, deletedItem, &store.BeefyRelayInfo{})
 }
 
 func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
@@ -119,7 +128,7 @@ func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
 	signedCommitment := store.SignedCommitment{
 		Commitment: store.Commitment{
 			Payload:        types.NewH256(payloadBytes),
-			BlockNumber:    types.BlockNumber(930),
+			BlockNumber:    types.NewU32(930),
 			ValidatorSetID: types.NewU64(0),
 		},
 		Signatures: []store.OptionBeefySignature{

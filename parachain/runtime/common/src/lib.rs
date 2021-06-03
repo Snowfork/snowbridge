@@ -1,8 +1,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::weights::{DispatchClass, Weight};
+use frame_support::{
+    parameter_types,
+    dispatch::DispatchResult,
+    weights::{DispatchClass, Weight},
+};
 use frame_system::limits::BlockWeights;
-use sp_runtime::Perbill;
+use sp_runtime::{ModuleId, Perbill};
+use sp_std::marker::PhantomData;
+use sp_core::H160;
+
+use artemis_core::{AssetId, ChannelId};
 
 // This function replicates BlockWeights::with_sensible_defaults but uses custom
 // base block and extrinsic weights.
@@ -30,4 +38,31 @@ pub fn build_block_weights(
         .avg_block_initialization(Perbill::from_percent(10))
         .build()
         .expect("Weights must be valid")
+}
+
+pub const INDEXING_PREFIX: &'static [u8] = b"commitment";
+
+pub struct OutboundRouter<T>(PhantomData<T>);
+
+impl<T> artemis_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
+where
+	T: basic_channel::outbound::Config + incentivized_channel::outbound::Config
+{
+	fn submit(channel_id: ChannelId, who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
+		match channel_id {
+			ChannelId::Basic => basic_channel::outbound::Module::<T>::submit(who, target, payload),
+			ChannelId::Incentivized => incentivized_channel::outbound::Module::<T>::submit(who, target, payload),
+		}
+	}
+}
+
+parameter_types! {
+	pub const Ether: AssetId = AssetId::ETH;
+	pub const MaxMessagePayloadSize: usize = 256;
+	pub const MaxMessagesPerCommit: usize = 20;
+}
+
+parameter_types! {
+    pub const TreasuryModuleId: ModuleId = ModuleId(*b"s/treasy");
+    pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
 }

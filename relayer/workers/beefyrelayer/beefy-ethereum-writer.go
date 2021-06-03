@@ -116,7 +116,7 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		GasLimit: 5000000,
 	}
 
-	tx, err := contract.NewSignatureCommitment(&options, msg.Payload,
+	tx, err := contract.NewSignatureCommitment(&options, msg.CommitmentHash,
 		msg.ValidatorClaimsBitfield, msg.ValidatorSignatureCommitment,
 		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
@@ -161,7 +161,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		GasLimit: 500000,
 	}
 
-	tx, err := contract.CompleteSignatureCommitment(&options, msg.ID, msg.Payload, msg.Signatures,
+	tx, err := contract.CompleteSignatureCommitment(&options, msg.ID, msg.CommitmentHash, msg.Commitment, msg.Signatures,
 		msg.ValidatorPositions, msg.ValidatorPublicKeys, msg.ValidatorPublicKeyMerkleProofs)
 
 	if err != nil {
@@ -174,7 +174,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 	}).Info("Complete Signature Commitment transaction submitted")
 
 	// Update item's status in database
-	wr.log.Info("4: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
+	wr.log.Info("5: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
 	instructions := map[string]interface{}{
 		"status":                        store.CompleteVerificationTxSent,
 		"complete_verification_tx_hash": tx.Hash(),
@@ -182,6 +182,5 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 	updateCmd := store.NewDatabaseCmd(&info, store.Update, instructions)
 	wr.databaseMessages <- updateCmd
 
-	// TODO: delete from database after confirming
 	return nil
 }

@@ -1,11 +1,13 @@
 package ethereum
 
 type Config struct {
-	Endpoint              string         `mapstructure:"endpoint"`
-	PrivateKey            string         `mapstructure:"private-key"`
-	DescendantsUntilFinal byte           `mapstructure:"descendants-until-final"`
-	Channels              ChannelsConfig `mapstructure:"channels"`
-	LightClientBridge     string         `mapstructure:"lightclientbridge"`
+	Endpoint                       string         `mapstructure:"endpoint"`
+	BeefyPrivateKey                string         `mapstructure:"beefy-private-key"`
+	ParachainCommitmentsPrivateKey string         `mapstructure:"parachain-commitments-private-key"`
+	DescendantsUntilFinal          byte           `mapstructure:"descendants-until-final"`
+	Channels                       ChannelsConfig `mapstructure:"channels"`
+	LightClientBridge              string         `mapstructure:"lightclientbridge"`
+	StartBlock                     uint64         `mapstructure:"startblock"`
 }
 
 type ChannelsConfig struct {

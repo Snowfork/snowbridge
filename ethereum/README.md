@@ -4,9 +4,11 @@ This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge
 
 ## Development
 
-Install truffle <sup id="a1">[1](#f1)</sup>
+Make sure you use a recent node version, e. g. with [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
+
 ```bash
-yarn global add truffle
+nvm install 14.16.1
+nvm use 14.16.1
 ```
 
 Install dependencies with yarn:

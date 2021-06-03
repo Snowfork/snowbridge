@@ -9,12 +9,22 @@ repository = "https://github.com/Snowfork/polkadot-ethereum"
 [dependencies]
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1", default-features = false }
+artemis-core = { path = "../../primitives/core", package = "artemis-core", default-features = false }
+basic-channel = { path = "../../pallets/basic-channel", package = "artemis-basic-channel", default-features = false }
+incentivized-channel = { path = "../../pallets/incentivized-channel", package = "artemis-incentivized-channel", default-features = false }
 
 [features]
 default = ["std"]
 std = [
     "frame-support/std",
     "frame-system/std",
+    "sp-core/std",
+    "sp-std/std",
     "sp-runtime/std",
+    "artemis-core/std",
+    "basic-channel/std",
+    "incentivized-channel/std",
 ]

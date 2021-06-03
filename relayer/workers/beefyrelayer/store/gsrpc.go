@@ -14,7 +14,7 @@ import (
 // Commitment is a beefy commitment
 type Commitment struct {
 	Payload        types.H256
-	BlockNumber    types.BlockNumber
+	BlockNumber    types.U32
 	ValidatorSetID types.U64
 }
 

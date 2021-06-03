@@ -7,9 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/stretchr/testify/assert"
 
 	"golang.org/x/sync/errgroup"
 
@@ -22,7 +20,7 @@ import (
 )
 
 func TestWrite(t *testing.T) {
-	logger, hook := test.NewNullLogger()
+	logger, _ := test.NewNullLogger()
 	log := logger.WithField("chain", "Parachain")
 
 	conn := parachain.NewConnection("ws://127.0.0.1:11144/", sr25519.Alice().AsKeyringPair(), log)
@@ -61,13 +59,17 @@ func TestWrite(t *testing.T) {
 		Call: "BasicInboundChannel.submit",
 		Args: args,
 	}
+	header := chain.Header{
+		HeaderData: "headerdata",
+		ProofData:  "proofdata",
+	}
+	payload := ethrelayer.ParachainPayload{
+		Header:   &header,
+		Messages: []*chain.EthereumOutboundMessage{&message},
+	}
 
-	err = writer.WriteMessages(ctx, []*chain.EthereumOutboundMessage{&message})
+	err = writer.WritePayload(ctx, &payload)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
-	assert.Equal(t, "Submitted messages to Substrate", hook.LastEntry().Message)
-
 }

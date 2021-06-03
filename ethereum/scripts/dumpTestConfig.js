@@ -36,6 +36,7 @@ const dump = (tmpDir, channels, bridge) => {
     const config = {
         ethereum: {
             endpoint: "ws://localhost:8545/",
+            startblock: 1,
             "descendants-until-final": 3,
             channels: {
                 basic: {
@@ -62,13 +63,15 @@ const dump = (tmpDir, channels, bridge) => {
         workers: {
             parachaincommitmentrelayer: {
                 enabled: true,
+                "restart-delay": 30,
             },
-            beefyrelayer:  {
+            beefyrelayer: {
                 enabled: true,
+                "restart-delay": 30,
             },
-            ethrelayer:  {
+            ethrelayer: {
                 enabled: true,
-                "restart-delay": 60,
+                "restart-delay": 30,
             },
         }
     }

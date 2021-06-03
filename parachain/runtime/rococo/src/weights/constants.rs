@@ -11,7 +11,7 @@ parameter_types! {
     pub const ExtrinsicBaseWeight: Weight = 297 * WEIGHT_PER_MICROS;
     /// Weight of reads and writes to RocksDB, the default DB used by Substrate
     pub const RocksDbWeight: RuntimeDbWeight = RuntimeDbWeight {
-        read: 30 * WEIGHT_PER_MICROS,
-        write: 112 * WEIGHT_PER_MICROS,
+        read: 27 * WEIGHT_PER_MICROS,
+        write: 107 * WEIGHT_PER_MICROS,
     };
 }

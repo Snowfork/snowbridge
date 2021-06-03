@@ -131,8 +131,9 @@ async function subscribeJustifications(api) {
     console.log("New beefy justification received:");
     const commitment = justification.commitment;
     const commitmentBytes = commitment.toHex();
+    const rawCommitmentBytes = hexToU8a(commitmentBytes)
     const hashedCommitment = blake2AsHex(commitmentBytes, 256);
-    console.log({ justification: justification.toHuman(), commitmentBytes, hashedCommitment });
+    console.log({ justification: justification.toHuman(), commitmentBytes, rawCommitmentBytes, hashedCommitment });
     getLatestMMRInJustification(justification, api)
   });
 }
@@ -157,7 +158,6 @@ async function getLatestMMRInJustification(justification, api) {
 async function getMMRLeafForBlock(blockNumber, api) {
   console.log(`Getting proof and leaf for block ${blockNumber}...`);
   const mmrProof = await api.rpc.mmr.generateProof(blockNumber);
-
   console.log({ mmrProof: mmrProof.toHuman() });
 
   const mmrEncodableOpqueLeaf = api.createType('MMREncodableOpaqueLeaf', hexToU8a(mmrProof.leaf.toHex()))

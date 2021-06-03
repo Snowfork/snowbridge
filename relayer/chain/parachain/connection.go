@@ -101,3 +101,12 @@ func (co *Connection) GetFinalizedHeader() (*types.Header, error) {
 
 	return finalizedHeader, nil
 }
+
+func (co *Connection) GetLatestBlockNumber() (*types.BlockNumber, error) {
+	latestBlock, err := co.api.RPC.Chain.GetBlockLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	return &latestBlock.Block.Header.Number, nil
+}

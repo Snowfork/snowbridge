@@ -31,8 +31,7 @@ type Worker struct {
 
 const Name = "beefy-relayer"
 
-func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, dbConfig *store.Config) (*Worker, error) {
-	log := logrus.WithField("worker", Name)
+func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, dbConfig *store.Config, log *logrus.Entry) (*Worker, error) {
 
 	log.Info("Worker created")
 
@@ -45,7 +44,7 @@ func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Con
 	logger := log.WithField("database", "Beefy")
 	beefyDB := store.NewDatabase(db, dbMessages, logger)
 
-	ethereumKeypair, err := secp256k1.NewKeypairFromString(ethereumConfig.PrivateKey)
+	ethereumKeypair, err := secp256k1.NewKeypairFromString(ethereumConfig.BeefyPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +56,7 @@ func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Con
 	ethHeaders := make(chan chain.Header)
 
 	beefyEthereumListener := NewBeefyEthereumListener(ethereumConfig,
-		ethereumConn, beefyDB, beefyMessages, dbMessages, ethHeaders,
-		log)
+		ethereumConn, beefyDB, beefyMessages, dbMessages, ethHeaders, log)
 
 	beefyEthereumWriter := NewBeefyEthereumWriter(ethereumConfig, ethereumConn,
 		beefyDB, dbMessages, beefyMessages, log)
