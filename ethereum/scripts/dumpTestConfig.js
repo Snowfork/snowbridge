@@ -36,6 +36,7 @@ const dump = (tmpDir, channels, bridge) => {
     const config = {
         ethereum: {
             endpoint: "ws://localhost:8545/",
+            startblock: 1,
             "descendants-until-final": 3,
             channels: {
                 basic: {

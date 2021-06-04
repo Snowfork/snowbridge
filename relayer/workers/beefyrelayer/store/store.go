@@ -75,6 +75,7 @@ type CmdType int
 const (
 	Create CmdType = iota // 0
 	Update CmdType = iota // 1
+	Delete CmdType = iota // 2
 )
 
 type DatabaseCmd struct {
@@ -178,6 +179,9 @@ func (d *Database) writeLoop(ctx context.Context) error {
 			case Update:
 				d.log.Info("Updating item in database...")
 				d.DB.Model(&cmd.Info).Updates(cmd.Instructions)
+			case Delete:
+				d.log.Info("Deleting item from database...")
+				d.DB.Delete(&cmd.Info, cmd.Info.ID)
 			}
 			mutex.Unlock()
 		}
@@ -193,5 +197,11 @@ func (d *Database) GetItemsByStatus(status Status) []*BeefyRelayInfo {
 func (d *Database) GetItemByInitialVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
 	var item BeefyRelayInfo
 	d.DB.Take(&item, "initial_verification_tx_hash = ?", txHash)
+	return &item
+}
+
+func (d *Database) GetItemByFinalVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
+	var item BeefyRelayInfo
+	d.DB.Take(&item, "final_verification_tx_hash = ?", txHash)
 	return &item
 }

@@ -7,6 +7,7 @@ type Config struct {
 	DescendantsUntilFinal          byte           `mapstructure:"descendants-until-final"`
 	Channels                       ChannelsConfig `mapstructure:"channels"`
 	LightClientBridge              string         `mapstructure:"lightclientbridge"`
+	StartBlock                     uint64         `mapstructure:"startblock"`
 }
 
 type ChannelsConfig struct {

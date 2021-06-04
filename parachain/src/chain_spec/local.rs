@@ -6,8 +6,8 @@ use local_runtime::{
 	SystemConfig, VerifierLightclientConfig,
 	BasicInboundChannelConfig, IncentivizedInboundChannelConfig,
 	ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
-	CommitmentsConfig,
 	ParachainInfoConfig,
+	BasicOutboundChannelConfig,
 	IncentivizedOutboundChannelConfig,
 	LocalCouncilMembershipConfig,
 	SudoConfig,
@@ -129,6 +129,10 @@ fn testnet_genesis(
 		basic_channel_inbound: BasicInboundChannelConfig {
 			source_channel: hex!["EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"].into(),
 		},
+		basic_channel_outbound: BasicOutboundChannelConfig {
+			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
+			interval: 1,
+		},
 		incentivized_channel_inbound: IncentivizedInboundChannelConfig {
 			source_channel: hex!["B8EA8cB425d85536b158d661da1ef0895Bb92F1D"].into(),
 			reward_fraction: Perbill::from_percent(80)
@@ -167,9 +171,6 @@ fn testnet_genesis(
 				],
 			},
 			initial_difficulty: 19755084633726428633088u128.into(),
-		},
-		commitments: CommitmentsConfig {
-			interval: 1,
 		},
 		eth_app: ETHConfig {
 			address: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into()
