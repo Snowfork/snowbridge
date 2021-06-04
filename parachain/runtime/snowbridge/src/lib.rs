@@ -72,8 +72,8 @@ use runtime_common::{
 	Ether,
 	MaxMessagePayloadSize,
 	MaxMessagesPerCommit,
-	DotModuleId,
-	TreasuryModuleId,
+	DotPalletId,
+	TreasuryPalletId,
 };
 
 mod weights;
