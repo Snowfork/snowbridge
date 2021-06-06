@@ -102,10 +102,6 @@ const ChannelId = {
   Incentivized: 1,
 }
 
-const encodeLog = (log) => {
-  return rlp.encode([log.address, log.topics, log.data]).toString("hex")
-}
-
 const hexPrefix = /^(0x)/i
 
 const mergeKeccak256 = (left, right) =>
