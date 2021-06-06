@@ -11,42 +11,6 @@ const fixture7leaves = require('./fixtures/mmr-fixture-data-7-leaves.json');
 const fixture15leaves = require('./fixtures/mmr-fixture-data-15-leaves.json');
 
 describe("MMRVerification Contract", function () {
-
-    // context("Live Data", function () {
-
-    //     // before(function () {
-    //     //     console.log('                 1-leaf MMR:           ');
-    //     //     console.log('                                       ');
-    //     //     console.log('    Height 1 | 1                       ');
-    //     //     console.log('             | |                       ');
-    //     //     console.log('Leaf indexes | 0                       ');
-    //     // })
-
-    //     // ---------------------------- Tree contents ----------------------------
-    //     //  - For leaf nodes, node hash is the SCALE-encoding of the leaf data.
-    //     //  - For parent nodes, node hash is the hash of it's children (left, right).
-    //     //
-    //     // 0xda5e6d0616e05c6a6348605a37ca33493fc1a15ad1e6a405ee05c17843fdafed // 1  LEAF NODE
-
-    //     let mmrVerification;
-    //     beforeEach(async function () {
-    //         mmrVerification = await MMRVerification.new();
-    //     })
-
-    //     const root = ""
-
-    //     it('should verify valid proof for leaf index 0 (node 1)', async () => {
-    //         let leafNodeHash = ""
-    //         let proof = {
-    //             leaf_index: 0,
-    //             leaf_count: 1,
-    //             items: []
-    //         }
-
-    //         expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
-    //     });
-    // })
-
     describe("7-leaf, 11-node MMR", function () {
         before(function () {
             console.log('                 7-leaf MMR:           ');
