@@ -52,10 +52,13 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployLightClientBridge = async _ => {
+const deployLightClientBridge = async (validatorRoot, numOfValidators) => {
   await lazyInit();
   const mmrVerification = await MMRVerification.new();
   const blake2b = await Blake2b.new();
+  if (validatorRoot && numOfValidators != undefined) {
+    await validatorRegistry.update(validatorRoot, numOfValidators)
+  }
   const lightClientBridge = await LightClientBridge.new(
     validatorRegistry.address,
     mmrVerification.address,
