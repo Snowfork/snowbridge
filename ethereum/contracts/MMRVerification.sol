@@ -68,15 +68,13 @@ contract MMRVerification {
             return true;
         }
 
-        // Calculate the index of our leaf's mountain peak
-        uint256 targetPeakIndex;
+        // Calculate the position of our leaf's mountain peak
+        uint256 targetPeakPos;
         uint256 numLeftPeaks;
-        uint256 numRightPeaks;
         uint256[] memory peakPositions = getPeakPositions(leafCount);
         for (uint256 i = 0; i < peakPositions.length; i++) {
             if (peakPositions[i] >= leafPos) {
-                targetPeakIndex = peakPositions[i];
-                numRightPeaks = peakPositions.length-1-i;
+                targetPeakPos = peakPositions[i];
                 break;
             }
             numLeftPeaks++;
@@ -84,16 +82,15 @@ contract MMRVerification {
 
         // Calculate our leaf's mountain peak hash
         bytes32 mountainHash = calculatePeakRoot(
-            numLeftPeaks, leafNodeHash, leafPos, targetPeakIndex, proofItems
+            numLeftPeaks, leafNodeHash, leafPos, targetPeakPos, proofItems
         );
 
-        // All right peaks are rolled up into one hash. If there are any, bag them.
+        // Bag peaks
         bytes32 bagger = mountainHash;
 
-        // TODO: Make this more elegant
-        bytes32 rightPeaksHash;
-        if (numRightPeaks > 0) {
-                bagger = keccak256(abi.encodePacked(proofItems[proofItems.length-1], bagger));
+        // All right peaks are rolled up into one hash. If there are any, bag them.
+        if (targetPeakPos < peakPositions[peakPositions.length-1]) {
+            bagger = keccak256(abi.encodePacked(proofItems[proofItems.length-1], bagger));
         }
 
         // Bag left peaks one-by-one
