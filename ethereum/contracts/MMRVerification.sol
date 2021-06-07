@@ -15,6 +15,7 @@ pragma solidity ^0.7.0;
  *
  *      General definitions:
  *      - Height:         the height of the tree.
+ *      - Width:          the number of leaves in the tree.
  *      - Size:           the number of nodes in the tree.
  *      - Nodes:          an item in the tree. A node is a leaf or a parent. Nodes' positions are ordered from 1
  *                        to size in the order that they were added to the tree.
@@ -67,26 +68,28 @@ contract MMRVerification {
             return true;
         }
 
-        // Calculate the index of our leaf's mountain peak
-        uint256 targetPeakIndex;
+        // Calculate the position of our leaf's mountain peak
+        uint256 targetPeakPos;
         uint256 numLeftPeaks;
-        uint256[] memory peakIndexes = getPeakIndexes(leafCount);
-        for (uint256 i = 0; i < peakIndexes.length; i++) {
-            if (peakIndexes[i] >= leafPos) {
-                targetPeakIndex = peakIndexes[i];
+        uint256[] memory peakPositions = getPeakPositions(leafCount);
+        for (uint256 i = 0; i < peakPositions.length; i++) {
+            if (peakPositions[i] >= leafPos) {
+                targetPeakPos = peakPositions[i];
                 break;
             }
-            numLeftPeaks = numLeftPeaks + 1;
+            numLeftPeaks++;
         }
 
         // Calculate our leaf's mountain peak hash
         bytes32 mountainHash = calculatePeakRoot(
-            numLeftPeaks, leafNodeHash, leafPos, targetPeakIndex, proofItems
+            numLeftPeaks, leafNodeHash, leafPos, targetPeakPos, proofItems
         );
 
-        // All right peaks are rolled up into one hash. If there are any, bag them.
+        // Bag peaks
         bytes32 bagger = mountainHash;
-        if(targetPeakIndex > leafPos) {
+
+        // All right peaks are rolled up into one hash. If there are any, bag them.
+        if (targetPeakPos < peakPositions[peakPositions.length-1]) {
             bagger = keccak256(abi.encodePacked(proofItems[proofItems.length-1], bagger));
         }
 
@@ -205,25 +208,24 @@ contract MMRVerification {
     }
 
     /**
-     * @dev It returns all peaks of the smallest merkle mountain range tree which includes
-     *      the given index(size)
+     * @dev It returns positions of all peaks
      */
-    function getPeakIndexes(uint256 width)
+    function getPeakPositions(uint256 width)
         public
         pure
-        returns (uint256[] memory peakIndexes)
+        returns (uint256[] memory peakPositions)
     {
-        peakIndexes = new uint256[](numOfPeaks(width));
+        peakPositions = new uint256[](numOfPeaks(width));
         uint256 count;
         uint256 size;
         for (uint256 i = 255; i > 0; i--) {
             if (width & (1 << (i - 1)) != 0) {
                 // peak exists
                 size = size + (1 << i) - 1;
-                peakIndexes[count++] = size;
+                peakPositions[count++] = size;
             }
         }
-        require(count == peakIndexes.length, "Invalid bit calculation");
+        require(count == peakPositions.length, "Invalid bit calculation");
     }
 
     /**
