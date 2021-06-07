@@ -107,17 +107,19 @@ func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 				return nil
 			}
 
+			header := payload.Header.HeaderData.(ethereum.Header)
+			headerID := header.ID()
 			err := wr.WritePayload(ctx, &payload)
 			if err != nil {
 				wr.log.WithError(err).WithFields(logrus.Fields{
-					"blockNumber":  payload.Header.HeaderData.(ethereum.Header).Number,
+					"blockNumber":  headerID.Number,
 					"messageCount": len(payload.Messages),
 				}).Error("Failure submitting header and messages to Substrate")
 				return err
 			}
 
 			wr.log.WithFields(logrus.Fields{
-				"blockNumber":  payload.Header.HeaderData.(ethereum.Header).Number,
+				"blockNumber":  headerID.Number,
 				"messageCount": len(payload.Messages),
 			}).Info("Submitted header and messages to Substrate")
 		}
@@ -161,7 +163,8 @@ func (wr *ParachainWriter) write(ctx context.Context, c types.Call) error {
 		return err
 	}
 
-	wr.pool.WaitForSubmitAndWatch(ctx, wr.nonce, &extI)
+	onProcessed := func() error { return nil }
+	wr.pool.WaitForSubmitAndWatch(ctx, wr.nonce, &extI, onProcessed)
 
 	wr.nonce = wr.nonce + 1
 

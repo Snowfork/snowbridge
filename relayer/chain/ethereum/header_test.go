@@ -133,7 +133,7 @@ func TestHeader_EncodeDecode11090290(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assert.Equal(t, *header, decoded, "Decoded Substrate header should match ethereum.Header")
+	assert.Equal(t, header.Fields, decoded.Fields, "Decoded Substrate header should match ethereum.Header")
 }
 
 func TestProof_EncodeDecode(t *testing.T) {
