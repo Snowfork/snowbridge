@@ -14,7 +14,7 @@ require("chai")
 const ethers = require("ethers");
 const { expect } = require("chai");
 
-describe("Verification tests", function () {
+describe.skip("Verification tests", function () {
   let accounts;
   let owner;
   let userOne;
