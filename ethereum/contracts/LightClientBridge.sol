@@ -197,6 +197,28 @@ contract LightClientBridge {
         currentId = currentId.add(1);
     }
 
+    function validatorBitfield(uint256 id) public view returns (uint256[] memory) {
+        ValidationData storage data = validationData[id];
+
+        /**
+         * @dev verify that block wait period has passed
+         */
+        require(
+            block.number >= data.blockNumber.add(BLOCK_WAIT_PERIOD),
+            "Error: Block wait period not over"
+        );
+
+        uint256 requiredNumOfSignatures =
+            (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
+                THRESHOLD_DENOMINATOR;
+
+        return Bitfield.randomNBitsFromPrior(
+            getSeed(data),
+            data.validatorClaimsBitfield,
+            requiredNumOfSignatures
+        );
+    }
+
     /**
      * @notice Performs the second step in the validation logic
      * @param id an identifying value generated in the previous transaction

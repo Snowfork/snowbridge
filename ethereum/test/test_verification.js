@@ -1,7 +1,7 @@
 const BigNumber = web3.BigNumber;
 const {
   deployLightClientBridge, signatureSubstrateToEthereum, buildCommitment,
-  createMerkleTree, deployGenericAppWithChannels, ChannelId, mine, lockupFunds
+  createMerkleTree, deployGenericAppWithChannels, ChannelId, mine, lockupFunds, catchRevert
 } = require("./helpers");
 const ETHApp = artifacts.require("ETHApp");
 const fixture = require('./fixtures/beefy-fixture-data.json');
@@ -12,6 +12,7 @@ require("chai")
   .should();
 
 const ethers = require("ethers");
+const { expect } = require("chai");
 
 describe.skip("Verification tests", function () {
   let accounts;
@@ -30,6 +31,8 @@ describe.skip("Verification tests", function () {
 
   describe("initialize LightClientBridge", function () {
     beforeEach(async function () {
+      this.timeout(10 * 1000)
+
       const validatorsMerkleTree = createMerkleTree(["0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b", "0x25451A4de12dcCc2D166922fA938E900fCc4ED24"]);
       this.validatorsLeaf0 = validatorsMerkleTree.getHexLeaves()[0];
       this.validatorsLeaf1 = validatorsMerkleTree.getHexLeaves()[1];
@@ -45,10 +48,18 @@ describe.skip("Verification tests", function () {
         "0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b",
         this.validator0PubKeyMerkleProof
       );
+
+      const lastId = (await this.lightClientBridge.currentId()).sub(new web3.utils.BN(1));
+
+      await catchRevert(this.lightClientBridge.validatorBitfield(lastId), 'Error: Block wait period not over');
+
       await mine(45);
-      const currentId = await this.lightClientBridge.currentId();
+
+      const bitfield = await this.lightClientBridge.validatorBitfield(lastId);
+      expect(printBitfield(bitfield)).to.eq('10')
+
       const completeCommitment = await this.lightClientBridge.completeSignatureCommitment(
-        currentId.sub(new web3.utils.BN(1)),
+        lastId,
         fixture.commitmentHash,
         fixture.commitment,
         [signatureSubstrateToEthereum(fixture.signature1)],
@@ -58,13 +69,16 @@ describe.skip("Verification tests", function () {
       );
       console.log(await this.lightClientBridge.latestMMRRoot());
 
-      this.channel = await BasicInboundChannel.new(this.lightClientBridge.address,
-        { from: owner }
-      );
-      this.app = await MockApp.new();
+      // this.channel = await BasicInboundChannel.new(this.lightClientBridge.address,
+      //   { from: owner }
+      // );
+      // this.app = await MockApp.new();
     });
 
     it("should successfully verify a commitment", async function () {
+      // TODO finish this test
+      return
+
       const abi = this.app.abi;
       const iChannel = new ethers.utils.Interface(abi);
       const polkadotSender = ethers.utils.formatBytes32String('fake-polkadot-address');
@@ -99,4 +113,8 @@ describe.skip("Verification tests", function () {
 
 function parseBitfield(s) {
   return parseInt(s, 2)
+}
+
+function printBitfield(s) {
+  return parseInt(s.toString(), 10).toString(2)
 }
