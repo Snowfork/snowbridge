@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
 	merkletree "github.com/wealdtech/go-merkletree"
-	"golang.org/x/crypto/blake2b"
 )
 
 type NewSignatureCommitmentMessage struct {
@@ -22,7 +21,6 @@ type NewSignatureCommitmentMessage struct {
 
 type CompleteSignatureCommitmentMessage struct {
 	ID                             *big.Int
-	CommitmentHash                 [32]byte
 	Commitment                     lightclientbridge.LightClientBridgeCommitment
 	Signatures                     [][]byte
 	ValidatorPositions             []*big.Int
@@ -56,12 +54,9 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 	sigValvAdded := byte(uint8(sigValv) + 27)
 	sigValEthereum := append(sigValrs, sigValvAdded)
 
-	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
-
 	validatorClaimsBitfield := []*big.Int{big.NewInt(123)} // TODO: add bitfield stuff properly
 
 	msg := NewSignatureCommitmentMessage{
-		CommitmentHash:                commitmentHash,
 		ValidatorClaimsBitfield:       validatorClaimsBitfield,
 		ValidatorSignatureCommitment:  sigValEthereum,
 		ValidatorPublicKey:            b.ValidatorAddresses[valAddrIndex],
@@ -126,8 +121,6 @@ func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][3
 }
 
 func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage() (CompleteSignatureCommitmentMessage, error) {
-	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
-
 	validationDataID := big.NewInt(int64(b.SignedCommitment.Commitment.ValidatorSetID))
 
 	//TODO: Use info.RandomSeed.Big() to generate validatorPositions
@@ -146,7 +139,6 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage() (Complete
 
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                             validationDataID,
-		CommitmentHash:                 commitmentHash,
 		Commitment:                     commitment,
 		Signatures:                     signatures,
 		ValidatorPositions:             validatorPositions,

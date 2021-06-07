@@ -60,7 +60,6 @@ describe.skip("Verification tests", function () {
 
       const completeCommitment = await this.lightClientBridge.completeSignatureCommitment(
         lastId,
-        fixture.commitmentHash,
         fixture.commitment,
         [signatureSubstrateToEthereum(fixture.signature1)],
         [1],

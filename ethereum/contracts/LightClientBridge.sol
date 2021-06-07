@@ -222,7 +222,6 @@ contract LightClientBridge {
     /**
      * @notice Performs the second step in the validation logic
      * @param id an identifying value generated in the previous transaction
-     * @param commitmentHash contains the commitmentHash signed by the validator(s)
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param signatures an array of signatures from the randomly chosen validators
      * @param validatorPositions an array of bitfields from the chosen validators
@@ -231,7 +230,6 @@ contract LightClientBridge {
      */
     function completeSignatureCommitment(
         uint256 id,
-        bytes32 commitmentHash, // TODO: not needed, we have to create that from the commitment below
         Commitment memory commitment,
         bytes[] memory signatures,
         uint256[] memory validatorPositions,
@@ -291,10 +289,8 @@ contract LightClientBridge {
                 requiredNumOfSignatures
             );
 
-        /**
-         * @dev Encode and hash the commitment
-         */
-        bytes32[2] memory commitmentHashB =
+        // Encode and hash the commitment
+        bytes32 commitmentHash =
             blake2b.formatOutput(
                 blake2b.blake2b(
                     abi.encodePacked(
@@ -305,12 +301,7 @@ contract LightClientBridge {
                     "",
                     32
                 )
-            );
-
-        require(
-            commitmentHashB[0] == commitmentHash,
-            "Error: Commitment must match commitment hash"
-        );
+            )[0];
 
         /**
          *  @dev For each randomSignature, do:
