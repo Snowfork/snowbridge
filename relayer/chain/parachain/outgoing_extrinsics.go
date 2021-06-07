@@ -35,17 +35,17 @@ func NewExtrinsicPool(eg *errgroup.Group, conn *Connection, log *logrus.Entry) *
 	return &ep
 }
 
-func (ep *ExtrinsicPool) WaitForSubmitAndWatch(ctx context.Context, nonce uint32, ext *types.Extrinsic) {
+func (ep *ExtrinsicPool) WaitForSubmitAndWatch(ctx context.Context, nonce uint32, ext *types.Extrinsic, onProcessed func() error) {
 	select {
 	case ep.watched <- struct{}{}:
 		ep.eg.Go(func() error {
-			return ep.submitAndWatchLoop(ctx, nonce, ext)
+			return ep.submitAndWatchLoop(ctx, nonce, ext, onProcessed)
 		})
 	case <-ctx.Done():
 	}
 }
 
-func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, ext *types.Extrinsic) error {
+func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, ext *types.Extrinsic, onProcessed func() error) error {
 	sub, err := ep.conn.api.RPC.Author.SubmitAndWatchExtrinsic(*ext)
 	if err != nil {
 		return err
@@ -105,7 +105,7 @@ func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 					ep.maxNonce = nonce
 				}
 				<-ep.watched
-				return nil
+				return onProcessed()
 			}
 
 		case err := <-sub.Err():
