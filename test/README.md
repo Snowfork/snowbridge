@@ -53,6 +53,7 @@ Build polkadot:
 git clone -n https://github.com/snowfork/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
 git checkout enable_beefy_on_rococo
+./scripts/init.sh
 cargo build --release
 cd -
 ```
