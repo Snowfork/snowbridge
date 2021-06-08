@@ -179,7 +179,7 @@ impl<T: Config> Module<T> {
 				assets: vec![MultiAsset::All],
 				dest: MultiLocation::X2(
 					Junction::Parent,
-					Junction::Parachain { id: para_id.into() },
+					Junction::Parachain(para_id.into()),
 				),
 				effects: vec![Order::DepositAsset {
 					assets: vec![MultiAsset::All],

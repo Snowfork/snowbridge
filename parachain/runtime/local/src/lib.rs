@@ -644,30 +644,35 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 4,
+		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 5,
 
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 5,
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>} = 6,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>} = 7,
 
-		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
-		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 8,
+		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 8,
+		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 9,
 
-		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event} = 9,
-		BasicOutboundChannel: basic_channel_outbound::{Pallet, Config<T>, Storage, Event} = 10,
-		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 11,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Config<T>, Storage, Event} = 12,
-		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 13,
-		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 14,
-		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
+		// Bridge Infrastructure
+		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event} = 10,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Config<T>, Storage, Event} = 11,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 12,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Config<T>, Storage, Event} = 13,
+		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
+		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 15,
+		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
 
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 16,
-		LocalXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 17,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Origin} = 18,
-		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 19,
-		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 20,
+		// XCM
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 17,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 18,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 19,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Origin} = 20,
 
 		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 21,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 20,
 
+		// Bridge applications
+		// NOTE: Do not change the following pallet indices without updating
+		//   the peer apps (smart contracts) on the Ethereum side.
 		DOT: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
 		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
 		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
