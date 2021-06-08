@@ -9392,7 +9392,6 @@ dependencies = [
  "artemis-eth-app",
  "artemis-incentivized-channel",
  "artemis-runtime-common",
- "artemis-transfer",
  "artemis-xcm-support",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
