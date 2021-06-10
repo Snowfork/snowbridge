@@ -196,7 +196,7 @@ contract LightClientBridge {
         currentId = currentId.add(1);
     }
 
-    function validatorBitfield(uint256 id)
+    function createRandomBitfield(uint256 id)
         public
         view
         returns (uint256[] memory)
@@ -212,7 +212,19 @@ contract LightClientBridge {
         );
 
         return
-            Bitfield.randomNBits(getSeed(data), requiredNumberOfSignatures());
+            Bitfield.randomNBitsWithPriorCheck(
+                getSeed(data),
+                data.validatorClaimsBitfield,
+                requiredNumberOfSignatures()
+            );
+    }
+
+    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
+        public
+        view
+        returns (uint256[] memory)
+    {
+        return Bitfield.createBitfield(bitsToSet, length);
     }
 
     /**
@@ -221,7 +233,7 @@ contract LightClientBridge {
      * @param commitmentHash contains the commitmentHash signed by the validator(s)
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param signatures an array of signatures from the randomly chosen validators
-     * @param validatorPositions an array of bitfields from the chosen validators
+     * @param validatorPositions an array of the positions of the randomly chosen validators
      * @param validatorPublicKeys an array of the public key of each signer
      * @param validatorPublicKeyMerkleProofs an array of merkle proofs from the chosen validators
      */

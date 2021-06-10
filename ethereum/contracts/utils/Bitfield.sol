@@ -68,33 +68,18 @@ library Bitfield {
         return bitfield;
     }
 
-    /**
-     * @notice Draws a random number, derives an index in the bitfield, and sets the bit if it is in the `prior` and not
-     * yet set. Repeats that `n` times.
-     */
-    function randomNBits(uint256 seed, uint256 n)
+    function createBitfield(uint256[] calldata bitsToSet, uint256 length)
         public
         pure
         returns (uint256[] memory bitfield)
     {
         // Calculate length of uint256 array based on rounding up to number of uint256 needed
-        uint256 arrayLength = (n + 255) / 256;
+        uint256 arrayLength = (length + 255) / 256;
 
         bitfield = new uint256[](arrayLength);
-        uint256 found = 0;
 
-        for (uint256 i = 0; found < n; i++) {
-            bytes32 randomness = keccak256(abi.encode(seed + i));
-            uint256 index = uint256(randomness) % n;
-
-            // require a not yet set (new) bit to be set
-            if (isSet(bitfield, index)) {
-                continue;
-            }
-
-            set(bitfield, index);
-
-            found++;
+        for (uint256 i = 0; i < bitsToSet.length; i++) {
+            set(bitfield, i);
         }
 
         return bitfield;

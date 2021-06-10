@@ -348,7 +348,7 @@ func (li *BeefyEthereumListener) simulatePayloadGeneration(item store.BeefyRelay
 		li.log.WithError(fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error()))
 	}
 
-	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(0)
+	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(0, []*big.Int{})
 	if err != nil {
 		li.log.WithError(err).Error("Error building commitment message")
 	}

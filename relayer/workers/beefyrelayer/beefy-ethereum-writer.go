@@ -3,6 +3,8 @@ package beefyrelayer
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"strconv"
 
 	"golang.org/x/sync/errgroup"
 
@@ -99,14 +101,29 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
 	}
 
-	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(valIndex)
-	if err != nil {
-		return err
-	}
-
 	contract := wr.lightClientBridge
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")
+	}
+
+	signedValidators := []*big.Int{}
+	for i, signature := range beefyJustification.SignedCommitment.Signatures {
+		if signature.Option.IsSome() {
+			signedValidators = append(signedValidators, big.NewInt(int64(i)))
+		}
+	}
+	numberOfValidators := big.NewInt(int64(len(beefyJustification.SignedCommitment.Signatures)))
+	initialBitfield, err := contract.CreateInitialBitfield(
+		&bind.CallOpts{Pending: true}, signedValidators, numberOfValidators,
+	)
+	if err != nil {
+		wr.log.WithError(err).Error("Failed to create initial validator bitfield")
+		return err
+	}
+
+	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(valIndex, initialBitfield)
+	if err != nil {
+		return err
 	}
 
 	options := bind.TransactOpts{
@@ -144,14 +161,29 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
 	}
 
-	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage(info)
-	if err != nil {
-		return err
-	}
-
 	contract := wr.lightClientBridge
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")
+	}
+
+	randomBitfield, err := contract.CreateRandomBitfield(
+		&bind.CallOpts{Pending: true},
+		big.NewInt(int64(info.ContractID)),
+	)
+	if err != nil {
+		wr.log.WithError(err).Error("Failed to get random validator bitfield")
+		return err
+	}
+
+	bitfield := ""
+	for _, bitfieldInt := range randomBitfield {
+		bits := strconv.FormatInt(bitfieldInt.Int64(), 2)
+		bitfield += bits
+	}
+
+	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage(info, bitfield)
+	if err != nil {
+		return err
 	}
 
 	options := bind.TransactOpts{

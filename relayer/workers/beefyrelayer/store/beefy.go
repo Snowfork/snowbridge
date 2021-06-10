@@ -42,7 +42,7 @@ func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment
 	}
 }
 
-func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int) (NewSignatureCommitmentMessage, error) {
+func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int, initialBitfield []*big.Int) (NewSignatureCommitmentMessage, error) {
 	sig0ProofContents, err := b.GenerateMerkleProofOffchain(valAddrIndex)
 	if err != nil {
 		return NewSignatureCommitmentMessage{}, err
@@ -58,11 +58,9 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 
 	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
 
-	validatorClaimsBitfield := []*big.Int{big.NewInt(123)} // TODO: add bitfield stuff properly
-
 	msg := NewSignatureCommitmentMessage{
 		CommitmentHash:                commitmentHash,
-		ValidatorClaimsBitfield:       validatorClaimsBitfield,
+		ValidatorClaimsBitfield:       initialBitfield,
 		ValidatorSignatureCommitment:  sigValEthereum,
 		ValidatorPublicKey:            b.ValidatorAddresses[valAddrIndex],
 		ValidatorPosition:             big.NewInt(int64(valAddrIndex)),
@@ -125,22 +123,33 @@ func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][3
 	return sigProofContents, nil
 }
 
-func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyRelayInfo) (CompleteSignatureCommitmentMessage, error) {
+func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyRelayInfo, bitfield string) (CompleteSignatureCommitmentMessage, error) {
 	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
 
 	validationDataID := big.NewInt(int64(info.ContractID))
 
-	//TODO: Populate validatorPublicKeys, and based on validatorPositions
-	//TODO: Use info.RandomSeed.Big() to generate validatorPositions
 	validatorPositions := []*big.Int{}
-
-	signatures := [][]byte{}
-	for _, sig := range b.SignedCommitment.Signatures {
-		signatures = append(signatures, sig.Value[:])
+	for i := 0; i < len(bitfield); i++ {
+		bit := bitfield[i : i+1]
+		if bit == "1" {
+			validatorPositions = append(validatorPositions, big.NewInt(int64(i)))
+		}
 	}
 
-	validatorPublicKeys := b.ValidatorAddresses
+	signatures := [][]byte{}
+	validatorPublicKeys := []common.Address{}
 	validatorPublicKeyMerkleProofs := [][][32]byte{}
+	for _, validatorPosition := range validatorPositions {
+		sig := b.SignedCommitment.Signatures[validatorPosition.Int64()].Value[:]
+		signatures = append(signatures, sig)
+
+		pubKey := b.ValidatorAddresses[validatorPosition.Int64()]
+		validatorPublicKeys = append(validatorPublicKeys, pubKey)
+
+		//TODO: do proper proof
+		merkleProof := [][32]byte{}
+		validatorPublicKeyMerkleProofs = append(validatorPublicKeyMerkleProofs, merkleProof)
+	}
 
 	commitment := lightclientbridge.LightClientBridgeCommitment{
 		Payload:        b.SignedCommitment.Commitment.Payload,
@@ -148,7 +157,6 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),
 	}
 
-	fmt.Println("beefy-relayer sigs, ", signatures)
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                             validationDataID,
 		CommitmentHash:                 commitmentHash,
