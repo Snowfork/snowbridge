@@ -83,7 +83,7 @@ contract LightClientBridge {
 
     uint256 public constant THRESHOLD_NUMERATOR = 2;
     uint256 public constant THRESHOLD_DENOMINATOR = 3;
-    uint256 public constant BLOCK_WAIT_PERIOD = 45;
+    uint256 public constant BLOCK_WAIT_PERIOD = 3;
 
     /**
      * @notice Deploys the LightClientBridge contract
@@ -197,7 +197,11 @@ contract LightClientBridge {
         currentId = currentId.add(1);
     }
 
-    function validatorBitfield(uint256 id) public view returns (uint256[] memory) {
+    function validatorBitfield(uint256 id)
+        public
+        view
+        returns (uint256[] memory)
+    {
         ValidationData storage data = validationData[id];
 
         /**
@@ -212,11 +216,12 @@ contract LightClientBridge {
             (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
                 THRESHOLD_DENOMINATOR;
 
-        return Bitfield.randomNBitsFromPrior(
-            getSeed(data),
-            data.validatorClaimsBitfield,
-            requiredNumOfSignatures
-        );
+        return
+            Bitfield.randomNBitsFromPrior(
+                getSeed(data),
+                data.validatorClaimsBitfield,
+                requiredNumOfSignatures
+            );
     }
 
     /**

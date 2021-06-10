@@ -144,7 +144,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
 	}
 
-	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage()
+	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage(info)
 	if err != nil {
 		return err
 	}
