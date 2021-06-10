@@ -182,7 +182,10 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 			generatedPayload := li.simulatePayloadGeneration(*item)
 			if generatedPayload == validationData.CommitmentHash {
 				// Update existing database item
-				li.log.Info("Updating item status from 'CommitmentWitnessed' to 'InitialVerificationTxConfirmed' and adding ID")
+				li.log.Info(
+					"Updating item %s status from 'CommitmentWitnessed' to 'InitialVerificationTxConfirmed'",
+					event.Id,
+				)
 				instructions := map[string]interface{}{
 					"contract_id":             event.Id.Int64(),
 					"status":                  store.InitialVerificationTxConfirmed,
@@ -234,7 +237,10 @@ func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx 
 			continue
 		}
 
-		li.log.Info("3: Updating status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
+		li.log.Info(
+			"3: Updating item %s status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'",
+			event.Id,
+		)
 		instructions := map[string]interface{}{
 			"contract_id":       event.Id.Int64(),
 			"status":            store.InitialVerificationTxConfirmed,
@@ -289,7 +295,10 @@ func (li *BeefyEthereumListener) processHistoricalFinalVerificationSuccessfulEve
 	for _, event := range events {
 		item := li.beefyDB.GetItemByID(event.Id.Int64())
 		if int64(item.ID) == event.Id.Int64() {
-			li.log.Info("Deleting finalized item from the database'")
+			li.log.Info(
+				"Deleting finalized item %s from the database",
+				event.Id,
+			)
 			deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
 			li.dbMessages <- deleteCmd
 		} else {
@@ -321,7 +330,10 @@ func (li *BeefyEthereumListener) processFinalVerificationSuccessfulEvents(ctx co
 			continue
 		}
 
-		li.log.Info("6: Deleting finalized item from the database'")
+		li.log.Info(
+			"6: Deleting finalized item %s from the database",
+			event.Id,
+		)
 
 		item := li.beefyDB.GetItemByID(event.Id.Int64())
 		deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
@@ -368,7 +380,10 @@ func (li *BeefyEthereumListener) forwardReadyToCompleteItems(ctx context.Context
 				li.log.WithError(err).Error("Failure fetching inclusion block")
 			}
 
-			li.log.Info("4: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
+			li.log.Info(
+				"4: Updating item %s status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'",
+				item.ID,
+			)
 			item.Status = store.ReadyToComplete
 			item.RandomSeed = block.Hash()
 			li.beefyMessages <- *item
