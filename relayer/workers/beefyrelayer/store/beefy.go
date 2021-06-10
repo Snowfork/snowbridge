@@ -43,20 +43,14 @@ func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment
 }
 
 func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int, initialBitfield []*big.Int) (NewSignatureCommitmentMessage, error) {
+	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
+
 	sig0ProofContents, err := b.GenerateMerkleProofOffchain(valAddrIndex)
 	if err != nil {
 		return NewSignatureCommitmentMessage{}, err
 	}
 
-	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
-	// Split signature into r, s, v and add 27 to v
-	sigValPolkadot := b.SignedCommitment.Signatures[valAddrIndex].Value
-	sigValrs := sigValPolkadot[:64]
-	sigValv := sigValPolkadot[64]
-	sigValvAdded := byte(uint8(sigValv) + 27)
-	sigValEthereum := append(sigValrs, sigValvAdded)
-
-	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
+	sigValEthereum := BeefySigToEthSig(b.SignedCommitment.Signatures[valAddrIndex].Value)
 
 	msg := NewSignatureCommitmentMessage{
 		CommitmentHash:                commitmentHash,
@@ -68,6 +62,17 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 	}
 
 	return msg, nil
+}
+
+func BeefySigToEthSig(beefySig BeefySignature) []byte {
+	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
+	// Split signature into r, s, v and add 27 to v
+	sigValrs := beefySig[:64]
+	sigValv := beefySig[64]
+	sigValvAdded := byte(uint8(sigValv) + 27)
+	sigValEthereum := append(sigValrs, sigValvAdded)
+
+	return sigValEthereum
 }
 
 // Keccak256 is the Keccak256 hashing method
@@ -140,14 +145,18 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 	validatorPublicKeys := []common.Address{}
 	validatorPublicKeyMerkleProofs := [][][32]byte{}
 	for _, validatorPosition := range validatorPositions {
-		sig := b.SignedCommitment.Signatures[validatorPosition.Int64()].Value[:]
-		signatures = append(signatures, sig)
+		beefySig := b.SignedCommitment.Signatures[validatorPosition.Int64()].Value
+		ethSig := BeefySigToEthSig(beefySig)
+		signatures = append(signatures, ethSig)
 
 		pubKey := b.ValidatorAddresses[validatorPosition.Int64()]
 		validatorPublicKeys = append(validatorPublicKeys, pubKey)
 
-		//TODO: do proper proof
-		merkleProof := [][32]byte{}
+		merkleProof, err := b.GenerateMerkleProofOffchain(int(validatorPosition.Int64()))
+		if err != nil {
+			return CompleteSignatureCommitmentMessage{}, err
+		}
+
 		validatorPublicKeyMerkleProofs = append(validatorPublicKeyMerkleProofs, merkleProof)
 	}
 
