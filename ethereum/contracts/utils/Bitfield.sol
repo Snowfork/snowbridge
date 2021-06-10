@@ -32,14 +32,14 @@ library Bitfield {
      * @notice Draws a random number, derives an index in the bitfield, and sets the bit if it is in the `prior` and not
      * yet set. Repeats that `n` times.
      */
-    function randomNBitsFromPrior(
+    function randomNBitsWithPriorCheck(
         uint256 seed,
         uint256[] memory prior,
         uint256 n
     ) public pure returns (uint256[] memory bitfield) {
         require(
-            n <= countSetBits(prior),
-            "`n` must be <= number of set bits in `prior`"
+            n == countSetBits(prior),
+            "`n` must be == number of set bits in `prior`"
         );
 
         bitfield = new uint256[](prior.length);
@@ -55,7 +55,44 @@ library Bitfield {
                 continue;
             }
 
-            // require a not yet sit (new) bit to be set
+            // require a not yet set (new) bit to be set
+            if (isSet(bitfield, index)) {
+                continue;
+            }
+
+            set(bitfield, index);
+
+            found++;
+        }
+
+        return bitfield;
+    }
+
+    /**
+     * @notice Draws a random number, derives an index in the bitfield, and sets the bit if it is in the `prior` and not
+     * yet set. Repeats that `n` times.
+     */
+    function randomNBits(uint256 seed, uint256 n)
+        public
+        pure
+        returns (uint256[] memory bitfield)
+    {
+        // Calculate length of uint256 array based on rounding up to number of uint256 needed
+        uint256 arrayLength = (n + 255) / 256;
+
+        bitfield = new uint256[](arrayLength);
+        uint256 found = 0;
+
+        for (uint256 i = 0; found < n; i++) {
+            bytes32 randomness = keccak256(abi.encode(seed + i));
+            uint256 index = uint256(randomness) % n;
+
+            // require randomly seclected bit to be set in prior
+            if (!isSet(prior, index)) {
+                continue;
+            }
+
+            // require a not yet set (new) bit to be set
             if (isSet(bitfield, index)) {
                 continue;
             }

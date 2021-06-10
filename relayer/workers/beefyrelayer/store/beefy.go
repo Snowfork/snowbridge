@@ -130,11 +130,15 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 
 	validationDataID := big.NewInt(int64(info.ContractID))
 
+	//TODO: Populate validatorPublicKeys, and based on validatorPositions
 	//TODO: Use info.RandomSeed.Big() to generate validatorPositions
 	validatorPositions := []*big.Int{}
 
-	//TODO: Populate signatures, validatorPublicKeys, and based on validatorPositions
 	signatures := [][]byte{}
+	for _, sig := range b.SignedCommitment.Signatures {
+		signatures = append(signatures, sig.Value[:])
+	}
+
 	validatorPublicKeys := b.ValidatorAddresses
 	validatorPublicKeyMerkleProofs := [][][32]byte{}
 
@@ -144,6 +148,7 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),
 	}
 
+	fmt.Println("beefy-relayer sigs, ", signatures)
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                             validationDataID,
 		CommitmentHash:                 commitmentHash,

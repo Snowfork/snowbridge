@@ -174,8 +174,7 @@ contract LightClientBridge {
          */
         require(
             validatorClaimsBitfield.countSetBits() >
-                (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-                    THRESHOLD_DENOMINATOR,
+                requiredNumberOfSignatures(),
             "Error: Bitfield not enough validators"
         );
 
@@ -212,16 +211,8 @@ contract LightClientBridge {
             "Error: Block wait period not over"
         );
 
-        uint256 requiredNumOfSignatures =
-            (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-                THRESHOLD_DENOMINATOR;
-
         return
-            Bitfield.randomNBitsFromPrior(
-                getSeed(data),
-                data.validatorClaimsBitfield,
-                requiredNumOfSignatures
-            );
+            Bitfield.randomNBits(getSeed(data), requiredNumberOfSignatures());
     }
 
     /**
@@ -261,9 +252,7 @@ contract LightClientBridge {
             "Error: Sender address does not match original validation data"
         );
 
-        uint256 requiredNumOfSignatures =
-            (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-                THRESHOLD_DENOMINATOR;
+        uint256 requiredNumOfSignatures = requiredNumberOfSignatures();
 
         /**
          * @dev verify that required number of signatures, positions, public keys and merkle proofs are
@@ -290,7 +279,7 @@ contract LightClientBridge {
          * @dev Generate an array of numbers
          */
         uint256[] memory randomBitfield =
-            Bitfield.randomNBitsFromPrior(
+            Bitfield.randomNBitsWithPriorCheck(
                 getSeed(data),
                 data.validatorClaimsBitfield,
                 requiredNumOfSignatures
@@ -432,5 +421,13 @@ contract LightClientBridge {
         // get beefy_authority_set from newest leaf
         // update authority set
         // validatorRegistry.updateValidatorSet(beefy_authority_set)
+    }
+
+    function requiredNumberOfSignatures() public view returns (uint256) {
+        uint256 requiredNumOfSignaturesX100 =
+            (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR * 100) /
+                THRESHOLD_DENOMINATOR;
+
+        return (requiredNumOfSignaturesX100 + 99) / 100;
     }
 }
