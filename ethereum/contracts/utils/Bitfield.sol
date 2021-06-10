@@ -38,8 +38,8 @@ library Bitfield {
         uint256 n
     ) public pure returns (uint256[] memory bitfield) {
         require(
-            n == countSetBits(prior),
-            "`n` must be == number of set bits in `prior`"
+            n <= countSetBits(prior),
+            "`n` must be <= number of set bits in `prior`"
         );
 
         bitfield = new uint256[](prior.length);
