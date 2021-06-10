@@ -182,7 +182,7 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 			generatedPayload := li.simulatePayloadGeneration(*item)
 			if generatedPayload == validationData.CommitmentHash {
 				// Update existing database item
-				li.log.Info(
+				li.log.Infof(
 					"Updating item %s status from 'CommitmentWitnessed' to 'InitialVerificationTxConfirmed'",
 					event.Id,
 				)
@@ -237,7 +237,7 @@ func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx 
 			continue
 		}
 
-		li.log.Info(
+		li.log.Infof(
 			"3: Updating item %s status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'",
 			event.Id,
 		)
@@ -295,7 +295,7 @@ func (li *BeefyEthereumListener) processHistoricalFinalVerificationSuccessfulEve
 	for _, event := range events {
 		item := li.beefyDB.GetItemByID(event.Id.Int64())
 		if int64(item.ID) == event.Id.Int64() {
-			li.log.Info(
+			li.log.Infof(
 				"Deleting finalized item %s from the database",
 				event.Id,
 			)
@@ -330,7 +330,7 @@ func (li *BeefyEthereumListener) processFinalVerificationSuccessfulEvents(ctx co
 			continue
 		}
 
-		li.log.Info(
+		li.log.Infof(
 			"6: Deleting finalized item %s from the database",
 			event.Id,
 		)
@@ -380,8 +380,8 @@ func (li *BeefyEthereumListener) forwardReadyToCompleteItems(ctx context.Context
 				li.log.WithError(err).Error("Failure fetching inclusion block")
 			}
 
-			li.log.Info(
-				"4: Updating item %s status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'",
+			li.log.Infof(
+				"4: Updating item %v status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'",
 				item.ID,
 			)
 			item.Status = store.ReadyToComplete
