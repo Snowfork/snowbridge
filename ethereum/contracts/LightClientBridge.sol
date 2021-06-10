@@ -170,10 +170,10 @@ contract LightClientBridge {
         );
 
         /**
-         * @dev Check that the bitfield actually contains enough claims to be succesful, ie, > 2/3
+         * @dev Check that the bitfield actually contains enough claims to be succesful, ie, >= 2/3
          */
         require(
-            validatorClaimsBitfield.countSetBits() >
+            validatorClaimsBitfield.countSetBits() >=
                 requiredNumberOfSignatures(),
             "Error: Bitfield not enough validators"
         );
