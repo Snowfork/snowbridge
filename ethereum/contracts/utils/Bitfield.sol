@@ -87,11 +87,6 @@ library Bitfield {
             bytes32 randomness = keccak256(abi.encode(seed + i));
             uint256 index = uint256(randomness) % n;
 
-            // require randomly seclected bit to be set in prior
-            if (!isSet(prior, index)) {
-                continue;
-            }
-
             // require a not yet set (new) bit to be set
             if (isSet(bitfield, index)) {
                 continue;
