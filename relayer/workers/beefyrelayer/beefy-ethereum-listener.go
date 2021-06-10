@@ -182,8 +182,9 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 			generatedPayload := li.simulatePayloadGeneration(*item)
 			if generatedPayload == validationData.CommitmentHash {
 				// Update existing database item
-				li.log.Info("Updating item status from 'CommitmentWitnessed' to 'InitialVerificationTxConfirmed'")
+				li.log.Info("Updating item status from 'CommitmentWitnessed' to 'InitialVerificationTxConfirmed' and adding ID")
 				instructions := map[string]interface{}{
+					"contract_id":             event.Id.Int64(),
 					"status":                  store.InitialVerificationTxConfirmed,
 					"initial_verification_tx": event.Raw.TxHash.Hex(),
 					"complete_on_block":       event.Raw.BlockNumber + li.blockWaitPeriod,
@@ -233,8 +234,9 @@ func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx 
 			continue
 		}
 
-		li.log.Info("3: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
+		li.log.Info("3: Updating status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
 		instructions := map[string]interface{}{
+			"contract_id":       event.Id.Int64(),
 			"status":            store.InitialVerificationTxConfirmed,
 			"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
 		}
@@ -285,27 +287,12 @@ func (li *BeefyEthereumListener) processHistoricalFinalVerificationSuccessfulEve
 	)
 
 	for _, event := range events {
-		// Fetch validation data from contract using event.ID
-		validationData, err := li.lightClientBridge.ContractCaller.ValidationData(nil, event.Id)
-		if err != nil {
-			li.log.WithError(err).Error(fmt.Sprintf("Error querying validation data for ID %d", event.Id))
-		}
-
-		// Attempt to match items in database based on their payload
-		itemFoundInDatabase := false
-		items := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
-		for _, item := range items {
-			generatedPayload := li.simulatePayloadGeneration(*item)
-			if generatedPayload == validationData.CommitmentHash {
-				li.log.Info("Deleting finalized item from the database'")
-				deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
-				li.dbMessages <- deleteCmd
-
-				itemFoundInDatabase = true
-				break
-			}
-		}
-		if !itemFoundInDatabase {
+		item := li.beefyDB.GetItemByID(event.Id.Int64())
+		if int64(item.ID) == event.Id.Int64() {
+			li.log.Info("Deleting finalized item from the database'")
+			deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
+			li.dbMessages <- deleteCmd
+		} else {
 			li.log.Error("BEEFY justification data not found in database for FinalVerificationSuccessful event. Ignoring event.")
 		}
 	}
@@ -334,12 +321,9 @@ func (li *BeefyEthereumListener) processFinalVerificationSuccessfulEvents(ctx co
 			continue
 		}
 
-		item := li.beefyDB.GetItemByFinalVerificationTxHash(event.Raw.TxHash)
-		if item.Status != store.CompleteVerificationTxSent {
-			continue
-		}
-
 		li.log.Info("6: Deleting finalized item from the database'")
+
+		item := li.beefyDB.GetItemByID(event.Id.Int64())
 		deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
 		li.dbMessages <- deleteCmd
 	}
