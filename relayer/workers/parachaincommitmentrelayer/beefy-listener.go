@@ -1,5 +1,3 @@
-// +build ignore
-
 package parachaincommitmentrelayer
 
 import (
@@ -28,11 +26,11 @@ const OUR_PARACHAIN_ID = 200
 // to the relay chain light client, but will be done once that's complete.
 
 type MessagePackage struct {
-	channelID          chainTypes.ChannelID
-	commitmentHash     types.H256
-	commitmentMessages []chainTypes.CommitmentMessage
-	paraHeadProof      string
-	mmrProof           types.GenerateMMRProofResponse
+	channelID              chainTypes.ChannelID
+	commitmentHash         types.H256
+	commitmentMessagesData types.StorageDataRaw
+	paraHeadProof          string
+	mmrProof               types.GenerateMMRProofResponse
 }
 
 type BeefyListener struct {
@@ -134,32 +132,25 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 
 			ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
 
-			channelID, commitmentHash, commitmentMessages, err := li.extractCommitment(ourParaHead)
+			messagePackets, err := li.extractCommitments(ourParaHead, mmrProof, ourParaHeadProof)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to extract commitment and messages")
 			}
-			if commitmentMessages == nil {
+			if len(messagePackets) == 0 {
 				li.log.Info("Parachain header has no commitment with messages, skipping...")
 				continue
 			}
+			for _, messagePacket := range messagePackets {
+				li.log.WithFields(logrus.Fields{
+					"channelID":              messagePacket.channelID,
+					"commitmentHash":         messagePacket.commitmentHash,
+					"commitmentMessagesData": messagePacket.commitmentMessagesData,
+					"ourParaHeadProof":       messagePacket.paraHeadProof,
+					"mmrProof":               messagePacket.mmrProof,
+				}).Info("Beefy Listener emitted new message packet")
 
-			messagePackage := MessagePackage{
-				channelID,
-				commitmentHash,
-				commitmentMessages,
-				ourParaHeadProof,
-				mmrProof,
+				li.messages <- messagePacket
 			}
-
-			li.log.WithFields(logrus.Fields{
-				"channelID":          messagePackage.channelID,
-				"commitmentHash":     messagePackage.commitmentHash,
-				"commitmentMessages": messagePackage.commitmentMessages,
-				"ourParaHeadProof":   messagePackage.paraHeadProof,
-				"mmrProof":           messagePackage.mmrProof,
-			}).Info("Beefy Listener emmited new message packet")
-
-			li.messages <- messagePackage
 		}
 	}
 }
@@ -278,42 +269,47 @@ func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.H
 	return ""
 }
 
-func (li *BeefyListener) extractCommitment(header types.Header) (
-	chainTypes.ChannelID,
-	types.H256,
-	[]chainTypes.CommitmentMessage,
-	error) {
+func (li *BeefyListener) extractCommitments(
+	header types.Header,
+	mmrProof types.GenerateMMRProofResponse,
+	ourParaHeadProof string) ([]MessagePackage, error) {
 
 	li.log.WithFields(logrus.Fields{
 		"blockNumber": header.Number,
 	}).Debug("Extracting commitment from parachain header")
 
-	digestItem, err := getAuxiliaryDigestItem(header.Digest)
+	auxDigestItems, err := getAuxiliaryDigestItems(header.Digest)
 	if err != nil {
-		return chainTypes.ChannelID{}, types.H256{}, nil, err
+		return nil, err
 	}
 
-	if digestItem == nil || !digestItem.IsCommitment {
-		return chainTypes.ChannelID{}, types.H256{}, nil, nil
+	var messagePackages []MessagePackage
+	for _, auxDigestItem := range auxDigestItems {
+		li.log.WithFields(logrus.Fields{
+			"block":          header.Number,
+			"channelID":      auxDigestItem.AsCommitment.ChannelID,
+			"commitmentHash": auxDigestItem.AsCommitment.Hash.Hex(),
+		}).Debug("Found commitment hash in header digest")
+		commitmentHash := auxDigestItem.AsCommitment.Hash
+		commitmentMessagesData, err := li.getMessagesDataForDigestItem(&auxDigestItem)
+		if err != nil {
+			return nil, err
+		}
+		messagePackage := MessagePackage{
+			auxDigestItem.AsCommitment.ChannelID,
+			commitmentHash,
+			commitmentMessagesData,
+			ourParaHeadProof,
+			mmrProof,
+		}
+		messagePackages = append(messagePackages, messagePackage)
 	}
 
-	li.log.WithFields(logrus.Fields{
-		"block":          header.Number,
-		"channelID":      digestItem.AsCommitment.ChannelID,
-		"commitmentHash": digestItem.AsCommitment.Hash.Hex(),
-	}).Debug("Found commitment hash in header digest")
-
-	channelID := digestItem.AsCommitment.ChannelID
-	commitmentHash := digestItem.AsCommitment.Hash
-	commitmentMessages, err := li.getMessagesForDigestItem(digestItem)
-	if err != nil {
-		return chainTypes.ChannelID{}, types.H256{}, nil, err
-	}
-
-	return channelID, commitmentHash, commitmentMessages, nil
+	return messagePackages, nil
 }
 
-func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestItem, error) {
+func getAuxiliaryDigestItems(digest types.Digest) ([]chainTypes.AuxiliaryDigestItem, error) {
+	var auxDigestItems []chainTypes.AuxiliaryDigestItem
 	for _, digestItem := range digest {
 		if digestItem.IsOther {
 			var auxDigestItem chainTypes.AuxiliaryDigestItem
@@ -321,13 +317,13 @@ func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestIte
 			if err != nil {
 				return nil, err
 			}
-			return &auxDigestItem, nil
+			auxDigestItems = append(auxDigestItems, auxDigestItem)
 		}
 	}
-	return nil, nil
+	return auxDigestItems, nil
 }
 
-func (li *BeefyListener) getMessagesForDigestItem(digestItem *chainTypes.AuxiliaryDigestItem) ([]chainTypes.CommitmentMessage, error) {
+func (li *BeefyListener) getMessagesDataForDigestItem(digestItem *chainTypes.AuxiliaryDigestItem) (types.StorageDataRaw, error) {
 	storageKey, err := parachain.MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
 	if err != nil {
 		return nil, err
@@ -348,13 +344,25 @@ func (li *BeefyListener) getMessagesForDigestItem(digestItem *chainTypes.Auxilia
 		return nil, err
 	}
 
-	var messages []chainTypes.CommitmentMessage
+	return *data, nil
 
-	err = types.DecodeFromBytes(*data, &messages)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, err
-	}
+	// if digestItem.AsCommitment.ChannelID.IsBasic {
+	// 	var messages []chainTypes.BasicOutboundChannelMessage
+	// 	err = types.DecodeFromBytes(*data, &messages)
+	// 	if err != nil {
+	// 		li.log.WithError(err).Error("Failed to decode commitment messages")
+	// 		return nil, err
+	// 	}
+	// 	return messages, nil
+	// }
 
-	return messages, nil
+	// if digestItem.AsCommitment.ChannelID.IsIncentivized {
+	// 	var messages []chainTypes.IncentivizedOutboundChannelMessage
+	// 	err = types.DecodeFromBytes(*data, &messages)
+	// 	if err != nil {
+	// 		li.log.WithError(err).Error("Failed to decode commitment messages")
+	// 		return nil, err
+	// 	}
+	// 	return messages, nil
+	// }
 }
