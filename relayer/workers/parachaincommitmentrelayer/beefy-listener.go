@@ -107,13 +107,9 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 				continue
 			} else {
 				hash := blake2b.Sum256(signedCommitment.Commitment.Bytes())
-				signature0 := signedCommitment.Signatures[0].Value
-				signature1 := signedCommitment.Signatures[1].Value
 				li.log.WithFields(logrus.Fields{
 					"commitment":       hex.EncodeToString(signedCommitment.Commitment.Bytes()),
 					"hashedCommitment": hex.EncodeToString(hash[:]),
-					"signature0":       hex.EncodeToString(signature0[:]),
-					"signature1":       hex.EncodeToString(signature1[:]),
 				}).Info("Commitment with signatures:")
 			}
 			li.log.WithField("blockNumber", blockNumber+1).Info("Getting hash for next block")
