@@ -11,9 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v2/types"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
@@ -112,10 +112,11 @@ func (wr *EthereumChannelWriter) signerFn(_ common.Address, tx *types.Transactio
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (wr *EthereumChannelWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
-	msg *chain.SubstrateOutboundBasicMessage,
+	commitment gsrpcTypes.H256,
+	msgs []substrate.BasicOutboundChannelMessage,
 ) error {
 	var messages []inbound.BasicInboundChannelMessage
-	for _, m := range msg.Messages {
+	for _, m := range msgs {
 		messages = append(messages,
 			inbound.BasicInboundChannelMessage{
 				Target:  m.Target,
@@ -125,7 +126,7 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		)
 	}
 
-	tx, err := wr.basicInboundChannel.Submit(options, messages, msg.Commitment,
+	tx, err := wr.basicInboundChannel.Submit(options, messages, commitment,
 		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
@@ -142,10 +143,11 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 
 func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	options *bind.TransactOpts,
-	msg *chain.SubstrateOutboundIncentivizedMessage,
+	commitment gsrpcTypes.H256,
+	msgs []substrate.IncentivizedOutboundChannelMessage,
 ) error {
 	var messages []inbound.IncentivizedInboundChannelMessage
-	for _, m := range msg.Messages {
+	for _, m := range msgs {
 		messages = append(messages,
 			inbound.IncentivizedInboundChannelMessage{
 				Target:  m.Target,
@@ -156,7 +158,7 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		)
 	}
 
-	tx, err := wr.incentivizedInboundChannel.Submit(options, messages, msg.Commitment,
+	tx, err := wr.incentivizedInboundChannel.Submit(options, messages, commitment,
 		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
@@ -182,29 +184,8 @@ func (wr *EthereumChannelWriter) WriteChannel(
 			wr.log.WithError(err).Error("Failed to decode commitment messages")
 			return err
 		}
+		wr.WriteBasicChannel(options, msg.commitmentHash, outboundMessages)
 
-		var messages []inbound.BasicInboundChannelMessage
-		for _, m := range outboundMessages {
-			messages = append(messages,
-				inbound.BasicInboundChannelMessage{
-					Target:  m.Target,
-					Nonce:   m.Nonce,
-					Payload: m.Payload,
-				},
-			)
-		}
-
-		tx, err := wr.basicInboundChannel.Submit(options, messages, msg.commitmentHash,
-			[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
-		if err != nil {
-			wr.log.WithError(err).Error("Failed to submit transaction")
-			return err
-		}
-
-		wr.log.WithFields(logrus.Fields{
-			"txHash":  tx.Hash().Hex(),
-			"channel": "Basic",
-		}).Info("Transaction submitted")
 	}
 	if msg.channelID.IsIncentivized {
 		var outboundMessages []chainTypes.IncentivizedOutboundChannelMessage
@@ -213,29 +194,7 @@ func (wr *EthereumChannelWriter) WriteChannel(
 			wr.log.WithError(err).Error("Failed to decode commitment messages")
 			return err
 		}
-		var messages []inbound.IncentivizedInboundChannelMessage
-		for _, m := range outboundMessages {
-			messages = append(messages,
-				inbound.IncentivizedInboundChannelMessage{
-					Target:  m.Target,
-					Nonce:   m.Nonce,
-					Fee:     m.Fee.Int,
-					Payload: m.Payload,
-				},
-			)
-		}
-
-		tx, err := wr.incentivizedInboundChannel.Submit(options, messages, msg.commitmentHash,
-			[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
-		if err != nil {
-			wr.log.WithError(err).Error("Failed to submit transaction")
-			return err
-		}
-
-		wr.log.WithFields(logrus.Fields{
-			"txHash":  tx.Hash().Hex(),
-			"channel": "Incentivized",
-		}).Info("Transaction submitted")
+		wr.WriteIncentivizedChannel(options, msg.commitmentHash, outboundMessages)
 	}
 
 	return nil
