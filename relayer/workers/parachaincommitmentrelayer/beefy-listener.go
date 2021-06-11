@@ -345,24 +345,4 @@ func (li *BeefyListener) getMessagesDataForDigestItem(digestItem *chainTypes.Aux
 	}
 
 	return *data, nil
-
-	// if digestItem.AsCommitment.ChannelID.IsBasic {
-	// 	var messages []chainTypes.BasicOutboundChannelMessage
-	// 	err = types.DecodeFromBytes(*data, &messages)
-	// 	if err != nil {
-	// 		li.log.WithError(err).Error("Failed to decode commitment messages")
-	// 		return nil, err
-	// 	}
-	// 	return messages, nil
-	// }
-
-	// if digestItem.AsCommitment.ChannelID.IsIncentivized {
-	// 	var messages []chainTypes.IncentivizedOutboundChannelMessage
-	// 	err = types.DecodeFromBytes(*data, &messages)
-	// 	if err != nil {
-	// 		li.log.WithError(err).Error("Failed to decode commitment messages")
-	// 		return nil, err
-	// 	}
-	// 	return messages, nil
-	// }
 }

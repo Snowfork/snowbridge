@@ -45,6 +45,7 @@ func NewWorker(parachainConfig *parachain.Config,
 
 	// channel for messages from substrate
 	messages := make(chan interface{}, 1)
+	var messagePackages = make(chan MessagePackage, 1)
 
 	parachainCommitmentListener := parachaincommitment.NewListener(
 		parachainConn,
@@ -59,13 +60,12 @@ func NewWorker(parachainConfig *parachain.Config,
 		ethereumConfig,
 		ethereumConn,
 		messages,
+		messagePackages,
 		log,
 	)
 	if err != nil {
 		return nil, err
 	}
-
-	var messagePackages = make(chan MessagePackage, 1)
 
 	beefyRelaychainListener := NewBeefyListener(
 		relaychainConfig,
