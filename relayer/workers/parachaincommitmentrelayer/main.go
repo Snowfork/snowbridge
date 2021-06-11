@@ -43,23 +43,19 @@ func NewWorker(parachainConfig *parachain.Config,
 	relaychainConn := relaychain.NewConnection(relaychainConfig.Endpoint, log)
 	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKp, log)
 
-	// channel for messages from substrate
-	messages := make(chan interface{}, 1)
+	// channel for messages from beefy listener to ethereum writer
 	var messagePackages = make(chan MessagePackage, 1)
 
 	parachainCommitmentListener := parachaincommitment.NewListener(
 		parachainConn,
-		relaychainConn,
 		ethereumConn,
 		ethereumConfig,
-		messages,
 		log,
 	)
 
 	ethereumChannelWriter, err := NewEthereumChannelWriter(
 		ethereumConfig,
 		ethereumConn,
-		messages,
 		messagePackages,
 		log,
 	)

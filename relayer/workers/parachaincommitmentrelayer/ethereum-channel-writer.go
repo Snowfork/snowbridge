@@ -24,7 +24,6 @@ type EthereumChannelWriter struct {
 	conn                       *ethereum.Connection
 	basicInboundChannel        *inbound.BasicInboundChannel
 	incentivizedInboundChannel *inbound.IncentivizedInboundChannel
-	messages                   <-chan interface{}
 	messagePackages            <-chan MessagePackage
 	log                        *logrus.Entry
 }
@@ -32,7 +31,6 @@ type EthereumChannelWriter struct {
 func NewEthereumChannelWriter(
 	config *ethereum.Config,
 	conn *ethereum.Connection,
-	messages <-chan interface{},
 	messagePackages <-chan MessagePackage,
 	log *logrus.Entry,
 ) (*EthereumChannelWriter, error) {
@@ -41,7 +39,6 @@ func NewEthereumChannelWriter(
 		conn:                       conn,
 		basicInboundChannel:        nil,
 		incentivizedInboundChannel: nil,
-		messages:                   messages,
 		messagePackages:            messagePackages,
 		log:                        log,
 	}, nil
@@ -70,9 +67,6 @@ func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) 
 func (wr *EthereumChannelWriter) onDone(ctx context.Context) error {
 	wr.log.Info("Shutting down writer...")
 	// Avoid deadlock if a listener is still trying to send to a channel
-	for range wr.messages {
-		wr.log.Debug("Discarded message")
-	}
 	for range wr.messagePackages {
 		wr.log.Debug("Discarded message package")
 	}
