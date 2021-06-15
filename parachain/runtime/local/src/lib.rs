@@ -668,7 +668,7 @@ construct_runtime!(
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Origin} = 20,
 
 		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 20,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 21,
 
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating
