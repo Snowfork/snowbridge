@@ -98,7 +98,7 @@ start_polkadot_launch()
             genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header" \
             genesis.runtime.parachainInfo.parachainId 201 \
             para_id 201
-        jq  -s '.[0] * .[1]' configDup.json ../test/config/launchConfigOverridesDup.json \
+        jq  -s '.[0] * .[1]' config-dup.json ../test/config/launchConfigOverridesDup.json \
             | jq ".parachains[0].bin = \"$bin\"" \
             | jq ".parachains[0].chain = \"$configdir/spec.json\"" \
             | jq ".parachains[1].bin = \"$bin\"" \
