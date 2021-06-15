@@ -161,7 +161,7 @@ pub fn run() -> Result<()> {
 					task_manager,
 					import_queue,
 					..
-				} = crate::service::new_partial(&config)?;
+				} = crate::service::new_partial(&config, crate::service::build_import_queue)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		}
@@ -172,7 +172,7 @@ pub fn run() -> Result<()> {
 					client,
 					task_manager,
 					..
-				} = crate::service::new_partial(&config)?;
+				} = crate::service::new_partial(&config, crate::service::build_import_queue)?;
 				Ok((cmd.run(client, config.database), task_manager))
 			})
 		}
@@ -183,7 +183,7 @@ pub fn run() -> Result<()> {
 					client,
 					task_manager,
 					..
-				} = crate::service::new_partial(&config)?;
+				} = crate::service::new_partial(&config, crate::service::build_import_queue)?;
 				Ok((cmd.run(client, config.chain_spec), task_manager))
 			})
 		}
@@ -195,7 +195,7 @@ pub fn run() -> Result<()> {
 					task_manager,
 					import_queue,
 					..
-				} = crate::service::new_partial(&config)?;
+				} = crate::service::new_partial(&config, crate::service::build_import_queue)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		}
@@ -228,7 +228,7 @@ pub fn run() -> Result<()> {
 					task_manager,
 					backend,
 					..
-				} = crate::service::new_partial(&config)?;
+				} = crate::service::new_partial(&config, crate::service::build_import_queue)?;
 				Ok((cmd.run(client, backend), task_manager))
 			})
 		}
@@ -291,9 +291,6 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(&*cli.run)?;
 
 			runner.run_node_until_exit(|config| async move {
-				// TODO
-				let key = sp_core::Pair::generate().0;
-
 				let para_id = Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
 				let polkadot_cli = RelayChainCli::new(
@@ -319,14 +316,16 @@ pub fn run() -> Result<()> {
 					task_executor,
 				)
 				.map_err(|err| format!("Relay chain argument error: {}", err))?;
-				let collator = cli.run.base.validator || cli.collator;
 
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
 				info!("Parachain genesis state: {}", genesis_state);
-				info!("Is collating: {}", if collator { "yes" } else { "no" });
+				info!(
+					"Is collating: {}",
+					if config.role.is_authority() { "yes" } else { "no" }
+				);
 
-				crate::service::start_node(config, key, polkadot_config, id, collator)
+				crate::service::start_parachain_node(config, polkadot_config, id)
 					.await
 					.map(|r| r.0)
 					.map_err(Into::into)
