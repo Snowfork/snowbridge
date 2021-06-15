@@ -20,6 +20,15 @@
 					"--enable-offchain-indexing=true",
 					"--offchain-worker=Always"
 				]
+			},
+			{
+				"name": "eve",
+				"wsPort": 9956,
+				"port": 30556,
+				"flags": [
+					"--enable-offchain-indexing=true",
+					"--offchain-worker=Always"
+				]
 			}
 		]
 	},
@@ -32,6 +41,20 @@
 			"flags": [
 				"-lbasic_authorship=trace,commitments=debug,import_header=trace,runtime=debug,submit_messages=trace",
 				"--rpc-port=9980",
+				"--offchain-worker=Always",
+				"--enable-offchain-indexing=true",
+				"--",
+				"--execution=wasm"
+			]
+		},
+		{
+			"bin": "target/release/artemis",
+			"id": "201",
+			"wsPort": 9967,
+			"port": 30667,
+			"flags": [
+				"-lbasic_authorship=trace,commitments=debug,import_header=trace,runtime=debug,submit_messages=trace",
+				"--rpc-port=9981",
 				"--offchain-worker=Always",
 				"--enable-offchain-indexing=true",
 				"--",
