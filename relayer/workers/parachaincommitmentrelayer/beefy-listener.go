@@ -5,10 +5,12 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/blake2b"
 	"github.com/sirupsen/logrus"
 	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/wealdtech/go-merkletree"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
@@ -29,7 +31,7 @@ type MessagePackage struct {
 	channelID              chainTypes.ChannelID
 	commitmentHash         types.H256
 	commitmentMessagesData types.StorageDataRaw
-	paraHeadProof          string
+	paraHeadProof          [][32]byte
 	mmrProof               types.GenerateMMRProofResponse
 }
 
@@ -126,7 +128,14 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 			mmrProof := li.GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash)
 			allParaHeads, ourParaHead := li.GetAllParaheads(nextBlockHash, OUR_PARACHAIN_ID)
 
-			ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
+			ourParaHeadProof, err := createParachainHeaderProof(allParaHeads, ourParaHead)
+			if err != nil {
+				li.log.WithError(err).Error("Failed to create para head proof")
+			}
+
+			li.log.WithFields(logrus.Fields{
+				"ParachainHeads": mmrProof.Leaf.ParachainHeads.Hex(),
+			}).Info("ParachainHeadsParachainHeadsParachainHeads")
 
 			messagePackets, err := li.extractCommitments(ourParaHead, mmrProof, ourParaHeadProof)
 			if err != nil {
@@ -260,15 +269,82 @@ func (li *BeefyListener) GetAllParaheads(blockHash types.Hash, ourParachainId ui
 	return headers, ourParachainHeader
 }
 
-func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.Header) string {
-	//TODO: implement
-	return ""
+func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.Header) ([][32]byte, error) {
+	var allParaHeadsBytes [][]byte
+	for _, paraHead := range allParaHeads {
+		paraHeadBytes, err := types.EncodeToBytes(paraHead)
+		if err != nil {
+			return [][32]byte{}, err
+		}
+		allParaHeadsBytes = append(allParaHeadsBytes, paraHeadBytes)
+	}
+	ourParaHeadBytes, err := types.EncodeToBytes(ourParaHead)
+	if err != nil {
+		return [][32]byte{}, err
+	}
+
+	fmt.Println("parachain-commitment-relayer allParaHeadsBytes", allParaHeadsBytes)
+	fmt.Println("parachain-commitment-relayer ourParaHeadBytes", ourParaHeadBytes)
+
+	paraTreeData := make([][]byte, len(allParaHeadsBytes))
+	for i, paraHead := range allParaHeadsBytes {
+		paraTreeData[i] = paraHead
+	}
+
+	// Create the tree
+	paraMerkleTree, err := merkletree.NewUsing(paraTreeData, &Keccak256{}, nil)
+	if err != nil {
+		return [][32]byte{}, err
+	}
+
+	// Generate Merkle Proof for our parachain's head
+	proof, err := paraMerkleTree.GenerateProof(ourParaHeadBytes)
+	if err != nil {
+		return [][32]byte{}, err
+	}
+
+	// Verify the proof
+	root := paraMerkleTree.Root()
+	rootHex, _ := types.EncodeToHexString(root)
+	fmt.Println("parachain-commitment-relayer root", rootHex)
+	verified, err := merkletree.VerifyProofUsing(ourParaHeadBytes, proof, root, &Keccak256{}, nil)
+	if err != nil {
+		return [][32]byte{}, err
+	}
+	if !verified {
+		return [][32]byte{}, fmt.Errorf("failed to verify proof")
+	}
+
+	proofContents := make([][32]byte, len(proof.Hashes))
+	for i, hash := range proof.Hashes {
+		var hash32Byte [32]byte
+		copy(hash32Byte[:], hash)
+		proofContents[i] = hash32Byte
+	}
+	fmt.Println("parachain-commitment-relayer len(proof.Hashes)", len(proof.Hashes))
+	fmt.Println("parachain-commitment-relayer proofContents", proofContents)
+
+	return proofContents, nil
+}
+
+// Keccak256 is the Keccak256 hashing method
+type Keccak256 struct{}
+
+// New creates a new Keccak256 hashing method
+func New() *Keccak256 {
+	return &Keccak256{}
+}
+
+// Hash generates a Keccak256 hash from a byte array
+func (h *Keccak256) Hash(data []byte) []byte {
+	hash := crypto.Keccak256(data)
+	return hash[:]
 }
 
 func (li *BeefyListener) extractCommitments(
 	header types.Header,
 	mmrProof types.GenerateMMRProofResponse,
-	ourParaHeadProof string) ([]MessagePackage, error) {
+	ourParaHeadProof [][32]byte) ([]MessagePackage, error) {
 
 	li.log.WithFields(logrus.Fields{
 		"blockNumber": header.Number,
