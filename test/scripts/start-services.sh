@@ -59,19 +59,16 @@ deploy_contracts()
 }
 
 
-start_parachain()
+start_polkadot_launch()
 {
-    echo "Starting Parachain"
+    echo "Building parachain and starting polkadot launch"
     pushd ../parachain
     bin=$(pwd)/target/release/artemis
 
     cargo build --release --no-default-features --features with-local-runtime
 
-    echo "Generating Parachain 1 spec"
+    echo "Generating Parachain spec"
     target/release/artemis build-spec --disable-default-bootnode > $configdir/spec.json
-
-    echo "Generating Parachain 2 spec"
-    target/release/artemis build-spec --disable-default-bootnode > $configdir/spec2.json
 
     echo "Inserting Ganache chain info into genesis spec"
     ethereum_initial_header=$(curl http://localhost:8545 \
@@ -84,24 +81,37 @@ start_parachain()
         genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header" \
         genesis.runtime.parachainInfo.parachainId 200 \
         para_id 200
-    node ../test/scripts/helpers/overrideParachainSpec.js $configdir/spec2.json \
-        genesis.runtime.verifierLightclient.initialDifficulty 0x0 \
-        genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header" \
-        genesis.runtime.parachainInfo.parachainId 201 \
-        para_id 201
 
     echo "Writing Polkadot configuration"
     polkadotbinary=/tmp/polkadot/target/release/polkadot
     if [[ -f ../test/.env ]]; then
         source ../test/.env
     fi
-    jq  -s '.[0] * .[1]' config.json ../test/config/launchConfigOverrides.json \
-        | jq ".parachains[0].bin = \"$bin\"" \
-        | jq ".parachains[0].chain = \"$configdir/spec.json\"" \
-        | jq ".parachains[1].bin = \"$bin\"" \
-        | jq ".parachains[1].chain = \"$configdir/spec2.json\"" \
-        | jq ".relaychain.bin = \"$polkadotbinary\"" \
-        > $configdir/polkadotLaunchConfig.json
+
+    if [ $# -eq 1 ] && [ $1 = "duplicate" ];
+    then
+        echo "Generating second parachain spec"
+        target/release/artemis build-spec --disable-default-bootnode > $configdir/spec2.json
+
+        node ../test/scripts/helpers/overrideParachainSpec.js $configdir/spec2.json \
+            genesis.runtime.verifierLightclient.initialDifficulty 0x0 \
+            genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header" \
+            genesis.runtime.parachainInfo.parachainId 201 \
+            para_id 201
+        jq  -s '.[0] * .[1]' configDup.json ../test/config/launchConfigOverridesDup.json \
+            | jq ".parachains[0].bin = \"$bin\"" \
+            | jq ".parachains[0].chain = \"$configdir/spec.json\"" \
+            | jq ".parachains[1].bin = \"$bin\"" \
+            | jq ".parachains[1].chain = \"$configdir/spec2.json\"" \
+            | jq ".relaychain.bin = \"$polkadotbinary\"" \
+            > $configdir/polkadotLaunchConfig.json
+    else
+        jq  -s '.[0] * .[1]' config.json ../test/config/launchConfigOverrides.json \
+            | jq ".parachains[0].bin = \"$bin\"" \
+            | jq ".parachains[0].chain = \"$configdir/spec.json\"" \
+            | jq ".relaychain.bin = \"$polkadotbinary\"" \
+            > $configdir/polkadotLaunchConfig.json
+    fi
 
     polkadot-launch $configdir/polkadotLaunchConfig.json &
 
@@ -139,7 +149,12 @@ trap cleanup SIGINT SIGTERM EXIT
 
 start_ganache
 deploy_contracts
-start_parachain
+if [ $# -eq 1 ] && [ $1 = "duplicate" ];
+then
+    start_polkadot_launch "duplicate"
+else
+    start_polkadot_launch
+fi
 restart_ganache
 echo "Waiting for consensus between polkadot and parachain"
 sleep 60
