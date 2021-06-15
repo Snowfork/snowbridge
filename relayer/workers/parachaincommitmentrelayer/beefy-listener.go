@@ -283,9 +283,6 @@ func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.H
 		return [][32]byte{}, err
 	}
 
-	fmt.Println("parachain-commitment-relayer allParaHeadsBytes", allParaHeadsBytes)
-	fmt.Println("parachain-commitment-relayer ourParaHeadBytes", ourParaHeadBytes)
-
 	paraTreeData := make([][]byte, len(allParaHeadsBytes))
 	for i, paraHead := range allParaHeadsBytes {
 		paraTreeData[i] = paraHead
@@ -305,8 +302,6 @@ func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.H
 
 	// Verify the proof
 	root := paraMerkleTree.Root()
-	rootHex, _ := types.EncodeToHexString(root)
-	fmt.Println("parachain-commitment-relayer root", rootHex)
 	verified, err := merkletree.VerifyProofUsing(ourParaHeadBytes, proof, root, &Keccak256{}, nil)
 	if err != nil {
 		return [][32]byte{}, err
@@ -321,8 +316,27 @@ func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.H
 		copy(hash32Byte[:], hash)
 		proofContents[i] = hash32Byte
 	}
+
+	fmt.Println("parachain-commitment-relayer allParaHeadsBytes", allParaHeadsBytes)
+	allParaHeadsBytesHex, _ := types.EncodeToHexString(allParaHeadsBytes)
+	fmt.Println("parachain-commitment-relayer allParaHeadsBytesHex", allParaHeadsBytesHex)
+
+	paraHeadBytes0Hex, _ := types.EncodeToHexString(allParaHeadsBytes[0])
+	fmt.Println("parachain-commitment-relayer paraHeadBytes0Hex", paraHeadBytes0Hex)
+	paraHeadBytes1Hex, _ := types.EncodeToHexString(allParaHeadsBytes[1])
+	fmt.Println("parachain-commitment-relayer paraHeadBytes1Hex", paraHeadBytes1Hex)
+	fmt.Println("parachain-commitment-relayer paraHeadBytesHex", paraHeadBytes0Hex, paraHeadBytes1Hex)
+
+	fmt.Println("parachain-commitment-relayer ourParaHeadBytes", ourParaHeadBytes)
+	ourParaHeadBytesHex, _ := types.EncodeToHexString(ourParaHeadBytes)
+	fmt.Println("parachain-commitment-relayer ourParaHeadBytesHex", ourParaHeadBytesHex)
+	rootHex, _ := types.EncodeToHexString(root)
+	fmt.Println("parachain-commitment-relayer root", rootHex)
+	fmt.Println("parachain-commitment-relayer proof", proof)
 	fmt.Println("parachain-commitment-relayer len(proof.Hashes)", len(proof.Hashes))
 	fmt.Println("parachain-commitment-relayer proofContents", proofContents)
+	proofContents0Hex, _ := types.EncodeToHexString(proofContents[0])
+	fmt.Println("parachain-commitment-relayer proofContents0Hex", proofContents0Hex)
 
 	return proofContents, nil
 }
