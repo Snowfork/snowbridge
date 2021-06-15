@@ -42,27 +42,19 @@ func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment
 	}
 }
 
-func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int) (NewSignatureCommitmentMessage, error) {
+func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int, initialBitfield []*big.Int) (NewSignatureCommitmentMessage, error) {
+	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
+
 	sig0ProofContents, err := b.GenerateMerkleProofOffchain(valAddrIndex)
 	if err != nil {
 		return NewSignatureCommitmentMessage{}, err
 	}
 
-	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
-	// Split signature into r, s, v and add 27 to v
-	sigValPolkadot := b.SignedCommitment.Signatures[valAddrIndex].Value
-	sigValrs := sigValPolkadot[:64]
-	sigValv := sigValPolkadot[64]
-	sigValvAdded := byte(uint8(sigValv) + 27)
-	sigValEthereum := append(sigValrs, sigValvAdded)
-
-	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
-
-	validatorClaimsBitfield := []*big.Int{big.NewInt(123)} // TODO: add bitfield stuff properly
+	sigValEthereum := BeefySigToEthSig(b.SignedCommitment.Signatures[valAddrIndex].Value)
 
 	msg := NewSignatureCommitmentMessage{
 		CommitmentHash:                commitmentHash,
-		ValidatorClaimsBitfield:       validatorClaimsBitfield,
+		ValidatorClaimsBitfield:       initialBitfield,
 		ValidatorSignatureCommitment:  sigValEthereum,
 		ValidatorPublicKey:            b.ValidatorAddresses[valAddrIndex],
 		ValidatorPosition:             big.NewInt(int64(valAddrIndex)),
@@ -70,6 +62,17 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 	}
 
 	return msg, nil
+}
+
+func BeefySigToEthSig(beefySig BeefySignature) []byte {
+	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
+	// Split signature into r, s, v and add 27 to v
+	sigValrs := beefySig[:64]
+	sigValv := beefySig[64]
+	sigValvAdded := byte(uint8(sigValv) + 27)
+	sigValEthereum := append(sigValrs, sigValvAdded)
+
+	return sigValEthereum
 }
 
 // Keccak256 is the Keccak256 hashing method
@@ -125,18 +128,37 @@ func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][3
 	return sigProofContents, nil
 }
 
-func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyRelayInfo) (CompleteSignatureCommitmentMessage, error) {
+func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyRelayInfo, bitfield string) (CompleteSignatureCommitmentMessage, error) {
 	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
 
 	validationDataID := big.NewInt(int64(info.ContractID))
 
-	//TODO: Use info.RandomSeed.Big() to generate validatorPositions
 	validatorPositions := []*big.Int{}
+	for i := 0; i < len(bitfield); i++ {
+		bit := bitfield[i : i+1]
+		if bit == "1" {
+			validatorPositions = append(validatorPositions, big.NewInt(int64(i)))
+		}
+	}
 
-	//TODO: Populate signatures, validatorPublicKeys, and based on validatorPositions
 	signatures := [][]byte{}
-	validatorPublicKeys := b.ValidatorAddresses
+	validatorPublicKeys := []common.Address{}
 	validatorPublicKeyMerkleProofs := [][][32]byte{}
+	for _, validatorPosition := range validatorPositions {
+		beefySig := b.SignedCommitment.Signatures[validatorPosition.Int64()].Value
+		ethSig := BeefySigToEthSig(beefySig)
+		signatures = append(signatures, ethSig)
+
+		pubKey := b.ValidatorAddresses[validatorPosition.Int64()]
+		validatorPublicKeys = append(validatorPublicKeys, pubKey)
+
+		merkleProof, err := b.GenerateMerkleProofOffchain(int(validatorPosition.Int64()))
+		if err != nil {
+			return CompleteSignatureCommitmentMessage{}, err
+		}
+
+		validatorPublicKeyMerkleProofs = append(validatorPublicKeyMerkleProofs, merkleProof)
+	}
 
 	commitment := lightclientbridge.LightClientBridgeCommitment{
 		Payload:        b.SignedCommitment.Commitment.Payload,

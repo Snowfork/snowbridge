@@ -170,12 +170,11 @@ contract LightClientBridge {
         );
 
         /**
-         * @dev Check that the bitfield actually contains enough claims to be succesful, ie, > 2/3
+         * @dev Check that the bitfield actually contains enough claims to be succesful, ie, >= 2/3
          */
         require(
-            validatorClaimsBitfield.countSetBits() >
-                (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-                    THRESHOLD_DENOMINATOR,
+            validatorClaimsBitfield.countSetBits() >=
+                requiredNumberOfSignatures(),
             "Error: Bitfield not enough validators"
         );
 
@@ -197,7 +196,7 @@ contract LightClientBridge {
         currentId = currentId.add(1);
     }
 
-    function validatorBitfield(uint256 id)
+    function createRandomBitfield(uint256 id)
         public
         view
         returns (uint256[] memory)
@@ -212,16 +211,20 @@ contract LightClientBridge {
             "Error: Block wait period not over"
         );
 
-        uint256 requiredNumOfSignatures =
-            (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-                THRESHOLD_DENOMINATOR;
-
         return
-            Bitfield.randomNBitsFromPrior(
+            Bitfield.randomNBitsWithPriorCheck(
                 getSeed(data),
                 data.validatorClaimsBitfield,
-                requiredNumOfSignatures
+                requiredNumberOfSignatures()
             );
+    }
+
+    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
+        public
+        view
+        returns (uint256[] memory)
+    {
+        return Bitfield.createBitfield(bitsToSet, length);
     }
 
     /**
@@ -230,7 +233,7 @@ contract LightClientBridge {
      * @param commitmentHash contains the commitmentHash signed by the validator(s)
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param signatures an array of signatures from the randomly chosen validators
-     * @param validatorPositions an array of bitfields from the chosen validators
+     * @param validatorPositions an array of the positions of the randomly chosen validators
      * @param validatorPublicKeys an array of the public key of each signer
      * @param validatorPublicKeyMerkleProofs an array of merkle proofs from the chosen validators
      */
@@ -261,9 +264,7 @@ contract LightClientBridge {
             "Error: Sender address does not match original validation data"
         );
 
-        uint256 requiredNumOfSignatures =
-            (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR) /
-                THRESHOLD_DENOMINATOR;
+        uint256 requiredNumOfSignatures = requiredNumberOfSignatures();
 
         /**
          * @dev verify that required number of signatures, positions, public keys and merkle proofs are
@@ -290,7 +291,7 @@ contract LightClientBridge {
          * @dev Generate an array of numbers
          */
         uint256[] memory randomBitfield =
-            Bitfield.randomNBitsFromPrior(
+            Bitfield.randomNBitsWithPriorCheck(
                 getSeed(data),
                 data.validatorClaimsBitfield,
                 requiredNumOfSignatures
@@ -432,5 +433,10 @@ contract LightClientBridge {
         // get beefy_authority_set from newest leaf
         // update authority set
         // validatorRegistry.updateValidatorSet(beefy_authority_set)
+    }
+
+    function requiredNumberOfSignatures() public view returns (uint256) {
+        return (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) /
+                THRESHOLD_DENOMINATOR;
     }
 }
