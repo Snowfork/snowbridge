@@ -19,6 +19,7 @@ frame-executive = { git = "https://github.com/paritytech/substrate.git", branch 
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
+pallet-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.4" }
 pallet-sudo = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
@@ -31,6 +32,7 @@ pallet-membership = { git = "https://github.com/paritytech/substrate.git", branc
 sp-api = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
 sp-offchain = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
@@ -43,6 +45,7 @@ sp-version = { git = "https://github.com/paritytech/substrate.git", branch = "po
 parachain-info = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.4", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.4", default-features = false }
 cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.4", default-features = false }
+cumulus-pallet-aura-ext =  { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.4", default-features = false }
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.4", default-features = false }
 cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.4", default-features = false }
 cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.4", default-features = false }
@@ -56,7 +59,6 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "re
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.4", default-features = false }
 
 artemis-core = { path = "../../primitives/core", default-features = false }
-artemis-transfer = { path = "../../pallets/transfer", default-features = false }
 artemis-xcm-support = { path = "../../primitives/xcm-support", default-features = false }
 basic-channel = { path = "../../pallets/basic-channel", package = "artemis-basic-channel", default-features = false }
 incentivized-channel = { path = "../../pallets/incentivized-channel", package = "artemis-incentivized-channel", default-features = false }
@@ -85,6 +87,7 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
+    "pallet-aura/std",
     "pallet-sudo/std",
     "pallet-balances/std",
     "pallet-randomness-collective-flip/std",
@@ -97,6 +100,7 @@ std = [
     "sp-api/std",
     "sp-block-builder/std",
     "sp-core/std",
+    "sp-consensus-aura/std",
     "sp-inherents/std",
     "sp-offchain/std",
     "sp-runtime/std",
@@ -105,6 +109,7 @@ std = [
     "sp-transaction-pool/std",
     "sp-version/std",
     "cumulus-primitives-core/std",
+    "cumulus-pallet-aura-ext/std",
     "cumulus-pallet-parachain-system/std",
     "cumulus-pallet-xcm/std",
     "cumulus-pallet-xcmp-queue/std",
@@ -123,7 +128,6 @@ std = [
     "dot-app/std",
     "eth-app/std",
     "erc20-app/std",
-    "artemis-transfer/std",
     "artemis-xcm-support/std",
     "runtime-common/std",
 ]

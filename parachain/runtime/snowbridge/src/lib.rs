@@ -46,6 +46,7 @@ use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
+pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 
 pub use artemis_core::{AssetId, ChannelId, MessageId};
 use dispatch::EnsureEthereumAccount;
@@ -62,7 +63,7 @@ use xcm_builder::{
 	SovereignSignedViaLocation, TakeWeightCredit, SignedToAccountId32,
 };
 use xcm_executor::{Config, XcmExecutor};
-use pallet_xcm::{XcmPassthrough, EnsureXcm, IsMajorityOfBody};
+use pallet_xcm::XcmPassthrough;
 
 use artemis_xcm_support::AssetsTransactor;
 use assets::SingleAssetAdaptor;
@@ -122,7 +123,9 @@ pub mod opaque {
 	pub type BlockId = generic::BlockId<Block>;
 
 	impl_opaque_keys! {
-		pub struct SessionKeys {}
+		pub struct SessionKeys {
+			pub aura: Aura,
+		}
 	}
 }
 
@@ -137,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	transaction_version: 1,
 };
 
-pub const MILLISECS_PER_BLOCK: u64 = 6000;
+pub const MILLISECS_PER_BLOCK: u64 = 12000;
 
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
@@ -290,6 +293,8 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 }
 
 impl parachain_info::Config for Runtime {}
+
+impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 parameter_types! {
 	pub const RococoLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
@@ -520,7 +525,6 @@ impl basic_channel_outbound::Config for Runtime {
 parameter_types! {
 	pub SourceAccount: AccountId = DotPalletId::get().into_account();
 	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
-
 }
 
 pub struct FeeConverter;
@@ -614,6 +618,10 @@ impl dot_app::Config for Runtime {
 	type WeightInfo = weights::dot_app_weights::WeightInfo<Runtime>;
 }
 
+impl pallet_aura::Config for Runtime {
+	type AuthorityId = AuraId;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -633,6 +641,7 @@ construct_runtime!(
 		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 8,
 		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 9,
 
+		// Bridge Infrastructure
 		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event} = 10,
 		BasicOutboundChannel: basic_channel_outbound::{Pallet, Config<T>, Storage, Event} = 11,
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 12,
@@ -641,14 +650,21 @@ construct_runtime!(
 		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 15,
 		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
 
+		// XCM
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 17,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 18,
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 19,
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 20,
 
-		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 21,
+		Aura: pallet_aura::{Pallet, Config<T>} = 21,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 22,
 
+		// For dev only, will be removed in production
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 23,
+
+		// Bridge applications
+		// NOTE: Do not change the following pallet indices without updating
+		//   the peer apps (smart contracts) on the Ethereum side.
 		DOT: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
 		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
 		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
@@ -757,6 +773,22 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
+		fn slot_duration() -> sp_consensus_aura::SlotDuration {
+			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
+		}
+
+		fn authorities() -> Vec<AuraId> {
+			Aura::authorities()
+		}
+	}
+
+	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
+		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info()
+		}
+	}
+
 	impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
 		fn account_nonce(account: AccountId) -> Index {
 			System::account_nonce(account)
@@ -819,4 +851,7 @@ impl_runtime_apis! {
 	}
 }
 
-cumulus_pallet_parachain_system::register_validate_block!(Runtime, Executive);
+cumulus_pallet_parachain_system::register_validate_block!(
+	Runtime,
+	cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
+);

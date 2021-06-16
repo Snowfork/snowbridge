@@ -59,7 +59,6 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "re
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.4", default-features = false }
 
 artemis-core = { path = "../../primitives/core", default-features = false }
-artemis-transfer = { path = "../../pallets/transfer", default-features = false }
 artemis-xcm-support = { path = "../../primitives/xcm-support", default-features = false }
 basic-channel = { path = "../../pallets/basic-channel", package = "artemis-basic-channel", default-features = false }
 incentivized-channel = { path = "../../pallets/incentivized-channel", package = "artemis-incentivized-channel", default-features = false }
@@ -88,6 +87,7 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
+    "pallet-aura/std",
     "pallet-sudo/std",
     "pallet-balances/std",
     "pallet-randomness-collective-flip/std",
@@ -128,7 +128,6 @@ std = [
     "dot-app/std",
     "eth-app/std",
     "erc20-app/std",
-    "artemis-transfer/std",
     "artemis-xcm-support/std",
     "runtime-common/std",
 ]
