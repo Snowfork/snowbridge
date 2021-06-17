@@ -96,7 +96,7 @@ This will deploy and run everything as usual, but replace the erc20 app with a m
 yarn test
 ```
 
-You should see the erc20 tests failing, due to the malicious app, but the eth and dot app tests should pass successfully without being impacted.
+You should see the erc20 unlock test failing, due to the malicious app, but the eth and dot app tests should pass successfully without being impacted.
 
 ### Manual Tests
 
