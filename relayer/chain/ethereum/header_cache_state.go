@@ -264,6 +264,7 @@ func (s *HeaderCacheState) makeTrie(items gethTypes.DerivableList) *gethTrie.Tri
 		keybuf.Reset()
 		rlp.Encode(keybuf, uint(i))
 		trie.Update(keybuf.Bytes(), items.GetRlp(i))
+
 	}
 	return trie
 }

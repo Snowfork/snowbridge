@@ -4,10 +4,12 @@ go 1.14
 
 require (
 	github.com/ChainSafe/go-schnorrkel v0.0.0-20210527232834-58622d036665 // indirect
+	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
 	github.com/allegro/bigcache v1.2.1 // indirect
-	github.com/btcsuite/btcd v0.21.0-beta // indirect
-	github.com/ethereum/go-ethereum v1.10.4
+	github.com/btcsuite/btcd v0.22.0-beta // indirect
+	github.com/ethereum/go-ethereum v1.10.3
 	github.com/go-ole/go-ole v1.2.5 // indirect
+	github.com/holiman/uint256 v1.1.1 // indirect
 	github.com/influxdata/influxdb v1.8.3
 	github.com/jinzhu/gorm v1.9.16
 	github.com/jinzhu/now v1.1.2 // indirect
