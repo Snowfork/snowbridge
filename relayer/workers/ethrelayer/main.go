@@ -101,7 +101,7 @@ func (w *Worker) queryFinalizedBlockNumber() (uint64, error) {
 }
 
 func (w *Worker) connect(ctx context.Context) error {
-	kpForPara, err := sr25519.NewKeypairFromSeed(w.paraconfig.PrivateKey, "")
+	kpForPara, err := sr25519.NewKeypairFromSeed(w.paraconfig.PrivateKey, 42)
 	if err != nil {
 		return err
 	}

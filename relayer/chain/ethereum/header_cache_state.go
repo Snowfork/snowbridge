@@ -257,14 +257,15 @@ func (s *HeaderCacheState) GetEthashproofCache(number uint64) (*ethashproof.Data
 	return cacheState.currentCache, nil
 }
 
-func (s *HeaderCacheState) makeTrie(items gethTypes.DerivableList) *gethTrie.Trie {
-	keybuf := new(bytes.Buffer)
+func (s *HeaderCacheState) makeTrie(items gethTypes.Receipts) *gethTrie.Trie {
+	keyBuf := new(bytes.Buffer)
+	valueBuf := new(bytes.Buffer)
 	trie := new(gethTrie.Trie)
-	for i := 0; i < items.Len(); i++ {
-		keybuf.Reset()
-		rlp.Encode(keybuf, uint(i))
-		trie.Update(keybuf.Bytes(), items.GetRlp(i))
-
+	for i, item := range items {
+		keyBuf.Reset()
+		rlp.Encode(keyBuf, uint(i))
+		item.EncodeRLP(valueBuf)
+		trie.Update(keyBuf.Bytes(), valueBuf.Bytes())
 	}
 	return trie
 }
