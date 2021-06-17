@@ -173,7 +173,7 @@ func (wr *EthereumChannelWriter) WriteChannel(
 ) error {
 	if msg.channelID.IsBasic {
 		var outboundMessages []chainTypes.BasicOutboundChannelMessage
-		err := gsrpcTypes.DecodeFromBytes(msg.commitmentMessagesData, &outboundMessages)
+		err := gsrpcTypes.DecodeFromBytes(msg.commitmentData, &outboundMessages)
 		if err != nil {
 			wr.log.WithError(err).Error("Failed to decode commitment messages")
 			return err
@@ -183,7 +183,7 @@ func (wr *EthereumChannelWriter) WriteChannel(
 	}
 	if msg.channelID.IsIncentivized {
 		var outboundMessages []chainTypes.IncentivizedOutboundChannelMessage
-		err := gsrpcTypes.DecodeFromBytes(msg.commitmentMessagesData, &outboundMessages)
+		err := gsrpcTypes.DecodeFromBytes(msg.commitmentData, &outboundMessages)
 		if err != nil {
 			wr.log.WithError(err).Error("Failed to decode commitment messages")
 			return err

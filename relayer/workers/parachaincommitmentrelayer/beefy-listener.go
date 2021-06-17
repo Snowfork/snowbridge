@@ -26,11 +26,11 @@ const OUR_PARACHAIN_ID = 200
 // to the relay chain light client, but will be done once that's complete.
 
 type MessagePackage struct {
-	channelID              chainTypes.ChannelID
-	commitmentHash         types.H256
-	commitmentMessagesData types.StorageDataRaw
-	paraHeadProof          string
-	mmrProof               types.GenerateMMRProofResponse
+	channelID      chainTypes.ChannelID
+	commitmentHash types.H256
+	commitmentData types.StorageDataRaw
+	paraHeadProof  string
+	mmrProof       types.GenerateMMRProofResponse
 }
 
 type BeefyListener struct {
@@ -138,11 +138,11 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 			}
 			for _, messagePacket := range messagePackets {
 				li.log.WithFields(logrus.Fields{
-					"channelID":              messagePacket.channelID,
-					"commitmentHash":         messagePacket.commitmentHash,
-					"commitmentMessagesData": messagePacket.commitmentMessagesData,
-					"ourParaHeadProof":       messagePacket.paraHeadProof,
-					"mmrProof":               messagePacket.mmrProof,
+					"channelID":        messagePacket.channelID,
+					"commitmentHash":   messagePacket.commitmentHash,
+					"commitmentData":   messagePacket.commitmentData,
+					"ourParaHeadProof": messagePacket.paraHeadProof,
+					"mmrProof":         messagePacket.mmrProof,
 				}).Info("Beefy Listener emitted new message packet")
 
 				li.messages <- messagePacket
@@ -287,14 +287,14 @@ func (li *BeefyListener) extractCommitments(
 			"commitmentHash": auxDigestItem.AsCommitment.Hash.Hex(),
 		}).Debug("Found commitment hash in header digest")
 		commitmentHash := auxDigestItem.AsCommitment.Hash
-		commitmentMessagesData, err := li.getMessagesDataForDigestItem(&auxDigestItem)
+		commitmentData, err := li.getDataForDigestItem(&auxDigestItem)
 		if err != nil {
 			return nil, err
 		}
 		messagePackage := MessagePackage{
 			auxDigestItem.AsCommitment.ChannelID,
 			commitmentHash,
-			commitmentMessagesData,
+			commitmentData,
 			ourParaHeadProof,
 			mmrProof,
 		}
@@ -319,7 +319,7 @@ func getAuxiliaryDigestItems(digest types.Digest) ([]chainTypes.AuxiliaryDigestI
 	return auxDigestItems, nil
 }
 
-func (li *BeefyListener) getMessagesDataForDigestItem(digestItem *chainTypes.AuxiliaryDigestItem) (types.StorageDataRaw, error) {
+func (li *BeefyListener) getDataForDigestItem(digestItem *chainTypes.AuxiliaryDigestItem) (types.StorageDataRaw, error) {
 	storageKey, err := parachain.MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
 	if err != nil {
 		return nil, err
