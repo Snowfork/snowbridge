@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const MaliciousDOTApp = artifacts.require("MaliciousDOTApp");
+const MaliciousApp = artifacts.require("MaliciousApp");
 
 module.exports = function (deployer, network, accounts) {
   deployer.then(async () => {
@@ -9,7 +9,7 @@ module.exports = function (deployer, network, accounts) {
       return
     }
 
-    await deployer.deploy(MaliciousDOTApp);
+    await deployer.deploy(MaliciousApp);
 
   })
 };
