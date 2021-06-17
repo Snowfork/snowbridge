@@ -2,7 +2,6 @@ package parachaincommitmentrelayer
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"golang.org/x/sync/errgroup"
@@ -12,9 +11,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
+
+	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v2/types"
+	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type EthereumChannelWriter struct {
@@ -22,14 +24,14 @@ type EthereumChannelWriter struct {
 	conn                       *ethereum.Connection
 	basicInboundChannel        *inbound.BasicInboundChannel
 	incentivizedInboundChannel *inbound.IncentivizedInboundChannel
-	messages                   <-chan interface{}
+	messagePackages            <-chan MessagePackage
 	log                        *logrus.Entry
 }
 
 func NewEthereumChannelWriter(
 	config *ethereum.Config,
 	conn *ethereum.Connection,
-	messages <-chan interface{},
+	messagePackages <-chan MessagePackage,
 	log *logrus.Entry,
 ) (*EthereumChannelWriter, error) {
 	return &EthereumChannelWriter{
@@ -37,7 +39,7 @@ func NewEthereumChannelWriter(
 		conn:                       conn,
 		basicInboundChannel:        nil,
 		incentivizedInboundChannel: nil,
-		messages:                   messages,
+		messagePackages:            messagePackages,
 		log:                        log,
 	}, nil
 }
@@ -65,8 +67,8 @@ func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) 
 func (wr *EthereumChannelWriter) onDone(ctx context.Context) error {
 	wr.log.Info("Shutting down writer...")
 	// Avoid deadlock if a listener is still trying to send to a channel
-	for range wr.messages {
-		wr.log.Debug("Discarded message")
+	for range wr.messagePackages {
+		wr.log.Debug("Discarded message package")
 	}
 	return ctx.Err()
 }
@@ -83,22 +85,11 @@ func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return wr.onDone(ctx)
-		case message := <-wr.messages:
-			switch value := message.(type) {
-			case chain.SubstrateOutboundBasicMessage:
-				err := wr.WriteBasicChannel(&options, &value)
-				if err != nil {
-					wr.log.WithError(err).Error("Error submitting message to ethereum")
-					return err
-				}
-			case chain.SubstrateOutboundIncentivizedMessage:
-				err := wr.WriteIncentivizedChannel(&options, &value)
-				if err != nil {
-					wr.log.WithError(err).Error("Error submitting message to ethereum")
-					return err
-				}
-			default:
-				return fmt.Errorf("Unknown message type")
+		case messagePackage := <-wr.messagePackages:
+			err := wr.WriteChannel(&options, &messagePackage)
+			if err != nil {
+				wr.log.WithError(err).Error("Error submitting message to ethereum")
+				return err
 			}
 		}
 	}
@@ -115,10 +106,11 @@ func (wr *EthereumChannelWriter) signerFn(_ common.Address, tx *types.Transactio
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (wr *EthereumChannelWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
-	msg *chain.SubstrateOutboundBasicMessage,
+	commitment gsrpcTypes.H256,
+	msgs []substrate.BasicOutboundChannelMessage,
 ) error {
 	var messages []inbound.BasicInboundChannelMessage
-	for _, m := range msg.Messages {
+	for _, m := range msgs {
 		messages = append(messages,
 			inbound.BasicInboundChannelMessage{
 				Target:  m.Target,
@@ -128,7 +120,7 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		)
 	}
 
-	tx, err := wr.basicInboundChannel.Submit(options, messages, msg.Commitment,
+	tx, err := wr.basicInboundChannel.Submit(options, messages, commitment,
 		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
@@ -145,10 +137,11 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 
 func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	options *bind.TransactOpts,
-	msg *chain.SubstrateOutboundIncentivizedMessage,
+	commitment gsrpcTypes.H256,
+	msgs []substrate.IncentivizedOutboundChannelMessage,
 ) error {
 	var messages []inbound.IncentivizedInboundChannelMessage
-	for _, m := range msg.Messages {
+	for _, m := range msgs {
 		messages = append(messages,
 			inbound.IncentivizedInboundChannelMessage{
 				Target:  m.Target,
@@ -159,7 +152,7 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		)
 	}
 
-	tx, err := wr.incentivizedInboundChannel.Submit(options, messages, msg.Commitment,
+	tx, err := wr.incentivizedInboundChannel.Submit(options, messages, commitment,
 		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
@@ -170,6 +163,33 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		"txHash":  tx.Hash().Hex(),
 		"channel": "Incentivized",
 	}).Info("Transaction submitted")
+
+	return nil
+}
+
+func (wr *EthereumChannelWriter) WriteChannel(
+	options *bind.TransactOpts,
+	msg *MessagePackage,
+) error {
+	if msg.channelID.IsBasic {
+		var outboundMessages []chainTypes.BasicOutboundChannelMessage
+		err := gsrpcTypes.DecodeFromBytes(msg.commitmentMessagesData, &outboundMessages)
+		if err != nil {
+			wr.log.WithError(err).Error("Failed to decode commitment messages")
+			return err
+		}
+		wr.WriteBasicChannel(options, msg.commitmentHash, outboundMessages)
+
+	}
+	if msg.channelID.IsIncentivized {
+		var outboundMessages []chainTypes.IncentivizedOutboundChannelMessage
+		err := gsrpcTypes.DecodeFromBytes(msg.commitmentMessagesData, &outboundMessages)
+		if err != nil {
+			wr.log.WithError(err).Error("Failed to decode commitment messages")
+			return err
+		}
+		wr.WriteIncentivizedChannel(options, msg.commitmentHash, outboundMessages)
+	}
 
 	return nil
 }

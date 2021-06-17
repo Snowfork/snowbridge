@@ -1,5 +1,3 @@
-// +build ignore
-
 package parachaincommitmentrelayer
 
 import (
@@ -7,10 +5,12 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/blake2b"
 	"github.com/sirupsen/logrus"
 	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/wealdtech/go-merkletree"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
@@ -28,11 +28,11 @@ const OUR_PARACHAIN_ID = 200
 // to the relay chain light client, but will be done once that's complete.
 
 type MessagePackage struct {
-	channelID          chainTypes.ChannelID
-	commitmentHash     types.H256
-	commitmentMessages []chainTypes.CommitmentMessage
-	paraHeadProof      string
-	mmrProof           types.GenerateMMRProofResponse
+	channelID              chainTypes.ChannelID
+	commitmentHash         types.H256
+	commitmentMessagesData types.StorageDataRaw
+	paraHeadProof          [][32]byte
+	mmrProof               types.GenerateMMRProofResponse
 }
 
 type BeefyListener struct {
@@ -109,13 +109,9 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 				continue
 			} else {
 				hash := blake2b.Sum256(signedCommitment.Commitment.Bytes())
-				signature0 := signedCommitment.Signatures[0].Value
-				signature1 := signedCommitment.Signatures[1].Value
 				li.log.WithFields(logrus.Fields{
 					"commitment":       hex.EncodeToString(signedCommitment.Commitment.Bytes()),
 					"hashedCommitment": hex.EncodeToString(hash[:]),
-					"signature0":       hex.EncodeToString(signature0[:]),
-					"signature1":       hex.EncodeToString(signature1[:]),
 				}).Info("Commitment with signatures:")
 			}
 			li.log.WithField("blockNumber", blockNumber+1).Info("Getting hash for next block")
@@ -132,34 +128,34 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 			mmrProof := li.GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash)
 			allParaHeads, ourParaHead := li.GetAllParaheads(nextBlockHash, OUR_PARACHAIN_ID)
 
-			ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
-
-			channelID, commitmentHash, commitmentMessages, err := li.extractCommitment(ourParaHead)
+			ourParaHeadProof, err := createParachainHeaderProof(allParaHeads, ourParaHead)
 			if err != nil {
-				li.log.WithError(err).Error("Failed to extract commitment and messages")
-			}
-			if commitmentMessages == nil {
-				li.log.Info("Parachain header has no commitment with messages, skipping...")
-				continue
-			}
-
-			messagePackage := MessagePackage{
-				channelID,
-				commitmentHash,
-				commitmentMessages,
-				ourParaHeadProof,
-				mmrProof,
+				li.log.WithError(err).Error("Failed to create para head proof")
 			}
 
 			li.log.WithFields(logrus.Fields{
-				"channelID":          messagePackage.channelID,
-				"commitmentHash":     messagePackage.commitmentHash,
-				"commitmentMessages": messagePackage.commitmentMessages,
-				"ourParaHeadProof":   messagePackage.paraHeadProof,
-				"mmrProof":           messagePackage.mmrProof,
-			}).Info("Beefy Listener emmited new message packet")
+				"ParachainHeads": mmrProof.Leaf.ParachainHeads.Hex(),
+			}).Info("ParachainHeadsParachainHeadsParachainHeads")
 
-			li.messages <- messagePackage
+			messagePackets, err := li.extractCommitments(ourParaHead, mmrProof, ourParaHeadProof)
+			if err != nil {
+				li.log.WithError(err).Error("Failed to extract commitment and messages")
+			}
+			if len(messagePackets) == 0 {
+				li.log.Info("Parachain header has no commitment with messages, skipping...")
+				continue
+			}
+			for _, messagePacket := range messagePackets {
+				li.log.WithFields(logrus.Fields{
+					"channelID":              messagePacket.channelID,
+					"commitmentHash":         messagePacket.commitmentHash,
+					"commitmentMessagesData": messagePacket.commitmentMessagesData,
+					"ourParaHeadProof":       messagePacket.paraHeadProof,
+					"mmrProof":               messagePacket.mmrProof,
+				}).Info("Beefy Listener emitted new message packet")
+
+				li.messages <- messagePacket
+			}
 		}
 	}
 }
@@ -273,47 +269,133 @@ func (li *BeefyListener) GetAllParaheads(blockHash types.Hash, ourParachainId ui
 	return headers, ourParachainHeader
 }
 
-func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.Header) string {
-	//TODO: implement
-	return ""
+func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.Header) ([][32]byte, error) {
+	var allParaHeadsBytes [][]byte
+	for _, paraHead := range allParaHeads {
+		paraHeadBytes, err := types.EncodeToBytes(paraHead)
+		if err != nil {
+			return [][32]byte{}, err
+		}
+		allParaHeadsBytes = append(allParaHeadsBytes, paraHeadBytes)
+	}
+	ourParaHeadBytes, err := types.EncodeToBytes(ourParaHead)
+	if err != nil {
+		return [][32]byte{}, err
+	}
+
+	paraTreeData := make([][]byte, len(allParaHeadsBytes))
+	for i, paraHead := range allParaHeadsBytes {
+		paraTreeData[i] = paraHead
+	}
+
+	// Create the tree
+	paraMerkleTree, err := merkletree.NewUsing(paraTreeData, &Keccak256{}, nil)
+	if err != nil {
+		return [][32]byte{}, err
+	}
+
+	// Generate Merkle Proof for our parachain's head
+	proof, err := paraMerkleTree.GenerateProof(ourParaHeadBytes)
+	if err != nil {
+		return [][32]byte{}, err
+	}
+
+	// Verify the proof
+	root := paraMerkleTree.Root()
+	verified, err := merkletree.VerifyProofUsing(ourParaHeadBytes, proof, root, &Keccak256{}, nil)
+	if err != nil {
+		return [][32]byte{}, err
+	}
+	if !verified {
+		return [][32]byte{}, fmt.Errorf("failed to verify proof")
+	}
+
+	proofContents := make([][32]byte, len(proof.Hashes))
+	for i, hash := range proof.Hashes {
+		var hash32Byte [32]byte
+		copy(hash32Byte[:], hash)
+		proofContents[i] = hash32Byte
+	}
+
+	fmt.Println("parachain-commitment-relayer allParaHeadsBytes", allParaHeadsBytes)
+	allParaHeadsBytesHex, _ := types.EncodeToHexString(allParaHeadsBytes)
+	fmt.Println("parachain-commitment-relayer allParaHeadsBytesHex", allParaHeadsBytesHex)
+
+	paraHeadBytes0Hex, _ := types.EncodeToHexString(allParaHeadsBytes[0])
+	fmt.Println("parachain-commitment-relayer paraHeadBytes0Hex", paraHeadBytes0Hex)
+	paraHeadBytes1Hex, _ := types.EncodeToHexString(allParaHeadsBytes[1])
+	fmt.Println("parachain-commitment-relayer paraHeadBytes1Hex", paraHeadBytes1Hex)
+	fmt.Println("parachain-commitment-relayer paraHeadBytesHex", paraHeadBytes0Hex, paraHeadBytes1Hex)
+
+	fmt.Println("parachain-commitment-relayer ourParaHeadBytes", ourParaHeadBytes)
+	ourParaHeadBytesHex, _ := types.EncodeToHexString(ourParaHeadBytes)
+	fmt.Println("parachain-commitment-relayer ourParaHeadBytesHex", ourParaHeadBytesHex)
+	rootHex, _ := types.EncodeToHexString(root)
+	fmt.Println("parachain-commitment-relayer root", rootHex)
+	fmt.Println("parachain-commitment-relayer proof", proof)
+	fmt.Println("parachain-commitment-relayer len(proof.Hashes)", len(proof.Hashes))
+	fmt.Println("parachain-commitment-relayer proofContents", proofContents)
+	proofContents0Hex, _ := types.EncodeToHexString(proofContents[0])
+	fmt.Println("parachain-commitment-relayer proofContents0Hex", proofContents0Hex)
+
+	return proofContents, nil
 }
 
-func (li *BeefyListener) extractCommitment(header types.Header) (
-	chainTypes.ChannelID,
-	types.H256,
-	[]chainTypes.CommitmentMessage,
-	error) {
+// Keccak256 is the Keccak256 hashing method
+type Keccak256 struct{}
+
+// New creates a new Keccak256 hashing method
+func New() *Keccak256 {
+	return &Keccak256{}
+}
+
+// Hash generates a Keccak256 hash from a byte array
+func (h *Keccak256) Hash(data []byte) []byte {
+	hash := crypto.Keccak256(data)
+	return hash[:]
+}
+
+func (li *BeefyListener) extractCommitments(
+	header types.Header,
+	mmrProof types.GenerateMMRProofResponse,
+	ourParaHeadProof [][32]byte) ([]MessagePackage, error) {
 
 	li.log.WithFields(logrus.Fields{
 		"blockNumber": header.Number,
 	}).Debug("Extracting commitment from parachain header")
 
-	digestItem, err := getAuxiliaryDigestItem(header.Digest)
+	auxDigestItems, err := getAuxiliaryDigestItems(header.Digest)
 	if err != nil {
-		return chainTypes.ChannelID{}, types.H256{}, nil, err
+		return nil, err
 	}
 
-	if digestItem == nil || !digestItem.IsCommitment {
-		return chainTypes.ChannelID{}, types.H256{}, nil, nil
+	var messagePackages []MessagePackage
+	for _, auxDigestItem := range auxDigestItems {
+		li.log.WithFields(logrus.Fields{
+			"block":          header.Number,
+			"channelID":      auxDigestItem.AsCommitment.ChannelID,
+			"commitmentHash": auxDigestItem.AsCommitment.Hash.Hex(),
+		}).Debug("Found commitment hash in header digest")
+		commitmentHash := auxDigestItem.AsCommitment.Hash
+		commitmentMessagesData, err := li.getMessagesDataForDigestItem(&auxDigestItem)
+		if err != nil {
+			return nil, err
+		}
+		messagePackage := MessagePackage{
+			auxDigestItem.AsCommitment.ChannelID,
+			commitmentHash,
+			commitmentMessagesData,
+			ourParaHeadProof,
+			mmrProof,
+		}
+		messagePackages = append(messagePackages, messagePackage)
 	}
 
-	li.log.WithFields(logrus.Fields{
-		"block":          header.Number,
-		"channelID":      digestItem.AsCommitment.ChannelID,
-		"commitmentHash": digestItem.AsCommitment.Hash.Hex(),
-	}).Debug("Found commitment hash in header digest")
-
-	channelID := digestItem.AsCommitment.ChannelID
-	commitmentHash := digestItem.AsCommitment.Hash
-	commitmentMessages, err := li.getMessagesForDigestItem(digestItem)
-	if err != nil {
-		return chainTypes.ChannelID{}, types.H256{}, nil, err
-	}
-
-	return channelID, commitmentHash, commitmentMessages, nil
+	return messagePackages, nil
 }
 
-func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestItem, error) {
+func getAuxiliaryDigestItems(digest types.Digest) ([]chainTypes.AuxiliaryDigestItem, error) {
+	var auxDigestItems []chainTypes.AuxiliaryDigestItem
 	for _, digestItem := range digest {
 		if digestItem.IsOther {
 			var auxDigestItem chainTypes.AuxiliaryDigestItem
@@ -321,13 +403,13 @@ func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestIte
 			if err != nil {
 				return nil, err
 			}
-			return &auxDigestItem, nil
+			auxDigestItems = append(auxDigestItems, auxDigestItem)
 		}
 	}
-	return nil, nil
+	return auxDigestItems, nil
 }
 
-func (li *BeefyListener) getMessagesForDigestItem(digestItem *chainTypes.AuxiliaryDigestItem) ([]chainTypes.CommitmentMessage, error) {
+func (li *BeefyListener) getMessagesDataForDigestItem(digestItem *chainTypes.AuxiliaryDigestItem) (types.StorageDataRaw, error) {
 	storageKey, err := parachain.MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
 	if err != nil {
 		return nil, err
@@ -348,13 +430,5 @@ func (li *BeefyListener) getMessagesForDigestItem(digestItem *chainTypes.Auxilia
 		return nil, err
 	}
 
-	var messages []chainTypes.CommitmentMessage
-
-	err = types.DecodeFromBytes(*data, &messages)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, err
-	}
-
-	return messages, nil
+	return *data, nil
 }

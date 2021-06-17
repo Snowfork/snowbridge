@@ -64,10 +64,10 @@ Optional: If you cloned the polkadot repo in another location, Create an `.env` 
 cp ./.env-example .env
 ```
 
-Start all services (parachain, relayer, ganache, etc):
+Start all services (parachain, relayer, ganache, etc). We recommend adding the `duplicate` flag to create a duplicate parachain so that we have 2 different running and registered parachains for testing XCM and for testing the polkadot light client with multiple parachain headers being tracked.
 
 ```bash
-scripts/start-services.sh
+scripts/start-services.sh duplicate
 ```
 
 Wait until the "System has been initialized" message

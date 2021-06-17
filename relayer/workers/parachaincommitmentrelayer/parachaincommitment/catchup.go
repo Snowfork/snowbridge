@@ -174,12 +174,12 @@ func (li *Listener) searchForLostCommitments(lastBlockNumber uint64, basicNonceT
 		digestItems[i], digestItems[j] = digestItems[j], digestItems[i]
 	}
 
-	for _, digestItem := range digestItems {
-		err := li.processCommitment(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
-		if err != nil {
-			return err
-		}
-	}
+	// for _, digestItem := range digestItems {
+	// 	err := li.processCommitment(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }
