@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./LightClientBridge.sol";
+import "./ParachainLightClient.sol";
 
 contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
@@ -12,7 +13,7 @@ contract BasicInboundChannel {
 
     struct Message {
         address target;
-        uint64 nonce;
+        uint64 nonce; // TODO: this might cause an error, we use uint256 when encoding on Parachain
         bytes payload;
     }
 
@@ -25,58 +26,16 @@ contract BasicInboundChannel {
         lightClientBridge = _lightClientBridge;
     }
 
-    // TODO: Submit should take in all inputs required for verification,
-    // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
+    // TODO: add docs
     function submit(
         Message[] calldata _messages,
-        bytes32 _commitment,
-        bytes32 _beefyMMRLeaf,
+        ParachainLightClient.OwnParachainHeadPartial _ownParachainHeadPartial,
+        bytes32[] memory _parachainHeadsProof,
+        LightClientBridge.BeefyMMRLeafPartial _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
         bytes32[] memory _beefyMMRLeafProof
     ) public {
-        verifyMessages(_messages, _commitment);
-        // TODO: require(
-        //     lightClientBridge.verifyBeefyMerkleLeaf(
-        //         _beefyMMRLeaf,
-        //         _beefyMMRLeafIndex,
-        //         _beefyMMRLeafCount,
-        //         _beefyMMRLeafProof
-        //     ),
-        //     "Invalid proof"
-        // );
-        processMessages(_messages);
-    }
-
-    //TODO: verifyMessages should accept all needed proofs
-    function verifyMessages(Message[] calldata _messages, bytes32 _commitment)
-        internal
-        view
-        returns (bool success)
-    {
-        // Prove we can get the MMRLeaf that is claimed to contain our Parachain Block Header
-        // BEEFYLightClient.verifyMMRLeaf(parachainHeadsMMRProof)
-        // BeefyLightClient{
-        //   verifyMMRLeaf(parachainHeadsMMRProof) {
-        //   MMRVerification.verifyInclusionProof(latestMMRRoot, parachainHeadsMMRProof)
-        // }
-        //}
-        //}
-        // returns mmrLeaf;
-
-        // Prove we can get the claimed parachain block header from the MMRLeaf
-        // allParachainHeadsMerkleTreeRoot = mmrLeaf.parachain_heads;
-        // MerkeTree.verify(allParachainHeadsMerkleTreeRoot, ourParachainMerkleProof)
-        // returns parachainBlockHeader
-
-        // Prove that the commitment is in fact in the parachain block header
-        // require(parachainBlockHeader.commitment == commitment)
-
-        // Validate that the commitment matches the commitment contents
-        require(
-            validateMessagesMatchCommitment(_messages, _commitment),
-            "invalid commitment"
-        );
 
         // Require there is enough gas to play all messages
         require(
@@ -84,7 +43,42 @@ contract BasicInboundChannel {
             "insufficient gas for delivery of all messages"
         );
 
-        return true;
+        // Proof
+        // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
+        // TODO
+        // bytes32 commitment = keccak256(abi.encodePacked(_messages));
+
+        // 2. Compute `ownParachainHead` by hashing the data of the `commitment` together with the contents of
+        // `_ownParachainHeadPartial`
+        // TODO
+        // bytes32 ownParachainHead = keccak256(abi.encodePacked(ParachainLightClient.OwnParachainHead(
+        //     _ownParachainHeadPartial.parentHash,
+        //     _ownParachainHeadPartial.number,
+        //     _ownParachainHeadPartial.stateRoot,
+        //     _ownParachainHeadPartial.extrinsicsRoot,
+        //     commitment,
+        // )));
+
+        // 3. Compute `parachainHeadsRoot` by verifying the merkle proof using `ownParachainHead` and
+        // `_parachainHeadsProof`
+        // TODO
+
+        // 4. Compute the `beefyMMRLeaf` using `parachainHeadsRoot` and `_beefyMMRLeafPartial`
+        // TODO
+
+        // 5. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
+        // `_beefyMMRLeafIndex`, `_beefyMMRLeafCount` and `_beefyMMRLeafProof`
+        require(
+            lightClientBridge.verifyBeefyMerkleLeaf(
+                beefyMMRLeaf,
+                _beefyMMRLeafIndex,
+                _beefyMMRLeafCount,
+                _beefyMMRLeafProof
+            ),
+            "Invalid proof"
+        );
+
+        processMessages(_messages);
     }
 
     function processMessages(Message[] calldata _messages) internal {
