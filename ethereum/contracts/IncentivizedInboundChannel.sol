@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./LightClientBridge.sol";
+import "./BeefyLightClient.sol";
 import "./RewardSource.sol";
 
 contract IncentivizedInboundChannel is AccessControl {
@@ -29,12 +29,12 @@ contract IncentivizedInboundChannel is AccessControl {
 
     RewardSource private rewardSource;
 
-    LightClientBridge public lightClientBridge;
+    BeefyLightClient public beefyLightClient;
 
-    constructor(LightClientBridge _lightClientBridge) {
+    constructor(BeefyLightClient _beefyLightClient) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         nonce = 0;
-        lightClientBridge = _lightClientBridge;
+        beefyLightClient = _beefyLightClient;
     }
 
     // Once-off post-construction call to set initial configuration.
@@ -66,7 +66,7 @@ contract IncentivizedInboundChannel is AccessControl {
     ) public {
         verifyMessages(_messages, _commitment);
         // TODO: require(
-        //     lightClientBridge.verifyBeefyMerkleLeaf(
+        //     beefyLightClient.verifyBeefyMerkleLeaf(
         //         _beefyMMRLeaf,
         //         _beefyMMRLeafIndex,
         //         _beefyMMRLeafCount,

@@ -34,7 +34,7 @@ type BasicInboundChannelMessage struct {
 }
 
 // BasicInboundChannelABI is the input ABI used to generate the binding from.
-const BasicInboundChannelABI = "[{\"inputs\":[{\"internalType\":\"contractLightClientBridge\",\"name\":\"_lightClientBridge\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lightClientBridge\",\"outputs\":[{\"internalType\":\"contractLightClientBridge\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message[]\",\"name\":\"_messages\",\"type\":\"tuple[]\"},{\"internalType\":\"bytes32\",\"name\":\"_commitment\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_beefyMMRLeaf\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"_beefyMMRLeafIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_beefyMMRLeafCount\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"_beefyMMRLeafProof\",\"type\":\"bytes32[]\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const BasicInboundChannelABI = "[{\"inputs\":[{\"internalType\":\"contractBeefyLightClient\",\"name\":\"_beefyLightClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"beefyLightClient\",\"outputs\":[{\"internalType\":\"contractBeefyLightClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message[]\",\"name\":\"_messages\",\"type\":\"tuple[]\"},{\"internalType\":\"bytes32\",\"name\":\"_commitment\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_beefyMMRLeaf\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"_beefyMMRLeafIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_beefyMMRLeafCount\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"_beefyMMRLeafProof\",\"type\":\"bytes32[]\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // BasicInboundChannel is an auto generated Go binding around an Ethereum contract.
 type BasicInboundChannel struct {
@@ -209,12 +209,12 @@ func (_BasicInboundChannel *BasicInboundChannelCallerSession) MAXGASPERMESSAGE()
 	return _BasicInboundChannel.Contract.MAXGASPERMESSAGE(&_BasicInboundChannel.CallOpts)
 }
 
-// LightClientBridge is a free data retrieval call binding the contract method 0xc82d9437.
+// BeefyLightClient is a free data retrieval call binding the contract method 0xc82d9437.
 //
-// Solidity: function lightClientBridge() view returns(address)
-func (_BasicInboundChannel *BasicInboundChannelCaller) LightClientBridge(opts *bind.CallOpts) (common.Address, error) {
+// Solidity: function beefyLightClient() view returns(address)
+func (_BasicInboundChannel *BasicInboundChannelCaller) BeefyLightClient(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
-	err := _BasicInboundChannel.contract.Call(opts, &out, "lightClientBridge")
+	err := _BasicInboundChannel.contract.Call(opts, &out, "beefyLightClient")
 
 	if err != nil {
 		return *new(common.Address), err
@@ -226,18 +226,18 @@ func (_BasicInboundChannel *BasicInboundChannelCaller) LightClientBridge(opts *b
 
 }
 
-// LightClientBridge is a free data retrieval call binding the contract method 0xc82d9437.
+// BeefyLightClient is a free data retrieval call binding the contract method 0xc82d9437.
 //
-// Solidity: function lightClientBridge() view returns(address)
-func (_BasicInboundChannel *BasicInboundChannelSession) LightClientBridge() (common.Address, error) {
-	return _BasicInboundChannel.Contract.LightClientBridge(&_BasicInboundChannel.CallOpts)
+// Solidity: function beefyLightClient() view returns(address)
+func (_BasicInboundChannel *BasicInboundChannelSession) BeefyLightClient() (common.Address, error) {
+	return _BasicInboundChannel.Contract.BeefyLightClient(&_BasicInboundChannel.CallOpts)
 }
 
-// LightClientBridge is a free data retrieval call binding the contract method 0xc82d9437.
+// BeefyLightClient is a free data retrieval call binding the contract method 0xc82d9437.
 //
-// Solidity: function lightClientBridge() view returns(address)
-func (_BasicInboundChannel *BasicInboundChannelCallerSession) LightClientBridge() (common.Address, error) {
-	return _BasicInboundChannel.Contract.LightClientBridge(&_BasicInboundChannel.CallOpts)
+// Solidity: function beefyLightClient() view returns(address)
+func (_BasicInboundChannel *BasicInboundChannelCallerSession) BeefyLightClient() (common.Address, error) {
+	return _BasicInboundChannel.Contract.BeefyLightClient(&_BasicInboundChannel.CallOpts)
 }
 
 // Nonce is a free data retrieval call binding the contract method 0xaffed0e0.

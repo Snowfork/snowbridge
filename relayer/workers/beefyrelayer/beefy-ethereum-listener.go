@@ -14,7 +14,7 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
@@ -22,15 +22,15 @@ const MaxMessagesPerSend = 10
 
 // Listener streams the Ethereum blockchain for application events
 type BeefyEthereumListener struct {
-	ethereumConfig    *ethereum.Config
-	ethereumConn      *ethereum.Connection
-	beefyDB           *store.Database
-	lightClientBridge *lightclientbridge.Contract
-	beefyMessages     chan<- store.BeefyRelayInfo
-	dbMessages        chan<- store.DatabaseCmd
-	headers           chan<- chain.Header
-	blockWaitPeriod   uint64
-	log               *logrus.Entry
+	ethereumConfig   *ethereum.Config
+	ethereumConn     *ethereum.Connection
+	beefyDB          *store.Database
+	beefyLightClient *beefylightclient.Contract
+	beefyMessages    chan<- store.BeefyRelayInfo
+	dbMessages       chan<- store.DatabaseCmd
+	headers          chan<- chain.Header
+	blockWaitPeriod  uint64
+	log              *logrus.Entry
 }
 
 func NewBeefyEthereumListener(ethereumConfig *ethereum.Config, ethereumConn *ethereum.Connection, beefyDB *store.Database,
@@ -51,14 +51,14 @@ func NewBeefyEthereumListener(ethereumConfig *ethereum.Config, ethereumConn *eth
 func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group, descendantsUntilFinal uint64) error {
 
 	// Set up light client bridge contract
-	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(li.ethereumConfig.LightClientBridge), li.ethereumConn.GetClient())
+	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(li.ethereumConfig.BeefyLightClient), li.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}
-	li.lightClientBridge = lightClientBridgeContract
+	li.beefyLightClient = beefyLightClientContract
 
 	// Fetch BLOCK_WAIT_PERIOD from light client bridge contract
-	blockWaitPeriod, err := li.lightClientBridge.ContractCaller.BLOCKWAITPERIOD(nil)
+	blockWaitPeriod, err := li.beefyLightClient.ContractCaller.BLOCKWAITPERIOD(nil)
 	if err != nil {
 		return err
 	}
@@ -125,13 +125,13 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(ctx context.Context, desce
 	}
 }
 
-// queryInitialVerificationSuccessfulEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
+// queryInitialVerificationSuccessfulEvents queries ContractInitialVerificationSuccessful events from the BeefyLightClient contract
 func (li *BeefyEthereumListener) queryInitialVerificationSuccessfulEvents(ctx context.Context, start uint64,
-	end *uint64) ([]*lightclientbridge.ContractInitialVerificationSuccessful, error) {
-	var events []*lightclientbridge.ContractInitialVerificationSuccessful
+	end *uint64) ([]*beefylightclient.ContractInitialVerificationSuccessful, error) {
+	var events []*beefylightclient.ContractInitialVerificationSuccessful
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-	iter, err := li.lightClientBridge.FilterInitialVerificationSuccessful(&filterOps)
+	iter, err := li.beefyLightClient.FilterInitialVerificationSuccessful(&filterOps)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 
 	for _, event := range events {
 		// Fetch validation data from contract using event.ID
-		validationData, err := li.lightClientBridge.ContractCaller.ValidationData(nil, event.Id)
+		validationData, err := li.beefyLightClient.ContractCaller.ValidationData(nil, event.Id)
 		if err != nil {
 			li.log.WithError(err).Error(fmt.Sprintf("Error querying validation data for ID %d", event.Id))
 		}
@@ -251,13 +251,13 @@ func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx 
 	}
 }
 
-// queryFinalVerificationSuccessfulEvents queries ContractFinalVerificationSuccessful events from the LightClientBridge contract
+// queryFinalVerificationSuccessfulEvents queries ContractFinalVerificationSuccessful events from the BeefyLightClient contract
 func (li *BeefyEthereumListener) queryFinalVerificationSuccessfulEvents(ctx context.Context, start uint64,
-	end *uint64) ([]*lightclientbridge.ContractFinalVerificationSuccessful, error) {
-	var events []*lightclientbridge.ContractFinalVerificationSuccessful
+	end *uint64) ([]*beefylightclient.ContractFinalVerificationSuccessful, error) {
+	var events []*beefylightclient.ContractFinalVerificationSuccessful
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-	iter, err := li.lightClientBridge.FilterFinalVerificationSuccessful(&filterOps)
+	iter, err := li.beefyLightClient.FilterFinalVerificationSuccessful(&filterOps)
 	if err != nil {
 		return nil, err
 	}

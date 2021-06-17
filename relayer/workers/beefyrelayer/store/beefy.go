@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 	merkletree "github.com/wealdtech/go-merkletree"
 	"golang.org/x/crypto/blake2b"
 )
@@ -22,7 +22,7 @@ type NewSignatureCommitmentMessage struct {
 
 type CompleteSignatureCommitmentMessage struct {
 	ID                             *big.Int
-	Commitment                     lightclientbridge.LightClientBridgeCommitment
+	Commitment                     beefylightclient.BeefyLightClientCommitment
 	Signatures                     [][]byte
 	ValidatorPositions             []*big.Int
 	ValidatorPublicKeys            []common.Address
@@ -157,7 +157,7 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		validatorPublicKeyMerkleProofs = append(validatorPublicKeyMerkleProofs, merkleProof)
 	}
 
-	commitment := lightclientbridge.LightClientBridgeCommitment{
+	commitment := beefylightclient.BeefyLightClientCommitment{
 		Payload:        b.SignedCommitment.Commitment.Payload,
 		BlockNumber:    uint64(b.SignedCommitment.Commitment.BlockNumber),
 		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),

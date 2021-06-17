@@ -3,7 +3,7 @@ pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./LightClientBridge.sol";
+import "./BeefyLightClient.sol";
 import "./ParachainLightClient.sol";
 
 contract BasicInboundChannel {
@@ -19,11 +19,11 @@ contract BasicInboundChannel {
 
     event MessageDispatched(uint64 nonce, bool result);
 
-    LightClientBridge public lightClientBridge;
+    BeefyLightClient public beefyLightClient;
 
-    constructor(LightClientBridge _lightClientBridge) {
+    constructor(BeefyLightClient _beefyLightClient) {
         nonce = 0;
-        lightClientBridge = _lightClientBridge;
+        beefyLightClient = _beefyLightClient;
     }
 
     // TODO: add docs
@@ -31,7 +31,7 @@ contract BasicInboundChannel {
         Message[] calldata _messages,
         ParachainLightClient.OwnParachainHeadPartial _ownParachainHeadPartial,
         bytes32[] memory _parachainHeadsProof,
-        LightClientBridge.BeefyMMRLeafPartial _beefyMMRLeafPartial,
+        BeefyLightClient.BeefyMMRLeafPartial _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
         bytes32[] memory _beefyMMRLeafProof
@@ -69,7 +69,7 @@ contract BasicInboundChannel {
         // 5. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
         // `_beefyMMRLeafIndex`, `_beefyMMRLeafCount` and `_beefyMMRLeafProof`
         require(
-            lightClientBridge.verifyBeefyMerkleLeaf(
+            beefyLightClient.verifyBeefyMerkleLeaf(
                 beefyMMRLeaf,
                 _beefyMMRLeafIndex,
                 _beefyMMRLeafCount,

@@ -14,7 +14,7 @@ import "./ScaleCodec.sol";
 /**
  * @title A entry contract for the Ethereum light client
  */
-contract LightClientBridge {
+contract BeefyLightClient {
     using SafeMath for uint256;
     using Bits for uint256;
     using Bitfield for uint256[];
@@ -103,7 +103,7 @@ contract LightClientBridge {
     uint256 public constant BLOCK_WAIT_PERIOD = 3;
 
     /**
-     * @notice Deploys the LightClientBridge contract
+     * @notice Deploys the BeefyLightClient contract
      * @dev If the validatorSetRegistry should be initialised with 0 entries, then input
      * 0x00 as validatorSetRoot
      * @param _validatorRegistry The contract to be used as the validator registry

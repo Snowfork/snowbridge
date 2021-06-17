@@ -6,7 +6,7 @@ type Config struct {
 	ParachainCommitmentsPrivateKey string         `mapstructure:"parachain-commitments-private-key"`
 	DescendantsUntilFinal          byte           `mapstructure:"descendants-until-final"`
 	Channels                       ChannelsConfig `mapstructure:"channels"`
-	LightClientBridge              string         `mapstructure:"lightclientbridge"`
+	BeefyLightClient               string         `mapstructure:"beefylightclient"`
 	StartBlock                     uint64         `mapstructure:"startblock"`
 }
 

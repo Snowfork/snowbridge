@@ -1,4 +1,4 @@
-//go:generate bash -c "jq .abi ../../ethereum/build/contracts/LightClientBridge.json | abigen --abi - --type contract --pkg lightclientbridge --out lightclientbridge/contract.go"
+//go:generate bash -c "jq .abi ../../ethereum/build/contracts/BeefyLightClient.json | abigen --abi - --type contract --pkg beefylightclient --out beefylightclient/contract.go"
 //go:generate bash -c "jq .abi ../../ethereum/build/contracts/ValidatorRegistry.json | abigen --abi - --type contract --pkg validatorregistry --out validatorregistry/contract.go"
 //go:generate bash -c "jq .abi ../../ethereum/build/contracts/BasicInboundChannel.json | abigen --abi - --type BasicInboundChannel --pkg inbound --out inbound/basic.go"
 //go:generate bash -c "jq .abi ../../ethereum/build/contracts/IncentivizedInboundChannel.json | abigen --abi - --type IncentivizedInboundChannel --pkg inbound --out inbound/incentivized.go"
