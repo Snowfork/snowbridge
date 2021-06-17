@@ -436,7 +436,10 @@ contract LightClientBridge {
     }
 
     function requiredNumberOfSignatures() public view returns (uint256) {
-        return (validatorRegistry.numOfValidators() * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) /
-                THRESHOLD_DENOMINATOR;
+        return
+            (validatorRegistry.numOfValidators() *
+                THRESHOLD_NUMERATOR +
+                THRESHOLD_DENOMINATOR -
+                1) / THRESHOLD_DENOMINATOR;
     }
 }
