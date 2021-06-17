@@ -8,8 +8,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	gsrpc "github.com/snowfork/go-substrate-rpc-client/v2"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	gsrpc "github.com/snowfork/go-substrate-rpc-client/v3"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 )
 
 type Connection struct {

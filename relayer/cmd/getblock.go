@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
+	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
 )

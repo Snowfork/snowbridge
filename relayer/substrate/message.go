@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 )
 
 type Message struct {

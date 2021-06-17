@@ -1,6 +1,6 @@
 package substrate
 
-import "github.com/snowfork/go-substrate-rpc-client/v2/types"
+import "github.com/snowfork/go-substrate-rpc-client/v3/types"
 
 type BasicOutboundChannelMessage struct {
 	Target  [20]byte
