@@ -3,11 +3,11 @@ pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./BeefyLightClient.sol";
 import "./ParachainLightClient.sol";
 
 contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
+    uint256 public constant GAS_BUFFER = 60000;
 
     uint64 public nonce;
 
@@ -22,8 +22,8 @@ contract BasicInboundChannel {
     BeefyLightClient public beefyLightClient;
 
     constructor(BeefyLightClient _beefyLightClient) {
-        nonce = 0;
         beefyLightClient = _beefyLightClient;
+        nonce = 0;
     }
 
     // TODO: add docs
@@ -32,51 +32,30 @@ contract BasicInboundChannel {
         ParachainLightClient.OwnParachainHeadPartial
             calldata _ownParachainHeadPartial,
         bytes32[] calldata _parachainHeadsProof,
-        BeefyLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
+        ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
         bytes32[] calldata _beefyMMRLeafProof
     ) public {
-        // Require there is enough gas to play all messages
-        require(
-            gasleft() >= _messages.length * MAX_GAS_PER_MESSAGE,
-            "insufficient gas for delivery of all messages"
-        );
-
         // Proof
         // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
-        // TODO
-        // bytes32 commitment = keccak256(abi.encodePacked(_messages));
+        bytes32 commitment = keccak256(abi.encode(_messages));
 
-        // 2. Compute `ownParachainHead` by hashing the data of the `commitment` together with the contents of
-        // `_ownParachainHeadPartial`
-        // TODO
-        // bytes32 ownParachainHead = keccak256(abi.encodePacked(ParachainLightClient.OwnParachainHead(
-        //     _ownParachainHeadPartial.parentHash,
-        //     _ownParachainHeadPartial.number,
-        //     _ownParachainHeadPartial.stateRoot,
-        //     _ownParachainHeadPartial.extrinsicsRoot,
-        //     commitment,
-        // )));
+        ParachainLightClient.verifyCommitmentInParachain(
+            commitment,
+            _ownParachainHeadPartial,
+            _parachainHeadsProof,
+            _beefyMMRLeafPartial,
+            _beefyMMRLeafIndex,
+            _beefyMMRLeafCount,
+            _beefyMMRLeafProof
+        );
 
-        // 3. Compute `parachainHeadsRoot` by verifying the merkle proof using `ownParachainHead` and
-        // `_parachainHeadsProof`
-        // TODO
-
-        // 4. Compute the `beefyMMRLeaf` using `parachainHeadsRoot` and `_beefyMMRLeafPartial`
-        // TODO
-
-        // 5. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
-        // `_beefyMMRLeafIndex`, `_beefyMMRLeafCount` and `_beefyMMRLeafProof`
-        // require(
-        //     beefyLightClient.verifyBeefyMerkleLeaf(
-        //         beefyMMRLeaf,
-        //         _beefyMMRLeafIndex,
-        //         _beefyMMRLeafCount,
-        //         _beefyMMRLeafProof
-        //     ),
-        //     "Invalid proof"
-        // );
+        // Require there is enough gas to play all messages
+        require(
+            gasleft() >= (_messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
+            "insufficient gas for delivery of all messages"
+        );
 
         processMessages(_messages);
     }
@@ -96,12 +75,5 @@ contract BasicInboundChannel {
 
             emit MessageDispatched(_messages[i].nonce, success);
         }
-    }
-
-    function validateMessagesMatchCommitment(
-        Message[] calldata _messages,
-        bytes32 _commitment
-    ) internal pure returns (bool) {
-        return keccak256(abi.encode(_messages)) == _commitment;
     }
 }

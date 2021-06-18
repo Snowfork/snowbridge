@@ -12,7 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/basic"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v2/types"
@@ -22,8 +23,8 @@ import (
 type EthereumChannelWriter struct {
 	config                     *ethereum.Config
 	conn                       *ethereum.Connection
-	basicInboundChannel        *inbound.BasicInboundChannel
-	incentivizedInboundChannel *inbound.IncentivizedInboundChannel
+	basicInboundChannel        *basic.BasicInboundChannel
+	incentivizedInboundChannel *incentivized.IncentivizedInboundChannel
 	messagePackages            <-chan MessagePackage
 	log                        *logrus.Entry
 }
@@ -45,13 +46,13 @@ func NewEthereumChannelWriter(
 }
 
 func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	basic, err := inbound.NewBasicInboundChannel(common.HexToAddress(wr.config.Channels.Basic.Inbound), wr.conn.GetClient())
+	basic, err := basic.NewBasicInboundChannel(common.HexToAddress(wr.config.Channels.Basic.Inbound), wr.conn.GetClient())
 	if err != nil {
 		return err
 	}
 	wr.basicInboundChannel = basic
 
-	incentivized, err := inbound.NewIncentivizedInboundChannel(common.HexToAddress(wr.config.Channels.Incentivized.Inbound), wr.conn.GetClient())
+	incentivized, err := incentivized.NewIncentivizedInboundChannel(common.HexToAddress(wr.config.Channels.Incentivized.Inbound), wr.conn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -109,10 +110,10 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 	commitment gsrpcTypes.H256,
 	msgs []substrate.BasicOutboundChannelMessage,
 ) error {
-	var messages []inbound.BasicInboundChannelMessage
+	var messages []basic.BasicInboundChannelMessage
 	for _, m := range msgs {
 		messages = append(messages,
-			inbound.BasicInboundChannelMessage{
+			basic.BasicInboundChannelMessage{
 				Target:  m.Target,
 				Nonce:   m.Nonce,
 				Payload: m.Payload,
@@ -120,16 +121,9 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		)
 	}
 
-	/*
-		_messages []inbound.BasicInboundChannelMessage,
-		_ownParachainHeadPartial inbound.ParachainLightClientOwnParachainHeadPartial,
-		 _parachainHeadsProof [][32]byte, _beefyMMRLeafPartial inbound.BeefyLightClientBeefyMMRLeafPartial,
-		  _beefyMMRLeafIndex *big.Int, _beefyMMRLeafCount *big.Int,
-			 _beefyMMRLeafProof [][32]byte
-	*/
-
-	tx, err := wr.basicInboundChannel.Submit(options, messages, commitment,
-		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
+	tx, err := wr.basicInboundChannel.Submit(options, messages, basic.ParachainLightClientOwnParachainHeadPartial{},
+		[][32]byte{}, basic.ParachainLightClientBeefyMMRLeafPartial{},
+		big.NewInt(0), big.NewInt(0), [][32]byte{})
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err
@@ -148,10 +142,10 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	commitment gsrpcTypes.H256,
 	msgs []substrate.IncentivizedOutboundChannelMessage,
 ) error {
-	var messages []inbound.IncentivizedInboundChannelMessage
+	var messages []incentivized.IncentivizedInboundChannelMessage
 	for _, m := range msgs {
 		messages = append(messages,
-			inbound.IncentivizedInboundChannelMessage{
+			incentivized.IncentivizedInboundChannelMessage{
 				Target:  m.Target,
 				Nonce:   m.Nonce,
 				Fee:     m.Fee.Int,
@@ -160,8 +154,10 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		)
 	}
 
-	tx, err := wr.incentivizedInboundChannel.Submit(options, messages, commitment,
-		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
+	tx, err := wr.incentivizedInboundChannel.Submit(options, messages,
+		incentivized.ParachainLightClientOwnParachainHeadPartial{},
+		[][32]byte{}, incentivized.ParachainLightClientBeefyMMRLeafPartial{},
+		big.NewInt(0), big.NewInt(0), [][32]byte{})
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err

@@ -79,14 +79,6 @@ contract BeefyLightClient {
         bytes32 parachainHeadsRoot; // TODO check type and position of this element
     }
 
-    struct BeefyMMRLeafPartial {
-        uint32 parentNumber;
-        bytes32 parentHash;
-        uint64 nextAuthoritySetId;
-        uint32 nextAuthoritySetLen;
-        bytes32 nextAuthoritySetRoot;
-    }
-
     /* State */
 
     ValidatorRegistry public validatorRegistry;
