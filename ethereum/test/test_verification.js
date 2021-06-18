@@ -1,6 +1,6 @@
 const BigNumber = web3.BigNumber;
 const {
-  deployLightClientBridge, signatureSubstrateToEthereum, buildCommitment,
+  deployBeefyLightClient, signatureSubstrateToEthereum, buildCommitment,
   createMerkleTree, deployGenericAppWithChannels, ChannelId, mine, lockupFunds, catchRevert
 } = require("./helpers");
 const ETHApp = artifacts.require("ETHApp");
@@ -29,7 +29,7 @@ describe.skip("Verification tests", function () {
     userThree = accounts[3];
   });
 
-  describe("initialize LightClientBridge", function () {
+  describe("initialize BeefyLightClient", function () {
     beforeEach(async function () {
       this.timeout(10 * 1000)
 
@@ -39,8 +39,8 @@ describe.skip("Verification tests", function () {
       this.validator0PubKeyMerkleProof = validatorsMerkleTree.getHexProof(this.validatorsLeaf0);
       this.validator1PubKeyMerkleProof = validatorsMerkleTree.getHexProof(this.validatorsLeaf1);
 
-      this.lightClientBridge = await deployLightClientBridge(validatorsMerkleTree.getHexRoot(), validatorsMerkleTree.getLeaves().length);
-      const newCommitment = await this.lightClientBridge.newSignatureCommitment(
+      this.beefyLightClient = await deployBeefyLightClient(validatorsMerkleTree.getHexRoot(), validatorsMerkleTree.getLeaves().length);
+      const newCommitment = await this.beefyLightClient.newSignatureCommitment(
         fixture.commitmentHash,
         fixture.bitfield,
         signatureSubstrateToEthereum(fixture.signature0),
@@ -49,27 +49,26 @@ describe.skip("Verification tests", function () {
         this.validator0PubKeyMerkleProof
       );
 
-      const lastId = (await this.lightClientBridge.currentId()).sub(new web3.utils.BN(1));
+      const lastId = (await this.beefyLightClient.currentId()).sub(new web3.utils.BN(1));
 
-      await catchRevert(this.lightClientBridge.validatorBitfield(lastId), 'Error: Block wait period not over');
+      await catchRevert(this.beefyLightClient.validatorBitfield(lastId), 'Error: Block wait period not over');
 
       await mine(45);
 
-      const bitfield = await this.lightClientBridge.validatorBitfield(lastId);
+      const bitfield = await this.beefyLightClient.validatorBitfield(lastId);
       expect(printBitfield(bitfield)).to.eq('10')
 
-      const completeCommitment = await this.lightClientBridge.completeSignatureCommitment(
+      const completeCommitment = await this.beefyLightClient.completeSignatureCommitment(
         lastId,
-        fixture.commitmentHash,
         fixture.commitment,
         [signatureSubstrateToEthereum(fixture.signature1)],
         [1],
         ["0x25451A4de12dcCc2D166922fA938E900fCc4ED24"],
         [this.validator1PubKeyMerkleProof]
       );
-      console.log(await this.lightClientBridge.latestMMRRoot());
+      console.log(await this.beefyLightClient.latestMMRRoot());
 
-      // this.channel = await BasicInboundChannel.new(this.lightClientBridge.address,
+      // this.channel = await BasicInboundChannel.new(this.beefyLightClient.address,
       //   { from: owner }
       // );
       // this.app = await MockApp.new();

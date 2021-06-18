@@ -12,16 +12,16 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 )
 
 // Listener streams the Ethereum blockchain for application events
 type EthereumLightClientListener struct {
-	ethereumConfig    *ethereum.Config
-	ethereumConn      *ethereum.Connection
-	lightClientBridge *lightclientbridge.Contract
-	blockWaitPeriod   uint64
-	log               *logrus.Entry
+	ethereumConfig   *ethereum.Config
+	ethereumConn     *ethereum.Connection
+	beefyLightClient *beefylightclient.Contract
+	blockWaitPeriod  uint64
+	log              *logrus.Entry
 }
 
 func NewEthereumLightClientListener(ethereumConfig *ethereum.Config, ethereumConn *ethereum.Connection,
@@ -36,11 +36,11 @@ func NewEthereumLightClientListener(ethereumConfig *ethereum.Config, ethereumCon
 func (li *EthereumLightClientListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	// Set up light client bridge contract
-	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(li.ethereumConfig.LightClientBridge), li.ethereumConn.GetClient())
+	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(li.ethereumConfig.BeefyLightClient), li.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}
-	li.lightClientBridge = lightClientBridgeContract
+	li.beefyLightClient = beefyLightClientContract
 
 	eg.Go(func() error {
 		err := li.pollEventsAndHeaders(ctx)
@@ -63,32 +63,32 @@ func (li *EthereumLightClientListener) pollEventsAndHeaders(
 			li.log.Info("Shutting down listener...")
 			return ctx.Err()
 		case gethheader := <-headers:
-			// Query LightClientBridge contract's ContractFinalVerificationSuccessful events
+			// Query BeefyLightClient contract's ContractFinalVerificationSuccessful events
 			blockNumber := gethheader.Number.Uint64()
-			var lightClientBridgeEvents []*lightclientbridge.ContractFinalVerificationSuccessful
+			var beefyLightClientEvents []*beefylightclient.ContractFinalVerificationSuccessful
 
 			contractEvents, err := li.queryLightClientEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
 				li.log.WithError(err).Error("Failure fetching event logs")
 				return err
 			}
-			lightClientBridgeEvents = append(lightClientBridgeEvents, contractEvents...)
+			beefyLightClientEvents = append(beefyLightClientEvents, contractEvents...)
 
-			if len(lightClientBridgeEvents) > 0 {
-				li.log.Info(fmt.Sprintf("Found %d LightClientBridge contract events on block %d", len(lightClientBridgeEvents), blockNumber))
+			if len(beefyLightClientEvents) > 0 {
+				li.log.Info(fmt.Sprintf("Found %d BeefyLightClient contract events on block %d", len(beefyLightClientEvents), blockNumber))
 			}
-			li.processLightClientEvents(ctx, lightClientBridgeEvents)
+			li.processLightClientEvents(ctx, beefyLightClientEvents)
 		}
 	}
 }
 
-// queryLightClientEvents queries ContractFinalVerificationSuccessful events from the LightClientBridge contract
+// queryLightClientEvents queries ContractFinalVerificationSuccessful events from the BeefyLightClient contract
 func (li *EthereumLightClientListener) queryLightClientEvents(ctx context.Context, start uint64,
-	end *uint64) ([]*lightclientbridge.ContractFinalVerificationSuccessful, error) {
-	var events []*lightclientbridge.ContractFinalVerificationSuccessful
+	end *uint64) ([]*beefylightclient.ContractFinalVerificationSuccessful, error) {
+	var events []*beefylightclient.ContractFinalVerificationSuccessful
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-	iter, err := li.lightClientBridge.FilterFinalVerificationSuccessful(&filterOps)
+	iter, err := li.beefyLightClient.FilterFinalVerificationSuccessful(&filterOps)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (li *EthereumLightClientListener) queryLightClientEvents(ctx context.Contex
 }
 
 // processLightClientEvents matches events to BEEFY commitment info by transaction hash
-func (li *EthereumLightClientListener) processLightClientEvents(ctx context.Context, events []*lightclientbridge.ContractFinalVerificationSuccessful) {
+func (li *EthereumLightClientListener) processLightClientEvents(ctx context.Context, events []*beefylightclient.ContractFinalVerificationSuccessful) {
 	for _, event := range events {
 		li.log.WithFields(logrus.Fields{
 			"blockHash":   event.Raw.BlockHash.Hex(),

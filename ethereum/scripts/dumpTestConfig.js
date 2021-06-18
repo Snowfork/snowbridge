@@ -14,7 +14,7 @@ const channelContracts = {
 }
 
 const bridgeContracts = {
-    lightclientbridge: artifacts.require("LightClientBridge"),
+    beefylightclient: artifacts.require("BeefyLightClient"),
 }
 
 const channels = {
@@ -29,7 +29,7 @@ const channels = {
 }
 
 const bridge = {
-    lightclientbridge: null
+    beefylightclient: null
 }
 
 const dump = (tmpDir, channels, bridge) => {
@@ -48,7 +48,7 @@ const dump = (tmpDir, channels, bridge) => {
                     outbound: channels.incentivized.outbound.address,
                 },
             },
-            lightclientbridge: bridge.lightclientbridge.address
+            beefylightclient: bridge.beefylightclient.address
         },
         parachain: {
             endpoint: "ws://127.0.0.1:11144/"
@@ -81,7 +81,7 @@ const dump = (tmpDir, channels, bridge) => {
 module.exports = async (callback) => {
     try {
         let configDir = process.argv[4].toString();
-        bridge.lightclientbridge = await bridgeContracts.lightclientbridge.deployed();
+        bridge.beefylightclient = await bridgeContracts.beefylightclient.deployed();
         channels.basic.inbound = await channelContracts.basic.inbound.deployed();
         channels.basic.outbound = await channelContracts.basic.outbound.deployed();
         channels.incentivized.inbound = await channelContracts.incentivized.inbound.deployed();

@@ -14,7 +14,7 @@ import "./ScaleCodec.sol";
 /**
  * @title A entry contract for the Ethereum light client
  */
-contract LightClientBridge {
+contract BeefyLightClient {
     using SafeMath for uint256;
     using Bits for uint256;
     using Bitfield for uint256[];
@@ -70,6 +70,15 @@ contract LightClientBridge {
         uint256 blockNumber;
     }
 
+    struct BeefyMMRLeaf {
+        uint32 parentNumber;
+        bytes32 parentHash;
+        uint64 nextAuthoritySetId;
+        uint32 nextAuthoritySetLen;
+        bytes32 nextAuthoritySetRoot;
+        bytes32 parachainHeadsRoot; // TODO check type and position of this element
+    }
+
     /* State */
 
     ValidatorRegistry public validatorRegistry;
@@ -86,7 +95,7 @@ contract LightClientBridge {
     uint256 public constant BLOCK_WAIT_PERIOD = 3;
 
     /**
-     * @notice Deploys the LightClientBridge contract
+     * @notice Deploys the BeefyLightClient contract
      * @dev If the validatorSetRegistry should be initialised with 0 entries, then input
      * 0x00 as validatorSetRoot
      * @param _validatorRegistry The contract to be used as the validator registry
@@ -221,7 +230,7 @@ contract LightClientBridge {
 
     function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
         public
-        view
+        pure
         returns (uint256[] memory)
     {
         return Bitfield.createBitfield(bitsToSet, length);
@@ -230,7 +239,6 @@ contract LightClientBridge {
     /**
      * @notice Performs the second step in the validation logic
      * @param id an identifying value generated in the previous transaction
-     * @param commitmentHash contains the commitmentHash signed by the validator(s)
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param signatures an array of signatures from the randomly chosen validators
      * @param validatorPositions an array of the positions of the randomly chosen validators
@@ -239,7 +247,6 @@ contract LightClientBridge {
      */
     function completeSignatureCommitment(
         uint256 id,
-        bytes32 commitmentHash, // TODO: not needed, we have to create that from the commitment below
         Commitment memory commitment,
         bytes[] memory signatures,
         uint256[] memory validatorPositions,
@@ -297,10 +304,8 @@ contract LightClientBridge {
                 requiredNumOfSignatures
             );
 
-        /**
-         * @dev Encode and hash the commitment
-         */
-        bytes32[2] memory commitmentHashB =
+        // Encode and hash the commitment
+        bytes32 commitmentHash =
             blake2b.formatOutput(
                 blake2b.blake2b(
                     abi.encodePacked(
@@ -311,12 +316,7 @@ contract LightClientBridge {
                     "",
                     32
                 )
-            );
-
-        require(
-            commitmentHashB[0] == commitmentHash,
-            "Error: Commitment must match commitment hash"
-        );
+            )[0];
 
         /**
          *  @dev For each randomSignature, do:

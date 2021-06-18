@@ -8,7 +8,7 @@ const ScaleCodec = artifacts.require("ScaleCodec");
 const ValidatorRegistry = artifacts.require("ValidatorRegistry");
 const MMRVerification = artifacts.require("MMRVerification");
 const Blake2b = artifacts.require("Blake2b");
-const LightClientBridge = artifacts.require("LightClientBridge");
+const BeefyLightClient = artifacts.require("BeefyLightClient");
 
 let lazyInitComplete = false;
 let validatorRegistry;
@@ -21,8 +21,8 @@ const lazyInit = async _ => {
 
   const bitfield = await Bitfield.new();
   const scaleCodec = await ScaleCodec.new();
-  LightClientBridge.link(bitfield);
-  LightClientBridge.link(scaleCodec);
+  BeefyLightClient.link(bitfield);
+  BeefyLightClient.link(scaleCodec);
 
   validatorRegistry = await ValidatorRegistry.new(
     '0x0',
@@ -52,20 +52,20 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployLightClientBridge = async (validatorRoot, numOfValidators) => {
+const deployBeefyLightClient = async (validatorRoot, numOfValidators) => {
   await lazyInit();
   const mmrVerification = await MMRVerification.new();
   const blake2b = await Blake2b.new();
   if (validatorRoot && numOfValidators != undefined) {
     await validatorRegistry.update(validatorRoot, numOfValidators)
   }
-  const lightClientBridge = await LightClientBridge.new(
+  const beefyLightClient = await BeefyLightClient.new(
     validatorRegistry.address,
     mmrVerification.address,
     blake2b.address
   );
 
-  return lightClientBridge;
+  return beefyLightClient;
 }
 
 function signatureSubstrateToEthereum(sig) {
@@ -131,7 +131,7 @@ async function tryCatch(promise, type, message) {
 
 module.exports = {
   deployAppWithMockChannels,
-  deployLightClientBridge,
+  deployBeefyLightClient,
   createMerkleTree,
   signatureSubstrateToEthereum,
   mine,
