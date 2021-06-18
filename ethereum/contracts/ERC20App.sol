@@ -2,6 +2,7 @@
 pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ScaleCodec.sol";
@@ -9,7 +10,7 @@ import "./OutboundChannel.sol";
 
 enum ChannelId {Basic, Incentivized}
 
-contract ERC20App {
+contract ERC20App is AccessControl {
     using SafeMath for uint256;
     using ScaleCodec for uint256;
 
@@ -38,6 +39,9 @@ contract ERC20App {
         address outbound;
     }
 
+    bytes32 public constant INBOUND_CHANNEL_ROLE =
+        keccak256("INBOUND_CHANNEL_ROLE");
+
     constructor(Channel memory _basic, Channel memory _incentivized) {
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
@@ -46,6 +50,9 @@ contract ERC20App {
         Channel storage c2 = channels[ChannelId.Incentivized];
         c2.inbound = _incentivized.inbound;
         c2.outbound = _incentivized.outbound;
+
+        _setupRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
+        _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
 
     function lock(
@@ -81,7 +88,10 @@ contract ERC20App {
         address _recipient,
         uint256 _amount
     ) public {
-        // TODO: Ensure message sender is a known inbound channel
+        require(
+            hasRole(INBOUND_CHANNEL_ROLE, msg.sender),
+            "Caller is not an inbound channel"
+        );
         require(_amount > 0, "Must unlock a positive amount");
         require(
             _amount <= balances[_token],
