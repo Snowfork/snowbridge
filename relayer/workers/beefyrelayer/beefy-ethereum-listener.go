@@ -18,8 +18,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
-const MaxMessagesPerSend = 10
-
 // Listener streams the Ethereum blockchain for application events
 type BeefyEthereumListener struct {
 	ethereumConfig   *ethereum.Config

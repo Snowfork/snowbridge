@@ -238,7 +238,7 @@ contract BeefyLightClient {
 
     function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
         public
-        view
+        pure
         returns (uint256[] memory)
     {
         return Bitfield.createBitfield(bitsToSet, length);

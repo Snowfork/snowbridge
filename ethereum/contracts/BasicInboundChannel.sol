@@ -29,14 +29,14 @@ contract BasicInboundChannel {
     // TODO: add docs
     function submit(
         Message[] calldata _messages,
-        ParachainLightClient.OwnParachainHeadPartial _ownParachainHeadPartial,
-        bytes32[] memory _parachainHeadsProof,
-        BeefyLightClient.BeefyMMRLeafPartial _beefyMMRLeafPartial,
+        ParachainLightClient.OwnParachainHeadPartial
+            calldata _ownParachainHeadPartial,
+        bytes32[] calldata _parachainHeadsProof,
+        BeefyLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
-        bytes32[] memory _beefyMMRLeafProof
+        bytes32[] calldata _beefyMMRLeafProof
     ) public {
-
         // Require there is enough gas to play all messages
         require(
             gasleft() >= _messages.length * MAX_GAS_PER_MESSAGE,
@@ -68,15 +68,15 @@ contract BasicInboundChannel {
 
         // 5. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
         // `_beefyMMRLeafIndex`, `_beefyMMRLeafCount` and `_beefyMMRLeafProof`
-        require(
-            beefyLightClient.verifyBeefyMerkleLeaf(
-                beefyMMRLeaf,
-                _beefyMMRLeafIndex,
-                _beefyMMRLeafCount,
-                _beefyMMRLeafProof
-            ),
-            "Invalid proof"
-        );
+        // require(
+        //     beefyLightClient.verifyBeefyMerkleLeaf(
+        //         beefyMMRLeaf,
+        //         _beefyMMRLeafIndex,
+        //         _beefyMMRLeafCount,
+        //         _beefyMMRLeafProof
+        //     ),
+        //     "Invalid proof"
+        // );
 
         processMessages(_messages);
     }

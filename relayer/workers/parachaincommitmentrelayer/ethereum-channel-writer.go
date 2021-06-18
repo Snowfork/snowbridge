@@ -120,6 +120,14 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		)
 	}
 
+	/*
+		_messages []inbound.BasicInboundChannelMessage,
+		_ownParachainHeadPartial inbound.ParachainLightClientOwnParachainHeadPartial,
+		 _parachainHeadsProof [][32]byte, _beefyMMRLeafPartial inbound.BeefyLightClientBeefyMMRLeafPartial,
+		  _beefyMMRLeafIndex *big.Int, _beefyMMRLeafCount *big.Int,
+			 _beefyMMRLeafProof [][32]byte
+	*/
+
 	tx, err := wr.basicInboundChannel.Submit(options, messages, commitment,
 		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
 	if err != nil {
@@ -173,7 +181,7 @@ func (wr *EthereumChannelWriter) WriteChannel(
 ) error {
 	if msg.channelID.IsBasic {
 		var outboundMessages []chainTypes.BasicOutboundChannelMessage
-		err := gsrpcTypes.DecodeFromBytes(msg.commitmentMessagesData, &outboundMessages)
+		err := gsrpcTypes.DecodeFromBytes(msg.commitmentData, &outboundMessages)
 		if err != nil {
 			wr.log.WithError(err).Error("Failed to decode commitment messages")
 			return err
@@ -183,7 +191,7 @@ func (wr *EthereumChannelWriter) WriteChannel(
 	}
 	if msg.channelID.IsIncentivized {
 		var outboundMessages []chainTypes.IncentivizedOutboundChannelMessage
-		err := gsrpcTypes.DecodeFromBytes(msg.commitmentMessagesData, &outboundMessages)
+		err := gsrpcTypes.DecodeFromBytes(msg.commitmentData, &outboundMessages)
 		if err != nil {
 			wr.log.WithError(err).Error("Failed to decode commitment messages")
 			return err
