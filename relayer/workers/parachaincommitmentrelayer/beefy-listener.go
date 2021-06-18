@@ -29,6 +29,7 @@ type MessagePackage struct {
 	channelID      chainTypes.ChannelID
 	commitmentHash types.H256
 	commitmentData types.StorageDataRaw
+	paraHead       types.Header
 	paraHeadProof  string
 	mmrProof       types.GenerateMMRProofResponse
 }
@@ -266,15 +267,15 @@ func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.H
 }
 
 func (li *BeefyListener) extractCommitments(
-	header types.Header,
+	paraHeader types.Header,
 	mmrProof types.GenerateMMRProofResponse,
 	ourParaHeadProof string) ([]MessagePackage, error) {
 
 	li.log.WithFields(logrus.Fields{
-		"blockNumber": header.Number,
+		"blockNumber": paraHeader.Number,
 	}).Debug("Extracting commitment from parachain header")
 
-	auxDigestItems, err := getAuxiliaryDigestItems(header.Digest)
+	auxDigestItems, err := getAuxiliaryDigestItems(paraHeader.Digest)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +283,7 @@ func (li *BeefyListener) extractCommitments(
 	var messagePackages []MessagePackage
 	for _, auxDigestItem := range auxDigestItems {
 		li.log.WithFields(logrus.Fields{
-			"block":          header.Number,
+			"block":          paraHeader.Number,
 			"channelID":      auxDigestItem.AsCommitment.ChannelID,
 			"commitmentHash": auxDigestItem.AsCommitment.Hash.Hex(),
 		}).Debug("Found commitment hash in header digest")
@@ -295,6 +296,7 @@ func (li *BeefyListener) extractCommitments(
 			auxDigestItem.AsCommitment.ChannelID,
 			commitmentHash,
 			commitmentData,
+			paraHeader,
 			ourParaHeadProof,
 			mmrProof,
 		}
