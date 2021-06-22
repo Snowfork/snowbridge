@@ -35,12 +35,12 @@ describe("Beefy Light Client", function () {
 
   it("encodes beefy mmr leaves correctly", async function () {
     encodedLeaf = await this.beefyLightClient.encodeMMRLeaf(fixture.beefyMMRLeaf)
-    expect(encodedLeaf).to.eq(fixture.encodedBeefyMMRLeaf)
+    expect(encodedLeaf).to.eq(fixture.encodedBeefyLeaf)
   });
 
   it("hashes beefy mmr leaves correctly", async function () {
-    hashedLeaf = await this.beefyLightClient.hashMMRLeaf(encodedLeaf)
-    expect(hashedLeaf).to.eq(fixture.hashedBeefyMMRLeaf)
+    hashedLeaf = await this.beefyLightClient.hashMMRLeaf(fixture.encodedBeefyLeaf)
+    expect(hashedLeaf).to.eq(fixture.hashedBeefyLeaf)
   });
 
   it("runs new signature commitment and complete signature commitment correctly", async function () {

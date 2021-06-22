@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
 import "./ValidatorRegistry.sol";
@@ -15,12 +14,12 @@ import "./ScaleCodec.sol";
  * @title A entry contract for the Ethereum light client
  */
 contract BeefyLightClient {
-    using SafeMath for uint256;
     using Bits for uint256;
     using Bitfield for uint256[];
     using ScaleCodec for uint256;
     using ScaleCodec for uint64;
     using ScaleCodec for uint32;
+    using ScaleCodec for uint16;
 
     /* Events */
 
@@ -212,7 +211,7 @@ contract BeefyLightClient {
 
         emit InitialVerificationSuccessful(msg.sender, block.number, currentId);
 
-        currentId = currentId.add(1);
+        currentId = currentId + 1;
     }
 
     function createRandomBitfield(uint256 id)
@@ -226,7 +225,7 @@ contract BeefyLightClient {
          * @dev verify that block wait period has passed
          */
         require(
-            block.number >= data.blockNumber.add(BLOCK_WAIT_PERIOD),
+            block.number >= data.blockNumber + BLOCK_WAIT_PERIOD,
             "Error: Block wait period not over"
         );
 
@@ -296,7 +295,7 @@ contract BeefyLightClient {
         returns (uint256)
     {
         // @note Get payload.blocknumber, add BLOCK_WAIT_PERIOD
-        uint256 randomSeedBlockNum = data.blockNumber.add(BLOCK_WAIT_PERIOD);
+        uint256 randomSeedBlockNum = data.blockNumber + BLOCK_WAIT_PERIOD;
         // @note Create a hash seed from the block number
         bytes32 randomSeedBlockHash = blockhash(randomSeedBlockNum);
 
@@ -392,7 +391,7 @@ contract BeefyLightClient {
          * @dev verify that block wait period has passed
          */
         require(
-            block.number >= data.blockNumber.add(BLOCK_WAIT_PERIOD),
+            block.number >= data.blockNumber + BLOCK_WAIT_PERIOD,
             "Error: Block wait period not over"
         );
 
@@ -526,10 +525,10 @@ contract BeefyLightClient {
 
     function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
         public
-        pure
+        view
         returns (bytes memory)
     {
-        return
+        bytes memory scaleEncodedMMRLeaf =
             abi.encodePacked(
                 ScaleCodec.encode32(leaf.parentNumber),
                 leaf.parentHash,
@@ -538,6 +537,11 @@ contract BeefyLightClient {
                 ScaleCodec.encode32(leaf.nextAuthoritySetLen),
                 leaf.nextAuthoritySetRoot
             );
+
+        uint16 length = uint16(scaleEncodedMMRLeaf.length);
+        bytes2 lengthEncoded = ScaleCodec.encodeUintCompact(length);
+
+        return bytes.concat(lengthEncoded, scaleEncodedMMRLeaf);
     }
 
     function hashMMRLeaf(bytes memory leaf) public pure returns (bytes32) {

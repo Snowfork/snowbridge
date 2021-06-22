@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // from https://github.com/ConsenSys/Project-Alchemy/blob/master/contracts/BLAKE2b/BLAKE2b.sol
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.5;
 
 contract Blake2b {
     uint64[8] public IV = [
@@ -57,19 +57,31 @@ contract Blake2b {
             // v[a] := (v[a] + v[b] + x) mod 2**64
             va := addmod(add(va, vb), x, 0x10000000000000000)
             //v[d] := (v[d] ^ v[a]) >>> 32
-            vd := xor(div(xor(vd, va), 0x100000000), mulmod(xor(vd, va), 0x100000000, 0x10000000000000000))
+            vd := xor(
+                div(xor(vd, va), 0x100000000),
+                mulmod(xor(vd, va), 0x100000000, 0x10000000000000000)
+            )
             //v[c] := (v[c] + v[d])     mod 2**64
             vc := addmod(vc, vd, 0x10000000000000000)
             //v[b] := (v[b] ^ v[c]) >>> 24
-            vb := xor(div(xor(vb, vc), 0x1000000), mulmod(xor(vb, vc), 0x10000000000, 0x10000000000000000))
+            vb := xor(
+                div(xor(vb, vc), 0x1000000),
+                mulmod(xor(vb, vc), 0x10000000000, 0x10000000000000000)
+            )
             // v[a] := (v[a] + v[b] + y) mod 2**64
             va := addmod(add(va, vb), y, 0x10000000000000000)
             //v[d] := (v[d] ^ v[a]) >>> 16
-            vd := xor(div(xor(vd, va), 0x10000), mulmod(xor(vd, va), 0x1000000000000, 0x10000000000000000))
+            vd := xor(
+                div(xor(vd, va), 0x10000),
+                mulmod(xor(vd, va), 0x1000000000000, 0x10000000000000000)
+            )
             //v[c] := (v[c] + v[d])     mod 2**64
             vc := addmod(vc, vd, 0x10000000000000000)
             // v[b] := (v[b] ^ v[c]) >>> 63
-            vb := xor(div(xor(vb, vc), 0x8000000000000000), mulmod(xor(vb, vc), 0x2, 0x10000000000000000))
+            vb := xor(
+                div(xor(vb, vc), 0x8000000000000000),
+                mulmod(xor(vb, vc), 0x2, 0x10000000000000000)
+            )
         }
 
         v[a] = va;
@@ -107,7 +119,10 @@ contract Blake2b {
 
             //Extract relevent input from buffer
             assembly {
-                mi := and(div(b, exp(2, mul(64, sub(3, k)))), 0xFFFFFFFFFFFFFFFF)
+                mi := and(
+                    div(b, exp(2, mul(64, sub(3, k)))),
+                    0xFFFFFFFFFFFFFFFF
+                )
             }
 
             //Flip endianness
@@ -245,7 +260,11 @@ contract Blake2b {
         }
 
         // Set up parameter block
-        ctx.h[0] = ctx.h[0] ^ 0x01010000 ^ shift_left(uint64(key.length), 8) ^ outlen;
+        ctx.h[0] =
+            ctx.h[0] ^
+            0x01010000 ^
+            shift_left(uint64(key.length), 8) ^
+            outlen;
         ctx.h[4] = ctx.h[4] ^ salt[0];
         ctx.h[5] = ctx.h[5] ^ salt[1];
         ctx.h[6] = ctx.h[6] ^ person[0];
@@ -283,7 +302,10 @@ contract Blake2b {
         }
     }
 
-    function finalize(Blake2b_ctx memory ctx, uint64[8] memory out) internal view {
+    function finalize(Blake2b_ctx memory ctx, uint64[8] memory out)
+        internal
+        view
+    {
         // Add any uncounted bytes
         ctx.t += ctx.c;
 
@@ -297,7 +319,10 @@ contract Blake2b {
 
         //Properly pad output if it doesn't fill a full word
         if (ctx.outlen < 64) {
-            out[ctx.outlen / 8] = shift_right(getWords(ctx.h[ctx.outlen / 8]), 64 - 8 * (ctx.outlen % 8));
+            out[ctx.outlen / 8] = shift_right(
+                getWords(ctx.h[ctx.outlen / 8]),
+                64 - 8 * (ctx.outlen % 8)
+            );
         }
     }
 
@@ -341,7 +366,11 @@ contract Blake2b {
             ((a & MASK_7) * SHIFT_0);
     }
 
-    function shift_right(uint64 a, uint256 shift) public pure returns (uint64 b) {
+    function shift_right(uint64 a, uint256 shift)
+        public
+        pure
+        returns (uint64 b)
+    {
         return uint64(a / 2**shift);
     }
 
@@ -350,19 +379,31 @@ contract Blake2b {
     }
 
     //bytes -> uint64[2]
-    function formatInput(bytes memory input) public pure returns (uint64[2] memory output) {
+    function formatInput(bytes memory input)
+        public
+        pure
+        returns (uint64[2] memory output)
+    {
         for (uint256 i = 0; i < input.length; i++) {
-            output[i / 8] = output[i / 8] ^ shift_left(uint64(uint8(input[i])), 64 - 8 * ((i % 8) + 1));
+            output[i / 8] =
+                output[i / 8] ^
+                shift_left(uint64(uint8(input[i])), 64 - 8 * ((i % 8) + 1));
         }
         output[0] = getWords(output[0]);
         output[1] = getWords(output[1]);
     }
 
-    function formatOutput(uint64[8] memory input) public pure returns (bytes32[2] memory) {
+    function formatOutput(uint64[8] memory input)
+        public
+        pure
+        returns (bytes32[2] memory)
+    {
         bytes32[2] memory result;
 
         for (uint256 i = 0; i < 8; i++) {
-            result[i / 4] = result[i / 4] ^ bytes32(input[i] * 2**(64 * (3 - (i % 4))));
+            result[i / 4] =
+                result[i / 4] ^
+                bytes32(input[i] * 2**(64 * (3 - (i % 4))));
         }
         return result;
     }

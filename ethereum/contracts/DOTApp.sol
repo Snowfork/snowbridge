@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -97,7 +97,7 @@ contract DOTApp is FeeSource, AccessControl {
             abi.encodePacked(
                 UNLOCK_CALL,
                 _sender,
-                byte(0x00), // Encoding recipient as MultiAddress::Id
+                bytes1(0x00), // Encoding recipient as MultiAddress::Id
                 _recipient,
                 _amount.encode256()
             );
