@@ -9,7 +9,7 @@ import "./utils/MerkleProof.sol";
  * @title A contract storing state on the current validator set
  * @dev Stores the validator set as a Merkle root
  * @dev Inherits `Ownable` to ensure it can only be callable by the
- * instantiating contract account (which is the LightClientBridge contract)
+ * instantiating contract account (which is the BeefyLightClient contract)
  */
 contract ValidatorRegistry is Ownable {
     /* Events */

@@ -8,7 +8,7 @@ const ScaleCodec = artifacts.require("ScaleCodec");
 const ValidatorRegistry = artifacts.require("ValidatorRegistry");
 const MMRVerification = artifacts.require("MMRVerification");
 const Blake2b = artifacts.require("Blake2b");
-const LightClientBridge = artifacts.require("LightClientBridge");
+const BeefyLightClient = artifacts.require("BeefyLightClient");
 
 let lazyInitComplete = false;
 let validatorRegistry;
@@ -21,8 +21,8 @@ const lazyInit = async _ => {
 
   const bitfield = await Bitfield.new();
   const scaleCodec = await ScaleCodec.new();
-  LightClientBridge.link(bitfield);
-  LightClientBridge.link(scaleCodec);
+  BeefyLightClient.link(bitfield);
+  BeefyLightClient.link(scaleCodec);
 
   validatorRegistry = await ValidatorRegistry.new(
     '0x0',
@@ -52,17 +52,20 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployLightClientBridge = async _ => {
+const deployBeefyLightClient = async (validatorRoot, numOfValidators) => {
   await lazyInit();
   const mmrVerification = await MMRVerification.new();
   const blake2b = await Blake2b.new();
-  const lightClientBridge = await LightClientBridge.new(
+  if (validatorRoot && numOfValidators != undefined) {
+    await validatorRegistry.update(validatorRoot, numOfValidators)
+  }
+  const beefyLightClient = await BeefyLightClient.new(
     validatorRegistry.address,
     mmrVerification.address,
     blake2b.address
   );
 
-  return lightClientBridge;
+  return beefyLightClient;
 }
 
 function signatureSubstrateToEthereum(sig) {
@@ -102,13 +105,46 @@ const ChannelId = {
   Incentivized: 1,
 }
 
+const hexPrefix = /^(0x)/i
+
+const mergeKeccak256 = (left, right) =>
+  '0x' + keccakFromHexString('0x' + left.replace(hexPrefix, "") + right.replace(hexPrefix, ''), 256).toString('hex')
+
+const PREFIX = "Returned error: VM Exception while processing transaction: ";
+
+async function tryCatch(promise, type, message) {
+    try {
+        await promise;
+        throw null;
+    }
+    catch (error) {
+      assert(error, "Expected an error but did not get one");
+      if (message) {
+        assert(error.message === (PREFIX + type + ' ' + message), "Expected error '" + PREFIX + type + ' ' + message +
+          "' but got '" + error.message + "' instead");
+      } else {
+        assert(error.message.startsWith(PREFIX + type), "Expected an error starting with '" + PREFIX + type +
+          "' but got '" + error.message + "' instead");
+      }
+    }
+};
+
 module.exports = {
   deployAppWithMockChannels,
-  deployLightClientBridge,
+  deployBeefyLightClient,
   createMerkleTree,
   signatureSubstrateToEthereum,
   mine,
   addressBytes,
   ChannelId,
   encodeLog,
+  mergeKeccak256,
+  catchRevert: async (promise, message) => await tryCatch(promise, "revert", message),
+  catchOutOfGas: async (promise, message) => await tryCatch(promise, "out of gas", message),
+  catchInvalidJump: async (promise, message) => await tryCatch(promise, "invalid JUMP", message),
+  catchInvalidOpcode: async (promise, message) => await tryCatch(promise, "invalid opcode", message),
+  catchStackOverflow: async (promise, message) => await tryCatch(promise, "stack overflow", message),
+  catchStackUnderflow: async (promise, message) => await tryCatch(promise, "stack underflow", message),
+  catchStaticStateChange: async (promise, message) => await tryCatch(promise, "static state change", message),
 };
+

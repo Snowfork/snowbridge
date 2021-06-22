@@ -8,7 +8,7 @@ const MockApp = artifacts.require("MockApp");
 const { ethers } = require("ethers");
 
 const {
-  deployLightClientBridge
+  deployBeefyLightClient
 } = require("./helpers");
 
 const makeCommitment = (messages) => {
@@ -32,12 +32,12 @@ describe("BasicInboundChannel", function () {
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
     userOne = accounts[1];
-    this.lightClientBridge = await deployLightClientBridge();
+    this.beefyLightClient = await deployBeefyLightClient();
   });
 
   describe("submit", function () {
     beforeEach(async function () {
-      this.channel = await BasicInboundChannel.new(this.lightClientBridge.address,
+      this.channel = await BasicInboundChannel.new(this.beefyLightClient.address,
         { from: owner }
       );
       this.app = await MockApp.new();

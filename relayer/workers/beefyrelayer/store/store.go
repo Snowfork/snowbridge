@@ -28,6 +28,7 @@ type BeefyRelayInfo struct {
 	gorm.Model
 	ValidatorAddresses         []byte
 	SignedCommitment           []byte
+	ContractID                 int64
 	Status                     Status
 	InitialVerificationTxHash  common.Hash
 	CompleteOnBlock            uint64
@@ -35,12 +36,13 @@ type BeefyRelayInfo struct {
 	CompleteVerificationTxHash common.Hash
 }
 
-func NewBeefyRelayInfo(validatorAddresses, signedCommitment []byte, status Status,
+func NewBeefyRelayInfo(validatorAddresses, signedCommitment []byte, contractId int64, status Status,
 	initialVerificationTxHash common.Hash, completeOnBlock uint64, randomSeed,
 	completeVerificationTxHash common.Hash) BeefyRelayInfo {
 	return BeefyRelayInfo{
 		ValidatorAddresses:         validatorAddresses,
 		SignedCommitment:           signedCommitment,
+		ContractID:                 contractId,
 		Status:                     status,
 		InitialVerificationTxHash:  initialVerificationTxHash,
 		CompleteOnBlock:            completeOnBlock,
@@ -194,14 +196,20 @@ func (d *Database) GetItemsByStatus(status Status) []*BeefyRelayInfo {
 	return items
 }
 
+func (d *Database) GetItemByID(id int64) *BeefyRelayInfo {
+	var item BeefyRelayInfo
+	d.DB.Take(&item, "contract_id = ?", id)
+	return &item
+}
+
 func (d *Database) GetItemByInitialVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
 	var item BeefyRelayInfo
 	d.DB.Take(&item, "initial_verification_tx_hash = ?", txHash)
 	return &item
 }
 
-func (d *Database) GetItemByFinalVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
+func (d *Database) GetItemByCompleteVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
 	var item BeefyRelayInfo
-	d.DB.Take(&item, "final_verification_tx_hash = ?", txHash)
+	d.DB.Take(&item, "complete_verification_tx_hash = ?", txHash)
 	return &item
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/ethashproof"
 	"github.com/snowfork/ethashproof/ethash"
+	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
 	types "github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 )
@@ -21,7 +22,7 @@ type HeaderID struct {
 	Hash   types.H256
 }
 
-type Header struct {
+type headerSCALE struct {
 	ParentHash       types.H256
 	Timestamp        types.U64
 	Number           types.U64
@@ -36,6 +37,33 @@ type Header struct {
 	GasLimit         types.U256
 	Difficulty       types.U256
 	Seal             []types.Bytes
+}
+
+type Header struct {
+	Fields headerSCALE
+	header *etypes.Header
+}
+
+func (h *Header) Decode(decoder scale.Decoder) error {
+	var fields headerSCALE
+	err := decoder.Decode(&fields)
+	if err != nil {
+		return err
+	}
+
+	h.Fields = fields
+	return nil
+}
+
+func (h Header) Encode(encoder scale.Encoder) error {
+	return encoder.Encode(h.Fields)
+}
+
+func (h *Header) ID() HeaderID {
+	return HeaderID{
+		Number: h.Fields.Number,
+		Hash:   types.NewH256(h.header.Hash().Bytes()),
+	}
 }
 
 type DoubleNodeWithMerkleProof struct {
@@ -92,20 +120,23 @@ func MakeHeaderData(gethheader *etypes.Header) (*Header, error) {
 	}
 
 	return &Header{
-		ParentHash:       types.NewH256(gethheader.ParentHash.Bytes()),
-		Timestamp:        types.NewU64(gethheader.Time),
-		Number:           types.NewU64(blockNumber),
-		Author:           types.NewH160(gethheader.Coinbase.Bytes()),
-		TransactionsRoot: types.NewH256(gethheader.TxHash.Bytes()),
-		OmmersHash:       types.NewH256(gethheader.UncleHash.Bytes()),
-		ExtraData:        types.NewBytes(gethheader.Extra),
-		StateRoot:        types.NewH256(gethheader.Root.Bytes()),
-		ReceiptsRoot:     types.NewH256(gethheader.ReceiptHash.Bytes()),
-		LogsBloom:        types.NewBytes256(bloomBytes),
-		GasUsed:          types.NewU256(gasUsed),
-		GasLimit:         types.NewU256(gasLimit),
-		Difficulty:       types.NewU256(*gethheader.Difficulty),
-		Seal:             []types.Bytes{mixHashRLP, nonceRLP},
+		Fields: headerSCALE{
+			ParentHash:       types.NewH256(gethheader.ParentHash.Bytes()),
+			Timestamp:        types.NewU64(gethheader.Time),
+			Number:           types.NewU64(blockNumber),
+			Author:           types.NewH160(gethheader.Coinbase.Bytes()),
+			TransactionsRoot: types.NewH256(gethheader.TxHash.Bytes()),
+			OmmersHash:       types.NewH256(gethheader.UncleHash.Bytes()),
+			ExtraData:        types.NewBytes(gethheader.Extra),
+			StateRoot:        types.NewH256(gethheader.Root.Bytes()),
+			ReceiptsRoot:     types.NewH256(gethheader.ReceiptHash.Bytes()),
+			LogsBloom:        types.NewBytes256(bloomBytes),
+			GasUsed:          types.NewU256(gasUsed),
+			GasLimit:         types.NewU256(gasLimit),
+			Difficulty:       types.NewU256(*gethheader.Difficulty),
+			Seal:             []types.Bytes{mixHashRLP, nonceRLP},
+		},
+		header: gethheader,
 	}, nil
 }
 

@@ -170,37 +170,37 @@ func printEthBlockForSub(header *gethTypes.Header, format Format) error {
 				hex!("%x").to_vec(),
 			],
 		}`,
-			headerForSub.ParentHash,
+			headerForSub.Fields.ParentHash,
 			header.Time,
-			headerForSub.Number,
-			headerForSub.Author,
-			headerForSub.TransactionsRoot,
-			headerForSub.OmmersHash,
-			headerForSub.ExtraData,
-			headerForSub.StateRoot,
-			headerForSub.ReceiptsRoot,
-			headerForSub.LogsBloom,
-			headerForSub.GasUsed,
-			headerForSub.GasLimit,
-			headerForSub.Difficulty,
-			headerForSub.Seal[0],
-			headerForSub.Seal[1],
+			headerForSub.Fields.Number,
+			headerForSub.Fields.Author,
+			headerForSub.Fields.TransactionsRoot,
+			headerForSub.Fields.OmmersHash,
+			headerForSub.Fields.ExtraData,
+			headerForSub.Fields.StateRoot,
+			headerForSub.Fields.ReceiptsRoot,
+			headerForSub.Fields.LogsBloom,
+			headerForSub.Fields.GasUsed,
+			headerForSub.Fields.GasLimit,
+			headerForSub.Fields.Difficulty,
+			headerForSub.Fields.Seal[0],
+			headerForSub.Fields.Seal[1],
 		)
 		fmt.Println("")
 	} else {
-		extraData, err := json.Marshal(bytesAsArray64(headerForSub.ExtraData))
+		extraData, err := json.Marshal(bytesAsArray64(headerForSub.Fields.ExtraData))
 		if err != nil {
 			return err
 		}
-		logsBloom, err := json.Marshal(headerForSub.LogsBloom)
+		logsBloom, err := json.Marshal(headerForSub.Fields.LogsBloom)
 		if err != nil {
 			return err
 		}
-		seal1, err := json.Marshal(bytesAsArray64(headerForSub.Seal[0]))
+		seal1, err := json.Marshal(bytesAsArray64(headerForSub.Fields.Seal[0]))
 		if err != nil {
 			return err
 		}
-		seal2, err := json.Marshal(bytesAsArray64(headerForSub.Seal[1]))
+		seal2, err := json.Marshal(bytesAsArray64(headerForSub.Fields.Seal[1]))
 		if err != nil {
 			return err
 		}
@@ -225,19 +225,19 @@ func printEthBlockForSub(header *gethTypes.Header, format Format) error {
 				%s
 			]
 		}`,
-			headerForSub.ParentHash.Hex(),
+			headerForSub.Fields.ParentHash.Hex(),
 			header.Time,
-			headerForSub.Number,
-			headerForSub.Author.Hex(),
-			headerForSub.TransactionsRoot.Hex(),
-			headerForSub.OmmersHash.Hex(),
+			headerForSub.Fields.Number,
+			headerForSub.Fields.Author.Hex(),
+			headerForSub.Fields.TransactionsRoot.Hex(),
+			headerForSub.Fields.OmmersHash.Hex(),
 			extraData,
-			headerForSub.StateRoot.Hex(),
-			headerForSub.ReceiptsRoot.Hex(),
+			headerForSub.Fields.StateRoot.Hex(),
+			headerForSub.Fields.ReceiptsRoot.Hex(),
 			logsBloom,
-			headerForSub.GasUsed,
-			headerForSub.GasLimit,
-			headerForSub.Difficulty,
+			headerForSub.Fields.GasUsed,
+			headerForSub.Fields.GasLimit,
+			headerForSub.Fields.Difficulty,
 			seal1,
 			seal2,
 		)

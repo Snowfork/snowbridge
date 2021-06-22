@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
@@ -82,15 +83,10 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				continue
 			}
 
-			// TODO:
-			// beefyAuthorities, err := li.getBeefyAuthorities(uint64(signedCommitment.Commitment.BlockNumber))
-			// if err != nil {
-			// 	li.log.WithError(err).Error("Failed to get Beefy authorities from on-chain storage")
-			// }
-
-			beefyAuthorities := []common.Address{
-				common.HexToAddress("0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b"),
-				common.HexToAddress("0x25451A4de12dcCc2D166922fA938E900fCc4ED24"),
+			beefyAuthorities, err := li.getBeefyAuthorities(uint64(signedCommitment.Commitment.BlockNumber))
+			if err != nil {
+				li.log.WithError(err).Error("Failed to get Beefy authorities from on-chain storage")
+				return err
 			}
 
 			beefyAuthoritiesBytes, err := json.Marshal(beefyAuthorities)
@@ -109,53 +105,52 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 	}
 }
 
-func (li *BeefyRelaychainListener) getBeefyAuthorities(blockNumber uint64) (substrate.Authorities, error) {
+func (li *BeefyRelaychainListener) getBeefyAuthorities(blockNumber uint64) ([]common.Address, error) {
 	blockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(blockNumber)
 	if err != nil {
-		return substrate.Authorities{}, err
+		return nil, err
 	}
 
 	meta, err := li.relaychainConn.GetAPI().RPC.State.GetMetadataLatest()
 	if err != nil {
-		return substrate.Authorities{}, err
+		return nil, err
 	}
 
 	storageKey, err := types.CreateStorageKey(meta, "Beefy", "Authorities", nil, nil)
 	if err != nil {
-		return substrate.Authorities{}, err
+		return nil, err
 	}
 
 	storageChangeSet, err := li.relaychainConn.GetAPI().RPC.State.QueryStorage([]types.StorageKey{storageKey}, blockHash, blockHash)
 	if err != nil {
-		return substrate.Authorities{}, err
+		return nil, err
 	}
 
 	authorities := substrate.Authorities{}
 	for _, storageChange := range storageChangeSet {
 		for _, keyValueOption := range storageChange.Changes {
-			bz, err := keyValueOption.MarshalJSON()
-			if err != nil {
-				return substrate.Authorities{}, err
-			}
 
-			err = types.DecodeFromBytes(bz, &authorities)
+			err = types.DecodeFromHexString(keyValueOption.StorageData.Hex(), &authorities)
 			if err != nil {
-				return substrate.Authorities{}, err
+				return nil, err
 			}
 
 		}
 	}
-	// TODO: Decode authorities using @polkadot/util-crypto/ethereum/encode.js ethereumEncode() method
 
-	// if data != nil {
-	// 	li.log.WithFields(logrus.Fields{
-	// 		"block":               signedCommitment.Commitment.BlockNumber,
-	// 		"commitmentSizeBytes": len(*data),
-	// 	}).Debug("Retrieved authorities from storage")
-	// } else {
-	// 	li.log.WithError(err).Error("Authorities not found in storage")
-	// 	continue
-	// }
+	// Convert from beefy authorities to ethereum addresses
+	var authorityEthereumAddresses []common.Address
+	for _, authority := range authorities {
+		pub, err := crypto.DecompressPubkey(authority[:])
+		if err != nil {
+			return nil, err
+		}
+		ethereumAddress := crypto.PubkeyToAddress(*pub)
+		if err != nil {
+			return nil, err
+		}
+		authorityEthereumAddresses = append(authorityEthereumAddresses, ethereumAddress)
+	}
 
-	return authorities, nil
+	return authorityEthereumAddresses, nil
 }

@@ -31,7 +31,14 @@ contract ETHApp is RewardSource, AccessControl {
         address outbound;
     }
 
-    constructor(address rewarder, Channel memory _basic, Channel memory _incentivized) {
+    bytes32 public constant INBOUND_CHANNEL_ROLE =
+        keccak256("INBOUND_CHANNEL_ROLE");
+
+    constructor(
+        address rewarder,
+        Channel memory _basic,
+        Channel memory _incentivized
+    ) {
         balance = 0;
 
         Channel storage c1 = channels[ChannelId.Basic];
@@ -43,6 +50,8 @@ contract ETHApp is RewardSource, AccessControl {
         c2.outbound = _incentivized.outbound;
 
         _setupRole(REWARD_ROLE, rewarder);
+        _setupRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
+        _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
 
     function lock(bytes32 _recipient, ChannelId _channelId) public payable {
@@ -69,7 +78,10 @@ contract ETHApp is RewardSource, AccessControl {
         address payable _recipient,
         uint256 _amount
     ) public {
-        // TODO: Ensure message sender is a known inbound channel
+        require(
+            hasRole(INBOUND_CHANNEL_ROLE, msg.sender),
+            "Caller is not an inbound channel"
+        );
         require(_amount > 0, "Must unlock a positive amount");
         require(
             balance >= _amount,
@@ -97,9 +109,11 @@ contract ETHApp is RewardSource, AccessControl {
             );
     }
 
-    function reward(address payable _recipient, uint256 _amount) external override {
+    function reward(address payable _recipient, uint256 _amount)
+        external
+        override
+    {
         require(hasRole(REWARD_ROLE, msg.sender), "Caller is unauthorized");
         _recipient.transfer(_amount);
     }
-
 }

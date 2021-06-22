@@ -9,14 +9,15 @@ import (
 	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v3/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/basic"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 // Catches up by searching for and relaying all missed commitments before the given block
 func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock uint64) error {
-	basicContract, err := inbound.NewBasicInboundChannel(common.HexToAddress(
+	basicContract, err := basic.NewBasicInboundChannel(common.HexToAddress(
 		li.ethereumConfig.Channels.Basic.Inbound),
 		li.ethereumConnection.GetClient(),
 	)
@@ -24,7 +25,7 @@ func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock ui
 		return err
 	}
 
-	incentivizedContract, err := inbound.NewIncentivizedInboundChannel(common.HexToAddress(
+	incentivizedContract, err := incentivized.NewIncentivizedInboundChannel(common.HexToAddress(
 		li.ethereumConfig.Channels.Incentivized.Inbound),
 		li.ethereumConnection.GetClient(),
 	)
@@ -174,12 +175,12 @@ func (li *Listener) searchForLostCommitments(lastBlockNumber uint64, basicNonceT
 		digestItems[i], digestItems[j] = digestItems[j], digestItems[i]
 	}
 
-	for _, digestItem := range digestItems {
-		err := li.processCommitment(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
-		if err != nil {
-			return err
-		}
-	}
+	// for _, digestItem := range digestItems {
+	// 	err := li.processCommitment(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }

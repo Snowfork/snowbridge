@@ -20,7 +20,8 @@ import (
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/basic"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
@@ -88,12 +89,12 @@ func getEthContractEventsAndTrie(
 	}
 	defer conn.Close()
 
-	basicOutboundChannel, err := outbound.NewBasicOutboundChannel(common.HexToAddress(config.Channels.Basic.Outbound), conn.GetClient())
+	basicOutboundChannel, err := basic.NewBasicOutboundChannel(common.HexToAddress(config.Channels.Basic.Outbound), conn.GetClient())
 	if err != nil {
 		return nil, nil, err
 	}
 
-	incentivizedOutboundChannel, err := outbound.NewIncentivizedOutboundChannel(common.HexToAddress(config.Channels.Incentivized.Outbound), conn.GetClient())
+	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(common.HexToAddress(config.Channels.Incentivized.Outbound), conn.GetClient())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -132,7 +133,7 @@ func getEthContractEventsAndTrie(
 
 func getEthBasicMessages(
 	ctx context.Context,
-	contract *outbound.BasicOutboundChannel,
+	contract *basic.BasicOutboundChannel,
 	blockNumber uint64,
 	index uint64,
 ) ([]*gethTypes.Log, error) {
@@ -165,7 +166,7 @@ func getEthBasicMessages(
 
 func getEthIncentivizedMessages(
 	ctx context.Context,
-	contract *outbound.IncentivizedOutboundChannel,
+	contract *incentivized.IncentivizedOutboundChannel,
 	blockNumber uint64,
 	index uint64,
 ) ([]*gethTypes.Log, error) {
