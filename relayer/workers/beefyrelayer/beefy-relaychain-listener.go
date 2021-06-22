@@ -104,12 +104,17 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 			li.log.WithField("blockHash", nextBlockHash.Hex()).Info("Got next blockhash")
 
 			latestMMRProof := li.relaychainConn.GetMMRLeafForBlock(blockNumber, nextBlockHash)
+			serializedProof, err := types.EncodeToBytes(latestMMRProof)
+			if err != nil {
+				li.log.WithError(err).Error("Failed to serialize MMR Proof")
+				return err
+			}
 
 			info := store.BeefyRelayInfo{
-				ValidatorAddresses: beefyAuthoritiesBytes,
-				SignedCommitment:   signedCommitmentBytes,
-				Status:             store.CommitmentWitnessed,
-				LatestMMRProof:     latestMMRProof,
+				ValidatorAddresses:       beefyAuthoritiesBytes,
+				SignedCommitment:         signedCommitmentBytes,
+				Status:                   store.CommitmentWitnessed,
+				SerializedLatestMMRProof: serializedProof,
 			}
 			li.beefyMessages <- info
 		}

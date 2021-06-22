@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 	merkletree "github.com/wealdtech/go-merkletree"
 	"golang.org/x/crypto/blake2b"
@@ -165,16 +166,22 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),
 	}
 
+	var latestMMRProof types.GenerateMMRProofResponse
+	err := types.DecodeFromBytes(info.SerializedLatestMMRProof, &latestMMRProof)
+	if err != nil {
+		return CompleteSignatureCommitmentMessage{}, err
+	}
+
 	latestMMRLeaf := beefylightclient.BeefyLightClientBeefyMMRLeaf{
-		ParentNumber:         uint32(info.LatestMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
-		ParentHash:           info.LatestMMRProof.Leaf.ParentNumberAndHash.Hash,
-		ParachainHeadsRoot:   info.LatestMMRProof.Leaf.ParachainHeads,
-		NextAuthoritySetId:   uint64(info.LatestMMRProof.Leaf.BeefyNextAuthoritySet.ID),
-		NextAuthoritySetLen:  uint32(info.LatestMMRProof.Leaf.BeefyNextAuthoritySet.Len),
-		NextAuthoritySetRoot: info.LatestMMRProof.Leaf.BeefyNextAuthoritySet.Root,
+		ParentNumber:         uint32(latestMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           latestMMRProof.Leaf.ParentNumberAndHash.Hash,
+		ParachainHeadsRoot:   latestMMRProof.Leaf.ParachainHeads,
+		NextAuthoritySetId:   uint64(latestMMRProof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(latestMMRProof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: latestMMRProof.Leaf.BeefyNextAuthoritySet.Root,
 	}
 	mmrProofItems := [][32]byte{}
-	for _, mmrProofItem := range info.LatestMMRProof.Proof.Items {
+	for _, mmrProofItem := range latestMMRProof.Proof.Items {
 		mmrProofItems = append(mmrProofItems, mmrProofItem)
 	}
 
