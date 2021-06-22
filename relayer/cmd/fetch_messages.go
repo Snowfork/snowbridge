@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -18,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
@@ -113,7 +111,7 @@ func getEthContractEventsAndTrie(
 	if err != nil {
 		return nil, nil, err
 	}
-	trie := makeTrie(receipts)
+	trie := ethereum.MakeTrie(receipts)
 
 	allEvents := make([]*gethTypes.Log, 0)
 
@@ -240,17 +238,4 @@ func printEthContractEventForSub(mapping map[common.Address]string, event *gethT
 	)
 	fmt.Println("")
 	return nil
-}
-
-func makeTrie(items gethTypes.Receipts) *gethTrie.Trie {
-	keyBuf := new(bytes.Buffer)
-	valueBuf := new(bytes.Buffer)
-	trie := new(gethTrie.Trie)
-	for i, item := range items {
-		keyBuf.Reset()
-		rlp.Encode(keyBuf, uint(i))
-		item.EncodeRLP(valueBuf)
-		trie.Update(keyBuf.Bytes(), valueBuf.Bytes())
-	}
-	return trie
 }

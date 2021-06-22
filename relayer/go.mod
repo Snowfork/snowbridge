@@ -6,10 +6,8 @@ require (
 	github.com/ChainSafe/go-schnorrkel v0.0.0-20210527232834-58622d036665 // indirect
 	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
 	github.com/allegro/bigcache v1.2.1 // indirect
-	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/ethereum/go-ethereum v1.10.3
 	github.com/go-ole/go-ole v1.2.5 // indirect
-	github.com/holiman/uint256 v1.1.1 // indirect
 	github.com/influxdata/influxdb v1.8.3
 	github.com/jinzhu/gorm v1.9.16
 	github.com/jinzhu/now v1.1.2 // indirect
@@ -26,7 +24,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/snowfork/ethashproof v0.0.0-20210106050330-7fb8adbe0892
-	github.com/snowfork/go-substrate-rpc-client/v3 v3.0.0-20210617125713-6d4919bb7df7
+	github.com/snowfork/go-substrate-rpc-client/v3 v3.0.0-20210622111340-f741bfc1863b
 	github.com/spf13/afero v1.5.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v1.1.1
@@ -36,7 +34,6 @@ require (
 	github.com/wealdtech/go-merkletree v1.0.0
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22 // indirect
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
