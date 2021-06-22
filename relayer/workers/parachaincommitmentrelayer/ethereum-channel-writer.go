@@ -16,7 +16,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
 	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 
-	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v2/types"
+	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v3/types"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
