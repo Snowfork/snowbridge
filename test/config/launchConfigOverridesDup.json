@@ -2,30 +2,48 @@
   "parachains": [
     {
       "id": "200",
-      "wsPort": 11144,
-      "port": 31200,
-      "flags": [
-        "--execution=native",
-        "-lruntime=debug,import_header=trace,bridge=trace",
-        "--rpc-cors=all",
-        "--offchain-worker=Always",
-        "--enable-offchain-indexing=true",
-        "--",
-        "--execution=wasm"
+      "nodes": [
+        {
+          "wsPort": 11144,
+          "port": 31200,
+          "name": "alice",
+          "flags": [
+            "-lruntime=debug",
+            "--rpc-port=8081",
+            "--rpc-cors=all",
+            "--ws-external",
+            "--rpc-external",
+            "--rpc-methods=Unsafe",
+            "--offchain-worker=Always",
+            "--enable-offchain-indexing=true",
+            "--execution=native",
+            "--",
+            "--execution=wasm"
+          ]
+        }
       ]
     },
     {
       "id": "201",
-      "wsPort": 11145,
-      "port": 31201,
-      "flags": [
-        "--execution=native",
-        "-lruntime=debug,import_header=trace,bridge=trace",
-        "--rpc-cors=all",
-        "--offchain-worker=Always",
-        "--enable-offchain-indexing=true",
-        "--",
-        "--execution=wasm"
+      "nodes": [
+        {
+          "wsPort": 11155,
+          "port": 31201,
+          "name": "alice",
+          "flags": [
+            "-lruntime=debug",
+            "--rpc-port=8082",
+            "--rpc-cors=all",
+            "--ws-external",
+            "--rpc-external",
+            "--rpc-methods=Unsafe",
+            "--offchain-worker=Always",
+            "--enable-offchain-indexing=true",
+            "--execution=native",
+            "--",
+            "--execution=wasm"
+          ]
+        }
       ]
     }
   ]

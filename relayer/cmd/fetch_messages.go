@@ -112,7 +112,11 @@ func getEthContractEventsAndTrie(
 	if err != nil {
 		return nil, nil, err
 	}
-	trie := ethereum.MakeTrie(receipts)
+
+	trie, err := ethereum.MakeTrie(receipts)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	allEvents := make([]*gethTypes.Log, 0)
 

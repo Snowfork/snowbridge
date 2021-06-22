@@ -195,7 +195,12 @@ func (s *HeaderCacheState) GetReceiptTrie(ctx context.Context, hash gethCommon.H
 	if err != nil {
 		return nil, err
 	}
-	receiptTrie = MakeTrie(receipts)
+
+	receiptTrie, err = MakeTrie(receipts)
+	if err != nil {
+		return nil, err
+	}
+
 	if receiptTrie.Hash() != block.ReceiptHash() {
 		return nil, fmt.Errorf("Receipt trie does not match block receipt hash")
 	}

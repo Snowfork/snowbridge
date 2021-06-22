@@ -44,16 +44,5 @@
         }
 		  ]
 		}
-	],
-	"simpleParachains": [
-    {
-      "bin": "/tmp/polkadot/target/release/adder-collator",
-      "id": 201,
-      "port": 9977,
-      "name": "alice"
-    }
-  ],
-	"hrmpChannels": [],
-	"types": {
-	}
+	]
 }

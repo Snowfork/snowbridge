@@ -46,7 +46,11 @@ func TestMessage_Proof(t *testing.T) {
 	}
 
 	// Construct Merkle Patricia Trie for receipts
-	receiptTrie := ethereum.MakeTrie(receipts)
+	receiptTrie, err := ethereum.MakeTrie(receipts)
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Println("Hash", receiptTrie.Hash())
 
 	if receiptTrie.Hash() != block.ReceiptHash() {
