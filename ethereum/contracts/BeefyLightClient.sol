@@ -260,7 +260,12 @@ contract BeefyLightClient {
         bytes32[] calldata mmrProofItems
     ) public {
         verifyCommitment(id, commitment, validatorProof);
-
+        verifyNewestMMRLeaf(
+            latestMMRLeaf,
+            mmrProofItems,
+            commitment.payload,
+            commitment.blockNumber
+        );
         /**
          * @follow-up Do we need a try-catch block here?
          */
@@ -296,6 +301,24 @@ contract BeefyLightClient {
         bytes32 randomSeedBlockHash = blockhash(randomSeedBlockNum);
 
         return uint256(randomSeedBlockHash);
+    }
+
+    function verifyNewestMMRLeaf(
+        BeefyMMRLeaf calldata leaf,
+        bytes32[] calldata proof,
+        bytes32 root,
+        uint64 length
+    ) internal {
+        bytes memory encodedLeaf = encodeMMRLeaf(leaf);
+        bytes32 hashedLeaf = hashMMRLeaf(encodedLeaf);
+
+        mmrVerification.verifyInclusionProof(
+            root,
+            hashedLeaf,
+            length - 1,
+            length,
+            proof
+        );
     }
 
     /**
@@ -483,7 +506,7 @@ contract BeefyLightClient {
     }
 
     function createCommitmentHash(Commitment calldata commitment)
-        internal
+        public
         view
         returns (bytes32)
     {
@@ -499,5 +522,25 @@ contract BeefyLightClient {
                     32
                 )
             )[0];
+    }
+
+    function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
+        public
+        pure
+        returns (bytes memory)
+    {
+        return
+            abi.encodePacked(
+                ScaleCodec.encode32(leaf.parentNumber),
+                leaf.parentHash,
+                leaf.parachainHeadsRoot,
+                ScaleCodec.encode64(leaf.nextAuthoritySetId),
+                ScaleCodec.encode32(leaf.nextAuthoritySetLen),
+                leaf.nextAuthoritySetRoot
+            );
+    }
+
+    function hashMMRLeaf(bytes memory leaf) public pure returns (bytes32) {
+        return keccak256(leaf);
     }
 }

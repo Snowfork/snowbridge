@@ -226,5 +226,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 	updateCmd := store.NewDatabaseCmd(&info, store.Update, instructions)
 	wr.databaseMessages <- updateCmd
 
+	wr.LogBeefyFixtureDataAll(msg)
+
 	return nil
 }
