@@ -1,9 +1,8 @@
 const BigNumber = web3.BigNumber;
 const {
-  deployBeefyLightClient, signatureSubstrateToEthereum, buildCommitment,
+  deployBeefyLightClient, signatureSubstrateToEthereum,
   createMerkleTree, mine, catchRevert
 } = require("./helpers");
-const ETHApp = artifacts.require("ETHApp");
 const fixture = require('./fixtures/beefy-fixture-data.json');
 
 require("chai")
@@ -11,7 +10,6 @@ require("chai")
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
-const ethers = require("ethers");
 const { expect } = require("chai");
 
 describe("Beefy Light Client", function () {
@@ -45,14 +43,14 @@ describe("Beefy Light Client", function () {
     const initialBitfield = await this.beefyLightClient.createInitialBitfield([0, 1], 2);
     expect(printBitfield(initialBitfield)).to.eq('11')
 
-    const newCommitment = await this.beefyLightClient.newSignatureCommitment(
+    await this.beefyLightClient.newSignatureCommitment(
       fixture.commitmentHash,
       initialBitfield,
       signatureSubstrateToEthereum(fixture.signature0),
       0,
       this.validatorAddressOne,
       this.validator0PubKeyMerkleProof
-    );
+    ).should.be.fulfilled;
 
     const lastId = (await this.beefyLightClient.currentId()).sub(new web3.utils.BN(1));
 
@@ -79,13 +77,13 @@ describe("Beefy Light Client", function () {
 
     const mmrProofItems = []
 
-    const completeCommitment = await this.beefyLightClient.completeSignatureCommitment(
+    await this.beefyLightClient.completeSignatureCommitment(
       lastId,
       fixture.commitment,
       validatorProof,
       beefyMMRLeaf,
       mmrProofItems,
-    );
+    ).should.be.fulfilled;
 
     latestMMRRoot = await this.beefyLightClient.latestMMRRoot()
     expect(latestMMRRoot).to.eq('0xfab049d511b54f8d1169f85fe8add36c54a76c36d20737a80b1f0e72179b7d5f')
