@@ -525,7 +525,7 @@ contract BeefyLightClient {
 
     function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
         public
-        view
+        pure
         returns (bytes memory)
     {
         bytes memory scaleEncodedMMRLeaf =

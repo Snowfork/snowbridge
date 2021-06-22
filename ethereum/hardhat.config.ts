@@ -35,7 +35,7 @@ export default {
     }
   },
   solidity: {
-    version: "0.8.5"
+    version: "0.8.6"
   },
   paths: {
     sources: "contracts",
