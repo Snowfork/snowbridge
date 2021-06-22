@@ -12,6 +12,7 @@ use local_runtime::{
 	LocalCouncilMembershipConfig,
 	SudoConfig,
 	WASM_BINARY, Signature,
+	AuraId, AuraConfig,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
@@ -70,6 +71,10 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		move || {
 			testnet_genesis(
 				vec![
+					get_from_seed::<AuraId>("Alice"),
+					get_from_seed::<AuraId>("Bob"),
+				],
+				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie"),
@@ -92,7 +97,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		None,
 		Some(props),
 		Extensions {
-			relay_chain: "local_testnet".into(),
+			relay_chain: "rococo-local".into(),
 			para_id: para_id.into(),
 		},
 	)
@@ -100,6 +105,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
+	initial_authorities: Vec<AuraId>,
 	endowed_accounts: Vec<AccountId>,
 	para_id: ParaId
 ) -> GenesisConfig {
@@ -183,7 +189,9 @@ fn testnet_genesis(
 			phantom: Default::default(),
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: para_id },
-		pallet_aura: Default::default(),
+		pallet_aura: AuraConfig {
+			authorities: initial_authorities,
+		},
 		cumulus_pallet_aura_ext: Default::default(),
 	}
 }
