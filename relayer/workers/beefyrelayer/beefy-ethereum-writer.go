@@ -194,8 +194,19 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		GasLimit: 500000,
 	}
 
-	tx, err := contract.CompleteSignatureCommitment(&options, msg.ID, msg.Commitment, msg.Signatures,
-		msg.ValidatorPositions, msg.ValidatorPublicKeys, msg.ValidatorPublicKeyMerkleProofs)
+	validatorProof := beefylightclient.BeefyLightClientValidatorProof{
+		Signatures:            msg.Signatures,
+		Positions:             msg.ValidatorPositions,
+		PublicKeys:            msg.ValidatorPublicKeys,
+		PublicKeyMerkleProofs: msg.ValidatorPublicKeyMerkleProofs,
+	}
+
+	tx, err := contract.CompleteSignatureCommitment(&options,
+		msg.ID,
+		msg.Commitment,
+		validatorProof,
+		msg.LatestMMRLeaf,
+		msg.MMRProofItems)
 
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")

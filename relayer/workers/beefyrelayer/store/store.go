@@ -11,6 +11,7 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -28,6 +29,7 @@ type BeefyRelayInfo struct {
 	gorm.Model
 	ValidatorAddresses         []byte
 	SignedCommitment           []byte
+	LatestMMRProof             types.GenerateMMRProofResponse
 	ContractID                 int64
 	Status                     Status
 	InitialVerificationTxHash  common.Hash

@@ -27,6 +27,8 @@ type CompleteSignatureCommitmentMessage struct {
 	ValidatorPositions             []*big.Int
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
+	LatestMMRLeaf                  beefylightclient.BeefyLightClientBeefyMMRLeaf
+	MMRProofItems                  [][32]byte
 }
 
 type BeefyJustification struct {
@@ -163,6 +165,19 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),
 	}
 
+	latestMMRLeaf := beefylightclient.BeefyLightClientBeefyMMRLeaf{
+		ParentNumber:         uint32(info.LatestMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           info.LatestMMRProof.Leaf.ParentNumberAndHash.Hash,
+		ParachainHeadsRoot:   info.LatestMMRProof.Leaf.ParachainHeads,
+		NextAuthoritySetId:   uint64(info.LatestMMRProof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(info.LatestMMRProof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: info.LatestMMRProof.Leaf.BeefyNextAuthoritySet.Root,
+	}
+	mmrProofItems := [][32]byte{}
+	for _, mmrProofItem := range info.LatestMMRProof.Proof.Items {
+		mmrProofItems = append(mmrProofItems, mmrProofItem)
+	}
+
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                             validationDataID,
 		Commitment:                     commitment,
@@ -170,6 +185,8 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorPositions:             validatorPositions,
 		ValidatorPublicKeys:            validatorPublicKeys,
 		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
+		LatestMMRLeaf:                  latestMMRLeaf,
+		MMRProofItems:                  mmrProofItems,
 	}
 	return msg, nil
 }

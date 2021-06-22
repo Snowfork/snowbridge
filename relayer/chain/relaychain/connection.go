@@ -68,3 +68,36 @@ func (co *Connection) Connect(_ context.Context) error {
 func (co *Connection) Close() {
 	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
 }
+
+func (co *Connection) GetMMRLeafForBlock(
+	blockNumber uint64,
+	blockHash types.Hash,
+) types.GenerateMMRProofResponse {
+	co.log.WithFields(logrus.Fields{
+		"blockNumber": blockNumber,
+		"blockHash":   blockHash.Hex(),
+	}).Info("Getting MMR Leaf for block...")
+	proofResponse, err := co.GetAPI().RPC.MMR.GenerateProof(blockNumber, blockHash)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to generate mmr proof")
+	}
+
+	var proofItemsHex = []string{}
+	for _, item := range proofResponse.Proof.Items {
+		proofItemsHex = append(proofItemsHex, item.Hex())
+	}
+
+	co.log.WithFields(logrus.Fields{
+		"BlockHash":                       proofResponse.BlockHash.Hex(),
+		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
+		"Leaf.Hash":                       proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
+		"Leaf.ParachainHeads":             proofResponse.Leaf.ParachainHeads.Hex(),
+		"Leaf.BeefyNextAuthoritySet.ID":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
+		"Leaf.BeefyNextAuthoritySet.Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
+		"Leaf.BeefyNextAuthoritySet.Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
+		"Proof.LeafIndex":                 proofResponse.Proof.LeafIndex,
+		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
+		"Proof.Items":                     proofItemsHex,
+	}).Info("Generated MMR Proof")
+	return proofResponse
+}

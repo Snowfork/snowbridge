@@ -44,14 +44,9 @@ contract BeefyLightClient {
      * @notice Notifies an observer that the complete verification process has
      *  finished successfuly and the new commitmentHash will be accepted
      * @param prover The address of the successful prover
-     * @param commitmentHash the commitmentHash which was approved for inclusion
      * @param id the identifier used
      */
-    event FinalVerificationSuccessful(
-        address prover,
-        bytes32 commitmentHash,
-        uint256 id
-    );
+    event FinalVerificationSuccessful(address prover, uint256 id);
 
     event NewMMRRoot(bytes32 mmrRoot, uint64 blockNumber);
 
@@ -61,6 +56,19 @@ contract BeefyLightClient {
         bytes32 payload;
         uint64 blockNumber;
         uint32 validatorSetId;
+    }
+
+    /**
+     * @param signatures an array of signatures from the randomly chosen validators
+     * @param positions an array of the positions of the randomly chosen validators
+     * @param publicKeys an array of the public key of each signer
+     * @param publicKeyMerkleProofs an array of merkle proofs from the chosen validators
+     */
+    struct ValidatorProof {
+        bytes[] signatures;
+        uint256[] positions;
+        address[] publicKeys;
+        bytes32[][] publicKeyMerkleProofs;
     }
 
     struct ValidationData {
@@ -73,10 +81,10 @@ contract BeefyLightClient {
     struct BeefyMMRLeaf {
         uint32 parentNumber;
         bytes32 parentHash;
+        bytes32 parachainHeadsRoot;
         uint64 nextAuthoritySetId;
         uint32 nextAuthoritySetLen;
         bytes32 nextAuthoritySetRoot;
-        bytes32 parachainHeadsRoot; // TODO check type and position of this element
     }
 
     /* State */
@@ -93,6 +101,8 @@ contract BeefyLightClient {
     uint256 public constant THRESHOLD_NUMERATOR = 2;
     uint256 public constant THRESHOLD_DENOMINATOR = 3;
     uint256 public constant BLOCK_WAIT_PERIOD = 3;
+    uint256 public constant NUMBER_OF_BLOCKS_PER_EPOCH = 3;
+    uint256 public constant ERROR_AND_SAFETY_BUFFER = 3;
 
     /**
      * @notice Deploys the BeefyLightClient contract
@@ -240,129 +250,23 @@ contract BeefyLightClient {
      * @notice Performs the second step in the validation logic
      * @param id an identifying value generated in the previous transaction
      * @param commitment contains the full commitment that was used for the commitmentHash
-     * @param signatures an array of signatures from the randomly chosen validators
-     * @param validatorPositions an array of the positions of the randomly chosen validators
-     * @param validatorPublicKeys an array of the public key of each signer
-     * @param validatorPublicKeyMerkleProofs an array of merkle proofs from the chosen validators
+     * @param validatorProof a struct containing the data needed to verify all validator signatures
      */
     function completeSignatureCommitment(
         uint256 id,
-        Commitment memory commitment,
-        bytes[] memory signatures,
-        uint256[] memory validatorPositions,
-        address[] memory validatorPublicKeys,
-        bytes32[][] memory validatorPublicKeyMerkleProofs
+        Commitment calldata commitment,
+        ValidatorProof calldata validatorProof,
+        BeefyMMRLeaf calldata latestMMRLeaf,
+        bytes32[] calldata mmrProofItems
     ) public {
-        ValidationData storage data = validationData[id];
-
-        /**
-         * @dev verify that block wait period has passed
-         */
-        require(
-            block.number >= data.blockNumber.add(BLOCK_WAIT_PERIOD),
-            "Error: Block wait period not over"
-        );
-
-        /**
-         * @dev verify that sender is the same as in `newSignatureCommitment`
-         */
-        require(
-            msg.sender == data.senderAddress,
-            "Error: Sender address does not match original validation data"
-        );
-
-        uint256 requiredNumOfSignatures = requiredNumberOfSignatures();
-
-        /**
-         * @dev verify that required number of signatures, positions, public keys and merkle proofs are
-         * submitted
-         */
-        require(
-            signatures.length == requiredNumOfSignatures,
-            "Error: Number of signatures does not match required"
-        );
-        require(
-            validatorPositions.length == requiredNumOfSignatures,
-            "Error: Number of validator positions does not match required"
-        );
-        require(
-            validatorPublicKeys.length == requiredNumOfSignatures,
-            "Error: Number of validator public keys does not match required"
-        );
-        require(
-            validatorPublicKeyMerkleProofs.length == requiredNumOfSignatures,
-            "Error: Number of validator public keys does not match required"
-        );
-
-        /**
-         * @dev Generate an array of numbers
-         */
-        uint256[] memory randomBitfield =
-            Bitfield.randomNBitsWithPriorCheck(
-                getSeed(data),
-                data.validatorClaimsBitfield,
-                requiredNumOfSignatures
-            );
-
-        // Encode and hash the commitment
-        bytes32 commitmentHash =
-            blake2b.formatOutput(
-                blake2b.blake2b(
-                    abi.encodePacked(
-                        commitment.payload,
-                        commitment.blockNumber.encode64(),
-                        commitment.validatorSetId.encode32()
-                    ),
-                    "",
-                    32
-                )
-            )[0];
-
-        /**
-         *  @dev For each randomSignature, do:
-         */
-        for (uint256 i = 0; i < requiredNumOfSignatures; i++) {
-            /**
-             * @dev Check if validator in randomBitfield
-             */
-            require(
-                randomBitfield.isSet(validatorPositions[i]),
-                "Error: Validator must be once in bitfield"
-            );
-
-            /**
-             * @dev Remove validator from randomBitfield such that no validator can appear twice in signatures
-             */
-            randomBitfield.clear(validatorPositions[i]);
-
-            /**
-             * @dev Check if merkle proof is valid
-             */
-            require(
-                validatorRegistry.checkValidatorInSet(
-                    validatorPublicKeys[i],
-                    validatorPositions[i],
-                    validatorPublicKeyMerkleProofs[i]
-                ),
-                "Error: Validator must be in validator set at correct position"
-            );
-
-            /**
-             * @dev Check if signature is correct
-             */
-            require(
-                ECDSA.recover(commitmentHash, signatures[i]) ==
-                    validatorPublicKeys[i],
-                "Error: Invalid Signature"
-            );
-        }
+        verifyCommitment(id, commitment, validatorProof);
 
         /**
          * @follow-up Do we need a try-catch block here?
          */
         processPayload(commitment.payload, commitment.blockNumber);
 
-        emit FinalVerificationSuccessful(msg.sender, commitmentHash, id);
+        emit FinalVerificationSuccessful(msg.sender, id);
 
         /**
          * @dev We no longer need the data held in state, so delete it for a gas refund
@@ -402,11 +306,12 @@ contract BeefyLightClient {
         // Check the payload is newer than the latest
         // Check that payload.leaf.block_number is > last_known_block_number;
 
+        // if payload is not in current or next epoch, reject
+
         latestMMRRoot = payload;
         emit NewMMRRoot(latestMMRRoot, blockNumber);
 
         // if payload is in next epoch, then apply validatorset changes
-        // if payload is not in current or next epoch, reject
 
         applyValidatorSetChanges(payload);
     }
@@ -441,5 +346,158 @@ contract BeefyLightClient {
                 THRESHOLD_NUMERATOR +
                 THRESHOLD_DENOMINATOR -
                 1) / THRESHOLD_DENOMINATOR;
+    }
+
+    function verifyCommitment(
+        uint256 id,
+        Commitment calldata commitment,
+        ValidatorProof calldata proof
+    ) internal view {
+        ValidationData storage data = validationData[id];
+
+        /**
+         * @dev verify that sender is the same as in `newSignatureCommitment`
+         */
+        require(
+            msg.sender == data.senderAddress,
+            "Error: Sender address does not match original validation data"
+        );
+
+        uint256 requiredNumOfSignatures = requiredNumberOfSignatures();
+
+        /**
+         * @dev verify that block wait period has passed
+         */
+        require(
+            block.number >= data.blockNumber.add(BLOCK_WAIT_PERIOD),
+            "Error: Block wait period not over"
+        );
+
+        uint256[] memory randomBitfield =
+            Bitfield.randomNBitsWithPriorCheck(
+                getSeed(data),
+                data.validatorClaimsBitfield,
+                requiredNumOfSignatures
+            );
+
+        verifyValidatorProofLengths(requiredNumOfSignatures, proof);
+
+        verifyValidatorProofSignatures(
+            randomBitfield,
+            proof,
+            requiredNumOfSignatures,
+            commitment
+        );
+    }
+
+    function verifyValidatorProofLengths(
+        uint256 requiredNumOfSignatures,
+        ValidatorProof calldata proof
+    ) internal pure {
+        /**
+         * @dev verify that required number of signatures, positions, public keys and merkle proofs are
+         * submitted
+         */
+        require(
+            proof.signatures.length == requiredNumOfSignatures,
+            "Error: Number of signatures does not match required"
+        );
+        require(
+            proof.positions.length == requiredNumOfSignatures,
+            "Error: Number of validator positions does not match required"
+        );
+        require(
+            proof.publicKeys.length == requiredNumOfSignatures,
+            "Error: Number of validator public keys does not match required"
+        );
+        require(
+            proof.publicKeyMerkleProofs.length == requiredNumOfSignatures,
+            "Error: Number of validator public keys does not match required"
+        );
+    }
+
+    function verifyValidatorProofSignatures(
+        uint256[] memory randomBitfield,
+        ValidatorProof calldata proof,
+        uint256 requiredNumOfSignatures,
+        Commitment calldata commitment
+    ) internal view {
+        // Encode and hash the commitment
+        bytes32 commitmentHash = createCommitmentHash(commitment);
+
+        /**
+         *  @dev For each randomSignature, do:
+         */
+        for (uint256 i = 0; i < requiredNumOfSignatures; i++) {
+            verifyValidatorSignature(
+                randomBitfield,
+                proof.signatures[i],
+                proof.positions[i],
+                proof.publicKeys[i],
+                proof.publicKeyMerkleProofs[i],
+                commitmentHash
+            );
+        }
+    }
+
+    function verifyValidatorSignature(
+        uint256[] memory randomBitfield,
+        bytes calldata signature,
+        uint256 position,
+        address publicKey,
+        bytes32[] calldata publicKeyMerkleProof,
+        bytes32 commitmentHash
+    ) internal view {
+        /**
+         * @dev Check if validator in randomBitfield
+         */
+        require(
+            randomBitfield.isSet(position),
+            "Error: Validator must be once in bitfield"
+        );
+
+        /**
+         * @dev Remove validator from randomBitfield such that no validator can appear twice in signatures
+         */
+        randomBitfield.clear(position);
+
+        /**
+         * @dev Check if merkle proof is valid
+         */
+        require(
+            validatorRegistry.checkValidatorInSet(
+                publicKey,
+                position,
+                publicKeyMerkleProof
+            ),
+            "Error: Validator must be in validator set at correct position"
+        );
+
+        /**
+         * @dev Check if signature is correct
+         */
+        require(
+            ECDSA.recover(commitmentHash, signature) == publicKey,
+            "Error: Invalid Signature"
+        );
+    }
+
+    function createCommitmentHash(Commitment calldata commitment)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            blake2b.formatOutput(
+                blake2b.blake2b(
+                    abi.encodePacked(
+                        commitment.payload,
+                        commitment.blockNumber.encode64(),
+                        commitment.validatorSetId.encode32()
+                    ),
+                    "",
+                    32
+                )
+            )[0];
     }
 }

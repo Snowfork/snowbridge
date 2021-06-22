@@ -124,7 +124,7 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 			// we should ideally be querying the last few leaves in the latest MMR until we find
 			// the first parachain block that has not yet been fully processed on ethereum,
 			// and then package and relay all newer heads/commitments
-			mmrProof := li.GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash)
+			mmrProof := li.relaychainConn.GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash)
 			allParaHeads, ourParaHead := li.GetAllParaheads(nextBlockHash, OUR_PARACHAIN_ID)
 
 			ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
@@ -150,39 +150,6 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 			}
 		}
 	}
-}
-
-func (li *BeefyListener) GetMMRLeafForBlock(
-	blockNumber uint64,
-	blockHash types.Hash,
-) types.GenerateMMRProofResponse {
-	li.log.WithFields(logrus.Fields{
-		"blockNumber": blockNumber,
-		"blockHash":   blockHash.Hex(),
-	}).Info("Getting MMR Leaf for block...")
-	proofResponse, err := li.relaychainConn.GetAPI().RPC.MMR.GenerateProof(blockNumber, blockHash)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to generate mmr proof")
-	}
-
-	var proofItemsHex = []string{}
-	for _, item := range proofResponse.Proof.Items {
-		proofItemsHex = append(proofItemsHex, item.Hex())
-	}
-
-	li.log.WithFields(logrus.Fields{
-		"BlockHash":                       proofResponse.BlockHash.Hex(),
-		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
-		"Leaf.Hash":                       proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
-		"Leaf.ParachainHeads":             proofResponse.Leaf.ParachainHeads.Hex(),
-		"Leaf.BeefyNextAuthoritySet.ID":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
-		"Leaf.BeefyNextAuthoritySet.Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
-		"Leaf.BeefyNextAuthoritySet.Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
-		"Proof.LeafIndex":                 proofResponse.Proof.LeafIndex,
-		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
-		"Proof.Items":                     proofItemsHex,
-	}).Info("Generated MMR Proof")
-	return proofResponse
 }
 
 func (li *BeefyListener) GetAllParaheads(blockHash types.Hash, ourParachainId uint32) ([]types.Header, types.Header) {
