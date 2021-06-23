@@ -78,7 +78,7 @@ describe("Beefy Light Client", function () {
       validatorProof,
       fixture.beefyMMRLeaf,
       fixture.leafProof,
-    )
+    ).should.be.fulfilled
 
     latestMMRRoot = await this.beefyLightClient.latestMMRRoot()
     expect(latestMMRRoot).to.eq(fixture.commitment.payload)
