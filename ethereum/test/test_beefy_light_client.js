@@ -13,24 +13,13 @@ require("chai")
 const { expect } = require("chai");
 
 describe("Beefy Light Client", function () {
-  let accounts;
-  let owner;
-  let userOne;
-  let userTwo;
-  let userThree;
 
   before(async function () {
-    accounts = await web3.eth.getAccounts();
-    owner = accounts[0];
-    userOne = accounts[1];
-    userTwo = accounts[2];
-    userThree = accounts[3];
-
     this.timeout(10 * 1000)
 
     this.validatorsMerkleTree = createMerkleTree(fixture.validatorPublicKeys);
     this.beefyLightClient = await deployBeefyLightClient(this.validatorsMerkleTree.getHexRoot(),
-      fixture.validatorPublicKeys.length);
+      fixture.validatorPublicKeys.length, fixture.startingValidatorSetID);
   });
 
   it("encodes beefy mmr leaves correctly", async function () {

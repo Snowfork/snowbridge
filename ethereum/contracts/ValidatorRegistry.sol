@@ -14,16 +14,26 @@ import "./utils/MerkleProof.sol";
 contract ValidatorRegistry is Ownable {
     /* Events */
 
-    event ValidatorRegistryUpdated(bytes32 root, uint256 numOfValidators);
+    event ValidatorRegistryUpdated(
+        bytes32 root,
+        uint256 numOfValidators,
+        uint64 id
+    );
 
     /* State */
 
     bytes32 public root;
     uint256 public numOfValidators;
+    uint64 public id;
 
-    constructor(bytes32 _root, uint256 _numOfValidators) {
+    constructor(
+        bytes32 _root,
+        uint256 _numOfValidators,
+        uint64 _id
+    ) {
         root = _root;
         numOfValidators = _numOfValidators;
+        id = _id;
     }
 
     /**
@@ -31,10 +41,15 @@ contract ValidatorRegistry is Ownable {
      * @param _root The new root
      * @param _numOfValidators The new number of validators
      */
-    function update(bytes32 _root, uint256 _numOfValidators) public onlyOwner {
+    function update(
+        bytes32 _root,
+        uint256 _numOfValidators,
+        uint64 _id
+    ) public onlyOwner {
         root = _root;
         numOfValidators = _numOfValidators;
-        emit ValidatorRegistryUpdated(_root, _numOfValidators);
+        id = _id;
+        emit ValidatorRegistryUpdated(_root, _numOfValidators, _id);
     }
 
     /**
