@@ -1,7 +1,7 @@
 const BigNumber = web3.BigNumber;
 const {
   deployBeefyLightClient,
-  createMerkleTree, mine, printBitfield
+  createMerkleTree, mine, printBitfield, printTxPromiseGas
 } = require("./helpers");
 const fixture = require('./fixtures/beefy-fixture-data.json');
 
@@ -50,14 +50,16 @@ describe("Beefy Light Client", function () {
 
     const commitmentHash = await this.beefyLightClient.createCommitmentHash(fixture.commitment);
 
-    await this.beefyLightClient.newSignatureCommitment(
+    let tx = this.beefyLightClient.newSignatureCommitment(
       commitmentHash,
       initialBitfield,
       fixture.signatures[0],
       0,
       fixture.validatorPublicKeys[0],
       fixture.validatorPublicKeyProofs[0]
-    ).should.be.fulfilled
+    )
+    printTxPromiseGas(tx)
+    await tx.should.be.fulfilled
 
     const lastId = (await this.beefyLightClient.currentId()).sub(new web3.utils.BN(1));
 
@@ -73,14 +75,15 @@ describe("Beefy Light Client", function () {
       publicKeyMerkleProofs: fixture.validatorPublicKeyProofs
     }
 
-    const tx = await this.beefyLightClient.completeSignatureCommitment(
+    tx = this.beefyLightClient.completeSignatureCommitment(
       lastId,
       fixture.commitment,
       validatorProof,
       fixture.beefyMMRLeaf,
       fixture.leafProof,
-    ).should.be.fulfilled
-
+    )
+    printTxPromiseGas(tx)
+    await tx.should.be.fulfilled
 
     latestMMRRoot = await this.beefyLightClient.latestMMRRoot()
     expect(latestMMRRoot).to.eq(fixture.commitment.payload)

@@ -3,12 +3,12 @@ const {
   createMerkleTree,
 } = require("../helpers");
 
-function createFixtureData200() {
+function createFixtureData(numberOfSignatures) {
   let signatures = [];
   let positions = [];
   let validatorPublicKeys = [];
   let validatorPublicKeyProofs = [];
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < numberOfSignatures; i++) {
     signatures.push(fixture.signatures[0]);
     positions.push(i)
     validatorPublicKeys.push(fixture.validatorPublicKeys[0])
@@ -26,4 +26,4 @@ function createFixtureData200() {
   }
 }
 
-module.exports = createFixtureData200()
+module.exports = createFixtureData(2)
