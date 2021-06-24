@@ -113,21 +113,35 @@ const mergeKeccak256 = (left, right) =>
 const PREFIX = "Returned error: VM Exception while processing transaction: ";
 
 async function tryCatch(promise, type, message) {
-    try {
-        await promise;
-        throw null;
+  try {
+    await promise;
+    throw null;
+  }
+  catch (error) {
+    assert(error, "Expected an error but did not get one");
+    if (message) {
+      assert(error.message === (PREFIX + type + ' ' + message), "Expected error '" + PREFIX + type + ' ' + message +
+        "' but got '" + error.message + "' instead");
+    } else {
+      assert(error.message.startsWith(PREFIX + type), "Expected an error starting with '" + PREFIX + type +
+        "' but got '" + error.message + "' instead");
     }
-    catch (error) {
-      assert(error, "Expected an error but did not get one");
-      if (message) {
-        assert(error.message === (PREFIX + type + ' ' + message), "Expected error '" + PREFIX + type + ' ' + message +
-          "' but got '" + error.message + "' instead");
-      } else {
-        assert(error.message.startsWith(PREFIX + type), "Expected an error starting with '" + PREFIX + type +
-          "' but got '" + error.message + "' instead");
-      }
-    }
+  }
 };
+
+function printBitfield(s) {
+  return parseInt(s.toString(), 10).toString(2)
+}
+
+function printTxPromiseGas(promise) {
+  return promise.then(r => {
+    console.log(`Tx successful - gas used: ${r.receipt.gasUsed}`)
+  }).catch(r => {
+    if (r && r.receipt && r.receipt.gasUsed) {
+      console.log(`Tx failed - gas used: ${r.receipt.gasUsed}`)
+    }
+  })
+}
 
 module.exports = {
   deployAppWithMockChannels,
@@ -135,6 +149,8 @@ module.exports = {
   createMerkleTree,
   signatureSubstrateToEthereum,
   mine,
+  printBitfield,
+  printTxPromiseGas,
   addressBytes,
   ChannelId,
   encodeLog,
@@ -147,4 +163,3 @@ module.exports = {
   catchStackUnderflow: async (promise, message) => await tryCatch(promise, "stack underflow", message),
   catchStaticStateChange: async (promise, message) => await tryCatch(promise, "static state change", message),
 };
-

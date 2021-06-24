@@ -1,6 +1,5 @@
 import { config as dotenv } from "dotenv";
 import { resolve } from "path";
-import "hardhat-gas-reporter"
 
 dotenv({ path: resolve(__dirname, ".env") });
 
@@ -21,6 +20,7 @@ const infuraKey = getenv("INFURA_PROJECT_ID");
 export default {
   networks: {
     hardhat: {
+      throwOnTransactionFailures: true
     },
     localhost: {
       url: "http://127.0.0.1:8545",

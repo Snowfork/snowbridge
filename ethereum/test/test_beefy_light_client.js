@@ -1,7 +1,7 @@
 const BigNumber = web3.BigNumber;
 const {
   deployBeefyLightClient,
-  createMerkleTree, mine,
+  createMerkleTree, mine, printBitfield
 } = require("./helpers");
 const fixture = require('./fixtures/beefy-fixture-data.json');
 
@@ -19,16 +19,15 @@ describe("Beefy Light Client", function () {
   let userTwo;
   let userThree;
 
-  before(async function () {
+  beforeEach(async function () {
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
     userOne = accounts[1];
     userTwo = accounts[2];
     userThree = accounts[3];
 
-    this.timeout(10 * 1000)
-
     this.validatorsMerkleTree = createMerkleTree(fixture.validatorPublicKeys);
+
     this.beefyLightClient = await deployBeefyLightClient(this.validatorsMerkleTree.getHexRoot(),
       fixture.validatorPublicKeys.length);
   });
@@ -44,12 +43,14 @@ describe("Beefy Light Client", function () {
   });
 
   it("runs new signature commitment and complete signature commitment correctly", async function () {
+    this.timeout(20 * 1000)
+
     const initialBitfield = await this.beefyLightClient.createInitialBitfield(fixture.validatorBitfield, 2);
     expect(printBitfield(initialBitfield)).to.eq('11')
 
     const commitmentHash = await this.beefyLightClient.createCommitmentHash(fixture.commitment);
 
-    const tx = await this.beefyLightClient.newSignatureCommitment(
+    await this.beefyLightClient.newSignatureCommitment(
       commitmentHash,
       initialBitfield,
       fixture.signatures[0],
@@ -72,7 +73,7 @@ describe("Beefy Light Client", function () {
       publicKeyMerkleProofs: fixture.validatorPublicKeyProofs
     }
 
-    await this.beefyLightClient.completeSignatureCommitment(
+    const tx = await this.beefyLightClient.completeSignatureCommitment(
       lastId,
       fixture.commitment,
       validatorProof,
@@ -80,13 +81,9 @@ describe("Beefy Light Client", function () {
       fixture.leafProof,
     ).should.be.fulfilled
 
+
     latestMMRRoot = await this.beefyLightClient.latestMMRRoot()
     expect(latestMMRRoot).to.eq(fixture.commitment.payload)
   });
 
-
 });
-
-function printBitfield(s) {
-  return parseInt(s.toString(), 10).toString(2)
-}

@@ -115,6 +115,7 @@ contract BeefyLightClient {
         MMRVerification _mmrVerification,
         Blake2b _blake2b
     ) {
+        //TODO - this contract should deploy and own the validatorRegistry
         validatorRegistry = _validatorRegistry;
         mmrVerification = _mmrVerification;
         blake2b = _blake2b;
@@ -174,7 +175,7 @@ contract BeefyLightClient {
                 validatorPosition,
                 validatorPublicKeyMerkleProof
             ),
-            "Error: Sender must be in validator set at correct position"
+            "Error: Validator provided must be in validator set at correct position"
         );
 
         /**
@@ -395,12 +396,11 @@ contract BeefyLightClient {
             "Error: Block wait period not over"
         );
 
-        uint256[] memory randomBitfield =
-            Bitfield.randomNBitsWithPriorCheck(
-                getSeed(data),
-                data.validatorClaimsBitfield,
-                requiredNumOfSignatures
-            );
+        uint256[] memory randomBitfield = Bitfield.randomNBitsWithPriorCheck(
+            getSeed(data),
+            data.validatorClaimsBitfield,
+            requiredNumOfSignatures
+        );
 
         verifyValidatorProofLengths(requiredNumOfSignatures, proof);
 
@@ -528,15 +528,14 @@ contract BeefyLightClient {
         pure
         returns (bytes memory)
     {
-        bytes memory scaleEncodedMMRLeaf =
-            abi.encodePacked(
-                ScaleCodec.encode32(leaf.parentNumber),
-                leaf.parentHash,
-                leaf.parachainHeadsRoot,
-                ScaleCodec.encode64(leaf.nextAuthoritySetId),
-                ScaleCodec.encode32(leaf.nextAuthoritySetLen),
-                leaf.nextAuthoritySetRoot
-            );
+        bytes memory scaleEncodedMMRLeaf = abi.encodePacked(
+            ScaleCodec.encode32(leaf.parentNumber),
+            leaf.parentHash,
+            leaf.parachainHeadsRoot,
+            ScaleCodec.encode64(leaf.nextAuthoritySetId),
+            ScaleCodec.encode32(leaf.nextAuthoritySetLen),
+            leaf.nextAuthoritySetRoot
+        );
 
         uint16 length = uint16(scaleEncodedMMRLeaf.length);
         bytes2 lengthEncoded = ScaleCodec.encodeUintCompact(length);
