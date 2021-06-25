@@ -77,7 +77,15 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	li.beefyLightClient = beefyLightClientContract
 
 	eg.Go(func() error {
-		err := li.subBeefyJustifications(ctx)
+
+		blockNumber, hash, err := li.fetchLatestBlockAndHash()
+		if err != nil {
+			return nil
+		}
+
+		li.catchupMissedCommitments(ctx, blockNumber, hash)
+
+		err = li.subBeefyJustifications(ctx)
 		return err
 	})
 
@@ -156,7 +164,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 		// the first parachain block that has not yet been fully processed on ethereum,
 		// and then package and relay all newer heads/commitments together with their corresponding leaf
 		mmrProof := li.relaychainConn.GetMMRLeafForBlock(uint64(relayChainBlockNumber-1), blockHash)
-		allParaHeads, ourParaHead := li.GetAllParaheads(blockHash, OUR_PARACHAIN_ID)
+		allParaHeads, ourParaHead := li.relaychainConn.GetAllParaheadsWithOwn(blockHash, OUR_PARACHAIN_ID)
 
 		ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
 
@@ -211,82 +219,6 @@ func (li *BeefyListener) queryBeefyLightClientEvents(ctx context.Context, start 
 	return events, nil
 }
 
-func (li *BeefyListener) GetAllParaheads(blockHash types.Hash, ourParachainId uint32) ([]types.Header, types.Header) {
-	none := types.NewOptionU32Empty()
-	encoded, err := types.EncodeToBytes(none)
-	if err != nil {
-		li.log.WithError(err).Error("Error")
-	}
-
-	baseParaHeadsStorageKey, err := types.CreateStorageKey(
-		li.relaychainConn.GetMetadata(),
-		"Paras",
-		"Heads", encoded, nil)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to create parachain header storage key")
-	}
-
-	//TODO fix this manual slice.
-	// The above types.CreateStorageKey does not give the same base key as polkadotjs needs for getKeys.
-	// It has some extra bytes.
-	// maybe from the none u32 in golang being wrong, or maybe slightly off CreateStorageKey call? we slice it
-	// here as a hack.
-	actualBaseParaHeadsStorageKey := baseParaHeadsStorageKey[:32]
-	li.log.WithField("actualBaseParaHeadsStorageKey", actualBaseParaHeadsStorageKey.Hex()).Info("actualBaseParaHeadsStorageKey")
-
-	keysResponse, err := li.relaychainConn.GetAPI().RPC.State.GetKeys(actualBaseParaHeadsStorageKey, blockHash)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to get all parachain keys")
-	}
-
-	headersResponse, err := li.relaychainConn.GetAPI().RPC.State.QueryStorage(keysResponse, blockHash, blockHash)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to get all parachain headers")
-	}
-
-	li.log.Info("Got all parachain headers")
-	var headers []types.Header
-	var ourParachainHeader types.Header
-	for _, headerResponse := range headersResponse {
-		for _, change := range headerResponse.Changes {
-
-			// TODO fix this manual slice with a proper type decode. only the last few bytes are for the ParaId,
-			// not sure what the early ones are for.
-			key := change.StorageKey[40:]
-			var parachainID types.U32
-			if err := types.DecodeFromBytes(key, &parachainID); err != nil {
-				li.log.WithError(err).Error("Failed to decode parachain ID")
-			}
-
-			li.log.WithField("parachainId", parachainID).Info("Decoding header for parachain")
-			var encodableOpaqueHeader types.Bytes
-			if err := types.DecodeFromBytes(change.StorageData, &encodableOpaqueHeader); err != nil {
-				li.log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
-			}
-
-			var header types.Header
-			if err := types.DecodeFromBytes(encodableOpaqueHeader, &header); err != nil {
-				li.log.WithError(err).Error("Failed to decode Header")
-			}
-			li.log.WithFields(logrus.Fields{
-				"headerBytes":           fmt.Sprintf("%#x", encodableOpaqueHeader),
-				"header.ParentHash":     header.ParentHash.Hex(),
-				"header.Number":         header.Number,
-				"header.StateRoot":      header.StateRoot.Hex(),
-				"header.ExtrinsicsRoot": header.ExtrinsicsRoot.Hex(),
-				"header.Digest":         header.Digest,
-				"parachainId":           parachainID,
-			}).Info("Decoded header for parachain")
-			headers = append(headers, header)
-
-			if parachainID == types.U32(ourParachainId) {
-				ourParachainHeader = header
-			}
-		}
-	}
-	return headers, ourParachainHeader
-}
-
 func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.Header) string {
 	//TODO: implement
 	return ""
@@ -301,7 +233,7 @@ func (li *BeefyListener) extractCommitments(
 		"blockNumber": paraHeader.Number,
 	}).Debug("Extracting commitment from parachain header")
 
-	auxDigestItems, err := getAuxiliaryDigestItems(paraHeader.Digest)
+	auxDigestItems, err := li.getAuxiliaryDigestItems(paraHeader.Digest)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +264,7 @@ func (li *BeefyListener) extractCommitments(
 	return messagePackages, nil
 }
 
-func getAuxiliaryDigestItems(digest types.Digest) ([]chainTypes.AuxiliaryDigestItem, error) {
+func (li *BeefyListener) getAuxiliaryDigestItems(digest types.Digest) ([]chainTypes.AuxiliaryDigestItem, error) {
 	var auxDigestItems []chainTypes.AuxiliaryDigestItem
 	for _, digestItem := range digest {
 		if digestItem.IsOther {
