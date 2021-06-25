@@ -1,4 +1,4 @@
-package parachaincommitment
+package parachaincommitmentrelayer
 
 import (
 	"context"
@@ -16,10 +16,10 @@ import (
 )
 
 // Catches up by searching for and relaying all missed commitments before the given block
-func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock uint64) error {
+func (li *BeefyListener) catchupMissedCommitments(ctx context.Context, latestParaBlock uint64, latestParaHash types.Hash) error {
 	basicContract, err := basic.NewBasicInboundChannel(common.HexToAddress(
 		li.ethereumConfig.Channels.Basic.Inbound),
-		li.ethereumConnection.GetClient(),
+		li.ethereumConn.GetClient(),
 	)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock ui
 
 	incentivizedContract, err := incentivized.NewIncentivizedInboundChannel(common.HexToAddress(
 		li.ethereumConfig.Channels.Incentivized.Inbound),
-		li.ethereumConnection.GetClient(),
+		li.ethereumConn.GetClient(),
 	)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock ui
 		return err
 	}
 	var paraBasicNonce types.U64
-	ok, err := li.parachainConnection.GetAPI().RPC.State.GetStorageLatest(paraBasicNonceKey, &paraBasicNonce)
+	ok, err := li.parachainConnection.GetAPI().RPC.State.GetStorage(paraBasicNonceKey, &paraBasicNonce, latestParaHash)
 	if err != nil {
 		li.log.Error(err)
 		return err
@@ -78,7 +78,7 @@ func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock ui
 		return err
 	}
 	var paraIncentivizedNonce types.U64
-	ok, err = li.parachainConnection.GetAPI().RPC.State.GetStorageLatest(paraIncentivizedNonceKey, &paraIncentivizedNonce)
+	ok, err = li.parachainConnection.GetAPI().RPC.State.GetStorage(paraIncentivizedNonceKey, &paraIncentivizedNonce, latestParaHash)
 	if err != nil {
 		li.log.Error(err)
 		return err
@@ -94,7 +94,7 @@ func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock ui
 		return nil
 	}
 
-	err = li.searchForLostCommitments(latestBlock, ethBasicNonce, ethIncentivizedNonce)
+	err = li.searchForLostCommitments(latestParaBlock, ethBasicNonce, ethIncentivizedNonce)
 	if err != nil {
 		return err
 	}
@@ -104,16 +104,16 @@ func (li *Listener) catchupMissedCommitments(ctx context.Context, latestBlock ui
 	return nil
 }
 
-func (li *Listener) searchForLostCommitments(lastBlockNumber uint64, basicNonceToFind uint64, incentivizedNonceToFind uint64) error {
+func (li *BeefyListener) searchForLostCommitments(lastParaBlockNumber uint64, basicNonceToFind uint64, incentivizedNonceToFind uint64) error {
 	li.log.WithFields(logrus.Fields{
 		"basicNonce":        basicNonceToFind,
 		"incentivizedNonce": incentivizedNonceToFind,
-		"latestblockNumber": lastBlockNumber,
+		"latestblockNumber": lastParaBlockNumber,
 	}).Debug("Searching backwards from latest block on parachain to find block with nonce")
 	basicId := substrate.ChannelID{IsBasic: true}
 	incentivizedId := substrate.ChannelID{IsIncentivized: true}
 
-	currentBlockNumber := lastBlockNumber + 1
+	currentBlockNumber := lastParaBlockNumber + 1
 	basicNonceFound := false
 	incentivizedNonceFound := false
 	var digestItems []*chainTypes.AuxiliaryDigestItem
@@ -137,33 +137,35 @@ func (li *Listener) searchForLostCommitments(lastBlockNumber uint64, basicNonceT
 			return err
 		}
 
-		digestItem, err := getAuxiliaryDigestItem(header.Digest)
+		digestItems, err := li.getAuxiliaryDigestItems(header.Digest)
 		if err != nil {
 			return err
 		}
 
-		if digestItem != nil && digestItem.IsCommitment {
-			channelID := digestItem.AsCommitment.ChannelID
-			if channelID == basicId && !basicNonceFound {
-				isRelayed, err := li.checkBasicMessageNonces(digestItem, basicNonceToFind)
-				if err != nil {
-					return err
+		for _, digestItem := range digestItems {
+			if digestItem.IsCommitment {
+				channelID := digestItem.AsCommitment.ChannelID
+				if channelID == basicId && !basicNonceFound {
+					isRelayed, err := li.checkBasicMessageNonces(&digestItem, basicNonceToFind)
+					if err != nil {
+						return err
+					}
+					if isRelayed {
+						basicNonceFound = true
+					} else {
+						digestItems = append(digestItems, digestItem)
+					}
 				}
-				if isRelayed {
-					basicNonceFound = true
-				} else {
-					digestItems = append(digestItems, digestItem)
-				}
-			}
-			if channelID == incentivizedId && !incentivizedNonceFound {
-				isRelayed, err := li.checkIncentivizedMessageNonces(digestItem, incentivizedNonceToFind)
-				if err != nil {
-					return err
-				}
-				if isRelayed {
-					incentivizedNonceFound = true
-				} else {
-					digestItems = append(digestItems, digestItem)
+				if channelID == incentivizedId && !incentivizedNonceFound {
+					isRelayed, err := li.checkIncentivizedMessageNonces(&digestItem, incentivizedNonceToFind)
+					if err != nil {
+						return err
+					}
+					if isRelayed {
+						incentivizedNonceFound = true
+					} else {
+						digestItems = append(digestItems, digestItem)
+					}
 				}
 			}
 		}
@@ -185,7 +187,7 @@ func (li *Listener) searchForLostCommitments(lastBlockNumber uint64, basicNonceT
 	return nil
 }
 
-func (li *Listener) checkBasicMessageNonces(
+func (li *BeefyListener) checkBasicMessageNonces(
 	digestItem *chainTypes.AuxiliaryDigestItem,
 	nonceToFind uint64,
 ) (bool, error) {
@@ -202,7 +204,7 @@ func (li *Listener) checkBasicMessageNonces(
 	return false, nil
 }
 
-func (li *Listener) checkIncentivizedMessageNonces(
+func (li *BeefyListener) checkIncentivizedMessageNonces(
 	digestItem *chainTypes.AuxiliaryDigestItem,
 	nonceToFind uint64,
 ) (bool, error) {
@@ -219,7 +221,7 @@ func (li *Listener) checkIncentivizedMessageNonces(
 	return false, nil
 }
 
-func (li *Listener) getBasicMessages(commitment types.H256) ([]chainTypes.BasicOutboundChannelMessage, error) {
+func (li *BeefyListener) getBasicMessages(commitment types.H256) ([]chainTypes.BasicOutboundChannelMessage, error) {
 	storageKey, err := parachain.MakeStorageKey(substrate.ChannelID{IsBasic: true}, commitment)
 	if err != nil {
 		return nil, err
@@ -251,7 +253,7 @@ func (li *Listener) getBasicMessages(commitment types.H256) ([]chainTypes.BasicO
 	return messages, nil
 }
 
-func (li *Listener) getIncentivizedMessages(commitment types.H256) ([]chainTypes.IncentivizedOutboundChannelMessage, error) {
+func (li *BeefyListener) getIncentivizedMessages(commitment types.H256) ([]chainTypes.IncentivizedOutboundChannelMessage, error) {
 	storageKey, err := parachain.MakeStorageKey(substrate.ChannelID{IsIncentivized: true}, commitment)
 	if err != nil {
 		return nil, err
@@ -281,4 +283,24 @@ func (li *Listener) getIncentivizedMessages(commitment types.H256) ([]chainTypes
 	}
 
 	return messages, nil
+}
+
+// Fetch the latest block of our parachain that has been finalized on the relay chain
+func (li *BeefyListener) fetchLatestBlockAndHash() (uint64, types.Hash, error) {
+	blockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHashLatest()
+	if err != nil {
+		li.log.WithError(err).Error("Failed to get latest relay chain block hash")
+		return 0, types.Hash{}, err
+	}
+	li.log.WithField("blockHash", blockHash.Hex()).Info("Got latest relaychain blockhash")
+
+	_, ourParaHead := li.relaychainConn.GetAllParaheadsWithOwn(blockHash, OUR_PARACHAIN_ID)
+	latestParaBlockNumber := uint64(ourParaHead.Number)
+	ourParaHeadHash, err := li.parachainConnection.Api().RPC.Chain.GetBlockHash(latestParaBlockNumber)
+	if err != nil {
+		li.log.WithError(err).Error("Failed to get parachain block hash")
+		return 0, types.Hash{}, err
+	}
+
+	return uint64(latestParaBlockNumber), ourParaHeadHash, nil
 }
