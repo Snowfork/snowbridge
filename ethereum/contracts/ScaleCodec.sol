@@ -11,11 +11,6 @@ library ScaleCodec {
         return number;
     }
 
-    function encodeUintCompact(uint16 number) public pure returns (bytes2) {
-        // TODO - remove hardcoded implementation
-        return bytes2(uint16(0xc101));
-    }
-
     // Decodes a SCALE encoded compact unsigned integer
     function decodeUintCompact(bytes memory data)
         public
