@@ -41,6 +41,11 @@ type BeefyListener struct {
 	log                 *logrus.Entry
 }
 
+type NewMMRRootEvent struct {
+	mmrRoot     types.H256
+	blockNumber uint64
+}
+
 func NewBeefyListener(
 	ethereumConfig *ethereum.Config,
 	ethereumConn *ethereum.Connection,
