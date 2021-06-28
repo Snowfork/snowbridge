@@ -127,6 +127,9 @@ func (wr *BeefyEthereumWriter) GetFailingMessage(client ethclient.Client, hash c
 		"Data":     hex.EncodeToString(tx.Data()),
 	}).Info("Call info")
 
+	// The logger does a test call to the actual contract to check for any revert message and log it, as well
+	// as logging the call info. This is because the golang client can sometimes supress the log message and so
+	// it can be helpful to use the call info to do the same call in Truffle/Web3js to get better logs.
 	res, err := client.CallContract(context.Background(), msg, nil)
 	if err != nil {
 		return "", err
