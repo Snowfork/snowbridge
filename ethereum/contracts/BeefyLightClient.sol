@@ -561,6 +561,9 @@ contract BeefyLightClient {
             )[0];
     }
 
+    bytes2 public constant MMR_LEAF_LENGTH_SCALE_ENCODED =
+        bytes2(uint16(0xc101));
+
     function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
         public
         pure
@@ -575,10 +578,7 @@ contract BeefyLightClient {
             leaf.nextAuthoritySetRoot
         );
 
-        uint16 length = uint16(scaleEncodedMMRLeaf.length);
-        bytes2 lengthEncoded = ScaleCodec.encodeUintCompact(length);
-
-        return bytes.concat(lengthEncoded, scaleEncodedMMRLeaf);
+        return bytes.concat(MMR_LEAF_LENGTH_SCALE_ENCODED, scaleEncodedMMRLeaf);
     }
 
     function hashMMRLeaf(bytes memory leaf) public pure returns (bytes32) {
