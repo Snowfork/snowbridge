@@ -19,6 +19,7 @@ start_ganache()
         --deterministic \
         --db $configdir/ganachedb \
         --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
+        --gasLimit=8000000 \
         >ganache.log 2>&1 &
 
     scripts/wait-for-it.sh -t 32 localhost:8545
@@ -38,6 +39,7 @@ restart_ganache()
         --deterministic \
         --db $configdir/ganachedb \
         --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
+        --gasLimit=8000000 \
         >ganache.log 2>&1 &
 
     scripts/wait-for-it.sh -t 32 localhost:8545

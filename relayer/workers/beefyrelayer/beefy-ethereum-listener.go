@@ -60,7 +60,7 @@ func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group, 
 	if err != nil {
 		return err
 	}
-	li.blockWaitPeriod = blockWaitPeriod.Uint64()
+	li.blockWaitPeriod = blockWaitPeriod
 
 	// If starting block < latest block, sync the Relayer to the latest block
 	blockNumber, err := li.ethereumConn.GetClient().BlockNumber(ctx)

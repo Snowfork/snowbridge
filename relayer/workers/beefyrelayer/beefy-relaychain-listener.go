@@ -83,7 +83,9 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				continue
 			}
 
-			beefyAuthorities, err := li.getBeefyAuthorities(uint64(signedCommitment.Commitment.BlockNumber))
+			blockNumber := uint64(signedCommitment.Commitment.BlockNumber)
+
+			beefyAuthorities, err := li.getBeefyAuthorities(blockNumber)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to get Beefy authorities from on-chain storage")
 				return err
@@ -95,10 +97,24 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				continue
 			}
 
+			blockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(blockNumber))
+			if err != nil {
+				li.log.WithError(err).Error("Failed to get block hash")
+			}
+			li.log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
+
+			latestMMRProof := li.relaychainConn.GetMMRLeafForBlock(blockNumber-1, blockHash)
+			serializedProof, err := types.EncodeToBytes(latestMMRProof)
+			if err != nil {
+				li.log.WithError(err).Error("Failed to serialize MMR Proof")
+				return err
+			}
+
 			info := store.BeefyRelayInfo{
-				ValidatorAddresses: beefyAuthoritiesBytes,
-				SignedCommitment:   signedCommitmentBytes,
-				Status:             store.CommitmentWitnessed,
+				ValidatorAddresses:       beefyAuthoritiesBytes,
+				SignedCommitment:         signedCommitmentBytes,
+				Status:                   store.CommitmentWitnessed,
+				SerializedLatestMMRProof: serializedProof,
 			}
 			li.beefyMessages <- info
 		}
