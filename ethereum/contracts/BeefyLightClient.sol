@@ -263,11 +263,14 @@ contract BeefyLightClient {
             "Error: Block wait period not over"
         );
 
+        uint256 numberOfValidators = validatorRegistry.numOfValidators();
+
         return
             Bitfield.randomNBitsWithPriorCheck(
                 getSeed(data),
                 data.validatorClaimsBitfield,
-                requiredNumberOfSignatures()
+                requiredNumberOfSignatures(numberOfValidators),
+                numberOfValidators
             );
     }
 
@@ -411,6 +414,16 @@ contract BeefyLightClient {
                 1) / THRESHOLD_DENOMINATOR;
     }
 
+    function requiredNumberOfSignatures(uint256 numValidators)
+        public
+        pure
+        returns (uint256)
+    {
+        return
+            (numValidators * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) /
+            THRESHOLD_DENOMINATOR;
+    }
+
     function verifyCommitment(
         uint256 id,
         Commitment calldata commitment,
@@ -424,7 +437,10 @@ contract BeefyLightClient {
             "Error: Sender address does not match original validation data"
         );
 
-        uint256 requiredNumOfSignatures = requiredNumberOfSignatures();
+        uint256 numberOfValidators = validatorRegistry.numOfValidators();
+        uint256 requiredNumOfSignatures = requiredNumberOfSignatures(
+            numberOfValidators
+        );
 
         /**
          * @dev verify that block wait period has passed
@@ -437,7 +453,8 @@ contract BeefyLightClient {
         uint256[] memory randomBitfield = Bitfield.randomNBitsWithPriorCheck(
             getSeed(data),
             data.validatorClaimsBitfield,
-            requiredNumOfSignatures
+            requiredNumOfSignatures,
+            numberOfValidators
         );
 
         verifyValidatorProofLengths(requiredNumOfSignatures, proof);

@@ -35,7 +35,8 @@ library Bitfield {
     function randomNBitsWithPriorCheck(
         uint256 seed,
         uint256[] memory prior,
-        uint256 n
+        uint256 n,
+        uint256 length
     ) public pure returns (uint256[] memory bitfield) {
         require(
             n <= countSetBits(prior),
@@ -44,7 +45,6 @@ library Bitfield {
 
         bitfield = new uint256[](prior.length);
         uint256 found = 0;
-        uint256 length = prior.length * 256;
 
         for (uint256 i = 0; found < n; i++) {
             bytes32 randomness = keccak256(abi.encode(seed + i));
