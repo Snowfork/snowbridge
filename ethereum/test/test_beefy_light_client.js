@@ -1,7 +1,7 @@
 const BigNumber = web3.BigNumber;
 const {
   deployBeefyLightClient,
-  createMerkleTree, mine,
+  createMerkleTree, mine, catchRevert
 } = require("./helpers");
 const fixture = require('./fixtures/beefy-fixture-data.json');
 
@@ -48,6 +48,8 @@ describe("Beefy Light Client", function () {
     ).should.be.fulfilled
 
     const lastId = (await this.beefyLightClient.currentId()).sub(new web3.utils.BN(1));
+
+    await catchRevert(this.beefyLightClient.createRandomBitfield(lastId), 'Error: Block wait period not over');
 
     await mine(45);
 
