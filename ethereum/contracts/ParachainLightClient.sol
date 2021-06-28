@@ -49,6 +49,7 @@ library ParachainLightClient {
         // )));
         // 3. Compute `parachainHeadsRoot` by verifying the merkle proof using `ownParachainHead` and
         // `_parachainHeadsProof`
+        // Must also verify the parachain id to ensure msg comes from our parachain
         // TODO
         // 4. Compute the `beefyMMRLeaf` using `parachainHeadsRoot` and `_beefyMMRLeafPartial`
         // TODO
