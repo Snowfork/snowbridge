@@ -18,7 +18,9 @@ describe("Beefy Light Client", function () {
     this.timeout(10 * 1000)
 
     this.validatorsMerkleTree = createMerkleTree(fixture.validatorPublicKeys);
-    this.beefyLightClient = await deployBeefyLightClient(this.validatorsMerkleTree.getHexRoot(),
+    const root = this.validatorsMerkleTree.getHexRoot()
+
+    this.beefyLightClient = await deployBeefyLightClient(root,
       fixture.validatorPublicKeys.length, fixture.startingValidatorSetID);
   });
 
@@ -38,14 +40,16 @@ describe("Beefy Light Client", function () {
 
     const commitmentHash = await this.beefyLightClient.createCommitmentHash(fixture.commitment);
 
-    const tx = await this.beefyLightClient.newSignatureCommitment(
+    const tx = this.beefyLightClient.newSignatureCommitment(
       commitmentHash,
       initialBitfield,
       fixture.signatures[0],
       0,
       fixture.validatorPublicKeys[0],
       fixture.validatorPublicKeyProofs[0]
-    ).should.be.fulfilled
+    )
+
+    await tx.should.be.fulfilled
 
     const lastId = (await this.beefyLightClient.currentId()).sub(new web3.utils.BN(1));
 

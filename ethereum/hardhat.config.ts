@@ -1,6 +1,5 @@
 import { config as dotenv } from "dotenv";
 import { resolve } from "path";
-import "hardhat-gas-reporter"
 
 dotenv({ path: resolve(__dirname, ".env") });
 

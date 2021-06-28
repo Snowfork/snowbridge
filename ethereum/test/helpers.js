@@ -10,12 +10,7 @@ const MMRVerification = artifacts.require("MMRVerification");
 const Blake2b = artifacts.require("Blake2b");
 const BeefyLightClient = artifacts.require("BeefyLightClient");
 
-let lazyInitComplete = false;
-let validatorRegistry;
-const lazyInit = async _ => {
-  if (lazyInitComplete) {
-    return
-  }
+const initValidatorRegistry = async (validatorRoot, numOfValidators, validatorSetID) => {
   const merkleProof = await MerkleProof.new();
   ValidatorRegistry.link(merkleProof);
 
@@ -25,13 +20,12 @@ const lazyInit = async _ => {
   BeefyLightClient.link(scaleCodec);
 
   validatorRegistry = await ValidatorRegistry.new(
-    '0x0',
-    2,
-    0
+    validatorRoot,
+    numOfValidators,
+    validatorSetID
   );
 
-  lazyInitComplete = true;
-
+  return validatorRegistry;
 }
 
 const deployAppWithMockChannels = async (deployer, channels, appContract, ...appContractArgs) => {
@@ -54,12 +48,10 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
 }
 
 const deployBeefyLightClient = async (validatorRoot, numOfValidators, validatorSetID) => {
-  await lazyInit();
+  const validatorRegistry = await initValidatorRegistry(validatorRoot, numOfValidators, validatorSetID);
   const mmrVerification = await MMRVerification.new();
   const blake2b = await Blake2b.new();
-  if (validatorRoot && numOfValidators != undefined) {
-    await validatorRegistry.update(validatorRoot, numOfValidators, validatorSetID)
-  }
+
   const beefyLightClient = await BeefyLightClient.new(
     validatorRegistry.address,
     mmrVerification.address,
@@ -82,7 +74,7 @@ function signatureSubstrateToEthereum(sig) {
 
 function createMerkleTree(leavesHex) {
   const leavesHashed = leavesHex.map(leaf => keccakFromHexString(leaf));
-  const merkleTree = new MerkleTree(leavesHashed, keccak, { sort: false });
+  const merkleTree = new MerkleTree(leavesHashed, keccak, { sort: true });
 
   return merkleTree;
 }
@@ -114,7 +106,7 @@ const hexPrefix = /^(0x)/i
 const mergeKeccak256 = (left, right) =>
   '0x' + keccakFromHexString('0x' + left.replace(hexPrefix, "") + right.replace(hexPrefix, ''), 256).toString('hex')
 
-const PREFIX = "Returned error: VM Exception while processing transaction: ";
+const PREFIX = "VM Exception while processing transaction: ";
 
 async function tryCatch(promise, type, message) {
   try {
