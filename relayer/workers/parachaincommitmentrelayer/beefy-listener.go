@@ -3,11 +3,7 @@ package parachaincommitmentrelayer
 import (
 	"context"
 	"fmt"
-	"log"
-	"math/big"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -43,11 +39,6 @@ type BeefyListener struct {
 	parachainConnection *parachain.Connection
 	messages            chan<- MessagePackage
 	log                 *logrus.Entry
-}
-
-type NewMMRRootEvent struct {
-	mmrRoot     types.H256
-	blockNumber uint64
 }
 
 func NewBeefyListener(
@@ -125,17 +116,7 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, events []*beefylightclient.ContractNewMMRRoot) error {
 	for _, event := range events {
 
-		contractAbi, err := abi.JSON(strings.NewReader(string(beefylightclient.ContractABI)))
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		eventUnpacked, err := contractAbi.Unpack("FinalVerificationSuccessful", event.Raw.Data)
-		if err != nil {
-			return err
-		}
-
-		relayChainBlockNumber := (eventUnpacked[1].(*big.Int)).Int64()
+		relayChainBlockNumber := event.BlockNumber
 
 		li.log.WithFields(logrus.Fields{
 			"relayChainBlockNumber": relayChainBlockNumber,
@@ -163,6 +144,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 		messagePackets, err := li.extractCommitments(ourParaHead, mmrProof, ourParaHeadProof)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to extract commitment and messages")
+			return err
 		}
 		if len(messagePackets) == 0 {
 			li.log.Info("Parachain header has no commitment with messages, skipping...")
