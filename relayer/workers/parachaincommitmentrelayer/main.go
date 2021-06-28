@@ -64,7 +64,8 @@ func NewWorker(parachainConfig *parachain.Config,
 	}
 
 	beefyRelaychainListener := NewBeefyListener(
-		relaychainConfig,
+		ethereumConfig,
+		ethereumConn,
 		relaychainConn,
 		parachainConn,
 		messagePackages,

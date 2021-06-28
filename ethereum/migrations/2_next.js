@@ -74,7 +74,7 @@ module.exports = function (deployer, network, accounts) {
     // TODO: Hardcoded for testing
     const root = "0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402";
     const numValidators = 2;
-    const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators);
+    const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators, 0);
     const mmrVerification = await deployer.deploy(MMRVerification);
     const blake2b = await deployer.deploy(Blake2b);
 
@@ -82,8 +82,11 @@ module.exports = function (deployer, network, accounts) {
       contracts.beefylightclient.contract,
       valRegistry.address,
       mmrVerification.address,
-      blake2b.address
+      blake2b.address,
+      0
     );
+
+    await valRegistry.transferOwnership(contracts.beefylightclient.instance.address)
 
     channels.basic.inbound.instance = await deployer.deploy(
       channels.basic.inbound.contract,
