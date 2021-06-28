@@ -73,7 +73,7 @@ func (co *Connection) Close() {
 func (co *Connection) GetMMRLeafForBlock(
 	blockNumber uint64,
 	blockHash types.Hash,
-) types.GenerateMMRProofResponse {
+) (types.GenerateMMRProofResponse, error) {
 	co.log.WithFields(logrus.Fields{
 		"blockNumber": blockNumber,
 		"blockHash":   blockHash.Hex(),
@@ -81,6 +81,7 @@ func (co *Connection) GetMMRLeafForBlock(
 	proofResponse, err := co.GetAPI().RPC.MMR.GenerateProof(blockNumber, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to generate mmr proof")
+		return types.GenerateMMRProofResponse{}, err
 	}
 
 	var proofItemsHex = []string{}
@@ -100,14 +101,15 @@ func (co *Connection) GetMMRLeafForBlock(
 		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
 		"Proof.Items":                     proofItemsHex,
 	}).Info("Generated MMR Proof")
-	return proofResponse
+	return proofResponse, nil
 }
 
-func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainId uint32) ([]types.Header, types.Header) {
+func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainId uint32) ([]types.Header, types.Header, error) {
 	none := types.NewOptionU32Empty()
 	encoded, err := types.EncodeToBytes(none)
 	if err != nil {
 		co.log.WithError(err).Error("Error")
+		return nil, types.Header{}, err
 	}
 
 	baseParaHeadsStorageKey, err := types.CreateStorageKey(
@@ -116,6 +118,7 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 		"Heads", encoded, nil)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to create parachain header storage key")
+		return nil, types.Header{}, err
 	}
 
 	//TODO fix this manual slice.
@@ -129,11 +132,13 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 	keysResponse, err := co.GetAPI().RPC.State.GetKeys(actualBaseParaHeadsStorageKey, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to get all parachain keys")
+		return nil, types.Header{}, err
 	}
 
 	headersResponse, err := co.GetAPI().RPC.State.QueryStorage(keysResponse, blockHash, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to get all parachain headers")
+		return nil, types.Header{}, err
 	}
 
 	co.log.Info("Got all parachain headers")
@@ -148,17 +153,20 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 			var parachainID types.U32
 			if err := types.DecodeFromBytes(key, &parachainID); err != nil {
 				co.log.WithError(err).Error("Failed to decode parachain ID")
+				return nil, types.Header{}, err
 			}
 
 			co.log.WithField("parachainId", parachainID).Info("Decoding header for parachain")
 			var encodableOpaqueHeader types.Bytes
 			if err := types.DecodeFromBytes(change.StorageData, &encodableOpaqueHeader); err != nil {
 				co.log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
+				return nil, types.Header{}, err
 			}
 
 			var header types.Header
 			if err := types.DecodeFromBytes(encodableOpaqueHeader, &header); err != nil {
 				co.log.WithError(err).Error("Failed to decode Header")
+				return nil, types.Header{}, err
 			}
 			co.log.WithFields(logrus.Fields{
 				"headerBytes":           fmt.Sprintf("%#x", encodableOpaqueHeader),
@@ -176,5 +184,5 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 			}
 		}
 	}
-	return headers, ownParachainHeader
+	return headers, ownParachainHeader, nil
 }

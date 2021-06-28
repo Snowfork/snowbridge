@@ -1,0 +1,3 @@
+catchup plan:
+ - have clean DRY code across the listener
+ - deal with errors on https://github.com/Snowfork/polkadot-ethereum/pull/440#discussion_r659157427
