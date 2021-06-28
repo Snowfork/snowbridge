@@ -413,39 +413,44 @@ func (li *BeefyListener) getIncentivizedMessages(digestItem substrate.AuxiliaryD
 	return messages, data, nil
 }
 
-// Fetch the latest block of our parachain that has been finalized on the relay chain
-func (li *BeefyListener) fetchLatestVerifiedBlocks(ctx context.Context) (uint64, uint64, types.Hash, error) {
-	verifiedRelayBlockNumber, err := li.beefyLightClient.LatestBeefyBlock(&bind.CallOpts{
+// Fetch the latest verified beefy block number and hash from Ethereum
+func (li *BeefyListener) fetchLatestVerifiedBeefyBlock(ctx context.Context) (uint64, types.Hash, error) {
+	number, err := li.beefyLightClient.LatestBeefyBlock(&bind.CallOpts{
 		Pending: false,
 		Context: ctx,
 	})
 	if err != nil {
-		li.log.WithError(err).Error("Failed to get latest verified relay chain block number from ethereum")
-		return 0, 0, types.Hash{}, err
+		li.log.WithError(err).Error("Failed to get latest verified beefy block number from ethereum")
+		return 0, types.Hash{}, err
 	}
 
-	verifiedRelayBlockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(verifiedRelayBlockNumber)
+	hash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(number)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to get latest relay chain block hash from relay chain")
-		return 0, 0, types.Hash{}, err
+		return 0, types.Hash{}, err
 	}
-	li.log.WithField("blockHash", verifiedRelayBlockHash.Hex()).
+	li.log.WithField("blockHash", hash.Hex()).
 		Info("Got latest relaychain blockhash that has been verified")
 
-	_, ourParaHead, err := li.relaychainConn.GetAllParaheadsWithOwn(verifiedRelayBlockHash, OUR_PARACHAIN_ID)
+	return number, hash, nil
+}
+
+// Fetch the latest block of our parachain that has been finalized at a beefy block hash
+func (li *BeefyListener) fetchLatestVerifiedParaBlock(beefyBlockhash types.Hash) (uint64, types.Hash, error) {
+	_, ourParaHead, err := li.relaychainConn.GetAllParaheadsWithOwn(beefyBlockhash, OUR_PARACHAIN_ID)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to get parachain heads from relay chain")
-		return 0, 0, types.Hash{}, err
+		return 0, types.Hash{}, err
 	}
 
 	verifiedParaBlockNumber := uint64(ourParaHead.Number)
 	ourParaHeadHash, err := li.parachainConnection.Api().RPC.Chain.GetBlockHash(verifiedParaBlockNumber)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to get parachain block hash")
-		return 0, 0, types.Hash{}, err
+		return 0, types.Hash{}, err
 	}
 
-	return verifiedRelayBlockNumber, verifiedParaBlockNumber, ourParaHeadHash, nil
+	return verifiedParaBlockNumber, ourParaHeadHash, nil
 }
 
 func (li *BeefyListener) getDataForDigestItem(digestItem *chainTypes.AuxiliaryDigestItem) (types.StorageDataRaw, error) {

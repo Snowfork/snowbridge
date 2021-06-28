@@ -57,14 +57,21 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	eg.Go(func() error {
 
-		verifiedRelaychainBlock, verifiedParaBlockNumber, verifiedParaBlockHash, err := li.fetchLatestVerifiedBlocks(ctx)
+		verifiedBeefyBlockNumber, verifiedBeefyBlockHash, err := li.fetchLatestVerifiedBeefyBlock(ctx)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to get latest relay chain block number and hash")
+			return err
+		}
+
+		verifiedParaBlockNumber, verifiedParaBlockHash, err := li.fetchLatestVerifiedParaBlock(verifiedBeefyBlockHash)
 		if err != nil {
 			return err
 		}
 
-		messagePackets, err := li.buildMissedMessagePackets(ctx, verifiedRelaychainBlock, verifiedParaBlockNumber, verifiedParaBlockHash)
+		messagePackets, err := li.buildMissedMessagePackets(ctx, verifiedBeefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
 		if err != nil {
-			return nil
+			li.log.WithError(err).Error("Failed to build missed message packets")
+			return err
 		}
 
 		li.EmitMessagePackages(messagePackets)
@@ -117,30 +124,31 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, events []*beefylightclient.ContractNewMMRRoot) error {
 	for _, event := range events {
 
-		relayChainBlockNumber := event.BlockNumber
+		beefyBlockNumber := event.BlockNumber
 
 		li.log.WithFields(logrus.Fields{
-			"relayChainBlockNumber": relayChainBlockNumber,
-			"ethereumBlockNumber":   event.Raw.BlockNumber,
-			"ethereumTxHash":        event.Raw.TxHash.Hex(),
+			"beefyBlockNumber":    beefyBlockNumber,
+			"ethereumBlockNumber": event.Raw.BlockNumber,
+			"ethereumTxHash":      event.Raw.TxHash.Hex(),
 		}).Info("Witnessed a new MMRRoot event")
 
-		li.log.WithField("relayChainBlockNumber", relayChainBlockNumber).Info("Getting hash for relay chain block")
-		relayBlockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(relayChainBlockNumber))
+		li.log.WithField("beefyBlockNumber", beefyBlockNumber).Info("Getting hash for relay chain block")
+		relayBlockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get block hash")
 			return err
 		}
 		li.log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
 
-		verifiedRelaychainBlock, verifiedParaBlockNumber, verifiedParaBlockHash, err := li.fetchLatestVerifiedBlocks(ctx)
+		verifiedParaBlockNumber, verifiedParaBlockHash, err := li.fetchLatestVerifiedParaBlock(relayBlockHash)
 		if err != nil {
-			return nil
+			return err
 		}
 
-		messagePackets, err := li.buildMissedMessagePackets(ctx, verifiedRelaychainBlock, verifiedParaBlockNumber, verifiedParaBlockHash)
+		messagePackets, err := li.buildMissedMessagePackets(ctx, beefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
 		if err != nil {
-			return nil
+			li.log.WithError(err).Error("Failed to build missed message packets")
+			return err
 		}
 
 		li.EmitMessagePackages(messagePackets)
