@@ -121,7 +121,7 @@ func (li *BeefyListener) buildMissedMessagePackets(
 		"blocks": blocksWithProofs,
 	}).Info("Packaging these blocks and proofs")
 
-	messagePackets, err := CreateMessagePackets(blocksWithProofs)
+	messagePackets, err := CreateMessagePackages(blocksWithProofs)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to create message packets")
 		return nil, err

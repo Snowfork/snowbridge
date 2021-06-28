@@ -31,7 +31,7 @@ type MessagePackage struct {
 	mmrProof       types.GenerateMMRProofResponse
 }
 
-func CreateMessagePackets(paraBlocks []ParaBlockWithProofs) ([]MessagePackage, error) {
+func CreateMessagePackages(paraBlocks []ParaBlockWithProofs) ([]MessagePackage, error) {
 	var messagePackages []MessagePackage
 
 	for _, block := range paraBlocks {
