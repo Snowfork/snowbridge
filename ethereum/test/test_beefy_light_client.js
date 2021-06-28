@@ -1,7 +1,7 @@
 const BigNumber = web3.BigNumber;
 const {
   deployBeefyLightClient,
-  createMerkleTree, mine, catchRevert
+  mine, catchRevert
 } = require("./helpers");
 const fixture = require('./fixtures/beefy-fixture-data.json');
 
@@ -17,11 +17,7 @@ describe("Beefy Light Client", function () {
   before(async function () {
     this.timeout(10 * 1000)
 
-    this.validatorsMerkleTree = createMerkleTree(fixture.validatorPublicKeys);
-    const root = this.validatorsMerkleTree.getHexRoot()
-
-    this.beefyLightClient = await deployBeefyLightClient(root,
-      fixture.validatorPublicKeys.length, fixture.startingValidatorSetID);
+    this.beefyLightClient = await deployBeefyLightClient();
   });
 
   it("encodes beefy mmr leaves correctly", async function () {

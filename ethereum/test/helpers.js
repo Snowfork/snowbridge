@@ -10,6 +10,8 @@ const MMRVerification = artifacts.require("MMRVerification");
 const Blake2b = artifacts.require("Blake2b");
 const BeefyLightClient = artifacts.require("BeefyLightClient");
 
+const fixture = require('./fixtures/beefy-fixture-data.json');
+
 let lazyLinked = false;
 const lazyLinkLibraries = async _ => {
   if (lazyLinked) {
@@ -55,8 +57,12 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployBeefyLightClient = async (validatorRoot, numOfValidators, validatorSetID) => {
-  const validatorRegistry = await initValidatorRegistry(validatorRoot, numOfValidators, validatorSetID);
+const deployBeefyLightClient = async _ => {
+  this.validatorsMerkleTree = createMerkleTree(fixture.validatorPublicKeys);
+  const root = this.validatorsMerkleTree.getHexRoot()
+
+  const validatorRegistry = await initValidatorRegistry(root,
+    fixture.validatorPublicKeys.length, fixture.startingValidatorSetID);
   const mmrVerification = await MMRVerification.new();
   const blake2b = await Blake2b.new();
 
