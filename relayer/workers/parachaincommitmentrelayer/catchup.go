@@ -15,7 +15,7 @@ import (
 // Catches up by searching for and relaying all missed commitments before the given para block
 // This method implicitly assumes that relaychainBlock or some earlier relay chain block has
 // already finalized the given para block
-func (li *BeefyListener) buildMissedMessagePackets(
+func (li *BeefyListener) buildMissedMessagePackages(
 	ctx context.Context, relaychainBlock uint64, paraBlock uint64, paraHash types.Hash) (
 	[]MessagePackage, error) {
 	basicContract, err := basic.NewBasicInboundChannel(common.HexToAddress(
@@ -121,27 +121,27 @@ func (li *BeefyListener) buildMissedMessagePackets(
 		"blocks": blocksWithProofs,
 	}).Info("Packaging these blocks and proofs")
 
-	messagePackets, err := CreateMessagePackages(blocksWithProofs)
+	messagePackages, err := CreateMessagePackages(blocksWithProofs)
 	if err != nil {
-		li.log.WithError(err).Error("Failed to create message packets")
+		li.log.WithError(err).Error("Failed to create message packages")
 		return nil, err
 	}
 
-	li.log.Info("Created message packets")
+	li.log.Info("Created message packages")
 
-	for _, messagePacket := range messagePackets {
+	for _, messagePackage := range messagePackages {
 		li.log.WithFields(logrus.Fields{
-			"channelID":        messagePacket.channelID,
-			"commitmentHash":   messagePacket.commitmentHash,
-			"commitmentData":   messagePacket.commitmentData,
-			"ourParaHeadProof": messagePacket.paraHeadProof,
-			"mmrProof":         messagePacket.mmrProof,
-		}).Info("Beefy Listener emitting new message packet")
+			"channelID":        messagePackage.channelID,
+			"commitmentHash":   messagePackage.commitmentHash,
+			"commitmentData":   messagePackage.commitmentData,
+			"ourParaHeadProof": messagePackage.paraHeadProof,
+			"mmrProof":         messagePackage.mmrProof,
+		}).Info("Beefy Listener emitting new message package")
 
-		li.messages <- messagePacket
+		li.messages <- messagePackage
 	}
 
-	return messagePackets, nil
+	return messagePackages, nil
 }
 
 // Takes a slice of parachain blocks and augments them with their respective

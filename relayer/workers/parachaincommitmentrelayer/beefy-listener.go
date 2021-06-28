@@ -69,13 +69,13 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
-		messagePackets, err := li.buildMissedMessagePackets(ctx, verifiedBeefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
+		messagePackages, err := li.buildMissedMessagePackages(ctx, verifiedBeefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to build missed message packets")
+			li.log.WithError(err).Error("Failed to build missed message package")
 			return err
 		}
 
-		li.EmitMessagePackages(messagePackets)
+		li.EmitMessagePackages(messagePackages)
 
 		err = li.subBeefyJustifications(ctx)
 		return err
@@ -154,13 +154,13 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 			return err
 		}
 
-		messagePackets, err := li.buildMissedMessagePackets(ctx, beefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
+		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to build missed message packets")
+			li.log.WithError(err).Error("Failed to build missed message packages")
 			return err
 		}
 
-		li.EmitMessagePackages(messagePackets)
+		li.EmitMessagePackages(messagePackages)
 
 	}
 	return nil
@@ -174,7 +174,7 @@ func (li *BeefyListener) EmitMessagePackages(packages []MessagePackage) {
 			"commitmentData":   messagePackage.commitmentData,
 			"ourParaHeadProof": messagePackage.paraHeadProof,
 			"mmrProof":         messagePackage.mmrProof,
-		}).Info("Beefy Listener emitted new message packet")
+		}).Info("Beefy Listener emitted new message package")
 
 		li.messages <- messagePackage
 	}
