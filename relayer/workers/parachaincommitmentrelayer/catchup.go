@@ -333,11 +333,13 @@ func (li *BeefyListener) searchForLostCommitments(
 			}
 		}
 
-		block := ParaBlockWithDigest{
-			BlockNumber:         currentBlockNumber,
-			DigestItemsWithData: digestItemsWithData,
+		if len(digestItemsWithData) != 0 {
+			block := ParaBlockWithDigest{
+				BlockNumber:         currentBlockNumber,
+				DigestItemsWithData: digestItemsWithData,
+			}
+			blocks = append(blocks, block)
 		}
-		blocks = append(blocks, block)
 	}
 
 	return blocks, nil
