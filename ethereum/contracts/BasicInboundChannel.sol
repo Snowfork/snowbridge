@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ParachainLightClient.sol";
 
 contract BasicInboundChannel {

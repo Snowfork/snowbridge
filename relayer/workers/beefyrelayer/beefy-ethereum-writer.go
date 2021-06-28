@@ -191,7 +191,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		From:     wr.ethereumConn.GetKP().CommonAddress(),
 		Signer:   wr.signerFn,
 		Context:  ctx,
-		GasLimit: 500000,
+		GasLimit: 2000000,
 	}
 
 	validatorProof := beefylightclient.BeefyLightClientValidatorProof{
@@ -225,6 +225,8 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 	}
 	updateCmd := store.NewDatabaseCmd(&info, store.Update, instructions)
 	wr.databaseMessages <- updateCmd
+
+	wr.LogBeefyFixtureDataAll(msg, info)
 
 	return nil
 }
