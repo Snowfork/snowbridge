@@ -38,22 +38,16 @@ yarn install
 Install `polkadot-launch`:
 
 ```bash
-git clone -n https://github.com/paritytech/polkadot-launch.git /tmp/polkadot-launch
-cd /tmp/polkadot-launch
-git checkout 89e970
-yarn install
-yarn build
-yarn global add file:$(pwd)
+yarn global add polkadot-launch@1.6.2
 cd -
 ```
 
 Build polkadot:
 
 ```bash
-git clone -n https://github.com/snowfork/polkadot.git /tmp/polkadot
+git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout enable_beefy_on_rococo
-./scripts/init.sh
+git checkout release-v0.9.4
 cargo build --release
 cd -
 ```
