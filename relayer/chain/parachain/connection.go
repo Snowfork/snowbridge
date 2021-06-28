@@ -135,3 +135,39 @@ func (co *Connection) GetDataForDigestItem(digestItem *AuxiliaryDigestItem) (typ
 
 	return *data, nil
 }
+
+func (co *Connection) GetBasicOutboundMessages(digestItem AuxiliaryDigestItem) (
+	[]BasicOutboundChannelMessage, types.StorageDataRaw, error) {
+	data, err := co.GetDataForDigestItem(&digestItem)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var messages []BasicOutboundChannelMessage
+
+	err = types.DecodeFromBytes(data, &messages)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to decode commitment messages")
+		return nil, nil, err
+	}
+
+	return messages, data, nil
+}
+
+func (co *Connection) GetIncentivizedOutboundMessages(digestItem AuxiliaryDigestItem) (
+	[]IncentivizedOutboundChannelMessage, types.StorageDataRaw, error) {
+	data, err := co.GetDataForDigestItem(&digestItem)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var messages []IncentivizedOutboundChannelMessage
+
+	err = types.DecodeFromBytes(data, &messages)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to decode commitment messages")
+		return nil, nil, err
+	}
+
+	return messages, data, nil
+}

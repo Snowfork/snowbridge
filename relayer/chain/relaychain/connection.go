@@ -186,3 +186,21 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 	}
 	return headers, ownParachainHeader, nil
 }
+
+// Fetch the latest block of a parachain that has been finalized at a relay chain block hash
+func (co *Connection) FetchLatestFinalizedParaBlock(relayBlockhash types.Hash, parachainId uint32) (uint64, types.Hash, error) {
+	_, ownParaHead, err := co.GetAllParaheadsWithOwn(relayBlockhash, parachainId)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to get parachain heads from relay chain")
+		return 0, types.Hash{}, err
+	}
+
+	finalizedParaBlockNumber := uint64(ownParaHead.Number)
+	ownParaHeadHash, err := co.GetAPI().RPC.Chain.GetBlockHash(finalizedParaBlockNumber)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to get parachain block hash")
+		return 0, types.Hash{}, err
+	}
+
+	return finalizedParaBlockNumber, ownParaHeadHash, nil
+}

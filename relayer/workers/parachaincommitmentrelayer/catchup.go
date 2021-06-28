@@ -12,32 +12,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
 )
 
-type ParaBlockWithDigest struct {
-	BlockNumber         uint64
-	DigestItemsWithData []DigestItemWithData
-}
-
-type ParaBlockWithProofs struct {
-	Block            ParaBlockWithDigest
-	MMRProofResponse types.GenerateMMRProofResponse
-	Header           types.Header
-	HeaderProof      string
-}
-
-type DigestItemWithData struct {
-	DigestItem parachain.AuxiliaryDigestItem
-	Data       types.StorageDataRaw
-}
-
-type MessagePackage struct {
-	channelID      parachain.ChannelID
-	commitmentHash types.H256
-	commitmentData types.StorageDataRaw
-	paraHead       types.Header
-	paraHeadProof  string
-	mmrProof       types.GenerateMMRProofResponse
-}
-
 // Catches up by searching for and relaying all missed commitments before the given para block
 // This method implicitly assumes that relaychainBlock or some earlier relay chain block has
 // already finalized the given para block
@@ -147,11 +121,13 @@ func (li *BeefyListener) buildMissedMessagePackets(
 		"blocks": blocksWithProofs,
 	}).Info("Packaging these blocks and proofs")
 
-	messagePackets, err := li.createMessagePackets(blocksWithProofs)
+	messagePackets, err := CreateMessagePackets(blocksWithProofs)
 	if err != nil {
-		li.log.WithError(err).Error("Failed to create message packet")
+		li.log.WithError(err).Error("Failed to create message packets")
 		return nil, err
 	}
+
+	li.log.Info("Created message packets")
 
 	for _, messagePacket := range messagePackets {
 		li.log.WithFields(logrus.Fields{
@@ -226,33 +202,6 @@ func (li *BeefyListener) createParachainHeaderProof(allParaHeads []types.Header,
 	//TODO: implement
 	//TODO: check against expectedRoot
 	return "", nil
-}
-
-func (li *BeefyListener) createMessagePackets(paraBlocks []ParaBlockWithProofs) ([]MessagePackage, error) {
-	var messagePackages []MessagePackage
-
-	for _, block := range paraBlocks {
-		for _, item := range block.Block.DigestItemsWithData {
-			li.log.WithFields(logrus.Fields{
-				"block":          block.Block.BlockNumber,
-				"channelID":      item.DigestItem.AsCommitment.ChannelID,
-				"commitmentHash": item.DigestItem.AsCommitment.Hash.Hex(),
-			}).Debug("Found commitment hash in header digest")
-			commitmentHash := item.DigestItem.AsCommitment.Hash
-			commitmentData := item.Data
-			messagePackage := MessagePackage{
-				item.DigestItem.AsCommitment.ChannelID,
-				commitmentHash,
-				commitmentData,
-				block.Header,
-				block.HeaderProof,
-				block.MMRProofResponse,
-			}
-			messagePackages = append(messagePackages, messagePackage)
-		}
-	}
-
-	return messagePackages, nil
 }
 
 // Searches for all lost commitments on each channel from the given parachain block number backwards
@@ -346,7 +295,7 @@ func (li *BeefyListener) checkBasicMessageNonces(
 	digestItem *parachain.AuxiliaryDigestItem,
 	nonceToFind uint64,
 ) (bool, types.StorageDataRaw, error) {
-	messages, data, err := li.getBasicMessages(*digestItem)
+	messages, data, err := li.parachainConnection.GetBasicOutboundMessages(*digestItem)
 	if err != nil {
 		return false, nil, err
 	}
@@ -363,7 +312,7 @@ func (li *BeefyListener) checkIncentivizedMessageNonces(
 	digestItem *parachain.AuxiliaryDigestItem,
 	nonceToFind uint64,
 ) (bool, types.StorageDataRaw, error) {
-	messages, data, err := li.getIncentivizedMessages(*digestItem)
+	messages, data, err := li.parachainConnection.GetIncentivizedOutboundMessages(*digestItem)
 	if err != nil {
 		return false, nil, err
 	}
@@ -374,42 +323,6 @@ func (li *BeefyListener) checkIncentivizedMessageNonces(
 		}
 	}
 	return false, data, nil
-}
-
-func (li *BeefyListener) getBasicMessages(digestItem parachain.AuxiliaryDigestItem) (
-	[]parachain.BasicOutboundChannelMessage, types.StorageDataRaw, error) {
-	data, err := li.parachainConnection.GetDataForDigestItem(&digestItem)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var messages []parachain.BasicOutboundChannelMessage
-
-	err = types.DecodeFromBytes(data, &messages)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, nil, err
-	}
-
-	return messages, data, nil
-}
-
-func (li *BeefyListener) getIncentivizedMessages(digestItem parachain.AuxiliaryDigestItem) (
-	[]parachain.IncentivizedOutboundChannelMessage, types.StorageDataRaw, error) {
-	data, err := li.parachainConnection.GetDataForDigestItem(&digestItem)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var messages []parachain.IncentivizedOutboundChannelMessage
-
-	err = types.DecodeFromBytes(data, &messages)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, nil, err
-	}
-
-	return messages, data, nil
 }
 
 // Fetch the latest verified beefy block number and hash from Ethereum
@@ -432,22 +345,4 @@ func (li *BeefyListener) fetchLatestVerifiedBeefyBlock(ctx context.Context) (uin
 		Info("Got latest relaychain blockhash that has been verified")
 
 	return number, hash, nil
-}
-
-// Fetch the latest block of our parachain that has been finalized at a beefy block hash
-func (li *BeefyListener) fetchLatestVerifiedParaBlock(beefyBlockhash types.Hash) (uint64, types.Hash, error) {
-	_, ourParaHead, err := li.relaychainConn.GetAllParaheadsWithOwn(beefyBlockhash, OUR_PARACHAIN_ID)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to get parachain heads from relay chain")
-		return 0, types.Hash{}, err
-	}
-
-	verifiedParaBlockNumber := uint64(ourParaHead.Number)
-	ourParaHeadHash, err := li.parachainConnection.Api().RPC.Chain.GetBlockHash(verifiedParaBlockNumber)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to get parachain block hash")
-		return 0, types.Hash{}, err
-	}
-
-	return verifiedParaBlockNumber, ourParaHeadHash, nil
 }

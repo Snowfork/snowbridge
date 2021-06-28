@@ -63,7 +63,8 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
-		verifiedParaBlockNumber, verifiedParaBlockHash, err := li.fetchLatestVerifiedParaBlock(verifiedBeefyBlockHash)
+		verifiedParaBlockNumber, verifiedParaBlockHash, err := li.relaychainConn.FetchLatestFinalizedParaBlock(
+			verifiedBeefyBlockHash, OUR_PARACHAIN_ID)
 		if err != nil {
 			return err
 		}
@@ -140,7 +141,8 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 		}
 		li.log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
 
-		verifiedParaBlockNumber, verifiedParaBlockHash, err := li.fetchLatestVerifiedParaBlock(relayBlockHash)
+		verifiedParaBlockNumber, verifiedParaBlockHash, err := li.relaychainConn.FetchLatestFinalizedParaBlock(
+			relayBlockHash, OUR_PARACHAIN_ID)
 		if err != nil {
 			return err
 		}
