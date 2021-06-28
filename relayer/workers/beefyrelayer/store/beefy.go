@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 	merkletree "github.com/wealdtech/go-merkletree"
 	"golang.org/x/crypto/blake2b"
@@ -27,6 +28,8 @@ type CompleteSignatureCommitmentMessage struct {
 	ValidatorPositions             []*big.Int
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
+	LatestMMRLeaf                  beefylightclient.BeefyLightClientBeefyMMRLeaf
+	MMRProofItems                  [][32]byte
 }
 
 type BeefyJustification struct {
@@ -163,6 +166,25 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),
 	}
 
+	var latestMMRProof types.GenerateMMRProofResponse
+	err := types.DecodeFromBytes(info.SerializedLatestMMRProof, &latestMMRProof)
+	if err != nil {
+		return CompleteSignatureCommitmentMessage{}, err
+	}
+
+	latestMMRLeaf := beefylightclient.BeefyLightClientBeefyMMRLeaf{
+		ParentNumber:         uint32(latestMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           latestMMRProof.Leaf.ParentNumberAndHash.Hash,
+		ParachainHeadsRoot:   latestMMRProof.Leaf.ParachainHeads,
+		NextAuthoritySetId:   uint64(latestMMRProof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(latestMMRProof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: latestMMRProof.Leaf.BeefyNextAuthoritySet.Root,
+	}
+	mmrProofItems := [][32]byte{}
+	for _, mmrProofItem := range latestMMRProof.Proof.Items {
+		mmrProofItems = append(mmrProofItems, mmrProofItem)
+	}
+
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                             validationDataID,
 		Commitment:                     commitment,
@@ -170,6 +192,8 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorPositions:             validatorPositions,
 		ValidatorPublicKeys:            validatorPublicKeys,
 		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
+		LatestMMRLeaf:                  latestMMRLeaf,
+		MMRProofItems:                  mmrProofItems,
 	}
 	return msg, nil
 }

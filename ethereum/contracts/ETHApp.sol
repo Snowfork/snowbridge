@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./RewardSource.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
@@ -11,7 +10,6 @@ import "./OutboundChannel.sol";
 enum ChannelId {Basic, Incentivized}
 
 contract ETHApp is RewardSource, AccessControl {
-    using SafeMath for uint256;
     using ScaleCodec for uint256;
 
     uint256 public balance;
@@ -62,7 +60,7 @@ contract ETHApp is RewardSource, AccessControl {
             "Invalid channel ID"
         );
 
-        balance = balance.add(msg.value);
+        balance = balance + msg.value;
 
         emit Locked(msg.sender, _recipient, msg.value);
 
@@ -88,7 +86,7 @@ contract ETHApp is RewardSource, AccessControl {
             "ETH token balances insufficient to fulfill the unlock request"
         );
 
-        balance = balance.sub(_amount);
+        balance = balance - _amount;
         _recipient.transfer(_amount);
         emit Unlocked(_sender, _recipient, _amount);
     }
@@ -103,7 +101,7 @@ contract ETHApp is RewardSource, AccessControl {
             abi.encodePacked(
                 MINT_CALL,
                 _sender,
-                byte(0x00), // Encode recipient as MultiAddress::Id
+                bytes1(0x00), // Encode recipient as MultiAddress::Id
                 _recipient,
                 _amount.encode256()
             );

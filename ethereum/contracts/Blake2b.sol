@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // from https://github.com/ConsenSys/Project-Alchemy/blob/master/contracts/BLAKE2b/BLAKE2b.sol
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.5;
 
 contract Blake2b {
     uint64[8] public IV = [
