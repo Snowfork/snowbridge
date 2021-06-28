@@ -10,14 +10,22 @@ const MMRVerification = artifacts.require("MMRVerification");
 const Blake2b = artifacts.require("Blake2b");
 const BeefyLightClient = artifacts.require("BeefyLightClient");
 
-const initValidatorRegistry = async (validatorRoot, numOfValidators, validatorSetID) => {
+let lazyLinked = false;
+const lazyLinkLibraries = async _ => {
+  if (lazyLinked) {
+    return;
+  }
   const merkleProof = await MerkleProof.new();
-  ValidatorRegistry.link(merkleProof);
-
+  await ValidatorRegistry.link(merkleProof);
   const bitfield = await Bitfield.new();
   const scaleCodec = await ScaleCodec.new();
-  BeefyLightClient.link(bitfield);
-  BeefyLightClient.link(scaleCodec);
+  await BeefyLightClient.link(bitfield);
+  await BeefyLightClient.link(scaleCodec);
+  lazyLinked = true;
+}
+
+const initValidatorRegistry = async (validatorRoot, numOfValidators, validatorSetID) => {
+  await lazyLinkLibraries()
 
   validatorRegistry = await ValidatorRegistry.new(
     validatorRoot,
