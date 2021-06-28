@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v3"
+	"github.com/snowfork/go-substrate-rpc-client/v3/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v3/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 )
@@ -109,4 +110,28 @@ func (co *Connection) GetLatestBlockNumber() (*types.BlockNumber, error) {
 	}
 
 	return &latestBlock.Block.Header.Number, nil
+}
+
+func (co *Connection) GetDataForDigestItem(digestItem *AuxiliaryDigestItem) (types.StorageDataRaw, error) {
+	storageKey, err := MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := co.GetAPI().RPC.Offchain.LocalStorageGet(offchain.Persistent, storageKey)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to read commitment from offchain storage")
+		return nil, err
+	}
+
+	if data != nil {
+		co.log.WithFields(logrus.Fields{
+			"commitmentSizeBytes": len(*data),
+		}).Debug("Retrieved commitment from offchain storage")
+	} else {
+		co.log.WithError(err).Error("Commitment not found in offchain storage")
+		return nil, err
+	}
+
+	return *data, nil
 }

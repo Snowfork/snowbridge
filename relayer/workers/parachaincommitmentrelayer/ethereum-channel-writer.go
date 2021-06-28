@@ -12,12 +12,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/basic"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v3/types"
-	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type EthereumChannelWriter struct {
@@ -108,7 +107,7 @@ func (wr *EthereumChannelWriter) signerFn(_ common.Address, tx *types.Transactio
 func (wr *EthereumChannelWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
 	msgPackage *MessagePackage,
-	msgs []substrate.BasicOutboundChannelMessage,
+	msgs []parachain.BasicOutboundChannelMessage,
 ) error {
 	var messages []basic.BasicInboundChannelMessage
 	for _, m := range msgs {
@@ -161,7 +160,7 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	options *bind.TransactOpts,
 	msgPackage *MessagePackage,
-	msgs []substrate.IncentivizedOutboundChannelMessage,
+	msgs []parachain.IncentivizedOutboundChannelMessage,
 ) error {
 	var messages []incentivized.IncentivizedInboundChannelMessage
 	for _, m := range msgs {
@@ -218,7 +217,7 @@ func (wr *EthereumChannelWriter) WriteChannel(
 	msg *MessagePackage,
 ) error {
 	if msg.channelID.IsBasic {
-		var outboundMessages []chainTypes.BasicOutboundChannelMessage
+		var outboundMessages []parachain.BasicOutboundChannelMessage
 		err := gsrpcTypes.DecodeFromBytes(msg.commitmentData, &outboundMessages)
 		if err != nil {
 			wr.log.WithError(err).Error("Failed to decode commitment messages")
@@ -228,7 +227,7 @@ func (wr *EthereumChannelWriter) WriteChannel(
 
 	}
 	if msg.channelID.IsIncentivized {
-		var outboundMessages []chainTypes.IncentivizedOutboundChannelMessage
+		var outboundMessages []parachain.IncentivizedOutboundChannelMessage
 		err := gsrpcTypes.DecodeFromBytes(msg.commitmentData, &outboundMessages)
 		if err != nil {
 			wr.log.WithError(err).Error("Failed to decode commitment messages")

@@ -20,10 +20,10 @@ import (
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/basic"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 func fetchMessagesCmd() *cobra.Command {
@@ -207,7 +207,7 @@ func printEthContractEventForSub(mapping map[common.Address]string, event *gethT
 		return err
 	}
 
-	msgInner, ok := message.Args[0].(substrate.Message)
+	msgInner, ok := message.Args[0].(parachain.Message)
 	if !ok {
 		return err
 	}

@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 )
 
 func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, receiptsTrie *etrie.Trie, log *logrus.Entry) (*chain.EthereumOutboundMessage, error) {
@@ -30,15 +30,15 @@ func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, 
 		return nil, err
 	}
 
-	proof := substrate.NewProofData()
+	proof := parachain.NewProofData()
 	err = receiptsTrie.Prove(receiptKey, 0, proof)
 	if err != nil {
 		return nil, err
 	}
 
-	m := substrate.Message{
+	m := parachain.Message{
 		Data: buf.Bytes(),
-		Proof: substrate.Proof{
+		Proof: parachain.Proof{
 			BlockHash: types.NewH256(event.BlockHash.Bytes()),
 			TxIndex:   types.NewU32(uint32(event.TxIndex)),
 			Data:      proof,

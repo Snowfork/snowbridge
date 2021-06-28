@@ -6,13 +6,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v3/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/basic"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
-	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 
 type ParaBlockWithDigest struct {
@@ -28,12 +25,12 @@ type ParaBlockWithProofs struct {
 }
 
 type DigestItemWithData struct {
-	DigestItem chainTypes.AuxiliaryDigestItem
+	DigestItem parachain.AuxiliaryDigestItem
 	Data       types.StorageDataRaw
 }
 
 type MessagePackage struct {
-	channelID      chainTypes.ChannelID
+	channelID      parachain.ChannelID
 	commitmentHash types.H256
 	commitmentData types.StorageDataRaw
 	paraHead       types.Header
@@ -269,8 +266,8 @@ func (li *BeefyListener) searchForLostCommitments(
 		"incentivizedNonce": incentivizedNonceToFind,
 		"latestblockNumber": lastParaBlockNumber,
 	}).Debug("Searching backwards from latest block on parachain to find block with nonce")
-	basicId := substrate.ChannelID{IsBasic: true}
-	incentivizedId := substrate.ChannelID{IsIncentivized: true}
+	basicId := parachain.ChannelID{IsBasic: true}
+	incentivizedId := parachain.ChannelID{IsIncentivized: true}
 
 	currentBlockNumber := lastParaBlockNumber + 1
 	basicNonceFound := false
@@ -296,7 +293,7 @@ func (li *BeefyListener) searchForLostCommitments(
 			return nil, err
 		}
 
-		digestItems, err := li.getAuxiliaryDigestItems(header.Digest)
+		digestItems, err := parachain.ExtractAuxiliaryDigestItems(header.Digest)
 		if err != nil {
 			return nil, err
 		}
@@ -346,7 +343,7 @@ func (li *BeefyListener) searchForLostCommitments(
 }
 
 func (li *BeefyListener) checkBasicMessageNonces(
-	digestItem *chainTypes.AuxiliaryDigestItem,
+	digestItem *parachain.AuxiliaryDigestItem,
 	nonceToFind uint64,
 ) (bool, types.StorageDataRaw, error) {
 	messages, data, err := li.getBasicMessages(*digestItem)
@@ -363,7 +360,7 @@ func (li *BeefyListener) checkBasicMessageNonces(
 }
 
 func (li *BeefyListener) checkIncentivizedMessageNonces(
-	digestItem *chainTypes.AuxiliaryDigestItem,
+	digestItem *parachain.AuxiliaryDigestItem,
 	nonceToFind uint64,
 ) (bool, types.StorageDataRaw, error) {
 	messages, data, err := li.getIncentivizedMessages(*digestItem)
@@ -379,14 +376,14 @@ func (li *BeefyListener) checkIncentivizedMessageNonces(
 	return false, data, nil
 }
 
-func (li *BeefyListener) getBasicMessages(digestItem substrate.AuxiliaryDigestItem) (
-	[]chainTypes.BasicOutboundChannelMessage, types.StorageDataRaw, error) {
-	data, err := li.getDataForDigestItem(&digestItem)
+func (li *BeefyListener) getBasicMessages(digestItem parachain.AuxiliaryDigestItem) (
+	[]parachain.BasicOutboundChannelMessage, types.StorageDataRaw, error) {
+	data, err := li.parachainConnection.GetDataForDigestItem(&digestItem)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var messages []chainTypes.BasicOutboundChannelMessage
+	var messages []parachain.BasicOutboundChannelMessage
 
 	err = types.DecodeFromBytes(data, &messages)
 	if err != nil {
@@ -397,14 +394,14 @@ func (li *BeefyListener) getBasicMessages(digestItem substrate.AuxiliaryDigestIt
 	return messages, data, nil
 }
 
-func (li *BeefyListener) getIncentivizedMessages(digestItem substrate.AuxiliaryDigestItem) (
-	[]chainTypes.IncentivizedOutboundChannelMessage, types.StorageDataRaw, error) {
-	data, err := li.getDataForDigestItem(&digestItem)
+func (li *BeefyListener) getIncentivizedMessages(digestItem parachain.AuxiliaryDigestItem) (
+	[]parachain.IncentivizedOutboundChannelMessage, types.StorageDataRaw, error) {
+	data, err := li.parachainConnection.GetDataForDigestItem(&digestItem)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var messages []chainTypes.IncentivizedOutboundChannelMessage
+	var messages []parachain.IncentivizedOutboundChannelMessage
 
 	err = types.DecodeFromBytes(data, &messages)
 	if err != nil {
@@ -453,43 +450,4 @@ func (li *BeefyListener) fetchLatestVerifiedParaBlock(beefyBlockhash types.Hash)
 	}
 
 	return verifiedParaBlockNumber, ourParaHeadHash, nil
-}
-
-func (li *BeefyListener) getDataForDigestItem(digestItem *chainTypes.AuxiliaryDigestItem) (types.StorageDataRaw, error) {
-	storageKey, err := parachain.MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := li.parachainConnection.GetAPI().RPC.Offchain.LocalStorageGet(offchain.Persistent, storageKey)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to read commitment from offchain storage")
-		return nil, err
-	}
-
-	if data != nil {
-		li.log.WithFields(logrus.Fields{
-			"commitmentSizeBytes": len(*data),
-		}).Debug("Retrieved commitment from offchain storage")
-	} else {
-		li.log.WithError(err).Error("Commitment not found in offchain storage")
-		return nil, err
-	}
-
-	return *data, nil
-}
-
-func (li *BeefyListener) getAuxiliaryDigestItems(digest types.Digest) ([]chainTypes.AuxiliaryDigestItem, error) {
-	var auxDigestItems []chainTypes.AuxiliaryDigestItem
-	for _, digestItem := range digest {
-		if digestItem.IsOther {
-			var auxDigestItem chainTypes.AuxiliaryDigestItem
-			err := types.DecodeFromBytes(digestItem.AsOther, &auxDigestItem)
-			if err != nil {
-				return nil, err
-			}
-			auxDigestItems = append(auxDigestItems, auxDigestItem)
-		}
-	}
-	return auxDigestItems, nil
 }
