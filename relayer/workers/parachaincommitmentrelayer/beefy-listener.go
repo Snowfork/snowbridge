@@ -95,12 +95,19 @@ func (li *BeefyListener) onDone(ctx context.Context) error {
 func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 	headers := make(chan *gethTypes.Header, 5)
 
-	li.ethereumConn.GetClient().SubscribeNewHead(ctx, headers)
+	sub, err := li.ethereumConn.GetClient().SubscribeNewHead(ctx, headers)
+	if err != nil {
+		li.log.WithError(err).Error("Error creating ethereum header subscription")
+		return err
+	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			return li.onDone(ctx)
+		case err := <-sub.Err():
+			li.log.WithError(err).Error("Error with ethereum header subscription")
+			return err
 		case gethheader := <-headers:
 			// Query LightClientBridge contract's ContractNewMMRRoot events
 			blockNumber := gethheader.Number.Uint64()
