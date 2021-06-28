@@ -1,20 +1,23 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
+use snowbridge_runtime::{
+	AccountId, EthereumHeader,
+	BalancesConfig, GenesisConfig,
+	SystemConfig, VerifierLightclientConfig,
+	BasicInboundChannelConfig, IncentivizedInboundChannelConfig,
+	ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
+	ParachainInfoConfig,
+	BasicOutboundChannelConfig,
+	IncentivizedOutboundChannelConfig,
+	LocalCouncilMembershipConfig,
+	SudoConfig,
+	WASM_BINARY, Signature,
+};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use serde::{Deserialize, Serialize};
-use snowbridge_runtime::{
-    AccountId, AssetsConfig, BalancesConfig, BasicInboundChannelConfig, BasicOutboundChannelConfig,
-    DOTConfig, ERC20Config, ETHConfig, EthereumHeader, GenesisConfig,
-    IncentivizedInboundChannelConfig, IncentivizedOutboundChannelConfig,
-    LocalCouncilMembershipConfig, ParachainInfoConfig, Signature, SudoConfig, SystemConfig,
-    VerifierLightclientConfig, WASM_BINARY,
-};
 use sp_core::{sr25519, Pair, Public, U256};
-use sp_runtime::{
-    traits::{IdentifyAccount, Verify},
-    Perbill,
-};
+use sp_runtime::{Perbill, traits::{IdentifyAccount, Verify}};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
@@ -23,26 +26,26 @@ use artemis_core::AssetId;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
+	TPublic::Pair::from_string(&format!("//{}", seed), None)
+		.expect("static values are valid; qed")
+		.public()
 }
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
 #[serde(deny_unknown_fields)]
 pub struct Extensions {
-    /// The relay chain of the Parachain.
-    pub relay_chain: String,
-    /// The id of the Parachain.
-    pub para_id: u32,
+	/// The relay chain of the Parachain.
+	pub relay_chain: String,
+	/// The id of the Parachain.
+	pub para_id: u32,
 }
 
 impl Extensions {
-    /// Try to get the extension from the given `ChainSpec`.
-    pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
-        sc_chain_spec::get_extension(chain_spec.extensions())
-    }
+	/// Try to get the extension from the given `ChainSpec`.
+	pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
+		sc_chain_spec::get_extension(chain_spec.extensions())
+	}
 }
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -50,54 +53,57 @@ type AccountPublic = <Signature as Verify>::Signer;
 /// Helper function to generate an account ID from seed
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
 pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
-    let mut props = Properties::new();
-    props.insert("tokenSymbol".into(), "DEV".into());
-    props.insert("tokenDecimals".into(), 12.into());
+	let mut props = Properties::new();
+	props.insert("tokenSymbol".into(), "DEV".into());
+	props.insert("tokenDecimals".into(), 12.into());
 
-    ChainSpec::from_genesis(
-        "Artemis Local Testnet",
-        "local_testnet",
-        ChainType::Local,
-        move || {
-            testnet_genesis(
-                vec![
-                    get_account_id_from_seed::<sr25519::Public>("Alice"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob"),
-                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
-                    get_account_id_from_seed::<sr25519::Public>("Dave"),
-                    get_account_id_from_seed::<sr25519::Public>("Eve"),
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-                    get_account_id_from_seed::<sr25519::Public>("Relay"),
-                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-                ],
-                para_id,
-            )
-        },
-        vec![],
-        None,
-        None,
-        Some(props),
-        Extensions {
-            relay_chain: "local_testnet".into(),
-            para_id: para_id.into(),
-        },
-    )
+	ChainSpec::from_genesis(
+		"Artemis Local Testnet",
+		"local_testnet",
+		ChainType::Local,
+		move || {
+			testnet_genesis(
+				vec![
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie"),
+					get_account_id_from_seed::<sr25519::Public>("Dave"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+					get_account_id_from_seed::<sr25519::Public>("Relay"),
+					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+				],
+				para_id
+			)
+		},
+		vec![],
+		None,
+		None,
+		Some(props),
+		Extensions {
+			relay_chain: "local_testnet".into(),
+			para_id: para_id.into(),
+		},
+	)
 }
 
 /// Configure initial storage state for FRAME modules.
-fn testnet_genesis(endowed_accounts: Vec<AccountId>, para_id: ParaId) -> GenesisConfig {
-    GenesisConfig {
+fn testnet_genesis(
+	endowed_accounts: Vec<AccountId>,
+	para_id: ParaId
+) -> GenesisConfig {
+	GenesisConfig {
 		frame_system: SystemConfig {
 			// Add Wasm runtime to storage.
 			code: WASM_BINARY
@@ -121,14 +127,14 @@ fn testnet_genesis(endowed_accounts: Vec<AccountId>, para_id: ParaId) -> Genesis
 			phantom: Default::default()
 		},
 		basic_channel_inbound: BasicInboundChannelConfig {
-			source_channel: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
+			source_channel: hex!["EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"].into(),
 		},
 		basic_channel_outbound: BasicOutboundChannelConfig {
 			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
 			interval: 1,
 		},
 		incentivized_channel_inbound: IncentivizedInboundChannelConfig {
-			source_channel: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
+			source_channel: hex!["B8EA8cB425d85536b158d661da1ef0895Bb92F1D"].into(),
 			reward_fraction: Perbill::from_percent(80)
 		},
 		incentivized_channel_outbound: IncentivizedOutboundChannelConfig {
@@ -167,13 +173,13 @@ fn testnet_genesis(endowed_accounts: Vec<AccountId>, para_id: ParaId) -> Genesis
 			initial_difficulty: 19755084633726428633088u128.into(),
 		},
 		eth_app: ETHConfig {
-			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into()
+			address: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into()
 		},
 		erc20_app: ERC20Config {
-			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into()
+			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into()
 		},
 		dot_app: DOTConfig {
-			address: hex!["3f839E70117C64744930De8567Ae7A5363487cA3"].into(),
+			address: hex!["4283d8996E5a7F4BEa58c6052b1471a2a9524C87"].into(),
 			phantom: Default::default(),
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: para_id },
