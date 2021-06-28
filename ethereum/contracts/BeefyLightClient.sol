@@ -51,6 +51,15 @@ contract BeefyLightClient {
 
     /* Types */
 
+    /**
+     * The Commitment, with its payload, is the core thing we are trying to verify with
+     * this contract. It contains a MMR root that commits to the polkadot history, including
+     * past blocks and parachain blocks and can be used to verify both polkadot and parachain blocks.
+     * @param payload the payload of the new commitment in beefy justifications (in
+     * our case, this is a new MMR root for all past polkadot blocks)
+     * @param blockNumber block number for the given commitment
+     * @param validatorSetId validator set id that signed the given commitment
+     */
     struct Commitment {
         bytes32 payload;
         uint64 blockNumber;
@@ -58,10 +67,13 @@ contract BeefyLightClient {
     }
 
     /**
+     * The ValidatorProof is a collection of proofs used to verify the signatures from the validators signing
+     * each new justification.
      * @param signatures an array of signatures from the randomly chosen validators
      * @param positions an array of the positions of the randomly chosen validators
      * @param publicKeys an array of the public key of each signer
-     * @param publicKeyMerkleProofs an array of merkle proofs from the chosen validators
+     * @param publicKeyMerkleProofs an array of merkle proofs from the chosen validators proving that their public
+     * keys are in the validator set
      */
     struct ValidatorProof {
         bytes[] signatures;
@@ -70,6 +82,13 @@ contract BeefyLightClient {
         bytes32[][] publicKeyMerkleProofs;
     }
 
+    /**
+     * The ValidationData is the set of data used to link each pair of initial and complete verification transactions.
+     * @param senderAddress the sender of the initial transaction
+     * @param commitmentHash the hash of the commitment they are claiming has been signed
+     * @param validatorClaimsBitfield a bitfield signalling which validators they claim have signed
+     * @param blockNumber the block number for this commitment
+     */
     struct ValidationData {
         address senderAddress;
         bytes32 commitmentHash;
@@ -77,6 +96,15 @@ contract BeefyLightClient {
         uint256 blockNumber;
     }
 
+    /**
+     * The BeefyMMRLeaf is the structure of each leaf in each MMR that each commitment's payload commits to.
+     * @param parentNumber parent number of the block this leaf describes
+     * @param parentHash parent hash of the block this leaf describes
+     * @param parachainHeadsRoot merkle root of all parachain headers in this block
+     * @param nextAuthoritySetId validator set id that will be part of consensus for the next block
+     * @param nextAuthoritySetLen length of that validator set
+     * @param nextAuthoritySetRoot merkle root of all public keys in that validator set
+     */
     struct BeefyMMRLeaf {
         uint32 parentNumber;
         bytes32 parentHash;
@@ -103,7 +131,7 @@ contract BeefyLightClient {
     uint64 public constant BLOCK_WAIT_PERIOD = 3;
 
     // We must ensure at least one block is processed every session,
-    //
+    // so these constants are checked to enforce a maximum gap between commitments.
     uint64 public constant NUMBER_OF_BLOCKS_PER_SESSION = 100;
     uint64 public constant ERROR_AND_SAFETY_BUFFER = 10;
     uint64 public constant MAXIMUM_BLOCK_GAP =
@@ -390,9 +418,7 @@ contract BeefyLightClient {
     ) internal view {
         ValidationData storage data = validationData[id];
 
-        /**
-         * @dev verify that sender is the same as in `newSignatureCommitment`
-         */
+        // Verify that sender is the same as in `newSignatureCommitment`
         require(
             msg.sender == data.senderAddress,
             "Error: Sender address does not match original validation data"
