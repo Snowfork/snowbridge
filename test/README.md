@@ -143,3 +143,6 @@ The `start-services.sh` script writes the following logs:
 - parachain.log
 - relayer.log
 - ganache.log
+
+## Generating/Updating new test fixtures
+Test fixtures are taken by running the service in full e2e test. The relayer should log the fixture data you need (code is in [the relayer here](../relayer/workers/beefyrelayer/fixture-data-logger.go), though may require a bit of manual copy/pasting to get perfectly it in the right format.

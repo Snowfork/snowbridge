@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ParachainLightClient.sol";
 import "./RewardSource.sol";
 
@@ -85,7 +84,7 @@ contract IncentivizedInboundChannel is AccessControl {
             "insufficient gas for delivery of all messages"
         );
 
-        processMessages(msg.sender, _messages);
+        processMessages(payable(msg.sender), _messages);
     }
 
     function processMessages(

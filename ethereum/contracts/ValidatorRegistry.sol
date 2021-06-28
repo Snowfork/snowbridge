@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -14,16 +14,26 @@ import "./utils/MerkleProof.sol";
 contract ValidatorRegistry is Ownable {
     /* Events */
 
-    event ValidatorRegistryUpdated(bytes32 root, uint256 numOfValidators);
+    event ValidatorRegistryUpdated(
+        bytes32 root,
+        uint256 numOfValidators,
+        uint64 id
+    );
 
     /* State */
 
     bytes32 public root;
     uint256 public numOfValidators;
+    uint64 public id;
 
-    constructor(bytes32 _root, uint256 _numOfValidators) {
+    constructor(
+        bytes32 _root,
+        uint256 _numOfValidators,
+        uint64 _id
+    ) {
         root = _root;
         numOfValidators = _numOfValidators;
+        id = _id;
     }
 
     /**
@@ -31,10 +41,18 @@ contract ValidatorRegistry is Ownable {
      * @param _root The new root
      * @param _numOfValidators The new number of validators
      */
-    function update(bytes32 _root, uint256 _numOfValidators) public onlyOwner {
-        root = _root;
-        numOfValidators = _numOfValidators;
-        emit ValidatorRegistryUpdated(_root, _numOfValidators);
+    function update(
+        bytes32 _root,
+        uint256 _numOfValidators,
+        uint64 _id
+    ) public onlyOwner {
+        // TODO: Commented out for now until we resolve issues with the root
+        // (it is being created via a modified patricia-trie, not a normal tree)
+        // so need to resolve that.
+        // root = _root;
+        // numOfValidators = _numOfValidators;
+        // id = _id;
+        emit ValidatorRegistryUpdated(_root, _numOfValidators, _id);
     }
 
     /**

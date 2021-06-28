@@ -2,28 +2,25 @@ package parachaincommitmentrelayer
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/crypto/blake2b"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v3/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
 //TODO - put in config
 const OUR_PARACHAIN_ID = 200
-
-// TODO: This file is currently listening to the relay chain for new beefy justifications. This is temporary, as in
-// a follow up PR, it will be changed to listen to Ethereum for new justifications.
-// This can't be done yet, as we still need to add block numbers to the Ethereum proofs being submitted
-// to the relay chain light client, but will be done once that's complete.
 
 type MessagePackage struct {
 	channelID      chainTypes.ChannelID
@@ -35,7 +32,9 @@ type MessagePackage struct {
 }
 
 type BeefyListener struct {
-	relaychainConfig    *relaychain.Config
+	ethereumConfig      *ethereum.Config
+	ethereumConn        *ethereum.Connection
+	beefyLightClient    *beefylightclient.Contract
 	relaychainConn      *relaychain.Connection
 	parachainConnection *parachain.Connection
 	messages            chan<- MessagePackage
@@ -43,13 +42,15 @@ type BeefyListener struct {
 }
 
 func NewBeefyListener(
-	relaychainConfig *relaychain.Config,
+	ethereumConfig *ethereum.Config,
+	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
 	messages chan<- MessagePackage,
 	log *logrus.Entry) *BeefyListener {
 	return &BeefyListener{
-		relaychainConfig:    relaychainConfig,
+		ethereumConfig:      ethereumConfig,
+		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
 		messages:            messages,
@@ -59,8 +60,16 @@ func NewBeefyListener(
 
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
+	// Set up light client bridge contract
+	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(li.ethereumConfig.BeefyLightClient), li.ethereumConn.GetClient())
+	if err != nil {
+		return err
+	}
+	li.beefyLightClient = beefyLightClientContract
+
 	eg.Go(func() error {
-		return li.subBeefyJustifications(ctx)
+		err := li.subBeefyJustifications(ctx)
+		return err
 	})
 
 	return nil
@@ -75,114 +84,113 @@ func (li *BeefyListener) onDone(ctx context.Context) error {
 }
 
 func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
-	ch := make(chan interface{})
+	headers := make(chan *gethTypes.Header, 5)
 
-	li.log.Info("Subscribing to relay chain light client for new mmr payloads")
-	sub, err := li.relaychainConn.GetAPI().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
-	if err != nil {
-		panic(err)
-	}
-	defer sub.Unsubscribe()
+	li.ethereumConn.GetClient().SubscribeNewHead(ctx, headers)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return li.onDone(ctx)
-		case msg := <-ch:
+		case gethheader := <-headers:
+			// Query LightClientBridge contract's ContractNewMMRRoot events
+			blockNumber := gethheader.Number.Uint64()
+			var beefyLightClientEvents []*beefylightclient.ContractNewMMRRoot
 
-			signedCommitment := &store.SignedCommitment{}
-			err := types.DecodeFromHexString(msg.(string), signedCommitment)
+			contractEvents, err := li.queryBeefyLightClientEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
-				li.log.WithError(err).Error("Failed to decode BEEFY commitment messages")
+				li.log.WithError(err).Error("Failure fetching event logs")
+				return err
 			}
+			beefyLightClientEvents = append(beefyLightClientEvents, contractEvents...)
 
-			blockNumber := signedCommitment.Commitment.BlockNumber
-
-			li.log.WithFields(logrus.Fields{
-				"commitmentBlockNumber": blockNumber,
-				"payload":               signedCommitment.Commitment.Payload.Hex(),
-				"validatorSetID":        signedCommitment.Commitment.ValidatorSetID,
-			}).Info("Witnessed a new BEEFY commitment:")
-			if len(signedCommitment.Signatures) == 0 {
-				li.log.Info("BEEFY commitment has no signatures, skipping...")
-				continue
-			} else {
-				hash := blake2b.Sum256(signedCommitment.Commitment.Bytes())
-				li.log.WithFields(logrus.Fields{
-					"commitment":       hex.EncodeToString(signedCommitment.Commitment.Bytes()),
-					"hashedCommitment": hex.EncodeToString(hash[:]),
-				}).Info("Commitment with signatures:")
+			if len(beefyLightClientEvents) > 0 {
+				li.log.Info(fmt.Sprintf("Found %d BeefyLightClient ContractNewMMRRoot events on block %d", len(beefyLightClientEvents), blockNumber))
 			}
-			li.log.WithField("blockNumber", blockNumber+1).Info("Getting hash for next block")
-			nextBlockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(blockNumber + 1))
-			if err != nil {
-				li.log.WithError(err).Error("Failed to get block hash")
-			}
-			li.log.WithField("blockHash", nextBlockHash.Hex()).Info("Got blockhash")
-
-			// TODO this just queries the latest MMR leaf in the latest MMR and our latest parahead in that leaf.
-			// we should ideally be querying the last few leaves in the latest MMR until we find
-			// the first parachain block that has not yet been fully processed on ethereum,
-			// and then package and relay all newer heads/commitments
-			mmrProof := li.GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash)
-			allParaHeads, ourParaHead := li.GetAllParaheads(nextBlockHash, OUR_PARACHAIN_ID)
-
-			ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
-
-			messagePackets, err := li.extractCommitments(ourParaHead, mmrProof, ourParaHeadProof)
-			if err != nil {
-				li.log.WithError(err).Error("Failed to extract commitment and messages")
-			}
-			if len(messagePackets) == 0 {
-				li.log.Info("Parachain header has no commitment with messages, skipping...")
-				continue
-			}
-			for _, messagePacket := range messagePackets {
-				li.log.WithFields(logrus.Fields{
-					"channelID":        messagePacket.channelID,
-					"commitmentHash":   messagePacket.commitmentHash,
-					"commitmentData":   messagePacket.commitmentData,
-					"ourParaHeadProof": messagePacket.paraHeadProof,
-					"mmrProof":         messagePacket.mmrProof,
-				}).Info("Beefy Listener emitted new message packet")
-
-				li.messages <- messagePacket
-			}
+			li.processBeefyLightClientEvents(ctx, beefyLightClientEvents)
 		}
 	}
 }
 
-func (li *BeefyListener) GetMMRLeafForBlock(
-	blockNumber uint64,
-	blockHash types.Hash,
-) types.GenerateMMRProofResponse {
-	li.log.WithFields(logrus.Fields{
-		"blockNumber": blockNumber,
-		"blockHash":   blockHash.Hex(),
-	}).Info("Getting MMR Leaf for block...")
-	proofResponse, err := li.relaychainConn.GetAPI().RPC.MMR.GenerateProof(blockNumber, blockHash)
+// processLightClientEvents matches events to BEEFY commitment info by transaction hash
+func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, events []*beefylightclient.ContractNewMMRRoot) error {
+	for _, event := range events {
+
+		relayChainBlockNumber := event.BlockNumber
+
+		li.log.WithFields(logrus.Fields{
+			"relayChainBlockNumber": relayChainBlockNumber,
+			"ethereumBlockNumber":   event.Raw.BlockNumber,
+			"ethereumTxHash":        event.Raw.TxHash.Hex(),
+		}).Info("Witnessed a new MMRRoot event")
+
+		li.log.WithField("blockNumber", relayChainBlockNumber).Info("Getting hash for relay chain block")
+		blockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(relayChainBlockNumber))
+		if err != nil {
+			li.log.WithError(err).Error("Failed to get block hash")
+			return err
+		}
+		li.log.WithField("blockHash", blockHash.Hex()).Info("Got blockhash")
+
+		// TODO this just queries the latest MMR leaf in the latest MMR and our latest parahead from the relaychain.
+		// we should ideally be querying the latest and last few leaves in the latest MMR until we find
+		// the first parachain block that has not yet been fully processed on ethereum,
+		// and then package and relay all newer heads/commitments together with their corresponding leaf
+		mmrProof := li.relaychainConn.GetMMRLeafForBlock(uint64(relayChainBlockNumber-1), blockHash)
+		allParaHeads, ourParaHead := li.GetAllParaheads(blockHash, OUR_PARACHAIN_ID)
+
+		ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
+
+		messagePackets, err := li.extractCommitments(ourParaHead, mmrProof, ourParaHeadProof)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to extract commitment and messages")
+			return err
+		}
+		if len(messagePackets) == 0 {
+			li.log.Info("Parachain header has no commitment with messages, skipping...")
+			continue
+		}
+		for _, messagePacket := range messagePackets {
+			li.log.WithFields(logrus.Fields{
+				"channelID":        messagePacket.channelID,
+				"commitmentHash":   messagePacket.commitmentHash,
+				"commitmentData":   messagePacket.commitmentData,
+				"ourParaHeadProof": messagePacket.paraHeadProof,
+				"mmrProof":         messagePacket.mmrProof,
+			}).Info("Beefy Listener emitted new message packet")
+
+			li.messages <- messagePacket
+		}
+
+	}
+	return nil
+}
+
+// queryBeefyLightClientEvents queries ContractNewMMRRoot events from the BeefyLightClient contract
+func (li *BeefyListener) queryBeefyLightClientEvents(ctx context.Context, start uint64,
+	end *uint64) ([]*beefylightclient.ContractNewMMRRoot, error) {
+	var events []*beefylightclient.ContractNewMMRRoot
+	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
+
+	iter, err := li.beefyLightClient.FilterNewMMRRoot(&filterOps)
 	if err != nil {
-		li.log.WithError(err).Error("Failed to generate mmr proof")
+		return nil, err
 	}
 
-	var proofItemsHex = []string{}
-	for _, item := range proofResponse.Proof.Items {
-		proofItemsHex = append(proofItemsHex, item.Hex())
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+
+		events = append(events, iter.Event)
 	}
 
-	li.log.WithFields(logrus.Fields{
-		"BlockHash":                       proofResponse.BlockHash.Hex(),
-		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
-		"Leaf.Hash":                       proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
-		"Leaf.ParachainHeads":             proofResponse.Leaf.ParachainHeads.Hex(),
-		"Leaf.BeefyNextAuthoritySet.ID":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
-		"Leaf.BeefyNextAuthoritySet.Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
-		"Leaf.BeefyNextAuthoritySet.Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
-		"Proof.LeafIndex":                 proofResponse.Proof.LeafIndex,
-		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
-		"Proof.Items":                     proofItemsHex,
-	}).Info("Generated MMR Proof")
-	return proofResponse
+	return events, nil
 }
 
 func (li *BeefyListener) GetAllParaheads(blockHash types.Hash, ourParachainId uint32) ([]types.Header, types.Header) {
