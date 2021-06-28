@@ -4,7 +4,6 @@
 package ethereum
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"math"
@@ -12,7 +11,6 @@ import (
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/ethashproof"
 	"golang.org/x/sync/errgroup"
@@ -197,7 +195,12 @@ func (s *HeaderCacheState) GetReceiptTrie(ctx context.Context, hash gethCommon.H
 	if err != nil {
 		return nil, err
 	}
-	receiptTrie = s.makeTrie(receipts)
+
+	receiptTrie, err = MakeTrie(receipts)
+	if err != nil {
+		return nil, err
+	}
+
 	if receiptTrie.Hash() != block.ReceiptHash() {
 		return nil, fmt.Errorf("Receipt trie does not match block receipt hash")
 	}
@@ -255,17 +258,6 @@ func (s *HeaderCacheState) GetEthashproofCache(number uint64) (*ethashproof.Data
 	})
 
 	return cacheState.currentCache, nil
-}
-
-func (s *HeaderCacheState) makeTrie(items gethTypes.DerivableList) *gethTrie.Trie {
-	keybuf := new(bytes.Buffer)
-	trie := new(gethTrie.Trie)
-	for i := 0; i < items.Len(); i++ {
-		keybuf.Reset()
-		rlp.Encode(keybuf, uint(i))
-		trie.Update(keybuf.Bytes(), items.GetRlp(i))
-	}
-	return trie
 }
 
 func (s *HeaderCacheState) prepareNextEthashproofCache() error {

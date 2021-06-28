@@ -3,8 +3,8 @@ package substrate
 import (
 	"fmt"
 
-	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 )
 
 type AuxiliaryDigestItem struct {

@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
-	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v3/rpc/offchain"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"

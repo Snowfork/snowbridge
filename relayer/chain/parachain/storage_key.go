@@ -3,8 +3,8 @@ package parachain
 import (
 	"bytes"
 
-	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 )
 

@@ -2,8 +2,8 @@
 
 mod benchmarking;
 mod payload;
-pub mod weights;
 pub mod primitives;
+pub mod weights;
 
 #[cfg(test)]
 mod mock;
@@ -13,33 +13,30 @@ mod tests;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
-	transactional,
 	traits::{
+		Currency, EnsureOrigin,
+		ExistenceRequirement::{AllowDeath, KeepAlive},
 		Get,
-		EnsureOrigin,
-		Currency,
-		ExistenceRequirement::{KeepAlive, AllowDeath},
 	},
+	transactional, PalletId,
 };
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 
-use sp_std::prelude::*;
-use sp_core::{H160, U256};
-use sp_runtime::{
-	ModuleId,
-	traits::{StaticLookup, AccountIdConversion},
-};
 use artemis_core::{ChannelId, OutboundRouter};
+use sp_core::{H160, U256};
+use sp_runtime::traits::{AccountIdConversion, StaticLookup};
+use sp_std::prelude::*;
 
-use primitives::{wrap, unwrap};
 use payload::OutboundPayload;
+use primitives::{unwrap, wrap};
 pub use weights::WeightInfo;
 
 pub use pallet::*;
 
-type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+type BalanceOf<T> =
+	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -61,9 +58,9 @@ pub mod pallet {
 
 		type OutboundRouter: OutboundRouter<Self::AccountId>;
 
-		type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
+		type CallOrigin: EnsureOrigin<Self::Origin, Success = H160>;
 
-		type ModuleId: Get<ModuleId>;
+		type PalletId: Get<PalletId>;
 
 		#[pallet::constant]
 		type Decimals: Get<u32>;
@@ -80,9 +77,7 @@ pub mod pallet {
 			sp_io::TestExternalities::new_empty().execute_with(|| {
 				let allowed_decimals: &[u32] = &[10, 12];
 				let decimals = T::Decimals::get();
-				assert!(
-					allowed_decimals.contains(&decimals)
-				)
+				assert!(allowed_decimals.contains(&decimals))
 			});
 		}
 	}
@@ -90,8 +85,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	#[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
-	pub enum Event<T: Config>
-	{
+	pub enum Event<T: Config> {
 		Locked(T::AccountId, H160, BalanceOf<T>),
 		Unlocked(H160, T::AccountId, BalanceOf<T>),
 	}
@@ -107,7 +101,7 @@ pub mod pallet {
 		/// In practice, this error should never occur under the conditions
 		/// we've tested. If however the bridge or the peer Ethereum contract
 		/// is exploited, then all bets are off.
-		Overflow
+		Overflow,
 	}
 
 	#[pallet::genesis_config]
@@ -130,19 +124,25 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			<Address<T>>::put(self.address);
-		 }
+		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::lock())]
 		#[transactional]
-		pub fn lock(origin: OriginFor<T>, channel_id: ChannelId, recipient: H160, amount: BalanceOf<T>) -> DispatchResult {
+		pub fn lock(
+			origin: OriginFor<T>,
+			channel_id: ChannelId,
+			recipient: H160,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Currency::transfer(&who, &Self::account_id(), amount, AllowDeath)?;
 
-			let amount_wrapped = wrap::<T>(amount, T::Decimals::get()).ok_or(Error::<T>::Overflow)?;
+			let amount_wrapped =
+				wrap::<T>(amount, T::Decimals::get()).ok_or(Error::<T>::Overflow)?;
 
 			let message = OutboundPayload {
 				sender: who.clone(),
@@ -157,13 +157,19 @@ pub mod pallet {
 
 		#[pallet::weight(T::WeightInfo::unlock())]
 		#[transactional]
-		pub fn unlock(origin: OriginFor<T>, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
+		pub fn unlock(
+			origin: OriginFor<T>,
+			sender: H160,
+			recipient: <T::Lookup as StaticLookup>::Source,
+			amount: U256,
+		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
-			let amount_unwrapped = unwrap::<T>(amount, T::Decimals::get()).ok_or(Error::<T>::Overflow)?;
+			let amount_unwrapped =
+				unwrap::<T>(amount, T::Decimals::get()).ok_or(Error::<T>::Overflow)?;
 
 			let recipient = T::Lookup::lookup(recipient)?;
 			T::Currency::transfer(&Self::account_id(), &recipient, amount_unwrapped, KeepAlive)?;
@@ -174,7 +180,7 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		pub fn account_id() -> T::AccountId {
-			T::ModuleId::get().into_account()
+			T::PalletId::get().into_account()
 		}
 	}
 }

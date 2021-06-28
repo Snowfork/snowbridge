@@ -46,13 +46,13 @@ func TestMessage_Proof(t *testing.T) {
 	}
 
 	// Construct Merkle Patricia Trie for receipts
-	keybuf := new(bytes.Buffer)
-	receiptTrie := new(gethTrie.Trie)
-	for i := 0; i < receipts.Len(); i++ {
-		keybuf.Reset()
-		rlp.Encode(keybuf, uint(i))
-		receiptTrie.Update(keybuf.Bytes(), receipts.GetRlp(i))
+	receiptTrie, err := ethereum.MakeTrie(receipts)
+	if err != nil {
+		panic(err)
 	}
+
+	fmt.Println("Hash", receiptTrie.Hash())
+
 	if receiptTrie.Hash() != block.ReceiptHash() {
 		panic("Receipt trie does not match block receipt hash")
 	}

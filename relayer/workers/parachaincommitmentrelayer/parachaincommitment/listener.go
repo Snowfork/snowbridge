@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
@@ -33,7 +33,7 @@ func NewListener(parachainConnection *parachain.Connection,
 	}
 }
 
-func (li *Listener) Start(ctx context.Context, eg *errgroup.Group) error {
+func (li *Listener) Start(ctx context.Context, _ *errgroup.Group) error {
 
 	blockNumber, err := li.fetchStartBlock()
 	if err != nil {
