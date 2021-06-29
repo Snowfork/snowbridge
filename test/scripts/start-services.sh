@@ -119,7 +119,7 @@ start_polkadot_launch()
 
     popd
 
-    scripts/wait-for-it.sh -t 32 localhost:11144
+    scripts/wait-for-it.sh -t 60 localhost:11144
 }
 
 start_relayer()
