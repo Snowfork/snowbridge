@@ -131,18 +131,6 @@ func (li *BeefyListener) buildMissedMessagePackages(
 
 	li.log.Info("Created message packages")
 
-	for _, messagePackage := range messagePackages {
-		li.log.WithFields(logrus.Fields{
-			"channelID":        messagePackage.channelID,
-			"commitmentHash":   messagePackage.commitmentHash,
-			"commitmentData":   messagePackage.commitmentData,
-			"ourParaHeadProof": messagePackage.paraHeadProof,
-			"mmrProof":         messagePackage.mmrProof,
-		}).Info("Beefy Listener emitting new message package")
-
-		li.messages <- messagePackage
-	}
-
 	return messagePackages, nil
 }
 
