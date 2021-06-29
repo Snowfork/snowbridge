@@ -205,8 +205,6 @@ func (li *BeefyListener) searchForLostCommitments(
 		"incentivizedNonce": incentivizedNonceToFind,
 		"latestblockNumber": lastParaBlockNumber,
 	}).Debug("Searching backwards from latest block on parachain to find block with nonce")
-	basicId := parachain.ChannelID{IsBasic: true}
-	incentivizedId := parachain.ChannelID{IsIncentivized: true}
 
 	currentBlockNumber := lastParaBlockNumber + 1
 	basicNonceFound := false
@@ -242,7 +240,7 @@ func (li *BeefyListener) searchForLostCommitments(
 		for _, digestItem := range digestItems {
 			if digestItem.IsCommitment {
 				channelID := digestItem.AsCommitment.ChannelID
-				if channelID == basicId && !basicNonceFound {
+				if channelID.IsBasic && !basicNonceFound {
 					isRelayed, messageData, err := li.checkBasicMessageNonces(&digestItem, basicNonceToFind)
 					if err != nil {
 						return nil, err
@@ -254,7 +252,7 @@ func (li *BeefyListener) searchForLostCommitments(
 						digestItemsWithData = append(digestItemsWithData, item)
 					}
 				}
-				if channelID == incentivizedId && !incentivizedNonceFound {
+				if channelID.IsIncentivized && !incentivizedNonceFound {
 					isRelayed, messageData, err := li.checkIncentivizedMessageNonces(&digestItem, incentivizedNonceToFind)
 					if err != nil {
 						return nil, err
@@ -302,6 +300,7 @@ func (li *BeefyListener) checkIncentivizedMessageNonces(
 	digestItem *parachain.AuxiliaryDigestItem,
 	nonceToFind uint64,
 ) (bool, types.StorageDataRaw, error) {
+
 	messages, data, err := li.parachainConnection.GetIncentivizedOutboundMessages(*digestItem)
 	if err != nil {
 		return false, nil, err

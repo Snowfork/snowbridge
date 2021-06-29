@@ -11,6 +11,6 @@ type BasicOutboundChannelMessage struct {
 type IncentivizedOutboundChannelMessage struct {
 	Target  [20]byte
 	Nonce   uint64
-	Payload []byte
 	Fee     types.U256
+	Payload []byte
 }
