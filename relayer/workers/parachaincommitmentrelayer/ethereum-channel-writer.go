@@ -223,7 +223,11 @@ func (wr *EthereumChannelWriter) WriteChannel(
 			wr.log.WithError(err).Error("Failed to decode commitment messages")
 			return err
 		}
-		wr.WriteBasicChannel(options, msg, outboundMessages)
+		err = wr.WriteBasicChannel(options, msg, outboundMessages)
+		if err != nil {
+			wr.log.WithError(err).Error("Failed to write basic channel")
+			return err
+		}
 
 	}
 	if msg.channelID.IsIncentivized {
@@ -233,7 +237,11 @@ func (wr *EthereumChannelWriter) WriteChannel(
 			wr.log.WithError(err).Error("Failed to decode commitment messages")
 			return err
 		}
-		wr.WriteIncentivizedChannel(options, msg, outboundMessages)
+		err = wr.WriteIncentivizedChannel(options, msg, outboundMessages)
+		if err != nil {
+			wr.log.WithError(err).Error("Failed to write incentivized channel")
+			return err
+		}
 	}
 
 	return nil
