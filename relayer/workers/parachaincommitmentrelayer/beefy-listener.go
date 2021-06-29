@@ -62,20 +62,25 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			li.log.WithError(err).Error("Failed to get latest relay chain block number and hash")
 			return err
 		}
+		if verifiedBeefyBlockNumber != 0 {
 
-		verifiedParaBlockNumber, verifiedParaBlockHash, err := li.relaychainConn.FetchLatestFinalizedParaBlock(
-			verifiedBeefyBlockHash, OUR_PARACHAIN_ID)
-		if err != nil {
-			return err
+			verifiedParaBlockNumber, verifiedParaBlockHash, err := li.relaychainConn.FetchLatestFinalizedParaBlock(
+				verifiedBeefyBlockHash, OUR_PARACHAIN_ID)
+			if err != nil {
+				return err
+			}
+
+			if verifiedParaBlockNumber != 0 {
+				messagePackages, err := li.buildMissedMessagePackages(ctx, verifiedBeefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
+				if err != nil {
+					li.log.WithError(err).Error("Failed to build missed message package")
+					return err
+				}
+
+				li.EmitMessagePackages(messagePackages)
+
+			}
 		}
-
-		messagePackages, err := li.buildMissedMessagePackages(ctx, verifiedBeefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
-		if err != nil {
-			li.log.WithError(err).Error("Failed to build missed message package")
-			return err
-		}
-
-		li.EmitMessagePackages(messagePackages)
 
 		err = li.subBeefyJustifications(ctx)
 		return err
