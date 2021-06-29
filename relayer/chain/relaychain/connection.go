@@ -104,7 +104,8 @@ func (co *Connection) GetMMRLeafForBlock(
 	return proofResponse, nil
 }
 
-func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainId uint32) ([]types.Header, types.Header, error) {
+func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainId uint32) (
+	[]types.Bytes, types.Header, error) {
 	none := types.NewOptionU32Empty()
 	encoded, err := types.EncodeToBytes(none)
 	if err != nil {
@@ -142,7 +143,7 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 	}
 
 	co.log.Info("Got all parachain headers")
-	var headers []types.Header
+	var headers []types.Bytes
 	var ownParachainHeader types.Header
 	for _, headerResponse := range headersResponse {
 		for _, change := range headerResponse.Changes {
@@ -157,31 +158,31 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 			}
 
 			co.log.WithField("parachainId", parachainID).Info("Decoding header for parachain")
-			var encodableOpaqueHeader types.Bytes
-			if err := types.DecodeFromBytes(change.StorageData, &encodableOpaqueHeader); err != nil {
+			var headerBytes types.Bytes
+			if err := types.DecodeFromBytes(change.StorageData, &headerBytes); err != nil {
 				co.log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
 				return nil, types.Header{}, err
 			}
-
-			var header types.Header
-			if err := types.DecodeFromBytes(encodableOpaqueHeader, &header); err != nil {
-				co.log.WithError(err).Error("Failed to decode Header")
-				return nil, types.Header{}, err
-			}
-			co.log.WithFields(logrus.Fields{
-				"headerBytes":           fmt.Sprintf("%#x", encodableOpaqueHeader),
-				"header.ParentHash":     header.ParentHash.Hex(),
-				"header.Number":         header.Number,
-				"header.StateRoot":      header.StateRoot.Hex(),
-				"header.ExtrinsicsRoot": header.ExtrinsicsRoot.Hex(),
-				"header.Digest":         header.Digest,
-				"parachainId":           parachainID,
-			}).Info("Decoded header for parachain")
-			headers = append(headers, header)
+			headers = append(headers, headerBytes)
 
 			if parachainID == types.U32(ownParachainId) {
+				var header types.Header
+				if err := types.DecodeFromBytes(headerBytes, &header); err != nil {
+					co.log.WithError(err).Error("Failed to decode Header")
+					return nil, types.Header{}, err
+				}
+				co.log.WithFields(logrus.Fields{
+					"headerBytes":           fmt.Sprintf("%#x", headerBytes),
+					"header.ParentHash":     header.ParentHash.Hex(),
+					"header.Number":         header.Number,
+					"header.StateRoot":      header.StateRoot.Hex(),
+					"header.ExtrinsicsRoot": header.ExtrinsicsRoot.Hex(),
+					"header.Digest":         header.Digest,
+					"parachainId":           parachainID,
+				}).Info("Decoded header for parachain")
 				ownParachainHeader = header
 			}
+
 		}
 	}
 	return headers, ownParachainHeader, nil

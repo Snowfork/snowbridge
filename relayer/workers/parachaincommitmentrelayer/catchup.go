@@ -150,11 +150,11 @@ func (li *BeefyListener) ParablocksWithProofs(blocks []ParaBlockWithDigest, late
 	[]ParaBlockWithProofs, error) {
 	relayChainBlockNumber := latestRelayChainBlockNumber
 	var relayBlockHash types.Hash
-	var allParaHeads []types.Header
-	var ourParaHead types.Header
 	var err error
 	var blocksWithProof []ParaBlockWithProofs
 	for _, block := range blocks {
+		var ourParaHead types.Header
+		var allParaHeads []types.Bytes
 		// Loop back over relay chain blocks to find the one that finalized the given parachain block
 		for ourParaHead.Number != types.BlockNumber(block.BlockNumber) {
 			li.log.WithField("relayChainBlockNumber", relayChainBlockNumber).Info("Getting hash for relay chain block")
@@ -198,7 +198,7 @@ func (li *BeefyListener) ParablocksWithProofs(blocks []ParaBlockWithDigest, late
 	return blocksWithProof, nil
 }
 
-func (li *BeefyListener) createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.Header, expectedRoot types.H256) (string, error) {
+func (li *BeefyListener) createParachainHeaderProof(allParaHeads []types.Bytes, ourParaHead types.Header, expectedRoot types.H256) (string, error) {
 	//TODO: implement
 	//TODO: check against expectedRoot
 	return "", nil
