@@ -1,5 +1,5 @@
 // "SPDX-License-Identifier: UNLICENSED"
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.5;
 
 /**
  * @dev MMRVerification library for MMR inclusion proofs generated
@@ -15,6 +15,7 @@ pragma solidity ^0.7.0;
  *
  *      General definitions:
  *      - Height:         the height of the tree.
+ *      - Width:          the number of leaves in the tree.
  *      - Size:           the number of nodes in the tree.
  *      - Nodes:          an item in the tree. A node is a leaf or a parent. Nodes' positions are ordered from 1
  *                        to size in the order that they were added to the tree.
@@ -35,7 +36,6 @@ pragma solidity ^0.7.0;
  *      - MMR root:       hash(hash(11, 10), 7)
  */
 contract MMRVerification {
-
     struct MountainData {
         uint256 position;
         bytes32 hash;
@@ -53,46 +53,53 @@ contract MMRVerification {
         uint256 leafIndex,
         uint256 leafCount,
         bytes32[] memory proofItems
-    )
-        public returns (bool)
-    {
+    ) public returns (bool) {
         // Input index must be a leaf
         uint256 leafPos = leafIndexToPos(leafIndex);
-        if(!isLeaf(leafPos)) {
+        if (!isLeaf(leafPos)) {
             return false;
         }
 
         // Handle 1-leaf MMR
-        if(leafCount == 1 && leafPos == 1 && leafNodeHash == root) {
+        if (leafCount == 1 && leafPos == 1 && leafNodeHash == root) {
             return true;
         }
 
-        // Calculate the index of our leaf's mountain peak
-        uint256 targetPeakIndex;
+        // Calculate the position of our leaf's mountain peak
+        uint256 targetPeakPos;
         uint256 numLeftPeaks;
-        uint256[] memory peakIndexes = getPeakIndexes(leafCount);
-        for (uint256 i = 0; i < peakIndexes.length; i++) {
-            if (peakIndexes[i] >= leafPos) {
-                targetPeakIndex = peakIndexes[i];
+        uint256[] memory peakPositions = getPeakPositions(leafCount);
+        for (uint256 i = 0; i < peakPositions.length; i++) {
+            if (peakPositions[i] >= leafPos) {
+                targetPeakPos = peakPositions[i];
                 break;
             }
-            numLeftPeaks = numLeftPeaks + 1;
+            numLeftPeaks++;
         }
 
         // Calculate our leaf's mountain peak hash
-        bytes32 mountainHash = calculatePeakRoot(
-            numLeftPeaks, leafNodeHash, leafPos, targetPeakIndex, proofItems
-        );
+        bytes32 mountainHash =
+            calculatePeakRoot(
+                numLeftPeaks,
+                leafNodeHash,
+                leafPos,
+                targetPeakPos,
+                proofItems
+            );
+
+        // Bag peaks
+        bytes32 bagger = mountainHash;
 
         // All right peaks are rolled up into one hash. If there are any, bag them.
-        bytes32 bagger = mountainHash;
-        if(targetPeakIndex > leafPos) {
-            bagger = keccak256(abi.encodePacked(proofItems[proofItems.length-1], bagger));
+        if (targetPeakPos < peakPositions[peakPositions.length - 1]) {
+            bagger = keccak256(
+                abi.encodePacked(proofItems[proofItems.length - 1], bagger)
+            );
         }
 
         // Bag left peaks one-by-one
-        for(uint i = numLeftPeaks; i > 0; i--) {
-            bagger = keccak256(abi.encodePacked(bagger, proofItems[i-1]));
+        for (uint256 i = numLeftPeaks; i > 0; i--) {
+            bagger = keccak256(abi.encodePacked(bagger, proofItems[i - 1]));
         }
 
         return bagger == root;
@@ -109,18 +116,19 @@ contract MMRVerification {
         uint256 peakPos,
         bytes32[] memory proofItems
     ) public returns (bytes32) {
-        if(leafPos == peakPos) {
+        if (leafPos == peakPos) {
             return leafNodeHash;
         }
         uint256 proofItemsCounter = numLeftPeaks;
         uint256 qFront;
         uint256 qBack;
 
-        MountainData memory mountainData = MountainData(leafPos, leafNodeHash, 1);
+        MountainData memory mountainData =
+            MountainData(leafPos, leafNodeHash, 1);
         queue[qBack] = mountainData;
-        qBack = qBack+1;
+        qBack = qBack + 1;
 
-        while(qBack >= qFront) {
+        while (qBack >= qFront) {
             MountainData memory mData = queue[qFront];
             uint256 pos = mData.position;
 
@@ -128,44 +136,56 @@ contract MMRVerification {
             uint256 siblingPos;
             uint256 parentPos;
 
-            uint256 nextHeight = heightAt(pos+1);
-            uint256 sibOffset = siblingOffset(mData.height-1);
-            if(nextHeight > mData.height) { // Current position is right sibling
-                siblingPos = pos-sibOffset;
-                parentPos = pos+1;
-            } else { // Current position is left sibling
-                siblingPos = pos+sibOffset;
-                parentPos = pos+parentOffset(mData.height-1);
+            uint256 nextHeight = heightAt(pos + 1);
+            uint256 sibOffset = siblingOffset(mData.height - 1);
+            if (nextHeight > mData.height) {
+                // Current position is right sibling
+                siblingPos = pos - sibOffset;
+                parentPos = pos + 1;
+            } else {
+                // Current position is left sibling
+                siblingPos = pos + sibOffset;
+                parentPos = pos + parentOffset(mData.height - 1);
             }
 
             // Sibling hash is either next in queue or next proof item
             bytes32 siblingHash;
-            if(siblingPos == queue[qFront].position) {
+            if (siblingPos == queue[qFront].position) {
                 siblingHash = queue[qFront].hash;
             } else {
                 siblingHash = proofItems[proofItemsCounter];
-                proofItemsCounter = proofItemsCounter+1;
+                proofItemsCounter = proofItemsCounter + 1;
             }
 
             // Calculate parent hash
             bytes32 parentHash;
-            if(nextHeight > mData.height) {
-                parentHash = keccak256(abi.encodePacked(siblingHash, mData.hash));
+            if (nextHeight > mData.height) {
+                parentHash = keccak256(
+                    abi.encodePacked(siblingHash, mData.hash)
+                );
             } else {
-                parentHash = keccak256(abi.encodePacked(mData.hash, siblingHash));
+                parentHash = keccak256(
+                    abi.encodePacked(mData.hash, siblingHash)
+                );
             }
 
-            if(parentPos < peakPos) { // Parent is not the mountain peak
-                queue[qBack] = MountainData(parentPos, parentHash, mData.height+1);
-                qBack = qBack+1;
-            } else { // Parent is the peak
-                delete(queue[qFront]);
+            if (parentPos < peakPos) {
+                // Parent is not the mountain peak
+                queue[qBack] = MountainData(
+                    parentPos,
+                    parentHash,
+                    mData.height + 1
+                );
+                qBack = qBack + 1;
+            } else {
+                // Parent is the peak
+                delete (queue[qFront]);
                 return parentHash;
             }
 
             // Move to next item in queue
-            delete(queue[qFront]);
-            qFront = qFront+1;
+            delete (queue[qFront]);
+            qFront = qFront + 1;
         }
         revert();
     }
@@ -205,31 +225,34 @@ contract MMRVerification {
     }
 
     /**
-     * @dev It returns all peaks of the smallest merkle mountain range tree which includes
-     *      the given index(size)
+     * @dev It returns positions of all peaks
      */
-    function getPeakIndexes(uint256 width)
+    function getPeakPositions(uint256 width)
         public
         pure
-        returns (uint256[] memory peakIndexes)
+        returns (uint256[] memory peakPositions)
     {
-        peakIndexes = new uint256[](numOfPeaks(width));
+        peakPositions = new uint256[](numOfPeaks(width));
         uint256 count;
         uint256 size;
         for (uint256 i = 255; i > 0; i--) {
             if (width & (1 << (i - 1)) != 0) {
                 // peak exists
                 size = size + (1 << i) - 1;
-                peakIndexes[count++] = size;
+                peakPositions[count++] = size;
             }
         }
-        require(count == peakIndexes.length, "Invalid bit calculation");
+        require(count == peakPositions.length, "Invalid bit calculation");
     }
 
     /**
      * @dev Return number of peaks from number of leaves
      */
-    function numOfPeaks(uint256 numLeaves) public pure returns (uint256 numPeaks) {
+    function numOfPeaks(uint256 numLeaves)
+        public
+        pure
+        returns (uint256 numPeaks)
+    {
         uint256 bits = numLeaves;
         while (bits > 0) {
             if (bits % 2 == 1) numPeaks++;
@@ -248,12 +271,11 @@ contract MMRVerification {
     /**
      * @dev Counts the number of 1s in the binary representation of an integer
      */
-    function bitCount(uint256 n) internal pure returns(uint256)
-    {
+    function bitCount(uint256 n) internal pure returns (uint256) {
         uint256 count;
-        while(n > 0) {
+        while (n > 0) {
             count = count + 1;
-            n = n & (n-1);
+            n = n & (n - 1);
         }
         return count;
     }
@@ -261,14 +283,14 @@ contract MMRVerification {
     /**
      * @dev Return position of leaf at given leaf index
      */
-   function leafIndexToPos(uint256 index) internal pure returns(uint256) {
-        return leafIndexToMmrSize(index) - trailingZeros(index+1);
+    function leafIndexToPos(uint256 index) internal pure returns (uint256) {
+        return leafIndexToMmrSize(index) - trailingZeros(index + 1);
     }
 
     /**
      * @dev Return
      */
-    function leafIndexToMmrSize(uint256 index) internal pure returns(uint256) {
+    function leafIndexToMmrSize(uint256 index) internal pure returns (uint256) {
         uint256 leavesCount = index + 1;
         uint256 peaksCount = bitCount(leavesCount);
         return (2 * leavesCount) - peaksCount;
@@ -277,15 +299,26 @@ contract MMRVerification {
     /**
      * @dev Counts the number of trailing 0s in the binary representation of an integer
      */
-    function trailingZeros(uint256 x) internal pure returns(uint256)
-    {
-       if (x == 0) return(32);
-       uint256 n = 1;
-       if ((x & 0x0000FFFF) == 0) {n = n +16; x = x >>16;}
-       if ((x & 0x000000FF) == 0) {n = n + 8; x = x >> 8;}
-       if ((x & 0x0000000F) == 0) {n = n + 4; x = x >> 4;}
-       if ((x & 0x00000003) == 0) {n = n + 2; x = x >> 2;}
-       return n - (x & 1);
+    function trailingZeros(uint256 x) internal pure returns (uint256) {
+        if (x == 0) return (32);
+        uint256 n = 1;
+        if ((x & 0x0000FFFF) == 0) {
+            n = n + 16;
+            x = x >> 16;
+        }
+        if ((x & 0x000000FF) == 0) {
+            n = n + 8;
+            x = x >> 8;
+        }
+        if ((x & 0x0000000F) == 0) {
+            n = n + 4;
+            x = x >> 4;
+        }
+        if ((x & 0x00000003) == 0) {
+            n = n + 2;
+            x = x >> 2;
+        }
+        return n - (x & 1);
     }
 
     /**
@@ -299,6 +332,6 @@ contract MMRVerification {
      * @dev Return sibling offset at a given height
      */
     function siblingOffset(uint256 height) internal pure returns (uint256 num) {
-        return(2 << height) - 1;
+        return (2 << height) - 1;
     }
 }

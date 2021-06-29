@@ -17,15 +17,16 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/outbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/basic"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
 )
 
 // EthereumListener streams the Ethereum blockchain for application events
 type EthereumListener struct {
 	config                      *ethereum.Config
 	conn                        *ethereum.Connection
-	basicOutboundChannel        *outbound.BasicOutboundChannel
-	incentivizedOutboundChannel *outbound.IncentivizedOutboundChannel
+	basicOutboundChannel        *basic.BasicOutboundChannel
+	incentivizedOutboundChannel *incentivized.IncentivizedOutboundChannel
 	mapping                     map[common.Address]string
 	payloads                    chan<- ParachainPayload
 	headerSyncer                *syncer.Syncer
@@ -67,13 +68,13 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 		return closeWithError(err)
 	}
 
-	basicOutboundChannel, err := outbound.NewBasicOutboundChannel(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.GetClient())
+	basicOutboundChannel, err := basic.NewBasicOutboundChannel(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.GetClient())
 	if err != nil {
 		return closeWithError(err)
 	}
 	li.basicOutboundChannel = basicOutboundChannel
 
-	incentivizedOutboundChannel, err := outbound.NewIncentivizedOutboundChannel(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.GetClient())
+	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.GetClient())
 	if err != nil {
 		return closeWithError(err)
 	}
@@ -175,7 +176,7 @@ func (li *EthereumListener) processEventsAndHeaders(
 	}
 }
 
-func (li *EthereumListener) queryBasicEvents(contract *outbound.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
+func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
 	var events []*etypes.Log
 
 	iter, err := contract.FilterMessage(options)
@@ -197,7 +198,7 @@ func (li *EthereumListener) queryBasicEvents(contract *outbound.BasicOutboundCha
 	return events, nil
 }
 
-func (li *EthereumListener) queryIncentivizedEvents(contract *outbound.IncentivizedOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
+func (li *EthereumListener) queryIncentivizedEvents(contract *incentivized.IncentivizedOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
 	var events []*etypes.Log
 
 	iter, err := contract.FilterMessage(options)

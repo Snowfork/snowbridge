@@ -14,23 +14,21 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
-const MaxMessagesPerSend = 10
-
 // Listener streams the Ethereum blockchain for application events
 type BeefyEthereumListener struct {
-	ethereumConfig    *ethereum.Config
-	ethereumConn      *ethereum.Connection
-	beefyDB           *store.Database
-	lightClientBridge *lightclientbridge.Contract
-	beefyMessages     chan<- store.BeefyRelayInfo
-	dbMessages        chan<- store.DatabaseCmd
-	headers           chan<- chain.Header
-	blockWaitPeriod   uint64
-	log               *logrus.Entry
+	ethereumConfig   *ethereum.Config
+	ethereumConn     *ethereum.Connection
+	beefyDB          *store.Database
+	beefyLightClient *beefylightclient.Contract
+	beefyMessages    chan<- store.BeefyRelayInfo
+	dbMessages       chan<- store.DatabaseCmd
+	headers          chan<- chain.Header
+	blockWaitPeriod  uint64
+	log              *logrus.Entry
 }
 
 func NewBeefyEthereumListener(ethereumConfig *ethereum.Config, ethereumConn *ethereum.Connection, beefyDB *store.Database,
@@ -51,18 +49,18 @@ func NewBeefyEthereumListener(ethereumConfig *ethereum.Config, ethereumConn *eth
 func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group, descendantsUntilFinal uint64) error {
 
 	// Set up light client bridge contract
-	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(li.ethereumConfig.LightClientBridge), li.ethereumConn.GetClient())
+	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(li.ethereumConfig.BeefyLightClient), li.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}
-	li.lightClientBridge = lightClientBridgeContract
+	li.beefyLightClient = beefyLightClientContract
 
 	// Fetch BLOCK_WAIT_PERIOD from light client bridge contract
-	blockWaitPeriod, err := li.lightClientBridge.ContractCaller.BLOCKWAITPERIOD(nil)
+	blockWaitPeriod, err := li.beefyLightClient.ContractCaller.BLOCKWAITPERIOD(nil)
 	if err != nil {
 		return err
 	}
-	li.blockWaitPeriod = blockWaitPeriod.Uint64()
+	li.blockWaitPeriod = blockWaitPeriod
 
 	// If starting block < latest block, sync the Relayer to the latest block
 	blockNumber, err := li.ethereumConn.GetClient().BlockNumber(ctx)
@@ -125,13 +123,13 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(ctx context.Context, desce
 	}
 }
 
-// queryInitialVerificationSuccessfulEvents queries ContractInitialVerificationSuccessful events from the LightClientBridge contract
+// queryInitialVerificationSuccessfulEvents queries ContractInitialVerificationSuccessful events from the BeefyLightClient contract
 func (li *BeefyEthereumListener) queryInitialVerificationSuccessfulEvents(ctx context.Context, start uint64,
-	end *uint64) ([]*lightclientbridge.ContractInitialVerificationSuccessful, error) {
-	var events []*lightclientbridge.ContractInitialVerificationSuccessful
+	end *uint64) ([]*beefylightclient.ContractInitialVerificationSuccessful, error) {
+	var events []*beefylightclient.ContractInitialVerificationSuccessful
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-	iter, err := li.lightClientBridge.FilterInitialVerificationSuccessful(&filterOps)
+	iter, err := li.beefyLightClient.FilterInitialVerificationSuccessful(&filterOps)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +168,7 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 
 	for _, event := range events {
 		// Fetch validation data from contract using event.ID
-		validationData, err := li.lightClientBridge.ContractCaller.ValidationData(nil, event.Id)
+		validationData, err := li.beefyLightClient.ContractCaller.ValidationData(nil, event.Id)
 		if err != nil {
 			li.log.WithError(err).Error(fmt.Sprintf("Error querying validation data for ID %d", event.Id))
 		}
@@ -182,8 +180,12 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 			generatedPayload := li.simulatePayloadGeneration(*item)
 			if generatedPayload == validationData.CommitmentHash {
 				// Update existing database item
-				li.log.Info("Updating item status from 'CommitmentWitnessed' to 'InitialVerificationTxConfirmed'")
+				li.log.Infof(
+					"Updating item %s status from 'CommitmentWitnessed' to 'InitialVerificationTxConfirmed'",
+					event.Id,
+				)
 				instructions := map[string]interface{}{
+					"contract_id":             event.Id.Int64(),
 					"status":                  store.InitialVerificationTxConfirmed,
 					"initial_verification_tx": event.Raw.TxHash.Hex(),
 					"complete_on_block":       event.Raw.BlockNumber + li.blockWaitPeriod,
@@ -233,8 +235,12 @@ func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx 
 			continue
 		}
 
-		li.log.Info("3: Updating item status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'")
+		li.log.Infof(
+			"3: Updating item %s status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'",
+			event.Id,
+		)
 		instructions := map[string]interface{}{
+			"contract_id":       event.Id.Int64(),
 			"status":            store.InitialVerificationTxConfirmed,
 			"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
 		}
@@ -243,13 +249,13 @@ func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx 
 	}
 }
 
-// queryFinalVerificationSuccessfulEvents queries ContractFinalVerificationSuccessful events from the LightClientBridge contract
+// queryFinalVerificationSuccessfulEvents queries ContractFinalVerificationSuccessful events from the BeefyLightClient contract
 func (li *BeefyEthereumListener) queryFinalVerificationSuccessfulEvents(ctx context.Context, start uint64,
-	end *uint64) ([]*lightclientbridge.ContractFinalVerificationSuccessful, error) {
-	var events []*lightclientbridge.ContractFinalVerificationSuccessful
+	end *uint64) ([]*beefylightclient.ContractFinalVerificationSuccessful, error) {
+	var events []*beefylightclient.ContractFinalVerificationSuccessful
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-	iter, err := li.lightClientBridge.FilterFinalVerificationSuccessful(&filterOps)
+	iter, err := li.beefyLightClient.FilterFinalVerificationSuccessful(&filterOps)
 	if err != nil {
 		return nil, err
 	}
@@ -285,27 +291,15 @@ func (li *BeefyEthereumListener) processHistoricalFinalVerificationSuccessfulEve
 	)
 
 	for _, event := range events {
-		// Fetch validation data from contract using event.ID
-		validationData, err := li.lightClientBridge.ContractCaller.ValidationData(nil, event.Id)
-		if err != nil {
-			li.log.WithError(err).Error(fmt.Sprintf("Error querying validation data for ID %d", event.Id))
-		}
-
-		// Attempt to match items in database based on their payload
-		itemFoundInDatabase := false
-		items := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
-		for _, item := range items {
-			generatedPayload := li.simulatePayloadGeneration(*item)
-			if generatedPayload == validationData.CommitmentHash {
-				li.log.Info("Deleting finalized item from the database'")
-				deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
-				li.dbMessages <- deleteCmd
-
-				itemFoundInDatabase = true
-				break
-			}
-		}
-		if !itemFoundInDatabase {
+		item := li.beefyDB.GetItemByID(event.Id.Int64())
+		if int64(item.ID) == event.Id.Int64() {
+			li.log.Infof(
+				"Deleting finalized item %s from the database",
+				event.Id,
+			)
+			deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
+			li.dbMessages <- deleteCmd
+		} else {
 			li.log.Error("BEEFY justification data not found in database for FinalVerificationSuccessful event. Ignoring event.")
 		}
 	}
@@ -334,12 +328,12 @@ func (li *BeefyEthereumListener) processFinalVerificationSuccessfulEvents(ctx co
 			continue
 		}
 
-		item := li.beefyDB.GetItemByFinalVerificationTxHash(event.Raw.TxHash)
-		if item.Status != store.CompleteVerificationTxSent {
-			continue
-		}
+		li.log.Infof(
+			"6: Deleting finalized item %s from the database",
+			event.Id,
+		)
 
-		li.log.Info("6: Deleting finalized item from the database'")
+		item := li.beefyDB.GetItemByID(event.Id.Int64())
 		deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
 		li.dbMessages <- deleteCmd
 	}
@@ -352,7 +346,7 @@ func (li *BeefyEthereumListener) simulatePayloadGeneration(item store.BeefyRelay
 		li.log.WithError(fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error()))
 	}
 
-	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(0)
+	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(0, []*big.Int{})
 	if err != nil {
 		li.log.WithError(err).Error("Error building commitment message")
 	}
@@ -384,7 +378,10 @@ func (li *BeefyEthereumListener) forwardReadyToCompleteItems(ctx context.Context
 				li.log.WithError(err).Error("Failure fetching inclusion block")
 			}
 
-			li.log.Info("4: Updating item status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'")
+			li.log.Infof(
+				"4: Updating item %v status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'",
+				item.ID,
+			)
 			item.Status = store.ReadyToComplete
 			item.RandomSeed = block.Hash()
 			li.beefyMessages <- *item

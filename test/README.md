@@ -53,6 +53,7 @@ Build polkadot:
 git clone -n https://github.com/snowfork/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
 git checkout enable_beefy_on_rococo
+./scripts/init.sh
 cargo build --release
 cd -
 ```
@@ -63,10 +64,10 @@ Optional: If you cloned the polkadot repo in another location, Create an `.env` 
 cp ./.env-example .env
 ```
 
-Start all services (parachain, relayer, ganache, etc):
+Start all services (parachain, relayer, ganache, etc). We recommend adding the `duplicate` flag to create a duplicate parachain so that we have 2 different running and registered parachains for testing XCM and for testing the polkadot light client with multiple parachain headers being tracked.
 
 ```bash
-scripts/start-services.sh
+scripts/start-services.sh duplicate
 ```
 
 Wait until the "System has been initialized" message
@@ -148,3 +149,6 @@ The `start-services.sh` script writes the following logs:
 - parachain.log
 - relayer.log
 - ganache.log
+
+## Generating/Updating new test fixtures
+Test fixtures are taken by running the service in full e2e test. The relayer should log the fixture data you need (code is in [the relayer here](../relayer/workers/beefyrelayer/fixture-data-logger.go), though may require a bit of manual copy/pasting to get perfectly it in the right format.

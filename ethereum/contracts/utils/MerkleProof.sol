@@ -1,5 +1,5 @@
 // "SPDX-License-Identifier: Apache-2.0"
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.5;
 
 library MerkleProof {
     /**
@@ -9,7 +9,7 @@ library MerkleProof {
      * @param leaf the leaf which needs to be proven
      * @param pos the position of the leaf, index starting with 0
      * @param width the width or number of leaves in the tree
-     * @param proof the array of proofs to help verify the leafs membership, ordered from leaf to root
+     * @param proof the array of proofs to help verify the leaf's membership, ordered from leaf to root
      * @return a boolean value representing the success or failure of the operation
      */
     function verifyMerkleLeafAtPosition(

@@ -6,7 +6,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 	merkletree "github.com/wealdtech/go-merkletree"
 	"golang.org/x/crypto/blake2b"
 )
@@ -22,12 +23,13 @@ type NewSignatureCommitmentMessage struct {
 
 type CompleteSignatureCommitmentMessage struct {
 	ID                             *big.Int
-	CommitmentHash                 [32]byte
-	Commitment                     lightclientbridge.LightClientBridgeCommitment
+	Commitment                     beefylightclient.BeefyLightClientCommitment
 	Signatures                     [][]byte
 	ValidatorPositions             []*big.Int
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
+	LatestMMRLeaf                  beefylightclient.BeefyLightClientBeefyMMRLeaf
+	MMRProofItems                  [][32]byte
 }
 
 type BeefyJustification struct {
@@ -42,27 +44,19 @@ func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment
 	}
 }
 
-func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int) (NewSignatureCommitmentMessage, error) {
+func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int, initialBitfield []*big.Int) (NewSignatureCommitmentMessage, error) {
+	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
+
 	sig0ProofContents, err := b.GenerateMerkleProofOffchain(valAddrIndex)
 	if err != nil {
 		return NewSignatureCommitmentMessage{}, err
 	}
 
-	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
-	// Split signature into r, s, v and add 27 to v
-	sigValPolkadot := b.SignedCommitment.Signatures[valAddrIndex].Value
-	sigValrs := sigValPolkadot[:64]
-	sigValv := sigValPolkadot[64]
-	sigValvAdded := byte(uint8(sigValv) + 27)
-	sigValEthereum := append(sigValrs, sigValvAdded)
-
-	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
-
-	validatorClaimsBitfield := []*big.Int{big.NewInt(123)} // TODO: add bitfield stuff properly
+	sigValEthereum := BeefySigToEthSig(b.SignedCommitment.Signatures[valAddrIndex].Value)
 
 	msg := NewSignatureCommitmentMessage{
 		CommitmentHash:                commitmentHash,
-		ValidatorClaimsBitfield:       validatorClaimsBitfield,
+		ValidatorClaimsBitfield:       initialBitfield,
 		ValidatorSignatureCommitment:  sigValEthereum,
 		ValidatorPublicKey:            b.ValidatorAddresses[valAddrIndex],
 		ValidatorPosition:             big.NewInt(int64(valAddrIndex)),
@@ -70,6 +64,17 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 	}
 
 	return msg, nil
+}
+
+func BeefySigToEthSig(beefySig BeefySignature) []byte {
+	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
+	// Split signature into r, s, v and add 27 to v
+	sigValrs := beefySig[:64]
+	sigValv := beefySig[64]
+	sigValvAdded := byte(uint8(sigValv) + 27)
+	sigValEthereum := append(sigValrs, sigValvAdded)
+
+	return sigValEthereum
 }
 
 // Keccak256 is the Keccak256 hashing method
@@ -125,33 +130,70 @@ func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][3
 	return sigProofContents, nil
 }
 
-func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage() (CompleteSignatureCommitmentMessage, error) {
-	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
+func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyRelayInfo, bitfield string) (CompleteSignatureCommitmentMessage, error) {
+	validationDataID := big.NewInt(int64(info.ContractID))
 
-	validationDataID := big.NewInt(int64(b.SignedCommitment.Commitment.ValidatorSetID))
-
-	//TODO: Use info.RandomSeed.Big() to generate validatorPositions
 	validatorPositions := []*big.Int{}
+	for i := 0; i < len(bitfield); i++ {
+		bit := bitfield[i : i+1]
+		if bit == "1" {
+			validatorPositions = append(validatorPositions, big.NewInt(int64(i)))
+		}
+	}
 
-	//TODO: Populate signatures, validatorPublicKeys, and based on validatorPositions
 	signatures := [][]byte{}
-	validatorPublicKeys := b.ValidatorAddresses
+	validatorPublicKeys := []common.Address{}
 	validatorPublicKeyMerkleProofs := [][][32]byte{}
+	for _, validatorPosition := range validatorPositions {
+		beefySig := b.SignedCommitment.Signatures[validatorPosition.Int64()].Value
+		ethSig := BeefySigToEthSig(beefySig)
+		signatures = append(signatures, ethSig)
 
-	commitment := lightclientbridge.LightClientBridgeCommitment{
+		pubKey := b.ValidatorAddresses[validatorPosition.Int64()]
+		validatorPublicKeys = append(validatorPublicKeys, pubKey)
+
+		merkleProof, err := b.GenerateMerkleProofOffchain(int(validatorPosition.Int64()))
+		if err != nil {
+			return CompleteSignatureCommitmentMessage{}, err
+		}
+
+		validatorPublicKeyMerkleProofs = append(validatorPublicKeyMerkleProofs, merkleProof)
+	}
+
+	commitment := beefylightclient.BeefyLightClientCommitment{
 		Payload:        b.SignedCommitment.Commitment.Payload,
 		BlockNumber:    uint64(b.SignedCommitment.Commitment.BlockNumber),
 		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),
 	}
 
+	var latestMMRProof types.GenerateMMRProofResponse
+	err := types.DecodeFromBytes(info.SerializedLatestMMRProof, &latestMMRProof)
+	if err != nil {
+		return CompleteSignatureCommitmentMessage{}, err
+	}
+
+	latestMMRLeaf := beefylightclient.BeefyLightClientBeefyMMRLeaf{
+		ParentNumber:         uint32(latestMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           latestMMRProof.Leaf.ParentNumberAndHash.Hash,
+		ParachainHeadsRoot:   latestMMRProof.Leaf.ParachainHeads,
+		NextAuthoritySetId:   uint64(latestMMRProof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(latestMMRProof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: latestMMRProof.Leaf.BeefyNextAuthoritySet.Root,
+	}
+	mmrProofItems := [][32]byte{}
+	for _, mmrProofItem := range latestMMRProof.Proof.Items {
+		mmrProofItems = append(mmrProofItems, mmrProofItem)
+	}
+
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                             validationDataID,
-		CommitmentHash:                 commitmentHash,
 		Commitment:                     commitment,
 		Signatures:                     signatures,
 		ValidatorPositions:             validatorPositions,
 		ValidatorPublicKeys:            validatorPublicKeys,
 		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
+		LatestMMRLeaf:                  latestMMRLeaf,
+		MMRProofItems:                  mmrProofItems,
 	}
 	return msg, nil
 }

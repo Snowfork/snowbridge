@@ -6,7 +6,7 @@ const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel
 const MockApp = artifacts.require("MockApp");
 const MockRewardSource = artifacts.require("MockRewardSource");
 const {
-  deployLightClientBridge
+  deployBeefyLightClient
 } = require("./helpers");
 
 const makeCommitment = (messages) => {
@@ -29,13 +29,13 @@ describe("IncentivizedInboundChannel", function () {
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
     userOne = accounts[1];
-    this.lightClientBridge = await deployLightClientBridge();
+    this.beefyLightClient = await deployBeefyLightClient();
   });
 
   describe("submit", function () {
     beforeEach(async function () {
       const rewardSource = await MockRewardSource.new();
-      this.channel = await IncentivizedInboundChannel.new(this.lightClientBridge.address,
+      this.channel = await IncentivizedInboundChannel.new(this.beefyLightClient.address,
         { from: owner }
       );
       await this.channel.initialize(owner, rewardSource.address);

@@ -3,6 +3,8 @@ package beefyrelayer
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"strconv"
 
 	"golang.org/x/sync/errgroup"
 
@@ -12,18 +14,18 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )
 
 type BeefyEthereumWriter struct {
-	ethereumConfig    *ethereum.Config
-	ethereumConn      *ethereum.Connection
-	beefyDB           *store.Database
-	lightClientBridge *lightclientbridge.Contract
-	databaseMessages  chan<- store.DatabaseCmd
-	beefyMessages     <-chan store.BeefyRelayInfo
-	log               *logrus.Entry
+	ethereumConfig   *ethereum.Config
+	ethereumConn     *ethereum.Connection
+	beefyDB          *store.Database
+	beefyLightClient *beefylightclient.Contract
+	databaseMessages chan<- store.DatabaseCmd
+	beefyMessages    <-chan store.BeefyRelayInfo
+	log              *logrus.Entry
 }
 
 func NewBeefyEthereumWriter(ethereumConfig *ethereum.Config, ethereumConn *ethereum.Connection, beefyDB *store.Database,
@@ -41,11 +43,11 @@ func NewBeefyEthereumWriter(ethereumConfig *ethereum.Config, ethereumConn *ether
 
 func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 
-	lightClientBridgeContract, err := lightclientbridge.NewContract(common.HexToAddress(wr.ethereumConfig.LightClientBridge), wr.ethereumConn.GetClient())
+	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(wr.ethereumConfig.BeefyLightClient), wr.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}
-	wr.lightClientBridge = lightClientBridgeContract
+	wr.beefyLightClient = beefyLightClientContract
 
 	eg.Go(func() error {
 		return wr.writeMessagesLoop(ctx)
@@ -99,14 +101,30 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
 	}
 
-	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(valIndex)
+	contract := wr.beefyLightClient
+	if contract == nil {
+		return fmt.Errorf("Unknown contract")
+	}
+
+	signedValidators := []*big.Int{}
+	for i := range beefyJustification.SignedCommitment.Signatures {
+		// TODO: skip over empty/missing signatures
+		// if signature.Option.IsSome() {
+		signedValidators = append(signedValidators, big.NewInt(int64(i)))
+		// }
+	}
+	numberOfValidators := big.NewInt(int64(len(beefyJustification.SignedCommitment.Signatures)))
+	initialBitfield, err := contract.CreateInitialBitfield(
+		&bind.CallOpts{Pending: true}, signedValidators, numberOfValidators,
+	)
 	if err != nil {
+		wr.log.WithError(err).Error("Failed to create initial validator bitfield")
 		return err
 	}
 
-	contract := wr.lightClientBridge
-	if contract == nil {
-		return fmt.Errorf("Unknown contract")
+	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(valIndex, initialBitfield)
+	if err != nil {
+		return err
 	}
 
 	options := bind.TransactOpts{
@@ -137,32 +155,58 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 	return nil
 }
 
-// WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the LightClientBridge contract
+// WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the BeefyLightClient contract
 func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
 		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
 	}
 
-	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage()
+	contract := wr.beefyLightClient
+	if contract == nil {
+		return fmt.Errorf("Unknown contract")
+	}
+
+	randomBitfield, err := contract.CreateRandomBitfield(
+		&bind.CallOpts{Pending: true},
+		big.NewInt(int64(info.ContractID)),
+	)
 	if err != nil {
+		wr.log.WithError(err).Error("Failed to get random validator bitfield")
 		return err
 	}
 
-	contract := wr.lightClientBridge
-	if contract == nil {
-		return fmt.Errorf("Unknown contract")
+	bitfield := ""
+	for _, bitfieldInt := range randomBitfield {
+		bits := strconv.FormatInt(bitfieldInt.Int64(), 2)
+		bitfield += bits
+	}
+
+	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage(info, bitfield)
+	if err != nil {
+		return err
 	}
 
 	options := bind.TransactOpts{
 		From:     wr.ethereumConn.GetKP().CommonAddress(),
 		Signer:   wr.signerFn,
 		Context:  ctx,
-		GasLimit: 500000,
+		GasLimit: 2000000,
 	}
 
-	tx, err := contract.CompleteSignatureCommitment(&options, msg.ID, msg.CommitmentHash, msg.Commitment, msg.Signatures,
-		msg.ValidatorPositions, msg.ValidatorPublicKeys, msg.ValidatorPublicKeyMerkleProofs)
+	validatorProof := beefylightclient.BeefyLightClientValidatorProof{
+		Signatures:            msg.Signatures,
+		Positions:             msg.ValidatorPositions,
+		PublicKeys:            msg.ValidatorPublicKeys,
+		PublicKeyMerkleProofs: msg.ValidatorPublicKeyMerkleProofs,
+	}
+
+	tx, err := contract.CompleteSignatureCommitment(&options,
+		msg.ID,
+		msg.Commitment,
+		validatorProof,
+		msg.LatestMMRLeaf,
+		msg.MMRProofItems)
 
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
@@ -181,6 +225,8 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 	}
 	updateCmd := store.NewDatabaseCmd(&info, store.Update, instructions)
 	wr.databaseMessages <- updateCmd
+
+	wr.LogBeefyFixtureDataAll(msg, info)
 
 	return nil
 }

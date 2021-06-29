@@ -1,0 +1,32 @@
+{
+  "parachains": [
+    {
+      "id": "200",
+      "wsPort": 11144,
+      "port": 31200,
+      "flags": [
+        "--execution=native",
+        "-lruntime=debug,import_header=trace,bridge=trace",
+        "--rpc-cors=all",
+        "--offchain-worker=Always",
+        "--enable-offchain-indexing=true",
+        "--",
+        "--execution=wasm"
+      ]
+    },
+    {
+      "id": "201",
+      "wsPort": 11145,
+      "port": 31201,
+      "flags": [
+        "--execution=native",
+        "-lruntime=debug,import_header=trace,bridge=trace",
+        "--rpc-cors=all",
+        "--offchain-worker=Always",
+        "--enable-offchain-indexing=true",
+        "--",
+        "--execution=wasm"
+      ]
+    }
+  ]
+}

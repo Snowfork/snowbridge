@@ -28,6 +28,8 @@ type BeefyRelayInfo struct {
 	gorm.Model
 	ValidatorAddresses         []byte
 	SignedCommitment           []byte
+	SerializedLatestMMRProof   []byte
+	ContractID                 int64
 	Status                     Status
 	InitialVerificationTxHash  common.Hash
 	CompleteOnBlock            uint64
@@ -35,12 +37,13 @@ type BeefyRelayInfo struct {
 	CompleteVerificationTxHash common.Hash
 }
 
-func NewBeefyRelayInfo(validatorAddresses, signedCommitment []byte, status Status,
+func NewBeefyRelayInfo(validatorAddresses, signedCommitment []byte, contractId int64, status Status,
 	initialVerificationTxHash common.Hash, completeOnBlock uint64, randomSeed,
 	completeVerificationTxHash common.Hash) BeefyRelayInfo {
 	return BeefyRelayInfo{
 		ValidatorAddresses:         validatorAddresses,
 		SignedCommitment:           signedCommitment,
+		ContractID:                 contractId,
 		Status:                     status,
 		InitialVerificationTxHash:  initialVerificationTxHash,
 		CompleteOnBlock:            completeOnBlock,
@@ -166,15 +169,18 @@ func (d *Database) writeLoop(ctx context.Context) error {
 				tx := d.DB.Begin()
 				if err := tx.Error; err != nil {
 					d.log.Error(err)
+					return err
 				}
 
 				if err := tx.Create(&cmd.Info).Error; err != nil {
 					tx.Rollback()
 					d.log.Error(err)
+					return err
 				}
 
 				if err := tx.Commit().Error; err != nil {
 					d.log.Error(err)
+					return err
 				}
 			case Update:
 				d.log.Info("Updating item in database...")
@@ -194,14 +200,20 @@ func (d *Database) GetItemsByStatus(status Status) []*BeefyRelayInfo {
 	return items
 }
 
+func (d *Database) GetItemByID(id int64) *BeefyRelayInfo {
+	var item BeefyRelayInfo
+	d.DB.Take(&item, "contract_id = ?", id)
+	return &item
+}
+
 func (d *Database) GetItemByInitialVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
 	var item BeefyRelayInfo
 	d.DB.Take(&item, "initial_verification_tx_hash = ?", txHash)
 	return &item
 }
 
-func (d *Database) GetItemByFinalVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
+func (d *Database) GetItemByCompleteVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
 	var item BeefyRelayInfo
-	d.DB.Take(&item, "final_verification_tx_hash = ?", txHash)
+	d.DB.Take(&item, "complete_verification_tx_hash = ?", txHash)
 	return &item
 }
