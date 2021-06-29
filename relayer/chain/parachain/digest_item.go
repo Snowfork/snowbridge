@@ -1,4 +1,4 @@
-package substrate
+package parachain
 
 import (
 	"fmt"
@@ -77,4 +77,19 @@ func (c ChannelID) Encode(encoder scale.Encoder) error {
 	}
 
 	return nil
+}
+
+func ExtractAuxiliaryDigestItems(digest types.Digest) ([]AuxiliaryDigestItem, error) {
+	var auxDigestItems []AuxiliaryDigestItem
+	for _, digestItem := range digest {
+		if digestItem.IsOther {
+			var auxDigestItem AuxiliaryDigestItem
+			err := types.DecodeFromBytes(digestItem.AsOther, &auxDigestItem)
+			if err != nil {
+				return nil, err
+			}
+			auxDigestItems = append(auxDigestItems, auxDigestItem)
+		}
+	}
+	return auxDigestItems, nil
 }

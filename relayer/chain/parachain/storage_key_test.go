@@ -3,7 +3,6 @@ package parachain
 import (
 	"testing"
 
-	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +14,7 @@ func TestMakeStorageKey(t *testing.T) {
 		7, 7, 7, 7, 7, 7, 7, 7,
 	}
 
-	channelID := chainTypes.ChannelID{
+	channelID := ChannelID{
 		IsBasic: true,
 	}
 
