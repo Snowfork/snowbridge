@@ -157,7 +157,6 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 				return nil, types.Header{}, err
 			}
 
-			co.log.WithField("parachainId", parachainID).Info("Decoding header for parachain")
 			var headerBytes types.Bytes
 			if err := types.DecodeFromBytes(change.StorageData, &headerBytes); err != nil {
 				co.log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
@@ -166,6 +165,7 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 			headers = append(headers, headerBytes)
 
 			if parachainID == types.U32(ownParachainId) {
+				co.log.WithField("parachainId", parachainID).Info("Decoding header for parachain")
 				var header types.Header
 				if err := types.DecodeFromBytes(headerBytes, &header); err != nil {
 					co.log.WithError(err).Error("Failed to decode Header")
@@ -189,19 +189,14 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 }
 
 // Fetch the latest block of a parachain that has been finalized at a relay chain block hash
-func (co *Connection) FetchLatestFinalizedParaBlock(relayBlockhash types.Hash, parachainId uint32) (uint64, types.Hash, error) {
+func (co *Connection) FetchLatestFinalizedParaBlockNumber(relayBlockhash types.Hash, parachainId uint32) (uint64, error) {
 	_, ownParaHead, err := co.GetAllParaheadsWithOwn(relayBlockhash, parachainId)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to get parachain heads from relay chain")
-		return 0, types.Hash{}, err
+		return 0, err
 	}
 
 	finalizedParaBlockNumber := uint64(ownParaHead.Number)
-	ownParaHeadHash, err := co.GetAPI().RPC.Chain.GetBlockHash(finalizedParaBlockNumber)
-	if err != nil {
-		co.log.WithError(err).Error("Failed to get parachain block hash")
-		return 0, types.Hash{}, err
-	}
 
-	return finalizedParaBlockNumber, ownParaHeadHash, nil
+	return finalizedParaBlockNumber, nil
 }
