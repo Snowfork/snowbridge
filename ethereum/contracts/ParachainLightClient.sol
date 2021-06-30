@@ -2,6 +2,7 @@
 pragma solidity ^0.8.5;
 
 import "./BeefyLightClient.sol";
+import "./utils/MerkleProof.sol";
 
 library ParachainLightClient {
     struct OwnParachainHead {
@@ -37,22 +38,31 @@ library ParachainLightClient {
         uint256 _beefyMMRLeafCount,
         bytes32[] calldata _beefyMMRLeafProof
     ) internal {
+        // Must verify the parachain id to ensure msg comes from our parachain
+        // TODO
+
         // 2. Compute `ownParachainHead` by hashing the data of the `commitment` together with the contents of
         // `_ownParachainHeadPartial`
         bytes32 ownParachainHeadHash = encodeParachainHeadHash(
             _ownParachainHeadPartial,
             commitment
         );
-        // 3. Compute `parachainHeadsRoot` by verifying the merkle proof using `ownParachainHead` and
+
+        // 3. Compute `parachainHeadsRoot` by verifying the merkle proof using `ownParachainHeadHash` and
         // `_parachainHeadsProof`
-        // TODO
-        // parachainHeadsRoot = MerkleProof.computeMerkleLeafAtPosition(ownParachainHeadHash, pos, width, proof);
-        // Must also verify the parachain id to ensure msg comes from our parachain
-        // TODO
+        bytes32 parachainHeadsRoot = MerkleProof.computeMerkleLeafAtPosition(
+            ownParachainHeadHash,
+            pos,
+            width,
+            proof
+        );
+
         // 4. Compute the `beefyMMRLeaf` using `parachainHeadsRoot` and `_beefyMMRLeafPartial`
         // TODO
+
         // 5. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
         // `_beefyMMRLeafIndex`, `_beefyMMRLeafCount` and `_beefyMMRLeafProof`
+        // TODO
         // require(
         //     beefyLightClient.verifyBeefyMerkleLeaf(
         //         beefyMMRLeaf,
