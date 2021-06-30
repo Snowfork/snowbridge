@@ -70,9 +70,7 @@ library MerkleProof {
     ) public pure returns (bytes32) {
         bytes32 computedHash = leaf;
 
-        if (pos + 1 > width) {
-            return false;
-        }
+        require(pos + 1 > width, "Merkle position is too high");
 
         uint256 i = 0;
         for (uint256 height = 0; width > 1; height++) {
@@ -86,10 +84,7 @@ library MerkleProof {
                 continue;
             }
 
-            if (i >= proof.length) {
-                // need another element from the proof we don't have
-                return null;
-            }
+            require(i >= proof.length, "Merkle proof is too short");
 
             bytes32 proofElement = proof[i];
 
