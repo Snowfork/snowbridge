@@ -14,7 +14,7 @@ type ParaBlockWithProofs struct {
 	Block            ParaBlockWithDigest
 	MMRProofResponse types.GenerateMMRProofResponse
 	Header           types.Header
-	HeaderProof      string
+	HeaderProof      [][32]byte
 }
 
 type DigestItemWithData struct {
@@ -27,7 +27,7 @@ type MessagePackage struct {
 	commitmentHash types.H256
 	commitmentData types.StorageDataRaw
 	paraHead       types.Header
-	paraHeadProof  string
+	paraHeadProof  [][32]byte
 	mmrProof       types.GenerateMMRProofResponse
 }
 

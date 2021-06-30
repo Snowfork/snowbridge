@@ -197,7 +197,7 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	}
 	tx, err := wr.incentivizedInboundChannel.Submit(options, messages,
 		paraheadPartial,
-		[][32]byte{}, beefyMMRLeafPartial,
+		msgPackage.paraHeadProof, beefyMMRLeafPartial,
 		big.NewInt(beefyMMRLeafIndex), big.NewInt(beefyLeafCount), beefyMMRProof)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")

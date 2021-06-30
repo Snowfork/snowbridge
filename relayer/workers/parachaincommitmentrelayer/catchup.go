@@ -171,7 +171,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 			li.log.WithError(err).Error("Failed to get mmr leaf")
 			return nil, err
 		}
-		ourParaHeadProof, err := li.createParachainHeaderProof(allParaHeads, ourParaHead, mmrProof.Leaf.ParachainHeads)
+		ourParaHeadProof, err := parachain.CreateParachainHeaderProof(allParaHeads, ourParaHead, mmrProof.Leaf.ParachainHeads)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to create parachain header proof")
 			return nil, err
@@ -186,12 +186,6 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 		blocksWithProof = append(blocksWithProof, blockWithProof)
 	}
 	return blocksWithProof, nil
-}
-
-func (li *BeefyListener) createParachainHeaderProof(allParaHeads []types.Bytes, ourParaHead types.Header, expectedRoot types.H256) (string, error) {
-	//TODO: implement
-	//TODO: check against expectedRoot
-	return "", nil
 }
 
 // Searches for all lost commitments on each channel from the given parachain block number backwards
