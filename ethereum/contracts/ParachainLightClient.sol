@@ -39,16 +39,14 @@ library ParachainLightClient {
     ) internal {
         // 2. Compute `ownParachainHead` by hashing the data of the `commitment` together with the contents of
         // `_ownParachainHeadPartial`
-        // TODO
-        // bytes32 ownParachainHead = keccak256(abi.encodePacked(ParachainLightClient.OwnParachainHead(
-        //     _ownParachainHeadPartial.parentHash,
-        //     _ownParachainHeadPartial.number,
-        //     _ownParachainHeadPartial.stateRoot,
-        //     _ownParachainHeadPartial.extrinsicsRoot,
-        //     commitment,
-        // )));
+        bytes32 ownParachainHeadHash = encodeParachainHeadHash(
+            _ownParachainHeadPartial,
+            commitment
+        );
         // 3. Compute `parachainHeadsRoot` by verifying the merkle proof using `ownParachainHead` and
         // `_parachainHeadsProof`
+        // TODO
+        // parachainHeadsRoot = MerkleProof.computeMerkleLeafAtPosition(ownParachainHeadHash, pos, width, proof);
         // Must also verify the parachain id to ensure msg comes from our parachain
         // TODO
         // 4. Compute the `beefyMMRLeaf` using `parachainHeadsRoot` and `_beefyMMRLeafPartial`
@@ -64,5 +62,24 @@ library ParachainLightClient {
         //     ),
         //     "Invalid proof"
         // );
+    }
+
+    function encodeParachainHeadHash(
+        ParachainLightClient.OwnParachainHeadPartial
+            calldata _ownParachainHeadPartial,
+        bytes32 commitment
+    ) public pure returns (bytes memory) {
+        return
+            keccak256(
+                abi.encode(
+                    ParachainLightClient.OwnParachainHead(
+                        _ownParachainHeadPartial.parentHash,
+                        _ownParachainHeadPartial.number,
+                        _ownParachainHeadPartial.stateRoot,
+                        _ownParachainHeadPartial.extrinsicsRoot,
+                        commitment
+                    )
+                )
+            );
     }
 }
