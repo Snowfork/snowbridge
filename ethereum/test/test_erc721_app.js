@@ -42,7 +42,7 @@ contract("ERC721", function (accounts) {
   const anotherTokenId = 2;
 
   // Constants
-  const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+  const POLKADOT_ACCOUNT_ID = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
   describe("lock", function () {
     beforeEach(async function () {
@@ -63,7 +63,7 @@ contract("ERC721", function (accounts) {
       await approveToken(this.token, this.app, userOne, tokenId)
         .should.be.fulfilled;
 
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ADDRESS, tokenId, ChannelId.Basic)
+      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, tokenId, ChannelId.Basic)
         .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
@@ -72,7 +72,7 @@ contract("ERC721", function (accounts) {
       );
 
       event.args.sender.should.be.equal(userOne);
-      event.args.recipient.should.be.equal(POLKADOT_ADDRESS);
+      event.args.recipient.should.be.equal(POLKADOT_ACCOUNT_ID);
       BigNumber(event.args.tokenId).should.be.bignumber.equal(tokenId);
 
       let newOwner = await this.token.ownerOf(tokenId);
@@ -83,7 +83,7 @@ contract("ERC721", function (accounts) {
       await approveToken(this.token, this.app, userOne, anotherTokenId)
         .should.be.fulfilled;
 
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ADDRESS, anotherTokenId, ChannelId.Basic)
+      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, anotherTokenId, ChannelId.Basic)
           .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
@@ -92,7 +92,7 @@ contract("ERC721", function (accounts) {
       );
 
       event.args.sender.should.be.equal(userOne);
-      event.args.recipient.should.be.equal(POLKADOT_ADDRESS);
+      event.args.recipient.should.be.equal(POLKADOT_ACCOUNT_ID);
       BigNumber(event.args.tokenId).should.be.bignumber.equal(anotherTokenId);
 
       let newOwner = await this.token.ownerOf(anotherTokenId);
@@ -103,7 +103,7 @@ contract("ERC721", function (accounts) {
       await approveToken(this.token, this.app, userOne, tokenId)
         .should.be.fulfilled;
 
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ADDRESS, tokenId, ChannelId.Basic)
+      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, tokenId, ChannelId.Basic)
           .should.be.fulfilled;
 
       confirmBasicChannelSend(tx.receipt.rawLogs[3], this.channels.basic.outbound.address, this.app.address, 1)
@@ -113,7 +113,7 @@ contract("ERC721", function (accounts) {
       await approveToken(this.token, this.app, userOne, tokenId)
         .should.be.fulfilled;
 
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ADDRESS, tokenId, ChannelId.Incentivized)
+      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, tokenId, ChannelId.Incentivized)
           .should.be.fulfilled;
 
       confirmIncentivizedChannelSend(tx.receipt.rawLogs[3], this.channels.incentivized.outbound.address, this.app.address, 1)
@@ -135,7 +135,7 @@ contract("ERC721", function (accounts) {
       await approveToken(this.token, this.app, userOne, tokenId)
         .should.be.fulfilled;
 
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ADDRESS, tokenId, ChannelId.Basic)
+      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, tokenId, ChannelId.Basic)
           .should.be.fulfilled;
 
       // recipient on the ethereum side
@@ -165,7 +165,7 @@ contract("ERC721", function (accounts) {
       await approveToken(this.token, this.app, userOne, tokenId)
         .should.be.fulfilled;
 
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ADDRESS, tokenId, ChannelId.Incentivized)
+      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, tokenId, ChannelId.Incentivized)
           .should.be.fulfilled;
 
       // recipient on the ethereum side

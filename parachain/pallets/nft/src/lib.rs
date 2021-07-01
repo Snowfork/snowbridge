@@ -1,19 +1,21 @@
-//! # Non Fungible Token
-//! The module provides implementations for non-fungible-token.
+//! # NFT
+//! The NFT (Non-Fungible Token) module provides implementations for handling non fungible assets.
 //!
-//! - [`Config`](./trait.Config.html)
+//! - [`nft::Config`](./trait.Config.html)
 //! - [`Call`](./enum.Call.html)
 //! - [`Module`](./struct.Module.html)
-//!
+//
 //! ## Overview
 //!
 //! The NFT module is used by the Polkadot-Ethereum bridge to store ERC721 tokens.
 
-//! ### Module Functions
+//! ## Interface
 //!
-//! - `transfer` - Transfer NFT(non fungible token) to another account.
-//! - `mint` - Mint NFT(non fungible token)
-//! - `burn` - Burn NFT(non fungible token)
+//! ### Dispatchable Functions
+//!
+//! - `transfer`: Transfer an NFT (non fungible token) between accounts.
+//! - `mint`: Mint an NFT (non fungible token).
+//! - `burn`: Burn an NFT (non fungible token).
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -27,8 +29,24 @@ use sp_std::vec::Vec;
 
 use artemis_core::nft::{TokenInfo, Nft};
 
+// TODO add
+// mod benchmarking;
+
+#[cfg(test)]
 mod mock;
+
+#[cfg(test)]
 mod tests;
+
+// TODO add weights
+/// Weight functions needed for this pallet.
+// pub trait WeightInfo {
+// 	fn transfer() -> Weight;
+// }
+//
+// impl WeightInfo for () {
+// 	fn transfer() -> Weight { 0 }
+// }
 
 pub use module::*;
 
@@ -48,7 +66,7 @@ pub mod module {
 
 	pub type GenesisTokenData<T> = (
 		<T as frame_system::Config>::AccountId, // Token owner
-		Vec<u8>,                                // Token metadata
+		Vec<u8>,                               // Token metadata
 		<T as Config>::TokenData,               // Token data
 	);
 
@@ -117,7 +135,7 @@ pub mod module {
 
 impl<T: Config> Nft<T::AccountId, T::TokenId, T::TokenData> for Pallet<T>
 {
-	/// Mint NFT(non fungible token) to `owner`
+	/// Mint NFT (non-fungible token) to `owner`
 	fn mint(
 		owner: &T::AccountId,
 		metadata: Vec<u8>,
@@ -140,7 +158,7 @@ impl<T: Config> Nft<T::AccountId, T::TokenId, T::TokenData> for Pallet<T>
 		})
 	}
 
-	/// Burn NFT(non fungible token) from `owner`
+	/// Burn NFT (non-fungible token) from `owner`
 	fn burn(owner: &T::AccountId, token: T::TokenId) -> DispatchResult {
 		Tokens::<T>::try_mutate_exists(token, |token_info| -> DispatchResult {
 			let t = token_info.take().ok_or(Error::<T>::TokenNotFound)?;
@@ -152,7 +170,7 @@ impl<T: Config> Nft<T::AccountId, T::TokenId, T::TokenData> for Pallet<T>
 		})
 	}
 
-	/// Transfer NFT(non fungible token) from `from` account to `to` account
+	/// Transfer NFT (non-fungible token) from `from` account to `to` account
 	fn transfer(from: &T::AccountId, to: &T::AccountId, token: T::TokenId) -> DispatchResult {
 		Tokens::<T>::try_mutate(token, |token_info| -> DispatchResult {
 			let mut info = token_info.as_mut().ok_or(Error::<T>::TokenNotFound)?;

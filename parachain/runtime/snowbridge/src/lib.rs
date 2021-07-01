@@ -46,7 +46,7 @@ use frame_system::{EnsureRoot, EnsureOneOf};
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
-pub use artemis_core::{AssetId, ChannelId, MessageId};
+pub use artemis_core::{AssetId, ChannelId, MessageId, ERC721TokenData};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::{EthereumHeader, EthereumDifficultyConfig};
@@ -560,7 +560,7 @@ impl nft::Config for Runtime {
 
 impl erc721_app::Config for Runtime {
 	type Event = Event;
-	type OutboundRouter = SimpleOutboundRouter<Runtime>;
+	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = ();
 	type TokenId = <Runtime as nft::Config>::TokenId;
@@ -592,6 +592,7 @@ construct_runtime!(
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 13,
 		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 14,
 		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
+		NFT: nft::{Pallet, Call, Config<T>, Storage} = 20,
 
 		LocalXcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin} = 16,
 		Transfer: artemis_transfer::{Pallet, Call, Event<T>} = 17,

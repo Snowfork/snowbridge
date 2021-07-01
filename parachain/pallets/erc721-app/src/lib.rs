@@ -35,6 +35,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+// TODO add weights
 
 pub use module::*;
 
@@ -127,7 +128,6 @@ pub mod module {
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
-
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}

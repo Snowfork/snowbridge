@@ -25,6 +25,9 @@ pub use types::{
 };
 
 pub use assets::{AssetId, MultiAsset, SingleAsset};
+
+pub use nft::{TokenInfo, ERC721TokenData};
+
 /// A trait for verifying messages.
 ///
 /// This trait should be implemented by runtime modules that wish to provide message verification functionality.

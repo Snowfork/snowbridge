@@ -6,7 +6,7 @@ use local_runtime::{
 	SystemConfig, VerifierLightclientConfig,
 	BasicInboundChannelConfig, IncentivizedInboundChannelConfig,
 	ETHConfig, ERC20Config, DOTConfig, ERC721Config,
-	AssetsConfig, NftConfig,
+	AssetsConfig, NFTConfig,
 	ParachainInfoConfig,
 	BasicOutboundChannelConfig,
 	IncentivizedOutboundChannelConfig,
@@ -151,7 +151,7 @@ fn testnet_genesis(
 				)
 			]
 		},
-		nft: NftConfig {
+		nft: NFTConfig {
 			tokens: vec![]
 		},
 		verifier_lightclient: VerifierLightclientConfig {
@@ -187,7 +187,7 @@ fn testnet_genesis(
 			phantom: Default::default(),
 		},
 		erc721_app: ERC721Config {
-			address: hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into()
+			address: Default::default() // TODO add actual address
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: para_id },
 	}

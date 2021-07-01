@@ -47,7 +47,7 @@ contract ERC721App {
     /**
      * @notice Locks ERC721 token in ERC721App contract
      * @param _token The NFT contract
-     * @param _recipient Polkadot address of the reciever
+     * @param _recipient Polkadot address of the receiver
      * @param _tokenId The NFT to lock
      * @param _channelId The Channel to use to send token
      */
