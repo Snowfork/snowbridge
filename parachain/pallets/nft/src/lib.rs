@@ -97,7 +97,6 @@ pub mod module {
 
 	/// Token existence check by owner
 	#[pallet::storage]
-	#[pallet::getter(fn tokens_by_owner)]
 	pub type TokensByOwner<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, T::AccountId, Twox64Concat, T::TokenId, (), ValueQuery>;
 
