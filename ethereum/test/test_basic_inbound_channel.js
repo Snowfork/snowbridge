@@ -58,10 +58,14 @@ describe("BasicInboundChannel", function () {
           stateRoot: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
           extrinsicsRoot: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
         },
-        _parachainHeadsProof: [
-          '0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7',
-          '0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7'
-        ],
+        _parachainHeadProof: {
+          pos: 0,
+          width: 1,
+          proof: [
+            '0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7',
+            '0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7'
+          ]
+        },
         _beefyMMRLeafPartial: {
           parentNumber: 2,
           parentHash: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",

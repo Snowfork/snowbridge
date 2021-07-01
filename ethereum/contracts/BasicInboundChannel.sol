@@ -31,7 +31,7 @@ contract BasicInboundChannel {
         Message[] calldata _messages,
         ParachainLightClient.OwnParachainHeadPartial
             calldata _ownParachainHeadPartial,
-        bytes32[] calldata _parachainHeadsProof,
+        ParachainLightClient.ParachainHeadProof calldata _parachainHeadProof,
         ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
@@ -44,7 +44,7 @@ contract BasicInboundChannel {
         ParachainLightClient.verifyCommitmentInParachain(
             commitment,
             _ownParachainHeadPartial,
-            _parachainHeadsProof,
+            _parachainHeadProof,
             _beefyMMRLeafPartial,
             _beefyMMRLeafIndex,
             _beefyMMRLeafCount,

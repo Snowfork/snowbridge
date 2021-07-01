@@ -14,6 +14,12 @@ library ParachainLightClient {
         bytes32 commitment; // TODO check type and position of this element
     }
 
+    struct ParachainHeadProof {
+        uint256 pos;
+        uint256 width;
+        bytes32[] proof;
+    }
+
     struct OwnParachainHeadPartial {
         bytes32 parentHash;
         uint32 number;
@@ -31,9 +37,8 @@ library ParachainLightClient {
 
     function verifyCommitmentInParachain(
         bytes32 commitment,
-        ParachainLightClient.OwnParachainHeadPartial
-            calldata _ownParachainHeadPartial,
-        bytes32[] calldata _parachainHeadsProof,
+        OwnParachainHeadPartial calldata _ownParachainHeadPartial,
+        ParachainHeadProof calldata _parachainHeadProof,
         BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
@@ -51,12 +56,11 @@ library ParachainLightClient {
 
         // 3. Compute `parachainHeadsRoot` by verifying the merkle proof using `ownParachainHeadHash` and
         // `_parachainHeadsProof`
-        // TODO - remove hardcoded pos and width
         bytes32 parachainHeadsRoot = MerkleProof.computeRootFromProofAtPosition(
             ownParachainHeadHash,
-            0,
-            1,
-            _parachainHeadsProof
+            _parachainHeadProof.pos,
+            _parachainHeadProof.width,
+            _parachainHeadProof.proof
         );
 
         // 4. Compute the `beefyMMRLeaf` using `parachainHeadsRoot` and `_beefyMMRLeafPartial`
