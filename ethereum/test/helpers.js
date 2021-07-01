@@ -18,11 +18,12 @@ const lazyLinkLibraries = async _ => {
     return;
   }
   const merkleProof = await MerkleProof.new();
-  await ValidatorRegistry.link(merkleProof);
   const bitfield = await Bitfield.new();
   const scaleCodec = await ScaleCodec.new();
-  await BeefyLightClient.link(bitfield);
-  await BeefyLightClient.link(scaleCodec);
+
+  await ValidatorRegistry.link(merkleProof); // 860624903cbc2e721b1f7f70307ce6b5fe
+  await BeefyLightClient.link(bitfield); // ce679fb3689ba2b0521c393162ea0c3c96$
+  await BeefyLightClient.link(scaleCodec); // 7cdc5241ea8d29c91205423c213999ecf3
   lazyLinked = true;
 }
 
@@ -36,6 +37,22 @@ const initValidatorRegistry = async (validatorRoot, numOfValidators, validatorSe
   );
 
   return validatorRegistry;
+}
+
+const makeBasicCommitment = (messages) => {
+  let encoded = ethers.utils.defaultAbiCoder.encode(
+    ['tuple(address target, uint64 nonce, bytes payload)[]'],
+    [messages]
+  )
+  return ethers.utils.solidityKeccak256(["bytes"], [encoded])
+}
+
+const makeIncentivizedCommitment = (messages) => {
+  let encoded = ethers.utils.defaultAbiCoder.encode(
+    ['tuple(address target, uint64 nonce, uint256 fee, bytes payload)[]'],
+    [messages]
+  )
+  return ethers.utils.solidityKeccak256(["bytes"], [encoded])
 }
 
 const deployAppWithMockChannels = async (deployer, channels, appContract, ...appContractArgs) => {

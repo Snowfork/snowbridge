@@ -3,6 +3,7 @@ pragma solidity ^0.8.5;
 
 import "./BeefyLightClient.sol";
 import "./utils/MerkleProof.sol";
+import "./ScaleCodec.sol";
 
 library ParachainLightClient {
     struct OwnParachainHead {
@@ -43,22 +44,26 @@ library ParachainLightClient {
 
         // 2. Compute `ownParachainHead` by hashing the data of the `commitment` together with the contents of
         // `_ownParachainHeadPartial`
-        bytes32 ownParachainHeadHash = encodeParachainHeadHash(
+        bytes32 ownParachainHeadHash = createParachainHeadHash(
             _ownParachainHeadPartial,
             commitment
         );
 
         // 3. Compute `parachainHeadsRoot` by verifying the merkle proof using `ownParachainHeadHash` and
         // `_parachainHeadsProof`
-        bytes32 parachainHeadsRoot = MerkleProof.computeMerkleLeafAtPosition(
+        // TODO - remove hardcoded pos and width
+        bytes32 parachainHeadsRoot = MerkleProof.computeRootFromProofAtPosition(
             ownParachainHeadHash,
-            pos,
-            width,
-            proof
+            0,
+            1,
+            _parachainHeadsProof
         );
 
         // 4. Compute the `beefyMMRLeaf` using `parachainHeadsRoot` and `_beefyMMRLeafPartial`
-        // TODO
+        bytes32 beefyMMRLeaf = createMMRLeafHash(
+            _beefyMMRLeafPartial,
+            parachainHeadsRoot
+        );
 
         // 5. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
         // `_beefyMMRLeafIndex`, `_beefyMMRLeafCount` and `_beefyMMRLeafProof`
@@ -74,11 +79,11 @@ library ParachainLightClient {
         // );
     }
 
-    function encodeParachainHeadHash(
+    function createParachainHeadHash(
         ParachainLightClient.OwnParachainHeadPartial
             calldata _ownParachainHeadPartial,
         bytes32 commitment
-    ) public pure returns (bytes memory) {
+    ) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -90,6 +95,28 @@ library ParachainLightClient {
                         commitment
                     )
                 )
+            );
+    }
+
+    bytes2 public constant MMR_LEAF_LENGTH_SCALE_ENCODED =
+        bytes2(uint16(0xc101));
+
+    function createMMRLeafHash(
+        BeefyMMRLeafPartial calldata leaf,
+        bytes32 parachainHeadsRoot
+    ) public pure returns (bytes32) {
+        bytes memory scaleEncodedMMRLeaf = abi.encodePacked(
+            ScaleCodec.encode32(leaf.parentNumber),
+            leaf.parentHash,
+            parachainHeadsRoot,
+            ScaleCodec.encode64(leaf.nextAuthoritySetId),
+            ScaleCodec.encode32(leaf.nextAuthoritySetLen),
+            leaf.nextAuthoritySetRoot
+        );
+
+        return
+            keccak256(
+                bytes.concat(MMR_LEAF_LENGTH_SCALE_ENCODED, scaleEncodedMMRLeaf)
             );
     }
 }
