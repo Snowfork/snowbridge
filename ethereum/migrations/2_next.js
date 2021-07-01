@@ -56,13 +56,13 @@ module.exports = function (deployer, network, accounts) {
     }
 
     // Deploy & link libraries
-    await deployer.deploy(ParachainLightClient);
     await deployer.deploy(ScaleCodec);
     await deployer.deploy(MerkleProof);
     await deployer.deploy(Bitfield);
     deployer.link(Bitfield, [contracts.beefylightclient.contract]);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, contracts.beefylightclient.contract, BasicInboundChannel, IncentivizedInboundChannel]);
-    deployer.link(MerkleProof, [ValidatorRegistry, BasicInboundChannel, IncentivizedInboundChannel]);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, contracts.beefylightclient.contract, ParachainLightClient, BasicInboundChannel, IncentivizedInboundChannel]);
+    deployer.link(MerkleProof, [ValidatorRegistry, ParachainLightClient, BasicInboundChannel, IncentivizedInboundChannel]);
+    await deployer.deploy(ParachainLightClient);
     deployer.link(ParachainLightClient, [BasicInboundChannel, IncentivizedInboundChannel]);
 
     // TODO: Hardcoded for testing
