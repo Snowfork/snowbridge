@@ -1,31 +1,29 @@
 const BigNumber = require('bignumber.js');
 const {
-  confirmBasicChannelSend,
-  confirmIncentivizedChannelSend,
-  confirmUnlockTokens,
-  deployAppContractWithChannels,
+  deployAppWithMockChannels,
   addressBytes,
   ChannelId,
-  buildCommitment
 } = require("./helpers");
-
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
   .should();
 
+const MockOutboundChannel = artifacts.require("MockOutboundChannel");
+
+const ScaleCodec = artifacts.require("ScaleCodec");
 const ERC721App = artifacts.require("ERC721App");
 const TestToken = artifacts.require("TestToken721");
 
-const approveToken = (token, contract, account, tokenId) => {
-  return token.approve(contract.address, tokenId, { from: account })
+const approveToken = (tokenContract, tokenId, app, account) => {
+  return tokenContract.approve(app.address, tokenId, { from: account })
 }
 
-const lockupToken = (contract, token, sender, recipient, tokenId, channel) => {
-  return contract.lock(
-    token.address,
-    addressBytes(recipient),
+const lockupToken = (app, tokenContract, tokenId, sender, recipient, channel) => {
+  return app.lock(
+    tokenContract.address,
     tokenId.toString(),
+    addressBytes(recipient),
     channel,
     {
       from: sender,
@@ -34,19 +32,27 @@ const lockupToken = (contract, token, sender, recipient, tokenId, channel) => {
   )
 }
 
-contract("ERC721", function (accounts) {
+contract("ERC721App", function (accounts) {
   // Accounts
   const owner = accounts[0];
-  const userOne = accounts[1];
+  const inboundChannel = accounts[1];
+  const userOne = accounts[2];
+  const userTwo = accounts[3];
   const tokenId = 1;
   const anotherTokenId = 2;
 
   // Constants
   const POLKADOT_ACCOUNT_ID = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
+  before(async function() {
+    const codec = await ScaleCodec.new();
+    ERC721App.link(codec);
+  });
+
   describe("lock", function () {
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(ERC721App);
+      let outboundChannel = await MockOutboundChannel.new()
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ERC721App);
       this.symbol = "TEST";
       this.token = await TestToken.new("Test Token", this.symbol);
 
@@ -60,10 +66,10 @@ contract("ERC721", function (accounts) {
     });
 
     it("should lock token with tokenURI metadata", async function () {
-      await approveToken(this.token, this.app, userOne, tokenId)
+      await approveToken(this.token, tokenId, this.app, userOne)
         .should.be.fulfilled;
 
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, tokenId, ChannelId.Basic)
+      let tx = await lockupToken(this.app, this.token, tokenId, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
         .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
@@ -71,19 +77,20 @@ contract("ERC721", function (accounts) {
         e => e.event === "Locked"
       );
 
+      event.args.tokenContract.should.be.equal(this.token.address);
+      BigNumber(event.args.tokenId).should.be.bignumber.equal(tokenId);
       event.args.sender.should.be.equal(userOne);
       event.args.recipient.should.be.equal(POLKADOT_ACCOUNT_ID);
-      BigNumber(event.args.tokenId).should.be.bignumber.equal(tokenId);
 
       let newOwner = await this.token.ownerOf(tokenId);
       newOwner.should.be.equal(this.app.address);
     });
 
     it("should lock token without tokenURI", async function () {
-      await approveToken(this.token, this.app, userOne, anotherTokenId)
+      await approveToken(this.token, anotherTokenId, this.app, userOne)
         .should.be.fulfilled;
 
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, anotherTokenId, ChannelId.Basic)
+      let tx = await lockupToken(this.app, this.token, anotherTokenId, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
           .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
@@ -91,38 +98,20 @@ contract("ERC721", function (accounts) {
         e => e.event === "Locked"
       );
 
+      event.args.tokenContract.should.be.equal(this.token.address);
+      BigNumber(event.args.tokenId).should.be.bignumber.equal(anotherTokenId);
       event.args.sender.should.be.equal(userOne);
       event.args.recipient.should.be.equal(POLKADOT_ACCOUNT_ID);
-      BigNumber(event.args.tokenId).should.be.bignumber.equal(anotherTokenId);
 
       let newOwner = await this.token.ownerOf(anotherTokenId);
       newOwner.should.be.equal(this.app.address);
-    });
-
-    it("should send payload to the basic outbound channel", async function () {
-      await approveToken(this.token, this.app, userOne, tokenId)
-        .should.be.fulfilled;
-
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, tokenId, ChannelId.Basic)
-          .should.be.fulfilled;
-
-      confirmBasicChannelSend(tx.receipt.rawLogs[3], this.channels.basic.outbound.address, this.app.address, 1)
-    });
-
-    it("should send payload to the incentivized outbound channel", async function () {
-      await approveToken(this.token, this.app, userOne, tokenId)
-        .should.be.fulfilled;
-
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, tokenId, ChannelId.Incentivized)
-          .should.be.fulfilled;
-
-      confirmIncentivizedChannelSend(tx.receipt.rawLogs[3], this.channels.incentivized.outbound.address, this.app.address, 1)
     });
   });
 
   describe("unlock", function () {
     beforeEach(async function () {
-      [this.channels, this.app] = await deployAppContractWithChannels(ERC721App);
+      let outboundChannel = await MockOutboundChannel.new()
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ERC721App);
       this.symbol = "TEST";
       this.token = await TestToken.new("Test Token", this.symbol);
 
@@ -131,64 +120,29 @@ contract("ERC721", function (accounts) {
       }).should.be.fulfilled;
     });
 
-    it("should unlock via the basic inbound channel", async function () {
-      await approveToken(this.token, this.app, userOne, tokenId)
+    it("should unlock funds", async function () {
+      await approveToken(this.token, tokenId, this.app, userOne)
         .should.be.fulfilled;
 
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, tokenId, ChannelId.Basic)
+      await lockupToken(this.app, this.token, tokenId, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
           .should.be.fulfilled;
 
-      // recipient on the ethereum side
-      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
-      const expectedTokenId = BigNumber(tokenId);
-      token_addr = this.token.address.replace(/^0x/, "");
-      const messages = [
+      let tx = await this.app.unlock(
+        this.token.address,
+        tokenId.toString(),
+        addressBytes(POLKADOT_ACCOUNT_ID),
+        userTwo,
         {
-          target: this.app.address,
-          nonce: 1,
-          payload: `0x010ce3c7000000000000000000000000${token_addr}1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000000000000000001`
+          from: inboundChannel
         }
-      ];
-      const commitment = buildCommitment(messages);
+      ).should.be.fulfilled;
 
-      tx = await this.channels.basic.inbound.submit(messages, commitment).should.be.fulfilled;
+      const event = tx.logs.find(e => e.event === "Unlocked");
 
-      confirmUnlockTokens(
-        tx.receipt.rawLogs[2],
-        this.app.address,
-        recipient,
-        expectedTokenId,
-      );
-    });
-
-    it("should unlock via the incentivized inbound channel", async function () {
-      await approveToken(this.token, this.app, userOne, tokenId)
-        .should.be.fulfilled;
-
-      let tx = await lockupToken(this.app, this.token, userOne, POLKADOT_ACCOUNT_ID, tokenId, ChannelId.Incentivized)
-          .should.be.fulfilled;
-
-      // recipient on the ethereum side
-      const recipient = "0xcCb3C82493AC988CEBE552779E7195A3a9DC651f";
-      const expectedTokenId = BigNumber(tokenId);
-      token_addr = this.token.address.replace(/^0x/, "");
-      const messages = [
-        {
-          target: this.app.address,
-          nonce: 1,
-          payload: `0x010ce3c7000000000000000000000000${token_addr}1aabf8593d9d109b6288149afa35690314f0b798289f8c5c466838dd218a4d50000000000000000000000000ccb3c82493ac988cebe552779e7195a3a9dc651f0000000000000000000000000000000000000000000000000000000000000001`
-        }
-      ];
-      const commitment = buildCommitment(messages);
-
-      tx = await this.channels.incentivized.inbound.submit(messages, commitment).should.be.fulfilled;
-
-      confirmUnlockTokens(
-        tx.receipt.rawLogs[2],
-        this.app.address,
-        recipient,
-        expectedTokenId,
-      );
+      event.args.tokenContract.should.be.equal(this.token.address);
+      BigNumber(event.args.tokenId).should.be.bignumber.equal(tokenId);
+      event.args.sender.should.be.equal(POLKADOT_ACCOUNT_ID);
+      event.args.recipient.should.be.equal(userTwo);
     });
   });
 })

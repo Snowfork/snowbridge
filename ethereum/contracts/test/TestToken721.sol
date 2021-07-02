@@ -17,7 +17,7 @@ contract TestToken721 is ERC721, ERC721URIStorage {
     }
 
     function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        _burn(tokenId);
+        super._burn(tokenId);
     }
 
     function tokenURI(uint256 tokenId)
@@ -26,6 +26,6 @@ contract TestToken721 is ERC721, ERC721URIStorage {
         override(ERC721, ERC721URIStorage)
         returns (string memory)
     {
-        return tokenURI(tokenId);
+        return super.tokenURI(tokenId);
     }
 }

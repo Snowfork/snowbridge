@@ -77,12 +77,11 @@ contract ERC721App is AccessControl {
 
         emit Locked(_tokenContract, _tokenId, msg.sender, _recipient);
 
-        bytes memory call = encodeCall(msg.sender, _recipient, _tokenContract, _tokenId, token.tokenURI(_tokenId));
+        bytes memory call = encodeCall(_tokenContract, _tokenId, msg.sender, _recipient, token.tokenURI(_tokenId));
 
         OutboundChannel channel =
             OutboundChannel(channels[_channelId].outbound);
         channel.submit(msg.sender, call);
-
     }
 
     /**
@@ -94,9 +93,9 @@ contract ERC721App is AccessControl {
      */
     function unlock(
              address _tokenContract,
+             uint256 _tokenId,
              bytes32 _sender,
-             address _recipient,
-             uint256 _tokenId
+             address _recipient
              ) public {
         require(
             hasRole(INBOUND_CHANNEL_ROLE, msg.sender),
@@ -113,10 +112,10 @@ contract ERC721App is AccessControl {
 
     // SCALE-encode payload
     function encodeCall(
-                        address _sender,
-                        bytes32 _recipient,
                         address _tokenContract,
                         uint256 _tokenId,
+                        address _sender,
+                        bytes32 _recipient,
                         string memory _tokenURI
                         ) private pure returns (bytes memory) {
         return
@@ -128,7 +127,7 @@ contract ERC721App is AccessControl {
                              _tokenContract,
                              _tokenId.encode256(),
                              bytes(_tokenURI)
-                             );
+                            );
     }
 }
 
