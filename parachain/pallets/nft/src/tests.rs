@@ -89,10 +89,31 @@ fn burn_should_fail() {
 #[test]
 fn transfer_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), false);
+		assert_eq!(Tokens::<Test>::get(0), None);
+
 		assert_ok!(NonFungibleTokenModule::mint(&BOB, vec![1], ()));
+
+		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
+		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
+
 		assert_ok!(NonFungibleTokenModule::transfer(&BOB, &BOB, TOKEN_ID));
+
+		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
+		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
+
 		assert_ok!(NonFungibleTokenModule::transfer(&BOB, &ALICE, TOKEN_ID));
+
+		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), false);
+		assert_eq!(TokensByOwner::<Test>::contains_key(ALICE, 0), true);
+		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: ALICE, data: ()}));
+
 		assert_ok!(NonFungibleTokenModule::transfer(&ALICE, &BOB, TOKEN_ID));
+
+		assert_eq!(TokensByOwner::<Test>::contains_key(ALICE, 0), false);
+		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
+		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
+
 		assert!(NonFungibleTokenModule::is_owner(&BOB, TOKEN_ID));
 	});
 }
