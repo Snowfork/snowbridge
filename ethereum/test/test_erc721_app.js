@@ -106,6 +106,36 @@ contract("ERC721App", function (accounts) {
       let newOwner = await this.token.ownerOf(anotherTokenId);
       newOwner.should.be.equal(this.app.address);
     });
+
+    it("should fail to lock if not approved", async function () {
+      await lockupToken(this.app, this.token, anotherTokenId, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
+        .should.be.rejectedWith(/transfer caller is not owner nor approved/);
+    });
+
+    it("should fail to lock if not approved or owner", async function () {
+      await approveToken(this.token, tokenId, this.app, userOne)
+        .should.be.fulfilled;
+
+      // note that now userTwo tries to lock the tokens, who is not the owner and not approved by userOne
+      await lockupToken(this.app, this.token, anotherTokenId, userTwo, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
+        .should.be.rejectedWith(/Transfer of token that is not own/);
+    });
+
+    it("should fail to lock if invalid token contract", async function () {
+      await approveToken(this.token, tokenId, this.app, userOne)
+        .should.be.fulfilled;
+
+      await lockupToken(this.app, { address: "0xfafafafafafafafafafafafafafafafafafafafa" }, anotherTokenId, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
+        .should.be.rejectedWith(/revert/);
+    });
+
+    it("should fail to lock if invalid token id", async function () {
+      await approveToken(this.token, tokenId, this.app, userOne)
+        .should.be.fulfilled;
+
+      await lockupToken(this.app, this.token, 1337, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
+        .should.be.rejectedWith(/owner query for nonexistent token/);
+    });
   });
 
   describe("unlock", function () {
@@ -143,6 +173,39 @@ contract("ERC721App", function (accounts) {
       BigNumber(event.args.tokenId).should.be.bignumber.equal(tokenId);
       event.args.sender.should.be.equal(POLKADOT_ACCOUNT_ID);
       event.args.recipient.should.be.equal(userTwo);
+    });
+
+    it("should fail to unlock if not locked", async function () {
+      await approveToken(this.token, tokenId, this.app, userOne)
+        .should.be.fulfilled;
+
+      await this.app.unlock(
+        this.token.address,
+        tokenId.toString(),
+        addressBytes(POLKADOT_ACCOUNT_ID),
+        userTwo,
+        {
+          from: inboundChannel
+        }
+      ).should.be.rejectedWith(/Transfer of token that is not own/);;
+    });
+
+    it("should fail to unlock if not channel", async function () {
+      await approveToken(this.token, tokenId, this.app, userOne)
+        .should.be.fulfilled;
+
+      await lockupToken(this.app, this.token, tokenId, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
+        .should.be.fulfilled;
+
+      await this.app.unlock(
+        this.token.address,
+        tokenId.toString(),
+        addressBytes(POLKADOT_ACCOUNT_ID),
+        userTwo,
+        {
+          from: userTwo
+        }
+      ).should.be.rejectedWith(/Caller is not an inbound channel/);;
     });
   });
 })
