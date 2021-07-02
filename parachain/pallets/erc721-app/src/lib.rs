@@ -65,7 +65,8 @@ pub mod module {
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
 
-		/// The Substrate token ID type
+		/// The token ID type, which is the identifier on this parachain and different from the token_id on other chains
+		/// such as in an ERC721 contract
 		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
 
 		/// The NFT pallet trait
@@ -84,10 +85,10 @@ pub mod module {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config>
 	{
-		/// Burned event: token, sender, recipient
-		Burned(H160, T::AccountId, H160),
-		/// Minted event: token, sender, recipient
-		Minted(H160, H160, T::AccountId),
+		/// Burned event: token_contract, token_id, sender, recipient
+		Burned(H160, U256, T::AccountId, H160),
+		/// Minted event: token_contract, token_id, sender, recipient
+		Minted(H160, U256, H160, T::AccountId),
 	}
 
 	/// Address of the peer application on the Ethereum side.
@@ -134,54 +135,54 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Burn an ERC721 token balance
+		/// Burn an ERC721 token
 		#[pallet::weight(T::WeightInfo::burn())]
 		#[transactional]
-		pub fn burn(origin: OriginFor<T>, channel_id: ChannelId, token_id: T::TokenId, sender: T::AccountId, recipient: H160) -> DispatchResultWithPostInfo {
+		pub fn burn(origin: OriginFor<T>, channel_id: ChannelId, token: T::TokenId, sender: T::AccountId, recipient: H160) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let token_data = T::Nft::get_token_data(token_id).ok_or(Error::<T>::TokenNotFound)?;
-			let token = token_data.data.token;
-			let token_id_erc721 = token_data.data.token_id;
+			let token_data = T::Nft::get_token_data(token).ok_or(Error::<T>::TokenNotFound)?;
+			let token_contract = token_data.data.token_contract;
+			let token_id = token_data.data.token_id;
 
-			T::Nft::burn(&sender, token_id)?;
+			T::Nft::burn(&sender, token)?;
 
-			// We can assume that the map contains the key, since the token and token_id are extracted from it
-			TokensByERC721Id::<T>::remove((token, token_id_erc721));
+			// We can assume that the map contains the key, since the token_contract and token_id are extracted from it
+			TokensByERC721Id::<T>::remove((token_contract, token_id));
 
 			let message = OutboundPayload {
-				token: token,
+				token_contract,
+				token_id,
 				sender: who.clone(),
 				recipient,
-				token_id: token_id_erc721,
 			};
 
 			T::OutboundRouter::submit(channel_id, &who, Address::<T>::get(), &message.encode())?;
-			Self::deposit_event(Event::<T>::Burned(token, who, recipient));
+			Self::deposit_event(Event::<T>::Burned(token_contract, token_id, who, recipient));
 
 			Ok(().into())
 		}
 
 		#[pallet::weight(T::WeightInfo::mint())]
 		#[transactional]
-		pub fn mint(origin: OriginFor<T>, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, token: H160, token_id: U256, token_uri: Vec<u8>) -> DispatchResultWithPostInfo {
+		pub fn mint(origin: OriginFor<T>, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, token_contract: H160, token_id: U256, token_uri: Vec<u8>) -> DispatchResultWithPostInfo {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != Address::<T>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
-			if TokensByERC721Id::<T>::contains_key((token, token_id)) {
+			if TokensByERC721Id::<T>::contains_key((token_contract, token_id)) {
 				return Err(Error::<T>::TokenAlreadyMinted.into());
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
 			let token_data = ERC721TokenData{
-				token,
+				token_contract,
 				token_id,
 			};
 			let nft_token_id = T::Nft::mint(&recipient, token_uri, token_data)?;
-			TokensByERC721Id::<T>::insert((token, token_id), nft_token_id);
+			TokensByERC721Id::<T>::insert((token_contract, token_id), nft_token_id);
 
-			Self::deposit_event(Event::<T>::Minted(token, sender, recipient));
+			Self::deposit_event(Event::<T>::Minted(token_contract, token_id, sender, recipient));
 
 			Ok(().into())
 		}

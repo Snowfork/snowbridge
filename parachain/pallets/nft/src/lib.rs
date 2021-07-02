@@ -56,7 +56,8 @@ pub mod module {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// The token ID type
+		/// The token ID type, which is the identifier on this parachain and different from the token_id on other chains
+		/// such as in an ERC721 contract
 		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
 		/// The token properties type
 		type TokenData: Parameter + Member + MaybeSerializeDeserialize;

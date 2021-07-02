@@ -22,9 +22,9 @@ pub struct TokenInfo<AccountId, Data> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
 pub struct ERC721TokenData {
-	/// The ERC721-based app in Ethereum
-	pub token: H160,
-	/// The token id according to ERC721
+	/// The ERC721 smart contract on Ethereum
+	pub token_contract: H160,
+	/// The ERC721 token id
 	pub token_id: U256,
 }
 
