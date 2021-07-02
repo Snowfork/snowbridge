@@ -5,18 +5,18 @@ const ETHApp = artifacts.require("ETHApp");
 const ERC20App = artifacts.require("ERC20App");
 const DOTApp = artifacts.require("DOTApp");
 const TestToken = artifacts.require("TestToken");
-const TestToken721 = artifacts.require("TestToken721");
-const ERC721App = artifacts.require("ERC721App");
 const ValidatorRegistry = artifacts.require("ValidatorRegistry");
 const MMRVerification = artifacts.require("MMRVerification");
 const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
 const Blake2b = artifacts.require("Blake2b");
+const BasicInboundChannel = artifacts.require("BasicInboundChannel");
+const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
 
 const channels = {
   basic: {
     inbound: {
-      contract: artifacts.require("BasicInboundChannel"),
+      contract: BasicInboundChannel,
       instance: null
     },
     outbound: {
@@ -26,7 +26,7 @@ const channels = {
   },
   incentivized: {
     inbound: {
-      contract: artifacts.require("IncentivizedInboundChannel"),
+      contract: IncentivizedInboundChannel,
       instance: null
     },
     outbound: {
@@ -56,22 +56,11 @@ module.exports = function (deployer, network, accounts) {
 
     // Deploy & link libraries
     await deployer.deploy(ScaleCodec);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, ERC721App, contracts.beefylightclient.contract]);
-
-    // Account of governance contract
-    // TODO: deploy the contract in this migration and use its address
-    let administrator = accounts[0];
-
-    // Fee for incentivized channel
-    if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
-      throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
-    }
-    const fee = process.env.INCENTIVIZED_CHANNEL_FEE
-
     await deployer.deploy(MerkleProof);
-    deployer.link(MerkleProof, [ValidatorRegistry]);
     await deployer.deploy(Bitfield);
     deployer.link(Bitfield, [contracts.beefylightclient.contract]);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, contracts.beefylightclient.contract, BasicInboundChannel, IncentivizedInboundChannel]);
+    deployer.link(MerkleProof, [ValidatorRegistry, BasicInboundChannel, IncentivizedInboundChannel]);
 
     // TODO: Hardcoded for testing
     const root = "0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402";
@@ -127,7 +116,7 @@ module.exports = function (deployer, network, accounts) {
       },
     );
 
-    const token = await deployer.deploy(TestToken, 100000000, "Test Token", "TEST");
+    const token = await deployer.deploy(TestToken, "Test Token", "TEST");
 
     // Deploy ERC1820 Registry for our E2E stack.
     if (network === 'e2e_test') {
@@ -152,18 +141,15 @@ module.exports = function (deployer, network, accounts) {
       },
     );
 
-    await deployer.deploy(
-      ERC721App,
-      {
-        inbound: channels.basic.inbound.instance.address,
-        outbound: channels.basic.outbound.instance.address,
-      },
-      {
-        inbound: channels.incentivized.inbound.instance.address,
-        outbound: channels.incentivized.outbound.instance.address,
-      },
-    );
-    await deployer.deploy(TestToken721, "Test Token 721", "TEST721");
+    // Account of governance contract
+    // TODO: deploy the contract in this migration and use its address
+    let administrator = accounts[0];
+
+    // Fee for incentivized channel
+    if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
+      throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
+    }
+    const fee = process.env.INCENTIVIZED_CHANNEL_FEE
 
     // Post-construction initialization for Incentivized outbound channel
     await channels.incentivized.outbound.instance.initialize(
