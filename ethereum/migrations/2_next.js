@@ -120,7 +120,7 @@ module.exports = function (deployer, network, accounts) {
 
     // Deploy ERC1820 Registry for our E2E stack.
     if (network === 'e2e_test') {
-      require('@openzeppelin/test-helpers/configure')({ web3 });
+      require('@openzeppelin/test-helpers/configure')({ provider: web3.currentProvider, environment: 'truffle' });
       const { singletons } = require('@openzeppelin/test-helpers');
 
       await singletons.ERC1820Registry(accounts[0]);
