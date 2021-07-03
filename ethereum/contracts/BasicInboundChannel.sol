@@ -1,90 +1,62 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./LightClientBridge.sol";
+import "./ParachainLightClient.sol";
 
 contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
+    uint256 public constant GAS_BUFFER = 60000;
 
     uint64 public nonce;
 
     struct Message {
         address target;
-        uint64 nonce;
+        uint64 nonce; // TODO: this might cause an error, we use uint256 when encoding on Parachain
         bytes payload;
     }
 
     event MessageDispatched(uint64 nonce, bool result);
 
-    LightClientBridge public lightClientBridge;
+    BeefyLightClient public beefyLightClient;
 
-    constructor(LightClientBridge _lightClientBridge) {
+    constructor(BeefyLightClient _beefyLightClient) {
+        beefyLightClient = _beefyLightClient;
         nonce = 0;
-        lightClientBridge = _lightClientBridge;
     }
 
-    // TODO: Submit should take in all inputs required for verification,
-    // including eg: _parachainBlockNumber, _parachainMerkleProof, parachainHeadsMMRProof
+    // TODO: add docs
     function submit(
         Message[] calldata _messages,
-        bytes32 _commitment,
-        bytes32 _beefyMMRLeaf,
+        ParachainLightClient.OwnParachainHeadPartial
+            calldata _ownParachainHeadPartial,
+        bytes32[] calldata _parachainHeadsProof,
+        ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
-        bytes32[] memory _beefyMMRLeafProof
+        bytes32[] calldata _beefyMMRLeafProof
     ) public {
-        verifyMessages(_messages, _commitment);
-        // TODO: require(
-        //     lightClientBridge.verifyBeefyMerkleLeaf(
-        //         _beefyMMRLeaf,
-        //         _beefyMMRLeafIndex,
-        //         _beefyMMRLeafCount,
-        //         _beefyMMRLeafProof
-        //     ),
-        //     "Invalid proof"
-        // );
-        processMessages(_messages);
-    }
+        // Proof
+        // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
+        bytes32 commitment = keccak256(abi.encode(_messages));
 
-    //TODO: verifyMessages should accept all needed proofs
-    function verifyMessages(Message[] calldata _messages, bytes32 _commitment)
-        internal
-        view
-        returns (bool success)
-    {
-        // Prove we can get the MMRLeaf that is claimed to contain our Parachain Block Header
-        // BEEFYLightClient.verifyMMRLeaf(parachainHeadsMMRProof)
-        // BeefyLightClient{
-        //   verifyMMRLeaf(parachainHeadsMMRProof) {
-        //   MMRVerification.verifyInclusionProof(latestMMRRoot, parachainHeadsMMRProof)
-        // }
-        //}
-        //}
-        // returns mmrLeaf;
-
-        // Prove we can get the claimed parachain block header from the MMRLeaf
-        // allParachainHeadsMerkleTreeRoot = mmrLeaf.parachain_heads;
-        // MerkeTree.verify(allParachainHeadsMerkleTreeRoot, ourParachainMerkleProof)
-        // returns parachainBlockHeader
-
-        // Prove that the commitment is in fact in the parachain block header
-        // require(parachainBlockHeader.commitment == commitment)
-
-        // Validate that the commitment matches the commitment contents
-        require(
-            validateMessagesMatchCommitment(_messages, _commitment),
-            "invalid commitment"
+        ParachainLightClient.verifyCommitmentInParachain(
+            commitment,
+            _ownParachainHeadPartial,
+            _parachainHeadsProof,
+            _beefyMMRLeafPartial,
+            _beefyMMRLeafIndex,
+            _beefyMMRLeafCount,
+            _beefyMMRLeafProof
         );
 
         // Require there is enough gas to play all messages
         require(
-            gasleft() >= _messages.length * MAX_GAS_PER_MESSAGE,
+            gasleft() >= (_messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
 
-        return true;
+        processMessages(_messages);
     }
 
     function processMessages(Message[] calldata _messages) internal {
@@ -102,12 +74,5 @@ contract BasicInboundChannel {
 
             emit MessageDispatched(_messages[i].nonce, success);
         }
-    }
-
-    function validateMessagesMatchCommitment(
-        Message[] calldata _messages,
-        bytes32 _commitment
-    ) internal pure returns (bool) {
-        return keccak256(abi.encode(_messages)) == _commitment;
     }
 }

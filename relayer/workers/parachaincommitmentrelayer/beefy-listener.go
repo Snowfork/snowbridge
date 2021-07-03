@@ -1,42 +1,28 @@
-// +build ignore
-
 package parachaincommitmentrelayer
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/crypto/blake2b"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
-	rpcOffchain "github.com/snowfork/go-substrate-rpc-client/v2/rpc/offchain"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 )
 
 //TODO - put in config
 const OUR_PARACHAIN_ID = 200
 
-// TODO: This file is currently listening to the relay chain for new beefy justifications. This is temporary, as in
-// a follow up PR, it will be changed to listen to Ethereum for new justifications.
-// This can't be done yet, as we still need to add block numbers to the Ethereum proofs being submitted
-// to the relay chain light client, but will be done once that's complete.
-
-type MessagePackage struct {
-	channelID          chainTypes.ChannelID
-	commitmentHash     types.H256
-	commitmentMessages []chainTypes.CommitmentMessage
-	paraHeadProof      string
-	mmrProof           types.GenerateMMRProofResponse
-}
-
 type BeefyListener struct {
-	relaychainConfig    *relaychain.Config
+	ethereumConfig      *ethereum.Config
+	ethereumConn        *ethereum.Connection
+	beefyLightClient    *beefylightclient.Contract
 	relaychainConn      *relaychain.Connection
 	parachainConnection *parachain.Connection
 	messages            chan<- MessagePackage
@@ -44,13 +30,15 @@ type BeefyListener struct {
 }
 
 func NewBeefyListener(
-	relaychainConfig *relaychain.Config,
+	ethereumConfig *ethereum.Config,
+	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
 	messages chan<- MessagePackage,
 	log *logrus.Entry) *BeefyListener {
 	return &BeefyListener{
-		relaychainConfig:    relaychainConfig,
+		ethereumConfig:      ethereumConfig,
+		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
 		messages:            messages,
@@ -60,8 +48,44 @@ func NewBeefyListener(
 
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
+	// Set up light client bridge contract
+	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(li.ethereumConfig.BeefyLightClient), li.ethereumConn.GetClient())
+	if err != nil {
+		return err
+	}
+	li.beefyLightClient = beefyLightClientContract
+
 	eg.Go(func() error {
-		return li.subBeefyJustifications(ctx)
+
+		verifiedBeefyBlockNumber, verifiedBeefyBlockHash, err := li.fetchLatestVerifiedBeefyBlock(ctx)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to get latest relay chain block number and hash")
+			return err
+		}
+
+		verifiedParaBlockNumber, err := li.relaychainConn.FetchLatestFinalizedParaBlockNumber(
+			verifiedBeefyBlockHash, OUR_PARACHAIN_ID)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to get latest finalized para block number from relay chain")
+			return err
+		}
+
+		verifiedParaBlockHash, err := li.parachainConnection.GetAPI().RPC.Chain.GetBlockHash(verifiedParaBlockNumber)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to get latest finalized para block hash")
+			return err
+		}
+
+		messagePackages, err := li.buildMissedMessagePackages(ctx, verifiedBeefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to build missed message package")
+			return err
+		}
+
+		li.emitMessagePackages(messagePackages)
+
+		err = li.subBeefyJustifications(ctx)
+		return err
 	})
 
 	return nil
@@ -76,285 +100,122 @@ func (li *BeefyListener) onDone(ctx context.Context) error {
 }
 
 func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
-	ch := make(chan interface{})
+	headers := make(chan *gethTypes.Header, 5)
 
-	li.log.Info("Subscribing to relay chain light client for new mmr payloads")
-	sub, err := li.relaychainConn.GetAPI().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
+	sub, err := li.ethereumConn.GetClient().SubscribeNewHead(ctx, headers)
 	if err != nil {
-		panic(err)
+		li.log.WithError(err).Error("Error creating ethereum header subscription")
+		return err
 	}
-	defer sub.Unsubscribe()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return li.onDone(ctx)
-		case msg := <-ch:
+		case err := <-sub.Err():
+			li.log.WithError(err).Error("Error with ethereum header subscription")
+			return err
+		case gethheader := <-headers:
+			// Query LightClientBridge contract's ContractNewMMRRoot events
+			blockNumber := gethheader.Number.Uint64()
+			var beefyLightClientEvents []*beefylightclient.ContractNewMMRRoot
 
-			signedCommitment := &store.SignedCommitment{}
-			err := types.DecodeFromHexString(msg.(string), signedCommitment)
+			contractEvents, err := li.queryBeefyLightClientEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
-				li.log.WithError(err).Error("Failed to decode BEEFY commitment messages")
+				li.log.WithError(err).Error("Failure fetching event logs")
+				return err
 			}
+			beefyLightClientEvents = append(beefyLightClientEvents, contractEvents...)
 
-			blockNumber := signedCommitment.Commitment.BlockNumber
-
-			li.log.WithFields(logrus.Fields{
-				"commitmentBlockNumber": blockNumber,
-				"payload":               signedCommitment.Commitment.Payload.Hex(),
-				"validatorSetID":        signedCommitment.Commitment.ValidatorSetID,
-			}).Info("Witnessed a new BEEFY commitment:")
-			if len(signedCommitment.Signatures) == 0 {
-				li.log.Info("BEEFY commitment has no signatures, skipping...")
-				continue
-			} else {
-				hash := blake2b.Sum256(signedCommitment.Commitment.Bytes())
-				signature0 := signedCommitment.Signatures[0].Value
-				signature1 := signedCommitment.Signatures[1].Value
-				li.log.WithFields(logrus.Fields{
-					"commitment":       hex.EncodeToString(signedCommitment.Commitment.Bytes()),
-					"hashedCommitment": hex.EncodeToString(hash[:]),
-					"signature0":       hex.EncodeToString(signature0[:]),
-					"signature1":       hex.EncodeToString(signature1[:]),
-				}).Info("Commitment with signatures:")
+			if len(beefyLightClientEvents) > 0 {
+				li.log.Info(fmt.Sprintf("Found %d BeefyLightClient ContractNewMMRRoot events on block %d", len(beefyLightClientEvents), blockNumber))
 			}
-			li.log.WithField("blockNumber", blockNumber+1).Info("Getting hash for next block")
-			nextBlockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(blockNumber + 1))
-			if err != nil {
-				li.log.WithError(err).Error("Failed to get block hash")
-			}
-			li.log.WithField("blockHash", nextBlockHash.Hex()).Info("Got blockhash")
-
-			// TODO this just queries the latest MMR leaf in the latest MMR and our latest parahead in that leaf.
-			// we should ideally be querying the last few leaves in the latest MMR until we find
-			// the first parachain block that has not yet been fully processed on ethereum,
-			// and then package and relay all newer heads/commitments
-			mmrProof := li.GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash)
-			allParaHeads, ourParaHead := li.GetAllParaheads(nextBlockHash, OUR_PARACHAIN_ID)
-
-			ourParaHeadProof := createParachainHeaderProof(allParaHeads, ourParaHead)
-
-			channelID, commitmentHash, commitmentMessages, err := li.extractCommitment(ourParaHead)
-			if err != nil {
-				li.log.WithError(err).Error("Failed to extract commitment and messages")
-			}
-			if commitmentMessages == nil {
-				li.log.Info("Parachain header has no commitment with messages, skipping...")
-				continue
-			}
-
-			messagePackage := MessagePackage{
-				channelID,
-				commitmentHash,
-				commitmentMessages,
-				ourParaHeadProof,
-				mmrProof,
-			}
-
-			li.log.WithFields(logrus.Fields{
-				"channelID":          messagePackage.channelID,
-				"commitmentHash":     messagePackage.commitmentHash,
-				"commitmentMessages": messagePackage.commitmentMessages,
-				"ourParaHeadProof":   messagePackage.paraHeadProof,
-				"mmrProof":           messagePackage.mmrProof,
-			}).Info("Beefy Listener emmited new message packet")
-
-			li.messages <- messagePackage
+			li.processBeefyLightClientEvents(ctx, beefyLightClientEvents)
 		}
 	}
 }
 
-func (li *BeefyListener) GetMMRLeafForBlock(
-	blockNumber uint64,
-	blockHash types.Hash,
-) types.GenerateMMRProofResponse {
-	li.log.WithFields(logrus.Fields{
-		"blockNumber": blockNumber,
-		"blockHash":   blockHash.Hex(),
-	}).Info("Getting MMR Leaf for block...")
-	proofResponse, err := li.relaychainConn.GetAPI().RPC.MMR.GenerateProof(blockNumber, blockHash)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to generate mmr proof")
-	}
+// processLightClientEvents matches events to BEEFY commitment info by transaction hash
+func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, events []*beefylightclient.ContractNewMMRRoot) error {
+	for _, event := range events {
 
-	var proofItemsHex = []string{}
-	for _, item := range proofResponse.Proof.Items {
-		proofItemsHex = append(proofItemsHex, item.Hex())
-	}
+		beefyBlockNumber := event.BlockNumber
 
-	li.log.WithFields(logrus.Fields{
-		"BlockHash":                       proofResponse.BlockHash.Hex(),
-		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
-		"Leaf.Hash":                       proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
-		"Leaf.ParachainHeads":             proofResponse.Leaf.ParachainHeads.Hex(),
-		"Leaf.BeefyNextAuthoritySet.ID":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
-		"Leaf.BeefyNextAuthoritySet.Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
-		"Leaf.BeefyNextAuthoritySet.Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
-		"Proof.LeafIndex":                 proofResponse.Proof.LeafIndex,
-		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
-		"Proof.Items":                     proofItemsHex,
-	}).Info("Generated MMR Proof")
-	return proofResponse
-}
+		li.log.WithFields(logrus.Fields{
+			"beefyBlockNumber":    beefyBlockNumber,
+			"ethereumBlockNumber": event.Raw.BlockNumber,
+			"ethereumTxHash":      event.Raw.TxHash.Hex(),
+		}).Info("Witnessed a new MMRRoot event")
 
-func (li *BeefyListener) GetAllParaheads(blockHash types.Hash, ourParachainId uint32) ([]types.Header, types.Header) {
-	none := types.NewOptionU32Empty()
-	encoded, err := types.EncodeToBytes(none)
-	if err != nil {
-		li.log.WithError(err).Error("Error")
-	}
-
-	baseParaHeadsStorageKey, err := types.CreateStorageKey(
-		li.relaychainConn.GetMetadata(),
-		"Paras",
-		"Heads", encoded, nil)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to create parachain header storage key")
-	}
-
-	//TODO fix this manual slice.
-	// The above types.CreateStorageKey does not give the same base key as polkadotjs needs for getKeys.
-	// It has some extra bytes.
-	// maybe from the none u32 in golang being wrong, or maybe slightly off CreateStorageKey call? we slice it
-	// here as a hack.
-	actualBaseParaHeadsStorageKey := baseParaHeadsStorageKey[:32]
-	li.log.WithField("actualBaseParaHeadsStorageKey", actualBaseParaHeadsStorageKey.Hex()).Info("actualBaseParaHeadsStorageKey")
-
-	keysResponse, err := li.relaychainConn.GetAPI().RPC.State.GetKeys(actualBaseParaHeadsStorageKey, blockHash)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to get all parachain keys")
-	}
-
-	headersResponse, err := li.relaychainConn.GetAPI().RPC.State.QueryStorage(keysResponse, blockHash, blockHash)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to get all parachain headers")
-	}
-
-	li.log.Info("Got all parachain headers")
-	var headers []types.Header
-	var ourParachainHeader types.Header
-	for _, headerResponse := range headersResponse {
-		for _, change := range headerResponse.Changes {
-
-			// TODO fix this manual slice with a proper type decode. only the last few bytes are for the ParaId,
-			// not sure what the early ones are for.
-			key := change.StorageKey[40:]
-			var parachainID types.U32
-			if err := types.DecodeFromBytes(key, &parachainID); err != nil {
-				li.log.WithError(err).Error("Failed to decode parachain ID")
-			}
-
-			li.log.WithField("parachainId", parachainID).Info("Decoding header for parachain")
-			var encodableOpaqueHeader types.Bytes
-			if err := types.DecodeFromBytes(change.StorageData, &encodableOpaqueHeader); err != nil {
-				li.log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
-			}
-
-			var header types.Header
-			if err := types.DecodeFromBytes(encodableOpaqueHeader, &header); err != nil {
-				li.log.WithError(err).Error("Failed to decode Header")
-			}
-			li.log.WithFields(logrus.Fields{
-				"headerBytes":           fmt.Sprintf("%#x", encodableOpaqueHeader),
-				"header.ParentHash":     header.ParentHash.Hex(),
-				"header.Number":         header.Number,
-				"header.StateRoot":      header.StateRoot.Hex(),
-				"header.ExtrinsicsRoot": header.ExtrinsicsRoot.Hex(),
-				"header.Digest":         header.Digest,
-				"parachainId":           parachainID,
-			}).Info("Decoded header for parachain")
-			headers = append(headers, header)
-
-			if parachainID == types.U32(ourParachainId) {
-				ourParachainHeader = header
-			}
+		li.log.WithField("beefyBlockNumber", beefyBlockNumber).Info("Getting hash for relay chain block")
+		relayBlockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
+		if err != nil {
+			li.log.WithError(err).Error("Failed to get block hash")
+			return err
 		}
+		li.log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
+
+		verifiedParaBlockNumber, err := li.relaychainConn.FetchLatestFinalizedParaBlockNumber(
+			relayBlockHash, OUR_PARACHAIN_ID)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to get latest finalized para block number from relay chain")
+			return err
+		}
+		verifiedParaBlockHash, err := li.parachainConnection.GetAPI().RPC.Chain.GetBlockHash(verifiedParaBlockNumber)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to get latest finalized para block hash")
+			return err
+		}
+
+		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
+		if err != nil {
+			li.log.WithError(err).Error("Failed to build missed message packages")
+			return err
+		}
+
+		li.emitMessagePackages(messagePackages)
+
 	}
-	return headers, ourParachainHeader
+	return nil
 }
 
-func createParachainHeaderProof(allParaHeads []types.Header, ourParaHead types.Header) string {
-	//TODO: implement
-	return ""
+func (li *BeefyListener) emitMessagePackages(packages []MessagePackage) {
+	for _, messagePackage := range packages {
+		li.log.WithFields(logrus.Fields{
+			"channelID":        messagePackage.channelID,
+			"commitmentHash":   messagePackage.commitmentHash,
+			"commitmentData":   messagePackage.commitmentData,
+			"ourParaHeadProof": messagePackage.paraHeadProof,
+			"mmrProof":         messagePackage.mmrProof,
+		}).Info("Beefy Listener emitted new message package")
+
+		li.messages <- messagePackage
+	}
 }
 
-func (li *BeefyListener) extractCommitment(header types.Header) (
-	chainTypes.ChannelID,
-	types.H256,
-	[]chainTypes.CommitmentMessage,
-	error) {
+// queryBeefyLightClientEvents queries ContractNewMMRRoot events from the BeefyLightClient contract
+func (li *BeefyListener) queryBeefyLightClientEvents(ctx context.Context, start uint64,
+	end *uint64) ([]*beefylightclient.ContractNewMMRRoot, error) {
+	var events []*beefylightclient.ContractNewMMRRoot
+	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-	li.log.WithFields(logrus.Fields{
-		"blockNumber": header.Number,
-	}).Debug("Extracting commitment from parachain header")
-
-	digestItem, err := getAuxiliaryDigestItem(header.Digest)
+	iter, err := li.beefyLightClient.FilterNewMMRRoot(&filterOps)
 	if err != nil {
-		return chainTypes.ChannelID{}, types.H256{}, nil, err
+		return nil, err
 	}
 
-	if digestItem == nil || !digestItem.IsCommitment {
-		return chainTypes.ChannelID{}, types.H256{}, nil, nil
-	}
-
-	li.log.WithFields(logrus.Fields{
-		"block":          header.Number,
-		"channelID":      digestItem.AsCommitment.ChannelID,
-		"commitmentHash": digestItem.AsCommitment.Hash.Hex(),
-	}).Debug("Found commitment hash in header digest")
-
-	channelID := digestItem.AsCommitment.ChannelID
-	commitmentHash := digestItem.AsCommitment.Hash
-	commitmentMessages, err := li.getMessagesForDigestItem(digestItem)
-	if err != nil {
-		return chainTypes.ChannelID{}, types.H256{}, nil, err
-	}
-
-	return channelID, commitmentHash, commitmentMessages, nil
-}
-
-func getAuxiliaryDigestItem(digest types.Digest) (*chainTypes.AuxiliaryDigestItem, error) {
-	for _, digestItem := range digest {
-		if digestItem.IsOther {
-			var auxDigestItem chainTypes.AuxiliaryDigestItem
-			err := types.DecodeFromBytes(digestItem.AsOther, &auxDigestItem)
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
 			if err != nil {
 				return nil, err
 			}
-			return &auxDigestItem, nil
+			break
 		}
-	}
-	return nil, nil
-}
 
-func (li *BeefyListener) getMessagesForDigestItem(digestItem *chainTypes.AuxiliaryDigestItem) ([]chainTypes.CommitmentMessage, error) {
-	storageKey, err := parachain.MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
-	if err != nil {
-		return nil, err
+		events = append(events, iter.Event)
 	}
 
-	data, err := li.parachainConnection.GetAPI().RPC.Offchain.LocalStorageGet(rpcOffchain.Persistent, storageKey)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to read commitment from offchain storage")
-		return nil, err
-	}
-
-	if data != nil {
-		li.log.WithFields(logrus.Fields{
-			"commitmentSizeBytes": len(*data),
-		}).Debug("Retrieved commitment from offchain storage")
-	} else {
-		li.log.WithError(err).Error("Commitment not found in offchain storage")
-		return nil, err
-	}
-
-	var messages []chainTypes.CommitmentMessage
-
-	err = types.DecodeFromBytes(*data, &messages)
-	if err != nil {
-		li.log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, err
-	}
-
-	return messages, nil
+	return events, nil
 }

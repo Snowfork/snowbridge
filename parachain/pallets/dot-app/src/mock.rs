@@ -1,18 +1,18 @@
 // Mock runtime
 use sp_std::marker::PhantomData;
 
+use frame_support::traits::GenesisBuild;
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
-    parameter_types,
+    parameter_types, PalletId,
 };
 use frame_system as system;
 use sp_core::{H160, H256};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-    ModuleId, MultiSignature,
+    MultiSignature,
 };
-use frame_support::traits::GenesisBuild;
 
 use artemis_core::{ChannelId, OutboundRouter};
 
@@ -85,7 +85,7 @@ impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
         if channel == ChannelId::Basic {
             return Err(DispatchError::Other("some error!"));
         }
-		Ok(())
+        Ok(())
     }
 }
 
@@ -107,7 +107,7 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-    pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
+    pub const DotPalletId: PalletId = PalletId(*b"s/dotapp");
     pub const Decimals: u32 = 12;
 }
 
@@ -116,7 +116,7 @@ impl dot_app::Config for Test {
     type Currency = Balances;
     type OutboundRouter = MockOutboundRouter<Self::AccountId>;
     type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
-    type ModuleId = DotModuleId;
+    type PalletId = DotPalletId;
     type Decimals = Decimals;
     type WeightInfo = ();
 }

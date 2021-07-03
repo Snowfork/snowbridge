@@ -12,8 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/ethashproof"
 	"github.com/snowfork/ethashproof/ethash"
-	"github.com/snowfork/go-substrate-rpc-client/v2/scale"
-	types "github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
+	types "github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 )
 

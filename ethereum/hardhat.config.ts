@@ -1,5 +1,6 @@
 import { config as dotenv } from "dotenv";
 import { resolve } from "path";
+
 dotenv({ path: resolve(__dirname, ".env") });
 
 import "@nomiclabs/hardhat-truffle5";
@@ -35,7 +36,7 @@ export default {
     }
   },
   solidity: {
-    version: "0.7.6"
+    version: "0.8.6"
   },
   paths: {
     sources: "contracts",

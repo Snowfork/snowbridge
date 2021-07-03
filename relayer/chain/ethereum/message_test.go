@@ -10,11 +10,11 @@ import (
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/stretchr/testify/assert"
 )
 
-type TestProof substrate.ProofData
+type TestProof parachain.ProofData
 
 // For interface gethTrie.KeyValueReader
 func (tp *TestProof) Get(key []byte) ([]byte, error) {
@@ -46,13 +46,13 @@ func TestMessage_Proof(t *testing.T) {
 	}
 
 	// Construct Merkle Patricia Trie for receipts
-	keybuf := new(bytes.Buffer)
-	receiptTrie := new(gethTrie.Trie)
-	for i := 0; i < receipts.Len(); i++ {
-		keybuf.Reset()
-		rlp.Encode(keybuf, uint(i))
-		receiptTrie.Update(keybuf.Bytes(), receipts.GetRlp(i))
+	receiptTrie, err := ethereum.MakeTrie(receipts)
+	if err != nil {
+		panic(err)
 	}
+
+	fmt.Println("Hash", receiptTrie.Hash())
+
 	if receiptTrie.Hash() != block.ReceiptHash() {
 		panic("Receipt trie does not match block receipt hash")
 	}
@@ -65,7 +65,7 @@ func TestMessage_Proof(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, msg)
 
-	msgInner, ok := msg.Args[0].(substrate.Message)
+	msgInner, ok := msg.Args[0].(parachain.Message)
 	if !ok {
 		panic("unexpected type")
 	}

@@ -28,6 +28,7 @@ type BeefyRelayInfo struct {
 	gorm.Model
 	ValidatorAddresses         []byte
 	SignedCommitment           []byte
+	SerializedLatestMMRProof   []byte
 	ContractID                 int64
 	Status                     Status
 	InitialVerificationTxHash  common.Hash
@@ -168,15 +169,18 @@ func (d *Database) writeLoop(ctx context.Context) error {
 				tx := d.DB.Begin()
 				if err := tx.Error; err != nil {
 					d.log.Error(err)
+					return err
 				}
 
 				if err := tx.Create(&cmd.Info).Error; err != nil {
 					tx.Rollback()
 					d.log.Error(err)
+					return err
 				}
 
 				if err := tx.Commit().Error; err != nil {
 					d.log.Error(err)
+					return err
 				}
 			case Update:
 				d.log.Info("Updating item in database...")

@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
@@ -83,7 +83,9 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				continue
 			}
 
-			beefyAuthorities, err := li.getBeefyAuthorities(uint64(signedCommitment.Commitment.BlockNumber))
+			blockNumber := uint64(signedCommitment.Commitment.BlockNumber)
+
+			beefyAuthorities, err := li.getBeefyAuthorities(blockNumber)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to get Beefy authorities from on-chain storage")
 				return err
@@ -95,10 +97,28 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				continue
 			}
 
+			blockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(blockNumber))
+			if err != nil {
+				li.log.WithError(err).Error("Failed to get block hash")
+			}
+			li.log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
+
+			latestMMRProof, err := li.relaychainConn.GetMMRLeafForBlock(blockNumber-1, blockHash)
+			if err != nil {
+				li.log.WithError(err).Error("Failed get MMR Leaf")
+				return err
+			}
+			serializedProof, err := types.EncodeToBytes(latestMMRProof)
+			if err != nil {
+				li.log.WithError(err).Error("Failed to serialize MMR Proof")
+				return err
+			}
+
 			info := store.BeefyRelayInfo{
-				ValidatorAddresses: beefyAuthoritiesBytes,
-				SignedCommitment:   signedCommitmentBytes,
-				Status:             store.CommitmentWitnessed,
+				ValidatorAddresses:       beefyAuthoritiesBytes,
+				SignedCommitment:         signedCommitmentBytes,
+				Status:                   store.CommitmentWitnessed,
+				SerializedLatestMMRProof: serializedProof,
 			}
 			li.beefyMessages <- info
 		}

@@ -12,6 +12,7 @@ use local_runtime::{
 	LocalCouncilMembershipConfig,
 	SudoConfig,
 	WASM_BINARY, Signature,
+	AuraId, AuraConfig,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
@@ -70,6 +71,10 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		move || {
 			testnet_genesis(
 				vec![
+					get_from_seed::<AuraId>("Alice"),
+					get_from_seed::<AuraId>("Bob"),
+				],
+				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie"),
@@ -92,7 +97,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		None,
 		Some(props),
 		Extensions {
-			relay_chain: "local_testnet".into(),
+			relay_chain: "rococo-local".into(),
 			para_id: para_id.into(),
 		},
 	)
@@ -100,6 +105,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
+	initial_authorities: Vec<AuraId>,
 	endowed_accounts: Vec<AccountId>,
 	para_id: ParaId
 ) -> GenesisConfig {
@@ -127,14 +133,14 @@ fn testnet_genesis(
 			phantom: Default::default()
 		},
 		basic_channel_inbound: BasicInboundChannelConfig {
-			source_channel: hex!["EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"].into(),
+			source_channel: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
 		},
 		basic_channel_outbound: BasicOutboundChannelConfig {
 			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
 			interval: 1,
 		},
 		incentivized_channel_inbound: IncentivizedInboundChannelConfig {
-			source_channel: hex!["B8EA8cB425d85536b158d661da1ef0895Bb92F1D"].into(),
+			source_channel: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
 			reward_fraction: Perbill::from_percent(80)
 		},
 		incentivized_channel_outbound: IncentivizedOutboundChannelConfig {
@@ -173,15 +179,19 @@ fn testnet_genesis(
 			initial_difficulty: 19755084633726428633088u128.into(),
 		},
 		eth_app: ETHConfig {
-			address: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into()
-		},
-		erc20_app: ERC20Config {
 			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into()
 		},
+		erc20_app: ERC20Config {
+			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into()
+		},
 		dot_app: DOTConfig {
-			address: hex!["4283d8996E5a7F4BEa58c6052b1471a2a9524C87"].into(),
+			address: hex!["3f839E70117C64744930De8567Ae7A5363487cA3"].into(),
 			phantom: Default::default(),
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: para_id },
+		pallet_aura: AuraConfig {
+			authorities: initial_authorities,
+		},
+		cumulus_pallet_aura_ext: Default::default(),
 	}
 }

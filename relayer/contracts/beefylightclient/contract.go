@@ -1,7 +1,7 @@
 // Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
 
-package lightclientbridge
+package beefylightclient
 
 import (
 	"math/big"
@@ -26,15 +26,33 @@ var (
 	_ = event.NewSubscription
 )
 
-// LightClientBridgeCommitment is an auto generated low-level Go binding around an user-defined struct.
-type LightClientBridgeCommitment struct {
+// BeefyLightClientBeefyMMRLeaf is an auto generated low-level Go binding around an user-defined struct.
+type BeefyLightClientBeefyMMRLeaf struct {
+	ParentNumber         uint32
+	ParentHash           [32]byte
+	ParachainHeadsRoot   [32]byte
+	NextAuthoritySetId   uint64
+	NextAuthoritySetLen  uint32
+	NextAuthoritySetRoot [32]byte
+}
+
+// BeefyLightClientCommitment is an auto generated low-level Go binding around an user-defined struct.
+type BeefyLightClientCommitment struct {
 	Payload        [32]byte
 	BlockNumber    uint64
 	ValidatorSetId uint32
 }
 
+// BeefyLightClientValidatorProof is an auto generated low-level Go binding around an user-defined struct.
+type BeefyLightClientValidatorProof struct {
+	Signatures            [][]byte
+	Positions             []*big.Int
+	PublicKeys            []common.Address
+	PublicKeyMerkleProofs [][][32]byte
+}
+
 // ContractABI is the input ABI used to generate the binding from.
-const ContractABI = "[{\"inputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"_validatorRegistry\",\"type\":\"address\"},{\"internalType\":\"contractMMRVerification\",\"name\":\"_mmrVerification\",\"type\":\"address\"},{\"internalType\":\"contractBlake2b\",\"name\":\"_blake2b\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"FinalVerificationSuccessful\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"InitialVerificationSuccessful\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"mmrRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"}],\"name\":\"NewMMRRoot\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"BLOCK_WAIT_PERIOD\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"THRESHOLD_DENOMINATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"THRESHOLD_NUMERATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"blake2b\",\"outputs\":[{\"internalType\":\"contractBlake2b\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"currentId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"latestMMRRoot\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"mmrVerification\",\"outputs\":[{\"internalType\":\"contractMMRVerification\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"validationData\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"senderAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"validatorRegistry\",\"outputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"beefyMMRLeaf\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"beefyMMRLeafIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"beefyMMRLeafCount\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"beefyMMRLeafProof\",\"type\":\"bytes32[]\"}],\"name\":\"verifyBeefyMerkleLeaf\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorClaimsBitfield\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"validatorSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"validatorPosition\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"validatorPublicKey\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"validatorPublicKeyMerkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"newSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\",\"payable\":true},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"createRandomBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"bitsToSet\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"createInitialBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"validatorSetId\",\"type\":\"uint32\"}],\"internalType\":\"structLightClientBridge.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorPositions\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"validatorPublicKeys\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"validatorPublicKeyMerkleProofs\",\"type\":\"bytes32[][]\"}],\"name\":\"completeSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"requiredNumberOfSignatures\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true}]"
+const ContractABI = "[{\"inputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"_validatorRegistry\",\"type\":\"address\"},{\"internalType\":\"contractMMRVerification\",\"name\":\"_mmrVerification\",\"type\":\"address\"},{\"internalType\":\"contractBlake2b\",\"name\":\"_blake2b\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"_startingBeefyBlock\",\"type\":\"uint64\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"FinalVerificationSuccessful\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"InitialVerificationSuccessful\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"mmrRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"}],\"name\":\"NewMMRRoot\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"BLOCK_WAIT_PERIOD\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"ERROR_AND_SAFETY_BUFFER\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"MAXIMUM_BLOCK_GAP\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"MMR_LEAF_LENGTH_SCALE_ENCODED\",\"outputs\":[{\"internalType\":\"bytes2\",\"name\":\"\",\"type\":\"bytes2\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"NUMBER_OF_BLOCKS_PER_SESSION\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"THRESHOLD_DENOMINATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"THRESHOLD_NUMERATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"blake2b\",\"outputs\":[{\"internalType\":\"contractBlake2b\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"currentId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"latestBeefyBlock\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"latestMMRRoot\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"mmrVerification\",\"outputs\":[{\"internalType\":\"contractMMRVerification\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"validationData\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"senderAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"validatorRegistry\",\"outputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"beefyMMRLeaf\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"beefyMMRLeafIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"beefyMMRLeafCount\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"beefyMMRLeafProof\",\"type\":\"bytes32[]\"}],\"name\":\"verifyBeefyMerkleLeaf\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorClaimsBitfield\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"validatorSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"validatorPosition\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"validatorPublicKey\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"validatorPublicKeyMerkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"newSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\",\"payable\":true},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"createRandomBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"bitsToSet\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"createInitialBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"pure\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"validatorSetId\",\"type\":\"uint32\"}],\"internalType\":\"structBeefyLightClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"},{\"internalType\":\"uint256[]\",\"name\":\"positions\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"publicKeys\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"publicKeyMerkleProofs\",\"type\":\"bytes32[][]\"}],\"internalType\":\"structBeefyLightClient.ValidatorProof\",\"name\":\"validatorProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyLightClient.BeefyMMRLeaf\",\"name\":\"latestMMRLeaf\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"mmrProofItems\",\"type\":\"bytes32[]\"}],\"name\":\"completeSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"numValidators\",\"type\":\"uint256\"}],\"name\":\"requiredNumberOfSignatures\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\",\"constant\":true},{\"inputs\":[],\"name\":\"requiredNumberOfSignatures\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"validatorSetId\",\"type\":\"uint32\"}],\"internalType\":\"structBeefyLightClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"}],\"name\":\"createCommitmentHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyLightClient.BeefyMMRLeaf\",\"name\":\"leaf\",\"type\":\"tuple\"}],\"name\":\"encodeMMRLeaf\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"pure\",\"type\":\"function\",\"constant\":true},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"leaf\",\"type\":\"bytes\"}],\"name\":\"hashMMRLeaf\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\",\"constant\":true}]"
 
 // Contract is an auto generated Go binding around an Ethereum contract.
 type Contract struct {
@@ -180,16 +198,16 @@ func (_Contract *ContractTransactorRaw) Transact(opts *bind.TransactOpts, method
 
 // BLOCKWAITPERIOD is a free data retrieval call binding the contract method 0xfb752c62.
 //
-// Solidity: function BLOCK_WAIT_PERIOD() view returns(uint256)
-func (_Contract *ContractCaller) BLOCKWAITPERIOD(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function BLOCK_WAIT_PERIOD() view returns(uint64)
+func (_Contract *ContractCaller) BLOCKWAITPERIOD(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _Contract.contract.Call(opts, &out, "BLOCK_WAIT_PERIOD")
 
 	if err != nil {
-		return *new(*big.Int), err
+		return *new(uint64), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
 
@@ -197,16 +215,140 @@ func (_Contract *ContractCaller) BLOCKWAITPERIOD(opts *bind.CallOpts) (*big.Int,
 
 // BLOCKWAITPERIOD is a free data retrieval call binding the contract method 0xfb752c62.
 //
-// Solidity: function BLOCK_WAIT_PERIOD() view returns(uint256)
-func (_Contract *ContractSession) BLOCKWAITPERIOD() (*big.Int, error) {
+// Solidity: function BLOCK_WAIT_PERIOD() view returns(uint64)
+func (_Contract *ContractSession) BLOCKWAITPERIOD() (uint64, error) {
 	return _Contract.Contract.BLOCKWAITPERIOD(&_Contract.CallOpts)
 }
 
 // BLOCKWAITPERIOD is a free data retrieval call binding the contract method 0xfb752c62.
 //
-// Solidity: function BLOCK_WAIT_PERIOD() view returns(uint256)
-func (_Contract *ContractCallerSession) BLOCKWAITPERIOD() (*big.Int, error) {
+// Solidity: function BLOCK_WAIT_PERIOD() view returns(uint64)
+func (_Contract *ContractCallerSession) BLOCKWAITPERIOD() (uint64, error) {
 	return _Contract.Contract.BLOCKWAITPERIOD(&_Contract.CallOpts)
+}
+
+// ERRORANDSAFETYBUFFER is a free data retrieval call binding the contract method 0xbe7e93a3.
+//
+// Solidity: function ERROR_AND_SAFETY_BUFFER() view returns(uint64)
+func (_Contract *ContractCaller) ERRORANDSAFETYBUFFER(opts *bind.CallOpts) (uint64, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "ERROR_AND_SAFETY_BUFFER")
+
+	if err != nil {
+		return *new(uint64), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
+
+	return out0, err
+
+}
+
+// ERRORANDSAFETYBUFFER is a free data retrieval call binding the contract method 0xbe7e93a3.
+//
+// Solidity: function ERROR_AND_SAFETY_BUFFER() view returns(uint64)
+func (_Contract *ContractSession) ERRORANDSAFETYBUFFER() (uint64, error) {
+	return _Contract.Contract.ERRORANDSAFETYBUFFER(&_Contract.CallOpts)
+}
+
+// ERRORANDSAFETYBUFFER is a free data retrieval call binding the contract method 0xbe7e93a3.
+//
+// Solidity: function ERROR_AND_SAFETY_BUFFER() view returns(uint64)
+func (_Contract *ContractCallerSession) ERRORANDSAFETYBUFFER() (uint64, error) {
+	return _Contract.Contract.ERRORANDSAFETYBUFFER(&_Contract.CallOpts)
+}
+
+// MAXIMUMBLOCKGAP is a free data retrieval call binding the contract method 0x4afad95b.
+//
+// Solidity: function MAXIMUM_BLOCK_GAP() view returns(uint64)
+func (_Contract *ContractCaller) MAXIMUMBLOCKGAP(opts *bind.CallOpts) (uint64, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "MAXIMUM_BLOCK_GAP")
+
+	if err != nil {
+		return *new(uint64), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
+
+	return out0, err
+
+}
+
+// MAXIMUMBLOCKGAP is a free data retrieval call binding the contract method 0x4afad95b.
+//
+// Solidity: function MAXIMUM_BLOCK_GAP() view returns(uint64)
+func (_Contract *ContractSession) MAXIMUMBLOCKGAP() (uint64, error) {
+	return _Contract.Contract.MAXIMUMBLOCKGAP(&_Contract.CallOpts)
+}
+
+// MAXIMUMBLOCKGAP is a free data retrieval call binding the contract method 0x4afad95b.
+//
+// Solidity: function MAXIMUM_BLOCK_GAP() view returns(uint64)
+func (_Contract *ContractCallerSession) MAXIMUMBLOCKGAP() (uint64, error) {
+	return _Contract.Contract.MAXIMUMBLOCKGAP(&_Contract.CallOpts)
+}
+
+// MMRLEAFLENGTHSCALEENCODED is a free data retrieval call binding the contract method 0x2e41c1bf.
+//
+// Solidity: function MMR_LEAF_LENGTH_SCALE_ENCODED() view returns(bytes2)
+func (_Contract *ContractCaller) MMRLEAFLENGTHSCALEENCODED(opts *bind.CallOpts) ([2]byte, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "MMR_LEAF_LENGTH_SCALE_ENCODED")
+
+	if err != nil {
+		return *new([2]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([2]byte)).(*[2]byte)
+
+	return out0, err
+
+}
+
+// MMRLEAFLENGTHSCALEENCODED is a free data retrieval call binding the contract method 0x2e41c1bf.
+//
+// Solidity: function MMR_LEAF_LENGTH_SCALE_ENCODED() view returns(bytes2)
+func (_Contract *ContractSession) MMRLEAFLENGTHSCALEENCODED() ([2]byte, error) {
+	return _Contract.Contract.MMRLEAFLENGTHSCALEENCODED(&_Contract.CallOpts)
+}
+
+// MMRLEAFLENGTHSCALEENCODED is a free data retrieval call binding the contract method 0x2e41c1bf.
+//
+// Solidity: function MMR_LEAF_LENGTH_SCALE_ENCODED() view returns(bytes2)
+func (_Contract *ContractCallerSession) MMRLEAFLENGTHSCALEENCODED() ([2]byte, error) {
+	return _Contract.Contract.MMRLEAFLENGTHSCALEENCODED(&_Contract.CallOpts)
+}
+
+// NUMBEROFBLOCKSPERSESSION is a free data retrieval call binding the contract method 0xe2a6ff3f.
+//
+// Solidity: function NUMBER_OF_BLOCKS_PER_SESSION() view returns(uint64)
+func (_Contract *ContractCaller) NUMBEROFBLOCKSPERSESSION(opts *bind.CallOpts) (uint64, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "NUMBER_OF_BLOCKS_PER_SESSION")
+
+	if err != nil {
+		return *new(uint64), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
+
+	return out0, err
+
+}
+
+// NUMBEROFBLOCKSPERSESSION is a free data retrieval call binding the contract method 0xe2a6ff3f.
+//
+// Solidity: function NUMBER_OF_BLOCKS_PER_SESSION() view returns(uint64)
+func (_Contract *ContractSession) NUMBEROFBLOCKSPERSESSION() (uint64, error) {
+	return _Contract.Contract.NUMBEROFBLOCKSPERSESSION(&_Contract.CallOpts)
+}
+
+// NUMBEROFBLOCKSPERSESSION is a free data retrieval call binding the contract method 0xe2a6ff3f.
+//
+// Solidity: function NUMBER_OF_BLOCKS_PER_SESSION() view returns(uint64)
+func (_Contract *ContractCallerSession) NUMBEROFBLOCKSPERSESSION() (uint64, error) {
+	return _Contract.Contract.NUMBEROFBLOCKSPERSESSION(&_Contract.CallOpts)
 }
 
 // THRESHOLDDENOMINATOR is a free data retrieval call binding the contract method 0xef024458.
@@ -302,9 +444,40 @@ func (_Contract *ContractCallerSession) Blake2b() (common.Address, error) {
 	return _Contract.Contract.Blake2b(&_Contract.CallOpts)
 }
 
+// CreateCommitmentHash is a free data retrieval call binding the contract method 0x5e974f57.
+//
+// Solidity: function createCommitmentHash((bytes32,uint64,uint32) commitment) view returns(bytes32)
+func (_Contract *ContractCaller) CreateCommitmentHash(opts *bind.CallOpts, commitment BeefyLightClientCommitment) ([32]byte, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "createCommitmentHash", commitment)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// CreateCommitmentHash is a free data retrieval call binding the contract method 0x5e974f57.
+//
+// Solidity: function createCommitmentHash((bytes32,uint64,uint32) commitment) view returns(bytes32)
+func (_Contract *ContractSession) CreateCommitmentHash(commitment BeefyLightClientCommitment) ([32]byte, error) {
+	return _Contract.Contract.CreateCommitmentHash(&_Contract.CallOpts, commitment)
+}
+
+// CreateCommitmentHash is a free data retrieval call binding the contract method 0x5e974f57.
+//
+// Solidity: function createCommitmentHash((bytes32,uint64,uint32) commitment) view returns(bytes32)
+func (_Contract *ContractCallerSession) CreateCommitmentHash(commitment BeefyLightClientCommitment) ([32]byte, error) {
+	return _Contract.Contract.CreateCommitmentHash(&_Contract.CallOpts, commitment)
+}
+
 // CreateInitialBitfield is a free data retrieval call binding the contract method 0x5da57fe9.
 //
-// Solidity: function createInitialBitfield(uint256[] bitsToSet, uint256 length) view returns(uint256[])
+// Solidity: function createInitialBitfield(uint256[] bitsToSet, uint256 length) pure returns(uint256[])
 func (_Contract *ContractCaller) CreateInitialBitfield(opts *bind.CallOpts, bitsToSet []*big.Int, length *big.Int) ([]*big.Int, error) {
 	var out []interface{}
 	err := _Contract.contract.Call(opts, &out, "createInitialBitfield", bitsToSet, length)
@@ -321,14 +494,14 @@ func (_Contract *ContractCaller) CreateInitialBitfield(opts *bind.CallOpts, bits
 
 // CreateInitialBitfield is a free data retrieval call binding the contract method 0x5da57fe9.
 //
-// Solidity: function createInitialBitfield(uint256[] bitsToSet, uint256 length) view returns(uint256[])
+// Solidity: function createInitialBitfield(uint256[] bitsToSet, uint256 length) pure returns(uint256[])
 func (_Contract *ContractSession) CreateInitialBitfield(bitsToSet []*big.Int, length *big.Int) ([]*big.Int, error) {
 	return _Contract.Contract.CreateInitialBitfield(&_Contract.CallOpts, bitsToSet, length)
 }
 
 // CreateInitialBitfield is a free data retrieval call binding the contract method 0x5da57fe9.
 //
-// Solidity: function createInitialBitfield(uint256[] bitsToSet, uint256 length) view returns(uint256[])
+// Solidity: function createInitialBitfield(uint256[] bitsToSet, uint256 length) pure returns(uint256[])
 func (_Contract *ContractCallerSession) CreateInitialBitfield(bitsToSet []*big.Int, length *big.Int) ([]*big.Int, error) {
 	return _Contract.Contract.CreateInitialBitfield(&_Contract.CallOpts, bitsToSet, length)
 }
@@ -395,6 +568,99 @@ func (_Contract *ContractCallerSession) CurrentId() (*big.Int, error) {
 	return _Contract.Contract.CurrentId(&_Contract.CallOpts)
 }
 
+// EncodeMMRLeaf is a free data retrieval call binding the contract method 0x3adcebda.
+//
+// Solidity: function encodeMMRLeaf((uint32,bytes32,bytes32,uint64,uint32,bytes32) leaf) pure returns(bytes)
+func (_Contract *ContractCaller) EncodeMMRLeaf(opts *bind.CallOpts, leaf BeefyLightClientBeefyMMRLeaf) ([]byte, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "encodeMMRLeaf", leaf)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// EncodeMMRLeaf is a free data retrieval call binding the contract method 0x3adcebda.
+//
+// Solidity: function encodeMMRLeaf((uint32,bytes32,bytes32,uint64,uint32,bytes32) leaf) pure returns(bytes)
+func (_Contract *ContractSession) EncodeMMRLeaf(leaf BeefyLightClientBeefyMMRLeaf) ([]byte, error) {
+	return _Contract.Contract.EncodeMMRLeaf(&_Contract.CallOpts, leaf)
+}
+
+// EncodeMMRLeaf is a free data retrieval call binding the contract method 0x3adcebda.
+//
+// Solidity: function encodeMMRLeaf((uint32,bytes32,bytes32,uint64,uint32,bytes32) leaf) pure returns(bytes)
+func (_Contract *ContractCallerSession) EncodeMMRLeaf(leaf BeefyLightClientBeefyMMRLeaf) ([]byte, error) {
+	return _Contract.Contract.EncodeMMRLeaf(&_Contract.CallOpts, leaf)
+}
+
+// HashMMRLeaf is a free data retrieval call binding the contract method 0xf4fa4e45.
+//
+// Solidity: function hashMMRLeaf(bytes leaf) pure returns(bytes32)
+func (_Contract *ContractCaller) HashMMRLeaf(opts *bind.CallOpts, leaf []byte) ([32]byte, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "hashMMRLeaf", leaf)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// HashMMRLeaf is a free data retrieval call binding the contract method 0xf4fa4e45.
+//
+// Solidity: function hashMMRLeaf(bytes leaf) pure returns(bytes32)
+func (_Contract *ContractSession) HashMMRLeaf(leaf []byte) ([32]byte, error) {
+	return _Contract.Contract.HashMMRLeaf(&_Contract.CallOpts, leaf)
+}
+
+// HashMMRLeaf is a free data retrieval call binding the contract method 0xf4fa4e45.
+//
+// Solidity: function hashMMRLeaf(bytes leaf) pure returns(bytes32)
+func (_Contract *ContractCallerSession) HashMMRLeaf(leaf []byte) ([32]byte, error) {
+	return _Contract.Contract.HashMMRLeaf(&_Contract.CallOpts, leaf)
+}
+
+// LatestBeefyBlock is a free data retrieval call binding the contract method 0x66ae69a0.
+//
+// Solidity: function latestBeefyBlock() view returns(uint64)
+func (_Contract *ContractCaller) LatestBeefyBlock(opts *bind.CallOpts) (uint64, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "latestBeefyBlock")
+
+	if err != nil {
+		return *new(uint64), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
+
+	return out0, err
+
+}
+
+// LatestBeefyBlock is a free data retrieval call binding the contract method 0x66ae69a0.
+//
+// Solidity: function latestBeefyBlock() view returns(uint64)
+func (_Contract *ContractSession) LatestBeefyBlock() (uint64, error) {
+	return _Contract.Contract.LatestBeefyBlock(&_Contract.CallOpts)
+}
+
+// LatestBeefyBlock is a free data retrieval call binding the contract method 0x66ae69a0.
+//
+// Solidity: function latestBeefyBlock() view returns(uint64)
+func (_Contract *ContractCallerSession) LatestBeefyBlock() (uint64, error) {
+	return _Contract.Contract.LatestBeefyBlock(&_Contract.CallOpts)
+}
+
 // LatestMMRRoot is a free data retrieval call binding the contract method 0x41c9634e.
 //
 // Solidity: function latestMMRRoot() view returns(bytes32)
@@ -457,12 +723,12 @@ func (_Contract *ContractCallerSession) MmrVerification() (common.Address, error
 	return _Contract.Contract.MmrVerification(&_Contract.CallOpts)
 }
 
-// RequiredNumberOfSignatures is a free data retrieval call binding the contract method 0x72fe1a9f.
+// RequiredNumberOfSignatures is a free data retrieval call binding the contract method 0x6edda8f4.
 //
-// Solidity: function requiredNumberOfSignatures() view returns(uint256)
-func (_Contract *ContractCaller) RequiredNumberOfSignatures(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function requiredNumberOfSignatures(uint256 numValidators) pure returns(uint256)
+func (_Contract *ContractCaller) RequiredNumberOfSignatures(opts *bind.CallOpts, numValidators *big.Int) (*big.Int, error) {
 	var out []interface{}
-	err := _Contract.contract.Call(opts, &out, "requiredNumberOfSignatures")
+	err := _Contract.contract.Call(opts, &out, "requiredNumberOfSignatures", numValidators)
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -474,18 +740,49 @@ func (_Contract *ContractCaller) RequiredNumberOfSignatures(opts *bind.CallOpts)
 
 }
 
-// RequiredNumberOfSignatures is a free data retrieval call binding the contract method 0x72fe1a9f.
+// RequiredNumberOfSignatures is a free data retrieval call binding the contract method 0x6edda8f4.
 //
-// Solidity: function requiredNumberOfSignatures() view returns(uint256)
-func (_Contract *ContractSession) RequiredNumberOfSignatures() (*big.Int, error) {
-	return _Contract.Contract.RequiredNumberOfSignatures(&_Contract.CallOpts)
+// Solidity: function requiredNumberOfSignatures(uint256 numValidators) pure returns(uint256)
+func (_Contract *ContractSession) RequiredNumberOfSignatures(numValidators *big.Int) (*big.Int, error) {
+	return _Contract.Contract.RequiredNumberOfSignatures(&_Contract.CallOpts, numValidators)
 }
 
-// RequiredNumberOfSignatures is a free data retrieval call binding the contract method 0x72fe1a9f.
+// RequiredNumberOfSignatures is a free data retrieval call binding the contract method 0x6edda8f4.
+//
+// Solidity: function requiredNumberOfSignatures(uint256 numValidators) pure returns(uint256)
+func (_Contract *ContractCallerSession) RequiredNumberOfSignatures(numValidators *big.Int) (*big.Int, error) {
+	return _Contract.Contract.RequiredNumberOfSignatures(&_Contract.CallOpts, numValidators)
+}
+
+// RequiredNumberOfSignatures0 is a free data retrieval call binding the contract method 0x72fe1a9f.
 //
 // Solidity: function requiredNumberOfSignatures() view returns(uint256)
-func (_Contract *ContractCallerSession) RequiredNumberOfSignatures() (*big.Int, error) {
-	return _Contract.Contract.RequiredNumberOfSignatures(&_Contract.CallOpts)
+func (_Contract *ContractCaller) RequiredNumberOfSignatures0(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "requiredNumberOfSignatures0")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// RequiredNumberOfSignatures0 is a free data retrieval call binding the contract method 0x72fe1a9f.
+//
+// Solidity: function requiredNumberOfSignatures() view returns(uint256)
+func (_Contract *ContractSession) RequiredNumberOfSignatures0() (*big.Int, error) {
+	return _Contract.Contract.RequiredNumberOfSignatures0(&_Contract.CallOpts)
+}
+
+// RequiredNumberOfSignatures0 is a free data retrieval call binding the contract method 0x72fe1a9f.
+//
+// Solidity: function requiredNumberOfSignatures() view returns(uint256)
+func (_Contract *ContractCallerSession) RequiredNumberOfSignatures0() (*big.Int, error) {
+	return _Contract.Contract.RequiredNumberOfSignatures0(&_Contract.CallOpts)
 }
 
 // ValidationData is a free data retrieval call binding the contract method 0x20bfa5cb.
@@ -566,25 +863,25 @@ func (_Contract *ContractCallerSession) ValidatorRegistry() (common.Address, err
 	return _Contract.Contract.ValidatorRegistry(&_Contract.CallOpts)
 }
 
-// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0x15bc64a3.
+// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0xb0413fb8.
 //
-// Solidity: function completeSignatureCommitment(uint256 id, bytes32 commitmentHash, (bytes32,uint64,uint32) commitment, bytes[] signatures, uint256[] validatorPositions, address[] validatorPublicKeys, bytes32[][] validatorPublicKeyMerkleProofs) returns()
-func (_Contract *ContractTransactor) CompleteSignatureCommitment(opts *bind.TransactOpts, id *big.Int, commitmentHash [32]byte, commitment LightClientBridgeCommitment, signatures [][]byte, validatorPositions []*big.Int, validatorPublicKeys []common.Address, validatorPublicKeyMerkleProofs [][][32]byte) (*types.Transaction, error) {
-	return _Contract.contract.Transact(opts, "completeSignatureCommitment", id, commitmentHash, commitment, signatures, validatorPositions, validatorPublicKeys, validatorPublicKeyMerkleProofs)
+// Solidity: function completeSignatureCommitment(uint256 id, (bytes32,uint64,uint32) commitment, (bytes[],uint256[],address[],bytes32[][]) validatorProof, (uint32,bytes32,bytes32,uint64,uint32,bytes32) latestMMRLeaf, bytes32[] mmrProofItems) returns()
+func (_Contract *ContractTransactor) CompleteSignatureCommitment(opts *bind.TransactOpts, id *big.Int, commitment BeefyLightClientCommitment, validatorProof BeefyLightClientValidatorProof, latestMMRLeaf BeefyLightClientBeefyMMRLeaf, mmrProofItems [][32]byte) (*types.Transaction, error) {
+	return _Contract.contract.Transact(opts, "completeSignatureCommitment", id, commitment, validatorProof, latestMMRLeaf, mmrProofItems)
 }
 
-// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0x15bc64a3.
+// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0xb0413fb8.
 //
-// Solidity: function completeSignatureCommitment(uint256 id, bytes32 commitmentHash, (bytes32,uint64,uint32) commitment, bytes[] signatures, uint256[] validatorPositions, address[] validatorPublicKeys, bytes32[][] validatorPublicKeyMerkleProofs) returns()
-func (_Contract *ContractSession) CompleteSignatureCommitment(id *big.Int, commitmentHash [32]byte, commitment LightClientBridgeCommitment, signatures [][]byte, validatorPositions []*big.Int, validatorPublicKeys []common.Address, validatorPublicKeyMerkleProofs [][][32]byte) (*types.Transaction, error) {
-	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, commitmentHash, commitment, signatures, validatorPositions, validatorPublicKeys, validatorPublicKeyMerkleProofs)
+// Solidity: function completeSignatureCommitment(uint256 id, (bytes32,uint64,uint32) commitment, (bytes[],uint256[],address[],bytes32[][]) validatorProof, (uint32,bytes32,bytes32,uint64,uint32,bytes32) latestMMRLeaf, bytes32[] mmrProofItems) returns()
+func (_Contract *ContractSession) CompleteSignatureCommitment(id *big.Int, commitment BeefyLightClientCommitment, validatorProof BeefyLightClientValidatorProof, latestMMRLeaf BeefyLightClientBeefyMMRLeaf, mmrProofItems [][32]byte) (*types.Transaction, error) {
+	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, commitment, validatorProof, latestMMRLeaf, mmrProofItems)
 }
 
-// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0x15bc64a3.
+// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0xb0413fb8.
 //
-// Solidity: function completeSignatureCommitment(uint256 id, bytes32 commitmentHash, (bytes32,uint64,uint32) commitment, bytes[] signatures, uint256[] validatorPositions, address[] validatorPublicKeys, bytes32[][] validatorPublicKeyMerkleProofs) returns()
-func (_Contract *ContractTransactorSession) CompleteSignatureCommitment(id *big.Int, commitmentHash [32]byte, commitment LightClientBridgeCommitment, signatures [][]byte, validatorPositions []*big.Int, validatorPublicKeys []common.Address, validatorPublicKeyMerkleProofs [][][32]byte) (*types.Transaction, error) {
-	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, commitmentHash, commitment, signatures, validatorPositions, validatorPublicKeys, validatorPublicKeyMerkleProofs)
+// Solidity: function completeSignatureCommitment(uint256 id, (bytes32,uint64,uint32) commitment, (bytes[],uint256[],address[],bytes32[][]) validatorProof, (uint32,bytes32,bytes32,uint64,uint32,bytes32) latestMMRLeaf, bytes32[] mmrProofItems) returns()
+func (_Contract *ContractTransactorSession) CompleteSignatureCommitment(id *big.Int, commitment BeefyLightClientCommitment, validatorProof BeefyLightClientValidatorProof, latestMMRLeaf BeefyLightClientBeefyMMRLeaf, mmrProofItems [][32]byte) (*types.Transaction, error) {
+	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, commitment, validatorProof, latestMMRLeaf, mmrProofItems)
 }
 
 // NewSignatureCommitment is a paid mutator transaction binding the contract method 0xe54d1543.
@@ -698,15 +995,14 @@ func (it *ContractFinalVerificationSuccessfulIterator) Close() error {
 
 // ContractFinalVerificationSuccessful represents a FinalVerificationSuccessful event raised by the Contract contract.
 type ContractFinalVerificationSuccessful struct {
-	Prover         common.Address
-	CommitmentHash [32]byte
-	Id             *big.Int
-	Raw            types.Log // Blockchain specific contextual infos
+	Prover common.Address
+	Id     *big.Int
+	Raw    types.Log // Blockchain specific contextual infos
 }
 
-// FilterFinalVerificationSuccessful is a free log retrieval operation binding the contract event 0x064680bd49185bfe9d29035c0d5caec57f27902d4f2037faa81246a9d686a106.
+// FilterFinalVerificationSuccessful is a free log retrieval operation binding the contract event 0xc128224dd1747f24cc4ecd95248a78fe3b1960b100c9d08ba578888bac274c4e.
 //
-// Solidity: event FinalVerificationSuccessful(address prover, bytes32 commitmentHash, uint256 id)
+// Solidity: event FinalVerificationSuccessful(address prover, uint256 id)
 func (_Contract *ContractFilterer) FilterFinalVerificationSuccessful(opts *bind.FilterOpts) (*ContractFinalVerificationSuccessfulIterator, error) {
 
 	logs, sub, err := _Contract.contract.FilterLogs(opts, "FinalVerificationSuccessful")
@@ -716,9 +1012,9 @@ func (_Contract *ContractFilterer) FilterFinalVerificationSuccessful(opts *bind.
 	return &ContractFinalVerificationSuccessfulIterator{contract: _Contract.contract, event: "FinalVerificationSuccessful", logs: logs, sub: sub}, nil
 }
 
-// WatchFinalVerificationSuccessful is a free log subscription operation binding the contract event 0x064680bd49185bfe9d29035c0d5caec57f27902d4f2037faa81246a9d686a106.
+// WatchFinalVerificationSuccessful is a free log subscription operation binding the contract event 0xc128224dd1747f24cc4ecd95248a78fe3b1960b100c9d08ba578888bac274c4e.
 //
-// Solidity: event FinalVerificationSuccessful(address prover, bytes32 commitmentHash, uint256 id)
+// Solidity: event FinalVerificationSuccessful(address prover, uint256 id)
 func (_Contract *ContractFilterer) WatchFinalVerificationSuccessful(opts *bind.WatchOpts, sink chan<- *ContractFinalVerificationSuccessful) (event.Subscription, error) {
 
 	logs, sub, err := _Contract.contract.WatchLogs(opts, "FinalVerificationSuccessful")
@@ -753,9 +1049,9 @@ func (_Contract *ContractFilterer) WatchFinalVerificationSuccessful(opts *bind.W
 	}), nil
 }
 
-// ParseFinalVerificationSuccessful is a log parse operation binding the contract event 0x064680bd49185bfe9d29035c0d5caec57f27902d4f2037faa81246a9d686a106.
+// ParseFinalVerificationSuccessful is a log parse operation binding the contract event 0xc128224dd1747f24cc4ecd95248a78fe3b1960b100c9d08ba578888bac274c4e.
 //
-// Solidity: event FinalVerificationSuccessful(address prover, bytes32 commitmentHash, uint256 id)
+// Solidity: event FinalVerificationSuccessful(address prover, uint256 id)
 func (_Contract *ContractFilterer) ParseFinalVerificationSuccessful(log types.Log) (*ContractFinalVerificationSuccessful, error) {
 	event := new(ContractFinalVerificationSuccessful)
 	if err := _Contract.contract.UnpackLog(event, "FinalVerificationSuccessful", log); err != nil {

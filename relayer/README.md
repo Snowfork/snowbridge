@@ -1,6 +1,6 @@
 # Relayer
 
-Relayer service that streams transactions from blockchain networks, packages data into messages, and sends the packets to the correlated bridge component.
+Relayer service that streams transactions from blockchain networks, packages data into messages, and sends the packages to the correlated bridge component.
 
 Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe/ChainBridge). Our implementation is inspired by their design and incorporates some of their code.
 
@@ -74,7 +74,7 @@ Example Configuration:
 [ethereum]
 endpoint = "ws://localhost:8545/"
 descendants-until-final = 3
-lightclientbridge = "0x8cF6147918A5CBb672703F879f385036f8793a24"
+beefylightclient = "0x8cF6147918A5CBb672703F879f385036f8793a24"
 
 [ethereum.channels.basic]
 inbound = "0x992B9df075935E522EC7950F37eC8557e86f6fdb"

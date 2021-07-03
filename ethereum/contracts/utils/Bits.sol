@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 
 library Bits {
     uint256 internal constant ONE = uint256(1);
-    uint256 internal constant ONES = uint256(~0);
+    uint256 internal constant ONES = type(uint256).max;
 
     // Sets the bit at the given 'index' in 'self' to '1'.
     // Returns the modified value.

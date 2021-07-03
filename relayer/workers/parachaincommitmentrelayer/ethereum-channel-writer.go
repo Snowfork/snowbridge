@@ -2,7 +2,6 @@ package parachaincommitmentrelayer
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"golang.org/x/sync/errgroup"
@@ -12,24 +11,27 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/inbound"
+	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/basic"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
+
+	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v3/types"
 )
 
 type EthereumChannelWriter struct {
 	config                     *ethereum.Config
 	conn                       *ethereum.Connection
-	basicInboundChannel        *inbound.BasicInboundChannel
-	incentivizedInboundChannel *inbound.IncentivizedInboundChannel
-	messages                   <-chan interface{}
+	basicInboundChannel        *basic.BasicInboundChannel
+	incentivizedInboundChannel *incentivized.IncentivizedInboundChannel
+	messagePackages            <-chan MessagePackage
 	log                        *logrus.Entry
 }
 
 func NewEthereumChannelWriter(
 	config *ethereum.Config,
 	conn *ethereum.Connection,
-	messages <-chan interface{},
+	messagePackages <-chan MessagePackage,
 	log *logrus.Entry,
 ) (*EthereumChannelWriter, error) {
 	return &EthereumChannelWriter{
@@ -37,19 +39,19 @@ func NewEthereumChannelWriter(
 		conn:                       conn,
 		basicInboundChannel:        nil,
 		incentivizedInboundChannel: nil,
-		messages:                   messages,
+		messagePackages:            messagePackages,
 		log:                        log,
 	}, nil
 }
 
 func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	basic, err := inbound.NewBasicInboundChannel(common.HexToAddress(wr.config.Channels.Basic.Inbound), wr.conn.GetClient())
+	basic, err := basic.NewBasicInboundChannel(common.HexToAddress(wr.config.Channels.Basic.Inbound), wr.conn.GetClient())
 	if err != nil {
 		return err
 	}
 	wr.basicInboundChannel = basic
 
-	incentivized, err := inbound.NewIncentivizedInboundChannel(common.HexToAddress(wr.config.Channels.Incentivized.Inbound), wr.conn.GetClient())
+	incentivized, err := incentivized.NewIncentivizedInboundChannel(common.HexToAddress(wr.config.Channels.Incentivized.Inbound), wr.conn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -65,8 +67,8 @@ func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) 
 func (wr *EthereumChannelWriter) onDone(ctx context.Context) error {
 	wr.log.Info("Shutting down writer...")
 	// Avoid deadlock if a listener is still trying to send to a channel
-	for range wr.messages {
-		wr.log.Debug("Discarded message")
+	for range wr.messagePackages {
+		wr.log.Debug("Discarded message package")
 	}
 	return ctx.Err()
 }
@@ -83,22 +85,11 @@ func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return wr.onDone(ctx)
-		case message := <-wr.messages:
-			switch value := message.(type) {
-			case chain.SubstrateOutboundBasicMessage:
-				err := wr.WriteBasicChannel(&options, &value)
-				if err != nil {
-					wr.log.WithError(err).Error("Error submitting message to ethereum")
-					return err
-				}
-			case chain.SubstrateOutboundIncentivizedMessage:
-				err := wr.WriteIncentivizedChannel(&options, &value)
-				if err != nil {
-					wr.log.WithError(err).Error("Error submitting message to ethereum")
-					return err
-				}
-			default:
-				return fmt.Errorf("Unknown message type")
+		case messagePackage := <-wr.messagePackages:
+			err := wr.WriteChannel(&options, &messagePackage)
+			if err != nil {
+				wr.log.WithError(err).Error("Error submitting message to ethereum")
+				return err
 			}
 		}
 	}
@@ -115,12 +106,13 @@ func (wr *EthereumChannelWriter) signerFn(_ common.Address, tx *types.Transactio
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (wr *EthereumChannelWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
-	msg *chain.SubstrateOutboundBasicMessage,
+	msgPackage *MessagePackage,
+	msgs []parachain.BasicOutboundChannelMessage,
 ) error {
-	var messages []inbound.BasicInboundChannelMessage
-	for _, m := range msg.Messages {
+	var messages []basic.BasicInboundChannelMessage
+	for _, m := range msgs {
 		messages = append(messages,
-			inbound.BasicInboundChannelMessage{
+			basic.BasicInboundChannelMessage{
 				Target:  m.Target,
 				Nonce:   m.Nonce,
 				Payload: m.Payload,
@@ -128,8 +120,30 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		)
 	}
 
-	tx, err := wr.basicInboundChannel.Submit(options, messages, msg.Commitment,
-		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
+	paraheadPartial := basic.ParachainLightClientOwnParachainHeadPartial{
+		ParentHash:     msgPackage.paraHead.ParentHash,
+		Number:         uint32(msgPackage.paraHead.Number),
+		StateRoot:      msgPackage.paraHead.StateRoot,
+		ExtrinsicsRoot: msgPackage.paraHead.ExtrinsicsRoot,
+	}
+	beefyMMRLeafPartial := basic.ParachainLightClientBeefyMMRLeafPartial{
+		ParentNumber:         uint32(msgPackage.mmrProof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           msgPackage.mmrProof.Leaf.ParentNumberAndHash.Hash,
+		NextAuthoritySetId:   uint64(msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Root,
+	}
+	// TODO: assess this - We assume no pruning, so one leaf for each block
+	beefyLeafCount := int64(msgPackage.mmrProof.Leaf.ParentNumberAndHash.ParentNumber)
+	// TODO: assess this - We assume we are relaying the newest leaf
+	beefyMMRLeafIndex := beefyLeafCount - 1
+	var beefyMMRProof [][32]byte
+	for _, item := range msgPackage.mmrProof.Proof.Items {
+		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
+	}
+	tx, err := wr.basicInboundChannel.Submit(options, messages, paraheadPartial,
+		[][32]byte{}, beefyMMRLeafPartial,
+		big.NewInt(beefyMMRLeafIndex), big.NewInt(beefyLeafCount), beefyMMRProof)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err
@@ -145,12 +159,13 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 
 func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	options *bind.TransactOpts,
-	msg *chain.SubstrateOutboundIncentivizedMessage,
+	msgPackage *MessagePackage,
+	msgs []parachain.IncentivizedOutboundChannelMessage,
 ) error {
-	var messages []inbound.IncentivizedInboundChannelMessage
-	for _, m := range msg.Messages {
+	var messages []incentivized.IncentivizedInboundChannelMessage
+	for _, m := range msgs {
 		messages = append(messages,
-			inbound.IncentivizedInboundChannelMessage{
+			incentivized.IncentivizedInboundChannelMessage{
 				Target:  m.Target,
 				Nonce:   m.Nonce,
 				Fee:     m.Fee.Int,
@@ -159,8 +174,31 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		)
 	}
 
-	tx, err := wr.incentivizedInboundChannel.Submit(options, messages, msg.Commitment,
-		[32]byte{}, big.NewInt(0), big.NewInt(0), [][32]byte{})
+	paraheadPartial := incentivized.ParachainLightClientOwnParachainHeadPartial{
+		ParentHash:     msgPackage.paraHead.ParentHash,
+		Number:         uint32(msgPackage.paraHead.Number),
+		StateRoot:      msgPackage.paraHead.StateRoot,
+		ExtrinsicsRoot: msgPackage.paraHead.ExtrinsicsRoot,
+	}
+	beefyMMRLeafPartial := incentivized.ParachainLightClientBeefyMMRLeafPartial{
+		ParentNumber:         uint32(msgPackage.mmrProof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           msgPackage.mmrProof.Leaf.ParentNumberAndHash.Hash,
+		NextAuthoritySetId:   uint64(msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Root,
+	}
+	// TODO: assess this - We assume no pruning, so one leaf for each block
+	beefyLeafCount := int64(msgPackage.mmrProof.Leaf.ParentNumberAndHash.ParentNumber)
+	// TODO: assess this - We assume we are relaying the newest leaf
+	beefyMMRLeafIndex := beefyLeafCount - 1
+	var beefyMMRProof [][32]byte
+	for _, item := range msgPackage.mmrProof.Proof.Items {
+		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
+	}
+	tx, err := wr.incentivizedInboundChannel.Submit(options, messages,
+		paraheadPartial,
+		[][32]byte{}, beefyMMRLeafPartial,
+		big.NewInt(beefyMMRLeafIndex), big.NewInt(beefyLeafCount), beefyMMRProof)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
 		return err
@@ -170,6 +208,41 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		"txHash":  tx.Hash().Hex(),
 		"channel": "Incentivized",
 	}).Info("Transaction submitted")
+
+	return nil
+}
+
+func (wr *EthereumChannelWriter) WriteChannel(
+	options *bind.TransactOpts,
+	msg *MessagePackage,
+) error {
+	if msg.channelID.IsBasic {
+		var outboundMessages []parachain.BasicOutboundChannelMessage
+		err := gsrpcTypes.DecodeFromBytes(msg.commitmentData, &outboundMessages)
+		if err != nil {
+			wr.log.WithError(err).Error("Failed to decode commitment messages")
+			return err
+		}
+		err = wr.WriteBasicChannel(options, msg, outboundMessages)
+		if err != nil {
+			wr.log.WithError(err).Error("Failed to write basic channel")
+			return err
+		}
+
+	}
+	if msg.channelID.IsIncentivized {
+		var outboundMessages []parachain.IncentivizedOutboundChannelMessage
+		err := gsrpcTypes.DecodeFromBytes(msg.commitmentData, &outboundMessages)
+		if err != nil {
+			wr.log.WithError(err).Error("Failed to decode commitment messages")
+			return err
+		}
+		err = wr.WriteIncentivizedChannel(options, msg, outboundMessages)
+		if err != nil {
+			wr.log.WithError(err).Error("Failed to write incentivized channel")
+			return err
+		}
+	}
 
 	return nil
 }

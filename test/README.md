@@ -38,21 +38,16 @@ yarn install
 Install `polkadot-launch`:
 
 ```bash
-git clone -n https://github.com/paritytech/polkadot-launch.git /tmp/polkadot-launch
-cd /tmp/polkadot-launch
-git checkout 89e970
-yarn install
-yarn build
-yarn global add file:$(pwd)
+yarn global add polkadot-launch@1.6.1
 cd -
 ```
 
 Build polkadot:
 
 ```bash
-git clone -n https://github.com/snowfork/polkadot.git /tmp/polkadot
+git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout enable_beefy_on_rococo
+git checkout release-v0.9.4
 cargo build --release
 cd -
 ```
@@ -148,3 +143,6 @@ The `start-services.sh` script writes the following logs:
 - parachain.log
 - relayer.log
 - ganache.log
+
+## Generating/Updating new test fixtures
+Test fixtures are taken by running the service in full e2e test. The relayer should log the fixture data you need (code is in [the relayer here](../relayer/workers/beefyrelayer/fixture-data-logger.go), though may require a bit of manual copy/pasting to get perfectly it in the right format.

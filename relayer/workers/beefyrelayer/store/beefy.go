@@ -6,7 +6,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/lightclientbridge"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 	merkletree "github.com/wealdtech/go-merkletree"
 	"golang.org/x/crypto/blake2b"
 )
@@ -22,12 +23,13 @@ type NewSignatureCommitmentMessage struct {
 
 type CompleteSignatureCommitmentMessage struct {
 	ID                             *big.Int
-	CommitmentHash                 [32]byte
-	Commitment                     lightclientbridge.LightClientBridgeCommitment
+	Commitment                     beefylightclient.BeefyLightClientCommitment
 	Signatures                     [][]byte
 	ValidatorPositions             []*big.Int
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
+	LatestMMRLeaf                  beefylightclient.BeefyLightClientBeefyMMRLeaf
+	MMRProofItems                  [][32]byte
 }
 
 type BeefyJustification struct {
@@ -129,8 +131,6 @@ func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][3
 }
 
 func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyRelayInfo, bitfield string) (CompleteSignatureCommitmentMessage, error) {
-	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
-
 	validationDataID := big.NewInt(int64(info.ContractID))
 
 	validatorPositions := []*big.Int{}
@@ -160,20 +160,40 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		validatorPublicKeyMerkleProofs = append(validatorPublicKeyMerkleProofs, merkleProof)
 	}
 
-	commitment := lightclientbridge.LightClientBridgeCommitment{
+	commitment := beefylightclient.BeefyLightClientCommitment{
 		Payload:        b.SignedCommitment.Commitment.Payload,
 		BlockNumber:    uint64(b.SignedCommitment.Commitment.BlockNumber),
 		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),
 	}
 
+	var latestMMRProof types.GenerateMMRProofResponse
+	err := types.DecodeFromBytes(info.SerializedLatestMMRProof, &latestMMRProof)
+	if err != nil {
+		return CompleteSignatureCommitmentMessage{}, err
+	}
+
+	latestMMRLeaf := beefylightclient.BeefyLightClientBeefyMMRLeaf{
+		ParentNumber:         uint32(latestMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           latestMMRProof.Leaf.ParentNumberAndHash.Hash,
+		ParachainHeadsRoot:   latestMMRProof.Leaf.ParachainHeads,
+		NextAuthoritySetId:   uint64(latestMMRProof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(latestMMRProof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: latestMMRProof.Leaf.BeefyNextAuthoritySet.Root,
+	}
+	mmrProofItems := [][32]byte{}
+	for _, mmrProofItem := range latestMMRProof.Proof.Items {
+		mmrProofItems = append(mmrProofItems, mmrProofItem)
+	}
+
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                             validationDataID,
-		CommitmentHash:                 commitmentHash,
 		Commitment:                     commitment,
 		Signatures:                     signatures,
 		ValidatorPositions:             validatorPositions,
 		ValidatorPublicKeys:            validatorPublicKeys,
 		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
+		LatestMMRLeaf:                  latestMMRLeaf,
+		MMRProofItems:                  mmrProofItems,
 	}
 	return msg, nil
 }
