@@ -11,11 +11,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
-	chainTypes "github.com/snowfork/polkadot-ethereum/relayer/substrate"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/ethrelayer"
 )
 
@@ -45,12 +44,12 @@ func TestWrite(t *testing.T) {
 
 	var args []interface{}
 	args = append(args,
-		chainTypes.Message{
+		parachain.Message{
 			Data: []byte{1, 2, 3},
-			Proof: chainTypes.Proof{
+			Proof: parachain.Proof{
 				BlockHash: types.NewH256([]byte{1, 2, 3}),
 				TxIndex:   1,
-				Data:      chainTypes.NewProofData(),
+				Data:      parachain.NewProofData(),
 			},
 		},
 	)

@@ -190,5 +190,7 @@ fn testnet_genesis(
 			address: Default::default() // TODO add actual address
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: para_id },
+		pallet_aura: Default::default(),
+		cumulus_pallet_aura_ext: Default::default(),
 	}
 }

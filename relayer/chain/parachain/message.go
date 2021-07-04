@@ -1,13 +1,13 @@
 // Copyright 2020 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package substrate
+package parachain
 
 import (
 	"fmt"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 )
 
 type Message struct {

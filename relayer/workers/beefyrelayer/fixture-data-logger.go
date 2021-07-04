@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
-	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v2/types"
+	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v3/types"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 )

@@ -1,6 +1,6 @@
 # Relayer
 
-Relayer service that streams transactions from blockchain networks, packages data into messages, and sends the packets to the correlated bridge component.
+Relayer service that streams transactions from blockchain networks, packages data into messages, and sends the packages to the correlated bridge component.
 
 Thanks to Chainsafe for their work on [ChainBridge](https://github.com/ChainSafe/ChainBridge). Our implementation is inspired by their design and incorporates some of their code.
 

@@ -43,21 +43,18 @@ cargo build --release --no-default-features --features with-local-runtime
 Install `polkadot-launch`:
 
 ```bash
-git clone https://github.com/Snowfork/polkadot-launch.git
-cd polkadot-launch
-git checkout beefy_tmpfix
-yarn install
-yarn build
-yarn global add file:$(pwd)
+yarn global add polkadot-launch@1.6.1
+cd -
 ```
 
-Build Polkadot:
+Build polkadot:
 
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout c4a0772
+git checkout release-v0.9.4
 cargo build --release
+cd -
 ```
 
 Launch Polkadot and the parachain:

@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
@@ -103,7 +103,11 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 			}
 			li.log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
 
-			latestMMRProof := li.relaychainConn.GetMMRLeafForBlock(blockNumber-1, blockHash)
+			latestMMRProof, err := li.relaychainConn.GetMMRLeafForBlock(blockNumber-1, blockHash)
+			if err != nil {
+				li.log.WithError(err).Error("Failed get MMR Leaf")
+				return err
+			}
 			serializedProof, err := types.EncodeToBytes(latestMMRProof)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to serialize MMR Proof")

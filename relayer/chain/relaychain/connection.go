@@ -5,11 +5,12 @@ package relaychain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 
-	gsrpc "github.com/snowfork/go-substrate-rpc-client/v2"
-	"github.com/snowfork/go-substrate-rpc-client/v2/types"
+	gsrpc "github.com/snowfork/go-substrate-rpc-client/v3"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 )
 
 type Connection struct {
@@ -72,7 +73,7 @@ func (co *Connection) Close() {
 func (co *Connection) GetMMRLeafForBlock(
 	blockNumber uint64,
 	blockHash types.Hash,
-) types.GenerateMMRProofResponse {
+) (types.GenerateMMRProofResponse, error) {
 	co.log.WithFields(logrus.Fields{
 		"blockNumber": blockNumber,
 		"blockHash":   blockHash.Hex(),
@@ -80,6 +81,7 @@ func (co *Connection) GetMMRLeafForBlock(
 	proofResponse, err := co.GetAPI().RPC.MMR.GenerateProof(blockNumber, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to generate mmr proof")
+		return types.GenerateMMRProofResponse{}, err
 	}
 
 	var proofItemsHex = []string{}
@@ -99,5 +101,102 @@ func (co *Connection) GetMMRLeafForBlock(
 		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
 		"Proof.Items":                     proofItemsHex,
 	}).Info("Generated MMR Proof")
-	return proofResponse
+	return proofResponse, nil
+}
+
+func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainId uint32) (
+	[]types.Bytes, types.Header, error) {
+	none := types.NewOptionU32Empty()
+	encoded, err := types.EncodeToBytes(none)
+	if err != nil {
+		co.log.WithError(err).Error("Error")
+		return nil, types.Header{}, err
+	}
+
+	baseParaHeadsStorageKey, err := types.CreateStorageKey(
+		co.GetMetadata(),
+		"Paras",
+		"Heads", encoded, nil)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to create parachain header storage key")
+		return nil, types.Header{}, err
+	}
+
+	//TODO fix this manual slice.
+	// The above types.CreateStorageKey does not give the same base key as polkadotjs needs for getKeys.
+	// It has some extra bytes.
+	// maybe from the none u32 in golang being wrong, or maybe slightly off CreateStorageKey call? we slice it
+	// here as a hack.
+	actualBaseParaHeadsStorageKey := baseParaHeadsStorageKey[:32]
+	co.log.WithField("actualBaseParaHeadsStorageKey", actualBaseParaHeadsStorageKey.Hex()).Info("actualBaseParaHeadsStorageKey")
+
+	keysResponse, err := co.GetAPI().RPC.State.GetKeys(actualBaseParaHeadsStorageKey, blockHash)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to get all parachain keys")
+		return nil, types.Header{}, err
+	}
+
+	headersResponse, err := co.GetAPI().RPC.State.QueryStorage(keysResponse, blockHash, blockHash)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to get all parachain headers")
+		return nil, types.Header{}, err
+	}
+
+	co.log.Info("Got all parachain headers")
+	var headers []types.Bytes
+	var ownParachainHeader types.Header
+	for _, headerResponse := range headersResponse {
+		for _, change := range headerResponse.Changes {
+
+			// TODO fix this manual slice with a proper type decode. only the last few bytes are for the ParaId,
+			// not sure what the early ones are for.
+			key := change.StorageKey[40:]
+			var parachainID types.U32
+			if err := types.DecodeFromBytes(key, &parachainID); err != nil {
+				co.log.WithError(err).Error("Failed to decode parachain ID")
+				return nil, types.Header{}, err
+			}
+
+			var headerBytes types.Bytes
+			if err := types.DecodeFromBytes(change.StorageData, &headerBytes); err != nil {
+				co.log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
+				return nil, types.Header{}, err
+			}
+			headers = append(headers, headerBytes)
+
+			if parachainID == types.U32(ownParachainId) {
+				co.log.WithField("parachainId", parachainID).Info("Decoding header for parachain")
+				var header types.Header
+				if err := types.DecodeFromBytes(headerBytes, &header); err != nil {
+					co.log.WithError(err).Error("Failed to decode Header")
+					return nil, types.Header{}, err
+				}
+				co.log.WithFields(logrus.Fields{
+					"headerBytes":           fmt.Sprintf("%#x", headerBytes),
+					"header.ParentHash":     header.ParentHash.Hex(),
+					"header.Number":         header.Number,
+					"header.StateRoot":      header.StateRoot.Hex(),
+					"header.ExtrinsicsRoot": header.ExtrinsicsRoot.Hex(),
+					"header.Digest":         header.Digest,
+					"parachainId":           parachainID,
+				}).Info("Decoded header for parachain")
+				ownParachainHeader = header
+			}
+
+		}
+	}
+	return headers, ownParachainHeader, nil
+}
+
+// Fetch the latest block of a parachain that has been finalized at a relay chain block hash
+func (co *Connection) FetchLatestFinalizedParaBlockNumber(relayBlockhash types.Hash, parachainId uint32) (uint64, error) {
+	_, ownParaHead, err := co.GetAllParaheadsWithOwn(relayBlockhash, parachainId)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to get parachain heads from relay chain")
+		return 0, err
+	}
+
+	finalizedParaBlockNumber := uint64(ownParaHead.Number)
+
+	return finalizedParaBlockNumber, nil
 }

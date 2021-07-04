@@ -3,10 +3,11 @@
 use frame_support::{
     parameter_types,
     dispatch::DispatchResult,
+    PalletId,
     weights::{DispatchClass, Weight},
 };
 use frame_system::limits::BlockWeights;
-use sp_runtime::{ModuleId, Perbill};
+use sp_runtime::Perbill;
 use sp_std::marker::PhantomData;
 use sp_core::H160;
 
@@ -41,7 +42,6 @@ pub fn build_block_weights(
 }
 
 pub const INDEXING_PREFIX: &'static [u8] = b"commitment";
-
 pub struct OutboundRouter<T>(PhantomData<T>);
 
 impl<T> artemis_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
@@ -63,6 +63,6 @@ parameter_types! {
 }
 
 parameter_types! {
-    pub const TreasuryModuleId: ModuleId = ModuleId(*b"s/treasy");
-    pub const DotModuleId: ModuleId = ModuleId(*b"s/dotapp");
+    pub const TreasuryPalletId: PalletId = PalletId(*b"s/treasy");
+    pub const DotPalletId: PalletId = PalletId(*b"s/dotapp");
 }
