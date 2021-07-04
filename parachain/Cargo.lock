@@ -9544,7 +9544,6 @@ dependencies = [
  "artemis-erc20-app",
  "artemis-erc721-app",
  "artemis-eth-app",
- "artemis-ethereum",
  "artemis-incentivized-channel",
  "artemis-nft",
  "artemis-runtime-common",
