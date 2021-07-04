@@ -116,6 +116,7 @@ std = [
     "dot-app/std",
     "eth-app/std",
     "erc20-app/std",
+    "erc721-app/std",
     "artemis-transfer/std",
     "artemis-xcm-support/std",
     "runtime-common/std",
