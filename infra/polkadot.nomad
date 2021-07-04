@@ -1,11 +1,11 @@
 job "polkadot" {
   datacenters = ["dc1"]
-  group "node-0" {
+  group "alice" {
 
-    volume "volume0" {
+    volume "storage" {
       type      = "host"
       read_only = false
-      source    = "volume0"
+      source    = "polkadot-node-0"
     }
 
     network {
@@ -21,7 +21,7 @@ job "polkadot" {
       driver = "docker"
 
       volume_mount {
-        volume      = "volume0"
+        volume      = "storage"
         destination = "/data"
         read_only   = false
       }
@@ -37,8 +37,11 @@ job "polkadot" {
             "traefik.http.services.polkadot.loadbalancer.server.port=${NOMAD_HOST_PORT_rpc}"
         ]
       }
+
+      user = "root"
+
       config {
-        image = "parity/polkadot:v0.9.3"
+        image = "parity/polkadot:v0.9.5"
         args = [
           "--chain", "rococo-local",
           "--alice",
@@ -50,17 +53,18 @@ job "polkadot" {
         ports = ["p2p", "rpc"]
       }
       resources {
-        cpu = 1001
-        memory = 1024
+        cpu = 1024
+        memory = 8192
       }
     }
   }
-  group "node-1" {
 
-    volume "volume1" {
+  group "bob" {
+
+    volume "storage" {
       type      = "host"
       read_only = false
-      source    = "volume1"
+      source    = "polkadot-node-1"
     }
 
     network {
@@ -71,26 +75,33 @@ job "polkadot" {
         to = 9944
       }
     }
+
     task "polkadot" {
       driver = "docker"
 
       volume_mount {
-        volume      = "volume1"
+        volume      = "storage"
         destination = "/data"
         read_only   = false
       }
 
-    template {
+      template {
         data = <<EOF
 #!/bin/sh
 {{ with service "polkadot-alice" }}{{ with index . 0 }}
-exec /usr/bin/polkadot --chain rococo-local --bob --rpc-cors all --bootnodes /ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
+bootnode=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
 {{ end }}{{ end }}
+exec /usr/bin/polkadot \
+  --chain rococo-local \
+  --bob \
+  --rpc-cors all \
+  --bootnodes $bootnode
 EOF
         change_mode = "restart"
-        destination = "local/init.sh"
+        destination = "local/run.sh"
         perms = 755
       }
+
       service {
         name = "polkadot-bob"
         tags = ["bob"]
@@ -99,14 +110,18 @@ EOF
           rpc_port = "${NOMAD_PORT_rpc}"
         }
       }
+
+      user = "root"
+
       config {
-        image = "parity/polkadot:v0.9.3"
-        entrypoint = ["/local/init.sh"]
+        image = "parity/polkadot:v0.9.5"
+        entrypoint = ["/local/run.sh"]
         ports = ["p2p", "rpc"]
       }
+
       resources {
-        cpu = 1001
-        memory = 1024
+        cpu = 1024
+        memory = 8192
       }
     }
   }
