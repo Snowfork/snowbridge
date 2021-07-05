@@ -34,6 +34,12 @@ job "polkadot" {
             "traefik.http.routers.polkadot.entrypoints=websecure",
             "traefik.http.services.polkadot.loadbalancer.server.port=${NOMAD_PORT_ws_rpc}"
         ]
+        check {
+          type     = "tcp"
+          port     = "p2p"
+          interval = "10s"
+          timeout  = "2s"
+        }
         meta {
           ws_rpc_port = "${NOMAD_PORT_ws_rpc}"
           http_rpc_port = "${NOMAD_PORT_http_rpc}"
@@ -139,6 +145,12 @@ EOF
         name = "polkadot-bob"
         tags = ["bob"]
         port = "p2p"
+        check {
+          type     = "tcp"
+          port     = "p2p"
+          interval = "10s"
+          timeout  = "2s"
+        }
         meta {
           ws_rpc_port = "${NOMAD_PORT_ws_rpc}"
           http_rpc_port = "${NOMAD_PORT_http_rpc}"

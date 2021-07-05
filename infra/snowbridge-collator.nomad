@@ -34,6 +34,12 @@ job "snowbridge-collator" {
             "traefik.http.routers.collator.entrypoints=websecure",
             "traefik.http.services.collator.loadbalancer.server.port=${NOMAD_PORT_ws_rpc}"
         ]
+        check {
+          type     = "tcp"
+          port     = "p2p"
+          interval = "10s"
+          timeout  = "2s"
+        }
         meta {
           ws_rpc_port = "${NOMAD_PORT_ws_rpc}"
           http_rpc_port = "${NOMAD_PORT_http_rpc}"
@@ -148,6 +154,12 @@ EOF
       service {
         name = "collator-1"
         port = "p2p"
+        check {
+          type     = "tcp"
+          port     = "p2p"
+          interval = "10s"
+          timeout  = "2s"
+        }
       }
 
       artifact {
