@@ -3,9 +3,10 @@ job "polkadot" {
   group "alice" {
 
     volume "storage" {
-      type      = "host"
-      read_only = false
-      source    = "polkadot-node-0"
+      type = "csi"
+      source = "polkadot-node-0"
+      attachment_mode = "file-system"
+      access_mode = "single-node-writer"
     }
 
     network {
@@ -22,7 +23,7 @@ job "polkadot" {
 
       volume_mount {
         volume      = "storage"
-        destination = "/data"
+        destination = "/var/lib/polkadot"
         read_only   = false
       }
 
@@ -43,6 +44,7 @@ job "polkadot" {
       config {
         image = "parity/polkadot:v0.9.5"
         args = [
+          "--base-path", "/var/lib/polkadot",
           "--chain", "rococo-local",
           "--alice",
           "--rpc-cors", "all",
@@ -62,9 +64,10 @@ job "polkadot" {
   group "bob" {
 
     volume "storage" {
-      type      = "host"
-      read_only = false
-      source    = "polkadot-node-1"
+      type = "csi"
+      source = "polkadot-node-1"
+      attachment_mode = "file-system"
+      access_mode = "single-node-writer"
     }
 
     network {
@@ -81,7 +84,7 @@ job "polkadot" {
 
       volume_mount {
         volume      = "storage"
-        destination = "/data"
+        destination = "/var/lib/polkadot"
         read_only   = false
       }
 
@@ -92,6 +95,7 @@ job "polkadot" {
 bootnode=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
 {{ end }}{{ end }}
 exec /usr/bin/polkadot \
+  --base-path /var/lib/polkadot \
   --chain rococo-local \
   --bob \
   --rpc-cors all \

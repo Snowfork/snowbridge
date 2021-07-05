@@ -7,9 +7,10 @@ job "traefik" {
     count = 1
 
     volume "certs" {
-      type      = "host"
-      read_only = false
-      source    = "certs"
+      type = "csi"
+      source = "traefik-certs"
+      attachment_mode = "file-system"
+      access_mode = "single-node-writer"
     }
 
     network {
@@ -54,9 +55,8 @@ job "traefik" {
         image        = "traefik:v2.4.8"
         network_mode = "host"
 
-        volumes = [
-          "local/traefik.toml:/etc/traefik/traefik.toml",
-          "local/dynamic-config.toml:/etc/traefik/dynamic-config.toml",
+        args = [
+          "--configFile=local/traefik.toml"
         ]
       }
 
@@ -64,7 +64,7 @@ job "traefik" {
         data = <<EOF
 [providers]
   [providers.file]
-    filename = "/etc/traefik/dynamic-config.toml"
+    filename = "/local/dynamic-config.toml"
 
 [entryPoints]
     [entryPoints.web]
