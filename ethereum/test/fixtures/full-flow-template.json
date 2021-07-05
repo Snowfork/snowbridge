@@ -1,0 +1,17 @@
+{
+  "initialValidatorAddresses": [
+    "0xe04cc55ebee1cbce552f250e85c57b70b2e2625b",
+    "0x25451a4de12dccc2d166922fa938e900fcc4ed24"
+  ],
+  "initialValidatorSetID": 0,
+  "hashedLeaf": "",
+  "hexEncodedLeaf": "",
+  "completeSubmitInput": {},
+  "basicSubmitParaHeadsRoot": "",
+  "basicSubmitInput": {},
+  "hashedLeaf2": "",
+  "hexEncodedLeaf2": "",
+  "completeSubmitInput2": {},
+  "incentivizedSubmitParaHeadsRoot": "",
+  "incentivizedSubmitInput": {}
+}

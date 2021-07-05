@@ -73,7 +73,7 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 		case msg := <-wr.beefyMessages:
 			switch msg.Status {
 			case store.CommitmentWitnessed:
-				err := wr.WriteNewSignatureCommitment(ctx, msg, 0) // TODO: pick val addr
+				err := wr.WriteNewSignatureCommitment(ctx, msg, 0) // TODO: pick val addr of first val that actually signed
 				if err != nil {
 					wr.log.WithError(err).Error("Error submitting message to ethereum")
 				}
@@ -201,6 +201,12 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		PublicKeyMerkleProofs: msg.ValidatorPublicKeyMerkleProofs,
 	}
 
+	err = wr.LogBeefyFixtureDataAll(msg, info)
+	if err != nil {
+		wr.log.WithError(err).Error("Failed to log complete tx input")
+		return err
+	}
+
 	tx, err := contract.CompleteSignatureCommitment(&options,
 		msg.ID,
 		msg.Commitment,
@@ -225,8 +231,6 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 	}
 	updateCmd := store.NewDatabaseCmd(&info, store.Update, instructions)
 	wr.databaseMessages <- updateCmd
-
-	wr.LogBeefyFixtureDataAll(msg, info)
 
 	return nil
 }

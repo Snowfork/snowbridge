@@ -10,7 +10,7 @@ const MMRVerification = artifacts.require("MMRVerification");
 const Blake2b = artifacts.require("Blake2b");
 const BeefyLightClient = artifacts.require("BeefyLightClient");
 
-const fixture = require('./fixtures/beefy-fixture-data.json');
+const fixture = require('./fixtures/full-flow.json');
 
 let lazyLinked = false;
 const lazyLinkLibraries = async _ => {
@@ -75,11 +75,11 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
 }
 
 const deployBeefyLightClient = async _ => {
-  this.validatorsMerkleTree = createMerkleTree(fixture.validatorPublicKeys);
+  this.validatorsMerkleTree = createMerkleTree(fixture.initialValidatorAddresses);
   const root = this.validatorsMerkleTree.getHexRoot()
 
   const validatorRegistry = await initValidatorRegistry(root,
-    fixture.validatorPublicKeys.length, fixture.startingValidatorSetID);
+    fixture.initialValidatorAddresses.length, fixture.initialValidatorSetID);
   const mmrVerification = await MMRVerification.new();
   const blake2b = await Blake2b.new();
 
@@ -93,6 +93,36 @@ const deployBeefyLightClient = async _ => {
   await validatorRegistry.transferOwnership(beefyLightClient.address)
 
   return beefyLightClient;
+}
+
+const runBeefyLighClientFlow = async beefyLightClient => {
+  const initialBitfield = await beefyLightClient.createInitialBitfield(
+    fixture.completeSubmitInput.validatorProof.positions,
+    2
+  );
+  const commitmentHash = await beefyLightClient.createCommitmentHash(
+    fixture.completeSubmitInput.commitment
+  );
+  await beefyLightClient.newSignatureCommitment(
+    commitmentHash,
+    initialBitfield,
+    fixture.completeSubmitInput.validatorProof.signatures[0],
+    fixture.completeSubmitInput.validatorProof.positions[0],
+    fixture.completeSubmitInput.validatorProof.publicKeys[0],
+    fixture.completeSubmitInput.validatorProof.publicKeyMerkleProofs[0],
+  )
+
+  const lastId = (await beefyLightClient.currentId()).sub(new web3.utils.BN(1));
+
+  await mine(45);
+
+  await beefyLightClient.completeSignatureCommitment(
+    lastId,
+    fixture.completeSubmitInput.commitment,
+    fixture.completeSubmitInput.validatorProof,
+    fixture.completeSubmitInput.latestMMRLeaf,
+    fixture.completeSubmitInput.mmrProofItems,
+  ).should.be.fulfilled
 }
 
 function signatureSubstrateToEthereum(sig) {
@@ -166,6 +196,7 @@ module.exports = {
   ChannelId,
   encodeLog,
   mergeKeccak256,
+  runBeefyLighClientFlow,
   catchRevert: async (promise, message) => await tryCatch(promise, "revert", message),
   catchOutOfGas: async (promise, message) => await tryCatch(promise, "out of gas", message),
   catchInvalidJump: async (promise, message) => await tryCatch(promise, "invalid JUMP", message),

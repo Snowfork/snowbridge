@@ -172,7 +172,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 			li.log.WithError(err).Error("Failed to get mmr leaf")
 			return nil, err
 		}
-		ownParaHeadProof, err := parachain.CreateParachainHeaderProof(allParaHeads, ownParaHead, mmrProof.Leaf.ParachainHeads)
+		parasRoot, ownParaHeadProof, err := parachain.CreateParachainHeaderProof(allParaHeads, ownParaHead, mmrProof.Leaf.ParachainHeads)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to create parachain header proof")
 			return nil, err
@@ -185,6 +185,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 			HeaderProof:      ownParaHeadProof,
 			HeaderProofPos:   ownParaHeadProofPos,
 			HeaderProofWidth: len(allParaHeads),
+			HeaderProofRoot:  parasRoot,
 		}
 		blocksWithProof = append(blocksWithProof, blockWithProof)
 	}

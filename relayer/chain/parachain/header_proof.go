@@ -8,10 +8,11 @@ import (
 	"github.com/wealdtech/go-merkletree"
 )
 
-func CreateParachainHeaderProof(allParaHeads []types.Bytes, ourParaHead types.Header, expectedRoot types.H256) ([][32]byte, error) {
+func CreateParachainHeaderProof(allParaHeads []types.Bytes, ourParaHead types.Header, expectedRoot types.H256) (
+	[]byte, [][32]byte, error) {
 	ourParaHeadBytes, err := types.EncodeToBytes(ourParaHead)
 	if err != nil {
-		return [][32]byte{}, err
+		return nil, [][32]byte{}, err
 	}
 
 	paraTreeData := make([][]byte, len(allParaHeads))
@@ -22,13 +23,13 @@ func CreateParachainHeaderProof(allParaHeads []types.Bytes, ourParaHead types.He
 	// Create the tree
 	paraMerkleTree, err := merkletree.NewUsing(paraTreeData, &Keccak256{}, nil)
 	if err != nil {
-		return [][32]byte{}, err
+		return nil, [][32]byte{}, err
 	}
 
 	// Generate Merkle Proof for our parachain's head
 	proof, err := paraMerkleTree.GenerateProof(ourParaHeadBytes)
 	if err != nil {
-		return [][32]byte{}, err
+		return nil, [][32]byte{}, err
 	}
 	root := paraMerkleTree.Root()
 
@@ -42,10 +43,10 @@ func CreateParachainHeaderProof(allParaHeads []types.Bytes, ourParaHead types.He
 	// Verify the proof
 	verified, err := merkletree.VerifyProofUsing(ourParaHeadBytes, proof, root, &Keccak256{}, nil)
 	if err != nil {
-		return [][32]byte{}, err
+		return nil, [][32]byte{}, err
 	}
 	if !verified {
-		return [][32]byte{}, fmt.Errorf("failed to verify proof")
+		return nil, [][32]byte{}, fmt.Errorf("failed to verify proof")
 	}
 
 	proofContents := make([][32]byte, len(proof.Hashes))
@@ -55,7 +56,7 @@ func CreateParachainHeaderProof(allParaHeads []types.Bytes, ourParaHead types.He
 		proofContents[i] = hash32Byte
 	}
 
-	return proofContents, nil
+	return root, proofContents, nil
 }
 
 // Keccak256 is the Keccak256 hashing method

@@ -17,6 +17,7 @@ type ParaBlockWithProofs struct {
 	HeaderProof      [][32]byte
 	HeaderProofPos   int
 	HeaderProofWidth int
+	HeaderProofRoot  []byte
 }
 
 type DigestItemWithData struct {
@@ -32,6 +33,7 @@ type MessagePackage struct {
 	paraHeadProof      [][32]byte
 	paraHeadProofPos   int
 	paraHeadProofWidth int
+	paraHeadProofRoot  []byte
 	mmrProof           types.GenerateMMRProofResponse
 }
 
@@ -50,6 +52,7 @@ func CreateMessagePackages(paraBlocks []ParaBlockWithProofs) ([]MessagePackage, 
 				block.HeaderProof,
 				block.HeaderProofPos,
 				block.HeaderProofWidth,
+				block.HeaderProofRoot,
 				block.MMRProofResponse,
 			}
 			messagePackages = append(messagePackages, messagePackage)
