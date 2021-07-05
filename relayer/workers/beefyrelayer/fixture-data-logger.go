@@ -18,33 +18,33 @@ import (
 )
 
 type BeefyLightClientCommitmentLog struct {
-	Payload        string
-	BlockNumber    uint64
-	ValidatorSetId uint32
+	Payload        string `json:"payload"`
+	BlockNumber    uint64 `json:"blockNumber"`
+	ValidatorSetId uint32 `json:"validatorSetId"`
 }
 
 type BeefyLightClientValidatorProofLog struct {
-	Signatures            []string
-	Positions             []*big.Int
-	PublicKeys            []common.Address
-	PublicKeyMerkleProofs [][]string
+	Signatures            []string         `json:"signatures"`
+	Positions             []*big.Int       `json:"positions"`
+	PublicKeys            []common.Address `json:"publicKeys"`
+	PublicKeyMerkleProofs [][]string       `json:"publicKeyMerkleProofs"`
 }
 
 type BeefyLightClientBeefyMMRLeafLog struct {
-	ParentNumber         uint32
-	ParentHash           string
-	ParachainHeadsRoot   string
-	NextAuthoritySetId   uint64
-	NextAuthoritySetLen  uint32
-	NextAuthoritySetRoot string
+	ParentNumber         uint32 `json:"parentNumber"`
+	ParentHash           string `json:"parentHash"`
+	ParachainHeadsRoot   string `json:"parachainHeadsRoot"`
+	NextAuthoritySetId   uint64 `json:"nextAuthoritySetId"`
+	NextAuthoritySetLen  uint32 `json:"nextAuthoritySetLen"`
+	NextAuthoritySetRoot string `json:"nextAuthoritySetRoot"`
 }
 
 type CompleteSignatureCommitmentTxInput struct {
-	Id             *big.Int
-	Commitment     BeefyLightClientCommitmentLog
-	ValidatorProof BeefyLightClientValidatorProofLog
-	LatestMMRLeaf  BeefyLightClientBeefyMMRLeafLog
-	MMRProofItems  []string
+	Id             *big.Int                          `json:"id"`
+	Commitment     BeefyLightClientCommitmentLog     `json:"commitment"`
+	ValidatorProof BeefyLightClientValidatorProofLog `json:"validatorProof"`
+	LatestMMRLeaf  BeefyLightClientBeefyMMRLeafLog   `json:"latestMMRLeaf"`
+	MMRProofItems  []string                          `json:"mmrProofItems"`
 }
 
 func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
@@ -88,7 +88,7 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 	input := &CompleteSignatureCommitmentTxInput{
 		Id: msg.ID,
 		Commitment: BeefyLightClientCommitmentLog{
-			Payload:        hex.EncodeToString(msg.Commitment.Payload[:]),
+			Payload:        "0x" + hex.EncodeToString(msg.Commitment.Payload[:]),
 			BlockNumber:    msg.Commitment.BlockNumber,
 			ValidatorSetId: msg.Commitment.ValidatorSetId,
 		},
@@ -100,11 +100,11 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 		},
 		LatestMMRLeaf: BeefyLightClientBeefyMMRLeafLog{
 			ParentNumber:         msg.LatestMMRLeaf.ParentNumber,
-			ParentHash:           hex.EncodeToString(msg.LatestMMRLeaf.ParentHash[:]),
-			ParachainHeadsRoot:   hex.EncodeToString(msg.LatestMMRLeaf.ParachainHeadsRoot[:]),
+			ParentHash:           "0x" + hex.EncodeToString(msg.LatestMMRLeaf.ParentHash[:]),
+			ParachainHeadsRoot:   "0x" + hex.EncodeToString(msg.LatestMMRLeaf.ParachainHeadsRoot[:]),
 			NextAuthoritySetId:   msg.LatestMMRLeaf.NextAuthoritySetId,
 			NextAuthoritySetLen:  msg.LatestMMRLeaf.NextAuthoritySetLen,
-			NextAuthoritySetRoot: hex.EncodeToString(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
+			NextAuthoritySetRoot: "0x" + hex.EncodeToString(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
 		},
 		MMRProofItems: mmrProofItems,
 	}
@@ -117,7 +117,6 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 		"json":           string(b),
 		"hexEncodedLeaf": hexEncodedLeaf,
 		"hashedLeaf":     hashedLeaf,
-		"mmrProofItems":  mmrProofItems,
 	}).Info("Complete Signature Commitment transaction submitted")
 
 	return nil
