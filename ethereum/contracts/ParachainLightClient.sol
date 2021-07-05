@@ -42,8 +42,9 @@ library ParachainLightClient {
         BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
-        bytes32[] calldata _beefyMMRLeafProof
-    ) internal pure {
+        bytes32[] calldata _beefyMMRLeafProof,
+        BeefyLightClient beefyLightClient
+    ) internal {
         // Must verify the parachain id to ensure msg comes from our parachain
         // TODO
 

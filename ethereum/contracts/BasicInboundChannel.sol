@@ -48,7 +48,8 @@ contract BasicInboundChannel {
             _beefyMMRLeafPartial,
             _beefyMMRLeafIndex,
             _beefyMMRLeafCount,
-            _beefyMMRLeafProof
+            _beefyMMRLeafProof,
+            beefyLightClient
         );
 
         // Require there is enough gas to play all messages
