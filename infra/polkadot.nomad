@@ -10,12 +10,10 @@ job "polkadot" {
     }
 
     network {
-      port "p2p" {
-        to = 30333
-      }
-      port "rpc" {
-        to = 9944
-      }
+      port "p2p" {}
+      port "ws_rpc" {}
+      port "http_rpc" {}
+      port "prometheus" {}
     }
 
     task "polkadot" {
@@ -24,7 +22,6 @@ job "polkadot" {
       volume_mount {
         volume      = "storage"
         destination = "/var/lib/polkadot"
-        read_only   = false
       }
 
       service {
@@ -35,8 +32,13 @@ job "polkadot" {
             "traefik.enable=true",
             "traefik.http.routers.polkadot.rule=Host(`polkadot-rpc.snowbridge.network`)",
             "traefik.http.routers.polkadot.entrypoints=websecure",
-            "traefik.http.services.polkadot.loadbalancer.server.port=${NOMAD_HOST_PORT_rpc}"
+            "traefik.http.services.polkadot.loadbalancer.server.port=${NOMAD_PORT_ws_rpc}"
         ]
+        meta {
+          ws_rpc_port = "${NOMAD_PORT_ws_rpc}"
+          http_rpc_port = "${NOMAD_PORT_http_rpc}"
+          prometheus_port = "${NOMAD_PORT_prometheus}"
+        }
       }
 
       user = "root"
@@ -50,12 +52,17 @@ job "polkadot" {
           "--rpc-cors", "all",
           "--ws-external",
           "--rpc-external",
+          "--port", "${NOMAD_PORT_p2p}",
+          "--ws-port", "${NOMAD_PORT_ws_rpc}",
+          "--rpc-port", "${NOMAD_PORT_http_rpc}",
+          "--prometheus-port", "${NOMAD_PORT_prometheus}",
           "--node-key", "ac86396c43f8083b41c02fcbcfde161baf42e56e4ff7bc5bb38144825860fe50"
         ]
-        ports = ["p2p", "rpc"]
+        ports = ["p2p", "ws_rpc", "http_rpc", "prometheus"]
+        network_mode = "host"
       }
       resources {
-        cpu = 1024
+        cpu = 8000
         memory = 8192
       }
     }
@@ -71,11 +78,30 @@ job "polkadot" {
     }
 
     network {
-      port "p2p" {
-        to = 30333
+      port "p2p" {}
+      port "ws_rpc" {}
+      port "http_rpc" {}
+      port "prometheus" {}
+    }
+
+    task "await-bootnode" {
+      driver = "docker"
+
+      config {
+        image        = "busybox:1.28"
+        command      = "sh"
+        args         = ["-c", "until nslookup polkadot-alice.service.dc1.consul 2>&1 >/dev/null; do echo '.'; sleep 5; done"]
+        network_mode = "host"
       }
-      port "rpc" {
-        to = 9944
+
+      resources {
+        cpu    = 200
+        memory = 128
+      }
+
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
       }
     }
 
@@ -85,7 +111,6 @@ job "polkadot" {
       volume_mount {
         volume      = "storage"
         destination = "/var/lib/polkadot"
-        read_only   = false
       }
 
       template {
@@ -99,6 +124,10 @@ exec /usr/bin/polkadot \
   --chain rococo-local \
   --bob \
   --rpc-cors all \
+  --port {{ env "NOMAD_PORT_p2p" }} \
+  --ws-port {{ env "NOMAD_PORT_ws_rpc" }} \
+  --rpc-port {{ env "NOMAD_PORT_http_rpc" }} \
+  --prometheus-port {{ env "NOMAD_PORT_prometheus" }} \
   --bootnodes $bootnode
 EOF
         change_mode = "restart"
@@ -111,7 +140,9 @@ EOF
         tags = ["bob"]
         port = "p2p"
         meta {
-          rpc_port = "${NOMAD_PORT_rpc}"
+          ws_rpc_port = "${NOMAD_PORT_ws_rpc}"
+          http_rpc_port = "${NOMAD_PORT_http_rpc}"
+          prometheus_port = "${NOMAD_PORT_prometheus}"
         }
       }
 
@@ -120,11 +151,12 @@ EOF
       config {
         image = "parity/polkadot:v0.9.5"
         entrypoint = ["/local/run.sh"]
-        ports = ["p2p", "rpc"]
+        ports = ["p2p", "ws_rpc", "http_rpc", "prometheus"]
+        network_mode = "host"
       }
 
       resources {
-        cpu = 1024
+        cpu = 8000
         memory = 8192
       }
     }

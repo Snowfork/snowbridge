@@ -28,8 +28,8 @@ job "clear-volume" {
 
       config {
         image = "ubuntu:20.04"
-        command = "ls"
-        args = ["-lh", "/srv"]
+        command = "rm"
+        args = ["-rfv", "/srv/chains"]
       }
 
       resources {
