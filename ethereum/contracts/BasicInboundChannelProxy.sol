@@ -15,6 +15,10 @@ contract BasicInboundChannelProxy is Ownable {
         channel = BasicInboundChannel(_channel);
     }
 
+    function nonce() public view returns (uint64) {
+        return channel.nonce();
+    }
+
     function submit(
         BasicInboundChannel.Message[] calldata _messages,
         ParachainLightClient.OwnParachainHeadPartial
