@@ -1,7 +1,7 @@
 const TOML = require('@iarna/toml');
 const fs = require('fs');
 const path = require('path');
-const TestBasicInboundChannelProxy = artifacts.require("TestBasicInboundChannelProxy");
+const BasicInboundChannelProxy = artifacts.require("BasicInboundChannelProxy");
 
 const channelContracts = {
     basic: {
@@ -86,7 +86,7 @@ module.exports = async (callback) => {
         channels.basic.inbound = await channelContracts.basic.inbound.deployed();
         const network = process.argv[6];
         if (network === 'ropsten' || network === 'e2e_test') {
-            channels.basic.inbound = await TestBasicInboundChannelProxy.deployed();
+            channels.basic.inbound = await BasicInboundChannelProxy.deployed();
         }
         channels.basic.outbound = await channelContracts.basic.outbound.deployed();
         channels.incentivized.inbound = await channelContracts.incentivized.inbound.deployed();

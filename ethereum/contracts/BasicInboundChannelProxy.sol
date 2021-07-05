@@ -5,7 +5,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ParachainLightClient.sol";
 import "./BasicInboundChannel.sol";
 
-contract TestBasicInboundChannelProxy is Ownable {
+// This contract is used to proxy the BasicInboundChannel and become its owner
+// so that any user can access it without being the owner.
+// It is only intended to be used for testing purposes, not in production.
+contract BasicInboundChannelProxy is Ownable {
     BasicInboundChannel channel;
 
     constructor(address _channel) {
