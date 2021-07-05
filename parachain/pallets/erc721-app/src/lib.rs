@@ -138,14 +138,14 @@ pub mod module {
 		/// Burn an ERC721 token
 		#[pallet::weight(T::WeightInfo::burn())]
 		#[transactional]
-		pub fn burn(origin: OriginFor<T>, channel_id: ChannelId, token: T::TokenId, sender: T::AccountId, recipient: H160) -> DispatchResultWithPostInfo {
+		pub fn burn(origin: OriginFor<T>, channel_id: ChannelId, token: T::TokenId, recipient: H160) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			let token_data = T::Nft::get_token_data(token).ok_or(Error::<T>::TokenNotFound)?;
 			let token_contract = token_data.data.token_contract;
 			let token_id = token_data.data.token_id;
 
-			T::Nft::burn(&sender, token)?;
+			T::Nft::burn(&who, token)?;
 
 			// We can assume that the map contains the key, since the token_contract and token_id are extracted from it
 			TokensByERC721Id::<T>::remove((token_contract, token_id));

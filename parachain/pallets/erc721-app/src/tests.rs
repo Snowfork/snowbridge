@@ -57,7 +57,6 @@ fn burn_should_emit_bridge_event() {
 			Origin::signed(bob.clone()),
 			ChannelId::Incentivized,
 			token,
-			bob.clone(),
 			recipient.clone()));
 
 		assert_eq!(
@@ -86,7 +85,6 @@ fn should_not_burn_on_commitment_failure() {
 				Origin::signed(sender.clone()),
 				ChannelId::Basic,
 				token_id,
-				sender.clone(),
 				recipient.clone()
 			),
 			DispatchError::Other("some error!")

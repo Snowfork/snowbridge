@@ -491,7 +491,7 @@ pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(call: &Call) -> bool {
 		match call {
-			Call::ETH(_) | Call::ERC20(_) | Call::DOT(_) => true,
+			Call::ETH(_) | Call::ERC20(_) | Call::ERC721(_) | Call::DOT(_) => true,
 			_ => false,
 		}
 	}
