@@ -1,20 +1,19 @@
-job "snowbridge" {
+job "snowbridge-collator" {
   datacenters = ["dc1"]
   group "snowbridge-node-0" {
 
     volume "storage" {
-      type      = "host"
-      read_only = false
-      source    = "snowbridge-node-0"
+      type = "csi"
+      source = "snowbridge-node-0"
+      attachment_mode = "file-system"
+      access_mode = "single-node-writer"
     }
 
     network {
-      port "p2p" {
-        to = 30333
-      }
-      port "rpc" {
-        to = 9944
-      }
+      port "p2p" {}
+      port "ws_rpc" {}
+      port "http_rpc" {}
+      port "prometheus" {}
     }
 
     task "collator" {
@@ -33,8 +32,13 @@ job "snowbridge" {
             "traefik.enable=true",
             "traefik.http.routers.collator.rule=Host(`parachain-rpc.snowbridge.network`)",
             "traefik.http.routers.collator.entrypoints=websecure",
-            "traefik.http.services.collator.loadbalancer.server.port=${NOMAD_HOST_PORT_rpc}"
+            "traefik.http.services.collator.loadbalancer.server.port=${NOMAD_PORT_rpc}"
         ]
+        meta {
+          ws_rpc_port = "${NOMAD_PORT_ws_rpc}"
+          http_rpc_port = "${NOMAD_PORT_http_rpc}"
+          prometheus_port = "${NOMAD_PORT_prometheus}"
+        }
       }
 
       artifact {
@@ -61,6 +65,10 @@ exec /usr/local/bin/snowbridge \
   --rpc-cors=all \
   --ws-external \
   --rpc-external \
+  --port {{ env "NOMAD_PORT_p2p" }} \
+  --ws-port {{ env "NOMAD_PORT_ws_rpc" }} \
+  --rpc-port {{ env "NOMAD_PORT_http_rpc" }} \
+  --prometheus-port {{ env "NOMAD_PORT_prometheus" }} \
   --rpc-methods=Safe \
   --offchain-worker=Always \
   --enable-offchain-indexing=true \
@@ -79,11 +87,12 @@ EOF
       config {
         image = "ghcr.io/snowfork/snowbridge-collator:0.3.2"
         entrypoint = ["/local/run.sh"]
-        ports = ["p2p", "rpc"]
+        ports = ["p2p", "ws_rpc", "http_rpc", "prometheus"]
+        network_mode = "host"
       }
 
       resources {
-        cpu = 1024
+        cpu = 8000
         memory = 8192
       }
 
@@ -93,17 +102,37 @@ EOF
   group "snowbridge-node-1" {
 
     volume "storage" {
-      type      = "host"
-      read_only = false
-      source    = "snowbridge-node-1"
+      type = "csi"
+      source = "snowbridge-node-1"
+      attachment_mode = "file-system"
+      access_mode = "single-node-writer"
     }
 
     network {
-      port "p2p" {
-        to = 30333
+      port "p2p" {}
+      port "ws_rpc" {}
+      port "http_rpc" {}
+      port "prometheus" {}
+    }
+
+    task "await-bootnode" {
+      driver = "docker"
+
+      config {
+        image        = "busybox:1.28"
+        command      = "sh"
+        args         = ["-c", "until nslookup collator-0.service.dc1.consul 2>&1 >/dev/null; do echo '.'; sleep 5; done"]
+        network_mode = "host"
       }
-      port "rpc" {
-        to = 9944
+
+      resources {
+        cpu    = 200
+        memory = 128
+      }
+
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
       }
     }
 
@@ -148,6 +177,10 @@ exec /usr/local/bin/snowbridge \
   --rpc-cors=all \
   --ws-external \
   --rpc-external \
+  --port {{ env "NOMAD_PORT_p2p" }} \
+  --ws-port {{ env "NOMAD_PORT_ws_rpc" }} \
+  --rpc-port {{ env "NOMAD_PORT_http_rpc" }} \
+  --prometheus-port {{ env "NOMAD_PORT_prometheus" }} \
   --rpc-methods=Safe \
   --offchain-worker=Always \
   --enable-offchain-indexing=true \
@@ -167,11 +200,12 @@ EOF
       config {
         image = "ghcr.io/snowfork/snowbridge-collator:0.3.2"
         entrypoint = ["/local/run.sh"]
-        ports = ["p2p", "rpc"]
+        ports = ["p2p", "ws_rpc", "http_rpc", "prometheus"]
+        network_mode = "host"
       }
 
       resources {
-        cpu = 1024
+        cpu = 8000
         memory = 8192
       }
 
