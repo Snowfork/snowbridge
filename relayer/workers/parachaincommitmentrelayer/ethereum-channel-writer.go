@@ -208,7 +208,6 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	for _, item := range msgPackage.mmrProof.Proof.Items {
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
-
 	paraHeadProof := incentivized.ParachainLightClientParachainHeadProof{
 		Pos:   big.NewInt(int64(msgPackage.paraHeadProofPos)),
 		Width: big.NewInt(int64(msgPackage.paraHeadProofWidth)),
