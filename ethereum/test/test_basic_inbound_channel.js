@@ -2,8 +2,10 @@ require("chai")
   .use(require("chai-as-promised"))
   .should();
 
-const BasicInboundChannel = artifacts.require("BasicInboundChannel");
 const MockApp = artifacts.require("MockApp");
+const BasicInboundChannel = artifacts.require("BasicInboundChannel");
+const MerkleProof = artifacts.require("MerkleProof");
+const ScaleCodec = artifacts.require("ScaleCodec");
 
 const { ethers } = require("ethers");
 
@@ -11,19 +13,10 @@ const {
   deployBeefyLightClient
 } = require("./helpers");
 
-const makeCommitment = (messages) => {
-  let encoded = ethers.utils.defaultAbiCoder.encode(
-    ['tuple(address target, uint64 nonce, bytes payload)[]'],
-    [messages]
-  )
-  return ethers.utils.solidityKeccak256(["bytes"], [encoded])
-}
-
 describe("BasicInboundChannel", function () {
   let accounts;
   let owner;
   let userOne;
-
   const interface = new ethers.utils.Interface(BasicInboundChannel.abi)
   const mockAppInterface = new ethers.utils.Interface(MockApp.abi);
   const mockAppUnlock = mockAppInterface.functions['unlock(uint256)'];
@@ -33,6 +26,10 @@ describe("BasicInboundChannel", function () {
     owner = accounts[0];
     userOne = accounts[1];
     this.beefyLightClient = await deployBeefyLightClient();
+    const merkleProof = await MerkleProof.new();
+    const scaleCodec = await ScaleCodec.new();
+    await BasicInboundChannel.link(merkleProof);
+    await BasicInboundChannel.link(scaleCodec);
   });
 
   describe("submit", function () {
@@ -41,9 +38,7 @@ describe("BasicInboundChannel", function () {
         { from: owner }
       );
       this.app = await MockApp.new();
-    });
 
-    it("should accept a valid commitment and dispatch messages", async function () {
       const message1 = {
         target: this.app.address,
         nonce: 1,
@@ -55,15 +50,45 @@ describe("BasicInboundChannel", function () {
         payload: mockAppInterface.encodeFunctionData(mockAppUnlock, [200])
       }
 
-      // Construct commitment hash from messages
-      const commitment = makeCommitment([message1, message2]);
+      this.submitInput = {
+        messages: [message1, message2],
+        _ownParachainHeadPartial: {
+          parentHash: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+          number: 2,
+          stateRoot: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+          extrinsicsRoot: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+        },
+        _parachainHeadProof: {
+          pos: 0,
+          width: 1,
+          proof: [
+            '0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7',
+            '0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7'
+          ]
+        },
+        _beefyMMRLeafPartial: {
+          parentNumber: 2,
+          parentHash: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+          nextAuthoritySetId: 2,
+          nextAuthoritySetLen: 2,
+          nextAuthoritySetRoot: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+        },
+        _beefyMMRLeafIndex: 2,
+        _beefyMMRLeafCount: 2,
+        _beefyMMRLeafProof: [
+          "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+          "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7"
+        ]
+      };
+    });
+
+    it("should accept a valid commitment and dispatch messages", async function () {
 
       // Send commitment
       const { receipt } = await this.channel.submit(
-        [message1, message2],
-        commitment, '0x0', 0, 0, [],
+        ...Object.values(this.submitInput),
         { from: userOne }
-      )
+      ).should.be.fulfilled
 
       let event;
 
@@ -104,22 +129,15 @@ describe("BasicInboundChannel", function () {
         payload: mockAppInterface.encodeFunctionData(mockAppUnlock, [100])
       }
 
-      // Construct commitment hash from messages
-      const commitment = makeCommitment([message]);
-
       // Send commitment
-      const { receipt } = await this.channel.submit(
-        [message],
-        commitment, '0x0', 0, 0, [],
+      await this.channel.submit(
+        ...Object.values(this.submitInput),
         { from: userOne }
       ).should.be.fulfilled;
 
-      let event;
-
       // Send commitment again - should revert
       await this.channel.submit(
-        [message],
-        commitment, '0x0', 0, 0, [],
+        ...Object.values(this.submitInput),
         { from: userOne }
       ).should.not.be.fulfilled;
 

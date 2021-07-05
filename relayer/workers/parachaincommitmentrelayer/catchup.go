@@ -143,10 +143,11 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 	var err error
 	var blocksWithProof []ParaBlockWithProofs
 	for _, block := range blocks {
-		var ourParaHead types.Header
 		var allParaHeads []types.Bytes
+		var ownParaHeadProofPos int
+		var ownParaHead types.Header
 		// Loop back over relay chain blocks to find the one that finalized the given parachain block
-		for ourParaHead.Number != types.BlockNumber(block.BlockNumber) {
+		for ownParaHead.Number != types.BlockNumber(block.BlockNumber) {
 			li.log.WithField("relayChainBlockNumber", relayChainBlockNumber).Info("Getting hash for relay chain block")
 			relayBlockHash, err = li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(relayChainBlockNumber))
 			if err != nil {
@@ -154,7 +155,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 				return nil, err
 			}
 			li.log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
-			allParaHeads, ourParaHead, err = li.relaychainConn.GetAllParaheadsWithOwn(relayBlockHash, OUR_PARACHAIN_ID)
+			allParaHeads, ownParaHeadProofPos, ownParaHead, err = li.relaychainConn.GetAllParaheadsWithOwn(relayBlockHash, OUR_PARACHAIN_ID)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to get paraheads")
 				return nil, err
@@ -171,7 +172,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 			li.log.WithError(err).Error("Failed to get mmr leaf")
 			return nil, err
 		}
-		ourParaHeadProof, err := li.createParachainHeaderProof(allParaHeads, ourParaHead, mmrProof.Leaf.ParachainHeads)
+		ownParaHeadProof, err := parachain.CreateParachainHeaderProof(allParaHeads, ownParaHead, mmrProof.Leaf.ParachainHeads)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to create parachain header proof")
 			return nil, err
@@ -180,18 +181,14 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 		blockWithProof := ParaBlockWithProofs{
 			Block:            block,
 			MMRProofResponse: mmrProof,
-			Header:           ourParaHead,
-			HeaderProof:      ourParaHeadProof,
+			Header:           ownParaHead,
+			HeaderProof:      ownParaHeadProof,
+			HeaderProofPos:   ownParaHeadProofPos,
+			HeaderProofWidth: len(allParaHeads),
 		}
 		blocksWithProof = append(blocksWithProof, blockWithProof)
 	}
 	return blocksWithProof, nil
-}
-
-func (li *BeefyListener) createParachainHeaderProof(allParaHeads []types.Bytes, ourParaHead types.Header, expectedRoot types.H256) (string, error) {
-	//TODO: implement
-	//TODO: check against expectedRoot
-	return "", nil
 }
 
 // Searches for all lost commitments on each channel from the given parachain block number backwards

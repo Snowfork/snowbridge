@@ -2,20 +2,16 @@ const { ethers } = require("ethers");
 require("chai")
   .use(require("chai-as-promised"))
   .should();
+
 const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
+const MerkleProof = artifacts.require("MerkleProof");
+const ScaleCodec = artifacts.require("ScaleCodec");
+
 const MockApp = artifacts.require("MockApp");
 const MockRewardSource = artifacts.require("MockRewardSource");
 const {
   deployBeefyLightClient
 } = require("./helpers");
-
-const makeCommitment = (messages) => {
-  let encoded = ethers.utils.defaultAbiCoder.encode(
-    ['tuple(address target, uint64 nonce, uint256 fee, bytes payload)[]'],
-    [messages]
-  )
-  return ethers.utils.solidityKeccak256(["bytes"], [encoded])
-}
 
 describe("IncentivizedInboundChannel", function () {
   let accounts;
@@ -30,6 +26,10 @@ describe("IncentivizedInboundChannel", function () {
     owner = accounts[0];
     userOne = accounts[1];
     this.beefyLightClient = await deployBeefyLightClient();
+    const merkleProof = await MerkleProof.new();
+    const scaleCodec = await ScaleCodec.new();
+    await IncentivizedInboundChannel.link(merkleProof);
+    await IncentivizedInboundChannel.link(scaleCodec);
   });
 
   describe("submit", function () {
@@ -40,31 +40,67 @@ describe("IncentivizedInboundChannel", function () {
       );
       await this.channel.initialize(owner, rewardSource.address);
       this.app = await MockApp.new();
-    });
 
-    it("should accept a valid commitment and dispatch messages", async function () {
-      const message1 = {
+      this.message1 = {
         target: this.app.address,
         nonce: 1,
         fee: 64,
         payload: mockAppInterface.encodeFunctionData(mockAppUnlock, [100])
       }
-      const message2 = {
+
+      this.message2 = {
         target: this.app.address,
         nonce: 2,
         fee: 64,
         payload: mockAppInterface.encodeFunctionData(mockAppUnlock, [200])
       }
 
-      // Construct commitment hash from messages
-      const commitment = makeCommitment([message1, message2]);
+      this.message3 = {
+        target: this.app.address,
+        nonce: 1,
+        fee: 1024,
+        payload: mockAppInterface.encodeFunctionData(mockAppUnlock, [100])
+      }
+
+      this.submitInput = {
+        messages: [this.message1, this.message2],
+        _ownParachainHeadPartial: {
+          parentHash: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+          number: 2,
+          stateRoot: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+          extrinsicsRoot: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+        },
+        _parachainHeadProof: {
+          pos: 0,
+          width: 1,
+          proof: [
+            '0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7',
+            '0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7'
+          ]
+        },
+        _beefyMMRLeafPartial: {
+          parentNumber: 2,
+          parentHash: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+          nextAuthoritySetId: 2,
+          nextAuthoritySetLen: 2,
+          nextAuthoritySetRoot: "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+        },
+        _beefyMMRLeafIndex: 2,
+        _beefyMMRLeafCount: 2,
+        _beefyMMRLeafProof: [
+          "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7",
+          "0x5e6f2ad7fd8ebf43b022baad65832bdc3616f562dfbff2721e29284c288111d7"
+        ]
+      };
+    });
+
+    it("should accept a valid commitment and dispatch messages", async function () {
 
       // Send commitment
       const { receipt } = await this.channel.submit(
-        [message1, message2],
-        commitment, '0x0', 0, 0, [],
+        ...Object.values(this.submitInput),
         { from: userOne }
-      )
+      ).should.be.fulfilled
 
       let event;
 
@@ -106,13 +142,9 @@ describe("IncentivizedInboundChannel", function () {
         payload: mockAppInterface.encodeFunctionData(mockAppUnlock, [100])
       }
 
-      // Construct commitment hash from messages
-      const commitment = makeCommitment([message]);
-
       // Send commitment
       const { receipt } = await this.channel.submit(
-        [message],
-        commitment, '0x0', 0, 0, [],
+        ...Object.values(this.submitInput),
         { from: userOne }
       ).should.be.fulfilled;
 
@@ -120,37 +152,11 @@ describe("IncentivizedInboundChannel", function () {
 
       // Send commitment again - should revert
       await this.channel.submit(
-        [message],
-        commitment, '0x0', 0, 0, [],
+        ...Object.values(this.submitInput),
         { from: userOne }
       ).should.not.be.fulfilled;
 
     });
 
-    it("should not revert commitment submission if relayer cannot be rewarded", async function () {
-      const message = {
-        target: this.app.address,
-        nonce: 1,
-        fee: 1024,
-        payload: mockAppInterface.encodeFunctionData(mockAppUnlock, [100])
-      }
-
-      // Construct commitment hash from messages
-      const commitment = makeCommitment([message]);
-
-      // Send commitment
-      const { receipt } = await this.channel.submit(
-        [message],
-        commitment, '0x0', 0, 0, [],
-        { from: userOne }
-      ).should.be.fulfilled;
-
-      let event = interface.decodeEventLog(
-        'RelayerNotRewarded(address,uint256)',
-        receipt.rawLogs[2].data,
-        receipt.rawLogs[2].topics
-      );
-      (event.relayer === userOne).should.be.true
-    });
   });
 });
