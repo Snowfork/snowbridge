@@ -32,7 +32,7 @@ job "snowbridge-collator" {
             "traefik.enable=true",
             "traefik.http.routers.collator.rule=Host(`parachain-rpc.snowbridge.network`)",
             "traefik.http.routers.collator.entrypoints=websecure",
-            "traefik.http.services.collator.loadbalancer.server.port=${NOMAD_PORT_p2p}"
+            "traefik.http.services.collator.loadbalancer.server.port=${NOMAD_PORT_ws_rpc}"
         ]
         meta {
           ws_rpc_port = "${NOMAD_PORT_ws_rpc}"
