@@ -49,7 +49,7 @@ describe("BasicInboundChannel", function () {
     it("should refuse to replay commitments", async function () {
       // Submit messages
       await this.channel.submit(
-        ...Object.values(fixture.basicSubmitInput),
+        ...Object.values(fixture.basicSubmitInput)
       ).should.be.fulfilled;
 
       // Submit messages again - should revert
