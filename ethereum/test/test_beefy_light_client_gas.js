@@ -51,11 +51,14 @@ describe("Beefy Light Client Gas Usage", function () {
       const proof = tree.getHexProof(leaf, position)
       const privateKey = ethers.utils.arrayify(wallet.privateKey)
       const signatureECDSA = secp256k1.ecdsaSign(commitmentHashBytes, privateKey)
-      const signature = signatureECDSA.signature
+      const ethRecID = signatureECDSA.recid + 27
+      const signature = Uint8Array.from(
+        signatureECDSA.signature.join().split(',').concat(ethRecID)
+      )
       accum.positions.push(position)
       accum.publicKeys.push(address)
       accum.publicKeyMerkleProofs.push(proof)
-      accum.signatures.push(signature)
+      accum.signatures.push(ethers.utils.hexlify(signature))
       return accum
     }, {
       signatures: [],
@@ -63,18 +66,6 @@ describe("Beefy Light Client Gas Usage", function () {
       publicKeys: [],
       publicKeyMerkleProofs: []
     });
-    // const position = initialBitfieldPositions[0]
-    // const leaf = leaves[position]
-    // const wallet = fixture.walletsByLeaf[leaf]
-    // const address = wallet.address
-    // const kekkackAddress = '0x' + keccakFromHexString(address).toString('hex')
-    // const proof = tree.getHexProof(leaf, position)
-    // const privateKey = ethers.utils.arrayify(wallet.privateKey)
-    // console.log({ privateKey })
-    // const signatureECDSA = secp256k1.ecdsaSign(commitmentHashBytes, privateKey)
-    // const signature = signatureECDSA.signature
-    // console.log({ position, address, privateKey, kekkackAddress, leaf, root: fixture.root, proof, signature })
-    // console.log({ verify: tree.verify(proof, leaf, fixture.root) })
 
     console.log("Sending new signature commitment tx")
     const newSigTxPromise = this.beefyLightClient.newSignatureCommitment(
@@ -96,13 +87,14 @@ describe("Beefy Light Client Gas Usage", function () {
     const bitfield = await this.beefyLightClient.createRandomBitfield(lastId);
     console.log(`Random bitfield is: ${printBitfield(bitfield)}`)
 
+
     console.log("Sending complete signature commitment tx")
     const completeSigTxPromise = this.beefyLightClient.completeSignatureCommitment(
       lastId,
-      realWorldFixture.commitment,
+      realWorldFixture.completeSubmitInput.commitment,
       validatorProof,
-      realWorldFixture.beefyMMRLeaf,
-      realWorldFixture.leafProof,
+      realWorldFixture.completeSubmitInput.beefyMMRLeaf,
+      realWorldFixture.completeSubmitInput.leafProof,
     )
     printTxPromiseGas(completeSigTxPromise)
     await completeSigTxPromise.should.be.fulfilled
