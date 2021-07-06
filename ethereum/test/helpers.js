@@ -149,7 +149,7 @@ function createMerkleTree(values) {
 
 async function mine(n) {
   for (let i = 0; i < n; i++) {
-    web3.currentProvider.send({
+    await web3.currentProvider.send({
       jsonrpc: '2.0',
       method: 'evm_mine',
       params: [],
@@ -175,6 +175,7 @@ const mergeKeccak256 = (left, right) =>
   '0x' + keccakFromHexString('0x' + left.replace(hexPrefix, "") + right.replace(hexPrefix, ''), 256).toString('hex')
 
 const PREFIX = "VM Exception while processing transaction: ";
+const PREFIX_2 = "Returned error: VM Exception while processing transaction: ";
 
 async function tryCatch(promise, type, message) {
   try {

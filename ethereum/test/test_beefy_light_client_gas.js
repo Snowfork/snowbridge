@@ -44,7 +44,7 @@ describe("Beefy Light Client Gas Usage", function () {
     const tree = fixture.validatorsMerkleTree;
     const leaves = tree.getHexLeaves()
 
-    const validatorProof = initialBitfieldPositions.reduce((accum, position) => {
+    const allValidatorProofs = initialBitfieldPositions.reduce((accum, position) => {
       const leaf = leaves[position]
       const wallet = fixture.walletsByLeaf[leaf]
       const address = wallet.address
@@ -71,10 +71,10 @@ describe("Beefy Light Client Gas Usage", function () {
     const newSigTxPromise = this.beefyLightClient.newSignatureCommitment(
       commitmentHash,
       initialBitfield,
-      validatorProof.signatures[0],
-      validatorProof.positions[0],
-      validatorProof.publicKeys[0],
-      validatorProof.publicKeyMerkleProofs[0],
+      allValidatorProofs.signatures[0],
+      allValidatorProofs.positions[0],
+      allValidatorProofs.publicKeys[0],
+      allValidatorProofs.publicKeyMerkleProofs[0],
     )
     printTxPromiseGas(newSigTxPromise)
     await newSigTxPromise.should.be.fulfilled
@@ -87,16 +87,17 @@ describe("Beefy Light Client Gas Usage", function () {
     const bitfield = await this.beefyLightClient.createRandomBitfield(lastId);
     console.log(`Random bitfield is: ${printBitfield(bitfield)}`)
 
-
     console.log("Sending complete signature commitment tx")
     const completeSigTxPromise = this.beefyLightClient.completeSignatureCommitment(
       lastId,
       realWorldFixture.completeSubmitInput.commitment,
-      validatorProof,
-      realWorldFixture.completeSubmitInput.beefyMMRLeaf,
-      realWorldFixture.completeSubmitInput.leafProof,
+      allValidatorProofs,
+      realWorldFixture.completeSubmitInput.latestMMRLeaf,
+      realWorldFixture.completeSubmitInput.mmrProofItems,
     )
-    printTxPromiseGas(completeSigTxPromise)
+    console.log("Sent it")
+    // printTxPromiseGas(completeSigTxPromise)
+    // completeSigTxPromise.catch((a, s, d) => console.log({ a, s, d }))
     await completeSigTxPromise.should.be.fulfilled
 
     latestMMRRoot = await this.beefyLightClient.latestMMRRoot()
