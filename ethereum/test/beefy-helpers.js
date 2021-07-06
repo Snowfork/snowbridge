@@ -1,3 +1,5 @@
+const { ethers } = require("ethers");
+
 const {
   createMerkleTree
 } = require("./helpers");

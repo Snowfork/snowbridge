@@ -3,6 +3,8 @@ const {
   mine, printBitfield, printTxPromiseGas
 } = require("./helpers");
 const { keccakFromHexString } = require("ethereumjs-util");
+const secp256k1 = require('secp256k1')
+const { ethers } = require("ethers");
 
 const { createBeefyValidatorFixture, createRandomPositions } = require("./beefy-helpers");
 const realWorldFixture = require('./fixtures/full-flow.json');
@@ -43,8 +45,15 @@ describe("Beefy Light Client Gas Usage", function () {
     const leaf = tree.getHexLeaves()[position]
     const wallet = fixture.walletsByLeaf[leaf]
     const address = wallet.address
+    const kekkackAddress = '0x' + keccakFromHexString(address).toString('hex')
     const proof = tree.getHexProof(leaf, position)
-    const signature = await wallet.signMessage(commitmentHash)
+    let commitmentHashBytes = ethers.utils.arrayify(commitmentHash)
+    const privateKey = ethers.utils.arrayify(wallet.privateKey)
+    console.log({ privateKey })
+    const signatureECDSA = secp256k1.ecdsaSign(commitmentHashBytes, privateKey)
+    const signature = signatureECDSA.signature
+    console.log({ position, address, privateKey, kekkackAddress, leaf, root: fixture.root, proof, signature })
+    console.log({ verify: tree.verify(proof, leaf, fixture.root) })
 
     console.log("Sending new signature commitment tx")
     const newSigTxPromise = this.beefyLightClient.newSignatureCommitment(
@@ -55,7 +64,6 @@ describe("Beefy Light Client Gas Usage", function () {
       address,
       proof,
     )
-    console.log("Sent it")
     printTxPromiseGas(newSigTxPromise)
     await newSigTxPromise.should.be.fulfilled
 
