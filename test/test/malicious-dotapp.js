@@ -21,7 +21,7 @@ describe('Bridge', function () {
 
   describe('Malicious DOT App', function () {
 
-    it('should fail to transfer DOT from Substrate to Ethereum (basic channel)', async function () {
+    it('should deliver message but fail to transfer DOT from Substrate to Ethereum (basic channel)', async function () {
       const amount = BigNumber('100000000000000'); // 100 DOT (12 decimal places in this environment)
       const ethAccount = ethClient.accounts[1];
 
