@@ -74,12 +74,17 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployBeefyLightClient = async _ => {
-  this.validatorsMerkleTree = createMerkleTree(fixture.initialValidatorAddresses);
-  const root = this.validatorsMerkleTree.getHexRoot()
+const deployBeefyLightClient = async (root, numberOfValidators) => {
+  if (!root) {
+    const validatorsMerkleTree = createMerkleTree(fixture.initialValidatorAddresses);
+    root = validatorsMerkleTree.getHexRoot()
+  }
+  if (!numberOfValidators) {
+    numberOfValidators = fixture.initialValidatorAddresses.length;
+  }
 
   const validatorRegistry = await initValidatorRegistry(root,
-    fixture.initialValidatorAddresses.length, fixture.initialValidatorSetID);
+    numberOfValidators, fixture.initialValidatorSetID);
   const mmrVerification = await MMRVerification.new();
   const blake2b = await Blake2b.new();
 
@@ -133,10 +138,9 @@ function signatureSubstrateToEthereum(sig) {
   return res;
 }
 
-function createMerkleTree(leavesHex) {
-  const leavesHashed = leavesHex.map(leaf => keccakFromHexString(leaf));
-  const merkleTree = new MerkleTree(leavesHashed, keccak, { sort: true });
-
+function createMerkleTree(values) {
+  const leaves = values.map(value => keccakFromHexString(value));
+  const merkleTree = new MerkleTree(leaves, keccak, { sort: true });
   return merkleTree;
 }
 
@@ -186,29 +190,6 @@ async function tryCatch(promise, type, message) {
   }
 };
 
-async function createBeefyFixtureData(numberOfSignatures) {
-  let signatures = [];
-  let positions = [];
-  let validatorPublicKeys = [];
-  let validatorPublicKeyProofs = [];
-  for (let i = 0; i < numberOfSignatures; i++) {
-    signatures.push(fixture.signatures[0]);
-    positions.push(i)
-    validatorPublicKeys.push(fixture.validatorPublicKeys[0])
-  }
-
-  this.validatorsMerkleTree = createMerkleTree(validatorPublicKeys);
-
-  for (let i = 0; i < 200; i++) {
-    proof = this.validatorsMerkleTree.getHexProof(validatorPublicKeys[0], 0)
-    validatorPublicKeyProofs.push(proof)
-  }
-
-  return {
-    signatures, positions, validatorPublicKeys, validatorPublicKeyProofs
-  }
-}
-
 function printTxPromiseGas(promise) {
   return promise.then(r => {
     console.log(`Tx successful - gas used: ${r.receipt.gasUsed}`)
@@ -234,7 +215,6 @@ module.exports = {
   encodeLog,
   mergeKeccak256,
   runBeefyLighClientFlow,
-  createBeefyFixtureData,
   printTxPromiseGas,
   printBitfield,
   catchRevert: async (promise, message) => await tryCatch(promise, "revert", message),

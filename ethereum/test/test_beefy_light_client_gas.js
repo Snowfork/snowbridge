@@ -1,8 +1,11 @@
 const {
   deployBeefyLightClient,
-  mine, catchRevert
+  mine, printBitfield, printTxPromiseGas
 } = require("./helpers");
-const fixture = require('./fixtures/full-flow.json');
+const { keccakFromHexString } = require("ethereumjs-util");
+
+const { createBeefyValidatorFixture, createRandomPositions } = require("./beefy-helpers");
+const realWorldFixture = require('./fixtures/full-flow.json');
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -12,33 +15,52 @@ const { expect } = require("chai");
 
 describe("Beefy Light Client Gas Usage", function () {
 
-  before(async function () {
-    this.validatorsMerkleTree = createMerkleTree(fixture200.validatorPublicKeys);
-    this.beefyLightClient = await deployBeefyLightClient(this.validatorsMerkleTree.getHexRoot(),
-      fixture200.validatorPublicKeys.length);
-  });
-
   it("runs new signature commitment with 200 validators", async function () {
-    this.timeout(10 * 1000)
+    this.timeout(10 * 2000)
+    const numberOfValidators = 200;
+    const numberOfSignatures = 140;
 
-    const initialBitfield = await this.beefyLightClient.createInitialBitfield(fixture200.positions, 200);
+    const fixture = await createBeefyValidatorFixture(
+      numberOfValidators
+    )
+
+    this.beefyLightClient = await deployBeefyLightClient(fixture.root,
+      numberOfValidators);
+
+    const initialBitfieldPositions = await createRandomPositions(numberOfSignatures, numberOfValidators)
+
+    const initialBitfield = await this.beefyLightClient.createInitialBitfield(
+      initialBitfieldPositions, numberOfValidators
+    );
+
+    const commitmentHash = await this.beefyLightClient.createCommitmentHash(realWorldFixture.completeSubmitInput.commitment);
+
+    console.log({ initialBitfieldPositions })
     console.log(`Initial bitfield is: ${printBitfield(initialBitfield)}`)
 
-    const commitmentHash = await this.beefyLightClient.createCommitmentHash(fixture.commitment);
+    const tree = fixture.validatorsMerkleTree;
+    const position = initialBitfieldPositions[0]
+    const leaf = tree.getHexLeaves()[position]
+    const wallet = fixture.walletsByLeaf[leaf]
+    const address = wallet.address
+    const proof = tree.getHexProof(leaf, position)
+    const signature = await wallet.signMessage(commitmentHash)
 
     console.log("Sending new signature commitment tx")
     const newSigTxPromise = this.beefyLightClient.newSignatureCommitment(
       commitmentHash,
       initialBitfield,
-      fixture200.signatures[0],
-      0,
-      fixture200.validatorPublicKeys[0],
-      fixture200.validatorPublicKeyProofs[0]
+      signature,
+      position,
+      address,
+      proof,
     )
+    console.log("Sent it")
     printTxPromiseGas(newSigTxPromise)
     await newSigTxPromise.should.be.fulfilled
 
     const lastId = (await this.beefyLightClient.currentId()).sub(new web3.utils.BN(1));
+    console.log("Onto the next one")
 
     await mine(45);
 
