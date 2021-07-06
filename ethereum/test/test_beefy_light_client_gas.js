@@ -40,29 +40,50 @@ describe("Beefy Light Client Gas Usage", function () {
     console.log({ initialBitfieldPositions })
     console.log(`Initial bitfield is: ${printBitfield(initialBitfield)}`)
 
-    const tree = fixture.validatorsMerkleTree;
-    const position = initialBitfieldPositions[0]
-    const leaf = tree.getHexLeaves()[position]
-    const wallet = fixture.walletsByLeaf[leaf]
-    const address = wallet.address
-    const kekkackAddress = '0x' + keccakFromHexString(address).toString('hex')
-    const proof = tree.getHexProof(leaf, position)
     let commitmentHashBytes = ethers.utils.arrayify(commitmentHash)
-    const privateKey = ethers.utils.arrayify(wallet.privateKey)
-    console.log({ privateKey })
-    const signatureECDSA = secp256k1.ecdsaSign(commitmentHashBytes, privateKey)
-    const signature = signatureECDSA.signature
-    console.log({ position, address, privateKey, kekkackAddress, leaf, root: fixture.root, proof, signature })
-    console.log({ verify: tree.verify(proof, leaf, fixture.root) })
+    const tree = fixture.validatorsMerkleTree;
+    const leaves = tree.getHexLeaves()
+
+    const validatorProof = initialBitfieldPositions.reduce((accum, position) => {
+      const leaf = leaves[position]
+      const wallet = fixture.walletsByLeaf[leaf]
+      const address = wallet.address
+      const proof = tree.getHexProof(leaf, position)
+      const privateKey = ethers.utils.arrayify(wallet.privateKey)
+      const signatureECDSA = secp256k1.ecdsaSign(commitmentHashBytes, privateKey)
+      const signature = signatureECDSA.signature
+      accum.positions.push(position)
+      accum.publicKeys.push(address)
+      accum.publicKeyMerkleProofs.push(proof)
+      accum.signatures.push(signature)
+      return accum
+    }, {
+      signatures: [],
+      positions: [],
+      publicKeys: [],
+      publicKeyMerkleProofs: []
+    });
+    // const position = initialBitfieldPositions[0]
+    // const leaf = leaves[position]
+    // const wallet = fixture.walletsByLeaf[leaf]
+    // const address = wallet.address
+    // const kekkackAddress = '0x' + keccakFromHexString(address).toString('hex')
+    // const proof = tree.getHexProof(leaf, position)
+    // const privateKey = ethers.utils.arrayify(wallet.privateKey)
+    // console.log({ privateKey })
+    // const signatureECDSA = secp256k1.ecdsaSign(commitmentHashBytes, privateKey)
+    // const signature = signatureECDSA.signature
+    // console.log({ position, address, privateKey, kekkackAddress, leaf, root: fixture.root, proof, signature })
+    // console.log({ verify: tree.verify(proof, leaf, fixture.root) })
 
     console.log("Sending new signature commitment tx")
     const newSigTxPromise = this.beefyLightClient.newSignatureCommitment(
       commitmentHash,
       initialBitfield,
-      signature,
-      position,
-      address,
-      proof,
+      validatorProof.signatures[0],
+      validatorProof.positions[0],
+      validatorProof.publicKeys[0],
+      validatorProof.publicKeyMerkleProofs[0],
     )
     printTxPromiseGas(newSigTxPromise)
     await newSigTxPromise.should.be.fulfilled
@@ -75,20 +96,13 @@ describe("Beefy Light Client Gas Usage", function () {
     const bitfield = await this.beefyLightClient.createRandomBitfield(lastId);
     console.log(`Random bitfield is: ${printBitfield(bitfield)}`)
 
-    const validatorProof = {
-      signatures: fixture200.signatures,
-      positions: fixture200.positions,
-      publicKeys: fixture200.validatorPublicKeys,
-      publicKeyMerkleProofs: fixture200.validatorPublicKeyProofs
-    }
-
     console.log("Sending complete signature commitment tx")
     const completeSigTxPromise = this.beefyLightClient.completeSignatureCommitment(
       lastId,
-      fixture.commitment,
+      realWorldFixture.commitment,
       validatorProof,
-      fixture.beefyMMRLeaf,
-      fixture.leafProof,
+      realWorldFixture.beefyMMRLeaf,
+      realWorldFixture.leafProof,
     )
     printTxPromiseGas(completeSigTxPromise)
     await completeSigTxPromise.should.be.fulfilled
