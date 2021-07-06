@@ -9,8 +9,8 @@ const DOTApp = require('../../../ethereum/build/contracts/DOTApp.json');
 const WrappedToken = require('../../../ethereum/build/contracts/WrappedToken.json');
 const BasicOutboundChannel = require('../../../ethereum/build/contracts/BasicOutboundChannel.json');
 const IncentivizedOutboundChannel = require('../../../ethereum/build/contracts/IncentivizedOutboundChannel.json');
-
-const { ChannelId } = require("../helpers");
+const BasicInboundChannel = require('../../../ethereum/build/contracts/BasicInboundChannel.json');
+const IncentivizedInboundChannel = require('../../../ethereum/build/contracts/IncentivizedInboundChannel.json');
 
 /**
  * The Ethereum client for Bridge interaction
@@ -43,6 +43,14 @@ class EthClient {
     const appIncOutChan = new this.web3.eth.Contract(IncentivizedOutboundChannel.abi,
       IncentivizedOutboundChannel.networks[networkID].address);
     this.appIncOutChan = appIncOutChan;
+
+    const appBasicInChan = new this.web3.eth.Contract(BasicInboundChannel.abi,
+      BasicInboundChannel.networks[networkID].address);
+    this.appBasicInChan = appBasicInChan;
+
+    const appIncentivizedInChan = new this.web3.eth.Contract(IncentivizedInboundChannel.abi,
+      IncentivizedInboundChannel.networks[networkID].address);
+    this.appIncentivizedInChan = appIncentivizedInChan;
   };
 
   loadERC20Contract() {
@@ -111,11 +119,11 @@ class EthClient {
       recipientBytes,
       this.web3.utils.toBN(amount),
       channelId
-      ).send({
-        from,
-        gas: 500000,
-        value: 0
-      });
+    ).send({
+      from,
+      gas: 500000,
+      value: 0
+    });
   }
 
   async burnDOT(from, amount, polkadotRecipient, channelId) {
@@ -132,7 +140,11 @@ class EthClient {
   async waitForNextEventData({ appName, eventName, eventData }) {
     let foundEvent = new Promise(async (resolve, reject) => {
       this[appName].once(eventName, (error, event) => {
-        resolve(event.returnValues[eventData]);
+        if (eventData) {
+          resolve(event.returnValues[eventData]);
+        } else {
+          resolve(event.returnValues)
+        }
       })
     });
     return foundEvent;

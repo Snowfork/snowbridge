@@ -19,9 +19,9 @@ describe('Bridge', function () {
     subClient = clients.subClient;
   });
 
-  describe('DOT App', function () {
+  describe('Malicious DOT App', function () {
 
-    it('should transfer DOT from Substrate to Ethereum (basic channel)', async function () {
+    it('should fail to transfer DOT from Substrate to Ethereum (basic channel)', async function () {
       const amount = BigNumber('100000000000000'); // 100 DOT (12 decimal places in this environment)
       const ethAccount = ethClient.accounts[1];
 
@@ -30,13 +30,15 @@ describe('Bridge', function () {
 
       // lock DOT using basic channel
       await subClient.lockDOT(subClient.alice, ethAccount, amount.toFixed(), ChannelId.BASIC)
-      await ethClient.waitForNextEventData({ appName: 'snowDOT', eventName: 'Minted' });
+      const event = await ethClient.waitForNextEventData({ appName: 'appBasicInChan', eventName: 'MessageDispatched' });
+
+      expect(event.result).to.be.false;
 
       const afterEthBalance = await ethClient.getDotBalance(ethAccount);
       const afterSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
 
       expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(0);
-      expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.equal(0);
+      expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.greaterThan(0);
     })
 
   })
