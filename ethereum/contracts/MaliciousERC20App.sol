@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
-enum ChannelId {Basic, Incentivized}
+enum ChannelId {
+    Basic,
+    Incentivized
+}
 
 contract MaliciousERC20App {
-    using SafeMath for uint256;
     using ScaleCodec for uint256;
 
     mapping(address => uint256) public balances;
@@ -70,8 +71,9 @@ contract MaliciousERC20App {
 
         bytes memory call = encodeCall(_token, msg.sender, _recipient, _amount);
 
-        OutboundChannel channel =
-            OutboundChannel(channels[_channelId].outbound);
+        OutboundChannel channel = OutboundChannel(
+            channels[_channelId].outbound
+        );
         channel.submit(msg.sender, call);
     }
 
@@ -96,7 +98,7 @@ contract MaliciousERC20App {
                 MINT_CALL,
                 _token,
                 _sender,
-                byte(0x00), // Encode recipient as MultiAddress::Id
+                bytes1(0x00), // Encode recipient as MultiAddress::Id
                 _recipient,
                 _amount.encode256()
             );
