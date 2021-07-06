@@ -1,7 +1,7 @@
 const BigNumber = web3.BigNumber;
 const {
   deployBeefyLightClient,
-  mine, catchRevert
+  mine, catchRevert, printBitfield
 } = require("./helpers");
 const fixture = require('./fixtures/full-flow.json');
 
@@ -75,7 +75,3 @@ describe("Beefy Light Client", function () {
 
 
 });
-
-function printBitfield(s) {
-  return parseInt(s.toString(), 10).toString(2)
-}

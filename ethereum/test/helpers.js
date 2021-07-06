@@ -186,6 +186,43 @@ async function tryCatch(promise, type, message) {
   }
 };
 
+async function createBeefyFixtureData(numberOfSignatures) {
+  let signatures = [];
+  let positions = [];
+  let validatorPublicKeys = [];
+  let validatorPublicKeyProofs = [];
+  for (let i = 0; i < numberOfSignatures; i++) {
+    signatures.push(fixture.signatures[0]);
+    positions.push(i)
+    validatorPublicKeys.push(fixture.validatorPublicKeys[0])
+  }
+
+  this.validatorsMerkleTree = createMerkleTree(validatorPublicKeys);
+
+  for (let i = 0; i < 200; i++) {
+    proof = this.validatorsMerkleTree.getHexProof(validatorPublicKeys[0], 0)
+    validatorPublicKeyProofs.push(proof)
+  }
+
+  return {
+    signatures, positions, validatorPublicKeys, validatorPublicKeyProofs
+  }
+}
+
+function printTxPromiseGas(promise) {
+  return promise.then(r => {
+    console.log(`Tx successful - gas used: ${r.receipt.gasUsed}`)
+  }).catch(r => {
+    if (r && r.receipt && r.receipt.gasUsed) {
+      console.log(`Tx failed - gas used: ${r.receipt.gasUsed}`)
+    }
+  })
+}
+
+function printBitfield(s) {
+  return parseInt(s.toString(), 10).toString(2)
+}
+
 module.exports = {
   deployAppWithMockChannels,
   deployBeefyLightClient,
@@ -197,6 +234,9 @@ module.exports = {
   encodeLog,
   mergeKeccak256,
   runBeefyLighClientFlow,
+  createBeefyFixtureData,
+  printTxPromiseGas,
+  printBitfield,
   catchRevert: async (promise, message) => await tryCatch(promise, "revert", message),
   catchOutOfGas: async (promise, message) => await tryCatch(promise, "out of gas", message),
   catchInvalidJump: async (promise, message) => await tryCatch(promise, "invalid JUMP", message),
