@@ -90,13 +90,13 @@ We also have a test environment that tests against a malicious contract that att
 scripts/start-services.sh malicious
 ```
 
-This will deploy and run everything as usual, but replace the erc20 app with a malicious one. Once everything is ready to go, run the tests again
+This will deploy and run everything as usual, but replace the erc20 app with a malicious one. Once everything is ready to go, run the tests for the malicious app:
 
 ```bash
-yarn test
+yarn test ./test/malicious-dotapp.js
 ```
 
-You should see the erc20 unlock test failing, due to the malicious app, but the eth and dot app tests should pass successfully without being impacted.
+You should see the test pass, checking that message delivery works correctly and channel functionality is still secure without being affected by the malicious app.
 
 ### Manual Tests
 
