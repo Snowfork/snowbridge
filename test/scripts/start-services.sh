@@ -85,7 +85,7 @@ start_polkadot_launch()
         para_id 200
 
     if [ $# -eq 1 ] && [ $1 = "malicious" ]; then
-        jq '.genesis.runtime.erc20App.address = "0x6495675F661E208CC34d8e163CF1f5b2d6d05129"' \
+        jq '.genesis.runtime.dotApp.address = "0x433488cec14C4478e5ff18DDC7E7384Fc416f148"' \
           $configdir/spec.json > spec.malicious.json && \
           mv spec.malicious.json $configdir/spec.json
     fi
