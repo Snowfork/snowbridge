@@ -67,6 +67,7 @@ job "polkadot" {
           "--rpc-cors", "all",
           "--ws-external",
           "--rpc-external",
+          "--prometheus-external",
           "--port", "${NOMAD_PORT_p2p}",
           "--ws-port", "${NOMAD_PORT_ws_rpc}",
           "--rpc-port", "${NOMAD_PORT_http_rpc}",
@@ -133,25 +134,15 @@ job "polkadot" {
 
       template {
         data = <<EOF
-#!/bin/sh
-exec /usr/bin/polkadot \
-  --base-path /var/lib/polkadot \
-  --chain rococo-local \
-  --bob \
-  --rpc-cors all \
-  --ws-external \
-  --rpc-external \
-  --port {{ env "NOMAD_PORT_p2p" }} \
-  --ws-port {{ env "NOMAD_PORT_ws_rpc" }} \
-  --rpc-port {{ env "NOMAD_PORT_http_rpc" }} \
-  --prometheus-port {{ env "NOMAD_PORT_prometheus" }} \
-{{ with service "polkadot-p2p-0" }}{{ with index . 0 -}}
-  --bootnodes=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
-{{ end }}{{ end }}
+{{ with service "polkadot-p2p-0" -}}
+  {{ with index . 0 -}}
+BOOTNODE=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
+  {{- end -}}
+{{- end }}
 EOF
+        env = true
         change_mode = "restart"
-        destination = "local/run.sh"
-        perms = 755
+        destination = "local/bootnodes.env"
       }
 
       service {
@@ -179,7 +170,20 @@ EOF
 
       config {
         image = "parity/polkadot:v0.9.5"
-        entrypoint = ["/local/run.sh"]
+        args = [
+          "--base-path", "/var/lib/polkadot",
+          "--chain", "rococo-local",
+          "--bob",
+          "--rpc-cors", "all",
+          "--ws-external",
+          "--rpc-external",
+          "--prometheus-external",
+          "--port", "${NOMAD_PORT_p2p}",
+          "--ws-port", "${NOMAD_PORT_ws_rpc}",
+          "--rpc-port", "${NOMAD_PORT_http_rpc}",
+          "--prometheus-port", "${NOMAD_PORT_prometheus}",
+          "--bootnodes", "${BOOTNODE}"
+        ]
         ports = ["p2p", "ws_rpc", "http_rpc", "prometheus"]
         network_mode = "host"
       }

@@ -1,5 +1,7 @@
 job "snowbridge-collator" {
+
   datacenters = ["dc1"]
+
   group "node-0" {
 
     volume "storage" {
@@ -67,42 +69,42 @@ job "snowbridge-collator" {
 
       template {
         data = <<EOF
-#!/bin/sh
-{{ with service "polkadot-alice" }}{{ with index . 0 }}
-relay_bootnode=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
-{{ end }}{{ end }}
-
-exec /usr/local/bin/snowbridge \
-  --base-path /var/lib/snowbridge \
-  --alice \
-  --node-key f390b6c880d57f2a73b928dc13ddcb86fa595f92ecd6f09bf40160335c6ec459 \
-  --chain /local/spec.json \
-  --parachain-id 200 \
-  --rpc-cors=all \
-  --ws-external \
-  --rpc-external \
-  --port {{ env "NOMAD_PORT_p2p" }} \
-  --ws-port {{ env "NOMAD_PORT_ws_rpc" }} \
-  --rpc-port {{ env "NOMAD_PORT_http_rpc" }} \
-  --prometheus-port {{ env "NOMAD_PORT_prometheus" }} \
-  --rpc-methods=Safe \
-  --offchain-worker=Always \
-  --enable-offchain-indexing=true \
-  --execution=native \
-  -lruntime=debug \
-  -- \
-  --chain /local/rococo-local.json \
-  --execution=wasm \
-  --bootnodes=$relay_bootnode
+{{ with service "polkadot-p2p-0" -}}
+  {{ with index . 0 -}}
+POLKADOT_BOOTNODE=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
+  {{- end -}}
+{{- end }}
 EOF
+        env = true
         change_mode = "restart"
-        destination = "local/run.sh"
-        perms = 755
+        destination = "local/bootnodes.env"
       }
 
       config {
         image = "ghcr.io/snowfork/snowbridge-collator:0.3.2"
-        entrypoint = ["/local/run.sh"]
+        args = [
+          "--alice",
+          "--node-key=f390b6c880d57f2a73b928dc13ddcb86fa595f92ecd6f09bf40160335c6ec459",
+          "--chain=/local/spec.json",
+          "--parachain-id=200",
+          "--rpc-cors=all",
+          "--ws-external",
+          "--rpc-external",
+          "--prometheus-external",
+          "--port=${NOMAD_PORT_p2p}",
+          "--ws-port=${NOMAD_PORT_ws_rpc}",
+          "--rpc-port=${NOMAD_PORT_http_rpc}",
+          "--prometheus-port=${NOMAD_PORT_prometheus}",
+          "--rpc-methods=Safe",
+          "--offchain-worker=Always",
+          "--enable-offchain-indexing=true",
+          "--execution=native",
+          "-lruntime=debug",
+          "--",
+          "--chain=/local/rococo-local.json",
+          "--execution=wasm",
+          "--bootnodes=${POLKADOT_BOOTNODE}"
+        ]
         ports = ["p2p", "ws_rpc", "http_rpc", "prometheus"]
         network_mode = "host"
       }
@@ -193,48 +195,51 @@ EOF
         source = "s3::https://snowbridge-artifacts.s3.eu-central-1.amazonaws.com/rococo-local.json"
       }
 
+
       template {
         data = <<EOF
-#!/bin/sh
-{{ with service "polkadot-p2p-0" }}{{ with index . 0 }}
-relay_bootnode=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
-{{ end }}{{ end }}
-
-{{ with service "snowbridge-p2p-0" }}{{ with index . 0 }}
-para_bootnode=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWJxpA4svH4YipQ7Vc8sNfaakBjzfHMUWTtQ2baVx6rtTX
-{{ end }}{{ end }}
-
-exec /usr/local/bin/snowbridge \
-  --base-path /var/lib/snowbridge \
-  --bob \
-  --chain /local/spec.json \
-  --parachain-id 200 \
-  --rpc-cors=all \
-  --ws-external \
-  --rpc-external \
-  --port {{ env "NOMAD_PORT_p2p" }} \
-  --ws-port {{ env "NOMAD_PORT_ws_rpc" }} \
-  --rpc-port {{ env "NOMAD_PORT_http_rpc" }} \
-  --prometheus-port {{ env "NOMAD_PORT_prometheus" }} \
-  --rpc-methods=Safe \
-  --offchain-worker=Always \
-  --enable-offchain-indexing=true \
-  --execution=native \
-  --bootnodes=$para_bootnode \
-  -lruntime=debug \
-  -- \
-  --chain /local/rococo-local.json \
-  --execution=wasm \
-  --bootnodes=$relay_bootnode
+{{ with service "polkadot-p2p-0" -}}
+  {{ with index . 0 -}}
+POLKADOT_BOOTNODE=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
+  {{- end -}}
+{{- end }}
+{{ with service "snowbridge-p2p-0" -}}
+  {{ with index . 0 -}}
+PARACHAIN_BOOTNODE=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWJxpA4svH4YipQ7Vc8sNfaakBjzfHMUWTtQ2baVx6rtTX
+  {{- end -}}
+{{- end }}
 EOF
+
+        env = true
         change_mode = "restart"
-        destination = "local/run.sh"
-        perms = 755
+        destination = "local/bootnodes.env"
       }
 
       config {
         image = "ghcr.io/snowfork/snowbridge-collator:0.3.2"
-        entrypoint = ["/local/run.sh"]
+        args = [
+          "--bob",
+          "--chain=/local/spec.json",
+          "--parachain-id=200",
+          "--rpc-cors=all",
+          "--ws-external",
+          "--rpc-external",
+          "--prometheus-external",
+          "--port=${NOMAD_PORT_p2p}",
+          "--ws-port=${NOMAD_PORT_ws_rpc}",
+          "--rpc-port=${NOMAD_PORT_http_rpc}",
+          "--prometheus-port=${NOMAD_PORT_prometheus}",
+          "--rpc-methods=Safe",
+          "--offchain-worker=Always",
+          "--enable-offchain-indexing=true",
+          "--execution=native",
+          "-lruntime=debug",
+          "--bootnodes=${PARACHAIN_BOOTNODE}",
+          "--",
+          "--chain=/local/rococo-local.json",
+          "--execution=wasm",
+          "--bootnodes=${POLKADOT_BOOTNODE}"
+        ]
         ports = ["p2p", "ws_rpc", "http_rpc", "prometheus"]
         network_mode = "host"
       }
