@@ -1,0 +1,39 @@
+[ethereum]
+endpoint = "ws://localhost:8545/"
+startblock = 1
+descendants-until-final = 3
+beefylightclient = {{ key "/snowbridge/staging/contracts/beefyLightClient/address" }}
+
+[ethereum.channels.basic]
+inbound = {{ key "/snowbridge/staging/contracts/basicInboundChannel/address" }}
+outbound = {{ key "/snowbridge/staging/contracts/basicOutboundChannel/address" }}
+
+[ethereum.channels.incentivized]
+inbound = {{ key "/snowbridge/staging/contracts/incentivizedInboundChannel/address" }}
+outbound = {{ key "/snowbridge/staging/contracts/incentivizedOutboundChannel/address" }}
+
+[parachain]
+{{ with service "snowbridge-rpc" }}{{ with index . 0 -}}
+endpoint = "ws://{{ .Address }}:{{ .Port }}/"
+{{ end }}{{- end }}
+
+[relaychain]
+{{ with service "polkadot-rpc" }}{{ with index . 0 -}}
+endpoint = "ws://{{ .Address }}:{{ .Port }}/"
+{{ end }}{{- end }}
+
+[database]
+dialect = "sqlite3"
+dbpath = "tmp.db"
+
+[workers.parachaincommitmentrelayer]
+enabled = true
+restart-delay = 30
+
+[workers.beefyrelayer]
+enabled = true
+restart-delay = 30
+
+[workers.ethrelayer]
+enabled = true
+restart-delay = 30
