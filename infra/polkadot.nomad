@@ -1,6 +1,6 @@
 job "polkadot" {
   datacenters = ["dc1"]
-  group "alice" {
+  group "node-0" {
 
     volume "storage" {
       type = "csi"
@@ -16,7 +16,7 @@ job "polkadot" {
       port "prometheus" {}
     }
 
-    task "polkadot" {
+    task "validator" {
       driver = "docker"
 
       volume_mount {
@@ -25,25 +25,34 @@ job "polkadot" {
       }
 
       service {
-        name = "polkadot-alice"
+        name = "polkadot-p2p-0"
         port = "p2p"
-        tags = [
-            "alice",
-            "traefik.enable=true",
-            "traefik.http.routers.polkadot.rule=Host(`polkadot-rpc.snowbridge.network`)",
-            "traefik.http.routers.polkadot.entrypoints=websecure",
-            "traefik.http.services.polkadot.loadbalancer.server.port=${NOMAD_PORT_ws_rpc}"
-        ]
         check {
           type     = "tcp"
           port     = "p2p"
           interval = "10s"
           timeout  = "2s"
         }
-        meta {
-          ws_rpc_port = "${NOMAD_PORT_ws_rpc}"
-          http_rpc_port = "${NOMAD_PORT_http_rpc}"
-          prometheus_port = "${NOMAD_PORT_prometheus}"
+      }
+
+      service {
+        name = "polkadot-rpc"
+        port = "ws_rpc"
+        tags = [
+            "traefik.enable=true",
+            "traefik.http.routers.polkadot.rule=Host(`polkadot-rpc.snowbridge.network`)",
+            "traefik.http.routers.polkadot.entrypoints=websecure",
+            "traefik.http.services.polkadot.loadbalancer.server.port=${NOMAD_PORT_ws_rpc}",
+            "traefik.http.services.polkadot.loadbalancer.sticky=true",
+            "traefik.http.services.polkadot.loadbalancer.sticky.cookie.name=polkadot",
+            "traefik.http.services.polkadot.loadbalancer.sticky.cookie.secure=true",
+            "traefik.http.services.polkadot.loadbalancer.sticky.cookie.httpOnly=true"
+        ]
+        check {
+          type     = "tcp"
+          port     = "ws_rpc"
+          interval = "10s"
+          timeout  = "2s"
         }
       }
 
@@ -68,13 +77,13 @@ job "polkadot" {
         network_mode = "host"
       }
       resources {
-        cpu = 8000
-        memory = 8192
+        cpu = 4000
+        memory = 4096
       }
     }
   }
 
-  group "bob" {
+  group "node-1" {
 
     volume "storage" {
       type = "csi"
@@ -96,7 +105,10 @@ job "polkadot" {
       config {
         image        = "busybox:1.28"
         command      = "sh"
-        args         = ["-c", "until nslookup polkadot-alice.service.dc1.consul 2>&1 >/dev/null; do echo '.'; sleep 5; done"]
+        args         = [
+          "-c",
+          "until nslookup polkadot-p2p-0.service.dc1.consul; do sleep 5; done"
+        ]
         network_mode = "host"
       }
 
@@ -111,7 +123,7 @@ job "polkadot" {
       }
     }
 
-    task "polkadot" {
+    task "validator" {
       driver = "docker"
 
       volume_mount {
@@ -122,19 +134,20 @@ job "polkadot" {
       template {
         data = <<EOF
 #!/bin/sh
-{{ with service "polkadot-alice" }}{{ with index . 0 }}
-bootnode=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
-{{ end }}{{ end }}
 exec /usr/bin/polkadot \
   --base-path /var/lib/polkadot \
   --chain rococo-local \
   --bob \
   --rpc-cors all \
+  --ws-external \
+  --rpc-external \
   --port {{ env "NOMAD_PORT_p2p" }} \
   --ws-port {{ env "NOMAD_PORT_ws_rpc" }} \
   --rpc-port {{ env "NOMAD_PORT_http_rpc" }} \
   --prometheus-port {{ env "NOMAD_PORT_prometheus" }} \
-  --bootnodes $bootnode
+{{ with service "polkadot-p2p-0" }}{{ with index . 0 -}}
+  --bootnodes=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
+{{ end }}{{ end }}
 EOF
         change_mode = "restart"
         destination = "local/run.sh"
@@ -142,19 +155,23 @@ EOF
       }
 
       service {
-        name = "polkadot-bob"
-        tags = ["bob"]
-        port = "p2p"
+        name = "polkadot-rpc"
+        port = "ws_rpc"
+        tags = [
+            "traefik.enable=true",
+            "traefik.http.routers.polkadot.rule=Host(`polkadot-rpc.snowbridge.network`)",
+            "traefik.http.routers.polkadot.entrypoints=websecure",
+            "traefik.http.services.polkadot.loadbalancer.server.port=${NOMAD_PORT_ws_rpc}",
+            "traefik.http.services.polkadot.loadbalancer.sticky=true",
+            "traefik.http.services.polkadot.loadbalancer.sticky.cookie.name=polkadot",
+            "traefik.http.services.polkadot.loadbalancer.sticky.cookie.secure=true",
+            "traefik.http.services.polkadot.loadbalancer.sticky.cookie.httpOnly=true"
+        ]
         check {
           type     = "tcp"
-          port     = "p2p"
+          port     = "ws_rpc"
           interval = "10s"
           timeout  = "2s"
-        }
-        meta {
-          ws_rpc_port = "${NOMAD_PORT_ws_rpc}"
-          http_rpc_port = "${NOMAD_PORT_http_rpc}"
-          prometheus_port = "${NOMAD_PORT_prometheus}"
         }
       }
 
@@ -168,8 +185,8 @@ EOF
       }
 
       resources {
-        cpu = 8000
-        memory = 8192
+        cpu = 4000
+        memory = 4096
       }
     }
   }

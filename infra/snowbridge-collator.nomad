@@ -1,6 +1,6 @@
 job "snowbridge-collator" {
   datacenters = ["dc1"]
-  group "snowbridge-node-0" {
+  group "node-0" {
 
     volume "storage" {
       type = "csi"
@@ -26,24 +26,34 @@ job "snowbridge-collator" {
       }
 
       service {
-        name = "collator-0"
+        name = "snowbridge-p2p-0"
         port = "p2p"
-        tags = [
-            "traefik.enable=true",
-            "traefik.http.routers.collator.rule=Host(`parachain-rpc.snowbridge.network`)",
-            "traefik.http.routers.collator.entrypoints=websecure",
-            "traefik.http.services.collator.loadbalancer.server.port=${NOMAD_PORT_ws_rpc}"
-        ]
         check {
           type     = "tcp"
           port     = "p2p"
           interval = "10s"
           timeout  = "2s"
         }
-        meta {
-          ws_rpc_port = "${NOMAD_PORT_ws_rpc}"
-          http_rpc_port = "${NOMAD_PORT_http_rpc}"
-          prometheus_port = "${NOMAD_PORT_prometheus}"
+      }
+
+      service {
+        name = "snowbridge-rpc"
+        port = "ws_rpc"
+        tags = [
+            "traefik.enable=true",
+            "traefik.http.routers.collator.rule=Host(`parachain-rpc.snowbridge.network`)",
+            "traefik.http.routers.collator.entrypoints=websecure",
+            "traefik.http.services.collator.loadbalancer.server.port=${NOMAD_PORT_ws_rpc}",
+            "traefik.http.services.collator.loadbalancer.sticky=true",
+            "traefik.http.services.collator.loadbalancer.sticky.cookie.name=snowbridge",
+            "traefik.http.services.collator.loadbalancer.sticky.cookie.secure=true",
+            "traefik.http.services.collator.loadbalancer.sticky.cookie.httpOnly=true"
+        ]
+        check {
+          type     = "tcp"
+          port     = "ws_rpc"
+          interval = "10s"
+          timeout  = "2s"
         }
       }
 
@@ -105,7 +115,7 @@ EOF
     }
   }
 
-  group "snowbridge-node-1" {
+  group "node-1" {
 
     volume "storage" {
       type = "csi"
@@ -127,7 +137,10 @@ EOF
       config {
         image        = "busybox:1.28"
         command      = "sh"
-        args         = ["-c", "until nslookup collator-0.service.dc1.consul 2>&1 >/dev/null; do echo '.'; sleep 5; done"]
+        args         = [
+          "-c",
+          "until nslookup snowbridge-p2p-0.service.dc1.consul; do sleep 5; done"
+        ]
         network_mode = "host"
       }
 
@@ -152,11 +165,21 @@ EOF
       }
 
       service {
-        name = "collator-1"
-        port = "p2p"
+        name = "snowbridge-rpc"
+        port = "ws_rpc"
+        tags = [
+            "traefik.enable=true",
+            "traefik.http.routers.collator.rule=Host(`parachain-rpc.snowbridge.network`)",
+            "traefik.http.routers.collator.entrypoints=websecure",
+            "traefik.http.services.collator.loadbalancer.server.port=${NOMAD_PORT_ws_rpc}",
+            "traefik.http.services.collator.loadbalancer.sticky=true",
+            "traefik.http.services.collator.loadbalancer.sticky.cookie.name=snowbridge",
+            "traefik.http.services.collator.loadbalancer.sticky.cookie.secure=true",
+            "traefik.http.services.collator.loadbalancer.sticky.cookie.httpOnly=true"
+        ]
         check {
           type     = "tcp"
-          port     = "p2p"
+          port     = "ws_rpc"
           interval = "10s"
           timeout  = "2s"
         }
@@ -173,11 +196,11 @@ EOF
       template {
         data = <<EOF
 #!/bin/sh
-{{ with service "polkadot-alice" }}{{ with index . 0 }}
+{{ with service "polkadot-p2p-0" }}{{ with index . 0 }}
 relay_bootnode=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWGbgscGKWfHgGXZU42e1BNkCiBHqobhBptWXceuHsL8VL
 {{ end }}{{ end }}
 
-{{ with service "collator-0" }}{{ with index . 0 }}
+{{ with service "snowbridge-p2p-0" }}{{ with index . 0 }}
 para_bootnode=/ip4/{{ .Address }}/tcp/{{ .Port }}/p2p/12D3KooWJxpA4svH4YipQ7Vc8sNfaakBjzfHMUWTtQ2baVx6rtTX
 {{ end }}{{ end }}
 
