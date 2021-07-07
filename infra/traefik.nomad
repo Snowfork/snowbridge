@@ -6,6 +6,11 @@ job "traefik" {
   group "traefik" {
     count = 1
 
+    constraint {
+      attribute = "${node.unique.id}"
+      value     = "cb240190-d0bb-f889-547e-2cd59822248e"
+    }
+
     volume "certs" {
       type = "csi"
       source = "traefik-certs"
@@ -17,8 +22,8 @@ job "traefik" {
       port "http" {
         static = 80
       }
-      port "api" {
-        static = 8080
+      port "https" {
+        static = 443
       }
     }
 
