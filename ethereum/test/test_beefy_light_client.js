@@ -3,7 +3,7 @@ const {
   deployBeefyLightClient,
   mine, catchRevert
 } = require("./helpers");
-const fixture = require('./fixtures/beefy-fixture-data.json');
+const fixture = require('./fixtures/full-flow.json');
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -20,29 +20,34 @@ describe("Beefy Light Client", function () {
     this.beefyLightClient = await deployBeefyLightClient();
   });
 
-  it("encodes beefy mmr leaves correctly", async function () {
-    encodedLeaf = await this.beefyLightClient.encodeMMRLeaf(fixture.beefyMMRLeaf)
-    expect(encodedLeaf).to.eq(fixture.encodedBeefyLeaf)
-  });
-
-  it("hashes beefy mmr leaves correctly", async function () {
-    hashedLeaf = await this.beefyLightClient.hashMMRLeaf(fixture.encodedBeefyLeaf)
-    expect(hashedLeaf).to.eq(fixture.hashedBeefyLeaf)
+  it("encodes, hashes and verifies beefy mmr leaves correctly", async function () {
+    await this.beefyLightClient.verifyNewestMMRLeaf(
+      fixture.completeSubmitInput.latestMMRLeaf,
+      fixture.completeSubmitInput.mmrProofItems,
+      fixture.completeSubmitInput.commitment.payload,
+      fixture.completeSubmitInput.commitment.blockNumber,
+    ).should.be.fulfilled
   });
 
   it("runs new signature commitment and complete signature commitment correctly", async function () {
-    const initialBitfield = await this.beefyLightClient.createInitialBitfield(fixture.validatorBitfield, 2);
+
+    const initialBitfield = await this.beefyLightClient.createInitialBitfield(
+      fixture.completeSubmitInput.validatorProof.positions,
+      2
+    );
     expect(printBitfield(initialBitfield)).to.eq('11')
 
-    const commitmentHash = await this.beefyLightClient.createCommitmentHash(fixture.commitment);
+    const commitmentHash = await this.beefyLightClient.createCommitmentHash(
+      fixture.completeSubmitInput.commitment
+    );
 
     const tx = this.beefyLightClient.newSignatureCommitment(
       commitmentHash,
       initialBitfield,
-      fixture.signatures[0],
-      0,
-      fixture.validatorPublicKeys[0],
-      fixture.validatorPublicKeyProofs[0]
+      fixture.completeSubmitInput.validatorProof.signatures[0],
+      fixture.completeSubmitInput.validatorProof.positions[0],
+      fixture.completeSubmitInput.validatorProof.publicKeys[0],
+      fixture.completeSubmitInput.validatorProof.publicKeyMerkleProofs[0],
     )
 
     await tx.should.be.fulfilled
@@ -56,23 +61,16 @@ describe("Beefy Light Client", function () {
     const bitfield = await this.beefyLightClient.createRandomBitfield(lastId);
     expect(printBitfield(bitfield)).to.eq('11')
 
-    const validatorProof = {
-      signatures: fixture.signatures,
-      positions: [0, 1],
-      publicKeys: fixture.validatorPublicKeys,
-      publicKeyMerkleProofs: fixture.validatorPublicKeyProofs
-    }
-
     await this.beefyLightClient.completeSignatureCommitment(
       lastId,
-      fixture.commitment,
-      validatorProof,
-      fixture.beefyMMRLeaf,
-      fixture.leafProof,
+      fixture.completeSubmitInput.commitment,
+      fixture.completeSubmitInput.validatorProof,
+      fixture.completeSubmitInput.latestMMRLeaf,
+      fixture.completeSubmitInput.mmrProofItems,
     ).should.be.fulfilled
 
     latestMMRRoot = await this.beefyLightClient.latestMMRRoot()
-    expect(latestMMRRoot).to.eq(fixture.commitment.payload)
+    expect(latestMMRRoot).to.eq(fixture.completeSubmitInput.commitment.payload)
   });
 
 

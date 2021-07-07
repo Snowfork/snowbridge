@@ -12,6 +12,7 @@ const Bitfield = artifacts.require("Bitfield");
 const Blake2b = artifacts.require("Blake2b");
 const BasicInboundChannel = artifacts.require("BasicInboundChannel");
 const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
+const ParachainLightClient = artifacts.require("ParachainLightClient");
 
 const channels = {
   basic: {
@@ -59,8 +60,10 @@ module.exports = function (deployer, network, accounts) {
     await deployer.deploy(MerkleProof);
     await deployer.deploy(Bitfield);
     deployer.link(Bitfield, [contracts.beefylightclient.contract]);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, contracts.beefylightclient.contract, BasicInboundChannel, IncentivizedInboundChannel]);
-    deployer.link(MerkleProof, [ValidatorRegistry, BasicInboundChannel, IncentivizedInboundChannel]);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, contracts.beefylightclient.contract, ParachainLightClient, BasicInboundChannel, IncentivizedInboundChannel]);
+    deployer.link(MerkleProof, [ValidatorRegistry, ParachainLightClient, BasicInboundChannel, IncentivizedInboundChannel]);
+    await deployer.deploy(ParachainLightClient);
+    deployer.link(ParachainLightClient, [BasicInboundChannel, IncentivizedInboundChannel]);
 
     // TODO: Hardcoded for testing
     const root = "0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402";

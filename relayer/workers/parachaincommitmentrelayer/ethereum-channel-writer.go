@@ -141,8 +141,21 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 	for _, item := range msgPackage.mmrProof.Proof.Items {
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
+	paraHeadProof := basic.ParachainLightClientParachainHeadProof{
+		Pos:   big.NewInt(int64(msgPackage.paraHeadProofPos)),
+		Width: big.NewInt(int64(msgPackage.paraHeadProofWidth)),
+		Proof: msgPackage.paraHeadProof,
+	}
+
+	err := wr.logBasicTx(messages, paraheadPartial, paraHeadProof, msgPackage.paraHeadProofRoot,
+		beefyMMRLeafPartial, beefyMMRLeafIndex, beefyLeafCount, beefyMMRProof)
+	if err != nil {
+		wr.log.WithError(err).Error("Failed to log transaction input")
+		return err
+	}
+
 	tx, err := wr.basicInboundChannel.Submit(options, messages, paraheadPartial,
-		[][32]byte{}, beefyMMRLeafPartial,
+		paraHeadProof, beefyMMRLeafPartial,
 		big.NewInt(beefyMMRLeafIndex), big.NewInt(beefyLeafCount), beefyMMRProof)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
@@ -195,9 +208,22 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	for _, item := range msgPackage.mmrProof.Proof.Items {
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
+	paraHeadProof := incentivized.ParachainLightClientParachainHeadProof{
+		Pos:   big.NewInt(int64(msgPackage.paraHeadProofPos)),
+		Width: big.NewInt(int64(msgPackage.paraHeadProofWidth)),
+		Proof: msgPackage.paraHeadProof,
+	}
+
+	err := wr.logIncentivizedTx(messages, paraheadPartial, paraHeadProof, msgPackage.paraHeadProofRoot,
+		beefyMMRLeafPartial, beefyMMRLeafIndex, beefyLeafCount, beefyMMRProof)
+	if err != nil {
+		wr.log.WithError(err).Error("Failed to log transaction input")
+		return err
+	}
+
 	tx, err := wr.incentivizedInboundChannel.Submit(options, messages,
 		paraheadPartial,
-		[][32]byte{}, beefyMMRLeafPartial,
+		paraHeadProof, beefyMMRLeafPartial,
 		big.NewInt(beefyMMRLeafIndex), big.NewInt(beefyLeafCount), beefyMMRProof)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to submit transaction")
