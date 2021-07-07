@@ -193,7 +193,7 @@ fn testnet_genesis(
 			phantom: Default::default(),
 		},
 		erc721_app: ERC721Config {
-			address: hex!["3d4C8E0DFabadDF664b7C6Ae7829d58ddaf72bCc"].into(),
+			address: hex!["433488cec14C4478e5ff18DDC7E7384Fc416f148"].into(),
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: para_id },
 		pallet_aura: AuraConfig {
