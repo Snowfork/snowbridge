@@ -1,8 +1,6 @@
 job "plugin-aws-ebs-nodes" {
   datacenters = ["dc1"]
 
-  # you can run node plugins as service jobs as well, but this ensures
-  # that all nodes in the DC have a copy.
   type = "system"
 
   group "nodes" {
@@ -10,7 +8,7 @@ job "plugin-aws-ebs-nodes" {
       driver = "docker"
 
       config {
-        image = "amazon/aws-ebs-csi-driver:v0.10.1"
+        image = "amazon/aws-ebs-csi-driver:v1.1.0"
 
         args = [
           "node",
@@ -19,8 +17,6 @@ job "plugin-aws-ebs-nodes" {
           "--v=5",
         ]
 
-        # node plugins must run as privileged jobs because they
-        # mount disks to the host
         privileged = true
       }
 
@@ -31,9 +27,10 @@ job "plugin-aws-ebs-nodes" {
       }
 
       resources {
-        cpu    = 500
         memory = 256
       }
+
+      kill_timeout = "60s"
     }
   }
 }

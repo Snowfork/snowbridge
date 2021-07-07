@@ -2,11 +2,17 @@ job "plugin-aws-ebs-controller" {
   datacenters = ["dc1"]
 
   group "controller" {
+    count = 2
+
+    constraint {
+      distinct_hosts = true
+    }
+
     task "plugin" {
       driver = "docker"
 
       config {
-        image = "amazon/aws-ebs-csi-driver:v0.10.1"
+        image = "amazon/aws-ebs-csi-driver:v1.1.0"
 
         args = [
           "controller",
@@ -23,9 +29,10 @@ job "plugin-aws-ebs-controller" {
       }
 
       resources {
-        cpu    = 500
         memory = 256
       }
+
+      kill_timeout = "60s"
     }
   }
 }
