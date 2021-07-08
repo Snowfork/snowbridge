@@ -59,13 +59,33 @@ describe("Beefy Light Client", function () {
     await mine(45);
 
     const bitfield = await this.beefyLightClient.createRandomBitfield(lastId);
-    const bitFieldHasOneBit = bitfield.toString() === '2' || bitfield.toString() === '1'
+    const bitfieldString = printBitfield(bitfield);
+    const bitfieldIndex = [Number(bitfield)] - 1
+    const bitFieldHasOneBit = bitfieldIndex === 1 || bitfieldIndex === 0
     expect(bitFieldHasOneBit).to.be.true
+
+    const validatorProofs = {
+      signatures: [],
+      positions: [],
+      publicKeys: [],
+      publicKeyMerkleProofs: [],
+    }
+
+    const ascendingBitfield = bitfieldString.split('').reverse().join('');
+    for (let position = 0; position < ascendingBitfield.length; position++) {
+      const bit = ascendingBitfield[position]
+      if (bit === '1') {
+        validatorProofs.signatures.push(fixture.completeSubmitInput.validatorProof.signatures[position])
+        validatorProofs.positions.push(fixture.completeSubmitInput.validatorProof.positions[position])
+        validatorProofs.publicKeys.push(fixture.completeSubmitInput.validatorProof.publicKeys[position])
+        validatorProofs.publicKeyMerkleProofs.push(fixture.completeSubmitInput.validatorProof.publicKeyMerkleProofs[position])
+      }
+    }
 
     await this.beefyLightClient.completeSignatureCommitment(
       lastId,
       fixture.completeSubmitInput.commitment,
-      fixture.completeSubmitInput.validatorProof,
+      validatorProofs,
       fixture.completeSubmitInput.latestMMRLeaf,
       fixture.completeSubmitInput.mmrProofItems,
     ).should.be.fulfilled

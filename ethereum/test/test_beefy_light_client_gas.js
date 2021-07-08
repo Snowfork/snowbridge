@@ -117,7 +117,7 @@ describe("Beefy Light Client Gas Usage", function () {
       publicKeyMerkleProofs: [],
     }
 
-    ascendingBitfield = bitfieldString.split('').reverse().join('');
+    const ascendingBitfield = bitfieldString.split('').reverse().join('');
     for (let position = 0; position < ascendingBitfield.length; position++) {
       const bit = ascendingBitfield[position]
       if (bit === '1') {
