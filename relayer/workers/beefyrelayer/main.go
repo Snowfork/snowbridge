@@ -31,18 +31,23 @@ type Worker struct {
 
 const Name = "beefy-relayer"
 
-func NewWorker(relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, dbConfig *store.Config, log *logrus.Entry) (*Worker, error) {
+func NewWorker(
+	dataDir string,
+	relaychainConfig *relaychain.Config,
+	ethereumConfig *ethereum.Config,
+	log *logrus.Entry,
+) (*Worker, error) {
 
 	log.Info("Worker created")
 
-	db, err := store.PrepareDatabase(dbConfig)
+	dbMessages := make(chan store.DatabaseCmd)
+	logger := log.WithField("database", "Beefy")
+	beefyDB := store.NewDatabase(dbMessages, logger)
+
+	err := beefyDB.Initialize(dataDir)
 	if err != nil {
 		return nil, err
 	}
-
-	dbMessages := make(chan store.DatabaseCmd)
-	logger := log.WithField("database", "Beefy")
-	beefyDB := store.NewDatabase(db, dbMessages, logger)
 
 	ethereumKeypair, err := secp256k1.NewKeypairFromString(ethereumConfig.BeefyPrivateKey)
 	if err != nil {
@@ -133,18 +138,6 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	})
 
 	return nil
-}
-
-func (worker *Worker) Stop() {
-	if worker.relaychainConn != nil {
-		worker.relaychainConn.Close()
-	}
-	if worker.ethereumConn != nil {
-		worker.ethereumConn.Close()
-	}
-	if worker.beefyDB != nil {
-		worker.beefyDB.Stop()
-	}
 }
 
 func (worker *Worker) Name() string {

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"path/filepath"
 	"strconv"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
@@ -21,6 +22,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
+	"github.com/spf13/viper"
 )
 
 type Format string
@@ -139,7 +141,13 @@ func getEthHeaderProof(header *gethTypes.Header) ([]ethereum.DoubleNodeWithMerkl
 		return nil, err
 	}
 
-	return ethereum.MakeProofData(header, cache)
+	if !viper.IsSet("global.data-dir") {
+		return nil, fmt.Errorf("data-dir not set in config")
+	}
+
+	dataDir := filepath.Join(viper.GetString("global.data-dir"), "ethash-data")
+
+	return ethereum.MakeProofData(header, cache, dataDir)
 }
 
 func printEthBlockForSub(header *gethTypes.Header, format Format) error {

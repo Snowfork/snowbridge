@@ -22,10 +22,6 @@ endpoint = "ws://{{ .Address }}:{{ .Port }}/"
 endpoint = "ws://{{ .Address }}:{{ .Port }}/"
 {{ end }}{{- end }}
 
-[database]
-dialect = "sqlite3"
-dbpath = "tmp.db"
-
 [workers.parachaincommitmentrelayer]
 enabled = true
 restart-delay = 30

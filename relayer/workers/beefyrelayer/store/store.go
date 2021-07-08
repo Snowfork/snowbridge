@@ -3,8 +3,8 @@ package store
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -37,13 +37,17 @@ type BeefyRelayInfo struct {
 	CompleteVerificationTxHash common.Hash
 }
 
-func NewBeefyRelayInfo(validatorAddresses, signedCommitment []byte, contractId int64, status Status,
-	initialVerificationTxHash common.Hash, completeOnBlock uint64, randomSeed,
-	completeVerificationTxHash common.Hash) BeefyRelayInfo {
+func NewBeefyRelayInfo(
+	validatorAddresses, signedCommitment []byte,
+	contractID int64, status Status,
+	initialVerificationTxHash common.Hash,
+	completeOnBlock uint64, randomSeed,
+	completeVerificationTxHash common.Hash,
+) BeefyRelayInfo {
 	return BeefyRelayInfo{
 		ValidatorAddresses:         validatorAddresses,
 		SignedCommitment:           signedCommitment,
-		ContractID:                 contractId,
+		ContractID:                 contractID,
 		Status:                     status,
 		InitialVerificationTxHash:  initialVerificationTxHash,
 		CompleteOnBlock:            completeOnBlock,
@@ -96,49 +100,46 @@ func NewDatabaseCmd(info *BeefyRelayInfo, cmdType CmdType, instructions map[stri
 }
 
 type Database struct {
+	Path     string
 	DB       *gorm.DB
 	messages <-chan DatabaseCmd
 	log      *logrus.Entry
 }
 
-func NewDatabase(db *gorm.DB, messages <-chan DatabaseCmd, log *logrus.Entry) *Database {
+func NewDatabase(messages <-chan DatabaseCmd, log *logrus.Entry) *Database {
 	return &Database{
-		DB:       db,
+		Path:     "",
+		DB:       nil,
 		messages: messages,
 		log:      log,
 	}
 }
 
-func PrepareDatabase(config *Config) (*gorm.DB, error) {
-	if len(config.DBPath) == 0 {
-		return nil, fmt.Errorf("invalid database path: %s", config.DBPath)
-	}
-	tmpDBFile, err := ioutil.TempFile("", config.DBPath)
+func (d *Database) Initialize(dataDir string) error {
+	path := filepath.Join(dataDir, "beefy.db")
+
+	// Create/Truncate DB
+	f, err := os.Create(path);
 	if err != nil {
-		return nil, err
+		return err
 	}
+	f.Close()
 
-	db, err := gorm.Open(config.Dialect, tmpDBFile.Name())
+	db, err := gorm.Open("sqlite3", path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	InitTables(db)
-
-	return db, nil
-}
-
-func InitTables(db *gorm.DB) {
 	var beefyRelayInfo BeefyRelayInfo
 	if !db.HasTable(&beefyRelayInfo) {
 		db.CreateTable(&beefyRelayInfo)
 		db.Model(&beefyRelayInfo)
 	}
-}
 
-func (d *Database) onDone(ctx context.Context) error {
-	d.log.Info("Shutting down database...")
-	return ctx.Err()
+	d.Path = path
+	d.DB = db
+
+	return nil
 }
 
 func (d *Database) Start(ctx context.Context, eg *errgroup.Group) error {
@@ -149,18 +150,14 @@ func (d *Database) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-// Stop is used to handle shut down logic
-func (d *Database) Stop() {
-	// Should automatically close. The database.close() method was removed in gorm 1.20.
-}
-
 func (d *Database) writeLoop(ctx context.Context) error {
 	var mutex = &sync.Mutex{}
 
 	for {
 		select {
 		case <-ctx.Done():
-			return d.onDone(ctx)
+			d.log.Info("Shutting down database...")
+			return ctx.Err()
 		case cmd := <-d.messages:
 			mutex.Lock()
 			switch cmd.Type {
