@@ -348,7 +348,7 @@ contract BeefyLightClient {
         bytes32[] calldata proof,
         bytes32 root,
         uint64 length
-    ) internal {
+    ) public {
         bytes memory encodedLeaf = encodeMMRLeaf(leaf);
         bytes32 hashedLeaf = hashMMRLeaf(encodedLeaf);
 

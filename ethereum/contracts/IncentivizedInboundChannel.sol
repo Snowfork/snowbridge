@@ -58,7 +58,7 @@ contract IncentivizedInboundChannel is AccessControl {
         Message[] calldata _messages,
         ParachainLightClient.OwnParachainHeadPartial
             calldata _ownParachainHeadPartial,
-        bytes32[] calldata _parachainHeadsProof,
+        ParachainLightClient.ParachainHeadProof calldata _parachainHeadProof,
         ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
@@ -71,11 +71,12 @@ contract IncentivizedInboundChannel is AccessControl {
         ParachainLightClient.verifyCommitmentInParachain(
             commitment,
             _ownParachainHeadPartial,
-            _parachainHeadsProof,
+            _parachainHeadProof,
             _beefyMMRLeafPartial,
             _beefyMMRLeafIndex,
             _beefyMMRLeafCount,
-            _beefyMMRLeafProof
+            _beefyMMRLeafProof,
+            beefyLightClient
         );
 
         // Require there is enough gas to play all messages
@@ -101,10 +102,10 @@ contract IncentivizedInboundChannel is AccessControl {
 
             // Deliver the message to the target
             // Delivery will have fixed maximum gas allowed for the target app
-            (bool success, ) =
-                _messages[i].target.call{value: 0, gas: MAX_GAS_PER_MESSAGE}(
-                    _messages[i].payload
-                );
+            (bool success, ) = _messages[i].target.call{
+                value: 0,
+                gas: MAX_GAS_PER_MESSAGE
+            }(_messages[i].payload);
 
             _rewardAmount = _rewardAmount + _messages[i].fee;
             emit MessageDispatched(_messages[i].nonce, success);

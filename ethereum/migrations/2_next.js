@@ -10,11 +10,14 @@ const MMRVerification = artifacts.require("MMRVerification");
 const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
 const Blake2b = artifacts.require("Blake2b");
+const BasicInboundChannel = artifacts.require("BasicInboundChannel");
+const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
+const ParachainLightClient = artifacts.require("ParachainLightClient");
 
 const channels = {
   basic: {
     inbound: {
-      contract: artifacts.require("BasicInboundChannel"),
+      contract: BasicInboundChannel,
       instance: null
     },
     outbound: {
@@ -24,7 +27,7 @@ const channels = {
   },
   incentivized: {
     inbound: {
-      contract: artifacts.require("IncentivizedInboundChannel"),
+      contract: IncentivizedInboundChannel,
       instance: null
     },
     outbound: {
@@ -54,22 +57,13 @@ module.exports = function (deployer, network, accounts) {
 
     // Deploy & link libraries
     await deployer.deploy(ScaleCodec);
-    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, contracts.beefylightclient.contract]);
-
-    // Account of governance contract
-    // TODO: deploy the contract in this migration and use its address
-    let administrator = accounts[0];
-
-    // Fee for incentivized channel
-    if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
-      throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
-    }
-    const fee = process.env.INCENTIVIZED_CHANNEL_FEE
-
     await deployer.deploy(MerkleProof);
-    deployer.link(MerkleProof, [ValidatorRegistry]);
     await deployer.deploy(Bitfield);
     deployer.link(Bitfield, [contracts.beefylightclient.contract]);
+    deployer.link(ScaleCodec, [ETHApp, ERC20App, DOTApp, contracts.beefylightclient.contract, ParachainLightClient, BasicInboundChannel, IncentivizedInboundChannel]);
+    deployer.link(MerkleProof, [ValidatorRegistry, ParachainLightClient, BasicInboundChannel, IncentivizedInboundChannel]);
+    await deployer.deploy(ParachainLightClient);
+    deployer.link(ParachainLightClient, [BasicInboundChannel, IncentivizedInboundChannel]);
 
     // TODO: Hardcoded for testing
     const root = "0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402";
@@ -149,6 +143,16 @@ module.exports = function (deployer, network, accounts) {
         outbound: channels.incentivized.outbound.instance.address,
       },
     );
+
+    // Account of governance contract
+    // TODO: deploy the contract in this migration and use its address
+    let administrator = accounts[0];
+
+    // Fee for incentivized channel
+    if (!("INCENTIVIZED_CHANNEL_FEE" in process.env)) {
+      throw "Missing INCENTIVIZED_CHANNEL_FEE in environment config"
+    }
+    const fee = process.env.INCENTIVIZED_CHANNEL_FEE
 
     // Post-construction initialization for Incentivized outbound channel
     await channels.incentivized.outbound.instance.initialize(
