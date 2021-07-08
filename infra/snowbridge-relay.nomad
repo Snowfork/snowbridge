@@ -17,8 +17,27 @@ job "snowbridge-relay" {
         destination = "local/config.toml"
       }
 
+      vault {
+        policies = ["snowbridge"]
+      }
+
+      template {
+        data = <<EOF
+KEY="{{with secret "secret/data/relay"}}{{.Data.data.foo}}{{end}}"
+BEEFY_RELAYER_ETHEREUM_KEY="<foo>"
+PARACHAIN_COMMITMENT_RELAYER_ETHEREUM_KEY="<bar>"
+ARTEMIS_PARACHAIN_KEY="//Relay"
+ARTEMIS_RELAYCHAIN_KEY="//Alice"
+
+EOF
+        env = true
+        change_mode = "restart"
+        destination = "secrets/keys.env"
+      }
+
       config {
         image = "ghcr.io/snowfork/snowbridge-relay:0.3.2"
+        entrypoint = "/bin/sh"
         args = [
           "run", "--config", "local/config.toml"
         ]

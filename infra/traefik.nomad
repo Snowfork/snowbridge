@@ -118,6 +118,10 @@ EOF
     rule = "Host(`nomad.snowbridge.network`)"
     entryPoints = ["websecure"]
     service = "nomad"
+  [http.routers.vault]
+    rule = "Host(`vault.snowbridge.network`)"
+    entryPoints = ["websecure"]
+    service = "vault"
 
 [http.services]
   [http.services.consul.loadBalancer]
@@ -126,6 +130,9 @@ EOF
   [http.services.nomad.loadBalancer]
     [[http.services.nomad.loadBalancer.servers]]
       url = "http://172.31.37.41:4646/"
+  [http.services.vault.loadBalancer]
+    [[http.services.vault.loadBalancer.servers]]
+      url = "http://172.31.40.191:8200/"
 EOF
 
         destination = "local/dynamic-config.toml"
