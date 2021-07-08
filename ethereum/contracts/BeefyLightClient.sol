@@ -128,8 +128,8 @@ contract BeefyLightClient {
 
     // THRESHOLD_NUMERATOR - numerator for percent of validator signatures required
     // THRESHOLD_DENOMINATOR - denominator for percent of validator signatures required
-    uint256 public constant THRESHOLD_NUMERATOR = 1;
-    uint256 public constant THRESHOLD_DENOMINATOR = 40;
+    uint256 public constant THRESHOLD_NUMERATOR = 3;
+    uint256 public constant THRESHOLD_DENOMINATOR = 250;
     uint64 public constant BLOCK_WAIT_PERIOD = 3;
 
     // We must ensure at least one block is processed every session,

@@ -27,33 +27,33 @@ describe("Beefy Light Client Gas Usage", function () {
       totalNumberOfValidators: 200,
       totalNumberOfSignatures: 134,
     },
-    // {
-    //   totalNumberOfValidators: 265,
-    //   totalNumberOfSignatures: 265,
-    // },
-    // {
-    //   totalNumberOfValidators: 266,
-    //   totalNumberOfSignatures: 266,
-    // },
+    {
+      totalNumberOfValidators: 255,
+      totalNumberOfSignatures: 255,
+    },
+    {
+      totalNumberOfValidators: 257,
+      totalNumberOfSignatures: 257,
+    },
     {
       totalNumberOfValidators: 1000,
       totalNumberOfSignatures: 1000,
       fail: true
     },
-    // {
-    //   totalNumberOfValidators: 1000,
-    //   totalNumberOfSignatures: 1000,
-    // },
-    // {
-    //   totalNumberOfValidators: 1000,
-    //   totalNumberOfSignatures: 667,
-    // }
+    {
+      totalNumberOfValidators: 1000,
+      totalNumberOfSignatures: 1000,
+    },
+    {
+      totalNumberOfValidators: 1000,
+      totalNumberOfSignatures: 667,
+    }
   ]
 
   for (const testCase of testCases) {
     it(`runs full flow with ${testCase.totalNumberOfValidators} validators and ${testCase.totalNumberOfSignatures} signers with the complete transaction ${testCase.fail ? 'failing' : 'succeeding'}`,
       async function () {
-        this.timeout(10 * 2000);
+        this.timeout(10 * 4000);
         await runFlow(testCase.totalNumberOfValidators, testCase.totalNumberOfSignatures, testCase.fail)
       });
   }

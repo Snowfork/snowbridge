@@ -205,7 +205,13 @@ function printTxPromiseGas(promise) {
 }
 
 function printBitfield(bitfield) {
-  return bitfield.map(i => BigInt(i.toString(), 10).toString(2)).join('')
+  return bitfield.map(i => {
+    const bf = BigInt(i.toString(), 10).toString(2).split('')
+    while (bf.length < 256) {
+      bf.unshift('0')
+    }
+    return bf.join('')
+  }).reverse().join('').replace(/^0*/g, '')
 }
 
 module.exports = {
