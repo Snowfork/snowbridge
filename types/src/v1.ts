@@ -60,7 +60,7 @@ export const types: RegistryTypes = {
         Token: "H160"
       }
     },
-    TokenId: "U128",
+    TokenId: "u128",
     TokenData: {
       tokenContract: "H160",
       tokenId: "U256",
