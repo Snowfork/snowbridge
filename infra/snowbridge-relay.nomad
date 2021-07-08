@@ -37,7 +37,6 @@ EOF
 
       config {
         image = "ghcr.io/snowfork/snowbridge-relay:0.3.2"
-        entrypoint = "/bin/sh"
         args = [
           "run", "--config", "local/config.toml"
         ]
