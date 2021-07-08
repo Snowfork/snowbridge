@@ -17,6 +17,7 @@
     "find-config": "^1.0.0",
     "ganache-cli": "^6.12.1",
     "hardhat-gas-reporter": "^1.0.4",
+    "lodash": "^4.17.21",
     "merkletreejs": "^0.2.18",
     "rlp": "^2.2.6",
     "secp256k1": "^4.0.2",

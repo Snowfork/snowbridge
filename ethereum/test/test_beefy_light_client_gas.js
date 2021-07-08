@@ -6,7 +6,7 @@ const { keccakFromHexString } = require("ethereumjs-util");
 const secp256k1 = require('secp256k1')
 const { ethers } = require("ethers");
 
-const { createBeefyValidatorFixture, createRandomPositions } = require("./beefy-helpers");
+const { createBeefyValidatorFixture, createRandomPositions, createFullPositions } = require("./beefy-helpers");
 const realWorldFixture = require('./fixtures/full-flow.json');
 
 require("chai")
@@ -15,37 +15,71 @@ require("chai")
 
 const { expect } = require("chai");
 
+
 describe("Beefy Light Client Gas Usage", function () {
 
-  it("runs new signature commitment with 200 validators", async function () {
-    this.timeout(10 * 2000)
-    const numberOfValidators = 200;
-    const numberOfSignatures = 140;
+  const testCases = [
+    {
+      totalNumberOfValidators: 200,
+      totalNumberOfSignatures: 200,
+    },
+    {
+      totalNumberOfValidators: 200,
+      totalNumberOfSignatures: 134,
+    },
+    // {
+    //   totalNumberOfValidators: 265,
+    //   totalNumberOfSignatures: 265,
+    // },
+    // {
+    //   totalNumberOfValidators: 266,
+    //   totalNumberOfSignatures: 266,
+    // },
+    {
+      totalNumberOfValidators: 1000,
+      totalNumberOfSignatures: 1000,
+      fail: true
+    },
+    // {
+    //   totalNumberOfValidators: 1000,
+    //   totalNumberOfSignatures: 1000,
+    // },
+    // {
+    //   totalNumberOfValidators: 1000,
+    //   totalNumberOfSignatures: 667,
+    // }
+  ]
+
+  for (const testCase of testCases) {
+    it(`runs full flow with ${testCase.totalNumberOfValidators} validators and ${testCase.totalNumberOfSignatures} signers with the complete transaction ${testCase.fail ? 'failing' : 'succeeding'}`,
+      async function () {
+        this.timeout(10 * 2000);
+        await runFlow(testCase.totalNumberOfValidators, testCase.totalNumberOfSignatures, testCase.fail)
+      });
+  }
+
+  const runFlow = async function (totalNumberOfValidators, totalNumberOfSignatures, fail) {
+    console.log(`Running flow with ${totalNumberOfValidators} validators and ${totalNumberOfSignatures} signatures: `)
 
     const fixture = await createBeefyValidatorFixture(
-      numberOfValidators
+      totalNumberOfValidators
     )
+    const beefyLightClient = await deployBeefyLightClient(fixture.root,
+      totalNumberOfValidators);
 
-    this.beefyLightClient = await deployBeefyLightClient(fixture.root,
-      numberOfValidators);
+    const initialBitfieldPositions = await createRandomPositions(totalNumberOfSignatures, totalNumberOfValidators)
 
-    const initialBitfieldPositions = await createRandomPositions(numberOfSignatures, numberOfValidators)
-
-    const initialBitfield = await this.beefyLightClient.createInitialBitfield(
-      initialBitfieldPositions, numberOfValidators
+    const initialBitfield = await beefyLightClient.createInitialBitfield(
+      initialBitfieldPositions, totalNumberOfValidators
     );
 
-    const commitmentHash = await this.beefyLightClient.createCommitmentHash(realWorldFixture.completeSubmitInput.commitment);
-
-    console.log({ initialBitfieldPositions })
-    console.log(`Initial bitfield is: ${printBitfield(initialBitfield)}`)
+    const commitmentHash = await beefyLightClient.createCommitmentHash(realWorldFixture.completeSubmitInput.commitment);
 
     let commitmentHashBytes = ethers.utils.arrayify(commitmentHash)
     const tree = fixture.validatorsMerkleTree;
     const leaves = tree.getHexLeaves()
 
-    const allValidatorProofs = initialBitfieldPositions.reduce((accum, position) => {
-      const leaf = leaves[position]
+    const allValidatorProofs = leaves.map((leaf, position) => {
       const wallet = fixture.walletsByLeaf[leaf]
       const address = wallet.address
       const proof = tree.getHexProof(leaf, position)
@@ -55,54 +89,61 @@ describe("Beefy Light Client Gas Usage", function () {
       const signature = Uint8Array.from(
         signatureECDSA.signature.join().split(',').concat(ethRecID)
       )
-      accum.positions.push(position)
-      accum.publicKeys.push(address)
-      accum.publicKeyMerkleProofs.push(proof)
-      accum.signatures.push(ethers.utils.hexlify(signature))
-      return accum
-    }, {
-      signatures: [],
-      positions: [],
-      publicKeys: [],
-      publicKeyMerkleProofs: []
+      return { signature: ethers.utils.hexlify(signature), position, address, proof };
     });
+    console.log(7)
 
-    console.log("Sending new signature commitment tx")
-    const newSigTxPromise = this.beefyLightClient.newSignatureCommitment(
+    const newSigTxPromise = beefyLightClient.newSignatureCommitment(
       commitmentHash,
       initialBitfield,
-      allValidatorProofs.signatures[0],
-      allValidatorProofs.positions[0],
-      allValidatorProofs.publicKeys[0],
-      allValidatorProofs.publicKeyMerkleProofs[0],
+      allValidatorProofs[0].signature,
+      allValidatorProofs[0].position,
+      allValidatorProofs[0].address,
+      allValidatorProofs[0].proof,
     )
     printTxPromiseGas(newSigTxPromise)
     await newSigTxPromise.should.be.fulfilled
 
-    const lastId = (await this.beefyLightClient.currentId()).sub(new web3.utils.BN(1));
-    console.log("Onto the next one")
+    const lastId = (await beefyLightClient.currentId()).sub(new web3.utils.BN(1));
 
     await mine(45);
 
-    const bitfield = await this.beefyLightClient.createRandomBitfield(lastId);
-    console.log(`Random bitfield is: ${printBitfield(bitfield)}`)
+    const bitfieldInts = await beefyLightClient.createRandomBitfield(lastId);
+    const bitfieldString = printBitfield(bitfieldInts);
 
-    console.log("Sending complete signature commitment tx")
-    const completeSigTxPromise = this.beefyLightClient.completeSignatureCommitment(
-      lastId,
+    const validatorProofs = {
+      signatures: [],
+      positions: [],
+      publicKeys: [],
+      publicKeyMerkleProofs: [],
+    }
+
+    ascendingBitfield = bitfieldString.split('').reverse().join('');
+    for (let position = 0; position < ascendingBitfield.length; position++) {
+      const bit = ascendingBitfield[position]
+      if (bit === '1') {
+        validatorProofs.signatures.push(allValidatorProofs[position].signature)
+        validatorProofs.positions.push(allValidatorProofs[position].position)
+        validatorProofs.publicKeys.push(allValidatorProofs[position].address)
+        validatorProofs.publicKeyMerkleProofs.push(allValidatorProofs[position].proof)
+      }
+    }
+
+    const completeSigTxPromise = beefyLightClient.completeSignatureCommitment(
+      fail ? 99 : lastId,
       realWorldFixture.completeSubmitInput.commitment,
-      allValidatorProofs,
+      validatorProofs,
       realWorldFixture.completeSubmitInput.latestMMRLeaf,
       realWorldFixture.completeSubmitInput.mmrProofItems,
     )
-    console.log("Sent it")
-    // printTxPromiseGas(completeSigTxPromise)
-    // completeSigTxPromise.catch((a, s, d) => console.log({ a, s, d }))
-    await completeSigTxPromise.should.be.fulfilled
-
-    latestMMRRoot = await this.beefyLightClient.latestMMRRoot()
-    expect(latestMMRRoot).to.eq(fixture.commitment.payload)
-  });
-
+    printTxPromiseGas(completeSigTxPromise)
+    if (fail) {
+      await completeSigTxPromise.should.be.rejected
+    } else {
+      await completeSigTxPromise.should.be.fulfilled
+      latestMMRRoot = await beefyLightClient.latestMMRRoot()
+      expect(latestMMRRoot).to.eq(realWorldFixture.completeSubmitInput.commitment.payload)
+    }
+  }
 
 });

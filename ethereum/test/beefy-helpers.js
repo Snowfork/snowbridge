@@ -1,4 +1,5 @@
 const { ethers } = require("ethers");
+const _ = require("lodash");
 
 const {
   createMerkleTree
@@ -40,17 +41,27 @@ async function createBeefyValidatorFixture(numberOfValidators) {
 }
 
 async function createRandomPositions(numberOfPositions, numberOfValidators) {
+
   const positions = [];
-  while (positions.length < numberOfPositions) {
-    const position = Math.floor(Math.random() * numberOfValidators);
-    if (positions.indexOf(position) === -1) {
-      positions.push(position);
-    }
+  for (i = 0; i < numberOfValidators; i++) {
+    positions.push(i);
   }
-  return positions.sort((a, b) => a - b)
+
+  const shuffled = _.shuffle(positions)
+
+  return shuffled.slice(0, numberOfPositions)
+}
+
+async function createFullPositions(numberOfValidators) {
+  const positions = [];
+  for (let i = 0; i < numberOfValidators; i++) {
+    positions.push(i);
+  }
+  return positions.sort((a, b) => b - a)
 }
 
 module.exports = {
   createBeefyValidatorFixture,
   createRandomPositions,
+  createFullPositions,
 }

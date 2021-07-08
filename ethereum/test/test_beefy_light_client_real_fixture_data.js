@@ -59,7 +59,8 @@ describe("Beefy Light Client", function () {
     await mine(45);
 
     const bitfield = await this.beefyLightClient.createRandomBitfield(lastId);
-    expect(printBitfield(bitfield)).to.eq('11')
+    const bitFieldHasOneBit = bitfield.toString() === '2' || bitfield.toString() === '1'
+    expect(bitFieldHasOneBit).to.be.true
 
     await this.beefyLightClient.completeSignatureCommitment(
       lastId,

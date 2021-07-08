@@ -188,7 +188,7 @@ async function tryCatch(promise, type, message) {
       assert(error.message === (PREFIX + type + ' ' + message), "Expected error '" + PREFIX + type + ' ' + message +
         "' but got '" + error.message + "' instead");
     } else {
-      assert(error.message.startsWith(PREFIX + type), "Expected an error starting with '" + PREFIX + type +
+      assert(error && error.message && error.message.startsWith(PREFIX + type), "Expected an error starting with '" + PREFIX + type +
         "' but got '" + error.message + "' instead");
     }
   }
@@ -204,8 +204,8 @@ function printTxPromiseGas(promise) {
   })
 }
 
-function printBitfield(s) {
-  return parseInt(s.toString(), 10).toString(2)
+function printBitfield(bitfield) {
+  return bitfield.map(i => BigInt(i.toString(), 10).toString(2)).join('')
 }
 
 module.exports = {
