@@ -100,7 +100,7 @@ const deployBeefyLightClient = async (root, numberOfValidators) => {
   return beefyLightClient;
 }
 
-const runBeefyLighClientFlow = async beefyLightClient => {
+const runBeefyLightClientFlow = async beefyLightClient => {
   const initialBitfield = await beefyLightClient.createInitialBitfield(
     fixture.completeSubmitInput.validatorProof.positions,
     2
@@ -224,7 +224,7 @@ module.exports = {
   ChannelId,
   encodeLog,
   mergeKeccak256,
-  runBeefyLighClientFlow,
+  runBeefyLightClientFlow,
   printTxPromiseGas,
   printBitfield,
   catchRevert: async (promise, message) => await tryCatch(promise, "revert", message),

@@ -9,7 +9,7 @@ const ScaleCodec = artifacts.require("ScaleCodec");
 const { ethers } = require("ethers");
 
 const {
-  deployBeefyLightClient, runBeefyLighClientFlow
+  deployBeefyLightClient, runBeefyLightClientFlow
 } = require("./helpers");
 const fixture = require('./fixtures/full-flow.json');
 
@@ -23,7 +23,7 @@ describe("BasicInboundChannel", function () {
     await BasicInboundChannel.link(merkleProof);
     await BasicInboundChannel.link(scaleCodec);
 
-    runBeefyLighClientFlow(this.beefyLightClient)
+    runBeefyLightClientFlow(this.beefyLightClient)
   });
 
   describe("submit", function () {
