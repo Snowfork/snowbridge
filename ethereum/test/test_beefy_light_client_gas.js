@@ -91,7 +91,6 @@ describe("Beefy Light Client Gas Usage", function () {
       )
       return { signature: ethers.utils.hexlify(signature), position, address, proof };
     });
-    console.log(7)
 
     const newSigTxPromise = beefyLightClient.newSignatureCommitment(
       commitmentHash,
