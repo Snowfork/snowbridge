@@ -47,7 +47,7 @@ func NewEthereumListener(
 ) *EthereumListener {
 	return &EthereumListener{
 		dataDir:                     filepath.Join(dataDir, "ethash-data"),
-		cacheDir:                    filepath.Join(dataDir, "ethash-proof-cache"),
+		cacheDir:                    filepath.Join(dataDir, "ethash-cache"),
 		config:                      config,
 		conn:                        conn,
 		basicOutboundChannel:        nil,
@@ -69,12 +69,14 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 	var err error
 
 	err = os.Mkdir(li.dataDir, 0755)
-	if !errors.Is(err, os.ErrExist) {
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		li.log.WithError(err).Error("FOO")
 		return err
 	}
 
 	err = os.Mkdir(li.cacheDir, 0755)
-	if !errors.Is(err, os.ErrExist) {
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		li.log.WithError(err).Error("BAR")
 		return err
 	}
 

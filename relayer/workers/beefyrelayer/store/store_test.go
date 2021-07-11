@@ -36,7 +36,7 @@ func (suite *StoreTestSuite) SetupTest() {
 	logger := logrus.WithField("database", "Beefy")
 	database := store.NewDatabase(messages, logger)
 
-	err := database.Initialize("/tmp")
+	err := database.Initialize()
 	if err != nil {
 		suite.Fail(err.Error())
 	}

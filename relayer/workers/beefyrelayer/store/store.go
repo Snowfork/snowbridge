@@ -3,13 +3,13 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jinzhu/gorm"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // required by gorm
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -115,17 +115,14 @@ func NewDatabase(messages <-chan DatabaseCmd, log *logrus.Entry) *Database {
 	}
 }
 
-func (d *Database) Initialize(dataDir string) error {
-	path := filepath.Join(dataDir, "beefy.db")
-
-	// Create/Truncate DB
-	f, err := os.Create(path);
+func (d *Database) Initialize() error {
+	tmpfile, err := ioutil.TempFile("", "beefy.*.db")
 	if err != nil {
-		return err
+		return nil
 	}
-	f.Close()
+	tmpfile.Close()
 
-	db, err := gorm.Open("sqlite3", path)
+	db, err := gorm.Open("sqlite3", tmpfile.Name())
 	if err != nil {
 		return err
 	}
@@ -136,7 +133,7 @@ func (d *Database) Initialize(dataDir string) error {
 		db.Model(&beefyRelayInfo)
 	}
 
-	d.Path = path
+	d.Path = tmpfile.Name()
 	d.DB = db
 
 	return nil
@@ -144,7 +141,25 @@ func (d *Database) Initialize(dataDir string) error {
 
 func (d *Database) Start(ctx context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
-		return d.writeLoop(ctx)
+		var err1, err2 error
+
+		err1 = d.writeLoop(ctx)
+
+		d.log.Info("Shutting down DB")
+		sqlDB := d.DB.DB()
+		if sqlDB != nil {
+			err2 = sqlDB.Close()
+			if err2 != nil {
+				d.log.WithError(err2).Error("Unable to close DB connection")
+			}
+
+			err2 = os.Remove(d.Path)
+			if err2 != nil {
+				d.log.WithError(err2).Error("Unable to delete DB file")
+			}
+		}
+
+		return err1
 	})
 
 	return nil
@@ -156,7 +171,6 @@ func (d *Database) writeLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			d.log.Info("Shutting down database...")
 			return ctx.Err()
 		case cmd := <-d.messages:
 			mutex.Lock()

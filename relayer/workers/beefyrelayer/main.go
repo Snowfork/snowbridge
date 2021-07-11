@@ -32,7 +32,6 @@ type Worker struct {
 const Name = "beefy-relayer"
 
 func NewWorker(
-	dataDir string,
 	relaychainConfig *relaychain.Config,
 	ethereumConfig *ethereum.Config,
 	log *logrus.Entry,
@@ -44,7 +43,7 @@ func NewWorker(
 	logger := log.WithField("database", "Beefy")
 	beefyDB := store.NewDatabase(dbMessages, logger)
 
-	err := beefyDB.Initialize(dataDir)
+	err := beefyDB.Initialize()
 	if err != nil {
 		return nil, err
 	}

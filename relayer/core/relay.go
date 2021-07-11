@@ -34,7 +34,6 @@ func (re *Relay) Run() error {
 	if config.Workers.BeefyRelayer.Enabled {
 		beefyrelayerFactory := func() (workers.Worker, *workers.WorkerConfig, error) {
 			beefyRelayer, err := beefyrelayer.NewWorker(
-				config.Global.DataDir,
 				&config.Relaychain,
 				&config.Eth,
 				logrus.WithField("worker", beefyrelayer.Name),

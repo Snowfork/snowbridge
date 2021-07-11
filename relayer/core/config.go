@@ -9,7 +9,6 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/workers"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
 	"github.com/spf13/viper"
 )
 
@@ -28,7 +27,6 @@ type Config struct {
 	Eth                  ethereum.Config   `mapstructure:"ethereum"`
 	Parachain            parachain.Config  `mapstructure:"parachain"`
 	Relaychain           relaychain.Config `mapstructure:"relaychain"`
-	BeefyRelayerDatabase store.Config      `mapstructure:"beefy-database"`
 	Workers              WorkerConfig      `mapstructure:"workers"`
 }
 
@@ -44,15 +42,15 @@ func LoadConfig() (*Config, error) {
 	var ok bool
 
 	// Ethereum configuration
-	value, ok = os.LookupEnv("SNOWBRIDGE_BEEFY_RELAY_KEY")
+	value, ok = os.LookupEnv("SNOWBRIDGE_BEEFY_KEY")
 	if !ok {
-		return nil, fmt.Errorf("environment variable not set: SNOWBRIDGE_BEEFY_RELAY_KEY")
+		return nil, fmt.Errorf("environment variable not set: SNOWBRIDGE_BEEFY_KEY")
 	}
 	config.Eth.BeefyPrivateKey = strings.TrimPrefix(value, "0x")
 
-	value, ok = os.LookupEnv("SNOWBRIDGE_MESSAGE_RELAY_KEY")
+	value, ok = os.LookupEnv("SNOWBRIDGE_MESSAGE_KEY")
 	if !ok {
-		return nil, fmt.Errorf("environment variable not set: SNOWBRIDGE_MESSAGE_RELAY_KEY")
+		return nil, fmt.Errorf("environment variable not set: SNOWBRIDGE_MESSAGE_KEY")
 	}
 	config.Eth.MessagePrivateKey = strings.TrimPrefix(value, "0x")
 
