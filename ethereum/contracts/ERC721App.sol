@@ -102,8 +102,6 @@ contract ERC721App is AccessControl {
 
         IERC721Metadata token = IERC721Metadata(_tokenContract);
 
-        require(token.ownerOf(_tokenId) == address(this), "Transfer of token that is not own");
-
         token.transferFrom(address(this), _recipient, _tokenId);
         emit Unlocked(_tokenContract, _tokenId, _sender, _recipient);
     }
