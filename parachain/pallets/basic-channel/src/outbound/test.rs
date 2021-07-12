@@ -169,7 +169,6 @@ fn test_submit_fails_not_authorized() {
 #[test]
 fn test_set_principal_unauthorized() {
 	new_tester().execute_with(|| {
-		let target = H160::zero();
 		let dave: AccountId = Keyring::Dave.into();
 
 		assert_noop!(
@@ -183,7 +182,6 @@ fn test_set_principal_unauthorized() {
 #[test]
 fn test_set_principal() {
 	new_tester().execute_with(|| {
-		let target = H160::zero();
 		let alice: AccountId = Keyring::Alice.into();
 
 		assert_ok!(BasicOutboundChannel::set_principal(Origin::root(), alice.clone()));

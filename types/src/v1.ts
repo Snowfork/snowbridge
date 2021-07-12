@@ -60,6 +60,16 @@ export const types: RegistryTypes = {
         Token: "H160"
       }
     },
+    TokenId: "u128",
+    TokenData: {
+      tokenContract: "H160",
+      tokenId: "U256",
+    },
+    TokenInfoOf: {
+      owner: "AccountId",
+      metadata: "Vec<u8>",
+      data: "TokenData",
+    },
     InboundChannelData: {
       nonce: "u64"
     },

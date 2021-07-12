@@ -27,28 +27,19 @@ class SubClient {
   }
 
   async subscribeAssetBalances(accountId, assetId, length) {
-    // Create an array of promises and resolvers for the balances
-    const balancePromiseItems = new Array(length).fill().map(i => {
-      let resolver;
-      const promise = new Promise(async (resolve, reject) => {
-        resolver = resolve;
-      });
-      return { promise, resolver };
-    });
-    const balancePromises = balancePromiseItems.map(i => i.promise);
-    const resolveBalance = balancePromiseItems.map(i => i.resolver);
+    const [promises, resolvers] = createPromiseResolverMap(length)
 
     // Setup our balance subscription and resolve each promise one by one
     let count = 0;
     const unsubscribe = await this.api.query.assets.balances(assetId, accountId, newBalance => {
-      resolveBalance[count](BigNumber(newBalance.toBigInt()));
+      resolvers[count](BigNumber(newBalance.toBigInt()));
       count++;
       if (count === length) {
         unsubscribe();
       }
     });
 
-    return balancePromises;
+    return promises;
   }
 
   async queryAccountBalance(accountId) {
@@ -61,16 +52,7 @@ class SubClient {
   }
 
   async subscribeAccountBalances(accountId, length) {
-    // Create an array of promises and resolvers for the balances
-    const balancePromiseItems = new Array(length).fill().map(i => {
-      let resolver;
-      const promise = new Promise(async (resolve, reject) => {
-        resolver = resolve;
-      });
-      return { promise, resolver };
-    });
-    const balancePromises = balancePromiseItems.map(i => i.promise);
-    const resolveBalance = balancePromiseItems.map(i => i.resolver);
+    const [promises, resolvers] = createPromiseResolverMap(length)
 
     // Setup our balance subscription and resolve each promise one by one
     let count = 0;
@@ -80,14 +62,57 @@ class SubClient {
           free: balance
         }
       } = account;
-      resolveBalance[count](BigNumber(balance.toBigInt()));
+      resolvers[count](BigNumber(balance.toBigInt()));
       count++;
       if (count === length) {
         unsubscribe();
       }
     });
 
-    return balancePromises;
+    return promises;
+  }
+
+
+  async queryNFTTokenIdByERC721Id(ethTokenContract, ethTokenId) {
+    let subTokenId = await this.api.query.erc721.tokensByERC721Id([ethTokenContract, ethTokenId]);
+    return subTokenId
+  }
+
+  async subscribeNFTTokenIdByERC721Id(ethTokenContract, ethTokenId, length) {
+    const [promises, resolvers] = createPromiseResolverMap(length)
+
+    // Setup our subscription and resolve each promise one by one
+    let count = 0;
+    const unsubscribe = await this.api.query.erc721.tokensByERC721Id([ethTokenContract, ethTokenId], newSubTokenId => {
+      resolvers[count](newSubTokenId);
+      count++;
+      if (count === length) {
+        unsubscribe();
+      }
+    });
+
+    return promises;
+  }
+
+  async queryNFT(subTokenId) {
+    let token = await this.api.query.nft.tokens(subTokenId);
+    return token
+  }
+
+  async subscribeNFT(subTokenId, length) {
+    const [promises, resolvers] = createPromiseResolverMap(length)
+
+    // Setup our subscription and resolve each promise one by one
+    let count = 0;
+    const unsubscribe = await this.api.query.nft.tokens(subTokenId, newToken => {
+      resolvers[count](newToken);
+      count++;
+      if (count === length) {
+        unsubscribe();
+      }
+    });
+
+    return promises;
   }
 
   async waitForNextEvent({ eventSection, eventMethod, eventDataType }) {
@@ -122,6 +147,10 @@ class SubClient {
     return await this.api.tx.erc20.burn(channelId, assetId, recipient, amount).signAndSend(account);
   }
 
+  async burnERC721(account, subTokenId, recipient, channelId) {
+    return await this.api.tx.erc721.burn(channelId, subTokenId, recipient).signAndSend(account);
+  }
+
   async lockDOT(account, recipient, amount, channelId) {
     return await this.api.tx.dot.lock(channelId, recipient, amount).signAndSend(account);
   }
@@ -145,7 +174,21 @@ class SubClient {
     return BigNumber(fee.toBigInt())
   }
 
+}
 
+// Creates an array of length `length` promises and an array of corresponding resolvers for those promises
+function createPromiseResolverMap(length) {
+  const promisesResolvers = new Array(length).fill().map(i => {
+    let resolver;
+    const promise = new Promise(async (resolve, reject) => {
+      resolver = resolve;
+    });
+    return { promise, resolver };
+  });
+  const promises = promisesResolvers.map(i => i.promise);
+  const resolvers = promisesResolvers.map(i => i.resolver);
+
+  return [promises, resolvers]
 }
 
 module.exports.SubClient = SubClient;

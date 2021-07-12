@@ -1,5 +1,8 @@
 {
   "license": "Apache-2.0",
+  "scripts": {
+    "test": "npx hardhat test"
+  },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "@openzeppelin/contracts": "^4.1.0",
@@ -17,8 +20,10 @@
     "find-config": "^1.0.0",
     "ganache-cli": "^6.12.1",
     "hardhat-gas-reporter": "^1.0.4",
+    "lodash": "^4.17.21",
     "merkletreejs": "^0.2.18",
     "rlp": "^2.2.6",
+    "secp256k1": "^4.0.2",
     "solc": "^0.7.6",
     "solidity-bytes-utils": "^0.1.2",
     "solidity-docgen": "^0.5.10",
