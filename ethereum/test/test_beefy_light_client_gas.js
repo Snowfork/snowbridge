@@ -66,6 +66,8 @@ describe("Beefy Light Client Gas Usage", function () {
 
     const initialBitfieldPositions = await createRandomPositions(totalNumberOfSignatures, totalNumberOfValidators)
 
+    const firstPosition = initialBitfieldPositions[0]
+
     const initialBitfield = await beefyLightClient.createInitialBitfield(
       initialBitfieldPositions, totalNumberOfValidators
     );
@@ -77,10 +79,10 @@ describe("Beefy Light Client Gas Usage", function () {
     const newSigTxPromise = beefyLightClient.newSignatureCommitment(
       commitmentHash,
       initialBitfield,
-      allValidatorProofs[0].signature,
-      allValidatorProofs[0].position,
-      allValidatorProofs[0].address,
-      allValidatorProofs[0].proof,
+      allValidatorProofs[firstPosition].signature,
+      firstPosition,
+      allValidatorProofs[firstPosition].address,
+      allValidatorProofs[firstPosition].proof,
     )
     printTxPromiseGas(newSigTxPromise)
     await newSigTxPromise.should.be.fulfilled
