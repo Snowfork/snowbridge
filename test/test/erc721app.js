@@ -44,7 +44,7 @@ describe('Bridge', function () {
       const afterSubTokenId = await subTokenIds[1];
       expect(afterSubTokenId.isSome).to.be.true;
 
-      // TODO why do we need to wait here before the queryNFT command below actually returns the NFT?
+      // wait for one block before running the queryNFT command
       await subClient.waitForNextBlock();
 
       const subNFT = await subClient.queryNFT(afterSubTokenId);
