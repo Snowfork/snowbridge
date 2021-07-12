@@ -55,13 +55,6 @@ async function createRandomPositions(numberOfPositions, numberOfValidators) {
   return shuffled.slice(0, numberOfPositions)
 }
 
-async function createFullPositions(numberOfValidators) {
-  const positions = [];
-  for (let i = 0; i < numberOfValidators; i++) {
-    positions.push(i);
-  }
-  return positions.sort((a, b) => b - a)
-}
 
 const runBeefyLightClientFlow = async (beefyLightClient, beefyFixture, totalNumberOfSignatures, totalNumberOfValidators) => {
   const initialBitfieldPositions = await createRandomPositions(totalNumberOfSignatures, totalNumberOfValidators)
@@ -146,7 +139,6 @@ async function createCompleteValidatorProofs(id, beefyLightClient, allValidatorP
 module.exports = {
   createBeefyValidatorFixture,
   createRandomPositions,
-  createFullPositions,
   createAllValidatorProofs,
   runBeefyLightClientFlow,
   createCompleteValidatorProofs,
