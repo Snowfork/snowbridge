@@ -163,7 +163,7 @@ func BitfieldToString(bitfield []*big.Int) string {
 		bits := strconv.FormatInt(bitfieldInt.Int64(), 2)
 
 		// add bits from this int at leftmost position
-		bitfieldString  = bits + bitfieldString
+		bitfieldString = bits + bitfieldString
 
 		// pad to 256 bits to include missing validators
 		for bitsLength := len(bits); bitsLength < 256; bitsLength++ {
