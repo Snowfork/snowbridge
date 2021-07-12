@@ -5,11 +5,12 @@ require("chai")
 const BasicInboundChannel = artifacts.require("BasicInboundChannel");
 const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
+const { createBeefyValidatorFixture, runBeefyLightClientFlow } = require("./beefy-helpers");
 
 const { ethers } = require("ethers");
 
 const {
-  deployBeefyLightClient, runBeefyLighClientFlow
+  deployBeefyLightClient
 } = require("./helpers");
 const fixture = require('./fixtures/full-flow.json');
 
@@ -17,13 +18,18 @@ describe("BasicInboundChannel", function () {
   const interface = new ethers.utils.Interface(BasicInboundChannel.abi)
 
   before(async function () {
-    this.beefyLightClient = await deployBeefyLightClient();
+    const totalNumberOfValidatorSigs = 100;
+    const beefyFixture = await createBeefyValidatorFixture(
+      totalNumberOfValidatorSigs
+    )
+    this.beefyLightClient = await deployBeefyLightClient(beefyFixture.root,
+      totalNumberOfValidatorSigs);
     const merkleProof = await MerkleProof.new();
     const scaleCodec = await ScaleCodec.new();
     await BasicInboundChannel.link(merkleProof);
     await BasicInboundChannel.link(scaleCodec);
 
-    runBeefyLighClientFlow(this.beefyLightClient)
+    runBeefyLightClientFlow(this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
   });
 
   describe("submit", function () {

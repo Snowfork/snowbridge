@@ -73,7 +73,7 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 		case msg := <-wr.beefyMessages:
 			switch msg.Status {
 			case store.CommitmentWitnessed:
-				err := wr.WriteNewSignatureCommitment(ctx, msg, 0) // TODO: pick val addr of first val that actually signed
+				err := wr.WriteNewSignatureCommitment(ctx, msg)
 				if err != nil {
 					wr.log.WithError(err).Error("Error submitting message to ethereum")
 				}
@@ -95,7 +95,7 @@ func (wr *BeefyEthereumWriter) signerFn(_ common.Address, tx *types.Transaction)
 	return signedTx, nil
 }
 
-func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo, valIndex int) error {
+func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
 		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
@@ -121,6 +121,8 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		wr.log.WithError(err).Error("Failed to create initial validator bitfield")
 		return err
 	}
+
+	valIndex := signedValidators[0].Int64()
 
 	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(valIndex, initialBitfield)
 	if err != nil {
@@ -155,6 +157,22 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 	return nil
 }
 
+func BitfieldToString(bitfield []*big.Int) string {
+	bitfieldString := ""
+	for _, bitfieldInt := range bitfield {
+		bits := strconv.FormatInt(bitfieldInt.Int64(), 2)
+
+		// add bits from this int at leftmost position
+		bitfieldString = bits + bitfieldString
+
+		// pad to 256 bits to include missing validators
+		for bitsLength := len(bits); bitsLength < 256; bitsLength++ {
+			bitfieldString = "0" + bitfieldString
+		}
+	}
+	return bitfieldString
+}
+
 // WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the BeefyLightClient contract
 func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
 	beefyJustification, err := info.ToBeefyJustification()
@@ -176,11 +194,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		return err
 	}
 
-	bitfield := ""
-	for _, bitfieldInt := range randomBitfield {
-		bits := strconv.FormatInt(bitfieldInt.Int64(), 2)
-		bitfield += bits
-	}
+	bitfield := BitfieldToString(randomBitfield)
 
 	msg, err := beefyJustification.BuildCompleteSignatureCommitmentMessage(info, bitfield)
 	if err != nil {

@@ -44,7 +44,7 @@ func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment
 	}
 }
 
-func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int, initialBitfield []*big.Int) (NewSignatureCommitmentMessage, error) {
+func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int64, initialBitfield []*big.Int) (NewSignatureCommitmentMessage, error) {
 	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
 
 	sig0ProofContents, err := b.GenerateMerkleProofOffchain(valAddrIndex)
@@ -59,7 +59,7 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 		ValidatorClaimsBitfield:       initialBitfield,
 		ValidatorSignatureCommitment:  sigValEthereum,
 		ValidatorPublicKey:            b.ValidatorAddresses[valAddrIndex],
-		ValidatorPosition:             big.NewInt(int64(valAddrIndex)),
+		ValidatorPosition:             big.NewInt(valAddrIndex),
 		ValidatorPublicKeyMerkleProof: sig0ProofContents,
 	}
 
@@ -91,7 +91,7 @@ func (h *Keccak256) Hash(data []byte) []byte {
 	return hash[:]
 }
 
-func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int) ([][32]byte, error) {
+func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int64) ([][32]byte, error) {
 	// Hash validator addresses for leaf input data
 	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
 	for i, valAddr := range b.ValidatorAddresses {
@@ -134,10 +134,13 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 	validationDataID := big.NewInt(int64(info.ContractID))
 
 	validatorPositions := []*big.Int{}
-	for i := 0; i < len(bitfield); i++ {
+
+	// bitfield is right to left order, so loop backwards
+	for i := len(bitfield) - 1; i >= 0; i-- {
 		bit := bitfield[i : i+1]
 		if bit == "1" {
-			validatorPositions = append(validatorPositions, big.NewInt(int64(i)))
+			position := len(bitfield) - 1 - i // positions start from 0 and increase to len(bitfield) - 1
+			validatorPositions = append(validatorPositions, big.NewInt(int64(position)))
 		}
 	}
 
@@ -152,7 +155,7 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		pubKey := b.ValidatorAddresses[validatorPosition.Int64()]
 		validatorPublicKeys = append(validatorPublicKeys, pubKey)
 
-		merkleProof, err := b.GenerateMerkleProofOffchain(int(validatorPosition.Int64()))
+		merkleProof, err := b.GenerateMerkleProofOffchain(validatorPosition.Int64())
 		if err != nil {
 			return CompleteSignatureCommitmentMessage{}, err
 		}
