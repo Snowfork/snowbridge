@@ -8,9 +8,10 @@ use frame_system::RawOrigin;
 use frame_support::traits::UnfilteredDispatchable;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 use sp_core::H160;
+use artemis_core::nft::TokenInfo;
 
 #[allow(unused_imports)]
-use crate::Module as ERC721App;
+use crate::Pallet as ERC721App;
 
 benchmarks! {
 	// Benchmark `burn` extrinsic under worst case conditions:
@@ -26,12 +27,12 @@ benchmarks! {
 			token_id,
 		};
 
-		let nft_token_id = T::Nft::mint(&recipient, "http uri".into(), token_data)?;
+		let nft_token_id = T::Nft::mint(&caller, "http uri".into(), token_data)?;
 		TokensByERC721Id::<T>::insert((token_contract, token_id), nft_token_id);
 	}: _(RawOrigin::Signed(caller.clone()), ChannelId::Incentivized, nft_token_id, recipient)
 	verify {
-		assert_eq!(TokensByOwner::<T>::contains_key(caller, nft_token_id), false);
-		assert_eq!(Tokens::<T>::get(nft_token_id), None);
+		assert_eq!(T::Nft::is_owner(&caller, nft_token_id), false);
+		assert_eq!(T::Nft::get_token_data(nft_token_id), None);
 	}
 
 	// Benchmark `mint` extrinsic under worst case conditions:
@@ -39,7 +40,7 @@ benchmarks! {
 	mint {
 		let origin = T::CallOrigin::successful_origin();
 		if let Ok(caller) = T::CallOrigin::try_origin(origin.clone()) {
-			Address::put(caller);
+			Address::<T>::put(caller);
 		} else {
 			return Err("Failed to extract caller address from origin");
 		}
@@ -54,9 +55,10 @@ benchmarks! {
 
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {
-		let nft_token_id = TokensByERC721Id::<T>::get(token_contract, token_id);
-		assert_eq!(Tokens::<T>::get(nft_token_id), Some(TokenInfo{metadata: "http uri".into(), owner: recipient, data: ()}));
-		assert_eq!(TokensByOwner::<Test>::contains_key(recipient, nft_token_id), true);
+		let nft_token_id = TokensByERC721Id::<T>::get((token_contract, token_id));
+		assert_eq!(T::Nft::is_owner(&recipient, nft_token_id.unwrap()), true);
+		let token_info: TokenInfo<T::AccountId, ERC721TokenData> = TokenInfo{owner: recipient, metadata: "http uri".into(), data: ERC721TokenData{token_contract, token_id}};
+		assert_eq!(T::Nft::get_token_data(nft_token_id.unwrap()), Some(token_info));
 	}
 }
 
