@@ -1,5 +1,8 @@
 {
   "license": "Apache-2.0",
+  "scripts": {
+    "test": "npx hardhat test"
+  },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "@openzeppelin/contracts": "^4.1.0",

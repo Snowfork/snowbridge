@@ -45,4 +45,7 @@ export default {
     cache: "cache",
     artifacts: "artifacts"
   },
+  mocha: {
+    timeout: 60000
+  }
 };

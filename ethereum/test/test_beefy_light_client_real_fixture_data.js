@@ -61,8 +61,7 @@ describe("Beefy Light Client", function () {
 
     const bitfield = await this.beefyLightClient.createRandomBitfield(lastId);
     const bitfieldString = printBitfield(bitfield);
-    const bitfieldIndex = [Number(bitfield)] - 1
-    const bitFieldHasOneBit = bitfieldIndex === 1 || bitfieldIndex === 0
+    const bitFieldHasOneBit = bitfieldString === '1' || bitfieldString === '10' // (trailing 0's are removed)
     expect(bitFieldHasOneBit).to.be.true
 
     const validatorProofs = {
