@@ -5,7 +5,8 @@ use rococo_runtime::{
 	BalancesConfig, GenesisConfig,
 	SystemConfig, VerifierLightclientConfig,
 	BasicInboundChannelConfig, IncentivizedInboundChannelConfig,
-	ETHConfig, ERC20Config, DOTConfig, AssetsConfig,
+	ETHConfig, ERC20Config, DOTConfig, ERC721Config,
+	AssetsConfig, NFTConfig,
 	ParachainInfoConfig,
 	BasicOutboundChannelConfig,
 	IncentivizedOutboundChannelConfig,
@@ -149,6 +150,8 @@ fn testnet_genesis(
 					U256::from_str_radix("1000000000000000000", 10).unwrap()
 				)
 			]
+		nft: NFTConfig {
+			tokens: vec![]
 		},
 		verifier_lightclient: VerifierLightclientConfig {
 			initial_header: EthereumHeader {
@@ -181,6 +184,9 @@ fn testnet_genesis(
 		dot_app: DOTConfig {
 			address: hex!["dAF13FA1997b9649b2bCC553732c67887A68022C"].into(),
 			phantom: Default::default(),
+		},
+		erc721_app: ERC721Config {
+			address: hex!["433488cec14C4478e5ff18DDC7E7384Fc416f148"].into(),
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: para_id },
 		pallet_aura: Default::default(),

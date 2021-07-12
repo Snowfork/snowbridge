@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 enum-iterator = "0.6.0"
 serde = { version = "1.0.101", optional = true }
+serde_derive = { version = "1.0.101", optional = true }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
 artemis-ethereum = { path = "../ethereum", default-features = false }
 
@@ -23,6 +24,7 @@ hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 default = ["std"]
 std = [
     "serde",
+    "serde_derive",
     "codec/std",
     "frame-support/std",
     "sp-std/std",

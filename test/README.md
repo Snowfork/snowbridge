@@ -39,7 +39,6 @@ Install `polkadot-launch`:
 
 ```bash
 yarn global add polkadot-launch@1.6.1
-cd -
 ```
 
 Build polkadot:

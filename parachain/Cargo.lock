@@ -300,6 +300,7 @@ dependencies = [
  "parity-scale-codec",
  "rustc-hex",
  "serde",
+ "serde_derive",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -358,6 +359,29 @@ dependencies = [
  "artemis-ethereum",
  "ethabi-decode",
  "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "artemis-erc721-app"
+version = "0.0.1"
+dependencies = [
+ "artemis-core",
+ "artemis-dispatch",
+ "artemis-ethereum",
+ "artemis-nft",
+ "ethabi-decode",
  "frame-support",
  "frame-system",
  "hex-literal",
@@ -447,6 +471,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "artemis-nft"
+version = "0.0.1"
+dependencies = [
+ "artemis-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "rustc-hex",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "artemis-rococo-runtime"
 version = "0.1.1"
 dependencies = [
@@ -456,8 +498,10 @@ dependencies = [
  "artemis-dispatch",
  "artemis-dot-app",
  "artemis-erc20-app",
+ "artemis-erc721-app",
  "artemis-eth-app",
  "artemis-incentivized-channel",
+ "artemis-nft",
  "artemis-runtime-common",
  "artemis-xcm-support",
  "cumulus-pallet-aura-ext",
@@ -4571,8 +4615,10 @@ dependencies = [
  "artemis-dispatch",
  "artemis-dot-app",
  "artemis-erc20-app",
+ "artemis-erc721-app",
  "artemis-eth-app",
  "artemis-incentivized-channel",
+ "artemis-nft",
  "artemis-runtime-common",
  "artemis-xcm-support",
  "cumulus-pallet-aura-ext",
@@ -9496,8 +9542,10 @@ dependencies = [
  "artemis-dispatch",
  "artemis-dot-app",
  "artemis-erc20-app",
+ "artemis-erc721-app",
  "artemis-eth-app",
  "artemis-incentivized-channel",
+ "artemis-nft",
  "artemis-runtime-common",
  "artemis-xcm-support",
  "cumulus-pallet-aura-ext",
