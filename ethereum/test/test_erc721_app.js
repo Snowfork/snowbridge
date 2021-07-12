@@ -44,7 +44,7 @@ contract("ERC721App", function (accounts) {
   // Constants
   const POLKADOT_ACCOUNT_ID = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
-  before(async function() {
+  before(async function () {
     const codec = await ScaleCodec.new();
     ERC721App.link(codec);
   });
@@ -91,7 +91,7 @@ contract("ERC721App", function (accounts) {
         .should.be.fulfilled;
 
       let tx = await lockupToken(this.app, this.token, anotherTokenId, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
-          .should.be.fulfilled;
+        .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
       const event = tx.logs.find(
@@ -118,7 +118,7 @@ contract("ERC721App", function (accounts) {
 
       // note that now userTwo tries to lock the tokens, who is not the owner and not approved by userOne
       await lockupToken(this.app, this.token, anotherTokenId, userTwo, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
-        .should.be.rejectedWith(/Transfer of token that is not own/);
+        .should.be.rejectedWith(/transfer caller is not owner nor approved/);
     });
 
     it("should fail to lock if invalid token contract", async function () {
@@ -134,7 +134,7 @@ contract("ERC721App", function (accounts) {
         .should.be.fulfilled;
 
       await lockupToken(this.app, this.token, 1337, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
-        .should.be.rejectedWith(/owner query for nonexistent token/);
+        .should.be.rejectedWith(/operator query for nonexistent token/);
     });
   });
 
@@ -155,7 +155,7 @@ contract("ERC721App", function (accounts) {
         .should.be.fulfilled;
 
       await lockupToken(this.app, this.token, tokenId, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
-          .should.be.fulfilled;
+        .should.be.fulfilled;
 
       let tx = await this.app.unlock(
         this.token.address,
@@ -187,7 +187,7 @@ contract("ERC721App", function (accounts) {
         {
           from: inboundChannel
         }
-      ).should.be.rejectedWith(/Transfer of token that is not own/);;
+      ).should.be.rejectedWith(/transfer of token that is not own/);
     });
 
     it("should fail to unlock if not channel", async function () {
