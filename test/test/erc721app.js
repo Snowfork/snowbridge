@@ -47,7 +47,11 @@ describe('Bridge', function () {
       // wait for one block before running the queryNFT command
       await subClient.waitForNextBlock();
 
-      const subNFT = await subClient.queryNFT(afterSubTokenId);
+      const subNFT2 = await subClient.queryNFTTokenIdByERC721Id(ethTokenContract, ethTokenId);
+      expect(subNFT2.isSome).to.be.true;
+      expect(subNFT2.unwrap().toString()).to.be.equal(afterSubTokenId.unwrap().toString());
+
+      const subNFT = await subClient.queryNFT(subNFT2.unwrap());
       expect(subNFT.isSome).to.be.true;
       expect(subNFT.unwrap().owner.toHuman()).to.be.equal(polkadotRecipientSS58);
     });
