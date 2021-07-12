@@ -7,20 +7,22 @@ use cumulus_primitives_core::ParaId;
 use cumulus_client_service::genesis::generate_genesis_block;
 use log::info;
 
+use crate::chain_spec::Extensions;
+
 #[cfg(feature = "with-snowbridge-runtime")]
 use snowbridge_runtime::opaque::Block;
 #[cfg(feature = "with-snowbridge-runtime")]
-use crate::chain_spec::snowbridge::{get_chain_spec, ChainSpec, Extensions};
+use crate::chain_spec::snowbridge::{get_chain_spec, ChainSpec};
 
 #[cfg(feature = "with-rococo-runtime")]
 use rococo_runtime::opaque::Block;
 #[cfg(feature = "with-rococo-runtime")]
-use crate::chain_spec::rococo::{get_chain_spec, ChainSpec, Extensions};
+use crate::chain_spec::rococo::{get_chain_spec, ChainSpec};
 
 #[cfg(feature = "with-local-runtime")]
 use local_runtime::opaque::Block;
 #[cfg(feature = "with-local-runtime")]
-use crate::chain_spec::local::{get_chain_spec, ChainSpec, Extensions};
+use crate::chain_spec::local::{get_chain_spec, ChainSpec};
 
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
