@@ -6,6 +6,7 @@ require("chai")
 const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
 const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
+const { createBeefyValidatorFixture, runBeefyLightClientFlow } = require("./beefy-helpers");
 
 const MockRewardSource = artifacts.require("MockRewardSource");
 const {
@@ -17,12 +18,18 @@ describe("IncentivizedInboundChannel", function () {
   const interface = new ethers.utils.Interface(IncentivizedInboundChannel.abi)
 
   before(async function () {
-    this.beefyLightClient = await deployBeefyLightClient();
+    const totalNumberOfValidatorSigs = 100;
+    const beefyFixture = await createBeefyValidatorFixture(
+      totalNumberOfValidatorSigs
+    )
+    this.beefyLightClient = await deployBeefyLightClient(beefyFixture.root,
+      totalNumberOfValidatorSigs);
     const merkleProof = await MerkleProof.new();
     const scaleCodec = await ScaleCodec.new();
+
     await IncentivizedInboundChannel.link(merkleProof);
     await IncentivizedInboundChannel.link(scaleCodec);
-    runBeefyLighClientFlow(this.beefyLightClient)
+    runBeefyLightClientFlow(this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
   });
 
   describe("submit", function () {

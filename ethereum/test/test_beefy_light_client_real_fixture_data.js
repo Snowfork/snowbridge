@@ -4,6 +4,7 @@ const {
   mine, catchRevert, printBitfield
 } = require("./helpers");
 const fixture = require('./fixtures/full-flow.json');
+const { createCompleteValidatorProofs } = require("./beefy-helpers");
 
 require("chai")
   .use(require("chai-as-promised"))

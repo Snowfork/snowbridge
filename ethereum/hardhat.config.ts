@@ -20,7 +20,7 @@ const infuraKey = getenv("INFURA_PROJECT_ID");
 export default {
   networks: {
     hardhat: {
-      throwOnTransactionFailures: false
+      throwOnTransactionFailures: true
     },
     localhost: {
       url: "http://127.0.0.1:8545",

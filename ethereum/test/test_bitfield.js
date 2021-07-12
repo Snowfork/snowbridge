@@ -41,14 +41,15 @@ describe("Bitfield", function () {
 });
 
 const positionsToBitfield = (positions) => {
-  const ascendingPositions = positions.reverse()
   let bitfield = []
-  for (let i = 0; i < ascendingPositions.length; i++) {
-    const num = ascendingPositions[i];
-    while (num > bitfield.length) {
-      bitfield.unshift('0')
-    }
-    bitfield.unshift('1')
+  for (let i = 0; i < positions.length; i++) {
+    const position = positions[i];
+    bitfield[position] = '1'
   }
-  return bitfield.join('')
+  for (let i = 0; i < bitfield.length; i++) {
+    if (bitfield[i] !== '1') {
+      bitfield[i] = '0'
+    }
+  }
+  return bitfield.reverse().join('')
 }

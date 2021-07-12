@@ -1,12 +1,10 @@
 const {
   deployBeefyLightClient,
-  mine, printBitfield, printTxPromiseGas
+  mine, printTxPromiseGas
 } = require("./helpers");
-const { keccakFromHexString } = require("ethereumjs-util");
-const secp256k1 = require('secp256k1')
-const { ethers } = require("ethers");
 
-const { createBeefyValidatorFixture, createRandomPositions, createFullPositions } = require("./beefy-helpers");
+const { createBeefyValidatorFixture, createRandomPositions,
+  createAllValidatorProofs, createCompleteValidatorProofs } = require("./beefy-helpers");
 const realWorldFixture = require('./fixtures/full-flow.json');
 
 require("chai")
@@ -14,7 +12,6 @@ require("chai")
   .should();
 
 const { expect } = require("chai");
-
 
 describe("Beefy Light Client Gas Usage", function () {
 
@@ -59,7 +56,7 @@ describe("Beefy Light Client Gas Usage", function () {
   }
 
   const runFlow = async function (totalNumberOfValidators, totalNumberOfSignatures, fail) {
-    console.log(`Running flow with ${totalNumberOfValidators} validators and ${totalNumberOfSignatures} signatures: `)
+    console.log(`Running flow with ${totalNumberOfValidators} validators and ${totalNumberOfSignatures} signatures with the complete transaction ${fail ? 'failing' : 'succeeding'}: `)
 
     const fixture = await createBeefyValidatorFixture(
       totalNumberOfValidators
@@ -75,22 +72,7 @@ describe("Beefy Light Client Gas Usage", function () {
 
     const commitmentHash = await beefyLightClient.createCommitmentHash(realWorldFixture.completeSubmitInput.commitment);
 
-    let commitmentHashBytes = ethers.utils.arrayify(commitmentHash)
-    const tree = fixture.validatorsMerkleTree;
-    const leaves = tree.getHexLeaves()
-
-    const allValidatorProofs = leaves.map((leaf, position) => {
-      const wallet = fixture.walletsByLeaf[leaf]
-      const address = wallet.address
-      const proof = tree.getHexProof(leaf, position)
-      const privateKey = ethers.utils.arrayify(wallet.privateKey)
-      const signatureECDSA = secp256k1.ecdsaSign(commitmentHashBytes, privateKey)
-      const ethRecID = signatureECDSA.recid + 27
-      const signature = Uint8Array.from(
-        signatureECDSA.signature.join().split(',').concat(ethRecID)
-      )
-      return { signature: ethers.utils.hexlify(signature), position, address, proof };
-    });
+    const allValidatorProofs = await createAllValidatorProofs(commitmentHash, fixture);
 
     const newSigTxPromise = beefyLightClient.newSignatureCommitment(
       commitmentHash,
@@ -107,31 +89,12 @@ describe("Beefy Light Client Gas Usage", function () {
 
     await mine(45);
 
-    const bitfieldInts = await beefyLightClient.createRandomBitfield(lastId);
-    const bitfieldString = printBitfield(bitfieldInts);
-
-    const validatorProofs = {
-      signatures: [],
-      positions: [],
-      publicKeys: [],
-      publicKeyMerkleProofs: [],
-    }
-
-    const ascendingBitfield = bitfieldString.split('').reverse().join('');
-    for (let position = 0; position < ascendingBitfield.length; position++) {
-      const bit = ascendingBitfield[position]
-      if (bit === '1') {
-        validatorProofs.signatures.push(allValidatorProofs[position].signature)
-        validatorProofs.positions.push(allValidatorProofs[position].position)
-        validatorProofs.publicKeys.push(allValidatorProofs[position].address)
-        validatorProofs.publicKeyMerkleProofs.push(allValidatorProofs[position].proof)
-      }
-    }
+    const completeValidatorProofs = await createCompleteValidatorProofs(lastId, beefyLightClient, allValidatorProofs);
 
     const completeSigTxPromise = beefyLightClient.completeSignatureCommitment(
       fail ? 99 : lastId,
       realWorldFixture.completeSubmitInput.commitment,
-      validatorProofs,
+      completeValidatorProofs,
       realWorldFixture.completeSubmitInput.latestMMRLeaf,
       realWorldFixture.completeSubmitInput.mmrProofItems,
     )
