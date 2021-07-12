@@ -4,16 +4,19 @@ job "snowbridge-relay" {
   group "main" {
     count = 1
 
-    task "plugin" {
+    task "relay" {
       driver = "docker"
+
+      service {
+        name = "snowbridge-relay"
+      }
 
       artifact {
         source = "s3::https://snowbridge-artifacts.s3.eu-central-1.amazonaws.com/relay-config.toml.tpl"
-        destination = "local/config.toml.tpl"
       }
 
       template {
-        source = "local/config.toml.tpl"
+        source = "local/relay-config.toml.tpl"
         destination = "local/config.toml"
       }
 
@@ -23,12 +26,12 @@ job "snowbridge-relay" {
 
       template {
         data = <<EOF
-KEY="{{with secret "secret/data/relay"}}{{.Data.data.foo}}{{end}}"
-BEEFY_RELAYER_ETHEREUM_KEY="<foo>"
-PARACHAIN_COMMITMENT_RELAYER_ETHEREUM_KEY="<bar>"
-ARTEMIS_PARACHAIN_KEY="//Relay"
-ARTEMIS_RELAYCHAIN_KEY="//Alice"
-
+{{with secret "secret/data/relay" -}}
+SNOWBRIDGE_BEEFY_KEY="{{.Data.data.beefy_key}}"
+SNOWBRIDGE_MESSAGE_KEY="{{.Data.data.message_key}}"
+SNOWBRIDGE_PARACHAIN_KEY="{{.Data.data.parachain_key}}"
+SNOWBRIDGE_RELAYCHAIN_KEY="{{.Data.data.relaychain_key}}"
+{{end -}}
 EOF
         env = true
         change_mode = "restart"
@@ -38,7 +41,9 @@ EOF
       config {
         image = "ghcr.io/snowfork/snowbridge-relay:0.3.2"
         args = [
-          "run", "--config", "local/config.toml"
+          "run",
+          "--data-dir", "/var/lib/snowbridge-relay",
+          "--config", "local/config.toml"
         ]
       }
 

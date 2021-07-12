@@ -70,13 +70,13 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 
 	err = os.Mkdir(li.dataDir, 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
-		li.log.WithError(err).Error("FOO")
+		li.log.WithError(err).Error("Could not create data dir")
 		return err
 	}
 
 	err = os.Mkdir(li.cacheDir, 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
-		li.log.WithError(err).Error("BAR")
+		li.log.WithError(err).Error("Could not create cache dir")
 		return err
 	}
 

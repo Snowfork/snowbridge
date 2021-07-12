@@ -34,12 +34,10 @@ buildah run $c find /var/lib/apt/lists/ -type f -not -name lock -delete
 buildah copy $c ../relayer/build/artemis-relay /usr/local/bin/snowbridge-relay
 
 buildah run $c mkdir -p /var/lib/snowbridge-relay
-buildah run $c ln -s /root/.ethash /var/lib/snowbridge-relay/ethash
-buildah run $c ln -s /root/.ethashproof /var/lib/snowbridge-relay/ethashproof
 
 buildah config \
     --entrypoint '["/usr/local/bin/snowbridge-relay"]' \
-    --cmd 'run --config /etc/snowbridge/relay.toml' \
+    --cmd 'run --data-dir /var/lib/snowbridge --config /etc/snowbridge/relay.toml' \
     --volume /etc/snowbridge \
     --volume /var/lib/snowbridge \
     --label org.opencontainers.image.title="Snowbridge Relay" \
