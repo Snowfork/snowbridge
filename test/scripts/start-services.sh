@@ -84,6 +84,12 @@ start_polkadot_launch()
         genesis.runtime.parachainInfo.parachainId 200 \
         para_id 200
 
+    if [ $# -eq 1 ] && [ $1 = "malicious" ]; then
+        jq '.genesis.runtime.dotApp.address = "0x433488cec14C4478e5ff18DDC7E7384Fc416f148"' \
+          $configdir/spec.json > spec.malicious.json && \
+          mv spec.malicious.json $configdir/spec.json
+    fi
+
     echo "Writing Polkadot configuration"
     polkadotbinary=/tmp/polkadot/target/release/polkadot
     if [[ -f ../test/.env ]]; then
@@ -151,9 +157,9 @@ trap cleanup SIGINT SIGTERM EXIT
 
 start_ganache
 deploy_contracts
-if [ $# -eq 1 ] && [ $1 = "duplicate" ];
+if [ $# -eq 1 ];
 then
-    start_polkadot_launch "duplicate"
+    start_polkadot_launch $1
 else
     start_polkadot_launch
 fi
