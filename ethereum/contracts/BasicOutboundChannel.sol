@@ -67,6 +67,6 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
         require(isOperatorFor(msg.sender, _origin), "Caller is unauthorized");
         require(_origin == principal, "Caller is unauthorized");
         nonce = nonce + 1;
-        emit Message(msg.sender, nonce, payload);
+        emit Message(msg.sender, nonce, _payload);
     }
 }
