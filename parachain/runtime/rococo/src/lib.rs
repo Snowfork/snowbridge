@@ -48,7 +48,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 
-pub use artemis_core::{AssetId, ChannelId, MessageId};
+pub use artemis_core::{AssetId, ChannelId, MessageId, ERC721TokenData};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::{EthereumDifficultyConfig, EthereumHeader};
@@ -486,7 +486,7 @@ pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(call: &Call) -> bool {
 		match call {
-			Call::ETH(_) | Call::ERC20(_) | Call::DOT(_) => true,
+			Call::ETH(_) | Call::ERC20(_) | Call::ERC721(_) | Call::DOT(_) => true,
 			_ => false,
 		}
 	}
@@ -618,6 +618,20 @@ impl dot_app::Config for Runtime {
 	type WeightInfo = weights::dot_app_weights::WeightInfo<Runtime>;
 }
 
+impl nft::Config for Runtime {
+	type TokenId = u128;
+	type TokenData = ERC721TokenData;
+}
+
+impl erc721_app::Config for Runtime {
+	type Event = Event;
+	type OutboundRouter = OutboundRouter<Runtime>;
+	type CallOrigin = EnsureEthereumAccount;
+	type WeightInfo = ();
+	type TokenId = <Runtime as nft::Config>::TokenId;
+	type Nft = nft::Pallet<Runtime>;
+}
+
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 }
@@ -649,6 +663,7 @@ construct_runtime!(
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
 		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 15,
 		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
+		NFT: nft::{Pallet, Call, Config<T>, Storage} = 24,
 
 		// XCM
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 17,
@@ -668,6 +683,7 @@ construct_runtime!(
 		DOT: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
 		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
 		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
+		ERC721: erc721_app::{Pallet, Call, Config, Storage, Event<T>} = 67,
 	}
 );
 

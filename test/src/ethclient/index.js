@@ -3,14 +3,17 @@ const BigNumber = require('bignumber.js');
 
 const ETHApp = require('../../../ethereum/build/contracts/ETHApp.json');
 const ERC20App = require('../../../ethereum/build/contracts/ERC20App.json');
+const ERC721App = require('../../../ethereum/build/contracts/ERC721App.json');
 const ERC20 = require('../../../ethereum/build/contracts/ERC20.json');
 const TestToken = require('../../../ethereum/build/contracts/TestToken.json');
+const ERC721 = require('../../../ethereum/build/contracts/ERC721.json');
+const TestToken721 = require('../../../ethereum/build/contracts/TestToken721.json');
 const DOTApp = require('../../../ethereum/build/contracts/DOTApp.json');
 const WrappedToken = require('../../../ethereum/build/contracts/WrappedToken.json');
 const BasicOutboundChannel = require('../../../ethereum/build/contracts/BasicOutboundChannel.json');
 const IncentivizedOutboundChannel = require('../../../ethereum/build/contracts/IncentivizedOutboundChannel.json');
-
-const { ChannelId } = require("../helpers");
+const BasicInboundChannel = require('../../../ethereum/build/contracts/BasicInboundChannel.json');
+const IncentivizedInboundChannel = require('../../../ethereum/build/contracts/IncentivizedInboundChannel.json');
 
 /**
  * The Ethereum client for Bridge interaction
@@ -22,6 +25,8 @@ class EthClient {
     this.web3 = web3;
     this.networkID = networkID;
     this.TestTokenAddress = TestToken.networks[this.networkID].address;
+    this.TestToken721Address = TestToken721.networks[this.networkID].address;
+    this.ERC721AppAddress = ERC721App.networks[this.networkID].address;
 
     this.loadApplicationContracts(networkID);
   }
@@ -33,6 +38,9 @@ class EthClient {
     const appERC20 = new this.web3.eth.Contract(ERC20App.abi, ERC20App.networks[networkID].address);
     this.appERC20 = appERC20;
 
+    const appERC721 = new this.web3.eth.Contract(ERC721App.abi, ERC721App.networks[networkID].address);
+    this.appERC721 = appERC721;
+
     const appDOT = new this.web3.eth.Contract(DOTApp.abi, DOTApp.networks[networkID].address);
     this.appDOT = appDOT;
 
@@ -43,10 +51,22 @@ class EthClient {
     const appIncOutChan = new this.web3.eth.Contract(IncentivizedOutboundChannel.abi,
       IncentivizedOutboundChannel.networks[networkID].address);
     this.appIncOutChan = appIncOutChan;
+
+    const appBasicInChan = new this.web3.eth.Contract(BasicInboundChannel.abi,
+      BasicInboundChannel.networks[networkID].address);
+    this.appBasicInChan = appBasicInChan;
+
+    const appIncentivizedInChan = new this.web3.eth.Contract(IncentivizedInboundChannel.abi,
+      IncentivizedInboundChannel.networks[networkID].address);
+    this.appIncentivizedInChan = appIncentivizedInChan;
   };
 
   loadERC20Contract() {
     return new this.web3.eth.Contract(ERC20.abi, this.TestTokenAddress);
+  }
+
+  loadERC721Contract() {
+    return new this.web3.eth.Contract(TestToken721.abi, this.TestToken721Address);
   }
 
   async initialize() {
@@ -69,6 +89,11 @@ class EthClient {
   async getErc20Balance(account) {
     const instance = this.loadERC20Contract();
     return BigNumber(await instance.methods.balanceOf(account).call());
+  }
+
+  async getErc721OwnerOf(tokenId) {
+    const instance = this.loadERC721Contract();
+    return await instance.methods.ownerOf(tokenId).call();
   }
 
   async getDotBalance(account) {
@@ -95,9 +120,26 @@ class EthClient {
     return { receipt, tx, gasCost }
   }
 
+  async mintERC721(tokenId, to, owner) {
+    const erc721Instance = this.loadERC721Contract();
+    // return erc721Instance.methods.mintWithTokenURI(to, tokenId, "http://testuri.com/nft.json")
+    return erc721Instance.methods.mint(to, tokenId)
+      .send({
+        from: owner
+      });
+  }
+
   async approveERC20(from, amount) {
     const erc20Instance = this.loadERC20Contract();
     return erc20Instance.methods.approve(this.appERC20._address, this.web3.utils.toBN(amount))
+      .send({
+        from
+      });
+  }
+
+  async approveERC721(tokenId, from) {
+    const erc721Instance = this.loadERC721Contract();
+    return erc721Instance.methods.approve(this.appERC721._address, tokenId)
       .send({
         from
       });
@@ -110,6 +152,21 @@ class EthClient {
       this.TestTokenAddress,
       recipientBytes,
       this.web3.utils.toBN(amount),
+      channelId
+    ).send({
+      from,
+      gas: 500000,
+      value: 0
+    });
+  }
+
+  async lockERC721(tokenId, from, polkadotRecipient, channelId) {
+    const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
+
+    return await this.appERC721.methods.lock(
+      this.TestToken721Address,
+      tokenId.toString(),
+      recipientBytes,
       channelId
       ).send({
         from,
@@ -132,7 +189,11 @@ class EthClient {
   async waitForNextEventData({ appName, eventName, eventData }) {
     let foundEvent = new Promise(async (resolve, reject) => {
       this[appName].once(eventName, (error, event) => {
-        resolve(event.returnValues[eventData]);
+        if (eventData) {
+          resolve(event.returnValues[eventData]);
+        } else {
+          resolve(event.returnValues)
+        }
       })
     });
     return foundEvent;

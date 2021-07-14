@@ -1,9 +1,10 @@
 const BigNumber = web3.BigNumber;
 const {
   deployBeefyLightClient,
-  mine, catchRevert
+  mine, catchRevert, printBitfield
 } = require("./helpers");
 const fixture = require('./fixtures/full-flow.json');
+const { createCompleteValidatorProofs } = require("./beefy-helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -59,12 +60,32 @@ describe("Beefy Light Client", function () {
     await mine(45);
 
     const bitfield = await this.beefyLightClient.createRandomBitfield(lastId);
-    expect(printBitfield(bitfield)).to.eq('11')
+    const bitfieldString = printBitfield(bitfield);
+    const bitFieldHasOneBit = bitfieldString === '1' || bitfieldString === '10' // (trailing 0's are removed)
+    expect(bitFieldHasOneBit).to.be.true
+
+    const validatorProofs = {
+      signatures: [],
+      positions: [],
+      publicKeys: [],
+      publicKeyMerkleProofs: [],
+    }
+
+    const ascendingBitfield = bitfieldString.split('').reverse().join('');
+    for (let position = 0; position < ascendingBitfield.length; position++) {
+      const bit = ascendingBitfield[position]
+      if (bit === '1') {
+        validatorProofs.signatures.push(fixture.completeSubmitInput.validatorProof.signatures[position])
+        validatorProofs.positions.push(fixture.completeSubmitInput.validatorProof.positions[position])
+        validatorProofs.publicKeys.push(fixture.completeSubmitInput.validatorProof.publicKeys[position])
+        validatorProofs.publicKeyMerkleProofs.push(fixture.completeSubmitInput.validatorProof.publicKeyMerkleProofs[position])
+      }
+    }
 
     await this.beefyLightClient.completeSignatureCommitment(
       lastId,
       fixture.completeSubmitInput.commitment,
-      fixture.completeSubmitInput.validatorProof,
+      validatorProofs,
       fixture.completeSubmitInput.latestMMRLeaf,
       fixture.completeSubmitInput.mmrProofItems,
     ).should.be.fulfilled
@@ -75,7 +96,3 @@ describe("Beefy Light Client", function () {
 
 
 });
-
-function printBitfield(s) {
-  return parseInt(s.toString(), 10).toString(2)
-}

@@ -121,6 +121,9 @@ fn testnet_genesis(
 				)
 			]
 		},
+		nft: local_runtime::NFTConfig {
+			tokens: vec![]
+		},
 		verifier_lightclient: local_runtime::VerifierLightclientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
@@ -134,6 +137,9 @@ fn testnet_genesis(
 		dot_app: local_runtime::DOTConfig {
 			address: hex!["dAF13FA1997b9649b2bCC553732c67887A68022C"].into(),
 			phantom: Default::default(),
+		},
+		erc721_app: local_runtime::ERC721Config {
+			address: hex!["433488cec14C4478e5ff18DDC7E7384Fc416f148"].into(),
 		},
 		parachain_info: local_runtime::ParachainInfoConfig { parachain_id: para_id },
 		pallet_aura: local_runtime::AuraConfig {

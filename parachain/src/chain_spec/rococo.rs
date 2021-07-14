@@ -1,7 +1,7 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use rococo_runtime::{
-	GenesisConfig, WASM_BINARY, Signature,	AccountId, AuraId
+	GenesisConfig, WASM_BINARY, Signature, AccountId, AuraId
 };
 use sc_service::{ChainType, Properties};
 use sp_core::{sr25519, Pair, Public, U256};
@@ -121,6 +121,9 @@ fn testnet_genesis(
 				)
 			]
 		},
+		nft: rococo_runtime::NFTConfig {
+			tokens: vec![]
+		},
 		verifier_lightclient: rococo_runtime::VerifierLightclientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default()
@@ -134,6 +137,9 @@ fn testnet_genesis(
 		dot_app: rococo_runtime::DOTConfig {
 			address: hex!["dAF13FA1997b9649b2bCC553732c67887A68022C"].into(),
 			phantom: Default::default(),
+		},
+		erc721_app: rococo_runtime::ERC721Config {
+			address: hex!["433488cec14C4478e5ff18DDC7E7384Fc416f148"].into(),
 		},
 		parachain_info: rococo_runtime::ParachainInfoConfig { parachain_id: para_id },
 		pallet_aura: rococo_runtime::AuraConfig {

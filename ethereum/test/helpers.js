@@ -74,12 +74,17 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployBeefyLightClient = async _ => {
-  this.validatorsMerkleTree = createMerkleTree(fixture.initialValidatorAddresses);
-  const root = this.validatorsMerkleTree.getHexRoot()
+const deployBeefyLightClient = async (root, numberOfValidators) => {
+  if (!root) {
+    const validatorsMerkleTree = createMerkleTree(fixture.initialValidatorAddresses);
+    root = validatorsMerkleTree.getHexRoot()
+  }
+  if (!numberOfValidators) {
+    numberOfValidators = fixture.initialValidatorAddresses.length;
+  }
 
   const validatorRegistry = await initValidatorRegistry(root,
-    fixture.initialValidatorAddresses.length, fixture.initialValidatorSetID);
+    numberOfValidators, fixture.initialValidatorSetID);
   const mmrVerification = await MMRVerification.new();
   const blake2b = await Blake2b.new();
 
@@ -95,35 +100,6 @@ const deployBeefyLightClient = async _ => {
   return beefyLightClient;
 }
 
-const runBeefyLighClientFlow = async beefyLightClient => {
-  const initialBitfield = await beefyLightClient.createInitialBitfield(
-    fixture.completeSubmitInput.validatorProof.positions,
-    2
-  );
-  const commitmentHash = await beefyLightClient.createCommitmentHash(
-    fixture.completeSubmitInput.commitment
-  );
-  await beefyLightClient.newSignatureCommitment(
-    commitmentHash,
-    initialBitfield,
-    fixture.completeSubmitInput.validatorProof.signatures[0],
-    fixture.completeSubmitInput.validatorProof.positions[0],
-    fixture.completeSubmitInput.validatorProof.publicKeys[0],
-    fixture.completeSubmitInput.validatorProof.publicKeyMerkleProofs[0],
-  )
-
-  const lastId = (await beefyLightClient.currentId()).sub(new web3.utils.BN(1));
-
-  await mine(45);
-
-  await beefyLightClient.completeSignatureCommitment(
-    lastId,
-    fixture.completeSubmitInput.commitment,
-    fixture.completeSubmitInput.validatorProof,
-    fixture.completeSubmitInput.latestMMRLeaf,
-    fixture.completeSubmitInput.mmrProofItems,
-  ).should.be.fulfilled
-}
 
 function signatureSubstrateToEthereum(sig) {
   const recoveryId0 = web3.utils.hexToNumber(`0x${sig.slice(130)}`);
@@ -133,16 +109,18 @@ function signatureSubstrateToEthereum(sig) {
   return res;
 }
 
-function createMerkleTree(leavesHex) {
-  const leavesHashed = leavesHex.map(leaf => keccakFromHexString(leaf));
-  const merkleTree = new MerkleTree(leavesHashed, keccak, { sort: true });
-
+function createMerkleTree(values) {
+  const leaves = values.map(value => keccakFromHexString(value));
+  const merkleTree = new MerkleTree(leaves, keccak, {
+    sortLeaves: true,
+    sortPairs: false
+  });
   return merkleTree;
 }
 
 async function mine(n) {
   for (let i = 0; i < n; i++) {
-    web3.currentProvider.send({
+    await web3.currentProvider.send({
       jsonrpc: '2.0',
       method: 'evm_mine',
       params: [],
@@ -168,6 +146,7 @@ const mergeKeccak256 = (left, right) =>
   '0x' + keccakFromHexString('0x' + left.replace(hexPrefix, "") + right.replace(hexPrefix, ''), 256).toString('hex')
 
 const PREFIX = "VM Exception while processing transaction: ";
+const PREFIX_2 = "Returned error: VM Exception while processing transaction: ";
 
 async function tryCatch(promise, type, message) {
   try {
@@ -180,11 +159,32 @@ async function tryCatch(promise, type, message) {
       assert(error.message === (PREFIX + type + ' ' + message), "Expected error '" + PREFIX + type + ' ' + message +
         "' but got '" + error.message + "' instead");
     } else {
-      assert(error.message.startsWith(PREFIX + type), "Expected an error starting with '" + PREFIX + type +
+      assert(error && error.message && error.message.startsWith(PREFIX + type), "Expected an error starting with '" + PREFIX + type +
         "' but got '" + error.message + "' instead");
     }
   }
 };
+
+function printTxPromiseGas(promise) {
+  return promise.then(r => {
+    console.log(`Tx successful - gas used: ${r.receipt.gasUsed}`)
+  }).catch(r => {
+    if (r && r.receipt && r.receipt.gasUsed) {
+      console.log(`Tx failed - gas used: ${r.receipt.gasUsed}`)
+    }
+  })
+}
+
+function printBitfield(bitfield) {
+  return bitfield.map(i => {
+    const bf = BigInt(i.toString(), 10).toString(2).split('')
+    while (bf.length < 256) {
+      bf.unshift('0')
+    }
+    return bf.join('')
+  }).reverse().join('').replace(/^0*/g, '')
+}
+
 
 module.exports = {
   deployAppWithMockChannels,
@@ -196,7 +196,8 @@ module.exports = {
   ChannelId,
   encodeLog,
   mergeKeccak256,
-  runBeefyLighClientFlow,
+  printTxPromiseGas,
+  printBitfield,
   catchRevert: async (promise, message) => await tryCatch(promise, "revert", message),
   catchOutOfGas: async (promise, message) => await tryCatch(promise, "out of gas", message),
   catchInvalidJump: async (promise, message) => await tryCatch(promise, "invalid JUMP", message),

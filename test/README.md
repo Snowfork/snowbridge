@@ -39,7 +39,6 @@ Install `polkadot-launch`:
 
 ```bash
 yarn global add polkadot-launch@1.6.1
-cd -
 ```
 
 Build polkadot:
@@ -82,6 +81,21 @@ You should now be good to go!
 ```bash
 yarn test
 ```
+
+### Testing against a malicious contract
+We also have a test environment that tests against a malicious contract that attempts to consume infinite gas. To setup this environment, run the start-services script with the malicious flag:
+
+```bash
+scripts/start-services.sh malicious
+```
+
+This will deploy and run everything as usual, but replace the erc20 app with a malicious one. Once everything is ready to go, run the tests for the malicious app:
+
+```bash
+yarn test ./test/malicious-dotapp.js
+```
+
+You should see the test pass, checking that message delivery works correctly and channel functionality is still secure without being affected by the malicious app.
 
 ### Manual Tests
 

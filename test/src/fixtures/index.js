@@ -1,4 +1,5 @@
 const TestToken = require('../../../ethereum/build/contracts/TestToken.json');
+const TestToken721 = require('../../../ethereum/build/contracts/TestToken721.json');
 const EthClient = require('../../src/ethclient').EthClient;
 const SubClient = require('../../src/subclient').SubClient;
 
@@ -11,6 +12,7 @@ const parachainEndpoint = 'ws://localhost:11144';
 const testNetworkID = '344';
 
 const TestTokenAddress = TestToken.networks[testNetworkID].address;
+const TestToken721Address = TestToken721.networks[testNetworkID].address;
 
 const ETH_TO_PARA_WAIT_TIME = 60000;
 const PARA_TO_ETH_WAIT_TIME = 100000;
@@ -26,6 +28,6 @@ async function bootstrap() {
 module.exports = {
   bootstrap, polkadotRecipient,
   polkadotRecipientSS58, polkadotSenderSS58, treasuryAddressSS58,
-  TestTokenAddress,
+  TestTokenAddress, TestToken721Address,
   ETH_TO_PARA_WAIT_TIME, PARA_TO_ETH_WAIT_TIME
 };
