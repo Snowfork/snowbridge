@@ -1,11 +1,9 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use local_runtime::{
-	GenesisConfig, WASM_BINARY, Signature,	AccountId,
+	GenesisConfig, WASM_BINARY, Signature, AccountId, AuraId,
 };
-use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
-use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public, U256};
 use sp_runtime::{Perbill, traits::{IdentifyAccount, Verify}};
 

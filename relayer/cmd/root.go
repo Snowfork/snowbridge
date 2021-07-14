@@ -54,9 +54,7 @@ func initConfig() {
 
 	viper.BindPFlag("global.data-dir", rootCmd.PersistentFlags().Lookup("data-dir"))
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	} else {
+	if err := viper.ReadInConfig(); err != nil {
 		fmt.Println("Error: ", err)
 		os.Exit(1)
 	}

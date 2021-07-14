@@ -32,7 +32,7 @@ buildah run $c apt-get clean
 buildah run $c find /var/lib/apt/lists/ -type f -not -name lock -delete
 
 buildah run $c mkdir -p /var/lib/snowbridge
-buildah copy $c ../parachain/target/release/artemis /usr/local/bin/snowbridge
+buildah copy $c target/release/artemis /usr/local/bin/snowbridge
 
 buildah config \
     --entrypoint '["/usr/local/bin/snowbridge"]' \

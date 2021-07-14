@@ -81,8 +81,8 @@ start_polkadot_launch()
     node ../test/scripts/helpers/overrideParachainSpec.js $configdir/spec.json \
         genesis.runtime.verifierLightclient.initialDifficulty 0x0 \
         genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header" \
-        genesis.runtime.parachainInfo.parachainId 200 \
-        para_id 200
+        genesis.runtime.parachainInfo.parachainId 1000 \
+        para_id 1000
 
     echo "Writing Polkadot configuration"
     polkadotbinary=/tmp/polkadot/target/release/polkadot
@@ -98,8 +98,8 @@ start_polkadot_launch()
         node ../test/scripts/helpers/overrideParachainSpec.js $configdir/spec2.json \
             genesis.runtime.verifierLightclient.initialDifficulty 0x0 \
             genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header" \
-            genesis.runtime.parachainInfo.parachainId 201 \
-            para_id 201
+            genesis.runtime.parachainInfo.parachainId 1001 \
+            para_id 1001
         jq  -s '.[0] * .[1]' config-dup.json ../test/config/launchConfigOverridesDup.json \
             | jq ".parachains[0].bin = \"$bin\"" \
             | jq ".parachains[0].chain = \"$configdir/spec.json\"" \

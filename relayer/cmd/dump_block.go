@@ -14,7 +14,6 @@ import (
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -105,12 +104,6 @@ func getEthBlock(url string, blockHash *gethCommon.Hash) (*gethTypes.Header, err
 	}
 	defer client.Close()
 
-	chainID, err := client.NetworkID(ctx)
-	logrus.WithFields(logrus.Fields{
-		"endpoint": url,
-		"chainID":  chainID,
-	}).Info("Connected to chain")
-
 	var header *gethTypes.Header
 	if blockHash == nil {
 		header, err = client.HeaderByNumber(ctx, nil)
@@ -149,11 +142,9 @@ func printEthBlockForSub(header *gethTypes.Header, format Format) error {
 		return err
 	}
 
-	fmt.Println("")
 	if format == RustFmt {
 		fmt.Printf(
-`
-EthereumHeader {
+`EthereumHeader {
 	parent_hash: hex!("%x").into(),
 	timestamp: %du64.into(),
 	number: %du64.into(),

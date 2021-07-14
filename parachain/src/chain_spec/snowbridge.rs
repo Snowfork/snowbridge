@@ -1,7 +1,7 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use snowbridge_runtime::{
-	GenesisConfig, WASM_BINARY, Signature,	AccountId,
+	GenesisConfig, WASM_BINARY, Signature, AccountId, AuraId
 };
 use sc_service::{ChainType, Properties};
 use sp_core::{sr25519, Pair, Public, U256};
@@ -26,7 +26,7 @@ where
 
 pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 	let mut props = Properties::new();
-	props.insert("tokenSymbol".into(), "DEV".into());
+	props.insert("tokenSymbol".into(), "DOT".into());
 	props.insert("tokenDecimals".into(), 12.into());
 
 	ChainSpec::from_genesis(
@@ -35,6 +35,10 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		ChainType::Local,
 		move || {
 			testnet_genesis(
+				vec![
+					get_from_seed::<AuraId>("Alice"),
+					get_from_seed::<AuraId>("Bob"),
+				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -66,6 +70,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
+	initial_authorities: Vec<AuraId>,
 	endowed_accounts: Vec<AccountId>,
 	para_id: ParaId
 ) -> GenesisConfig {
@@ -131,7 +136,9 @@ fn testnet_genesis(
 			phantom: Default::default(),
 		},
 		parachain_info: snowbridge_runtime::ParachainInfoConfig { parachain_id: para_id },
-		pallet_aura: Default::default(),
+		pallet_aura: snowbridge_runtime::AuraConfig {
+			authorities: initial_authorities,
+		},
 		cumulus_pallet_aura_ext: Default::default(),
 	}
 }

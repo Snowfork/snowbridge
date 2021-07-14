@@ -37,6 +37,8 @@ use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Block as BlockT;
 use std::{io::Write, net::SocketAddr};
 
+const DEFAULT_PARA_ID: u32 = 1000;
+
 fn load_spec(
 	id: &str,
 	para_id: ParaId,
@@ -79,7 +81,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		load_spec(id, self.run.parachain_id.unwrap_or(100).into())
+		load_spec(id, self.run.parachain_id.unwrap_or(DEFAULT_PARA_ID).into())
 	}
 
 	#[cfg(feature = "with-snowbridge-runtime")]
