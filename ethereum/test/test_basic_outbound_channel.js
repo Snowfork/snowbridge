@@ -10,6 +10,7 @@ require("chai")
   .should();
 
 describe("BasicOutboundChannel", function () {
+  let owner;
   let appAddress;
   let origin;
   const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
@@ -17,6 +18,7 @@ describe("BasicOutboundChannel", function () {
 
   before(async function() {
     accounts = await web3.eth.getAccounts();
+    owner = accounts[0];
     appAddress = accounts[1];
     origin = accounts[2];
   });
@@ -24,6 +26,8 @@ describe("BasicOutboundChannel", function () {
   describe("send", function () {
     beforeEach(async function () {
       this.channel = await BasicOutboundChannel.new();
+      const principal = "0x0000000000000000000000000000000000000000"
+      await this.channel.initialize(owner, principal, [appAddress]).should.be.fulfilled;
     });
 
     it("should send messages out with the correct event and fields", async function () {

@@ -60,12 +60,26 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
         _revokeDefaultOperator(operator);
     }
 
+    // Update the principal.
+    function setPrincipal(address _principal) external {
+        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+        principal = _principal;
+    }
+
     /**
      * @dev Sends a message across the channel
+     *
+     * Submission is a privileged action involving two parties: The operator and the origin.
+     * Apps (aka operators) need to be authorized by the `origin` to submit messages via this channel.
+     *
+     * Furthermore, this channel restricts the origin to a single account, that of the principal.
+     * In essence this ensures that only the principal account can send messages via this channel.
      */
     function submit(address _origin, bytes calldata _payload) external override {
         require(isOperatorFor(msg.sender, _origin), "Caller is unauthorized");
-        require(_origin == principal, "Caller is unauthorized");
+        if (principal != address(0)) {
+            require(_origin == principal, "Origin is not an authorized principal");
+        }
         nonce = nonce + 1;
         emit Message(msg.sender, nonce, _payload);
     }
