@@ -98,14 +98,14 @@ fn testnet_genesis(
 			phantom: Default::default()
 		},
 		basic_channel_inbound: local_runtime::BasicInboundChannelConfig {
-			source_channel: hex!["B8EA8cB425d85536b158d661da1ef0895Bb92F1D"].into(),
+			source_channel: hex!["EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"].into(),
 		},
 		basic_channel_outbound: local_runtime::BasicOutboundChannelConfig {
 			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
 			interval: 1,
 		},
 		incentivized_channel_inbound: local_runtime::IncentivizedInboundChannelConfig {
-			source_channel: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into(),
+			source_channel: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
 			reward_fraction: Perbill::from_percent(80)
 		},
 		incentivized_channel_outbound: local_runtime::IncentivizedOutboundChannelConfig {
@@ -129,17 +129,17 @@ fn testnet_genesis(
 			initial_difficulty: Default::default(),
 		},
 		eth_app: local_runtime::ETHConfig {
-			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into()
+			address: hex!["B8EA8cB425d85536b158d661da1ef0895Bb92F1D"].into()
 		},
 		erc20_app: local_runtime::ERC20Config {
-			address: hex!["54D6643762E46036b3448659791adAf554225541"].into()
+			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into()
 		},
 		dot_app: local_runtime::DOTConfig {
-			address: hex!["dAF13FA1997b9649b2bCC553732c67887A68022C"].into(),
+			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into(),
 			phantom: Default::default(),
 		},
 		erc721_app: local_runtime::ERC721Config {
-			address: hex!["433488cec14C4478e5ff18DDC7E7384Fc416f148"].into(),
+			address: hex!["4283d8996E5a7F4BEa58c6052b1471a2a9524C87"].into(),
 		},
 		parachain_info: local_runtime::ParachainInfoConfig { parachain_id: para_id },
 		pallet_aura: local_runtime::AuraConfig {
