@@ -119,6 +119,7 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		signedValidators = append(signedValidators, big.NewInt(int64(i)))
 		// }
 	}
+
 	numberOfValidators := big.NewInt(int64(len(beefyJustification.SignedCommitment.Signatures)))
 	initialBitfield, err := contract.CreateInitialBitfield(
 		&bind.CallOpts{Pending: true}, signedValidators, numberOfValidators,
@@ -190,6 +191,8 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 	if contract == nil {
 		return fmt.Errorf("Unknown contract")
 	}
+
+	wr.log.WithField("ContractID", big.NewInt(int64(info.ContractID))).Info("Creating a random validator bitfield")
 
 	randomBitfield, err := contract.CreateRandomBitfield(
 		&bind.CallOpts{Pending: true},

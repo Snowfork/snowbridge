@@ -53,13 +53,10 @@ deploy_contracts()
     echo "Deploying contracts"
     pushd ../ethereum
 
-    npx hardhat deploy --network localhost --reset
+    npx hardhat deploy --network localhost --reset --export $configdir/contracts.json
 
     echo "Generating relayer configuration from contracts"
     npx hardhat run --network localhost scripts/make-relay-config.ts > $configdir/config.toml
-
-    echo "Generating test configuration from contracts"
-    npx hardhat export --network localhost --export $configdir/contracts.json
 
     popd
 

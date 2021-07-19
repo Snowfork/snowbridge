@@ -9,7 +9,6 @@ import "@nomiclabs/hardhat-web3";
 import "hardhat-deploy";
 import { HardhatUserConfig } from "hardhat/config";
 
-
 const getenv = (name: string) => {
   if (name in process.env) {
     return process.env[name]
@@ -40,7 +39,7 @@ const config: HardhatUserConfig = {
         mnemonic: mnemonic,
       },
       gas: 6000000,
-      gasPrice: 5000000000
+      gasPrice: 5000000000,
     }
   },
   solidity: {
