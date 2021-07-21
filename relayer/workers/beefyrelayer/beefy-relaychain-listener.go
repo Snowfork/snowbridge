@@ -3,7 +3,6 @@ package beefyrelayer
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -137,20 +136,31 @@ func (li *BeefyRelaychainListener) getBeefyAuthorities(blockNumber uint64) ([]co
 		return nil, err
 	}
 
-	storageKey, err := types.CreateStorageKey(li.relaychainConn.GetMetadata(), "Beefy", "Authorities", nil, nil)
+	meta, err := li.relaychainConn.GetAPI().RPC.State.GetMetadataLatest()
 	if err != nil {
 		return nil, err
 	}
 
-	var authorities substrate.Authorities
-
-	ok, err := li.relaychainConn.GetAPI().RPC.State.GetStorage(storageKey, &authorities, blockHash)
+	storageKey, err := types.CreateStorageKey(meta, "Beefy", "Authorities", nil, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if !ok {
-		return nil, fmt.Errorf("Beefy authorities not found")
+	storageChangeSet, err := li.relaychainConn.GetAPI().RPC.State.QueryStorage([]types.StorageKey{storageKey}, blockHash, blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	authorities := substrate.Authorities{}
+	for _, storageChange := range storageChangeSet {
+		for _, keyValueOption := range storageChange.Changes {
+
+			err = types.DecodeFromHexString(keyValueOption.StorageData.Hex(), &authorities)
+			if err != nil {
+				return nil, err
+			}
+
+		}
 	}
 
 	// Convert from beefy authorities to ethereum addresses
