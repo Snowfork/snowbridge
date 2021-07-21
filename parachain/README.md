@@ -1,6 +1,6 @@
-# Polkadot Ethereum Parachain <!-- omit in toc -->
-![Check](https://github.com/Snowfork/polkadot-ethereum/workflows/Check/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/Snowfork/polkadot-ethereum/badge.svg)](https://coveralls.io/github/Snowfork/polkadot-ethereum)
+# Snowbridge Parachain <!-- omit in toc -->
+![Check](https://github.com/Snowfork/snowbridge/workflows/Check/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/Snowfork/polkadot-ethereum/badge.svg)](https://coveralls.io/github/Snowfork/snowbridge)
 
 A Polkadot parachain for bridging arbitrary data from and to Ethereum.
 

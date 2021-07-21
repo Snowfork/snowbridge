@@ -1,6 +1,6 @@
 # Snowbridge
 
-A trust-minimized bridge between Polkadot and Ethereum.
+A trustless bridge between Polkadot and Ethereum.
 
 ## Development
 
