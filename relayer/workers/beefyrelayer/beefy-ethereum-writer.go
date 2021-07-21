@@ -103,8 +103,6 @@ func (wr *BeefyEthereumWriter) signerFn(_ common.Address, tx *types.Transaction)
 }
 
 func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
-	wr.log.WithField("modelID", info.ID).Debug("Begin WriteNewSignatureCommitment")
-
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
 		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
@@ -115,10 +113,6 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		return fmt.Errorf("Unknown contract")
 	}
 
-	numberOfValidators := big.NewInt(int64(len(beefyJustification.SignedCommitment.Signatures)))
-
-	wr.log.WithField("NumValidators", numberOfValidators).Debug("Analyzing validator signatures")
-
 	signedValidators := []*big.Int{}
 	for i := range beefyJustification.SignedCommitment.Signatures {
 		// TODO: skip over empty/missing signatures
@@ -127,6 +121,7 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		// }
 	}
 
+	numberOfValidators := big.NewInt(int64(len(beefyJustification.SignedCommitment.Signatures)))
 	initialBitfield, err := contract.CreateInitialBitfield(
 		&bind.CallOpts{Pending: true}, signedValidators, numberOfValidators,
 	)
@@ -202,12 +197,11 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		return fmt.Errorf("Unknown contract")
 	}
 
-	contractID := big.NewInt(int64(info.ContractID))
-	wr.log.WithField("ContractID", contractID).Info("Creating a random validator bitfield")
+	wr.log.WithField("ContractID", big.NewInt(int64(info.ContractID))).Info("Creating a random validator bitfield")
 
 	randomBitfield, err := contract.CreateRandomBitfield(
 		&bind.CallOpts{Pending: true},
-		contractID,
+		big.NewInt(int64(info.ContractID)),
 	)
 	if err != nil {
 		wr.log.WithError(err).Error("Failed to get random validator bitfield")

@@ -127,7 +127,6 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				SerializedLatestMMRProof: serializedProof,
 			}
 			li.beefyMessages <- info
-
 		}
 	}
 }
