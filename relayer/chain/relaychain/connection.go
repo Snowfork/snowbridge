@@ -122,7 +122,15 @@ func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainI
 		return nil, 0, types.Header{}, err
 	}
 
-	keysResponse, err := co.GetAPI().RPC.State.GetKeys(baseParaHeadsStorageKey, blockHash)
+	//TODO fix this manual slice.
+	// The above types.CreateStorageKey does not give the same base key as polkadotjs needs for getKeys.
+	// It has some extra bytes.
+	// maybe from the none u32 in golang being wrong, or maybe slightly off CreateStorageKey call? we slice it
+	// here as a hack.
+	actualBaseParaHeadsStorageKey := baseParaHeadsStorageKey[:32]
+	co.log.WithField("actualBaseParaHeadsStorageKey", actualBaseParaHeadsStorageKey.Hex()).Info("actualBaseParaHeadsStorageKey")
+
+	keysResponse, err := co.GetAPI().RPC.State.GetKeys(actualBaseParaHeadsStorageKey, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to get all parachain keys")
 		return nil, 0, types.Header{}, err
