@@ -9,7 +9,6 @@ const ValidatorRegistry = artifacts.require("ValidatorRegistry");
 const MMRVerification = artifacts.require("MMRVerification");
 const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
-const Blake2b = artifacts.require("Blake2b");
 const BasicInboundChannel = artifacts.require("BasicInboundChannel");
 const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
 const ParachainLightClient = artifacts.require("ParachainLightClient");
@@ -41,10 +40,6 @@ const contracts = {
   beefylightclient: {
     contract: artifacts.require("BeefyLightClient"),
     instance: null
-  },
-  blake2b: {
-    contract: artifacts.require("Blake2b"),
-    instance: null
   }
 }
 
@@ -70,13 +65,11 @@ module.exports = function (deployer, network, accounts) {
     const numValidators = 2;
     const valRegistry = await deployer.deploy(ValidatorRegistry, root, numValidators, 0);
     const mmrVerification = await deployer.deploy(MMRVerification);
-    const blake2b = await deployer.deploy(Blake2b);
 
     contracts.beefylightclient.instance = await deployer.deploy(
       contracts.beefylightclient.contract,
       valRegistry.address,
       mmrVerification.address,
-      blake2b.address,
       0
     );
 

@@ -155,6 +155,7 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		"txHash":                           tx.Hash().Hex(),
 		"msg.CommitmentHash":               "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
 		"msg.ValidatorSignatureCommitment": "0x" + hex.EncodeToString(msg.ValidatorSignatureCommitment),
+		"msg.ValidatorPublicKey":           msg.ValidatorPublicKey.Hex(),
 		"BlockNumber":                      beefyJustification.SignedCommitment.Commitment.BlockNumber,
 	}).Info("New Signature Commitment transaction submitted")
 
