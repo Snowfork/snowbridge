@@ -2,6 +2,7 @@ package beefyrelayer
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -151,7 +152,10 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 	}
 
 	wr.log.WithFields(logrus.Fields{
-		"txHash": tx.Hash().Hex(),
+		"txHash":                           tx.Hash().Hex(),
+		"msg.CommitmentHash":               "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
+		"msg.ValidatorSignatureCommitment": "0x" + hex.EncodeToString(msg.ValidatorSignatureCommitment),
+		"BlockNumber":                      beefyJustification.SignedCommitment.Commitment.BlockNumber,
 	}).Info("New Signature Commitment transaction submitted")
 
 	wr.log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
