@@ -150,7 +150,7 @@ mod tests {
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
-			Dispatch: dispatch::{Pallet, Call, Storage, Origin, Event<T>},
+			Dispatch: dispatch::{Pallet, Storage, Origin, Event<T>},
 		}
 	);
 
@@ -226,7 +226,7 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: Event::dispatch(crate::Event::<Test>::MessageDispatched(id, Err(DispatchError::BadOrigin))),
+					event: Event::Dispatch(crate::Event::<Test>::MessageDispatched(id, Err(DispatchError::BadOrigin))),
 					topics: vec![],
 				}],
 			);
@@ -248,7 +248,7 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: Event::dispatch(crate::Event::<Test>::MessageDecodeFailed(id)),
+					event: Event::Dispatch(crate::Event::<Test>::MessageDecodeFailed(id)),
 					topics: vec![],
 				}],
 			);
@@ -270,7 +270,7 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: Event::dispatch(crate::Event::<Test>::MessageRejected(id)),
+					event: Event::Dispatch(crate::Event::<Test>::MessageRejected(id)),
 					topics: vec![],
 				}],
 			);

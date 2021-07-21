@@ -1,4 +1,4 @@
-use crate::mock::{self, new_tester, System, AccountId, Origin, ERC721App, NftApp};
+use crate::mock::{self, new_tester, System, AccountId, Origin, Erc721App, NftApp};
 use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
@@ -21,7 +21,7 @@ fn mints_after_handling_ethereum_event() {
 		let sender = H160::repeat_byte(3);
 		let recipient: AccountId = Keyring::Bob.into();
 
-		assert_ok!(ERC721App::mint(
+		assert_ok!(Erc721App::mint(
 			artemis_dispatch::Origin(peer_contract).into(),
 			sender,
 			recipient.clone(),
@@ -32,7 +32,7 @@ fn mints_after_handling_ethereum_event() {
 		assert!(NftApp::is_owner(&recipient, 0));
 
 		assert_eq!(
-			mock::Event::erc721_app(Event::Minted(token_contract, token_id, sender, recipient)),
+			mock::Event::Erc721App(Event::Minted(token_contract, token_id, sender, recipient)),
 			last_event()
 		);
 	});
@@ -53,14 +53,14 @@ fn burn_should_emit_bridge_event() {
 
 		NftApp::mint(&bob, Vec::<u8>::new(), data).unwrap();
 
-		assert_ok!(ERC721App::burn(
+		assert_ok!(Erc721App::burn(
 			Origin::signed(bob.clone()),
 			ChannelId::Incentivized,
 			token,
 			recipient.clone()));
 
 		assert_eq!(
-			mock::Event::erc721_app(Event::Burned(token_contract, token_id, bob, recipient)),
+			mock::Event::Erc721App(Event::Burned(token_contract, token_id, bob, recipient)),
 			last_event()
 		);
 	});
@@ -81,7 +81,7 @@ fn should_not_burn_on_commitment_failure() {
 		NftApp::mint(&sender, vec![0,1,2], data).unwrap();
 
 		assert_noop!(
-			ERC721App::burn(
+			Erc721App::burn(
 				Origin::signed(sender.clone()),
 				ChannelId::Basic,
 				token_id,

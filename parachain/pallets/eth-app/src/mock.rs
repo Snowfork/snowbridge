@@ -30,7 +30,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Assets: artemis_assets::{Pallet, Call, Storage, Event<T>},
 		Dispatch: artemis_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
-		ETHApp: eth_app::{Pallet, Call, Config, Storage, Event<T>},
+		EthApp: eth_app::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
 

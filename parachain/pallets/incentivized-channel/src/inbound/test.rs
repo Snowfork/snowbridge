@@ -77,6 +77,7 @@ impl system::Config for Test {
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 1;
 	pub const MaxLocks: u32 = 50;
+	pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Test {
@@ -89,6 +90,8 @@ impl pallet_balances::Config for Test {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = [u8; 8];
 }
 
 // Mock verifier
