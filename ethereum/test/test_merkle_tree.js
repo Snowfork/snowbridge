@@ -15,58 +15,7 @@ const { expect } = require("chai");
 describe("Merkle Proof", function () {
 
   beforeEach(async function () {
-    const merkleProof = await MerkleProof.new();
-  });
-
-  it("should_generate_single_root", async function () {
-    const leafData = ['0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b'];
-
-    const tree = createMerkleTree(leafData);
-    const root = tree.getHexRoot();
-
-    expect(root).to.be.equal('0xaeb47a269393297f4b0a3c9c9cfd00c7a4195255274cf39d83dabc2fcc9ff3d7');
-  });
-
-  it("should_generate_root_pow_2", async function () {
-    const leafData = [
-      '0xE04CC55ebEE1cBCE552f250e85c57B70B2E2625b',
-      '0x25451A4de12dcCc2D166922fA938E900fCc4ED24'
-    ];
-
-    const tree = createMerkleTree(leafData);
-    const root = tree.getHexRoot();
-
-    expect(root).to.be.equal('0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402');
-  });
-
-  it.skip("should_generate_root_complex", async function () {
-
-    const test = (root, leaves) => {
-      const tree = createMerkleTree(leaves);
-      const root2 = tree.getHexRoot();
-
-      expect(root).to.be.equal(root2);
-    }
-
-    test(
-      "0xaff1208e69c9e8be9b584b07ebac4e48a1ee9d15ce3afe20b77a4d29e4175aa3",
-      ["0xa", "0xb", "0xc"],
-    );
-
-    test(
-      "0xb8912f7269068901f231a965adfefbc10f0eedcfa61852b103efd54dac7db3d7",
-      ["0xa", "0xb", "0xa"],
-    );
-
-    test(
-      "0xdc8e73fe6903148ff5079baecc043983625c23b39f31537e322cd0deee09fa9c",
-      ["0xa", "0xb", "0xa", "0xb"],
-    );
-
-    test(
-      "0xfb3b3be94be9e983ba5e094c9c51a7d96a4fa2e5d8e891df00ca89ba05bb1239",
-      ["0xa", "0xb", "0xc", "0xd", "0xe", "0xf", "0xg", "0xh", "0xi", "0xj"],
-    );
+    this.merkleProof = await MerkleProof.new();
   });
 
   it("should_generate_and_verify_proof_on_test_data", async function () {
@@ -80,13 +29,8 @@ describe("Merkle Proof", function () {
       const hashedLeaf = keccakFromHexString(leaf);
       const hashedLeafHex = '0x' + hashedLeaf.toString('hex')
       const proof = tree.getHexProof(hashedLeafHex)
-      // expect(proof[proof.length - 1]).to.be.equal(root);
-      // expect(proof[0]).to.be.equal(leaf);
 
-      console.log({ proof, leaf, hashedLeafHex, root });
-      expect(tree.verify(proof, hashedLeaf, root)).to.be.equal(true)
-
-      const solidityRoot = await merkleProof.computeRootFromProofAtPosition(
+      const solidityRoot = await this.merkleProof.computeRootFromProofAtPosition(
         hashedLeafHex,
         i,
         leaves.length,
@@ -96,8 +40,10 @@ describe("Merkle Proof", function () {
       expect(solidityRoot).to.be.equal(expectedRoot);
     }
 
-    const lastProof = tree.getHexProof(leaves[leaves.length - 1])
-    expect(lastProof).to.be.equal([
+    const lastLeaf = keccakFromHexString(leaves[leaves.length - 1])
+    const lastProof = tree.getHexProof(lastLeaf)
+
+    expect(lastProof).to.deep.equal([
       "0x340bcb1d49b2d82802ddbcf5b85043edb3427b65d09d7f758fbc76932ad2da2f",
       "0xba0580e5bd530bc93d61276df7969fb5b4ae8f1864b4a28c280249575198ff1f",
       "0xd02609d2bbdb28aa25f58b85afec937d5a4c85d37925bce6d0cf802f9d76ba79",
