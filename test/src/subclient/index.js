@@ -74,7 +74,7 @@ class SubClient {
 
 
   async queryNFTTokenIdByERC721Id(ethTokenContract, ethTokenId) {
-    let subTokenId = await this.api.query.erc721.tokensByERC721Id([ethTokenContract, ethTokenId]);
+    let subTokenId = await this.api.query.erc721App.tokensByERC721Id([ethTokenContract, ethTokenId]);
     return subTokenId
   }
 
@@ -83,7 +83,7 @@ class SubClient {
 
     // Setup our subscription and resolve each promise one by one
     let count = 0;
-    const unsubscribe = await this.api.query.erc721.tokensByERC721Id([ethTokenContract, ethTokenId], newSubTokenId => {
+    const unsubscribe = await this.api.query.erc721App.tokensByERC721Id([ethTokenContract, ethTokenId], newSubTokenId => {
       resolvers[count](newSubTokenId);
       count++;
       if (count === length) {
@@ -140,19 +140,19 @@ class SubClient {
   }
 
   async burnETH(account, recipient, amount, channelId) {
-    return await this.api.tx.eth.burn(channelId, recipient, amount).signAndSend(account);
+    return await this.api.tx.ethApp.burn(channelId, recipient, amount).signAndSend(account);
   }
 
   async burnERC20(account, assetId, recipient, amount, channelId) {
-    return await this.api.tx.erc20.burn(channelId, assetId, recipient, amount).signAndSend(account);
+    return await this.api.tx.erc20App.burn(channelId, assetId, recipient, amount).signAndSend(account);
   }
 
   async burnERC721(account, subTokenId, recipient, channelId) {
-    return await this.api.tx.erc721.burn(channelId, subTokenId, recipient).signAndSend(account);
+    return await this.api.tx.erc721App.burn(channelId, subTokenId, recipient).signAndSend(account);
   }
 
   async lockDOT(account, recipient, amount, channelId) {
-    return await this.api.tx.dot.lock(channelId, recipient, amount).signAndSend(account);
+    return await this.api.tx.dotApp.lock(channelId, recipient, amount).signAndSend(account);
   }
 
   async waitForNextBlock() {

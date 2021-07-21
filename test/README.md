@@ -38,7 +38,7 @@ yarn install
 Install `polkadot-launch`:
 
 ```bash
-yarn global add polkadot-launch@1.6.1
+yarn global add polkadot-launch
 ```
 
 Build polkadot:
