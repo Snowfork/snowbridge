@@ -489,11 +489,8 @@ impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
 
 pub struct CallFilter;
 impl Filter<Call> for CallFilter {
-	fn filter(call: &Call) -> bool {
-		match call {
-			Call::ETH(_) | Call::ERC20(_) | Call::ERC721(_) | Call::DOT(_) => true,
-			_ => false,
-		}
+	fn filter(_: &Call) -> bool {
+		true
 	}
 }
 
@@ -652,7 +649,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
-		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 5,
+		Utility: pallet_utility::{Pallet, Call, Event} = 5,
 
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>} = 7,
@@ -685,10 +682,10 @@ construct_runtime!(
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating
 		//   the peer apps (smart contracts) on the Ethereum side.
-		DOT: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
-		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
-		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
-		ERC721: erc721_app::{Pallet, Call, Config, Storage, Event<T>} = 67,
+		DotApp: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
+		EthApp: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
+		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
+		Erc721App: erc721_app::{Pallet, Call, Config, Storage, Event<T>} = 67,
 	}
 );
 
@@ -872,7 +869,6 @@ impl_runtime_apis! {
 		}
 	}
 }
-
 struct CheckInherents;
 
 impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
