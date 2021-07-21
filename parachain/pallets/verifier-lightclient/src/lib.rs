@@ -29,13 +29,13 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use codec::{Encode, Decode};
 
-use artemis_core::{Message, Verifier, Proof};
-use artemis_ethereum::{
+use snowbridge_core::{Message, Verifier, Proof};
+use snowbridge_ethereum::{
 	HeaderId as EthereumHeaderId, Log, Receipt, H256, U256,
 	difficulty::calc_difficulty,
 	ethashproof::{DoubleNodeWithMerkleProof as EthashProofData, EthashProver},
 };
-pub use artemis_ethereum::{
+pub use snowbridge_ethereum::{
 	Header as EthereumHeader, difficulty::DifficultyConfig as EthereumDifficultyConfig,
 };
 

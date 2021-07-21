@@ -3,7 +3,7 @@ use sp_std::prelude::*;
 use codec::Encode;
 
 use ethabi::{self, Token};
-use artemis_ethereum::{H160, U256};
+use snowbridge_ethereum::{H160, U256};
 
 // Message to Ethereum (ABI-encoded)
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]

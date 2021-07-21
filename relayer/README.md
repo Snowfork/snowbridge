@@ -66,7 +66,7 @@ go generate ./...
 
 ## Configuration
 
-Before running the relayer, it needs to be configured first. By default the configuration file is read from  `~/.config/artemis-relay/config.toml`, but this can be overriden by passing the `--config PATH` flag to the relayer binary.
+Before running the relayer, it needs to be configured first. By default the configuration file is read from  `~/.config/snowbridge-relay/config.toml`, but this can be overriden by passing the `--config PATH` flag to the relayer binary.
 
 Example Configuration:
 
@@ -121,7 +121,7 @@ mage build
 Run the relayer with the configuration described in [Configuration](#configuration).
 
 ```bash
-build/artemis-relay run --config config.toml
+build/snowbridge-relay run --config config.toml
 ```
 
 NOTE: On its first run, the relayer has to perform some initial computation relating to Ethereum PoW verification. This can take over 10 minutes to complete, and is not a sign that its stuck or frozen.

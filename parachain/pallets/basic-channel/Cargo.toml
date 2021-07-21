@@ -1,6 +1,6 @@
 [package]
-name = "artemis-basic-channel"
-description = "Artemis Basic Channel"
+name = "snowbridge-basic-channel"
+description = "Snowbridge Basic Channel"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
@@ -23,8 +23,8 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkad
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
 
-artemis-core = { path = "../../primitives/core", default-features = false }
-artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
+snowbridge-core = { path = "../../primitives/core", default-features = false }
+snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
@@ -44,12 +44,12 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     "sp-io/std",
-    "artemis-core/std",
-    "artemis-ethereum/std",
+    "snowbridge-core/std",
+    "snowbridge-ethereum/std",
     "ethabi/std"
 ]
 runtime-benchmarks = [
-    "artemis-core/runtime-benchmarks",
+    "snowbridge-core/runtime-benchmarks",
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",

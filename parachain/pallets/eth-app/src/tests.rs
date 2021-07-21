@@ -4,7 +4,7 @@ use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
 use crate::RawEvent;
 
-use artemis_core::{SingleAsset, ChannelId};
+use snowbridge_core::{SingleAsset, ChannelId};
 
 fn last_event() -> Event {
 	System::events().pop().expect("Event expected").event
@@ -19,7 +19,7 @@ fn mints_after_handling_ethereum_event() {
 		let amount = 10;
 		assert_ok!(
 			EthApp::mint(
-				artemis_dispatch::Origin(peer_contract).into(),
+				snowbridge_dispatch::Origin(peer_contract).into(),
 				sender,
 				recipient.clone(),
 				amount.into()

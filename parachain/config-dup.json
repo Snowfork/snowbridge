@@ -34,7 +34,7 @@
 	},
 	"parachains": [
 		{
-			"bin": "target/release/artemis",
+			"bin": "target/release/snowbridge",
 			"id": "200",
 			"wsPort": 9966,
 			"port": 30666,
@@ -48,7 +48,7 @@
 			]
 		},
 		{
-			"bin": "target/release/artemis",
+			"bin": "target/release/snowbridge",
 			"id": "201",
 			"wsPort": 9967,
 			"port": 30667,

@@ -2,7 +2,7 @@ use crate::mock::{new_tester, AccountId, Assets, Test};
 use frame_support::{assert_ok, assert_noop};
 use sp_keyring::AccountKeyring as Keyring;
 use crate::{Balances, TotalIssuance};
-use artemis_core::{AssetId, MultiAsset};
+use snowbridge_core::{AssetId, MultiAsset};
 
 use super::*;
 

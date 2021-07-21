@@ -12,8 +12,8 @@ use sp_runtime::{
 use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
 
-use artemis_core::{AssetId, SingleAsset};
-use artemis_assets::{SingleAssetAdaptor};
+use snowbridge_core::{AssetId, SingleAsset};
+use snowbridge_assets::{SingleAssetAdaptor};
 
 use crate::outbound as incentivized_outbound_channel;
 
@@ -27,7 +27,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Assets: artemis_assets::{Pallet, Call, Storage, Event<T>},
+		Assets: snowbridge_assets::{Pallet, Call, Storage, Event<T>},
 		IncentivizedOutboundChannel: incentivized_outbound_channel::{Pallet, Call, Storage, Event},
 	}
 );
@@ -65,7 +65,7 @@ impl system::Config for Test {
 	type OnSetCode = ();
 }
 
-impl artemis_assets::Config for Test {
+impl snowbridge_assets::Config for Test {
 	type Event = Event;
 	type WeightInfo = ();
 }

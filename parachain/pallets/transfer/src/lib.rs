@@ -17,7 +17,7 @@ use cumulus_primitives_core::{relay_chain::Balance as RelayChainBalance, ParaId}
 use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm};
 use xcm_executor::traits::Convert as XcmConvert;
 
-use artemis_core::AssetId;
+use snowbridge_core::AssetId;
 
 pub trait Config: frame_system::Config {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;

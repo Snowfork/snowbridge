@@ -8,7 +8,7 @@ use frame_support::{assert_noop, assert_ok,
 };
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
-use artemis_core::ChannelId;
+use snowbridge_core::ChannelId;
 
 fn last_event() -> Event {
 	System::events().pop().expect("Event expected").event
@@ -53,7 +53,7 @@ fn should_unlock() {
 
 		assert_ok!(
 			DotApp::unlock(
-				artemis_dispatch::Origin(peer_contract).into(),
+				snowbridge_dispatch::Origin(peer_contract).into(),
 				sender,
 				recipient.clone(),
 				amount_wrapped,
@@ -83,7 +83,7 @@ fn should_not_unlock_on_bad_origin_failure() {
 
 		assert_noop!(
 			DotApp::unlock(
-				artemis_dispatch::Origin(unknown_peer_contract).into(),
+				snowbridge_dispatch::Origin(unknown_peer_contract).into(),
 				sender,
 				recipient.clone(),
 				amount_wrapped,
