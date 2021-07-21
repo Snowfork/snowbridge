@@ -112,7 +112,7 @@ function signatureSubstrateToEthereum(sig) {
 function createMerkleTree(values) {
   const leaves = values.map(value => keccakFromHexString(value));
   const merkleTree = new MerkleTree(leaves, keccak, {
-    sortLeaves: true,
+    sortLeaves: false,
     sortPairs: false
   });
   return merkleTree;
