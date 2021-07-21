@@ -75,8 +75,8 @@ describe("Merkle Proof", function () {
     const root = tree.getHexRoot();
     expect(root).to.be.equal(expectedRoot);
 
-
-    leaves.forEach(leaf => {
+    for (let i = 0; i < leaves.length; i++) {
+      const leaf = leaves[i];
       const hashedLeaf = keccakFromHexString(leaf);
       const hashedLeafHex = '0x' + hashedLeaf.toString('hex')
       const proof = tree.getHexProof(hashedLeafHex)
@@ -86,7 +86,15 @@ describe("Merkle Proof", function () {
       console.log({ proof, leaf, hashedLeafHex, root });
       expect(tree.verify(proof, hashedLeaf, root)).to.be.equal(true)
 
-    })
+      const solidityRoot = await merkleProof.computeRootFromProofAtPosition(
+        hashedLeafHex,
+        i,
+        leaves.length,
+        proof
+      );
+
+      expect(solidityRoot).to.be.equal(expectedRoot);
+    }
 
     const lastProof = tree.getHexProof(leaves[leaves.length - 1])
     expect(lastProof).to.be.equal([
