@@ -24,15 +24,15 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkad
 sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
 
-artemis-core = { path = "../../primitives/core", default-features = false }
-artemis-ethereum = { path = "../../primitives/ethereum", default-features = false }
+snowbridge-core = { path = "../../primitives/core", default-features = false }
+snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 
 ethash = { git = "https://github.com/snowfork/ethash.git", branch = "master", default-features = false }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8" }
 hex-literal = { version = "0.3.1" }
-artemis-testutils = { path = "../../primitives/testutils" }
+snowbridge-testutils = { path = "../../primitives/testutils" }
 serde_json = "1.0"
 
 [features]
@@ -48,8 +48,8 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
-    "artemis-core/std",
-    "artemis-ethereum/std",
+    "snowbridge-core/std",
+    "snowbridge-ethereum/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking",

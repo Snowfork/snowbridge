@@ -1,5 +1,5 @@
 [package]
-name = "artemis-rococo-runtime"
+name = "snowbridge-rococo-runtime"
 description = "Artemis Rococo Runtime"
 version = "0.1.1"
 edition = "2018"
@@ -59,19 +59,19 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "r
 xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.8", default-features = false }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.8", default-features = false }
 
-artemis-core = { path = "../../primitives/core", default-features = false }
-artemis-xcm-support = { path = "../../primitives/xcm-support", default-features = false }
-basic-channel = { path = "../../pallets/basic-channel", package = "artemis-basic-channel", default-features = false }
-incentivized-channel = { path = "../../pallets/incentivized-channel", package = "artemis-incentivized-channel", default-features = false }
-dispatch = { path = "../../pallets/dispatch", package = "artemis-dispatch", default-features = false }
+snowbridge-core = { path = "../../primitives/core", default-features = false }
+snowbridge-xcm-support = { path = "../../primitives/xcm-support", default-features = false }
+basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-basic-channel", default-features = false }
+incentivized-channel = { path = "../../pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }
+dispatch = { path = "../../pallets/dispatch", package = "snowbridge-dispatch", default-features = false }
 verifier-lightclient = { path = "../../pallets/verifier-lightclient", package = "pallet-verifier-lightclient", default-features = false }
-assets = { path = "../../pallets/assets", package = "artemis-assets", default-features = false }
-nft = { path = "../../pallets/nft", package = "artemis-nft", default-features = false }
-dot-app = { path = "../../pallets/dot-app", package = "artemis-dot-app", default-features = false }
-eth-app = { path = "../../pallets/eth-app", package = "artemis-eth-app", default-features = false }
-erc20-app = { path = "../../pallets/erc20-app", package = "artemis-erc20-app", default-features = false }
-erc721-app = { path = "../../pallets/erc721-app", package = "artemis-erc721-app", default-features = false }
-runtime-common = { path = "../common", package = "artemis-runtime-common", default-features = false }
+assets = { path = "../../pallets/assets", package = "snowbridge-assets", default-features = false }
+nft = { path = "../../pallets/nft", package = "snowbridge-nft", default-features = false }
+dot-app = { path = "../../pallets/dot-app", package = "snowbridge-dot-app", default-features = false }
+eth-app = { path = "../../pallets/eth-app", package = "snowbridge-eth-app", default-features = false }
+erc20-app = { path = "../../pallets/erc20-app", package = "snowbridge-erc20-app", default-features = false }
+erc721-app = { path = "../../pallets/erc721-app", package = "snowbridge-erc721-app", default-features = false }
+runtime-common = { path = "../common", package = "snowbridge-runtime-common", default-features = false }
 
 # Used for runtime benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false, optional = true }
@@ -133,7 +133,7 @@ std = [
     "eth-app/std",
     "erc20-app/std",
     "erc721-app/std",
-    "artemis-xcm-support/std",
+    "snowbridge-xcm-support/std",
     "runtime-common/std",
 ]
 runtime-benchmarks = [
@@ -150,7 +150,7 @@ runtime-benchmarks = [
     "pallet-utility/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
     # Artemis pallets & support
-    "artemis-core/runtime-benchmarks",
+    "snowbridge-core/runtime-benchmarks",
     "assets/runtime-benchmarks",
     "basic-channel/runtime-benchmarks",
     "dot-app/runtime-benchmarks",

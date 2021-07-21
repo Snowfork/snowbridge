@@ -3,13 +3,13 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 3.0.0
 //! DATE: 2021-05-08, STEPS: `[50, ]`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("/tmp/artemis-benchmark-tce/spec.json"), DB CACHE: 128
+//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("/tmp/snowbridge-benchmark-tce/spec.json"), DB CACHE: 128
 
 // Executed Command:
-// target/release/artemis
+// target/release/snowbridge
 // benchmark
 // --chain
-// /tmp/artemis-benchmark-tce/spec.json
+// /tmp/snowbridge-benchmark-tce/spec.json
 // --execution
 // wasm
 // --wasm-execution

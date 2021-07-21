@@ -14,7 +14,7 @@ use sp_runtime::{
     MultiSignature,
 };
 
-use artemis_core::{ChannelId, OutboundRouter};
+use snowbridge_core::{ChannelId, OutboundRouter};
 
 use crate as dot_app;
 
@@ -29,7 +29,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-        Dispatch: artemis_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
+        Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
         DotApp: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>},
     }
 );
@@ -70,7 +70,7 @@ impl system::Config for Test {
     type OnSetCode = ();
 }
 
-impl artemis_dispatch::Config for Test {
+impl snowbridge_dispatch::Config for Test {
     type Origin = Origin;
     type Event = Event;
     type MessageId = u64;
@@ -118,7 +118,7 @@ impl dot_app::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type OutboundRouter = MockOutboundRouter<Self::AccountId>;
-    type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
+    type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
     type PalletId = DotPalletId;
     type Decimals = Decimals;
     type WeightInfo = ();

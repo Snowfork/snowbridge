@@ -48,7 +48,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 
-pub use artemis_core::{AssetId, ChannelId, MessageId, ERC721TokenData};
+pub use snowbridge_core::{AssetId, ChannelId, MessageId, ERC721TokenData};
 use dispatch::EnsureEthereumAccount;
 
 pub use verifier_lightclient::{EthereumDifficultyConfig, EthereumHeader};
@@ -65,7 +65,7 @@ use xcm_builder::{
 use xcm_executor::{Config, XcmExecutor};
 use pallet_xcm::XcmPassthrough;
 
-use artemis_xcm_support::AssetsTransactor;
+use snowbridge_xcm_support::AssetsTransactor;
 use assets::SingleAssetAdaptor;
 
 use runtime_common::{

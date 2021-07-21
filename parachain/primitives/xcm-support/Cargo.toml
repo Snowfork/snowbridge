@@ -1,5 +1,5 @@
 [package]
-name = "artemis-xcm-support"
+name = "snowbridge-xcm-support"
 version = "0.1.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
@@ -16,7 +16,7 @@ xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.8", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.8", default-features = false }
 
-artemis-core = { path = "../../primitives/core", default-features = false }
+snowbridge-core = { path = "../../primitives/core", default-features = false }
 
 [features]
 default = ["std"]
@@ -28,5 +28,5 @@ std = [
         "xcm/std",
         "xcm-executor/std",
         "xcm-builder/std",
-        "artemis-core/std"
+        "snowbridge-core/std"
 ]

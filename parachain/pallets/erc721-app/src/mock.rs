@@ -14,7 +14,7 @@ use sp_runtime::{
 	}, testing::Header, MultiSignature,
 };
 
-use artemis_core::{ChannelId, OutboundRouter, nft::ERC721TokenData};
+use snowbridge_core::{ChannelId, OutboundRouter, nft::ERC721TokenData};
 
 use crate as erc721_app;
 
@@ -28,8 +28,8 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Dispatch: artemis_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
-		NftApp: artemis_nft::{Pallet, Call, Config<T>, Storage},
+		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
+		NftApp: snowbridge_nft::{Pallet, Call, Config<T>, Storage},
 		Erc721App: erc721_app::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
@@ -69,12 +69,12 @@ impl frame_system::Config for Test {
 }
 
 
-impl artemis_nft::Config for Test {
+impl snowbridge_nft::Config for Test {
 	type TokenId = u64;
 	type TokenData = ERC721TokenData;
 }
 
-impl artemis_dispatch::Config for Test {
+impl snowbridge_dispatch::Config for Test {
 	type Origin = Origin;
 	type Event = Event;
 	type MessageId = u64;
@@ -96,9 +96,9 @@ impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
 impl erc721_app::Config for Test {
 	type Event = Event;
 	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
-	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
+	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
 	type WeightInfo = ();
-	type TokenId = <Test as artemis_nft::Config>::TokenId;
+	type TokenId = <Test as snowbridge_nft::Config>::TokenId;
 	type Nft = NftApp;
 }
 

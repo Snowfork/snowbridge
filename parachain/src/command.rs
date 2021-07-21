@@ -113,7 +113,7 @@ impl SubstrateCli for RelayChainCli {
 		"Cumulus test parachain collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relaychain node.\n\n\
-		artemis-collator [parachain-args] -- [relaychain-args]"
+		snowbridge-collator [parachain-args] -- [relaychain-args]"
 			.into()
 	}
 

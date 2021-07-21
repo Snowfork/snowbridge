@@ -28,7 +28,7 @@ use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 use sp_core::{H160, U256};
 
-use artemis_core::{ChannelId, SingleAsset, OutboundRouter};
+use snowbridge_core::{ChannelId, SingleAsset, OutboundRouter};
 
 mod payload;
 use payload::OutboundPayload;

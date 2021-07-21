@@ -2,7 +2,7 @@ use crate::mock::{new_tester, Event, System, AccountId, Origin, Assets, Erc20App
 use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
-use artemis_core::{ChannelId, AssetId, MultiAsset};
+use snowbridge_core::{ChannelId, AssetId, MultiAsset};
 
 use crate::RawEvent;
 
@@ -20,7 +20,7 @@ fn mints_after_handling_ethereum_event() {
 		let amount = 10;
 		assert_ok!(
 			Erc20App::mint(
-				artemis_dispatch::Origin(peer_contract).into(),
+				snowbridge_dispatch::Origin(peer_contract).into(),
 				token,
 				sender,
 				recipient.clone(),

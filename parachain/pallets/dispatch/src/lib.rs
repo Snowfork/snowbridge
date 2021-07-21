@@ -13,7 +13,7 @@ use frame_system::{self as system};
 use sp_core::H160;
 use sp_std::prelude::*;
 
-use artemis_core::MessageDispatch;
+use snowbridge_core::MessageDispatch;
 
 use codec::{Encode, Decode};
 

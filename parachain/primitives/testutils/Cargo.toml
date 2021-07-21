@@ -1,5 +1,5 @@
 [package]
-name = "artemis-testutils"
+name = "snowbridge-testutils"
 version = "0.1.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"

@@ -24,7 +24,7 @@ use frame_support::{
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 
-use artemis_core::{ChannelId, OutboundRouter};
+use snowbridge_core::{ChannelId, OutboundRouter};
 use sp_core::{H160, U256};
 use sp_runtime::traits::{AccountIdConversion, StaticLookup};
 use sp_std::prelude::*;

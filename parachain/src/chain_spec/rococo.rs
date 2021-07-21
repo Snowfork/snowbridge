@@ -12,7 +12,7 @@ use super::{get_from_seed, Extensions};
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
-use artemis_core::AssetId;
+use snowbridge_core::AssetId;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -30,7 +30,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 	props.insert("tokenDecimals".into(), 12.into());
 
 	ChainSpec::from_genesis(
-		"Artemis Local Testnet",
+		"Snowbridge Local Testnet",
 		"local_testnet",
 		ChainType::Local,
 		move || {

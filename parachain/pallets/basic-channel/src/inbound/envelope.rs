@@ -1,5 +1,5 @@
 use ethabi::{Event, Param, ParamKind, Token};
-use artemis_ethereum::{log::Log, H160};
+use snowbridge_ethereum::{log::Log, H160};
 
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;

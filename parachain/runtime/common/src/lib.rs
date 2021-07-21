@@ -11,7 +11,7 @@ use sp_runtime::Perbill;
 use sp_std::marker::PhantomData;
 use sp_core::H160;
 
-use artemis_core::{AssetId, ChannelId};
+use snowbridge_core::{AssetId, ChannelId};
 
 // This function replicates BlockWeights::with_sensible_defaults but uses custom
 // base block and extrinsic weights.
@@ -44,7 +44,7 @@ pub fn build_block_weights(
 pub const INDEXING_PREFIX: &'static [u8] = b"commitment";
 pub struct OutboundRouter<T>(PhantomData<T>);
 
-impl<T> artemis_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
+impl<T> snowbridge_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
 where
 	T: basic_channel::outbound::Config + incentivized_channel::outbound::Config
 {

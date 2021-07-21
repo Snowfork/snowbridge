@@ -15,7 +15,7 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 
-use artemis_core::{ChannelId, MessageNonce, types::AuxiliaryDigestItem};
+use snowbridge_core::{ChannelId, MessageNonce, types::AuxiliaryDigestItem};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;

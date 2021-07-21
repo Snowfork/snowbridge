@@ -31,7 +31,7 @@ func fetchMessagesCmd() *cobra.Command {
 		Use:     "fetch-messages",
 		Short:   "Retrieve the messages specified by block and index",
 		Args:    cobra.ExactArgs(0),
-		Example: "artemis-relay fetch-messages -b 812e7d414071648252bb3c2dc9c6d2f292fb615634606f9251191c7372eb4acc -i 123",
+		Example: "snowbridge-relay fetch-messages -b 812e7d414071648252bb3c2dc9c6d2f292fb615634606f9251191c7372eb4acc -i 123",
 		RunE:    FetchMessagesFn,
 	}
 	cmd.Flags().StringP("block", "b", "", "Block hash")

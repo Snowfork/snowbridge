@@ -12,7 +12,7 @@ use xcm::v0::{Error as XcmError, Junction, MultiAsset, MultiLocation, Result as 
 
 use xcm_executor::traits::{Convert, TransactAsset};
 
-use artemis_core::assets::{AssetId, MultiAsset as ArtemisMultiAsset};
+use snowbridge_core::assets::{AssetId, MultiAsset as ArtemisMultiAsset};
 
 use codec::Decode;
 

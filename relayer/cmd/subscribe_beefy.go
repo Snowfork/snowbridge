@@ -21,7 +21,7 @@ func subBeefyCmd() *cobra.Command {
 		Use:     "sub-beefy",
 		Short:   "Subscribe beefy messages",
 		Args:    cobra.ExactArgs(0),
-		Example: "artemis-relay sub-beefy",
+		Example: "snowbridge-relay sub-beefy",
 		RunE:    SubBeefyFn,
 	}
 	cmd.Flags().UintP(

@@ -7,7 +7,7 @@ rm -rf $configdir
 mkdir $configdir
 
 # kill all potentially old processes
-kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/artemis | awk '{print $2}') || true
+kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
 
 start_ganache()
 {
@@ -65,12 +65,12 @@ start_polkadot_launch()
 {
     echo "Building parachain and starting polkadot launch"
     pushd ../parachain
-    bin=$(pwd)/target/release/artemis
+    bin=$(pwd)/target/release/snowbridge
 
     cargo build --release --no-default-features --features with-local-runtime
 
     echo "Generating Parachain spec"
-    target/release/artemis build-spec --disable-default-bootnode > $configdir/spec.json
+    target/release/snowbridge build-spec --disable-default-bootnode > $configdir/spec.json
 
     echo "Inserting Ganache chain info into genesis spec"
     ethereum_initial_header=$(curl http://localhost:8545 \
@@ -99,7 +99,7 @@ start_polkadot_launch()
     if [ $# -eq 1 ] && [ $1 = "duplicate" ];
     then
         echo "Generating second parachain spec"
-        target/release/artemis build-spec --disable-default-bootnode > $configdir/spec2.json
+        target/release/snowbridge build-spec --disable-default-bootnode > $configdir/spec2.json
 
         node ../test/scripts/helpers/overrideParachainSpec.js $configdir/spec2.json \
             genesis.runtime.verifierLightclient.initialDifficulty 0x0 \
@@ -141,7 +141,7 @@ start_relayer()
     export SNOWBRIDGE_PARACHAIN_KEY="//Relay"
     export SNOWBRIDGE_RELAYCHAIN_KEY="//Alice"
 
-    build/artemis-relay run --config $configdir/config.toml >$logfile 2>&1 &
+    build/snowbridge-relay run --config $configdir/config.toml >$logfile 2>&1 &
 
     popd
     echo "Relay PID: $!"
@@ -150,7 +150,7 @@ start_relayer()
 
 cleanup() {
     kill $(jobs -p)
-    kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/artemis | awk '{print $2}') || true
+    kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
 }
 
 trap cleanup SIGINT SIGTERM EXIT

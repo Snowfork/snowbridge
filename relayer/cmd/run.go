@@ -14,7 +14,7 @@ func runCmd() *cobra.Command {
 		Use:     "run",
 		Short:   "Start the relay service",
 		Args:    cobra.ExactArgs(0),
-		Example: "artemis-relay run",
+		Example: "snowbridge-relay run",
 		RunE:    RunFn,
 	}
 	return cmd

@@ -81,7 +81,7 @@ To get a newly finalized Ethereum block in a format compatible with Substrate's 
 ```bash
 cd ../relayer
 # Alternatively, use '--format rust' to get the Rust code
-build/artemis-relay getblock --config /tmp/relay-config.toml --format json
+build/snowbridge-relay getblock --config /tmp/relay-config.toml --format json
 ```
 
 Insert the output of the `getblock` command in the `initial_header` field in the `verifier_lightclient` section of the chain spec.
@@ -97,7 +97,7 @@ To change the config to use your own addresses, follow these steps:
 Generate a development chain-spec:
 
 ```bash
-target/debug/artemis-node build-spec --dev > spec.json
+target/debug/snowbridge-node build-spec --dev > spec.json
 ```
 
 Edit the generated spec file and replace the following addresses:

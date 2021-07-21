@@ -12,7 +12,7 @@ func Build() {
 }
 
 func BuildMain() error {
-	return sh.Run("go", "build", "-o", "build/artemis-relay", "main.go")
+	return sh.Run("go", "build", "-o", "build/snowbridge-relay", "main.go")
 }
 
 func Test() error {
@@ -24,7 +24,7 @@ func Lint() error {
 }
 
 func Install() error {
-	return sh.Run("go", "build", "-o", "$GOPATH/bin/artemis-relay", "main.go")
+	return sh.Run("go", "build", "-o", "$GOPATH/bin/snowbridge-relay", "main.go")
 }
 
 func SubBeef() error {
