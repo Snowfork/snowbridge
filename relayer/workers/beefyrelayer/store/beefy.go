@@ -9,7 +9,6 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
 	merkletree "github.com/wealdtech/go-merkletree"
-	"golang.org/x/crypto/blake2b"
 )
 
 type NewSignatureCommitmentMessage struct {
@@ -45,7 +44,10 @@ func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment
 }
 
 func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int64, initialBitfield []*big.Int) (NewSignatureCommitmentMessage, error) {
-	commitmentHash := blake2b.Sum256(b.SignedCommitment.Commitment.Bytes())
+	commitmentHash := (&Keccak256{}).Hash(b.SignedCommitment.Commitment.Bytes())
+
+	var commitmentHash32 [32]byte
+	copy(commitmentHash32[:], commitmentHash[0:32])
 
 	sig0ProofContents, err := b.GenerateMerkleProofOffchain(valAddrIndex)
 	if err != nil {
@@ -55,7 +57,7 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 	sigValEthereum := BeefySigToEthSig(b.SignedCommitment.Signatures[valAddrIndex].Value)
 
 	msg := NewSignatureCommitmentMessage{
-		CommitmentHash:                commitmentHash,
+		CommitmentHash:                commitmentHash32,
 		ValidatorClaimsBitfield:       initialBitfield,
 		ValidatorSignatureCommitment:  sigValEthereum,
 		ValidatorPublicKey:            b.ValidatorAddresses[valAddrIndex],

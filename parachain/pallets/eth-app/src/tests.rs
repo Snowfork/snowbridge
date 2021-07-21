@@ -1,4 +1,4 @@
-use crate::mock::{new_tester, AccountId, Origin, Event, System, Asset, ETHApp};
+use crate::mock::{new_tester, AccountId, Origin, Event, System, Asset, EthApp};
 use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
@@ -18,7 +18,7 @@ fn mints_after_handling_ethereum_event() {
 		let recipient: AccountId = Keyring::Bob.into();
 		let amount = 10;
 		assert_ok!(
-			ETHApp::mint(
+			EthApp::mint(
 				artemis_dispatch::Origin(peer_contract).into(),
 				sender,
 				recipient.clone(),
@@ -28,7 +28,7 @@ fn mints_after_handling_ethereum_event() {
 		assert_eq!(Asset::balance(&recipient), amount.into());
 
 		assert_eq!(
-			Event::eth_app(RawEvent::Minted(sender, recipient, amount.into())),
+			Event::EthApp(RawEvent::Minted(sender, recipient, amount.into())),
 			last_event()
 		);
 	});
@@ -41,14 +41,14 @@ fn burn_should_emit_bridge_event() {
 		let bob: AccountId = Keyring::Bob.into();
 		Asset::deposit(&bob, 500.into()).unwrap();
 
-		assert_ok!(ETHApp::burn(
+		assert_ok!(EthApp::burn(
 			Origin::signed(bob.clone()),
 			ChannelId::Incentivized,
 			recipient.clone(),
 			20.into()));
 
 		assert_eq!(
-			Event::eth_app(RawEvent::Burned(bob, recipient, 20.into())),
+			Event::EthApp(RawEvent::Burned(bob, recipient, 20.into())),
 			last_event()
 		);
 	});
@@ -63,7 +63,7 @@ fn should_not_burn_on_commitment_failure() {
 		Asset::deposit(&sender, 500.into()).unwrap();
 
 		assert_noop!(
-			ETHApp::burn(
+			EthApp::burn(
 				Origin::signed(sender.clone()),
 				ChannelId::Basic,
 				recipient.clone(),

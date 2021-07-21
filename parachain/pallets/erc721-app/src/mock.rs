@@ -30,7 +30,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Dispatch: artemis_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
 		NftApp: artemis_nft::{Pallet, Call, Config<T>, Storage},
-		ERC721App: erc721_app::{Pallet, Call, Config, Storage, Event<T>},
+		Erc721App: erc721_app::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
 

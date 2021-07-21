@@ -17,10 +17,10 @@ serde = { version = "1.0.101", optional = true }
 serde-big-array = { version = "0.2", optional = true }
 getrandom = { version = "0.2.1", features = ["js"] }
 
-sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.4", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
 
 ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", branch = "master", package = "ethabi-decode", default-features = false }
 ethash = { git = "https://github.com/snowfork/ethash.git", branch = "master", default-features = false }

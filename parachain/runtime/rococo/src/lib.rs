@@ -249,6 +249,7 @@ impl pallet_utility::Config for Runtime {
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
+	pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -261,6 +262,8 @@ impl pallet_balances::Config for Runtime {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = weights::pallet_balances_weights::WeightInfo<Runtime>;
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = [u8; 8];
 }
 
 parameter_types! {
@@ -273,6 +276,8 @@ impl pallet_transaction_payment::Config for Runtime {
 	type WeightToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate = ();
 }
+
+impl pallet_randomness_collective_flip::Config for Runtime {}
 
 // Cumulus and XCMP
 
@@ -484,11 +489,8 @@ impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
 
 pub struct CallFilter;
 impl Filter<Call> for CallFilter {
-	fn filter(call: &Call) -> bool {
-		match call {
-			Call::ETH(_) | Call::ERC20(_) | Call::ERC721(_) | Call::DOT(_) => true,
-			_ => false,
-		}
+	fn filter(_: &Call) -> bool {
+		true
 	}
 }
 
@@ -646,7 +648,7 @@ construct_runtime!(
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 4,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
 		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 5,
 
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
@@ -680,10 +682,10 @@ construct_runtime!(
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating
 		//   the peer apps (smart contracts) on the Ethereum side.
-		DOT: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
-		ETH: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
-		ERC20: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
-		ERC721: erc721_app::{Pallet, Call, Config, Storage, Event<T>} = 67,
+		DotApp: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
+		EthApp: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
+		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
+		Erc721App: erc721_app::{Pallet, Call, Config, Storage, Event<T>} = 67,
 	}
 );
 
@@ -766,8 +768,9 @@ impl_runtime_apis! {
 		fn validate_transaction(
 			source: TransactionSource,
 			tx: <Block as BlockT>::Extrinsic,
+			block_hash: <Block as BlockT>::Hash,
 		) -> TransactionValidity {
-			Executive::validate_transaction(source, tx)
+			Executive::validate_transaction(source, tx, block_hash)
 		}
 	}
 
@@ -857,9 +860,9 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
-			add_benchmark!(params, batches, dot_app, DOT);
-			add_benchmark!(params, batches, erc20_app, ERC20);
-			add_benchmark!(params, batches, eth_app, ETH);
+			add_benchmark!(params, batches, dot_app, DotApp);
+			add_benchmark!(params, batches, erc20_app, Erc20App);
+			add_benchmark!(params, batches, eth_app, EthApp);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
@@ -867,7 +870,31 @@ impl_runtime_apis! {
 	}
 }
 
+struct CheckInherents;
+
+impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
+	fn check_inherents(
+		block: &Block,
+		relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
+	) -> sp_inherents::CheckInherentsResult {
+		let relay_chain_slot = relay_state_proof
+			.read_slot()
+			.expect("Could not read the relay chain slot from the proof");
+
+		let inherent_data =
+			cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
+				relay_chain_slot,
+				sp_std::time::Duration::from_secs(6),
+			)
+			.create_inherent_data()
+			.expect("Could not create the timestamp inherent data");
+
+		inherent_data.check_extrinsics(&block)
+	}
+}
+
 cumulus_pallet_parachain_system::register_validate_block!(
-	Runtime,
-	cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
+	Runtime = Runtime,
+	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
+	CheckInherents = CheckInherents,
 );

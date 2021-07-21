@@ -7,7 +7,6 @@ import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
 import "./ValidatorRegistry.sol";
 import "./MMRVerification.sol";
-import "./Blake2b.sol";
 import "./ScaleCodec.sol";
 
 /**
@@ -118,7 +117,6 @@ contract BeefyLightClient {
 
     ValidatorRegistry public validatorRegistry;
     MMRVerification public mmrVerification;
-    Blake2b public blake2b;
     uint256 public currentId;
     bytes32 public latestMMRRoot;
     uint64 public latestBeefyBlock;
@@ -147,12 +145,10 @@ contract BeefyLightClient {
     constructor(
         ValidatorRegistry _validatorRegistry,
         MMRVerification _mmrVerification,
-        Blake2b _blake2b,
         uint64 _startingBeefyBlock
     ) {
         validatorRegistry = _validatorRegistry;
         mmrVerification = _mmrVerification;
-        blake2b = _blake2b;
         currentId = 0;
         latestBeefyBlock = _startingBeefyBlock;
     }
@@ -567,17 +563,13 @@ contract BeefyLightClient {
         returns (bytes32)
     {
         return
-            blake2b.formatOutput(
-                blake2b.blake2b(
-                    abi.encodePacked(
-                        commitment.payload,
-                        commitment.blockNumber.encode64(),
-                        commitment.validatorSetId.encode32()
-                    ),
-                    "",
-                    32
+            keccak256(
+                abi.encodePacked(
+                    commitment.payload,
+                    commitment.blockNumber.encode64(),
+                    commitment.validatorSetId.encode32()
                 )
-            )[0];
+            );
     }
 
     bytes2 public constant MMR_LEAF_LENGTH_SCALE_ENCODED =
