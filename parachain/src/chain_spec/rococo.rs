@@ -98,14 +98,14 @@ fn testnet_genesis(
 			phantom: Default::default()
 		},
 		basic_inbound_channel: rococo_runtime::BasicInboundChannelConfig {
-			source_channel: hex!["B8EA8cB425d85536b158d661da1ef0895Bb92F1D"].into(),
+			source_channel: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
 		},
 		basic_outbound_channel: rococo_runtime::BasicOutboundChannelConfig {
 			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
 			interval: 1,
 		},
 		incentivized_inbound_channel: rococo_runtime::IncentivizedInboundChannelConfig {
-			source_channel: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into(),
+			source_channel: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
 			reward_fraction: Perbill::from_percent(80)
 		},
 		incentivized_outbound_channel: rococo_runtime::IncentivizedOutboundChannelConfig {
@@ -129,17 +129,17 @@ fn testnet_genesis(
 			initial_difficulty: Default::default()
 		},
 		dot_app: rococo_runtime::DotAppConfig {
-			address: hex!["dAF13FA1997b9649b2bCC553732c67887A68022C"].into(),
+			address: hex!["3f839E70117C64744930De8567Ae7A5363487cA3"].into(),
 			phantom: Default::default(),
 		},
 		eth_app: rococo_runtime::EthAppConfig {
-			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into()
+			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into()
 		},
 		erc_20_app: rococo_runtime::Erc20AppConfig {
-			address: hex!["54D6643762E46036b3448659791adAf554225541"].into()
+			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into()
 		},
 		erc_721_app: rococo_runtime::Erc721AppConfig {
-			address: hex!["433488cec14C4478e5ff18DDC7E7384Fc416f148"].into(),
+			address: hex!["F67EFf5250cD974E6e86c9B53dc5290905Bd8916"].into(),
 		},
 		parachain_info: rococo_runtime::ParachainInfoConfig { parachain_id: para_id },
 		aura: rococo_runtime::AuraConfig {
