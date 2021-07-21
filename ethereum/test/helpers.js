@@ -6,9 +6,11 @@ const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ValidatorRegistry = artifacts.require("ValidatorRegistry");
+const ValidatorRegistryFull = artifacts.require("ValidatorRegistryFull");
 const MMRVerification = artifacts.require("MMRVerification");
 const Blake2b = artifacts.require("Blake2b");
 const BeefyLightClient = artifacts.require("BeefyLightClient");
+const BeefyFullClient = artifacts.require("BeefyFullClient");
 
 const fixture = require('./fixtures/full-flow.json');
 
@@ -24,6 +26,7 @@ const lazyLinkLibraries = async _ => {
   await ValidatorRegistry.link(merkleProof); // 860624903cbc2e721b1f7f70307ce6b5fe
   await BeefyLightClient.link(bitfield); // ce679fb3689ba2b0521c393162ea0c3c96$
   await BeefyLightClient.link(scaleCodec); // 7cdc5241ea8d29c91205423c213999ecf3
+  await BeefyFullClient.link(scaleCodec); // 7cdc5241ea8d29c91205423c213999ecf3
   lazyLinked = true;
 }
 
@@ -37,6 +40,17 @@ const initValidatorRegistry = async (validatorRoot, numOfValidators, validatorSe
   );
 
   return validatorRegistry;
+}
+
+const initValidatorRegistryFull = async (validatorAddresses, validatorSetID) => {
+  await lazyLinkLibraries()
+
+  validatorRegistryFull = await ValidatorRegistryFull.new(
+    validatorAddresses,
+    validatorSetID
+  );
+
+  return validatorRegistryFull;
 }
 
 const makeBasicCommitment = (messages) => {
@@ -98,6 +112,23 @@ const deployBeefyLightClient = async (root, numberOfValidators) => {
   await validatorRegistry.transferOwnership(beefyLightClient.address)
 
   return beefyLightClient;
+}
+
+const deployBeefyFullClient = async (validatorAddresses) => {
+  const validatorRegistryFull = await initValidatorRegistryFull(validatorAddresses, fixture.initialValidatorSetID);
+  const mmrVerification = await MMRVerification.new();
+  const blake2b = await Blake2b.new();
+
+  const beefyFullClient = await BeefyFullClient.new(
+    validatorRegistryFull.address,
+    mmrVerification.address,
+    blake2b.address,
+    0
+  );
+
+  await validatorRegistryFull.transferOwnership(beefyFullClient.address)
+
+  return beefyFullClient;
 }
 
 
@@ -189,6 +220,7 @@ function printBitfield(bitfield) {
 module.exports = {
   deployAppWithMockChannels,
   deployBeefyLightClient,
+  deployBeefyFullClient,
   createMerkleTree,
   signatureSubstrateToEthereum,
   mine,
