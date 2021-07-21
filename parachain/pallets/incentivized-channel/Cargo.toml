@@ -1,6 +1,6 @@
 [package]
 name = "snowbridge-incentivized-channel"
-description = "Artemis Incentivized Channel"
+description = "Snowbridge Incentivized Channel"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]

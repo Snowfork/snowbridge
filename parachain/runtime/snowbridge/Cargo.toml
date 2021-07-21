@@ -1,6 +1,6 @@
 [package]
 name = "snowbridge-runtime"
-description = "Artemis Snowbridge Runtime"
+description = "Snowbridge Snowbridge Runtime"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
@@ -149,7 +149,7 @@ runtime-benchmarks = [
     "pallet-collective/runtime-benchmarks",
     "pallet-utility/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
-    # Artemis pallets & support
+    # Snowbridge pallets & support
     "snowbridge-core/runtime-benchmarks",
     "assets/runtime-benchmarks",
     "basic-channel/runtime-benchmarks",

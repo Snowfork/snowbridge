@@ -18,7 +18,7 @@ var configFile string
 
 var rootCmd = &cobra.Command{
 	Use:          "snowbridge-relay",
-	Short:        "Artemis Relay is a bridge between Ethereum and Polkadot",
+	Short:        "Snowbridge Relay is a bridge between Ethereum and Polkadot",
 	SilenceUsage: true,
 }
 

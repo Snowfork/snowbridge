@@ -1,7 +1,7 @@
 // Copyright 2019-2020 Snowfork
 // This file is part of Snowbridge
 
-//! Artemis parachain collator
+//! Snowbridge parachain collator
 
 #![warn(missing_docs)]
 #![warn(unused_extern_crates)]

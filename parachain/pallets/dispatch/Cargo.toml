@@ -1,6 +1,6 @@
 [package]
 name = "snowbridge-dispatch"
-description = "Artemis Dispatch Pallet"
+description = "Snowbridge Dispatch Pallet"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]

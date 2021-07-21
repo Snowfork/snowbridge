@@ -1,6 +1,6 @@
 [package]
 name = "snowbridge-transfer"
-description = "Artemis XCM Transfer pallet"
+description = "Snowbridge XCM Transfer pallet"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]

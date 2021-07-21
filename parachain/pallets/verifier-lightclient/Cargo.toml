@@ -1,6 +1,6 @@
 [package]
 name = "pallet-verifier-lightclient"
-description = "Artemis Light Client Verifier Pallet"
+description = "Snowbridge Light Client Verifier Pallet"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
