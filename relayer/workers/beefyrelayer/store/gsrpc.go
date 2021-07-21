@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 
 	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
@@ -36,6 +37,10 @@ type SignedCommitment struct {
 
 // BeefySignature is a beefy signature
 type BeefySignature [65]byte
+
+func (b BeefySignature) String() string {
+	return hex.EncodeToString(b[:])
+}
 
 // OptionBeefySignature is a structure that can store a BeefySignature or a missing value
 type OptionBeefySignature struct {

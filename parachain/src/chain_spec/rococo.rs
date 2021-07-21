@@ -75,20 +75,20 @@ fn testnet_genesis(
 	para_id: ParaId
 ) -> GenesisConfig {
 	GenesisConfig {
-		frame_system: rococo_runtime::SystemConfig {
+		system: rococo_runtime::SystemConfig {
 			// Add Wasm runtime to storage.
 			code: WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		pallet_balances: rococo_runtime::BalancesConfig {
+		balances: rococo_runtime::BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k|(k, 1 << 60)).collect(),
 		},
-		pallet_sudo: rococo_runtime::SudoConfig { key: get_account_id_from_seed::<sr25519::Public>("Alice") },
-		pallet_collective_Instance1: Default::default(),
-		pallet_membership_Instance1: rococo_runtime::LocalCouncilMembershipConfig {
+		sudo: rococo_runtime::SudoConfig { key: get_account_id_from_seed::<sr25519::Public>("Alice") },
+		local_council: Default::default(),
+		local_council_membership: rococo_runtime::LocalCouncilMembershipConfig {
 			members: vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -97,18 +97,18 @@ fn testnet_genesis(
 			],
 			phantom: Default::default()
 		},
-		basic_channel_inbound: rococo_runtime::BasicInboundChannelConfig {
-			source_channel: hex!["B8EA8cB425d85536b158d661da1ef0895Bb92F1D"].into(),
+		basic_inbound_channel: rococo_runtime::BasicInboundChannelConfig {
+			source_channel: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
 		},
-		basic_channel_outbound: rococo_runtime::BasicOutboundChannelConfig {
+		basic_outbound_channel: rococo_runtime::BasicOutboundChannelConfig {
 			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
 			interval: 1,
 		},
-		incentivized_channel_inbound: rococo_runtime::IncentivizedInboundChannelConfig {
-			source_channel: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into(),
+		incentivized_inbound_channel: rococo_runtime::IncentivizedInboundChannelConfig {
+			source_channel: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
 			reward_fraction: Perbill::from_percent(80)
 		},
-		incentivized_channel_outbound: rococo_runtime::IncentivizedOutboundChannelConfig {
+		incentivized_outbound_channel: rococo_runtime::IncentivizedOutboundChannelConfig {
 			fee: U256::from_str_radix("10000000000000000", 10).unwrap(), // 0.01 SnowEther
 			interval: 1,
 		},
@@ -128,23 +128,23 @@ fn testnet_genesis(
 			initial_header: Default::default(),
 			initial_difficulty: Default::default()
 		},
-		eth_app: rococo_runtime::ETHConfig {
-			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into()
-		},
-		erc20_app: rococo_runtime::ERC20Config {
-			address: hex!["54D6643762E46036b3448659791adAf554225541"].into()
-		},
-		dot_app: rococo_runtime::DOTConfig {
-			address: hex!["dAF13FA1997b9649b2bCC553732c67887A68022C"].into(),
+		dot_app: rococo_runtime::DotAppConfig {
+			address: hex!["3f839E70117C64744930De8567Ae7A5363487cA3"].into(),
 			phantom: Default::default(),
 		},
-		erc721_app: rococo_runtime::ERC721Config {
-			address: hex!["433488cec14C4478e5ff18DDC7E7384Fc416f148"].into(),
+		eth_app: rococo_runtime::EthAppConfig {
+			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into()
+		},
+		erc_20_app: rococo_runtime::Erc20AppConfig {
+			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into()
+		},
+		erc_721_app: rococo_runtime::Erc721AppConfig {
+			address: hex!["F67EFf5250cD974E6e86c9B53dc5290905Bd8916"].into(),
 		},
 		parachain_info: rococo_runtime::ParachainInfoConfig { parachain_id: para_id },
-		pallet_aura: rococo_runtime::AuraConfig {
+		aura: rococo_runtime::AuraConfig {
 			authorities: initial_authorities,
 		},
-		cumulus_pallet_aura_ext: Default::default(),
+		aura_ext: Default::default(),
 	}
 }

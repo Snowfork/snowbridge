@@ -43,7 +43,7 @@ cargo build --release --no-default-features --features with-local-runtime
 Install `polkadot-launch`:
 
 ```bash
-yarn global add polkadot-launch@1.6.1
+yarn global add polkadot-launch
 cd -
 ```
 
@@ -52,7 +52,7 @@ Build polkadot:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout release-v0.9.4
+git checkout release-v0.9.8
 cargo build --release
 cd -
 ```

@@ -1,4 +1,4 @@
-use crate::mock::{new_tester, Event, System, AccountId, Origin, Assets, ERC20App};
+use crate::mock::{new_tester, Event, System, AccountId, Origin, Assets, Erc20App};
 use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
@@ -19,7 +19,7 @@ fn mints_after_handling_ethereum_event() {
 		let recipient: AccountId = Keyring::Bob.into();
 		let amount = 10;
 		assert_ok!(
-			ERC20App::mint(
+			Erc20App::mint(
 				artemis_dispatch::Origin(peer_contract).into(),
 				token,
 				sender,
@@ -30,7 +30,7 @@ fn mints_after_handling_ethereum_event() {
 		assert_eq!(Assets::balance(AssetId::Token(token), &recipient), amount.into());
 
 		assert_eq!(
-			Event::erc20_app(RawEvent::Minted(token, sender, recipient, amount.into())),
+			Event::Erc20App(RawEvent::Minted(token, sender, recipient, amount.into())),
 			last_event()
 		);
 	});
@@ -44,7 +44,7 @@ fn burn_should_emit_bridge_event() {
 		let bob: AccountId = Keyring::Bob.into();
 		Assets::deposit(AssetId::Token(token_id), &bob, 500.into()).unwrap();
 
-		assert_ok!(ERC20App::burn(
+		assert_ok!(Erc20App::burn(
 			Origin::signed(bob.clone()),
 			ChannelId::Incentivized,
 			token_id,
@@ -52,7 +52,7 @@ fn burn_should_emit_bridge_event() {
 			20.into()));
 
 		assert_eq!(
-			Event::erc20_app(RawEvent::Burned(token_id, bob, recipient, 20.into())),
+			Event::Erc20App(RawEvent::Burned(token_id, bob, recipient, 20.into())),
 			last_event()
 		);
 	});
@@ -68,7 +68,7 @@ fn should_not_burn_on_commitment_failure() {
 		Assets::deposit(AssetId::Token(token_id), &sender, 500.into()).unwrap();
 
 		assert_noop!(
-			ERC20App::burn(
+			Erc20App::burn(
 				Origin::signed(sender.clone()),
 				ChannelId::Basic,
 				token_id,

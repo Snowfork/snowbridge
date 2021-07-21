@@ -1,5 +1,5 @@
 use crate::Config;
-use crate::mock::{Test, AccountId, Balances, DOTApp, Event, Origin, System, new_tester};
+use crate::mock::{Test, AccountId, Balances, DotApp, Event, Origin, System, new_tester};
 use frame_support::{assert_noop, assert_ok,
 	dispatch::{
 		DispatchError,
@@ -24,16 +24,16 @@ fn should_lock() {
 
 		let _ = Balances::deposit_creating(&sender, amount * 2);
 
-		assert_ok!(DOTApp::lock(
+		assert_ok!(DotApp::lock(
 			Origin::signed(sender.clone()),
 			ChannelId::Incentivized,
 			recipient.clone(),
 			amount));
 
-		assert_eq!(Balances::total_balance(&DOTApp::account_id()), amount);
+		assert_eq!(Balances::total_balance(&DotApp::account_id()), amount);
 
 		assert_eq!(
-			Event::dot_app(crate::Event::<Test>::Locked(sender, recipient, amount)),
+			Event::DotApp(crate::Event::<Test>::Locked(sender, recipient, amount)),
 			last_event()
 		);
 	});
@@ -49,10 +49,10 @@ fn should_unlock() {
 		let amount = 100;
 		let amount_wrapped = crate::primitives::wrap::<Test>(amount, <Test as Config>::Decimals::get()).unwrap();
 
-		let _ = Balances::deposit_creating(&DOTApp::account_id(), balance);
+		let _ = Balances::deposit_creating(&DotApp::account_id(), balance);
 
 		assert_ok!(
-			DOTApp::unlock(
+			DotApp::unlock(
 				artemis_dispatch::Origin(peer_contract).into(),
 				sender,
 				recipient.clone(),
@@ -60,10 +60,10 @@ fn should_unlock() {
 			)
 		);
 		assert_eq!(Balances::total_balance(&recipient), amount);
-		assert_eq!(Balances::total_balance(&DOTApp::account_id()), balance - amount);
+		assert_eq!(Balances::total_balance(&DotApp::account_id()), balance - amount);
 
 		assert_eq!(
-			Event::dot_app(crate::Event::<Test>::Unlocked(sender, recipient, amount)),
+			Event::DotApp(crate::Event::<Test>::Unlocked(sender, recipient, amount)),
 			last_event()
 		);
 	});
@@ -79,10 +79,10 @@ fn should_not_unlock_on_bad_origin_failure() {
 		let amount = 100;
 		let amount_wrapped = crate::primitives::wrap::<Test>(amount, <Test as Config>::Decimals::get()).unwrap();
 
-		let _ = Balances::deposit_creating(&DOTApp::account_id(), balance);
+		let _ = Balances::deposit_creating(&DotApp::account_id(), balance);
 
 		assert_noop!(
-			DOTApp::unlock(
+			DotApp::unlock(
 				artemis_dispatch::Origin(unknown_peer_contract).into(),
 				sender,
 				recipient.clone(),
@@ -92,7 +92,7 @@ fn should_not_unlock_on_bad_origin_failure() {
 		);
 
 		assert_noop!(
-			DOTApp::unlock(
+			DotApp::unlock(
 				Origin::signed(Keyring::Alice.into()),
 				sender,
 				recipient.clone(),
@@ -113,7 +113,7 @@ fn should_not_lock_on_add_commitment_failure() {
 		let _ = Balances::deposit_creating(&sender, amount * 10);
 
 		assert_noop!(
-			DOTApp::lock(
+			DotApp::lock(
 				Origin::signed(sender.clone()),
 				ChannelId::Basic,
 				recipient.clone(),

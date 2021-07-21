@@ -28,14 +28,9 @@ module.exports = async ({
     log: true,
   });
 
-  let blake2b = await deployments.deploy("Blake2b", {
-    from: deployer,
-    log: true,
-  });
-
   let beefy = await deployments.deploy("BeefyLightClient", {
     from: deployer,
-    args: [registry.address, mmr.address, blake2b.address, 0],
+    args: [registry.address, mmr.address, 0],
     libraries: {
         Bitfield: bitFieldLibrary.address,
         ScaleCodec: scaleCodecLibrary.address,
