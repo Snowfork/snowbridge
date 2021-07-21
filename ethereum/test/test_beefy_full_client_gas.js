@@ -18,45 +18,28 @@ describe("Beefy Full Client Gas Usage", function () {
   const testCases = [
     {
       totalNumberOfValidators: 200,
-      totalNumberOfSignatures: 200,
     },
     {
-      totalNumberOfValidators: 200,
-      totalNumberOfSignatures: 134,
+      totalNumberOfValidators: 400,
     },
     {
-      totalNumberOfValidators: 255,
-      totalNumberOfSignatures: 255,
-    },
-    {
-      totalNumberOfValidators: 257,
-      totalNumberOfSignatures: 257,
+      totalNumberOfValidators: 667,
     },
     {
       totalNumberOfValidators: 1000,
-      totalNumberOfSignatures: 1000,
-      fail: true
     },
-    {
-      totalNumberOfValidators: 1000,
-      totalNumberOfSignatures: 1000,
-    },
-    {
-      totalNumberOfValidators: 1000,
-      totalNumberOfSignatures: 667,
-    }
   ]
 
   for (const testCase of testCases) {
-    it(`runs full flow with ${testCase.totalNumberOfValidators} validators and ${testCase.totalNumberOfSignatures} signers with the complete transaction ${testCase.fail ? 'failing' : 'succeeding'}`,
+    it(`runs full flow with ${testCase.totalNumberOfValidators} validators`,
       async function () {
         this.timeout(10 * 4000);
-        await runFlow(testCase.totalNumberOfValidators, testCase.totalNumberOfSignatures, testCase.fail)
+        await runFlow(testCase.totalNumberOfValidators)
       });
   }
 
-  const runFlow = async function (totalNumberOfValidators, totalNumberOfSignatures, fail) {
-    console.log(`Running flow with ${totalNumberOfValidators} validators and ${totalNumberOfSignatures} signatures with the complete transaction ${fail ? 'failing' : 'succeeding'}: `)
+  const runFlow = async function (totalNumberOfValidators) {
+    console.log(`Running flow with ${totalNumberOfValidators} validators`)
 
     const fixture = await createBeefyValidatorFixture(
       totalNumberOfValidators
@@ -74,13 +57,9 @@ describe("Beefy Full Client Gas Usage", function () {
       realWorldFixture.completeSubmitInput.mmrProofItems,
     )
     printTxPromiseGas(newBeefyBlockPromise)
-    if (fail) {
-      await newBeefyBlockPromise.should.be.rejected
-    } else {
-      await newBeefyBlockPromise.should.be.fulfilled
-      latestMMRRoot = await beefyFullClient.latestMMRRoot()
-      expect(latestMMRRoot).to.eq(realWorldFixture.completeSubmitInput.commitment.payload)
-    }
+    await newBeefyBlockPromise.should.be.fulfilled
+    latestMMRRoot = await beefyFullClient.latestMMRRoot()
+    expect(latestMMRRoot).to.eq(realWorldFixture.completeSubmitInput.commitment.payload)
   }
 
 });
