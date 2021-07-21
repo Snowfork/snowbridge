@@ -13,8 +13,8 @@ use sp_runtime::{
 use sp_keyring::AccountKeyring as Keyring;
 use sp_std::convert::From;
 
-use artemis_core::{MessageDispatch, Message, Proof};
-use artemis_ethereum::{Header as EthereumHeader, Log, U256};
+use snowbridge_core::{MessageDispatch, Message, Proof};
+use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
 

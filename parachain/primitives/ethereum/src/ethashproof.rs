@@ -11,7 +11,7 @@ pub use crate::ethashdata::{DAGS_MERKLE_ROOTS, DAGS_START_EPOCH};
 /// Ethash Params. See https://eth.wiki/en/concepts/ethash/ethash
 /// Blocks per epoch
 const EPOCH_LENGTH: u64 = 30000;
-/// Width of mix 
+/// Width of mix
 const MIX_BYTES: usize = 128;
 /// Hash length in bytes
 const HASH_BYTES: usize = 64;
@@ -174,7 +174,7 @@ impl EthashProver {
         if nodes.len() != MIXHASHES * ACCESSES / 2 {
             return Err(Error::UnexpectedNumberOfNodes);
         }
-    
+
         let epoch = header_number / EPOCH_LENGTH;
         // Reuse single Merkle root across all the proofs
         let merkle_root = self.dag_merkle_root(epoch).ok_or(Error::EpochOutOfRange)?;
@@ -227,7 +227,7 @@ impl EthashProver {
         header_hash: H256,
         nonce: H64,
         header_number: u64,
-    ) -> (H256, H256) { 
+    ) -> (H256, H256) {
         let epoch = header_number / EPOCH_LENGTH;
         let cache = match self.dags_cache {
             Some(ref mut c) => c.get(epoch, header_number),
@@ -242,7 +242,7 @@ impl EthashProver {
 mod tests {
 
     use super::*;
-    use artemis_testutils::BlockWithProofs;
+    use snowbridge_testutils::BlockWithProofs;
     use hex_literal::hex;
     use rand::Rng;
     use std::path::PathBuf;
@@ -353,7 +353,7 @@ mod tests {
         let mut proofs = block_with_proofs
             .to_double_node_with_merkle_proof_vec(DoubleNodeWithMerkleProof::from_values);
         let prover = EthashProver::new();
-    
+
         assert_eq!(
             prover.hashimoto_merkle(header_partial_hash, header_nonce, 30000000, &proofs),
             Err(Error::EpochOutOfRange),
@@ -379,9 +379,9 @@ mod tests {
         let nonce: H64 = hex!("8ae5c070892cb70c").into();
         let epoch = 11550000 / EPOCH_LENGTH;
         let full_size = ethash::get_full_size(epoch as usize);
-    
+
         let index = RefCell::new(0);
-    
+
         ethash::hashimoto_with_hasher(
             header_hash,
             nonce,

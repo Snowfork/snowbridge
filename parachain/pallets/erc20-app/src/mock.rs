@@ -13,7 +13,7 @@ use sp_runtime::{
 };
 use frame_system as system;
 
-use artemis_core::{ChannelId, AssetId, OutboundRouter};
+use snowbridge_core::{ChannelId, AssetId, OutboundRouter};
 
 use crate as erc20_app;
 
@@ -27,8 +27,8 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Assets: artemis_assets::{Pallet, Call, Storage, Event<T>},
-		Dispatch: artemis_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
+		Assets: snowbridge_assets::{Pallet, Call, Storage, Event<T>},
+		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
 		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
@@ -67,12 +67,12 @@ impl system::Config for Test {
 	type OnSetCode = ();
 }
 
-impl artemis_assets::Config for Test {
+impl snowbridge_assets::Config for Test {
 	type Event = Event;
 	type WeightInfo = ();
 }
 
-impl artemis_dispatch::Config for Test {
+impl snowbridge_dispatch::Config for Test {
 	type Origin = Origin;
 	type Event = Event;
 	type MessageId = u64;
@@ -99,7 +99,7 @@ impl erc20_app::Config for Test {
 	type Event = Event;
 	type Assets = Assets;
 	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
-	type CallOrigin = artemis_dispatch::EnsureEthereumAccount;
+	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
 	type WeightInfo = ();
 }
 

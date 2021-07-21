@@ -3,8 +3,8 @@ use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
 
-use artemis_ethereum::U256;
-use artemis_core::{ChannelId, nft::{ERC721TokenData, Nft}};
+use snowbridge_ethereum::U256;
+use snowbridge_core::{ChannelId, nft::{ERC721TokenData, Nft}};
 
 use crate::Event;
 
@@ -22,7 +22,7 @@ fn mints_after_handling_ethereum_event() {
 		let recipient: AccountId = Keyring::Bob.into();
 
 		assert_ok!(Erc721App::mint(
-			artemis_dispatch::Origin(peer_contract).into(),
+			snowbridge_dispatch::Origin(peer_contract).into(),
 			sender,
 			recipient.clone(),
 			token_contract,

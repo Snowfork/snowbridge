@@ -1,6 +1,6 @@
 [package]
-name = "artemis-transfer"
-description = "Artemis XCM Transfer pallet"
+name = "snowbridge-transfer"
+description = "Snowbridge XCM Transfer pallet"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
@@ -20,7 +20,7 @@ xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.8", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.8", default-features = false }
 
-artemis-core = { path = "../../primitives/core", default-features = false }
+snowbridge-core = { path = "../../primitives/core", default-features = false }
 
 [features]
 default = ["std"]
@@ -35,5 +35,5 @@ std = [
 	"cumulus-primitives-core/std",
 	"xcm/std",
 	"xcm-executor/std",
-	"artemis-core/std",
+	"snowbridge-core/std",
 ]

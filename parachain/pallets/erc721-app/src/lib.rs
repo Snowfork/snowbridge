@@ -23,8 +23,8 @@ use sp_std::prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, StaticLookup};
 use sp_core::H160;
 
-use artemis_core::{ChannelId, OutboundRouter, nft::{Nft, ERC721TokenData}};
-use artemis_ethereum::U256;
+use snowbridge_core::{ChannelId, OutboundRouter, nft::{Nft, ERC721TokenData}};
+use snowbridge_ethereum::U256;
 
 mod payload;
 use payload::OutboundPayload;

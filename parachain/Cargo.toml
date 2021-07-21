@@ -1,17 +1,17 @@
 [package]
-name = "artemis"
-description = "Artemis"
+name = "snowbridge"
+description = "Snowbridge Parachain"
 version = "0.1.1"
 build = "build.rs"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
-repository = "https://github.com/Snowfork/polkadot-ethereum"
+repository = "https://github.com/Snowfork/snowbridge"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [[bin]]
-name = "artemis"
+name = "snowbridge"
 path = "src/main.rs"
 
 [dependencies]
@@ -74,9 +74,9 @@ polkadot-service = { git = "https://github.com/paritytech/polkadot.git", branch 
 polkadot-cli = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.8" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.8" }
 
-artemis-core = { path = "primitives/core" }
+snowbridge-core = { path = "primitives/core" }
 snowbridge-runtime = { path = "runtime/snowbridge", optional = true }
-rococo-runtime = { path = "runtime/rococo", package = "artemis-rococo-runtime", optional = true }
+rococo-runtime = { path = "runtime/rococo", package = "snowbridge-rococo-runtime", optional = true }
 local-runtime = { path = "runtime/local", optional = true }
 
 # These dependencies are used for runtime benchmarking

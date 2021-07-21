@@ -25,7 +25,7 @@
 	},
 	"parachains": [
 		{
-			"bin": "target/release/artemis",
+			"bin": "target/release/snowbridge",
 		  "id": "200",
 		  "nodes": [
         {

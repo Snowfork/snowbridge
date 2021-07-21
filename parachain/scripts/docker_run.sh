@@ -2,7 +2,7 @@
 
 set -e
 
-echo "*** Start Artemis Node ***"
+echo "*** Start Snowbridge Node ***"
 
 cd $(dirname ${BASH_SOURCE[0]})/..
 

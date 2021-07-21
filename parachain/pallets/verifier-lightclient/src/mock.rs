@@ -1,6 +1,6 @@
 // Mock runtime
-use artemis_core::{Message, Proof};
-use artemis_testutils::BlockWithProofs;
+use snowbridge_core::{Message, Proof};
+use snowbridge_testutils::BlockWithProofs;
 use crate::{EthashProofData, EthereumHeader, EthereumDifficultyConfig};
 use sp_core::H256;
 use frame_support::{parameter_types};

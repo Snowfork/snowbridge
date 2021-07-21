@@ -10,7 +10,7 @@ use frame_support::dispatch::{DispatchError, DispatchResult};
 use frame_system::Config;
 use sp_core::H160;
 use sp_std::prelude::*;
-use artemis_ethereum::{Header, Log, U256};
+use snowbridge_ethereum::{Header, Log, U256};
 
 pub mod types;
 pub mod assets;

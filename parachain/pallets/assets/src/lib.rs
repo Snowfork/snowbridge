@@ -14,9 +14,9 @@
 //!
 //! The Assets module provides implementations for the following traits.
 //!
-//! - [`MultiAsset`](../artemis_core/assets/trait.MultiAsset.html): Functions for dealing with a
+//! - [`MultiAsset`](../snowbridge_core/assets/trait.MultiAsset.html): Functions for dealing with a
 //! multiple fungible assets.
-//! - [`SingleAsset`](../artemis_core/assets/trait.SingleAsset.html): Functions for dealing with a
+//! - [`SingleAsset`](../snowbridge_core/assets/trait.SingleAsset.html): Functions for dealing with a
 //! single fungible asset.
 //!
 //! ## Interface
@@ -38,7 +38,7 @@ use frame_support::{
 use sp_runtime::traits::StaticLookup;
 use sp_core::U256;
 
-use artemis_core::assets::{AssetId, MultiAsset, SingleAsset};
+use snowbridge_core::assets::{AssetId, MultiAsset, SingleAsset};
 use sp_std::marker;
 
 mod benchmarking;

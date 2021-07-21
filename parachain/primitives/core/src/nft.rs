@@ -6,7 +6,7 @@ use sp_runtime::RuntimeDebug;
 use sp_core::H160;
 use sp_runtime::sp_std::prelude::Vec;
 
-use artemis_ethereum::U256;
+use snowbridge_ethereum::U256;
 
 /// Token info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]

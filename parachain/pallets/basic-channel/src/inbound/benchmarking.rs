@@ -9,8 +9,8 @@ use frame_benchmarking::{benchmarks, whitelisted_caller, impl_benchmark_test_sui
 use hex_literal::hex;
 use sp_std::convert::TryInto;
 
-use artemis_core::{ChannelId, Message, MessageId, Proof};
-use artemis_ethereum::{Log, Header};
+use snowbridge_core::{ChannelId, Message, MessageId, Proof};
+use snowbridge_ethereum::{Log, Header};
 
 #[allow(unused_imports)]
 use crate::inbound::Module as BasicInboundChannel;

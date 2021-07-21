@@ -14,7 +14,7 @@ use frame_system::{self as system, ensure_signed};
 use sp_core::{U256, H160};
 use sp_std::prelude::*;
 use sp_std::convert::TryFrom;
-use artemis_core::{
+use snowbridge_core::{
 	ChannelId, Message, MessageId,
 	MessageDispatch, Verifier,
 };

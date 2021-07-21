@@ -1,5 +1,5 @@
 [package]
-name = "artemis-ethereum"
+name = "snowbridge-ethereum"
 version = "0.1.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
@@ -27,7 +27,7 @@ ethash = { git = "https://github.com/snowfork/ethash.git", branch = "master", de
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.19"
-artemis-testutils = { path = "../../primitives/testutils" }
+snowbridge-testutils = { path = "../../primitives/testutils" }
 rand = "0.7.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

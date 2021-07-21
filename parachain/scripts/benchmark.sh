@@ -3,7 +3,7 @@
 set -e
 
 RUNTIME_FEATURE=$1
-TMP_DIR=$(mktemp -d -t artemis-benchmark-XXX)
+TMP_DIR=$(mktemp -d -t snowbridge-benchmark-XXX)
 
 if [[ "$RUNTIME_FEATURE" == "with-snowbridge-runtime" ]]
 then
@@ -26,7 +26,7 @@ benchmark_pallets()
 
     echo "Generating benchmark spec at $TMP_DIR/spec.json"
 
-    target/release/artemis build-spec > $TMP_DIR/spec.json
+    target/release/snowbridge build-spec > $TMP_DIR/spec.json
     # Initialize dot-app account with enough DOT for benchmarks
     DOT_MODULE_ENDOWMENT="[
         \"5EYCAe5jHEQsVPTRQqy6NCeG71Hz1EVXikZxTkr67fM8j2Rd\",
@@ -47,7 +47,7 @@ benchmark_pallets()
     for pallet in $PALLETS
     do
         MODULE_NAME="$(tr -s [:] _ <<< $pallet)_weights"
-        target/release/artemis benchmark \
+        target/release/snowbridge benchmark \
             --chain $TMP_DIR/spec.json \
             --execution wasm \
             --wasm-execution compiled \

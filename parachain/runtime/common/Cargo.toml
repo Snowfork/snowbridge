@@ -1,6 +1,6 @@
 [package]
-name = "artemis-runtime-common"
-description = "Artemis Runtime Common"
+name = "snowbridge-runtime-common"
+description = "Snowbridge Runtime Common"
 version = "0.1.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
@@ -13,9 +13,9 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polka
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
 
-artemis-core = { path = "../../primitives/core", package = "artemis-core", default-features = false }
-basic-channel = { path = "../../pallets/basic-channel", package = "artemis-basic-channel", default-features = false }
-incentivized-channel = { path = "../../pallets/incentivized-channel", package = "artemis-incentivized-channel", default-features = false }
+snowbridge-core = { path = "../../primitives/core", package = "snowbridge-core", default-features = false }
+basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-basic-channel", default-features = false }
+incentivized-channel = { path = "../../pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }
 
 [features]
 default = ["std"]
@@ -25,7 +25,7 @@ std = [
     "sp-core/std",
     "sp-std/std",
     "sp-runtime/std",
-    "artemis-core/std",
+    "snowbridge-core/std",
     "basic-channel/std",
     "incentivized-channel/std",
 ]

@@ -12,7 +12,7 @@ use xcm::v0::{Error as XcmError, Junction, MultiAsset, MultiLocation, Result as 
 
 use xcm_executor::traits::{Convert, TransactAsset};
 
-use artemis_core::assets::{AssetId, MultiAsset as ArtemisMultiAsset};
+use snowbridge_core::assets::{AssetId, MultiAsset as SnowbridgeMultiAsset};
 
 use codec::Decode;
 
@@ -21,7 +21,7 @@ pub struct AssetsTransactor<Assets, AccountIdConverter, AccountId>(
 );
 
 impl<
-		Assets: ArtemisMultiAsset<AccountId>,
+		Assets: SnowbridgeMultiAsset<AccountId>,
 		AccountIdConverter: Convert<MultiLocation, AccountId>,
 		AccountId: sp_std::fmt::Debug + Clone,
 	> TransactAsset for AssetsTransactor<Assets, AccountIdConverter, AccountId>
