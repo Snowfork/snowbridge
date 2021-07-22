@@ -25,25 +25,12 @@ Example:
 cp env.template .env
 ```
 
-Start a local Ethereum chain using truffle:
-
-```bash
-truffle develop
-```
-
-Open a fresh terminal window and deploy the contracts:
-
-```bash
-truffle migrate
-```
-
 ## Testing
 
 Make sure the truffle environment is running, then run tests
 
 ```bash
-# Start ethereum chain if it's not already running
-truffle develop
+npx hardhat test
 
 # In a new terminal, test application gas expenditures
 truffle test test/test_eth_app.js

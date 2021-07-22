@@ -59,9 +59,7 @@ describe("ERC20App", function () {
       this.symbol = "TEST";
       this.token = await TestToken.new("Test Token", this.symbol);
 
-      await this.token.mint("10000", {
-        from: userOne,
-      }).should.be.fulfilled;
+      await this.token.mint(userOne, "10000").should.be.fulfilled;
     });
 
     it("should lock funds", async function () {
@@ -100,9 +98,7 @@ describe("ERC20App", function () {
       this.symbol = "TEST";
       this.token = await TestToken.new("Test Token", this.symbol);
 
-      await this.token.mint("10000", {
-        from: userOne,
-      }).should.be.fulfilled;
+      await this.token.mint(userOne, "10000").should.be.fulfilled;
     });
 
     it("should unlock funds", async function () {
