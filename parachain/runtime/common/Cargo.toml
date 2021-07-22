@@ -4,7 +4,7 @@ description = "Snowbridge Runtime Common"
 version = "0.1.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
-repository = "https://github.com/Snowfork/polkadot-ethereum"
+repository = "https://github.com/Snowfork/snowbridge"
 
 [dependencies]
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }

@@ -13,4 +13,4 @@ pub mod pallet_balances_weights;
 pub mod pallet_collective_weights;
 pub mod pallet_timestamp_weights;
 pub mod pallet_utility_weights;
-pub mod verifier_lightclient_weights;
+pub mod ethereum_light_client_weights;

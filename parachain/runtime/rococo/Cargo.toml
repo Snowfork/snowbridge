@@ -4,7 +4,7 @@ description = "Snowbridge Rococo Runtime"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
-repository = "https://github.com/Snowfork/polkadot-ethereum"
+repository = "https://github.com/Snowfork/snowbridge"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -64,7 +64,7 @@ snowbridge-xcm-support = { path = "../../primitives/xcm-support", default-featur
 basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-basic-channel", default-features = false }
 incentivized-channel = { path = "../../pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }
 dispatch = { path = "../../pallets/dispatch", package = "snowbridge-dispatch", default-features = false }
-verifier-lightclient = { path = "../../pallets/verifier-lightclient", package = "pallet-verifier-lightclient", default-features = false }
+ethereum-light-client = { path = "../../pallets/ethereum-light-client", package = "snowbridge-ethereum-light-client", default-features = false }
 assets = { path = "../../pallets/assets", package = "snowbridge-assets", default-features = false }
 nft = { path = "../../pallets/nft", package = "snowbridge-nft", default-features = false }
 dot-app = { path = "../../pallets/dot-app", package = "snowbridge-dot-app", default-features = false }
@@ -125,7 +125,7 @@ std = [
     "polkadot-parachain/std",
     "basic-channel/std",
     "incentivized-channel/std",
-    "verifier-lightclient/std",
+    "ethereum-light-client/std",
     "assets/std",
     "nft/std",
     "dispatch/std",
@@ -158,5 +158,5 @@ runtime-benchmarks = [
     "erc20-app/runtime-benchmarks",
     "eth-app/runtime-benchmarks",
     "incentivized-channel/runtime-benchmarks",
-    "verifier-lightclient/runtime-benchmarks",
+    "ethereum-light-client/runtime-benchmarks",
 ]

@@ -4319,7 +4319,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-utility",
- "pallet-verifier-lightclient",
+ "snowbridge-ethereum-light-client",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
@@ -5655,7 +5655,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-verifier-lightclient"
+name = "snowbridge-ethereum-light-client"
 version = "0.1.1"
 dependencies = [
  "ethash",
@@ -9627,7 +9627,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-utility",
- "pallet-verifier-lightclient",
+ "snowbridge-ethereum-light-client",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
@@ -9692,7 +9692,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-utility",
- "pallet-verifier-lightclient",
+ "snowbridge-ethereum-light-client",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",

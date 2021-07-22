@@ -124,7 +124,7 @@ fn testnet_genesis(
 		nft: snowbridge_runtime::NFTConfig {
 			tokens: vec![]
 		},
-		verifier_lightclient: snowbridge_runtime::VerifierLightclientConfig {
+		ethereum_light_client: snowbridge_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
 		},

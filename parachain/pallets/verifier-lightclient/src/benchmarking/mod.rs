@@ -1,4 +1,4 @@
-//! VerifierLightclient pallet benchmarking
+//! EthereumLightClient pallet benchmarking
 
 #![cfg(feature = "runtime-benchmarks")]
 
@@ -8,7 +8,7 @@ use frame_system::RawOrigin;
 use frame_benchmarking::{benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 
 #[allow(unused_imports)]
-use crate::Module as VerifierLightclient;
+use crate::Module as EthereumLightClient;
 
 mod data;
 
@@ -40,7 +40,7 @@ fn assert_header_pruned<T: Config>(hash: H256, number: u64) {
 	assert!(
 		hashes_at_number.is_none() || !hashes_at_number.unwrap().contains(&hash),
 	);
-}	
+}
 
 benchmarks! {
 	// Benchmark `import_header` extrinsic under worst case conditions:
@@ -63,7 +63,7 @@ benchmarks! {
 		let header = headers[next_tip_idx].clone();
 		let header_proof = data::header_proof(header.compute_hash()).unwrap();
 
-		VerifierLightclient::<T>::initialize_storage(
+		EthereumLightClient::<T>::initialize_storage(
 			headers[0..next_tip_idx].to_vec(),
 			U256::zero(),
 			descendants_until_final,
@@ -123,7 +123,7 @@ benchmarks! {
 		let mut init_headers = headers[0..next_tip_idx].to_vec();
 		init_headers.append(&mut vec![header_sibling]);
 
-		VerifierLightclient::<T>::initialize_storage(
+		EthereumLightClient::<T>::initialize_storage(
 			init_headers,
 			U256::zero(),
 			descendants_until_final,
@@ -174,7 +174,7 @@ benchmarks! {
 		let header = headers[next_tip_idx].clone();
 		let header_proof = data::header_proof(header.compute_hash()).unwrap();
 
-		VerifierLightclient::<T>::initialize_storage(
+		EthereumLightClient::<T>::initialize_storage(
 			headers[0..next_tip_idx].to_vec(),
 			U256::zero(),
 			descendants_until_final,
@@ -227,7 +227,7 @@ benchmarks! {
 		let mut init_headers = headers[0..next_tip_idx].to_vec();
 		init_headers.append(&mut vec![header_sibling]);
 
-		VerifierLightclient::<T>::initialize_storage(
+		EthereumLightClient::<T>::initialize_storage(
 			init_headers,
 			U256::zero(),
 			descendants_until_final,
@@ -261,7 +261,7 @@ benchmarks! {
 }
 
 impl_benchmark_test_suite!(
-	VerifierLightclient,
+	EthereumLightClient,
 	crate::mock::new_tester::<crate::mock::mock_verifier_with_pow::Test>(),
 	crate::mock::mock_verifier_with_pow::Test,
 );

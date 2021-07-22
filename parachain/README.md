@@ -84,7 +84,7 @@ cd ../relayer
 build/snowbridge-relay getblock --config /tmp/relay-config.toml --format json
 ```
 
-Insert the output of the `getblock` command in the `initial_header` field in the `verifier_lightclient` section of the chain spec.
+Insert the output of the `getblock` command in the `initial_header` field in the `ethereum_light_client` section of the chain spec.
 
 ### Ethereum Contract Addresses
 

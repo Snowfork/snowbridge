@@ -124,7 +124,7 @@ fn testnet_genesis(
 		nft: local_runtime::NFTConfig {
 			tokens: vec![]
 		},
-		verifier_lightclient: local_runtime::VerifierLightclientConfig {
+		ethereum_light_client: local_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
 		},
