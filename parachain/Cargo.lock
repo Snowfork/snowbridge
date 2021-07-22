@@ -4319,7 +4319,6 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-utility",
- "snowbridge-ethereum-light-client",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
@@ -4333,6 +4332,7 @@ dependencies = [
  "snowbridge-erc20-app",
  "snowbridge-erc721-app",
  "snowbridge-eth-app",
+ "snowbridge-ethereum-light-client",
  "snowbridge-incentivized-channel",
  "snowbridge-nft",
  "snowbridge-runtime-common",
@@ -5650,30 +5650,6 @@ dependencies = [
  "parity-scale-codec",
  "sp-core",
  "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "snowbridge-ethereum-light-client"
-version = "0.1.1"
-dependencies = [
- "ethash",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "parity-scale-codec",
- "rlp",
- "rustc-hex",
- "serde",
- "serde_json",
- "snowbridge-core",
- "snowbridge-ethereum",
- "snowbridge-testutils",
- "sp-core",
- "sp-io",
- "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]
@@ -9557,6 +9533,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowbridge-ethereum-light-client"
+version = "0.1.1"
+dependencies = [
+ "ethash",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "serde",
+ "serde_json",
+ "snowbridge-core",
+ "snowbridge-ethereum",
+ "snowbridge-testutils",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "snowbridge-incentivized-channel"
 version = "0.1.1"
 dependencies = [
@@ -9627,7 +9627,6 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-utility",
- "snowbridge-ethereum-light-client",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
@@ -9641,6 +9640,7 @@ dependencies = [
  "snowbridge-erc20-app",
  "snowbridge-erc721-app",
  "snowbridge-eth-app",
+ "snowbridge-ethereum-light-client",
  "snowbridge-incentivized-channel",
  "snowbridge-nft",
  "snowbridge-runtime-common",
@@ -9692,7 +9692,6 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-utility",
- "snowbridge-ethereum-light-client",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
@@ -9706,6 +9705,7 @@ dependencies = [
  "snowbridge-erc20-app",
  "snowbridge-erc721-app",
  "snowbridge-eth-app",
+ "snowbridge-ethereum-light-client",
  "snowbridge-incentivized-channel",
  "snowbridge-nft",
  "snowbridge-runtime-common",

@@ -98,7 +98,7 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 }
 
 func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, error) {
-	key, err := types.CreateStorageKey(wr.conn.GetMetadata(), "VerifierLightclient", "Headers", hash[:], nil)
+	key, err := types.CreateStorageKey(wr.conn.GetMetadata(), "EthereumLightClient", "Headers", hash[:], nil)
 	if err != nil {
 		return false, err
 	}
@@ -237,5 +237,5 @@ func (wr *ParachainWriter) makeHeaderImportCall(header *chain.Header) (types.Cal
 		return types.Call{}, fmt.Errorf("Header is nil")
 	}
 
-	return types.NewCall(wr.conn.GetMetadata(), "VerifierLightclient.import_header", header.HeaderData, header.ProofData)
+	return types.NewCall(wr.conn.GetMetadata(), "EthereumLightClient.import_header", header.HeaderData, header.ProofData)
 }
