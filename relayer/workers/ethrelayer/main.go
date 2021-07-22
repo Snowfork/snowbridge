@@ -94,7 +94,7 @@ func (w *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (w *Worker) queryFinalizedBlockNumber() (uint64, error) {
-	storageKey, err := types.CreateStorageKey(w.paraconn.Metadata(), "VerifierLightclient", "FinalizedBlock", nil, nil)
+	storageKey, err := types.CreateStorageKey(w.paraconn.Metadata(), "EthereumLightClient", "FinalizedBlock", nil, nil)
 	if err != nil {
 		return 0, err
 	}
