@@ -1,6 +1,6 @@
 [package]
 name = "snowbridge-runtime"
-description = "Snowbridge Snowbridge Runtime"
+description = "Snowbridge Runtime"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
