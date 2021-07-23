@@ -82,8 +82,8 @@ start_polkadot_launch()
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
         | node ../test/scripts/helpers/transformEthHeader.js)
     node ../test/scripts/helpers/overrideParachainSpec.js $configdir/spec.json \
-        genesis.runtime.verifierLightclient.initialDifficulty 0x0 \
-        genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header" \
+        genesis.runtime.ethereumLightClient.initialDifficulty 0x0 \
+        genesis.runtime.ethereumLightClient.initialHeader "$ethereum_initial_header" \
         genesis.runtime.parachainInfo.parachainId 1000 \
         para_id 1000
 
@@ -105,8 +105,8 @@ start_polkadot_launch()
         target/release/snowbridge build-spec --disable-default-bootnode > $configdir/spec2.json
 
         node ../test/scripts/helpers/overrideParachainSpec.js $configdir/spec2.json \
-            genesis.runtime.verifierLightclient.initialDifficulty 0x0 \
-            genesis.runtime.verifierLightclient.initialHeader "$ethereum_initial_header" \
+            genesis.runtime.ethereumLightClient.initialDifficulty 0x0 \
+            genesis.runtime.ethereumLightClient.initialHeader "$ethereum_initial_header" \
             genesis.runtime.parachainInfo.parachainId 1001 \
             para_id 1001
         jq  -s '.[0] * .[1]' config-dup.json ../test/config/launchConfigOverridesDup.json \

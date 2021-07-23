@@ -108,7 +108,7 @@ pub trait Config: system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as VerifierLightclient {
+	trait Store for Module<T: Config> as EthereumLightClient {
 		/// Best known block.
 		BestBlock: (EthereumHeaderId, U256);
 		/// Range of blocks that we want to prune.

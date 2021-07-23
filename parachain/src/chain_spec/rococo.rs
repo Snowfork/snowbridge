@@ -124,7 +124,7 @@ fn testnet_genesis(
 		nft: rococo_runtime::NFTConfig {
 			tokens: vec![]
 		},
-		verifier_lightclient: rococo_runtime::VerifierLightclientConfig {
+		ethereum_light_client: rococo_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default()
 		},

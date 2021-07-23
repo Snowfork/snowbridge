@@ -58,7 +58,7 @@ pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use snowbridge_core::{AssetId, ChannelId, MessageId, ERC721TokenData};
 use dispatch::EnsureEthereumAccount;
 
-pub use verifier_lightclient::{EthereumDifficultyConfig, EthereumHeader};
+pub use ethereum_light_client::{EthereumDifficultyConfig, EthereumHeader};
 
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{MultiAsset, Junction, MultiLocation, NetworkId, Xcm, BodyId};
@@ -514,7 +514,7 @@ use incentivized_channel::outbound as incentivized_channel_outbound;
 
 impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
-	type Verifier = verifier_lightclient::Module<Runtime>;
+	type Verifier = ethereum_light_client::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
 	type WeightInfo = ();
 }
@@ -544,7 +544,7 @@ impl Convert<U256, Balance> for FeeConverter {
 
 impl incentivized_channel_inbound::Config for Runtime {
 	type Event = Event;
-	type Verifier = verifier_lightclient::Module<Runtime>;
+	type Verifier = ethereum_light_client::Module<Runtime>;
 	type MessageDispatch = dispatch::Module<Runtime>;
 	type Currency = Balances;
 	type SourceAccount = SourceAccount;
@@ -577,7 +577,7 @@ parameter_types! {
 	pub const VerifyPoW: bool = false;
 }
 
-impl verifier_lightclient::Config for Runtime {
+impl ethereum_light_client::Config for Runtime {
 	type Event = Event;
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type DifficultyConfig = DifficultyConfig;
@@ -667,7 +667,7 @@ construct_runtime!(
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event} = 12,
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Config<T>, Storage, Event} = 13,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
-		VerifierLightclient: verifier_lightclient::{Pallet, Call, Storage, Event, Config} = 15,
+		EthereumLightClient: ethereum_light_client::{Pallet, Call, Storage, Event, Config} = 15,
 		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
 		NFT: nft::{Pallet, Call, Config<T>, Storage} = 24,
 
@@ -858,7 +858,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_collective, LocalCouncil);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, pallet_utility, Utility);
-			add_benchmark!(params, batches, verifier_lightclient, VerifierLightclient);
+			add_benchmark!(params, batches, ethereum_light_client, EthereumLightClient);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel::inbound, BasicInboundChannel);
 			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);
