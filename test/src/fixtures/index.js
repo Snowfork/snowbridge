@@ -1,5 +1,9 @@
-const TestToken = require('../../../ethereum/build/contracts/TestToken.json');
-const TestToken721 = require('../../../ethereum/build/contracts/TestToken721.json');
+const fs = require('fs');
+
+const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge-e2e-config/contracts.json', 'utf8'));
+
+const TestToken = contracts.contracts.TestToken;
+const TestToken721 = contracts.contracts.TestToken721;
 const EthClient = require('../../src/ethclient').EthClient;
 const SubClient = require('../../src/subclient').SubClient;
 
@@ -11,8 +15,8 @@ const ethEndpoint = 'ws://localhost:8545';
 const parachainEndpoint = 'ws://localhost:11144';
 const testNetworkID = '344';
 
-const TestTokenAddress = TestToken.networks[testNetworkID].address;
-const TestToken721Address = TestToken721.networks[testNetworkID].address;
+const TestTokenAddress = TestToken.address;
+const TestToken721Address = TestToken721.address;
 
 const ETH_TO_PARA_WAIT_TIME = 60000;
 const PARA_TO_ETH_WAIT_TIME = 100000;

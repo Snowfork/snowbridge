@@ -13,12 +13,13 @@ start_ganache()
 {
     echo "Starting Ganache"
 
-    yarn run ganache-cli \
+    npx ganache-cli \
         --port=8545 \
         --networkId=344 \
+        --chainId=344 \
         --deterministic \
-        --db $configdir/ganachedb \
-        --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
+        --db $configdir/ganache.db \
+        --mnemonic="stone speak what ritual switch pigeon weird dutch burst shaft nature shove" \
         --gasLimit=8000000 \
         >ganache.log 2>&1 &
 
@@ -32,13 +33,14 @@ restart_ganache()
 
     kill $(ps -aux | grep -e ganache-cli | awk '{print $2}') || true
 
-    yarn run ganache-cli \
+    npx ganache-cli \
         --port=8545 \
         --blockTime=6 \
         --networkId=344 \
+        --chainId=344 \
         --deterministic \
-        --db $configdir/ganachedb \
-        --mnemonic='stone speak what ritual switch pigeon weird dutch burst shaft nature shove' \
+        --db $configdir/ganache.db \
+        --mnemonic="stone speak what ritual switch pigeon weird dutch burst shaft nature shove" \
         --gasLimit=8000000 \
         >ganache.log 2>&1 &
 
@@ -51,10 +53,11 @@ deploy_contracts()
     echo "Deploying contracts"
     pushd ../ethereum
 
-    truffle deploy --network e2e_test
+    npx hardhat deploy --network localhost --reset --export $configdir/contracts.json
 
-    echo "Generating configuration from contracts"
-    truffle exec scripts/dumpTestConfig.js $configdir --network e2e_test
+    echo "Generating relayer configuration from contracts"
+    npx hardhat run --network localhost scripts/make-relay-config.ts > $configdir/config.toml
+
     popd
 
     echo "Wrote configuration to $configdir"

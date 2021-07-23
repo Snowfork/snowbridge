@@ -5,6 +5,9 @@ dotenv({ path: resolve(__dirname, ".env") });
 
 import "@nomiclabs/hardhat-truffle5";
 import "@nomiclabs/hardhat-ethers";
+import "@nomiclabs/hardhat-web3";
+import "hardhat-deploy";
+import { HardhatUserConfig } from "hardhat/config";
 
 const getenv = (name: string) => {
   if (name in process.env) {
@@ -17,23 +20,26 @@ const getenv = (name: string) => {
 const mnemonic = getenv("MNEMONIC");
 const infuraKey = getenv("INFURA_PROJECT_ID");
 
-export default {
+const config: HardhatUserConfig = {
   networks: {
     hardhat: {
-      throwOnTransactionFailures: true
+      throwOnTransactionFailures: true,
     },
     localhost: {
       url: "http://127.0.0.1:8545",
       accounts: {
-        mnemonic: 'stone speak what ritual switch pigeon weird dutch burst shaft nature shove',
-      }
+        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
+      },
+      chainId: 344,
     },
     ropsten: {
       chainId: 3,
       url: `https://ropsten.infura.io/v3/${infuraKey}`,
       accounts: {
         mnemonic: mnemonic,
-      }
+      },
+      gas: 6000000,
+      gasPrice: 5000000000,
     }
   },
   solidity: {
@@ -41,11 +47,14 @@ export default {
   },
   paths: {
     sources: "contracts",
+    deployments: '.deployments',
     tests: "test",
-    cache: "cache",
+    cache: ".cache",
     artifacts: "artifacts"
   },
   mocha: {
     timeout: 60000
   }
 };
+
+export default config;

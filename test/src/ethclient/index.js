@@ -1,19 +1,21 @@
 const Web3 = require('web3');
 const BigNumber = require('bignumber.js');
+const fs = require('fs');
 
-const ETHApp = require('../../../ethereum/build/contracts/ETHApp.json');
-const ERC20App = require('../../../ethereum/build/contracts/ERC20App.json');
-const ERC721App = require('../../../ethereum/build/contracts/ERC721App.json');
-const ERC20 = require('../../../ethereum/build/contracts/ERC20.json');
-const TestToken = require('../../../ethereum/build/contracts/TestToken.json');
-const TestToken721 = require('../../../ethereum/build/contracts/TestToken721.json');
-const DOTApp = require('../../../ethereum/build/contracts/DOTApp.json');
-const WrappedToken = require('../../../ethereum/build/contracts/WrappedToken.json');
-const BasicOutboundChannel = require('../../../ethereum/build/contracts/BasicOutboundChannel.json');
-const IncentivizedOutboundChannel = require('../../../ethereum/build/contracts/IncentivizedOutboundChannel.json');
-const BasicInboundChannel = require('../../../ethereum/build/contracts/BasicInboundChannel.json');
-const IncentivizedInboundChannel = require('../../../ethereum/build/contracts/IncentivizedInboundChannel.json');
+const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge-e2e-config/contracts.json', 'utf8'));
 
+const ETHApp = contracts.contracts.ETHApp;
+const ERC20App = contracts.contracts.ERC20App;
+const ERC721App = contracts.contracts.ERC721App;
+const TestToken = contracts.contracts.TestToken;
+const TestToken721 = contracts.contracts.TestToken721;
+const DOTApp = contracts.contracts.DOTApp;
+const BasicOutboundChannel = contracts.contracts.BasicOutboundChannel;
+const IncentivizedOutboundChannel = contracts.contracts.IncentivizedOutboundChannel;
+const BasicInboundChannel = contracts.contracts.BasicInboundChannel;
+const IncentivizedInboundChannel = contracts.contracts.IncentivizedInboundChannel;
+
+const IERC777 = require("../../../ethereum/artifacts/@openzeppelin/contracts/token/ERC777/IERC777.sol/IERC777.json")
 /**
  * The Ethereum client for Bridge interaction
  */
@@ -23,45 +25,45 @@ class EthClient {
     var web3 = new Web3(new Web3.providers.WebsocketProvider(endpoint));
     this.web3 = web3;
     this.networkID = networkID;
-    this.TestTokenAddress = TestToken.networks[this.networkID].address;
-    this.TestToken721Address = TestToken721.networks[this.networkID].address;
-    this.ERC721AppAddress = ERC721App.networks[this.networkID].address;
+    this.TestTokenAddress = TestToken.address;
+    this.TestToken721Address = TestToken721.address;
+    this.ERC721AppAddress = ERC721App.address;
 
     this.loadApplicationContracts(networkID);
   }
 
   loadApplicationContracts(networkID) {
-    const appETH = new this.web3.eth.Contract(ETHApp.abi, ETHApp.networks[networkID].address);
+    const appETH = new this.web3.eth.Contract(ETHApp.abi, ETHApp.address);
     this.appETH = appETH;
 
-    const appERC20 = new this.web3.eth.Contract(ERC20App.abi, ERC20App.networks[networkID].address);
+    const appERC20 = new this.web3.eth.Contract(ERC20App.abi, ERC20App.address);
     this.appERC20 = appERC20;
 
-    const appERC721 = new this.web3.eth.Contract(ERC721App.abi, ERC721App.networks[networkID].address);
+    const appERC721 = new this.web3.eth.Contract(ERC721App.abi, ERC721App.address);
     this.appERC721 = appERC721;
 
-    const appDOT = new this.web3.eth.Contract(DOTApp.abi, DOTApp.networks[networkID].address);
+    const appDOT = new this.web3.eth.Contract(DOTApp.abi, DOTApp.address);
     this.appDOT = appDOT;
 
     const appBasicOutChan = new this.web3.eth.Contract(BasicOutboundChannel.abi,
-      BasicOutboundChannel.networks[networkID].address);
+      BasicOutboundChannel.address);
     this.appBasicOutChan = appBasicOutChan;
 
     const appIncOutChan = new this.web3.eth.Contract(IncentivizedOutboundChannel.abi,
-      IncentivizedOutboundChannel.networks[networkID].address);
+      IncentivizedOutboundChannel.address);
     this.appIncOutChan = appIncOutChan;
 
     const appBasicInChan = new this.web3.eth.Contract(BasicInboundChannel.abi,
-      BasicInboundChannel.networks[networkID].address);
+      BasicInboundChannel.address);
     this.appBasicInChan = appBasicInChan;
 
     const appIncentivizedInChan = new this.web3.eth.Contract(IncentivizedInboundChannel.abi,
-      IncentivizedInboundChannel.networks[networkID].address);
+      IncentivizedInboundChannel.address);
     this.appIncentivizedInChan = appIncentivizedInChan;
   };
 
   loadERC20Contract() {
-    return new this.web3.eth.Contract(ERC20.abi, this.TestTokenAddress);
+    return new this.web3.eth.Contract(TestToken.abi, this.TestTokenAddress);
   }
 
   loadERC721Contract() {
@@ -73,7 +75,7 @@ class EthClient {
     this.web3.eth.defaultAccount = this.accounts[1];
 
     const snowDotAddr = await this.appDOT.methods.token().call();
-    const snowDOT = new this.web3.eth.Contract(WrappedToken.abi, snowDotAddr);
+    const snowDOT = new this.web3.eth.Contract(IERC777.abi, snowDotAddr);
     this.snowDOT = snowDOT;
   };
 
@@ -123,6 +125,14 @@ class EthClient {
     const erc721Instance = this.loadERC721Contract();
     // return erc721Instance.methods.mintWithTokenURI(to, tokenId, "http://testuri.com/nft.json")
     return erc721Instance.methods.mint(to, tokenId)
+      .send({
+        from: owner
+      });
+  }
+
+  async mintERC20(amount, to, owner) {
+    const erc20Instance = this.loadERC20Contract();
+    return erc20Instance.methods.mint(to, amount)
       .send({
         from: owner
       });

@@ -1,6 +1,7 @@
-build/
 .env
+build/
 node_modules/
 ganache.log
 artifacts/
-cache/
+.cache/
+.deployments/
