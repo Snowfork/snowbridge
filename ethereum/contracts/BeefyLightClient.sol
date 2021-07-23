@@ -132,7 +132,7 @@ contract BeefyLightClient {
 
     // We must ensure at least one block is processed every session,
     // so these constants are checked to enforce a maximum gap between commitments.
-    uint64 public constant NUMBER_OF_BLOCKS_PER_SESSION = 100;
+    uint64 public constant NUMBER_OF_BLOCKS_PER_SESSION = 2400;
     uint64 public constant ERROR_AND_SAFETY_BUFFER = 10;
     uint64 public constant MAXIMUM_BLOCK_GAP =
         NUMBER_OF_BLOCKS_PER_SESSION - ERROR_AND_SAFETY_BUFFER;
