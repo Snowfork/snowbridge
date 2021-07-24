@@ -60,7 +60,7 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 	}
 	wr.nonce = nonce
 
-	genesisHash, err := wr.conn.GetAPI().RPC.Chain.GetBlockHash(0)
+	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
 	if err != nil {
 		return cancelWithError(err)
 	}
@@ -80,31 +80,31 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 }
 
 func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
-	key, err := types.CreateStorageKey(wr.conn.GetMetadata(), "System", "Account", wr.conn.GetKeypair().PublicKey, nil)
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "System", "Account", wr.conn.KeyPair().PublicKey, nil)
 	if err != nil {
 		return 0, err
 	}
 
 	var accountInfo types.AccountInfo
-	ok, err := wr.conn.GetAPI().RPC.State.GetStorageLatest(key, &accountInfo)
+	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &accountInfo)
 	if err != nil {
 		return 0, err
 	}
 	if !ok {
-		return 0, fmt.Errorf("no account info found for %s", wr.conn.GetKeypair().URI)
+		return 0, fmt.Errorf("no account info found for %s", wr.conn.KeyPair().URI)
 	}
 
 	return uint32(accountInfo.Nonce), nil
 }
 
 func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, error) {
-	key, err := types.CreateStorageKey(wr.conn.GetMetadata(), "EthereumLightClient", "Headers", hash[:], nil)
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumLightClient", "Headers", hash[:], nil)
 	if err != nil {
 		return false, err
 	}
 
 	var headerOption types.OptionBytes
-	ok, err := wr.conn.GetAPI().RPC.State.GetStorageLatest(key, &headerOption)
+	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &headerOption)
 	if err != nil {
 		return false, err
 	}
@@ -147,19 +147,19 @@ func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 func (wr *ParachainWriter) write(ctx context.Context, c types.Call, onProcessed func() error) error {
 	ext := types.NewExtrinsic(c)
 
-	latestHash, err := wr.conn.GetAPI().RPC.Chain.GetFinalizedHead()
+	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
 	if err != nil {
 		return err
 	}
 
-	latestBlock, err := wr.conn.GetAPI().RPC.Chain.GetBlock(latestHash)
+	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
 	if err != nil {
 		return err
 	}
 
 	era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
 
-	rv, err := wr.conn.GetAPI().RPC.State.GetRuntimeVersionLatest()
+	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func (wr *ParachainWriter) write(ctx context.Context, c types.Call, onProcessed 
 	}
 
 	extI := ext
-	err = extI.Sign(*wr.conn.GetKeypair(), o)
+	err = extI.Sign(*wr.conn.KeyPair(), o)
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainP
 		calls = append(calls, call)
 	}
 
-	call, err = types.NewCall(wr.conn.GetMetadata(), "Utility.batch_all", calls)
+	call, err = types.NewCall(wr.conn.Metadata(), "Utility.batch_all", calls)
 	if err != nil {
 		return err
 	}
@@ -229,7 +229,7 @@ func (wr *ParachainWriter) makeMessageSubmitCall(msg *chain.EthereumOutboundMess
 		return types.Call{}, fmt.Errorf("Message is nil")
 	}
 
-	return types.NewCall(wr.conn.GetMetadata(), msg.Call, msg.Args...)
+	return types.NewCall(wr.conn.Metadata(), msg.Call, msg.Args...)
 }
 
 func (wr *ParachainWriter) makeHeaderImportCall(header *chain.Header) (types.Call, error) {
@@ -237,5 +237,5 @@ func (wr *ParachainWriter) makeHeaderImportCall(header *chain.Header) (types.Cal
 		return types.Call{}, fmt.Errorf("Header is nil")
 	}
 
-	return types.NewCall(wr.conn.GetMetadata(), "EthereumLightClient.import_header", header.HeaderData, header.ProofData)
+	return types.NewCall(wr.conn.Metadata(), "EthereumLightClient.import_header", header.HeaderData, header.ProofData)
 }

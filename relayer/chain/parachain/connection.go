@@ -23,18 +23,6 @@ type Connection struct {
 	log         *logrus.Entry
 }
 
-func (co *Connection) GetAPI() *gsrpc.SubstrateAPI {
-	return co.api
-}
-
-func (co *Connection) GetMetadata() *types.Metadata {
-	return &co.metadata
-}
-
-func (co *Connection) GetKeypair() *signature.KeyringPair {
-	return co.kp
-}
-
 func NewConnection(endpoint string, kp *signature.KeyringPair, log *logrus.Entry) *Connection {
 	return &Connection{
 		endpoint: endpoint,
@@ -77,7 +65,11 @@ func (co *Connection) Close() {
 	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
 }
 
-func (co *Connection) Api() *gsrpc.SubstrateAPI {
+func (co *Connection) KeyPair() *signature.KeyringPair {
+	return co.kp
+}
+
+func (co *Connection) API() *gsrpc.SubstrateAPI {
 	return co.api
 }
 
@@ -118,7 +110,7 @@ func (co *Connection) GetDataForDigestItem(digestItem *AuxiliaryDigestItem) (typ
 		return nil, err
 	}
 
-	data, err := co.GetAPI().RPC.Offchain.LocalStorageGet(offchain.Persistent, storageKey)
+	data, err := co.API().RPC.Offchain.LocalStorageGet(offchain.Persistent, storageKey)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to read commitment from offchain storage")
 		return nil, err

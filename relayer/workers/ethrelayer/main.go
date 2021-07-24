@@ -100,7 +100,7 @@ func (w *Worker) queryFinalizedBlockNumber() (uint64, error) {
 	}
 
 	var finalizedHeader ethereum.HeaderID
-	_, err = w.paraconn.Api().RPC.State.GetStorageLatest(storageKey, &finalizedHeader)
+	_, err = w.paraconn.API().RPC.State.GetStorageLatest(storageKey, &finalizedHeader)
 	if err != nil {
 		return 0, err
 	}

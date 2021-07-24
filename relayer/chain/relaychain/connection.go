@@ -28,11 +28,11 @@ func NewConnection(endpoint string, log *logrus.Entry) *Connection {
 	}
 }
 
-func (co *Connection) GetAPI() *gsrpc.SubstrateAPI {
+func (co *Connection) API() *gsrpc.SubstrateAPI {
 	return co.api
 }
 
-func (co *Connection) GetMetadata() *types.Metadata {
+func (co *Connection) Metadata() *types.Metadata {
 	return &co.metadata
 }
 
@@ -78,7 +78,7 @@ func (co *Connection) GetMMRLeafForBlock(
 		"blockNumber": blockNumber,
 		"blockHash":   blockHash.Hex(),
 	}).Info("Getting MMR Leaf for block...")
-	proofResponse, err := co.GetAPI().RPC.MMR.GenerateProof(blockNumber, blockHash)
+	proofResponse, err := co.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to generate mmr proof")
 		return types.GenerateMMRProofResponse{}, err
@@ -114,13 +114,13 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]Head, err
 
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 
-	keys, err := co.GetAPI().RPC.State.GetKeys(keyPrefix, blockHash)
+	keys, err := co.API().RPC.State.GetKeys(keyPrefix, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to get all parachain keys")
 		return nil, err
 	}
 
-	changeSets, err := co.GetAPI().RPC.State.QueryStorageAt(keys, blockHash)
+	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to get all parachain headers")
 		return nil, err
