@@ -183,9 +183,6 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 			relayChainBlockNumber--
 		}
 
-		fmt.Printf("allParaHeads: %#v\n", allParaHeads)
-		fmt.Printf("ownParaHead: %#v\n", ownParaHead)
-
 		// Note - relayChainBlockNumber will be one less than the block number discovered
 		// due to the decrement at the end of the loop, but the mmr leaves are 0 indexed whereas
 		// block numbers start from 1, so we actually do want to query for the leaf at
