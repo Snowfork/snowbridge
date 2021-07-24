@@ -5,6 +5,7 @@ package relaychain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 
@@ -103,7 +104,13 @@ func (co *Connection) GetMMRLeafForBlock(
 	return proofResponse, nil
 }
 
-func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32][]byte, error) {
+type Head struct {
+	LeafIndex  int // order in which this head was returned from the storage query
+	ParaID uint32
+	Data   []byte
+}
+
+func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]Head, error) {
 
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 
@@ -119,10 +126,10 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32][]byte, e
 		return nil, err
 	}
 
-	heads := make(map[uint32][]byte)
+	heads := make(map[uint32]Head)
 
 	for _, changeSet := range changeSets {
-		for _, change := range changeSet.Changes {
+		for index, change := range changeSet.Changes {
 			if change.StorageData.IsNone() {
 				continue
 			}
@@ -142,7 +149,11 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32][]byte, e
 				return nil, err
 			}
 
-			heads[paraID] = headData
+			heads[paraID] = Head{
+				LeafIndex: index,
+				ParaID:    paraID,
+				Data:      headData,
+			}
 		}
 	}
 
@@ -150,18 +161,22 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32][]byte, e
 }
 
 // Fetch the latest block of a parachain that has been finalized at a relay chain block hash
-func (co *Connection) FetchLatestFinalizedParaBlockNumber(relayBlockhash types.Hash, paraID uint32) (uint64, error) {
+func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID uint32) (*types.Header, error) {
 	heads, err := co.FetchParaHeads(relayBlockhash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to fetch parachain heads from relay chain")
-		return 0, err
+		return nil, err
+	}
+
+	if _, ok := heads[paraID]; !ok {
+		return nil, fmt.Errorf("chain is not a registered parachain")
 	}
 
 	var header types.Header
-	if err := types.DecodeFromBytes(heads[paraID], &header); err != nil {
+	if err := types.DecodeFromBytes(heads[paraID].Data, &header); err != nil {
 		co.log.WithError(err).Error("Failed to decode Header")
-		return 0, err
+		return nil, err
 	}
 
-	return uint64(header.Number), nil
+	return &header, nil
 }

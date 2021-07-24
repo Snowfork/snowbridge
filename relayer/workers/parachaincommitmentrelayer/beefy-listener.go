@@ -76,26 +76,27 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	eg.Go(func() error {
 
-		verifiedBeefyBlockNumber, verifiedBeefyBlockHash, err := li.fetchLatestVerifiedBeefyBlock(ctx)
+		relayBlockNumber, relayBlockHash, err := li.fetchLatestVerifiedBeefyBlock(ctx)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get latest relay chain block number and hash")
 			return err
 		}
 
-		verifiedParaBlockNumber, err := li.relaychainConn.FetchLatestFinalizedParaBlockNumber(
-			verifiedBeefyBlockHash, paraID)
+		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(relayBlockHash, paraID)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to get latest finalized para block number from relay chain")
+			li.log.WithError(err).Error("Failed to get finalized para head from relay chain")
 			return err
 		}
 
-		verifiedParaBlockHash, err := li.parachainConnection.GetAPI().RPC.Chain.GetBlockHash(verifiedParaBlockNumber)
+		paraBlockNumber := uint64(paraHead.Number)
+
+		paraBlockHash, err := li.parachainConnection.GetAPI().RPC.Chain.GetBlockHash(paraBlockNumber)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get latest finalized para block hash")
 			return err
 		}
 
-		messagePackages, err := li.buildMissedMessagePackages(ctx, verifiedBeefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
+		messagePackages, err := li.buildMissedMessagePackages(ctx, relayBlockNumber, paraBlockNumber, paraBlockHash)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to build missed message package")
 			return err
@@ -174,19 +175,22 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 		}
 		li.log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
 
-		verifiedParaBlockNumber, err := li.relaychainConn.FetchLatestFinalizedParaBlockNumber(
-			relayBlockHash, li.paraID)
+		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(relayBlockHash, li.paraID)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to get latest finalized para block number from relay chain")
+			li.log.WithError(err).Error("Failed to get finalized para head from relay chain")
 			return err
 		}
-		verifiedParaBlockHash, err := li.parachainConnection.GetAPI().RPC.Chain.GetBlockHash(verifiedParaBlockNumber)
+
+		paraBlockNumber := uint64(paraHead.Number)
+
+
+		paraBlockHash, err := li.parachainConnection.GetAPI().RPC.Chain.GetBlockHash(paraBlockNumber)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get latest finalized para block hash")
 			return err
 		}
 
-		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, verifiedParaBlockNumber, verifiedParaBlockHash)
+		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, paraBlockNumber, paraBlockHash)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to build missed message packages")
 			return err

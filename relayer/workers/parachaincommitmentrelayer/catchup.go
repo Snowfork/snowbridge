@@ -146,6 +146,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 	for _, block := range blocks {
 		var allParaHeads []types.Bytes
 		var ownParaHead types.Header
+		var ownParaHeadLeafIndex int
 
 		// Loop back over relay chain blocks to find the one that finalized the given parachain block
 		for ownParaHead.Number != types.BlockNumber(block.BlockNumber) {
@@ -167,18 +168,19 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 			}
 
 			var header types.Header
-			if err := types.DecodeFromBytes(heads[li.paraID], &header); err != nil {
+			if err := types.DecodeFromBytes(heads[li.paraID].Data, &header); err != nil {
 				li.log.WithError(err).Error("Failed to decode Header")
 				return nil, err
 			}
 
 			tmp := make([]types.Bytes, 0, len(heads))
 			for _, v := range heads {
-				tmp = append(tmp, v)
+				tmp = append(tmp, v.Data)
 			}
 
 			allParaHeads = tmp
 			ownParaHead = header
+			ownParaHeadLeafIndex = heads[li.paraID].LeafIndex
 
 			relayChainBlockNumber--
 		}
@@ -203,7 +205,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 			MMRProofResponse: mmrProof,
 			Header:           ownParaHead,
 			HeaderProof:      ownParaHeadProof,
-			HeaderProofPos:   0,
+			HeaderProofPos:   ownParaHeadLeafIndex,
 			HeaderProofWidth: len(allParaHeads),
 			HeaderProofRoot:  parasRoot,
 		}
