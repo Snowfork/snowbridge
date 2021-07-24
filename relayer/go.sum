@@ -543,10 +543,6 @@ github.com/smartystreets/goconvey v1.6.4 h1:fv0U8FUIMPNf1L9lnHLvLhgicrIVChEkdzIK
 github.com/smartystreets/goconvey v1.6.4/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
 github.com/snowfork/ethashproof v0.0.0-20210708164253-a74e2d12ad79 h1:GD0O2pb4qpC4n4ljsNri3snVljfxxPf6Q+k55xbFJVk=
 github.com/snowfork/ethashproof v0.0.0-20210708164253-a74e2d12ad79/go.mod h1:Yy1jPDuUtVPG1b3XnRGiEHWPs09Yd5UphOTqPhN9XPU=
-github.com/snowfork/go-substrate-rpc-client/v3 v3.0.3 h1:sqmImqfcJVjDXKAJZSiSBVqg8DCrNFnLG0eaFxWJEfA=
-github.com/snowfork/go-substrate-rpc-client/v3 v3.0.3/go.mod h1:n+dDFUtmhedjdLsXi8m+rWwwx1SEAEN1Uo2PFePK3bU=
-github.com/snowfork/go-substrate-rpc-client/v3 v3.0.4-0.20210724125305-3ecbba823f93 h1:LErNhNI++ZE5yA4VdCWQeYhDyRp1LUG32FrEdHK5HTc=
-github.com/snowfork/go-substrate-rpc-client/v3 v3.0.4-0.20210724125305-3ecbba823f93/go.mod h1:n+dDFUtmhedjdLsXi8m+rWwwx1SEAEN1Uo2PFePK3bU=
 github.com/snowfork/go-substrate-rpc-client/v3 v3.0.4-0.20210724130822-b34f07e6ef2d h1:ydZZ2MHhFEfLYLcfg+9QW4OLhDX4SDN5e872+B5+J+I=
 github.com/snowfork/go-substrate-rpc-client/v3 v3.0.4-0.20210724130822-b34f07e6ef2d/go.mod h1:n+dDFUtmhedjdLsXi8m+rWwwx1SEAEN1Uo2PFePK3bU=
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
