@@ -13,9 +13,9 @@ import (
 )
 
 type WorkerConfig struct {
-	ParachainCommitmentRelayer workers.WorkerConfig `mapstructure:"parachaincommitmentrelayer"`
-	BeefyRelayer               workers.WorkerConfig `mapstructure:"beefyrelayer"`
-	EthRelayer                 workers.WorkerConfig `mapstructure:"ethrelayer"`
+	Parachain workers.WorkerConfig `mapstructure:"parachain"`
+	Beefy     workers.WorkerConfig `mapstructure:"beefy"`
+	Ethereum  workers.WorkerConfig `mapstructure:"ethereum"`
 }
 
 type GlobalConfig struct {
@@ -23,11 +23,11 @@ type GlobalConfig struct {
 }
 
 type Config struct {
-	Global               GlobalConfig      `mapstructure:"global"`
-	Eth                  ethereum.Config   `mapstructure:"ethereum"`
-	Parachain            parachain.Config  `mapstructure:"parachain"`
-	Relaychain           relaychain.Config `mapstructure:"relaychain"`
-	Workers              WorkerConfig      `mapstructure:"workers"`
+	Global     GlobalConfig      `mapstructure:"global"`
+	Eth        ethereum.Config   `mapstructure:"ethereum"`
+	Parachain  parachain.Config  `mapstructure:"parachain"`
+	Relaychain relaychain.Config `mapstructure:"relaychain"`
+	Workers    WorkerConfig      `mapstructure:"workers"`
 }
 
 func LoadConfig() (*Config, error) {

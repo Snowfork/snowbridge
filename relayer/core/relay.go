@@ -4,9 +4,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/polkadot-ethereum/relayer/workers"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/ethrelayer"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachaincommitmentrelayer"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefy"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachain"
 )
 
 type Relay struct{}
@@ -19,47 +19,47 @@ func (re *Relay) Run() error {
 
 	var pool workers.WorkerPool
 
-	if config.Workers.EthRelayer.Enabled {
-		ethrelayerFactory := func() (workers.Worker, *workers.WorkerConfig, error) {
-			return ethrelayer.NewWorker(
+	if config.Workers.Ethereum.Enabled {
+		ethereumFactory := func() (workers.Worker, *workers.WorkerConfig, error) {
+			return ethereum.NewWorker(
 				config.Global.DataDir,
 				&config.Eth,
 				&config.Parachain,
-				logrus.WithField("worker", ethrelayer.Name),
-			), &config.Workers.EthRelayer, nil
+				logrus.WithField("worker", ethereum.Name),
+			), &config.Workers.Ethereum, nil
 		}
-		pool = append(pool, ethrelayerFactory)
+		pool = append(pool, ethereumFactory)
 	}
 
-	if config.Workers.BeefyRelayer.Enabled {
-		beefyrelayerFactory := func() (workers.Worker, *workers.WorkerConfig, error) {
-			beefyRelayer, err := beefyrelayer.NewWorker(
+	if config.Workers.Beefy.Enabled {
+		beefyFactory := func() (workers.Worker, *workers.WorkerConfig, error) {
+			beefyRelayer, err := beefy.NewWorker(
 				&config.Relaychain,
 				&config.Eth,
-				logrus.WithField("worker", beefyrelayer.Name),
+				logrus.WithField("worker", beefy.Name),
 			)
 			if err != nil {
 				return nil, nil, err
 			}
-			return beefyRelayer, &config.Workers.BeefyRelayer, nil
+			return beefyRelayer, &config.Workers.Beefy, nil
 		}
-		pool = append(pool, beefyrelayerFactory)
+		pool = append(pool, beefyFactory)
 	}
 
-	if config.Workers.ParachainCommitmentRelayer.Enabled {
-		parachaincommitmentrelayerFactory := func() (workers.Worker, *workers.WorkerConfig, error) {
-			parachainCommitmentRelayer, err := parachaincommitmentrelayer.NewWorker(
+	if config.Workers.Parachain.Enabled {
+		parachainFactory := func() (workers.Worker, *workers.WorkerConfig, error) {
+			parachain, err := parachain.NewWorker(
 				&config.Parachain,
 				&config.Relaychain,
 				&config.Eth,
-				logrus.WithField("worker", parachaincommitmentrelayer.Name),
+				logrus.WithField("worker", parachain.Name),
 			)
 			if err != nil {
 				return nil, nil, err
 			}
-			return parachainCommitmentRelayer, &config.Workers.ParachainCommitmentRelayer, nil
+			return parachain, &config.Workers.Parachain, nil
 		}
-		pool = append(pool, parachaincommitmentrelayerFactory)
+		pool = append(pool, parachainFactory)
 	}
 
 	return pool.Run()

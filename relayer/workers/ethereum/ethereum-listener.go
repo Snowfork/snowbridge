@@ -1,7 +1,7 @@
 // Copyright 2021 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package ethrelayer
+package ethereum
 
 import (
 	"context"

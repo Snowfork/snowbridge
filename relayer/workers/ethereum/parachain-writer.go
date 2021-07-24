@@ -1,4 +1,4 @@
-package ethrelayer
+package ethereum
 
 import (
 	"context"

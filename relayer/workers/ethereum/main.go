@@ -1,7 +1,7 @@
 // Copyright 2021 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package ethrelayer
+package ethereum
 
 import (
 	"context"
@@ -25,7 +25,7 @@ type Worker struct {
 	log        *logrus.Entry
 }
 
-const Name = "eth-relayer"
+const Name = "ethereum-relay"
 
 func NewWorker(
 	dataDir   string,

@@ -1,4 +1,4 @@
-package beefyrelayer
+package beefy
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefy/store"
 )
 
 type Worker struct {
@@ -29,7 +29,7 @@ type Worker struct {
 	ethHeaders              chan chain.Header
 }
 
-const Name = "beefy-relayer"
+const Name = "beefy-relay"
 
 func NewWorker(
 	relaychainConfig *relaychain.Config,

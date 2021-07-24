@@ -1,4 +1,4 @@
-package beefyrelayer
+package beefy
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefy/store"
 )
 
 // Listener streams the Ethereum blockchain for application events

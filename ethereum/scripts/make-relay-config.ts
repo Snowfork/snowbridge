@@ -43,15 +43,15 @@ const main = async () => {
             endpoint: "ws://127.0.0.1:9944/"
         },
         workers: {
-            parachaincommitmentrelayer: {
+            parachain: {
                 enabled: true,
                 "restart-delay": 30,
             },
-            beefyrelayer: {
+            beefy: {
                 enabled: true,
                 "restart-delay": 30,
             },
-            ethrelayer: {
+            ethereum: {
                 enabled: true,
                 "restart-delay": 30,
             },

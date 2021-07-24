@@ -1,4 +1,4 @@
-package parachaincommitmentrelayer
+package parachain
 
 import (
 	"context"
@@ -25,7 +25,7 @@ type Worker struct {
 	log                   *logrus.Entry
 }
 
-const Name = "parachain-commitment-relayer"
+const Name = "parachain-relay"
 
 func NewWorker(parachainConfig *parachain.Config,
 	relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, log *logrus.Entry) (*Worker, error) {

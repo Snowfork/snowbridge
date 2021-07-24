@@ -1,4 +1,4 @@
-package beefyrelayer
+package beefy
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v3/types"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefy/store"
 )
 
 type BeefyLightClientCommitmentLog struct {

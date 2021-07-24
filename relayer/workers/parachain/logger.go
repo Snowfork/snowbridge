@@ -1,4 +1,4 @@
-package parachaincommitmentrelayer
+package parachain
 
 import (
 	"encoding/hex"
