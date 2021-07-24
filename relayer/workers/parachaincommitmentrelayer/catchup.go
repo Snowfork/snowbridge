@@ -2,6 +2,7 @@ package parachaincommitmentrelayer
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -144,8 +145,8 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 	var blocksWithProof []ParaBlockWithProofs
 	for _, block := range blocks {
 		var allParaHeads []types.Bytes
-		var ownParaHeadProofPos int
 		var ownParaHead types.Header
+
 		// Loop back over relay chain blocks to find the one that finalized the given parachain block
 		for ownParaHead.Number != types.BlockNumber(block.BlockNumber) {
 			li.log.WithField("relayChainBlockNumber", relayChainBlockNumber).Info("Getting hash for relay chain block")
@@ -155,13 +156,35 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 				return nil, err
 			}
 			li.log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
-			allParaHeads, ownParaHeadProofPos, ownParaHead, err = li.relaychainConn.GetAllParaheadsWithOwn(relayBlockHash, li.paraID)
+			heads, err := li.relaychainConn.FetchParaHeads(relayBlockHash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to get paraheads")
 				return nil, err
 			}
+
+			if _, ok := heads[li.paraID]; !ok {
+				return nil, fmt.Errorf("chain is not a registered parachain")
+			}
+
+			var header types.Header
+			if err := types.DecodeFromBytes(heads[li.paraID], &header); err != nil {
+				li.log.WithError(err).Error("Failed to decode Header")
+				return nil, err
+			}
+
+			tmp := make([]types.Bytes, 0, len(heads))
+			for _, v := range heads {
+				tmp = append(tmp, v)
+			}
+
+			allParaHeads = tmp
+			ownParaHead = header
+
 			relayChainBlockNumber--
 		}
+
+		fmt.Printf("allParaHeads: %#v\n", allParaHeads)
+		fmt.Printf("ownParaHead: %#v\n", ownParaHead)
 
 		// Note - relayChainBlockNumber will be one less than the block number discovered
 		// due to the decrement at the end of the loop, but the mmr leaves are 0 indexed whereas
@@ -183,7 +206,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 			MMRProofResponse: mmrProof,
 			Header:           ownParaHead,
 			HeaderProof:      ownParaHeadProof,
-			HeaderProofPos:   ownParaHeadProofPos,
+			HeaderProofPos:   0,
 			HeaderProofWidth: len(allParaHeads),
 			HeaderProofRoot:  parasRoot,
 		}
