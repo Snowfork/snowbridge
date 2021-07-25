@@ -3,10 +3,10 @@ package core
 import (
 	"github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/workers"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefy"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/parachain"
+	"github.com/snowfork/polkadot-ethereum/relayer/relays"
+	"github.com/snowfork/polkadot-ethereum/relayer/relays/beefy"
+	"github.com/snowfork/polkadot-ethereum/relayer/relays/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/relays/parachain"
 )
 
 type Relay struct{}
@@ -17,10 +17,10 @@ func (re *Relay) Run() error {
 		return err
 	}
 
-	var pool workers.WorkerPool
+	var pool relays.WorkerPool
 
 	if config.Workers.Ethereum.Enabled {
-		ethereumFactory := func() (workers.Worker, *workers.WorkerConfig, error) {
+		ethereumFactory := func() (relays.Worker, *relays.WorkerConfig, error) {
 			return ethereum.NewWorker(
 				config.Global.DataDir,
 				&config.Eth,
@@ -32,7 +32,7 @@ func (re *Relay) Run() error {
 	}
 
 	if config.Workers.Beefy.Enabled {
-		beefyFactory := func() (workers.Worker, *workers.WorkerConfig, error) {
+		beefyFactory := func() (relays.Worker, *relays.WorkerConfig, error) {
 			beefyRelayer, err := beefy.NewWorker(
 				&config.Relaychain,
 				&config.Eth,
@@ -47,7 +47,7 @@ func (re *Relay) Run() error {
 	}
 
 	if config.Workers.Parachain.Enabled {
-		parachainFactory := func() (workers.Worker, *workers.WorkerConfig, error) {
+		parachainFactory := func() (relays.Worker, *relays.WorkerConfig, error) {
 			parachain, err := parachain.NewWorker(
 				&config.Parachain,
 				&config.Relaychain,

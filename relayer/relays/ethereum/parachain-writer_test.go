@@ -15,7 +15,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/ethereum"
+	"github.com/snowfork/polkadot-ethereum/relayer/relays/ethereum"
 )
 
 func TestWrite(t *testing.T) {

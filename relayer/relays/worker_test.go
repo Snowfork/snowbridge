@@ -1,7 +1,7 @@
 // Copyright 2021 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package workers_test
+package relays_test
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/snowfork/polkadot-ethereum/relayer/relays"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/workers"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/errgroup"
 )
@@ -65,8 +65,8 @@ func (w *TerminatingWorker) Start(ctx context.Context, eg *errgroup.Group) error
 	return nil
 }
 
-func testConfig() *workers.WorkerConfig {
-	return &workers.WorkerConfig{
+func testConfig() *relays.WorkerConfig {
+	return &relays.WorkerConfig{
 		Enabled:      true,
 		RestartDelay: 1,
 	}
@@ -80,10 +80,10 @@ func testLogger() (*logrus.Entry, *logtest.Hook) {
 }
 
 func TestCanStopPool(t *testing.T) {
-	factory := func() (workers.Worker, *workers.WorkerConfig, error) {
+	factory := func() (relays.Worker, *relays.WorkerConfig, error) {
 		return &TestWorker{}, testConfig(), nil
 	}
-	pool := workers.WorkerPool{
+	pool := relays.WorkerPool{
 		factory,
 		factory,
 		factory,
@@ -112,10 +112,10 @@ func TestDetectsDeadlockedWorker(t *testing.T) {
 	ch := make(chan struct{})
 	// The consumer worker will run until the incoming channel is closed, ignoring
 	// context cancellation.
-	factoryConsumer := func() (workers.Worker, *workers.WorkerConfig, error) {
+	factoryConsumer := func() (relays.Worker, *relays.WorkerConfig, error) {
 		return NewConsumerWorker(ch), testConfig(), nil
 	}
-	pool := workers.WorkerPool{factoryConsumer}
+	pool := relays.WorkerPool{factoryConsumer}
 
 	log, _ := testLogger()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -138,10 +138,10 @@ func TestDetectsDeadlockedWorker(t *testing.T) {
 }
 
 func TestRestartsTerminatedWorker(t *testing.T) {
-	factoryTerminating := func() (workers.Worker, *workers.WorkerConfig, error) {
+	factoryTerminating := func() (relays.Worker, *relays.WorkerConfig, error) {
 		return &TerminatingWorker{}, testConfig(), nil
 	}
-	pool := workers.WorkerPool{factoryTerminating}
+	pool := relays.WorkerPool{factoryTerminating}
 
 	log, hook := testLogger()
 	ctx, cancel := context.WithCancel(context.Background())

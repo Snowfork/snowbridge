@@ -8,14 +8,14 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers"
+	"github.com/snowfork/polkadot-ethereum/relayer/relays"
 	"github.com/spf13/viper"
 )
 
 type WorkerConfig struct {
-	Parachain workers.WorkerConfig `mapstructure:"parachain"`
-	Beefy     workers.WorkerConfig `mapstructure:"beefy"`
-	Ethereum  workers.WorkerConfig `mapstructure:"ethereum"`
+	Parachain relays.WorkerConfig `mapstructure:"parachain"`
+	Beefy     relays.WorkerConfig `mapstructure:"beefy"`
+	Ethereum  relays.WorkerConfig `mapstructure:"ethereum"`
 }
 
 type GlobalConfig struct {

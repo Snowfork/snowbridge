@@ -9,7 +9,7 @@ import (
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
 	"github.com/snowfork/polkadot-ethereum/relayer/core"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefy/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/relays/beefy/store"
 	"github.com/spf13/cobra"
 )
 

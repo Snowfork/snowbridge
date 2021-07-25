@@ -16,7 +16,7 @@ import (
 
 	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
 	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefy/store"
+	"github.com/snowfork/polkadot-ethereum/relayer/relays/beefy/store"
 )
 
 type BeefyEthereumWriter struct {
