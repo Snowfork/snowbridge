@@ -21,7 +21,7 @@ const createTransferXcm = (
             id: api.createType("MultiLocation", {
               X1: api.createType("Junction", "Parent"),
             }),
-            amount: api.createType("Compact<U128>", 1000_000_0000),
+            amount: api.createType("Compact<U128>", 10_000_000),
           }),
         }),
         api.createType("MultiAsset", {
@@ -36,7 +36,7 @@ const createTransferXcm = (
           BuyExecution: api.createType("XcmOrderBuyExecution", {
             fees: api.createType("MultiAsset", "All"),
             weight: 0,
-            debt: 10000000,
+            debt: 3_000_000,
             haltOnError: false,
             xcm: [],
           }),
@@ -57,7 +57,7 @@ const createTransferXcm = (
                 BuyExecution: api.createType("XcmOrderBuyExecution", {
                   fees: api.createType("MultiAsset", "All"),
                   weight: 0,
-                  debt: 10000000,
+                  debt: 3_000_000,
                   haltOnError: false,
                   xcm: [],
                 }),
