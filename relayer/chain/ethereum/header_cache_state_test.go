@@ -11,7 +11,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/ethashproof"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/sync/errgroup"

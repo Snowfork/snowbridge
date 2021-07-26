@@ -1,4 +1,4 @@
-package beefyrelayer
+package beefy
 
 import (
 	"context"
@@ -8,11 +8,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
+	"github.com/snowfork/snowbridge/relayer/chain"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 )
 
 type Worker struct {

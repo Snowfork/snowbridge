@@ -6,10 +6,10 @@ import (
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/core"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/core"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 	"github.com/spf13/cobra"
 )
 

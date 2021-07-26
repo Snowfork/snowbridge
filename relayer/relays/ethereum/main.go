@@ -1,7 +1,7 @@
 // Copyright 2021 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package ethrelayer
+package ethereum
 
 import (
 	"context"
@@ -11,9 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
-	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 )
 
 type Worker struct {

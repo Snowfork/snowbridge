@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/snowfork/polkadot-ethereum/relayer/crypto"
+	"github.com/snowfork/snowbridge/relayer/crypto"
 
 	secp256k1 "github.com/ethereum/go-ethereum/crypto"
 )

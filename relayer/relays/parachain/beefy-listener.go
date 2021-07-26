@@ -1,4 +1,4 @@
-package parachaincommitmentrelayer
+package parachain
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
 )
 
 type BeefyListener struct {

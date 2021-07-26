@@ -1,4 +1,4 @@
-package ethrelayer
+package ethereum
 
 import (
 	"context"
@@ -9,9 +9,9 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 )
 
 type ParachainPayload struct {

@@ -1,7 +1,7 @@
 // Copyright 2021 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package workers
+package relays
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type WorkerFactory func() (Worker, *WorkerConfig, error)
 
 type WorkerPool []WorkerFactory
 
-var WorkerDeadlocked = errors.New("Worker deadlocked")
+var WorkerDeadLocked = errors.New("Worker deadlocked")
 
 type DeadlockHandler func() error
 
@@ -61,7 +61,7 @@ func (wp WorkerPool) runWorker(ctx context.Context, worker Worker) error {
 			return err
 		}
 
-		return WorkerDeadlocked
+		return WorkerDeadLocked
 	}
 }
 
@@ -127,7 +127,7 @@ func (wp WorkerPool) run(ctx context.Context, onDeadlock DeadlockHandler, log *l
 				}).Debug("Starting worker")
 				err = wp.runWorker(ctx, worker)
 
-				if err == WorkerDeadlocked {
+				if err == WorkerDeadLocked {
 					log.WithField(
 						"worker",
 						worker.Name(),

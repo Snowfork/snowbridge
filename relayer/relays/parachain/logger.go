@@ -1,4 +1,4 @@
-package parachaincommitmentrelayer
+package parachain
 
 import (
 	"encoding/hex"
@@ -7,8 +7,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/basic"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
+	"github.com/snowfork/snowbridge/relayer/contracts/basic"
+	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 )
 
 type ParaheadPartialLog struct {

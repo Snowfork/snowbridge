@@ -1,4 +1,4 @@
-package beefyrelayer
+package beefy
 
 import (
 	"context"
@@ -11,9 +11,9 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/substrate"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
+	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
+	"github.com/snowfork/snowbridge/relayer/substrate"
 )
 
 type BeefyRelaychainListener struct {

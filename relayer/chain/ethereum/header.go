@@ -14,7 +14,7 @@ import (
 	"github.com/snowfork/ethashproof/ethash"
 	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
 	types "github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
+	"github.com/snowfork/snowbridge/relayer/chain"
 )
 
 type HeaderID struct {

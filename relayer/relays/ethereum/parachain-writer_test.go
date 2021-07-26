@@ -1,7 +1,7 @@
 // Copyright 2021 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package ethrelayer_test
+package ethereum_test
 
 import (
 	"context"
@@ -12,10 +12,10 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
-	"github.com/snowfork/polkadot-ethereum/relayer/crypto/sr25519"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/ethrelayer"
+	"github.com/snowfork/snowbridge/relayer/chain"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+	ethereumRelay "github.com/snowfork/snowbridge/relayer/relays/ethereum"
 )
 
 func TestWrite(t *testing.T) {
@@ -24,12 +24,12 @@ func TestWrite(t *testing.T) {
 
 	conn := parachain.NewConnection("ws://127.0.0.1:11144/", sr25519.Alice().AsKeyringPair(), log)
 
-	payloads := make(chan ethrelayer.ParachainPayload, 1)
+	payloads := make(chan ethereumRelay.ParachainPayload, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 	defer cancel()
 
-	writer := ethrelayer.NewParachainWriter(conn, payloads, log)
+	writer := ethereumRelay.NewParachainWriter(conn, payloads, log)
 
 	err := conn.Connect(ctx)
 	if err != nil {
@@ -62,7 +62,7 @@ func TestWrite(t *testing.T) {
 		HeaderData: "headerdata",
 		ProofData:  "proofdata",
 	}
-	payload := ethrelayer.ParachainPayload{
+	payload := ethereumRelay.ParachainPayload{
 		Header:   &header,
 		Messages: []*chain.EthereumOutboundMessage{&message},
 	}

@@ -1,4 +1,4 @@
-package beefyrelayer
+package beefy
 
 import (
 	"context"
@@ -12,10 +12,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/beefylightclient"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers/beefyrelayer/store"
+	"github.com/snowfork/snowbridge/relayer/chain"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 )
 
 // Listener streams the Ethereum blockchain for application events

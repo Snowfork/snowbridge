@@ -1,7 +1,7 @@
 // Copyright 2021 Snowfork
 // SPDX-License-Identifier: LGPL-3.0-only
 
-package ethrelayer
+package ethereum
 
 import (
 	"context"
@@ -17,11 +17,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum/syncer"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/basic"
-	"github.com/snowfork/polkadot-ethereum/relayer/contracts/incentivized"
+	"github.com/snowfork/snowbridge/relayer/chain"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum/syncer"
+	"github.com/snowfork/snowbridge/relayer/contracts/basic"
+	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 )
 
 // EthereumListener streams the Ethereum blockchain for application events

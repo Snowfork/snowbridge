@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/snowfork/go-substrate-rpc-client/v3/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/crypto"
+	"github.com/snowfork/snowbridge/relayer/crypto"
 )
 
 var _ crypto.Keypair = &Keypair{}
