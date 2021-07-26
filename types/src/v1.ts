@@ -43,7 +43,8 @@ export const types: RegistryTypes = {
     StoredHeader: {
       submitter: "Option<AccountId>",
       header: "EthereumHeader",
-      totalDifficulty: "U256"
+      totalDifficulty: "U256",
+      finalized: "bool"
     },
     EthashProofData: {
       dagNodes: "[H512; 2]",
