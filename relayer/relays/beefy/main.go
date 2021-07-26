@@ -29,7 +29,7 @@ type Worker struct {
 	ethHeaders              chan chain.Header
 }
 
-const Name = "beefy-relayer"
+const Name = "beefy-relay"
 
 func NewWorker(
 	relaychainConfig *relaychain.Config,

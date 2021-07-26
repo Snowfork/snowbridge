@@ -25,7 +25,7 @@ type Worker struct {
 	log        *logrus.Entry
 }
 
-const Name = "eth-relayer"
+const Name = "ethereum-relay"
 
 func NewWorker(
 	dataDir   string,
