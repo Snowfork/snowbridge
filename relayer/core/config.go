@@ -5,17 +5,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/workers"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	worker "github.com/snowfork/snowbridge/relayer/relays"
 	"github.com/spf13/viper"
 )
 
 type WorkerConfig struct {
-	ParachainCommitmentRelayer workers.WorkerConfig `mapstructure:"parachaincommitmentrelayer"`
-	BeefyRelayer               workers.WorkerConfig `mapstructure:"beefyrelayer"`
-	EthRelayer                 workers.WorkerConfig `mapstructure:"ethrelayer"`
+	ParachainCommitmentRelayer worker.WorkerConfig `mapstructure:"parachaincommitmentrelayer"`
+	BeefyRelayer               worker.WorkerConfig `mapstructure:"beefyrelayer"`
+	EthRelayer                 worker.WorkerConfig `mapstructure:"ethrelayer"`
 }
 
 type GlobalConfig struct {

@@ -9,7 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 )
 
 func TestConnect(t *testing.T) {

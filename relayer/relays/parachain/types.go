@@ -1,8 +1,8 @@
-package parachaincommitmentrelayer
+package parachain
 
 import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 )
 
 type ParaBlockWithDigest struct {

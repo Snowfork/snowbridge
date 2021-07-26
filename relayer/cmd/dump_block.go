@@ -18,7 +18,7 @@ import (
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/spf13/viper"
 )
 

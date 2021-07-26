@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
+	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 )
 
 type Connection struct {

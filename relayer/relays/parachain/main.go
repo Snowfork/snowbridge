@@ -1,4 +1,4 @@
-package parachaincommitmentrelayer
+package parachain
 
 import (
 	"context"
@@ -7,10 +7,10 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/relaychain"
-	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 )
 
 type Worker struct {
@@ -25,7 +25,7 @@ type Worker struct {
 	log                   *logrus.Entry
 }
 
-const Name = "parachain-commitment-relayer"
+const Name = "parachain-relay"
 
 func NewWorker(parachainConfig *parachain.Config,
 	relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, log *logrus.Entry) (*Worker, error) {
