@@ -54,7 +54,7 @@ func (li *BeefyRelaychainListener) onDone(ctx context.Context) error {
 func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) error {
 	ch := make(chan interface{})
 
-	sub, err := li.relaychainConn.GetAPI().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
+	sub, err := li.relaychainConn.API().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
 	if err != nil {
 		panic(err)
 	}
@@ -103,7 +103,7 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				continue
 			}
 
-			blockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(blockNumber))
+			blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(blockNumber))
 			if err != nil {
 				li.log.WithError(err).Error("Failed to get block hash")
 			}
@@ -132,19 +132,19 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 }
 
 func (li *BeefyRelaychainListener) getBeefyAuthorities(blockNumber uint64) ([]common.Address, error) {
-	blockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(blockNumber)
+	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	storageKey, err := types.CreateStorageKey(li.relaychainConn.GetMetadata(), "Beefy", "Authorities", nil, nil)
+	storageKey, err := types.CreateStorageKey(li.relaychainConn.Metadata(), "Beefy", "Authorities", nil, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var authorities substrate.Authorities
 
-	ok, err := li.relaychainConn.GetAPI().RPC.State.GetStorage(storageKey, &authorities, blockHash)
+	ok, err := li.relaychainConn.API().RPC.State.GetStorage(storageKey, &authorities, blockHash)
 	if err != nil {
 		return nil, err
 	}

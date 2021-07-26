@@ -146,7 +146,7 @@ func (worker *Worker) Name() string {
 func (worker *Worker) QueryCurrentEpoch() error {
 	worker.log.Info("Creating storage key...")
 
-	storageKey, err := types.CreateStorageKey(worker.relaychainConn.GetMetadata(), "Babe", "Epoch", nil, nil)
+	storageKey, err := types.CreateStorageKey(worker.relaychainConn.Metadata(), "Babe", "Epoch", nil, nil)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func (worker *Worker) QueryCurrentEpoch() error {
 
 	// var headerID ethereum.HeaderID
 	var epochData interface{}
-	_, err = worker.relaychainConn.GetAPI().RPC.State.GetStorageLatest(storageKey, &epochData)
+	_, err = worker.relaychainConn.API().RPC.State.GetStorageLatest(storageKey, &epochData)
 	if err != nil {
 		return err
 	}
