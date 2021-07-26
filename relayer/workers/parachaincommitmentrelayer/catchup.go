@@ -156,12 +156,17 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 				li.log.WithError(err).Error("Failed to get block hash")
 				return nil, err
 			}
+
 			li.log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
 			heads, err := li.relaychainConn.FetchParaHeads(relayBlockHash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to get paraheads")
 				return nil, err
 			}
+
+			li.log.WithFields(logrus.Fields{
+				"count": len(heads),
+			}).Info("Fetched para heads")
 
 			if _, ok := heads[li.paraID]; !ok {
 				return nil, fmt.Errorf("chain is not a registered parachain")
@@ -172,6 +177,15 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 				li.log.WithError(err).Error("Failed to decode Header")
 				return nil, err
 			}
+
+			li.log.WithFields(logrus.Fields{
+				"header.ParentHash":     header.ParentHash.Hex(),
+				"header.Number":         header.Number,
+				"header.StateRoot":      header.StateRoot.Hex(),
+				"header.ExtrinsicsRoot": header.ExtrinsicsRoot.Hex(),
+				"header.Digest":         header.Digest,
+				"parachainId":           li.paraID,
+			}).Info("Decoded header for parachain")
 
 			allParaHeads = li.relaychainConn.AsProofInput(heads)
 			ownParaHead = header

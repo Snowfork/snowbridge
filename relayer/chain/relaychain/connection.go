@@ -176,18 +176,18 @@ func (b ByLeafIndex) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 // in the original order they were returned by the Paras.Heads storage query.
 func (co *Connection) AsProofInput(heads map[uint32]ParaHead) []types.Bytes {
 	// make a slice of values in the map
-	headsAsSlice := make([]ParaHead, len(heads))
-	for i, v := range heads {
-		headsAsSlice[i] = v
+	headsAsSlice := make([]ParaHead, 0, len(heads))
+	for _, v := range heads {
+		headsAsSlice = append(headsAsSlice, v)
 	}
 
 	// sort by leaf index
 	sort.Sort(ByLeafIndex(headsAsSlice))
 
 	// map over slice to retrieve header data
-    data := make([]types.Bytes, len(headsAsSlice))
-    for i, h := range headsAsSlice {
-        data[i] = h.Data
+    data := make([]types.Bytes, 0, len(headsAsSlice))
+    for _, h := range headsAsSlice {
+        data = append(data, h.Data)
     }
     return data
 }
@@ -203,14 +203,20 @@ func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID u
 		return nil, err
 	}
 
-	var header types.Header
-	ok, err := co.GetAPI().RPC.State.GetStorage(storageKey, &header, relayBlockhash)
+	var headerBytes types.Bytes
+	ok, err := co.GetAPI().RPC.State.GetStorage(storageKey, &headerBytes, relayBlockhash)
 	if err != nil {
 		return nil, err
 	}
 
 	if !ok {
 		return nil, fmt.Errorf("parachain head not found")
+	}
+
+	var header types.Header
+	if err := types.DecodeFromBytes(headerBytes, &header); err != nil {
+		co.log.WithError(err).Error("Failed to decode Header")
+		return nil, err
 	}
 
 	return &header, nil

@@ -76,13 +76,13 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	eg.Go(func() error {
 
-		relayBlockNumber, relayBlockHash, err := li.fetchLatestVerifiedBeefyBlock(ctx)
+		beefyBlockNumber, beefyBlockHash, err := li.fetchLatestVerifiedBeefyBlock(ctx)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get latest relay chain block number and hash")
 			return err
 		}
 
-		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(relayBlockHash, paraID)
+		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(beefyBlockHash, paraID)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get finalized para head from relay chain")
 			return err
@@ -96,7 +96,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
-		messagePackages, err := li.buildMissedMessagePackages(ctx, relayBlockNumber, paraBlockNumber, paraBlockHash)
+		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, paraBlockNumber, paraBlockHash)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to build missed message package")
 			return err
@@ -168,14 +168,14 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 		}).Info("Witnessed a new MMRRoot event")
 
 		li.log.WithField("beefyBlockNumber", beefyBlockNumber).Info("Getting hash for relay chain block")
-		relayBlockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
+		beefyBlockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get block hash")
 			return err
 		}
-		li.log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
+		li.log.WithField("beefyBlockHash", beefyBlockHash.Hex()).Info("Got relay chain blockhash")
 
-		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(relayBlockHash, li.paraID)
+		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(beefyBlockHash, li.paraID)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get finalized para head from relay chain")
 			return err
