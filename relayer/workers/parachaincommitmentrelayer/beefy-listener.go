@@ -88,6 +88,15 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
+		li.log.WithFields(logrus.Fields{
+			"header.ParentHash":     paraHead.ParentHash.Hex(),
+			"header.Number":         paraHead.Number,
+			"header.StateRoot":      paraHead.StateRoot.Hex(),
+			"header.ExtrinsicsRoot": paraHead.ExtrinsicsRoot.Hex(),
+			"header.Digest":         paraHead.Digest,
+			"parachainId":           paraID,
+		}).Info("Fetched finalized header for parachain")
+
 		paraBlockNumber := uint64(paraHead.Number)
 
 		paraBlockHash, err := li.parachainConnection.GetAPI().RPC.Chain.GetBlockHash(paraBlockNumber)

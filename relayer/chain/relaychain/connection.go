@@ -127,6 +127,12 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 		return nil, err
 	}
 
+	co.log.WithFields(logrus.Fields{
+		"numKeys": len(keys),
+		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
+		"block": blockHash.Hex(),
+	}).Debug("Found keys for Paras.Heads storage map")
+
 	changeSets, err := co.GetAPI().RPC.State.QueryStorageAt(keys, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to get all parachain headers")
@@ -154,6 +160,12 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 				co.log.WithError(err).Error("Failed to decode HeadData wrapper")
 				return nil, err
 			}
+
+			co.log.WithFields(logrus.Fields{
+				"ParaID": paraID,
+				"LeafIndex": index,
+				"HeadData": fmt.Sprintf("%#x", headData),
+			}).Debug("Processed storage key for head in Paras.Heads")
 
 			heads[paraID] = ParaHead{
 				LeafIndex: index,

@@ -178,20 +178,20 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 				return nil, err
 			}
 
-			li.log.WithFields(logrus.Fields{
-				"header.ParentHash":     header.ParentHash.Hex(),
-				"header.Number":         header.Number,
-				"header.StateRoot":      header.StateRoot.Hex(),
-				"header.ExtrinsicsRoot": header.ExtrinsicsRoot.Hex(),
-				"header.Digest":         header.Digest,
-				"parachainId":           li.paraID,
-			}).Info("Decoded header for parachain")
-
 			allParaHeads = li.relaychainConn.AsProofInput(heads)
 			ownParaHead = header
 			ownParaHeadLeafIndex = heads[li.paraID].LeafIndex
 
 			relayChainBlockNumber--
+		}
+
+		li.log.Debug("Have inputs for proof generation")
+		for i, v := range allParaHeads {
+			li.log.WithFields(logrus.Fields{
+				"LeafIndex": i,
+				"HeadData": fmt.Sprintf("%#x", v),
+				"IsSnowbridgePara": i == ownParaHeadLeafIndex,
+			}).Debug("Head data")
 		}
 
 		// Note - relayChainBlockNumber will be one less than the block number discovered
