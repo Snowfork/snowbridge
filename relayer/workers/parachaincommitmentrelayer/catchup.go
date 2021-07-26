@@ -173,12 +173,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 				return nil, err
 			}
 
-			tmp := make([]types.Bytes, 0, len(heads))
-			for _, v := range heads {
-				tmp = append(tmp, v.Data)
-			}
-
-			allParaHeads = tmp
+			allParaHeads = li.relaychainConn.AsProofInput(heads)
 			ownParaHead = header
 			ownParaHeadLeafIndex = heads[li.paraID].LeafIndex
 

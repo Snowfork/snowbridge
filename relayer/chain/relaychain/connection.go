@@ -6,6 +6,7 @@ package relaychain
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/sirupsen/logrus"
 
@@ -104,13 +105,19 @@ func (co *Connection) GetMMRLeafForBlock(
 	return proofResponse, nil
 }
 
-type Head struct {
+type ParaHead struct {
 	LeafIndex  int // order in which this head was returned from the storage query
 	ParaID uint32
-	Data   []byte
+	Data   types.Bytes
 }
 
-func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]Head, error) {
+// Offset of encoded para id in storage key.
+// The key is of this format:
+//   ParaId: u32
+//   Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
+const ParaIDOffset = 16 + 16 + 8
+
+func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
 
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 
@@ -126,7 +133,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]Head, err
 		return nil, err
 	}
 
-	heads := make(map[uint32]Head)
+	heads := make(map[uint32]ParaHead)
 
 	for _, changeSet := range changeSets {
 		for index, change := range changeSet.Changes {
@@ -135,8 +142,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]Head, err
 			}
 
 			var paraID uint32
-
-			if err := types.DecodeFromBytes(change.StorageKey[40:], &paraID); err != nil {
+			if err := types.DecodeFromBytes(change.StorageKey[ParaIDOffset:], &paraID); err != nil {
 				co.log.WithError(err).Error("Failed to decode parachain ID")
 				return nil, err
 			}
@@ -149,7 +155,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]Head, err
 				return nil, err
 			}
 
-			heads[paraID] = Head{
+			heads[paraID] = ParaHead{
 				LeafIndex: index,
 				ParaID:    paraID,
 				Data:      headData,
@@ -160,22 +166,51 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]Head, err
 	return heads, nil
 }
 
-// Fetch the latest block of a parachain that has been finalized at a relay chain block hash
+// ByLeafIndex implements sort.Interface based on the LeafIndex field.
+type ByLeafIndex []ParaHead
+func (b ByLeafIndex) Len() int           { return len(b) }
+func (b ByLeafIndex) Less(i, j int) bool { return b[i].LeafIndex < b[j].LeafIndex }
+func (b ByLeafIndex) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+
+// AsProofInput transforms heads into a slice of head datas,
+// in the original order they were returned by the Paras.Heads storage query.
+func (co *Connection) AsProofInput(heads map[uint32]ParaHead) []types.Bytes {
+	// make a slice of values in the map
+	headsAsSlice := make([]ParaHead, len(heads))
+	for i, v := range heads {
+		headsAsSlice[i] = v
+	}
+
+	// sort by leaf index
+	sort.Sort(ByLeafIndex(headsAsSlice))
+
+	// map over slice to retrieve header data
+    data := make([]types.Bytes, len(headsAsSlice))
+    for i, h := range headsAsSlice {
+        data[i] = h.Data
+    }
+    return data
+}
+
 func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID uint32) (*types.Header, error) {
-	heads, err := co.FetchParaHeads(relayBlockhash)
+	encodedParaID, err := types.EncodeToBytes(paraID)
 	if err != nil {
-		co.log.WithError(err).Error("Failed to fetch parachain heads from relay chain")
 		return nil, err
 	}
 
-	if _, ok := heads[paraID]; !ok {
-		return nil, fmt.Errorf("chain is not a registered parachain")
+	storageKey, err := types.CreateStorageKey(co.GetMetadata(), "Paras", "Heads", encodedParaID, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	var header types.Header
-	if err := types.DecodeFromBytes(heads[paraID].Data, &header); err != nil {
-		co.log.WithError(err).Error("Failed to decode Header")
+	ok, err := co.GetAPI().RPC.State.GetStorage(storageKey, &header, relayBlockhash)
+	if err != nil {
 		return nil, err
+	}
+
+	if !ok {
+		return nil, fmt.Errorf("parachain head not found")
 	}
 
 	return &header, nil
