@@ -69,7 +69,7 @@ func subBeefyJustifications(ctx context.Context, paraID uint32) error {
 	ch := make(chan interface{})
 
 	log.Info("Subscribing to beefy justifications")
-	sub, err := relaychainConn.GetAPI().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
+	sub, err := relaychainConn.API().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
 	if err != nil {
 		panic(err)
 	}
@@ -93,7 +93,7 @@ func subBeefyJustifications(ctx context.Context, paraID uint32) error {
 				continue
 			}
 			log.WithField("blockNumber", blockNumber+1).Info("Getting hash for next block")
-			nextBlockHash, err := relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(blockNumber + 1))
+			nextBlockHash, err := relaychainConn.API().RPC.Chain.GetBlockHash(uint64(blockNumber + 1))
 			if err != nil {
 				log.WithError(err).Error("Failed to get block hash")
 			}
@@ -123,13 +123,13 @@ func fetchParaHeads(co *relaychain.Connection, blockHash types.Hash) (map[uint32
 
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 
-	keys, err := co.GetAPI().RPC.State.GetKeys(keyPrefix, blockHash)
+	keys, err := co.API().RPC.State.GetKeys(keyPrefix, blockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain keys")
 		return nil, err
 	}
 
-	changeSets, err := co.GetAPI().RPC.State.QueryStorageAt(keys, blockHash)
+	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain headers")
 		return nil, err
@@ -171,7 +171,7 @@ func GetMMRLeafForBlock(blockNumber uint64, blockHash types.Hash, relaychainConn
 		"blockNumber": blockNumber,
 		"blockHash":   blockHash.Hex(),
 	}).Info("Getting MMR Leaf for block...")
-	proofResponse, err := relaychainConn.GetAPI().RPC.MMR.GenerateProof(blockNumber, blockHash)
+	proofResponse, err := relaychainConn.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate mmr proof")
 	}

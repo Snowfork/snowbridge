@@ -55,13 +55,13 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	li.beefyLightClient = beefyLightClientContract
 
 	// Fetch ParaId
-	storageKeyForParaID, err := types.CreateStorageKey(li.parachainConnection.GetMetadata(), "ParachainInfo", "ParachainId", nil, nil)
+	storageKeyForParaID, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "ParachainInfo", "ParachainId", nil, nil)
 	if err != nil {
 		return err
 	}
 
 	var paraID uint32
-	ok, err := li.parachainConnection.GetAPI().RPC.State.GetStorageLatest(storageKeyForParaID, &paraID)
+	ok, err := li.parachainConnection.API().RPC.State.GetStorageLatest(storageKeyForParaID, &paraID)
 	if err != nil {
 		li.log.WithError(err).Error("Failed to get para id for snowbridge")
 		return err
@@ -99,7 +99,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 		paraBlockNumber := uint64(paraHead.Number)
 
-		paraBlockHash, err := li.parachainConnection.GetAPI().RPC.Chain.GetBlockHash(paraBlockNumber)
+		paraBlockHash, err := li.parachainConnection.API().RPC.Chain.GetBlockHash(paraBlockNumber)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get latest finalized para block hash")
 			return err
@@ -177,7 +177,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 		}).Info("Witnessed a new MMRRoot event")
 
 		li.log.WithField("beefyBlockNumber", beefyBlockNumber).Info("Getting hash for relay chain block")
-		beefyBlockHash, err := li.relaychainConn.GetAPI().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
+		beefyBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get block hash")
 			return err
@@ -193,7 +193,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 		paraBlockNumber := uint64(paraHead.Number)
 
 
-		paraBlockHash, err := li.parachainConnection.GetAPI().RPC.Chain.GetBlockHash(paraBlockNumber)
+		paraBlockHash, err := li.parachainConnection.API().RPC.Chain.GetBlockHash(paraBlockNumber)
 		if err != nil {
 			li.log.WithError(err).Error("Failed to get latest finalized para block hash")
 			return err

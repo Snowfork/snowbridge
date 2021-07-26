@@ -29,11 +29,11 @@ func NewConnection(endpoint string, log *logrus.Entry) *Connection {
 	}
 }
 
-func (co *Connection) GetAPI() *gsrpc.SubstrateAPI {
+func (co *Connection) API() *gsrpc.SubstrateAPI {
 	return co.api
 }
 
-func (co *Connection) GetMetadata() *types.Metadata {
+func (co *Connection) Metadata() *types.Metadata {
 	return &co.metadata
 }
 
@@ -79,7 +79,7 @@ func (co *Connection) GetMMRLeafForBlock(
 		"blockNumber": blockNumber,
 		"blockHash":   blockHash.Hex(),
 	}).Info("Getting MMR Leaf for block...")
-	proofResponse, err := co.GetAPI().RPC.MMR.GenerateProof(blockNumber, blockHash)
+	proofResponse, err := co.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to generate mmr proof")
 		return types.GenerateMMRProofResponse{}, err
@@ -121,7 +121,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 
-	keys, err := co.GetAPI().RPC.State.GetKeys(keyPrefix, blockHash)
+	keys, err := co.API().RPC.State.GetKeys(keyPrefix, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to get all parachain keys")
 		return nil, err
@@ -133,7 +133,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 		"block": blockHash.Hex(),
 	}).Debug("Found keys for Paras.Heads storage map")
 
-	changeSets, err := co.GetAPI().RPC.State.QueryStorageAt(keys, blockHash)
+	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
 	if err != nil {
 		co.log.WithError(err).Error("Failed to get all parachain headers")
 		return nil, err
@@ -210,13 +210,13 @@ func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID u
 		return nil, err
 	}
 
-	storageKey, err := types.CreateStorageKey(co.GetMetadata(), "Paras", "Heads", encodedParaID, nil)
+	storageKey, err := types.CreateStorageKey(co.Metadata(), "Paras", "Heads", encodedParaID, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var headerBytes types.Bytes
-	ok, err := co.GetAPI().RPC.State.GetStorage(storageKey, &headerBytes, relayBlockhash)
+	ok, err := co.API().RPC.State.GetStorage(storageKey, &headerBytes, relayBlockhash)
 	if err != nil {
 		return nil, err
 	}
