@@ -23,7 +23,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/snowfork/ethashproof v0.0.0-20210708164253-a74e2d12ad79
-	github.com/snowfork/go-substrate-rpc-client/v3 v3.0.3
+	github.com/snowfork/go-substrate-rpc-client/v3 v3.0.4
 	github.com/spf13/afero v1.5.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v1.1.1
@@ -31,7 +31,6 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
 	github.com/wealdtech/go-merkletree v1.0.0
-	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect

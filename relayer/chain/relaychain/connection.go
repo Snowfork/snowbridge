@@ -6,6 +6,7 @@ package relaychain
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/sirupsen/logrus"
 
@@ -104,102 +105,131 @@ func (co *Connection) GetMMRLeafForBlock(
 	return proofResponse, nil
 }
 
-func (co *Connection) GetAllParaheadsWithOwn(blockHash types.Hash, ownParachainId uint32) (
-	[]types.Bytes, int, types.Header, error) {
-	none := types.NewOptionU32Empty()
-	encoded, err := types.EncodeToBytes(none)
-	if err != nil {
-		co.log.WithError(err).Error("Error")
-		return nil, 0, types.Header{}, err
-	}
-
-	baseParaHeadsStorageKey, err := types.CreateStorageKey(
-		co.GetMetadata(),
-		"Paras",
-		"Heads", encoded, nil)
-	if err != nil {
-		co.log.WithError(err).Error("Failed to create parachain header storage key")
-		return nil, 0, types.Header{}, err
-	}
-
-	//TODO fix this manual slice.
-	// The above types.CreateStorageKey does not give the same base key as polkadotjs needs for getKeys.
-	// It has some extra bytes.
-	// maybe from the none u32 in golang being wrong, or maybe slightly off CreateStorageKey call? we slice it
-	// here as a hack.
-	actualBaseParaHeadsStorageKey := baseParaHeadsStorageKey[:32]
-	co.log.WithField("actualBaseParaHeadsStorageKey", actualBaseParaHeadsStorageKey.Hex()).Info("actualBaseParaHeadsStorageKey")
-
-	keysResponse, err := co.GetAPI().RPC.State.GetKeys(actualBaseParaHeadsStorageKey, blockHash)
-	if err != nil {
-		co.log.WithError(err).Error("Failed to get all parachain keys")
-		return nil, 0, types.Header{}, err
-	}
-
-	headersResponse, err := co.GetAPI().RPC.State.QueryStorage(keysResponse, blockHash, blockHash)
-	if err != nil {
-		co.log.WithError(err).Error("Failed to get all parachain headers")
-		return nil, 0, types.Header{}, err
-	}
-
-	co.log.Info("Got all parachain headers")
-	var headers []types.Bytes
-	var ownParachainHeaderPos int
-	for _, headerResponse := range headersResponse {
-		for index, change := range headerResponse.Changes {
-
-			// TODO fix this manual slice with a proper type decode. only the last few bytes are for the ParaId,
-			// not sure what the early ones are for.
-			key := change.StorageKey[40:]
-			var parachainID types.U32
-			if err := types.DecodeFromBytes(key, &parachainID); err != nil {
-				co.log.WithError(err).Error("Failed to decode parachain ID")
-				return nil, 0, types.Header{}, err
-			}
-
-			var headerBytes types.Bytes
-			if err := types.DecodeFromBytes(change.StorageData, &headerBytes); err != nil {
-				co.log.WithError(err).Error("Failed to decode MMREncodableOpaqueLeaf")
-				return nil, 0, types.Header{}, err
-			}
-			headers = append(headers, headerBytes)
-
-			if parachainID == types.U32(ownParachainId) {
-				ownParachainHeaderPos = index
-			}
-
-		}
-	}
-	var ownParachainHeader types.Header
-	if err := types.DecodeFromBytes(headers[ownParachainHeaderPos], &ownParachainHeader); err != nil {
-		co.log.WithError(err).Error("Failed to decode Header")
-		return nil, 0, types.Header{}, err
-	}
-
-	co.log.WithField("parachainId", ownParachainId).Info("Decoding header for own parachain")
-	co.log.WithFields(logrus.Fields{
-		"headerBytes":           fmt.Sprintf("%#x", headers[ownParachainHeaderPos]),
-		"header.ParentHash":     ownParachainHeader.ParentHash.Hex(),
-		"header.Number":         ownParachainHeader.Number,
-		"header.StateRoot":      ownParachainHeader.StateRoot.Hex(),
-		"header.ExtrinsicsRoot": ownParachainHeader.ExtrinsicsRoot.Hex(),
-		"header.Digest":         ownParachainHeader.Digest,
-		"parachainId":           ownParachainId,
-	}).Info("Decoded header for parachain")
-
-	return headers, ownParachainHeaderPos, ownParachainHeader, nil
+type ParaHead struct {
+	LeafIndex  int // order in which this head was returned from the storage query
+	ParaID uint32
+	Data   types.Bytes
 }
 
-// Fetch the latest block of a parachain that has been finalized at a relay chain block hash
-func (co *Connection) FetchLatestFinalizedParaBlockNumber(relayBlockhash types.Hash, parachainId uint32) (uint64, error) {
-	_, _, ownParaHead, err := co.GetAllParaheadsWithOwn(relayBlockhash, parachainId)
+// Offset of encoded para id in storage key.
+// The key is of this format:
+//   ParaId: u32
+//   Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
+const ParaIDOffset = 16 + 16 + 8
 
+func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
+
+	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
+
+	keys, err := co.GetAPI().RPC.State.GetKeys(keyPrefix, blockHash)
 	if err != nil {
-		co.log.WithError(err).Error("Failed to get parachain heads from relay chain")
-		return 0, err
+		co.log.WithError(err).Error("Failed to get all parachain keys")
+		return nil, err
 	}
 
-	finalizedParaBlockNumber := uint64(ownParaHead.Number)
+	co.log.WithFields(logrus.Fields{
+		"numKeys": len(keys),
+		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
+		"block": blockHash.Hex(),
+	}).Debug("Found keys for Paras.Heads storage map")
 
-	return finalizedParaBlockNumber, nil
+	changeSets, err := co.GetAPI().RPC.State.QueryStorageAt(keys, blockHash)
+	if err != nil {
+		co.log.WithError(err).Error("Failed to get all parachain headers")
+		return nil, err
+	}
+
+	heads := make(map[uint32]ParaHead)
+
+	for _, changeSet := range changeSets {
+		for index, change := range changeSet.Changes {
+			if change.StorageData.IsNone() {
+				continue
+			}
+
+			var paraID uint32
+			if err := types.DecodeFromBytes(change.StorageKey[ParaIDOffset:], &paraID); err != nil {
+				co.log.WithError(err).Error("Failed to decode parachain ID")
+				return nil, err
+			}
+
+			_, headDataWrapped := change.StorageData.Unwrap()
+
+			var headData types.Bytes
+			if err := types.DecodeFromBytes(headDataWrapped, &headData); err != nil {
+				co.log.WithError(err).Error("Failed to decode HeadData wrapper")
+				return nil, err
+			}
+
+			co.log.WithFields(logrus.Fields{
+				"ParaID": paraID,
+				"LeafIndex": index,
+				"HeadData": fmt.Sprintf("%#x", headData),
+			}).Debug("Processed storage key for head in Paras.Heads")
+
+			heads[paraID] = ParaHead{
+				LeafIndex: index,
+				ParaID:    paraID,
+				Data:      headData,
+			}
+		}
+	}
+
+	return heads, nil
+}
+
+// ByLeafIndex implements sort.Interface based on the LeafIndex field.
+type ByLeafIndex []ParaHead
+func (b ByLeafIndex) Len() int           { return len(b) }
+func (b ByLeafIndex) Less(i, j int) bool { return b[i].LeafIndex < b[j].LeafIndex }
+func (b ByLeafIndex) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+
+// AsProofInput transforms heads into a slice of head datas,
+// in the original order they were returned by the Paras.Heads storage query.
+func (co *Connection) AsProofInput(heads map[uint32]ParaHead) []types.Bytes {
+	// make a slice of values in the map
+	headsAsSlice := make([]ParaHead, 0, len(heads))
+	for _, v := range heads {
+		headsAsSlice = append(headsAsSlice, v)
+	}
+
+	// sort by leaf index
+	sort.Sort(ByLeafIndex(headsAsSlice))
+
+	// map over slice to retrieve header data
+    data := make([]types.Bytes, 0, len(headsAsSlice))
+    for _, h := range headsAsSlice {
+        data = append(data, h.Data)
+    }
+    return data
+}
+
+func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID uint32) (*types.Header, error) {
+	encodedParaID, err := types.EncodeToBytes(paraID)
+	if err != nil {
+		return nil, err
+	}
+
+	storageKey, err := types.CreateStorageKey(co.GetMetadata(), "Paras", "Heads", encodedParaID, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var headerBytes types.Bytes
+	ok, err := co.GetAPI().RPC.State.GetStorage(storageKey, &headerBytes, relayBlockhash)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, fmt.Errorf("parachain head not found")
+	}
+
+	var header types.Header
+	if err := types.DecodeFromBytes(headerBytes, &header); err != nil {
+		co.log.WithError(err).Error("Failed to decode Header")
+		return nil, err
+	}
+
+	return &header, nil
 }

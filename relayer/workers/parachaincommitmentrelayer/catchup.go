@@ -2,6 +2,7 @@ package parachaincommitmentrelayer
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -144,8 +145,9 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 	var blocksWithProof []ParaBlockWithProofs
 	for _, block := range blocks {
 		var allParaHeads []types.Bytes
-		var ownParaHeadProofPos int
 		var ownParaHead types.Header
+		var ownParaHeadLeafIndex int
+
 		// Loop back over relay chain blocks to find the one that finalized the given parachain block
 		for ownParaHead.Number != types.BlockNumber(block.BlockNumber) {
 			li.log.WithField("relayChainBlockNumber", relayChainBlockNumber).Info("Getting hash for relay chain block")
@@ -154,13 +156,42 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 				li.log.WithError(err).Error("Failed to get block hash")
 				return nil, err
 			}
+
 			li.log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
-			allParaHeads, ownParaHeadProofPos, ownParaHead, err = li.relaychainConn.GetAllParaheadsWithOwn(relayBlockHash, li.paraID)
+			heads, err := li.relaychainConn.FetchParaHeads(relayBlockHash)
 			if err != nil {
 				li.log.WithError(err).Error("Failed to get paraheads")
 				return nil, err
 			}
+
+			li.log.WithFields(logrus.Fields{
+				"count": len(heads),
+			}).Info("Fetched para heads")
+
+			if _, ok := heads[li.paraID]; !ok {
+				return nil, fmt.Errorf("chain is not a registered parachain")
+			}
+
+			var header types.Header
+			if err := types.DecodeFromBytes(heads[li.paraID].Data, &header); err != nil {
+				li.log.WithError(err).Error("Failed to decode Header")
+				return nil, err
+			}
+
+			allParaHeads = li.relaychainConn.AsProofInput(heads)
+			ownParaHead = header
+			ownParaHeadLeafIndex = heads[li.paraID].LeafIndex
+
 			relayChainBlockNumber--
+		}
+
+		li.log.Debug("Have inputs for proof generation")
+		for i, v := range allParaHeads {
+			li.log.WithFields(logrus.Fields{
+				"LeafIndex": i,
+				"HeadData": fmt.Sprintf("%#x", v),
+				"IsSnowbridgePara": i == ownParaHeadLeafIndex,
+			}).Debug("Head data")
 		}
 
 		// Note - relayChainBlockNumber will be one less than the block number discovered
@@ -183,7 +214,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest, late
 			MMRProofResponse: mmrProof,
 			Header:           ownParaHead,
 			HeaderProof:      ownParaHeadProof,
-			HeaderProofPos:   ownParaHeadProofPos,
+			HeaderProofPos:   ownParaHeadLeafIndex,
 			HeaderProofWidth: len(allParaHeads),
 			HeaderProofRoot:  parasRoot,
 		}
