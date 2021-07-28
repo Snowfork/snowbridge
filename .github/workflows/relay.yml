@@ -1,4 +1,4 @@
-name: parachain
+name: relay
 
 on:
   push:
