@@ -13,6 +13,7 @@ type HeaderCacheItem struct {
 	Forwarded bool
 }
 
+
 // This is used to store the latest headers as they are published. Up to
 // `numHeightsToTrack` heights are stored. Once this number is reached, an old
 // height is pruned each time a new height is added. The current stored height

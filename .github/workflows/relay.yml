@@ -1,0 +1,21 @@
+name: parachain
+
+on:
+  push:
+    paths:
+      - 'relayer/**'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'relayer/**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: morphy2k/revive-action@v2
+        with:
+          config: relayer/revive.toml
+          path: "relayer/..."
