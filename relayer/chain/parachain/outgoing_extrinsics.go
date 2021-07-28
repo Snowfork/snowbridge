@@ -13,7 +13,6 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
 )
-
 const MaxWatchedExtrinsics = 10
 
 type ExtrinsicPool struct {

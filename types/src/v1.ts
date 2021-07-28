@@ -39,6 +39,8 @@ export const types: RegistryTypes = {
       gasLimit: "U256",
       difficulty: "U256",
       seal: "Vec<Vec<u8>>",
+      baseFee: "Option<U256>"
+    },
     StoredHeader: {
       submitter: "Option<AccountId>",
       header: "EthereumHeader",
