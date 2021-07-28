@@ -37,6 +37,20 @@ type headerSCALE struct {
 	GasLimit         types.U256
 	Difficulty       types.U256
 	Seal             []types.Bytes
+	BaseFee          optionBaseFee
+}
+
+type optionBaseFee struct {
+	HasValue bool
+	Value types.U256
+}
+
+func (o optionBaseFee) Encode(encoder scale.Encoder) error {
+	return encoder.EncodeOption(o.HasValue, o.Value)
+}
+
+func (o *optionBaseFee) Decode(decoder scale.Decoder) error {
+	return decoder.DecodeOption(&o.HasValue, &o.Value)
 }
 
 type Header struct {
@@ -120,6 +134,13 @@ func MakeHeaderData(gethheader *etypes.Header) (*Header, error) {
 		return nil, err
 	}
 
+	var baseFee optionBaseFee
+	if gethheader.BaseFee == nil {
+		baseFee = optionBaseFee{false, types.U256{}}
+	} else {
+		baseFee = optionBaseFee{true, types.NewU256(*gethheader.BaseFee)}
+	}
+
 	return &Header{
 		Fields: headerSCALE{
 			ParentHash:       types.NewH256(gethheader.ParentHash.Bytes()),
@@ -136,6 +157,7 @@ func MakeHeaderData(gethheader *etypes.Header) (*Header, error) {
 			GasLimit:         types.NewU256(gasLimit),
 			Difficulty:       types.NewU256(*gethheader.Difficulty),
 			Seal:             []types.Bytes{mixHashRLP, nonceRLP},
+			BaseFee:          baseFee,
 		},
 		header: gethheader,
 	}, nil

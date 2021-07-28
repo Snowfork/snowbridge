@@ -21,6 +21,7 @@ module.exports = async ({
         ParachainLightClient: paraLibrary.address
     },
     log: true,
+    autoMine: true,
   });
 
   await deployments.deploy("IncentivizedInboundChannel", {
@@ -32,15 +33,18 @@ module.exports = async ({
         ParachainLightClient: paraLibrary.address
     },
     log: true,
+    autoMine: true,
   });
 
   await deployments.deploy("BasicOutboundChannel", {
     from: deployer,
     log: true,
+    autoMine: true,
   });
 
   await deployments.deploy("IncentivizedOutboundChannel", {
     from: deployer,
     log: true,
+    autoMine: true,
   });
 };

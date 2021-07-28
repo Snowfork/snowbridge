@@ -31,6 +31,7 @@
 				"--rpc-port=9980",
 				"--offchain-worker=Always",
 				"--enable-offchain-indexing=true",
+				"--execution=wasm",
 				"--",
 				"--execution=wasm"
 			]
@@ -45,6 +46,7 @@
 				"--rpc-port=9990",
 				"--offchain-worker=Always",
 				"--enable-offchain-indexing=true",
+				"--execution=wasm",
 				"--",
 				"--execution=wasm"
 			]

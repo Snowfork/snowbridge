@@ -63,6 +63,9 @@ pub struct Header {
 	pub difficulty: U256,
 	/// Vector of post-RLP-encoded fields.
 	pub seal: Vec<Bytes>,
+
+	// Base fee per gas (EIP-1559), only in headers from the London hardfork onwards.
+	pub base_fee: Option<U256>,
 }
 
 impl Header {
@@ -137,12 +140,21 @@ impl Header {
 	}
 
 	/// Returns header RLP with or without seals.
+	///	For EIP-1559 baseFee addition refer to:
+	/// https://github.com/openethereum/openethereum/blob/193b25a22d5ff07759c6431129e95235510516f9/crates/ethcore/types/src/header.rs#L341
 	fn rlp(&self, with_seal: bool) -> Bytes {
 		let mut s = RlpStream::new();
-		if with_seal {
-			s.begin_list(13 + self.seal.len());
+
+		let stream_length_without_seal = if self.base_fee.is_some() {
+			14
 		} else {
-			s.begin_list(13);
+			13
+		};
+
+		if with_seal {
+			s.begin_list(stream_length_without_seal + self.seal.len());
+		} else {
+			s.begin_list(stream_length_without_seal);
 		}
 
 		s.append(&self.parent_hash);
@@ -163,6 +175,10 @@ impl Header {
 			for b in &self.seal {
 				s.append_raw(b, 1);
 			}
+		}
+
+		if let Some(base_fee) = self.base_fee {
+			s.append(&base_fee);
 		}
 
 		s.out().to_vec()
@@ -252,6 +268,7 @@ mod tests {
 				vec.resize(67, 0);
 				vec
 			}],
+			base_fee: None
 		};
 		assert_eq!(
 			header.compute_hash().as_bytes(),
@@ -282,6 +299,7 @@ mod tests {
 				rlp::encode(&mix_hash).to_vec(),
 				rlp::encode(&nonce).to_vec(),
 			],
+			base_fee: None
 		};
 		assert_eq!(
 			header.compute_hash().as_bytes(),

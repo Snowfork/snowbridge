@@ -16,6 +16,7 @@ const HEADER_FIELD_MAPPING = [
   ['gasUsed', 'gas_used'],
   ['gasLimit', 'gas_limit'],
   ['difficulty', 'difficulty'],
+  ['baseFeePerGas', 'base_fee'],
 ];
 
 function parseHeader(input) {
@@ -31,6 +32,11 @@ function transformHeaderForParachain(header) {
   for (const mapping of HEADER_FIELD_MAPPING) {
     let value =  header[mapping[0]];
     if (!value) {
+      if (mapping[0] == "baseFeePerGas") {
+        output[mapping[1]] = null;
+        continue
+      }
+
       throw Error("Field '" + mapping[0] + "' not found or is empty");
     }
 

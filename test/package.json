@@ -4,15 +4,13 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "test": "mocha --timeout 210000 --exit"
+    "test": "mocha --timeout 240000 --exit"
   },
   "dependencies": {
     "@polkadot/api": "^4.4.1",
     "@snowfork/snowbridge-types": "link:../types",
     "bignumber.js": "^9.0.0",
     "chai": "^4.2.0",
-    "chai-as-promised": "^7.1.1",
-    "chai-bignumber": "^3.0.0",
     "esm": "^3.2.25",
     "ethers": "^5.0.14",
     "ganache-cli": "^6.12.2",

@@ -38,12 +38,14 @@ module.exports = async ({
         ScaleCodec: scaleCodecLibrary.address
     },
     log: true,
+    autoMine: true,
   });
 
   await deployments.deploy("TestToken721", {
     from: deployer,
     args:["Test Token 721", "TEST721"],
     log: true,
+    autoMine: true,
   });
 
 };

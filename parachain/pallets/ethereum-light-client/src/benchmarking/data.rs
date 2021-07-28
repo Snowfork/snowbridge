@@ -24,6 +24,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a00493edb354d4cc04df763c35505e8bb926b9c90b362dc494531f9c2c1e345158").to_vec(),
 				hex!("88134848c0981f496b").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -44,6 +45,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0364356452fce82aa420127cfe9d685b80876a1e0dc57c03f9364f11a5711de16").to_vec(),
 				hex!("88090fa2fbf919199a").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -64,6 +66,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a06a5e77aab5c3e3e4c345596f8b7717ff0d310541d109b34c2b25fe4411bb1c1b").to_vec(),
 				hex!("885aa89ddaa1c0e8b9").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -84,6 +87,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a089f32957b76783e7304270e744a628ab18c42a9f46879485c7192463a64e3258").to_vec(),
 				hex!("88ad78ac610e9c67ab").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -104,6 +108,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0719704220d7c3736d6c0abcd723b8ce7973384788f5be9ee3eae80c55424f163").to_vec(),
 				hex!("88ab2cfa05081aa98e").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -124,6 +129,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a03406db2bb79ef96c22cb323978a775b05c8ded28e71107751e5432764a097c84").to_vec(),
 				hex!("8866f3b76ad77c0090").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -144,6 +150,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a04f79dc7c3a1b5ec47c4b4c15fc9a6e501d30d5d4f906e8285d827cbb7be8482f").to_vec(),
 				hex!("88b586c601719e8236").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -164,6 +171,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0de468c313e9171cd596d7b09abc73d1db940b7191134b8e861090eaf16d6e8b7").to_vec(),
 				hex!("88edf2b64e262ad62a").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -184,6 +192,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0bc43dd3cef81ae20d709413d6a7bc00f8f958df600dd927e233be9e65c339424").to_vec(),
 				hex!("88fe00de9b66c3a0b6").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -204,6 +213,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a07da20b43f1a245aca044b6a99873eb81ff6f301deb8a1e0e722fd9ee6214ebee").to_vec(),
 				hex!("8831f2a39de5daa24a").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -224,6 +234,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0a64278268f8f5295398b6030e4d679a21278084c9b05a715cc8ae74553367a0d").to_vec(),
 				hex!("88065efb0b205efac2").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -244,6 +255,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0a34fc4fbb7e5096c12c13af97aaa5beae78996f5b3699b3e2930e4869fca46e9").to_vec(),
 				hex!("886a2f28ca06302d48").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -264,6 +276,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a09dcab7f66fb206bb075c8c8375c894f47c74a40cb4d8511c954d1627eb9e8a49").to_vec(),
 				hex!("88334aa43541401a6e").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -284,6 +297,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a064ad7c20c808ce9c9ac2acb30bd6a8e25960b7d39ad3459aea3c7a308e0b27dd").to_vec(),
 				hex!("88e8e612226d8e2f5a").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -304,6 +318,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a006978ad9ca5e748ee27bd51a62a2fd3dad4f46206389bd7584e44df3f8dbbfd3").to_vec(),
 				hex!("884c74ebaa4bf55701").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -324,6 +339,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a07c96dd6e810f56c03063893ebde02900993dd0ae9e1c00a16d7c6468b0fd4866").to_vec(),
 				hex!("8811bb8e25725d1999").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -344,6 +360,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0a8191438fc26f2996cb567f100c47dca67ed0c7842a6b39ea394f6aeac371c7d").to_vec(),
 				hex!("8812fb89bdcf2e21d1").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -364,6 +381,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0585d796080e23bf0fcd62e2089a8dfd2510bbde31eb0b50562e8b3d77fec8d6a").to_vec(),
 				hex!("88ac795446443f4ad4").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -384,6 +402,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0722dda48509810e980a37f62e0b8acd3f207fab58f807874b73036d8ce7f797d").to_vec(),
 				hex!("888e60b0097c11caae").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -404,6 +423,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0fddb3803d75b91f2960e524069d7177d459b9ae76c157edc3e76b1111d63d0e6").to_vec(),
 				hex!("88ead5273150eb2262").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -424,6 +444,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a053ec13111b50d38b4e92634c2ad50ef2296c2f225382ff62af5f8a0432c8ea47").to_vec(),
 				hex!("88ecfabd6a7bcf1bd2").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -444,6 +465,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a06811bcf8d148f07ba897438d12d60345c0769d6c8756974ddf45f150a765dfe0").to_vec(),
 				hex!("88b0802727bd3589aa").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -464,6 +486,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a031c35842579e39a2220a9eea88c2d556edc9ccb4c4d2cb56b818f3c32cbc6307").to_vec(),
 				hex!("880d79c510c9c83524").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -484,6 +507,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0c143319b1c4bb39a6026326ba11ce89ba7d0c3dde28294340f33516ec7e0e27b").to_vec(),
 				hex!("88f1d5a58cf281f879").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -504,6 +528,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a09b4fb0109ab486458037dbd46c378f7753c3cbff8521795df75a0ae9466f1f87").to_vec(),
 				hex!("88282efa78e18bdf7c").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -524,6 +549,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a034e6eed2bd0cc02e17fb3827654c416acac5811e7c1c2d2a0c6b349c1d386ab5").to_vec(),
 				hex!("881b26a80008e81333").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -544,6 +570,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0340b4ad5e51a36da029991f4dd8d777aa33cb8279fe56fb65b6e8b887ab769ed").to_vec(),
 				hex!("88f32e0e8b201c797e").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -564,6 +591,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a08246e389652279ddb4dfb9d28ec2f955d1fb1334ce296f4aa774a47903a84971").to_vec(),
 				hex!("88e94e9e973caaf4a0").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -584,6 +612,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a04b3de464dea0cef2bc9b0ce9cf0f15453064eed55d81049b6d89343639917a8a").to_vec(),
 				hex!("8885b28aee85e0a589").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -604,6 +633,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0dfd9e57db5a8f53c1376301483571e7c4271eeae0a060c8e28a388c000ac0b0a").to_vec(),
 				hex!("885a6d84c664f423d0").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -624,6 +654,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0b4e6eea5d5495c645ca167e2506aa8075cb65acddec574b824c2cffec3fd5174").to_vec(),
 				hex!("880373badbe8d497af").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -644,6 +675,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0cbdee1b99e9cc64b337b029487850941c03e6448b64a636c86ad35039b5f4013").to_vec(),
 				hex!("88a53151fe8259c93a").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -664,6 +696,8 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a06f70f7dfd41c24e5b853e3b503bb5bc51c003094fae0b651386e0ff52aa3c6a3").to_vec(),
 				hex!("88f341585809607edb").to_vec(),
 			],
+            base_fee: None,
+
 		},
 
 		EthereumHeader {
@@ -684,6 +718,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a063d4033ac33e642aabb77d6754e5608c41ff79508e839355d7f1eb42cbda3531").to_vec(),
 				hex!("88c32074994bf07ea8").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -704,6 +739,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a03eb8d5069ea4277f41c74c60de8e28a380991d5db22af20737285b16ab717369").to_vec(),
 				hex!("882516e0ad51973b22").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -724,6 +760,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0da373ca8c50eb9778673531c2eec46eee99c39b548994eb3847812ffe03a7921").to_vec(),
 				hex!("88ed86c0be625e235d").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -744,6 +781,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0d69a1c589f0b11482b23a262c63b4591c20e285377ae056e85c0f4f3dd19f66c").to_vec(),
 				hex!("88ef90964851d9c041").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -764,6 +802,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0f169abbaa1d59989658a60e11f4de5b8ba7429c8bd4ef60d86e5fb386e35b82e").to_vec(),
 				hex!("881084e8b9733a9f1a").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -784,6 +823,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0bbbcd47c6aca74ba35365543decf355ebee4ca60c7ec0f072c357a7b63022cf9").to_vec(),
 				hex!("88309aaaddf64e01da").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -804,6 +844,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0cade140e9d732b7af9c43b18fc7e9a1fdb7dd2ee7e2429a34dcdde5e3a74a13c").to_vec(),
 				hex!("881d8565ea7603633f").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -824,6 +865,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0b8f34a89bb57894c773a7509d5fd10e99c0f7cf23c90c56ca3b32729f5600c55").to_vec(),
 				hex!("88ce2d6ca1f9551b5b").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -844,6 +886,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0a6f987b81ac4bc80e0208e0d79adb7c10892ad1505d7b01dbe464a7cb6ee59f7").to_vec(),
 				hex!("88d462d5f28cae8874").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -864,6 +907,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0dc7d0b7f5b46528365e22be22fa7a21400f96f2fdbf7f23fc334d6f138fbfa9f").to_vec(),
 				hex!("88bbf115f36577756f").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -884,6 +928,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a00fde8786e11b5f45c7f74da62659a8adfbd82737665f1a0724ceb5f062f3a690").to_vec(),
 				hex!("88ba39432d7dc67087").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -904,6 +949,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0b8ce8965cebf4695e01f297614d9ecf588e25db134aa367bc9f43b1af1486296").to_vec(),
 				hex!("882e25053378908528").to_vec(),
 			],
+            base_fee: None,
 		},
 
 		EthereumHeader {
@@ -924,6 +970,7 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 				hex!("a0e89dc02ea00e8753760a704c3e942f1dc814141b5762af8eaa2e13b5db1b065e").to_vec(),
 				hex!("88b0867985a2a493d5").to_vec(),
 			],
+            base_fee: None,
 		},
 	]
 }

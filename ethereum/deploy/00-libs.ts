@@ -6,16 +6,19 @@ module.exports = async ({deployments, getUnnamedAccounts}: HardhatRuntimeEnviron
   let codec = await deployments.deploy('ScaleCodec', {
     from: deployer,
     log: true,
+    autoMine: true,
   });
 
   await deployments.deploy('MerkleProof', {
     from: deployer,
     log: true,
+    autoMine: true,
   });
 
   await deployments.deploy('Bitfield', {
     from: deployer,
     log: true,
+    autoMine: true,
   });
 
   await deployments.deploy('ParachainLightClient', {
@@ -24,6 +27,7 @@ module.exports = async ({deployments, getUnnamedAccounts}: HardhatRuntimeEnviron
       ScaleCodec: codec.address
     },
     log: true,
+    autoMine: true,
   });
 
 };

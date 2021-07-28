@@ -14,9 +14,8 @@
             "--ws-external",
             "--rpc-external",
             "--rpc-methods=Unsafe",
-            "--offchain-worker=Always",
             "--enable-offchain-indexing=true",
-            "--execution=native",
+            "--execution=wasm",
             "--",
             "--execution=wasm"
           ]
@@ -32,9 +31,8 @@
             "--ws-external",
             "--rpc-external",
             "--rpc-methods=Unsafe",
-            "--offchain-worker=Always",
             "--enable-offchain-indexing=true",
-            "--execution=native",
+            "--execution=wasm",
             "--",
             "--execution=wasm"
           ]

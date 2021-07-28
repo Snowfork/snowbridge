@@ -13,8 +13,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
 )
-
-const MaxWatchedExtrinsics = 20
+const MaxWatchedExtrinsics = 10
 
 type ExtrinsicPool struct {
 	sync.Mutex
@@ -70,7 +69,7 @@ func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 				}).Debug("Extrinsic failed to be processed")
 
 				// Back off for ~1 block to give the txpool time to resolve any backlog
-				time.Sleep(time.Second * 6)
+				time.Sleep(time.Second * 12)
 
 				ep.Lock()
 				if nonce <= ep.maxNonce {

@@ -15,27 +15,7 @@ start_ganache()
 
     npx ganache-cli \
         --port=8545 \
-        --networkId=344 \
-        --chainId=344 \
-        --deterministic \
-        --db $configdir/ganache.db \
-        --mnemonic="stone speak what ritual switch pigeon weird dutch burst shaft nature shove" \
-        --gasLimit=8000000 \
-        >ganache.log 2>&1 &
-
-    scripts/wait-for-it.sh -t 32 localhost:8545
-    sleep 5
-}
-
-restart_ganache()
-{
-    echo "Restarting Ganache with a slower block time"
-
-    kill $(ps -aux | grep -e ganache-cli | awk '{print $2}') || true
-
-    npx ganache-cli \
-        --port=8545 \
-        --blockTime=6 \
+        --blockTime 12 \
         --networkId=344 \
         --chainId=344 \
         --deterministic \
@@ -62,7 +42,6 @@ deploy_contracts()
 
     echo "Wrote configuration to $configdir"
 }
-
 
 start_polkadot_launch()
 {
@@ -166,7 +145,6 @@ then
 else
     start_polkadot_launch
 fi
-restart_ganache
 echo "Waiting for consensus between polkadot and parachain"
 sleep 60
 start_relayer
