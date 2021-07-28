@@ -26,6 +26,7 @@ pub const MAINNET_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficul
 	byzantium_fork_block: 4370000,
 	constantinople_fork_block: 7280000,
 	muir_glacier_fork_block: 9200000,
+	london_fork_block: 12965000,
 };
 
 pub mod mock_verifier {
