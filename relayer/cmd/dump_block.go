@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
+	"path"
 	"strconv"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
@@ -121,19 +121,24 @@ func getEthBlock(url string, blockHash *gethCommon.Hash) (*gethTypes.Header, err
 }
 
 func getEthHeaderProof(header *gethTypes.Header) ([]ethereum.DoubleNodeWithMerkleProof, error) {
-	ethashproofCacheLoader := &ethereum.DefaultCacheLoader{}
-	cache, err := ethashproofCacheLoader.MakeCache(header.Number.Uint64() / 30000)
-	if err != nil {
-		return nil, err
-	}
 
 	if !viper.IsSet("global.data-dir") {
 		return nil, fmt.Errorf("data-dir not set in config")
 	}
 
-	dataDir := filepath.Join(viper.GetString("global.data-dir"), "ethash-data")
+	dataDir := viper.GetString("global.data-dir")
 
-	return ethereum.MakeProofData(header, cache, dataDir)
+	ethashproofCacheLoader := &ethereum.DefaultCacheLoader{
+		DataDir: path.Join(dataDir, "ethash-data"),
+		CacheDir: path.Join(dataDir, "ethash-cache"),
+	}
+
+	cache, err := ethashproofCacheLoader.MakeCache(header.Number.Uint64() / 30000)
+	if err != nil {
+		return nil, err
+	}
+
+	return ethereum.MakeProofData(header, cache, ethashproofCacheLoader.DataDir)
 }
 
 func printEthBlockForSub(header *gethTypes.Header, format Format) error {
@@ -251,7 +256,6 @@ func printEthHeaderProofForSub(proof []ethereum.DoubleNodeWithMerkleProof) error
 	fmt.Println(gethCommon.Bytes2Hex(buffer.Bytes()))
 	return nil
 }
-
 func bytesAsArray64(bytes []byte) []uint64 {
 	arr := make([]uint64, len(bytes))
 	for i, v := range bytes {

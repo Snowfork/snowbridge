@@ -4,10 +4,10 @@ go 1.14
 
 require (
 	github.com/ChainSafe/go-schnorrkel v0.0.0-20210527232834-58622d036665 // indirect
-	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
 	github.com/allegro/bigcache v1.2.1 // indirect
-	github.com/ethereum/go-ethereum v1.10.3
+	github.com/ethereum/go-ethereum v1.10.6
 	github.com/go-ole/go-ole v1.2.5 // indirect
+	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jinzhu/gorm v1.9.16
 	github.com/jinzhu/now v1.1.2 // indirect
 	github.com/magefile/mage v1.11.0
@@ -22,7 +22,7 @@ require (
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
-	github.com/snowfork/ethashproof v0.0.0-20210708164253-a74e2d12ad79
+	github.com/snowfork/ethashproof v0.0.0-20210727164350-02f2b5741c50
 	github.com/snowfork/go-substrate-rpc-client/v3 v3.0.4
 	github.com/spf13/afero v1.5.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect

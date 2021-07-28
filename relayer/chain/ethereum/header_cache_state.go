@@ -101,20 +101,20 @@ type EthashproofCacheLoader interface {
 }
 
 type DefaultCacheLoader struct{
-	dataDir string
-	cacheDir string
+	DataDir string
+	CacheDir string
 }
 
 func (d *DefaultCacheLoader) MakeCache(epoch uint64) (*ethashproof.DatasetMerkleTreeCache, error) {
-	cache, err := ethashproof.LoadCache(int(epoch), d.cacheDir)
+	cache, err := ethashproof.LoadCache(int(epoch), d.CacheDir)
 	if err != nil {
 		// Cache probably doesn't exist - create it
-		_, err := ethashproof.CalculateDatasetMerkleRoot(epoch, true, d.dataDir, d.cacheDir)
+		_, err := ethashproof.CalculateDatasetMerkleRoot(epoch, true, d.DataDir, d.CacheDir)
 		if err != nil {
 			return nil, err
 		}
 
-		return ethashproof.LoadCache(int(epoch), d.cacheDir)
+		return ethashproof.LoadCache(int(epoch), d.CacheDir)
 	}
 
 	return cache, nil

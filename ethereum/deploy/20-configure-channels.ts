@@ -38,17 +38,23 @@ module.exports = async ({
   console.log("Configuring BasicOutboundChannel")
   await deployments.execute(
     "BasicOutboundChannel",
-    {from: deployer},
+    {
+      from: deployer,
+      autoMine: true,
+    },
     "initialize",
     deployer,
     principal,
-    [dotApp.address, ethApp.address, erc20App.address, erc721App.address]
+    [dotApp.address, ethApp.address, erc20App.address, erc721App.address],
   );
 
   console.log("Configuring IncentivizedOutboundChannel")
   await deployments.execute(
     "IncentivizedOutboundChannel",
-    {from: deployer},
+    {
+      from: deployer,
+      autoMine: true,
+},
     "initialize",
     deployer,
     dotApp.address,
@@ -56,7 +62,10 @@ module.exports = async ({
   );
   await deployments.execute(
     "IncentivizedOutboundChannel",
-    {from: deployer},
+    {
+      from: deployer,
+      autoMine: true,
+    },
     "setFee",
     fee
   );
@@ -64,7 +73,10 @@ module.exports = async ({
   console.log("Configuring IncentivizedInboundChannel")
   await deployments.execute(
     "IncentivizedInboundChannel",
-    {from: deployer},
+    {
+      from: deployer,
+      autoMine: true,
+    },
     "initialize",
     deployer,
     ethApp.address

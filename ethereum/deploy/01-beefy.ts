@@ -21,11 +21,13 @@ module.exports = async ({
         MerkleProof: merkleProofLibrary.address
     },
     log: true,
+    autoMine: true,
   });
 
   let mmr = await deployments.deploy("MMRVerification", {
     from: deployer,
     log: true,
+    autoMine: true,
   });
 
   let beefy = await deployments.deploy("BeefyLightClient", {
@@ -36,5 +38,6 @@ module.exports = async ({
         ScaleCodec: scaleCodecLibrary.address,
     },
     log: true,
+    autoMine: true,
   });
 };

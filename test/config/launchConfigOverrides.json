@@ -16,7 +16,7 @@
             "--rpc-methods=Unsafe",
             "--offchain-worker=Always",
             "--enable-offchain-indexing=true",
-            "--execution=native",
+            "--execution=wasm",
             "--",
             "--execution=wasm"
           ]
@@ -34,7 +34,7 @@
             "--rpc-methods=Unsafe",
             "--offchain-worker=Always",
             "--enable-offchain-indexing=true",
-            "--execution=native",
+            "--execution=wasm",
             "--",
             "--execution=wasm"
           ]

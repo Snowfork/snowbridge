@@ -14,7 +14,10 @@ module.exports = async ({
   console.log("Configuring ValidatorRegistry")
   await deployments.execute(
     "ValidatorRegistry",
-    {from: deployer},
+    {
+      from: deployer,
+      autoMine: true,
+    },
     "transferOwnership",
     beefy.address
   );
