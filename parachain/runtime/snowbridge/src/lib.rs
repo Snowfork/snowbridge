@@ -565,6 +565,7 @@ pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficul
 	byzantium_fork_block: 1700000,
 	constantinople_fork_block: 4230000,
 	muir_glacier_fork_block: 7117117,
+	london_fork_block: 10499401,
 };
 
 parameter_types! {
