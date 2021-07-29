@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
-	merkletree "github.com/wealdtech/go-merkletree"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
 type NewSignatureCommitmentMessage struct {
@@ -94,40 +95,59 @@ func (h *Keccak256) Hash(data []byte) []byte {
 }
 
 func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int64) ([][32]byte, error) {
+	fmt.Println("beefy-relay", "GenerateMerkleProofOffchain")
 	// Hash validator addresses for leaf input data
 	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
 	for i, valAddr := range b.ValidatorAddresses {
 		beefyTreeData[i] = valAddr.Bytes()
 	}
 
+	fmt.Println("beefy-relay: b.ValidatorAddresses", b.ValidatorAddresses)
+
+	hasher := &Keccak256{}
+	h0 := hasher.Hash(b.ValidatorAddresses[0].Bytes())
+	h1 := hasher.Hash(b.ValidatorAddresses[1].Bytes())
+	h2 := hasher.Hash(b.ValidatorAddresses[2].Bytes())
+	first2 := append(h0, h1...)
+	h_first2 := hasher.Hash(first2)
+	h_all3 := hasher.Hash(append(h_first2, h2...))
+	fmt.Println("beefy-relay: h0", hex.EncodeToString(h0))
+	fmt.Println("beefy-relay: h1", hex.EncodeToString(h1))
+	fmt.Println("beefy-relay: h2", hex.EncodeToString(h2))
+	fmt.Println("beefy-relay: first2", hex.EncodeToString(first2))
+	fmt.Println("beefy-relay: h_first2", hex.EncodeToString(h_first2))
+	fmt.Println("beefy-relay: h_all3", hex.EncodeToString(h_all3))
+	beefyTreeData2 := make([][]byte, 2)
+	beefyTreeData2[0] = first2
+	beefyTreeData2[1] = b.ValidatorAddresses[2].Bytes()
+
 	// Create the tree
-	beefyMerkleTree, err := merkletree.NewUsing(beefyTreeData, &Keccak256{}, nil)
-	if err != nil {
-		return [][32]byte{}, err
-	}
+	beefyMerkleTree := merkle.NewTree()
+	beefyMerkleTree.Hash(beefyTreeData, &Keccak256{})
+
+	root := beefyMerkleTree.Root()
+	fmt.Println("beefy-relay: beefyMerkleTree.Root()", hex.EncodeToString(beefyMerkleTree.Root()))
 
 	// Generate Merkle Proof for validator at index valAddrIndex
-	sigProof, err := beefyMerkleTree.GenerateProof(beefyTreeData[valAddrIndex])
-	if err != nil {
-		return [][32]byte{}, err
-	}
+	sigProof := beefyMerkleTree.MerklePath(beefyTreeData[valAddrIndex])
+	fmt.Println("beefy-relay: valAddrIndex", valAddrIndex)
+	fmt.Println("beefy-relay: beefyTreeData[valAddrIndex]", hex.EncodeToString(beefyTreeData[valAddrIndex]))
+	fmt.Println("beefy-relay: sigProof", sigProof)
 
 	// Verify the proof
-	root := beefyMerkleTree.Root()
-	verified, err := merkletree.VerifyProofUsing(beefyTreeData[valAddrIndex], sigProof, root, &Keccak256{}, nil)
-	if err != nil {
-		return [][32]byte{}, err
-	}
+	verified := merkle.Prove(beefyTreeData[valAddrIndex], root, sigProof, &Keccak256{})
 	if !verified {
 		return [][32]byte{}, fmt.Errorf("failed to verify proof")
 	}
 
-	sigProofContents := make([][32]byte, len(sigProof.Hashes))
-	for i, hash := range sigProof.Hashes {
+	sigProofContents := make([][32]byte, len(sigProof))
+	for i, node := range sigProof {
 		var hash32Byte [32]byte
-		copy(hash32Byte[:], hash)
+		copy(hash32Byte[:], node.Hash)
 		sigProofContents[i] = hash32Byte
 	}
+
+	fmt.Println("beefy-relay: sigProofContents", sigProofContents)
 
 	return sigProofContents, nil
 }
