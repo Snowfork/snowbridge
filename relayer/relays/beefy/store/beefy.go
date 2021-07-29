@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -95,44 +94,20 @@ func (h *Keccak256) Hash(data []byte) []byte {
 }
 
 func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int64) ([][32]byte, error) {
-	fmt.Println("beefy-relay", "GenerateMerkleProofOffchain")
 	// Hash validator addresses for leaf input data
 	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
 	for i, valAddr := range b.ValidatorAddresses {
 		beefyTreeData[i] = valAddr.Bytes()
 	}
 
-	fmt.Println("beefy-relay: b.ValidatorAddresses", b.ValidatorAddresses)
-
-	hasher := &Keccak256{}
-	h0 := hasher.Hash(b.ValidatorAddresses[0].Bytes())
-	h1 := hasher.Hash(b.ValidatorAddresses[1].Bytes())
-	h2 := hasher.Hash(b.ValidatorAddresses[2].Bytes())
-	first2 := append(h0, h1...)
-	h_first2 := hasher.Hash(first2)
-	h_all3 := hasher.Hash(append(h_first2, h2...))
-	fmt.Println("beefy-relay: h0", hex.EncodeToString(h0))
-	fmt.Println("beefy-relay: h1", hex.EncodeToString(h1))
-	fmt.Println("beefy-relay: h2", hex.EncodeToString(h2))
-	fmt.Println("beefy-relay: first2", hex.EncodeToString(first2))
-	fmt.Println("beefy-relay: h_first2", hex.EncodeToString(h_first2))
-	fmt.Println("beefy-relay: h_all3", hex.EncodeToString(h_all3))
-	beefyTreeData2 := make([][]byte, 2)
-	beefyTreeData2[0] = first2
-	beefyTreeData2[1] = b.ValidatorAddresses[2].Bytes()
-
 	// Create the tree
 	beefyMerkleTree := merkle.NewTree()
 	beefyMerkleTree.Hash(beefyTreeData, &Keccak256{})
 
 	root := beefyMerkleTree.Root()
-	fmt.Println("beefy-relay: beefyMerkleTree.Root()", hex.EncodeToString(beefyMerkleTree.Root()))
 
 	// Generate Merkle Proof for validator at index valAddrIndex
 	sigProof := beefyMerkleTree.MerklePath(beefyTreeData[valAddrIndex])
-	fmt.Println("beefy-relay: valAddrIndex", valAddrIndex)
-	fmt.Println("beefy-relay: beefyTreeData[valAddrIndex]", hex.EncodeToString(beefyTreeData[valAddrIndex]))
-	fmt.Println("beefy-relay: sigProof", sigProof)
 
 	// Verify the proof
 	verified := merkle.Prove(beefyTreeData[valAddrIndex], root, sigProof, &Keccak256{})
@@ -146,8 +121,6 @@ func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int64) ([]
 		copy(hash32Byte[:], node.Hash)
 		sigProofContents[i] = hash32Byte
 	}
-
-	fmt.Println("beefy-relay: sigProofContents", sigProofContents)
 
 	return sigProofContents, nil
 }

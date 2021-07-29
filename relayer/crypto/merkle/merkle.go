@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 )
 
@@ -90,10 +89,8 @@ func (t *Tree) findIndex(leaf []byte) int {
 	}
 
 	s := hex.EncodeToString(leaf)
-	fmt.Println("beefy-relay: s", s)
 
 	for i, l := range t.levels[t.Depth()] {
-		fmt.Println("beefy-relay: i,l", i, l, hex.EncodeToString(l))
 		if hex.EncodeToString(l) == s {
 			return i
 		}
@@ -126,8 +123,6 @@ func (t *Tree) Depth() int {
 func (t *Tree) MerklePath(preLeaf []byte) []*Node {
 	leaf := t.h.Hash(preLeaf)
 	index := t.findIndex(leaf)
-	fmt.Println("beefy-relay: leaf", leaf)
-	fmt.Println("beefy-relay: index", index)
 
 	if index < 0 {
 		return nil
@@ -136,16 +131,11 @@ func (t *Tree) MerklePath(preLeaf []byte) []*Node {
 	d := t.Depth()
 	var path []*Node
 
-	fmt.Println("beefy-relay: index", index)
-	fmt.Println("beefy-relay: d", d)
-
 	for i := d; i > 0; i -= 1 {
 		level := t.levels[i]
 		levelLen := len(level)
 		remainder := levelLen % 2
 		nextIndex := index / 2
-
-		fmt.Println("beefy-relay: d", d)
 
 		// if index is the the last item in an odd length level promote
 		if index == levelLen-1 && remainder != 0 {
@@ -224,10 +214,8 @@ func NewTree() *Tree {
 func Prove(preLeaf, root []byte, path []*Node, h Hasher) bool {
 	leaf := h.Hash(preLeaf)
 	hash := leaf
-	fmt.Println("beefy-relay: proving hash", hex.EncodeToString(hash))
 
 	for _, node := range path {
-		fmt.Println("beefy-relay: node.Position", node.Position)
 		if node.Position == POSITION_LEFT {
 			hash = append(node.Hash, hash...)
 		} else {
@@ -235,7 +223,6 @@ func Prove(preLeaf, root []byte, path []*Node, h Hasher) bool {
 		}
 
 		hash = h.Hash(hash)
-		fmt.Println("beefy-relay: hash", hex.EncodeToString(hash))
 	}
 
 	return hex.EncodeToString(hash) == hex.EncodeToString(root)
