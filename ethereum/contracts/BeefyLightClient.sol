@@ -228,11 +228,6 @@ contract BeefyLightClient {
             "Error: Bitfield not enough validators"
         );
 
-        /**
-         * @todo Lock up the sender stake as collateral
-         */
-        // TODO
-
         // Accept and save the commitment
         validationData[currentId] = ValidationData(
             msg.sender,
