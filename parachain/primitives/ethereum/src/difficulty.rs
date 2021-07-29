@@ -37,7 +37,7 @@ impl DifficultyConfig {
 
 	// Correct block numbers for mainnet and various testnets can be found here:
 	// https://github.com/ethereum/go-ethereum/blob/498458b4102c0d32d7453035a115e6b9df5e485d/params/config.go#L55-L258
-	pub fn mainnet() -> Self {
+	pub const fn mainnet() -> Self {
 		DifficultyConfig {
 			byzantium_fork_block: 4370000,
 			constantinople_fork_block: 7280000,
@@ -46,7 +46,7 @@ impl DifficultyConfig {
 		}
 	}
 
-	pub fn ropsten() -> Self {
+	pub const fn ropsten() -> Self {
 		DifficultyConfig {
 			byzantium_fork_block: 1700000,
 			constantinople_fork_block: 4230000,

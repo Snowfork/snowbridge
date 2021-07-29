@@ -561,16 +561,9 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type WeightInfo = weights::incentivized_channel_outbound_weights::WeightInfo<Runtime>;
 }
 
-pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficultyConfig {
-	byzantium_fork_block: 1700000,
-	constantinople_fork_block: 4230000,
-	muir_glacier_fork_block: 7117117,
-	london_fork_block: 10499401,
-};
-
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 3;
-	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
+	pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::mainnet();
 	pub const VerifyPoW: bool = true;
 }
 
