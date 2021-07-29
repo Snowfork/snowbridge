@@ -7,31 +7,14 @@ rm -rf $configdir
 mkdir $configdir
 
 # kill all potentially old processes
-kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
-
-start_ganache()
-{
-    echo "Starting Ganache"
-
-    npx ganache-cli \
-        --port=8545 \
-        --blockTime 12 \
-        --networkId=344 \
-        --chainId=344 \
-        --deterministic \
-        --db $configdir/ganache.db \
-        --mnemonic="stone speak what ritual switch pigeon weird dutch burst shaft nature shove" \
-        --gasLimit=8000000 \
-        >ganache.log 2>&1 &
-
-    scripts/wait-for-it.sh -t 32 localhost:8545
-    sleep 5
-}
+kill $(ps -aux | grep -e hardhat -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
 
 deploy_contracts()
 {
     echo "Deploying contracts"
     pushd ../ethereum
+
+    npx hardhat node --no-deploy >hardhat-node.log 2>&1 &
 
     npx hardhat deploy --network localhost --reset --export $configdir/contracts.json
 
@@ -54,7 +37,7 @@ start_polkadot_launch()
     echo "Generating Parachain spec"
     target/release/snowbridge build-spec --disable-default-bootnode > $configdir/spec.json
 
-    echo "Inserting Ganache chain info into genesis spec"
+    echo "Inserting Ethereum chain info into genesis spec"
     ethereum_initial_header=$(curl http://localhost:8545 \
         -X POST \
         -H "Content-Type: application/json" \
@@ -132,12 +115,11 @@ start_relayer()
 
 cleanup() {
     kill $(jobs -p)
-    kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
+    kill $(ps -aux | grep -e hardhat -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
 }
 
 trap cleanup SIGINT SIGTERM EXIT
 
-start_ganache
 deploy_contracts
 if [ $# -eq 1 ];
 then
