@@ -14,7 +14,7 @@ module.exports = {
     e2e_test: {
       host: "127.0.0.1",
       port: 8545,
-      network_id: "344"
+      network_id: "15"
     },
     ropsten: {
       provider: () => new HDWalletProvider(

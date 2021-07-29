@@ -7,14 +7,23 @@ rm -rf $configdir
 mkdir $configdir
 
 # kill all potentially old processes
-kill $(ps -aux | grep -e hardhat -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
+kill $(ps -aux | grep -e geth -e hardhat -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
+
+start_geth() {
+    geth init --datadir $configdir/geth/ ./genesis.json
+    geth account import --datadir $configdir/geth/ --password password ./key0.prv
+    geth account import --datadir $configdir/geth/ --password password ./key1.prv
+    geth --vmdebug --datadir $configdir/geth/ --networkid 15 \
+        --http --http.api debug,personal,eth,net,web3 --ws --ws.api debug,eth,net,web3 \
+        --rpc.allow-unprotected-txs --mine --miner.threads=1 \
+        --miner.etherbase=0x0000000000000000000000000000000000000000 \
+        > $configdir/geth.log 2>&1 &
+}
 
 deploy_contracts()
 {
     echo "Deploying contracts"
     pushd ../ethereum
-
-    npx hardhat node --no-deploy >hardhat-node.log 2>&1 &
 
     npx hardhat deploy --network localhost --reset --export $configdir/contracts.json
 
@@ -115,11 +124,12 @@ start_relayer()
 
 cleanup() {
     kill $(jobs -p)
-    kill $(ps -aux | grep -e hardhat -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
+    kill $(ps -aux | grep -e geth -e hardhat -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
 }
 
 trap cleanup SIGINT SIGTERM EXIT
 
+start_geth
 deploy_contracts
 if [ $# -eq 1 ];
 then

@@ -6,12 +6,12 @@ import path from 'path';
 const main = async () => {
     let channels = {
         basic: {
-          inbound: await deployments.get("BasicInboundChannel"),
-          outbound: await deployments.get("BasicOutboundChannel")
+            inbound: await deployments.get("BasicInboundChannel"),
+            outbound: await deployments.get("BasicOutboundChannel")
         },
         incentivized: {
-          inbound: await deployments.get("IncentivizedInboundChannel"),
-          outbound: await deployments.get("IncentivizedOutboundChannel")
+            inbound: await deployments.get("IncentivizedInboundChannel"),
+            outbound: await deployments.get("IncentivizedOutboundChannel")
         }
     }
     let beefy = await deployments.get("BeefyLightClient");
@@ -21,7 +21,7 @@ const main = async () => {
             "data-dir": "/tmp/snowbridge-e2e-config",
         },
         ethereum: {
-            endpoint: "ws://localhost:8545/",
+            endpoint: "ws://localhost:8546/",
             startblock: 1,
             "descendants-until-final": 3,
             channels: {

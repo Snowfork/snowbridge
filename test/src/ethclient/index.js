@@ -177,11 +177,11 @@ class EthClient {
       tokenId.toString(),
       recipientBytes,
       channelId
-      ).send({
-        from,
-        gas: 500000,
-        value: 0
-      });
+    ).send({
+      from,
+      gas: 500000,
+      value: 0
+    });
   }
 
   async burnDOT(from, amount, polkadotRecipient, channelId) {
