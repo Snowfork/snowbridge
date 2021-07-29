@@ -42,11 +42,6 @@ func LoadConfig() (*Config, error) {
 	var ok bool
 
 	// Ethereum configuration
-	value, ok = os.LookupEnv("SNOWBRIDGE_BEEFY_KEY")
-	if !ok {
-		return nil, fmt.Errorf("environment variable not set: SNOWBRIDGE_BEEFY_KEY")
-	}
-	config.Eth.BeefyPrivateKey = strings.TrimPrefix(value, "0x")
 
 	value, ok = os.LookupEnv("SNOWBRIDGE_MESSAGE_KEY")
 	if !ok {

@@ -23,7 +23,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	//cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&dataDir, "data-dir", "", "data directory")
 	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file")
 

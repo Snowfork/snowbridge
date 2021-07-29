@@ -12,6 +12,8 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type ParachainPayload struct {
@@ -22,7 +24,6 @@ type ParachainPayload struct {
 type ParachainWriter struct {
 	conn        *parachain.Connection
 	payloads    <-chan ParachainPayload
-	log         *logrus.Entry
 	nonce       uint32
 	pool        *parachain.ExtrinsicPool
 	genesisHash types.Hash
@@ -31,12 +32,10 @@ type ParachainWriter struct {
 func NewParachainWriter(
 	conn *parachain.Connection,
 	payloads <-chan ParachainPayload,
-	log *logrus.Entry,
 ) *ParachainWriter {
 	return &ParachainWriter{
 		conn:     conn,
 		payloads: payloads,
-		log:      log,
 	}
 }
 
@@ -46,10 +45,10 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 		// closed by the listener
 		eg.Go(func() error { return err })
 
-		wr.log.Info("Shutting down writer...")
+		log.Info("Shutting down writer...")
 		// Avoid deadlock if the listener is still trying to send to a channel
 		for range wr.payloads {
-			wr.log.Debug("Discarded payload")
+			log.Debug("Discarded payload")
 		}
 		return err
 	}
@@ -66,7 +65,7 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 	}
 	wr.genesisHash = genesisHash
 
-	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn, wr.log)
+	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn, log.WithField("name", "ExtrinsicPool"))
 
 	eg.Go(func() error {
 		err := wr.writeLoop(ctx)
@@ -128,14 +127,14 @@ func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 			header := payload.Header.HeaderData.(ethereum.Header)
 			err := wr.WritePayload(ctx, &payload)
 			if err != nil {
-				wr.log.WithError(err).WithFields(logrus.Fields{
+				log.WithError(err).WithFields(logrus.Fields{
 					"blockNumber":  header.Fields.Number,
 					"messageCount": len(payload.Messages),
 				}).Error("Failure submitting header and messages to Substrate")
 				return err
 			}
 
-			wr.log.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"blockNumber":  header.Fields.Number,
 				"messageCount": len(payload.Messages),
 			}).Info("Submitted header and messages to Substrate")

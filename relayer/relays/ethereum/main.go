@@ -8,45 +8,61 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+
+	log "github.com/sirupsen/logrus"
 )
 
-type Worker struct {
-	dataDir     string
+type Config struct {
+	DataDir  string         `mapstructure:"data-dir"`
+	Polkadot PolkadotConfig `mapstructure:"polkadot"`
+	Ethereum EthereumConfig `mapstructure:"ethereum"`
+}
+
+type PolkadotConfig struct {
+	Endpoint string `mapstructure:"endpoint"`
+}
+
+type EthereumConfig struct {
+	Endpoint              string         `mapstructure:"endpoint"`
+	DescendantsUntilFinal uint64         `mapstructure:"descendants-until-final"`
+	Channels              ChannelsConfig `mapstructure:"channels"`
+}
+
+type ChannelsConfig struct {
+	Basic        ChannelConfig `mapstructure:"basic"`
+	Incentivized ChannelConfig `mapstructure:"incentivized"`
+}
+
+type ChannelConfig struct {
+	Inbound  string `mapstructure:"inbound"`
+	Outbound string `mapstructure:"outbound"`
+}
+
+type Relay struct {
+	config     *Config
+	keypair    *sr25519.Keypair
 	ethconfig  *ethereum.Config
 	ethconn    *ethereum.Connection
 	paraconfig *parachain.Config
 	paraconn   *parachain.Connection
-	log        *logrus.Entry
 }
 
-const Name = "ethereum-relay"
-
-func NewWorker(
-	dataDir   string,
-	ethconfig *ethereum.Config,
-	paraconfig *parachain.Config,
-	log *logrus.Entry,
-) *Worker {
-	return &Worker{
-		dataDir:    dataDir,
-		ethconfig:  ethconfig,
-		paraconfig: paraconfig,
-		log:        log,
+func NewRelay(
+	config *Config,
+	keypair *sr25519.Keypair,
+) *Relay {
+	return &Relay{
+		config:  config,
+		keypair: keypair,
 	}
 }
 
-func (w *Worker) Name() string {
-	return Name
-}
-
-func (w *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := w.connect(ctx)
+func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
+	err := r.connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -54,7 +70,7 @@ func (w *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	// Clean up after ourselves
 	eg.Go(func() error {
 		<-ctx.Done()
-		w.disconnect()
+		r.disconnect()
 		return nil
 	})
 
@@ -62,25 +78,22 @@ func (w *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	payloads := make(chan ParachainPayload, 1)
 
 	listener := NewEthereumListener(
-		w.dataDir,
-		w.ethconfig,
-		w.ethconn,
+		r.config,
+		r.ethconn,
 		payloads,
-		w.log,
 	)
 	writer := NewParachainWriter(
-		w.paraconn,
+		r.paraconn,
 		payloads,
-		w.log,
 	)
 
-	finalizedBlockNumber, err := w.queryFinalizedBlockNumber()
+	finalizedBlockNumber, err := r.queryFinalizedBlockNumber()
 	if err != nil {
 		return err
 	}
-	w.log.WithField("blockNumber", finalizedBlockNumber).Debug("Retrieved finalized block number from parachain")
+	log.WithField("blockNumber", finalizedBlockNumber).Debug("Retrieved finalized block number from parachain")
 
-	err = listener.Start(ctx, eg, finalizedBlockNumber+1, uint64(w.ethconfig.DescendantsUntilFinal))
+	err = listener.Start(ctx, eg, finalizedBlockNumber+1, uint64(r.ethconfig.DescendantsUntilFinal))
 	if err != nil {
 		return err
 	}
@@ -93,14 +106,14 @@ func (w *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (w *Worker) queryFinalizedBlockNumber() (uint64, error) {
-	storageKey, err := types.CreateStorageKey(w.paraconn.Metadata(), "EthereumLightClient", "FinalizedBlock", nil, nil)
+func (r *Relay) queryFinalizedBlockNumber() (uint64, error) {
+	storageKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumLightClient", "FinalizedBlock", nil, nil)
 	if err != nil {
 		return 0, err
 	}
 
 	var finalizedHeader ethereum.HeaderID
-	_, err = w.paraconn.API().RPC.State.GetStorageLatest(storageKey, &finalizedHeader)
+	_, err = r.paraconn.API().RPC.State.GetStorageLatest(storageKey, &finalizedHeader)
 	if err != nil {
 		return 0, err
 	}
@@ -108,21 +121,21 @@ func (w *Worker) queryFinalizedBlockNumber() (uint64, error) {
 	return uint64(finalizedHeader.Number), nil
 }
 
-func (w *Worker) connect(ctx context.Context) error {
-	kpForPara, err := sr25519.NewKeypairFromSeed(w.paraconfig.PrivateKey, 42)
+func (r *Relay) connect(ctx context.Context) error {
+	kpForPara, err := sr25519.NewKeypairFromSeed(r.paraconfig.PrivateKey, 42)
 	if err != nil {
 		return err
 	}
 
-	w.ethconn = ethereum.NewConnection(w.ethconfig.Endpoint, nil, w.log)
-	w.paraconn = parachain.NewConnection(w.paraconfig.Endpoint, kpForPara.AsKeyringPair(), w.log)
+	r.ethconn = ethereum.NewConnection(r.ethconfig.Endpoint, nil)
+	r.paraconn = parachain.NewConnection(r.paraconfig.Endpoint, kpForPara.AsKeyringPair())
 
-	err = w.ethconn.Connect(ctx)
+	err = r.ethconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = w.paraconn.Connect(ctx)
+	err = r.paraconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -130,14 +143,14 @@ func (w *Worker) connect(ctx context.Context) error {
 	return nil
 }
 
-func (w *Worker) disconnect() {
-	if w.ethconn != nil {
-		w.ethconn.Close()
-		w.ethconn = nil
+func (r *Relay) disconnect() {
+	if r.ethconn != nil {
+		r.ethconn.Close()
+		r.ethconn = nil
 	}
 
-	if w.paraconn != nil {
-		w.paraconn.Close()
-		w.paraconn = nil
+	if r.paraconn != nil {
+		r.paraconn.Close()
+		r.paraconn = nil
 	}
 }

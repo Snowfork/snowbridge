@@ -17,39 +17,38 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type BeefyEthereumWriter struct {
-	ethereumConfig   *ethereum.Config
+	config   *Config
 	ethereumConn     *ethereum.Connection
 	beefyDB          *store.Database
 	beefyLightClient *beefylightclient.Contract
 	databaseMessages chan<- store.DatabaseCmd
 	beefyMessages    <-chan store.BeefyRelayInfo
-	log              *logrus.Entry
 }
 
 func NewBeefyEthereumWriter(
-	ethereumConfig *ethereum.Config,
+	config *Config,
 	ethereumConn *ethereum.Connection,
 	beefyDB *store.Database,
 	databaseMessages chan<- store.DatabaseCmd,
 	beefyMessages <-chan store.BeefyRelayInfo,
-	log *logrus.Entry,
 ) *BeefyEthereumWriter {
 	return &BeefyEthereumWriter{
-		ethereumConfig:   ethereumConfig,
+		config:   config,
 		ethereumConn:     ethereumConn,
 		beefyDB:          beefyDB,
 		databaseMessages: databaseMessages,
 		beefyMessages:    beefyMessages,
-		log:              log,
 	}
 }
 
 func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 
-	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(wr.ethereumConfig.BeefyLightClient), wr.ethereumConn.GetClient())
+	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(wr.config.Ethereum.BeefyContract), wr.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -63,10 +62,10 @@ func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) er
 }
 
 func (wr *BeefyEthereumWriter) onDone(ctx context.Context) error {
-	wr.log.Info("Shutting down writer...")
+	log.Info("Shutting down writer...")
 	// Avoid deadlock if a listener is still trying to send to a channel
 	for range wr.beefyMessages {
-		wr.log.Debug("Discarded BEEFY message")
+		log.Debug("Discarded BEEFY message")
 	}
 
 	return ctx.Err()
@@ -82,12 +81,12 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			case store.CommitmentWitnessed:
 				err := wr.WriteNewSignatureCommitment(ctx, msg)
 				if err != nil {
-					wr.log.WithError(err).Error("Error submitting message to ethereum")
+					log.WithError(err).Error("Error submitting message to ethereum")
 				}
 			case store.ReadyToComplete:
 				err := wr.WriteCompleteSignatureCommitment(ctx, msg)
 				if err != nil {
-					wr.log.WithError(err).Error("Error submitting message to ethereum")
+					log.WithError(err).Error("Error submitting message to ethereum")
 				}
 			}
 		}
@@ -125,7 +124,7 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		&bind.CallOpts{Pending: true}, signedValidators, numberOfValidators,
 	)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to create initial validator bitfield")
+		log.WithError(err).Error("Failed to create initial validator bitfield")
 		return err
 	}
 
@@ -147,11 +146,11 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		msg.ValidatorClaimsBitfield, msg.ValidatorSignatureCommitment,
 		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to submit transaction")
+		log.WithError(err).Error("Failed to submit transaction")
 		return err
 	}
 
-	wr.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"txHash":                           tx.Hash().Hex(),
 		"msg.CommitmentHash":               "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
 		"msg.ValidatorSignatureCommitment": "0x" + hex.EncodeToString(msg.ValidatorSignatureCommitment),
@@ -159,7 +158,7 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		"BlockNumber":                      beefyJustification.SignedCommitment.Commitment.BlockNumber,
 	}).Info("New Signature Commitment transaction submitted")
 
-	wr.log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
+	log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
 	info.Status = store.InitialVerificationTxSent
 	info.InitialVerificationTxHash = tx.Hash()
 	cmd := store.NewDatabaseCmd(&info, store.Create, nil)
@@ -201,7 +200,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		big.NewInt(int64(info.ContractID)),
 	)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to get random validator bitfield")
+		log.WithError(err).Error("Failed to get random validator bitfield")
 		return err
 	}
 
@@ -228,7 +227,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 
 	err = wr.LogBeefyFixtureDataAll(msg, info)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to log complete tx input")
+		log.WithError(err).Error("Failed to log complete tx input")
 		return err
 	}
 
@@ -240,16 +239,16 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		msg.MMRProofItems)
 
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to submit transaction")
+		log.WithError(err).Error("Failed to submit transaction")
 		return err
 	}
 
-	wr.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"txHash": tx.Hash().Hex(),
 	}).Info("Complete Signature Commitment transaction submitted")
 
 	// Update item's status in database
-	wr.log.Info("5: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
+	log.Info("5: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
 	instructions := map[string]interface{}{
 		"status":                        store.CompleteVerificationTxSent,
 		"complete_verification_tx_hash": tx.Hash(),

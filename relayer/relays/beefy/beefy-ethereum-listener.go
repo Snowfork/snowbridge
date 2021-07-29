@@ -16,11 +16,13 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Listener streams the Ethereum blockchain for application events
 type BeefyEthereumListener struct {
-	ethereumConfig   *ethereum.Config
+	config   *Config
 	ethereumConn     *ethereum.Connection
 	beefyDB          *store.Database
 	beefyLightClient *beefylightclient.Contract
@@ -28,34 +30,31 @@ type BeefyEthereumListener struct {
 	dbMessages       chan<- store.DatabaseCmd
 	headers          chan<- chain.Header
 	blockWaitPeriod  uint64
-	log              *logrus.Entry
 }
 
 func NewBeefyEthereumListener(
-	ethereumConfig *ethereum.Config,
+	config *Config,
 	ethereumConn *ethereum.Connection,
 	beefyDB *store.Database,
 	beefyMessages chan<- store.BeefyRelayInfo,
 	dbMessages chan<- store.DatabaseCmd,
 	headers chan<- chain.Header,
-	log *logrus.Entry,
 ) *BeefyEthereumListener {
 	return &BeefyEthereumListener{
-		ethereumConfig:  ethereumConfig,
+		config:  config,
 		ethereumConn:    ethereumConn,
 		beefyDB:         beefyDB,
 		dbMessages:      dbMessages,
 		beefyMessages:   beefyMessages,
 		headers:         headers,
 		blockWaitPeriod: 0,
-		log:             log,
 	}
 }
 
-func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group, descendantsUntilFinal uint64) error {
+func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	// Set up light client bridge contract
-	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(li.ethereumConfig.BeefyLightClient), li.ethereumConn.GetClient())
+	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(li.config.Ethereum.BeefyContract), li.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -74,18 +73,18 @@ func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group, 
 		return err
 	}
 	// Relayer config StartBlock config variable must be updated to the latest Ethereum block number
-	if uint64(li.ethereumConfig.StartBlock) < blockNumber {
-		li.log.Info(fmt.Sprintf("Syncing Relayer from block %d...", li.ethereumConfig.StartBlock))
-		err := li.pollHistoricEventsAndHeaders(ctx, descendantsUntilFinal)
+	if uint64(li.config.Ethereum.StartBlock) < blockNumber {
+		log.Info(fmt.Sprintf("Syncing Relayer from block %d...", li.config.Ethereum.StartBlock))
+		err := li.pollHistoricEventsAndHeaders(ctx, uint64(li.config.Ethereum.DescendantsUntilFinal))
 		if err != nil {
 			return err
 		}
-		li.log.Info(fmt.Sprintf("Relayer fully synced. Starting live processing on block number %d...", blockNumber))
+		log.Info(fmt.Sprintf("Relayer fully synced. Starting live processing on block number %d...", blockNumber))
 	}
 
 	// In live mode the relayer processes blocks as they're mined and broadcast
 	eg.Go(func() error {
-		err := li.pollEventsAndHeaders(ctx, descendantsUntilFinal)
+		err := li.pollEventsAndHeaders(ctx, uint64(li.config.Ethereum.DescendantsUntilFinal))
 		close(li.headers)
 		return err
 	})
@@ -95,7 +94,7 @@ func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group, 
 
 func (li *BeefyEthereumListener) pollHistoricEventsAndHeaders(ctx context.Context, descendantsUntilFinal uint64) error {
 	// Load starting block number and latest block number
-	blockNumber := li.ethereumConfig.StartBlock
+	blockNumber := li.config.Ethereum.StartBlock
 	latestBlockNumber, err := li.ethereumConn.GetClient().BlockNumber(ctx)
 	if err != nil {
 		return err
@@ -117,7 +116,7 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(ctx context.Context, desce
 	for {
 		select {
 		case <-ctx.Done():
-			li.log.Info("Shutting down listener...")
+			log.Info("Shutting down listener...")
 			return ctx.Err()
 		case gethheader := <-headers:
 			blockNumber := gethheader.Number.Uint64()
@@ -164,10 +163,10 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 	// Query previous InitialVerificationSuccessful events and update the status of BEEFY justifications in database
 	events, err := li.queryInitialVerificationSuccessfulEvents(ctx, blockNumber, &latestBlockNumber)
 	if err != nil {
-		li.log.WithError(err).Error("Failure fetching event logs")
+		log.WithError(err).Error("Failure fetching event logs")
 	}
 
-	li.log.Info(fmt.Sprintf(
+	log.Info(fmt.Sprintf(
 		"Found %d InitialVerificationSuccessful events between blocks %d-%d",
 		len(events), blockNumber, latestBlockNumber),
 	)
@@ -176,7 +175,7 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 		// Fetch validation data from contract using event.ID
 		validationData, err := li.beefyLightClient.ContractCaller.ValidationData(nil, event.Id)
 		if err != nil {
-			li.log.WithError(err).Error(fmt.Sprintf("Error querying validation data for ID %d", event.Id))
+			log.WithError(err).Error(fmt.Sprintf("Error querying validation data for ID %d", event.Id))
 		}
 
 		// Attempt to match items in database based on their payload
@@ -186,7 +185,7 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 			generatedPayload := li.simulatePayloadGeneration(*item)
 			if generatedPayload == validationData.CommitmentHash {
 				// Update existing database item
-				li.log.Infof(
+				log.Infof(
 					"Updating item %s status from 'CommitmentWitnessed' to 'InitialVerificationTxConfirmed'",
 					event.Id,
 				)
@@ -205,7 +204,7 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 		}
 		if !itemFoundInDatabase {
 			// Don't have an existing item to update, therefore we won't be able to build the completion tx
-			li.log.Error("BEEFY justification data not found in database for InitialVerificationSuccessful event. Ignoring event.")
+			log.Error("BEEFY justification data not found in database for InitialVerificationSuccessful event. Ignoring event.")
 		}
 	}
 }
@@ -217,15 +216,15 @@ func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx 
 
 	events, err := li.queryInitialVerificationSuccessfulEvents(ctx, blockNumber, &blockNumber)
 	if err != nil {
-		li.log.WithError(err).Error("Failure fetching event logs")
+		log.WithError(err).Error("Failure fetching event logs")
 	}
 
 	if len(events) > 0 {
-		li.log.Info(fmt.Sprintf("Found %d InitialVerificationSuccessful events on block %d", len(events), blockNumber))
+		log.Info(fmt.Sprintf("Found %d InitialVerificationSuccessful events on block %d", len(events), blockNumber))
 	}
 
 	for _, event := range events {
-		li.log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"blockHash":   event.Raw.BlockHash.Hex(),
 			"blockNumber": event.Raw.BlockNumber,
 			"txHash":      event.Raw.TxHash.Hex(),
@@ -241,7 +240,7 @@ func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(ctx 
 			continue
 		}
 
-		li.log.Infof(
+		log.Infof(
 			"3: Updating item %s status from 'InitialVerificationTxSent' to 'InitialVerificationTxConfirmed'",
 			event.Id,
 		)
@@ -289,9 +288,9 @@ func (li *BeefyEthereumListener) processHistoricalFinalVerificationSuccessfulEve
 	// Query previous FinalVerificationSuccessful events and update the status of BEEFY justifications in database
 	events, err := li.queryFinalVerificationSuccessfulEvents(ctx, blockNumber, &latestBlockNumber)
 	if err != nil {
-		li.log.WithError(err).Error("Failure fetching event logs")
+		log.WithError(err).Error("Failure fetching event logs")
 	}
-	li.log.Info(fmt.Sprintf(
+	log.Info(fmt.Sprintf(
 		"Found %d FinalVerificationSuccessful events between blocks %d-%d",
 		len(events), blockNumber, latestBlockNumber),
 	)
@@ -299,14 +298,14 @@ func (li *BeefyEthereumListener) processHistoricalFinalVerificationSuccessfulEve
 	for _, event := range events {
 		item := li.beefyDB.GetItemByID(event.Id.Int64())
 		if int64(item.ID) == event.Id.Int64() {
-			li.log.Infof(
+			log.Infof(
 				"Deleting finalized item %s from the database",
 				event.Id,
 			)
 			deleteCmd := store.NewDatabaseCmd(item, store.Delete, nil)
 			li.dbMessages <- deleteCmd
 		} else {
-			li.log.Error("BEEFY justification data not found in database for FinalVerificationSuccessful event. Ignoring event.")
+			log.Error("BEEFY justification data not found in database for FinalVerificationSuccessful event. Ignoring event.")
 		}
 	}
 }
@@ -316,15 +315,15 @@ func (li *BeefyEthereumListener) processFinalVerificationSuccessfulEvents(ctx co
 	blockNumber uint64) {
 	events, err := li.queryFinalVerificationSuccessfulEvents(ctx, blockNumber, &blockNumber)
 	if err != nil {
-		li.log.WithError(err).Error("Failure fetching event logs")
+		log.WithError(err).Error("Failure fetching event logs")
 	}
 
 	if len(events) > 0 {
-		li.log.Info(fmt.Sprintf("Found %d FinalVerificationSuccessful events on block %d", len(events), blockNumber))
+		log.Info(fmt.Sprintf("Found %d FinalVerificationSuccessful events on block %d", len(events), blockNumber))
 	}
 
 	for _, event := range events {
-		li.log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"blockHash":   event.Raw.BlockHash.Hex(),
 			"blockNumber": event.Raw.BlockNumber,
 			"txHash":      event.Raw.TxHash.Hex(),
@@ -334,7 +333,7 @@ func (li *BeefyEthereumListener) processFinalVerificationSuccessfulEvents(ctx co
 			continue
 		}
 
-		li.log.Infof(
+		log.Infof(
 			"6: Deleting finalized item %s from the database",
 			event.Id,
 		)
@@ -349,12 +348,12 @@ func (li *BeefyEthereumListener) processFinalVerificationSuccessfulEvents(ctx co
 func (li *BeefyEthereumListener) simulatePayloadGeneration(item store.BeefyRelayInfo) [32]byte {
 	beefyJustification, err := item.ToBeefyJustification()
 	if err != nil {
-		li.log.WithError(fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error()))
+		log.WithError(fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error()))
 	}
 
 	msg, err := beefyJustification.BuildNewSignatureCommitmentMessage(0, []*big.Int{})
 	if err != nil {
-		li.log.WithError(err).Error("Error building commitment message")
+		log.WithError(err).Error("Error building commitment message")
 	}
 
 	return msg.CommitmentHash
@@ -374,17 +373,17 @@ func (li *BeefyEthereumListener) forwardReadyToCompleteItems(ctx context.Context
 	// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
 	initialVerificationItems := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
 	if len(initialVerificationItems) > 0 {
-		li.log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(initialVerificationItems)))
+		log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(initialVerificationItems)))
 	}
 	for _, item := range initialVerificationItems {
 		if item.CompleteOnBlock+descendantsUntilFinal <= blockNumber {
 			// Fetch intended completion block's hash
 			block, err := li.ethereumConn.GetClient().BlockByNumber(ctx, big.NewInt(int64(item.CompleteOnBlock)))
 			if err != nil {
-				li.log.WithError(err).Error("Failure fetching inclusion block")
+				log.WithError(err).Error("Failure fetching inclusion block")
 			}
 
-			li.log.Infof(
+			log.Infof(
 				"4: Updating item %v status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'",
 				item.ID,
 			)

@@ -12,6 +12,8 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type latestBlockInfo struct {
@@ -31,18 +33,16 @@ type Syncer struct {
 	headerCache           HeaderCache
 	headers               chan<- *gethTypes.Header
 	loader                HeaderLoader
-	log                   *logrus.Entry
 	newHeaders            chan *gethTypes.Header
 	oldHeaders            chan *gethTypes.Header
 }
 
-func NewSyncer(descendantsUntilFinal uint64, loader HeaderLoader, headers chan<- *gethTypes.Header, log *logrus.Entry) *Syncer {
+func NewSyncer(descendantsUntilFinal uint64, loader HeaderLoader, headers chan<- *gethTypes.Header) *Syncer {
 	return &Syncer{
 		descendantsUntilFinal: descendantsUntilFinal,
 		headerCache:           *NewHeaderCache(descendantsUntilFinal + 1),
 		headers:               headers,
 		loader:                loader,
-		log:                   log,
 		newHeaders:            nil,
 		oldHeaders:            nil,
 	}
@@ -66,7 +66,7 @@ func (s *Syncer) StartSync(ctx context.Context, eg *errgroup.Group, initBlockHei
 	defer lbi.Unlock()
 	latestHeader, err := s.loader.HeaderByNumber(ctx, nil)
 	if err != nil {
-		s.log.WithError(err).Error("Failed to retrieve latest header")
+		log.WithError(err).Error("Failed to retrieve latest header")
 		close(s.headers)
 		return err
 	}
@@ -107,7 +107,7 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 			lbi.fetchFinalizedDone = true
 			lbi.Unlock()
 
-			s.log.WithField("blockNumber", syncedUpUntil).Debug("Done retrieving finalized headers")
+			log.WithField("blockNumber", syncedUpUntil).Debug("Done retrieving finalized headers")
 
 			break
 		}
@@ -115,13 +115,13 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 
 		header, err := s.loader.HeaderByNumber(ctx, new(big.Int).SetUint64(syncedUpUntil+1))
 		if err != nil {
-			s.log.WithField(
+			log.WithField(
 				"blockNumber", syncedUpUntil+1,
 			).WithError(err).Error("Failed to retrieve finalized header")
 			return err
 		}
 
-		s.log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"blockHash":   header.Hash().Hex(),
 			"blockNumber": syncedUpUntil + 1,
 		}).Debug("Retrieved finalized header")
@@ -144,7 +144,7 @@ func (s *Syncer) pollNewHeaders(ctx context.Context, lbi *latestBlockInfo) error
 
 	subscription, err := s.loader.SubscribeNewHead(ctx, headers)
 	if err != nil {
-		s.log.WithError(err).Error("Failed to subscribe to new headers")
+		log.WithError(err).Error("Failed to subscribe to new headers")
 		return err
 	}
 	headersSubscriptionErr = subscription.Err()
@@ -160,7 +160,7 @@ func (s *Syncer) pollNewHeaders(ctx context.Context, lbi *latestBlockInfo) error
 			lbi.Lock()
 			lbi.height = header.Number.Uint64()
 
-			s.log.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"blockHash":   header.Hash().Hex(),
 				"blockNumber": lbi.height,
 			}).Debug("Witnessed new header")
@@ -168,7 +168,7 @@ func (s *Syncer) pollNewHeaders(ctx context.Context, lbi *latestBlockInfo) error
 			if lbi.fetchFinalizedDone {
 				err = s.forwardAncestry(ctx, header.Hash(), saturatingSub(lbi.height, s.descendantsUntilFinal))
 				if err != nil {
-					s.log.WithFields(logrus.Fields{
+					log.WithFields(logrus.Fields{
 						"blockHash":   header.Hash().Hex(),
 						"blockNumber": lbi.height,
 					}).WithError(err).Error("Failed to forward header and its ancestors")

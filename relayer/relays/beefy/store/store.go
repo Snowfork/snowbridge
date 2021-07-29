@@ -10,8 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3" // required by gorm
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Status int
@@ -103,15 +104,13 @@ type Database struct {
 	Path     string
 	DB       *gorm.DB
 	messages <-chan DatabaseCmd
-	log      *logrus.Entry
 }
 
-func NewDatabase(messages <-chan DatabaseCmd, log *logrus.Entry) *Database {
+func NewDatabase(messages <-chan DatabaseCmd) *Database {
 	return &Database{
 		Path:     "",
 		DB:       nil,
 		messages: messages,
-		log:      log,
 	}
 }
 
@@ -145,17 +144,17 @@ func (d *Database) Start(ctx context.Context, eg *errgroup.Group) error {
 
 		err1 = d.writeLoop(ctx)
 
-		d.log.Info("Shutting down DB")
+		log.Info("Shutting down DB")
 		sqlDB := d.DB.DB()
 		if sqlDB != nil {
 			err2 = sqlDB.Close()
 			if err2 != nil {
-				d.log.WithError(err2).Error("Unable to close DB connection")
+				log.WithError(err2).Error("Unable to close DB connection")
 			}
 
 			err2 = os.Remove(d.Path)
 			if err2 != nil {
-				d.log.WithError(err2).Error("Unable to delete DB file")
+				log.WithError(err2).Error("Unable to delete DB file")
 			}
 		}
 
@@ -176,28 +175,28 @@ func (d *Database) writeLoop(ctx context.Context) error {
 			mutex.Lock()
 			switch cmd.Type {
 			case Create:
-				d.log.Info("Creating item in database...")
+				log.Info("Creating item in database...")
 				tx := d.DB.Begin()
 				if err := tx.Error; err != nil {
-					d.log.Error(err)
+					log.Error(err)
 					return err
 				}
 
 				if err := tx.Create(&cmd.Info).Error; err != nil {
 					tx.Rollback()
-					d.log.Error(err)
+					log.Error(err)
 					return err
 				}
 
 				if err := tx.Commit().Error; err != nil {
-					d.log.Error(err)
+					log.Error(err)
 					return err
 				}
 			case Update:
-				d.log.Info("Updating item in database...")
+				log.Info("Updating item in database...")
 				d.DB.Model(&cmd.Info).Updates(cmd.Instructions)
 			case Delete:
-				d.log.Info("Deleting item from database...")
+				log.Info("Deleting item from database...")
 				d.DB.Delete(&cmd.Info, cmd.Info.ID)
 			}
 			mutex.Unlock()

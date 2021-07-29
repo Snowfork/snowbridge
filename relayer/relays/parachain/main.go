@@ -38,8 +38,8 @@ func NewWorker(parachainConfig *parachain.Config,
 	}
 
 	parachainConn := parachain.NewConnection(parachainConfig.Endpoint, nil, log)
-	relaychainConn := relaychain.NewConnection(relaychainConfig.Endpoint, log)
-	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKp, log)
+	relaychainConn := relaychain.NewConnection(relaychainConfig.Endpoint)
+	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKp)
 
 	// channel for messages from beefy listener to ethereum writer
 	var messagePackages = make(chan MessagePackage, 1)

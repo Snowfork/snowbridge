@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -82,7 +81,7 @@ func getEthContractEventsAndTrie(
 ) ([]*gethTypes.Log, *gethTrie.Trie, error) {
 	ctx := context.Background()
 
-	conn := ethereum.NewConnection(config.Endpoint, nil, logrus.WithField("chain", "Ethereum"))
+	conn := ethereum.NewConnection(config.Endpoint, nil)
 	err := conn.Connect(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -202,7 +201,7 @@ func getEthIncentivizedMessages(
 }
 
 func printEthContractEventForSub(mapping map[common.Address]string, event *gethTypes.Log, trie *gethTrie.Trie) error {
-	message, err := ethereum.MakeMessageFromEvent(mapping, event, trie, logrus.WithField("chain", "Ethereum"))
+	message, err := ethereum.MakeMessageFromEvent(mapping, event, trie)
 	if err != nil {
 		return err
 	}

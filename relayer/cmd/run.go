@@ -4,27 +4,29 @@ import (
 	"log"
 
 	"github.com/sirupsen/logrus"
+	"github.com/snowfork/snowbridge/relayer/cmd/run"
 	"github.com/spf13/cobra"
-
-	"github.com/snowfork/snowbridge/relayer/core"
 )
+
 
 func runCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "run",
-		Short:   "Start the relay service",
-		Args:    cobra.ExactArgs(0),
-		Example: "snowbridge-relay run",
+		Short:   "Start a relay service",
+		Args:    cobra.MinimumNArgs(1),
 		RunE:    RunFn,
 	}
+
+	cmd.AddCommand(run.BeefyCmd())
+
 	return cmd
 }
 
 func RunFn(cmd *cobra.Command, _ []string) error {
 	setupLogging()
 
-	relay := &core.Relay{}
-	return relay.Run()
+	//relay := &core.Relay{}
+	return nil
 }
 
 func setupLogging() {

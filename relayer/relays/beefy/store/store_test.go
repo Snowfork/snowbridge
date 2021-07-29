@@ -33,8 +33,7 @@ func TestStoreTestSuite(t *testing.T) {
 func (suite *StoreTestSuite) SetupTest() {
 
 	messages := make(chan store.DatabaseCmd, 1)
-	logger := logrus.WithField("database", "Beefy")
-	database := store.NewDatabase(messages, logger)
+	database := store.NewDatabase(messages)
 
 	err := database.Initialize()
 	if err != nil {

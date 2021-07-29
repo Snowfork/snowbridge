@@ -51,7 +51,7 @@ func subBeefyJustifications(ctx context.Context, paraID uint32) error {
 	log := log.WithField("script", "beefy")
 
 	relaychainEndpoint := config.Relaychain.Endpoint
-	relaychainConn := relaychain.NewConnection(relaychainEndpoint, log)
+	relaychainConn := relaychain.NewConnection(relaychainEndpoint)
 	err = relaychainConn.Connect(ctx)
 	if err != nil {
 		log.Error(err)
@@ -59,7 +59,7 @@ func subBeefyJustifications(ctx context.Context, paraID uint32) error {
 	}
 
 	parachainEndpoint := config.Parachain.Endpoint
-	parachainConn := parachain.NewConnection(parachainEndpoint, nil, log)
+	parachainConn := parachain.NewConnection(parachainEndpoint, nil)
 	err = parachainConn.Connect(ctx)
 	if err != nil {
 		log.Error(err)
