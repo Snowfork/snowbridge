@@ -153,8 +153,6 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		return err
 	}
 
-	fmt.Println("beefy-relay: tx", tx)
-
 	wr.log.WithFields(logrus.Fields{
 		"txHash":                           tx.Hash().Hex(),
 		"msg.CommitmentHash":               "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
