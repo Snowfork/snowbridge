@@ -182,7 +182,7 @@ start_relayer()
         do
             ../relayer/build/snowbridge-relay run ethereum \
                 --config $configdir/ethereum-relay.json \
-                --private-key "//Alice" \
+                --private-key "//Relay" \
                 >>ethereum-relay.log 2>&1 || true
             echo "Ethereum relay died. Restarting after delay..."
             sleep 20
