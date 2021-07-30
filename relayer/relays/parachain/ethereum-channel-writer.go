@@ -96,7 +96,8 @@ func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
 }
 
 func (wr *EthereumChannelWriter) signerFn(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
-	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, wr.conn.GetKP().PrivateKey())
+	chainID := wr.conn.ChainID()
+	signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainID), wr.conn.GetKP().PrivateKey())
 	if err != nil {
 		return nil, err
 	}
