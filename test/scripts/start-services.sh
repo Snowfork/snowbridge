@@ -23,7 +23,8 @@ start_geth() {
         --rpc.gascap 100000000 \
         --trace $configdir/geth/trace \
         --gcmode archive \
-        --miner.gasprice=0
+        --miner.gasprice=0 \
+        > $configdir/geth.log 2>&1 &
 }
 
 deploy_contracts()
