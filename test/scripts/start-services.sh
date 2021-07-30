@@ -136,8 +136,8 @@ start_relayer()
     config/parachain-relay.json > $configdir/parachain-relay.json
 
     jq \
-        --arg k1 $(address_for BasicInboundChannel) \
-        --arg k2 $(address_for IncentivizedInboundChannel) \
+        --arg k1 $(address_for BasicOutboundChannel) \
+        --arg k2 $(address_for IncentivizedOutboundChannel) \
     '
       .ethereum.contracts.BasicOutboundChannel = $k1
     | .ethereum.contracts.IncentivizedOutboundChannel = $k2
