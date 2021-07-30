@@ -48,7 +48,8 @@ func NewBeefyEthereumWriter(
 
 func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 
-	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(wr.config.Ethereum.BeefyContract), wr.ethereumConn.GetClient())
+	address := common.HexToAddress(wr.config.Ethereum.Contracts.BeefyLightClient)
+	beefyLightClientContract, err := beefylightclient.NewContract(address, wr.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}

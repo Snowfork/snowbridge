@@ -54,7 +54,8 @@ func NewBeefyEthereumListener(
 func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	// Set up light client bridge contract
-	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(li.config.Ethereum.BeefyContract), li.ethereumConn.GetClient())
+	address := common.HexToAddress(li.config.Ethereum.Contracts.BeefyLightClient)
+	beefyLightClientContract, err := beefylightclient.NewContract(address, li.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}

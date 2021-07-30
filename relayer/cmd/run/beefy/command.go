@@ -1,4 +1,4 @@
-package ethereum
+package beefy
 
 import (
 	"context"
@@ -13,8 +13,8 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
-	"github.com/snowfork/snowbridge/relayer/relays/ethereum"
+	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -22,21 +22,21 @@ import (
 
 var (
 	configFile string
-	substratePrivateKey string
-	substratePrivateKeyFile string
+	ethereumPrivateKey string
+	ethereumPrivateKeyFile string
 )
 
-func EthereumCmd() *cobra.Command {
+func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "ethereum",
-		Short:   "Start the ethereum relay",
+		Use:     "beefy",
+		Short:   "Start the beefy relay",
 		Args:    cobra.ExactArgs(0),
 		RunE:    runFunc,
 	}
 
 	cmd.Flags().StringVar(&configFile, "config", "", "Config file")
-	cmd.Flags().StringVar(&substratePrivateKey, "private-key", "", "Private key URI for Substrate")
-	cmd.Flags().StringVar(&substratePrivateKeyFile, "private-key-file", "", "The file from which to read the private key URI")
+	cmd.Flags().StringVar(&ethereumPrivateKey, "private-key", "", "Ethereum private key")
+	cmd.Flags().StringVar(&ethereumPrivateKeyFile, "private-key-file", "", "The file from which to read the private key")
 
 	return cmd
 }
@@ -67,33 +67,33 @@ func runFunc(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	var config ethereum.Config
+	var config beefy.Config
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		return nil
 	}
 
-	var privateKeyURI string
+	var privateKey string
 
-	if substratePrivateKey == "" {
-		if substratePrivateKeyFile == "" {
-			return fmt.Errorf("Private key URI not supplied")
+	if ethereumPrivateKey == "" {
+		if ethereumPrivateKeyFile == "" {
+			return fmt.Errorf("Ethereum private key not supplied")
 		}
-		contentBytes, err := ioutil.ReadFile(substratePrivateKeyFile)
+		contentBytes, err := ioutil.ReadFile(ethereumPrivateKeyFile)
 		if err != nil {
 			log.Fatal(err)
 		}
-		privateKeyURI = strings.TrimSpace(string(contentBytes))
+		privateKey = strings.TrimPrefix(strings.TrimSpace(string(contentBytes)), "0x")
 	} else {
-		privateKeyURI = substratePrivateKey
+		privateKey = strings.TrimPrefix(ethereumPrivateKey, "0x")
 	}
 
-	keypair, err := sr25519.NewKeypairFromSeed(privateKeyURI, 42)
+	keypair, err := secp256k1.NewKeypairFromString(privateKey)
 	if err != nil {
-		return fmt.Errorf("Unable to parse private key URI: %w", err)
+		return fmt.Errorf("Unable to parse private key: %w", err)
 	}
 
-	relay := ethereum.NewRelay(&config, keypair)
+	relay, err := beefy.NewRelay(&config, keypair)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
@@ -114,7 +114,10 @@ func runFunc(_ *cobra.Command, _ []string) error {
 		return nil
 	})
 
-	relay.Start(ctx, eg)
+	err = relay.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
 
 	return eg.Wait()
 }

@@ -27,22 +27,6 @@ type Relay struct {
 	ethHeaders              chan chain.Header
 }
 
-type Config struct {
-	Polkadot PolkadotConfig `mapstructure:"polkadot"`
-	Ethereum EthereumConfig `mapstructure:"ethereum"`
-}
-
-type PolkadotConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
-}
-
-type EthereumConfig struct {
-	Endpoint              string `mapstructure:"endpoint"`
-	BeefyContract         string `mapstructure:"contract"`
-	StartBlock            uint64 `mapstructure:"start-block"`
-	DescendantsUntilFinal uint64 `mapstructure:"descendants-until-final"`
-}
-
 func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
 	log.Info("Relay created")
 

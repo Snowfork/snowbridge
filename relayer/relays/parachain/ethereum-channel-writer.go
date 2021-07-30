@@ -17,22 +17,22 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v3/types"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type EthereumChannelWriter struct {
-	config                     *ethereum.Config
+	config                     *Config
 	conn                       *ethereum.Connection
 	basicInboundChannel        *basic.BasicInboundChannel
 	incentivizedInboundChannel *incentivized.IncentivizedInboundChannel
 	messagePackages            <-chan MessagePackage
-	log                        *logrus.Entry
 }
 
 func NewEthereumChannelWriter(
-	config *ethereum.Config,
+	config *Config,
 	conn *ethereum.Connection,
 	messagePackages <-chan MessagePackage,
-	log *logrus.Entry,
 ) (*EthereumChannelWriter, error) {
 	return &EthereumChannelWriter{
 		config:                     config,
@@ -40,18 +40,21 @@ func NewEthereumChannelWriter(
 		basicInboundChannel:        nil,
 		incentivizedInboundChannel: nil,
 		messagePackages:            messagePackages,
-		log:                        log,
 	}, nil
 }
 
 func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	basic, err := basic.NewBasicInboundChannel(common.HexToAddress(wr.config.Channels.Basic.Inbound), wr.conn.GetClient())
+	var address common.Address
+
+	address = common.HexToAddress(wr.config.Ethereum.Contracts.BasicInboundChannel)
+	basic, err := basic.NewBasicInboundChannel(address, wr.conn.GetClient())
 	if err != nil {
 		return err
 	}
 	wr.basicInboundChannel = basic
 
-	incentivized, err := incentivized.NewIncentivizedInboundChannel(common.HexToAddress(wr.config.Channels.Incentivized.Inbound), wr.conn.GetClient())
+	address = common.HexToAddress(wr.config.Ethereum.Contracts.IncentivizedInboundChannel)
+	incentivized, err := incentivized.NewIncentivizedInboundChannel(address, wr.conn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -65,10 +68,10 @@ func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) 
 }
 
 func (wr *EthereumChannelWriter) onDone(ctx context.Context) error {
-	wr.log.Info("Shutting down writer...")
+	log.Info("Shutting down writer...")
 	// Avoid deadlock if a listener is still trying to send to a channel
 	for range wr.messagePackages {
-		wr.log.Debug("Discarded message package")
+		log.Debug("Discarded message package")
 	}
 	return ctx.Err()
 }
@@ -88,7 +91,7 @@ func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
 		case messagePackage := <-wr.messagePackages:
 			err := wr.WriteChannel(&options, &messagePackage)
 			if err != nil {
-				wr.log.WithError(err).Error("Error submitting message to ethereum")
+				log.WithError(err).Error("Error submitting message to ethereum")
 				return err
 			}
 		}
@@ -150,7 +153,7 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 	err := wr.logBasicTx(messages, paraheadPartial, paraHeadProof, msgPackage.paraHeadProofRoot,
 		beefyMMRLeafPartial, beefyMMRLeafIndex, beefyLeafCount, beefyMMRProof)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to log transaction input")
+		log.WithError(err).Error("Failed to log transaction input")
 		return err
 	}
 
@@ -158,11 +161,11 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		paraHeadProof, beefyMMRLeafPartial,
 		big.NewInt(beefyMMRLeafIndex), big.NewInt(beefyLeafCount), beefyMMRProof)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to submit transaction")
+		log.WithError(err).Error("Failed to submit transaction")
 		return err
 	}
 
-	wr.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"txHash":  tx.Hash().Hex(),
 		"channel": "Basic",
 	}).Info("Transaction submitted")
@@ -217,7 +220,7 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	err := wr.logIncentivizedTx(messages, paraheadPartial, paraHeadProof, msgPackage.paraHeadProofRoot,
 		beefyMMRLeafPartial, beefyMMRLeafIndex, beefyLeafCount, beefyMMRProof)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to log transaction input")
+		log.WithError(err).Error("Failed to log transaction input")
 		return err
 	}
 
@@ -226,11 +229,11 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		paraHeadProof, beefyMMRLeafPartial,
 		big.NewInt(beefyMMRLeafIndex), big.NewInt(beefyLeafCount), beefyMMRProof)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to submit transaction")
+		log.WithError(err).Error("Failed to submit transaction")
 		return err
 	}
 
-	wr.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"txHash":  tx.Hash().Hex(),
 		"channel": "Incentivized",
 	}).Info("Transaction submitted")
@@ -246,12 +249,12 @@ func (wr *EthereumChannelWriter) WriteChannel(
 		var outboundMessages []parachain.BasicOutboundChannelMessage
 		err := gsrpcTypes.DecodeFromBytes(msg.commitmentData, &outboundMessages)
 		if err != nil {
-			wr.log.WithError(err).Error("Failed to decode commitment messages")
+			log.WithError(err).Error("Failed to decode commitment messages")
 			return err
 		}
 		err = wr.WriteBasicChannel(options, msg, outboundMessages)
 		if err != nil {
-			wr.log.WithError(err).Error("Failed to write basic channel")
+			log.WithError(err).Error("Failed to write basic channel")
 			return err
 		}
 
@@ -260,12 +263,12 @@ func (wr *EthereumChannelWriter) WriteChannel(
 		var outboundMessages []parachain.IncentivizedOutboundChannelMessage
 		err := gsrpcTypes.DecodeFromBytes(msg.commitmentData, &outboundMessages)
 		if err != nil {
-			wr.log.WithError(err).Error("Failed to decode commitment messages")
+			log.WithError(err).Error("Failed to decode commitment messages")
 			return err
 		}
 		err = wr.WriteIncentivizedChannel(options, msg, outboundMessages)
 		if err != nil {
-			wr.log.WithError(err).Error("Failed to write incentivized channel")
+			log.WithError(err).Error("Failed to write incentivized channel")
 			return err
 		}
 	}

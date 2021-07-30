@@ -108,7 +108,7 @@ func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, err
 		return false, err
 	}
 	if !ok {
-		return false, fmt.Errorf("Unable to query header for hash %s", hash.Hex())
+		return false, fmt.Errorf("Storage query did not find header for hash %s", hash.Hex())
 	}
 
 	return headerOption.IsSome(), nil

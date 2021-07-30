@@ -1,0 +1,14 @@
+{
+    "polkadot": {
+        "endpoint": "ws://localhost:9944"
+    },
+    "parachain": {
+        "endpoint": "ws://localhost:11144"
+    },
+    "ethereum": {
+        "endpoint": "ws://localhost:8545",
+        "start-block": 0,
+        "descendants-until-final": 3,
+        "contracts": {}
+    }
+}

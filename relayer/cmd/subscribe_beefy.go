@@ -6,11 +6,10 @@ import (
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/core"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func subBeefyCmd() *cobra.Command {
@@ -18,9 +17,12 @@ func subBeefyCmd() *cobra.Command {
 		Use:     "sub-beefy",
 		Short:   "Subscribe beefy messages",
 		Args:    cobra.ExactArgs(0),
-		Example: "snowbridge-relay sub-beefy",
 		RunE:    SubBeefyFn,
 	}
+
+	cmd.Flags().StringP("url", "u", "", "Polkadot URL")
+	cmd.MarkFlagRequired("url")
+
 	cmd.Flags().UintP(
 		"para-id",
 		"i",
@@ -28,39 +30,20 @@ func subBeefyCmd() *cobra.Command {
 		"Parachain ID",
 	)
 	cmd.MarkFlagRequired("para-id")
+
+	viper.BindPFlags(cmd.Flags())
 	return cmd
 }
 
 func SubBeefyFn(cmd *cobra.Command, _ []string) error {
-	paraID, err := cmd.Flags().GetUint32("para-id")
-	if err != nil {
-		return err
-	}
+	paraID := viper.GetUint32("para-id")
 	subBeefyJustifications(cmd.Context(), paraID)
 	return nil
 }
 
 func subBeefyJustifications(ctx context.Context, paraID uint32) error {
-	log.Info("Loading config")
-	config, err := core.LoadConfig()
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	log := log.WithField("script", "beefy")
-
-	relaychainEndpoint := config.Relaychain.Endpoint
-	relaychainConn := relaychain.NewConnection(relaychainEndpoint)
-	err = relaychainConn.Connect(ctx)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	parachainEndpoint := config.Parachain.Endpoint
-	parachainConn := parachain.NewConnection(parachainEndpoint, nil)
-	err = parachainConn.Connect(ctx)
+	relaychainConn := relaychain.NewConnection(viper.GetString("url"))
+	err := relaychainConn.Connect(ctx)
 	if err != nil {
 		log.Error(err)
 		return err

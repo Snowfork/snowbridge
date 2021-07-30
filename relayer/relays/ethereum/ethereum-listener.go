@@ -90,20 +90,23 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 		return closeWithError(err)
 	}
 
-	basicOutboundChannel, err := basic.NewBasicOutboundChannel(common.HexToAddress(li.config.Ethereum.Channels.Basic.Outbound), li.conn.GetClient())
+	var address common.Address
+
+	address = common.HexToAddress(li.config.Ethereum.Contracts.BasicOutboundChannel)
+	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.GetClient())
 	if err != nil {
 		return closeWithError(err)
 	}
 	li.basicOutboundChannel = basicOutboundChannel
+	li.mapping[address] = "BasicInboundChannel.submit"
 
-	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(common.HexToAddress(li.config.Ethereum.Channels.Incentivized.Outbound), li.conn.GetClient())
+	address = common.HexToAddress(li.config.Ethereum.Contracts.IncentivizedOutboundChannel)
+	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, li.conn.GetClient())
 	if err != nil {
 		return closeWithError(err)
 	}
 	li.incentivizedOutboundChannel = incentivizedOutboundChannel
-
-	li.mapping[common.HexToAddress(li.config.Ethereum.Channels.Basic.Outbound)] = "BasicInboundChannel.submit"
-	li.mapping[common.HexToAddress(li.config.Ethereum.Channels.Incentivized.Outbound)] = "IncentivizedInboundChannel.submit"
+	li.mapping[address] = "IncentivizedInboundChannel.submit"
 
 	headersIn := make(chan *gethTypes.Header, 5)
 	li.headerSyncer = syncer.NewSyncer(

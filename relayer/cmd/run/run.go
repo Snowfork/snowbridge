@@ -1,15 +1,17 @@
-package cmd
+package run
 
 import (
 	"log"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/snowbridge/relayer/cmd/run"
+	"github.com/snowfork/snowbridge/relayer/cmd/run/beefy"
+	"github.com/snowfork/snowbridge/relayer/cmd/run/ethereum"
+	"github.com/snowfork/snowbridge/relayer/cmd/run/parachain"
 	"github.com/spf13/cobra"
 )
 
 
-func runCmd() *cobra.Command {
+func Command() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "run",
 		Short:   "Start a relay service",
@@ -17,12 +19,14 @@ func runCmd() *cobra.Command {
 		RunE:    RunFn,
 	}
 
-	cmd.AddCommand(run.BeefyCmd())
+	cmd.AddCommand(beefy.Command())
+	cmd.AddCommand(parachain.Command())
+	cmd.AddCommand(ethereum.Command())
 
 	return cmd
 }
 
-func RunFn(cmd *cobra.Command, _ []string) error {
+func RunFn(_ *cobra.Command, _ []string) error {
 	setupLogging()
 
 	//relay := &core.Relay{}

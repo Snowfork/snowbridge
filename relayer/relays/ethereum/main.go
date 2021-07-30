@@ -16,38 +16,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Config struct {
-	DataDir  string         `mapstructure:"data-dir"`
-	Polkadot PolkadotConfig `mapstructure:"polkadot"`
-	Ethereum EthereumConfig `mapstructure:"ethereum"`
-}
-
-type PolkadotConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
-}
-
-type EthereumConfig struct {
-	Endpoint              string         `mapstructure:"endpoint"`
-	DescendantsUntilFinal uint64         `mapstructure:"descendants-until-final"`
-	Channels              ChannelsConfig `mapstructure:"channels"`
-}
-
-type ChannelsConfig struct {
-	Basic        ChannelConfig `mapstructure:"basic"`
-	Incentivized ChannelConfig `mapstructure:"incentivized"`
-}
-
-type ChannelConfig struct {
-	Inbound  string `mapstructure:"inbound"`
-	Outbound string `mapstructure:"outbound"`
-}
-
 type Relay struct {
 	config     *Config
 	keypair    *sr25519.Keypair
-	ethconfig  *ethereum.Config
 	ethconn    *ethereum.Connection
-	paraconfig *parachain.Config
 	paraconn   *parachain.Connection
 }
 
@@ -93,7 +65,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	log.WithField("blockNumber", finalizedBlockNumber).Debug("Retrieved finalized block number from parachain")
 
-	err = listener.Start(ctx, eg, finalizedBlockNumber+1, uint64(r.ethconfig.DescendantsUntilFinal))
+	err = listener.Start(ctx, eg, finalizedBlockNumber+1, uint64(r.config.Ethereum.DescendantsUntilFinal))
 	if err != nil {
 		return err
 	}
@@ -122,15 +94,10 @@ func (r *Relay) queryFinalizedBlockNumber() (uint64, error) {
 }
 
 func (r *Relay) connect(ctx context.Context) error {
-	kpForPara, err := sr25519.NewKeypairFromSeed(r.paraconfig.PrivateKey, 42)
-	if err != nil {
-		return err
-	}
+	r.ethconn = ethereum.NewConnection(r.config.Ethereum.Endpoint, nil)
+	r.paraconn = parachain.NewConnection(r.config.Parachain.Endpoint, r.keypair.AsKeyringPair())
 
-	r.ethconn = ethereum.NewConnection(r.ethconfig.Endpoint, nil)
-	r.paraconn = parachain.NewConnection(r.paraconfig.Endpoint, kpForPara.AsKeyringPair())
-
-	err = r.ethconn.Connect(ctx)
+	err := r.ethconn.Connect(ctx)
 	if err != nil {
 		return err
 	}

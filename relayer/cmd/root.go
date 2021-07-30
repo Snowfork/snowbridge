@@ -4,13 +4,10 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
-	"path"
 
-	"github.com/mitchellh/go-homedir"
+	"github.com/snowfork/snowbridge/relayer/cmd/run"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var dataDir string
@@ -23,44 +20,12 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	//cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&dataDir, "data-dir", "", "data directory")
-	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file")
-
-	rootCmd.AddCommand(runCmd())
+	rootCmd.AddCommand(run.Command())
 	rootCmd.AddCommand(getBlockCmd())
 	rootCmd.AddCommand(fetchMessagesCmd())
 	rootCmd.AddCommand(subBeefyCmd())
 }
 
-func initConfig() {
-
-	if configFile != "" {
-		viper.SetConfigFile(configFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println("Error: ", err)
-			os.Exit(1)
-		}
-
-		viper.AddConfigPath(path.Join(home, ".config", "snowbridge-relay"))
-		viper.AddConfigPath(".")
-
-		viper.SetConfigName("config")
-		viper.SetConfigType("toml")
-	}
-
-	viper.BindPFlag("global.data-dir", rootCmd.PersistentFlags().Lookup("data-dir"))
-
-	if err := viper.ReadInConfig(); err != nil {
-		fmt.Println("Error: ", err)
-		os.Exit(1)
-	}
-}
-
-// Execute adds all child commands to the root command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

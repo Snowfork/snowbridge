@@ -6,102 +6,87 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+
+	log "github.com/sirupsen/logrus"
 )
 
-type Worker struct {
-	parachainConfig       *parachain.Config
-	relaychainConfig      *relaychain.Config
-	ethereumConfig        *ethereum.Config
+type Relay struct {
+	config                *Config
 	parachainConn         *parachain.Connection
 	relaychainConn        *relaychain.Connection
 	ethereumConn          *ethereum.Connection
 	ethereumChannelWriter *EthereumChannelWriter
 	beefyListener         *BeefyListener
-	log                   *logrus.Entry
 }
 
-const Name = "parachain-relay"
-
-func NewWorker(parachainConfig *parachain.Config,
-	relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, log *logrus.Entry) (*Worker, error) {
+func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 
 	log.Info("Creating worker")
 
-	ethereumKp, err := secp256k1.NewKeypairFromString(ethereumConfig.MessagePrivateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	parachainConn := parachain.NewConnection(parachainConfig.Endpoint, nil, log)
-	relaychainConn := relaychain.NewConnection(relaychainConfig.Endpoint)
-	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKp)
+	parachainConn := parachain.NewConnection(config.Parachain.Endpoint, nil)
+	relaychainConn := relaychain.NewConnection(config.Polkadot.Endpoint)
+	ethereumConn := ethereum.NewConnection(config.Ethereum.Endpoint, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
 	var messagePackages = make(chan MessagePackage, 1)
 
 	ethereumChannelWriter, err := NewEthereumChannelWriter(
-		ethereumConfig,
+		config,
 		ethereumConn,
 		messagePackages,
-		log,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	beefyListener := NewBeefyListener(
-		ethereumConfig,
+		config,
 		ethereumConn,
 		relaychainConn,
 		parachainConn,
 		messagePackages,
-		log,
 	)
 
-	return &Worker{
-		parachainConfig:       parachainConfig,
-		relaychainConfig:      relaychainConfig,
-		ethereumConfig:        ethereumConfig,
+	return &Relay{
+		config:                config,
 		parachainConn:         parachainConn,
 		relaychainConn:        relaychainConn,
 		ethereumConn:          ethereumConn,
 		ethereumChannelWriter: ethereumChannelWriter,
 		beefyListener:         beefyListener,
-		log:                   log,
 	}, nil
 }
 
-func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
-	worker.log.Info("Starting worker")
+func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
+	log.Info("Starting worker")
 
-	if worker.beefyListener == nil || worker.ethereumChannelWriter == nil {
+	if relay.beefyListener == nil || relay.ethereumChannelWriter == nil {
 		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
 	}
 
-	err := worker.parachainConn.Connect(ctx)
+	err := relay.parachainConn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = worker.ethereumConn.Connect(ctx)
+	err = relay.ethereumConn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = worker.relaychainConn.Connect(ctx)
+	err = relay.relaychainConn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
 	eg.Go(func() error {
-		if worker.ethereumChannelWriter != nil {
-			worker.log.Info("Starting Writer")
-			err = worker.ethereumChannelWriter.Start(ctx, eg)
+		if relay.ethereumChannelWriter != nil {
+			log.Info("Starting Writer")
+			err = relay.ethereumChannelWriter.Start(ctx, eg)
 			if err != nil {
 				return err
 			}
@@ -110,9 +95,9 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	})
 
 	eg.Go(func() error {
-		if worker.beefyListener != nil {
-			worker.log.Info("Starting Beefy Listener")
-			err = worker.beefyListener.Start(ctx, eg)
+		if relay.beefyListener != nil {
+			log.Info("Starting Beefy Listener")
+			err = relay.beefyListener.Start(ctx, eg)
 			if err != nil {
 				return err
 			}
@@ -123,18 +108,14 @@ func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (worker *Worker) Stop() {
-	if worker.parachainConn != nil {
-		worker.parachainConn.Close()
+func (relay *Relay) Stop() {
+	if relay.parachainConn != nil {
+		relay.parachainConn.Close()
 	}
-	if worker.relaychainConn != nil {
-		worker.relaychainConn.Close()
+	if relay.relaychainConn != nil {
+		relay.relaychainConn.Close()
 	}
-	if worker.ethereumConn != nil {
-		worker.ethereumConn.Close()
+	if relay.ethereumConn != nil {
+		relay.ethereumConn.Close()
 	}
-}
-
-func (worker *Worker) Name() string {
-	return Name
 }

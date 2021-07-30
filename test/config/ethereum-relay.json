@@ -1,0 +1,11 @@
+{
+    "data-dir": "/tmp/snowbridge-e2e-config",
+    "parachain": {
+        "endpoint": "ws://localhost:11144"
+    },
+    "ethereum": {
+        "endpoint": "ws://localhost:8545",
+        "descendants-until-final": 3,
+        "contracts": {}
+    }
+}

@@ -15,40 +15,41 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type BeefyListener struct {
-	ethereumConfig      *ethereum.Config
+	config              *Config
 	ethereumConn        *ethereum.Connection
 	beefyLightClient    *beefylightclient.Contract
 	relaychainConn      *relaychain.Connection
 	parachainConnection *parachain.Connection
 	paraID              uint32
 	messages            chan<- MessagePackage
-	log                 *logrus.Entry
 }
 
 func NewBeefyListener(
-	ethereumConfig *ethereum.Config,
+	config *Config,
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
 	messages chan<- MessagePackage,
-	log *logrus.Entry) *BeefyListener {
+) *BeefyListener {
 	return &BeefyListener{
-		ethereumConfig:      ethereumConfig,
+		config:              config,
 		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
 		messages:            messages,
-		log:                 log,
 	}
 }
 
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	// Set up light client bridge contract
-	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(li.ethereumConfig.BeefyLightClient), li.ethereumConn.GetClient())
+	address := common.HexToAddress(li.config.Ethereum.Contracts.BeefyLightClient)
+	beefyLightClientContract, err := beefylightclient.NewContract(address, li.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -63,32 +64,32 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	var paraID uint32
 	ok, err := li.parachainConnection.API().RPC.State.GetStorageLatest(storageKeyForParaID, &paraID)
 	if err != nil {
-		li.log.WithError(err).Error("Failed to get para id for snowbridge")
+		log.WithError(err).Error("Failed to get para id for snowbridge")
 		return err
 	}
 	if !ok {
-		li.log.Error("Expected parachain but chain does not provide a parachain ID")
+		log.Error("Expected parachain but chain does not provide a parachain ID")
 		return fmt.Errorf("invalid parachain")
 	}
 
-	li.log.WithField("paraId", paraID).Info("Fetched parachain id")
+	log.WithField("paraId", paraID).Info("Fetched parachain id")
 	li.paraID = paraID
 
 	eg.Go(func() error {
 
 		beefyBlockNumber, beefyBlockHash, err := li.fetchLatestVerifiedBeefyBlock(ctx)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to get latest relay chain block number and hash")
+			log.WithError(err).Error("Failed to get latest relay chain block number and hash")
 			return err
 		}
 
 		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(beefyBlockHash, paraID)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to get finalized para head from relay chain")
+			log.WithError(err).Error("Failed to get finalized para head from relay chain")
 			return err
 		}
 
-		li.log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"header.ParentHash":     paraHead.ParentHash.Hex(),
 			"header.Number":         paraHead.Number,
 			"header.StateRoot":      paraHead.StateRoot.Hex(),
@@ -101,13 +102,13 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 		paraBlockHash, err := li.parachainConnection.API().RPC.Chain.GetBlockHash(paraBlockNumber)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to get latest finalized para block hash")
+			log.WithError(err).Error("Failed to get latest finalized para block hash")
 			return err
 		}
 
 		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, paraBlockNumber, paraBlockHash)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to build missed message package")
+			log.WithError(err).Error("Failed to build missed message package")
 			return err
 		}
 
@@ -121,7 +122,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (li *BeefyListener) onDone(ctx context.Context) error {
-	li.log.Info("Shutting down listener...")
+	log.Info("Shutting down listener...")
 	if li.messages != nil {
 		close(li.messages)
 	}
@@ -133,7 +134,7 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 
 	sub, err := li.ethereumConn.GetClient().SubscribeNewHead(ctx, headers)
 	if err != nil {
-		li.log.WithError(err).Error("Error creating ethereum header subscription")
+		log.WithError(err).Error("Error creating ethereum header subscription")
 		return err
 	}
 
@@ -142,7 +143,7 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 		case <-ctx.Done():
 			return li.onDone(ctx)
 		case err := <-sub.Err():
-			li.log.WithError(err).Error("Error with ethereum header subscription")
+			log.WithError(err).Error("Error with ethereum header subscription")
 			return err
 		case gethheader := <-headers:
 			// Query LightClientBridge contract's ContractNewMMRRoot events
@@ -151,13 +152,13 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 
 			contractEvents, err := li.queryBeefyLightClientEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
-				li.log.WithError(err).Error("Failure fetching event logs")
+				log.WithError(err).Error("Failure fetching event logs")
 				return err
 			}
 			beefyLightClientEvents = append(beefyLightClientEvents, contractEvents...)
 
 			if len(beefyLightClientEvents) > 0 {
-				li.log.Info(fmt.Sprintf("Found %d BeefyLightClient ContractNewMMRRoot events on block %d", len(beefyLightClientEvents), blockNumber))
+				log.Info(fmt.Sprintf("Found %d BeefyLightClient ContractNewMMRRoot events on block %d", len(beefyLightClientEvents), blockNumber))
 			}
 			li.processBeefyLightClientEvents(ctx, beefyLightClientEvents)
 		}
@@ -170,38 +171,37 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 
 		beefyBlockNumber := event.BlockNumber
 
-		li.log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"beefyBlockNumber":    beefyBlockNumber,
 			"ethereumBlockNumber": event.Raw.BlockNumber,
 			"ethereumTxHash":      event.Raw.TxHash.Hex(),
 		}).Info("Witnessed a new MMRRoot event")
 
-		li.log.WithField("beefyBlockNumber", beefyBlockNumber).Info("Getting hash for relay chain block")
+		log.WithField("beefyBlockNumber", beefyBlockNumber).Info("Getting hash for relay chain block")
 		beefyBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
 		if err != nil {
-			li.log.WithError(err).Error("Failed to get block hash")
+			log.WithError(err).Error("Failed to get block hash")
 			return err
 		}
-		li.log.WithField("beefyBlockHash", beefyBlockHash.Hex()).Info("Got relay chain blockhash")
+		log.WithField("beefyBlockHash", beefyBlockHash.Hex()).Info("Got relay chain blockhash")
 
 		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(beefyBlockHash, li.paraID)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to get finalized para head from relay chain")
+			log.WithError(err).Error("Failed to get finalized para head from relay chain")
 			return err
 		}
 
 		paraBlockNumber := uint64(paraHead.Number)
 
-
 		paraBlockHash, err := li.parachainConnection.API().RPC.Chain.GetBlockHash(paraBlockNumber)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to get latest finalized para block hash")
+			log.WithError(err).Error("Failed to get latest finalized para block hash")
 			return err
 		}
 
 		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, paraBlockNumber, paraBlockHash)
 		if err != nil {
-			li.log.WithError(err).Error("Failed to build missed message packages")
+			log.WithError(err).Error("Failed to build missed message packages")
 			return err
 		}
 
@@ -213,7 +213,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 
 func (li *BeefyListener) emitMessagePackages(packages []MessagePackage) {
 	for _, messagePackage := range packages {
-		li.log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"channelID":             messagePackage.channelID,
 			"commitmentHash":        messagePackage.commitmentHash,
 			"commitmentData":        messagePackage.commitmentData,

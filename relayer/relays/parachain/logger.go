@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 )
@@ -118,7 +119,7 @@ func (wr *EthereumChannelWriter) logBasicTx(
 		return err
 	}
 
-	wr.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"input":                    string(b),
 		"basicSubmitParaHeadsRoot": "0x" + hex.EncodeToString(paraHeadProofRoot[:]),
 	}).Info("Submitting tx")
@@ -180,7 +181,7 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 		return err
 	}
 
-	wr.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"input":                           string(b),
 		"incentivizedSubmitParaHeadsRoot": "0x" + hex.EncodeToString(paraHeadProofRoot[:]),
 	}).Info("Submitting tx")
