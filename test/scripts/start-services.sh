@@ -7,25 +7,24 @@ rm -rf $configdir
 mkdir $configdir
 
 # kill all potentially old processes
-kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
+kill $(ps -aux | grep -e geth -e hardhat -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
 
-start_ganache()
-{
-    echo "Starting Ganache"
-
-    npx ganache-cli \
-        --port=8545 \
-        --blockTime 12 \
-        --networkId=344 \
-        --chainId=344 \
-        --deterministic \
-        --db $configdir/ganache.db \
-        --mnemonic="stone speak what ritual switch pigeon weird dutch burst shaft nature shove" \
-        --gasLimit=8000000 \
-        >ganache.log 2>&1 &
-
-    scripts/wait-for-it.sh -t 32 localhost:8545
-    sleep 5
+start_geth() {
+    geth init --datadir $configdir/geth/ ./genesis.json
+    geth account import --datadir $configdir/geth/ --password password ./key0.prv
+    geth account import --datadir $configdir/geth/ --password password ./key1.prv
+    geth --vmdebug --datadir $configdir/geth/ --networkid 15 \
+        --http --http.api debug,personal,eth,net,web3,txpool --ws --ws.api debug,eth,net,web3 \
+        --rpc.allow-unprotected-txs --mine --miner.threads=1 \
+        --miner.etherbase=0x0000000000000000000000000000000000000000 \
+        --allow-insecure-unlock \
+        --unlock 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD,0x89b4AB1eF20763630df9743ACF155865600daFF2 \
+        --password ./password \
+        --rpc.gascap 100000000 \
+        --trace $configdir/geth/trace \
+        --gcmode archive \
+        --miner.gasprice=0 \
+        > $configdir/geth.log 2>&1 &
 }
 
 deploy_contracts()
@@ -54,7 +53,7 @@ start_polkadot_launch()
     echo "Generating Parachain spec"
     target/release/snowbridge build-spec --disable-default-bootnode > $configdir/spec.json
 
-    echo "Inserting Ganache chain info into genesis spec"
+    echo "Inserting Ethereum chain info into genesis spec"
     ethereum_initial_header=$(curl http://localhost:8545 \
         -X POST \
         -H "Content-Type: application/json" \
@@ -132,12 +131,12 @@ start_relayer()
 
 cleanup() {
     kill $(jobs -p)
-    kill $(ps -aux | grep -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
+    kill $(ps -aux | grep -e geth -e hardhat -e polkadot/target -e ganache-cli -e release/snowbridge | awk '{print $2}') || true
 }
 
 trap cleanup SIGINT SIGTERM EXIT
 
-start_ganache
+start_geth
 deploy_contracts
 if [ $# -eq 1 ];
 then

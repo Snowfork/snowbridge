@@ -95,7 +95,8 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 }
 
 func (wr *BeefyEthereumWriter) signerFn(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
-	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, wr.ethereumConn.GetKP().PrivateKey())
+	chainID := wr.ethereumConn.ChainID()
+	signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainID), wr.ethereumConn.GetKP().PrivateKey())
 	if err != nil {
 		return nil, err
 	}
@@ -105,12 +106,12 @@ func (wr *BeefyEthereumWriter) signerFn(_ common.Address, tx *types.Transaction)
 func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
-		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
+		return fmt.Errorf("error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
 	}
 
 	contract := wr.beefyLightClient
 	if contract == nil {
-		return fmt.Errorf("Unknown contract")
+		return fmt.Errorf("unknown contract")
 	}
 
 	signedValidators := []*big.Int{}
@@ -137,10 +138,11 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 	}
 
 	options := bind.TransactOpts{
-		From:     wr.ethereumConn.GetKP().CommonAddress(),
-		Signer:   wr.signerFn,
-		Context:  ctx,
-		GasLimit: 5000000,
+		From:      wr.ethereumConn.GetKP().CommonAddress(),
+		Signer:    wr.signerFn,
+		Context:   ctx,
+		GasFeeCap: big.NewInt(5000000),
+		GasTipCap: big.NewInt(5000000),
 	}
 
 	tx, err := contract.NewSignatureCommitment(&options, msg.CommitmentHash,
@@ -188,12 +190,12 @@ func BitfieldToString(bitfield []*big.Int) string {
 func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
-		return fmt.Errorf("Error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
+		return fmt.Errorf("error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
 	}
 
 	contract := wr.beefyLightClient
 	if contract == nil {
-		return fmt.Errorf("Unknown contract")
+		return fmt.Errorf("unknown contract")
 	}
 
 	randomBitfield, err := contract.CreateRandomBitfield(
