@@ -171,6 +171,7 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 	}
 
 	latestMMRLeaf := beefylightclient.BeefyLightClientBeefyMMRLeaf{
+		Version:              uint8(latestMMRProof.Leaf.Version),
 		ParentNumber:         uint32(latestMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
 		ParentHash:           latestMMRProof.Leaf.ParentNumberAndHash.Hash,
 		ParachainHeadsRoot:   latestMMRProof.Leaf.ParachainHeads,
