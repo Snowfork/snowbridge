@@ -14,10 +14,16 @@ start_geth() {
     geth account import --datadir $configdir/geth/ --password password ./key0.prv
     geth account import --datadir $configdir/geth/ --password password ./key1.prv
     geth --vmdebug --datadir $configdir/geth/ --networkid 15 \
-        --http --http.api debug,personal,eth,net,web3 --ws --ws.api debug,eth,net,web3 \
+        --http --http.api debug,personal,eth,net,web3,txpool --ws --ws.api debug,eth,net,web3 \
         --rpc.allow-unprotected-txs --mine --miner.threads=1 \
         --miner.etherbase=0x0000000000000000000000000000000000000000 \
-        > $configdir/geth.log 2>&1 &
+        --allow-insecure-unlock \
+        --unlock 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD,0x89b4AB1eF20763630df9743ACF155865600daFF2 \
+        --password ./password \
+        --rpc.gascap 100000000 \
+        --trace $configdir/geth/trace \
+        --gcmode archive \
+        --miner.gasprice=0
 }
 
 deploy_contracts()

@@ -14,7 +14,7 @@
     "londonBlock": 0,
     "ethash": {}
   },
-  "difficulty": "100000",
+  "difficulty": "0x4fff0",
   "gasLimit": "80000000",
   "alloc": {
     "Be68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD": { "balance": "100000000000000000000" },
