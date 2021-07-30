@@ -152,7 +152,7 @@ class SubClient {
   }
 
   async lockDOT(account, recipient, amount, channelId, cb) {
-    return await this.api.tx.dotApp.lock(channelId, recipient, amount).signAndSend(account, cb);
+    return await this.api.tx.dotApp.lock(channelId, recipient, amount).signAndSend(account);
   }
 
   async waitForNextBlock() {
