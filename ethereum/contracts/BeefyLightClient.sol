@@ -97,6 +97,7 @@ contract BeefyLightClient {
 
     /**
      * The BeefyMMRLeaf is the structure of each leaf in each MMR that each commitment's payload commits to.
+     * @param version version of the leaf type
      * @param parentNumber parent number of the block this leaf describes
      * @param parentHash parent hash of the block this leaf describes
      * @param parachainHeadsRoot merkle root of all parachain headers in this block
@@ -105,6 +106,7 @@ contract BeefyLightClient {
      * @param nextAuthoritySetRoot merkle root of all public keys in that validator set
      */
     struct BeefyMMRLeaf {
+        uint8 version;
         uint32 parentNumber;
         bytes32 parentHash;
         bytes32 parachainHeadsRoot;
@@ -554,7 +556,7 @@ contract BeefyLightClient {
 
     function createCommitmentHash(Commitment calldata commitment)
         public
-        view
+        pure
         returns (bytes32)
     {
         return
@@ -568,7 +570,7 @@ contract BeefyLightClient {
     }
 
     bytes2 public constant MMR_LEAF_LENGTH_SCALE_ENCODED =
-        bytes2(uint16(0xc101));
+        bytes2(uint16(0xc501));
 
     function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
         public
@@ -576,6 +578,7 @@ contract BeefyLightClient {
         returns (bytes memory)
     {
         bytes memory scaleEncodedMMRLeaf = abi.encodePacked(
+            ScaleCodec.encode8(leaf.version),
             ScaleCodec.encode32(leaf.parentNumber),
             leaf.parentHash,
             leaf.parachainHeadsRoot,

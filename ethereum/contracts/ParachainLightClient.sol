@@ -28,6 +28,7 @@ library ParachainLightClient {
     }
 
     struct BeefyMMRLeafPartial {
+        uint8 version;
         uint32 parentNumber;
         bytes32 parentHash;
         uint64 nextAuthoritySetId;
@@ -104,13 +105,14 @@ library ParachainLightClient {
     }
 
     bytes2 public constant MMR_LEAF_LENGTH_SCALE_ENCODED =
-        bytes2(uint16(0xc101));
+        bytes2(uint16(0xc501));
 
     function createMMRLeafHash(
         BeefyMMRLeafPartial calldata leaf,
         bytes32 parachainHeadsRoot
     ) public pure returns (bytes32) {
         bytes memory scaleEncodedMMRLeaf = abi.encodePacked(
+            ScaleCodec.encode8(leaf.version),
             ScaleCodec.encode32(leaf.parentNumber),
             leaf.parentHash,
             parachainHeadsRoot,
