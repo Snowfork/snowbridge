@@ -6,12 +6,9 @@ configdir=/tmp/snowbridge-e2e-config
 rm -rf $configdir
 mkdir $configdir
 
-# kill all potentially old processes
-kill $(ps -aux | grep -e geth -e polkadot/target -e release/snowbridge | awk '{print $2}') || true
-
 address_for()
 {
-    cat $configdir/contracts.json | jq -r .contracts.${1}.address
+    jq -r .contracts."${1}".address $configdir/contracts.json
 }
 
 start_geth() {
@@ -69,7 +66,7 @@ start_polkadot_launch()
         genesis.runtime.parachainInfo.parachainId 1000 \
         para_id 1000
 
-    if [ $# -eq 1 ] && [ $1 = "malicious" ]; then
+    if [ $# -eq 1 ] && [ "$1" = "malicious" ]; then
         jq '.genesis.runtime.dotApp.address = "0x433488cec14C4478e5ff18DDC7E7384Fc416f148"' \
           $configdir/spec.json > spec.malicious.json && \
           mv spec.malicious.json $configdir/spec.json
@@ -78,10 +75,11 @@ start_polkadot_launch()
     echo "Writing Polkadot configuration"
     polkadotbinary=/tmp/polkadot/target/release/polkadot
     if [[ -f ../test/.env ]]; then
+        # shellcheck disable=SC1091
         source ../test/.env
     fi
 
-    if [ $# -eq 1 ] && [ $1 = "duplicate" ];
+    if [ $# -eq 1 ] && [ "$1" = "duplicate" ];
     then
         echo "Generating second parachain spec"
         target/release/snowbridge build-spec --disable-default-bootnode > $configdir/spec2.json
@@ -115,19 +113,24 @@ start_polkadot_launch()
 
 start_relayer()
 {
-    echo "Generate Relay config"
+    echo "Starting relay services"
 
+    # Build relay services
+    mage -d ../relayer build
+
+    # Configure beefy relay
     jq \
-        --arg k1 $(address_for BeefyLightClient) \
+        --arg k1 "$(address_for BeefyLightClient)" \
     '
       .ethereum.contracts.BeefyLightClient = $k1
     ' \
     config/beefy-relay.json > $configdir/beefy-relay.json
 
+    # Configure parachain relay
     jq \
-        --arg k1 $(address_for BasicInboundChannel) \
-        --arg k2 $(address_for IncentivizedInboundChannel) \
-        --arg k3 $(address_for BeefyLightClient) \
+        --arg k1 "$(address_for BasicInboundChannel)" \
+        --arg k2 "$(address_for IncentivizedInboundChannel)" \
+        --arg k3 "$(address_for BeefyLightClient)" \
     '
       .ethereum.contracts.BasicInboundChannel = $k1
     | .ethereum.contracts.IncentivizedInboundChannel = $k2
@@ -135,56 +138,56 @@ start_relayer()
     ' \
     config/parachain-relay.json > $configdir/parachain-relay.json
 
+    # Configure ethereum relay
     jq \
-        --arg k1 $(address_for BasicOutboundChannel) \
-        --arg k2 $(address_for IncentivizedOutboundChannel) \
+        --arg k1 "$(address_for BasicOutboundChannel)" \
+        --arg k2 "$(address_for IncentivizedOutboundChannel)" \
     '
       .ethereum.contracts.BasicOutboundChannel = $k1
     | .ethereum.contracts.IncentivizedOutboundChannel = $k2
     ' \
     config/ethereum-relay.json > $configdir/ethereum-relay.json
 
-    # Build relay
-    mage -d ../relayer build
+    relay=$(realpath ../relayer/build/snowbridge-relay)
 
     # Launch beefy relay
     (
-        > beefy-relay.log
-        while true
+        : > beefy-relay.log
+        while :
         do
-            ../relayer/build/snowbridge-relay run beefy \
+            echo "Starting beefy relay"
+            ${relay} run beefy \
                 --config $configdir/beefy-relay.json \
-                --private-key "0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109" \
+                --ethereum.private-key "0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109" \
                 >>beefy-relay.log 2>&1 || true
-            echo "Beefy relay died. Restarting after delay..."
             sleep 20
         done
     ) &
 
     # Launch parachain relay
     (
-        > parachain-relay.log
-        while true
+        : > parachain-relay.log
+        while :
         do
-            ../relayer/build/snowbridge-relay run parachain \
+            echo "Starting parachain relay"
+            ${relay} run parachain \
                 --config $configdir/parachain-relay.json \
-                --private-key "0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a" \
+                --ethereum.private-key "0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a" \
                 >>parachain-relay.log 2>&1 || true
-            echo "Parachain relay died. Restarting after delay..."
             sleep 20
         done
     ) &
 
     # Launch ethereum relay
     (
-        > ethereum-relay.log
-        while true
+        : > ethereum-relay.log
+        while :
         do
-            ../relayer/build/snowbridge-relay run ethereum \
+            echo "Starting ethereum relay"
+            ${relay} run ethereum \
                 --config $configdir/ethereum-relay.json \
-                --private-key "//Relay" \
+                --substrate.private-key "//Relay" \
                 >>ethereum-relay.log 2>&1 || true
-            echo "Ethereum relay died. Restarting after delay..."
             sleep 20
         done
     ) &
@@ -192,17 +195,17 @@ start_relayer()
 }
 
 cleanup() {
-    kill $(jobs -p)
-    kill $(ps -aux | grep -e geth -e polkadot/target -e release/snowbridge -e snowbridge-relay | awk '{print $2}') || true
+    trap - SIGTERM
+    kill -- -"$(ps -o pgid:1= $$)"
 }
 
-trap cleanup SIGINT SIGTERM EXIT
+trap cleanup SIGINT SIGTERM
 
 start_geth
 deploy_contracts
 if [ $# -eq 1 ];
 then
-    start_polkadot_launch $1
+    start_polkadot_launch "$1"
 else
     start_polkadot_launch
 fi
@@ -214,13 +217,13 @@ echo "Process Tree:"
 pstree $$
 
 sleep 3
-until $(grep "Syncing headers starting..." $(pwd)/ethereum-relay.log > /dev/null); do
-    echo "Waiting for relayer to generate the DAG cache. This can take up to 20 minutes."
+until grep "Syncing headers starting..." "$(pwd)"/ethereum-relay.log > /dev/null; do
+    echo "Waiting for ethereum relay to generate the DAG cache. This can take up to 20 minutes."
     sleep 20
 done
 
-until $(grep "Done retrieving finalized headers" $(pwd)/ethereum-relay.log > /dev/null); do
-    echo "Waiting for relayer to sync headers..."
+until grep "Done retrieving finalized headers" "$(pwd)"/ethereum-relay.log > /dev/null; do
+    echo "Waiting for ethereum relay to sync headers..."
     sleep 5
 done
 

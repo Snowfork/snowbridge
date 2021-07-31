@@ -77,12 +77,14 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			case store.CommitmentWitnessed:
 				err := wr.WriteNewSignatureCommitment(ctx, msg)
 				if err != nil {
-					log.WithError(err).Error("Error submitting message to ethereum")
+					log.WithError(err).Error("Failed to write new signature commitment")
+					return err
 				}
 			case store.ReadyToComplete:
 				err := wr.WriteCompleteSignatureCommitment(ctx, msg)
 				if err != nil {
-					log.WithError(err).Error("Error submitting message to ethereum")
+					log.WithError(err).Error("Failed to write complete signature commitment")
+					return err
 				}
 			}
 		}

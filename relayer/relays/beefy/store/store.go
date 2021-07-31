@@ -170,7 +170,7 @@ func (d *Database) writeLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil
 		case cmd := <-d.messages:
 			mutex.Lock()
 			switch cmd.Type {

@@ -29,17 +29,19 @@ func Command() *cobra.Command {
 		Use:     "beefy",
 		Short:   "Start the beefy relay",
 		Args:    cobra.ExactArgs(0),
-		RunE:    runFunc,
+		RunE:    run,
 	}
 
-	cmd.Flags().StringVar(&configFile, "config", "", "Config file")
+	cmd.Flags().StringVar(&configFile, "config", "", "Path to configuration file")
+	cmd.MarkFlagRequired("config")
+
 	cmd.Flags().StringVar(&privateKey, "ethereum.private-key", "", "Ethereum private key")
 	cmd.Flags().StringVar(&privateKeyFile, "ethereum.private-key-file", "", "The file from which to read the private key")
 
 	return cmd
 }
 
-func runFunc(_ *cobra.Command, _ []string) error {
+func run(_ *cobra.Command, _ []string) error {
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 	logrus.SetLevel(logrus.DebugLevel)
 
@@ -51,7 +53,7 @@ func runFunc(_ *cobra.Command, _ []string) error {
 	var config beefy.Config
 	err := viper.Unmarshal(&config)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	keypair, err := resolvePrivateKey(privateKey, privateKeyFile)
@@ -121,4 +123,3 @@ func resolvePrivateKey(privateKey, privateKeyFile string) (*secp256k1.Keypair, e
 
 	return keypair, nil
 }
-

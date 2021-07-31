@@ -375,7 +375,7 @@ func (li *BeefyEthereumListener) forwardWitnessedBeefyJustifications() {
 	}
 }
 
-// forwardReadyToCompleteItems updates the status of items in the databse to ReadyToComplete if the
+// forwardReadyToCompleteItems updates the status of items in the database to ReadyToComplete if the
 // current block number has passed their CompleteOnBlock number
 func (li *BeefyEthereumListener) forwardReadyToCompleteItems(ctx context.Context, blockNumber, descendantsUntilFinal uint64) {
 	// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
