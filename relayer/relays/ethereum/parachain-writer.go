@@ -118,7 +118,8 @@ func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			log.WithField("reason", ctx.Err()).Info("Shutting down parachain writer")
+			return nil
 		case payload, ok := <-wr.payloads:
 			if !ok {
 				return nil

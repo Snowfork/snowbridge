@@ -62,21 +62,16 @@ func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) er
 	return nil
 }
 
-func (wr *BeefyEthereumWriter) onDone(ctx context.Context) error {
-	log.Info("Shutting down writer...")
-	// Avoid deadlock if a listener is still trying to send to a channel
-	for range wr.beefyMessages {
-		log.Debug("Discarded BEEFY message")
-	}
-
-	return ctx.Err()
-}
-
 func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return wr.onDone(ctx)
+			log.WithField("reason", ctx.Err()).Info("Shutting down ethereum writer")
+			// Drain messages to avoid deadlock
+			for len(wr.beefyMessages) > 0 {
+				<-wr.beefyMessages
+			}
+			return nil
 		case msg := <-wr.beefyMessages:
 			switch msg.Status {
 			case store.CommitmentWitnessed:

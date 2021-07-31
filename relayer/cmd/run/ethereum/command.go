@@ -7,11 +7,9 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path"
 	"strings"
 	"syscall"
 
-	"github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/ethereum"
@@ -22,8 +20,8 @@ import (
 
 var (
 	configFile string
-	substratePrivateKey string
-	substratePrivateKeyFile string
+	privateKey string
+	privateKeyFile string
 )
 
 func Command() *cobra.Command {
@@ -31,38 +29,23 @@ func Command() *cobra.Command {
 		Use:     "ethereum",
 		Short:   "Start the ethereum relay",
 		Args:    cobra.ExactArgs(0),
-		RunE:    runFunc,
+		RunE:    run,
 	}
 
-	cmd.Flags().StringVar(&configFile, "config", "", "Config file")
-	cmd.Flags().StringVar(&substratePrivateKey, "private-key", "", "Private key URI for Substrate")
-	cmd.Flags().StringVar(&substratePrivateKeyFile, "private-key-file", "", "The file from which to read the private key URI")
+	cmd.Flags().StringVar(&configFile, "config", "", "Path to configuration file")
+	cmd.MarkFlagRequired("config")
+
+	cmd.Flags().StringVar(&privateKey, "substrate.private-key", "", "Private key URI for Substrate")
+	cmd.Flags().StringVar(&privateKeyFile, "substrate.private-key-file", "", "The file from which to read the private key URI")
 
 	return cmd
 }
 
-func runFunc(_ *cobra.Command, _ []string) error {
-	// Logging
-	logrus.SetLevel(logrus.DebugLevel)
+func run(_ *cobra.Command, _ []string) error {
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
+	logrus.SetLevel(logrus.DebugLevel)
 
-	// Configuration
-	if configFile != "" {
-		viper.SetConfigFile(configFile)
-	} else {
-		home, err := homedir.Dir()
-		if err != nil {
-			return err
-		}
-
-		viper.AddConfigPath(".")
-		viper.AddConfigPath(path.Join(home, ".config", "snowbridge-relay"))
-		viper.AddConfigPath("/etc/snowbridge-relay")
-
-		viper.SetConfigName("beefy")
-		viper.SetConfigType("toml")
-	}
-
+	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
 		return err
 	}
@@ -70,30 +53,18 @@ func runFunc(_ *cobra.Command, _ []string) error {
 	var config ethereum.Config
 	err := viper.Unmarshal(&config)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	var privateKeyURI string
-
-	if substratePrivateKey == "" {
-		if substratePrivateKeyFile == "" {
-			return fmt.Errorf("Private key URI not supplied")
-		}
-		contentBytes, err := ioutil.ReadFile(substratePrivateKeyFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		privateKeyURI = strings.TrimSpace(string(contentBytes))
-	} else {
-		privateKeyURI = substratePrivateKey
-	}
-
-	keypair, err := sr25519.NewKeypairFromSeed(privateKeyURI, 42)
+	keypair, err := resolvePrivateKey(privateKey, privateKeyFile)
 	if err != nil {
-		return fmt.Errorf("Unable to parse private key URI: %w", err)
+		return err
 	}
 
 	relay := ethereum.NewRelay(&config, keypair)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
@@ -116,9 +87,40 @@ func runFunc(_ *cobra.Command, _ []string) error {
 
 	err = relay.Start(ctx, eg)
 	if err != nil {
+		logrus.WithError(err).Fatal("Unhandled error")
 		return err
 	}
 
-	return eg.Wait()
+	err = eg.Wait()
+	if err != nil {
+		logrus.WithError(err).Fatal("Unhandled error")
+		return err
+	}
+
+	return nil
+}
+
+func resolvePrivateKey(privateKey, privateKeyFile string) (*sr25519.Keypair, error) {
+	var cleanedKeyURI string
+
+	if privateKey == "" {
+		if privateKeyFile == "" {
+			return nil, fmt.Errorf("Private key URI not supplied")
+		}
+		content, err := ioutil.ReadFile(privateKeyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cleanedKeyURI = strings.TrimSpace(string(content))
+	} else {
+		cleanedKeyURI = privateKey
+	}
+
+	keypair, err := sr25519.NewKeypairFromSeed(cleanedKeyURI, 42)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to parse private key URI: %w", err)
+	}
+
+	return keypair, nil
 }
 

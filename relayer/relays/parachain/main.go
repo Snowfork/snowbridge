@@ -2,7 +2,6 @@ package parachain
 
 import (
 	"context"
-	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
@@ -24,7 +23,6 @@ type Relay struct {
 }
 
 func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
-
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Parachain.Endpoint, nil)
@@ -62,12 +60,6 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 }
 
 func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	log.Info("Starting worker")
-
-	if relay.beefyListener == nil || relay.ethereumChannelWriter == nil {
-		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
-	}
-
 	err := relay.parachainConn.Connect(ctx)
 	if err != nil {
 		return err
@@ -83,39 +75,18 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	eg.Go(func() error {
-		if relay.ethereumChannelWriter != nil {
-			log.Info("Starting Writer")
-			err = relay.ethereumChannelWriter.Start(ctx, eg)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	log.Info("Starting ethereum writer")
+	err = relay.ethereumChannelWriter.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
 
-	eg.Go(func() error {
-		if relay.beefyListener != nil {
-			log.Info("Starting Beefy Listener")
-			err = relay.beefyListener.Start(ctx, eg)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	log.Info("Starting beefy listener")
+	err = relay.beefyListener.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (relay *Relay) Stop() {
-	if relay.parachainConn != nil {
-		relay.parachainConn.Close()
-	}
-	if relay.relaychainConn != nil {
-		relay.relaychainConn.Close()
-	}
-	if relay.ethereumConn != nil {
-		relay.ethereumConn.Close()
-	}
-}

@@ -152,7 +152,8 @@ func (li *EthereumListener) processEventsAndHeaders(
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			log.WithField("reason", ctx.Err()).Info("Shutting down ethereum listener")
+			return nil
 		case <-headerCtx.Done():
 			return headerCtx.Err()
 		case gethheader, ok := <-headers:

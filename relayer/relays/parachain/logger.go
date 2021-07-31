@@ -28,7 +28,7 @@ type ParaHeadProofLog struct {
 type BeefyMMRLeafPartialLog struct {
 	ParentNumber         uint32 `json:"parentNumber"`
 	ParentHash           string `json:"parentHash"`
-	NextAuthoritySetId   uint64 `json:"nextAuthoritySetId"`
+	NextAuthoritySetId   uint64 `json:"nextAuthoritySetId"` // revive:disable-line
 	NextAuthoritySetLen  uint32 `json:"nextAuthoritySetLen"`
 	NextAuthoritySetRoot string `json:"nextAuthoritySetRoot"`
 }

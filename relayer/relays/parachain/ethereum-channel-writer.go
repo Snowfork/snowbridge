@@ -67,15 +67,6 @@ func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) 
 	return nil
 }
 
-func (wr *EthereumChannelWriter) onDone(ctx context.Context) error {
-	log.Info("Shutting down writer...")
-	// Avoid deadlock if a listener is still trying to send to a channel
-	for range wr.messagePackages {
-		log.Debug("Discarded message package")
-	}
-	return ctx.Err()
-}
-
 func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
 	options := bind.TransactOpts{
 		From:     wr.conn.GetKP().CommonAddress(),
@@ -87,7 +78,12 @@ func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return wr.onDone(ctx)
+			log.WithField("reason", ctx.Err()).Info("Shutting down ethereum writer")
+			// Avoid deadlock if a listener is still trying to send to a channel
+			for range wr.messagePackages {
+				log.Debug("Discarded message package")
+			}
+			return nil
 		case messagePackage := <-wr.messagePackages:
 			err := wr.WriteChannel(&options, &messagePackage)
 			if err != nil {

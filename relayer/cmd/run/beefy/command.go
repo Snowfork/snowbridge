@@ -7,11 +7,9 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path"
 	"strings"
 	"syscall"
 
-	"github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy"
@@ -22,8 +20,8 @@ import (
 
 var (
 	configFile string
-	ethereumPrivateKey string
-	ethereumPrivateKeyFile string
+	privateKey string
+	privateKeyFile string
 )
 
 func Command() *cobra.Command {
@@ -35,34 +33,17 @@ func Command() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&configFile, "config", "", "Config file")
-	cmd.Flags().StringVar(&ethereumPrivateKey, "private-key", "", "Ethereum private key")
-	cmd.Flags().StringVar(&ethereumPrivateKeyFile, "private-key-file", "", "The file from which to read the private key")
+	cmd.Flags().StringVar(&privateKey, "ethereum.private-key", "", "Ethereum private key")
+	cmd.Flags().StringVar(&privateKeyFile, "ethereum.private-key-file", "", "The file from which to read the private key")
 
 	return cmd
 }
 
 func runFunc(_ *cobra.Command, _ []string) error {
-	// Logging
-	logrus.SetLevel(logrus.DebugLevel)
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
+	logrus.SetLevel(logrus.DebugLevel)
 
-	// Configuration
-	if configFile != "" {
-		viper.SetConfigFile(configFile)
-	} else {
-		home, err := homedir.Dir()
-		if err != nil {
-			return err
-		}
-
-		viper.AddConfigPath(".")
-		viper.AddConfigPath(path.Join(home, ".config", "snowbridge-relay"))
-		viper.AddConfigPath("/etc/snowbridge-relay")
-
-		viper.SetConfigName("beefy")
-		viper.SetConfigType("toml")
-	}
-
+	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
 		return err
 	}
@@ -73,27 +54,15 @@ func runFunc(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	var privateKey string
-
-	if ethereumPrivateKey == "" {
-		if ethereumPrivateKeyFile == "" {
-			return fmt.Errorf("Ethereum private key not supplied")
-		}
-		contentBytes, err := ioutil.ReadFile(ethereumPrivateKeyFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		privateKey = strings.TrimPrefix(strings.TrimSpace(string(contentBytes)), "0x")
-	} else {
-		privateKey = strings.TrimPrefix(ethereumPrivateKey, "0x")
-	}
-
-	keypair, err := secp256k1.NewKeypairFromString(privateKey)
+	keypair, err := resolvePrivateKey(privateKey, privateKeyFile)
 	if err != nil {
-		return fmt.Errorf("Unable to parse private key: %w", err)
+		return err
 	}
 
 	relay, err := beefy.NewRelay(&config, keypair)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
@@ -116,9 +85,40 @@ func runFunc(_ *cobra.Command, _ []string) error {
 
 	err = relay.Start(ctx, eg)
 	if err != nil {
+		logrus.WithError(err).Fatal("Unhandled error")
 		return err
 	}
 
-	return eg.Wait()
+	err = eg.Wait()
+	if err != nil {
+		logrus.WithError(err).Fatal("Unhandled error")
+		return err
+	}
+
+	return nil
+}
+
+func resolvePrivateKey(privateKey, privateKeyFile string) (*secp256k1.Keypair, error) {
+	var cleanedKey string
+
+	if privateKey == "" {
+		if privateKeyFile == "" {
+			return nil, fmt.Errorf("private key not supplied")
+		}
+		contentBytes, err := ioutil.ReadFile(privateKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load private key: %w", err)
+		}
+		cleanedKey = strings.TrimPrefix(strings.TrimSpace(string(contentBytes)), "0x")
+	} else {
+		cleanedKey = strings.TrimPrefix(privateKey, "0x")
+	}
+
+	keypair, err := secp256k1.NewKeypairFromString(cleanedKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse private key: %w", err)
+	}
+
+	return keypair, nil
 }
 

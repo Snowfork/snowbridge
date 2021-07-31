@@ -21,7 +21,7 @@ import (
 type BeefyLightClientCommitmentLog struct {
 	Payload        string `json:"payload"`
 	BlockNumber    uint64 `json:"blockNumber"`
-	ValidatorSetId uint32 `json:"validatorSetId"`
+	ValidatorSetId uint32 `json:"validatorSetId"`  // revive:disable-line
 }
 
 type BeefyLightClientValidatorProofLog struct {
@@ -35,13 +35,13 @@ type BeefyLightClientBeefyMMRLeafLog struct {
 	ParentNumber         uint32 `json:"parentNumber"`
 	ParentHash           string `json:"parentHash"`
 	ParachainHeadsRoot   string `json:"parachainHeadsRoot"`
-	NextAuthoritySetId   uint64 `json:"nextAuthoritySetId"`
+	NextAuthoritySetId   uint64 `json:"nextAuthoritySetId"`  // revive:disable-line
 	NextAuthoritySetLen  uint32 `json:"nextAuthoritySetLen"`
 	NextAuthoritySetRoot string `json:"nextAuthoritySetRoot"`
 }
 
 type CompleteSignatureCommitmentTxInput struct {
-	Id             *big.Int                          `json:"id"`
+	Id             *big.Int                          `json:"id"`  //  revive:disable-line
 	Commitment     BeefyLightClientCommitmentLog     `json:"commitment"`
 	ValidatorProof BeefyLightClientValidatorProofLog `json:"validatorProof"`
 	LatestMMRLeaf  BeefyLightClientBeefyMMRLeafLog   `json:"latestMMRLeaf"`

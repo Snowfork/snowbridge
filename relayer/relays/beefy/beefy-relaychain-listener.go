@@ -45,14 +45,6 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 	return nil
 }
 
-func (li *BeefyRelaychainListener) onDone(ctx context.Context) error {
-	log.Info("Shutting down listener...")
-	if li.beefyMessages != nil {
-		close(li.beefyMessages)
-	}
-	return ctx.Err()
-}
-
 func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) error {
 	ch := make(chan interface{})
 
@@ -65,9 +57,12 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 	for {
 		select {
 		case <-ctx.Done():
-			return li.onDone(ctx)
+			log.WithField("reason", ctx.Err()).Info("Shutting down polkadot listener")
+			if li.beefyMessages != nil {
+				close(li.beefyMessages)
+			}
+			return nil
 		case msg := <-ch:
-
 			signedCommitment := &store.SignedCommitment{}
 			err := types.DecodeFromHexString(msg.(string), signedCommitment)
 			if err != nil {

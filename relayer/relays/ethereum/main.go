@@ -34,17 +34,18 @@ func NewRelay(
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := r.connect(ctx)
+	r.ethconn = ethereum.NewConnection(r.config.Ethereum.Endpoint, nil)
+	r.paraconn = parachain.NewConnection(r.config.Parachain.Endpoint, r.keypair.AsKeyringPair())
+
+	err := r.ethconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Clean up after ourselves
-	eg.Go(func() error {
-		<-ctx.Done()
-		r.disconnect()
-		return nil
-	})
+	err = r.paraconn.Connect(ctx)
+	if err != nil {
+		return err
+	}
 
 	// channel for payloads from ethereum
 	payloads := make(chan ParachainPayload, 1)
@@ -91,33 +92,4 @@ func (r *Relay) queryFinalizedBlockNumber() (uint64, error) {
 	}
 
 	return uint64(finalizedHeader.Number), nil
-}
-
-func (r *Relay) connect(ctx context.Context) error {
-	r.ethconn = ethereum.NewConnection(r.config.Ethereum.Endpoint, nil)
-	r.paraconn = parachain.NewConnection(r.config.Parachain.Endpoint, r.keypair.AsKeyringPair())
-
-	err := r.ethconn.Connect(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = r.paraconn.Connect(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *Relay) disconnect() {
-	if r.ethconn != nil {
-		r.ethconn.Close()
-		r.ethconn = nil
-	}
-
-	if r.paraconn != nil {
-		r.paraconn.Close()
-		r.paraconn = nil
-	}
 }

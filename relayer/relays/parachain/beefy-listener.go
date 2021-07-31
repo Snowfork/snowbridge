@@ -121,14 +121,6 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (li *BeefyListener) onDone(ctx context.Context) error {
-	log.Info("Shutting down listener...")
-	if li.messages != nil {
-		close(li.messages)
-	}
-	return ctx.Err()
-}
-
 func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 	headers := make(chan *gethTypes.Header, 5)
 
@@ -137,11 +129,16 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 		log.WithError(err).Error("Error creating ethereum header subscription")
 		return err
 	}
+	defer sub.Unsubscribe()
 
 	for {
 		select {
 		case <-ctx.Done():
-			return li.onDone(ctx)
+			log.WithField("reason", ctx.Err()).Info("Shutting down beefy listener")
+			if li.messages != nil {
+				close(li.messages)
+			}
+			return nil
 		case err := <-sub.Err():
 			log.WithError(err).Error("Error with ethereum header subscription")
 			return err
