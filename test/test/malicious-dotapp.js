@@ -10,7 +10,7 @@ const { polkadotSenderSS58, bootstrap } = require('../src/fixtures');
 
 const { ChannelId } = require("../src/helpers");
 
-describe('Bridge', function () {
+describe.skip('Bridge', function () {
 
   let ethClient, subClient;
   before(async function () {
