@@ -5,6 +5,7 @@ package ethereum
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
@@ -18,6 +19,7 @@ type Connection struct {
 	endpoint string
 	kp       *secp256k1.Keypair
 	client   *ethclient.Client
+	chainID  *big.Int
 }
 
 func NewConnection(endpoint string, kp *secp256k1.Keypair) *Connection {
@@ -44,6 +46,7 @@ func (co *Connection) Connect(ctx context.Context) error {
 	}).Info("Connected to chain")
 
 	co.client = client
+	co.chainID = chainID
 
 	return nil
 }
@@ -60,4 +63,8 @@ func (co *Connection) GetClient() *ethclient.Client {
 
 func (co *Connection) GetKP() *secp256k1.Keypair {
 	return co.kp
+}
+
+func (co *Connection) ChainID() *big.Int {
+	return co.chainID
 }

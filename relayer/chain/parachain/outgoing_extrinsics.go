@@ -56,7 +56,7 @@ func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 			return fmt.Errorf("Context was canceled. Stopping extrinsic monitoring")
 
 		case status := <-sub.Chan():
-			if status.IsDropped || status.IsInvalid {
+			if status.IsDropped || status.IsInvalid || status.IsUsurped {
 				// Indicates that the extrinsic wasn't processed. We expect the Substrate txpool to be
 				// stuck until this nonce is successfully provided. But it might be provided without this
 				// relayer's intervention, e.g. if an internal Substrate mechanism re-introduces it to the
@@ -92,7 +92,7 @@ func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 				}
 				sub = newSub
 
-			} else if !status.IsReady && !status.IsFuture && !status.IsBroadcast {
+			} else if status.IsInBlock || status.IsFinalized {
 				// We assume all other status codes indicate that the extrinsic was processed
 				// and account nonce was incremented.
 				// See details at:
