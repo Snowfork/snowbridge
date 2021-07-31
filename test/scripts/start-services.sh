@@ -9,6 +9,11 @@ mkdir $configdir
 # kill all potentially old processes
 kill $(ps -aux | grep -e geth -e polkadot/target -e release/snowbridge | awk '{print $2}') || true
 
+address_for()
+{
+    cat $configdir/contracts.json | jq -r .contracts.${1}.address
+}
+
 start_geth() {
     local dataDir=$configdir/geth
 

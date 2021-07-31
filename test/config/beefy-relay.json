@@ -3,7 +3,7 @@
         "endpoint": "ws://localhost:9944"
     },
     "ethereum": {
-        "endpoint": "ws://localhost:8545",
+        "endpoint": "ws://localhost:8546",
         "start-block": 0,
         "descendants-until-final": 3,
         "contracts": {}
