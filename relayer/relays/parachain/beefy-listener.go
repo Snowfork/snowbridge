@@ -76,7 +76,6 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	li.paraID = paraID
 
 	eg.Go(func() error {
-
 		beefyBlockNumber, beefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
 		if err != nil {
 			log.WithError(err).Error("Failed to get latest relay chain block number and hash")
@@ -87,7 +86,6 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			"blockHash": beefyBlockHash.Hex(),
 			"blockNumber": beefyBlockNumber,
 		}).Info("Fetched latest verified polkadot block")
-
 
 		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(beefyBlockHash, paraID)
 		if err != nil {

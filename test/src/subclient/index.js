@@ -151,7 +151,7 @@ class SubClient {
     return await this.api.tx.erc721App.burn(channelId, subTokenId, recipient).signAndSend(account);
   }
 
-  async lockDOT(account, recipient, amount, channelId, cb) {
+  async lockDOT(account, recipient, amount, channelId) {
     return await this.api.tx.dotApp.lock(channelId, recipient, amount).signAndSend(account);
   }
 
