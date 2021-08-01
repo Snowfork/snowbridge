@@ -22,7 +22,7 @@ import (
 
 // Listener streams the Ethereum blockchain for application events
 type BeefyEthereumListener struct {
-	config   *Config
+	config   *SinkConfig
 	ethereumConn     *ethereum.Connection
 	beefyDB          *store.Database
 	beefyLightClient *beefylightclient.Contract
@@ -33,7 +33,7 @@ type BeefyEthereumListener struct {
 }
 
 func NewBeefyEthereumListener(
-	config *Config,
+	config *SinkConfig,
 	ethereumConn *ethereum.Connection,
 	beefyDB *store.Database,
 	beefyMessages chan<- store.BeefyRelayInfo,
@@ -54,7 +54,7 @@ func NewBeefyEthereumListener(
 func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	// Set up light client bridge contract
-	address := common.HexToAddress(li.config.Ethereum.Contracts.BeefyLightClient)
+	address := common.HexToAddress(li.config.Contracts.BeefyLightClient)
 	beefyLightClientContract, err := beefylightclient.NewContract(address, li.ethereumConn.GetClient())
 	if err != nil {
 		return err
@@ -74,9 +74,9 @@ func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group) 
 		return err
 	}
 	// Relayer config StartBlock config variable must be updated to the latest Ethereum block number
-	if uint64(li.config.Ethereum.StartBlock) < blockNumber {
-		log.Info(fmt.Sprintf("Syncing Relayer from block %d...", li.config.Ethereum.StartBlock))
-		err := li.pollHistoricEventsAndHeaders(ctx, uint64(li.config.Ethereum.DescendantsUntilFinal))
+	if uint64(li.config.StartBlock) < blockNumber {
+		log.Info(fmt.Sprintf("Syncing Relayer from block %d...", li.config.StartBlock))
+		err := li.pollHistoricEventsAndHeaders(ctx, uint64(li.config.DescendantsUntilFinal))
 		if err != nil {
 			return err
 		}
@@ -85,7 +85,7 @@ func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group) 
 
 	// In live mode the relayer processes blocks as they're mined and broadcast
 	eg.Go(func() error {
-		err := li.pollEventsAndHeaders(ctx, uint64(li.config.Ethereum.DescendantsUntilFinal))
+		err := li.pollEventsAndHeaders(ctx, uint64(li.config.DescendantsUntilFinal))
 		close(li.headers)
 		return err
 	})
@@ -95,7 +95,7 @@ func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group) 
 
 func (li *BeefyEthereumListener) pollHistoricEventsAndHeaders(ctx context.Context, descendantsUntilFinal uint64) error {
 	// Load starting block number and latest block number
-	blockNumber := li.config.Ethereum.StartBlock
+	blockNumber := li.config.StartBlock
 	latestBlockNumber, err := li.ethereumConn.GetClient().BlockNumber(ctx)
 	if err != nil {
 		return err

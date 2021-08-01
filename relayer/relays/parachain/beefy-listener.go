@@ -20,7 +20,7 @@ import (
 )
 
 type BeefyListener struct {
-	config              *Config
+	config              *SourceConfig
 	ethereumConn        *ethereum.Connection
 	beefyLightClient    *beefylightclient.Contract
 	relaychainConn      *relaychain.Connection
@@ -30,7 +30,7 @@ type BeefyListener struct {
 }
 
 func NewBeefyListener(
-	config *Config,
+	config *SourceConfig,
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
@@ -48,7 +48,7 @@ func NewBeefyListener(
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	// Set up light client bridge contract
-	address := common.HexToAddress(li.config.Ethereum.Contracts.BeefyLightClient)
+	address := common.HexToAddress(li.config.Contracts.BeefyLightClient)
 	beefyLightClientContract, err := beefylightclient.NewContract(address, li.ethereumConn.GetClient())
 	if err != nil {
 		return err
@@ -77,15 +77,21 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	eg.Go(func() error {
 
-		beefyBlockNumber, beefyBlockHash, err := li.fetchLatestVerifiedBeefyBlock(ctx)
+		beefyBlockNumber, beefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
 		if err != nil {
 			log.WithError(err).Error("Failed to get latest relay chain block number and hash")
 			return err
 		}
 
+		log.WithFields(logrus.Fields{
+			"blockHash": beefyBlockHash.Hex(),
+			"blockNumber": beefyBlockNumber,
+		}).Info("Fetched latest verified polkadot block")
+
+
 		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(beefyBlockHash, paraID)
 		if err != nil {
-			log.WithError(err).Error("Failed to get finalized para head from relay chain")
+			log.WithError(err).Error("Parachain not registered")
 			return err
 		}
 
@@ -249,4 +255,24 @@ func (li *BeefyListener) queryBeefyLightClientEvents(ctx context.Context, start 
 	}
 
 	return events, nil
+}
+
+// Fetch the latest verified beefy block number and hash from Ethereum
+func (li *BeefyListener) fetchLatestBeefyBlock(ctx context.Context) (uint64, types.Hash, error) {
+	number, err := li.beefyLightClient.LatestBeefyBlock(&bind.CallOpts{
+		Pending: false,
+		Context: ctx,
+	})
+	if err != nil {
+		log.WithError(err).Error("Failed to get latest verified beefy block number from ethereum")
+		return 0, types.Hash{}, err
+	}
+
+	hash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(number)
+	if err != nil {
+		log.WithError(err).Error("Failed to get latest relay chain block hash from relay chain")
+		return 0, types.Hash{}, err
+	}
+
+	return number, hash, nil
 }

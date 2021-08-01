@@ -1,27 +1,31 @@
 package parachain
 
+import "github.com/snowfork/snowbridge/relayer/config"
+
 type Config struct {
-	Polkadot  PolkadotConfig  `mapstructure:"polkadot"`
-	Parachain ParachainConfig `mapstructure:"parachain"`
-	Ethereum  EthereumConfig  `mapstructure:"ethereum"`
+	Source SourceConfig `mapstructure:"source"`
+	Sink   SinkConfig   `mapstructure:"sink"`
 }
 
-type PolkadotConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+type SourceConfig struct {
+	Polkadot  config.PolkadotConfig  `mapstructure:"polkadot"`
+	Parachain config.ParachainConfig `mapstructure:"parachain"`
+	Ethereum  config.EthereumConfig  `mapstructure:"ethereum"`
+	Contracts SourceContractsConfig   `mapstructure:"contracts"`
 }
 
-type ParachainConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+type SourceContractsConfig struct {
+	BeefyLightClient string `mapstructure:"BeefyLightClient"`
+	BasicInboundChannel        string `mapstructure:"BasicInboundChannel"`
+	IncentivizedInboundChannel string `mapstructure:"IncentivizedInboundChannel"`
 }
 
-type EthereumConfig struct {
-	Endpoint              string          `mapstructure:"endpoint"`
-	DescendantsUntilFinal uint64          `mapstructure:"descendants-until-final"`
-	Contracts             ContractsConfig `mapstructure:"contracts"`
+type SinkConfig struct {
+	Ethereum  config.EthereumConfig `mapstructure:"ethereum"`
+	Contracts SinkContractsConfig   `mapstructure:"contracts"`
 }
 
-type ContractsConfig struct {
-	BeefyLightClient           string `mapstructure:"BeefyLightClient"`
+type SinkContractsConfig struct {
 	BasicInboundChannel        string `mapstructure:"BasicInboundChannel"`
 	IncentivizedInboundChannel string `mapstructure:"IncentivizedInboundChannel"`
 }

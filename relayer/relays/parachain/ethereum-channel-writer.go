@@ -22,7 +22,7 @@ import (
 )
 
 type EthereumChannelWriter struct {
-	config                     *Config
+	config                     *SinkConfig
 	conn                       *ethereum.Connection
 	basicInboundChannel        *basic.BasicInboundChannel
 	incentivizedInboundChannel *incentivized.IncentivizedInboundChannel
@@ -30,7 +30,7 @@ type EthereumChannelWriter struct {
 }
 
 func NewEthereumChannelWriter(
-	config *Config,
+	config *SinkConfig,
 	conn *ethereum.Connection,
 	messagePackages <-chan MessagePackage,
 ) (*EthereumChannelWriter, error) {
@@ -46,14 +46,14 @@ func NewEthereumChannelWriter(
 func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	var address common.Address
 
-	address = common.HexToAddress(wr.config.Ethereum.Contracts.BasicInboundChannel)
+	address = common.HexToAddress(wr.config.Contracts.BasicInboundChannel)
 	basic, err := basic.NewBasicInboundChannel(address, wr.conn.GetClient())
 	if err != nil {
 		return err
 	}
 	wr.basicInboundChannel = basic
 
-	address = common.HexToAddress(wr.config.Ethereum.Contracts.IncentivizedInboundChannel)
+	address = common.HexToAddress(wr.config.Contracts.IncentivizedInboundChannel)
 	incentivized, err := incentivized.NewIncentivizedInboundChannel(address, wr.conn.GetClient())
 	if err != nil {
 		return err
@@ -67,25 +67,50 @@ func (wr *EthereumChannelWriter) Start(ctx context.Context, eg *errgroup.Group) 
 	return nil
 }
 
-func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
+func (wr *EthereumChannelWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
+	chainID := wr.conn.ChainID()
+	keypair := wr.conn.GetKP()
+
 	options := bind.TransactOpts{
-		From:     wr.conn.GetKP().CommonAddress(),
-		Signer:   wr.signerFn,
-		Context:  ctx,
-		GasLimit: 2000000,
+		From: keypair.CommonAddress(),
+		Signer: func(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			return types.SignTx(tx, types.NewLondonSigner(chainID), keypair.PrivateKey())
+		},
+		Context: ctx,
 	}
 
+	if wr.config.Ethereum.GasFeeCap > 0 {
+		fee := big.NewInt(0)
+		fee.SetUint64(wr.config.Ethereum.GasFeeCap)
+		options.GasFeeCap = fee
+	}
+
+	if wr.config.Ethereum.GasTipCap > 0 {
+		tip := big.NewInt(0)
+		tip.SetUint64(wr.config.Ethereum.GasTipCap)
+		options.GasTipCap = tip
+	}
+
+	if wr.config.Ethereum.GasLimit > 0 {
+		options.GasLimit = wr.config.Ethereum.GasLimit
+	}
+
+	return &options
+}
+
+func (wr *EthereumChannelWriter) writeMessagesLoop(ctx context.Context) error {
+	options := wr.makeTxOpts(ctx)
 	for {
 		select {
 		case <-ctx.Done():
 			log.WithField("reason", ctx.Err()).Info("Shutting down ethereum writer")
-			// Avoid deadlock if a listener is still trying to send to a channel
-			for range wr.messagePackages {
-				log.Debug("Discarded message package")
+			// Drain messages to avoid deadlock
+			for len(wr.messagePackages) > 0 {
+				<-wr.messagePackages
 			}
 			return nil
 		case messagePackage := <-wr.messagePackages:
-			err := wr.WriteChannel(&options, &messagePackage)
+			err := wr.WriteChannel(options, &messagePackage)
 			if err != nil {
 				log.WithError(err).Error("Error submitting message to ethereum")
 				return err

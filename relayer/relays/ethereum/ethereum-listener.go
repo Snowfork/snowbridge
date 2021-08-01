@@ -30,7 +30,7 @@ import (
 type EthereumListener struct {
 	ethashDataDir               string
 	ethashCacheDir              string
-	config                      *Config
+	config                      *SourceConfig
 	conn                        *ethereum.Connection
 	basicOutboundChannel        *basic.BasicOutboundChannel
 	incentivizedOutboundChannel *incentivized.IncentivizedOutboundChannel
@@ -40,7 +40,7 @@ type EthereumListener struct {
 }
 
 func NewEthereumListener(
-	config *Config,
+	config *SourceConfig,
 	conn *ethereum.Connection,
 	payloads chan<- ParachainPayload,
 ) *EthereumListener {
@@ -92,7 +92,7 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 
 	var address common.Address
 
-	address = common.HexToAddress(li.config.Ethereum.Contracts.BasicOutboundChannel)
+	address = common.HexToAddress(li.config.Contracts.BasicOutboundChannel)
 	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.GetClient())
 	if err != nil {
 		return closeWithError(err)
@@ -100,7 +100,7 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 	li.basicOutboundChannel = basicOutboundChannel
 	li.mapping[address] = "BasicInboundChannel.submit"
 
-	address = common.HexToAddress(li.config.Ethereum.Contracts.IncentivizedOutboundChannel)
+	address = common.HexToAddress(li.config.Contracts.IncentivizedOutboundChannel)
 	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, li.conn.GetClient())
 	if err != nil {
 		return closeWithError(err)

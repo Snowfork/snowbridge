@@ -38,16 +38,16 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 		return nil, err
 	}
 
-	relaychainConn := relaychain.NewConnection(config.Polkadot.Endpoint)
-	ethereumConn := ethereum.NewConnection(config.Ethereum.Endpoint, ethereumKeypair)
+	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
+	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, ethereumKeypair)
 
 	beefyMessages := make(chan store.BeefyRelayInfo)
 	ethHeaders := make(chan chain.Header)
 
-	beefyEthereumListener := NewBeefyEthereumListener(config,
+	beefyEthereumListener := NewBeefyEthereumListener(&config.Sink,
 		ethereumConn, beefyDB, beefyMessages, dbMessages, ethHeaders)
 
-	beefyEthereumWriter := NewBeefyEthereumWriter(config, ethereumConn,
+	beefyEthereumWriter := NewBeefyEthereumWriter(&config.Sink, ethereumConn,
 		beefyDB, dbMessages, beefyMessages)
 
 	beefyRelaychainListener := NewBeefyRelaychainListener(

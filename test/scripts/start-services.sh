@@ -122,7 +122,7 @@ start_relayer()
     jq \
         --arg k1 "$(address_for BeefyLightClient)" \
     '
-      .ethereum.contracts.BeefyLightClient = $k1
+      .sink.contracts.BeefyLightClient = $k1
     ' \
     config/beefy-relay.json > $configdir/beefy-relay.json
 
@@ -132,9 +132,11 @@ start_relayer()
         --arg k2 "$(address_for IncentivizedInboundChannel)" \
         --arg k3 "$(address_for BeefyLightClient)" \
     '
-      .ethereum.contracts.BasicInboundChannel = $k1
-    | .ethereum.contracts.IncentivizedInboundChannel = $k2
-    | .ethereum.contracts.BeefyLightClient = $k3
+      .source.contracts.BasicInboundChannel = $k1
+    | .source.contracts.IncentivizedInboundChannel = $k2
+    | .source.contracts.BeefyLightClient = $k3
+    | .sink.contracts.BasicInboundChannel = $k1
+    | .sink.contracts.IncentivizedInboundChannel = $k2
     ' \
     config/parachain-relay.json > $configdir/parachain-relay.json
 
@@ -143,8 +145,8 @@ start_relayer()
         --arg k1 "$(address_for BasicOutboundChannel)" \
         --arg k2 "$(address_for IncentivizedOutboundChannel)" \
     '
-      .ethereum.contracts.BasicOutboundChannel = $k1
-    | .ethereum.contracts.IncentivizedOutboundChannel = $k2
+      .source.contracts.BasicOutboundChannel = $k1
+    | .source.contracts.IncentivizedOutboundChannel = $k2
     ' \
     config/ethereum-relay.json > $configdir/ethereum-relay.json
 
@@ -214,7 +216,7 @@ sleep 60
 start_relayer
 
 echo "Process Tree:"
-pstree $$
+pstree -T $$
 
 sleep 3
 until grep "Syncing headers starting..." "$(pwd)"/ethereum-relay.log > /dev/null; do

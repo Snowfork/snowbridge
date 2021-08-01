@@ -22,7 +22,7 @@ import (
 )
 
 type BeefyEthereumWriter struct {
-	config   *Config
+	config           *SinkConfig
 	ethereumConn     *ethereum.Connection
 	beefyDB          *store.Database
 	beefyLightClient *beefylightclient.Contract
@@ -31,14 +31,14 @@ type BeefyEthereumWriter struct {
 }
 
 func NewBeefyEthereumWriter(
-	config *Config,
+	config *SinkConfig,
 	ethereumConn *ethereum.Connection,
 	beefyDB *store.Database,
 	databaseMessages chan<- store.DatabaseCmd,
 	beefyMessages <-chan store.BeefyRelayInfo,
 ) *BeefyEthereumWriter {
 	return &BeefyEthereumWriter{
-		config:   config,
+		config:           config,
 		ethereumConn:     ethereumConn,
 		beefyDB:          beefyDB,
 		databaseMessages: databaseMessages,
@@ -48,7 +48,7 @@ func NewBeefyEthereumWriter(
 
 func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 
-	address := common.HexToAddress(wr.config.Ethereum.Contracts.BeefyLightClient)
+	address := common.HexToAddress(wr.config.Contracts.BeefyLightClient)
 	beefyLightClientContract, err := beefylightclient.NewContract(address, wr.ethereumConn.GetClient())
 	if err != nil {
 		return err
@@ -91,13 +91,35 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 	}
 }
 
-func (wr *BeefyEthereumWriter) signerFn(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
+func (wr *BeefyEthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 	chainID := wr.ethereumConn.ChainID()
-	signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainID), wr.ethereumConn.GetKP().PrivateKey())
-	if err != nil {
-		return nil, err
+	keypair := wr.ethereumConn.GetKP()
+
+	options := bind.TransactOpts{
+		From: keypair.CommonAddress(),
+		Signer: func(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			return types.SignTx(tx, types.NewLondonSigner(chainID), keypair.PrivateKey())
+		},
+		Context: ctx,
 	}
-	return signedTx, nil
+
+	if wr.config.Ethereum.GasFeeCap > 0 {
+		fee := big.NewInt(0)
+		fee.SetUint64(wr.config.Ethereum.GasFeeCap)
+		options.GasFeeCap = fee
+	}
+
+	if wr.config.Ethereum.GasTipCap > 0 {
+		tip := big.NewInt(0)
+		tip.SetUint64(wr.config.Ethereum.GasTipCap)
+		options.GasTipCap = tip
+	}
+
+	if wr.config.Ethereum.GasLimit > 0 {
+		options.GasLimit = wr.config.Ethereum.GasLimit
+	}
+
+	return &options
 }
 
 func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
@@ -134,15 +156,9 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		return err
 	}
 
-	options := bind.TransactOpts{
-		From:      wr.ethereumConn.GetKP().CommonAddress(),
-		Signer:    wr.signerFn,
-		Context:   ctx,
-		GasFeeCap: big.NewInt(5000000),
-		GasTipCap: big.NewInt(5000000),
-	}
+	options := wr.makeTxOpts(ctx)
 
-	tx, err := contract.NewSignatureCommitment(&options, msg.CommitmentHash,
+	tx, err := contract.NewSignatureCommitment(options, msg.CommitmentHash,
 		msg.ValidatorClaimsBitfield, msg.ValidatorSignatureCommitment,
 		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
@@ -211,12 +227,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		return err
 	}
 
-	options := bind.TransactOpts{
-		From:     wr.ethereumConn.GetKP().CommonAddress(),
-		Signer:   wr.signerFn,
-		Context:  ctx,
-		GasLimit: 2000000,
-	}
+	options := wr.makeTxOpts(ctx)
 
 	validatorProof := beefylightclient.BeefyLightClientValidatorProof{
 		Signatures:            msg.Signatures,
@@ -231,7 +242,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		return err
 	}
 
-	tx, err := contract.CompleteSignatureCommitment(&options,
+	tx, err := contract.CompleteSignatureCommitment(options,
 		msg.ID,
 		msg.Commitment,
 		validatorProof,

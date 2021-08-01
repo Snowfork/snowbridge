@@ -25,15 +25,17 @@ type Relay struct {
 func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	log.Info("Creating worker")
 
-	parachainConn := parachain.NewConnection(config.Parachain.Endpoint, nil)
-	relaychainConn := relaychain.NewConnection(config.Polkadot.Endpoint)
-	ethereumConn := ethereum.NewConnection(config.Ethereum.Endpoint, keypair)
+	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
+	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
+
+	// FIXME: This is used by both the source & sink. They should use separate connections
+	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
 	var messagePackages = make(chan MessagePackage, 1)
 
 	ethereumChannelWriter, err := NewEthereumChannelWriter(
-		config,
+		&config.Sink,
 		ethereumConn,
 		messagePackages,
 	)
@@ -42,7 +44,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	}
 
 	beefyListener := NewBeefyListener(
-		config,
+		&config.Source,
 		ethereumConn,
 		relaychainConn,
 		parachainConn,
@@ -75,14 +77,14 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	log.Info("Starting ethereum writer")
-	err = relay.ethereumChannelWriter.Start(ctx, eg)
+	log.Info("Starting beefy listener")
+	err = relay.beefyListener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	log.Info("Starting beefy listener")
-	err = relay.beefyListener.Start(ctx, eg)
+	log.Info("Starting ethereum writer")
+	err = relay.ethereumChannelWriter.Start(ctx, eg)
 	if err != nil {
 		return err
 	}

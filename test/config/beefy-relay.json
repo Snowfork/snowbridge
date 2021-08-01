@@ -1,11 +1,18 @@
 {
+  "source": {
     "polkadot": {
-        "endpoint": "ws://localhost:9944"
-    },
-    "ethereum": {
-        "endpoint": "ws://localhost:8546",
-        "start-block": 0,
-        "descendants-until-final": 3,
-        "contracts": {}
+      "endpoint": "ws://localhost:9944"
     }
+  },
+  "sink": {
+    "ethereum": {
+      "endpoint": "ws://localhost:8546",
+      "gas-limit": 5000000
+    },
+    "start-block": 0,
+    "descendants-until-final": 3,
+    "contracts": {
+      "BeefyLightClient": null
+    }
+  }
 }

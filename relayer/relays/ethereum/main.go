@@ -34,8 +34,8 @@ func NewRelay(
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	r.ethconn = ethereum.NewConnection(r.config.Ethereum.Endpoint, nil)
-	r.paraconn = parachain.NewConnection(r.config.Parachain.Endpoint, r.keypair.AsKeyringPair())
+	r.ethconn = ethereum.NewConnection(r.config.Source.Ethereum.Endpoint, nil)
+	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 
 	err := r.ethconn.Connect(ctx)
 	if err != nil {
@@ -51,7 +51,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	payloads := make(chan ParachainPayload, 1)
 
 	listener := NewEthereumListener(
-		r.config,
+		&r.config.Source,
 		r.ethconn,
 		payloads,
 	)
@@ -66,7 +66,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	log.WithField("blockNumber", finalizedBlockNumber).Debug("Retrieved finalized block number from parachain")
 
-	err = listener.Start(ctx, eg, finalizedBlockNumber+1, uint64(r.config.Ethereum.DescendantsUntilFinal))
+	err = listener.Start(ctx, eg, finalizedBlockNumber+1, uint64(r.config.Source.DescendantsUntilFinal))
 	if err != nil {
 		return err
 	}

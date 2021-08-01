@@ -1,22 +1,27 @@
 package ethereum
 
+import (
+	"github.com/snowfork/snowbridge/relayer/config"
+)
+
 type Config struct {
-	DataDir   string          `mapstructure:"data-dir"`
-	Parachain ParachainConfig `mapstructure:"parachain"`
-	Ethereum  EthereumConfig  `mapstructure:"ethereum"`
+	Source SourceConfig `mapstructure:"source"`
+	Sink   SinkConfig   `mapstructure:"sink"`
 }
 
-type ParachainConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
-}
-
-type EthereumConfig struct {
-	Endpoint              string          `mapstructure:"endpoint"`
-	DescendantsUntilFinal uint64          `mapstructure:"descendants-until-final"`
-	Contracts             ContractsConfig `mapstructure:"contracts"`
+type SourceConfig struct {
+	Ethereum              config.EthereumConfig `mapstructure:"ethereum"`
+	DataDir               string                `mapstructure:"data-dir"`
+	DescendantsUntilFinal uint64                `mapstructure:"descendants-until-final"`
+	Contracts             ContractsConfig       `mapstructure:"contracts"`
 }
 
 type ContractsConfig struct {
 	BasicOutboundChannel        string `mapstructure:"BasicOutboundChannel"`
 	IncentivizedOutboundChannel string `mapstructure:"IncentivizedOutboundChannel"`
 }
+
+type SinkConfig struct {
+	Parachain config.ParachainConfig `mapstructure:"parachain"`
+}
+
