@@ -104,6 +104,8 @@ library ParachainLightClient {
             );
     }
 
+    // To scale encode the byte array, we need to prefix it
+    // with it's length. This is the expected current length of a leaf.
     bytes2 public constant MMR_LEAF_LENGTH_SCALE_ENCODED =
         bytes2(uint16(0xc501));
 
