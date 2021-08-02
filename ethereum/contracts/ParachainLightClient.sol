@@ -47,7 +47,10 @@ library ParachainLightClient {
         BeefyLightClient beefyLightClient
     ) internal {
         // Must verify the parachain id to ensure msg comes from our parachain
-        // TODO
+        // TODO - maybe can be done at application level rather than here tho
+        // - for example, application can register itself with channel to get
+        // the parachain id as part of the calldata to it, then we prepend
+        // it to the calldate
 
         // 2. Compute `ownParachainHead` by hashing the data of the `commitment` together with the contents of
         // `_ownParachainHeadPartial`
