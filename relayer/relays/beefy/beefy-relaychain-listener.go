@@ -116,7 +116,7 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				log.WithError(err).Error("Failed to serialize MMR Proof")
 				return err
 			}
-			li.log.WithField("latestMMRProof", latestMMRProof.Leaf.Version).Info("Got latestMMRProof")
+			log.WithField("latestMMRProof", latestMMRProof.Leaf.Version).Info("Got latestMMRProof")
 
 			info := store.BeefyRelayInfo{
 				ValidatorAddresses:       beefyAuthoritiesBytes,
