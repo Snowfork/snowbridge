@@ -32,6 +32,7 @@ type BeefyLightClientValidatorProofLog struct {
 }
 
 type BeefyLightClientBeefyMMRLeafLog struct {
+	Version              uint8  `json:"version"`
 	ParentNumber         uint32 `json:"parentNumber"`
 	ParentHash           string `json:"parentHash"`
 	ParachainHeadsRoot   string `json:"parachainHeadsRoot"`
@@ -100,6 +101,7 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 			PublicKeyMerkleProofs: pubKeyMerkleProofs,
 		},
 		LatestMMRLeaf: BeefyLightClientBeefyMMRLeafLog{
+			Version:              msg.LatestMMRLeaf.Version,
 			ParentNumber:         msg.LatestMMRLeaf.ParentNumber,
 			ParentHash:           "0x" + hex.EncodeToString(msg.LatestMMRLeaf.ParentHash[:]),
 			ParachainHeadsRoot:   "0x" + hex.EncodeToString(msg.LatestMMRLeaf.ParachainHeadsRoot[:]),

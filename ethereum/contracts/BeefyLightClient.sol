@@ -581,10 +581,10 @@ contract BeefyLightClient {
             ScaleCodec.encode8(leaf.version),
             ScaleCodec.encode32(leaf.parentNumber),
             leaf.parentHash,
-            leaf.parachainHeadsRoot,
             ScaleCodec.encode64(leaf.nextAuthoritySetId),
             ScaleCodec.encode32(leaf.nextAuthoritySetLen),
-            leaf.nextAuthoritySetRoot
+            leaf.nextAuthoritySetRoot,
+            leaf.parachainHeadsRoot
         );
 
         return bytes.concat(MMR_LEAF_LENGTH_SCALE_ENCODED, scaleEncodedMMRLeaf);

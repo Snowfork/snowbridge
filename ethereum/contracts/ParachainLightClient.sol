@@ -115,10 +115,10 @@ library ParachainLightClient {
             ScaleCodec.encode8(leaf.version),
             ScaleCodec.encode32(leaf.parentNumber),
             leaf.parentHash,
-            parachainHeadsRoot,
             ScaleCodec.encode64(leaf.nextAuthoritySetId),
             ScaleCodec.encode32(leaf.nextAuthoritySetLen),
-            leaf.nextAuthoritySetRoot
+            leaf.nextAuthoritySetRoot,
+            parachainHeadsRoot
         );
 
         return
