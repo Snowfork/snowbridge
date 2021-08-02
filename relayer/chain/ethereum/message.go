@@ -15,9 +15,11 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+
+	log "github.com/sirupsen/logrus"
 )
 
-func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, receiptsTrie *etrie.Trie, log *logrus.Entry) (*chain.EthereumOutboundMessage, error) {
+func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, receiptsTrie *etrie.Trie) (*chain.EthereumOutboundMessage, error) {
 	// RLP encode event log's Address, Topics, and Data
 	var buf bytes.Buffer
 	err := event.EncodeRLP(&buf)

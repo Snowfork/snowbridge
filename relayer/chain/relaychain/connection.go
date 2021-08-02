@@ -12,6 +12,8 @@ import (
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v3"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Connection struct {
@@ -19,13 +21,11 @@ type Connection struct {
 	api         *gsrpc.SubstrateAPI
 	metadata    types.Metadata
 	genesisHash types.Hash
-	log         *logrus.Entry
 }
 
-func NewConnection(endpoint string, log *logrus.Entry) *Connection {
+func NewConnection(endpoint string) *Connection {
 	return &Connection{
 		endpoint: endpoint,
-		log:      log,
 	}
 }
 
@@ -59,7 +59,7 @@ func (co *Connection) Connect(_ context.Context) error {
 	}
 	co.genesisHash = genesisHash
 
-	co.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"endpoint":    co.endpoint,
 		"metaVersion": meta.Version,
 	}).Info("Connected to chain")
@@ -75,13 +75,13 @@ func (co *Connection) GetMMRLeafForBlock(
 	blockNumber uint64,
 	blockHash types.Hash,
 ) (types.GenerateMMRProofResponse, error) {
-	co.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"blockNumber": blockNumber,
 		"blockHash":   blockHash.Hex(),
 	}).Info("Getting MMR Leaf for block...")
 	proofResponse, err := co.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
 	if err != nil {
-		co.log.WithError(err).Error("Failed to generate mmr proof")
+		log.WithError(err).Error("Failed to generate mmr proof")
 		return types.GenerateMMRProofResponse{}, err
 	}
 
@@ -90,7 +90,7 @@ func (co *Connection) GetMMRLeafForBlock(
 		proofItemsHex = append(proofItemsHex, item.Hex())
 	}
 
-	co.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"BlockHash":                       proofResponse.BlockHash.Hex(),
 		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
 		"Leaf.Hash":                       proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
@@ -123,11 +123,11 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 
 	keys, err := co.API().RPC.State.GetKeys(keyPrefix, blockHash)
 	if err != nil {
-		co.log.WithError(err).Error("Failed to get all parachain keys")
+		log.WithError(err).Error("Failed to get all parachain keys")
 		return nil, err
 	}
 
-	co.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"numKeys": len(keys),
 		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
 		"block": blockHash.Hex(),
@@ -135,7 +135,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 
 	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
 	if err != nil {
-		co.log.WithError(err).Error("Failed to get all parachain headers")
+		log.WithError(err).Error("Failed to get all parachain headers")
 		return nil, err
 	}
 
@@ -149,7 +149,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 
 			var paraID uint32
 			if err := types.DecodeFromBytes(change.StorageKey[ParaIDOffset:], &paraID); err != nil {
-				co.log.WithError(err).Error("Failed to decode parachain ID")
+				log.WithError(err).Error("Failed to decode parachain ID")
 				return nil, err
 			}
 
@@ -157,11 +157,11 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 
 			var headData types.Bytes
 			if err := types.DecodeFromBytes(headDataWrapped, &headData); err != nil {
-				co.log.WithError(err).Error("Failed to decode HeadData wrapper")
+				log.WithError(err).Error("Failed to decode HeadData wrapper")
 				return nil, err
 			}
 
-			co.log.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"ParaID": paraID,
 				"LeafIndex": index,
 				"HeadData": fmt.Sprintf("%#x", headData),
@@ -227,7 +227,7 @@ func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID u
 
 	var header types.Header
 	if err := types.DecodeFromBytes(headerBytes, &header); err != nil {
-		co.log.WithError(err).Error("Failed to decode Header")
+		log.WithError(err).Error("Failed to decode Header")
 		return nil, err
 	}
 

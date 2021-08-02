@@ -7,8 +7,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sirupsen/logrus/hooks/test"
-
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
@@ -19,17 +17,14 @@ import (
 )
 
 func TestWrite(t *testing.T) {
-	logger, _ := test.NewNullLogger()
-	log := logger.WithField("chain", "Parachain")
-
-	conn := parachain.NewConnection("ws://127.0.0.1:11144/", sr25519.Alice().AsKeyringPair(), log)
+	conn := parachain.NewConnection("ws://127.0.0.1:11144/", sr25519.Alice().AsKeyringPair())
 
 	payloads := make(chan ethereumRelay.ParachainPayload, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 	defer cancel()
 
-	writer := ethereumRelay.NewParachainWriter(conn, payloads, log)
+	writer := ethereumRelay.NewParachainWriter(conn, payloads)
 
 	err := conn.Connect(ctx)
 	if err != nil {

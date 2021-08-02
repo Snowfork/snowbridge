@@ -7,11 +7,10 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"strconv"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,7 +22,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
-	"github.com/snowfork/snowbridge/relayer/core"
 )
 
 func fetchMessagesCmd() *cobra.Command {
@@ -32,38 +30,46 @@ func fetchMessagesCmd() *cobra.Command {
 		Short:   "Retrieve the messages specified by block and index",
 		Args:    cobra.ExactArgs(0),
 		Example: "snowbridge-relay fetch-messages -b 812e7d414071648252bb3c2dc9c6d2f292fb615634606f9251191c7372eb4acc -i 123",
-		RunE:    FetchMessagesFn,
+		RunE:    fetchMessagesFunc,
 	}
+
+	cmd.Flags().StringP("url", "u", "", "Ethereum URL")
+	cmd.MarkFlagRequired("url")
+
+	cmd.Flags().String("bo-channel", "", "Address of basic outbound channel")
+	cmd.MarkFlagRequired("bo-channel")
+
+	cmd.Flags().String("io-channel", "", "Address of incentivized outbound channel")
+	cmd.MarkFlagRequired("io-channel")
+
 	cmd.Flags().StringP("block", "b", "", "Block hash")
-	cmd.Flags().UintP(
+	cmd.Flags().Uint64P(
 		"index",
 		"i",
 		0,
 		"Index in the block of the receipt (or transaction) that contains the event",
 	)
 	cmd.MarkFlagRequired("block")
+
+	viper.BindPFlags(cmd.Flags())
+
 	return cmd
 }
 
-func FetchMessagesFn(cmd *cobra.Command, _ []string) error {
-	config, err := core.LoadConfig()
-	if err != nil {
-		return err
-	}
-
-	hashBytes, err := hex.DecodeString(cmd.Flags().Lookup("block").Value.String())
+func fetchMessagesFunc(_ *cobra.Command, _ []string) error {
+	hashBytes, err := hex.DecodeString(viper.GetString("block"))
 	if err != nil {
 		return err
 	}
 	blockHash := gethCommon.BytesToHash(hashBytes)
-	index, err := strconv.ParseUint(cmd.Flags().Lookup("index").Value.String(), 10, 16)
+	index := viper.GetUint64("index")
 	if err != nil {
 		return err
 	}
 
 	mapping := make(map[common.Address]string)
 
-	contractEvents, trie, err := getEthContractEventsAndTrie(&config.Eth, mapping, blockHash, index)
+	contractEvents, trie, err := getEthContractEventsAndTrie(mapping, blockHash, index)
 	if err != nil {
 		return err
 	}
@@ -75,32 +81,35 @@ func FetchMessagesFn(cmd *cobra.Command, _ []string) error {
 }
 
 func getEthContractEventsAndTrie(
-	config *ethereum.Config,
 	mapping map[common.Address]string,
 	blockHash gethCommon.Hash,
 	index uint64,
 ) ([]*gethTypes.Log, *gethTrie.Trie, error) {
 	ctx := context.Background()
 
-	conn := ethereum.NewConnection(config.Endpoint, nil, logrus.WithField("chain", "Ethereum"))
+	conn := ethereum.NewConnection(viper.GetString("url"), nil)
 	err := conn.Connect(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer conn.Close()
 
-	basicOutboundChannel, err := basic.NewBasicOutboundChannel(common.HexToAddress(config.Channels.Basic.Outbound), conn.GetClient())
+
+	var address common.Address
+
+	address = common.HexToAddress(viper.GetString("bo-channel"))
+	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, conn.GetClient())
 	if err != nil {
 		return nil, nil, err
 	}
+	mapping[address] = "BasicInboundChannel.submit"
 
-	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(common.HexToAddress(config.Channels.Incentivized.Outbound), conn.GetClient())
+	address = common.HexToAddress(viper.GetString("io-channel"))
+	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, conn.GetClient())
 	if err != nil {
 		return nil, nil, err
 	}
-
-	mapping[common.HexToAddress(config.Channels.Basic.Outbound)] = "BasicInboundChannel.submit"
-	mapping[common.HexToAddress(config.Channels.Incentivized.Outbound)] = "IncentivizedInboundChannel.submit"
+	mapping[address] = "IncentivizedInboundChannel.submit"
 
 	loader := ethereum.DefaultBlockLoader{Conn: conn}
 	block, err := loader.GetBlock(ctx, blockHash)
@@ -202,7 +211,7 @@ func getEthIncentivizedMessages(
 }
 
 func printEthContractEventForSub(mapping map[common.Address]string, event *gethTypes.Log, trie *gethTrie.Trie) error {
-	message, err := ethereum.MakeMessageFromEvent(mapping, event, trie, logrus.WithField("chain", "Ethereum"))
+	message, err := ethereum.MakeMessageFromEvent(mapping, event, trie)
 	if err != nil {
 		return err
 	}

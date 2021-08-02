@@ -10,6 +10,7 @@ import (
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/ethashproof"
 	"github.com/snowfork/ethashproof/ethash"
 	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
@@ -89,7 +90,6 @@ func MakeHeaderFromEthHeader(
 	gethheader *etypes.Header,
 	proofcache *ethashproof.DatasetMerkleTreeCache,
 	dataDir     string,
-	log *logrus.Entry,
 ) (*chain.Header, error) {
 	headerData, err := MakeHeaderData(gethheader)
 	if err != nil {

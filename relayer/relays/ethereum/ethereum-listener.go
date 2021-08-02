@@ -22,32 +22,31 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum/syncer"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // EthereumListener streams the Ethereum blockchain for application events
 type EthereumListener struct {
-	dataDir                     string
-	cacheDir                    string
-	config                      *ethereum.Config
+	ethashDataDir               string
+	ethashCacheDir              string
+	config                      *SourceConfig
 	conn                        *ethereum.Connection
 	basicOutboundChannel        *basic.BasicOutboundChannel
 	incentivizedOutboundChannel *incentivized.IncentivizedOutboundChannel
 	mapping                     map[common.Address]string
 	payloads                    chan<- ParachainPayload
 	headerSyncer                *syncer.Syncer
-	log                         *logrus.Entry
 }
 
 func NewEthereumListener(
-	dataDir string,
-	config *ethereum.Config,
+	config *SourceConfig,
 	conn *ethereum.Connection,
 	payloads chan<- ParachainPayload,
-	log *logrus.Entry,
 ) *EthereumListener {
 	return &EthereumListener{
-		dataDir:                     filepath.Join(dataDir, "ethash-data"),
-		cacheDir:                    filepath.Join(dataDir, "ethash-cache"),
+		ethashDataDir:               filepath.Join(config.DataDir, "ethash-data"),
+		ethashCacheDir:              filepath.Join(config.DataDir, "ethash-cache"),
 		config:                      config,
 		conn:                        conn,
 		basicOutboundChannel:        nil,
@@ -55,34 +54,33 @@ func NewEthereumListener(
 		mapping:                     make(map[common.Address]string),
 		payloads:                    payloads,
 		headerSyncer:                nil,
-		log:                         log,
 	}
 }
 
 func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
 	closeWithError := func(err error) error {
-		li.log.Info("Shutting down listener...")
+		log.Info("Shutting down listener...")
 		close(li.payloads)
 		return err
 	}
 
 	var err error
 
-	err = os.Mkdir(li.dataDir, 0755)
+	err = os.Mkdir(li.ethashDataDir, 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
-		li.log.WithError(err).Error("Could not create data dir")
+		log.WithError(err).Error("Could not create data dir")
 		return err
 	}
 
-	err = os.Mkdir(li.cacheDir, 0755)
+	err = os.Mkdir(li.ethashCacheDir, 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
-		li.log.WithError(err).Error("Could not create cache dir")
+		log.WithError(err).Error("Could not create cache dir")
 		return err
 	}
 
 	hcs, err := ethereum.NewHeaderCacheState(
-		li.dataDir,
-		li.cacheDir,
+		li.ethashDataDir,
+		li.ethashCacheDir,
 		eg,
 		initBlockHeight,
 		&ethereum.DefaultBlockLoader{Conn: li.conn},
@@ -92,27 +90,29 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 		return closeWithError(err)
 	}
 
-	basicOutboundChannel, err := basic.NewBasicOutboundChannel(common.HexToAddress(li.config.Channels.Basic.Outbound), li.conn.GetClient())
+	var address common.Address
+
+	address = common.HexToAddress(li.config.Contracts.BasicOutboundChannel)
+	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.GetClient())
 	if err != nil {
 		return closeWithError(err)
 	}
 	li.basicOutboundChannel = basicOutboundChannel
+	li.mapping[address] = "BasicInboundChannel.submit"
 
-	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(common.HexToAddress(li.config.Channels.Incentivized.Outbound), li.conn.GetClient())
+	address = common.HexToAddress(li.config.Contracts.IncentivizedOutboundChannel)
+	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, li.conn.GetClient())
 	if err != nil {
 		return closeWithError(err)
 	}
 	li.incentivizedOutboundChannel = incentivizedOutboundChannel
-
-	li.mapping[common.HexToAddress(li.config.Channels.Basic.Outbound)] = "BasicInboundChannel.submit"
-	li.mapping[common.HexToAddress(li.config.Channels.Incentivized.Outbound)] = "IncentivizedInboundChannel.submit"
+	li.mapping[address] = "IncentivizedInboundChannel.submit"
 
 	headersIn := make(chan *gethTypes.Header, 5)
 	li.headerSyncer = syncer.NewSyncer(
 		descendantsUntilFinal,
 		syncer.NewHeaderLoader(li.conn.GetClient()),
 		headersIn,
-		li.log,
 	)
 
 	eg.Go(func() error {
@@ -124,7 +124,7 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 
 		// Avoid deadlock if the syncer is still trying to send a header
 		for range headersIn {
-			li.log.Debug("Discarded header")
+			log.Debug("Discarded header")
 		}
 
 		return closeWithError(err)
@@ -142,17 +142,18 @@ func (li *EthereumListener) processEventsAndHeaders(
 ) error {
 	headerEg, headerCtx := errgroup.WithContext(ctx)
 
-	li.log.Info("Syncing headers starting...")
+	log.Info("Syncing headers starting...")
 	err := li.headerSyncer.StartSync(headerCtx, headerEg, initBlockHeight-1)
 	if err != nil {
-		li.log.WithError(err).Error("Failed to start header sync")
+		log.WithError(err).Error("Failed to start header sync")
 		return err
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			log.WithField("reason", ctx.Err()).Info("Shutting down ethereum listener")
+			return nil
 		case <-headerCtx.Done():
 			return headerCtx.Err()
 		case gethheader, ok := <-headers:
@@ -178,14 +179,14 @@ func (li *EthereumListener) processEventsAndHeaders(
 
 			basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
 			if err != nil {
-				li.log.WithError(err).Error("Failure fetching event logs")
+				log.WithError(err).Error("Failure fetching event logs")
 				return err
 			}
 			events = append(events, basicEvents...)
 
 			incentivizedEvents, err := li.queryIncentivizedEvents(li.incentivizedOutboundChannel, &filterOptions)
 			if err != nil {
-				li.log.WithError(err).Error("Failure fetching event logs")
+				log.WithError(err).Error("Failure fetching event logs")
 				return err
 			}
 			events = append(events, incentivizedEvents...)
@@ -254,7 +255,7 @@ func (li *EthereumListener) makeOutgoingMessages(
 	for i, event := range events {
 		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
 		if err != nil {
-			li.log.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"blockHash":   event.BlockHash.Hex(),
 				"blockNumber": event.BlockNumber,
 				"txHash":      event.TxHash.Hex(),
@@ -262,9 +263,9 @@ func (li *EthereumListener) makeOutgoingMessages(
 			return nil, err
 		}
 
-		msg, err := ethereum.MakeMessageFromEvent(li.mapping, event, receiptTrie, li.log)
+		msg, err := ethereum.MakeMessageFromEvent(li.mapping, event, receiptTrie)
 		if err != nil {
-			li.log.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"address":     event.Address.Hex(),
 				"blockHash":   event.BlockHash.Hex(),
 				"blockNumber": event.BlockNumber,
@@ -285,16 +286,16 @@ func (li *EthereumListener) makeOutgoingHeader(
 ) (*chain.Header, error) {
 	cache, err := hcs.GetEthashproofCache(gethheader.Number.Uint64())
 	if err != nil {
-		li.log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"blockHash":   gethheader.Hash().Hex(),
 			"blockNumber": gethheader.Number,
 		}).WithError(err).Error("Failed to get ethashproof cache for header")
 		return nil, err
 	}
 
-	header, err := ethereum.MakeHeaderFromEthHeader(gethheader, cache, li.dataDir, li.log)
+	header, err := ethereum.MakeHeaderFromEthHeader(gethheader, cache, li.ethashDataDir)
 	if err != nil {
-		li.log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"blockHash":   gethheader.Hash().Hex(),
 			"blockNumber": gethheader.Number,
 		}).WithError(err).Error("Failed to generate header from ethereum header")

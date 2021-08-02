@@ -12,6 +12,8 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v3/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Connection struct {
@@ -20,7 +22,6 @@ type Connection struct {
 	api         *gsrpc.SubstrateAPI
 	metadata    types.Metadata
 	genesisHash types.Hash
-	log         *logrus.Entry
 }
 
 func (co *Connection) API() *gsrpc.SubstrateAPI {
@@ -35,11 +36,10 @@ func (co *Connection) Keypair() *signature.KeyringPair {
 	return co.kp
 }
 
-func NewConnection(endpoint string, kp *signature.KeyringPair, log *logrus.Entry) *Connection {
+func NewConnection(endpoint string, kp *signature.KeyringPair) *Connection {
 	return &Connection{
 		endpoint: endpoint,
 		kp:       kp,
-		log:      log,
 	}
 }
 
@@ -65,7 +65,7 @@ func (co *Connection) Connect(_ context.Context) error {
 	}
 	co.genesisHash = genesisHash
 
-	co.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"endpoint":    co.endpoint,
 		"metaVersion": meta.Version,
 	}).Info("Connected to chain")
@@ -112,16 +112,16 @@ func (co *Connection) GetDataForDigestItem(digestItem *AuxiliaryDigestItem) (typ
 
 	data, err := co.API().RPC.Offchain.LocalStorageGet(offchain.Persistent, storageKey)
 	if err != nil {
-		co.log.WithError(err).Error("Failed to read commitment from offchain storage")
+		log.WithError(err).Error("Failed to read commitment from offchain storage")
 		return nil, err
 	}
 
 	if data != nil {
-		co.log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"commitmentSizeBytes": len(*data),
 		}).Debug("Retrieved commitment from offchain storage")
 	} else {
-		co.log.WithError(err).Error("Commitment not found in offchain storage")
+		log.WithError(err).Error("Commitment not found in offchain storage")
 		return nil, err
 	}
 
@@ -139,7 +139,7 @@ func (co *Connection) GetBasicOutboundMessages(digestItem AuxiliaryDigestItem) (
 
 	err = types.DecodeFromBytes(data, &messages)
 	if err != nil {
-		co.log.WithError(err).Error("Failed to decode commitment messages")
+		log.WithError(err).Error("Failed to decode commitment messages")
 		return nil, nil, err
 	}
 
@@ -157,7 +157,7 @@ func (co *Connection) GetIncentivizedOutboundMessages(digestItem AuxiliaryDigest
 
 	err = types.DecodeFromBytes(data, &messages)
 	if err != nil {
-		co.log.WithError(err).Error("Failed to decode commitment messages")
+		log.WithError(err).Error("Failed to decode commitment messages")
 		return nil, nil, err
 	}
 

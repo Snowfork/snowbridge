@@ -2,139 +2,93 @@ package parachain
 
 import (
 	"context"
-	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+
+	log "github.com/sirupsen/logrus"
 )
 
-type Worker struct {
-	parachainConfig       *parachain.Config
-	relaychainConfig      *relaychain.Config
-	ethereumConfig        *ethereum.Config
+type Relay struct {
+	config                *Config
 	parachainConn         *parachain.Connection
 	relaychainConn        *relaychain.Connection
 	ethereumConn          *ethereum.Connection
 	ethereumChannelWriter *EthereumChannelWriter
 	beefyListener         *BeefyListener
-	log                   *logrus.Entry
 }
 
-const Name = "parachain-relay"
-
-func NewWorker(parachainConfig *parachain.Config,
-	relaychainConfig *relaychain.Config, ethereumConfig *ethereum.Config, log *logrus.Entry) (*Worker, error) {
-
+func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	log.Info("Creating worker")
 
-	ethereumKp, err := secp256k1.NewKeypairFromString(ethereumConfig.MessagePrivateKey)
-	if err != nil {
-		return nil, err
-	}
+	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
+	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 
-	parachainConn := parachain.NewConnection(parachainConfig.Endpoint, nil, log)
-	relaychainConn := relaychain.NewConnection(relaychainConfig.Endpoint, log)
-	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKp, log)
+	// TODO: This is used by both the source & sink. They should use separate connections
+	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
 	var messagePackages = make(chan MessagePackage, 1)
 
 	ethereumChannelWriter, err := NewEthereumChannelWriter(
-		ethereumConfig,
+		&config.Sink,
 		ethereumConn,
 		messagePackages,
-		log,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	beefyListener := NewBeefyListener(
-		ethereumConfig,
+		&config.Source,
 		ethereumConn,
 		relaychainConn,
 		parachainConn,
 		messagePackages,
-		log,
 	)
 
-	return &Worker{
-		parachainConfig:       parachainConfig,
-		relaychainConfig:      relaychainConfig,
-		ethereumConfig:        ethereumConfig,
+	return &Relay{
+		config:                config,
 		parachainConn:         parachainConn,
 		relaychainConn:        relaychainConn,
 		ethereumConn:          ethereumConn,
 		ethereumChannelWriter: ethereumChannelWriter,
 		beefyListener:         beefyListener,
-		log:                   log,
 	}, nil
 }
 
-func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
-	worker.log.Info("Starting worker")
-
-	if worker.beefyListener == nil || worker.ethereumChannelWriter == nil {
-		return fmt.Errorf("Sender and/or receiver need to be set before starting chain")
-	}
-
-	err := worker.parachainConn.Connect(ctx)
+func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
+	err := relay.parachainConn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = worker.ethereumConn.Connect(ctx)
+	err = relay.ethereumConn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = worker.relaychainConn.Connect(ctx)
+	err = relay.relaychainConn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	eg.Go(func() error {
-		if worker.ethereumChannelWriter != nil {
-			worker.log.Info("Starting Writer")
-			err = worker.ethereumChannelWriter.Start(ctx, eg)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	log.Info("Starting beefy listener")
+	err = relay.beefyListener.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
 
-	eg.Go(func() error {
-		if worker.beefyListener != nil {
-			worker.log.Info("Starting Beefy Listener")
-			err = worker.beefyListener.Start(ctx, eg)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	log.Info("Starting ethereum writer")
+	err = relay.ethereumChannelWriter.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (worker *Worker) Stop() {
-	if worker.parachainConn != nil {
-		worker.parachainConn.Close()
-	}
-	if worker.relaychainConn != nil {
-		worker.relaychainConn.Close()
-	}
-	if worker.ethereumConn != nil {
-		worker.ethereumConn.Close()
-	}
-}
-
-func (worker *Worker) Name() string {
-	return Name
-}

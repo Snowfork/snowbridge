@@ -8,79 +8,65 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+
+	log "github.com/sirupsen/logrus"
 )
 
-type Worker struct {
-	dataDir     string
-	ethconfig  *ethereum.Config
+type Relay struct {
+	config     *Config
+	keypair    *sr25519.Keypair
 	ethconn    *ethereum.Connection
-	paraconfig *parachain.Config
 	paraconn   *parachain.Connection
-	log        *logrus.Entry
 }
 
-const Name = "ethereum-relay"
-
-func NewWorker(
-	dataDir   string,
-	ethconfig *ethereum.Config,
-	paraconfig *parachain.Config,
-	log *logrus.Entry,
-) *Worker {
-	return &Worker{
-		dataDir:    dataDir,
-		ethconfig:  ethconfig,
-		paraconfig: paraconfig,
-		log:        log,
+func NewRelay(
+	config *Config,
+	keypair *sr25519.Keypair,
+) *Relay {
+	return &Relay{
+		config:  config,
+		keypair: keypair,
 	}
 }
 
-func (w *Worker) Name() string {
-	return Name
-}
+func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
+	r.ethconn = ethereum.NewConnection(r.config.Source.Ethereum.Endpoint, nil)
+	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 
-func (w *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := w.connect(ctx)
+	err := r.ethconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Clean up after ourselves
-	eg.Go(func() error {
-		<-ctx.Done()
-		w.disconnect()
-		return nil
-	})
+	err = r.paraconn.Connect(ctx)
+	if err != nil {
+		return err
+	}
 
 	// channel for payloads from ethereum
 	payloads := make(chan ParachainPayload, 1)
 
 	listener := NewEthereumListener(
-		w.dataDir,
-		w.ethconfig,
-		w.ethconn,
+		&r.config.Source,
+		r.ethconn,
 		payloads,
-		w.log,
 	)
 	writer := NewParachainWriter(
-		w.paraconn,
+		r.paraconn,
 		payloads,
-		w.log,
 	)
 
-	finalizedBlockNumber, err := w.queryFinalizedBlockNumber()
+	finalizedBlockNumber, err := r.queryFinalizedBlockNumber()
 	if err != nil {
 		return err
 	}
-	w.log.WithField("blockNumber", finalizedBlockNumber).Debug("Retrieved finalized block number from parachain")
+	log.WithField("blockNumber", finalizedBlockNumber).Debug("Retrieved finalized block number from parachain")
 
-	err = listener.Start(ctx, eg, finalizedBlockNumber+1, uint64(w.ethconfig.DescendantsUntilFinal))
+	err = listener.Start(ctx, eg, finalizedBlockNumber+1, uint64(r.config.Source.DescendantsUntilFinal))
 	if err != nil {
 		return err
 	}
@@ -93,51 +79,17 @@ func (w *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (w *Worker) queryFinalizedBlockNumber() (uint64, error) {
-	storageKey, err := types.CreateStorageKey(w.paraconn.Metadata(), "EthereumLightClient", "FinalizedBlock", nil, nil)
+func (r *Relay) queryFinalizedBlockNumber() (uint64, error) {
+	storageKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumLightClient", "FinalizedBlock", nil, nil)
 	if err != nil {
 		return 0, err
 	}
 
 	var finalizedHeader ethereum.HeaderID
-	_, err = w.paraconn.API().RPC.State.GetStorageLatest(storageKey, &finalizedHeader)
+	_, err = r.paraconn.API().RPC.State.GetStorageLatest(storageKey, &finalizedHeader)
 	if err != nil {
 		return 0, err
 	}
 
 	return uint64(finalizedHeader.Number), nil
-}
-
-func (w *Worker) connect(ctx context.Context) error {
-	kpForPara, err := sr25519.NewKeypairFromSeed(w.paraconfig.PrivateKey, 42)
-	if err != nil {
-		return err
-	}
-
-	w.ethconn = ethereum.NewConnection(w.ethconfig.Endpoint, nil, w.log)
-	w.paraconn = parachain.NewConnection(w.paraconfig.Endpoint, kpForPara.AsKeyringPair(), w.log)
-
-	err = w.ethconn.Connect(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = w.paraconn.Connect(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (w *Worker) disconnect() {
-	if w.ethconn != nil {
-		w.ethconn.Close()
-		w.ethconn = nil
-	}
-
-	if w.paraconn != nil {
-		w.paraconn.Close()
-		w.paraconn = nil
-	}
 }

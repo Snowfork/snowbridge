@@ -17,39 +17,39 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type BeefyEthereumWriter struct {
-	ethereumConfig   *ethereum.Config
+	config           *SinkConfig
 	ethereumConn     *ethereum.Connection
 	beefyDB          *store.Database
 	beefyLightClient *beefylightclient.Contract
 	databaseMessages chan<- store.DatabaseCmd
 	beefyMessages    <-chan store.BeefyRelayInfo
-	log              *logrus.Entry
 }
 
 func NewBeefyEthereumWriter(
-	ethereumConfig *ethereum.Config,
+	config *SinkConfig,
 	ethereumConn *ethereum.Connection,
 	beefyDB *store.Database,
 	databaseMessages chan<- store.DatabaseCmd,
 	beefyMessages <-chan store.BeefyRelayInfo,
-	log *logrus.Entry,
 ) *BeefyEthereumWriter {
 	return &BeefyEthereumWriter{
-		ethereumConfig:   ethereumConfig,
+		config:           config,
 		ethereumConn:     ethereumConn,
 		beefyDB:          beefyDB,
 		databaseMessages: databaseMessages,
 		beefyMessages:    beefyMessages,
-		log:              log,
 	}
 }
 
 func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 
-	beefyLightClientContract, err := beefylightclient.NewContract(common.HexToAddress(wr.ethereumConfig.BeefyLightClient), wr.ethereumConn.GetClient())
+	address := common.HexToAddress(wr.config.Contracts.BeefyLightClient)
+	beefyLightClientContract, err := beefylightclient.NewContract(address, wr.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}
@@ -62,45 +62,64 @@ func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) er
 	return nil
 }
 
-func (wr *BeefyEthereumWriter) onDone(ctx context.Context) error {
-	wr.log.Info("Shutting down writer...")
-	// Avoid deadlock if a listener is still trying to send to a channel
-	for range wr.beefyMessages {
-		wr.log.Debug("Discarded BEEFY message")
-	}
-
-	return ctx.Err()
-}
-
 func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return wr.onDone(ctx)
+			log.WithField("reason", ctx.Err()).Info("Shutting down ethereum writer")
+			// Drain messages to avoid deadlock
+			for len(wr.beefyMessages) > 0 {
+				<-wr.beefyMessages
+			}
+			return nil
 		case msg := <-wr.beefyMessages:
 			switch msg.Status {
 			case store.CommitmentWitnessed:
 				err := wr.WriteNewSignatureCommitment(ctx, msg)
 				if err != nil {
-					wr.log.WithError(err).Error("Error submitting message to ethereum")
+					log.WithError(err).Error("Failed to write new signature commitment")
+					return err
 				}
 			case store.ReadyToComplete:
 				err := wr.WriteCompleteSignatureCommitment(ctx, msg)
 				if err != nil {
-					wr.log.WithError(err).Error("Error submitting message to ethereum")
+					log.WithError(err).Error("Failed to write complete signature commitment")
+					return err
 				}
 			}
 		}
 	}
 }
 
-func (wr *BeefyEthereumWriter) signerFn(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
+func (wr *BeefyEthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 	chainID := wr.ethereumConn.ChainID()
-	signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainID), wr.ethereumConn.GetKP().PrivateKey())
-	if err != nil {
-		return nil, err
+	keypair := wr.ethereumConn.GetKP()
+
+	options := bind.TransactOpts{
+		From: keypair.CommonAddress(),
+		Signer: func(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			return types.SignTx(tx, types.NewLondonSigner(chainID), keypair.PrivateKey())
+		},
+		Context: ctx,
 	}
-	return signedTx, nil
+
+	if wr.config.Ethereum.GasFeeCap > 0 {
+		fee := big.NewInt(0)
+		fee.SetUint64(wr.config.Ethereum.GasFeeCap)
+		options.GasFeeCap = fee
+	}
+
+	if wr.config.Ethereum.GasTipCap > 0 {
+		tip := big.NewInt(0)
+		tip.SetUint64(wr.config.Ethereum.GasTipCap)
+		options.GasTipCap = tip
+	}
+
+	if wr.config.Ethereum.GasLimit > 0 {
+		options.GasLimit = wr.config.Ethereum.GasLimit
+	}
+
+	return &options
 }
 
 func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
@@ -126,7 +145,7 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		&bind.CallOpts{Pending: true}, signedValidators, numberOfValidators,
 	)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to create initial validator bitfield")
+		log.WithError(err).Error("Failed to create initial validator bitfield")
 		return err
 	}
 
@@ -137,23 +156,17 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		return err
 	}
 
-	options := bind.TransactOpts{
-		From:      wr.ethereumConn.GetKP().CommonAddress(),
-		Signer:    wr.signerFn,
-		Context:   ctx,
-		GasFeeCap: big.NewInt(5000000),
-		GasTipCap: big.NewInt(5000000),
-	}
+	options := wr.makeTxOpts(ctx)
 
-	tx, err := contract.NewSignatureCommitment(&options, msg.CommitmentHash,
+	tx, err := contract.NewSignatureCommitment(options, msg.CommitmentHash,
 		msg.ValidatorClaimsBitfield, msg.ValidatorSignatureCommitment,
 		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to submit transaction")
+		log.WithError(err).Error("Failed to submit transaction")
 		return err
 	}
 
-	wr.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"txHash":                           tx.Hash().Hex(),
 		"msg.CommitmentHash":               "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
 		"msg.ValidatorSignatureCommitment": "0x" + hex.EncodeToString(msg.ValidatorSignatureCommitment),
@@ -161,7 +174,7 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		"BlockNumber":                      beefyJustification.SignedCommitment.Commitment.BlockNumber,
 	}).Info("New Signature Commitment transaction submitted")
 
-	wr.log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
+	log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
 	info.Status = store.InitialVerificationTxSent
 	info.InitialVerificationTxHash = tx.Hash()
 	cmd := store.NewDatabaseCmd(&info, store.Create, nil)
@@ -203,7 +216,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		big.NewInt(int64(info.ContractID)),
 	)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to get random validator bitfield")
+		log.WithError(err).Error("Failed to get random validator bitfield")
 		return err
 	}
 
@@ -214,12 +227,7 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		return err
 	}
 
-	options := bind.TransactOpts{
-		From:     wr.ethereumConn.GetKP().CommonAddress(),
-		Signer:   wr.signerFn,
-		Context:  ctx,
-		GasLimit: 2000000,
-	}
+	options := wr.makeTxOpts(ctx)
 
 	validatorProof := beefylightclient.BeefyLightClientValidatorProof{
 		Signatures:            msg.Signatures,
@@ -230,11 +238,11 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 
 	err = wr.LogBeefyFixtureDataAll(msg, info)
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to log complete tx input")
+		log.WithError(err).Error("Failed to log complete tx input")
 		return err
 	}
 
-	tx, err := contract.CompleteSignatureCommitment(&options,
+	tx, err := contract.CompleteSignatureCommitment(options,
 		msg.ID,
 		msg.Commitment,
 		validatorProof,
@@ -242,16 +250,16 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		msg.MMRProofItems)
 
 	if err != nil {
-		wr.log.WithError(err).Error("Failed to submit transaction")
+		log.WithError(err).Error("Failed to submit transaction")
 		return err
 	}
 
-	wr.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"txHash": tx.Hash().Hex(),
 	}).Info("Complete Signature Commitment transaction submitted")
 
 	// Update item's status in database
-	wr.log.Info("5: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
+	log.Info("5: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
 	instructions := map[string]interface{}{
 		"status":                        store.CompleteVerificationTxSent,
 		"complete_verification_tx_hash": tx.Hash(),

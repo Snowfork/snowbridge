@@ -6,164 +6,111 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
+
+	log "github.com/sirupsen/logrus"
 )
 
-type Worker struct {
-	relaychainConfig        *relaychain.Config
-	ethereumConfig          *ethereum.Config
+type Relay struct {
+	config                  *Config
 	relaychainConn          *relaychain.Connection
+	ethereumConn            *ethereum.Connection
 	beefyEthereumListener   *BeefyEthereumListener
 	beefyRelaychainListener *BeefyRelaychainListener
-	ethereumConn            *ethereum.Connection
 	beefyEthereumWriter     *BeefyEthereumWriter
-	log                     *logrus.Entry
 	beefyDB                 *store.Database
 	beefyMessages           chan store.BeefyRelayInfo
 	ethHeaders              chan chain.Header
 }
 
-const Name = "beefy-relay"
-
-func NewWorker(
-	relaychainConfig *relaychain.Config,
-	ethereumConfig *ethereum.Config,
-	log *logrus.Entry,
-) (*Worker, error) {
-
-	log.Info("Worker created")
+func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
+	log.Info("Relay created")
 
 	dbMessages := make(chan store.DatabaseCmd)
-	logger := log.WithField("database", "Beefy")
-	beefyDB := store.NewDatabase(dbMessages, logger)
+	beefyDB := store.NewDatabase(dbMessages)
 
 	err := beefyDB.Initialize()
 	if err != nil {
 		return nil, err
 	}
 
-	ethereumKeypair, err := secp256k1.NewKeypairFromString(ethereumConfig.BeefyPrivateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	relaychainConn := relaychain.NewConnection(relaychainConfig.Endpoint, log)
-	ethereumConn := ethereum.NewConnection(ethereumConfig.Endpoint, ethereumKeypair, log)
+	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
+	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, ethereumKeypair)
 
 	beefyMessages := make(chan store.BeefyRelayInfo)
 	ethHeaders := make(chan chain.Header)
 
-	beefyEthereumListener := NewBeefyEthereumListener(ethereumConfig,
-		ethereumConn, beefyDB, beefyMessages, dbMessages, ethHeaders, log)
+	beefyEthereumListener := NewBeefyEthereumListener(&config.Sink,
+		ethereumConn, beefyDB, beefyMessages, dbMessages, ethHeaders)
 
-	beefyEthereumWriter := NewBeefyEthereumWriter(ethereumConfig, ethereumConn,
-		beefyDB, dbMessages, beefyMessages, log)
+	beefyEthereumWriter := NewBeefyEthereumWriter(&config.Sink, ethereumConn,
+		beefyDB, dbMessages, beefyMessages)
 
 	beefyRelaychainListener := NewBeefyRelaychainListener(
-		relaychainConfig,
+		config,
 		relaychainConn,
 		beefyMessages,
-		log,
 	)
 
-	return &Worker{
-		relaychainConfig:        relaychainConfig,
-		ethereumConfig:          ethereumConfig,
+	return &Relay{
+		config:                  config,
 		relaychainConn:          relaychainConn,
 		beefyEthereumListener:   beefyEthereumListener,
 		ethereumConn:            ethereumConn,
 		beefyEthereumWriter:     beefyEthereumWriter,
 		beefyRelaychainListener: beefyRelaychainListener,
-		log:                     log,
 		beefyDB:                 beefyDB,
 		beefyMessages:           beefyMessages,
 		ethHeaders:              ethHeaders,
 	}, nil
 }
 
-func (worker *Worker) Start(ctx context.Context, eg *errgroup.Group) error {
-	worker.log.Info("Worker started")
-
-	err := worker.beefyDB.Start(ctx, eg)
+func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
+	err := relay.beefyDB.Start(ctx, eg)
 	if err != nil {
-		worker.log.WithFields(logrus.Fields{
-			"database": "Beefy",
-			"error":    err,
-		}).Error("Failed to start database")
+		log.WithError(err).Error("Failed to start database")
 		return err
 	}
-	worker.log.WithField("database", "Beefy").Info("Started database")
 
-	if worker.beefyEthereumListener == nil ||
-		worker.beefyEthereumWriter == nil ||
-		worker.beefyRelaychainListener == nil {
+	if relay.beefyEthereumListener == nil ||
+		relay.beefyEthereumWriter == nil ||
+		relay.beefyRelaychainListener == nil {
 		return fmt.Errorf("Sender needs to be set before starting chain")
 	}
 
-	err = worker.relaychainConn.Connect(ctx)
+	err = relay.relaychainConn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = worker.beefyRelaychainListener.Start(ctx, eg)
+	err = relay.beefyRelaychainListener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	err = worker.ethereumConn.Connect(ctx)
+	err = relay.ethereumConn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
 	eg.Go(func() error {
 
-		err = worker.beefyEthereumListener.Start(ctx, eg, uint64(worker.ethereumConfig.DescendantsUntilFinal))
+		err = relay.beefyEthereumListener.Start(ctx, eg)
 		if err != nil {
 			return err
 		}
 
-		err = worker.beefyEthereumWriter.Start(ctx, eg)
+		err = relay.beefyEthereumWriter.Start(ctx, eg)
 		if err != nil {
 			return err
 		}
 
 		return nil
 	})
-
-	return nil
-}
-
-func (worker *Worker) Name() string {
-	return Name
-}
-
-func (worker *Worker) QueryCurrentEpoch() error {
-	worker.log.Info("Creating storage key...")
-
-	storageKey, err := types.CreateStorageKey(worker.relaychainConn.Metadata(), "Babe", "Epoch", nil, nil)
-	if err != nil {
-		return err
-	}
-
-	worker.log.Info("Attempting to query current epoch...")
-
-	// var headerID ethereum.HeaderID
-	var epochData interface{}
-	_, err = worker.relaychainConn.API().RPC.State.GetStorageLatest(storageKey, &epochData)
-	if err != nil {
-		return err
-	}
-
-	worker.log.Info("Retrieved current epoch data:", epochData)
-
-	// nextHeaderID := ethereum.HeaderID{Number: types.NewU64(uint64(headerID.Number) + 1)}
-	// return &nextHeaderID, nil
 
 	return nil
 }

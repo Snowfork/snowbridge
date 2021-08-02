@@ -1,6 +1,5 @@
 node_modules
 test-config.json
-ganache.log
 parachain.log
 relay.log
 alice.log
@@ -8,3 +7,6 @@ bob.log
 200.log
 tmp
 .env
+beefy-relay.log
+ethereum-relay.log
+parachain-relay.log

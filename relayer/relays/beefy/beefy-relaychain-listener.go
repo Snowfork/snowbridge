@@ -14,23 +14,25 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 	"github.com/snowfork/snowbridge/relayer/substrate"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type BeefyRelaychainListener struct {
-	relaychainConfig *relaychain.Config
-	relaychainConn   *relaychain.Connection
-	beefyMessages    chan<- store.BeefyRelayInfo
-	log              *logrus.Entry
+	config         *Config
+	relaychainConn *relaychain.Connection
+	beefyMessages  chan<- store.BeefyRelayInfo
 }
 
-func NewBeefyRelaychainListener(relaychainConfig *relaychain.Config,
-	relaychainConn *relaychain.Connection, beefyMessages chan<- store.BeefyRelayInfo,
-	log *logrus.Entry) *BeefyRelaychainListener {
+func NewBeefyRelaychainListener(
+	config *Config,
+	relaychainConn *relaychain.Connection,
+	beefyMessages chan<- store.BeefyRelayInfo,
+) *BeefyRelaychainListener {
 	return &BeefyRelaychainListener{
-		relaychainConfig: relaychainConfig,
-		relaychainConn:   relaychainConn,
-		beefyMessages:    beefyMessages,
-		log:              log,
+		config:         config,
+		relaychainConn: relaychainConn,
+		beefyMessages:  beefyMessages,
 	}
 }
 
@@ -41,14 +43,6 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 	})
 
 	return nil
-}
-
-func (li *BeefyRelaychainListener) onDone(ctx context.Context) error {
-	li.log.Info("Shutting down listener...")
-	if li.beefyMessages != nil {
-		close(li.beefyMessages)
-	}
-	return ctx.Err()
 }
 
 func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) error {
@@ -63,29 +57,32 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 	for {
 		select {
 		case <-ctx.Done():
-			return li.onDone(ctx)
+			log.WithField("reason", ctx.Err()).Info("Shutting down polkadot listener")
+			if li.beefyMessages != nil {
+				close(li.beefyMessages)
+			}
+			return nil
 		case msg := <-ch:
-
 			signedCommitment := &store.SignedCommitment{}
 			err := types.DecodeFromHexString(msg.(string), signedCommitment)
 			if err != nil {
-				li.log.WithError(err).Error("Failed to decode BEEFY commitment messages")
+				log.WithError(err).Error("Failed to decode BEEFY commitment messages")
 			}
 
-			li.log.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"signedCommitment.Commitment.BlockNumber":    signedCommitment.Commitment.BlockNumber,
 				"signedCommitment.Commitment.Payload":        signedCommitment.Commitment.Payload.Hex(),
 				"signedCommitment.Commitment.ValidatorSetID": signedCommitment.Commitment.ValidatorSetID,
 				"signedCommitment.Signatures":                signedCommitment.Signatures,
 			}).Info("Witnessed a new BEEFY commitment: ", msg.(string))
 			if len(signedCommitment.Signatures) == 0 {
-				li.log.Info("BEEFY commitment has no signatures, skipping...")
+				log.Info("BEEFY commitment has no signatures, skipping...")
 				continue
 			}
 
 			signedCommitmentBytes, err := json.Marshal(signedCommitment)
 			if err != nil {
-				li.log.WithError(err).Error("Failed to marshal signed commitment:", signedCommitment)
+				log.WithError(err).Error("Failed to marshal signed commitment:", signedCommitment)
 				continue
 			}
 
@@ -93,30 +90,30 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 
 			beefyAuthorities, err := li.getBeefyAuthorities(blockNumber)
 			if err != nil {
-				li.log.WithError(err).Error("Failed to get Beefy authorities from on-chain storage")
+				log.WithError(err).Error("Failed to get Beefy authorities from on-chain storage")
 				return err
 			}
 
 			beefyAuthoritiesBytes, err := json.Marshal(beefyAuthorities)
 			if err != nil {
-				li.log.WithError(err).Error("Failed to marshal BEEFY authorities:", beefyAuthorities)
+				log.WithError(err).Error("Failed to marshal BEEFY authorities:", beefyAuthorities)
 				continue
 			}
 
 			blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(blockNumber))
 			if err != nil {
-				li.log.WithError(err).Error("Failed to get block hash")
+				log.WithError(err).Error("Failed to get block hash")
 			}
-			li.log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
+			log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
 
 			latestMMRProof, err := li.relaychainConn.GetMMRLeafForBlock(blockNumber-1, blockHash)
 			if err != nil {
-				li.log.WithError(err).Error("Failed get MMR Leaf")
+				log.WithError(err).Error("Failed get MMR Leaf")
 				return err
 			}
 			serializedProof, err := types.EncodeToBytes(latestMMRProof)
 			if err != nil {
-				li.log.WithError(err).Error("Failed to serialize MMR Proof")
+				log.WithError(err).Error("Failed to serialize MMR Proof")
 				return err
 			}
 
