@@ -133,7 +133,7 @@ func (wr *EthereumChannelWriter) logBasicTx(
 	log.WithFields(log.Fields{
 		"input":                       string(b),
 		"commitmentHash":              "0x" + hex.EncodeToString(commitmentHash[:]),
-		"paraHeadProofRootMMRLeaf":    "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
+		"paraHeadProofRootMerkleLeaf": "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
 		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
 		"merkleProofData":             merkleProofData,
 		"scaleParaId":                 scaleParaId,
@@ -219,7 +219,7 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	log.WithFields(log.Fields{
 		"input":                       string(b),
 		"commitmentHash":              "0x" + hex.EncodeToString(commitmentHash[:]),
-		"paraHeadProofRootMMRLeaf":    "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
+		"paraHeadProofRootMerkleLeaf": "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
 		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
 		"merkleProofData":             merkleProofData,
 		"scaleParaId":                 scaleParaId,

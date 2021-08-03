@@ -71,15 +71,16 @@ library ParachainLightClient {
 
         // 4. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
         // `_beefyMMRLeafIndex`, `_beefyMMRLeafCount` and `_beefyMMRLeafProof`
-        require(
-            beefyLightClient.verifyBeefyMerkleLeaf(
-                beefyMMRLeaf,
-                _beefyMMRLeafIndex,
-                _beefyMMRLeafCount,
-                _beefyMMRLeafProof
-            ),
-            "Invalid proof"
-        );
+        //TODO:
+        // require(
+        //     beefyLightClient.verifyBeefyMerkleLeaf(
+        //         beefyMMRLeaf,
+        //         _beefyMMRLeafIndex,
+        //         _beefyMMRLeafCount,
+        //         _beefyMMRLeafProof
+        //     ),
+        //     "Invalid proof"
+        // );
     }
 
     function createParachainMerkleLeaf(
