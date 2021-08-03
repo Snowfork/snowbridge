@@ -35,10 +35,16 @@ type MessagePackage struct {
 	paraHeadProofWidth int
 	paraHeadProofRoot  []byte
 	mmrProof           types.GenerateMMRProofResponse
+	mmrProofLeafCount  uint64
 }
 
-func CreateMessagePackages(paraBlocks []ParaBlockWithProofs) ([]MessagePackage, error) {
+func CreateMessagePackages(paraBlocks []ParaBlockWithProofs, relaychainBlock uint64) ([]MessagePackage, error) {
 	var messagePackages []MessagePackage
+
+	// This leaf count calculation assumes that there is one mmr leaf for every relay chain block
+	// except the newest, with no pruning.
+	// TODO: verify the assumption/remove it if possible
+	mmrProofLeafCount := relaychainBlock - 1
 
 	for _, block := range paraBlocks {
 		for _, item := range block.Block.DigestItemsWithData {
@@ -54,6 +60,7 @@ func CreateMessagePackages(paraBlocks []ParaBlockWithProofs) ([]MessagePackage, 
 				block.HeaderProofWidth,
 				block.HeaderProofRoot,
 				block.MMRProofResponse,
+				mmrProofLeafCount,
 			}
 			messagePackages = append(messagePackages, messagePackage)
 		}

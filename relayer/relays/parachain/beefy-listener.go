@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
@@ -82,8 +81,8 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
-		log.WithFields(logrus.Fields{
-			"blockHash": beefyBlockHash.Hex(),
+		log.WithFields(log.Fields{
+			"blockHash":   beefyBlockHash.Hex(),
 			"blockNumber": beefyBlockNumber,
 		}).Info("Fetched latest verified polkadot block")
 
@@ -93,7 +92,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
-		log.WithFields(logrus.Fields{
+		log.WithFields(log.Fields{
 			"header.ParentHash":     paraHead.ParentHash.Hex(),
 			"header.Number":         paraHead.Number,
 			"header.StateRoot":      paraHead.StateRoot.Hex(),
@@ -110,7 +109,8 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
-		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, paraBlockNumber, paraBlockHash)
+		messagePackages, err := li.buildMissedMessagePackages(ctx,
+			beefyBlockNumber, beefyBlockHash, paraBlockNumber, paraBlockHash)
 		if err != nil {
 			log.WithError(err).Error("Failed to build missed message package")
 			return err
@@ -172,7 +172,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 
 		beefyBlockNumber := event.BlockNumber
 
-		log.WithFields(logrus.Fields{
+		log.WithFields(log.Fields{
 			"beefyBlockNumber":    beefyBlockNumber,
 			"ethereumBlockNumber": event.Raw.BlockNumber,
 			"ethereumTxHash":      event.Raw.TxHash.Hex(),
@@ -200,7 +200,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 			return err
 		}
 
-		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, paraBlockNumber, paraBlockHash)
+		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, beefyBlockHash, paraBlockNumber, paraBlockHash)
 		if err != nil {
 			log.WithError(err).Error("Failed to build missed message packages")
 			return err
@@ -214,7 +214,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 
 func (li *BeefyListener) emitMessagePackages(packages []MessagePackage) {
 	for _, messagePackage := range packages {
-		log.WithFields(logrus.Fields{
+		log.WithFields(log.Fields{
 			"channelID":             messagePackage.channelID,
 			"commitmentHash":        messagePackage.commitmentHash,
 			"commitmentData":        messagePackage.commitmentData,
