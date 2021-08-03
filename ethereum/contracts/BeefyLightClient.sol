@@ -288,6 +288,8 @@ contract BeefyLightClient {
         Commitment calldata commitment,
         ValidatorProof calldata validatorProof,
         BeefyMMRLeaf calldata latestMMRLeaf,
+        uint64 leafIndex,
+        uint64 leafCount,
         bytes32[] calldata mmrProofItems
     ) public {
         verifyCommitment(id, commitment, validatorProof);
@@ -295,7 +297,8 @@ contract BeefyLightClient {
             latestMMRLeaf,
             mmrProofItems,
             commitment.payload,
-            commitment.blockNumber
+            leafIndex,
+            leafCount
         );
 
         processPayload(commitment.payload, commitment.blockNumber);
@@ -342,7 +345,8 @@ contract BeefyLightClient {
         BeefyMMRLeaf calldata leaf,
         bytes32[] calldata proof,
         bytes32 root,
-        uint64 length
+        uint64 leafIndex,
+        uint64 leafCount
     ) public {
         bytes memory encodedLeaf = encodeMMRLeaf(leaf);
         bytes32 hashedLeaf = hashMMRLeaf(encodedLeaf);
@@ -350,8 +354,8 @@ contract BeefyLightClient {
         mmrVerification.verifyInclusionProof(
             root,
             hashedLeaf,
-            length - 1,
-            length,
+            leafIndex,
+            leafCount,
             proof
         );
     }

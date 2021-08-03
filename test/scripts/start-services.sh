@@ -111,6 +111,16 @@ start_polkadot_launch()
     scripts/wait-for-it.sh -t 120 localhost:11144
 }
 
+configure_contracts()
+{
+    echo "Configuring contracts"
+    pushd ../ethereum
+
+    npx hardhat run ./scripts/configure-beefy.ts --network localhost
+
+    popd
+}
+
 start_relayer()
 {
     echo "Starting relay services"
@@ -213,6 +223,7 @@ else
 fi
 echo "Waiting for consensus between polkadot and parachain"
 sleep 60
+configure_contracts
 start_relayer
 
 echo "Process Tree:"

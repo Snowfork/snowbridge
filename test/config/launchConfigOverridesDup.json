@@ -8,13 +8,12 @@
           "port": 31200,
           "name": "alice",
           "flags": [
-            "-lruntime=debug",
+            "-lruntime=trace,sc_basic_authorship=trace,txpool=trace",
             "--rpc-port=8081",
             "--rpc-cors=all",
             "--ws-external",
             "--rpc-external",
             "--rpc-methods=Unsafe",
-            "--offchain-worker=Always",
             "--enable-offchain-indexing=true",
             "--execution=wasm",
             "--",
@@ -44,8 +43,8 @@
       "id": "1001",
       "nodes": [
         {
-          "wsPort": 11155,
-          "port": 31201,
+          "wsPort": 11166,
+          "port": 31202,
           "name": "alice",
           "flags": [
             "-lruntime=debug",
@@ -62,8 +61,8 @@
           ]
         },
         {
-          "wsPort": 11155,
-          "port": 31201,
+          "wsPort": 11177,
+          "port": 31203,
           "name": "bob",
           "flags": [
             "-lruntime=debug",

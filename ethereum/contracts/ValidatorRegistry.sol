@@ -26,16 +26,6 @@ contract ValidatorRegistry is Ownable {
     uint256 public numOfValidators;
     uint64 public id;
 
-    constructor(
-        bytes32 _root,
-        uint256 _numOfValidators,
-        uint64 _id
-    ) {
-        root = _root;
-        numOfValidators = _numOfValidators;
-        id = _id;
-    }
-
     /**
      * @notice Updates the validator registry and number of validators
      * @param _root The new root

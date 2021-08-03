@@ -28,6 +28,8 @@ type CompleteSignatureCommitmentMessage struct {
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
 	LatestMMRLeaf                  beefylightclient.BeefyLightClientBeefyMMRLeaf
+	MMRLeafIndex                   uint64
+	MMRLeafCount                   uint64
 	MMRProofItems                  [][32]byte
 }
 
@@ -192,6 +194,8 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorPublicKeys:            validatorPublicKeys,
 		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
 		LatestMMRLeaf:                  latestMMRLeaf,
+		MMRLeafIndex:                   info.MMRLeafCount - 1,
+		MMRLeafCount:                   info.MMRLeafCount,
 		MMRProofItems:                  mmrProofItems,
 	}
 	return msg, nil

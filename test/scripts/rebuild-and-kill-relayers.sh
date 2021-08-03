@@ -42,4 +42,4 @@ jq \
 ' \
 config/ethereum-relay.json > $configdir/ethereum-relay.json
 
-kill $(ps -aux | grep -e snowbridge-relay | awk '{print $2}') || true
+kill $(ps -aux | grep -e snowbridge-relay | awk '{print $2}') -9 || true

@@ -111,6 +111,21 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				log.WithError(err).Error("Failed get MMR Leaf")
 				return err
 			}
+			mmrLeafCountKey, err := types.CreateStorageKey(li.relaychainConn.Metadata(), "MMR", "NumberOfLeaves", nil, nil)
+			if err != nil {
+				return err
+			}
+			var mmrLeafCount uint64
+
+			ok, err := li.relaychainConn.API().RPC.State.GetStorage(mmrLeafCountKey, &mmrLeafCount, blockHash)
+			if err != nil {
+				return err
+			}
+
+			if !ok || mmrLeafCount == 0 {
+				return fmt.Errorf("MMR Leaf Count Not Found")
+			}
+
 			serializedProof, err := types.EncodeToBytes(latestMMRProof)
 			if err != nil {
 				log.WithError(err).Error("Failed to serialize MMR Proof")
@@ -123,6 +138,7 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				SignedCommitment:         signedCommitmentBytes,
 				Status:                   store.CommitmentWitnessed,
 				SerializedLatestMMRProof: serializedProof,
+				MMRLeafCount:             mmrLeafCount,
 			}
 			li.beefyMessages <- info
 		}

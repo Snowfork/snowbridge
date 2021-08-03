@@ -253,6 +253,8 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		msg.Commitment,
 		validatorProof,
 		msg.LatestMMRLeaf,
+		msg.MMRLeafIndex,
+		msg.MMRLeafCount,
 		msg.MMRProofItems)
 
 	if err != nil {
