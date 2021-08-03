@@ -1,12 +1,11 @@
 require("dotenv").config();
 const hre = require("hardhat");
+let { ApiPromise, WsProvider } = require('@polkadot/api');
+let { bundle } = require("@snowfork/snowbridge-types");
 
-const SubClient = require('../../test/src/subclient').SubClient;
-
-const relaychainEndpoint = "ws://localhost:9944";
+const relaychainEndpoint = process.env.RELAYCHAIN_ENDPOINT;
 
 async function main() {
-  const [deployer] = await hre.getUnnamedAccounts();
   const signer = await hre.ethers.getSigner()
 
   const beefyDeployment = await hre.deployments.get("BeefyLightClient");
@@ -17,10 +16,13 @@ async function main() {
 
   const validatorRegistry = await validatorRegistryContract.connect(signer)
 
-  const subClient = new SubClient(relaychainEndpoint);
-  await subClient.connect();
+  const relayChainProvider = new WsProvider(relaychainEndpoint);
+  const relaychainAPI = await ApiPromise.create({
+    provider: relayChainProvider,
+    typesBundle: bundle
+  })
 
-  const authorities = await subClient.api.query.mmrLeaf.beefyNextAuthorities()
+  const authorities = await relaychainAPI.query.mmrLeaf.beefyNextAuthorities()
   const root = authorities.root.toString();
   const numValidators = authorities.len.toString();
   const id = authorities.id.toString();

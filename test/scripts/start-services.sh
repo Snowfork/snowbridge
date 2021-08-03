@@ -116,7 +116,7 @@ configure_contracts()
     echo "Configuring contracts"
     pushd ../ethereum
 
-    npx hardhat run ./scripts/configure-beefy.ts --network localhost
+    RELAYCHAIN_ENDPOINT="ws://localhost:9944" npx hardhat run ./scripts/configure-beefy.ts --network localhost
 
     popd
 }
