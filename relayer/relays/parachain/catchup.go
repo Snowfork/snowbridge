@@ -132,7 +132,7 @@ func (li *BeefyListener) buildMissedMessagePackages(
 		return nil, err
 	}
 
-	messagePackages, err := CreateMessagePackages(blocksWithProofs, mmrLeafCount)
+	messagePackages, err := CreateMessagePackages(blocksWithProofs, mmrLeafCount, li.paraID)
 	if err != nil {
 		log.WithError(err).Error("Failed to create message packages")
 		return nil, err

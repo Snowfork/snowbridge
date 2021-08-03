@@ -167,7 +167,7 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 	err := wr.logBasicTx(messages, paraheadPartial, paraHeadProof,
 		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
 		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
-		msgPackage.commitmentHash,
+		msgPackage.commitmentHash, msgPackage.paraId,
 	)
 	if err != nil {
 		log.WithError(err).Error("Failed to log transaction input")
@@ -239,7 +239,7 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	err := wr.logIncentivizedTx(messages, paraheadPartial, paraHeadProof,
 		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
 		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
-		msgPackage.commitmentHash,
+		msgPackage.commitmentHash, msgPackage.paraId,
 	)
 	if err != nil {
 		log.WithError(err).Error("Failed to log transaction input")

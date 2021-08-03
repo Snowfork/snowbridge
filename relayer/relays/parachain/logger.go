@@ -73,7 +73,7 @@ func (wr *EthereumChannelWriter) logBasicTx(
 	beefyMMRLeafPartial basic.ParachainLightClientBeefyMMRLeafPartial,
 	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte,
 	paraHead types.Header, merkleProofData MerkleProofData, mmrLeaf types.MMRLeaf,
-	commitmentHash types.H256,
+	commitmentHash types.H256, paraID uint32,
 ) error {
 
 	var basicMessagesLog []BasicInboundChannelMessageLog
@@ -123,14 +123,33 @@ func (wr *EthereumChannelWriter) logBasicTx(
 
 	mmrLeafEncoded, _ := types.EncodeToBytes(mmrLeaf)
 	mmrLeafOpaqueEncoded, _ := types.EncodeToHexString(mmrLeafEncoded)
-	paraHeadEncoded, _ := types.EncodeToHexString(paraHead)
+	scaleParaId, _ := types.EncodeToHexString(paraID)
+	scaleParaHead, _ := types.EncodeToHexString(paraHead)
+	scaleParaHeadParentHash, _ := types.EncodeToHexString(paraHead.ParentHash)
+	scaleparaHeadNumber, _ := types.EncodeToHexString(paraHead.Number)
+	scaleparaHeadStateRoot, _ := types.EncodeToHexString(paraHead.StateRoot)
+	scaleparaHeadExtrinsicsRoot, _ := types.EncodeToHexString(paraHead.ExtrinsicsRoot)
+	scaleparaHeadDigest, _ := types.EncodeToHexString(paraHead.Digest)
+	var scaleDigestItems []string
+	for _, item := range paraHead.Digest {
+		scaleDigestItem, _ := types.EncodeToHexString(item)
+		scaleDigestItems = append(scaleDigestItems, scaleDigestItem)
+	}
+
 	log.WithFields(log.Fields{
-		"input":                    string(b),
-		"commitmentHash":           "0x" + hex.EncodeToString(commitmentHash[:]),
-		"paraHeadEncoded":          paraHeadEncoded,
-		"merkleProofData":          merkleProofData,
-		"paraHeadProofRootMMRLeaf": "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
-		"mmrLeafOpaqueEncoded":     mmrLeafOpaqueEncoded,
+		"input":                       string(b),
+		"commitmentHash":              "0x" + hex.EncodeToString(commitmentHash[:]),
+		"paraHeadProofRootMMRLeaf":    "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
+		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
+		"merkleProofData":             merkleProofData,
+		"scaleParaId":                 scaleParaId,
+		"scaleParaHead":               scaleParaHead,
+		"scaleParaHeadParentHash":     scaleParaHeadParentHash,
+		"scaleparaHeadNumber":         scaleparaHeadNumber,
+		"scaleparaHeadStateRoot":      scaleparaHeadStateRoot,
+		"scaleparaHeadExtrinsicsRoot": scaleparaHeadExtrinsicsRoot,
+		"scaleparaHeadDigest":         scaleparaHeadDigest,
+		"scaleDigestItems":            scaleDigestItems,
 	}).Info("Submitting tx")
 	return nil
 }
@@ -142,7 +161,7 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	beefyMMRLeafPartial incentivized.ParachainLightClientBeefyMMRLeafPartial,
 	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte,
 	paraHead types.Header, merkleProofData MerkleProofData, mmrLeaf types.MMRLeaf,
-	commitmentHash types.H256,
+	commitmentHash types.H256, paraID uint32,
 ) error {
 	var incentivizedMessagesLog []IncentivizedInboundChannelMessageLog
 	for _, item := range messages {
@@ -193,14 +212,33 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 
 	mmrLeafEncoded, _ := types.EncodeToBytes(mmrLeaf)
 	mmrLeafOpaqueEncoded, _ := types.EncodeToHexString(mmrLeafEncoded)
-	paraHeadEncoded, _ := types.EncodeToHexString(paraHead)
+	scaleParaId, _ := types.EncodeToHexString(paraID)
+	scaleParaHead, _ := types.EncodeToHexString(paraHead)
+	scaleParaHeadParentHash, _ := types.EncodeToHexString(paraHead.ParentHash)
+	scaleparaHeadNumber, _ := types.EncodeToHexString(paraHead.Number)
+	scaleparaHeadStateRoot, _ := types.EncodeToHexString(paraHead.StateRoot)
+	scaleparaHeadExtrinsicsRoot, _ := types.EncodeToHexString(paraHead.ExtrinsicsRoot)
+	scaleparaHeadDigest, _ := types.EncodeToHexString(paraHead.Digest)
+	var scaleDigestItems []string
+	for _, item := range paraHead.Digest {
+		scaleDigestItem, _ := types.EncodeToHexString(item)
+		scaleDigestItems = append(scaleDigestItems, scaleDigestItem)
+	}
+
 	log.WithFields(log.Fields{
-		"input":                    string(b),
-		"commitmentHash":           "0x" + hex.EncodeToString(commitmentHash[:]),
-		"paraHeadEncoded":          paraHeadEncoded,
-		"merkleProofData":          merkleProofData,
-		"paraHeadProofRootMMRLeaf": "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
-		"mmrLeafOpaqueEncoded":     mmrLeafOpaqueEncoded,
+		"input":                       string(b),
+		"commitmentHash":              "0x" + hex.EncodeToString(commitmentHash[:]),
+		"paraHeadProofRootMMRLeaf":    "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
+		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
+		"merkleProofData":             merkleProofData,
+		"scaleParaId":                 scaleParaId,
+		"scaleParaHead":               scaleParaHead,
+		"scaleParaHeadParentHash":     scaleParaHeadParentHash,
+		"scaleparaHeadNumber":         scaleparaHeadNumber,
+		"scaleparaHeadStateRoot":      scaleparaHeadStateRoot,
+		"scaleparaHeadExtrinsicsRoot": scaleparaHeadExtrinsicsRoot,
+		"scaleparaHeadDigest":         scaleparaHeadDigest,
+		"scaleDigestItems":            scaleDigestItems,
 	}).Info("Submitting tx")
 
 	return nil

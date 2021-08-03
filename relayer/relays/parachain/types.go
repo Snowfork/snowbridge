@@ -30,9 +30,10 @@ type MessagePackage struct {
 	merkleProofData   MerkleProofData
 	mmrProof          types.GenerateMMRProofResponse
 	mmrProofLeafCount uint64
+	paraId            uint32
 }
 
-func CreateMessagePackages(paraBlocks []ParaBlockWithProofs, mmrLeafCount uint64) ([]MessagePackage, error) {
+func CreateMessagePackages(paraBlocks []ParaBlockWithProofs, mmrLeafCount uint64, paraID uint32) ([]MessagePackage, error) {
 	var messagePackages []MessagePackage
 
 	for _, block := range paraBlocks {
@@ -47,6 +48,7 @@ func CreateMessagePackages(paraBlocks []ParaBlockWithProofs, mmrLeafCount uint64
 				block.MerkleProofData,
 				block.MMRProofResponse,
 				mmrLeafCount,
+				paraID,
 			}
 			messagePackages = append(messagePackages, messagePackage)
 		}
