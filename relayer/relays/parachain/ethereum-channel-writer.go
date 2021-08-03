@@ -151,10 +151,23 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 	if len(prefixSuffix) != 2 {
 		return errors.New("error splitting parachain header into prefix and suffix")
 	}
+	paraIDHex, err := gsrpcTypes.EncodeToHexString(msgPackage.paraId)
+	if err != nil {
+		return err
+	}
+	prefixWithoutParaID := strings.TrimPrefix(prefixSuffix[0], strings.TrimPrefix(paraIDHex, "0x"))
+	prefix, err := hex.DecodeString(prefixWithoutParaID)
+	if err != nil {
+		return err
+	}
+	suffix, err := hex.DecodeString(prefixSuffix[1])
+	if err != nil {
+		return err
+	}
 
 	paraVerifyInput := basic.ParachainLightClientParachainVerifyInput{
-		OwnParachainHeadPrefixBytes: []byte(prefixSuffix[0]),
-		OwnParachainHeadSuffixBytes: []byte(prefixSuffix[1]),
+		OwnParachainHeadPrefixBytes: prefix,
+		OwnParachainHeadSuffixBytes: suffix,
 		ParachainHeadProof:          paraHeadProof,
 	}
 
@@ -177,7 +190,7 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
 
-	err := wr.logBasicTx(messages, paraVerifyInput,
+	err = wr.logBasicTx(messages, paraVerifyInput,
 		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
 		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
 		msgPackage.commitmentHash, msgPackage.paraId,
@@ -233,10 +246,23 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	if len(prefixSuffix) != 2 {
 		return errors.New("error splitting parachain header into prefix and suffix")
 	}
+	paraIDHex, err := gsrpcTypes.EncodeToHexString(msgPackage.paraId)
+	if err != nil {
+		return err
+	}
+	prefixWithoutParaID := strings.TrimPrefix(prefixSuffix[0], strings.TrimPrefix(paraIDHex, "0x"))
+	prefix, err := hex.DecodeString(prefixWithoutParaID)
+	if err != nil {
+		return err
+	}
+	suffix, err := hex.DecodeString(prefixSuffix[1])
+	if err != nil {
+		return err
+	}
 
 	paraVerifyInput := incentivized.ParachainLightClientParachainVerifyInput{
-		OwnParachainHeadPrefixBytes: []byte(prefixSuffix[0]),
-		OwnParachainHeadSuffixBytes: []byte(prefixSuffix[1]),
+		OwnParachainHeadPrefixBytes: prefix,
+		OwnParachainHeadSuffixBytes: suffix,
 		ParachainHeadProof:          paraHeadProof,
 	}
 
@@ -258,7 +284,7 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
 
-	err := wr.logIncentivizedTx(messages, paraVerifyInput,
+	err = wr.logIncentivizedTx(messages, paraVerifyInput,
 		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
 		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
 		msgPackage.commitmentHash, msgPackage.paraId,
