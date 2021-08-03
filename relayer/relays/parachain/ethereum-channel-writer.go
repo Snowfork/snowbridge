@@ -2,7 +2,10 @@ package parachain
 
 import (
 	"context"
+	"encoding/hex"
+	"errors"
 	"math/big"
+	"strings"
 
 	"golang.org/x/sync/errgroup"
 
@@ -135,12 +138,26 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		)
 	}
 
-	paraheadPartial := basic.ParachainLightClientOwnParachainHeadPartial{
-		ParentHash:     msgPackage.paraHead.ParentHash,
-		Number:         uint32(msgPackage.paraHead.Number),
-		StateRoot:      msgPackage.paraHead.StateRoot,
-		ExtrinsicsRoot: msgPackage.paraHead.ExtrinsicsRoot,
+	paraHeadProof := basic.ParachainLightClientParachainHeadProof{
+		Pos:   big.NewInt(int64(msgPackage.merkleProofData.ProvenLeafIndex)),
+		Width: big.NewInt(int64(msgPackage.merkleProofData.NumberOfLeaves)),
+		Proof: msgPackage.merkleProofData.Proof,
 	}
+
+	ownParachainHeadBytes := msgPackage.merkleProofData.ProvenPreLeaf
+	ownParachainHeadBytesString := hex.EncodeToString(ownParachainHeadBytes)
+	commitmentHashString := hex.EncodeToString(msgPackage.commitmentHash[:])
+	prefixSuffix := strings.Split(ownParachainHeadBytesString, commitmentHashString)
+	if len(prefixSuffix) != 2 {
+		return errors.New("error splitting parachain header into prefix and suffix")
+	}
+
+	paraVerifyInput := basic.ParachainLightClientParachainVerifyInput{
+		OwnParachainHeadPrefixBytes: []byte(prefixSuffix[0]),
+		OwnParachainHeadSuffixBytes: []byte(prefixSuffix[1]),
+		ParachainHeadProof:          paraHeadProof,
+	}
+
 	beefyMMRLeafPartial := basic.ParachainLightClientBeefyMMRLeafPartial{
 		Version:              uint8(msgPackage.mmrProof.Leaf.Version),
 		ParentNumber:         uint32(msgPackage.mmrProof.Leaf.ParentNumberAndHash.ParentNumber),
@@ -149,6 +166,7 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		NextAuthoritySetLen:  uint32(msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Len),
 		NextAuthoritySetRoot: msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Root,
 	}
+
 	// This leaf index calculation assumes that there is one mmr leaf for every relay chain block
 	// except the newest, with no pruning, such that
 	// each leaf's index in the mmr equals that leaf's ParentNumber - 1
@@ -158,13 +176,8 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 	for _, item := range msgPackage.mmrProof.Proof.Items {
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
-	paraHeadProof := basic.ParachainLightClientParachainHeadProof{
-		Pos:   big.NewInt(int64(msgPackage.merkleProofData.ProvenLeafIndex)),
-		Width: big.NewInt(int64(msgPackage.merkleProofData.NumberOfLeaves)),
-		Proof: msgPackage.merkleProofData.Proof,
-	}
 
-	err := wr.logBasicTx(messages, paraheadPartial, paraHeadProof,
+	err := wr.logBasicTx(messages, paraVerifyInput,
 		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
 		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
 		msgPackage.commitmentHash, msgPackage.paraId,
@@ -174,8 +187,8 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		return err
 	}
 
-	tx, err := wr.basicInboundChannel.Submit(options, messages, paraheadPartial,
-		paraHeadProof, beefyMMRLeafPartial,
+	tx, err := wr.basicInboundChannel.Submit(options, messages, paraVerifyInput,
+		beefyMMRLeafPartial,
 		big.NewInt(beefyMMRLeafIndex), big.NewInt(int64(msgPackage.mmrProofLeafCount)), beefyMMRProof)
 	if err != nil {
 		log.WithError(err).Error("Failed to submit transaction")
@@ -207,12 +220,26 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		)
 	}
 
-	paraheadPartial := incentivized.ParachainLightClientOwnParachainHeadPartial{
-		ParentHash:     msgPackage.paraHead.ParentHash,
-		Number:         uint32(msgPackage.paraHead.Number),
-		StateRoot:      msgPackage.paraHead.StateRoot,
-		ExtrinsicsRoot: msgPackage.paraHead.ExtrinsicsRoot,
+	paraHeadProof := incentivized.ParachainLightClientParachainHeadProof{
+		Pos:   big.NewInt(int64(msgPackage.merkleProofData.ProvenLeafIndex)),
+		Width: big.NewInt(int64(msgPackage.merkleProofData.NumberOfLeaves)),
+		Proof: msgPackage.merkleProofData.Proof,
 	}
+
+	ownParachainHeadBytes := msgPackage.merkleProofData.ProvenPreLeaf
+	ownParachainHeadBytesString := hex.EncodeToString(ownParachainHeadBytes)
+	commitmentHashString := hex.EncodeToString(msgPackage.commitmentHash[:])
+	prefixSuffix := strings.Split(ownParachainHeadBytesString, commitmentHashString)
+	if len(prefixSuffix) != 2 {
+		return errors.New("error splitting parachain header into prefix and suffix")
+	}
+
+	paraVerifyInput := incentivized.ParachainLightClientParachainVerifyInput{
+		OwnParachainHeadPrefixBytes: []byte(prefixSuffix[0]),
+		OwnParachainHeadSuffixBytes: []byte(prefixSuffix[1]),
+		ParachainHeadProof:          paraHeadProof,
+	}
+
 	beefyMMRLeafPartial := incentivized.ParachainLightClientBeefyMMRLeafPartial{
 		Version:              uint8(msgPackage.mmrProof.Leaf.Version),
 		ParentNumber:         uint32(msgPackage.mmrProof.Leaf.ParentNumberAndHash.ParentNumber),
@@ -230,13 +257,8 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	for _, item := range msgPackage.mmrProof.Proof.Items {
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
-	paraHeadProof := incentivized.ParachainLightClientParachainHeadProof{
-		Pos:   big.NewInt(int64(msgPackage.merkleProofData.ProvenLeafIndex)),
-		Width: big.NewInt(int64(msgPackage.merkleProofData.NumberOfLeaves)),
-		Proof: msgPackage.merkleProofData.Proof,
-	}
 
-	err := wr.logIncentivizedTx(messages, paraheadPartial, paraHeadProof,
+	err := wr.logIncentivizedTx(messages, paraVerifyInput,
 		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
 		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
 		msgPackage.commitmentHash, msgPackage.paraId,
@@ -247,8 +269,7 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	}
 
 	tx, err := wr.incentivizedInboundChannel.Submit(options, messages,
-		paraheadPartial,
-		paraHeadProof, beefyMMRLeafPartial,
+		paraVerifyInput, beefyMMRLeafPartial,
 		big.NewInt(beefyMMRLeafIndex), big.NewInt(int64(msgPackage.mmrProofLeafCount)), beefyMMRProof)
 	if err != nil {
 		log.WithError(err).Error("Failed to submit transaction")
