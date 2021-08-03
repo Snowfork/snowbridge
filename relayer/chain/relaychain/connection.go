@@ -106,9 +106,9 @@ func (co *Connection) GetMMRLeafForBlock(
 }
 
 type ParaHead struct {
-	LeafIndex  int // order in which this head was returned from the storage query
-	ParaID uint32
-	Data   types.Bytes
+	LeafIndex int // order in which this head was returned from the storage query
+	ParaID    uint32
+	Data      types.Bytes
 }
 
 // Offset of encoded para id in storage key.
@@ -128,9 +128,9 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 	}
 
 	log.WithFields(logrus.Fields{
-		"numKeys": len(keys),
+		"numKeys":          len(keys),
 		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
-		"block": blockHash.Hex(),
+		"block":            blockHash.Hex(),
 	}).Debug("Found keys for Paras.Heads storage map")
 
 	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
@@ -162,9 +162,9 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 			}
 
 			log.WithFields(logrus.Fields{
-				"ParaID": paraID,
+				"ParaID":    paraID,
 				"LeafIndex": index,
-				"HeadData": fmt.Sprintf("%#x", headData),
+				"HeadData":  fmt.Sprintf("%#x", headData),
 			}).Debug("Processed storage key for head in Paras.Heads")
 
 			heads[paraID] = ParaHead{
@@ -180,6 +180,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 
 // ByLeafIndex implements sort.Interface based on the LeafIndex field.
 type ByLeafIndex []ParaHead
+
 func (b ByLeafIndex) Len() int           { return len(b) }
 func (b ByLeafIndex) Less(i, j int) bool { return b[i].LeafIndex < b[j].LeafIndex }
 func (b ByLeafIndex) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
@@ -197,11 +198,11 @@ func (co *Connection) AsProofInput(heads map[uint32]ParaHead) []types.Bytes {
 	sort.Sort(ByLeafIndex(headsAsSlice))
 
 	// map over slice to retrieve header data
-    data := make([]types.Bytes, 0, len(headsAsSlice))
-    for _, h := range headsAsSlice {
-        data = append(data, h.Data)
-    }
-    return data
+	data := make([]types.Bytes, 0, len(headsAsSlice))
+	for _, h := range headsAsSlice {
+		data = append(data, h.Data)
+	}
+	return data
 }
 
 func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID uint32) (*types.Header, error) {
@@ -232,4 +233,27 @@ func (co *Connection) FetchFinalizedParaHead(relayBlockhash types.Hash, paraID u
 	}
 
 	return &header, nil
+}
+
+func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, error) {
+	mmrLeafCountKey, err := types.CreateStorageKey(co.Metadata(), "Mmr", "NumberOfLeaves", nil, nil)
+	if err != nil {
+		return 0, err
+	}
+	var mmrLeafCount uint64
+
+	ok, err := co.API().RPC.State.GetStorage(mmrLeafCountKey, &mmrLeafCount, relayBlockhash)
+	if err != nil {
+		return 0, err
+	}
+
+	if !ok || mmrLeafCount == 0 {
+		return 0, fmt.Errorf("MMR Leaf Count Not Found")
+	}
+
+	log.WithFields(logrus.Fields{
+		"mmrLeafCount": mmrLeafCount,
+	}).Info("MMR Leaf Count")
+
+	return mmrLeafCount, nil
 }

@@ -125,7 +125,13 @@ func (li *BeefyListener) buildMissedMessagePackages(
 		"blocks": blocksWithProofs,
 	}).Info("Packaging these blocks and proofs")
 
-	messagePackages, err := CreateMessagePackages(blocksWithProofs, relaychainBlock)
+	mmrLeafCount, err := li.relaychainConn.FetchMMRLeafCount(relaychainBlockHash)
+	if err != nil {
+		log.WithError(err).Error("Failed get MMR Leaf Count")
+		return nil, err
+	}
+
+	messagePackages, err := CreateMessagePackages(blocksWithProofs, mmrLeafCount)
 	if err != nil {
 		log.WithError(err).Error("Failed to create message packages")
 		return nil, err
