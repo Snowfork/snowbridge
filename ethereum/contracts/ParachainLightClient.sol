@@ -50,7 +50,7 @@ library ParachainLightClient {
         // TODO - maybe can be done at application level rather than here tho
         // - for example, application can register itself with channel to get
         // the parachain id as part of the calldata to it, then we prepend
-        // it to the calldate
+        // it to the calldata
 
         // 2. Compute `ownParachainHead` by hashing the data of the `commitment` together with the contents of
         // `_ownParachainHeadPartial`
@@ -76,16 +76,15 @@ library ParachainLightClient {
 
         // 5. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
         // `_beefyMMRLeafIndex`, `_beefyMMRLeafCount` and `_beefyMMRLeafProof`
-        // TODO
-        // require(
-        //     beefyLightClient.verifyBeefyMerkleLeaf(
-        //         beefyMMRLeaf,
-        //         _beefyMMRLeafIndex,
-        //         _beefyMMRLeafCount,
-        //         _beefyMMRLeafProof
-        //     ),
-        //     "Invalid proof"
-        // );
+        require(
+            beefyLightClient.verifyBeefyMerkleLeaf(
+                beefyMMRLeaf,
+                _beefyMMRLeafIndex,
+                _beefyMMRLeafCount,
+                _beefyMMRLeafProof
+            ),
+            "Invalid proof"
+        );
     }
 
     function createParachainHeadHash(
