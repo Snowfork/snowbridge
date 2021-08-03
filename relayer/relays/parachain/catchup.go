@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
-	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -153,9 +153,8 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 	var err error
 	var blocksWithProof []ParaBlockWithProofs
 	for _, block := range blocks {
-		var allParaHeads [][]byte
 		var ownParaHead types.Header
-		var ownParaHeadLeafIndex int64
+		var heads map[uint32]relaychain.ParaHead
 
 		// Loop back over relay chain blocks to find the one that finalized the given parachain block
 		for ownParaHead.Number != types.BlockNumber(block.BlockNumber) {
@@ -187,20 +186,9 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 				return nil, err
 			}
 
-			allParaHeads = li.relaychainConn.AsProofInput(heads)
 			ownParaHead = header
-			ownParaHeadLeafIndex = heads[li.paraID].LeafIndex
 
 			relayChainBlockNumber--
-		}
-
-		log.Debug("Have inputs for proof generation")
-		for i, v := range allParaHeads {
-			log.WithFields(log.Fields{
-				"LeafIndex":        i,
-				"HeadData":         fmt.Sprintf("%#x", v),
-				"IsSnowbridgePara": int64(i) == ownParaHeadLeafIndex,
-			}).Debug("Head data")
 		}
 
 		// Note - relayChainBlockNumber will be one less than the actual block number we want
@@ -213,21 +201,19 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 			return nil, err
 		}
 
-		leaf, parasRoot, ownParaHeadProof, err := merkle.GenerateMerkleProof(allParaHeads, ownParaHeadLeafIndex)
+		merkleProofData, err := CreateParachainMerkleProof(heads, li.paraID)
 		if err != nil {
 			log.WithError(err).Error("Failed to create parachain header proof")
 			return nil, err
 		}
 
+		log.Debug("Created all parachain merkle proof data")
+
 		blockWithProof := ParaBlockWithProofs{
 			Block:            block,
 			MMRProofResponse: mmrProof,
 			Header:           ownParaHead,
-			HeaderLeaf:       leaf,
-			HeaderProof:      ownParaHeadProof,
-			HeaderProofPos:   ownParaHeadLeafIndex,
-			HeaderProofWidth: len(allParaHeads),
-			HeaderProofRoot:  parasRoot,
+			MerkleProofData:  merkleProofData,
 		}
 		blocksWithProof = append(blocksWithProof, blockWithProof)
 	}

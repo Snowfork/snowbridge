@@ -92,18 +92,15 @@ library ParachainLightClient {
             calldata _ownParachainHeadPartial,
         bytes32 commitment
     ) public pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    ParachainLightClient.OwnParachainHead(
-                        _ownParachainHeadPartial.parentHash,
-                        _ownParachainHeadPartial.number,
-                        _ownParachainHeadPartial.stateRoot,
-                        _ownParachainHeadPartial.extrinsicsRoot,
-                        commitment
-                    )
-                )
-            );
+        bytes memory scaleEncodedParachainHead = abi.encodePacked(
+            _ownParachainHeadPartial.parentHash,
+            ScaleCodec.encode32(_ownParachainHeadPartial.number),
+            _ownParachainHeadPartial.stateRoot,
+            _ownParachainHeadPartial.extrinsicsRoot,
+            commitment
+        );
+
+        return keccak256(scaleEncodedParachainHead);
     }
 
     // To scale encode the byte array, we need to prefix it

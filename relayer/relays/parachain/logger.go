@@ -72,7 +72,7 @@ func (wr *EthereumChannelWriter) logBasicTx(
 	paraHeadProof basic.ParachainLightClientParachainHeadProof,
 	beefyMMRLeafPartial basic.ParachainLightClientBeefyMMRLeafPartial,
 	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte,
-	paraHead types.Header, paraHeadLeaf []byte, paraHeadProofRoot []byte, mmrLeaf types.MMRLeaf,
+	paraHead types.Header, merkleProofData MerkleProofData, mmrLeaf types.MMRLeaf,
 	commitmentHash types.H256,
 ) error {
 
@@ -125,13 +125,12 @@ func (wr *EthereumChannelWriter) logBasicTx(
 	mmrLeafOpaqueEncoded, _ := types.EncodeToHexString(mmrLeafEncoded)
 	paraHeadEncoded, _ := types.EncodeToHexString(paraHead)
 	log.WithFields(log.Fields{
-		"input":                       string(b),
-		"commitmentHash":              "0x" + hex.EncodeToString(commitmentHash[:]),
-		"paraHeadEncoded":             paraHeadEncoded,
-		"paraHeadLeaf":                "0x" + hex.EncodeToString(paraHeadLeaf),
-		"paraHeadProofRootCalculated": "0x" + hex.EncodeToString(paraHeadProofRoot),
-		"paraHeadProofRootMMRLeaf":    "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
-		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
+		"input":                    string(b),
+		"commitmentHash":           "0x" + hex.EncodeToString(commitmentHash[:]),
+		"paraHeadEncoded":          paraHeadEncoded,
+		"merkleProofData":          merkleProofData,
+		"paraHeadProofRootMMRLeaf": "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
+		"mmrLeafOpaqueEncoded":     mmrLeafOpaqueEncoded,
 	}).Info("Submitting tx")
 	return nil
 }
@@ -142,7 +141,7 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	paraHeadProof incentivized.ParachainLightClientParachainHeadProof,
 	beefyMMRLeafPartial incentivized.ParachainLightClientBeefyMMRLeafPartial,
 	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte,
-	paraHead types.Header, paraHeadLeaf []byte, paraHeadProofRoot []byte, mmrLeaf types.MMRLeaf,
+	paraHead types.Header, merkleProofData MerkleProofData, mmrLeaf types.MMRLeaf,
 	commitmentHash types.H256,
 ) error {
 	var incentivizedMessagesLog []IncentivizedInboundChannelMessageLog
@@ -196,13 +195,12 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	mmrLeafOpaqueEncoded, _ := types.EncodeToHexString(mmrLeafEncoded)
 	paraHeadEncoded, _ := types.EncodeToHexString(paraHead)
 	log.WithFields(log.Fields{
-		"input":                       string(b),
-		"commitmentHash":              "0x" + hex.EncodeToString(commitmentHash[:]),
-		"paraHeadEncoded":             paraHeadEncoded,
-		"paraHeadLeaf":                "0x" + hex.EncodeToString(paraHeadLeaf),
-		"paraHeadProofRootCalculated": "0x" + hex.EncodeToString(paraHeadProofRoot),
-		"paraHeadProofRootMMRLeaf":    "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
-		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
+		"input":                    string(b),
+		"commitmentHash":           "0x" + hex.EncodeToString(commitmentHash[:]),
+		"paraHeadEncoded":          paraHeadEncoded,
+		"merkleProofData":          merkleProofData,
+		"paraHeadProofRootMMRLeaf": "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
+		"mmrLeafOpaqueEncoded":     mmrLeafOpaqueEncoded,
 	}).Info("Submitting tx")
 
 	return nil

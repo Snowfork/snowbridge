@@ -14,11 +14,7 @@ type ParaBlockWithProofs struct {
 	Block            ParaBlockWithDigest
 	MMRProofResponse types.GenerateMMRProofResponse
 	Header           types.Header
-	HeaderLeaf       []byte
-	HeaderProof      [][32]byte
-	HeaderProofPos   int64
-	HeaderProofWidth int
-	HeaderProofRoot  []byte
+	MerkleProofData  MerkleProofData
 }
 
 type DigestItemWithData struct {
@@ -27,17 +23,13 @@ type DigestItemWithData struct {
 }
 
 type MessagePackage struct {
-	channelID          parachain.ChannelID
-	commitmentHash     types.H256
-	commitmentData     types.StorageDataRaw
-	paraHead           types.Header
-	paraHeadLeaf       []byte
-	paraHeadProof      [][32]byte
-	paraHeadProofPos   int64
-	paraHeadProofWidth int
-	paraHeadProofRoot  []byte
-	mmrProof           types.GenerateMMRProofResponse
-	mmrProofLeafCount  uint64
+	channelID         parachain.ChannelID
+	commitmentHash    types.H256
+	commitmentData    types.StorageDataRaw
+	paraHead          types.Header
+	merkleProofData   MerkleProofData
+	mmrProof          types.GenerateMMRProofResponse
+	mmrProofLeafCount uint64
 }
 
 func CreateMessagePackages(paraBlocks []ParaBlockWithProofs, mmrLeafCount uint64) ([]MessagePackage, error) {
@@ -52,11 +44,7 @@ func CreateMessagePackages(paraBlocks []ParaBlockWithProofs, mmrLeafCount uint64
 				commitmentHash,
 				commitmentData,
 				block.Header,
-				block.HeaderLeaf,
-				block.HeaderProof,
-				block.HeaderProofPos,
-				block.HeaderProofWidth,
-				block.HeaderProofRoot,
+				block.MerkleProofData,
 				block.MMRProofResponse,
 				mmrLeafCount,
 			}

@@ -159,14 +159,14 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
 	paraHeadProof := basic.ParachainLightClientParachainHeadProof{
-		Pos:   big.NewInt(int64(msgPackage.paraHeadProofPos)),
-		Width: big.NewInt(int64(msgPackage.paraHeadProofWidth)),
-		Proof: msgPackage.paraHeadProof,
+		Pos:   big.NewInt(int64(msgPackage.merkleProofData.ProvenLeafIndex)),
+		Width: big.NewInt(int64(msgPackage.merkleProofData.NumberOfLeaves)),
+		Proof: msgPackage.merkleProofData.Proof,
 	}
 
 	err := wr.logBasicTx(messages, paraheadPartial, paraHeadProof,
 		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
-		msgPackage.paraHead, msgPackage.paraHeadLeaf, msgPackage.paraHeadProofRoot, msgPackage.mmrProof.Leaf,
+		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
 		msgPackage.commitmentHash,
 	)
 	if err != nil {
@@ -231,14 +231,14 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
 	paraHeadProof := incentivized.ParachainLightClientParachainHeadProof{
-		Pos:   big.NewInt(int64(msgPackage.paraHeadProofPos)),
-		Width: big.NewInt(int64(msgPackage.paraHeadProofWidth)),
-		Proof: msgPackage.paraHeadProof,
+		Pos:   big.NewInt(int64(msgPackage.merkleProofData.ProvenLeafIndex)),
+		Width: big.NewInt(int64(msgPackage.merkleProofData.NumberOfLeaves)),
+		Proof: msgPackage.merkleProofData.Proof,
 	}
 
 	err := wr.logIncentivizedTx(messages, paraheadPartial, paraHeadProof,
 		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
-		msgPackage.paraHead, msgPackage.paraHeadLeaf, msgPackage.paraHeadProofRoot, msgPackage.mmrProof.Leaf,
+		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
 		msgPackage.commitmentHash,
 	)
 	if err != nil {
