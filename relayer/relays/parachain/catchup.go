@@ -10,6 +10,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -152,9 +153,9 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 	var err error
 	var blocksWithProof []ParaBlockWithProofs
 	for _, block := range blocks {
-		var allParaHeads []types.Bytes
+		var allParaHeads [][]byte
 		var ownParaHead types.Header
-		var ownParaHeadLeafIndex int
+		var ownParaHeadLeafIndex int64
 
 		// Loop back over relay chain blocks to find the one that finalized the given parachain block
 		for ownParaHead.Number != types.BlockNumber(block.BlockNumber) {
@@ -198,7 +199,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 			log.WithFields(log.Fields{
 				"LeafIndex":        i,
 				"HeadData":         fmt.Sprintf("%#x", v),
-				"IsSnowbridgePara": i == ownParaHeadLeafIndex,
+				"IsSnowbridgePara": int64(i) == ownParaHeadLeafIndex,
 			}).Debug("Head data")
 		}
 
@@ -212,7 +213,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 			return nil, err
 		}
 
-		parasRoot, ownParaHeadProof, err := parachain.CreateParachainHeaderProof(allParaHeads, ownParaHead, mmrProof.Leaf.ParachainHeads)
+		leaf, parasRoot, ownParaHeadProof, err := merkle.GenerateMerkleProof(allParaHeads, ownParaHeadLeafIndex)
 		if err != nil {
 			log.WithError(err).Error("Failed to create parachain header proof")
 			return nil, err
@@ -222,6 +223,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 			Block:            block,
 			MMRProofResponse: mmrProof,
 			Header:           ownParaHead,
+			HeaderLeaf:       leaf,
 			HeaderProof:      ownParaHeadProof,
 			HeaderProofPos:   ownParaHeadLeafIndex,
 			HeaderProofWidth: len(allParaHeads),

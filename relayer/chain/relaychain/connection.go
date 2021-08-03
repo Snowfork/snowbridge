@@ -106,7 +106,7 @@ func (co *Connection) GetMMRLeafForBlock(
 }
 
 type ParaHead struct {
-	LeafIndex int // order in which this head was returned from the storage query
+	LeafIndex int64 // order in which this head was returned from the storage query
 	ParaID    uint32
 	Data      types.Bytes
 }
@@ -168,7 +168,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 			}).Debug("Processed storage key for head in Paras.Heads")
 
 			heads[paraID] = ParaHead{
-				LeafIndex: index,
+				LeafIndex: int64(index),
 				ParaID:    paraID,
 				Data:      headData,
 			}
@@ -187,7 +187,7 @@ func (b ByLeafIndex) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 
 // AsProofInput transforms heads into a slice of head datas,
 // in the original order they were returned by the Paras.Heads storage query.
-func (co *Connection) AsProofInput(heads map[uint32]ParaHead) []types.Bytes {
+func (co *Connection) AsProofInput(heads map[uint32]ParaHead) [][]byte {
 	// make a slice of values in the map
 	headsAsSlice := make([]ParaHead, 0, len(heads))
 	for _, v := range heads {
@@ -198,7 +198,7 @@ func (co *Connection) AsProofInput(heads map[uint32]ParaHead) []types.Bytes {
 	sort.Sort(ByLeafIndex(headsAsSlice))
 
 	// map over slice to retrieve header data
-	data := make([]types.Bytes, 0, len(headsAsSlice))
+	data := make([][]byte, 0, len(headsAsSlice))
 	for _, h := range headsAsSlice {
 		data = append(data, h.Data)
 	}

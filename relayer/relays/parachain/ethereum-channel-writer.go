@@ -164,8 +164,11 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		Proof: msgPackage.paraHeadProof,
 	}
 
-	err := wr.logBasicTx(messages, paraheadPartial, paraHeadProof, msgPackage.paraHeadProofRoot,
-		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof)
+	err := wr.logBasicTx(messages, paraheadPartial, paraHeadProof,
+		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
+		msgPackage.paraHead, msgPackage.paraHeadLeaf, msgPackage.paraHeadProofRoot, msgPackage.mmrProof.Leaf,
+		msgPackage.commitmentHash,
+	)
 	if err != nil {
 		log.WithError(err).Error("Failed to log transaction input")
 		return err
@@ -233,8 +236,11 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		Proof: msgPackage.paraHeadProof,
 	}
 
-	err := wr.logIncentivizedTx(messages, paraheadPartial, paraHeadProof, msgPackage.paraHeadProofRoot,
-		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof)
+	err := wr.logIncentivizedTx(messages, paraheadPartial, paraHeadProof,
+		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
+		msgPackage.paraHead, msgPackage.paraHeadLeaf, msgPackage.paraHeadProofRoot, msgPackage.mmrProof.Leaf,
+		msgPackage.commitmentHash,
+	)
 	if err != nil {
 		log.WithError(err).Error("Failed to log transaction input")
 		return err

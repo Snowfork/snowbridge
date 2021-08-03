@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 )
@@ -69,9 +70,11 @@ func (wr *EthereumChannelWriter) logBasicTx(
 	messages []basic.BasicInboundChannelMessage,
 	paraheadPartial basic.ParachainLightClientOwnParachainHeadPartial,
 	paraHeadProof basic.ParachainLightClientParachainHeadProof,
-	paraHeadProofRoot []byte,
 	beefyMMRLeafPartial basic.ParachainLightClientBeefyMMRLeafPartial,
-	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte) error {
+	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte,
+	paraHead types.Header, paraHeadLeaf []byte, paraHeadProofRoot []byte, mmrLeaf types.MMRLeaf,
+	commitmentHash types.H256,
+) error {
 
 	var basicMessagesLog []BasicInboundChannelMessageLog
 	for _, item := range messages {
@@ -118,9 +121,17 @@ func (wr *EthereumChannelWriter) logBasicTx(
 		return err
 	}
 
+	mmrLeafEncoded, _ := types.EncodeToBytes(mmrLeaf)
+	mmrLeafOpaqueEncoded, _ := types.EncodeToHexString(mmrLeafEncoded)
+	paraHeadEncoded, _ := types.EncodeToHexString(paraHead)
 	log.WithFields(log.Fields{
-		"input":                    string(b),
-		"basicSubmitParaHeadsRoot": "0x" + hex.EncodeToString(paraHeadProofRoot[:]),
+		"input":                       string(b),
+		"commitmentHash":              "0x" + hex.EncodeToString(commitmentHash[:]),
+		"paraHeadEncoded":             paraHeadEncoded,
+		"paraHeadLeaf":                "0x" + hex.EncodeToString(paraHeadLeaf),
+		"paraHeadProofRootCalculated": "0x" + hex.EncodeToString(paraHeadProofRoot),
+		"paraHeadProofRootMMRLeaf":    "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
+		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
 	}).Info("Submitting tx")
 	return nil
 }
@@ -129,10 +140,11 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	messages []incentivized.IncentivizedInboundChannelMessage,
 	paraheadPartial incentivized.ParachainLightClientOwnParachainHeadPartial,
 	paraHeadProof incentivized.ParachainLightClientParachainHeadProof,
-	paraHeadProofRoot []byte,
 	beefyMMRLeafPartial incentivized.ParachainLightClientBeefyMMRLeafPartial,
-	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte) error {
-
+	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte,
+	paraHead types.Header, paraHeadLeaf []byte, paraHeadProofRoot []byte, mmrLeaf types.MMRLeaf,
+	commitmentHash types.H256,
+) error {
 	var incentivizedMessagesLog []IncentivizedInboundChannelMessageLog
 	for _, item := range messages {
 		incentivizedMessagesLog = append(incentivizedMessagesLog, IncentivizedInboundChannelMessageLog{
@@ -180,9 +192,18 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 		return err
 	}
 
+	mmrLeafEncoded, _ := types.EncodeToBytes(mmrLeaf)
+	mmrLeafOpaqueEncoded, _ := types.EncodeToHexString(mmrLeafEncoded)
+	paraHeadEncoded, _ := types.EncodeToHexString(paraHead)
 	log.WithFields(log.Fields{
-		"input":                           string(b),
-		"incentivizedSubmitParaHeadsRoot": "0x" + hex.EncodeToString(paraHeadProofRoot[:]),
+		"input":                       string(b),
+		"commitmentHash":              "0x" + hex.EncodeToString(commitmentHash[:]),
+		"paraHeadEncoded":             paraHeadEncoded,
+		"paraHeadLeaf":                "0x" + hex.EncodeToString(paraHeadLeaf),
+		"paraHeadProofRootCalculated": "0x" + hex.EncodeToString(paraHeadProofRoot),
+		"paraHeadProofRootMMRLeaf":    "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
+		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
 	}).Info("Submitting tx")
+
 	return nil
 }

@@ -14,8 +14,9 @@ type ParaBlockWithProofs struct {
 	Block            ParaBlockWithDigest
 	MMRProofResponse types.GenerateMMRProofResponse
 	Header           types.Header
+	HeaderLeaf       []byte
 	HeaderProof      [][32]byte
-	HeaderProofPos   int
+	HeaderProofPos   int64
 	HeaderProofWidth int
 	HeaderProofRoot  []byte
 }
@@ -30,8 +31,9 @@ type MessagePackage struct {
 	commitmentHash     types.H256
 	commitmentData     types.StorageDataRaw
 	paraHead           types.Header
+	paraHeadLeaf       []byte
 	paraHeadProof      [][32]byte
-	paraHeadProofPos   int
+	paraHeadProofPos   int64
 	paraHeadProofWidth int
 	paraHeadProofRoot  []byte
 	mmrProof           types.GenerateMMRProofResponse
@@ -50,6 +52,7 @@ func CreateMessagePackages(paraBlocks []ParaBlockWithProofs, mmrLeafCount uint64
 				commitmentHash,
 				commitmentData,
 				block.Header,
+				block.HeaderLeaf,
 				block.HeaderProof,
 				block.HeaderProofPos,
 				block.HeaderProofWidth,

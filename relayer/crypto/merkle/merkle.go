@@ -7,7 +7,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
+
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 )
 
 // Position constants are used in merkle path nodes to denote
@@ -226,4 +229,33 @@ func Prove(preLeaf, root []byte, path []*Node, h Hasher) bool {
 	}
 
 	return hex.EncodeToString(hash) == hex.EncodeToString(root)
+}
+
+func GenerateMerkleProof(inputPreLeaves [][]byte, leafIndex int64) ([]byte, []byte, [][32]byte, error) {
+	// Create the tree
+	tree := NewTree()
+	tree.Hash(inputPreLeaves, &keccak.Keccak256{})
+
+	root := tree.Root()
+
+	// Generate Merkle Proof for leaf at index leafIndex
+	proof := tree.MerklePath(inputPreLeaves[leafIndex])
+
+	// Verify the proof
+	verified := Prove(inputPreLeaves[leafIndex], root, proof, &keccak.Keccak256{})
+	if !verified {
+		return nil, nil, nil, fmt.Errorf("failed to verify proof")
+	}
+
+	proofContents := make([][32]byte, len(proof))
+	for i, node := range proof {
+		var hash32Byte [32]byte
+		copy(hash32Byte[:], node.Hash)
+		proofContents[i] = hash32Byte
+	}
+
+	hasher := &keccak.Keccak256{}
+	leaf := hasher.Hash(inputPreLeaves[leafIndex])
+
+	return leaf, root, proofContents, nil
 }

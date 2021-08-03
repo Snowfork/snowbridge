@@ -1,13 +1,12 @@
 package store
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
@@ -46,12 +45,12 @@ func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment
 }
 
 func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int64, initialBitfield []*big.Int) (NewSignatureCommitmentMessage, error) {
-	commitmentHash := (&Keccak256{}).Hash(b.SignedCommitment.Commitment.Bytes())
+	commitmentHash := (&keccak.Keccak256{}).Hash(b.SignedCommitment.Commitment.Bytes())
 
 	var commitmentHash32 [32]byte
 	copy(commitmentHash32[:], commitmentHash[0:32])
 
-	sig0ProofContents, err := b.GenerateMerkleProofOffchain(valAddrIndex)
+	sig0ProofContents, err := b.GenerateValidatorAddressProof(valAddrIndex)
 	if err != nil {
 		return NewSignatureCommitmentMessage{}, err
 	}
@@ -81,50 +80,19 @@ func BeefySigToEthSig(beefySig BeefySignature) []byte {
 	return sigValEthereum
 }
 
-// Keccak256 is the Keccak256 hashing method
-type Keccak256 struct{}
-
-// New creates a new Keccak256 hashing method
-func New() *Keccak256 {
-	return &Keccak256{}
-}
-
-// Hash generates a Keccak256 hash from a byte array
-func (h *Keccak256) Hash(data []byte) []byte {
-	hash := crypto.Keccak256(data)
-	return hash[:]
-}
-
-func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int64) ([][32]byte, error) {
+func (b *BeefyJustification) GenerateValidatorAddressProof(valAddrIndex int64) ([][32]byte, error) {
 	// Hash validator addresses for leaf input data
 	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
 	for i, valAddr := range b.ValidatorAddresses {
 		beefyTreeData[i] = valAddr.Bytes()
 	}
 
-	// Create the tree
-	beefyMerkleTree := merkle.NewTree()
-	beefyMerkleTree.Hash(beefyTreeData, &Keccak256{})
-
-	root := beefyMerkleTree.Root()
-
-	// Generate Merkle Proof for validator at index valAddrIndex
-	sigProof := beefyMerkleTree.MerklePath(beefyTreeData[valAddrIndex])
-
-	// Verify the proof
-	verified := merkle.Prove(beefyTreeData[valAddrIndex], root, sigProof, &Keccak256{})
-	if !verified {
-		return [][32]byte{}, fmt.Errorf("failed to verify proof")
+	_, _, proof, err := merkle.GenerateMerkleProof(beefyTreeData, valAddrIndex)
+	if err != nil {
+		return nil, err
 	}
 
-	sigProofContents := make([][32]byte, len(sigProof))
-	for i, node := range sigProof {
-		var hash32Byte [32]byte
-		copy(hash32Byte[:], node.Hash)
-		sigProofContents[i] = hash32Byte
-	}
-
-	return sigProofContents, nil
+	return proof, nil
 }
 
 func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyRelayInfo, bitfield string) (CompleteSignatureCommitmentMessage, error) {
@@ -152,7 +120,7 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		pubKey := b.ValidatorAddresses[validatorPosition.Int64()]
 		validatorPublicKeys = append(validatorPublicKeys, pubKey)
 
-		merkleProof, err := b.GenerateMerkleProofOffchain(validatorPosition.Int64())
+		merkleProof, err := b.GenerateValidatorAddressProof(validatorPosition.Int64())
 		if err != nil {
 			return CompleteSignatureCommitmentMessage{}, err
 		}
