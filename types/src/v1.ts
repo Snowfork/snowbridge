@@ -1,16 +1,22 @@
-import type { RegistryTypes, OverrideModuleType } from "@polkadot/types/types";
+import type { RegistryTypes, OverrideModuleType, AliasDefinition } from "@polkadot/types/types";
+
+export const alias: AliasDefinition = {
+  dispatch: {
+    MessageId: "DispatchMessageId"
+  }
+};
 
 export const types: RegistryTypes = {
   Address: "MultiAddress",
   LookupSource: "MultiAddress",
+  DispatchMessageId: {
+    channelId: "ChannelId",
+    nonce: "u64",
+  },
   ChannelId: {
     _enum: ["Basic", "Incentivized"],
   },
   MessageNonce: "u64",
-  MessageId: {
-    channelId: "ChannelId",
-    nonce: "u64",
-  },
   Message: {
     data: "Vec<u8>",
     proof: "Proof",
