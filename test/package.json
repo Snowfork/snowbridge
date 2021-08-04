@@ -22,6 +22,8 @@
     "ws": "^7.4.6"
   },
   "devDependencies": {
+    "@polkadot/util": "^7.1.1",
+    "@polkadot/util-crypto": "^7.1.1",
     "@types/node": "^16.4.2",
     "@types/yargs": "^17.0.2",
     "bn.js": "^5.2.0",
