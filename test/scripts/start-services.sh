@@ -154,7 +154,7 @@ start_relayer()
             "${relay_bin}" run beefy \
                 --config "$output_dir/beefy-relay.json" \
                 --ethereum.private-key "0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109" \
-                >>"$output_dir/beefy-relay.log" 2>&1 || true
+                >>beefy-relay.log 2>&1 || true
             sleep 20
         done
     ) &
@@ -168,7 +168,7 @@ start_relayer()
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay.json" \
                 --ethereum.private-key "0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a" \
-                >>"$output_dir/parachain-relay.log" 2>&1 || true
+                >>parachain-relay.log 2>&1 || true
             sleep 20
         done
     ) &
@@ -182,7 +182,7 @@ start_relayer()
             "${relay_bin}" run ethereum \
                 --config $output_dir/ethereum-relay.json \
                 --substrate.private-key "//Relay" \
-                >>"$output_dir/ethereum-relay.log" 2>&1 || true
+                >>ethereum-relay.log 2>&1 || true
             sleep 20
         done
     ) &
