@@ -1,0 +1,28 @@
+{
+    "source": {
+        "ethereum": {
+            "endpoint": "ws://localhost:8546"
+        },
+        "polkadot": {
+            "endpoint": "ws://localhost:9944"
+        },
+        "parachain": {
+            "endpoint": "ws://localhost:11144"
+        },
+        "contracts": {
+            "BeefyLightClient": null,
+            "BasicInboundChannel": null,
+            "IncentivizedInboundChannel": null
+        }
+    },
+    "sink": {
+        "ethereum": {
+            "endpoint": "ws://localhost:8546",
+            "gas-limit": 5000000
+        },
+        "contracts": {
+            "BasicInboundChannel": null,
+            "IncentivizedInboundChannel": null
+        }
+    }
+}

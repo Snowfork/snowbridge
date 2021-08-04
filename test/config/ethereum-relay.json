@@ -1,0 +1,18 @@
+{
+  "source": {
+    "data-dir": "/tmp/snowbridge-e2e-config",
+    "ethereum": {
+      "endpoint": "ws://localhost:8546"
+    },
+    "descendants-until-final": 3,
+    "contracts": {
+      "BasicOutboundChannel": null,
+      "IncentivizedOutboundChannel": null
+    }
+  },
+  "sink": {
+    "parachain": {
+      "endpoint": "ws://localhost:11144"
+    }
+  }
+}

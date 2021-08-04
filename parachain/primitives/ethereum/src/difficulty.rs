@@ -13,8 +13,10 @@ pub enum BombDelay {
 	Byzantium = 3000000,
 	// See https://eips.ethereum.org/EIPS/eip-1234
 	Constantinople = 5000000,
-	// // See https://eips.ethereum.org/EIPS/eip-2384
+	// See https://eips.ethereum.org/EIPS/eip-2384
 	MuirGlacier = 9000000,
+	// See https://eips.ethereum.org/EIPS/eip-3554
+	London = 9700000,
 }
 
 /// Describes when hard forks occurred that affect difficulty calculations. These
@@ -27,30 +29,36 @@ pub struct DifficultyConfig {
 	pub constantinople_fork_block: u64,
 	// Block number on which MuirGlacier (EIP-2384) activated
 	pub muir_glacier_fork_block: u64,
+	// Block number on which London (EIP-3554) activated
+	pub london_fork_block: u64,
 }
 
 impl DifficultyConfig {
 
 	// Correct block numbers for mainnet and various testnets can be found here:
 	// https://github.com/ethereum/go-ethereum/blob/498458b4102c0d32d7453035a115e6b9df5e485d/params/config.go#L55-L258
-	pub fn mainnet() -> Self {
+	pub const fn mainnet() -> Self {
 		DifficultyConfig {
 			byzantium_fork_block: 4370000,
 			constantinople_fork_block: 7280000,
 			muir_glacier_fork_block: 9200000,
+			london_fork_block: 12965000
 		}
 	}
 
-	pub fn ropsten() -> Self {
+	pub const fn ropsten() -> Self {
 		DifficultyConfig {
 			byzantium_fork_block: 1700000,
 			constantinople_fork_block: 4230000,
 			muir_glacier_fork_block: 7117117,
+			london_fork_block: 10499401
 		}
 	}
 
 	pub fn bomb_delay(&self, block_number: u64) -> Option<BombDelay> {
-		if block_number >= self.muir_glacier_fork_block {
+		if block_number >= self.london_fork_block {
+			return Some(BombDelay::London);
+		} else if block_number >= self.muir_glacier_fork_block {
 			return Some(BombDelay::MuirGlacier);
 		} else if block_number >= self.constantinople_fork_block {
 			return Some(BombDelay::Constantinople);
@@ -214,6 +222,7 @@ mod tests {
 			byzantium_fork_block: 0,
 			constantinople_fork_block: u64::max_value(),
 			muir_glacier_fork_block: u64::max_value(),
+			london_fork_block: u64::max_value(),
 		};
 		test_difficulty!("difficultyByzantium.json", all_blocks_are_byzantium);
 	}
@@ -224,6 +233,7 @@ mod tests {
 			byzantium_fork_block: 0,
 			constantinople_fork_block: 0,
 			muir_glacier_fork_block: u64::max_value(),
+			london_fork_block: u64::max_value(),
 		};
 		test_difficulty!("difficultyConstantinople.json", all_blocks_are_constantinople);
 	}
@@ -234,6 +244,7 @@ mod tests {
 			byzantium_fork_block: 0,
 			constantinople_fork_block: 0,
 			muir_glacier_fork_block: 0,
+			london_fork_block: u64::max_value(),
 		};
 		test_difficulty!("difficultyEIP2384.json", all_blocks_are_muir_glacier);
 		test_difficulty!("difficultyEIP2384_random.json", all_blocks_are_muir_glacier);

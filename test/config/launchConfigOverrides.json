@@ -8,15 +8,14 @@
           "port": 31200,
           "name": "alice",
           "flags": [
-            "-lruntime=debug",
+            "-lruntime=trace,sc_basic_authorship=trace,txpool=trace",
             "--rpc-port=8081",
             "--rpc-cors=all",
             "--ws-external",
             "--rpc-external",
             "--rpc-methods=Unsafe",
-            "--offchain-worker=Always",
             "--enable-offchain-indexing=true",
-            "--execution=native",
+            "--execution=wasm",
             "--",
             "--execution=wasm"
           ]
@@ -26,15 +25,14 @@
           "port": 31201,
           "name": "bob",
           "flags": [
-            "-lruntime=debug",
+            "-lruntime=trace,sc_basic_authorship=trace,txpool=trace",
             "--rpc-port=8082",
             "--rpc-cors=all",
             "--ws-external",
             "--rpc-external",
             "--rpc-methods=Unsafe",
-            "--offchain-worker=Always",
             "--enable-offchain-indexing=true",
-            "--execution=native",
+            "--execution=wasm",
             "--",
             "--execution=wasm"
           ]

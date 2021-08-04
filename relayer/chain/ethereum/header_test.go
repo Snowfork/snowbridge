@@ -13,7 +13,7 @@ import (
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/snowfork/ethashproof"
 	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -114,7 +114,7 @@ func TestHeader_EncodeDecode11090290(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 135, 16, 166, 202, 64, 193, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 132, 160, 190, 58, 223, 176, 8, 123, 230, 43,
 		40, 183, 22, 226, 205, 243, 199, 147, 41, 223, 92, 170, 4, 201, 238, 224, 53, 211, 91, 93, 82,
-		16, 40, 21, 36, 136, 105, 53, 187, 231, 182, 60, 79, 142,
+		16, 40, 21, 36, 136, 105, 53, 187, 231, 182, 60, 79, 142, 0,
 	}
 
 	header, err := ethereum.MakeHeaderData(&gethHeader)

@@ -24,6 +24,7 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
 5. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
 6. `jq` - https://stedolan.github.io/jq/download/
 7. Build the `@snowfork/snowbridge-types` package using these [steps](../types/README.md#development).
+8. geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
 
 ## Setup
 

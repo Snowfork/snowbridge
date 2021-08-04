@@ -8,7 +8,7 @@ import (
 	"github.com/wealdtech/go-merkletree"
 )
 
-func CreateParachainHeaderProof(allParaHeads []types.Bytes, ourParaHead types.Header, expectedRoot types.H256) (
+func CreateParachainHeaderProof(allParaHeads []types.Bytes, ourParaHead types.Header, _ types.H256) (
 	[]byte, [][32]byte, error) {
 	ourParaHeadBytes, err := types.EncodeToBytes(ourParaHead)
 	if err != nil {

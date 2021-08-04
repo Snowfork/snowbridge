@@ -13,8 +13,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
 )
-
-const MaxWatchedExtrinsics = 20
+const MaxWatchedExtrinsics = 10
 
 type ExtrinsicPool struct {
 	sync.Mutex
@@ -57,7 +56,7 @@ func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 			return fmt.Errorf("Context was canceled. Stopping extrinsic monitoring")
 
 		case status := <-sub.Chan():
-			if status.IsDropped || status.IsInvalid {
+			if status.IsDropped || status.IsInvalid || status.IsUsurped {
 				// Indicates that the extrinsic wasn't processed. We expect the Substrate txpool to be
 				// stuck until this nonce is successfully provided. But it might be provided without this
 				// relayer's intervention, e.g. if an internal Substrate mechanism re-introduces it to the
@@ -70,7 +69,7 @@ func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 				}).Debug("Extrinsic failed to be processed")
 
 				// Back off for ~1 block to give the txpool time to resolve any backlog
-				time.Sleep(time.Second * 6)
+				time.Sleep(time.Second * 12)
 
 				ep.Lock()
 				if nonce <= ep.maxNonce {
@@ -93,7 +92,7 @@ func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 				}
 				sub = newSub
 
-			} else if !status.IsReady && !status.IsFuture && !status.IsBroadcast {
+			} else if status.IsInBlock || status.IsFinalized {
 				// We assume all other status codes indicate that the extrinsic was processed
 				// and account nonce was incremented.
 				// See details at:

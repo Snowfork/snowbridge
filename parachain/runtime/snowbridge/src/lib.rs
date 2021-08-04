@@ -164,11 +164,11 @@ const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
 	pub const BlockHashCount: BlockNumber = 2400;
-	/// We allow for 2 seconds of compute with a 6 second average block time.
+	/// We allow for 0.5 seconds of compute with a 12 second average block time.
 	pub BlockWeights: frame_system::limits::BlockWeights = runtime_common::build_block_weights(
 		weights::constants::BlockExecutionWeight::get(),
 		weights::constants::ExtrinsicBaseWeight::get(),
-		2 * WEIGHT_PER_SECOND,
+		MAXIMUM_BLOCK_WEIGHT,
 		NORMAL_DISPATCH_RATIO,
 	);
 	pub BlockLength: frame_system::limits::BlockLength = frame_system::limits::BlockLength
@@ -561,15 +561,9 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type WeightInfo = weights::incentivized_channel_outbound_weights::WeightInfo<Runtime>;
 }
 
-pub const ROPSTEN_DIFFICULTY_CONFIG: EthereumDifficultyConfig = EthereumDifficultyConfig {
-	byzantium_fork_block: 1700000,
-	constantinople_fork_block: 4230000,
-	muir_glacier_fork_block: 7117117,
-};
-
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 3;
-	pub const DifficultyConfig: EthereumDifficultyConfig = ROPSTEN_DIFFICULTY_CONFIG;
+	pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::mainnet();
 	pub const VerifyPoW: bool = true;
 }
 

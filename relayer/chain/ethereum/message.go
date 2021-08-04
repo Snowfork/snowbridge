@@ -13,11 +13,13 @@ import (
 	etrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+
+	log "github.com/sirupsen/logrus"
 )
 
-func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, receiptsTrie *etrie.Trie, log *logrus.Entry) (*chain.EthereumOutboundMessage, error) {
+func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, receiptsTrie *etrie.Trie) (*chain.EthereumOutboundMessage, error) {
 	// RLP encode event log's Address, Topics, and Data
 	var buf bytes.Buffer
 	err := event.EncodeRLP(&buf)

@@ -5,25 +5,27 @@ package ethereum
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/crypto/secp256k1"
+	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Connection struct {
 	endpoint string
 	kp       *secp256k1.Keypair
 	client   *ethclient.Client
-	log      *logrus.Entry
+	chainID  *big.Int
 }
 
-func NewConnection(endpoint string, kp *secp256k1.Keypair, log *logrus.Entry) *Connection {
+func NewConnection(endpoint string, kp *secp256k1.Keypair) *Connection {
 	return &Connection{
 		endpoint: endpoint,
 		kp:       kp,
-		log:      log,
 	}
 }
 
@@ -38,12 +40,13 @@ func (co *Connection) Connect(ctx context.Context) error {
 		return err
 	}
 
-	co.log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"endpoint": co.endpoint,
 		"chainID":  chainID,
 	}).Info("Connected to chain")
 
 	co.client = client
+	co.chainID = chainID
 
 	return nil
 }
@@ -60,4 +63,8 @@ func (co *Connection) GetClient() *ethclient.Client {
 
 func (co *Connection) GetKP() *secp256k1.Keypair {
 	return co.kp
+}
+
+func (co *Connection) ChainID() *big.Int {
+	return co.chainID
 }

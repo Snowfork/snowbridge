@@ -8,9 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
-	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/ethereum"
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,11 +56,10 @@ func TestMessage_Proof(t *testing.T) {
 		panic("Receipt trie does not match block receipt hash")
 	}
 
-	logger, _ := test.NewNullLogger()
 	mapping := make(map[common.Address]string)
 	mapping[event5_5.Address] = "InboundChannel.submit"
 
-	msg, err := ethereum.MakeMessageFromEvent(mapping, event5_5, receiptTrie, logger.WithField("test", "ing"))
+	msg, err := ethereum.MakeMessageFromEvent(mapping, event5_5, receiptTrie)
 	assert.Nil(t, err)
 	assert.NotNil(t, msg)
 

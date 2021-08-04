@@ -1,18 +1,22 @@
-import type { OverrideBundleType, OverrideBundleDefinition } from '@polkadot/types/types';
+import type {
+  OverrideBundleType,
+  OverrideBundleDefinition,
+} from "@polkadot/types/types";
 
-import { types as v1 } from "./v1";
+import { alias, types as typesV1 } from "./v1";
 
 export const definition: OverrideBundleDefinition = {
+  alias: alias,
   types: [
     {
       minmax: [0, undefined],
-      types: v1
-    }
-  ]
-}
+      types: typesV1,
+    },
+  ],
+};
 
 export const bundle: OverrideBundleType = {
   spec: {
-    snowbridge: definition
-  }
-}
+    snowbridge: definition,
+  },
+};

@@ -30,7 +30,7 @@ const config: HardhatUserConfig = {
       accounts: {
         mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
       },
-      chainId: 344,
+      chainId: 15,
     },
     ropsten: {
       chainId: 3,

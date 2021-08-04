@@ -2,12 +2,12 @@ require("dotenv").config();
 
 import { singletons } from "@openzeppelin/test-helpers";
 
-import {HardhatRuntimeEnvironment} from "hardhat/types";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 module.exports = async ({
-    deployments,
-    getUnnamedAccounts,
-    network,
+  deployments,
+  getUnnamedAccounts,
+  network,
 }: HardhatRuntimeEnvironment) => {
   let [deployer] = await getUnnamedAccounts();
 
@@ -30,7 +30,7 @@ module.exports = async ({
 
   await deployments.deploy("DOTApp", {
     from: deployer,
-    args:[
+    args: [
       "Snowfork DOT",
       "SnowDOT",
       channels.incentivized.outbound.address,
@@ -44,9 +44,10 @@ module.exports = async ({
       }
     ],
     libraries: {
-        ScaleCodec: scaleCodecLibrary.address
+      ScaleCodec: scaleCodecLibrary.address
     },
     log: true,
+    autoMine: true,
   });
 
 };

@@ -6,7 +6,7 @@ package parachain_test
 import (
 	"testing"
 
-	"github.com/snowfork/polkadot-ethereum/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/stretchr/testify/assert"
 )
 

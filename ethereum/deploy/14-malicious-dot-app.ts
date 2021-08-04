@@ -41,5 +41,6 @@ module.exports = async ({
         ScaleCodec: scaleCodecLibrary.address
     },
     log: true,
+    autoMine: true,
   });
 };

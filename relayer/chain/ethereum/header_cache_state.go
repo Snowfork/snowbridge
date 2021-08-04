@@ -100,21 +100,21 @@ type EthashproofCacheLoader interface {
 	MakeCache(epoch uint64) (*ethashproof.DatasetMerkleTreeCache, error)
 }
 
-type DefaultCacheLoader struct{
-	dataDir string
-	cacheDir string
+type DefaultCacheLoader struct {
+	DataDir  string
+	CacheDir string
 }
 
 func (d *DefaultCacheLoader) MakeCache(epoch uint64) (*ethashproof.DatasetMerkleTreeCache, error) {
-	cache, err := ethashproof.LoadCache(int(epoch), d.cacheDir)
+	cache, err := ethashproof.LoadCache(int(epoch), d.CacheDir)
 	if err != nil {
 		// Cache probably doesn't exist - create it
-		_, err := ethashproof.CalculateDatasetMerkleRoot(epoch, true, d.dataDir, d.cacheDir)
+		_, err := ethashproof.CalculateDatasetMerkleRoot(epoch, true, d.DataDir, d.CacheDir)
 		if err != nil {
 			return nil, err
 		}
 
-		return ethashproof.LoadCache(int(epoch), d.cacheDir)
+		return ethashproof.LoadCache(int(epoch), d.CacheDir)
 	}
 
 	return cache, nil
@@ -211,7 +211,7 @@ func (s *HeaderCacheState) GetReceiptTrie(ctx context.Context, hash gethCommon.H
 	}
 
 	if receiptTrie.Hash() != block.ReceiptHash() {
-		return nil, fmt.Errorf("Receipt trie does not match block receipt hash")
+		return nil, fmt.Errorf("receipt trie does not match block receipt hash")
 	}
 
 	s.blockCache.Insert(block, receiptTrie)

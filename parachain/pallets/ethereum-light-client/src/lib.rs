@@ -287,12 +287,24 @@ impl<T: Config> Module<T> {
 			Error::<T>::InvalidHeader,
 		);
 
+		log::trace!(
+			target: "import_header",
+			"Header {} passed basic verification",
+			header.number
+		);
+
 		let difficulty_config = T::DifficultyConfig::get();
 		let header_difficulty = calc_difficulty(&difficulty_config, header.timestamp, &parent)
 			.map_err(|_| Error::<T>::InvalidHeader)?;
 		ensure!(
 			header.difficulty == header_difficulty,
 			Error::<T>::InvalidHeader,
+		);
+
+		log::trace!(
+			target: "import_header",
+			"Header {} passed difficulty verification",
+			header.number
 		);
 
 		let header_mix_hash = header.mix_hash().ok_or(Error::<T>::InvalidHeader)?;
@@ -303,6 +315,12 @@ impl<T: Config> Module<T> {
 			header.number,
 			proof,
 		).map_err(|_| Error::<T>::InvalidHeader)?;
+
+		log::trace!(
+			target: "import_header",
+			"Header {} passed PoW verification",
+			header.number
+		);
 		ensure!(
 			mix_hash == header_mix_hash
 			&& U256::from(result.0) < ethash::cross_boundary(header.difficulty),
