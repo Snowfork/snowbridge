@@ -162,8 +162,8 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorPublicKeys:            validatorPublicKeys,
 		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
 		LatestMMRLeaf:                  latestMMRLeaf,
-		MMRLeafIndex:                   info.MMRLeafCount - 1,
-		MMRLeafCount:                   info.MMRLeafCount,
+		MMRLeafIndex:                   uint64(latestMMRProof.Proof.LeafIndex),
+		MMRLeafCount:                   uint64(latestMMRProof.Proof.LeafCount),
 		MMRProofItems:                  mmrProofItems,
 	}
 	return msg, nil

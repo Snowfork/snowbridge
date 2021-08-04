@@ -10,6 +10,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 )
 
 type ParaVerifyInputLog struct {
@@ -117,6 +118,7 @@ func (wr *EthereumChannelWriter) logBasicTx(
 
 	mmrLeafEncoded, _ := types.EncodeToBytes(mmrLeaf)
 	mmrLeafOpaqueEncoded, _ := types.EncodeToHexString(mmrLeafEncoded)
+	mmrLeafOpaqueEncodedBytes, _ := types.EncodeToBytes(mmrLeafEncoded)
 	scaleParaId, _ := types.EncodeToHexString(paraID)
 	scaleParaHead, _ := types.EncodeToHexString(paraHead)
 	scaleParaHeadParentHash, _ := types.EncodeToHexString(paraHead.ParentHash)
@@ -146,6 +148,15 @@ func (wr *EthereumChannelWriter) logBasicTx(
 		"scaleparaHeadDigest":         scaleparaHeadDigest,
 		"scaleDigestItems":            scaleDigestItems,
 	}).Info("Submitting tx")
+
+	hasher := &keccak.Keccak256{}
+
+	log.WithFields(log.Fields{
+		"mmrLeafOpaqueEncoded": mmrLeafOpaqueEncoded,
+		"hashedOpaqueLeaf":     "0x" + hex.EncodeToString(hasher.Hash(mmrLeafOpaqueEncodedBytes)),
+		"hashedLeaf":           "0x" + hex.EncodeToString(hasher.Hash(mmrLeafEncoded)),
+	}).Info("DAT LEAF")
+
 	return nil
 }
 
@@ -204,6 +215,7 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 
 	mmrLeafEncoded, _ := types.EncodeToBytes(mmrLeaf)
 	mmrLeafOpaqueEncoded, _ := types.EncodeToHexString(mmrLeafEncoded)
+	mmrLeafOpaqueEncodedBytes, _ := types.EncodeToBytes(mmrLeafEncoded)
 	scaleParaId, _ := types.EncodeToHexString(paraID)
 	scaleParaHead, _ := types.EncodeToHexString(paraHead)
 	scaleParaHeadParentHash, _ := types.EncodeToHexString(paraHead.ParentHash)
@@ -234,5 +246,12 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 		"scaleDigestItems":            scaleDigestItems,
 	}).Info("Submitting tx")
 
+	hasher := &keccak.Keccak256{}
+
+	log.WithFields(log.Fields{
+		"mmrLeafOpaqueEncoded": mmrLeafOpaqueEncoded,
+		"hashedOpaqueLeaf":     "0x" + hex.EncodeToString(hasher.Hash(mmrLeafOpaqueEncodedBytes)),
+		"hashedLeaf":           "0x" + hex.EncodeToString(hasher.Hash(mmrLeafEncoded)),
+	}).Info("DAT LEAF")
 	return nil
 }

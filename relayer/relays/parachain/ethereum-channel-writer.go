@@ -180,18 +180,15 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		NextAuthoritySetRoot: msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Root,
 	}
 
-	// This leaf index calculation assumes that there is one mmr leaf for every relay chain block
-	// except the newest, with no pruning, such that
-	// each leaf's index in the mmr equals that leaf's ParentNumber - 1
-	// TODO: verify the assumption/remove it if possible
-	beefyMMRLeafIndex := int64(msgPackage.mmrProof.Leaf.ParentNumberAndHash.ParentNumber) - 1
+	beefyMMRLeafIndex := msgPackage.mmrProof.Proof.LeafIndex
+	beefyMMRLeafCount := msgPackage.mmrProof.Proof.LeafCount
 	var beefyMMRProof [][32]byte
 	for _, item := range msgPackage.mmrProof.Proof.Items {
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
 
 	err = wr.logBasicTx(messages, paraVerifyInput,
-		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
+		beefyMMRLeafPartial, int64(beefyMMRLeafIndex), int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
 		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
 		msgPackage.commitmentHash, msgPackage.paraId, msgPackage.mmrRootHash,
 	)
@@ -202,7 +199,7 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 
 	tx, err := wr.basicInboundChannel.Submit(options, messages, paraVerifyInput,
 		beefyMMRLeafPartial,
-		big.NewInt(beefyMMRLeafIndex), big.NewInt(int64(msgPackage.mmrProofLeafCount)), beefyMMRProof)
+		big.NewInt(int64(beefyMMRLeafIndex)), big.NewInt(int64(beefyMMRLeafCount)), beefyMMRProof)
 	if err != nil {
 		log.WithError(err).Error("Failed to submit transaction")
 		return err
@@ -274,18 +271,15 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		NextAuthoritySetLen:  uint32(msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Len),
 		NextAuthoritySetRoot: msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Root,
 	}
-	// This leaf index calculation assumes that there is one mmr leaf for every relay chain block
-	// except the newest, with no pruning, such that
-	// each leaf's index in the mmr equals that leaf's ParentNumber - 1
-	// TODO: verify the assumption/remove it if possible
-	beefyMMRLeafIndex := int64(msgPackage.mmrProof.Leaf.ParentNumberAndHash.ParentNumber) - 1
+	beefyMMRLeafIndex := msgPackage.mmrProof.Proof.LeafIndex
+	beefyMMRLeafCount := msgPackage.mmrProof.Proof.LeafCount
 	var beefyMMRProof [][32]byte
 	for _, item := range msgPackage.mmrProof.Proof.Items {
 		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
 	}
 
 	err = wr.logIncentivizedTx(messages, paraVerifyInput,
-		beefyMMRLeafPartial, beefyMMRLeafIndex, int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
+		beefyMMRLeafPartial, int64(beefyMMRLeafIndex), int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
 		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
 		msgPackage.commitmentHash, msgPackage.paraId, msgPackage.mmrRootHash,
 	)
@@ -296,7 +290,7 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 
 	tx, err := wr.incentivizedInboundChannel.Submit(options, messages,
 		paraVerifyInput, beefyMMRLeafPartial,
-		big.NewInt(beefyMMRLeafIndex), big.NewInt(int64(msgPackage.mmrProofLeafCount)), beefyMMRProof)
+		big.NewInt(int64(beefyMMRLeafIndex)), big.NewInt(int64(beefyMMRLeafCount)), beefyMMRProof)
 	if err != nil {
 		log.WithError(err).Error("Failed to submit transaction")
 		return err
