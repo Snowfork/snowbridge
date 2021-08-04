@@ -1,6 +1,6 @@
 {
   "source": {
-    "data-dir": "/tmp/snowbridge-e2e-config",
+    "data-dir": "/tmp",
     "ethereum": {
       "endpoint": "ws://localhost:8546"
     },

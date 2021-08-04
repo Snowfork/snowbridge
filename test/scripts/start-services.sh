@@ -194,7 +194,7 @@ cleanup() {
     kill -- -"$(ps -o pgid:1= $$)"
 }
 
-trap cleanup SIGINT SIGTERM
+trap cleanup SIGINT SIGTERM EXIT
 
 if [[ -f ".env" ]]; then
     export $(<.env)
@@ -215,12 +215,12 @@ echo "Process Tree:"
 pstree -T $$
 
 sleep 3
-until grep "Syncing headers starting..." "$output_dir/ethereum-relay.log" > /dev/null; do
+until grep "Syncing headers starting..." ethereum-relay.log > /dev/null; do
     echo "Waiting for ethereum relay to generate the DAG cache. This can take up to 20 minutes."
     sleep 20
 done
 
-until grep "Done retrieving finalized headers" "$output_dir/ethereum-relay.log" > /dev/null; do
+until grep "Done retrieving finalized headers" ethereum-relay.log > /dev/null; do
     echo "Waiting for ethereum relay to sync headers..."
     sleep 5
 done

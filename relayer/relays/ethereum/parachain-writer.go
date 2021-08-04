@@ -47,9 +47,10 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 
 		log.Info("Shutting down writer...")
 		// Avoid deadlock if the listener is still trying to send to a channel
-		for range wr.payloads {
-			log.Debug("Discarded payload")
+		for len(wr.payloads) > 0 {
+			<-wr.payloads
 		}
+
 		return err
 	}
 
@@ -69,6 +70,9 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 
 	eg.Go(func() error {
 		err := wr.writeLoop(ctx)
+		for len(wr.payloads) > 0 {
+			<-wr.payloads
+		}
 		if err != nil {
 			return cancelWithError(err)
 		}

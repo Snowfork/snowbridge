@@ -8,8 +8,7 @@
         "wsPort": 9944,
         "port": 30444,
         "flags": [
-          "--enable-offchain-indexing=true",
-          "--offchain-worker=Always"
+          "--enable-offchain-indexing=true"
         ]
       },
       {
@@ -17,8 +16,15 @@
         "wsPort": 9955,
         "port": 30555,
         "flags": [
-          "--enable-offchain-indexing=true",
-          "--offchain-worker=Always"
+          "--enable-offchain-indexing=true"
+        ]
+      },
+      {
+        "name": "charlie",
+        "wsPort": 9966,
+        "port": 30666,
+        "flags": [
+          "--enable-offchain-indexing=true"
         ]
       }
     ]
