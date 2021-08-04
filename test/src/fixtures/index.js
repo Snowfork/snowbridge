@@ -13,7 +13,7 @@ const polkadotSenderSS58 = polkadotRecipientSS58;
 const treasuryAddressSS58 = "5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS";
 const ethEndpoint = 'ws://localhost:8546';
 const parachainEndpoint = 'ws://localhost:11144';
-const testNetworkID = '344';
+const testNetworkID = '15';
 
 const TestTokenAddress = TestToken.address;
 const TestToken721Address = TestToken721.address;

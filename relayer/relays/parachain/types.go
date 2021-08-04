@@ -13,6 +13,7 @@ type ParaBlockWithDigest struct {
 type ParaBlockWithProofs struct {
 	Block            ParaBlockWithDigest
 	MMRProofResponse types.GenerateMMRProofResponse
+	MMRRootHash      types.Hash
 	Header           types.Header
 	MerkleProofData  MerkleProofData
 }
@@ -29,6 +30,7 @@ type MessagePackage struct {
 	paraHead          types.Header
 	merkleProofData   MerkleProofData
 	mmrProof          types.GenerateMMRProofResponse
+	mmrRootHash       types.Hash
 	mmrProofLeafCount uint64
 	paraId            uint32
 }
@@ -47,6 +49,7 @@ func CreateMessagePackages(paraBlocks []ParaBlockWithProofs, mmrLeafCount uint64
 				block.Header,
 				block.MerkleProofData,
 				block.MMRProofResponse,
+				block.MMRRootHash,
 				mmrLeafCount,
 				paraID,
 			}

@@ -69,7 +69,7 @@ func (wr *EthereumChannelWriter) logBasicTx(
 	beefyMMRLeafPartial basic.ParachainLightClientBeefyMMRLeafPartial,
 	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte,
 	paraHead types.Header, merkleProofData MerkleProofData, mmrLeaf types.MMRLeaf,
-	commitmentHash types.H256, paraID uint32,
+	commitmentHash types.H256, paraID uint32, mmrRootHash types.Hash,
 ) error {
 
 	var basicMessagesLog []BasicInboundChannelMessageLog
@@ -135,6 +135,7 @@ func (wr *EthereumChannelWriter) logBasicTx(
 		"commitmentHash":              "0x" + hex.EncodeToString(commitmentHash[:]),
 		"paraHeadProofRootMerkleLeaf": "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
 		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
+		"mmrRootHash":                 mmrRootHash,
 		"merkleProofData":             merkleProofData,
 		"scaleParaId":                 scaleParaId,
 		"scaleParaHead":               scaleParaHead,
@@ -154,7 +155,7 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	beefyMMRLeafPartial incentivized.ParachainLightClientBeefyMMRLeafPartial,
 	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte,
 	paraHead types.Header, merkleProofData MerkleProofData, mmrLeaf types.MMRLeaf,
-	commitmentHash types.H256, paraID uint32,
+	commitmentHash types.H256, paraID uint32, mmrRootHash types.Hash,
 ) error {
 	var incentivizedMessagesLog []IncentivizedInboundChannelMessageLog
 	for _, item := range messages {
@@ -221,6 +222,7 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 		"commitmentHash":              "0x" + hex.EncodeToString(commitmentHash[:]),
 		"paraHeadProofRootMerkleLeaf": "0x" + hex.EncodeToString(mmrLeaf.ParachainHeads[:]),
 		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
+		"mmrRootHash":                 mmrRootHash,
 		"merkleProofData":             merkleProofData,
 		"scaleParaId":                 scaleParaId,
 		"scaleParaHead":               scaleParaHead,

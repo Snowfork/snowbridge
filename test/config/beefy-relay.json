@@ -1,7 +1,8 @@
 {
   "source": {
     "polkadot": {
-      "endpoint": "ws://localhost:9944"
+      "endpoint": "ws://localhost:9944",
+      "beefy-starting-block": 0
     }
   },
   "sink": {

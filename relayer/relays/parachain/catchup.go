@@ -192,13 +192,26 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 		}
 
 		// Note - relayChainBlockNumber will be one less than the actual block number we want
-		// due to the decrement at the end of the loop, but the mmr leaves are 0 indexed whereas
-		// block numbers start from 1, so we actually do want to query for the leaf at
-		// relayChainBlockNumber
-		mmrProof, err := li.relaychainConn.GetMMRLeafForBlock(uint64(relayChainBlockNumber), latestRelaychainBlockHash)
+		// due to the decrement at the end of the loop, so we add back 1
+		mmrProof, err := li.relaychainConn.GetMMRLeafForBlock(uint64(relayChainBlockNumber+1), latestRelaychainBlockHash, li.config.Polkadot.BeefyStartingBlock)
 		if err != nil {
 			log.WithError(err).Error("Failed to get mmr leaf")
 			return nil, err
+		}
+
+		mmrRootHashKey, err := types.CreateStorageKey(li.relaychainConn.Metadata(), "Mmr", "RootHash", nil, nil)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+		var mmrRootHash types.Hash
+		ok, err := li.relaychainConn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, latestRelaychainBlockHash)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+		if !ok {
+			return nil, fmt.Errorf("could not get mmr root hash")
 		}
 
 		merkleProofData, err := CreateParachainMerkleProof(heads, li.paraID)
@@ -212,6 +225,7 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 		blockWithProof := ParaBlockWithProofs{
 			Block:            block,
 			MMRProofResponse: mmrProof,
+			MMRRootHash:      mmrRootHash,
 			Header:           ownParaHead,
 			MerkleProofData:  merkleProofData,
 		}
