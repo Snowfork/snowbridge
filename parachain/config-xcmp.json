@@ -22,47 +22,94 @@
 	},
 	"parachains": [
 		{
-			"bin": "target/release/snowbridge",
-			"id": "200",
-			"wsPort": 9977,
-			"port": 30777,
-			"flags": [
-				"-lruntime=debug",
-				"--rpc-port=9980",
-				"--offchain-worker=Always",
-				"--enable-offchain-indexing=true",
-				"--execution=wasm",
-				"--",
-				"--execution=wasm"
+			"id": "1000",
+			"nodes": [
+				{
+					"wsPort": 11144,
+					"port": 31200,
+					"name": "alice",
+					"flags": [
+						"-lruntime=debug",
+						"--rpc-port=8081",
+						"--rpc-cors=all",
+						"--ws-external",
+						"--rpc-external",
+						"--rpc-methods=Unsafe",
+						"--offchain-worker=Always",
+						"--enable-offchain-indexing=true",
+						"--execution=wasm",
+						"--",
+						"--execution=wasm"
+					]
+				},
+				{
+					"wsPort": 11155,
+					"port": 31201,
+					"name": "bob",
+					"flags": [
+						"-lruntime=debug",
+						"--rpc-port=8082",
+						"--rpc-cors=all",
+						"--ws-external",
+						"--rpc-external",
+						"--rpc-methods=Unsafe",
+						"--enable-offchain-indexing=true",
+						"--execution=wasm",
+						"--",
+						"--execution=wasm"
+					]
+				}
 			]
 		},
 		{
-			"bin": "target/release/snowbridge",
-			"id": "300",
-			"wsPort": 9988,
-			"port": 30888,
-			"flags": [
-				"-lruntime=debug",
-				"--rpc-port=9990",
-				"--offchain-worker=Always",
-				"--enable-offchain-indexing=true",
-				"--execution=wasm",
-				"--",
-				"--execution=wasm"
+			"id": "1001",
+			"nodes": [
+				{
+					"wsPort": 11166,
+					"port": 31202,
+					"name": "alice",
+					"flags": [
+						"-lruntime=debug",
+						"--rpc-port=8083",
+						"--rpc-cors=all",
+						"--ws-external",
+						"--rpc-external",
+						"--rpc-methods=Unsafe",
+						"--enable-offchain-indexing=true",
+						"--execution=wasm",
+						"--",
+						"--execution=wasm"
+					]
+				},
+				{
+					"wsPort": 11177,
+					"port": 31203,
+					"name": "bob",
+					"flags": [
+						"-lruntime=debug",
+						"--rpc-port=8084",
+						"--rpc-cors=all",
+						"--ws-external",
+						"--rpc-external",
+						"--rpc-methods=Unsafe",
+						"--enable-offchain-indexing=true",
+						"--execution=wasm",
+						"--",
+						"--execution=wasm"
+					]
+				}
 			]
 		}
 	],
 	"simpleParachains": [],
 	"hrmpChannels": [
 		{
-			"sender": "200",
-			"recipient": "300",
+			"sender": 1000,
+			"recipient": 1001,
 			"maxCapacity": 8,
 			"maxMessageSize": 512
 		}
 	],
 	"types": {
-		"Address": "MultiAddress",
-		"LookupSource": "MultiAddress"
 	}
 }

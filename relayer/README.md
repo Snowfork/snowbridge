@@ -15,7 +15,6 @@ This project requires the following tools for day to day development:
 
 - [Mage](https://magefile.org/): Used for build tasks
 - [Revive](https://github.com/mgechev/revive): Used for linting instead of golint
-- [Subkey](https://substrate.dev/docs/en/knowledgebase/integrate/subkey): Used for substrate key management
 
 Please install them first.
 

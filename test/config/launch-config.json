@@ -1,14 +1,39 @@
 {
+  "relaychain": {
+    "bin": null,
+    "chain": "rococo-local",
+    "nodes": [
+      {
+        "name": "alice",
+        "wsPort": 9944,
+        "port": 30444,
+        "flags": [
+          "--enable-offchain-indexing=true",
+          "--offchain-worker=Always"
+        ]
+      },
+      {
+        "name": "bob",
+        "wsPort": 9955,
+        "port": 30555,
+        "flags": [
+          "--enable-offchain-indexing=true",
+          "--offchain-worker=Always"
+        ]
+      }
+    ]
+  },
   "parachains": [
     {
       "id": "1000",
+      "bin": null,
       "nodes": [
         {
           "wsPort": 11144,
           "port": 31200,
           "name": "alice",
           "flags": [
-            "-lruntime=trace,sc_basic_authorship=trace,txpool=trace",
+            "-lruntime=debug",
             "--rpc-port=8081",
             "--rpc-cors=all",
             "--ws-external",
@@ -25,7 +50,7 @@
           "port": 31201,
           "name": "bob",
           "flags": [
-            "-lruntime=trace,sc_basic_authorship=trace,txpool=trace",
+            "-lruntime=debug",
             "--rpc-port=8082",
             "--rpc-cors=all",
             "--ws-external",
@@ -39,5 +64,14 @@
         }
       ]
     }
-  ]
+  ],
+  "simpleParachains": [
+    {
+      "id": "1001",
+      "port": 31202,
+      "bin": null
+    }
+  ],
+  "hrmpChannels": [],
+  "types": {}
 }
