@@ -47,10 +47,4 @@ module.exports = async ({
     log: true,
   });
 
-  await deployments.deploy("TestToken721Enumerable", {
-    from: deployer,
-    args: ["Test Enum", "TESTE"],
-    log: true,
-  });
-
 };
