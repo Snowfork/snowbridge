@@ -1,67 +1,74 @@
-# E2E tests
+# Local Testnet
 
 The E2E tests run against local deployments of the parachain, relayer and ganache.
 
 ## Requirements
 
-1. Development environment for Rust and Substrate. See parachain [requirements](../parachain/README.md#requirements).
-2. Make sure you use a recent node version, e. g. with [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
+* Development environment for Rust and Substrate. See parachain [requirements](../parachain/README.md#requirements).
+* Node 14 LTS. Can install using [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
 
   ```bash
-  nvm install 14.16.1
-  nvm use 14.16.1
+  nvm install 14.17.4
+  nvm use 14.17.4
   ```
 
-3. Development environment for Ethereum smart contracts.
+* Development environment for Ethereum smart contracts.
 
   ```bash
-  yarn global add truffle
   (cd ../ethereum && yarn install)
-  cp env.template .env
   ```
 
-4. Development environment for Relayer. See relayer [requirements](../relayer/README.md#development).
-5. `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
-6. `jq` - https://stedolan.github.io/jq/download/
-7. Build the `@snowfork/snowbridge-types` package using these [steps](../types/README.md#development).
-8. geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
+* Development environment for the relay services. See relayer [requirements](../relayer/README.md#development).
+* `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
+* `jq` - https://stedolan.github.io/jq/download/
+* geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
+* sponge - Is available in the moreutils package
+
+  ```bash
+  apt install moreutils
+  ```
+
+* polkadot-launch
+
+  ```bash
+  git clone -b fix-simple-paras https://github.com/Snowfork/polkadot-launch.git
+  yarn install
+  yarn build
+  yarn global add file:$(pwd)
+  ```
 
 ## Setup
 
-Make sure to install/build all the requirements above.
+### Polkadot
 
-Download dependencies:
+* Clone the polkadot repository somewhere on your machine
+* Checkout commit `2cbce56fb`.
+* Build polkadot and the adder-collator parachain
 
+Example:
 ```bash
-yarn install
-```
-
-Install `polkadot-launch`:
-
-```bash
-yarn global add polkadot-launch
-```
-
-Build polkadot:
-
-```bash
-git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
-cd /tmp/polkadot
-git checkout release-v0.9.8
+git clone -n https://github.com/paritytech/polkadot.git
+cd /path/to/polkadot
+git checkout 2cbce56fb
 cargo build --release
-cd -
+cargo build --manifest-path parachain/test-parachains/adder/collator/Cargo.toml --release
 ```
 
-Optional: If you cloned the polkadot repo in another location, Create an `.env` file to specify the directory where you installed the polkadot binary.
+### Configure testnet
 
-```bash
-cp ./.env-example .env
+Create an `.env` file with variables that point to the binaries for polkadot and adder-collator
+
+Example:
+```
+POLKADOT_BIN=/path/to/polkadot/target/release/polkadot
+ADDER_COLLATOR_BIN=/path/to/polkadot/target/release/adder-collator
 ```
 
-Start all services (parachain, relayer, ganache, etc). We recommend adding the `duplicate` flag to create a duplicate parachain so that we have 2 different running and registered parachains for testing XCM and for testing the polkadot light client with multiple parachain headers being tracked.
+## Launch the testnet
 
+Run the following script
 ```bash
-scripts/start-services.sh duplicate
+scripts/start-services.sh
 ```
 
 Wait until the "System has been initialized" message
@@ -69,9 +76,27 @@ Wait until the "System has been initialized" message
 Go to polkadot-js and wait until the parachain has started producing blocks:
 https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A11144#/explorer
 
-You can see the relay chain by connecting to https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9955#/explorer
+You can see the relay chain by connecting to https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/explorer
 
 Confirm the block number is > 2
+
+### Troubleshooting
+
+The `start-services.sh` script writes the following logs:
+
+- Parachain nodes: /tmp/snowbridge/{alice,bob,11144,11155}.log
+- Relay services: /tmp/snowbridge/{beefy,parachain,ethereum}-relay.log
+- Geth: /tmp/snowbridge/geth.log
+
+## E2E tests
+
+### Setup
+
+Download dependencies:
+
+```bash
+yarn install
+```
 
 You should now be good to go!
 
@@ -87,10 +112,10 @@ yarn test
 We also have a test environment that tests against a malicious contract that attempts to consume infinite gas. To setup this environment, run the start-services script with the malicious flag:
 
 ```bash
-scripts/start-services.sh malicious
+TEST_MALICIOUS_APP=1 scripts/start-services.sh
 ```
 
-This will deploy and run everything as usual, but replace the erc20 app with a malicious one. Once everything is ready to go, run the tests for the malicious app:
+This will deploy and run everything as usual, but replace the dot app with a malicious one. Once everything is ready to go, run the tests for the malicious app:
 
 ```bash
 yarn test ./test/malicious-dotapp.js
@@ -98,66 +123,7 @@ yarn test ./test/malicious-dotapp.js
 
 You should see the test pass, checking that message delivery works correctly and channel functionality is still secure without being affected by the malicious app.
 
-### Manual Tests
-
-Make sure to setup the E2E stack as described above.
-
-For interacting with Substrate, open [https://polkadot.js.org/apps/](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2Flocalhost%3A11144#/explorer) in your browser (Make sure to use this link specifically).
-
-#### Locking up ETH to mint PolkaETH on Substrate
-
-Send 10 Ether to `//Alice` on Substrate:
-
-```bash
-cd ../ethereum
-truffle exec scripts/sendEth.js 10 \
-  0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d \
-  --network e2e_test
-```
-
-It should take around 10-20 seconds for Substrate to receive and process the message.
-
-In the substrate webapp (linked above), you should see an `Eth.Minted` event in the Network > Explorer view.
-
-#### Burning PolkaETH to unlock ETH on Ethereum
-
-To see the PolkaETH balance for `//Alice`:
-
-1. Navigate to Developer > Chain state > Storage
-2. Select the `assets` module in the drop-down.
-3. Select `ETH` as the AssetId
-4. Select `Alice` as the AccountId
-5. Click the `+` button
-
-![Viewing the account balance for Alice](docs/query-balance.jpeg)
-
-To burn PolkaETH and unlock ETH on Ethereum:
-
-1. Navigate to Developer > Extrinsics
-2. Select `Alice` as the AccountId
-3. Select `eth` as the module, and `burn` as the extrinsic
-4. Select `Basic` for the ChannelId
-5. Input `0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD` for the recipient
-6. Input `10000000000000000000` for the amount
-
-![Viewing the account balance for Alice](docs/burn-polkaeth.jpeg)
-
-It should take around 20 seconds for Ethereum to receive and process the message.
-
-To verify that `0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD` received 10 Ether:
-
-```bash
-cd ../ethereum
-truffle exec scripts/getEthBalance.js 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD --network e2e_test
-```
-
-## Debugging
-
-The `start-services.sh` script writes the following logs:
-
-- parachain.log
-- relayer.log
-- ganache.log
 
 ## Generating/Updating new test fixtures
+
 Test fixtures are taken by running the service in full e2e test. The relayer should log the fixture data you need (code is in [the relayer here](../relayer/workers/beefyrelayer/fixture-data-logger.go), though may require a bit of manual copy/pasting to get perfectly it in the right format.

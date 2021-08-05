@@ -9753,23 +9753,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-transfer"
-version = "0.1.1"
-dependencies = [
- "cumulus-primitives-core",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "snowbridge-core",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "xcm",
- "xcm-executor",
-]
-
-[[package]]
 name = "snowbridge-xcm-support"
 version = "0.1.0"
 dependencies = [
