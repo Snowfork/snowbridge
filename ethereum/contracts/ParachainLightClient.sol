@@ -71,16 +71,15 @@ library ParachainLightClient {
 
         // 4. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
         // `_beefyMMRLeafIndex`, `_beefyMMRLeafCount` and `_beefyMMRLeafProof`
-        //TODO:
-        // require(
-        //     beefyLightClient.verifyBeefyMerkleLeaf(
-        //         beefyMMRLeaf,
-        //         _beefyMMRLeafIndex,
-        //         _beefyMMRLeafCount,
-        //         _beefyMMRLeafProof
-        //     ),
-        //     "Invalid proof"
-        // );
+        require(
+            beefyLightClient.verifyBeefyMerkleLeaf(
+                beefyMMRLeaf,
+                _beefyMMRLeafIndex,
+                _beefyMMRLeafCount,
+                _beefyMMRLeafProof
+            ),
+            "Invalid proof"
+        );
     }
 
     function createParachainMerkleLeaf(
@@ -98,11 +97,6 @@ library ParachainLightClient {
         return keccak256(scaleEncodedParachainHead);
     }
 
-    // To scale encode the byte array, we need to prefix it
-    // with it's length. This is the expected current length of a leaf.
-    bytes2 public constant MMR_LEAF_LENGTH_SCALE_ENCODED =
-        bytes2(uint16(0xc501));
-
     function createMMRLeafHash(
         BeefyMMRLeafPartial calldata leaf,
         bytes32 parachainHeadsRoot
@@ -117,9 +111,6 @@ library ParachainLightClient {
             parachainHeadsRoot
         );
 
-        return
-            keccak256(
-                bytes.concat(MMR_LEAF_LENGTH_SCALE_ENCODED, scaleEncodedMMRLeaf)
-            );
+        return keccak256(scaleEncodedMMRLeaf);
     }
 }
