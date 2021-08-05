@@ -32,6 +32,7 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
 
   ```bash
   git clone -b fix-simple-paras https://github.com/Snowfork/polkadot-launch.git
+  yarn install
   yarn build
   yarn global add file:$(pwd)
   ```
