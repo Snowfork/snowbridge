@@ -55,13 +55,5 @@ module.exports = async ({
     log: true,
   });
 
-  const nft = await deployments.get('TestToken721Enumerable');
-  const TestNft = await ethers.getContractAt('TestToken721Enumerable', nft.address);
-  const signer = await ethers.getSigner(deployer);
-  const NftWithSigner = await TestNft.connect(signer);
-
-  for (let i = 0; i < 10; i++) {
-    let tx = await NftWithSigner.mint(developer, Date.now().toString());
-    await tx.wait();
-  }
+  
 };
