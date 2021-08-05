@@ -42,13 +42,14 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
 ### Polkadot
 
 * Clone the polkadot repository somewhere on your machine
-* Checkout the `release-v0.9.8` branch
+* Checkout commit `2cbce56fb`.
 * Build polkadot and the adder-collator parachain
 
 Example:
 ```bash
-git clone -b release-v0.9.8 https://github.com/paritytech/polkadot.git
+git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
+git checkout 2cbce56fb
 cargo build --release
 cargo build --manifest-path parachain/test-parachains/adder/collator/Cargo.toml --release
 ```
