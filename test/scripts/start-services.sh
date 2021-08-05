@@ -201,7 +201,7 @@ cleanup() {
     kill -- -"$(ps -o pgid:1= $$)"
 }
 
-trap cleanup SIGINT SIGTERM
+trap cleanup SIGINT SIGTERM EXIT
 
 start_geth
 deploy_contracts
