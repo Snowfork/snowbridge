@@ -1111,7 +1111,7 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.1.0.tgz"
   integrity sha512-TihZitscnaHNcZgXGj9zDLDyCqjziytB4tMCwXq0XimfWkAjBYyk5/pOsDbbwcavhlc79HhpTEpQcrMnPVa1mw==
 
-"@openzeppelin/test-helpers@https://github.com/Snowfork/openzeppelin-test-helpers.git":
+"@openzeppelin/test-helpers@https://github.com/Snowfork/openzeppelin-test-helpers.git#3f9c4b8":
   version "0.5.12"
   resolved "https://github.com/Snowfork/openzeppelin-test-helpers.git#3f9c4b8ab0bac4cbcfe4697aeddbcf85ac73d154"
   dependencies:
