@@ -123,8 +123,8 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 		eg.Go(func() error { return err })
 
 		// Avoid deadlock if the syncer is still trying to send a header
-		for range headersIn {
-			log.Debug("Discarded header")
+		for len(headersIn) > 0 {
+			<-headersIn
 		}
 
 		return closeWithError(err)

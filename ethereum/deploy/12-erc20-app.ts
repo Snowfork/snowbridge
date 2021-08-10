@@ -1,11 +1,11 @@
 require("dotenv").config();
 
-import {HardhatRuntimeEnvironment} from "hardhat/types";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 module.exports = async ({
-    deployments,
-    getUnnamedAccounts,
-    network,
+  deployments,
+  getUnnamedAccounts,
+  network,
 }: HardhatRuntimeEnvironment) => {
   let [deployer] = await getUnnamedAccounts();
 
@@ -24,7 +24,7 @@ module.exports = async ({
 
   await deployments.deploy("ERC20App", {
     from: deployer,
-    args:[
+    args: [
       {
         inbound: channels.basic.inbound.address,
         outbound: channels.basic.outbound.address,
@@ -35,7 +35,7 @@ module.exports = async ({
       }
     ],
     libraries: {
-        ScaleCodec: scaleCodecLibrary.address
+      ScaleCodec: scaleCodecLibrary.address
     },
     log: true,
     autoMine: true,
@@ -43,7 +43,7 @@ module.exports = async ({
 
   await deployments.deploy("TestToken", {
     from: deployer,
-    args:["Test Token", "TEST"],
+    args: ["Test Token", "TEST"],
     log: true,
   });
 
