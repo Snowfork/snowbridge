@@ -81,7 +81,7 @@ func (co *Connection) GetMMRLeafForBlock(
 	// We expect 1 mmr leaf for each block. MMR leaf indexes start from 0, but block numbers start from 1,
 	// so the mmr leaf index should be 1 less than the block number.
 	// However, some chains only started using beefy late in their existence, so there are no leafs for
-	// blocks produced before beefy was activated. We substract the block in which beefy was started on the
+	// blocks produced before beefy was activated. We subtract the block in which beefy was started on the
 	// chain to account for this.
 	leafIndex := blockNumber - beefyStartingBlock - 1
 
