@@ -122,9 +122,7 @@ func (li *BeefyListener) buildMissedMessagePackages(
 		blocksWithProofs[i], blocksWithProofs[j] = blocksWithProofs[j], blocksWithProofs[i]
 	}
 
-	log.WithFields(log.Fields{
-		"blocks": blocksWithProofs,
-	}).Info("Packaging these blocks and proofs")
+	log.Info("Packaging blocks and proofs")
 
 	mmrLeafCount, err := li.relaychainConn.FetchMMRLeafCount(relaychainBlockHash)
 	if err != nil {
@@ -175,6 +173,17 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 			log.WithFields(log.Fields{
 				"count": len(heads),
 			}).Info("Fetched para heads")
+
+			//test
+			merkleProofData, err := CreateParachainMerkleProof(heads, li.paraID)
+			if err != nil {
+				log.WithError(err).Error("Failed to create parachain header proof")
+				return nil, err
+			}
+			log.WithFields(log.Fields{
+				"merkleProofData.Root": merkleProofData.Root.String(),
+			}).Info("para heads root")
+			//endtest
 
 			if _, ok := heads[li.paraID]; !ok {
 				return nil, fmt.Errorf("chain is not a registered parachain")

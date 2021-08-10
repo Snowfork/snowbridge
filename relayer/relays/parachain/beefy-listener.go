@@ -214,14 +214,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 
 func (li *BeefyListener) emitMessagePackages(packages []MessagePackage) {
 	for _, messagePackage := range packages {
-		log.WithFields(log.Fields{
-			"channelID":       messagePackage.channelID,
-			"commitmentHash":  messagePackage.commitmentHash,
-			"commitmentData":  messagePackage.commitmentData,
-			"merkleProofData": messagePackage.merkleProofData,
-			"mmrProof":        messagePackage.mmrProof,
-		}).Info("Beefy Listener emitted new message package")
-
+		log.Info("Beefy Listener emitting new message package")
 		li.messages <- messagePackage
 	}
 }
