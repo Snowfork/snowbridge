@@ -1,7 +1,6 @@
 require("dotenv").config();
 const hre = require("hardhat");
 let { ApiPromise, WsProvider } = require('@polkadot/api');
-let { bundle } = require("@snowfork/snowbridge-types");
 
 const relaychainEndpoint = process.env.RELAYCHAIN_ENDPOINT;
 
@@ -19,7 +18,6 @@ async function main() {
   const relayChainProvider = new WsProvider(relaychainEndpoint);
   const relaychainAPI = await ApiPromise.create({
     provider: relayChainProvider,
-    typesBundle: bundle
   })
 
   const authorities = await relaychainAPI.query.mmrLeaf.beefyNextAuthorities()
