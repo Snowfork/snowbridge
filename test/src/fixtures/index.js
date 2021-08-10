@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge-e2e-config/contracts.json', 'utf8'));
+const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge/contracts.json', 'utf8'));
 
 const TestToken = contracts.contracts.TestToken;
 const TestToken721 = contracts.contracts.TestToken721;

@@ -1,10 +1,10 @@
-require("dotenv").config();
-const hre = require("hardhat");
 let { ApiPromise, WsProvider } = require('@polkadot/api');
 
 const relaychainEndpoint = process.env.RELAYCHAIN_ENDPOINT;
 
-async function main() {
+async function configureBeefy() {
+  const hre = require("hardhat");
+
   const signer = await hre.ethers.getSigner()
 
   const beefyDeployment = await hre.deployments.get("BeefyLightClient");
@@ -45,7 +45,7 @@ async function main() {
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
-main()
+configureBeefy()
   .then(() => process.exit(0))
   .catch((error) => {
     console.error(error);

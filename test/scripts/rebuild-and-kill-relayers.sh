@@ -1,6 +1,6 @@
 echo "Rebuilding and killing relay services"
 
-configdir=/tmp/snowbridge-e2e-config
+configdir=/tmp/snowbridge
 
 address_for()
 {

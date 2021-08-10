@@ -2,7 +2,7 @@ const Web3 = require('web3');
 const BigNumber = require('bignumber.js');
 const fs = require('fs');
 
-const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge-e2e-config/contracts.json', 'utf8'));
+const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge/contracts.json', 'utf8'));
 
 const ETHApp = contracts.contracts.ETHApp;
 const ERC20App = contracts.contracts.ERC20App;
