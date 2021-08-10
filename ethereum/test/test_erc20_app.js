@@ -16,6 +16,10 @@ const ScaleCodec = artifacts.require("ScaleCodec");
 const ERC20App = artifacts.require("ERC20App");
 const TestToken = artifacts.require("TestToken");
 
+const {
+  printTxPromiseGas
+} = require("./helpers");
+
 const approveFunds = (token, contract, account, amount) => {
   return token.approve(contract.address, amount, { from: account })
 }
@@ -43,7 +47,7 @@ describe("ERC20App", function () {
   // Constants
   const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
-  before(async function() {
+  before(async function () {
     const codec = await ScaleCodec.new();
     ERC20App.link(codec);
     accounts = await web3.eth.getAccounts();
@@ -114,7 +118,7 @@ describe("ERC20App", function () {
       // expected amount to unlock
       const amount = ethers.BigNumber.from(100);
 
-      let { receipt } = await this.app.unlock(
+      let txPromise = this.app.unlock(
         this.token.address,
         addressBytes(POLKADOT_ADDRESS),
         recipient,
@@ -123,6 +127,8 @@ describe("ERC20App", function () {
           from: inboundChannel,
         }
       ).should.be.fulfilled;
+      printTxPromiseGas(txPromise)
+      const { receipt } = await txPromise;
 
       // decode event
       var iface = new ethers.utils.Interface(ERC20App.abi);

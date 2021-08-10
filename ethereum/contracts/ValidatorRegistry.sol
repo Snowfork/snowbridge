@@ -26,16 +26,6 @@ contract ValidatorRegistry is Ownable {
     uint256 public numOfValidators;
     uint64 public id;
 
-    constructor(
-        bytes32 _root,
-        uint256 _numOfValidators,
-        uint64 _id
-    ) {
-        root = _root;
-        numOfValidators = _numOfValidators;
-        id = _id;
-    }
-
     /**
      * @notice Updates the validator registry and number of validators
      * @param _root The new root
@@ -46,12 +36,9 @@ contract ValidatorRegistry is Ownable {
         uint256 _numOfValidators,
         uint64 _id
     ) public onlyOwner {
-        // TODO: Commented out for now until we resolve issues with the root
-        // (it is being created via a modified patricia-trie, not a normal tree)
-        // so need to resolve that.
-        // root = _root;
-        // numOfValidators = _numOfValidators;
-        // id = _id;
+        root = _root;
+        numOfValidators = _numOfValidators;
+        id = _id;
         emit ValidatorRegistryUpdated(_root, _numOfValidators, _id);
     }
 

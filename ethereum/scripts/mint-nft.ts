@@ -1,7 +1,7 @@
-const hre = require("hardhat");
 
-async function main() {
-  const {deployments, ethers} = hre;
+async function mintNFTs() {
+  const hre = require("hardhat");
+  const { deployments, ethers } = hre;
   const [deployer, developer] = await hre.getUnnamedAccounts();
 
   const nft = await deployments.get('TestToken721Enumerable');
@@ -12,7 +12,7 @@ async function main() {
   }
 }
 
-main()
+mintNFTs()
   .then(() => process.exit(0))
   .catch((error) => {
     console.error(error);

@@ -97,6 +97,7 @@ contract BeefyLightClient {
 
     /**
      * The BeefyMMRLeaf is the structure of each leaf in each MMR that each commitment's payload commits to.
+     * @param version version of the leaf type
      * @param parentNumber parent number of the block this leaf describes
      * @param parentHash parent hash of the block this leaf describes
      * @param parachainHeadsRoot merkle root of all parachain headers in this block
@@ -105,6 +106,7 @@ contract BeefyLightClient {
      * @param nextAuthoritySetRoot merkle root of all public keys in that validator set
      */
     struct BeefyMMRLeaf {
+        uint8 version;
         uint32 parentNumber;
         bytes32 parentHash;
         bytes32 parachainHeadsRoot;
@@ -228,11 +230,6 @@ contract BeefyLightClient {
             "Error: Bitfield not enough validators"
         );
 
-        /**
-         * @todo Lock up the sender stake as collateral
-         */
-        // TODO
-
         // Accept and save the commitment
         validationData[currentId] = ValidationData(
             msg.sender,
@@ -291,6 +288,8 @@ contract BeefyLightClient {
         Commitment calldata commitment,
         ValidatorProof calldata validatorProof,
         BeefyMMRLeaf calldata latestMMRLeaf,
+        uint64 leafIndex,
+        uint64 leafCount,
         bytes32[] calldata mmrProofItems
     ) public {
         verifyCommitment(id, commitment, validatorProof);
@@ -298,7 +297,8 @@ contract BeefyLightClient {
             latestMMRLeaf,
             mmrProofItems,
             commitment.payload,
-            commitment.blockNumber
+            leafIndex,
+            leafCount
         );
 
         processPayload(commitment.payload, commitment.blockNumber);
@@ -345,7 +345,8 @@ contract BeefyLightClient {
         BeefyMMRLeaf calldata leaf,
         bytes32[] calldata proof,
         bytes32 root,
-        uint64 length
+        uint64 leafIndex,
+        uint64 leafCount
     ) public {
         bytes memory encodedLeaf = encodeMMRLeaf(leaf);
         bytes32 hashedLeaf = hashMMRLeaf(encodedLeaf);
@@ -353,8 +354,8 @@ contract BeefyLightClient {
         mmrVerification.verifyInclusionProof(
             root,
             hashedLeaf,
-            length - 1,
-            length,
+            leafIndex,
+            leafCount,
             proof
         );
     }
@@ -559,7 +560,7 @@ contract BeefyLightClient {
 
     function createCommitmentHash(Commitment calldata commitment)
         public
-        view
+        pure
         returns (bytes32)
     {
         return
@@ -572,8 +573,19 @@ contract BeefyLightClient {
             );
     }
 
+    // To scale encode the byte array, we need to prefix it
+    // with it's length. This is the expected current length of a leaf.
+    // The length here is 113 bytes:
+    // - 1 byte for the version
+    // - 4 bytes for the block number
+    // - 32 bytes for the block hash
+    // - 8 bytes for the next validator set ID
+    // - 4 bytes for the length of it
+    // - 32 bytes for the root hash of it
+    // - 32 bytes for the parachain heads merkle root
+    // That number is then compact encoded unsigned integer - see SCALE spec
     bytes2 public constant MMR_LEAF_LENGTH_SCALE_ENCODED =
-        bytes2(uint16(0xc101));
+        bytes2(uint16(0xc501));
 
     function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
         public
@@ -581,12 +593,13 @@ contract BeefyLightClient {
         returns (bytes memory)
     {
         bytes memory scaleEncodedMMRLeaf = abi.encodePacked(
+            ScaleCodec.encode8(leaf.version),
             ScaleCodec.encode32(leaf.parentNumber),
             leaf.parentHash,
-            leaf.parachainHeadsRoot,
             ScaleCodec.encode64(leaf.nextAuthoritySetId),
             ScaleCodec.encode32(leaf.nextAuthoritySetLen),
-            leaf.nextAuthoritySetRoot
+            leaf.nextAuthoritySetRoot,
+            leaf.parachainHeadsRoot
         );
 
         return bytes.concat(MMR_LEAF_LENGTH_SCALE_ENCODED, scaleEncodedMMRLeaf);

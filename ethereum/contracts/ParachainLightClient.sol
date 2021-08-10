@@ -20,14 +20,8 @@ library ParachainLightClient {
         bytes32[] proof;
     }
 
-    struct OwnParachainHeadPartial {
-        bytes32 parentHash;
-        uint32 number;
-        bytes32 stateRoot;
-        bytes32 extrinsicsRoot;
-    }
-
     struct BeefyMMRLeafPartial {
+        uint8 version;
         uint32 parentNumber;
         bytes32 parentHash;
         uint64 nextAuthoritySetId;
@@ -35,93 +29,88 @@ library ParachainLightClient {
         bytes32 nextAuthoritySetRoot;
     }
 
+    bytes4 public constant PARACHAIN_ID_SCALE = 0xe8030000;
+
+    struct ParachainVerifyInput {
+        bytes ownParachainHeadPrefixBytes;
+        bytes ownParachainHeadSuffixBytes;
+        ParachainHeadProof parachainHeadProof;
+    }
+
     function verifyCommitmentInParachain(
         bytes32 commitment,
-        OwnParachainHeadPartial calldata _ownParachainHeadPartial,
-        ParachainHeadProof calldata _parachainHeadProof,
+        ParachainVerifyInput calldata _parachainVerifyInput,
         BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
         bytes32[] calldata _beefyMMRLeafProof,
         BeefyLightClient beefyLightClient
     ) internal {
-        // Must verify the parachain id to ensure msg comes from our parachain
-        // TODO
-
-        // 2. Compute `ownParachainHead` by hashing the data of the `commitment` together with the contents of
-        // `_ownParachainHeadPartial`
-        bytes32 ownParachainHeadHash = createParachainHeadHash(
-            _ownParachainHeadPartial,
-            commitment
+        // 1. Compute our parachains merkle leaf by combining the parachain id, commitment data
+        // and other misc bytes provided for the parachain header and hashing them.
+        bytes32 ownParachainHeadHash = createParachainMerkleLeaf(
+            _parachainVerifyInput.ownParachainHeadPrefixBytes,
+            commitment,
+            _parachainVerifyInput.ownParachainHeadSuffixBytes
         );
 
-        // 3. Compute `parachainHeadsRoot` by verifying the merkle proof using `ownParachainHeadHash` and
+        // 2. Compute `parachainHeadsRoot` by verifying the merkle proof using `ownParachainHeadHash` and
         // `_parachainHeadsProof`
         bytes32 parachainHeadsRoot = MerkleProof.computeRootFromProofAtPosition(
             ownParachainHeadHash,
-            _parachainHeadProof.pos,
-            _parachainHeadProof.width,
-            _parachainHeadProof.proof
+            _parachainVerifyInput.parachainHeadProof.pos,
+            _parachainVerifyInput.parachainHeadProof.width,
+            _parachainVerifyInput.parachainHeadProof.proof
         );
 
-        // 4. Compute the `beefyMMRLeaf` using `parachainHeadsRoot` and `_beefyMMRLeafPartial`
+        // 3. Compute the `beefyMMRLeaf` using `parachainHeadsRoot` and `_beefyMMRLeafPartial`
         bytes32 beefyMMRLeaf = createMMRLeafHash(
             _beefyMMRLeafPartial,
             parachainHeadsRoot
         );
 
-        // 5. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
+        // 4. Verify inclusion of the beefy MMR leaf in the beefy MMR root using that `beefyMMRLeaf` as well as
         // `_beefyMMRLeafIndex`, `_beefyMMRLeafCount` and `_beefyMMRLeafProof`
-        // TODO
-        // require(
-        //     beefyLightClient.verifyBeefyMerkleLeaf(
-        //         beefyMMRLeaf,
-        //         _beefyMMRLeafIndex,
-        //         _beefyMMRLeafCount,
-        //         _beefyMMRLeafProof
-        //     ),
-        //     "Invalid proof"
-        // );
+        require(
+            beefyLightClient.verifyBeefyMerkleLeaf(
+                beefyMMRLeaf,
+                _beefyMMRLeafIndex,
+                _beefyMMRLeafCount,
+                _beefyMMRLeafProof
+            ),
+            "Invalid proof"
+        );
     }
 
-    function createParachainHeadHash(
-        ParachainLightClient.OwnParachainHeadPartial
-            calldata _ownParachainHeadPartial,
-        bytes32 commitment
+    function createParachainMerkleLeaf(
+        bytes calldata _ownParachainHeadPrefixBytes,
+        bytes32 commitment,
+        bytes calldata _ownParachainHeadSuffixBytes
     ) public pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    ParachainLightClient.OwnParachainHead(
-                        _ownParachainHeadPartial.parentHash,
-                        _ownParachainHeadPartial.number,
-                        _ownParachainHeadPartial.stateRoot,
-                        _ownParachainHeadPartial.extrinsicsRoot,
-                        commitment
-                    )
-                )
-            );
-    }
+        bytes memory scaleEncodedParachainHead = bytes.concat(
+            PARACHAIN_ID_SCALE,
+            _ownParachainHeadPrefixBytes,
+            commitment,
+            _ownParachainHeadSuffixBytes
+        );
 
-    bytes2 public constant MMR_LEAF_LENGTH_SCALE_ENCODED =
-        bytes2(uint16(0xc101));
+        return keccak256(scaleEncodedParachainHead);
+    }
 
     function createMMRLeafHash(
         BeefyMMRLeafPartial calldata leaf,
         bytes32 parachainHeadsRoot
     ) public pure returns (bytes32) {
         bytes memory scaleEncodedMMRLeaf = abi.encodePacked(
+            ScaleCodec.encode8(leaf.version),
             ScaleCodec.encode32(leaf.parentNumber),
             leaf.parentHash,
-            parachainHeadsRoot,
             ScaleCodec.encode64(leaf.nextAuthoritySetId),
             ScaleCodec.encode32(leaf.nextAuthoritySetLen),
-            leaf.nextAuthoritySetRoot
+            leaf.nextAuthoritySetRoot,
+            parachainHeadsRoot
         );
 
-        return
-            keccak256(
-                bytes.concat(MMR_LEAF_LENGTH_SCALE_ENCODED, scaleEncodedMMRLeaf)
-            );
+        return keccak256(scaleEncodedMMRLeaf);
     }
 }

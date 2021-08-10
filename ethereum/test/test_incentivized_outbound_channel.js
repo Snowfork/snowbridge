@@ -5,6 +5,10 @@ require("chai")
 const IncentivizedOutboundChannel = artifacts.require("IncentivizedOutboundChannel");
 const MockFeeSource = artifacts.require("MockFeeSource");
 
+const {
+  printTxPromiseGas
+} = require("./helpers");
+
 describe("IncentivizedOutboundChannel", function () {
   let accounts;
   let owner;
@@ -13,7 +17,7 @@ describe("IncentivizedOutboundChannel", function () {
   const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
   const iface = new ethers.utils.Interface(IncentivizedOutboundChannel.abi);
 
-  before(async function() {
+  before(async function () {
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
     appAddress = accounts[1];
@@ -28,11 +32,13 @@ describe("IncentivizedOutboundChannel", function () {
     });
 
     it("should send messages out with the correct event and fields", async function () {
-      const tx = await this.channel.submit(
+      const txPromise = this.channel.submit(
         origin,
         testPayload,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
+      printTxPromiseGas(txPromise)
+      const tx = await txPromise;
 
       const log = tx.receipt.rawLogs[0];
       const event = iface.decodeEventLog('Message(address,uint64,uint256,bytes)', log.data, log.topics);

@@ -22,7 +22,7 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
 * `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
-* sponge - Is available in the moreutils package
+* sponge - Is available in the moreutils package. On Mac see https://formulae.brew.sh/formula/moreutils. On Linux:
 
   ```bash
   apt install moreutils

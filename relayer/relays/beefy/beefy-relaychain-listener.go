@@ -106,22 +106,37 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 			}
 			log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
 
-			latestMMRProof, err := li.relaychainConn.GetMMRLeafForBlock(blockNumber-1, blockHash)
+			latestMMRProof, err := li.relaychainConn.GetMMRLeafForBlock(blockNumber-1, blockHash, li.config.Source.Polkadot.BeefyStartingBlock)
 			if err != nil {
 				log.WithError(err).Error("Failed get MMR Leaf")
 				return err
 			}
+
+			mmrLeafCount, err := li.relaychainConn.FetchMMRLeafCount(blockHash)
+			if err != nil {
+				log.WithError(err).Error("Failed get MMR Leaf Count")
+				return err
+			}
+
+			if mmrLeafCount == 0 {
+				err := fmt.Errorf("MMR is empty and has no leaves")
+				log.WithError(err)
+				return err
+			}
+
 			serializedProof, err := types.EncodeToBytes(latestMMRProof)
 			if err != nil {
 				log.WithError(err).Error("Failed to serialize MMR Proof")
 				return err
 			}
+			log.WithField("latestMMRProof", latestMMRProof.Leaf.Version).Info("Got latestMMRProof")
 
 			info := store.BeefyRelayInfo{
 				ValidatorAddresses:       beefyAuthoritiesBytes,
 				SignedCommitment:         signedCommitmentBytes,
 				Status:                   store.CommitmentWitnessed,
 				SerializedLatestMMRProof: serializedProof,
+				MMRLeafCount:             mmrLeafCount,
 			}
 			li.beefyMessages <- info
 		}

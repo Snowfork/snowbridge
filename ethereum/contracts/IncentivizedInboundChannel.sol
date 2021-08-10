@@ -56,9 +56,8 @@ contract IncentivizedInboundChannel is AccessControl {
 
     function submit(
         Message[] calldata _messages,
-        ParachainLightClient.OwnParachainHeadPartial
-            calldata _ownParachainHeadPartial,
-        ParachainLightClient.ParachainHeadProof calldata _parachainHeadProof,
+        ParachainLightClient.ParachainVerifyInput
+            calldata _parachainVerifyInput,
         ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
@@ -70,8 +69,7 @@ contract IncentivizedInboundChannel is AccessControl {
 
         ParachainLightClient.verifyCommitmentInParachain(
             commitment,
-            _ownParachainHeadPartial,
-            _parachainHeadProof,
+            _parachainVerifyInput,
             _beefyMMRLeafPartial,
             _beefyMMRLeafIndex,
             _beefyMMRLeafCount,

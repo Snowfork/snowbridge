@@ -8,9 +8,10 @@ const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const { createBeefyValidatorFixture, runBeefyLightClientFlow } = require("./beefy-helpers");
 
+
 const MockRewardSource = artifacts.require("MockRewardSource");
 const {
-  deployBeefyLightClient, runBeefyLighClientFlow
+  deployBeefyLightClient, printTxPromiseGas
 } = require("./helpers");
 const fixture = require('./fixtures/full-flow.json');
 
@@ -45,9 +46,11 @@ describe("IncentivizedInboundChannel", function () {
     it("should accept a valid commitment and dispatch messages", async function () {
 
       // Send commitment
-      const { receipt } = await this.channel.submit(
+      const tx = this.channel.submit(
         ...Object.values(fixture.incentivizedSubmitInput),
       ).should.be.fulfilled
+      printTxPromiseGas(tx)
+      const { receipt } = await tx;
 
       let event;
 
