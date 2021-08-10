@@ -17,8 +17,8 @@ start_geth() {
     local data_dir="$output_dir/geth"
 
     geth init --datadir "$data_dir" config/genesis.json
-    geth account import --datadir "$data_dir" --password /dev/null config/key0.prv
-    geth account import --datadir "$data_dir" --password /dev/null config/key1.prv
+    geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key0.prv
+    geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key1.prv
     geth --vmdebug --datadir "$data_dir" --networkid 15 \
         --http --http.api debug,personal,eth,net,web3,txpool --ws --ws.api debug,eth,net,web3 \
         --rpc.allow-unprotected-txs --mine --miner.threads=1 \
