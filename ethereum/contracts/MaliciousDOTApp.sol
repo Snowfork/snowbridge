@@ -75,10 +75,10 @@ contract MaliciousDOTApp is FeeSource, AccessControl {
     }
 
     function mint(
-        bytes32 _sender,
-        address _recipient,
-        uint256 _amount
-    ) external {
+        bytes32,
+        address,
+        uint256
+    ) external pure {
         while (true) {}
     }
 
