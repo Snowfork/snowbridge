@@ -174,17 +174,6 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 				"count": len(heads),
 			}).Info("Fetched para heads")
 
-			//test
-			merkleProofData, err := CreateParachainMerkleProof(heads, li.paraID)
-			if err != nil {
-				log.WithError(err).Error("Failed to create parachain header proof")
-				return nil, err
-			}
-			log.WithFields(log.Fields{
-				"merkleProofData.Root": merkleProofData.Root.String(),
-			}).Info("para heads root")
-			//endtest
-
 			if _, ok := heads[li.paraID]; !ok {
 				return nil, fmt.Errorf("chain is not a registered parachain")
 			}
@@ -201,8 +190,10 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 		}
 
 		// Note - relayChainBlockNumber will be one less than the actual block number we want
-		// due to the decrement at the end of the loop, so we add back 1
-		mmrProof, err := li.relaychainConn.GetMMRLeafForBlock(uint64(relayChainBlockNumber+1), latestRelaychainBlockHash, li.config.Polkadot.BeefyStartingBlock)
+		// due to the decrement at the end of the loop, so we increment by 1. Additionally,
+		// parachain merkle roots are created 1 block later than the actual parachain headers,
+		// so we increment twice.
+		mmrProof, err := li.relaychainConn.GetMMRLeafForBlock(uint64(relayChainBlockNumber+2), latestRelaychainBlockHash, li.config.Polkadot.BeefyStartingBlock)
 		if err != nil {
 			log.WithError(err).Error("Failed to get mmr leaf")
 			return nil, err
@@ -226,6 +217,12 @@ func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
 		merkleProofData, err := CreateParachainMerkleProof(heads, li.paraID)
 		if err != nil {
 			log.WithError(err).Error("Failed to create parachain header proof")
+			return nil, err
+		}
+
+		if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
+			err = fmt.Errorf("MMR parachain merkle root does not match calculated parachain merkle root - calculated: %s, mmr: %s", merkleProofData.Root.String(), mmrProof.Leaf.ParachainHeads.Hex())
+			log.WithError(err).Error("Failed to create parachain merkle root")
 			return nil, err
 		}
 

@@ -78,7 +78,8 @@ func (co *Connection) GetMMRLeafForBlock(
 		"blockHash":   blockHash.Hex(),
 	}).Info("Getting MMR Leaf for block...")
 
-	// We expect 1 mmr leaf for each block, so the index of that leaf should be the block number - 1
+	// We expect 1 mmr leaf for each block. MMR leaf indexes start from 0, but block numbers start from 1,
+	// so the mmr leaf index should be 1 less than the block number.
 	// However, some chains only started using beefy late in their existence, so there are no leafs for
 	// blocks produced before beefy was activated. We substract the block in which beefy was started on the
 	// chain to account for this.

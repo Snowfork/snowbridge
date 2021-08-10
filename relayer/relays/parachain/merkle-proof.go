@@ -42,6 +42,10 @@ func (h HexBytes) String() string {
 	return string(b)
 }
 
+func (h HexBytes) Hex() string {
+	return "0x" + hex.EncodeToString(h)
+}
+
 func (d PreLeaves) MarshalJSON() ([]byte, error) {
 	items := make([]string, 0, len(d))
 	for _, v := range d {
