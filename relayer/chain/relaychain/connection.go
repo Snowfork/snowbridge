@@ -222,7 +222,7 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 		return 0, err
 	}
 
-	if !ok || mmrLeafCount == 0 {
+	if !ok {
 		return 0, fmt.Errorf("MMR Leaf Count Not Found")
 	}
 

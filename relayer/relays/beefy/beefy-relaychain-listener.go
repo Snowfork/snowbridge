@@ -118,6 +118,12 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				return err
 			}
 
+			if mmrLeafCount == 0 {
+				err := fmt.Errorf("MMR is empty and has no leaves")
+				log.WithError(err)
+				return err
+			}
+
 			serializedProof, err := types.EncodeToBytes(latestMMRProof)
 			if err != nil {
 				log.WithError(err).Error("Failed to serialize MMR Proof")
