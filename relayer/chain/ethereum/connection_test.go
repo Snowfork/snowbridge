@@ -12,7 +12,7 @@ import (
 )
 
 func TestConnect(t *testing.T) {
-	conn := ethereum.NewConnection("ws://localhost:8545", secp256k1.Alice())
+	conn := ethereum.NewConnection("ws://localhost:8546", secp256k1.Alice())
 	err := conn.Connect(context.Background())
 	if err != nil {
 		t.Fatal(err)
