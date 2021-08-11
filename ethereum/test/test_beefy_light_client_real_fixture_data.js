@@ -3,7 +3,7 @@ const {
   deployBeefyLightClient,
   mine, catchRevert, printBitfield
 } = require("./helpers");
-const fixture = require('./fixtures/full-flow.json');
+const fixture = require('./fixtures/full-flow-basic.json');
 
 require("chai")
   .use(require("chai-as-promised"))

@@ -5,7 +5,7 @@ const {
 
 const { createBeefyValidatorFixture, createRandomPositions,
   createAllValidatorProofs, createCompleteValidatorProofs } = require("./beefy-helpers");
-const realWorldFixture = require('./fixtures/full-flow.json');
+const realWorldFixture = require('./fixtures/full-flow-basic.json');
 
 require("chai")
   .use(require("chai-as-promised"))

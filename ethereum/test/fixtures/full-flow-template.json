@@ -17,7 +17,7 @@
     "latestMMRLeafCount": "",
     "mmrProofItems": []
   },
-  "basicSubmitInput": {
+  "...SubmitInput": {
     "_messages": [],
     "_paraVerifyInput": {},
     "_beefyMMRLeafPartial": {},

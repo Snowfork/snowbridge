@@ -9,7 +9,7 @@ const ValidatorRegistry = artifacts.require("ValidatorRegistry");
 const MMRVerification = artifacts.require("MMRVerification");
 const BeefyLightClient = artifacts.require("BeefyLightClient");
 
-const fixture = require('./fixtures/full-flow.json');
+const fixture = require('./fixtures/full-flow-basic.json');
 
 let lazyLinked = false;
 const lazyLinkLibraries = async _ => {
