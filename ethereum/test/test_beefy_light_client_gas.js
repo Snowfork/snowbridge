@@ -17,46 +17,36 @@ describe("Beefy Light Client Gas Usage", function () {
 
   const testCases = [
     {
-      totalNumberOfValidators: 200,
-      totalNumberOfSignatures: 200,
+      totalNumberOfValidators: 10,
     },
     {
       totalNumberOfValidators: 200,
-      totalNumberOfSignatures: 134,
     },
     {
       totalNumberOfValidators: 255,
-      totalNumberOfSignatures: 255,
     },
     {
       totalNumberOfValidators: 257,
-      totalNumberOfSignatures: 257,
     },
     {
       totalNumberOfValidators: 1000,
-      totalNumberOfSignatures: 1000,
       fail: true
     },
     {
       totalNumberOfValidators: 1000,
-      totalNumberOfSignatures: 1000,
     },
-    {
-      totalNumberOfValidators: 1000,
-      totalNumberOfSignatures: 667,
-    }
   ]
 
   for (const testCase of testCases) {
-    it(`runs full flow with ${testCase.totalNumberOfValidators} validators and ${testCase.totalNumberOfSignatures} signers with the complete transaction ${testCase.fail ? 'failing' : 'succeeding'}`,
+    it(`runs full flow with ${testCase.totalNumberOfValidators} validators with the complete transaction ${testCase.fail ? 'failing' : 'succeeding'}`,
       async function () {
         this.timeout(10 * 4000);
-        await runFlow(testCase.totalNumberOfValidators, testCase.totalNumberOfSignatures, testCase.fail)
+        await runFlow(testCase.totalNumberOfValidators, testCase.fail)
       });
   }
 
-  const runFlow = async function (totalNumberOfValidators, totalNumberOfSignatures, fail) {
-    console.log(`Running flow with ${totalNumberOfValidators} validators and ${totalNumberOfSignatures} signatures with the complete transaction ${fail ? 'failing' : 'succeeding'}: `)
+  const runFlow = async function (totalNumberOfValidators, fail) {
+    console.log(`Running flow with ${totalNumberOfValidators} validators with the complete transaction ${fail ? 'failing' : 'succeeding'}: `)
 
     const fixture = await createBeefyValidatorFixture(
       totalNumberOfValidators
@@ -64,7 +54,9 @@ describe("Beefy Light Client Gas Usage", function () {
     const beefyLightClient = await deployBeefyLightClient(fixture.root,
       totalNumberOfValidators);
 
-    const initialBitfieldPositions = await createRandomPositions(totalNumberOfSignatures, totalNumberOfValidators)
+    const requiredNumberOfSignatures = (await beefyLightClient.requiredNumberOfSignatures()).toNumber()
+
+    const initialBitfieldPositions = await createRandomPositions(requiredNumberOfSignatures, totalNumberOfValidators)
 
     const firstPosition = initialBitfieldPositions[0]
 
@@ -98,6 +90,8 @@ describe("Beefy Light Client Gas Usage", function () {
       realWorldFixture.completeSubmitInput.commitment,
       completeValidatorProofs,
       realWorldFixture.completeSubmitInput.latestMMRLeaf,
+      realWorldFixture.completeSubmitInput.latestMMRLeafIndex,
+      realWorldFixture.completeSubmitInput.latestMMRLeafCount,
       realWorldFixture.completeSubmitInput.mmrProofItems,
     )
     printTxPromiseGas(completeSigTxPromise)

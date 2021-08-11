@@ -25,7 +25,8 @@ describe("Beefy Light Client", function () {
       fixture.completeSubmitInput.latestMMRLeaf,
       fixture.completeSubmitInput.mmrProofItems,
       fixture.completeSubmitInput.commitment.payload,
-      fixture.completeSubmitInput.commitment.blockNumber,
+      fixture.completeSubmitInput.latestMMRLeafIndex,
+      fixture.completeSubmitInput.latestMMRLeafCount,
     ).should.be.fulfilled
   });
 
@@ -35,7 +36,7 @@ describe("Beefy Light Client", function () {
       fixture.completeSubmitInput.validatorProof.positions,
       2
     );
-    expect(printBitfield(initialBitfield)).to.eq('11')
+    expect(printBitfield(initialBitfield)).to.eq('1')
 
     const commitmentHash = await this.beefyLightClient.createCommitmentHash(
       fixture.completeSubmitInput.commitment
@@ -86,6 +87,8 @@ describe("Beefy Light Client", function () {
       fixture.completeSubmitInput.commitment,
       validatorProofs,
       fixture.completeSubmitInput.latestMMRLeaf,
+      fixture.completeSubmitInput.latestMMRLeafIndex,
+      fixture.completeSubmitInput.latestMMRLeafCount,
       fixture.completeSubmitInput.mmrProofItems,
     ).should.be.fulfilled
 

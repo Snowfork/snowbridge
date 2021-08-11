@@ -29,8 +29,9 @@ const lazyLinkLibraries = async _ => {
 const initValidatorRegistry = async (validatorRoot, numOfValidators, validatorSetID) => {
   await lazyLinkLibraries()
 
-  validatorRegistry = await ValidatorRegistry.new(
-    validatorRoot,
+  validatorRegistry = await ValidatorRegistry.new();
+
+  await validatorRegistry.update(validatorRoot,
     numOfValidators,
     validatorSetID
   );
@@ -75,15 +76,14 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
 
 const deployBeefyLightClient = async (root, numberOfValidators) => {
   if (!root) {
-    const validatorsMerkleTree = createMerkleTree(fixture.initialValidatorAddresses);
-    root = validatorsMerkleTree.getHexRoot()
+    root = fixture.completeSubmitInput.latestMMRLeaf.nextAuthoritySetRoot;
   }
   if (!numberOfValidators) {
-    numberOfValidators = fixture.initialValidatorAddresses.length;
+    numberOfValidators = fixture.completeSubmitInput.latestMMRLeaf.nextAuthoritySetLen
   }
 
   const validatorRegistry = await initValidatorRegistry(root,
-    numberOfValidators, fixture.initialValidatorSetID);
+    numberOfValidators, 0);
   const mmrVerification = await MMRVerification.new();
 
   const beefyLightClient = await BeefyLightClient.new(
@@ -153,7 +153,7 @@ async function tryCatch(promise, type, message) {
   catch (error) {
     assert(error, "Expected an error but did not get one");
     if (message) {
-      assert(error.message === (PREFIX + type + ' ' + message), "Expected error '" + PREFIX + type + ' ' + message +
+      assert(error.message === (PREFIX + type + ' \'' + message + '\''), "Expected error '" + PREFIX + type + ' ' + message +
         "' but got '" + error.message + "' instead");
     } else {
       assert(error && error.message && error.message.startsWith(PREFIX + type), "Expected an error starting with '" + PREFIX + type +
@@ -195,7 +195,7 @@ module.exports = {
   mergeKeccak256,
   printTxPromiseGas,
   printBitfield,
-  catchRevert: async (promise, message) => await tryCatch(promise, "revert", message),
+  catchRevert: async (promise, message) => await tryCatch(promise, "reverted with reason string", message),
   catchOutOfGas: async (promise, message) => await tryCatch(promise, "out of gas", message),
   catchInvalidJump: async (promise, message) => await tryCatch(promise, "invalid JUMP", message),
   catchInvalidOpcode: async (promise, message) => await tryCatch(promise, "invalid opcode", message),
