@@ -27,6 +27,7 @@ describe("IncentivizedInboundChannel", function () {
     const beefyFixture = await createBeefyValidatorFixture(
       totalNumberOfValidatorSigs
     )
+
     this.beefyLightClient = await deployBeefyLightClient(beefyFixture.root,
       totalNumberOfValidatorSigs);
 

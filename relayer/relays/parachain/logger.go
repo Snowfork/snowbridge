@@ -14,9 +14,9 @@ import (
 )
 
 type ParaVerifyInputLog struct {
-	OwnParachainHeadPrefixBytes string
-	OwnParachainHeadSuffixBytes string
-	ParachainHeadProof          ParaHeadProofLog
+	OwnParachainHeadPrefixBytes string           `json:"ownParachainHeadPrefixBytes"`
+	OwnParachainHeadSuffixBytes string           `json:"ownParachainHeadSuffixBytes"`
+	ParachainHeadProof          ParaHeadProofLog `json:"parachainHeadProof"`
 }
 
 type ParaHeadProofLog struct {

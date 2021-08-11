@@ -102,8 +102,8 @@ describe("Beefy Light Client Gas Usage", function () {
       realWorldFixture.completeSubmitInput.commitment,
       completeValidatorProofs,
       realWorldFixture.completeSubmitInput.latestMMRLeaf,
-      realWorldFixture.completeSubmitInput.latestMMRLeafIndex,
-      realWorldFixture.completeSubmitInput.latestMMRLeafCount,
+      realWorldFixture.completeSubmitInput.mmrLeafIndex,
+      realWorldFixture.completeSubmitInput.mmrLeafCount,
       realWorldFixture.completeSubmitInput.mmrProofItems,
     )
     printTxPromiseGas(completeSigTxPromise)

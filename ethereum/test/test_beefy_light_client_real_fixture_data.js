@@ -25,8 +25,8 @@ describe("Beefy Light Client", function () {
       fixture.completeSubmitInput.latestMMRLeaf,
       fixture.completeSubmitInput.mmrProofItems,
       fixture.completeSubmitInput.commitment.payload,
-      fixture.completeSubmitInput.latestMMRLeafIndex,
-      fixture.completeSubmitInput.latestMMRLeafCount,
+      fixture.completeSubmitInput.mmrLeafIndex,
+      fixture.completeSubmitInput.mmrLeafCount,
     ).should.be.fulfilled
   });
 
@@ -87,8 +87,8 @@ describe("Beefy Light Client", function () {
       fixture.completeSubmitInput.commitment,
       validatorProofs,
       fixture.completeSubmitInput.latestMMRLeaf,
-      fixture.completeSubmitInput.latestMMRLeafIndex,
-      fixture.completeSubmitInput.latestMMRLeafCount,
+      fixture.completeSubmitInput.mmrLeafIndex,
+      fixture.completeSubmitInput.mmrLeafCount,
       fixture.completeSubmitInput.mmrProofItems,
     ).should.be.fulfilled
 

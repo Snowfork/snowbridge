@@ -86,8 +86,8 @@ const runBeefyLightClientFlow = async (realWorldFixture, beefyLightClient, beefy
     realWorldFixture.completeSubmitInput.commitment,
     completeValidatorProofs,
     realWorldFixture.completeSubmitInput.latestMMRLeaf,
-    realWorldFixture.completeSubmitInput.latestMMRLeafIndex,
-    realWorldFixture.completeSubmitInput.latestMMRLeafCount,
+    realWorldFixture.completeSubmitInput.mmrLeafIndex,
+    realWorldFixture.completeSubmitInput.mmrLeafCount,
     realWorldFixture.completeSubmitInput.mmrProofItems,
   )
 

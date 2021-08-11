@@ -13,8 +13,8 @@
       "publicKeyMerkleProofs": []
     },
     "latestMMRLeaf": {},
-    "latestMMRLeafIndex": "",
-    "latestMMRLeafCount": "",
+    "mmrLeafIndex": "",
+    "mmrLeafCount": "",
     "mmrProofItems": []
   },
   "...SubmitInput": {
