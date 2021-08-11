@@ -14,9 +14,9 @@ import (
 )
 
 type ParaVerifyInputLog struct {
-	OwnParachainHeadPrefixBytes string
-	OwnParachainHeadSuffixBytes string
-	ParachainHeadProof          ParaHeadProofLog
+	OwnParachainHeadPrefixBytes string           `json:"ownParachainHeadPrefixBytes"`
+	OwnParachainHeadSuffixBytes string           `json:"ownParachainHeadSuffixBytes"`
+	ParachainHeadProof          ParaHeadProofLog `json:"parachainHeadProof"`
 }
 
 type ParaHeadProofLog struct {
@@ -26,6 +26,7 @@ type ParaHeadProofLog struct {
 }
 
 type BeefyMMRLeafPartialLog struct {
+	Version              uint8  `json:"version"`
 	ParentNumber         uint32 `json:"parentNumber"`
 	ParentHash           string `json:"parentHash"`
 	NextAuthoritySetId   uint64 `json:"nextAuthoritySetId"` // revive:disable-line
@@ -101,6 +102,7 @@ func (wr *EthereumChannelWriter) logBasicTx(
 			},
 		},
 		BeefyMMRLeafPartial: BeefyMMRLeafPartialLog{
+			Version:              beefyMMRLeafPartial.Version,
 			ParentNumber:         beefyMMRLeafPartial.ParentNumber,
 			ParentHash:           "0x" + hex.EncodeToString(beefyMMRLeafPartial.ParentHash[:]),
 			NextAuthoritySetId:   beefyMMRLeafPartial.NextAuthoritySetId,

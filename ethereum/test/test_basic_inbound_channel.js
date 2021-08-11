@@ -1,3 +1,4 @@
+const { ethers } = require("ethers");
 require("chai")
   .use(require("chai-as-promised"))
   .should();
@@ -7,29 +8,28 @@ const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const { createBeefyValidatorFixture, runBeefyLightClientFlow } = require("./beefy-helpers");
 
-const { ethers } = require("ethers");
-
 const {
   deployBeefyLightClient
 } = require("./helpers");
-const fixture = require('./fixtures/full-flow.json');
+const fixture = require('./fixtures/full-flow-basic.json');
 
 describe("BasicInboundChannel", function () {
   const interface = new ethers.utils.Interface(BasicInboundChannel.abi)
 
   before(async function () {
+    const merkleProof = await MerkleProof.new();
+    const scaleCodec = await ScaleCodec.new();
+    await BasicInboundChannel.link(merkleProof);
+    await BasicInboundChannel.link(scaleCodec);
+
     const totalNumberOfValidatorSigs = 100;
     const beefyFixture = await createBeefyValidatorFixture(
       totalNumberOfValidatorSigs
     )
     this.beefyLightClient = await deployBeefyLightClient(beefyFixture.root,
       totalNumberOfValidatorSigs);
-    const merkleProof = await MerkleProof.new();
-    const scaleCodec = await ScaleCodec.new();
-    await BasicInboundChannel.link(merkleProof);
-    await BasicInboundChannel.link(scaleCodec);
 
-    runBeefyLightClientFlow(this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
+    await runBeefyLightClientFlow(fixture, this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
   });
 
   describe("submit", function () {
@@ -49,7 +49,6 @@ describe("BasicInboundChannel", function () {
       );
       event.nonce.eq(ethers.BigNumber.from(1)).should.be.true;
       event.result.should.be.true;
-
     });
 
     it("should refuse to replay commitments", async function () {

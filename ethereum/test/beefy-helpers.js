@@ -5,7 +5,6 @@ const secp256k1 = require('secp256k1');
 const {
   createMerkleTree, mine, printBitfield
 } = require("./helpers");
-const realWorldFixture = require('./fixtures/full-flow.json');
 
 const { keccakFromHexString } = require("ethereumjs-util");
 
@@ -56,7 +55,7 @@ async function createRandomPositions(numberOfPositions, numberOfValidators) {
 }
 
 
-const runBeefyLightClientFlow = async (beefyLightClient, beefyFixture, totalNumberOfSignatures, totalNumberOfValidators) => {
+const runBeefyLightClientFlow = async (realWorldFixture, beefyLightClient, beefyFixture, totalNumberOfSignatures, totalNumberOfValidators) => {
   const initialBitfieldPositions = await createRandomPositions(totalNumberOfSignatures, totalNumberOfValidators)
 
   const initialBitfield = await beefyLightClient.createInitialBitfield(
@@ -87,6 +86,8 @@ const runBeefyLightClientFlow = async (beefyLightClient, beefyFixture, totalNumb
     realWorldFixture.completeSubmitInput.commitment,
     completeValidatorProofs,
     realWorldFixture.completeSubmitInput.latestMMRLeaf,
+    realWorldFixture.completeSubmitInput.mmrLeafIndex,
+    realWorldFixture.completeSubmitInput.mmrLeafCount,
     realWorldFixture.completeSubmitInput.mmrProofItems,
   )
 
