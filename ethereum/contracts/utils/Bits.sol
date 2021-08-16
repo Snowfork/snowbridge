@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // Code from https://github.com/ethereum/solidity-examples
 pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
