@@ -13,6 +13,9 @@ enum ChannelId {
     Incentivized
 }
 
+// MaliciousDOTApp is similar to DOTApp, but contains an infinite loop in the mint function, which will consume all the
+// gas of the message. MaliciousDOTApp is used in a test which verifies that a message running out of gas will not
+// prevent execution of other messages
 contract MaliciousDOTApp is FeeSource, AccessControl {
     using ScaleCodec for uint256;
 
