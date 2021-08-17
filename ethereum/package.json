@@ -2,7 +2,8 @@
   "license": "Apache-2.0",
   "scripts": {
     "test": "npx hardhat test",
-    "coverage": "npx hardhat coverage"
+    "coverage": "npx hardhat coverage",
+    "lint": "npx solhint 'contracts/**/*.sol'"
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",

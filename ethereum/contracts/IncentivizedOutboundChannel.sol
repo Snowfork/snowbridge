@@ -7,7 +7,8 @@ import "./OutboundChannel.sol";
 import "./ChannelAccess.sol";
 import "./FeeSource.sol";
 
-// IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have incentivization too.
+// IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have
+// incentivization too.
 contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
 
     // Governance contracts will administer using this role.
