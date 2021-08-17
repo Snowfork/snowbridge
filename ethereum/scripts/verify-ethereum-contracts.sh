@@ -24,3 +24,5 @@ for filename in $deployment_dir/*.json; do
   rm -rf $deployment_dir/args_temp.js
   verify_contract $filename $network
 done
+
+rm -rf $deployment_dir/args_temp.js
