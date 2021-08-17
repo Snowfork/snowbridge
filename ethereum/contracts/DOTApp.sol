@@ -74,17 +74,12 @@ contract DOTApp is FeeSource, AccessControl {
         bytes32 _sender,
         address _recipient,
         uint256 _amount
-    ) external {
-        require(
-            hasRole(INBOUND_CHANNEL_ROLE, msg.sender),
-            "Caller is not an inbound channel"
-        );
+    ) external onlyRole(INBOUND_CHANNEL_ROLE) {
         token.mint(_recipient, _amount, abi.encodePacked(_sender));
     }
 
     // Incentivized channel calls this to charge (burn) fees
-    function burnFee(address feePayer, uint256 _amount) external override {
-        require(hasRole(FEE_BURNER_ROLE, msg.sender), "Caller is unauthorized");
+    function burnFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
         token.burn(feePayer, _amount, "");
     }
 

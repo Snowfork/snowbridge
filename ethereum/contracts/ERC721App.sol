@@ -105,12 +105,7 @@ contract ERC721App is AccessControl {
         uint256 _tokenId,
         bytes32 _sender,
         address _recipient
-    ) public {
-        require(
-            hasRole(INBOUND_CHANNEL_ROLE, msg.sender),
-            "Caller is not an inbound channel"
-        );
-
+    ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         IERC721Metadata token = IERC721Metadata(_tokenContract);
 
         token.transferFrom(address(this), _recipient, _tokenId);

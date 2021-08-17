@@ -41,9 +41,7 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
         address _feeSource,
         address[] memory defaultOperators
     )
-    external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is unauthorized");
-
+    external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Set initial configuration
         feeSource = FeeSource(_feeSource);
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
@@ -56,21 +54,18 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     }
 
     // Update message submission fee.
-    function setFee(uint256 _amount) external {
-        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+    function setFee(uint256 _amount) external onlyRole(CONFIG_UPDATE_ROLE) {
         emit FeeChanged(fee, _amount);
         fee = _amount;
     }
 
     // Authorize an operator/app to submit messages for *all* users.
-    function authorizeDefaultOperator(address operator) external {
-        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+    function authorizeDefaultOperator(address operator) external onlyRole(CONFIG_UPDATE_ROLE) {
         _authorizeDefaultOperator(operator);
     }
 
     // Revoke authorization.
-    function revokeDefaultOperator(address operator) external {
-        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+    function revokeDefaultOperator(address operator) external onlyRole(CONFIG_UPDATE_ROLE) {
         _revokeDefaultOperator(operator);
     }
 

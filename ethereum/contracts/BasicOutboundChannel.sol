@@ -34,9 +34,7 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
         address _principal,
         address[] memory defaultOperators
     )
-    external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is unauthorized");
-
+    external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Set initial configuration
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
         principal = _principal;
@@ -49,20 +47,17 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
     }
 
     // Authorize an operator/app to submit messages for *all* users.
-    function authorizeDefaultOperator(address operator) external {
-        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+    function authorizeDefaultOperator(address operator) external onlyRole(CONFIG_UPDATE_ROLE) {
         _authorizeDefaultOperator(operator);
     }
 
     // Revoke authorization.
-    function revokeDefaultOperator(address operator) external {
-        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+    function revokeDefaultOperator(address operator) external onlyRole(CONFIG_UPDATE_ROLE) {
         _revokeDefaultOperator(operator);
     }
 
     // Update the principal.
-    function setPrincipal(address _principal) external {
-        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+    function setPrincipal(address _principal) external onlyRole(CONFIG_UPDATE_ROLE) {
         principal = _principal;
     }
 

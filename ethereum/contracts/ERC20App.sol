@@ -85,11 +85,7 @@ contract ERC20App is AccessControl {
         bytes32 _sender,
         address _recipient,
         uint256 _amount
-    ) public {
-        require(
-            hasRole(INBOUND_CHANNEL_ROLE, msg.sender),
-            "Caller is not an inbound channel"
-        );
+    ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         require(_amount > 0, "Must unlock a positive amount");
         require(
             _amount <= balances[_token],

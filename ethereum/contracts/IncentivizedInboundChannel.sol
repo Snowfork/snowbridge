@@ -40,12 +40,8 @@ contract IncentivizedInboundChannel is AccessControl {
     // Once-off post-construction call to set initial configuration.
     function initialize(address _configUpdater, address _rewardSource)
         external
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
-            "Caller is unauthorized"
-        );
-
         // Set initial configuration
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
         rewardSource = RewardSource(_rewardSource);

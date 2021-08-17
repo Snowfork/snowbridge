@@ -83,8 +83,7 @@ contract MaliciousDOTApp is FeeSource, AccessControl {
     }
 
     // Incentivized channel calls this to charge (burn) fees
-    function burnFee(address feePayer, uint256 _amount) external override {
-        require(hasRole(FEE_BURNER_ROLE, msg.sender), "Caller is unauthorized");
+    function burnFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
         token.burn(feePayer, _amount, "");
     }
 
