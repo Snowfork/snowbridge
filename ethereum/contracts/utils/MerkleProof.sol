@@ -36,7 +36,7 @@ library MerkleProof {
      * @param proof an array of nodes to be hashed in order that they should be hashed
      * @param side an array of booleans signalling whether the corresponding node should be hashed on the left side or the right side of the current hash
      */
-    function createMMRRoot(
+    function computeRootFromProofAndSide(
         bytes32 leaf,
         bytes32[] calldata proof,
         bool[] calldata side
