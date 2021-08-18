@@ -8,7 +8,7 @@ import (
 
 type SimplifiedMMRProof struct {
 	MerkleProofItems   []types.H256
-	MerkleProofOrder   []bool
+	MerkleProofOrder   uint64
 	Leaf               types.MMRLeaf
 	HasRightBaggedPeak bool
 	MMRRightBaggedPeak types.H256
@@ -100,8 +100,10 @@ func getPeaks(mmrSize uint64) []uint64 {
 	return peaksPositions
 }
 
-func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error, []bool) {
-	var proofOrder []bool
+func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error, uint64) {
+	var proofOrder uint64
+	currentBitFieldPosition := 0
+
 	type QueueElem struct {
 		Height   uint32
 		Position uint64
@@ -128,21 +130,20 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 		var isSiblingLeft bool
 		var siblingElem QueueElem
 		if nextHeight > lastElem.Height {
-			proofOrder = append(proofOrder, true)
+			proofOrder = proofOrder | 1 << currentBitFieldPosition
 			isSiblingLeft = true
 			siblingElem = QueueElem{
 				Height:   lastElem.Height,
 				Position: lastElem.Position - siblingOffset(lastElem.Height),
 			}
 		} else {
-			proofOrder = append(proofOrder, false)
 			isSiblingLeft = false
 			siblingElem = QueueElem{
 				Height:   lastElem.Height,
 				Position: lastElem.Position + siblingOffset(lastElem.Height),
 			}
 		}
-
+		currentBitFieldPosition += 1
 		proofItemIterationPosition += 1
 
 		var parentElem QueueElem
@@ -160,7 +161,7 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 		queue = append(queue, parentElem)
 	}
 
-	return fmt.Errorf("corrupted proof"), []bool{}
+	return fmt.Errorf("corrupted proof"), proofOrder
 }
 
 func ConvertToSimplifiedMMRProof(leafIndex uint64, leaf types.MMRLeaf, leafCount uint64, proofItems []types.H256) (SimplifiedMMRProof, error) {

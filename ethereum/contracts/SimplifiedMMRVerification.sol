@@ -7,9 +7,9 @@ contract  SimplifiedMMRVerification {
         bytes32[] memory restOfThePeaks,
         bytes32 rightBaggedPeak,
         bytes32[] memory merkleProofItems,
-        bool[] memory merkleProofOrder
+        uint64 merkleProofOrderBitField
     ) public pure returns (bool) {
-        require(merkleProofOrder.length == merkleProofItems.length);
+        require(merkleProofItems.length < 64);
 
         bool hasRightBaggedPeak = rightBaggedPeak != 0x0;
 
@@ -25,7 +25,7 @@ contract  SimplifiedMMRVerification {
             reversedPeaks[peakInsertionPointer++] = rightBaggedPeak;
         }
 
-        bytes32 merkleRootPeak = calculateMerkleRoot(leafNodeHash, merkleProofItems, merkleProofOrder);
+        bytes32 merkleRootPeak = calculateMerkleRoot(leafNodeHash, merkleProofItems, merkleProofOrderBitField);
         reversedPeaks[peakInsertionPointer++] = merkleRootPeak;
 
         if (restOfThePeaks.length > 0) {
@@ -54,15 +54,25 @@ contract  SimplifiedMMRVerification {
         return bag;
     }
 
+    // Get the value of the bit at the given 'index' in 'self'.
+    // index should be validated beforehand to make sure it is less than 64
+    function bit(uint64 self, uint index) internal pure returns (bool) {
+        if (uint8(self >> index & 1) == 1) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     function calculateMerkleRoot(
         bytes32 leafNodeHash,
         bytes32[] memory merkleProofItems,
-        bool[] memory merkleProofOrder
+        uint64 merkleProofOrderBitField
     ) internal pure returns (bytes32) {
         bytes32 currentHash = leafNodeHash;
 
         for (uint currentPosition = 0; currentPosition < merkleProofItems.length; currentPosition++) {
-            bool isSiblingLeft = merkleProofOrder[currentPosition];
+            bool isSiblingLeft = bit(merkleProofOrderBitField, currentPosition);
             bytes32 sibling = merkleProofItems[currentPosition];
 
             if (isSiblingLeft) {
