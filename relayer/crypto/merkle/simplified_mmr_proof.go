@@ -115,6 +115,11 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 	proofItemIterationPosition := 0
 
 	for len(queue) > 0 {
+		if proofItemIterationPosition >= len(proofItems) {
+			// We have reached an end
+			return nil, proofOrder
+		}
+
 		var lastElem QueueElem
 		lastElem, queue = queue[len(queue)-1], queue[:len(queue)-1]
 
@@ -138,10 +143,6 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 			}
 		}
 
-		if proofItemIterationPosition >= len(proofItems) {
-			// We have reached an end
-			return nil, proofOrder
-		}
 		proofItemIterationPosition += 1
 
 		var parentElem QueueElem

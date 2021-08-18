@@ -9,7 +9,7 @@ contract  SimplifiedMMRVerification {
         bytes32[] memory merkleProofItems,
         bool[] memory merkleProofOrder
     ) public pure returns (bool) {
-        require(merkleProofOrder.length == (merkleProofItems.length + 1));
+        require(merkleProofOrder.length == merkleProofItems.length);
 
         bool hasRightBaggedPeak = rightBaggedPeak != 0x0;
 
