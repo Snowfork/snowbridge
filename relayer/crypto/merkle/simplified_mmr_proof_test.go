@@ -45,7 +45,7 @@ func Test_SimplifiedMMRProof(t *testing.T) {
 	}
 	for i := 0; i < len(testData); i++ {
 		fmt.Printf("Testing for: LeafIndex; %d, LeafCount: %d\n", testData[i].LeafIndex, testData[i].LeafCount)
-		simplifiedProof, err := convertToSimplifiedMMRProof(testData[i].LeafIndex, types.MMRLeaf{}, testData[i].LeafCount, testData[i].MMRProof)
+		simplifiedProof, err := ConvertToSimplifiedMMRProof(testData[i].LeafIndex, types.MMRLeaf{}, testData[i].LeafCount, testData[i].MMRProof)
 		assert.NoError(t, err)
 		assert.Equal(t, testData[i].ReferenceSimplifiedProof.MMRRestOfThePeaks, simplifiedProof.MMRRestOfThePeaks)
 		assert.Equal(t, testData[i].ReferenceSimplifiedProof.MMRRightBaggedPeak, simplifiedProof.MMRRightBaggedPeak)

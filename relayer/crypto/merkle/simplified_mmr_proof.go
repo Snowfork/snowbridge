@@ -163,7 +163,7 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 	return fmt.Errorf("corrupted proof"), []bool{}
 }
 
-func convertToSimplifiedMMRProof(leafIndex uint64, leaf types.MMRLeaf, leafCount uint64, proofItems []types.H256) (SimplifiedMMRProof, error) {
+func ConvertToSimplifiedMMRProof(leafIndex uint64, leaf types.MMRLeaf, leafCount uint64, proofItems []types.H256) (SimplifiedMMRProof, error) {
 	leafPos := leafIndexToPosition(leafIndex)
 
 	var readyMadePeakHashes []types.H256
