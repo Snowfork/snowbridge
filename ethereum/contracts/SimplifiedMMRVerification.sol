@@ -5,13 +5,13 @@ contract  SimplifiedMMRVerification {
         bytes32 root,
         bytes32 leafNodeHash,
         bytes32[] memory restOfThePeaks,
-        bool hasRightBaggedPeak,
         bytes32 rightBaggedPeak,
         bytes32[] memory merkleProofItems,
         bool[] memory merkleProofOrder
     ) public pure returns (bool) {
         require(merkleProofOrder.length == merkleProofItems.length);
-        // TODO: Do validation of other input parameters
+
+        bool hasRightBaggedPeak = rightBaggedPeak != 0x0;
 
         uint numberOfPeaks = 1 + restOfThePeaks.length;
         if (hasRightBaggedPeak) {
