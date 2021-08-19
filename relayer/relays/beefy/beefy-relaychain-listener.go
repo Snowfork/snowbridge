@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
 
@@ -18,7 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const BlockCatchUpLimit = 1
+const SyncBlockNumberJump = 1
 
 type BeefyRelaychainListener struct {
 	config         *Config
@@ -53,46 +52,69 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 }
 
 func (li *BeefyRelaychainListener) syncBeefyJustifications(startBlockNumber uint64) error {
-	latestHeader, err := li.relaychainConn.API().RPC.Chain.GetHeaderLatest()
-	if err != nil {
-		return err
-	}
+	log.Info("Syncing BEEFY justifications from block number ", startBlockNumber, " skipping ", SyncBlockNumberJump, " blocks at a time")
 
-	endBlockNumber := uint64(latestHeader.Number)
-
-	log.Info("Syncing BEEFY justifications from block number ", startBlockNumber, " to ", endBlockNumber, ".")
-
-	for blockNumber := startBlockNumber; blockNumber < endBlockNumber; blockNumber += BlockCatchUpLimit {
+	blockNumber := startBlockNumber + SyncBlockNumberJump
+	for {
+		log.Info("Probing block ", blockNumber)
 		blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber)
 		if err != nil {
+			if err.Error() == "required result to be 32 bytes, but got 0" {
+				log.WithError(err).Info("Block ", blockNumber, " must be the final block.")
+				break
+			}
+			log.WithError(err).Error("Error getting block hash for block ", blockNumber)
 			return err
 		}
-		log.Info("Syncing BEEFY justifications for block ", blockNumber)
-		
+
+		// Hardcode to a known block hash with a beefy justification for testing.
+		//test, err := hex.DecodeString("1581be490ccb0bb7f0f5b170e4036c1c9decef1b8cd16966dc46b19a74c31aeb")
+		//if err != nil {
+		//	log.WithError(err).Info("Switching to test block")
+		//}
+		//blockHash = types.NewHash(test)
+
+		log.Info("Fetching block ", blockNumber, " with hash ", blockHash.Hex())
+
 		block, err := li.relaychainConn.API().RPC.Chain.GetBlock(blockHash)
 		if err != nil {
+			log.WithError(err).Error("Error fetching block ", blockNumber, " with hash ", blockHash.Hex())
 			return err
 		}
-		log.Debug("Justification", block.Justification)
-		if block.Justification != nil {
+		log.Info("Fetched block ", blockNumber)
+
+		if block.Justifications != nil && len(block.Justifications) > 0 {
+			log.Info("Justifications found for block ", blockNumber)
 			signedCommitment := &store.SignedCommitment{}
-			err := types.DecodeFromBytes(block.Justification, signedCommitment)
-			if err != nil {
-				log.WithError(err).Error("Failed to decode BEEFY commitment messages")
+			for j := range block.Justifications {
+				if string(block.Justifications[j][0]) == "BEEF" {
+					err := types.DecodeFromBytes(block.Justifications[j][1], signedCommitment)
+					if err != nil {
+						log.WithError(err).Error("Failed to decode BEEFY commitment messages")
+					} else {
+						log.Info("BEEFY justification found for block ", blockNumber)
+						break
+					}
+				}
 			}
 
-			log.WithFields(logrus.Fields{
+			log.WithFields(log.Fields{
 				"signedCommitment.Commitment.BlockNumber":    signedCommitment.Commitment.BlockNumber,
 				"signedCommitment.Commitment.Payload":        signedCommitment.Commitment.Payload.Hex(),
 				"signedCommitment.Commitment.ValidatorSetID": signedCommitment.Commitment.ValidatorSetID,
 				"signedCommitment.Signatures":                signedCommitment.Signatures,
-			}).Info("Synchronizing a BEEFY commitment: ", block.Justification)
+			}).Info("Synchronizing a BEEFY commitment")
 
 			err = li.processBeefyJustifications(signedCommitment)
 			if err != nil {
-				log.WithError(err).Error("Failed to synchronise BEEFY commitment.");
+				log.WithError(err).Error("Failed to synchronise BEEFY commitment.")
 				return err
 			}
+			log.Info("Sync complete for block ", blockNumber)
+			blockNumber += SyncBlockNumberJump
+		} else {
+			log.Info("BEEFY justifications NOT found for block ", blockNumber)
+			blockNumber++
 		}
 	}
 
@@ -124,7 +146,7 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				log.WithError(err).Error("Failed to decode BEEFY commitment messages")
 			}
 
-			log.WithFields(logrus.Fields{
+			log.WithFields(log.Fields{
 				"signedCommitment.Commitment.BlockNumber":    signedCommitment.Commitment.BlockNumber,
 				"signedCommitment.Commitment.Payload":        signedCommitment.Commitment.Payload.Hex(),
 				"signedCommitment.Commitment.ValidatorSetID": signedCommitment.Commitment.ValidatorSetID,
