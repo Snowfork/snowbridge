@@ -71,11 +71,11 @@ contract BasicOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
      * In essence this ensures that only the principal account can send messages via this channel.
      *
      * For pre-production testing, the restriction to the principal account can be bypassed by using
-     * `setPrincipal` to set the principal to the zero address.
+     * `setPrincipal` to set the principal to the address 0x0000000000000000000000000000000000000042.
      */
     function submit(address _origin, bytes calldata _payload) external override {
         require(isOperatorFor(msg.sender, _origin), "Caller is unauthorized");
-        if (principal != address(0)) {
+        if (principal != address(0x0000000000000000000000000000000000000042)) {
             require(_origin == principal, "Origin is not an authorized principal");
         }
         nonce = nonce + 1;
