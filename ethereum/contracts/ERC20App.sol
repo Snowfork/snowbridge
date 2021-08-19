@@ -7,7 +7,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
-enum ChannelId {Basic, Incentivized}
+enum ChannelId {
+    Basic,
+    Incentivized
+}
 
 contract ERC20App is AccessControl {
     using ScaleCodec for uint256;
@@ -60,10 +63,6 @@ contract ERC20App is AccessControl {
         ChannelId _channelId
     ) public {
         require(
-            IERC20(_token).transferFrom(msg.sender, address(this), _amount),
-            "Contract token allowances insufficient to complete this lock request"
-        );
-        require(
             _channelId == ChannelId.Basic ||
                 _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
@@ -75,9 +74,15 @@ contract ERC20App is AccessControl {
 
         bytes memory call = encodeCall(_token, msg.sender, _recipient, _amount);
 
-        OutboundChannel channel =
-            OutboundChannel(channels[_channelId].outbound);
+        OutboundChannel channel = OutboundChannel(
+            channels[_channelId].outbound
+        );
         channel.submit(msg.sender, call);
+
+        require(
+            IERC20(_token).transferFrom(msg.sender, address(this), _amount),
+            "Contract token allowances insufficient to complete this lock request"
+        );
     }
 
     function unlock(

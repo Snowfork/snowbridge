@@ -75,8 +75,6 @@ contract ERC721App is AccessControl {
 
         IERC721Metadata token = IERC721Metadata(_tokenContract);
 
-        token.transferFrom(msg.sender, address(this), _tokenId);
-
         emit Locked(_tokenContract, _tokenId, msg.sender, _recipient);
 
         bytes memory call = encodeCall(
@@ -91,6 +89,8 @@ contract ERC721App is AccessControl {
             channels[_channelId].outbound
         );
         channel.submit(msg.sender, call);
+
+        token.transferFrom(msg.sender, address(this), _tokenId);
     }
 
     /**
