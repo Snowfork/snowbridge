@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
@@ -13,6 +13,9 @@ enum ChannelId {
     Incentivized
 }
 
+// MaliciousDOTApp is similar to DOTApp, but contains an infinite loop in the mint function, which will consume all the
+// gas of the message. MaliciousDOTApp is used in a test which verifies that a message running out of gas will not
+// prevent execution of other messages
 contract MaliciousDOTApp is FeeSource, AccessControl {
     using ScaleCodec for uint256;
 
@@ -83,8 +86,7 @@ contract MaliciousDOTApp is FeeSource, AccessControl {
     }
 
     // Incentivized channel calls this to charge (burn) fees
-    function burnFee(address feePayer, uint256 _amount) external override {
-        require(hasRole(FEE_BURNER_ROLE, msg.sender), "Caller is unauthorized");
+    function burnFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
         token.burn(feePayer, _amount, "");
     }
 

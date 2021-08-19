@@ -1,5 +1,6 @@
 import { config as dotenv } from "dotenv";
 import { resolve } from "path";
+import "solidity-coverage"
 
 dotenv({ path: resolve(__dirname, ".env") });
 
