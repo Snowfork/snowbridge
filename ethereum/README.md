@@ -17,7 +17,7 @@ Install dependencies with yarn:
 yarn install
 ```
 
-Create an `.env` file using the `env.template` as a template. Note that deploying to ropsten network requires setting the INFURA_PROJECT_ID and MNEMONIC environment variables.
+Create an `.env` file using the `env.template` as a template. Note that deploying to ropsten network requires setting the INFURA_PROJECT_ID and ROPSTEN_PRIVATE_KEY environment variables.
 
 Example:
 
