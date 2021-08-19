@@ -134,7 +134,7 @@ contract("ERC721App", function (accounts) {
         .should.be.fulfilled;
 
       await lockupToken(this.app, this.token, 1337, userOne, POLKADOT_ACCOUNT_ID, ChannelId.Basic)
-        .should.be.rejectedWith(/operator query for nonexistent token/);
+        .should.be.rejectedWith(/query for nonexistent token/);
     });
   });
 
