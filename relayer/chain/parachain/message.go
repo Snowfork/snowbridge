@@ -4,6 +4,7 @@
 package parachain
 
 import (
+	"bytes"
 	"fmt"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
@@ -43,4 +44,24 @@ func (p *ProofData) Put(key []byte, value []byte) error {
 // For interface ethdb.KeyValueWriter
 func (p *ProofData) Delete(_ []byte) error {
 	return fmt.Errorf("Delete should never be called to generate a proof")
+}
+
+// For interface ethdb.KeyValueReader
+func (p *ProofData) Get(key []byte) ([]byte, error) {
+	for i := 0; i < len(p.Keys); i++ {
+		if bytes.Equal(p.Keys[i], key) {
+			return p.Values[i], nil
+		}
+	}
+	return nil, fmt.Errorf("could not find given key in the proof")
+}
+
+// For interface ethdb.KeyValueReader
+func (p *ProofData) Has(key []byte) (bool, error) {
+	for i := 0; i < len(p.Keys); i++ {
+		if bytes.Equal(p.Keys[i], key) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

@@ -6,10 +6,12 @@ package ethereum
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/trie"
 	etrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
@@ -36,6 +38,15 @@ func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, 
 	err = receiptsTrie.Prove(receiptKey, 0, proof)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check the proof is correct
+	provenValue, err := trie.VerifyProof(event.BlockHash, receiptKey, proof)
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(buf.Bytes(), provenValue) {
+		return nil, fmt.Errorf("receipt proof gave wrong value")
 	}
 
 	m := parachain.Message{
