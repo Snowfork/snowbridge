@@ -6,6 +6,7 @@ dotenv({ path: resolve(__dirname, ".env") });
 import "@nomiclabs/hardhat-truffle5";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-web3";
+import "@nomiclabs/hardhat-etherscan";
 import "hardhat-deploy";
 import { HardhatUserConfig } from "hardhat/config";
 
@@ -17,8 +18,9 @@ const getenv = (name: string) => {
   }
 }
 
-const mnemonic = getenv("MNEMONIC");
+const ropstenPrivateKey = getenv("ROPSTEN_PRIVATE_KEY");
 const infuraKey = getenv("INFURA_PROJECT_ID");
+const etherscanKey = getenv("ETHERSCAN_API_KEY");
 
 const config: HardhatUserConfig = {
   networks: {
@@ -35,9 +37,7 @@ const config: HardhatUserConfig = {
     ropsten: {
       chainId: 3,
       url: `https://ropsten.infura.io/v3/${infuraKey}`,
-      accounts: {
-        mnemonic: mnemonic,
-      },
+      accounts: [ropstenPrivateKey],
       gas: 6000000,
       gasPrice: 5000000000,
     }
@@ -54,6 +54,9 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     timeout: 60000
+  },
+  etherscan: {
+    apiKey: etherscanKey
   }
 };
 
