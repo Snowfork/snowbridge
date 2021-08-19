@@ -113,9 +113,6 @@ contract ERC721App is AccessControl {
     }
 
     // SCALE-encode payload
-    // TODO: Use the last _tokenURI argument. We ignore it for now, because
-    // using a nonempty one requires a compact SCALE encoded length prefix,
-    // which we have not yet implemented.
     function encodeCall(
         address _tokenContract,
         uint256 _tokenId,
