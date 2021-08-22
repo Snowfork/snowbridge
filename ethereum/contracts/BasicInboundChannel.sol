@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./ParachainLightClient.sol";
 import "./BeefyLightClient.sol";
+import "./SimplifiedMMRVerification.sol";
 
 contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
@@ -32,9 +33,7 @@ contract BasicInboundChannel {
         ParachainLightClient.ParachainVerifyInput
             calldata _parachainVerifyInput,
         ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
-        uint256 _beefyMMRLeafIndex,
-        uint256 _beefyMMRLeafCount,
-        bytes32[] calldata _beefyMMRLeafProof
+        SimplifiedMMRProof calldata proof
     ) public {
         // Proof
         // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
@@ -44,9 +43,7 @@ contract BasicInboundChannel {
             commitment,
             _parachainVerifyInput,
             _beefyMMRLeafPartial,
-            _beefyMMRLeafIndex,
-            _beefyMMRLeafCount,
-            _beefyMMRLeafProof,
+            proof,
             beefyLightClient
         );
 

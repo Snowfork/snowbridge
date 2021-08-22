@@ -160,25 +160,17 @@ contract BeefyLightClient {
     /**
      * @notice Executed by the incoming channel in order to verify commitment
      * @param beefyMMRLeaf contains the merkle leaf to be verified
-     * @param beefyMMRLeafIndex contains the merkle leaf index
-     * @param beefyMMRLeafCount contains the merkle leaf count
-     * @param beefyMMRLeafProof contains the merkle proof to verify against
+     * @param proof contains simplified mmr proof
      */
     function verifyBeefyMerkleLeaf(
         bytes32 beefyMMRLeaf,
-        bytes32[] calldata mmrRestOfThePeaks,
-        bytes32 mmrRightBaggedPeak,
-        bytes32[] calldata merkleProofItems,
-        bool[] calldata merkleProofOrder
-    ) external returns (bool) {
+        SimplifiedMMRProof memory proof
+    ) external view returns (bool) {
         return
             mmrVerification.verifyInclusionProof(
                 latestMMRRoot,
                 beefyMMRLeaf,
-                mmrRestOfThePeaks,
-                mmrRightBaggedPeak,
-                merkleProofItems,
-                merkleProofOrder
+                proof
             );
     }
 
@@ -290,19 +282,13 @@ contract BeefyLightClient {
         Commitment calldata commitment,
         ValidatorProof calldata validatorProof,
         BeefyMMRLeaf calldata latestMMRLeaf,
-        bytes32[] calldata restOfThePeaks,
-        bytes32 rightBaggedPeak,
-        bytes32[] calldata merkleProofItems,
-        bool[] calldata merkleProofOrder
+        SimplifiedMMRProof calldata proof
     ) public {
         verifyCommitment(id, commitment, validatorProof);
         verifyNewestMMRLeaf(
             latestMMRLeaf,
             commitment.payload,
-            restOfThePeaks,
-            rightBaggedPeak,
-            merkleProofItems,
-            merkleProofOrder
+            proof
         );
 
         processPayload(commitment.payload, commitment.blockNumber);
@@ -348,21 +334,15 @@ contract BeefyLightClient {
     function verifyNewestMMRLeaf(
         BeefyMMRLeaf calldata leaf,
         bytes32 root,
-        bytes32[] calldata restOfThePeaks,
-        bytes32 rightBaggedPeak,
-        bytes32[] calldata merkleProofItems,
-        bool[] calldata merkleProofOrder
-    ) public {
+        SimplifiedMMRProof calldata proof
+    ) public view {
         bytes memory encodedLeaf = encodeMMRLeaf(leaf);
         bytes32 hashedLeaf = hashMMRLeaf(encodedLeaf);
 
         mmrVerification.verifyInclusionProof(
             root,
             hashedLeaf,
-            restOfThePeaks,
-            rightBaggedPeak,
-            merkleProofItems,
-            merkleProofOrder
+            proof
         );
     }
 

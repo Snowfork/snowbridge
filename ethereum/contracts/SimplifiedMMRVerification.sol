@@ -1,19 +1,23 @@
 pragma solidity ^0.8.5;
 
+struct SimplifiedMMRProof {
+    bytes32[] restOfThePeaks;
+    bytes32 rightBaggedPeak;
+    bytes32[] merkleProofItems;
+    uint64 merkleProofOrderBitField;
+}
+
 contract  SimplifiedMMRVerification {
     function verifyInclusionProof(
         bytes32 root,
         bytes32 leafNodeHash,
-        bytes32[] memory restOfThePeaks,
-        bytes32 rightBaggedPeak,
-        bytes32[] memory merkleProofItems,
-        uint64 merkleProofOrderBitField
+        SimplifiedMMRProof memory proof
     ) public pure returns (bool) {
-        require(merkleProofItems.length < 64);
+        require(proof.merkleProofItems.length < 64);
 
-        bool hasRightBaggedPeak = rightBaggedPeak != 0x0;
+        bool hasRightBaggedPeak = proof.rightBaggedPeak != 0x0;
 
-        uint numberOfPeaks = 1 + restOfThePeaks.length;
+        uint numberOfPeaks = 1 + proof.restOfThePeaks.length;
         if (hasRightBaggedPeak) {
             numberOfPeaks++;
         }
@@ -22,15 +26,15 @@ contract  SimplifiedMMRVerification {
         uint peakInsertionPointer = 0;
 
         if (hasRightBaggedPeak) {
-            reversedPeaks[peakInsertionPointer++] = rightBaggedPeak;
+            reversedPeaks[peakInsertionPointer++] = proof.rightBaggedPeak;
         }
 
-        bytes32 merkleRootPeak = calculateMerkleRoot(leafNodeHash, merkleProofItems, merkleProofOrderBitField);
+        bytes32 merkleRootPeak = calculateMerkleRoot(leafNodeHash, proof.merkleProofItems, proof.merkleProofOrderBitField);
         reversedPeaks[peakInsertionPointer++] = merkleRootPeak;
 
-        if (restOfThePeaks.length > 0) {
-            for (uint i = 0; i < restOfThePeaks.length; i++) {
-                reversedPeaks[peakInsertionPointer] = restOfThePeaks[restOfThePeaks.length - i - 1];
+        if (proof.restOfThePeaks.length > 0) {
+            for (uint i = 0; i < proof.restOfThePeaks.length; i++) {
+                reversedPeaks[peakInsertionPointer] = proof.restOfThePeaks[proof.restOfThePeaks.length - i - 1];
                 peakInsertionPointer++;
             }
         }

@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./ParachainLightClient.sol";
 import "./RewardSource.sol";
+import "./SimplifiedMMRVerification.sol";
 
 contract IncentivizedInboundChannel is AccessControl {
     uint64 public nonce;
@@ -59,9 +60,7 @@ contract IncentivizedInboundChannel is AccessControl {
         ParachainLightClient.ParachainVerifyInput
             calldata _parachainVerifyInput,
         ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
-        uint256 _beefyMMRLeafIndex,
-        uint256 _beefyMMRLeafCount,
-        bytes32[] calldata _beefyMMRLeafProof
+        SimplifiedMMRProof calldata proof
     ) public {
         // Proof
         // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
@@ -71,9 +70,7 @@ contract IncentivizedInboundChannel is AccessControl {
             commitment,
             _parachainVerifyInput,
             _beefyMMRLeafPartial,
-            _beefyMMRLeafIndex,
-            _beefyMMRLeafCount,
-            _beefyMMRLeafProof,
+            proof,
             beefyLightClient
         );
 

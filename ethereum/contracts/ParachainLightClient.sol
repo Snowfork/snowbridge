@@ -4,6 +4,7 @@ pragma solidity ^0.8.5;
 import "./BeefyLightClient.sol";
 import "./utils/MerkleProof.sol";
 import "./ScaleCodec.sol";
+import "./SimplifiedMMRVerification.sol";
 
 library ParachainLightClient {
     struct OwnParachainHead {
@@ -41,11 +42,9 @@ library ParachainLightClient {
         bytes32 commitment,
         ParachainVerifyInput calldata _parachainVerifyInput,
         BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
-        uint256 _beefyMMRLeafIndex,
-        uint256 _beefyMMRLeafCount,
-        bytes32[] calldata _beefyMMRLeafProof,
+        SimplifiedMMRProof calldata proof,
         BeefyLightClient beefyLightClient
-    ) internal {
+    ) internal view {
         // 1. Compute our parachains merkle leaf by combining the parachain id, commitment data
         // and other misc bytes provided for the parachain header and hashing them.
         bytes32 ownParachainHeadHash = createParachainMerkleLeaf(
@@ -74,9 +73,7 @@ library ParachainLightClient {
         require(
             beefyLightClient.verifyBeefyMerkleLeaf(
                 beefyMMRLeaf,
-                _beefyMMRLeafIndex,
-                _beefyMMRLeafCount,
-                _beefyMMRLeafProof
+                proof
             ),
             "Invalid proof"
         );
