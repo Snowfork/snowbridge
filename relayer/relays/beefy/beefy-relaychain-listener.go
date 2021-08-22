@@ -125,10 +125,10 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				return err
 			}
 
-			simplifiedProof, err := merkle.ConvertToSimplifiedMMRProof(uint64(latestMMRProof.Proof.LeafIndex), latestMMRProof.Leaf, uint64(latestMMRProof.Proof.LeafCount), latestMMRProof.Proof.Items)
+			simplifiedProof, err := merkle.ConvertToSimplifiedMMRProof(latestMMRProof.BlockHash, uint64(latestMMRProof.Proof.LeafIndex), latestMMRProof.Leaf, uint64(latestMMRProof.Proof.LeafCount), latestMMRProof.Proof.Items)
 			log.WithField("simplifiedProof", simplifiedProof).Info("Converted proof to simplified proof")
 
-			serializedProof, err := types.EncodeToBytes(latestMMRProof)
+			serializedProof, err := types.EncodeToBytes(simplifiedProof)
 			if err != nil {
 				log.WithError(err).Error("Failed to serialize MMR Proof")
 				return err

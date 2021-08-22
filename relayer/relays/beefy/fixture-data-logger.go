@@ -41,14 +41,19 @@ type BeefyLightClientBeefyMMRLeafLog struct {
 	NextAuthoritySetRoot string `json:"nextAuthoritySetRoot"`
 }
 
+type SimplifiedMMRProofLog struct {
+	BeefyMMRRestOfThePeaks []string `json:"RestOfThePeaks"`
+	BeefyMMRRightBaggedPeak string `json:"RightBaggedPeak"`
+	MerkleProofItems   []string `json:"MerkleProofItems"`
+	MerkleProofOrder   uint64 `json:"MerkleProofOrder"`
+}
+
 type CompleteSignatureCommitmentTxInput struct {
 	Id             *big.Int                          `json:"id"` //  revive:disable-line
 	Commitment     BeefyLightClientCommitmentLog     `json:"commitment"`
 	ValidatorProof BeefyLightClientValidatorProofLog `json:"validatorProof"`
 	LatestMMRLeaf  BeefyLightClientBeefyMMRLeafLog   `json:"latestMMRLeaf"`
-	MMRLeafIndex   uint64                            `json:"mmrLeafIndex"`
-	MMRLeafCount   uint64                            `json:"mmrLeafCount"`
-	MMRProofItems  []string                          `json:"mmrProofItems"`
+	SimplifiedMMRProof SimplifiedMMRProofLog `json:"simplifiedMMRProof"`
 }
 
 func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
@@ -67,10 +72,14 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 
 	hashedLeaf := "0x" + hex.EncodeToString(hasher.Hash(bytesEncodedLeaf))
 
-	var mmrProofItems []string
-	for _, item := range msg.MMRProofItems {
-		hex := "0x" + hex.EncodeToString(item[:])
-		mmrProofItems = append(mmrProofItems, hex)
+	var beefyMMRRestOfThePeaks []string
+	for _, item := range msg.SimplifiedProof.RestOfThePeaks {
+		beefyMMRRestOfThePeaks = append(beefyMMRRestOfThePeaks, "0x"+hex.EncodeToString(item[:]))
+	}
+
+	var beefyMMRMerkleProofItems []string
+	for _, item := range msg.SimplifiedProof.MerkleProofItems {
+		beefyMMRMerkleProofItems = append(beefyMMRMerkleProofItems, "0x"+hex.EncodeToString(item[:]))
 	}
 
 	var signatures []string
@@ -111,9 +120,12 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 			NextAuthoritySetLen:  msg.LatestMMRLeaf.NextAuthoritySetLen,
 			NextAuthoritySetRoot: "0x" + hex.EncodeToString(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
 		},
-		MMRLeafIndex:  msg.MMRLeafIndex,
-		MMRLeafCount:  msg.MMRLeafCount,
-		MMRProofItems: mmrProofItems,
+		SimplifiedMMRProof: SimplifiedMMRProofLog{
+			BeefyMMRRestOfThePeaks:  beefyMMRRestOfThePeaks,
+			BeefyMMRRightBaggedPeak: "0x" + hex.EncodeToString(msg.SimplifiedProof.RightBaggedPeak[:]),
+			MerkleProofItems:        beefyMMRMerkleProofItems,
+			MerkleProofOrder:        msg.SimplifiedProof.MerkleProofOrderBitField,
+		},
 	}
 	b, err := json.Marshal(input)
 	if err != nil {

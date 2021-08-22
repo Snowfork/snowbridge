@@ -9,10 +9,12 @@ import (
 type SimplifiedMMRProof struct {
 	MerkleProofItems   []types.H256
 	MerkleProofOrder   uint64
-	Leaf               types.MMRLeaf
-	HasRightBaggedPeak bool
 	MMRRightBaggedPeak types.H256
 	MMRRestOfThePeaks  []types.H256
+	// Below fields are not part of proof directly, but they are included so that
+	// we do not lose any information when converting from RPC response
+	Blockhash types.H256
+	Leaf      types.MMRLeaf
 }
 
 func parentOffset(height uint32) uint64 {
@@ -164,16 +166,15 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 	return fmt.Errorf("corrupted proof"), proofOrder
 }
 
-func ConvertToSimplifiedMMRProof(leafIndex uint64, leaf types.MMRLeaf, leafCount uint64, proofItems []types.H256) (SimplifiedMMRProof, error) {
+func ConvertToSimplifiedMMRProof(blockhash types.H256, leafIndex uint64, leaf types.MMRLeaf, leafCount uint64, proofItems []types.H256) (SimplifiedMMRProof, error) {
 	leafPos := leafIndexToPosition(leafIndex)
 
 	var readyMadePeakHashes []types.H256
-	var optionalRightBaggedPeak types.H256
+	var optionalRightBaggedPeak types.H256 = [32]byte{}
 	var merkleProof []types.H256
 
 	var proofItemPosition uint64 = 0
 	var merkleRootPeakPosition uint64 = 0
-	hasRightBaggedPeak := false
 
 	mmrSize := leafCountToMMRSize(leafCount)
 	peaks := getPeaks(mmrSize)
@@ -190,7 +191,6 @@ func ConvertToSimplifiedMMRProof(leafIndex uint64, leaf types.MMRLeaf, leafCount
 					merkleProof = append(merkleProof, proofItems[i])
 				}
 				optionalRightBaggedPeak = proofItems[len(proofItems)-1]
-				hasRightBaggedPeak = true
 				break
 			}
 		} else {
@@ -214,9 +214,9 @@ func ConvertToSimplifiedMMRProof(leafIndex uint64, leaf types.MMRLeaf, leafCount
 	return SimplifiedMMRProof{
 		MerkleProofItems:   merkleProof,
 		MerkleProofOrder:   proofOrder,
-		Leaf:               leaf,
-		HasRightBaggedPeak: hasRightBaggedPeak,
 		MMRRightBaggedPeak: optionalRightBaggedPeak,
 		MMRRestOfThePeaks:  readyMadePeakHashes,
+		Leaf:               leaf,
+		Blockhash: blockhash,
 	}, nil
 }
