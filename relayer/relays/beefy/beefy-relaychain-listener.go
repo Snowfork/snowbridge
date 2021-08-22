@@ -17,7 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const SyncBlockNumberJump = 1
+const SyncBlockNumberJump = 50
 
 type BeefyRelaychainListener struct {
 	config         *Config
@@ -67,13 +67,6 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(startBlockNumber uint
 			return err
 		}
 
-		// Hardcode to a known block hash with a beefy justification for testing.
-		//test, err := hex.DecodeString("1581be490ccb0bb7f0f5b170e4036c1c9decef1b8cd16966dc46b19a74c31aeb")
-		//if err != nil {
-		//	log.WithError(err).Info("Switching to test block")
-		//}
-		//blockHash = types.NewHash(test)
-
 		log.Info("Fetching block ", blockNumber, " with hash ", blockHash.Hex())
 
 		block, err := li.relaychainConn.API().RPC.Chain.GetBlock(blockHash)
@@ -81,35 +74,36 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(startBlockNumber uint
 			log.WithError(err).Error("Error fetching block ", blockNumber, " with hash ", blockHash.Hex())
 			return err
 		}
-		log.Info("Fetched block ", blockNumber)
 
-		if block.Justifications != nil && len(block.Justifications) > 0 {
-			log.Info("Justifications found for block ", blockNumber)
-			signedCommitment := &store.SignedCommitment{}
-			for j := range block.Justifications {
-				if string(block.Justifications[j][0]) == "BEEF" {
-					err := types.DecodeFromBytes(block.Justifications[j][1], signedCommitment)
-					if err != nil {
-						log.WithError(err).Error("Failed to decode BEEFY commitment messages")
-					} else {
-						log.Info("BEEFY justification found for block ", blockNumber)
-						break
-					}
+		commitments := []store.SignedCommitment{}
+		for j := range block.Justifications {
+			sc := store.OptionalSignedCommitment{}
+			if block.Justifications[j].EngineID() == "BEEF" {
+				err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
+				if err != nil {
+					log.WithError(err).Error("Failed to decode BEEFY commitment messages")
+				} else if sc.IsSome() {
+					commitments = append(commitments, sc.Value)
 				}
 			}
+		}
 
+		for c := range commitments {
 			log.WithFields(log.Fields{
-				"signedCommitment.Commitment.BlockNumber":    signedCommitment.Commitment.BlockNumber,
-				"signedCommitment.Commitment.Payload":        signedCommitment.Commitment.Payload.Hex(),
-				"signedCommitment.Commitment.ValidatorSetID": signedCommitment.Commitment.ValidatorSetID,
-				"signedCommitment.Signatures":                signedCommitment.Signatures,
+				"signedCommitment.Commitment.BlockNumber":    commitments[c].Commitment.BlockNumber,
+				"signedCommitment.Commitment.Payload":        commitments[c].Commitment.Payload.Hex(),
+				"signedCommitment.Commitment.ValidatorSetID": commitments[c].Commitment.ValidatorSetID,
+				"signedCommitment.Signatures":                commitments[c].Signatures,
 			}).Info("Synchronizing a BEEFY commitment")
 
-			err = li.processBeefyJustifications(signedCommitment)
+			err = li.processBeefyJustifications(&commitments[c])
 			if err != nil {
 				log.WithError(err).Error("Failed to synchronise BEEFY commitment.")
 				return err
 			}
+		}
+
+		if len(commitments) > 0 {
 			log.Info("Sync complete for block ", blockNumber)
 			blockNumber += SyncBlockNumberJump
 		} else {
