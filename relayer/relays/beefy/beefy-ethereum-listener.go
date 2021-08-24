@@ -110,7 +110,7 @@ func (li *BeefyEthereumListener) pollHistoricEventsAndHeaders(ctx context.Contex
 }
 
 func (li *BeefyEthereumListener) pollEventsAndHeaders(ctx context.Context, descendantsUntilFinal uint64) error {
-	headers := make(chan *gethTypes.Header, 5)
+	headers := make(chan *gethTypes.Header)
 
 	sub, err := li.ethereumConn.GetClient().SubscribeNewHead(ctx, headers)
 	if err != nil {
@@ -126,7 +126,11 @@ func (li *BeefyEthereumListener) pollEventsAndHeaders(ctx context.Context, desce
 		case err := <-sub.Err():
 			log.WithError(err).Error("Error with ethereum header subscription")
 			return err
-		case gethheader := <-headers:
+		case gethheader, ok := <-headers:
+			if !ok {
+				log.WithField("reason", "channel closed").Info("Shutting down ethereum listener")
+				return nil
+			}
 			blockNumber := gethheader.Number.Uint64()
 			li.forwardWitnessedBeefyJustifications()
 			li.processInitialVerificationSuccessfulEvents(ctx, blockNumber)

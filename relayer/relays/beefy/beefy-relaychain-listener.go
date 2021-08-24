@@ -39,6 +39,7 @@ func NewBeefyRelaychainListener(
 func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	eg.Go(func() error {
+		defer close(li.beefyMessages)
 		return li.subBeefyJustifications(ctx)
 	})
 
@@ -48,9 +49,16 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) error {
 	ch := make(chan interface{})
 
-	sub, err := li.relaychainConn.API().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
+	sub, err := li.relaychainConn.API().Client.Subscribe(
+		context.Background(),
+		"beefy",
+		"subscribeJustifications",
+		"unsubscribeJustifications",
+		"justifications",
+		ch,
+	)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer sub.Unsubscribe()
 
@@ -58,11 +66,13 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 		select {
 		case <-ctx.Done():
 			log.WithField("reason", ctx.Err()).Info("Shutting down polkadot listener")
-			if li.beefyMessages != nil {
-				close(li.beefyMessages)
-			}
 			return nil
-		case msg := <-ch:
+		case msg, ok := <-ch:
+			if !ok {
+				log.WithField("reason", "channel closed").Info("Shutting down polkadot listener")
+				return nil
+			}
+
 			signedCommitment := &store.SignedCommitment{}
 			err := types.DecodeFromHexString(msg.(string), signedCommitment)
 			if err != nil {
@@ -97,12 +107,13 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 			beefyAuthoritiesBytes, err := json.Marshal(beefyAuthorities)
 			if err != nil {
 				log.WithError(err).Error("Failed to marshal BEEFY authorities:", beefyAuthorities)
-				continue
+				return err
 			}
 
 			blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(blockNumber))
 			if err != nil {
 				log.WithError(err).Error("Failed to get block hash")
+				return err
 			}
 			log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
 

@@ -67,12 +67,12 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			log.WithField("reason", ctx.Err()).Info("Shutting down ethereum writer")
-			// Drain messages to avoid deadlock
-			for len(wr.beefyMessages) > 0 {
-				<-wr.beefyMessages
-			}
 			return nil
-		case msg := <-wr.beefyMessages:
+		case msg, ok := <-wr.beefyMessages:
+			if !ok {
+				log.WithField("reason", "channel closed").Info("Shutting down ethereum writer")
+				return nil
+			}
 			switch msg.Status {
 			case store.CommitmentWitnessed:
 				err := wr.WriteNewSignatureCommitment(ctx, msg)
