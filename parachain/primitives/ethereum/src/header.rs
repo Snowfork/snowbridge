@@ -79,11 +79,11 @@ impl Header {
 		keccak_256(&self.rlp(false)).into()
 	}
 
-	pub fn check_receipt_proof(&self, proof: &[Vec<u8>]) -> Option<receipt::Receipt> {
+	pub fn check_receipt_proof(&self, proof: &[Vec<u8>]) -> Option<Result<receipt::Receipt, rlp::DecoderError>> {
 		match self.apply_merkle_proof(proof) {
-			Some((root, data)) if root == self.receipts_root => rlp::decode(&data).ok(),
+			Some((root, data)) if root == self.receipts_root => Some(rlp::decode(&data)),
 			Some((_, _)) => None,
-			None => None,
+			None => None
 		}
 	}
 

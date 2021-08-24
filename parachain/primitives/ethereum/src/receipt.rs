@@ -15,10 +15,8 @@ impl Receipt {
 	pub fn contains_log(&self, log: &Log) -> bool {
 		self.logs.iter().find(|&l| l == log).is_some()
 	}
-}
 
-impl rlp::Decodable for Receipt {
-	fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
+	fn decode_list(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
 		let mut iter = rlp.iter();
 
 		let post_state_or_status: Vec<u8> = match iter.next() {
@@ -33,15 +31,39 @@ impl rlp::Decodable for Receipt {
 
 		let bloom: Bloom = match iter.next() {
 			Some(data) => data.as_val()?,
-			None => return Err(rlp::DecoderError::Custom("Expected receipt bloom")) 
+			None => return Err(rlp::DecoderError::Custom("Expected receipt bloom"))
 		};
 
 		let logs: Vec<Log> = match iter.next() {
 			Some(data) => data.as_list()?,
-			None => return Err(rlp::DecoderError::Custom("Expected receipt logs")) 
+			None => return Err(rlp::DecoderError::Custom("Expected receipt logs"))
 		};
 
 		Ok(Self {post_state_or_status, cumulative_gas_used, bloom, logs})
+	}
+}
+
+impl rlp::Decodable for Receipt {
+	fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
+		if rlp.is_data() {
+			// Typed receipt
+			let data = rlp.as_raw();
+			match data[0] {
+				1 | 2 => {
+					let receipt_rlp = &rlp::Rlp::new(&data[1..]);
+					if !receipt_rlp.is_list() {
+						return Err(rlp::DecoderError::RlpExpectedToBeList)
+					}
+					Self::decode_list(&rlp::Rlp::new(&data[1..]))
+				}
+				_ => Err(rlp::DecoderError::Custom("Unsupported receipt type")),
+			}
+		} else if rlp.is_list() {
+			// Legacy receipt
+			Self::decode_list(rlp)
+		} else {
+			Err(rlp::DecoderError::RlpExpectedToBeList)
+		}
 	}
 }
 
