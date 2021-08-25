@@ -59,9 +59,6 @@ type CompleteSignatureCommitmentTxInput struct {
 func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 	msg store.CompleteSignatureCommitmentMessage, info store.BeefyRelayInfo) error {
 
-	var latestMMRProof gsrpcTypes.GenerateMMRProofResponse
-	gsrpcTypes.DecodeFromBytes(info.SerializedLatestMMRProof, &latestMMRProof)
-
 	var hasher Keccak256
 
 	bytesEncodedMMRLeaf, _ := gsrpcTypes.EncodeToBytes(msg.LatestMMRLeaf)
