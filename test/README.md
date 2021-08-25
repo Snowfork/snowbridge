@@ -22,7 +22,7 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
 * `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
-* sponge - Is available in the moreutils package
+* sponge - Is available in the moreutils package. On Mac see https://formulae.brew.sh/formula/moreutils. On Linux:
 
   ```bash
   apt install moreutils
@@ -107,6 +107,8 @@ You should now be good to go!
 ```bash
 yarn test
 ```
+
+These tests are meant to closely replicate real-world behaviour. This means that they also replicate real-world delays and confirmation times. This can take up to 4 minutes per test and ~20minutes for all tests.
 
 ### Testing against a malicious contract
 We also have a test environment that tests against a malicious contract that attempts to consume infinite gas. To setup this environment, run the start-services script with the malicious flag:

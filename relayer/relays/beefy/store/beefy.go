@@ -1,14 +1,13 @@
 package store
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
-	merkletree "github.com/wealdtech/go-merkletree"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
 type NewSignatureCommitmentMessage struct {
@@ -28,6 +27,8 @@ type CompleteSignatureCommitmentMessage struct {
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
 	LatestMMRLeaf                  beefylightclient.BeefyLightClientBeefyMMRLeaf
+	MMRLeafIndex                   uint64
+	MMRLeafCount                   uint64
 	MMRProofItems                  [][32]byte
 }
 
@@ -44,12 +45,12 @@ func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment
 }
 
 func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int64, initialBitfield []*big.Int) (NewSignatureCommitmentMessage, error) {
-	commitmentHash := (&Keccak256{}).Hash(b.SignedCommitment.Commitment.Bytes())
+	commitmentHash := (&keccak.Keccak256{}).Hash(b.SignedCommitment.Commitment.Bytes())
 
 	var commitmentHash32 [32]byte
 	copy(commitmentHash32[:], commitmentHash[0:32])
 
-	sig0ProofContents, err := b.GenerateMerkleProofOffchain(valAddrIndex)
+	sig0ProofContents, err := b.GenerateValidatorAddressProof(valAddrIndex)
 	if err != nil {
 		return NewSignatureCommitmentMessage{}, err
 	}
@@ -79,57 +80,19 @@ func BeefySigToEthSig(beefySig BeefySignature) []byte {
 	return sigValEthereum
 }
 
-// Keccak256 is the Keccak256 hashing method
-type Keccak256 struct{}
-
-// New creates a new Keccak256 hashing method
-func New() *Keccak256 {
-	return &Keccak256{}
-}
-
-// Hash generates a Keccak256 hash from a byte array
-func (h *Keccak256) Hash(data []byte) []byte {
-	hash := crypto.Keccak256(data)
-	return hash[:]
-}
-
-func (b *BeefyJustification) GenerateMerkleProofOffchain(valAddrIndex int64) ([][32]byte, error) {
+func (b *BeefyJustification) GenerateValidatorAddressProof(valAddrIndex int64) ([][32]byte, error) {
 	// Hash validator addresses for leaf input data
 	beefyTreeData := make([][]byte, len(b.ValidatorAddresses))
 	for i, valAddr := range b.ValidatorAddresses {
 		beefyTreeData[i] = valAddr.Bytes()
 	}
 
-	// Create the tree
-	beefyMerkleTree, err := merkletree.NewUsing(beefyTreeData, &Keccak256{}, nil)
+	_, _, proof, err := merkle.GenerateMerkleProof(beefyTreeData, valAddrIndex)
 	if err != nil {
-		return [][32]byte{}, err
+		return nil, err
 	}
 
-	// Generate Merkle Proof for validator at index valAddrIndex
-	sigProof, err := beefyMerkleTree.GenerateProof(beefyTreeData[valAddrIndex])
-	if err != nil {
-		return [][32]byte{}, err
-	}
-
-	// Verify the proof
-	root := beefyMerkleTree.Root()
-	verified, err := merkletree.VerifyProofUsing(beefyTreeData[valAddrIndex], sigProof, root, &Keccak256{}, nil)
-	if err != nil {
-		return [][32]byte{}, err
-	}
-	if !verified {
-		return [][32]byte{}, fmt.Errorf("failed to verify proof")
-	}
-
-	sigProofContents := make([][32]byte, len(sigProof.Hashes))
-	for i, hash := range sigProof.Hashes {
-		var hash32Byte [32]byte
-		copy(hash32Byte[:], hash)
-		sigProofContents[i] = hash32Byte
-	}
-
-	return sigProofContents, nil
+	return proof, nil
 }
 
 func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyRelayInfo, bitfield string) (CompleteSignatureCommitmentMessage, error) {
@@ -157,7 +120,7 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		pubKey := b.ValidatorAddresses[validatorPosition.Int64()]
 		validatorPublicKeys = append(validatorPublicKeys, pubKey)
 
-		merkleProof, err := b.GenerateMerkleProofOffchain(validatorPosition.Int64())
+		merkleProof, err := b.GenerateValidatorAddressProof(validatorPosition.Int64())
 		if err != nil {
 			return CompleteSignatureCommitmentMessage{}, err
 		}
@@ -178,6 +141,7 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 	}
 
 	latestMMRLeaf := beefylightclient.BeefyLightClientBeefyMMRLeaf{
+		Version:              uint8(latestMMRProof.Leaf.Version),
 		ParentNumber:         uint32(latestMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
 		ParentHash:           latestMMRProof.Leaf.ParentNumberAndHash.Hash,
 		ParachainHeadsRoot:   latestMMRProof.Leaf.ParachainHeads,
@@ -198,6 +162,8 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorPublicKeys:            validatorPublicKeys,
 		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
 		LatestMMRLeaf:                  latestMMRLeaf,
+		MMRLeafIndex:                   uint64(latestMMRProof.Proof.LeafIndex),
+		MMRLeafCount:                   uint64(latestMMRProof.Proof.LeafCount),
 		MMRProofItems:                  mmrProofItems,
 	}
 	return msg, nil

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
@@ -7,7 +7,10 @@ import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
-enum ChannelId {Basic, Incentivized}
+enum ChannelId {
+    Basic,
+    Incentivized
+}
 
 contract ERC721App is AccessControl {
     using ScaleCodec for uint256;
@@ -17,18 +20,18 @@ contract ERC721App is AccessControl {
     bytes2 constant MINT_CALL = 0x4301;
 
     event Locked(
-                 address tokenContract,
-                 uint256 tokenId,
-                 address sender,
-                 bytes32 recipient
-                 );
+        address tokenContract,
+        uint256 tokenId,
+        address sender,
+        bytes32 recipient
+    );
 
     event Unlocked(
-                   address tokenContract,
-                   uint256 tokenId,
-                   bytes32 sender,
-                   address recipient
-                   );
+        address tokenContract,
+        uint256 tokenId,
+        bytes32 sender,
+        address recipient
+    );
 
     struct Channel {
         address inbound;
@@ -58,28 +61,36 @@ contract ERC721App is AccessControl {
      * @param _recipient Polkadot address of the receiver
      * @param _channelId The Channel to use to send token
      */
-    function lock(address _tokenContract,
-                  uint256 _tokenId,
-                  bytes32 _recipient,
-                  ChannelId _channelId
-                  ) public payable {
+    function lock(
+        address _tokenContract,
+        uint256 _tokenId,
+        bytes32 _recipient,
+        ChannelId _channelId
+    ) public payable {
         require(
-                _channelId == ChannelId.Basic ||
+            _channelId == ChannelId.Basic ||
                 _channelId == ChannelId.Incentivized,
-                "Invalid channel ID"
-                );
+            "Invalid channel ID"
+        );
 
         IERC721Metadata token = IERC721Metadata(_tokenContract);
 
-        token.transferFrom(msg.sender, address(this), _tokenId);
-
         emit Locked(_tokenContract, _tokenId, msg.sender, _recipient);
 
-        bytes memory call = encodeCall(_tokenContract, _tokenId, msg.sender, _recipient, token.tokenURI(_tokenId));
+        bytes memory call = encodeCall(
+            _tokenContract,
+            _tokenId,
+            msg.sender,
+            _recipient,
+            token.tokenURI(_tokenId)
+        );
 
-        OutboundChannel channel =
-            OutboundChannel(channels[_channelId].outbound);
+        OutboundChannel channel = OutboundChannel(
+            channels[_channelId].outbound
+        );
         channel.submit(msg.sender, call);
+
+        token.transferFrom(msg.sender, address(this), _tokenId);
     }
 
     /**
@@ -90,16 +101,11 @@ contract ERC721App is AccessControl {
      * @param _recipient The ETHApp
      */
     function unlock(
-             address _tokenContract,
-             uint256 _tokenId,
-             bytes32 _sender,
-             address _recipient
-             ) public {
-        require(
-            hasRole(INBOUND_CHANNEL_ROLE, msg.sender),
-            "Caller is not an inbound channel"
-        );
-
+        address _tokenContract,
+        uint256 _tokenId,
+        bytes32 _sender,
+        address _recipient
+    ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         IERC721Metadata token = IERC721Metadata(_tokenContract);
 
         token.transferFrom(address(this), _recipient, _tokenId);
@@ -108,22 +114,21 @@ contract ERC721App is AccessControl {
 
     // SCALE-encode payload
     function encodeCall(
-                        address _tokenContract,
-                        uint256 _tokenId,
-                        address _sender,
-                        bytes32 _recipient,
-                        string memory _tokenURI
-                        ) private pure returns (bytes memory) {
+        address _tokenContract,
+        uint256 _tokenId,
+        address _sender,
+        bytes32 _recipient,
+        string memory
+    ) private pure returns (bytes memory) {
         return
             abi.encodePacked(
-                             MINT_CALL,
-                             _sender,
-                             bytes1(0x00), // Encode recipient as MultiAddress::Id
-                             _recipient,
-                             _tokenContract,
-                             _tokenId.encode256(),
-                             bytes1(0x00) // TODO placeholder for the following, which requires compact (scale) encoded length prefix: // bytes(_tokenURI)
-                            );
+                MINT_CALL,
+                _sender,
+                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                _recipient,
+                _tokenContract,
+                _tokenId.encode256(),
+                bytes1(0x00) // Use an empty _tokenURI instead of SCALE encoded _tokenURI
+            );
     }
 }
-

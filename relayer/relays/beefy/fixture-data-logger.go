@@ -21,7 +21,7 @@ import (
 type BeefyLightClientCommitmentLog struct {
 	Payload        string `json:"payload"`
 	BlockNumber    uint64 `json:"blockNumber"`
-	ValidatorSetId uint32 `json:"validatorSetId"`  // revive:disable-line
+	ValidatorSetId uint32 `json:"validatorSetId"` // revive:disable-line
 }
 
 type BeefyLightClientValidatorProofLog struct {
@@ -32,19 +32,22 @@ type BeefyLightClientValidatorProofLog struct {
 }
 
 type BeefyLightClientBeefyMMRLeafLog struct {
+	Version              uint8  `json:"version"`
 	ParentNumber         uint32 `json:"parentNumber"`
 	ParentHash           string `json:"parentHash"`
 	ParachainHeadsRoot   string `json:"parachainHeadsRoot"`
-	NextAuthoritySetId   uint64 `json:"nextAuthoritySetId"`  // revive:disable-line
+	NextAuthoritySetId   uint64 `json:"nextAuthoritySetId"` // revive:disable-line
 	NextAuthoritySetLen  uint32 `json:"nextAuthoritySetLen"`
 	NextAuthoritySetRoot string `json:"nextAuthoritySetRoot"`
 }
 
 type CompleteSignatureCommitmentTxInput struct {
-	Id             *big.Int                          `json:"id"`  //  revive:disable-line
+	Id             *big.Int                          `json:"id"` //  revive:disable-line
 	Commitment     BeefyLightClientCommitmentLog     `json:"commitment"`
 	ValidatorProof BeefyLightClientValidatorProofLog `json:"validatorProof"`
 	LatestMMRLeaf  BeefyLightClientBeefyMMRLeafLog   `json:"latestMMRLeaf"`
+	MMRLeafIndex   uint64                            `json:"mmrLeafIndex"`
+	MMRLeafCount   uint64                            `json:"mmrLeafCount"`
 	MMRProofItems  []string                          `json:"mmrProofItems"`
 }
 
@@ -100,6 +103,7 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 			PublicKeyMerkleProofs: pubKeyMerkleProofs,
 		},
 		LatestMMRLeaf: BeefyLightClientBeefyMMRLeafLog{
+			Version:              msg.LatestMMRLeaf.Version,
 			ParentNumber:         msg.LatestMMRLeaf.ParentNumber,
 			ParentHash:           "0x" + hex.EncodeToString(msg.LatestMMRLeaf.ParentHash[:]),
 			ParachainHeadsRoot:   "0x" + hex.EncodeToString(msg.LatestMMRLeaf.ParachainHeadsRoot[:]),
@@ -107,6 +111,8 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 			NextAuthoritySetLen:  msg.LatestMMRLeaf.NextAuthoritySetLen,
 			NextAuthoritySetRoot: "0x" + hex.EncodeToString(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
 		},
+		MMRLeafIndex:  msg.MMRLeafIndex,
+		MMRLeafCount:  msg.MMRLeafCount,
 		MMRProofItems: mmrProofItems,
 	}
 	b, err := json.Marshal(input)

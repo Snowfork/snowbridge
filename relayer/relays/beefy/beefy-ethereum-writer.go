@@ -166,12 +166,18 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 		return err
 	}
 
+	var pkProofHex []string
+	for _, proofItem := range msg.ValidatorPublicKeyMerkleProof {
+		pkProofHex = append(pkProofHex, "0x"+hex.EncodeToString(proofItem[:]))
+	}
+
 	log.WithFields(logrus.Fields{
-		"txHash":                           tx.Hash().Hex(),
-		"msg.CommitmentHash":               "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
-		"msg.ValidatorSignatureCommitment": "0x" + hex.EncodeToString(msg.ValidatorSignatureCommitment),
-		"msg.ValidatorPublicKey":           msg.ValidatorPublicKey.Hex(),
-		"BlockNumber":                      beefyJustification.SignedCommitment.Commitment.BlockNumber,
+		"txHash":                            tx.Hash().Hex(),
+		"msg.CommitmentHash":                "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
+		"msg.ValidatorSignatureCommitment":  "0x" + hex.EncodeToString(msg.ValidatorSignatureCommitment),
+		"msg.ValidatorPublicKey":            msg.ValidatorPublicKey.Hex(),
+		"msg.ValidatorPublicKeyMerkleProof": pkProofHex,
+		"BlockNumber":                       beefyJustification.SignedCommitment.Commitment.BlockNumber,
 	}).Info("New Signature Commitment transaction submitted")
 
 	log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
@@ -247,6 +253,8 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		msg.Commitment,
 		validatorProof,
 		msg.LatestMMRLeaf,
+		msg.MMRLeafIndex,
+		msg.MMRLeafCount,
 		msg.MMRProofItems)
 
 	if err != nil {

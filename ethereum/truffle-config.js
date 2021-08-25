@@ -18,7 +18,7 @@ module.exports = {
     },
     ropsten: {
       provider: () => new HDWalletProvider(
-        process.env.MNEMONIC,
+        [process.env.ROPSTEN_PRIVATE_KEY],
         "https://ropsten.infura.io/v3/".concat(process.env.INFURA_PROJECT_ID)
       ),
       network_id: 3,

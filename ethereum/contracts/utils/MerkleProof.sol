@@ -29,6 +29,30 @@ library MerkleProof {
         return computedHash == root;
     }
 
+    /**
+     * @notice Compute the root of a MMR from a leaf and proof
+     *
+     * @param leaf the leaf we want to prove
+     * @param proof an array of nodes to be hashed in order that they should be hashed
+     * @param side an array of booleans signalling whether the corresponding node should be hashed on the left side or
+     * the right side of the current hash
+     */
+    function computeRootFromProofAndSide(
+        bytes32 leaf,
+        bytes32[] calldata proof,
+        bool[] calldata side
+    ) public pure returns (bytes32) {
+        bytes32 node = leaf;
+        for (uint256 i = 0; i < proof.length; i++) {
+            if (side[i]) {
+                node = keccak256(abi.encodePacked(proof[i], node));
+            } else {
+                node = keccak256(abi.encodePacked(node, proof[i]));
+            }
+        }
+        return node;
+    }
+
     function computeRootFromProofAtPosition(
         bytes32 leaf,
         uint256 pos,

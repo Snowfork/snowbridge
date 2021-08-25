@@ -1,7 +1,8 @@
 package config
 
 type PolkadotConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+	Endpoint           string `mapstructure:"endpoint"`
+	BeefyStartingBlock uint64 `mapstructure:"beefy-starting-block"`
 }
 
 type ParachainConfig struct {

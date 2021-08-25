@@ -20,9 +20,10 @@ require (
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rs/cors v1.8.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454
-	github.com/snowfork/go-substrate-rpc-client/v3 v3.0.4
+	github.com/snowfork/go-substrate-rpc-client/v3 v3.0.6
 	github.com/spf13/afero v1.5.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v1.1.1

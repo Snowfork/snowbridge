@@ -3,7 +3,7 @@ const {
   deployBeefyLightClient,
   mine, catchRevert, printBitfield
 } = require("./helpers");
-const fixture = require('./fixtures/full-flow.json');
+const fixture = require('./fixtures/full-flow-basic.json');
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -25,7 +25,8 @@ describe("Beefy Light Client", function () {
       fixture.completeSubmitInput.latestMMRLeaf,
       fixture.completeSubmitInput.mmrProofItems,
       fixture.completeSubmitInput.commitment.payload,
-      fixture.completeSubmitInput.commitment.blockNumber,
+      fixture.completeSubmitInput.mmrLeafIndex,
+      fixture.completeSubmitInput.mmrLeafCount,
     ).should.be.fulfilled
   });
 
@@ -35,7 +36,7 @@ describe("Beefy Light Client", function () {
       fixture.completeSubmitInput.validatorProof.positions,
       2
     );
-    expect(printBitfield(initialBitfield)).to.eq('11')
+    expect(printBitfield(initialBitfield)).to.eq('1')
 
     const commitmentHash = await this.beefyLightClient.createCommitmentHash(
       fixture.completeSubmitInput.commitment
@@ -86,6 +87,8 @@ describe("Beefy Light Client", function () {
       fixture.completeSubmitInput.commitment,
       validatorProofs,
       fixture.completeSubmitInput.latestMMRLeaf,
+      fixture.completeSubmitInput.mmrLeafIndex,
+      fixture.completeSubmitInput.mmrLeafCount,
       fixture.completeSubmitInput.mmrProofItems,
     ).should.be.fulfilled
 

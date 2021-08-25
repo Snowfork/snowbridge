@@ -10,26 +10,28 @@ const { createBeefyValidatorFixture, runBeefyLightClientFlow } = require("./beef
 
 const MockRewardSource = artifacts.require("MockRewardSource");
 const {
-  deployBeefyLightClient, runBeefyLighClientFlow
+  deployBeefyLightClient, printTxPromiseGas
 } = require("./helpers");
-const fixture = require('./fixtures/full-flow.json');
+const fixture = require('./fixtures/full-flow-incentivized.json');
 
 describe("IncentivizedInboundChannel", function () {
   const interface = new ethers.utils.Interface(IncentivizedInboundChannel.abi)
 
   before(async function () {
+    const merkleProof = await MerkleProof.new();
+    const scaleCodec = await ScaleCodec.new();
+    await IncentivizedInboundChannel.link(merkleProof);
+    await IncentivizedInboundChannel.link(scaleCodec);
+
     const totalNumberOfValidatorSigs = 100;
     const beefyFixture = await createBeefyValidatorFixture(
       totalNumberOfValidatorSigs
     )
+
     this.beefyLightClient = await deployBeefyLightClient(beefyFixture.root,
       totalNumberOfValidatorSigs);
-    const merkleProof = await MerkleProof.new();
-    const scaleCodec = await ScaleCodec.new();
 
-    await IncentivizedInboundChannel.link(merkleProof);
-    await IncentivizedInboundChannel.link(scaleCodec);
-    runBeefyLightClientFlow(this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
+    await runBeefyLightClientFlow(fixture, this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
   });
 
   describe("submit", function () {
@@ -43,11 +45,12 @@ describe("IncentivizedInboundChannel", function () {
     });
 
     it("should accept a valid commitment and dispatch messages", async function () {
-
       // Send commitment
-      const { receipt } = await this.channel.submit(
+      const tx = this.channel.submit(
         ...Object.values(fixture.incentivizedSubmitInput),
       ).should.be.fulfilled
+      printTxPromiseGas(tx)
+      const { receipt } = await tx;
 
       let event;
 
@@ -58,7 +61,6 @@ describe("IncentivizedInboundChannel", function () {
       );
       event.nonce.eq(ethers.BigNumber.from(1)).should.be.true;
       event.result.should.be.true;
-
     });
 
     it("should refuse to replay commitments", async function () {
@@ -67,12 +69,10 @@ describe("IncentivizedInboundChannel", function () {
         ...Object.values(fixture.incentivizedSubmitInput),
       ).should.be.fulfilled;
 
-
       // Submit messages again - should revert
       await this.channel.submit(
         ...Object.values(fixture.incentivizedSubmitInput),
       ).should.not.be.fulfilled;
-
     });
 
   });

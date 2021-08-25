@@ -2,6 +2,9 @@ node_modules
 test-config.json
 .env
 
+*.log
+rococo-local-raw.json
+rococo-local.json
 
 .yarn/*
 !.yarn/patches
@@ -10,4 +13,3 @@ test-config.json
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
-

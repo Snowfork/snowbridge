@@ -5,3 +5,5 @@ ganache.log
 artifacts/
 .cache/
 .deployments/
+coverage.json
+coverage/

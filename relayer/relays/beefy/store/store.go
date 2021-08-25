@@ -30,6 +30,7 @@ type BeefyRelayInfo struct {
 	ValidatorAddresses         []byte
 	SignedCommitment           []byte
 	SerializedLatestMMRProof   []byte
+	MMRLeafCount               uint64
 	ContractID                 int64
 	Status                     Status
 	InitialVerificationTxHash  common.Hash

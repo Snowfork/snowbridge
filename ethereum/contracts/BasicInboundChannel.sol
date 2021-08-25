@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
@@ -15,7 +15,7 @@ contract BasicInboundChannel {
 
     struct Message {
         address target;
-        uint64 nonce; // TODO: this might cause an error, we use uint256 when encoding on Parachain
+        uint64 nonce;
         bytes payload;
     }
 
@@ -26,12 +26,10 @@ contract BasicInboundChannel {
         beefyLightClient = _beefyLightClient;
     }
 
-    // TODO: add docs
     function submit(
         Message[] calldata _messages,
-        ParachainLightClient.OwnParachainHeadPartial
-            calldata _ownParachainHeadPartial,
-        ParachainLightClient.ParachainHeadProof calldata _parachainHeadProof,
+        ParachainLightClient.ParachainVerifyInput
+            calldata _parachainVerifyInput,
         ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
@@ -43,8 +41,7 @@ contract BasicInboundChannel {
 
         ParachainLightClient.verifyCommitmentInParachain(
             commitment,
-            _ownParachainHeadPartial,
-            _parachainHeadProof,
+            _parachainVerifyInput,
             _beefyMMRLeafPartial,
             _beefyMMRLeafIndex,
             _beefyMMRLeafCount,

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.7.6;
 
 library ScaleCodec {
@@ -160,5 +160,9 @@ library ScaleCodec {
 
     function encode16(uint16 input) public pure returns (bytes2) {
         return bytes2(reverse16(input));
+    }
+
+    function encode8(uint8 input) public pure returns (bytes1) {
+        return bytes1(input);
     }
 }

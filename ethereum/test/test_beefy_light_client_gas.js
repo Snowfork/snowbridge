@@ -5,7 +5,7 @@ const {
 
 const { createBeefyValidatorFixture, createRandomPositions,
   createAllValidatorProofs, createCompleteValidatorProofs } = require("./beefy-helpers");
-const realWorldFixture = require('./fixtures/full-flow.json');
+const realWorldFixture = require('./fixtures/full-flow-basic.json');
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -16,6 +16,10 @@ const { expect } = require("chai");
 describe("Beefy Light Client Gas Usage", function () {
 
   const testCases = [
+    {
+      totalNumberOfValidators: 10,
+      totalNumberOfSignatures: 10,
+    },
     {
       totalNumberOfValidators: 200,
       totalNumberOfSignatures: 200,
@@ -44,13 +48,13 @@ describe("Beefy Light Client Gas Usage", function () {
     {
       totalNumberOfValidators: 1000,
       totalNumberOfSignatures: 667,
-    }
+    },
   ]
 
   for (const testCase of testCases) {
     it(`runs full flow with ${testCase.totalNumberOfValidators} validators and ${testCase.totalNumberOfSignatures} signers with the complete transaction ${testCase.fail ? 'failing' : 'succeeding'}`,
       async function () {
-        this.timeout(10 * 4000);
+        this.timeout(1000 * 65);
         await runFlow(testCase.totalNumberOfValidators, testCase.totalNumberOfSignatures, testCase.fail)
       });
   }
@@ -98,6 +102,8 @@ describe("Beefy Light Client Gas Usage", function () {
       realWorldFixture.completeSubmitInput.commitment,
       completeValidatorProofs,
       realWorldFixture.completeSubmitInput.latestMMRLeaf,
+      realWorldFixture.completeSubmitInput.mmrLeafIndex,
+      realWorldFixture.completeSubmitInput.mmrLeafCount,
       realWorldFixture.completeSubmitInput.mmrProofItems,
     )
     printTxPromiseGas(completeSigTxPromise)

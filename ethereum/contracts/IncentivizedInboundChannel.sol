@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
@@ -25,8 +25,6 @@ contract IncentivizedInboundChannel is AccessControl {
     bytes32 public constant CONFIG_UPDATE_ROLE =
         keccak256("CONFIG_UPDATE_ROLE");
 
-    event RelayerNotRewarded(address relayer, uint256 amount);
-
     RewardSource private rewardSource;
 
     BeefyLightClient public beefyLightClient;
@@ -40,12 +38,8 @@ contract IncentivizedInboundChannel is AccessControl {
     // Once-off post-construction call to set initial configuration.
     function initialize(address _configUpdater, address _rewardSource)
         external
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
-            "Caller is unauthorized"
-        );
-
         // Set initial configuration
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
         rewardSource = RewardSource(_rewardSource);
@@ -56,9 +50,8 @@ contract IncentivizedInboundChannel is AccessControl {
 
     function submit(
         Message[] calldata _messages,
-        ParachainLightClient.OwnParachainHeadPartial
-            calldata _ownParachainHeadPartial,
-        ParachainLightClient.ParachainHeadProof calldata _parachainHeadProof,
+        ParachainLightClient.ParachainVerifyInput
+            calldata _parachainVerifyInput,
         ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         uint256 _beefyMMRLeafIndex,
         uint256 _beefyMMRLeafCount,
@@ -70,8 +63,7 @@ contract IncentivizedInboundChannel is AccessControl {
 
         ParachainLightClient.verifyCommitmentInParachain(
             commitment,
-            _ownParachainHeadPartial,
-            _parachainHeadProof,
+            _parachainVerifyInput,
             _beefyMMRLeafPartial,
             _beefyMMRLeafIndex,
             _beefyMMRLeafCount,
@@ -111,9 +103,7 @@ contract IncentivizedInboundChannel is AccessControl {
             emit MessageDispatched(_messages[i].nonce, success);
         }
 
-        // Attempt to reward the relayer
-        try rewardSource.reward(_relayer, _rewardAmount) {} catch {
-            emit RelayerNotRewarded(_relayer, _rewardAmount);
-        }
+        // reward the relayer
+        rewardSource.reward(_relayer, _rewardAmount);
     }
 }

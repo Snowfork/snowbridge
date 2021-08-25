@@ -36,19 +36,12 @@ type IncentivizedInboundChannelMessage struct {
 
 // ParachainLightClientBeefyMMRLeafPartial is an auto generated low-level Go binding around an user-defined struct.
 type ParachainLightClientBeefyMMRLeafPartial struct {
+	Version              uint8
 	ParentNumber         uint32
 	ParentHash           [32]byte
 	NextAuthoritySetId   uint64
 	NextAuthoritySetLen  uint32
 	NextAuthoritySetRoot [32]byte
-}
-
-// ParachainLightClientOwnParachainHeadPartial is an auto generated low-level Go binding around an user-defined struct.
-type ParachainLightClientOwnParachainHeadPartial struct {
-	ParentHash     [32]byte
-	Number         uint32
-	StateRoot      [32]byte
-	ExtrinsicsRoot [32]byte
 }
 
 // ParachainLightClientParachainHeadProof is an auto generated low-level Go binding around an user-defined struct.
@@ -58,8 +51,15 @@ type ParachainLightClientParachainHeadProof struct {
 	Proof [][32]byte
 }
 
+// ParachainLightClientParachainVerifyInput is an auto generated low-level Go binding around an user-defined struct.
+type ParachainLightClientParachainVerifyInput struct {
+	OwnParachainHeadPrefixBytes []byte
+	OwnParachainHeadSuffixBytes []byte
+	ParachainHeadProof          ParachainLightClientParachainHeadProof
+}
+
 // IncentivizedInboundChannelABI is the input ABI used to generate the binding from.
-const IncentivizedInboundChannelABI = "[{\"inputs\":[{\"internalType\":\"contractBeefyLightClient\",\"name\":\"_beefyLightClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"relayer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"RelayerNotRewarded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"CONFIG_UPDATE_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"beefyLightClient\",\"outputs\":[{\"internalType\":\"contractBeefyLightClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_configUpdater\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_rewardSource\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"uint256\",\"name\":\"fee\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structIncentivizedInboundChannel.Message[]\",\"name\":\"_messages\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"number\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"stateRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structParachainLightClient.OwnParachainHeadPartial\",\"name\":\"_ownParachainHeadPartial\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structParachainLightClient.ParachainHeadProof\",\"name\":\"_parachainHeadProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structParachainLightClient.BeefyMMRLeafPartial\",\"name\":\"_beefyMMRLeafPartial\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"_beefyMMRLeafIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_beefyMMRLeafCount\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"_beefyMMRLeafProof\",\"type\":\"bytes32[]\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IncentivizedInboundChannelABI = "[{\"inputs\":[{\"internalType\":\"contractBeefyLightClient\",\"name\":\"_beefyLightClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"CONFIG_UPDATE_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"beefyLightClient\",\"outputs\":[{\"internalType\":\"contractBeefyLightClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_configUpdater\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_rewardSource\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"uint256\",\"name\":\"fee\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structIncentivizedInboundChannel.Message[]\",\"name\":\"_messages\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"ownParachainHeadPrefixBytes\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"ownParachainHeadSuffixBytes\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structParachainLightClient.ParachainHeadProof\",\"name\":\"parachainHeadProof\",\"type\":\"tuple\"}],\"internalType\":\"structParachainLightClient.ParachainVerifyInput\",\"name\":\"_parachainVerifyInput\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structParachainLightClient.BeefyMMRLeafPartial\",\"name\":\"_beefyMMRLeafPartial\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"_beefyMMRLeafIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_beefyMMRLeafCount\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"_beefyMMRLeafProof\",\"type\":\"bytes32[]\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IncentivizedInboundChannel is an auto generated Go binding around an Ethereum contract.
 type IncentivizedInboundChannel struct {
@@ -566,25 +566,25 @@ func (_IncentivizedInboundChannel *IncentivizedInboundChannelTransactorSession) 
 	return _IncentivizedInboundChannel.Contract.RevokeRole(&_IncentivizedInboundChannel.TransactOpts, role, account)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xf36c7ec4.
+// Submit is a paid mutator transaction binding the contract method 0x0ced2ea5.
 //
-// Solidity: function submit((address,uint64,uint256,bytes)[] _messages, (bytes32,uint32,bytes32,bytes32) _ownParachainHeadPartial, (uint256,uint256,bytes32[]) _parachainHeadProof, (uint32,bytes32,uint64,uint32,bytes32) _beefyMMRLeafPartial, uint256 _beefyMMRLeafIndex, uint256 _beefyMMRLeafCount, bytes32[] _beefyMMRLeafProof) returns()
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelTransactor) Submit(opts *bind.TransactOpts, _messages []IncentivizedInboundChannelMessage, _ownParachainHeadPartial ParachainLightClientOwnParachainHeadPartial, _parachainHeadProof ParachainLightClientParachainHeadProof, _beefyMMRLeafPartial ParachainLightClientBeefyMMRLeafPartial, _beefyMMRLeafIndex *big.Int, _beefyMMRLeafCount *big.Int, _beefyMMRLeafProof [][32]byte) (*types.Transaction, error) {
-	return _IncentivizedInboundChannel.contract.Transact(opts, "submit", _messages, _ownParachainHeadPartial, _parachainHeadProof, _beefyMMRLeafPartial, _beefyMMRLeafIndex, _beefyMMRLeafCount, _beefyMMRLeafProof)
+// Solidity: function submit((address,uint64,uint256,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[])) _parachainVerifyInput, (uint8,uint32,bytes32,uint64,uint32,bytes32) _beefyMMRLeafPartial, uint256 _beefyMMRLeafIndex, uint256 _beefyMMRLeafCount, bytes32[] _beefyMMRLeafProof) returns()
+func (_IncentivizedInboundChannel *IncentivizedInboundChannelTransactor) Submit(opts *bind.TransactOpts, _messages []IncentivizedInboundChannelMessage, _parachainVerifyInput ParachainLightClientParachainVerifyInput, _beefyMMRLeafPartial ParachainLightClientBeefyMMRLeafPartial, _beefyMMRLeafIndex *big.Int, _beefyMMRLeafCount *big.Int, _beefyMMRLeafProof [][32]byte) (*types.Transaction, error) {
+	return _IncentivizedInboundChannel.contract.Transact(opts, "submit", _messages, _parachainVerifyInput, _beefyMMRLeafPartial, _beefyMMRLeafIndex, _beefyMMRLeafCount, _beefyMMRLeafProof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xf36c7ec4.
+// Submit is a paid mutator transaction binding the contract method 0x0ced2ea5.
 //
-// Solidity: function submit((address,uint64,uint256,bytes)[] _messages, (bytes32,uint32,bytes32,bytes32) _ownParachainHeadPartial, (uint256,uint256,bytes32[]) _parachainHeadProof, (uint32,bytes32,uint64,uint32,bytes32) _beefyMMRLeafPartial, uint256 _beefyMMRLeafIndex, uint256 _beefyMMRLeafCount, bytes32[] _beefyMMRLeafProof) returns()
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelSession) Submit(_messages []IncentivizedInboundChannelMessage, _ownParachainHeadPartial ParachainLightClientOwnParachainHeadPartial, _parachainHeadProof ParachainLightClientParachainHeadProof, _beefyMMRLeafPartial ParachainLightClientBeefyMMRLeafPartial, _beefyMMRLeafIndex *big.Int, _beefyMMRLeafCount *big.Int, _beefyMMRLeafProof [][32]byte) (*types.Transaction, error) {
-	return _IncentivizedInboundChannel.Contract.Submit(&_IncentivizedInboundChannel.TransactOpts, _messages, _ownParachainHeadPartial, _parachainHeadProof, _beefyMMRLeafPartial, _beefyMMRLeafIndex, _beefyMMRLeafCount, _beefyMMRLeafProof)
+// Solidity: function submit((address,uint64,uint256,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[])) _parachainVerifyInput, (uint8,uint32,bytes32,uint64,uint32,bytes32) _beefyMMRLeafPartial, uint256 _beefyMMRLeafIndex, uint256 _beefyMMRLeafCount, bytes32[] _beefyMMRLeafProof) returns()
+func (_IncentivizedInboundChannel *IncentivizedInboundChannelSession) Submit(_messages []IncentivizedInboundChannelMessage, _parachainVerifyInput ParachainLightClientParachainVerifyInput, _beefyMMRLeafPartial ParachainLightClientBeefyMMRLeafPartial, _beefyMMRLeafIndex *big.Int, _beefyMMRLeafCount *big.Int, _beefyMMRLeafProof [][32]byte) (*types.Transaction, error) {
+	return _IncentivizedInboundChannel.Contract.Submit(&_IncentivizedInboundChannel.TransactOpts, _messages, _parachainVerifyInput, _beefyMMRLeafPartial, _beefyMMRLeafIndex, _beefyMMRLeafCount, _beefyMMRLeafProof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xf36c7ec4.
+// Submit is a paid mutator transaction binding the contract method 0x0ced2ea5.
 //
-// Solidity: function submit((address,uint64,uint256,bytes)[] _messages, (bytes32,uint32,bytes32,bytes32) _ownParachainHeadPartial, (uint256,uint256,bytes32[]) _parachainHeadProof, (uint32,bytes32,uint64,uint32,bytes32) _beefyMMRLeafPartial, uint256 _beefyMMRLeafIndex, uint256 _beefyMMRLeafCount, bytes32[] _beefyMMRLeafProof) returns()
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelTransactorSession) Submit(_messages []IncentivizedInboundChannelMessage, _ownParachainHeadPartial ParachainLightClientOwnParachainHeadPartial, _parachainHeadProof ParachainLightClientParachainHeadProof, _beefyMMRLeafPartial ParachainLightClientBeefyMMRLeafPartial, _beefyMMRLeafIndex *big.Int, _beefyMMRLeafCount *big.Int, _beefyMMRLeafProof [][32]byte) (*types.Transaction, error) {
-	return _IncentivizedInboundChannel.Contract.Submit(&_IncentivizedInboundChannel.TransactOpts, _messages, _ownParachainHeadPartial, _parachainHeadProof, _beefyMMRLeafPartial, _beefyMMRLeafIndex, _beefyMMRLeafCount, _beefyMMRLeafProof)
+// Solidity: function submit((address,uint64,uint256,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[])) _parachainVerifyInput, (uint8,uint32,bytes32,uint64,uint32,bytes32) _beefyMMRLeafPartial, uint256 _beefyMMRLeafIndex, uint256 _beefyMMRLeafCount, bytes32[] _beefyMMRLeafProof) returns()
+func (_IncentivizedInboundChannel *IncentivizedInboundChannelTransactorSession) Submit(_messages []IncentivizedInboundChannelMessage, _parachainVerifyInput ParachainLightClientParachainVerifyInput, _beefyMMRLeafPartial ParachainLightClientBeefyMMRLeafPartial, _beefyMMRLeafIndex *big.Int, _beefyMMRLeafCount *big.Int, _beefyMMRLeafProof [][32]byte) (*types.Transaction, error) {
+	return _IncentivizedInboundChannel.Contract.Submit(&_IncentivizedInboundChannel.TransactOpts, _messages, _parachainVerifyInput, _beefyMMRLeafPartial, _beefyMMRLeafIndex, _beefyMMRLeafCount, _beefyMMRLeafProof)
 }
 
 // IncentivizedInboundChannelMessageDispatchedIterator is returned from FilterMessageDispatched and is used to iterate over the raw logs and unpacked data for MessageDispatched events raised by the IncentivizedInboundChannel contract.
@@ -716,141 +716,6 @@ func (_IncentivizedInboundChannel *IncentivizedInboundChannelFilterer) WatchMess
 func (_IncentivizedInboundChannel *IncentivizedInboundChannelFilterer) ParseMessageDispatched(log types.Log) (*IncentivizedInboundChannelMessageDispatched, error) {
 	event := new(IncentivizedInboundChannelMessageDispatched)
 	if err := _IncentivizedInboundChannel.contract.UnpackLog(event, "MessageDispatched", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// IncentivizedInboundChannelRelayerNotRewardedIterator is returned from FilterRelayerNotRewarded and is used to iterate over the raw logs and unpacked data for RelayerNotRewarded events raised by the IncentivizedInboundChannel contract.
-type IncentivizedInboundChannelRelayerNotRewardedIterator struct {
-	Event *IncentivizedInboundChannelRelayerNotRewarded // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *IncentivizedInboundChannelRelayerNotRewardedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(IncentivizedInboundChannelRelayerNotRewarded)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(IncentivizedInboundChannelRelayerNotRewarded)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *IncentivizedInboundChannelRelayerNotRewardedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *IncentivizedInboundChannelRelayerNotRewardedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// IncentivizedInboundChannelRelayerNotRewarded represents a RelayerNotRewarded event raised by the IncentivizedInboundChannel contract.
-type IncentivizedInboundChannelRelayerNotRewarded struct {
-	Relayer common.Address
-	Amount  *big.Int
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterRelayerNotRewarded is a free log retrieval operation binding the contract event 0xc2e494a08070a72521abe61eacb25fef7c8dd12aef87e8725d1b9bc31a3a3bad.
-//
-// Solidity: event RelayerNotRewarded(address relayer, uint256 amount)
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelFilterer) FilterRelayerNotRewarded(opts *bind.FilterOpts) (*IncentivizedInboundChannelRelayerNotRewardedIterator, error) {
-
-	logs, sub, err := _IncentivizedInboundChannel.contract.FilterLogs(opts, "RelayerNotRewarded")
-	if err != nil {
-		return nil, err
-	}
-	return &IncentivizedInboundChannelRelayerNotRewardedIterator{contract: _IncentivizedInboundChannel.contract, event: "RelayerNotRewarded", logs: logs, sub: sub}, nil
-}
-
-// WatchRelayerNotRewarded is a free log subscription operation binding the contract event 0xc2e494a08070a72521abe61eacb25fef7c8dd12aef87e8725d1b9bc31a3a3bad.
-//
-// Solidity: event RelayerNotRewarded(address relayer, uint256 amount)
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelFilterer) WatchRelayerNotRewarded(opts *bind.WatchOpts, sink chan<- *IncentivizedInboundChannelRelayerNotRewarded) (event.Subscription, error) {
-
-	logs, sub, err := _IncentivizedInboundChannel.contract.WatchLogs(opts, "RelayerNotRewarded")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(IncentivizedInboundChannelRelayerNotRewarded)
-				if err := _IncentivizedInboundChannel.contract.UnpackLog(event, "RelayerNotRewarded", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseRelayerNotRewarded is a log parse operation binding the contract event 0xc2e494a08070a72521abe61eacb25fef7c8dd12aef87e8725d1b9bc31a3a3bad.
-//
-// Solidity: event RelayerNotRewarded(address relayer, uint256 amount)
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelFilterer) ParseRelayerNotRewarded(log types.Log) (*IncentivizedInboundChannelRelayerNotRewarded, error) {
-	event := new(IncentivizedInboundChannelRelayerNotRewarded)
-	if err := _IncentivizedInboundChannel.contract.UnpackLog(event, "RelayerNotRewarded", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

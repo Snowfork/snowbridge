@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+import { ethers } from "hardhat";
 import {HardhatRuntimeEnvironment} from "hardhat/types";
 
 module.exports = async ({
@@ -7,7 +8,7 @@ module.exports = async ({
     getUnnamedAccounts,
     network,
 }: HardhatRuntimeEnvironment) => {
-  let [deployer] = await getUnnamedAccounts();
+  let [deployer, developer] = await getUnnamedAccounts();
 
   let channels = {
     basic: {
@@ -48,4 +49,11 @@ module.exports = async ({
     autoMine: true,
   });
 
+  await deployments.deploy("TestToken721Enumerable", {
+    from: deployer,
+    args: ["Test Enum", "TESTE"],
+    log: true,
+  });
+
+  
 };
