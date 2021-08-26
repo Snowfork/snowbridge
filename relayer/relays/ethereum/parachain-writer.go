@@ -40,29 +40,15 @@ func NewParachainWriter(
 }
 
 func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	cancelWithError := func(err error) error {
-		// Ensures the context is canceled so that the channels below are
-		// closed by the listener
-		eg.Go(func() error { return err })
-
-		log.Info("Shutting down writer...")
-		// Avoid deadlock if the listener is still trying to send to a channel
-		for len(wr.payloads) > 0 {
-			<-wr.payloads
-		}
-
-		return err
-	}
-
 	nonce, err := wr.queryAccountNonce()
 	if err != nil {
-		return cancelWithError(err)
+		return err
 	}
 	wr.nonce = nonce
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
 	if err != nil {
-		return cancelWithError(err)
+		return err
 	}
 	wr.genesisHash = genesisHash
 
@@ -70,11 +56,8 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 
 	eg.Go(func() error {
 		err := wr.writeLoop(ctx)
-		for len(wr.payloads) > 0 {
-			<-wr.payloads
-		}
 		if err != nil {
-			return cancelWithError(err)
+			return err
 		}
 		return nil
 	})

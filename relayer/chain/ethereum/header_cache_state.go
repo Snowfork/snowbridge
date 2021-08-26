@@ -126,9 +126,9 @@ type EthashproofCacheState struct {
 	nextCache    *ethashproof.DatasetMerkleTreeCache
 }
 
-// HeaderCacheState fetches and caches data we need to construct proofs
+// HeaderCache fetches and caches data we need to construct proofs
 // as we move along the Ethereum chain.
-type HeaderCacheState struct {
+type HeaderCache struct {
 	dataDir                string
 	cacheDir               string
 	blockLoader            BlockLoader
@@ -138,14 +138,14 @@ type HeaderCacheState struct {
 	eg                     *errgroup.Group
 }
 
-func NewHeaderCacheState(
+func NewHeaderCache(
 	dataDir string,
 	cacheDir string,
 	eg *errgroup.Group,
 	initBlockHeight uint64,
 	bl BlockLoader,
 	ecl EthashproofCacheLoader,
-) (*HeaderCacheState, error) {
+) (*HeaderCache, error) {
 	blockCache := NewBlockCache(5)
 	blockLoader := bl
 	if blockLoader == nil {
@@ -162,7 +162,7 @@ func NewHeaderCacheState(
 		ethashproofCacheLoader = &DefaultCacheLoader{dataDir, cacheDir}
 	}
 
-	state := HeaderCacheState{
+	state := HeaderCache{
 		dataDir:                dataDir,
 		cacheDir:               cacheDir,
 		blockCache:             blockCache,
@@ -189,7 +189,7 @@ func NewHeaderCacheState(
 // GetReceiptTrie returns a Merkle Patricia trie constructed from the receipts
 // of the block specified by `hash`. If the trie isn't cached, it will block for
 // multiple seconds to fetch receipts and construct the trie.
-func (s *HeaderCacheState) GetReceiptTrie(ctx context.Context, hash gethCommon.Hash) (*gethTrie.Trie, error) {
+func (s *HeaderCache) GetReceiptTrie(ctx context.Context, hash gethCommon.Hash) (*gethTrie.Trie, error) {
 	_, receiptTrie, exists := s.blockCache.Get(hash)
 	if exists {
 		return receiptTrie, nil
@@ -218,11 +218,11 @@ func (s *HeaderCacheState) GetReceiptTrie(ctx context.Context, hash gethCommon.H
 	return receiptTrie, nil
 }
 
-// GetEthashProofCache returns the cache used for proof generation. It will return
+// MakeEthashproofCache returns the cache used for proof generation. It will return
 // immediately if `number` is in the current or next epoch. Outside that range, it
-// might block for multiple minutes to generate the cache. Calling GetEthashproofCache
+// might block for multiple minutes to generate the cache. Calling MakeEthashproofCache
 // will also update the current epoch to `number` / 30000.
-func (s *HeaderCacheState) GetEthashproofCache(number uint64) (*ethashproof.DatasetMerkleTreeCache, error) {
+func (s *HeaderCache) MakeEthashproofCache(number uint64) (*ethashproof.DatasetMerkleTreeCache, error) {
 	epoch := number / 30000
 	cacheState := s.ethashproofCacheState
 	if epoch == cacheState.currentCache.Epoch {
@@ -269,7 +269,7 @@ func (s *HeaderCacheState) GetEthashproofCache(number uint64) (*ethashproof.Data
 	return cacheState.currentCache, nil
 }
 
-func (s *HeaderCacheState) prepareNextEthashproofCache() error {
+func (s *HeaderCache) prepareNextEthashproofCache() error {
 	cacheState := s.ethashproofCacheState
 	cacheState.Mutex.Lock()
 	defer cacheState.Mutex.Unlock()

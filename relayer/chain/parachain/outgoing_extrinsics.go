@@ -47,6 +47,7 @@ func (ep *ExtrinsicPool) WaitForSubmitAndWatch(ctx context.Context, nonce uint32
 func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, ext *types.Extrinsic, onProcessed func() error) error {
 	sub, err := ep.conn.api.RPC.Author.SubmitAndWatchExtrinsic(*ext)
 	if err != nil {
+		ep.log.WithError(err).Debug("Failed to submit extrinsic")
 		return err
 	}
 
@@ -88,6 +89,7 @@ func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, e
 				}).Debug("Re-submitting failed extrinsic")
 				newSub, err := ep.conn.api.RPC.Author.SubmitAndWatchExtrinsic(*ext)
 				if err != nil {
+					ep.log.WithError(err).Debug("Failed to submit extrinsic")
 					return err
 				}
 				sub = newSub

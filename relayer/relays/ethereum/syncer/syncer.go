@@ -5,8 +5,8 @@ package syncer
 
 import (
 	"context"
+	"errors"
 	"math/big"
-	"sync"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -15,12 +15,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-type latestBlockInfo struct {
-	sync.Mutex
-	fetchFinalizedDone bool
-	height             uint64
-}
 
 // Syncer retrieves headers starting at a given initial height up to the latest.
 // Headers are sent to the channel `headers` in order. If the initial height is
@@ -31,87 +25,72 @@ type latestBlockInfo struct {
 type Syncer struct {
 	descendantsUntilFinal uint64
 	headerCache           HeaderCache
-	headers               chan<- *gethTypes.Header
+	headers               chan *gethTypes.Header
 	loader                HeaderLoader
-	newHeaders            chan *gethTypes.Header
-	oldHeaders            chan *gethTypes.Header
 }
 
-func NewSyncer(descendantsUntilFinal uint64, loader HeaderLoader, headers chan<- *gethTypes.Header) *Syncer {
+func NewSyncer(
+	descendantsUntilFinal uint64,
+	loader HeaderLoader,
+) *Syncer {
 	return &Syncer{
 		descendantsUntilFinal: descendantsUntilFinal,
 		headerCache:           *NewHeaderCache(descendantsUntilFinal + 1),
-		headers:               headers,
+		headers:               nil,
 		loader:                loader,
-		newHeaders:            nil,
-		oldHeaders:            nil,
 	}
 }
 
-func (s *Syncer) StartSync(ctx context.Context, eg *errgroup.Group, initBlockHeight uint64) error {
-	lbi := &latestBlockInfo{
-		fetchFinalizedDone: false,
-		height:             0,
-	}
-	s.newHeaders = make(chan *gethTypes.Header)
-	s.oldHeaders = make(chan *gethTypes.Header)
+func (s *Syncer) StartSync(
+	ctx context.Context,
+	eg *errgroup.Group,
+	initBlockHeight uint64,
+) (chan *gethTypes.Header, error) {
+	var height uint64
 
-	eg.Go(func() error {
-		err := s.pollNewHeaders(ctx, lbi)
-		close(s.newHeaders)
-		return err
-	})
+	s.headers = make(chan *gethTypes.Header, 5)
 
-	lbi.Lock()
-	defer lbi.Unlock()
 	latestHeader, err := s.loader.HeaderByNumber(ctx, nil)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve latest header")
-		close(s.headers)
-		return err
+		return nil, err
 	}
-	if latestHeader.Number.Uint64() > lbi.height {
-		lbi.height = latestHeader.Number.Uint64()
+	if latestHeader.Number.Uint64() > height {
+		height = latestHeader.Number.Uint64()
 	}
 
 	eg.Go(func() error {
-		err := s.fetchFinalizedHeaders(ctx, initBlockHeight, lbi)
-		close(s.oldHeaders)
-		return err
-	})
+		defer close(s.headers)
 
-	eg.Go(func() error {
-		for header := range s.oldHeaders {
-			s.headers <- header
+		err := s.fetchFinalizedHeaders(ctx, initBlockHeight, height)
+		if err != nil && errors.Is(err, context.Canceled) {
+			return nil
+		} else if err != nil {
+			return err
 		}
 
-		for header := range s.newHeaders {
-			s.headers <- header
+		err = s.fetchNewHeaders(ctx)
+		if err != nil && errors.Is(err, context.Canceled) {
+			return nil
+		} else if err != nil {
+			return err
 		}
 
-		close(s.headers)
 		return nil
 	})
 
-	return nil
+	return s.headers, nil
 }
 
-func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint64, lbi *latestBlockInfo) error {
+func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint64, height uint64) error {
 	syncedUpUntil := initBlockHeight
 
 	for {
-		lbi.Lock()
-		latestFinalizedHeight := saturatingSub(lbi.height, s.descendantsUntilFinal)
+		latestFinalizedHeight := saturatingSub(height, s.descendantsUntilFinal)
 		if syncedUpUntil >= latestFinalizedHeight {
-			// Signals to pollNewHeaders that new headers can be forwarded now
-			lbi.fetchFinalizedDone = true
-			lbi.Unlock()
-
 			log.WithField("blockNumber", syncedUpUntil).Debug("Done retrieving finalized headers")
-
 			break
 		}
-		lbi.Unlock()
 
 		header, err := s.loader.HeaderByNumber(ctx, new(big.Int).SetUint64(syncedUpUntil+1))
 		if err != nil {
@@ -128,9 +107,9 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 
 		select {
 		case <-ctx.Done():
+			log.WithField("reason", ctx.Err()).Info("Shutting down finalized header fetcher")
 			return ctx.Err()
-		default:
-			s.oldHeaders <- header
+		case s.headers <- header:
 		}
 		syncedUpUntil++
 	}
@@ -138,43 +117,43 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 	return nil
 }
 
-func (s *Syncer) pollNewHeaders(ctx context.Context, lbi *latestBlockInfo) error {
-	headers := make(chan *gethTypes.Header)
-	var headersSubscriptionErr <-chan error
+func (s *Syncer) fetchNewHeaders(ctx context.Context) error {
+	headersIn := make(chan *gethTypes.Header)
 
-	subscription, err := s.loader.SubscribeNewHead(ctx, headers)
+	sub, err := s.loader.SubscribeNewHead(ctx, headersIn)
 	if err != nil {
 		log.WithError(err).Error("Failed to subscribe to new headers")
 		return err
 	}
-	headersSubscriptionErr = subscription.Err()
+	defer sub.Unsubscribe()
 
 	for {
 		select {
 		case <-ctx.Done():
+			log.WithField("reason", ctx.Err()).Info("Shutting down header subscription")
 			return ctx.Err()
-		case err := <-headersSubscriptionErr:
+		case err := <-sub.Err():
+			log.WithError(err).Info("Header subscription failed")
 			return err
-		case header := <-headers:
+		case header, ok := <-headersIn:
+			if !ok {
+				return nil
+			}
 			s.headerCache.Insert(header)
-			lbi.Lock()
-			lbi.height = header.Number.Uint64()
+			height := header.Number.Uint64()
 
 			log.WithFields(logrus.Fields{
 				"blockHash":   header.Hash().Hex(),
-				"blockNumber": lbi.height,
+				"blockNumber": height,
 			}).Debug("Witnessed new header")
 
-			if lbi.fetchFinalizedDone {
-				err = s.forwardAncestry(ctx, header.Hash(), saturatingSub(lbi.height, s.descendantsUntilFinal))
-				if err != nil {
-					log.WithFields(logrus.Fields{
-						"blockHash":   header.Hash().Hex(),
-						"blockNumber": lbi.height,
-					}).WithError(err).Error("Failed to forward header and its ancestors")
-				}
+			err = s.forwardAncestry(ctx, header.Hash(), saturatingSub(height, s.descendantsUntilFinal))
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"blockHash":   header.Hash().Hex(),
+					"blockNumber": height,
+				}).WithError(err).Error("Failed to forward header and its ancestors")
 			}
-			lbi.Unlock()
 		}
 	}
 }
@@ -205,7 +184,7 @@ func (s *Syncer) forwardAncestry(ctx context.Context, hash gethCommon.Hash, olde
 		}
 	}
 
-	s.newHeaders <- item.Header
+	s.headers <- item.Header
 	item.Forwarded = true
 	return nil
 }
