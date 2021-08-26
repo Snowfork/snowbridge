@@ -49,6 +49,7 @@ impl rlp::Decodable for Receipt {
 			// Typed receipt
 			let data = rlp.as_raw();
 			match data[0] {
+				// 1 = EIP-2930, 2 = EIP-1559
 				1 | 2 => {
 					let receipt_rlp = &rlp::Rlp::new(&data[1..]);
 					if !receipt_rlp.is_list() {
@@ -109,7 +110,7 @@ mod tests {
 	");
 
     #[test]
-    fn decode_receipt() {
+    fn decode_legacy_receipt() {
 		let receipt: Receipt = rlp::decode(&RAW_RECEIPT).unwrap();
 		assert_eq!(receipt.post_state_or_status, vec!(1));
 		assert_eq!(receipt.cumulative_gas_used, 414448);
