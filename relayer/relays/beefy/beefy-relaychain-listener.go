@@ -37,12 +37,10 @@ func NewBeefyRelaychainListener(
 }
 
 func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group) error {
-
 	eg.Go(func() error {
 		defer close(li.beefyMessages)
 		return li.subBeefyJustifications(ctx)
 	})
-
 	return nil
 }
 
