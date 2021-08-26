@@ -31,16 +31,19 @@
       "nextAuthoritySetLen": "3",
       "nextAuthoritySetRoot": "0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365"
     },
-    "mmrLeafIndex": "1047",
-    "mmrLeafCount": "1049",
-    "mmrProofItems": [
-      "0xc426c89e1c1dc353199d4b1b0005b796b21fc1cf9eb857071e888397a7316f62",
-      "0xd5aadcbd22b9abaa88742b53092da93fdde41704493b644b7ea4a2bd87e26624",
-      "0xc16568d8dc568c0baed0544ab5d77f81394a79980956c343553a11771330c760",
-      "0x9597e97c1ccb69893e8795f55c376be5bbfec349f80c468f9c079b223231d0f8",
-      "0xa89321f1d3046bff7f98bd045d2328ac256d883ef80a00d710de8947b6364f63",
-      "0x3cfde5b5e50ec1702250ef86ec061fbff6a724b42f92d8548ff717855eae210e"
-    ]
+    "simplifiedMMRProof": {
+      "merkleProofItems": [
+        "0xc16568d8dc568c0baed0544ab5d77f81394a79980956c343553a11771330c760",
+        "0x9597e97c1ccb69893e8795f55c376be5bbfec349f80c468f9c079b223231d0f8",
+        "0xa89321f1d3046bff7f98bd045d2328ac256d883ef80a00d710de8947b6364f63"
+      ],
+      "merkleProofOrder": 7,
+      "mmrRightBaggedPeak": "0x3cfde5b5e50ec1702250ef86ec061fbff6a724b42f92d8548ff717855eae210e",
+      "mmrRestOfThePeaks": [
+        "0xc426c89e1c1dc353199d4b1b0005b796b21fc1cf9eb857071e888397a7316f62",
+        "0xd5aadcbd22b9abaa88742b53092da93fdde41704493b644b7ea4a2bd87e26624"
+      ]
+    }
   },
   "incentivizedSubmitInput": {
     "_messages": [
@@ -70,12 +73,15 @@
       "nextAuthoritySetLen": 3,
       "nextAuthoritySetRoot": "0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365"
     },
-    "_beefyMMRLeafIndex": 1048,
-    "_beefyLeafCount": 1049,
-    "_beefyMMRProof": [
-      "0xc426c89e1c1dc353199d4b1b0005b796b21fc1cf9eb857071e888397a7316f62",
-      "0xd5aadcbd22b9abaa88742b53092da93fdde41704493b644b7ea4a2bd87e26624",
-      "0x735740aabe5560339612a84518300fed3ba372721fd57f2b3376114be1c4a15d"
-    ]
+    "simplifiedMMRProof": {
+      "merkleProofItems": [],
+      "merkleProofOrder": 0,
+      "mmrRightBaggedPeak": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "mmrRestOfThePeaks": [
+        "0xc426c89e1c1dc353199d4b1b0005b796b21fc1cf9eb857071e888397a7316f62",
+        "0xd5aadcbd22b9abaa88742b53092da93fdde41704493b644b7ea4a2bd87e26624",
+        "0x735740aabe5560339612a84518300fed3ba372721fd57f2b3376114be1c4a15d"
+      ]
+    }
   }
 }

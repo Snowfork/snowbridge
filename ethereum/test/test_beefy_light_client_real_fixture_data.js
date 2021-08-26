@@ -5,6 +5,8 @@ const {
 } = require("./helpers");
 const fixture = require('./fixtures/full-flow-basic.json');
 
+const SimpleMMRVerification = artifacts.require("SimplifiedMMRVerification");
+
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
@@ -23,10 +25,13 @@ describe("Beefy Light Client", function () {
   it("encodes, hashes and verifies beefy mmr leaves correctly", async function () {
     await this.beefyLightClient.verifyNewestMMRLeaf(
       fixture.completeSubmitInput.latestMMRLeaf,
-      fixture.completeSubmitInput.mmrProofItems,
       fixture.completeSubmitInput.commitment.payload,
-      fixture.completeSubmitInput.mmrLeafIndex,
-      fixture.completeSubmitInput.mmrLeafCount,
+      {
+        restOfThePeaks: fixture.completeSubmitInput.simplifiedMMRProof.mmrRestOfThePeaks,
+        rightBaggedPeak: fixture.completeSubmitInput.simplifiedMMRProof.mmrRightBaggedPeak,
+        merkleProofItems: fixture.completeSubmitInput.simplifiedMMRProof.merkleProofItems,
+        merkleProofOrderBitField: fixture.completeSubmitInput.simplifiedMMRProof.merkleProofOrder
+      }
     ).should.be.fulfilled
   });
 
@@ -87,9 +92,12 @@ describe("Beefy Light Client", function () {
       fixture.completeSubmitInput.commitment,
       validatorProofs,
       fixture.completeSubmitInput.latestMMRLeaf,
-      fixture.completeSubmitInput.mmrLeafIndex,
-      fixture.completeSubmitInput.mmrLeafCount,
-      fixture.completeSubmitInput.mmrProofItems,
+        {
+          restOfThePeaks: fixture.completeSubmitInput.simplifiedMMRProof.mmrRestOfThePeaks,
+          rightBaggedPeak: fixture.completeSubmitInput.simplifiedMMRProof.mmrRightBaggedPeak,
+          merkleProofItems: fixture.completeSubmitInput.simplifiedMMRProof.merkleProofItems,
+          merkleProofOrderBitField: fixture.completeSubmitInput.simplifiedMMRProof.merkleProofOrder
+        }
     ).should.be.fulfilled
 
     latestMMRRoot = await this.beefyLightClient.latestMMRRoot()

@@ -31,10 +31,10 @@ describe("Simple MMR Verification", function () {
            it(`should verify valid proof for leaf index ${i}`, async () => {
                expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
                    {
-                       restOfThePeaks: fixture7leaves.proofs[i].mmr_rest_of_the_peaks,
-                       rightBaggedPeak: fixture7leaves.proofs[i].mmr_right_bagged_peak,
-                       merkleProofItems: fixture7leaves.proofs[i].merkle_proof_items,
-                       merkleProofOrderBitField: fixture7leaves.proofs[i].merkle_proof_order
+                       restOfThePeaks: fixture7leaves.proofs[i].mmrRestOfThePeaks,
+                       rightBaggedPeak: fixture7leaves.proofs[i].mmrRightBaggedPeak,
+                       merkleProofItems: fixture7leaves.proofs[i].merkleProofItems,
+                       merkleProofOrderBitField: fixture7leaves.proofs[i].merkleProofOrder
                    })).to.be.true;
            });
        });
@@ -61,10 +61,10 @@ describe("Simple MMR Verification", function () {
             it(`should verify valid proof for leaf index ${i}`, async () => {
                 expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
                     {
-                        restOfThePeaks: fixture15leaves.proofs[i].mmr_rest_of_the_peaks,
-                        rightBaggedPeak: fixture15leaves.proofs[i].mmr_right_bagged_peak,
-                        merkleProofItems: fixture15leaves.proofs[i].merkle_proof_items,
-                        merkleProofOrderBitField: fixture15leaves.proofs[i].merkle_proof_order
+                        restOfThePeaks: fixture15leaves.proofs[i].mmrRestOfThePeaks,
+                        rightBaggedPeak: fixture15leaves.proofs[i].mmrRightBaggedPeak,
+                        merkleProofItems: fixture15leaves.proofs[i].merkleProofItems,
+                        merkleProofOrderBitField: fixture15leaves.proofs[i].merkleProofOrder
                     })).to.be.true;
             });
         });
