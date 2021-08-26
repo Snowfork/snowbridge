@@ -167,6 +167,8 @@ decl_error! {
 		InvalidHeader,
 		/// Proof could not be applied / verified.
 		InvalidProof,
+		/// Log could not be decoded
+		DecodeFailed,
 		/// This should never be returned - indicates a bug
 		Unknown,
 	}
@@ -195,14 +197,14 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 
 			log::trace!(
-				target: "import_header",
+				target: "ethereum-light-client",
 				"Received header {}. Starting validation",
 				header.number,
 			);
 
 			if let Err(err) = Self::validate_header_to_import(&header, &proof) {
 				log::trace!(
-					target: "import_header",
+					target: "ethereum-light-client",
 					"Validation for header {} returned error. Skipping import",
 					header.number,
 				);
@@ -210,14 +212,14 @@ decl_module! {
 			}
 
 			log::trace!(
-				target: "import_header",
+				target: "ethereum-light-client",
 				"Validation succeeded. Starting import of header {}",
 				header.number,
 			);
 
 			if let Err(err) = Self::import_validated_header(&sender, &header) {
 				log::trace!(
-					target: "import_header",
+					target: "ethereum-light-client",
 					"Import of header {} failed",
 					header.number,
 				);
@@ -225,7 +227,7 @@ decl_module! {
 			}
 
 			log::trace!(
-				target: "import_header",
+				target: "ethereum-light-client",
 				"Import of header {} succeeded!",
 				header.number,
 			);
@@ -288,7 +290,7 @@ impl<T: Config> Module<T> {
 		);
 
 		log::trace!(
-			target: "import_header",
+			target: "ethereum-light-client",
 			"Header {} passed basic verification",
 			header.number
 		);
@@ -302,7 +304,7 @@ impl<T: Config> Module<T> {
 		);
 
 		log::trace!(
-			target: "import_header",
+			target: "ethereum-light-client",
 			"Header {} passed difficulty verification",
 			header.number
 		);
@@ -317,7 +319,7 @@ impl<T: Config> Module<T> {
 		).map_err(|_| Error::<T>::InvalidHeader)?;
 
 		log::trace!(
-			target: "import_header",
+			target: "ethereum-light-client",
 			"Header {} passed PoW verification",
 			header.number
 		);
@@ -487,10 +489,20 @@ impl<T: Config> Module<T> {
 
 		ensure!(stored_header.finalized, Error::<T>::HeaderNotFinalized);
 
-		let receipt = stored_header.header.check_receipt_proof(&proof.data.1)
+		let result = stored_header.header.check_receipt_proof(&proof.data.1)
 			.ok_or(Error::<T>::InvalidProof)?;
 
-		Ok(receipt)
+		match result {
+			Ok(receipt) => Ok(receipt),
+			Err(err) => {
+				log::trace!(
+					target: "ethereum-light-client",
+					"Failed to decode transaction receipt: {}",
+					err
+				);
+				Err(Error::<T>::InvalidProof.into())
+			}
+		}
 	}
 }
 
@@ -511,10 +523,21 @@ impl<T: Config> Verifier for Module<T> {
 	fn verify(message: &Message) -> Result<Log, DispatchError> {
 		let receipt = Self::verify_receipt_inclusion(&message.proof)?;
 
+		log::trace!(
+			target: "ethereum-light-client",
+			"Verified receipt inclusion for transaction at index {} in block {}",
+			message.proof.tx_index, message.proof.block_hash,
+		);
+
 		let log: Log = rlp::decode(&message.data)
-			.map_err(|_| Error::<T>::InvalidProof)?;
+			.map_err(|_| Error::<T>::DecodeFailed)?;
 
 		if !receipt.contains_log(&log) {
+			log::trace!(
+				target: "ethereum-light-client",
+				"Event log not found in receipt for transaction at index {} in block {}",
+				message.proof.tx_index, message.proof.block_hash,
+			);
 			return Err(Error::<T>::InvalidProof.into());
 		}
 

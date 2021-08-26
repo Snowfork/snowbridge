@@ -79,11 +79,11 @@ impl Header {
 		keccak_256(&self.rlp(false)).into()
 	}
 
-	pub fn check_receipt_proof(&self, proof: &[Vec<u8>]) -> Option<receipt::Receipt> {
+	pub fn check_receipt_proof(&self, proof: &[Vec<u8>]) -> Option<Result<receipt::Receipt, rlp::DecoderError>> {
 		match self.apply_merkle_proof(proof) {
-			Some((root, data)) if root == self.receipts_root => rlp::decode(&data).ok(),
+			Some((root, data)) if root == self.receipts_root => Some(rlp::decode(&data)),
 			Some((_, _)) => None,
-			None => None,
+			None => None
 		}
 	}
 
@@ -359,8 +359,17 @@ mod tests {
 		let proof_no_full_node = vec!(proof_receipt5[2].clone(), proof_receipt5[2].clone());
 		assert!(header.check_receipt_proof(&proof_empty).is_none());
 		assert!(header.check_receipt_proof(&proof_missing_full_node).is_none());
-		assert!(header.check_receipt_proof(&proof_missing_short_node1).is_none());
-		assert!(header.check_receipt_proof(&proof_missing_short_node2).is_none());
+
+		assert_eq!(
+			header.check_receipt_proof(&proof_missing_short_node1),
+			Some(Err(rlp::DecoderError::Custom("Unsupported receipt type")))
+		);
+
+		assert_eq!(
+			header.check_receipt_proof(&proof_missing_short_node2),
+			Some(Err(rlp::DecoderError::Custom("Unsupported receipt type")))
+		);
+
 		assert!(header.check_receipt_proof(&proof_invalid_encoding).is_none());
 		assert!(header.check_receipt_proof(&proof_no_full_node).is_none());
 	}
