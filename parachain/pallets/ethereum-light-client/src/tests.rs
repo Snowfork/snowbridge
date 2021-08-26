@@ -4,7 +4,8 @@ use crate::mock::{
 	genesis_ethereum_block_hash, log_payload,
 	message_with_receipt_proof, receipt_root_and_proof,
 	AccountId, new_tester, new_tester_with_config,
-	ethereum_header_from_file, ethereum_header_proof_from_file
+	ethereum_header_from_file, ethereum_header_proof_from_file,
+	ropsten_london_header, ropsten_london_message,
 };
 
 use crate::mock::mock_verifier_with_pow;
@@ -340,6 +341,19 @@ fn it_confirms_receipt_inclusion_in_finalized_header() {
 }
 
 #[test]
+fn it_confirms_receipt_inclusion_in_ropsten_london_header() {
+	let finalized_header: EthereumHeader = ropsten_london_header();
+
+	new_tester_with_config::<Test>(GenesisConfig {
+		initial_header: finalized_header,
+		initial_difficulty: 0.into(),
+	}).execute_with(|| {
+		assert_ok!(Verifier::verify(&ropsten_london_message()));
+	});
+}
+
+
+#[test]
 fn it_denies_receipt_inclusion_for_invalid_proof() {
 	new_tester::<Test>().execute_with(|| {
 		let (_, receipt_proof) = receipt_root_and_proof();
@@ -368,7 +382,7 @@ fn it_denies_receipt_inclusion_for_invalid_log() {
 			Verifier::verify(
 				&message_with_receipt_proof(Vec::new(), finalized_header_hash, receipt_proof.clone()),
 			),
-			Error::<Test>::InvalidProof,
+			Error::<Test>::DecodeFailed,
 		);
 
 		// Valid log payload but doesn't exist in receipt
