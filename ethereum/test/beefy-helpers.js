@@ -86,9 +86,12 @@ const runBeefyLightClientFlow = async (realWorldFixture, beefyLightClient, beefy
     realWorldFixture.completeSubmitInput.commitment,
     completeValidatorProofs,
     realWorldFixture.completeSubmitInput.latestMMRLeaf,
-    realWorldFixture.completeSubmitInput.mmrLeafIndex,
-    realWorldFixture.completeSubmitInput.mmrLeafCount,
-    realWorldFixture.completeSubmitInput.mmrProofItems,
+    {
+        restOfThePeaks: realWorldFixture.completeSubmitInput.simplifiedMMRProof.mmrRestOfThePeaks,
+        rightBaggedPeak: realWorldFixture.completeSubmitInput.simplifiedMMRProof.mmrRightBaggedPeak,
+        merkleProofItems: realWorldFixture.completeSubmitInput.simplifiedMMRProof.merkleProofItems,
+        merkleProofOrderBitField: realWorldFixture.completeSubmitInput.simplifiedMMRProof.merkleProofOrder
+    }
   )
 
 }

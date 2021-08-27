@@ -72,15 +72,15 @@
       "nextAuthoritySetLen": 3,
       "nextAuthoritySetRoot": "0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365"
     },
-    "simplifiedMMRProof": {
+    "proof": {
       "merkleProofItems": [
         "0xa244ae2c1d1ad04bbb307ce418d84980aa656c6818516f019364df29c1a37224",
         "0x1acbd16b3dab0a66914fbff7cbaa15f2c4a37db6d3552ff1a466cc51cb2cbb8b",
         "0x58059c5ee4970ecc8491209c64dae9b5b850dce7e983bcf982079a6423d74ef4"
       ],
-      "merkleProofOrder": 6,
-      "mmrRightBaggedPeak": "0x6aafdb1600e3233eb7cf374a438b64a11e8387b9cd0145557634c013e670c9c8",
-      "mmrRestOfThePeaks": [
+      "merkleProofOrderBitField": 6,
+      "rightBaggedPeak": "0x6aafdb1600e3233eb7cf374a438b64a11e8387b9cd0145557634c013e670c9c8",
+      "restOfThePeaks": [
         "0xee29f67540b840ec61825261182b7a8e73d1a1e548271b18e619ea87e0d1963e"
       ]
     }

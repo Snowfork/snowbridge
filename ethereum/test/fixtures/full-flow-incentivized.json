@@ -75,9 +75,9 @@
     },
     "simplifiedMMRProof": {
       "merkleProofItems": [],
-      "merkleProofOrder": 0,
-      "mmrRightBaggedPeak": "0x0000000000000000000000000000000000000000000000000000000000000000",
-      "mmrRestOfThePeaks": [
+      "merkleProofOrderBitField": 0,
+      "rightBaggedPeak": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "restOfThePeaks": [
         "0xc426c89e1c1dc353199d4b1b0005b796b21fc1cf9eb857071e888397a7316f62",
         "0xd5aadcbd22b9abaa88742b53092da93fdde41704493b644b7ea4a2bd87e26624",
         "0x735740aabe5560339612a84518300fed3ba372721fd57f2b3376114be1c4a15d"
