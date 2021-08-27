@@ -125,7 +125,14 @@ func (li *EthereumListener) Start(
 	eg.Go(func() error {
 		defer close(li.payloads)
 		err := li.processEventsAndHeaders(ctx, headers, headerCache)
-		return err
+		log.WithField("reason", err).Info("Shutting down ethereum listener")
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
+		}
+		return nil
 	})
 
 	return li.payloads, nil
@@ -141,8 +148,7 @@ func (li *EthereumListener) processEventsAndHeaders(
 	for {
 		select {
 		case <-ctx.Done():
-			log.WithField("reason", ctx.Err()).Info("Shutting down ethereum listener")
-			return nil
+			return ctx.Err()
 		case header, ok := <-headers:
 			if !ok {
 				return nil
@@ -185,8 +191,7 @@ func (li *EthereumListener) processEventsAndHeaders(
 
 			select {
 			case <-ctx.Done():
-				log.WithField("reason", ctx.Err()).Info("Shutting down ethereum listener")
-				return nil
+				return ctx.Err()
 			case li.payloads <- ParachainPayload{Header: preparedHeader, Messages: messages}:
 			}
 

@@ -62,19 +62,24 @@ func (s *Syncer) StartSync(
 	eg.Go(func() error {
 		defer close(s.headers)
 
-		err := s.fetchFinalizedHeaders(ctx, initBlockHeight, height)
-		if err != nil && errors.Is(err, context.Canceled) {
-			return nil
-		} else if err != nil {
+		err = s.fetchNewHeaders(ctx)
+		if err != nil {
+			log.WithField("reason", err).Info("Shutting down header syncer")
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
 			return err
 		}
 
-		err = s.fetchNewHeaders(ctx)
-		if err != nil && errors.Is(err, context.Canceled) {
-			return nil
-		} else if err != nil {
+		err := s.fetchFinalizedHeaders(ctx, initBlockHeight, height)
+		if err != nil {
+			log.WithField("reason", err).Info("Shutting down header syncer")
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
 			return err
 		}
+
 
 		return nil
 	})
@@ -107,10 +112,10 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 
 		select {
 		case <-ctx.Done():
-			log.WithField("reason", ctx.Err()).Info("Shutting down finalized header fetcher")
 			return ctx.Err()
 		case s.headers <- header:
 		}
+
 		syncedUpUntil++
 	}
 
@@ -130,10 +135,9 @@ func (s *Syncer) fetchNewHeaders(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			log.WithField("reason", ctx.Err()).Info("Shutting down header subscription")
 			return ctx.Err()
 		case err := <-sub.Err():
-			log.WithError(err).Info("Header subscription failed")
+			log.WithError(err).Error("Header subscription failed")
 			return err
 		case header, ok := <-headersIn:
 			if !ok {
@@ -149,20 +153,26 @@ func (s *Syncer) fetchNewHeaders(ctx context.Context) error {
 
 			err = s.forwardAncestry(ctx, header.Hash(), saturatingSub(height, s.descendantsUntilFinal))
 			if err != nil {
-				log.WithFields(logrus.Fields{
-					"blockHash":   header.Hash().Hex(),
-					"blockNumber": height,
-				}).WithError(err).Error("Failed to forward header and its ancestors")
+				return err
 			}
 		}
 	}
 }
 
 func (s *Syncer) forwardAncestry(ctx context.Context, hash gethCommon.Hash, oldestHeight uint64) error {
+	log.WithFields(logrus.Fields{
+		"blockHash":   hash,
+		"oldestHeight": oldestHeight,
+	}).Info("Forwarding header and its ancestors")
+
 	item, exists := s.headerCache.Get(hash)
 	if !exists {
 		header, err := s.loader.HeaderByHash(ctx, hash)
 		if err != nil {
+			log.WithFields(logrus.Fields{
+				"blockHash":   hash,
+				"error": err,
+			}).Error("Failed to fetch block header")
 			return err
 		}
 
@@ -184,7 +194,12 @@ func (s *Syncer) forwardAncestry(ctx context.Context, hash gethCommon.Hash, olde
 		}
 	}
 
-	s.headers <- item.Header
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case s.headers <- item.Header:
+	}
+
 	item.Forwarded = true
 	return nil
 }

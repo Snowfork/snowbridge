@@ -93,7 +93,8 @@ func (suite *StoreTestSuite) TestGetItemByID() {
 
 	time.Sleep(2 * time.Second)
 
-	foundItem := suite.database.GetItemByID(id)
+	foundItem, err := suite.database.GetItemByID(id)
+	suite.Equal(err, nil)
 	suite.Equal(item.ID, foundItem.ID)
 }
 
@@ -108,7 +109,7 @@ func (suite *StoreTestSuite) TestGetItemByInitialVerificationTxHash() {
 
 	time.Sleep(2 * time.Second)
 
-	foundItem := suite.database.GetItemByInitialVerificationTxHash(hash)
+	foundItem, _ := suite.database.GetItemByInitialVerificationTxHash(hash)
 	suite.Equal(item.InitialVerificationTxHash, foundItem.InitialVerificationTxHash)
 }
 
@@ -150,7 +151,7 @@ func (suite *StoreTestSuite) TestUpdateItem() {
 
 	time.Sleep(2 * time.Second)
 
-	newItem := suite.database.GetItemByInitialVerificationTxHash(hash)
+	newItem, _ := suite.database.GetItemByInitialVerificationTxHash(hash)
 	suite.Equal(newItem.Status, store.InitialVerificationTxSent)
 	suite.Equal(newItem.InitialVerificationTxHash, hash)
 }
@@ -166,7 +167,8 @@ func (suite *StoreTestSuite) TestDeleteItem() {
 
 	time.Sleep(2 * time.Second)
 
-	foundItem := suite.database.GetItemByID(id)
+	foundItem, err := suite.database.GetItemByID(id)
+	suite.Equal(err, nil)
 	suite.Equal(item.ID, foundItem.ID)
 	suite.Equal(item.CompleteOnBlock, foundItem.CompleteOnBlock)
 
@@ -176,7 +178,8 @@ func (suite *StoreTestSuite) TestDeleteItem() {
 
 	time.Sleep(2 * time.Second)
 
-	deletedItem := suite.database.GetItemByID(id)
+	deletedItem, err := suite.database.GetItemByID(id)
+	suite.Equal(err, nil)
 	suite.Equal(store.Status(0), deletedItem.Status)
 	suite.Equal(uint(0), deletedItem.ID)
 	suite.Equal(uint64(0), deletedItem.CompleteOnBlock)
