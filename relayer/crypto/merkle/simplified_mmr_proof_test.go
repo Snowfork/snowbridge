@@ -1,6 +1,7 @@
 package merkle
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
@@ -63,8 +64,28 @@ const TestData = "[{\"ReferenceSimplifiedProof\":{\"MerkleProofItems\":null,\"Me
 
 
 func Test_SimplifiedMMRProof(t *testing.T) {
+	var mmrProofs []types.H256
+	mmrProofItems := []string{
+		"ee29f67540b840ec61825261182b7a8e73d1a1e548271b18e619ea87e0d1963e",
+		"a244ae2c1d1ad04bbb307ce418d84980aa656c6818516f019364df29c1a37224",
+		"1acbd16b3dab0a66914fbff7cbaa15f2c4a37db6d3552ff1a466cc51cb2cbb8b",
+		"58059c5ee4970ecc8491209c64dae9b5b850dce7e983bcf982079a6423d74ef4",
+		"6aafdb1600e3233eb7cf374a438b64a11e8387b9cd0145557634c013e670c9c8",
+	}
+	for _, item := range mmrProofItems {
+		out, err := hex.DecodeString(item)
+		assert.NoError(t, err)
+		mmrProofs = append(mmrProofs, types.NewH256(out))
+	}
+	simplifiedMMRProof, err := ConvertToSimplifiedMMRProof(types.H256{}, 70, types.MMRLeaf{}, 73, mmrProofs)
+	assert.NoError(t, err)
+	fixture := convertSimplifiedProofToFixture(simplifiedMMRProof)
+	prettyOut, err := json.MarshalIndent(fixture, "", "\t")
+	assert.NoError(t, err)
+	fmt.Println(string(prettyOut))
+
 	var testData []SimplifiedProofTestData
-	err := json.Unmarshal([]byte(TestData), &testData)
+	err = json.Unmarshal([]byte(TestData), &testData)
 	if err != nil {
 		t.Fail()
 	}

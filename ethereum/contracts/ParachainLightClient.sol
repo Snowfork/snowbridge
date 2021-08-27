@@ -12,7 +12,7 @@ library ParachainLightClient {
         uint32 number;
         bytes32 stateRoot;
         bytes32 extrinsicsRoot;
-        bytes32 commitment; // TODO check type and position of this element
+        bytes32 commitment;
     }
 
     struct ParachainHeadProof {

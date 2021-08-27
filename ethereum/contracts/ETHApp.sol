@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
@@ -75,11 +75,7 @@ contract ETHApp is RewardSource, AccessControl {
         bytes32 _sender,
         address payable _recipient,
         uint256 _amount
-    ) public {
-        require(
-            hasRole(INBOUND_CHANNEL_ROLE, msg.sender),
-            "Caller is not an inbound channel"
-        );
+    ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         require(_amount > 0, "Must unlock a positive amount");
         require(
             balance >= _amount,
@@ -110,8 +106,8 @@ contract ETHApp is RewardSource, AccessControl {
     function reward(address payable _recipient, uint256 _amount)
         external
         override
+        onlyRole(REWARD_ROLE)
     {
-        require(hasRole(REWARD_ROLE, msg.sender), "Caller is unauthorized");
         _recipient.transfer(_amount);
     }
 }

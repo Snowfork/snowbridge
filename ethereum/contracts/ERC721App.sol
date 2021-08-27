@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
@@ -75,8 +75,6 @@ contract ERC721App is AccessControl {
 
         IERC721Metadata token = IERC721Metadata(_tokenContract);
 
-        token.transferFrom(msg.sender, address(this), _tokenId);
-
         emit Locked(_tokenContract, _tokenId, msg.sender, _recipient);
 
         bytes memory call = encodeCall(
@@ -91,6 +89,8 @@ contract ERC721App is AccessControl {
             channels[_channelId].outbound
         );
         channel.submit(msg.sender, call);
+
+        token.transferFrom(msg.sender, address(this), _tokenId);
     }
 
     /**
@@ -105,12 +105,7 @@ contract ERC721App is AccessControl {
         uint256 _tokenId,
         bytes32 _sender,
         address _recipient
-    ) public {
-        require(
-            hasRole(INBOUND_CHANNEL_ROLE, msg.sender),
-            "Caller is not an inbound channel"
-        );
-
+    ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         IERC721Metadata token = IERC721Metadata(_tokenContract);
 
         token.transferFrom(address(this), _recipient, _tokenId);
@@ -118,9 +113,6 @@ contract ERC721App is AccessControl {
     }
 
     // SCALE-encode payload
-    // TODO: Use the last _tokenURI argument. We ignore it for now, because
-    // using a nonempty one requires a compact SCALE encoded length prefix,
-    // which we have not yet implemented.
     function encodeCall(
         address _tokenContract,
         uint256 _tokenId,

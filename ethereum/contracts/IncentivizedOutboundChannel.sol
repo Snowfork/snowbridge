@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.7.6;
 pragma experimental ABIEncoderV2;
 
@@ -7,7 +7,8 @@ import "./OutboundChannel.sol";
 import "./ChannelAccess.sol";
 import "./FeeSource.sol";
 
-// IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have incentivization too.
+// IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have
+// incentivization too.
 contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
 
     // Governance contracts will administer using this role.
@@ -41,9 +42,7 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
         address _feeSource,
         address[] memory defaultOperators
     )
-    external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is unauthorized");
-
+    external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Set initial configuration
         feeSource = FeeSource(_feeSource);
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
@@ -56,21 +55,18 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     }
 
     // Update message submission fee.
-    function setFee(uint256 _amount) external {
-        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+    function setFee(uint256 _amount) external onlyRole(CONFIG_UPDATE_ROLE) {
         emit FeeChanged(fee, _amount);
         fee = _amount;
     }
 
     // Authorize an operator/app to submit messages for *all* users.
-    function authorizeDefaultOperator(address operator) external {
-        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+    function authorizeDefaultOperator(address operator) external onlyRole(CONFIG_UPDATE_ROLE) {
         _authorizeDefaultOperator(operator);
     }
 
     // Revoke authorization.
-    function revokeDefaultOperator(address operator) external {
-        require(hasRole(CONFIG_UPDATE_ROLE, msg.sender), "Caller is unauthorized");
+    function revokeDefaultOperator(address operator) external onlyRole(CONFIG_UPDATE_ROLE) {
         _revokeDefaultOperator(operator);
     }
 

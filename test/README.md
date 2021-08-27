@@ -108,6 +108,8 @@ You should now be good to go!
 yarn test
 ```
 
+These tests are meant to closely replicate real-world behaviour. This means that they also replicate real-world delays and confirmation times. This can take up to 4 minutes per test and ~20minutes for all tests.
+
 ### Testing against a malicious contract
 We also have a test environment that tests against a malicious contract that attempts to consume infinite gas. To setup this environment, run the start-services script with the malicious flag:
 
