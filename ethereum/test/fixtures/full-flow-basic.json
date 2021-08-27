@@ -72,7 +72,7 @@
       "nextAuthoritySetLen": 3,
       "nextAuthoritySetRoot": "0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365"
     },
-    "proof": {
+    "simplifiedMMRProof": {
       "merkleProofItems": [
         "0xa244ae2c1d1ad04bbb307ce418d84980aa656c6818516f019364df29c1a37224",
         "0x1acbd16b3dab0a66914fbff7cbaa15f2c4a37db6d3552ff1a466cc51cb2cbb8b",
