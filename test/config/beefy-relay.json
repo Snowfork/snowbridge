@@ -4,7 +4,7 @@
       "endpoint": "ws://localhost:9944",
       "beefy-starting-block": 0
     },
-    "sync-block-number-jump": 49
+    "sync-block-number-jump": 50
   },
   "sink": {
     "ethereum": {
