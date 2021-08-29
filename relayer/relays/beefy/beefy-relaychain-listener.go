@@ -52,26 +52,27 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 }
 
 func (li *BeefyRelaychainListener) syncBeefyJustifications(startBlockNumber uint64) error {
-	log.Info("Syncing BEEFY justifications from block number ", startBlockNumber, " skipping ", SyncBlockNumberJump, " blocks at a time")
+	log.WithFields(log.Fields{"StartingBlockNumber": startBlockNumber, "SyncBlockNumberJump": SyncBlockNumberJump}).Info("Syncing BEEFY justifications.")
 
 	blockNumber := startBlockNumber + SyncBlockNumberJump
 	for {
-		log.Info("Probing block ", blockNumber)
+		log.WithField("BlockNumber", blockNumber).Info("Probing block.")
 		blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber)
 		if err != nil {
 			if err.Error() == "required result to be 32 bytes, but got 0" {
-				log.WithError(err).Info("Block ", blockNumber, " must be the final block.")
+				log.WithField("BlockNumber", blockNumber).WithError(err).Info("Block must be the final block.")
 				break
 			}
-			log.WithError(err).Error("Error getting block hash for block ", blockNumber)
+			log.WithError(err).WithField("BlockNumber", blockNumber).Error("Failed getting block hash for block.")
 			return err
 		}
 
-		log.Info("Fetching block ", blockNumber, " with hash ", blockHash.Hex())
+		logFields := log.Fields{"BlockNumber": blockNumber, "BlockHash": blockHash.Hex()}
+		log.WithFields(logFields).Info("Fetching block.")
 
 		block, err := li.relaychainConn.API().RPC.Chain.GetBlock(blockHash)
 		if err != nil {
-			log.WithError(err).Error("Error fetching block ", blockNumber, " with hash ", blockHash.Hex())
+			log.WithFields(logFields).WithError(err).Error("Error fetching block.")
 			return err
 		}
 
@@ -81,7 +82,7 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(startBlockNumber uint
 			if block.Justifications[j].EngineID() == "BEEF" {
 				err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
 				if err != nil {
-					log.WithError(err).Error("Failed to decode BEEFY commitment messages")
+					log.WithFields(logFields).WithError(err).Error("Failed to decode BEEFY commitment messages")
 				} else if sc.IsSome() {
 					commitments = append(commitments, sc.Value)
 				}
@@ -98,16 +99,16 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(startBlockNumber uint
 
 			err = li.processBeefyJustifications(&commitments[c])
 			if err != nil {
-				log.WithError(err).Error("Failed to synchronise BEEFY commitment.")
+				log.WithFields(logFields).WithError(err).Error("Failed to synchronise BEEFY commitment.")
 				return err
 			}
 		}
 
 		if len(commitments) > 0 {
-			log.Info("Sync complete for block ", blockNumber)
+			log.WithFields(logFields).Info("Sync complete for block.")
 			blockNumber += SyncBlockNumberJump
 		} else {
-			log.Info("BEEFY justifications NOT found for block ", blockNumber)
+			log.WithFields(logFields).Info("BEEFY justifications NOT found for block.")
 			blockNumber++
 		}
 	}
@@ -163,7 +164,7 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(signedCommitment *
 
 	signedCommitmentBytes, err := json.Marshal(signedCommitment)
 	if err != nil {
-		log.WithError(err).Error("Failed to marshal signed commitment:", signedCommitment)
+		log.WithField("SignedCommitment", signedCommitment).WithError(err).Error("Failed to marshal signed commitment.")
 		return nil
 	}
 
@@ -177,7 +178,7 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(signedCommitment *
 
 	beefyAuthoritiesBytes, err := json.Marshal(beefyAuthorities)
 	if err != nil {
-		log.WithError(err).Error("Failed to marshal BEEFY authorities:", beefyAuthorities)
+		log.WithField("BeefyAuthorities", beefyAuthorities).WithError(err).Error("Failed to marshal BEEFY authorities.")
 		return nil
 	}
 
