@@ -17,8 +17,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const SyncBlockNumberJump = 50
-
 type BeefyRelaychainListener struct {
 	config         *Config
 	relaychainConn *relaychain.Connection
@@ -40,7 +38,7 @@ func NewBeefyRelaychainListener(
 func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	eg.Go(func() error {
-		err := li.syncBeefyJustifications(ctx, li.config.Source.Polkadot.BeefyStartingBlock)
+		err := li.syncBeefyJustifications(ctx, li.config.Source.Polkadot.BeefyStartingBlock, li.config.Source.SyncBlockNumberJump)
 		if err != nil {
 			return err
 		}
@@ -50,10 +48,10 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 	return nil
 }
 
-func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context, startBlockNumber uint64) error {
-	log.WithFields(log.Fields{"StartingBlockNumber": startBlockNumber, "SyncBlockNumberJump": SyncBlockNumberJump}).Info("Syncing BEEFY justifications.")
+func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context, startBlockNumber, syncBlockNumberJump uint64) error {
+	log.WithFields(log.Fields{"StartingBlockNumber": startBlockNumber, "SyncBlockNumberJump": syncBlockNumberJump}).Info("Syncing BEEFY justifications.")
 
-	blockNumber := startBlockNumber + SyncBlockNumberJump
+	blockNumber := startBlockNumber + syncBlockNumberJump
 	for {
 		log.WithField("BlockNumber", blockNumber).Info("Probing block.")
 		blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber)
@@ -105,7 +103,7 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context, 
 
 		if len(commitments) > 0 {
 			log.WithFields(logFields).Info("Sync complete for block.")
-			blockNumber += SyncBlockNumberJump
+			blockNumber += syncBlockNumberJump
 		} else {
 			log.WithFields(logFields).Info("BEEFY justifications NOT found for block.")
 			blockNumber++

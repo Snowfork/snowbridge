@@ -10,7 +10,8 @@ type Config struct {
 }
 
 type SourceConfig struct {
-	Polkadot config.PolkadotConfig `mapstructure:"polkadot"`
+	Polkadot            config.PolkadotConfig `mapstructure:"polkadot"`
+	SyncBlockNumberJump uint64                `mapstructure:"sync-block-number-jump"`
 }
 
 type SinkConfig struct {
