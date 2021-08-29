@@ -40,8 +40,7 @@ func NewBeefyRelaychainListener(
 func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	eg.Go(func() error {
-		// TODO: Get the starting block from some place other than config.
-		err := li.syncBeefyJustifications(li.config.Source.Polkadot.BeefyStartingBlock)
+		err := li.syncBeefyJustifications(ctx, li.config.Source.Polkadot.BeefyStartingBlock)
 		if err != nil {
 			return err
 		}
@@ -51,7 +50,7 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 	return nil
 }
 
-func (li *BeefyRelaychainListener) syncBeefyJustifications(startBlockNumber uint64) error {
+func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context, startBlockNumber uint64) error {
 	log.WithFields(log.Fields{"StartingBlockNumber": startBlockNumber, "SyncBlockNumberJump": SyncBlockNumberJump}).Info("Syncing BEEFY justifications.")
 
 	blockNumber := startBlockNumber + SyncBlockNumberJump
@@ -97,7 +96,7 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(startBlockNumber uint
 				"signedCommitment.Signatures":                commitments[c].Signatures,
 			}).Info("Synchronizing a BEEFY commitment")
 
-			err = li.processBeefyJustifications(&commitments[c])
+			err = li.processBeefyJustifications(ctx, &commitments[c])
 			if err != nil {
 				log.WithFields(logFields).WithError(err).Error("Failed to synchronise BEEFY commitment.")
 				return err
@@ -148,7 +147,7 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				"signedCommitment.Signatures":                signedCommitment.Signatures,
 			}).Info("Witnessed a new BEEFY commitment: ", msg.(string))
 
-			err = li.processBeefyJustifications(signedCommitment)
+			err = li.processBeefyJustifications(ctx, signedCommitment)
 			if err != nil {
 				return err
 			}
@@ -156,7 +155,7 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 	}
 }
 
-func (li *BeefyRelaychainListener) processBeefyJustifications(signedCommitment *store.SignedCommitment) error {
+func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Context, signedCommitment *store.SignedCommitment) error {
 	if len(signedCommitment.Signatures) == 0 {
 		log.Info("BEEFY commitment has no signatures, skipping...")
 		return nil
@@ -220,8 +219,17 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(signedCommitment *
 		SerializedLatestMMRProof: serializedProof,
 		MMRLeafCount:             mmrLeafCount,
 	}
-	li.beefyMessages <- info
-	return nil
+
+	select {
+	case <-ctx.Done():
+		log.WithError(ctx.Err()).Error("Relayer halting.")
+		if li.beefyMessages != nil {
+			close(li.beefyMessages)
+		}
+		return ctx.Err()
+	case li.beefyMessages <- info:
+		return nil
+	}
 }
 
 func (li *BeefyRelaychainListener) getBeefyAuthorities(blockNumber uint64) ([]common.Address, error) {
