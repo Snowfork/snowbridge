@@ -89,8 +89,8 @@ func run(_ *cobra.Command, _ []string) error {
 
 	err = relay.Start(ctx, eg)
 	if err != nil {
-		cancel()
 		logrus.WithError(err).Fatal("Unhandled error")
+		cancel()
 		return err
 	}
 
