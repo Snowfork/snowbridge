@@ -116,7 +116,10 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
-		li.emitMessagePackages(messagePackages)
+		err = li.emitMessagePackages(ctx, messagePackages)
+		if err != nil {
+			return err
+		}
 
 		err = li.subBeefyJustifications(ctx)
 		return err
@@ -206,17 +209,25 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 			return err
 		}
 
-		li.emitMessagePackages(messagePackages)
-
+		err = li.emitMessagePackages(ctx, messagePackages)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (li *BeefyListener) emitMessagePackages(packages []MessagePackage) {
+func (li *BeefyListener) emitMessagePackages(ctx context.Context, packages []MessagePackage) error {
 	for _, messagePackage := range packages {
-		log.Info("Beefy Listener emitting new message package")
-		li.messages <- messagePackage
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case li.messages <- messagePackage:
+			log.Info("Beefy Listener emitted new message package")
+		}
 	}
+
+	return nil
 }
 
 // queryBeefyLightClientEvents queries ContractNewMMRRoot events from the BeefyLightClient contract

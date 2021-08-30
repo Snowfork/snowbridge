@@ -53,7 +53,7 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 	}
 	wr.genesisHash = genesisHash
 
-	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn, log.WithField("name", "ExtrinsicPool"))
+	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn)
 
 	eg.Go(func() error {
 		err := wr.writeLoop(ctx)
@@ -111,7 +111,7 @@ func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 			log.WithFields(logrus.Fields{
 				"blockNumber":  header.Fields.Number,
 				"messageCount": len(payload.Messages),
-			}).Info("Submitted header and messages to Substrate")
+			}).Info("Submitted transaction to Substrate")
 		}
 	}
 }
@@ -153,7 +153,14 @@ func (wr *ParachainWriter) write(ctx context.Context, c types.Call) error {
 		return err
 	}
 
-	wr.pool.WaitForSubmitAndWatch(ctx, wr.nonce, &extI)
+	log.WithFields(logrus.Fields{
+		"nonce": wr.nonce,
+	}).Info("Submitting transaction")
+	err = wr.pool.WaitForSubmitAndWatch(ctx, &extI)
+	if err != nil {
+		log.WithError(err).WithField("nonce", wr.nonce).Debug("Failed to submit extrinsic")
+		return err
+	}
 
 	wr.nonce = wr.nonce + 1
 

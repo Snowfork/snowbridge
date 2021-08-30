@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/snowfork/snowbridge/relayer/chain/ethereum/syncer"
+	"github.com/snowfork/snowbridge/relayer/relays/ethereum/syncer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/sync/errgroup"
@@ -121,9 +121,8 @@ func Test_SyncFromFinalizedHeaderWithCacheGaps(t *testing.T) {
 		headerLoader.On("HeaderByHash", header.Hash()).Return(header, nil)
 	}
 
-	headerChannel := make(chan *types.Header, 5)
-	syncer := syncer.NewSyncer(2, &headerLoader, headerChannel)
-	syncer.StartSync(ctx, eg, 0)
+	syncer := syncer.NewSyncer(2, &headerLoader)
+	headerChannel, _ := syncer.StartSync(ctx, eg, 0)
 
 	// header2 is finalized and should be forwarded first
 	header2 := <-headerChannel
@@ -162,9 +161,8 @@ func Test_SyncFromUnfinalizedHeader(t *testing.T) {
 		headerLoader.On("HeaderByHash", header.Hash()).Return(header, nil)
 	}
 
-	headerChannel := make(chan *types.Header, 5)
-	syncer := syncer.NewSyncer(2, &headerLoader, headerChannel)
-	syncer.StartSync(ctx, eg, 1)
+	syncer := syncer.NewSyncer(2, &headerLoader)
+	headerChannel, _ := syncer.StartSync(ctx, eg, 1)
 
 	// Give syncer time to determine that there aren't any finalized
 	// headers to forward
@@ -195,9 +193,8 @@ func Test_SyncForwardsMultipleForks(t *testing.T) {
 		headerLoader.On("HeaderByHash", headersChain2[i].Hash()).Return(headersChain2[i], nil)
 	}
 
-	headerChannel := make(chan *types.Header, 10)
-	syncer := syncer.NewSyncer(2, &headerLoader, headerChannel)
-	syncer.StartSync(ctx, eg, 0)
+	syncer := syncer.NewSyncer(2, &headerLoader)
+	headerChannel, _ := syncer.StartSync(ctx, eg, 0)
 	<-headerChannel
 
 	// Forward a fork
@@ -208,5 +205,5 @@ func Test_SyncForwardsMultipleForks(t *testing.T) {
 	// Forward a different fork
 	headerLoader.NewHeaders <- headersChain2[4]
 	time.Sleep(100 * time.Millisecond)
-	assert.Equal(t, 6, len(headerChannel))
+	assert.Equal(t, 5, len(headerChannel))
 }
