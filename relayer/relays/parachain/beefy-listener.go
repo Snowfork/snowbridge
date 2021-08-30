@@ -164,7 +164,11 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 			if len(beefyLightClientEvents) > 0 {
 				log.Info(fmt.Sprintf("Found %d BeefyLightClient ContractNewMMRRoot events on block %d", len(beefyLightClientEvents), blockNumber))
 			}
-			li.processBeefyLightClientEvents(ctx, beefyLightClientEvents)
+
+			err = li.processBeefyLightClientEvents(ctx, beefyLightClientEvents)
+			if err != nil {
+				return err
+			}
 		}
 	}
 }

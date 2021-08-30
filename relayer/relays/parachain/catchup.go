@@ -143,9 +143,11 @@ func (li *BeefyListener) buildMissedMessagePackages(
 
 // Takes a slice of parachain blocks and augments them with their respective
 // header, header proof and MMR proof at the given relay chain block mmr root
-func (li *BeefyListener) parablocksWithProofs(blocks []ParaBlockWithDigest,
-	latestRelayChainBlockNumber uint64, latestRelaychainBlockHash types.Hash) (
-	[]ParaBlockWithProofs, error) {
+func (li *BeefyListener) parablocksWithProofs(
+	blocks []ParaBlockWithDigest,
+	latestRelayChainBlockNumber uint64,
+	latestRelaychainBlockHash types.Hash,
+) ([]ParaBlockWithProofs, error) {
 	relayChainBlockNumber := latestRelayChainBlockNumber
 	var relayBlockHash types.Hash
 	var err error
