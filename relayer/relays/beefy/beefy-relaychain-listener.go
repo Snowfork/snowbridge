@@ -68,6 +68,7 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 func (li *BeefyRelaychainListener) produceSignedCommitments(ctx context.Context, beefyCommitments chan<- store.SignedCommitment, pollStartingBlock, pollInterval, pollSkipBlockCount uint64) error {
 	current := pollStartingBlock
 	pollDuration := time.Duration(pollInterval) * time.Second
+	syncComplete := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -86,28 +87,34 @@ func (li *BeefyRelaychainListener) produceSignedCommitments(ctx context.Context,
 				return err
 			}
 
-			if current > uint64(finalizedHeader.Number) {
-				log.WithFields(log.Fields{"currentBlockNumber": current, "finalizedBlockNumber": finalizedHeader.Number}).Info("Current block is not finalized.")
-				sleep(ctx, pollDuration)
-				continue
-			}
-
-			log.WithFields(log.Fields{"currentBlockNumber": current, "finalizedBlockNumber": finalizedHeader.Number}).Info("Probing block.")
-
-			ErrBlockNotReady := errors.New("required result to be 32 bytes, but got 0")
-			hash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(current)
-			if err != nil {
-				if err.Error() == ErrBlockNotReady.Error() {
-					log.WithFields(log.Fields{"currentBlockNumber": current, "finalizedBlockNumber": finalizedHeader.Number}).Info("Current block is not ready.")
+			finalizedBlockNumber := uint64(finalizedHeader.Number)
+			if current > finalizedBlockNumber {
+				log.WithFields(log.Fields{
+					"blockNumber":          current,
+					"finalizedBlockNumber": finalizedHeader.Number,
+					"syncComplete":         syncComplete}).Info("Current block is not finalized.")
+				if !syncComplete {
+					syncComplete = true
+					current = finalizedBlockNumber
+				} else {
 					sleep(ctx, pollDuration)
 					continue
-				} else {
-					log.WithError(err).WithField("blockNumber", current).Error("Failed to fetch block hash.")
-					return err
 				}
 			}
 
-			logFields := log.Fields{"blockNumber": current, "blockHash": hash.Hex()}
+			logFields := log.Fields{
+				"blockNumber":          current,
+				"finalizedBlockNumber": finalizedHeader.Number,
+				"syncComplete":         syncComplete}
+			log.WithFields(logFields).Info("Probing block.")
+
+			hash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(current)
+			if err != nil {
+				log.WithError(err).WithFields(logFields).Error("Failed to fetch block hash.")
+				return err
+			}
+
+			logFields["blockHash"] = hash.Hex()
 			block, err := li.relaychainConn.API().RPC.Chain.GetBlock(hash)
 			if err != nil {
 				log.WithError(err).WithFields(logFields).Error("Failed to fetch block hash.")
@@ -128,7 +135,7 @@ func (li *BeefyRelaychainListener) produceSignedCommitments(ctx context.Context,
 			}
 
 			for c := range commitments {
-				log.WithFields(log.Fields{
+				log.WithFields(logFields).WithFields(log.Fields{
 					"signedCommitment.Commitment.BlockNumber":    commitments[c].Commitment.BlockNumber,
 					"signedCommitment.Commitment.Payload":        commitments[c].Commitment.Payload.Hex(),
 					"signedCommitment.Commitment.ValidatorSetID": commitments[c].Commitment.ValidatorSetID,
@@ -143,15 +150,20 @@ func (li *BeefyRelaychainListener) produceSignedCommitments(ctx context.Context,
 				}
 			}
 
-			// The beefy relayer can skip a certain amount of blocks provided it does not skip a whole
-			// validator sessions worth of blocks.
 			if len(commitments) > 0 {
-				current += pollSkipBlockCount
-				log.WithFields(logFields).Info("Justifications found processed. Jumping ahead.")
+				log.WithFields(logFields).Info("Justifications found.")
+				if !syncComplete {
+					// The beefy relayer can skip a certain amount of blocks provided it does not skip a whole
+					// validator sessions worth of blocks.
+					current += pollSkipBlockCount
+				} else {
+					current += 1
+				}
 			} else {
+				log.WithFields(logFields).Info("Justifications not found.")
 				current += 1
-				log.WithFields(logFields).Info("Justifications not found. Checking next block.")
 			}
+
 		}
 	}
 }
