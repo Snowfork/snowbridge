@@ -5,6 +5,7 @@ package parachain
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	log "github.com/sirupsen/logrus"
@@ -42,22 +43,30 @@ func (ep *ExtrinsicPool) WaitForSubmitAndWatch(ctx context.Context, ext *types.E
 	}
 
 	ep.eg.Go(func() error {
+		defer ep.sem.Release(1)
 		for {
 			select {
 			case <-ctx.Done():
+				sub.Unsubscribe()
 				return nil
 			case err := <-sub.Err():
 				log.WithError(err).WithField("nonce", nonce(ext)).Error("Subscription failed for extrinsic status")
 				return err
 			case status := <-sub.Chan():
 				// https://github.com/paritytech/substrate/blob/29aca981db5e8bf8b5538e6c7920ded917013ef3/primitives/transaction-pool/src/pool.rs#L56-L127
-				if status.IsInBlock || status.IsDropped || status.IsInvalid || status.IsUsurped {
+				if status.IsDropped || status.IsInvalid || status.IsUsurped {
+					sub.Unsubscribe()
 					log.WithFields(log.Fields{
 						"nonce":  nonce(ext),
 						"reason": reason(&status),
-					}).Debug("Extrinsic left the transaction pool")
+					}).Error("Extrinsic removed from the transaction pool")
+					return fmt.Errorf("extrinsic removed from the transaction pool")
+				} else if status.IsInBlock {
 					sub.Unsubscribe()
-					ep.sem.Release(1)
+					log.WithFields(log.Fields{
+						"nonce":  nonce(ext),
+						"reason": reason(&status),
+					}).Debug("Extrinsic included in block")
 					return nil
 				}
 			}
