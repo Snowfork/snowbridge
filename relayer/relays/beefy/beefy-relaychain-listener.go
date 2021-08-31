@@ -3,7 +3,9 @@ package beefy
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -36,116 +38,129 @@ func NewBeefyRelaychainListener(
 }
 
 func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group) error {
+	startingBlock := li.config.Source.Polkadot.BeefyStartingBlock
+	pollSkipBlockCount := li.config.Source.PollSkipBlockCount
+	pollInterval := li.config.Source.PollIntervalSeconds
+
+	log.WithFields(
+		log.Fields{
+			"startingBlock":      startingBlock,
+			"pollSkipBlockCount": pollSkipBlockCount,
+			"pollInterval":       pollInterval}).Info("Starting beefy relaychain listener")
+
+	if pollSkipBlockCount < 1 {
+		return errors.New("poll skip block count must be greater than 0")
+	}
+
+	commitments := make(chan store.SignedCommitment)
+	eg.Go(func() error {
+		defer close(commitments)
+		return li.produceSignedCommitments(ctx, commitments, startingBlock, pollInterval, pollSkipBlockCount)
+	})
 
 	eg.Go(func() error {
-		err := li.syncBeefyJustifications(ctx, li.config.Source.Polkadot.BeefyStartingBlock, li.config.Source.SyncBlockNumberJump)
-		if err != nil {
-			return err
-		}
-		return li.subBeefyJustifications(ctx)
+		return li.consumeSignedCommitments(ctx, commitments)
 	})
 
 	return nil
 }
 
-func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context, startBlockNumber, syncBlockNumberJump uint64) error {
-	log.WithFields(log.Fields{"StartingBlockNumber": startBlockNumber, "SyncBlockNumberJump": syncBlockNumberJump}).Info("Syncing BEEFY justifications.")
-
-	blockNumber := startBlockNumber + syncBlockNumberJump
-	for {
-		log.WithField("BlockNumber", blockNumber).Info("Probing block.")
-		blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber)
-		if err != nil {
-			if err.Error() == "required result to be 32 bytes, but got 0" {
-				log.WithField("BlockNumber", blockNumber).WithError(err).Info("Block must be the final block.")
-				break
-			}
-			log.WithError(err).WithField("BlockNumber", blockNumber).Error("Failed getting block hash for block.")
-			return err
-		}
-
-		logFields := log.Fields{"BlockNumber": blockNumber, "BlockHash": blockHash.Hex()}
-		log.WithFields(logFields).Info("Fetching block.")
-
-		block, err := li.relaychainConn.API().RPC.Chain.GetBlock(blockHash)
-		if err != nil {
-			log.WithFields(logFields).WithError(err).Error("Error fetching block.")
-			return err
-		}
-
-		commitments := []store.SignedCommitment{}
-		for j := range block.Justifications {
-			sc := store.OptionalSignedCommitment{}
-			if block.Justifications[j].EngineID() == "BEEF" {
-				err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
-				if err != nil {
-					log.WithFields(logFields).WithError(err).Error("Failed to decode BEEFY commitment messages")
-				} else if sc.IsSome() {
-					commitments = append(commitments, sc.Value)
-				}
-			}
-		}
-
-		for c := range commitments {
-			log.WithFields(log.Fields{
-				"signedCommitment.Commitment.BlockNumber":    commitments[c].Commitment.BlockNumber,
-				"signedCommitment.Commitment.Payload":        commitments[c].Commitment.Payload.Hex(),
-				"signedCommitment.Commitment.ValidatorSetID": commitments[c].Commitment.ValidatorSetID,
-				"signedCommitment.Signatures":                commitments[c].Signatures,
-			}).Info("Synchronizing a BEEFY commitment")
-
-			err = li.processBeefyJustifications(ctx, &commitments[c])
-			if err != nil {
-				log.WithFields(logFields).WithError(err).Error("Failed to synchronise BEEFY commitment.")
-				return err
-			}
-		}
-
-		if len(commitments) > 0 {
-			log.WithFields(logFields).Info("Sync complete for block.")
-			blockNumber += syncBlockNumberJump
-		} else {
-			log.WithFields(logFields).Info("BEEFY justifications NOT found for block.")
-			blockNumber++
-		}
-	}
-
-	log.Info("Syncing BEEFY justifications complete. Resuming subcription.")
-	return nil
-}
-
-func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) error {
-	ch := make(chan interface{})
-
-	sub, err := li.relaychainConn.API().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
-	if err != nil {
-		panic(err)
-	}
-	defer sub.Unsubscribe()
-
+func (li *BeefyRelaychainListener) produceSignedCommitments(ctx context.Context, beefyCommitments chan<- store.SignedCommitment, pollStartingBlock, pollInterval, pollSkipBlockCount uint64) error {
+	current := pollStartingBlock
+	pollDuration := time.Duration(pollInterval) * time.Second
 	for {
 		select {
 		case <-ctx.Done():
-			log.WithField("reason", ctx.Err()).Info("Shutting down polkadot listener")
-			if li.beefyMessages != nil {
-				close(li.beefyMessages)
-			}
-			return nil
-		case msg := <-ch:
-			signedCommitment := &store.SignedCommitment{}
-			err := types.DecodeFromHexString(msg.(string), signedCommitment)
+			log.WithError(ctx.Err()).Error("Shutting down beefy relaychain commitment producer.")
+			return ctx.Err()
+		default:
+			finalizedHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
 			if err != nil {
-				log.WithError(err).Error("Failed to decode BEEFY commitment messages")
+				log.WithError(err).Error("Failed to fetch finalized head.")
+				return err
 			}
 
-			log.WithFields(log.Fields{
-				"signedCommitment.Commitment.BlockNumber":    signedCommitment.Commitment.BlockNumber,
-				"signedCommitment.Commitment.Payload":        signedCommitment.Commitment.Payload.Hex(),
-				"signedCommitment.Commitment.ValidatorSetID": signedCommitment.Commitment.ValidatorSetID,
-				"signedCommitment.Signatures":                signedCommitment.Signatures,
-			}).Info("Witnessed a new BEEFY commitment: ", msg.(string))
+			finalizedHeader, err := li.relaychainConn.API().RPC.Chain.GetHeader(finalizedHash)
+			if err != nil {
+				log.WithError(err).WithField("finalizedBlockHash", finalizedHash.Hex()).Error("Failed to fetch header for finalised head.")
+				return err
+			}
 
-			err = li.processBeefyJustifications(ctx, signedCommitment)
+			if current > uint64(finalizedHeader.Number) {
+				sleep(ctx, pollDuration)
+				continue
+			}
+
+			ErrBlockNotReady := errors.New("required result to be 32 bytes, but got 0")
+			hash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(current)
+			if err != nil {
+				if err.Error() == ErrBlockNotReady.Error() {
+					sleep(ctx, pollDuration)
+					continue
+				} else {
+					log.WithError(err).WithField("blockNumber", current).Error("Failed to fetch block hash.")
+					return err
+				}
+			}
+
+			logFields := log.Fields{"blockNumber": current, "blockHash": hash.Hex()}
+			block, err := li.relaychainConn.API().RPC.Chain.GetBlock(hash)
+			if err != nil {
+				log.WithError(err).WithFields(logFields).Error("Failed to fetch block hash.")
+				return err
+			}
+
+			commitments := []store.SignedCommitment{}
+			for j := range block.Justifications {
+				sc := store.OptionalSignedCommitment{}
+				if block.Justifications[j].EngineID() == "BEEF" {
+					err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
+					if err != nil {
+						log.WithFields(logFields).WithError(err).Error("Failed to decode BEEFY commitment messages")
+					} else if sc.IsSome() {
+						commitments = append(commitments, sc.Value)
+					}
+				}
+			}
+
+			for c := range commitments {
+				log.WithFields(log.Fields{
+					"signedCommitment.Commitment.BlockNumber":    commitments[c].Commitment.BlockNumber,
+					"signedCommitment.Commitment.Payload":        commitments[c].Commitment.Payload.Hex(),
+					"signedCommitment.Commitment.ValidatorSetID": commitments[c].Commitment.ValidatorSetID,
+					"signedCommitment.Signatures":                commitments[c].Signatures,
+				}).Info("Witnessed a BEEFY commitment")
+
+				select {
+				case <-ctx.Done():
+					log.WithError(ctx.Err()).Error("Shutting down beefy relaychain commitment producer.")
+					return ctx.Err()
+				case beefyCommitments <- commitments[c]:
+				}
+
+				// The beefy relayer can skip a certain amount of blocks provided it does not skip a whole
+				// validator sessions worth of blocks.
+				current += pollSkipBlockCount
+			}
+		}
+	}
+}
+
+func sleep(ctx context.Context, delay time.Duration) {
+	select {
+	case <-ctx.Done():
+	case <-time.After(delay):
+	}
+}
+
+func (li *BeefyRelaychainListener) consumeSignedCommitments(ctx context.Context, beefyCommitments <-chan store.SignedCommitment) error {
+	for {
+		select {
+		case <-ctx.Done():
+			log.WithError(ctx.Err()).Error("Shutting down beefy relaychain commitment consumer.")
+			return ctx.Err()
+		case commitment := <-beefyCommitments:
+			err := li.processBeefyJustifications(ctx, &commitment)
 			if err != nil {
 				return err
 			}
@@ -162,7 +177,7 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 	signedCommitmentBytes, err := json.Marshal(signedCommitment)
 	if err != nil {
 		log.WithField("SignedCommitment", signedCommitment).WithError(err).Error("Failed to marshal signed commitment.")
-		return nil
+		return err
 	}
 
 	blockNumber := uint64(signedCommitment.Commitment.BlockNumber)
@@ -176,7 +191,7 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 	beefyAuthoritiesBytes, err := json.Marshal(beefyAuthorities)
 	if err != nil {
 		log.WithField("BeefyAuthorities", beefyAuthorities).WithError(err).Error("Failed to marshal BEEFY authorities.")
-		return nil
+		return err
 	}
 
 	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(blockNumber))
