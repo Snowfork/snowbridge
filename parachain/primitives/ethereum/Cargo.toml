@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 ethbloom = { version = "0.11.0", default-features = false }
-ethereum-types = { version = "0.11.0", default-features = false, features = ["codec", "rlp", "serialize"] }
+ethereum-types = { version = "0.12.0", default-features = false, features = ["codec", "rlp", "serialize"] }
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 hex-literal = { version = "0.3.1", default-features = false }
 libsecp256k1 = { version = "0.3", default-features = false }
@@ -17,13 +17,13 @@ serde = { version = "1.0.101", optional = true }
 serde-big-array = { version = "0.2", optional = true }
 getrandom = { version = "0.2.1", features = ["js"] }
 
-sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.9", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.9", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.9", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.9", default-features = false }
 
-ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", branch = "master", package = "ethabi-decode", default-features = false }
-ethash = { git = "https://github.com/snowfork/ethash.git", branch = "master", default-features = false }
+ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "update-deps", default-features = false }
+ethash = { git = "https://github.com/snowfork/ethash.git", branch = "update-deps", default-features = false }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.19"

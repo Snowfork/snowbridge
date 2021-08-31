@@ -33,7 +33,7 @@ pub use frame_support::{
 	construct_runtime,
 	dispatch::DispatchResult,
 	parameter_types,
-	traits::{All, Filter, IsInVec, KeyOwnerProofSystem, Randomness},
+	traits::{Everything, Contains, IsInVec, KeyOwnerProofSystem, Randomness},
 	weights::{
 		constants::{
 			BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight,
@@ -61,7 +61,7 @@ use dispatch::EnsureEthereumAccount;
 pub use ethereum_light_client::{EthereumDifficultyConfig, EthereumHeader};
 
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{MultiAsset, Junction, MultiLocation, NetworkId, Xcm, BodyId};
+use xcm::v0::{Junction, MultiLocation, NetworkId, BodyId};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
 	EnsureXcmOrigin, UsingComponents, FixedWeightBounds, IsConcrete, LocationInverter,
@@ -185,7 +185,7 @@ parameter_types! {
 
 impl frame_system::Config for Runtime {
 	/// The basic call filter to use in dispatchable.
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	/// Block & extrinsics weights: base values and limits.
 	type BlockWeights = BlockWeights;
 	/// The maximum length of a block (in bytes).
@@ -378,7 +378,7 @@ match_type! {
 
 pub type Barrier = (
 	TakeWeightCredit,
-	AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
+	AllowTopLevelPaidExecutionFrom<Everything>,
 	AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
 );
 
@@ -421,11 +421,12 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type XcmRouter = XcmRouter;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
+	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-	type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+	type XcmTeleportFilter = Everything;
+	type XcmReserveTransferFilter = Everything;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type LocationInverter = LocationInverter<Ancestry>;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -492,19 +493,12 @@ impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
 
 // Our pallets
 
-pub struct CallFilter;
-impl Filter<Call> for CallFilter {
-	fn filter(_: &Call) -> bool {
-		true
-	}
-}
-
 impl dispatch::Config for Runtime {
 	type Origin = Origin;
 	type Event = Event;
 	type MessageId = MessageId;
 	type Call = Call;
-	type CallFilter = CallFilter;
+	type CallFilter = Everything;
 }
 
 use basic_channel::inbound as basic_channel_inbound;
@@ -634,6 +628,7 @@ impl erc721_app::Config for Runtime {
 
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
+	type DisabledValidators = ();
 }
 
 construct_runtime!(
