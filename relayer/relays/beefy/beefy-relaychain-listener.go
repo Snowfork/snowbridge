@@ -87,14 +87,18 @@ func (li *BeefyRelaychainListener) produceSignedCommitments(ctx context.Context,
 			}
 
 			if current > uint64(finalizedHeader.Number) {
+				log.WithFields(log.Fields{"currentBlockNumber": current, "finalizedBlockNumber": finalizedHeader.Number}).Info("Current block is not finalized.")
 				sleep(ctx, pollDuration)
 				continue
 			}
+
+			log.WithFields(log.Fields{"currentBlockNumber": current, "finalizedBlockNumber": finalizedHeader.Number}).Info("Probing block.")
 
 			ErrBlockNotReady := errors.New("required result to be 32 bytes, but got 0")
 			hash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(current)
 			if err != nil {
 				if err.Error() == ErrBlockNotReady.Error() {
+					log.WithFields(log.Fields{"currentBlockNumber": current, "finalizedBlockNumber": finalizedHeader.Number}).Info("Current block is not ready.")
 					sleep(ctx, pollDuration)
 					continue
 				} else {
@@ -137,10 +141,16 @@ func (li *BeefyRelaychainListener) produceSignedCommitments(ctx context.Context,
 					return ctx.Err()
 				case beefyCommitments <- commitments[c]:
 				}
+			}
 
-				// The beefy relayer can skip a certain amount of blocks provided it does not skip a whole
-				// validator sessions worth of blocks.
+			// The beefy relayer can skip a certain amount of blocks provided it does not skip a whole
+			// validator sessions worth of blocks.
+			if len(commitments) > 0 {
 				current += pollSkipBlockCount
+				log.WithFields(logFields).Info("Justifications found processed. Jumping ahead.")
+			} else {
+				current += 1
+				log.WithFields(logFields).Info("Justifications not found. Checking next block.")
 			}
 		}
 	}
