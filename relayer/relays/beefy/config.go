@@ -10,7 +10,9 @@ type Config struct {
 }
 
 type SourceConfig struct {
-	Polkadot config.PolkadotConfig `mapstructure:"polkadot"`
+	Polkadot            config.PolkadotConfig `mapstructure:"polkadot"`
+	PollSkipBlockCount  uint64                `mapstructure:"poll-skip-block-count"`
+	PollIntervalSeconds uint64                `mapstructure:"poll-interval-seconds"`
 }
 
 type SinkConfig struct {
