@@ -117,7 +117,11 @@ func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 }
 
 // Write submits a transaction to the chain
-func (wr *ParachainWriter) write(ctx context.Context, c types.Call) error {
+func (wr *ParachainWriter) write(
+	ctx context.Context,
+	c types.Call,
+	onFinalized parachain.OnFinalized,
+) error {
 	ext := types.NewExtrinsic(c)
 
 	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
@@ -156,7 +160,7 @@ func (wr *ParachainWriter) write(ctx context.Context, c types.Call) error {
 	log.WithFields(logrus.Fields{
 		"nonce": wr.nonce,
 	}).Info("Submitting transaction")
-	err = wr.pool.WaitForSubmitAndWatch(ctx, &extI)
+	err = wr.pool.WaitForSubmitAndWatch(ctx, &extI, onFinalized)
 	if err != nil {
 		log.WithError(err).WithField("nonce", wr.nonce).Debug("Failed to submit extrinsic")
 		return err
@@ -188,7 +192,21 @@ func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainP
 		return err
 	}
 
-	return wr.write(ctx, call)
+	onFinalized := func(_ types.Hash) error {
+		// Confirm that the header import was successful
+		header := payload.Header.HeaderData.(ethereum.Header)
+		hash := header.ID().Hash
+		imported, err := wr.queryImportedHeaderExists(hash)
+		if err != nil {
+			return err
+		}
+		if !imported {
+			return fmt.Errorf("Header import failed for header %s", hash.Hex())
+		}
+		return nil
+	}
+
+	return wr.write(ctx, call, onFinalized)
 }
 
 func (wr *ParachainWriter) makeMessageSubmitCall(msg *chain.EthereumOutboundMessage) (types.Call, error) {
@@ -205,4 +223,22 @@ func (wr *ParachainWriter) makeHeaderImportCall(header *chain.Header) (types.Cal
 	}
 
 	return types.NewCall(wr.conn.Metadata(), "EthereumLightClient.import_header", header.HeaderData, header.ProofData)
+}
+
+func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumLightClient", "Headers", hash[:], nil)
+	if err != nil {
+		return false, err
+	}
+
+	var headerOption types.OptionBytes
+	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &headerOption)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, fmt.Errorf("Storage query did not find header for hash %s", hash.Hex())
+	}
+
+	return headerOption.IsSome(), nil
 }

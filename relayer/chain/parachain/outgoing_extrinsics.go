@@ -21,6 +21,8 @@ type ExtrinsicPool struct {
 	sem  *semaphore.Weighted
 }
 
+type OnFinalized func(types.Hash) error
+
 func NewExtrinsicPool(eg *errgroup.Group, conn *Connection) *ExtrinsicPool {
 	ep := ExtrinsicPool{
 		conn:    conn,
@@ -30,7 +32,11 @@ func NewExtrinsicPool(eg *errgroup.Group, conn *Connection) *ExtrinsicPool {
 	return &ep
 }
 
-func (ep *ExtrinsicPool) WaitForSubmitAndWatch(ctx context.Context, ext *types.Extrinsic) error {
+func (ep *ExtrinsicPool) WaitForSubmitAndWatch(
+	ctx context.Context,
+	ext *types.Extrinsic,
+	onFinalized OnFinalized,
+) error {
 	err := ep.sem.Acquire(ctx, 1)
 	if err != nil {
 		return err
@@ -61,13 +67,18 @@ func (ep *ExtrinsicPool) WaitForSubmitAndWatch(ctx context.Context, ext *types.E
 						"reason": reason(&status),
 					}).Error("Extrinsic removed from the transaction pool")
 					return fmt.Errorf("extrinsic removed from the transaction pool")
-				} else if status.IsInBlock {
+				} else if status.IsFinalized {
 					sub.Unsubscribe()
 					log.WithFields(log.Fields{
 						"nonce":  nonce(ext),
-						"reason": reason(&status),
-					}).Debug("Extrinsic included in block")
-					return nil
+					}).Debug("Extrinsic included in finalized block")
+					return onFinalized(status.AsFinalized)
+				} else if status.IsFinalityTimeout {
+					sub.Unsubscribe()
+					log.WithFields(log.Fields{
+						"nonce":  nonce(ext),
+					}).Error("Extrinsic finality timeout")
+					return fmt.Errorf("extrinsic removed from the transaction pool")
 				}
 			}
 		}

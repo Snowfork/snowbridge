@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jinzhu/gorm"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
@@ -218,7 +219,6 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 	blockNumber,
 	latestBlockNumber uint64,
 ) error {
-
 	// Query previous InitialVerificationSuccessful events and update the status of BEEFY justifications in database
 	events, err := li.queryInitialVerificationSuccessfulEvents(ctx, blockNumber, &latestBlockNumber)
 	if err != nil {
@@ -257,7 +257,12 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 
 		// Attempt to match items in database based on their payload
 		found := false
-		items := li.beefyDB.GetItemsByStatus(store.CommitmentWitnessed)
+		items, err := li.beefyDB.GetItemsByStatus(store.CommitmentWitnessed)
+		if err != nil {
+			log.WithError(err).Error("Failure querying beefy DB for items by CommitmentWitnessed status")
+			return err
+		}
+
 		for _, item := range items {
 			generatedPayload := li.simulatePayloadGeneration(*item)
 			if generatedPayload == validationData.CommitmentHash {
@@ -284,8 +289,8 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 			}
 		}
 		if !found {
-			// Don't have an existing item to update, therefore we won't be able to build the completion tx
-			return fmt.Errorf("item not found in database for InitialVerificationSuccessful event")
+			// Don't have an existing item to update, therefore we won't be able to build the completion tx.
+			log.Info("Item not found in database for InitialVerificationSuccessful event")
 		}
 	}
 
@@ -327,7 +332,11 @@ func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(
 
 		item, err := li.beefyDB.GetItemByInitialVerificationTxHash(event.Raw.TxHash)
 		if err != nil {
-			log.Error("Failed to retrieve item from Beefy DB")
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				log.WithField("txHash", event.Raw.TxHash.Hex()).Info("Query for items by InitialVerificationTxHash returned no results")
+				continue
+			}
+			log.WithError(err).Error("Failed to query Beefy DB")
 			return err
 		}
 
@@ -348,8 +357,11 @@ func (li *BeefyEthereumListener) processInitialVerificationSuccessfulEvents(
 }
 
 // queryFinalVerificationSuccessfulEvents queries ContractFinalVerificationSuccessful events from the BeefyLightClient contract
-func (li *BeefyEthereumListener) queryFinalVerificationSuccessfulEvents(ctx context.Context, start uint64,
-	end *uint64) ([]*beefylightclient.ContractFinalVerificationSuccessful, error) {
+func (li *BeefyEthereumListener) queryFinalVerificationSuccessfulEvents(
+	ctx context.Context,
+	start uint64,
+	end *uint64,
+) ([]*beefylightclient.ContractFinalVerificationSuccessful, error) {
 	var events []*beefylightclient.ContractFinalVerificationSuccessful
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
@@ -406,12 +418,16 @@ func (li *BeefyEthereumListener) processFinalVerificationSuccessfulEvents(
 				"ID":     event.Id.Int64(),
 				"Prover": event.Prover.Hex(),
 			}).Info("Skipping FinalVerificationSuccessful event as it has an unknown prover address")
-			return nil
+			continue
 		}
 
 		item, err := li.beefyDB.GetItemByID(event.Id.Int64())
 		if err != nil {
-			log.Error("Failed to retrieve item from Beefy DB")
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				log.WithField("ID", event.Id.Int64()).Info("Query for items by ID returned no results")
+				continue
+			}
+			log.WithError(err).Error("Failed to query Beefy DB")
 			return err
 		}
 
@@ -442,7 +458,11 @@ func (li *BeefyEthereumListener) simulatePayloadGeneration(item store.BeefyRelay
 
 // forwardWitnessedBeefyJustifications forwards witnessed BEEFY commitments to the Ethereum writer
 func (li *BeefyEthereumListener) forwardWitnessedBeefyJustifications(ctx context.Context) error {
-	witnessedItems := li.beefyDB.GetItemsByStatus(store.CommitmentWitnessed)
+	witnessedItems, err := li.beefyDB.GetItemsByStatus(store.CommitmentWitnessed)
+	if err != nil {
+		log.WithError(err).Error("Failure querying beefy DB for items by CommitmentWitnessed status")
+		return err
+	}
 	for _, item := range witnessedItems {
 		select {
 		case <-ctx.Done():
@@ -458,7 +478,12 @@ func (li *BeefyEthereumListener) forwardWitnessedBeefyJustifications(ctx context
 // current block number has passed their CompleteOnBlock number
 func (li *BeefyEthereumListener) forwardReadyToCompleteItems(ctx context.Context, blockNumber, descendantsUntilFinal uint64) error {
 	// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
-	initialVerificationItems := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
+	initialVerificationItems, err := li.beefyDB.GetItemsByStatus(store.InitialVerificationTxConfirmed)
+	if err != nil {
+		log.WithError(err).Error("Failure querying beefy DB for items by InitialVerificationTxConfirmed status")
+		return err
+	}
+
 	if len(initialVerificationItems) > 0 {
 		log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(initialVerificationItems)))
 	}

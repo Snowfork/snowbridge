@@ -217,10 +217,13 @@ func (d *Database) writeLoop(ctx context.Context) error {
 	}
 }
 
-func (d *Database) GetItemsByStatus(status Status) []*BeefyRelayInfo {
+func (d *Database) GetItemsByStatus(status Status) ([]*BeefyRelayInfo, error) {
 	items := make([]*BeefyRelayInfo, 0)
-	d.DB.Where("status = ?", status).Find(&items)
-	return items
+	err := d.DB.Where("status = ?", status).Find(&items).Error
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 func (d *Database) GetItemByID(id int64) (*BeefyRelayInfo, error) {
