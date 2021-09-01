@@ -3,6 +3,7 @@ package beefy
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -39,7 +40,15 @@ func NewBeefyRelaychainListener(
 func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
 		defer close(li.beefyMessages)
-		return li.subBeefyJustifications(ctx)
+		err := li.subBeefyJustifications(ctx)
+		log.WithField("reason", err).Info("Shutting down polkadot listener")
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
+		}
+		return nil
 	})
 	return nil
 }
@@ -63,11 +72,9 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 	for {
 		select {
 		case <-ctx.Done():
-			log.WithField("reason", ctx.Err()).Info("Shutting down polkadot listener")
-			return nil
+			return ctx.Err()
 		case msg, ok := <-ch:
 			if !ok {
-				log.WithField("reason", "channel closed").Info("Shutting down polkadot listener")
 				return nil
 			}
 
@@ -147,7 +154,12 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 				SerializedLatestMMRProof: serializedProof,
 				MMRLeafCount:             mmrLeafCount,
 			}
-			li.beefyMessages <- info
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case li.beefyMessages <- info:
+			}
 		}
 	}
 }
