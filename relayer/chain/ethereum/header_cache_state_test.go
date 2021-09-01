@@ -225,7 +225,7 @@ func getCacheAndWait(
 	hcs *ethereum.HeaderCacheState,
 	blockNumber uint64,
 ) *ethashproof.DatasetMerkleTreeCache {
-	cache, err := hcs.GetEthashproofCache(blockNumber)
+	cache, err := hcs.MakeEthashproofCache(blockNumber)
 	if err != nil {
 		panic(err)
 	}

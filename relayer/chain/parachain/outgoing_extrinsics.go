@@ -6,117 +6,102 @@ package parachain
 import (
 	"context"
 	"fmt"
-	"sync"
-	"time"
+	"math/big"
 
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 const MaxWatchedExtrinsics = 10
 
 type ExtrinsicPool struct {
-	sync.Mutex
 	conn     *Connection
 	eg       *errgroup.Group
-	log      *logrus.Entry
-	maxNonce uint32
-	watched  chan struct{}
+	sem  *semaphore.Weighted
 }
 
-func NewExtrinsicPool(eg *errgroup.Group, conn *Connection, log *logrus.Entry) *ExtrinsicPool {
+type OnFinalized func(types.Hash) error
+
+func NewExtrinsicPool(eg *errgroup.Group, conn *Connection) *ExtrinsicPool {
 	ep := ExtrinsicPool{
 		conn:    conn,
 		eg:      eg,
-		log:     log,
-		watched: make(chan struct{}, MaxWatchedExtrinsics),
+		sem: semaphore.NewWeighted(MaxWatchedExtrinsics),
 	}
 	return &ep
 }
 
-func (ep *ExtrinsicPool) WaitForSubmitAndWatch(ctx context.Context, nonce uint32, ext *types.Extrinsic, onProcessed func() error) {
-	select {
-	case ep.watched <- struct{}{}:
-		ep.eg.Go(func() error {
-			return ep.submitAndWatchLoop(ctx, nonce, ext, onProcessed)
-		})
-	case <-ctx.Done():
-	}
-}
-
-func (ep *ExtrinsicPool) submitAndWatchLoop(ctx context.Context, nonce uint32, ext *types.Extrinsic, onProcessed func() error) error {
-	sub, err := ep.conn.api.RPC.Author.SubmitAndWatchExtrinsic(*ext)
+func (ep *ExtrinsicPool) WaitForSubmitAndWatch(
+	ctx context.Context,
+	ext *types.Extrinsic,
+	onFinalized OnFinalized,
+) error {
+	err := ep.sem.Acquire(ctx, 1)
 	if err != nil {
 		return err
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("Context was canceled. Stopping extrinsic monitoring")
-
-		case status := <-sub.Chan():
-			if status.IsDropped || status.IsInvalid || status.IsUsurped {
-				// Indicates that the extrinsic wasn't processed. We expect the Substrate txpool to be
-				// stuck until this nonce is successfully provided. But it might be provided without this
-				// relayer's intervention, e.g. if an internal Substrate mechanism re-introduces it to the
-				// txpool.
-				sub.Unsubscribe()
-				statusStr := ep.getStatusString(&status)
-				ep.log.WithFields(logrus.Fields{
-					"nonce":  nonce,
-					"status": statusStr,
-				}).Debug("Extrinsic failed to be processed")
-
-				// Back off for ~1 block to give the txpool time to resolve any backlog
-				time.Sleep(time.Second * 12)
-
-				ep.Lock()
-				if nonce <= ep.maxNonce {
-					// We're in the clear - no need to retry
-					<-ep.watched
-					ep.Unlock()
-					return nil
-				}
-				ep.Unlock()
-
-				// This might fail because the transaction has been temporarily banned in Substrate. In that
-				// case it's best to crash, wait a while and restart the relayer.
-				ep.log.WithFields(logrus.Fields{
-					"nonce":  nonce,
-					"status": statusStr,
-				}).Debug("Re-submitting failed extrinsic")
-				newSub, err := ep.conn.api.RPC.Author.SubmitAndWatchExtrinsic(*ext)
-				if err != nil {
-					return err
-				}
-				sub = newSub
-
-			} else if status.IsInBlock || status.IsFinalized {
-				// We assume all other status codes indicate that the extrinsic was processed
-				// and account nonce was incremented.
-				// See details at:
-				// https://github.com/paritytech/substrate/blob/29aca981db5e8bf8b5538e6c7920ded917013ef3/primitives/transaction-pool/src/pool.rs#L56-L127
-				sub.Unsubscribe()
-				ep.Lock()
-				defer ep.Unlock()
-				if nonce > ep.maxNonce {
-					ep.maxNonce = nonce
-				}
-				<-ep.watched
-				return onProcessed()
-			}
-
-		case err := <-sub.Err():
-			return err
-		}
+	sub, err := ep.conn.api.RPC.Author.SubmitAndWatchExtrinsic(*ext)
+	if err != nil {
+		ep.sem.Release(1)
+		return err
 	}
+
+	ep.eg.Go(func() error {
+		defer ep.sem.Release(1)
+		for {
+			select {
+			case <-ctx.Done():
+				sub.Unsubscribe()
+				return nil
+			case err := <-sub.Err():
+				log.WithError(err).WithField("nonce", nonce(ext)).Error("Subscription failed for extrinsic status")
+				return err
+			case status := <-sub.Chan():
+				// https://github.com/paritytech/substrate/blob/29aca981db5e8bf8b5538e6c7920ded917013ef3/primitives/transaction-pool/src/pool.rs#L56-L127
+				if status.IsDropped || status.IsInvalid || status.IsUsurped {
+					sub.Unsubscribe()
+					log.WithFields(log.Fields{
+						"nonce":  nonce(ext),
+						"reason": reason(&status),
+					}).Error("Extrinsic removed from the transaction pool")
+					return fmt.Errorf("extrinsic removed from the transaction pool")
+				} else if status.IsFinalized {
+					sub.Unsubscribe()
+					log.WithFields(log.Fields{
+						"nonce":  nonce(ext),
+					}).Debug("Extrinsic included in finalized block")
+					return onFinalized(status.AsFinalized)
+				} else if status.IsFinalityTimeout {
+					sub.Unsubscribe()
+					log.WithFields(log.Fields{
+						"nonce":  nonce(ext),
+					}).Error("Extrinsic finality timeout")
+					return fmt.Errorf("extrinsic removed from the transaction pool")
+				}
+			}
+		}
+	})
+
+	return nil
 }
 
-func (ep *ExtrinsicPool) getStatusString(status *types.ExtrinsicStatus) string {
-	statusBytes, err := status.MarshalJSON()
-	if err != nil {
-		return "failed to serialize status"
+func nonce(ext *types.Extrinsic) uint64 {
+	nonce := big.Int(ext.Signature.Nonce)
+	return nonce.Uint64()
+}
+
+func reason(status *types.ExtrinsicStatus) string {
+	switch  {
+	case status.IsInBlock:
+		return "InBlock"
+	case status.IsDropped:
+		return "Dropped"
+	case status.IsInvalid:
+		return "Invalid"
+	case status.IsUsurped:
+		return "Usurped"
 	}
-	return string(statusBytes)
+	return ""
 }

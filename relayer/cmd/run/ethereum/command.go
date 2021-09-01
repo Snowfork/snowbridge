@@ -67,6 +67,8 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	eg, ctx := errgroup.WithContext(ctx)
 
 	// Ensure clean termination upon SIGINT, SIGTERM
@@ -88,6 +90,7 @@ func run(_ *cobra.Command, _ []string) error {
 	err = relay.Start(ctx, eg)
 	if err != nil {
 		logrus.WithError(err).Fatal("Unhandled error")
+		cancel()
 		return err
 	}
 

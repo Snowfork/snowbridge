@@ -2,7 +2,6 @@ package beefy
 
 import (
 	"context"
-	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
@@ -76,18 +75,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	if relay.beefyEthereumListener == nil ||
-		relay.beefyEthereumWriter == nil ||
-		relay.beefyRelaychainListener == nil {
-		return fmt.Errorf("Sender needs to be set before starting chain")
-	}
-
 	err = relay.relaychainConn.Connect(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = relay.beefyRelaychainListener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
@@ -97,20 +85,20 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	eg.Go(func() error {
+	err = relay.beefyRelaychainListener.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
 
-		err = relay.beefyEthereumListener.Start(ctx, eg)
-		if err != nil {
-			return err
-		}
+	err = relay.beefyEthereumListener.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
 
-		err = relay.beefyEthereumWriter.Start(ctx, eg)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
+	err = relay.beefyEthereumWriter.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

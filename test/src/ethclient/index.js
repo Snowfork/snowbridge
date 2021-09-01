@@ -198,7 +198,9 @@ class EthClient {
   async waitForNextEventData({ appName, eventName, eventData }) {
     let foundEvent = new Promise(async (resolve, reject) => {
       this[appName].once(eventName, (error, event) => {
-        if (eventData) {
+        if (error) {
+          reject(error)
+        } else if (eventData) {
           resolve(event.returnValues[eventData]);
         } else {
           resolve(event.returnValues)
