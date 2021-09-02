@@ -60,12 +60,12 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 
 func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context) error {
 	startingBlock := li.config.Source.Polkadot.BeefyStartingBlock
-	syncSkipBlockCount := li.config.Source.SyncSkipBlockCount
+	beefySkipPeriod := li.config.Source.BeefySkipPeriod
 
 	log.WithFields(
 		log.Fields{
-			"startingBlock":      startingBlock,
-			"syncSkipBlockCount": syncSkipBlockCount,
+			"startingBlock":  startingBlock,
+			"beefSkipPeriod": beefySkipPeriod,
 		}).Info("Synchronizing beefy relaychain listener")
 
 	current := startingBlock
@@ -137,7 +137,7 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context) 
 			log.WithFields(logFields).Info("Justifications found.")
 			// The beefy relayer can skip a certain amount of blocks provided it does not skip a whole
 			// validator sessions worth of blocks.
-			current += syncSkipBlockCount
+			current += beefySkipPeriod
 		} else {
 			log.WithFields(logFields).Info("Justifications not found.")
 			current += 1
