@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
-const MaxWatchedExtrinsics = 10
+const MaxWatchedExtrinsics = 30
 
 type ExtrinsicPool struct {
 	conn     *Connection
