@@ -77,7 +77,7 @@ func (suite *StoreTestSuite) TestGetItemsByStatus() {
 
 	time.Sleep(2 * time.Second)
 
-	items := suite.database.GetItemsByStatus(store.CommitmentWitnessed)
+	items, _ := suite.database.GetItemsByStatus(store.CommitmentWitnessed)
 	beefyItem := items[0]
 	suite.Equal(beefyItem.Status, store.CommitmentWitnessed)
 }
@@ -137,7 +137,7 @@ func (suite *StoreTestSuite) TestUpdateItem() {
 
 	time.Sleep(2 * time.Second)
 
-	items := suite.database.GetItemsByStatus(store.CommitmentWitnessed)
+	items, _ := suite.database.GetItemsByStatus(store.CommitmentWitnessed)
 	beefyItem := items[0]
 
 	// Pass update instruction to write loop
