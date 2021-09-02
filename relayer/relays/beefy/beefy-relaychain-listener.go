@@ -81,17 +81,16 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context) 
 			return err
 		}
 
-		finalizedBlockNumber := uint64(finalizedHeader.Number)
-		if current > finalizedBlockNumber {
-			log.WithFields(log.Fields{
-				"blockNumber":          current,
-				"finalizedBlockNumber": finalizedHeader.Number}).Info("Beefy relaychain listener synchronizing complete.")
-			return nil
-		}
-
 		logFields := log.Fields{
 			"blockNumber":          current,
 			"finalizedBlockNumber": finalizedHeader.Number}
+
+		finalizedBlockNumber := uint64(finalizedHeader.Number)
+		if current > finalizedBlockNumber {
+			log.WithFields(logFields).Info("Beefy relaychain listener synchronizing complete.")
+			return nil
+		}
+
 		log.WithFields(logFields).Info("Probing block.")
 
 		hash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(current)
