@@ -53,27 +53,35 @@ func NewBeefyEthereumListener(
 	}
 }
 
-func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group) error {
+func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group) (uint64, error) {
 
 	// Set up light client bridge contract
 	address := common.HexToAddress(li.config.Contracts.BeefyLightClient)
 	beefyLightClientContract, err := beefylightclient.NewContract(address, li.ethereumConn.GetClient())
 	if err != nil {
-		return err
+		return 0, err
 	}
 	li.beefyLightClient = beefyLightClientContract
+
+	latestBeefyBlock, err := li.beefyLightClient.ContractCaller.LatestBeefyBlock(&bind.CallOpts{
+		Pending: false,
+		Context: ctx,
+	})
+	if err != nil {
+		return 0, err
+	}
 
 	// Fetch BLOCK_WAIT_PERIOD from light client bridge contract
 	blockWaitPeriod, err := li.beefyLightClient.ContractCaller.BLOCKWAITPERIOD(nil)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	li.blockWaitPeriod = blockWaitPeriod
 
 	// If starting block < latest block, sync the Relayer to the latest block
 	blockNumber, err := li.ethereumConn.GetClient().BlockNumber(ctx)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Relayer config StartBlock config variable must be updated to the latest Ethereum block number
@@ -81,7 +89,7 @@ func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group) 
 		log.WithField("blockNumber", li.config.StartBlock).Info("Synchronizing relayer from historical block")
 		err := li.pollHistoricEventsAndHeaders(ctx, uint64(li.config.DescendantsUntilFinal))
 		if err != nil {
-			return err
+			return 0, err
 		}
 		log.WithField("blockNumber", blockNumber).Info("Relayer fully synced")
 	}
@@ -101,7 +109,7 @@ func (li *BeefyEthereumListener) Start(ctx context.Context, eg *errgroup.Group) 
 		return nil
 	})
 
-	return nil
+	return latestBeefyBlock, nil
 }
 
 func (li *BeefyEthereumListener) pollHistoricEventsAndHeaders(ctx context.Context, descendantsUntilFinal uint64) error {
@@ -228,8 +236,8 @@ func (li *BeefyEthereumListener) processHistoricalInitialVerificationSuccessfulE
 
 	log.WithFields(log.Fields{
 		"startBlock": blockNumber,
-		"endBlock": latestBlockNumber,
-		"count": len(events),
+		"endBlock":   latestBlockNumber,
+		"count":      len(events),
 	}).Debug("Queried for InitialVerificationSuccessful events")
 
 	for _, event := range events {
