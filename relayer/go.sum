@@ -554,8 +554,8 @@ github.com/smartystreets/goconvey v1.6.4 h1:fv0U8FUIMPNf1L9lnHLvLhgicrIVChEkdzIK
 github.com/smartystreets/goconvey v1.6.4/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
 github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454 h1:aKd0iBLZGBzMAjhOQ969tmzgh7/2FZxL5qvJ/+lHZRs=
 github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454/go.mod h1:C5irsRKMm2oEfPRjAJlvPKHtRZrXhcWLS0Z2IMXneSE=
-github.com/snowfork/go-substrate-rpc-client/v3 v3.0.6 h1:edomJ9IBN/Rvz/W2Ku+kteEiFd9P/3b/8EEFhg1ZfL8=
-github.com/snowfork/go-substrate-rpc-client/v3 v3.0.6/go.mod h1:n+dDFUtmhedjdLsXi8m+rWwwx1SEAEN1Uo2PFePK3bU=
+github.com/snowfork/go-substrate-rpc-client/v3 v3.0.7 h1:3GSs23kpy3+viMh8y0cEmNWvTn2ZMBSZKIvKVcQkx/c=
+github.com/snowfork/go-substrate-rpc-client/v3 v3.0.7/go.mod h1:n+dDFUtmhedjdLsXi8m+rWwwx1SEAEN1Uo2PFePK3bU=
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spaolacci/murmur3 v1.0.1-0.20190317074736-539464a789e9/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
