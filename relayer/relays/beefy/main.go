@@ -85,12 +85,12 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	err = relay.beefyRelaychainListener.Start(ctx, eg)
+	latestBeefyBlock, err := relay.beefyEthereumListener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	err = relay.beefyEthereumListener.Start(ctx, eg)
+	err = relay.beefyRelaychainListener.Start(ctx, eg, latestBeefyBlock)
 	if err != nil {
 		return err
 	}

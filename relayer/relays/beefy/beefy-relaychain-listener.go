@@ -36,11 +36,11 @@ func NewBeefyRelaychainListener(
 	}
 }
 
-func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group) error {
+func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group, startingBeefyBlock uint64) error {
 	eg.Go(func() error {
 		defer close(li.beefyMessages)
 
-		err := li.syncBeefyJustifications(ctx)
+		err := li.syncBeefyJustifications(ctx, startingBeefyBlock)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil
@@ -58,17 +58,16 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 	return nil
 }
 
-func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context) error {
-	startingBlock := li.config.Source.Polkadot.BeefyStartingBlock
+func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context, latestBeefyBlock uint64) error {
 	beefySkipPeriod := li.config.Source.BeefySkipPeriod
 
 	log.WithFields(
 		log.Fields{
-			"startingBlock":  startingBlock,
-			"beefSkipPeriod": beefySkipPeriod,
+			"latestBeefyBlock": latestBeefyBlock,
+			"beefSkipPeriod":   beefySkipPeriod,
 		}).Info("Synchronizing beefy relaychain listener")
 
-	current := startingBlock
+	current := latestBeefyBlock
 	for {
 		finalizedHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
 		if err != nil {
