@@ -285,7 +285,7 @@ pub fn run() -> Result<()> {
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
 
-				runner.sync_run(|config| cmd.run::<Block, service::Executor>(config))
+				runner.sync_run(|config| cmd.run::<Block, service::ExecutorDispatch>(config))
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`.".into())
@@ -329,7 +329,7 @@ pub fn run() -> Result<()> {
 					if config.role.is_authority() { "yes" } else { "no" }
 				);
 
-				crate::service::start_parachain_node(config, polkadot_config, id)
+				crate::service::start_node(config, polkadot_config, id)
 					.await
 					.map(|r| r.0)
 					.map_err(Into::into)
