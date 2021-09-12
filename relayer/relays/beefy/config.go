@@ -10,7 +10,8 @@ type Config struct {
 }
 
 type SourceConfig struct {
-	Polkadot config.PolkadotConfig `mapstructure:"polkadot"`
+	Polkadot        config.PolkadotConfig `mapstructure:"polkadot"`
+	BeefySkipPeriod uint64                `mapstructure:"beefy-skip-period"`
 }
 
 type SinkConfig struct {

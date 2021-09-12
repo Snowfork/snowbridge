@@ -3,7 +3,8 @@
     "polkadot": {
       "endpoint": "ws://localhost:9944",
       "beefy-starting-block": 0
-    }
+    },
+    "beefy-skip-period": 50
   },
   "sink": {
     "ethereum": {

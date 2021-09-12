@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -144,8 +145,8 @@ func (d *Database) Start(ctx context.Context, eg *errgroup.Group) error {
 		var err1, err2 error
 
 		err1 = d.writeLoop(ctx)
+		log.WithField("reason", err1).Info("Shutting down beefy DB")
 
-		log.Info("Shutting down DB")
 		sqlDB := d.DB.DB()
 		if sqlDB != nil {
 			err2 = sqlDB.Close()
@@ -159,7 +160,14 @@ func (d *Database) Start(ctx context.Context, eg *errgroup.Group) error {
 			}
 		}
 
-		return err1
+		if err1 != nil {
+			if errors.Is(err1, context.Canceled) {
+				return nil
+			}
+			return err1
+		}
+
+		return nil
 	})
 
 	return nil
@@ -171,7 +179,7 @@ func (d *Database) writeLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return ctx.Err()
 		case cmd := <-d.messages:
 			mutex.Lock()
 			switch cmd.Type {
@@ -195,32 +203,45 @@ func (d *Database) writeLoop(ctx context.Context) error {
 				}
 			case Update:
 				log.Info("Updating item in database...")
-				d.DB.Model(&cmd.Info).Updates(cmd.Instructions)
+				if err := d.DB.Model(&cmd.Info).Updates(cmd.Instructions).Error; err != nil {
+					return err
+				}
 			case Delete:
 				log.Info("Deleting item from database...")
-				d.DB.Delete(&cmd.Info, cmd.Info.ID)
+				if err := d.DB.Delete(&cmd.Info, cmd.Info.ID).Error; err != nil {
+					return err
+				}
 			}
 			mutex.Unlock()
 		}
 	}
 }
 
-func (d *Database) GetItemsByStatus(status Status) []*BeefyRelayInfo {
+func (d *Database) GetItemsByStatus(status Status) ([]*BeefyRelayInfo, error) {
 	items := make([]*BeefyRelayInfo, 0)
-	d.DB.Where("status = ?", status).Find(&items)
-	return items
+	err := d.DB.Where("status = ?", status).Find(&items).Error
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-func (d *Database) GetItemByID(id int64) *BeefyRelayInfo {
+func (d *Database) GetItemByID(id int64) (*BeefyRelayInfo, error) {
 	var item BeefyRelayInfo
-	d.DB.Take(&item, "contract_id = ?", id)
-	return &item
+	err := d.DB.Take(&item, "contract_id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
 }
 
-func (d *Database) GetItemByInitialVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {
+func (d *Database) GetItemByInitialVerificationTxHash(txHash common.Hash) (*BeefyRelayInfo, error) {
 	var item BeefyRelayInfo
-	d.DB.Take(&item, "initial_verification_tx_hash = ?", txHash)
-	return &item
+	err := d.DB.Take(&item, "initial_verification_tx_hash = ?", txHash).Error
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
 }
 
 func (d *Database) GetItemByCompleteVerificationTxHash(txHash common.Hash) *BeefyRelayInfo {

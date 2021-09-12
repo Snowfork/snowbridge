@@ -5,6 +5,7 @@ package syncer
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"sync"
 
@@ -31,35 +32,48 @@ type latestBlockInfo struct {
 type Syncer struct {
 	descendantsUntilFinal uint64
 	headerCache           HeaderCache
-	headers               chan<- *gethTypes.Header
+	headers               chan *gethTypes.Header
 	loader                HeaderLoader
 	newHeaders            chan *gethTypes.Header
 	oldHeaders            chan *gethTypes.Header
 }
 
-func NewSyncer(descendantsUntilFinal uint64, loader HeaderLoader, headers chan<- *gethTypes.Header) *Syncer {
+func NewSyncer(descendantsUntilFinal uint64, loader HeaderLoader) *Syncer {
 	return &Syncer{
 		descendantsUntilFinal: descendantsUntilFinal,
 		headerCache:           *NewHeaderCache(descendantsUntilFinal + 1),
-		headers:               headers,
+		headers:               nil,
 		loader:                loader,
 		newHeaders:            nil,
 		oldHeaders:            nil,
 	}
 }
 
-func (s *Syncer) StartSync(ctx context.Context, eg *errgroup.Group, initBlockHeight uint64) error {
+func (s *Syncer) StartSync(
+	ctx context.Context,
+	eg *errgroup.Group,
+	initBlockHeight uint64,
+) (<-chan *gethTypes.Header, error) {
 	lbi := &latestBlockInfo{
 		fetchFinalizedDone: false,
 		height:             0,
 	}
+
+	s.headers = make(chan *gethTypes.Header, 5)
 	s.newHeaders = make(chan *gethTypes.Header)
 	s.oldHeaders = make(chan *gethTypes.Header)
 
 	eg.Go(func() error {
+		defer close(s.newHeaders)
 		err := s.pollNewHeaders(ctx, lbi)
-		close(s.newHeaders)
-		return err
+		if err != nil {
+			log.WithField("reason", err).Info("Shutting down new headers poller")
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
+		}
+		return nil
 	})
 
 	lbi.Lock()
@@ -67,33 +81,45 @@ func (s *Syncer) StartSync(ctx context.Context, eg *errgroup.Group, initBlockHei
 	latestHeader, err := s.loader.HeaderByNumber(ctx, nil)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve latest header")
-		close(s.headers)
-		return err
+		return nil, err
 	}
 	if latestHeader.Number.Uint64() > lbi.height {
 		lbi.height = latestHeader.Number.Uint64()
 	}
 
 	eg.Go(func() error {
+		defer close(s.oldHeaders)
 		err := s.fetchFinalizedHeaders(ctx, initBlockHeight, lbi)
-		close(s.oldHeaders)
-		return err
-	})
-
-	eg.Go(func() error {
-		for header := range s.oldHeaders {
-			s.headers <- header
+		if err != nil {
+			log.WithField("reason", err).Info("Shutting down finalized headers poller")
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
 		}
-
-		for header := range s.newHeaders {
-			s.headers <- header
-		}
-
-		close(s.headers)
 		return nil
 	})
 
-	return nil
+	eg.Go(func() error {
+		defer close(s.headers)
+		for header := range s.oldHeaders {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case s.headers <- header:
+			}
+		}
+		for header := range s.newHeaders {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case s.headers <- header:
+			}
+		}
+		return nil
+	})
+
+	return s.headers, nil
 }
 
 func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint64, lbi *latestBlockInfo) error {
@@ -129,9 +155,9 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		default:
-			s.oldHeaders <- header
+		case s.oldHeaders <- header:
 		}
+
 		syncedUpUntil++
 	}
 
@@ -140,20 +166,18 @@ func (s *Syncer) fetchFinalizedHeaders(ctx context.Context, initBlockHeight uint
 
 func (s *Syncer) pollNewHeaders(ctx context.Context, lbi *latestBlockInfo) error {
 	headers := make(chan *gethTypes.Header)
-	var headersSubscriptionErr <-chan error
 
-	subscription, err := s.loader.SubscribeNewHead(ctx, headers)
+	sub, err := s.loader.SubscribeNewHead(ctx, headers)
 	if err != nil {
 		log.WithError(err).Error("Failed to subscribe to new headers")
 		return err
 	}
-	headersSubscriptionErr = subscription.Err()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case err := <-headersSubscriptionErr:
+		case err := <-sub.Err():
 			return err
 		case header := <-headers:
 			s.headerCache.Insert(header)
@@ -205,7 +229,12 @@ func (s *Syncer) forwardAncestry(ctx context.Context, hash gethCommon.Hash, olde
 		}
 	}
 
-	s.newHeaders <- item.Header
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case s.newHeaders <- item.Header:
+	}
+
 	item.Forwarded = true
 	return nil
 }

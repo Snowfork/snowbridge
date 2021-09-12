@@ -3,6 +3,7 @@ package beefy
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -56,7 +57,15 @@ func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) er
 	wr.beefyLightClient = beefyLightClientContract
 
 	eg.Go(func() error {
-		return wr.writeMessagesLoop(ctx)
+		err := wr.writeMessagesLoop(ctx)
+		log.WithField("reason", err).Info("Shutting down ethereum writer")
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
+		}
+		return nil
 	})
 
 	return nil
@@ -66,13 +75,11 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			log.WithField("reason", ctx.Err()).Info("Shutting down ethereum writer")
-			// Drain messages to avoid deadlock
-			for len(wr.beefyMessages) > 0 {
-				<-wr.beefyMessages
+			return ctx.Err()
+		case msg, ok := <-wr.beefyMessages:
+			if !ok {
+				return nil
 			}
-			return nil
-		case msg := <-wr.beefyMessages:
 			switch msg.Status {
 			case store.CommitmentWitnessed:
 				err := wr.WriteNewSignatureCommitment(ctx, msg)
@@ -183,8 +190,12 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 	log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
 	info.Status = store.InitialVerificationTxSent
 	info.InitialVerificationTxHash = tx.Hash()
-	cmd := store.NewDatabaseCmd(&info, store.Create, nil)
-	wr.databaseMessages <- cmd
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case wr.databaseMessages <- store.NewDatabaseCmd(&info, store.Create, nil):
+	}
 
 	return nil
 }
@@ -272,8 +283,12 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		"status":                        store.CompleteVerificationTxSent,
 		"complete_verification_tx_hash": tx.Hash(),
 	}
-	updateCmd := store.NewDatabaseCmd(&info, store.Update, instructions)
-	wr.databaseMessages <- updateCmd
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case wr.databaseMessages <- store.NewDatabaseCmd(&info, store.Update, instructions):
+	}
 
 	return nil
 }

@@ -35,6 +35,36 @@ type SignedCommitment struct {
 	Signatures []OptionBeefySignature
 }
 
+type OptionalSignedCommitment struct {
+	Option
+	Value SignedCommitment
+}
+
+func (o OptionalSignedCommitment) Encode(encoder scale.Encoder) error {
+	return encoder.EncodeOption(o.hasValue, o.Value)
+}
+
+func (o *OptionalSignedCommitment) Decode(decoder scale.Decoder) error {
+	return decoder.DecodeOption(&o.hasValue, &o.Value)
+}
+
+// SetSome sets a value
+func (o *OptionalSignedCommitment) SetSome(value SignedCommitment) {
+	o.hasValue = true
+	o.Value = value
+}
+
+// SetNone removes a value and marks it as missing
+func (o *OptionalSignedCommitment) SetNone() {
+	o.hasValue = false
+	o.Value = SignedCommitment{}
+}
+
+// Unwrap returns a flag that indicates whether a value is present and the stored value
+func (o OptionalSignedCommitment) Unwrap() (ok bool, value SignedCommitment) {
+	return o.hasValue, o.Value
+}
+
 // BeefySignature is a beefy signature
 type BeefySignature [65]byte
 

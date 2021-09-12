@@ -47,29 +47,28 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	// channel for payloads from ethereum
-	payloads := make(chan ParachainPayload, 1)
-
-	listener := NewEthereumListener(
-		&r.config.Source,
-		r.ethconn,
-		payloads,
-	)
-	writer := NewParachainWriter(
-		r.paraconn,
-		payloads,
-	)
-
 	finalizedBlockNumber, err := r.queryFinalizedBlockNumber()
 	if err != nil {
 		return err
 	}
 	log.WithField("blockNumber", finalizedBlockNumber).Debug("Retrieved finalized block number from parachain")
 
-	err = listener.Start(ctx, eg, finalizedBlockNumber+1, uint64(r.config.Source.DescendantsUntilFinal))
+	listener := NewEthereumListener(
+		&r.config.Source,
+		r.ethconn,
+		finalizedBlockNumber + 1,
+		uint64(r.config.Source.DescendantsUntilFinal),
+	)
+
+	payloads, err := listener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
+
+	writer := NewParachainWriter(
+		r.paraconn,
+		payloads,
+	)
 
 	err = writer.Start(ctx, eg)
 	if err != nil {
