@@ -16,9 +16,20 @@ limitations under the License.
 package main
 
 import (
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/cmd"
 )
 
+func configureLogger() {
+	log.SetFormatter(&log.JSONFormatter{
+		FieldMap: log.FieldMap{
+			log.FieldKeyTime: "@timestamp",
+			log.FieldKeyMsg:  "message",
+		},
+	})
+}
+
 func main() {
+	configureLogger()
 	cmd.Execute()
 }
