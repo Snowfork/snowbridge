@@ -16,12 +16,15 @@ limitations under the License.
 package main
 
 import (
+	"time"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/cmd"
 )
 
 func configureLogger() {
 	log.SetFormatter(&log.JSONFormatter{
+		TimestampFormat: time.RFC3339Nano,
 		FieldMap: log.FieldMap{
 			log.FieldKeyTime: "@timestamp",
 			log.FieldKeyMsg:  "message",
