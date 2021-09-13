@@ -187,8 +187,8 @@ mod tests {
 	}
 
 	pub struct CallFilter;
-	impl Filter<Call> for CallFilter {
-		fn filter(call: &Call) -> bool {
+	impl frame_support::traits::Contains<Call> for CallFilter {
+		fn contains(call: &Call) -> bool {
 			match call {
 				Call::System(frame_system::pallet::Call::<Test>::remark(_)) => true,
 				_ => false
