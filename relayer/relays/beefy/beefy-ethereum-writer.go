@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -93,6 +94,12 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 					log.WithError(err).Error("Failed to write complete signature commitment")
 					return err
 				}
+			}
+			// Rate-limit transaction sending to reduce the chance of transactions using the same pending nonce.
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(2 * time.Second):
 			}
 		}
 	}
