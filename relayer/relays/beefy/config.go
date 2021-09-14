@@ -16,7 +16,6 @@ type SourceConfig struct {
 
 type SinkConfig struct {
 	Ethereum              config.EthereumConfig `mapstructure:"ethereum"`
-	StartBlock            uint64                `mapstructure:"start-block"`
 	DescendantsUntilFinal uint64                `mapstructure:"descendants-until-final"`
 	Contracts             ContractsConfig       `mapstructure:"contracts"`
 }
