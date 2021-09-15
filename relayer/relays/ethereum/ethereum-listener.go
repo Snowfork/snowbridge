@@ -19,9 +19,9 @@ import (
 
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/snowfork/snowbridge/relayer/chain/ethereum/syncer"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
+	"github.com/snowfork/snowbridge/relayer/relays/ethereum/syncer"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -35,14 +35,17 @@ type EthereumListener struct {
 	basicOutboundChannel        *basic.BasicOutboundChannel
 	incentivizedOutboundChannel *incentivized.IncentivizedOutboundChannel
 	mapping                     map[common.Address]string
-	payloads                    chan<- ParachainPayload
+	payloads                    chan ParachainPayload
 	headerSyncer                *syncer.Syncer
+	initBlockHeight             uint64
+	descendantsUntilFinal       uint64
 }
 
 func NewEthereumListener(
 	config *SourceConfig,
 	conn *ethereum.Connection,
-	payloads chan<- ParachainPayload,
+	initBlockHeight uint64,
+	descendantsUntilFinal uint64,
 ) *EthereumListener {
 	return &EthereumListener{
 		ethashDataDir:               filepath.Join(config.DataDir, "ethash-data"),
@@ -52,42 +55,42 @@ func NewEthereumListener(
 		basicOutboundChannel:        nil,
 		incentivizedOutboundChannel: nil,
 		mapping:                     make(map[common.Address]string),
-		payloads:                    payloads,
 		headerSyncer:                nil,
+		initBlockHeight:             initBlockHeight,
+		descendantsUntilFinal:       descendantsUntilFinal,
 	}
 }
 
-func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initBlockHeight uint64, descendantsUntilFinal uint64) error {
-	closeWithError := func(err error) error {
-		log.Info("Shutting down listener...")
-		close(li.payloads)
-		return err
-	}
-
+func (li *EthereumListener) Start(
+	ctx context.Context,
+	eg *errgroup.Group,
+) (<-chan ParachainPayload, error) {
 	var err error
+
+	li.payloads = make(chan ParachainPayload, 1)
 
 	err = os.Mkdir(li.ethashDataDir, 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
-		log.WithError(err).Error("Could not create data dir")
-		return err
+		log.WithError(err).Error("Could not create ethash data dir")
+		return nil, err
 	}
 
 	err = os.Mkdir(li.ethashCacheDir, 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
-		log.WithError(err).Error("Could not create cache dir")
-		return err
+		log.WithError(err).Error("Could not create ethash cache dir")
+		return nil, err
 	}
 
-	hcs, err := ethereum.NewHeaderCacheState(
+	headerCache, err := ethereum.NewHeaderCache(
 		li.ethashDataDir,
 		li.ethashCacheDir,
 		eg,
-		initBlockHeight,
+		li.initBlockHeight,
 		&ethereum.DefaultBlockLoader{Conn: li.conn},
 		nil,
 	)
 	if err != nil {
-		return closeWithError(err)
+		return nil, err
 	}
 
 	var address common.Address
@@ -95,7 +98,7 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 	address = common.HexToAddress(li.config.Contracts.BasicOutboundChannel)
 	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.GetClient())
 	if err != nil {
-		return closeWithError(err)
+		return nil, err
 	}
 	li.basicOutboundChannel = basicOutboundChannel
 	li.mapping[address] = "BasicInboundChannel.submit"
@@ -103,76 +106,66 @@ func (li *EthereumListener) Start(cxt context.Context, eg *errgroup.Group, initB
 	address = common.HexToAddress(li.config.Contracts.IncentivizedOutboundChannel)
 	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, li.conn.GetClient())
 	if err != nil {
-		return closeWithError(err)
+		return nil, err
 	}
 	li.incentivizedOutboundChannel = incentivizedOutboundChannel
 	li.mapping[address] = "IncentivizedInboundChannel.submit"
 
-	headersIn := make(chan *gethTypes.Header, 5)
 	li.headerSyncer = syncer.NewSyncer(
-		descendantsUntilFinal,
+		li.descendantsUntilFinal,
 		syncer.NewHeaderLoader(li.conn.GetClient()),
-		headersIn,
 	)
 
+	headers, err := li.headerSyncer.StartSync(ctx, eg, li.initBlockHeight-1)
+	if err != nil {
+		log.WithError(err).Error("Failed to start header sync")
+		return nil, err
+	}
+
 	eg.Go(func() error {
-		err := li.processEventsAndHeaders(cxt, initBlockHeight, descendantsUntilFinal, headersIn, hcs)
-
-		// Ensures the context is canceled so that the channel below is
-		// closed by the syncer
-		eg.Go(func() error { return err })
-
-		// Avoid deadlock if the syncer is still trying to send a header
-		for len(headersIn) > 0 {
-			<-headersIn
+		defer close(li.payloads)
+		err := li.processEventsAndHeaders(ctx, headers, headerCache)
+		log.WithField("reason", err).Info("Shutting down ethereum listener")
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
 		}
-
-		return closeWithError(err)
+		return nil
 	})
 
-	return nil
+	return li.payloads, nil
 }
 
 func (li *EthereumListener) processEventsAndHeaders(
 	ctx context.Context,
-	initBlockHeight uint64,
-	descendantsUntilFinal uint64,
 	headers <-chan *gethTypes.Header,
-	hcs *ethereum.HeaderCacheState,
+	headerCache *ethereum.HeaderCache,
 ) error {
-	headerEg, headerCtx := errgroup.WithContext(ctx)
-
 	log.Info("Syncing headers starting...")
-	err := li.headerSyncer.StartSync(headerCtx, headerEg, initBlockHeight-1)
-	if err != nil {
-		log.WithError(err).Error("Failed to start header sync")
-		return err
-	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.WithField("reason", ctx.Err()).Info("Shutting down ethereum listener")
-			return nil
-		case <-headerCtx.Done():
-			return headerCtx.Err()
-		case gethheader, ok := <-headers:
+			return ctx.Err()
+		case header, ok := <-headers:
 			if !ok {
 				return nil
 			}
 
-			header, err := li.makeOutgoingHeader(hcs, gethheader)
+			preparedHeader, err := li.makeOutgoingHeader(headerCache, header)
 			if err != nil {
 				return err
 			}
 
 			// Don't attempt to forward events prior to genesis block
-			if descendantsUntilFinal > gethheader.Number.Uint64() {
-				li.payloads <- ParachainPayload{Header: header}
+			if li.descendantsUntilFinal > header.Number.Uint64() {
+				li.payloads <- ParachainPayload{Header: preparedHeader}
 				continue
 			}
 
-			finalizedBlockNumber := gethheader.Number.Uint64() - descendantsUntilFinal
+			finalizedBlockNumber := header.Number.Uint64() - li.descendantsUntilFinal
 			var events []*etypes.Log
 
 			filterOptions := bind.FilterOpts{Start: finalizedBlockNumber, End: &finalizedBlockNumber, Context: ctx}
@@ -191,12 +184,17 @@ func (li *EthereumListener) processEventsAndHeaders(
 			}
 			events = append(events, incentivizedEvents...)
 
-			messages, err := li.makeOutgoingMessages(ctx, hcs, events)
+			messages, err := li.makeOutgoingMessages(ctx, headerCache, events)
 			if err != nil {
 				return err
 			}
 
-			li.payloads <- ParachainPayload{Header: header, Messages: messages}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case li.payloads <- ParachainPayload{Header: preparedHeader, Messages: messages}:
+			}
+
 		}
 	}
 }
@@ -247,7 +245,7 @@ func (li *EthereumListener) queryIncentivizedEvents(contract *incentivized.Incen
 
 func (li *EthereumListener) makeOutgoingMessages(
 	ctx context.Context,
-	hcs *ethereum.HeaderCacheState,
+	hcs *ethereum.HeaderCache,
 	events []*etypes.Log,
 ) ([]*chain.EthereumOutboundMessage, error) {
 	messages := make([]*chain.EthereumOutboundMessage, len(events))
@@ -281,10 +279,10 @@ func (li *EthereumListener) makeOutgoingMessages(
 }
 
 func (li *EthereumListener) makeOutgoingHeader(
-	hcs *ethereum.HeaderCacheState,
+	headerCache *ethereum.HeaderCache,
 	gethheader *gethTypes.Header,
 ) (*chain.Header, error) {
-	cache, err := hcs.GetEthashproofCache(gethheader.Number.Uint64())
+	cache, err := headerCache.MakeEthashproofCache(gethheader.Number.Uint64())
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"blockHash":   gethheader.Hash().Hex(),

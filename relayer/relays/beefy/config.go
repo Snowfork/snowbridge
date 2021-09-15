@@ -10,12 +10,12 @@ type Config struct {
 }
 
 type SourceConfig struct {
-	Polkadot config.PolkadotConfig `mapstructure:"polkadot"`
+	Polkadot        config.PolkadotConfig `mapstructure:"polkadot"`
+	BeefySkipPeriod uint64                `mapstructure:"beefy-skip-period"`
 }
 
 type SinkConfig struct {
 	Ethereum              config.EthereumConfig `mapstructure:"ethereum"`
-	StartBlock            uint64                `mapstructure:"start-block"`
 	DescendantsUntilFinal uint64                `mapstructure:"descendants-until-final"`
 	Contracts             ContractsConfig       `mapstructure:"contracts"`
 }

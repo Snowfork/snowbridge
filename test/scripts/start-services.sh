@@ -160,7 +160,7 @@ start_relayer()
         : > beefy-relay.log
         while :
         do
-            echo "Starting beefy relay"
+            echo "Starting beefy relay at $(date)"
             "${relay_bin}" run beefy \
                 --config "$output_dir/beefy-relay.json" \
                 --ethereum.private-key "0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109" \
@@ -174,7 +174,7 @@ start_relayer()
         : > parachain-relay.log
         while :
         do
-            echo "Starting parachain relay"
+          echo "Starting parachain relay at $(date)"
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay.json" \
                 --ethereum.private-key "0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a" \
@@ -188,7 +188,7 @@ start_relayer()
         : > ethereum-relay.log
         while :
         do
-            echo "Starting ethereum relay"
+          echo "Starting ethereum relay at $(date)"
             "${relay_bin}" run ethereum \
                 --config $output_dir/ethereum-relay.json \
                 --substrate.private-key "//Relay" \

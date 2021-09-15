@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -40,41 +41,28 @@ func NewParachainWriter(
 }
 
 func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	cancelWithError := func(err error) error {
-		// Ensures the context is canceled so that the channels below are
-		// closed by the listener
-		eg.Go(func() error { return err })
-
-		log.Info("Shutting down writer...")
-		// Avoid deadlock if the listener is still trying to send to a channel
-		for len(wr.payloads) > 0 {
-			<-wr.payloads
-		}
-
-		return err
-	}
-
 	nonce, err := wr.queryAccountNonce()
 	if err != nil {
-		return cancelWithError(err)
+		return err
 	}
 	wr.nonce = nonce
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
 	if err != nil {
-		return cancelWithError(err)
+		return err
 	}
 	wr.genesisHash = genesisHash
 
-	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn, log.WithField("name", "ExtrinsicPool"))
+	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn)
 
 	eg.Go(func() error {
 		err := wr.writeLoop(ctx)
-		for len(wr.payloads) > 0 {
-			<-wr.payloads
-		}
+		log.WithField("reason", err).Info("Shutting down parachain writer")
 		if err != nil {
-			return cancelWithError(err)
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
 		}
 		return nil
 	})
@@ -100,30 +88,11 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 	return uint32(accountInfo.Nonce), nil
 }
 
-func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumLightClient", "Headers", hash[:], nil)
-	if err != nil {
-		return false, err
-	}
-
-	var headerOption types.OptionBytes
-	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &headerOption)
-	if err != nil {
-		return false, err
-	}
-	if !ok {
-		return false, fmt.Errorf("Storage query did not find header for hash %s", hash.Hex())
-	}
-
-	return headerOption.IsSome(), nil
-}
-
 func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			log.WithField("reason", ctx.Err()).Info("Shutting down parachain writer")
-			return nil
+			return ctx.Err()
 		case payload, ok := <-wr.payloads:
 			if !ok {
 				return nil
@@ -142,13 +111,17 @@ func (wr *ParachainWriter) writeLoop(ctx context.Context) error {
 			log.WithFields(logrus.Fields{
 				"blockNumber":  header.Fields.Number,
 				"messageCount": len(payload.Messages),
-			}).Info("Submitted header and messages to Substrate")
+			}).Info("Submitted transaction to Substrate")
 		}
 	}
 }
 
 // Write submits a transaction to the chain
-func (wr *ParachainWriter) write(ctx context.Context, c types.Call, onProcessed func() error) error {
+func (wr *ParachainWriter) write(
+	ctx context.Context,
+	c types.Call,
+	onFinalized parachain.OnFinalized,
+) error {
 	ext := types.NewExtrinsic(c)
 
 	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
@@ -184,7 +157,14 @@ func (wr *ParachainWriter) write(ctx context.Context, c types.Call, onProcessed 
 		return err
 	}
 
-	wr.pool.WaitForSubmitAndWatch(ctx, wr.nonce, &extI, onProcessed)
+	log.WithFields(logrus.Fields{
+		"nonce": wr.nonce,
+	}).Info("Submitting transaction")
+	err = wr.pool.WaitForSubmitAndWatch(ctx, &extI, onFinalized)
+	if err != nil {
+		log.WithError(err).WithField("nonce", wr.nonce).Debug("Failed to submit extrinsic")
+		return err
+	}
 
 	wr.nonce = wr.nonce + 1
 
@@ -212,7 +192,7 @@ func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainP
 		return err
 	}
 
-	onProcessed := func() error {
+	onFinalized := func(_ types.Hash) error {
 		// Confirm that the header import was successful
 		header := payload.Header.HeaderData.(ethereum.Header)
 		hash := header.ID().Hash
@@ -225,7 +205,8 @@ func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainP
 		}
 		return nil
 	}
-	return wr.write(ctx, call, onProcessed)
+
+	return wr.write(ctx, call, onFinalized)
 }
 
 func (wr *ParachainWriter) makeMessageSubmitCall(msg *chain.EthereumOutboundMessage) (types.Call, error) {
@@ -242,4 +223,22 @@ func (wr *ParachainWriter) makeHeaderImportCall(header *chain.Header) (types.Cal
 	}
 
 	return types.NewCall(wr.conn.Metadata(), "EthereumLightClient.import_header", header.HeaderData, header.ProofData)
+}
+
+func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumLightClient", "Headers", hash[:], nil)
+	if err != nil {
+		return false, err
+	}
+
+	var headerOption types.OptionBytes
+	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &headerOption)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, fmt.Errorf("Storage query did not find header for hash %s", hash.Hex())
+	}
+
+	return headerOption.IsSome(), nil
 }
