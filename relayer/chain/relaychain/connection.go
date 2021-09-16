@@ -256,7 +256,7 @@ func (co *Connection) getKeys(keyPrefix []byte, blockHash types.Hash) ([]types.S
 			"pageIndex":  pageIndex}).Info("Fetched a page of keys.")
 
 		results = append(results, response...)
-		if len(response) == 0 || len(response) < pageSize {
+		if len(response) < pageSize {
 			break
 		} else {
 			startKey = &response[len(response)-1]
