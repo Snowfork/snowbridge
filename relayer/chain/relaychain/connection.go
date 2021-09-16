@@ -238,13 +238,14 @@ func (co *Connection) getKeys(keyPrefix []byte, blockHash types.Hash) ([]types.S
 	const pageSize = 100
 	var startKey *types.StorageKey
 
-	result := make([]types.StorageKey, pageSize)
+	results := make([]types.StorageKey, pageSize)
 	log.WithFields(log.Fields{
 		"keyPrefix": keyPrefix,
 		"blockHash": blockHash.Hex(),
 		"pageSize":  pageSize}).Info("Fetching paged keys.")
 
-	for i := 0; ; i++ {
+	pageIndex := 0
+	for {
 		response, err := co.API().RPC.State.GetKeysPaged(keyPrefix, pageSize, startKey, blockHash)
 		if err != nil {
 			return nil, err
@@ -252,18 +253,20 @@ func (co *Connection) getKeys(keyPrefix []byte, blockHash types.Hash) ([]types.S
 
 		log.WithFields(log.Fields{
 			"keysInPage": len(response),
-			"pageNumber": i}).Info("Fetched a page of keys.")
+			"pageIndex":  pageIndex}).Info("Fetched a page of keys.")
 
-		if len(response) == 0 {
+		results = append(results, response...)
+		if len(response) == 0 || len(response) < pageSize {
 			break
 		} else {
 			startKey = &response[len(response)-1]
-			result = append(result, response...)
+			pageIndex++
 		}
 	}
 
 	log.WithFields(log.Fields{
-		"totalNumKeys": len(result)}).Info("Fetching of paged keys complete.")
+		"totalNumKeys":  len(results),
+		"totalNumPages": pageIndex + 1}).Info("Fetching of paged keys complete.")
 
-	return result, nil
+	return results, nil
 }
