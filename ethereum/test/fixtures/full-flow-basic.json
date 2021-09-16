@@ -2,7 +2,7 @@
   "completeSubmitInput": {
     "id": 1,
     "commitment": {
-      "payload": "0x746c8981b23e7e9525a8084adfe2fe05600c789fe373787308afd188e2972244",
+      "payload": "0xe629bdf7e7cdbc80579960b549ff94b66e43f911b10e9e2b56da64d767e3d0f4",
       "blockNumber": "73",
       "validatorSetId": "0"
     },
