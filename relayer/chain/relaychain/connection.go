@@ -126,7 +126,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 
-	keys, err := co.API().RPC.State.GetKeys(keyPrefix, blockHash)
+	keys, err := co.getKeys(keyPrefix, blockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain keys")
 		return nil, err
@@ -232,4 +232,38 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 	}).Info("MMR Leaf Count")
 
 	return mmrLeafCount, nil
+}
+
+func (co *Connection) getKeys(keyPrefix []byte, blockHash types.Hash) ([]types.StorageKey, error) {
+	const pageSize = 100
+	var startKey *types.StorageKey
+
+	result := make([]types.StorageKey, pageSize)
+	log.WithFields(log.Fields{
+		"keyPrefix": keyPrefix,
+		"blockHash": blockHash.Hex(),
+		"pageSize":  pageSize}).Info("Fetching paged keys.")
+
+	for i := 0; ; i++ {
+		response, err := co.API().RPC.State.GetKeysPaged(keyPrefix, pageSize, startKey, blockHash)
+		if err != nil {
+			return nil, err
+		}
+
+		log.WithFields(log.Fields{
+			"keysInPage": len(response),
+			"pageNumber": i}).Info("Fetched a page of keys.")
+
+		if len(response) == 0 {
+			break
+		} else {
+			startKey = &response[len(response)-1]
+			result = append(result, response...)
+		}
+	}
+
+	log.WithFields(log.Fields{
+		"totalNumKeys": len(result)}).Info("Fetching of paged keys complete.")
+
+	return result, nil
 }
