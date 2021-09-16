@@ -195,7 +195,7 @@ func (li *BeefyListener) parablocksWithProofs(
 		// due to the decrement at the end of the loop, so we increment by 1. Additionally,
 		// parachain merkle roots are created 1 block later than the actual parachain headers,
 		// so we increment twice.
-		mmrProof, err := li.relaychainConn.GetMMRLeafForBlock(uint64(relayChainBlockNumber+2), latestRelaychainBlockHash, li.config.Polkadot.BeefyStartingBlock)
+		mmrProof, err := li.relaychainConn.GetMMRLeafForBlock(uint64(relayChainBlockNumber+2), latestRelaychainBlockHash, li.config.BeefyActivationBlock)
 		if err != nil {
 			log.WithError(err).Error("Failed to get mmr leaf")
 			return nil, err
