@@ -6,7 +6,8 @@ type PolkadotConfig struct {
 }
 
 type ParachainConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+	Endpoint          string `mapstructure:"endpoint"`
+	KeyFetchBlockSize uint32 `mapstructure:"key-fetch-block-size"`
 }
 
 type EthereumConfig struct {

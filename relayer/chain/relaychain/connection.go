@@ -122,11 +122,11 @@ type ParaHead struct {
 //   Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
 const ParaIDOffset = 16 + 16 + 8
 
-func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
+func (co *Connection) FetchParaHeads(blockHash types.Hash, keyFetchBlockSize uint32) (map[uint32]ParaHead, error) {
 
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 
-	keys, err := co.getKeys(keyPrefix, blockHash)
+	keys, err := co.fetchKeys(keyPrefix, blockHash, keyFetchBlockSize)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain keys")
 		return nil, err
@@ -234,11 +234,14 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 	return mmrLeafCount, nil
 }
 
-func (co *Connection) getKeys(keyPrefix []byte, blockHash types.Hash) ([]types.StorageKey, error) {
-	const pageSize = 100
+func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash, pageSize uint32) ([]types.StorageKey, error) {
 	var startKey *types.StorageKey
 
-	results := make([]types.StorageKey, pageSize)
+	if pageSize < 1 {
+		return nil, fmt.Errorf("page size cannot be zero")
+	}
+
+	var results []types.StorageKey
 	log.WithFields(log.Fields{
 		"keyPrefix": keyPrefix,
 		"blockHash": blockHash.Hex(),
@@ -256,7 +259,7 @@ func (co *Connection) getKeys(keyPrefix []byte, blockHash types.Hash) ([]types.S
 			"pageIndex":  pageIndex}).Info("Fetched a page of keys.")
 
 		results = append(results, response...)
-		if len(response) < pageSize {
+		if uint32(len(response)) < pageSize {
 			break
 		} else {
 			startKey = &response[len(response)-1]
