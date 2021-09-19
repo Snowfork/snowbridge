@@ -220,3 +220,65 @@ func ConvertToSimplifiedMMRProof(blockhash types.H256, leafIndex uint64, leaf ty
 		Blockhash: blockhash,
 	}, nil
 }
+
+
+func ConvertToSimplifiedMerkleProof(blockhash types.H256, leafIndex uint64, leaf types.MMRLeaf, leafCount uint64, proofItems []types.H256) ([]types.H256, uint64, error) {
+	leafPos := leafIndexToPosition(leafIndex)
+
+	var readyMadePeakHashes []types.H256
+	var optionalRightBaggedPeak types.H256 = [32]byte{}
+	var merkleProof []types.H256
+
+	var proofItemPosition uint64 = 0
+	var merkleRootPeakPosition uint64 = 0
+
+	mmrSize := leafCountToMMRSize(leafCount)
+	peaks := getPeaks(mmrSize)
+
+	for i := 0; i < len(peaks); i++ {
+		if (i == 0 || leafPos > peaks[i-1]) && leafPos <= peaks[i] {
+			merkleRootPeakPosition = uint64(i)
+			if i == len(peaks)-1 {
+				for i := proofItemPosition; i < uint64(len(proofItems)); i++ {
+					merkleProof = append(merkleProof, proofItems[i])
+				}
+			} else {
+				for i := proofItemPosition; i < uint64(len(proofItems)-1); i++ {
+					merkleProof = append(merkleProof, proofItems[i])
+				}
+				optionalRightBaggedPeak = proofItems[len(proofItems)-1]
+				break
+			}
+		} else {
+			readyMadePeakHashes = append(readyMadePeakHashes, proofItems[proofItemPosition])
+			proofItemPosition += 1
+		}
+	}
+
+	var localizedMerkleRootPosition uint64
+	if merkleRootPeakPosition == 0 {
+		localizedMerkleRootPosition = leafPos
+	} else {
+		localizedMerkleRootPosition = leafPos - peaks[merkleRootPeakPosition-1] - 1
+	}
+
+	err, proofOrder := calculateMerkleProofOrder(localizedMerkleRootPosition, merkleProof)
+	if err != nil {
+		return merkleProof, proofOrder, err
+	}
+
+	// Adding peaks into merkle proof itself
+	currentProofOrderIndex := len(merkleProof) - 1
+	if optionalRightBaggedPeak != [32]byte{} {
+		currentProofOrderIndex += 1
+		proofOrder = proofOrder | 1 << currentProofOrderIndex
+		merkleProof = append(merkleProof, optionalRightBaggedPeak)
+	}
+	for i := 0; i < len(readyMadePeakHashes); i++ {
+		currentProofOrderIndex += 1
+		merkleProof = append(merkleProof, readyMadePeakHashes[len(readyMadePeakHashes) - i - 1])
+	}
+
+	return merkleProof, proofOrder, nil
+}
+
