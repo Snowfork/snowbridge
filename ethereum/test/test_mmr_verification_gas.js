@@ -26,10 +26,8 @@ describe("SimpleMMRVerification Contract", function () {
           const gas = await simplifiedMMRVerification.verifyInclusionProof.estimateGas(
             fixture15leavesSimplified.rootHash, fixture15leavesSimplified.leaves[i],
             {
-              restOfThePeaks: fixture15leavesSimplified.proofs[i].mmrRestOfThePeaks,
-              rightBaggedPeak: fixture15leavesSimplified.proofs[i].mmrRightBaggedPeak,
               merkleProofItems: fixture15leavesSimplified.proofs[i].merkleProofItems,
-              merkleProofOrderBitField: fixture15leavesSimplified.proofs[i].merkleProofOrder
+              merkleProofOrderBitField: fixture15leavesSimplified.proofs[i].merkleProofOrderBitField
             })
           console.log(`Gas used: ${gas}`);
         });

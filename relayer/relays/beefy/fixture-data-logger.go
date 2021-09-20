@@ -69,11 +69,6 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 
 	hashedLeaf := "0x" + hex.EncodeToString(hasher.Hash(bytesEncodedLeaf))
 
-	var beefyMMRRestOfThePeaks []string
-	for _, item := range msg.SimplifiedProof.RestOfThePeaks {
-		beefyMMRRestOfThePeaks = append(beefyMMRRestOfThePeaks, "0x"+hex.EncodeToString(item[:]))
-	}
-
 	var beefyMMRMerkleProofItems []string
 	for _, item := range msg.SimplifiedProof.MerkleProofItems {
 		beefyMMRMerkleProofItems = append(beefyMMRMerkleProofItems, "0x"+hex.EncodeToString(item[:]))
@@ -118,8 +113,6 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 			NextAuthoritySetRoot: "0x" + hex.EncodeToString(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
 		},
 		SimplifiedMMRProof: SimplifiedMMRProofLog{
-			BeefyMMRRestOfThePeaks:  beefyMMRRestOfThePeaks,
-			BeefyMMRRightBaggedPeak: "0x" + hex.EncodeToString(msg.SimplifiedProof.RightBaggedPeak[:]),
 			MerkleProofItems:        beefyMMRMerkleProofItems,
 			MerkleProofOrder:        msg.SimplifiedProof.MerkleProofOrderBitField,
 		},

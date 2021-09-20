@@ -90,11 +90,6 @@ func (wr *EthereumChannelWriter) logBasicTx(
 		paraHeadProofString = append(paraHeadProofString, "0x"+hex.EncodeToString(item[:]))
 	}
 
-	var beefyMMRRestOfThePeaks []string
-	for _, item := range beefyMMRSimplifiedProof.RestOfThePeaks {
-		beefyMMRRestOfThePeaks = append(beefyMMRRestOfThePeaks, "0x"+hex.EncodeToString(item[:]))
-	}
-
 	var beefyMMRMerkleProofItems []string
 	for _, item := range beefyMMRSimplifiedProof.MerkleProofItems {
 		beefyMMRMerkleProofItems = append(beefyMMRMerkleProofItems, "0x"+hex.EncodeToString(item[:]))
@@ -121,8 +116,6 @@ func (wr *EthereumChannelWriter) logBasicTx(
 			NextAuthoritySetRoot: "0x" + hex.EncodeToString(beefyMMRLeafPartial.NextAuthoritySetRoot[:]),
 		},
 		SimplifiedMMRProof: SimplifiedMMRProofLog{
-			BeefyMMRRestOfThePeaks:  beefyMMRRestOfThePeaks,
-			BeefyMMRRightBaggedPeak: "0x"+hex.EncodeToString(beefyMMRSimplifiedProof.RightBaggedPeak[:]),
 			MerkleProofItems:        beefyMMRMerkleProofItems,
 			MerkleProofOrder:        beefyMMRSimplifiedProof.MerkleProofOrderBitField,
 		},
@@ -198,10 +191,6 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	for _, item := range paraVerifyInput.ParachainHeadProof.Proof {
 		paraHeadProofString = append(paraHeadProofString, "0x"+hex.EncodeToString(item[:]))
 	}
-	var beefyMMRRestOfThePeaks []string
-	for _, item := range beefyMMRSimplifiedProof.RestOfThePeaks {
-		beefyMMRRestOfThePeaks = append(beefyMMRRestOfThePeaks, "0x"+hex.EncodeToString(item[:]))
-	}
 
 	var beefyMMRMerkleProofItems []string
 	for _, item := range beefyMMRSimplifiedProof.MerkleProofItems {
@@ -227,8 +216,6 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 			NextAuthoritySetRoot: "0x" + hex.EncodeToString(beefyMMRLeafPartial.NextAuthoritySetRoot[:]),
 		},
 		SimplifiedMMRProof: SimplifiedMMRProofLog{
-			BeefyMMRRestOfThePeaks:  beefyMMRRestOfThePeaks,
-			BeefyMMRRightBaggedPeak: "0x"+hex.EncodeToString(beefyMMRSimplifiedProof.RightBaggedPeak[:]),
 			MerkleProofItems:        beefyMMRMerkleProofItems,
 			MerkleProofOrder:        beefyMMRSimplifiedProof.MerkleProofOrderBitField,
 		},

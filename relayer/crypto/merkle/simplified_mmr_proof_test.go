@@ -23,8 +23,6 @@ type SimplifiedProofTestData struct {
 type SimplifiedProofFixture struct {
 	MerkleProofItems   []string `json:"merkle_proof_items"`
 	MerkleProofOrder   uint64 `json:"merkle_proof_order"`
-	MMRRightBaggedPeak string `json:"mmr_right_bagged_peak"`
-	MMRRestOfThePeaks  []string `json:"mmr_rest_of_the_peaks"`
 }
 
 func convertSimplifiedProofToFixture(proof SimplifiedMMRProof) SimplifiedProofFixture {
@@ -33,15 +31,8 @@ func convertSimplifiedProofToFixture(proof SimplifiedMMRProof) SimplifiedProofFi
 		merkleProofItems[i] = fmt.Sprintf("%#x", item)
 	}
 
-	mmrRestOfThePeaks := make([]string, len(proof.MMRRestOfThePeaks))
-	for i, item := range proof.MMRRestOfThePeaks {
-		mmrRestOfThePeaks[i] = fmt.Sprintf("%#x", item)
-	}
-
 	return SimplifiedProofFixture{
 		MerkleProofItems: merkleProofItems,
-		MMRRestOfThePeaks: mmrRestOfThePeaks,
-		MMRRightBaggedPeak: fmt.Sprintf("%#x", proof.MMRRightBaggedPeak),
 		MerkleProofOrder: proof.MerkleProofOrder,
 	}
 }
@@ -51,9 +42,6 @@ func sanitizeIncomingTestData(testData []SimplifiedProofTestData) {
 	for i := 0; i < len(testData); i++ {
 		if len(testData[i].ReferenceSimplifiedProof.MerkleProofItems) == 0 {
 			testData[i].ReferenceSimplifiedProof.MerkleProofItems = nil
-		}
-		if len(testData[i].ReferenceSimplifiedProof.MMRRestOfThePeaks) == 0 {
-			testData[i].ReferenceSimplifiedProof.MMRRestOfThePeaks = nil
 		}
 		if len(testData[i].SimplifiedMerkleProofItems) == 0 {
 			testData[i].SimplifiedMerkleProofItems = nil
@@ -71,18 +59,16 @@ const TestData = "[{\"ReferenceSimplifiedProof\":{\"MerkleProofItems\":null,\"Me
 func Test_SimplifiedMMRProof(t *testing.T) {
 	var mmrProofs []types.H256
 	mmrProofItems := []string{
-		"ee29f67540b840ec61825261182b7a8e73d1a1e548271b18e619ea87e0d1963e",
-		"a244ae2c1d1ad04bbb307ce418d84980aa656c6818516f019364df29c1a37224",
-		"1acbd16b3dab0a66914fbff7cbaa15f2c4a37db6d3552ff1a466cc51cb2cbb8b",
-		"58059c5ee4970ecc8491209c64dae9b5b850dce7e983bcf982079a6423d74ef4",
-		"6aafdb1600e3233eb7cf374a438b64a11e8387b9cd0145557634c013e670c9c8",
+		"c426c89e1c1dc353199d4b1b0005b796b21fc1cf9eb857071e888397a7316f62",
+		"d5aadcbd22b9abaa88742b53092da93fdde41704493b644b7ea4a2bd87e26624",
+		"735740aabe5560339612a84518300fed3ba372721fd57f2b3376114be1c4a15d",
 	}
 	for _, item := range mmrProofItems {
 		out, err := hex.DecodeString(item)
 		assert.NoError(t, err)
 		mmrProofs = append(mmrProofs, types.NewH256(out))
 	}
-	simplifiedMMRProof, err := ConvertToSimplifiedMMRProof(types.H256{}, 70, types.MMRLeaf{}, 73, mmrProofs)
+	simplifiedMMRProof, err := ConvertToSimplifiedMMRProof(types.H256{}, 1048, types.MMRLeaf{}, 1049, mmrProofs)
 	assert.NoError(t, err)
 	fixture := convertSimplifiedProofToFixture(simplifiedMMRProof)
 	prettyOut, err := json.MarshalIndent(fixture, "", "\t")
@@ -98,16 +84,9 @@ func Test_SimplifiedMMRProof(t *testing.T) {
 		fmt.Printf("Testing for: LeafIndex; %d, LeafCount: %d\n", testData[i].LeafIndex, testData[i].LeafCount)
 		simplifiedProof, err := ConvertToSimplifiedMMRProof(testData[i].LeafHash, testData[i].LeafIndex, types.MMRLeaf{}, testData[i].LeafCount, testData[i].MMRProof)
 		assert.NoError(t, err)
-		assert.Equal(t, testData[i].ReferenceSimplifiedProof.MMRRestOfThePeaks, simplifiedProof.MMRRestOfThePeaks)
-		assert.Equal(t, testData[i].ReferenceSimplifiedProof.MMRRightBaggedPeak, simplifiedProof.MMRRightBaggedPeak)
-		assert.Equal(t, testData[i].ReferenceSimplifiedProof.MerkleProofOrder, simplifiedProof.MerkleProofOrder)
-		assert.Equal(t, testData[i].ReferenceSimplifiedProof.MerkleProofItems, simplifiedProof.MerkleProofItems)
-
-		simpleProofItems, simpleOrder, err := ConvertToSimplifiedMerkleProof(testData[i].LeafHash, testData[i].LeafIndex, types.MMRLeaf{}, testData[i].LeafCount, testData[i].MMRProof)
+		assert.Equal(t, testData[i].SimplifiedMerkleProofOrder, simplifiedProof.MerkleProofOrder)
+		assert.Equal(t, testData[i].SimplifiedMerkleProofItems, simplifiedProof.MerkleProofItems)
 		assert.NoError(t, err)
-		assert.Equal(t, testData[i].SimplifiedMerkleProofItems, simpleProofItems)
-		assert.Equal(t, testData[i].SimplifiedMerkleProofOrder, simpleOrder)
-
 
 		fmt.Printf("\nRoot: %#x\n", testData[i].ReferenceMMRRoot)
 		fmt.Printf("Leaf Node hash: %#x\n", testData[i].LeafHash)

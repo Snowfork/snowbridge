@@ -272,8 +272,6 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		validatorProof,
 		msg.LatestMMRLeaf,
 		beefylightclient.SimplifiedMMRProof{
-			RestOfThePeaks:           msg.SimplifiedProof.RestOfThePeaks,
-			RightBaggedPeak:          msg.SimplifiedProof.RightBaggedPeak,
 			MerkleProofItems:         msg.SimplifiedProof.MerkleProofItems,
 			MerkleProofOrderBitField: msg.SimplifiedProof.MerkleProofOrderBitField,
 		})

@@ -180,19 +180,12 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		NextAuthoritySetRoot: msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.Root,
 	}
 
-	var restOfThePeaks [][32]byte
-	for _, peak := range msgPackage.simplifiedMMRProof.MMRRestOfThePeaks {
-		restOfThePeaks = append(restOfThePeaks, peak)
-	}
-
 	var merkleProofItems [][32]byte
 	for _, proofItem := range msgPackage.simplifiedMMRProof.MerkleProofItems {
 		merkleProofItems = append(merkleProofItems, proofItem)
 	}
 
 	simplifiedMMRProof := basic.SimplifiedMMRProof{
-		RestOfThePeaks:           restOfThePeaks,
-		RightBaggedPeak:          msgPackage.simplifiedMMRProof.MMRRightBaggedPeak,
 		MerkleProofItems:         merkleProofItems,
 		MerkleProofOrderBitField: msgPackage.simplifiedMMRProof.MerkleProofOrder,
 	}
@@ -283,19 +276,12 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 		NextAuthoritySetRoot: msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.Root,
 	}
 
-	var restOfThePeaks [][32]byte
-	for _, peak := range msgPackage.simplifiedMMRProof.MMRRestOfThePeaks {
-		restOfThePeaks = append(restOfThePeaks, peak)
-	}
-
 	var merkleProofItems [][32]byte
 	for _, proofItem := range msgPackage.simplifiedMMRProof.MerkleProofItems {
 		merkleProofItems = append(merkleProofItems, proofItem)
 	}
 
 	simplifiedMMRProof := incentivized.SimplifiedMMRProof{
-		RestOfThePeaks:           restOfThePeaks,
-		RightBaggedPeak:          msgPackage.simplifiedMMRProof.MMRRightBaggedPeak,
 		MerkleProofItems:         merkleProofItems,
 		MerkleProofOrderBitField: msgPackage.simplifiedMMRProof.MerkleProofOrder,
 	}

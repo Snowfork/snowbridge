@@ -153,11 +153,6 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		merkleProofItems = append(merkleProofItems, mmrProofItem)
 	}
 
-	mmrRestOfThePeaks := [][32]byte{}
-	for _, peak := range latestMMRProof.MMRRestOfThePeaks {
-		mmrRestOfThePeaks = append(mmrRestOfThePeaks, peak)
-	}
-
 	msg := CompleteSignatureCommitmentMessage{
 		ID:                             validationDataID,
 		Commitment:                     commitment,
@@ -168,8 +163,6 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		LatestMMRLeaf:                  latestMMRLeaf,
 
 		SimplifiedProof: beefylightclient.SimplifiedMMRProof{
-			RestOfThePeaks:           mmrRestOfThePeaks,
-			RightBaggedPeak:          latestMMRProof.MMRRightBaggedPeak,
 			MerkleProofItems:         merkleProofItems,
 			MerkleProofOrderBitField: latestMMRProof.MerkleProofOrder,
 		},

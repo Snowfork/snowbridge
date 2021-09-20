@@ -27,10 +27,8 @@ describe("Beefy Light Client", function () {
       fixture.completeSubmitInput.latestMMRLeaf,
       fixture.completeSubmitInput.commitment.payload,
       {
-        restOfThePeaks: fixture.completeSubmitInput.simplifiedMMRProof.mmrRestOfThePeaks,
-        rightBaggedPeak: fixture.completeSubmitInput.simplifiedMMRProof.mmrRightBaggedPeak,
         merkleProofItems: fixture.completeSubmitInput.simplifiedMMRProof.merkleProofItems,
-        merkleProofOrderBitField: fixture.completeSubmitInput.simplifiedMMRProof.merkleProofOrder
+        merkleProofOrderBitField: fixture.completeSubmitInput.simplifiedMMRProof.merkleProofOrderBitField
       }
     ).should.be.fulfilled
   });
@@ -93,10 +91,8 @@ describe("Beefy Light Client", function () {
       validatorProofs,
       fixture.completeSubmitInput.latestMMRLeaf,
         {
-          restOfThePeaks: fixture.completeSubmitInput.simplifiedMMRProof.mmrRestOfThePeaks,
-          rightBaggedPeak: fixture.completeSubmitInput.simplifiedMMRProof.mmrRightBaggedPeak,
           merkleProofItems: fixture.completeSubmitInput.simplifiedMMRProof.merkleProofItems,
-          merkleProofOrderBitField: fixture.completeSubmitInput.simplifiedMMRProof.merkleProofOrder
+          merkleProofOrderBitField: fixture.completeSubmitInput.simplifiedMMRProof.merkleProofOrderBitField
         }
     ).should.be.fulfilled
 
