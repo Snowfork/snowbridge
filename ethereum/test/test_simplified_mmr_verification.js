@@ -35,6 +35,18 @@ describe("Simple MMR Verification", function () {
                        merkleProofOrderBitField: fixture7leaves.proofs[i].merkleProofOrderBitField
                    })).to.be.true;
            });
+
+           it(`should reject invalid proof for leaf index ${i}`, async () => {
+               let j = i + 1;
+               if (j >= fixture7leaves.proofs.length) {
+                   j = 0;
+               }
+               expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
+                   {
+                       merkleProofItems: fixture7leaves.proofs[j].merkleProofItems,
+                       merkleProofOrderBitField: fixture7leaves.proofs[j].merkleProofOrderBitField
+                   })).to.be.false;
+           });
        });
    })
 
@@ -62,6 +74,18 @@ describe("Simple MMR Verification", function () {
                         merkleProofItems: fixture15leaves.proofs[i].merkleProofItems,
                         merkleProofOrderBitField: fixture15leaves.proofs[i].merkleProofOrderBitField
                     })).to.be.true;
+            });
+
+            it(`should reject invalid proof for leaf index ${i}`, async () => {
+                let j = i + 1;
+                if (j >= fixture15leaves.proofs.length) {
+                    j = 0;
+                }
+                expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
+                    {
+                        merkleProofItems: fixture15leaves.proofs[j].merkleProofItems,
+                        merkleProofOrderBitField: fixture15leaves.proofs[j].merkleProofOrderBitField
+                    })).to.be.false;
             });
         });
     })
