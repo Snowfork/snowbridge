@@ -8,8 +8,7 @@
             "beefy-starting-block": 0
         },
         "parachain": {
-            "endpoint": "ws://localhost:11144",
-            "key-fetch-block-size": 50
+            "endpoint": "ws://localhost:11144"
         },
         "contracts": {
             "BeefyLightClient": null,

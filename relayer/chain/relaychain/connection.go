@@ -122,11 +122,11 @@ type ParaHead struct {
 //   Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
 const ParaIDOffset = 16 + 16 + 8
 
-func (co *Connection) FetchParaHeads(blockHash types.Hash, keyFetchBlockSize uint32) (map[uint32]ParaHead, error) {
+func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
 
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 
-	keys, err := co.fetchKeys(keyPrefix, blockHash, keyFetchBlockSize)
+	keys, err := co.fetchKeys(keyPrefix, blockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to get all parachain keys")
 		return nil, err
@@ -234,7 +234,8 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 	return mmrLeafCount, nil
 }
 
-func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash, pageSize uint32) ([]types.StorageKey, error) {
+func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types.StorageKey, error) {
+	const pageSize = 50
 	var startKey *types.StorageKey
 
 	if pageSize < 1 {

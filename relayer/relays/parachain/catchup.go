@@ -166,7 +166,7 @@ func (li *BeefyListener) parablocksWithProofs(
 			}
 
 			log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
-			heads, err = li.relaychainConn.FetchParaHeads(relayBlockHash, li.config.Parachain.KeyFetchBlockSize)
+			heads, err = li.relaychainConn.FetchParaHeads(relayBlockHash)
 			if err != nil {
 				log.WithError(err).Error("Failed to get paraheads")
 				return nil, err

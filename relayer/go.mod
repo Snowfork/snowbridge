@@ -23,7 +23,7 @@ require (
 	github.com/rs/cors v1.8.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/snowfork/ethashproof v0.0.0-20210729080250-93b61cd82454
-	github.com/snowfork/go-substrate-rpc-client/v3 v3.0.7
+	github.com/snowfork/go-substrate-rpc-client/v3 v3.0.8
 	github.com/spf13/afero v1.5.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v1.1.1
@@ -37,5 +37,3 @@ require (
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
-
-replace github.com/snowfork/go-substrate-rpc-client/v3 => /home/alistair/go-substrate-rpc-client
