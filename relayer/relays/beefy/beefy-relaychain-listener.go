@@ -14,6 +14,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 	"github.com/snowfork/snowbridge/relayer/substrate"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -242,12 +243,16 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 		return err
 	}
 
-	serializedProof, err := types.EncodeToBytes(latestMMRProof)
+	log.WithField("latestMMRProof", latestMMRProof.Leaf.Version).Info("Got latestMMRProof")
+
+	simplifiedProof, err := merkle.ConvertToSimplifiedMMRProof(latestMMRProof.BlockHash, uint64(latestMMRProof.Proof.LeafIndex), latestMMRProof.Leaf, uint64(latestMMRProof.Proof.LeafCount), latestMMRProof.Proof.Items)
+	log.WithField("simplifiedProof", simplifiedProof).Info("Converted latestMMRProof to simplified proof")
+
+	serializedProof, err := types.EncodeToBytes(simplifiedProof)
 	if err != nil {
 		log.WithError(err).Error("Failed to serialize MMR Proof")
 		return err
 	}
-	log.WithField("latestMMRProof", latestMMRProof.Leaf.Version).Info("Got latestMMRProof")
 
 	info := store.BeefyRelayInfo{
 		ValidatorAddresses:       beefyAuthoritiesBytes,

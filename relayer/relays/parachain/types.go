@@ -3,6 +3,7 @@ package parachain
 import (
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
 type ParaBlockWithDigest struct {
@@ -12,7 +13,7 @@ type ParaBlockWithDigest struct {
 
 type ParaBlockWithProofs struct {
 	Block            ParaBlockWithDigest
-	MMRProofResponse types.GenerateMMRProofResponse
+	MMRProof merkle.SimplifiedMMRProof
 	MMRRootHash      types.Hash
 	Header           types.Header
 	MerkleProofData  MerkleProofData
@@ -29,10 +30,9 @@ type MessagePackage struct {
 	commitmentData    types.StorageDataRaw
 	paraHead          types.Header
 	merkleProofData   MerkleProofData
-	mmrProof          types.GenerateMMRProofResponse
-	mmrRootHash       types.Hash
-	mmrProofLeafCount uint64
 	paraId            uint32
+	mmrRootHash       types.Hash
+	simplifiedMMRProof merkle.SimplifiedMMRProof
 }
 
 func CreateMessagePackages(paraBlocks []ParaBlockWithProofs, mmrLeafCount uint64, paraID uint32) ([]MessagePackage, error) {
@@ -48,10 +48,9 @@ func CreateMessagePackages(paraBlocks []ParaBlockWithProofs, mmrLeafCount uint64
 				commitmentData,
 				block.Header,
 				block.MerkleProofData,
-				block.MMRProofResponse,
-				block.MMRRootHash,
-				mmrLeafCount,
 				paraID,
+				block.MMRRootHash,
+				block.MMRProof,
 			}
 			messagePackages = append(messagePackages, messagePackage)
 		}

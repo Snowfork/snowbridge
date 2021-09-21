@@ -172,24 +172,27 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 	}
 
 	beefyMMRLeafPartial := basic.ParachainLightClientBeefyMMRLeafPartial{
-		Version:              uint8(msgPackage.mmrProof.Leaf.Version),
-		ParentNumber:         uint32(msgPackage.mmrProof.Leaf.ParentNumberAndHash.ParentNumber),
-		ParentHash:           msgPackage.mmrProof.Leaf.ParentNumberAndHash.Hash,
-		NextAuthoritySetId:   uint64(msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.ID),
-		NextAuthoritySetLen:  uint32(msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Len),
-		NextAuthoritySetRoot: msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Root,
+		Version:              uint8(msgPackage.simplifiedMMRProof.Leaf.Version),
+		ParentNumber:         uint32(msgPackage.simplifiedMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           msgPackage.simplifiedMMRProof.Leaf.ParentNumberAndHash.Hash,
+		NextAuthoritySetId:   uint64(msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.Root,
 	}
 
-	beefyMMRLeafIndex := msgPackage.mmrProof.Proof.LeafIndex
-	beefyMMRLeafCount := msgPackage.mmrProof.Proof.LeafCount
-	var beefyMMRProof [][32]byte
-	for _, item := range msgPackage.mmrProof.Proof.Items {
-		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
+	var merkleProofItems [][32]byte
+	for _, proofItem := range msgPackage.simplifiedMMRProof.MerkleProofItems {
+		merkleProofItems = append(merkleProofItems, proofItem)
+	}
+
+	simplifiedMMRProof := basic.SimplifiedMMRProof{
+		MerkleProofItems:         merkleProofItems,
+		MerkleProofOrderBitField: msgPackage.simplifiedMMRProof.MerkleProofOrder,
 	}
 
 	err = wr.logBasicTx(messages, paraVerifyInput,
-		beefyMMRLeafPartial, int64(beefyMMRLeafIndex), int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
-		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
+		beefyMMRLeafPartial, simplifiedMMRProof,
+		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.simplifiedMMRProof.Leaf,
 		msgPackage.commitmentHash, msgPackage.paraId, msgPackage.mmrRootHash,
 	)
 	if err != nil {
@@ -197,9 +200,10 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 		return err
 	}
 
+
 	tx, err := wr.basicInboundChannel.Submit(options, messages, paraVerifyInput,
 		beefyMMRLeafPartial,
-		big.NewInt(int64(beefyMMRLeafIndex)), big.NewInt(int64(beefyMMRLeafCount)), beefyMMRProof)
+		simplifiedMMRProof)
 	if err != nil {
 		log.WithError(err).Error("Failed to submit transaction")
 		return err
@@ -264,23 +268,27 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	}
 
 	beefyMMRLeafPartial := incentivized.ParachainLightClientBeefyMMRLeafPartial{
-		Version:              uint8(msgPackage.mmrProof.Leaf.Version),
-		ParentNumber:         uint32(msgPackage.mmrProof.Leaf.ParentNumberAndHash.ParentNumber),
-		ParentHash:           msgPackage.mmrProof.Leaf.ParentNumberAndHash.Hash,
-		NextAuthoritySetId:   uint64(msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.ID),
-		NextAuthoritySetLen:  uint32(msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Len),
-		NextAuthoritySetRoot: msgPackage.mmrProof.Leaf.BeefyNextAuthoritySet.Root,
+		Version:              uint8(msgPackage.simplifiedMMRProof.Leaf.Version),
+		ParentNumber:         uint32(msgPackage.simplifiedMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           msgPackage.simplifiedMMRProof.Leaf.ParentNumberAndHash.Hash,
+		NextAuthoritySetId:   uint64(msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.Root,
 	}
-	beefyMMRLeafIndex := msgPackage.mmrProof.Proof.LeafIndex
-	beefyMMRLeafCount := msgPackage.mmrProof.Proof.LeafCount
-	var beefyMMRProof [][32]byte
-	for _, item := range msgPackage.mmrProof.Proof.Items {
-		beefyMMRProof = append(beefyMMRProof, [32]byte(item))
+
+	var merkleProofItems [][32]byte
+	for _, proofItem := range msgPackage.simplifiedMMRProof.MerkleProofItems {
+		merkleProofItems = append(merkleProofItems, proofItem)
+	}
+
+	simplifiedMMRProof := incentivized.SimplifiedMMRProof{
+		MerkleProofItems:         merkleProofItems,
+		MerkleProofOrderBitField: msgPackage.simplifiedMMRProof.MerkleProofOrder,
 	}
 
 	err = wr.logIncentivizedTx(messages, paraVerifyInput,
-		beefyMMRLeafPartial, int64(beefyMMRLeafIndex), int64(msgPackage.mmrProofLeafCount), beefyMMRProof,
-		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.mmrProof.Leaf,
+		beefyMMRLeafPartial, simplifiedMMRProof,
+		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.simplifiedMMRProof.Leaf,
 		msgPackage.commitmentHash, msgPackage.paraId, msgPackage.mmrRootHash,
 	)
 	if err != nil {
@@ -290,7 +298,7 @@ func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 
 	tx, err := wr.incentivizedInboundChannel.Submit(options, messages,
 		paraVerifyInput, beefyMMRLeafPartial,
-		big.NewInt(int64(beefyMMRLeafIndex)), big.NewInt(int64(beefyMMRLeafCount)), beefyMMRProof)
+		simplifiedMMRProof)
 	if err != nil {
 		log.WithError(err).Error("Failed to submit transaction")
 		return err

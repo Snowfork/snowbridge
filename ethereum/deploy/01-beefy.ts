@@ -20,7 +20,7 @@ module.exports = async ({
     autoMine: true,
   });
 
-  let mmr = await deployments.deploy("MMRVerification", {
+  let mmr = await deployments.deploy("SimplifiedMMRVerification", {
     from: deployer,
     log: true,
     autoMine: true,

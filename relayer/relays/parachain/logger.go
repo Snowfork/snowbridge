@@ -47,29 +47,32 @@ type IncentivizedInboundChannelMessageLog struct {
 	Payload string         `json:"payload"`
 }
 
+type SimplifiedMMRProofLog struct {
+	BeefyMMRRestOfThePeaks []string `json:"RestOfThePeaks"`
+	BeefyMMRRightBaggedPeak string `json:"RightBaggedPeak"`
+	MerkleProofItems   []string `json:"MerkleProofItems"`
+	MerkleProofOrder   uint64 `json:"MerkleProofOrder"`
+}
+
 type BasicSubmitInput struct {
 	Messages            []BasicInboundChannelMessageLog `json:"_messages"`
 	ParaVerifyInput     ParaVerifyInputLog              `json:"_paraVerifyInput"`
 	BeefyMMRLeafPartial BeefyMMRLeafPartialLog          `json:"_beefyMMRLeafPartial"`
-	BeefyMMRLeafIndex   int64                           `json:"_beefyMMRLeafIndex"`
-	BeefyLeafCount      int64                           `json:"_beefyLeafCount"`
-	BeefyMMRProof       []string                        `json:"_beefyMMRProof"`
+	SimplifiedMMRProof SimplifiedMMRProofLog `json:"_beefyMMRSimplifiedProof"`
 }
 
 type IncentivizedSubmitInput struct {
 	Messages            []IncentivizedInboundChannelMessageLog `json:"_messages"`
 	ParaVerifyInput     ParaVerifyInputLog                     `json:"_paraVerifyInput"`
 	BeefyMMRLeafPartial BeefyMMRLeafPartialLog                 `json:"_beefyMMRLeafPartial"`
-	BeefyMMRLeafIndex   int64                                  `json:"_beefyMMRLeafIndex"`
-	BeefyLeafCount      int64                                  `json:"_beefyLeafCount"`
-	BeefyMMRProof       []string                               `json:"_beefyMMRProof"`
+	SimplifiedMMRProof SimplifiedMMRProofLog `json:"_beefyMMRSimplifiedProof"`
 }
 
 func (wr *EthereumChannelWriter) logBasicTx(
 	messages []basic.BasicInboundChannelMessage,
 	paraVerifyInput basic.ParachainLightClientParachainVerifyInput,
 	beefyMMRLeafPartial basic.ParachainLightClientBeefyMMRLeafPartial,
-	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte,
+	beefyMMRSimplifiedProof basic.SimplifiedMMRProof,
 	paraHead types.Header, merkleProofData MerkleProofData, mmrLeaf types.MMRLeaf,
 	commitmentHash types.H256, paraID uint32, mmrRootHash types.Hash,
 ) error {
@@ -86,10 +89,13 @@ func (wr *EthereumChannelWriter) logBasicTx(
 	for _, item := range paraVerifyInput.ParachainHeadProof.Proof {
 		paraHeadProofString = append(paraHeadProofString, "0x"+hex.EncodeToString(item[:]))
 	}
-	var beefyMMRProofString []string
-	for _, item := range beefyMMRProof {
-		beefyMMRProofString = append(beefyMMRProofString, "0x"+hex.EncodeToString(item[:]))
+
+	var beefyMMRMerkleProofItems []string
+	for _, item := range beefyMMRSimplifiedProof.MerkleProofItems {
+		beefyMMRMerkleProofItems = append(beefyMMRMerkleProofItems, "0x"+hex.EncodeToString(item[:]))
 	}
+
+
 	input := &BasicSubmitInput{
 		Messages: basicMessagesLog,
 		ParaVerifyInput: ParaVerifyInputLog{
@@ -109,9 +115,10 @@ func (wr *EthereumChannelWriter) logBasicTx(
 			NextAuthoritySetLen:  beefyMMRLeafPartial.NextAuthoritySetLen,
 			NextAuthoritySetRoot: "0x" + hex.EncodeToString(beefyMMRLeafPartial.NextAuthoritySetRoot[:]),
 		},
-		BeefyMMRLeafIndex: beefyMMRLeafIndex,
-		BeefyLeafCount:    beefyLeafCount,
-		BeefyMMRProof:     beefyMMRProofString,
+		SimplifiedMMRProof: SimplifiedMMRProofLog{
+			MerkleProofItems:        beefyMMRMerkleProofItems,
+			MerkleProofOrder:        beefyMMRSimplifiedProof.MerkleProofOrderBitField,
+		},
 	}
 	b, err := json.Marshal(input)
 	if err != nil {
@@ -166,7 +173,7 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	messages []incentivized.IncentivizedInboundChannelMessage,
 	paraVerifyInput incentivized.ParachainLightClientParachainVerifyInput,
 	beefyMMRLeafPartial incentivized.ParachainLightClientBeefyMMRLeafPartial,
-	beefyMMRLeafIndex int64, beefyLeafCount int64, beefyMMRProof [][32]byte,
+	beefyMMRSimplifiedProof incentivized.SimplifiedMMRProof,
 	paraHead types.Header, merkleProofData MerkleProofData, mmrLeaf types.MMRLeaf,
 	commitmentHash types.H256, paraID uint32, mmrRootHash types.Hash,
 ) error {
@@ -184,10 +191,12 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	for _, item := range paraVerifyInput.ParachainHeadProof.Proof {
 		paraHeadProofString = append(paraHeadProofString, "0x"+hex.EncodeToString(item[:]))
 	}
-	var beefyMMRProofString []string
-	for _, item := range beefyMMRProof {
-		beefyMMRProofString = append(beefyMMRProofString, "0x"+hex.EncodeToString(item[:]))
+
+	var beefyMMRMerkleProofItems []string
+	for _, item := range beefyMMRSimplifiedProof.MerkleProofItems {
+		beefyMMRMerkleProofItems = append(beefyMMRMerkleProofItems, "0x"+hex.EncodeToString(item[:]))
 	}
+
 	input := &IncentivizedSubmitInput{
 		Messages: incentivizedMessagesLog,
 		ParaVerifyInput: ParaVerifyInputLog{
@@ -206,9 +215,10 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 			NextAuthoritySetLen:  beefyMMRLeafPartial.NextAuthoritySetLen,
 			NextAuthoritySetRoot: "0x" + hex.EncodeToString(beefyMMRLeafPartial.NextAuthoritySetRoot[:]),
 		},
-		BeefyMMRLeafIndex: beefyMMRLeafIndex,
-		BeefyLeafCount:    beefyLeafCount,
-		BeefyMMRProof:     beefyMMRProofString,
+		SimplifiedMMRProof: SimplifiedMMRProofLog{
+			MerkleProofItems:        beefyMMRMerkleProofItems,
+			MerkleProofOrder:        beefyMMRSimplifiedProof.MerkleProofOrderBitField,
+		},
 	}
 	b, err := json.Marshal(input)
 	if err != nil {

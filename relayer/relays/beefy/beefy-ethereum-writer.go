@@ -271,9 +271,10 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		msg.Commitment,
 		validatorProof,
 		msg.LatestMMRLeaf,
-		msg.MMRLeafIndex,
-		msg.MMRLeafCount,
-		msg.MMRProofItems)
+		beefylightclient.SimplifiedMMRProof{
+			MerkleProofItems:         msg.SimplifiedProof.MerkleProofItems,
+			MerkleProofOrderBitField: msg.SimplifiedProof.MerkleProofOrderBitField,
+		})
 
 	if err != nil {
 		log.WithError(err).Error("Failed to submit transaction")
