@@ -148,11 +148,10 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 	}
 
 	signedValidators := []*big.Int{}
-	for i := range beefyJustification.SignedCommitment.Signatures {
-		// TODO: skip over empty/missing signatures
-		// if signature.Option.IsSome() {
-		signedValidators = append(signedValidators, big.NewInt(int64(i)))
-		// }
+	for i, signature := range beefyJustification.SignedCommitment.Signatures {
+		if signature.Option.IsSome() {
+			signedValidators = append(signedValidators, big.NewInt(int64(i)))
+		}
 	}
 	numberOfValidators := big.NewInt(int64(len(beefyJustification.SignedCommitment.Signatures)))
 	initialBitfield, err := contract.CreateInitialBitfield(
