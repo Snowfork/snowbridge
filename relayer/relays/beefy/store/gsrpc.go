@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 
 	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v3/types"
@@ -111,6 +112,28 @@ func (o *OptionBeefySignature) SetNone() {
 // Unwrap returns a flag that indicates whether a value is present and the stored value
 func (o OptionBeefySignature) Unwrap() (ok bool, value BeefySignature) {
 	return o.hasValue, o.Value
+}
+
+func (o OptionBeefySignature) MarshalJSON() ([]byte, error) {
+	if !o.hasValue {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(o.Value)
+}
+
+func (o *OptionBeefySignature) UnmarshalJSON(b []byte) error {
+	var tmp *BeefySignature
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return err
+	}
+	if tmp != nil {
+		o.hasValue = true
+		o.Value = *tmp
+	} else {
+		o.hasValue = false
+	}
+
+	return nil
 }
 
 type Option struct {
