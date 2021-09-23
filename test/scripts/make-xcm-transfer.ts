@@ -85,13 +85,14 @@ const createTransferXcm = (
 
 let main = async () => {
   const argv = yargs.options({
-    "key-uri": { type: "string", demandOption: true },
-    "para-id": { type: "number", demandOption: true },
-    recipient: { type: "string", demandOption: true },
-    amount: { type: "number", demandOption: true },
+    "api": { type: "string", demandOption: true, describe: "API endpoint of source parachain" },
+    "key-uri": { type: "string", demandOption: true, describe: "Account key for sending extrinsic" },
+    "para-id": { type: "number", demandOption: true, describe: "Destination parachain" },
+    recipient: { type: "string", demandOption: true, describe: "Destination account" },
+    amount: { type: "number", demandOption: true, describe: "Amount to transfer" },
   }).argv as any;
 
-  let provider = new WsProvider("ws://127.0.0.1:11144");
+  let provider = new WsProvider(argv.api);
 
   let api = await ApiPromise.create({
     provider,
