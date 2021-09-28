@@ -3,7 +3,7 @@
 use frame_support::{
 	decl_event, decl_module, decl_storage,
 	dispatch::{Parameter, Dispatchable, DispatchResult},
-	traits::{EnsureOrigin, Filter},
+	traits::{EnsureOrigin, Contains},
 	weights::GetDispatchInfo,
 };
 
@@ -66,7 +66,7 @@ pub trait Config: system::Config {
 
 	/// The pallet will filter all incoming calls right before they're dispatched. If this filter
 	/// rejects the call, special event (`Event::MessageRejected`) is emitted.
-	type CallFilter: Filter<<Self as Config>::Call>;
+	type CallFilter: Contains<<Self as Config>::Call>;
 }
 
 decl_storage! {
@@ -103,7 +103,7 @@ impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Module<T> {
 			}
 		};
 
-		if !T::CallFilter::filter(&call) {
+		if !T::CallFilter::contains(&call) {
 			Self::deposit_event(RawEvent::MessageRejected(id));
 			return;
 		}
@@ -187,8 +187,8 @@ mod tests {
 	}
 
 	pub struct CallFilter;
-	impl Filter<Call> for CallFilter {
-		fn filter(call: &Call) -> bool {
+	impl frame_support::traits::Contains<Call> for CallFilter {
+		fn contains(call: &Call) -> bool {
 			match call {
 				Call::System(frame_system::pallet::Call::<Test>::remark(_)) => true,
 				_ => false

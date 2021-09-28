@@ -33,9 +33,16 @@ pub use frame_support::{
 	construct_runtime,
 	dispatch::DispatchResult,
 	parameter_types,
-	traits::{All, Filter, IsInVec, KeyOwnerProofSystem, Randomness},
-	weights::{constants::WEIGHT_PER_SECOND, IdentityFee, Weight},
-	PalletId, StorageValue,
+	traits::{Everything, Contains, IsInVec, KeyOwnerProofSystem, Randomness},
+	weights::{
+		constants::{
+			BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight,
+			WEIGHT_PER_SECOND,
+		},
+		IdentityFee,
+		Weight
+	},
+	StorageValue,
 	match_type,
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
@@ -54,7 +61,7 @@ use dispatch::EnsureEthereumAccount;
 pub use ethereum_light_client::{EthereumDifficultyConfig, EthereumHeader};
 
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{MultiAsset, Junction, MultiLocation, NetworkId, Xcm, BodyId};
+use xcm::v0::{Junction, MultiLocation, NetworkId, BodyId};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
 	EnsureXcmOrigin, UsingComponents, FixedWeightBounds, IsConcrete, LocationInverter,
@@ -373,7 +380,7 @@ match_type! {
 
 pub type Barrier = (
 	TakeWeightCredit,
-	AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
+	AllowTopLevelPaidExecutionFrom<Everything>,
 	AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
 );
 
@@ -416,11 +423,12 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type XcmRouter = XcmRouter;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
+	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-	type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+	type XcmTeleportFilter = Everything;
+	type XcmReserveTransferFilter = Everything;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type LocationInverter = LocationInverter<Ancestry>;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -487,19 +495,12 @@ impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
 
 // Our pallets
 
-pub struct CallFilter;
-impl Filter<Call> for CallFilter {
-	fn filter(_: &Call) -> bool {
-		true
-	}
-}
-
 impl dispatch::Config for Runtime {
 	type Origin = Origin;
 	type Event = Event;
 	type MessageId = MessageId;
 	type Call = Call;
-	type CallFilter = CallFilter;
+	type CallFilter = Everything;
 }
 
 use basic_channel::inbound as basic_channel_inbound;
@@ -530,7 +531,6 @@ parameter_types! {
 }
 
 pub struct FeeConverter;
-
 impl Convert<U256, Balance> for FeeConverter {
 	fn convert(amount: U256) -> Balance {
 		dot_app::primitives::unwrap::<Runtime>(amount, Decimals::get())
@@ -630,6 +630,7 @@ impl erc721_app::Config for Runtime {
 
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
+	type DisabledValidators = ();
 }
 
 construct_runtime!(
@@ -819,6 +820,36 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn benchmark_metadata(extra: bool) -> (
+			Vec<frame_benchmarking::BenchmarkList>,
+			Vec<frame_support::traits::StorageInfo>,
+		) {
+			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+			use frame_support::traits::StorageInfoTrait;
+			use frame_system_benchmarking::Pallet as SystemBench;
+
+			let mut list = Vec::<BenchmarkList>::new();
+
+			list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
+			list_benchmark!(list, extra, pallet_balances, Balances);
+			list_benchmark!(list, extra, pallet_collective, LocalCouncil);
+			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
+			list_benchmark!(list, extra, pallet_utility, Utility);
+			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
+			list_benchmark!(list, extra, assets, Assets);
+			list_benchmark!(list, extra, basic_channel::inbound, BasicInboundChannel);
+			list_benchmark!(list, extra, basic_channel::outbound, BasicOutboundChannel);
+			list_benchmark!(list, extra, incentivized_channel::inbound, IncentivizedInboundChannel);
+			list_benchmark!(list, extra, incentivized_channel::outbound, IncentivizedOutboundChannel);
+			list_benchmark!(list, extra, dot_app, DotApp);
+			list_benchmark!(list, extra, erc20_app, Erc20App);
+			list_benchmark!(list, extra, eth_app, EthApp);
+
+			let storage_info = AllPalletsWithSystem::storage_info();
+
+			return (list, storage_info)
+		}
+
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
