@@ -2188,7 +2188,7 @@ dependencies = [
 [[package]]
 name = "ethabi-decode"
 version = "1.3.2"
-source = "git+https://github.com/snowfork/ethabi-decode.git?branch=update-deps#c32c721b41ebfdd24fc9db3f843d9f91a6ee8108"
+source = "git+https://github.com/snowfork/ethabi-decode.git?branch=master#becd27ee393fc1c38ba778c674943690f4ba3d5b"
 dependencies = [
  "ethereum-types",
  "tiny-keccak 1.5.0",
@@ -2197,7 +2197,7 @@ dependencies = [
 [[package]]
 name = "ethash"
 version = "0.5.0"
-source = "git+https://github.com/snowfork/ethash.git?branch=update-deps#26f2a3ef7be30f7a743169f72f35e48d270581bf"
+source = "git+https://github.com/snowfork/ethash.git?branch=master#d777b18df8ebc29f9d8a5d78566bdd7fbee4a7cc"
 dependencies = [
  "byteorder",
  "ethereum-types",

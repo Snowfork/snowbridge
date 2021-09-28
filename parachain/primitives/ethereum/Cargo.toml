@@ -22,8 +22,8 @@ sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkad
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.9", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.9", default-features = false }
 
-ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "update-deps", default-features = false }
-ethash = { git = "https://github.com/snowfork/ethash.git", branch = "update-deps", default-features = false }
+ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
+ethash = { git = "https://github.com/snowfork/ethash.git", branch = "master", default-features = false }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.19"
