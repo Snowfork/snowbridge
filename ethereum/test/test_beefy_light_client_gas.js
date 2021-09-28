@@ -102,9 +102,10 @@ describe("Beefy Light Client Gas Usage", function () {
       realWorldFixture.completeSubmitInput.commitment,
       completeValidatorProofs,
       realWorldFixture.completeSubmitInput.latestMMRLeaf,
-      realWorldFixture.completeSubmitInput.mmrLeafIndex,
-      realWorldFixture.completeSubmitInput.mmrLeafCount,
-      realWorldFixture.completeSubmitInput.mmrProofItems,
+       {
+          merkleProofItems: realWorldFixture.completeSubmitInput.simplifiedMMRProof.merkleProofItems,
+          merkleProofOrderBitField: realWorldFixture.completeSubmitInput.simplifiedMMRProof.merkleProofOrderBitField
+       }
     )
     printTxPromiseGas(completeSigTxPromise)
     if (fail) {

@@ -562,7 +562,7 @@ impl incentivized_channel_outbound::Config for Runtime {
 }
 
 parameter_types! {
-	pub const DescendantsUntilFinalized: u8 = 3;
+	pub const DescendantsUntilFinalized: u8 = 8;
 	pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::ropsten();
 	pub const VerifyPoW: bool = true;
 }

@@ -27,9 +27,7 @@ type CompleteSignatureCommitmentMessage struct {
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
 	LatestMMRLeaf                  beefylightclient.BeefyLightClientBeefyMMRLeaf
-	MMRLeafIndex                   uint64
-	MMRLeafCount                   uint64
-	MMRProofItems                  [][32]byte
+	SimplifiedProof beefylightclient.SimplifiedMMRProof
 }
 
 type BeefyJustification struct {
@@ -134,7 +132,7 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),
 	}
 
-	var latestMMRProof types.GenerateMMRProofResponse
+	var latestMMRProof merkle.SimplifiedMMRProof
 	err := types.DecodeFromBytes(info.SerializedLatestMMRProof, &latestMMRProof)
 	if err != nil {
 		return CompleteSignatureCommitmentMessage{}, err
@@ -149,9 +147,10 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		NextAuthoritySetLen:  uint32(latestMMRProof.Leaf.BeefyNextAuthoritySet.Len),
 		NextAuthoritySetRoot: latestMMRProof.Leaf.BeefyNextAuthoritySet.Root,
 	}
-	mmrProofItems := [][32]byte{}
-	for _, mmrProofItem := range latestMMRProof.Proof.Items {
-		mmrProofItems = append(mmrProofItems, mmrProofItem)
+
+	merkleProofItems := [][32]byte{}
+	for _, mmrProofItem := range latestMMRProof.MerkleProofItems {
+		merkleProofItems = append(merkleProofItems, mmrProofItem)
 	}
 
 	msg := CompleteSignatureCommitmentMessage{
@@ -162,9 +161,11 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		ValidatorPublicKeys:            validatorPublicKeys,
 		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
 		LatestMMRLeaf:                  latestMMRLeaf,
-		MMRLeafIndex:                   uint64(latestMMRProof.Proof.LeafIndex),
-		MMRLeafCount:                   uint64(latestMMRProof.Proof.LeafCount),
-		MMRProofItems:                  mmrProofItems,
+
+		SimplifiedProof: beefylightclient.SimplifiedMMRProof{
+			MerkleProofItems:         merkleProofItems,
+			MerkleProofOrderBitField: latestMMRProof.MerkleProofOrder,
+		},
 	}
 	return msg, nil
 }

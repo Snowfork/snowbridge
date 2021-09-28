@@ -52,8 +52,14 @@ type BeefyLightClientValidatorProof struct {
 	PublicKeyMerkleProofs [][][32]byte
 }
 
+// SimplifiedMMRProof is an auto generated low-level Go binding around an user-defined struct.
+type SimplifiedMMRProof struct {
+	MerkleProofItems         [][32]byte
+	MerkleProofOrderBitField uint64
+}
+
 // ContractABI is the input ABI used to generate the binding from.
-const ContractABI = "[{\"inputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"_validatorRegistry\",\"type\":\"address\"},{\"internalType\":\"contractMMRVerification\",\"name\":\"_mmrVerification\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"_startingBeefyBlock\",\"type\":\"uint64\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"FinalVerificationSuccessful\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"InitialVerificationSuccessful\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"mmrRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"}],\"name\":\"NewMMRRoot\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"BLOCK_WAIT_PERIOD\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ERROR_AND_SAFETY_BUFFER\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAXIMUM_BLOCK_GAP\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MMR_LEAF_LENGTH_SCALE_ENCODED\",\"outputs\":[{\"internalType\":\"bytes2\",\"name\":\"\",\"type\":\"bytes2\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"NUMBER_OF_BLOCKS_PER_SESSION\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_DENOMINATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_NUMERATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestBeefyBlock\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestMMRRoot\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"mmrVerification\",\"outputs\":[{\"internalType\":\"contractMMRVerification\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"validationData\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"senderAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validatorRegistry\",\"outputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"beefyMMRLeaf\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"beefyMMRLeafIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"beefyMMRLeafCount\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"beefyMMRLeafProof\",\"type\":\"bytes32[]\"}],\"name\":\"verifyBeefyMerkleLeaf\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorClaimsBitfield\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"validatorSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"validatorPosition\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"validatorPublicKey\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"validatorPublicKeyMerkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"newSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"createRandomBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"bitsToSet\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"createInitialBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"validatorSetId\",\"type\":\"uint32\"}],\"internalType\":\"structBeefyLightClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"},{\"internalType\":\"uint256[]\",\"name\":\"positions\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"publicKeys\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"publicKeyMerkleProofs\",\"type\":\"bytes32[][]\"}],\"internalType\":\"structBeefyLightClient.ValidatorProof\",\"name\":\"validatorProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyLightClient.BeefyMMRLeaf\",\"name\":\"latestMMRLeaf\",\"type\":\"tuple\"},{\"internalType\":\"uint64\",\"name\":\"leafIndex\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"leafCount\",\"type\":\"uint64\"},{\"internalType\":\"bytes32[]\",\"name\":\"mmrProofItems\",\"type\":\"bytes32[]\"}],\"name\":\"completeSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyLightClient.BeefyMMRLeaf\",\"name\":\"leaf\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"leafIndex\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"leafCount\",\"type\":\"uint64\"}],\"name\":\"verifyNewestMMRLeaf\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"numValidators\",\"type\":\"uint256\"}],\"name\":\"requiredNumberOfSignatures\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"requiredNumberOfSignatures\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"validatorSetId\",\"type\":\"uint32\"}],\"internalType\":\"structBeefyLightClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"}],\"name\":\"createCommitmentHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyLightClient.BeefyMMRLeaf\",\"name\":\"leaf\",\"type\":\"tuple\"}],\"name\":\"encodeMMRLeaf\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"leaf\",\"type\":\"bytes\"}],\"name\":\"hashMMRLeaf\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]"
+const ContractABI = "[{\"inputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"_validatorRegistry\",\"type\":\"address\"},{\"internalType\":\"contractSimplifiedMMRVerification\",\"name\":\"_mmrVerification\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"_startingBeefyBlock\",\"type\":\"uint64\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"FinalVerificationSuccessful\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"InitialVerificationSuccessful\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"mmrRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"}],\"name\":\"NewMMRRoot\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"BLOCK_WAIT_PERIOD\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ERROR_AND_SAFETY_BUFFER\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAXIMUM_BLOCK_GAP\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MMR_LEAF_LENGTH_SCALE_ENCODED\",\"outputs\":[{\"internalType\":\"bytes2\",\"name\":\"\",\"type\":\"bytes2\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"NUMBER_OF_BLOCKS_PER_SESSION\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_DENOMINATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_NUMERATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestBeefyBlock\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestMMRRoot\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"mmrVerification\",\"outputs\":[{\"internalType\":\"contractSimplifiedMMRVerification\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"validationData\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"senderAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validatorRegistry\",\"outputs\":[{\"internalType\":\"contractValidatorRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"beefyMMRLeaf\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"merkleProofItems\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"merkleProofOrderBitField\",\"type\":\"uint64\"}],\"internalType\":\"structSimplifiedMMRProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"verifyBeefyMerkleLeaf\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorClaimsBitfield\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"validatorSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"validatorPosition\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"validatorPublicKey\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"validatorPublicKeyMerkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"newSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"createRandomBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"bitsToSet\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"createInitialBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"validatorSetId\",\"type\":\"uint32\"}],\"internalType\":\"structBeefyLightClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"},{\"internalType\":\"uint256[]\",\"name\":\"positions\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"publicKeys\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"publicKeyMerkleProofs\",\"type\":\"bytes32[][]\"}],\"internalType\":\"structBeefyLightClient.ValidatorProof\",\"name\":\"validatorProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyLightClient.BeefyMMRLeaf\",\"name\":\"latestMMRLeaf\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"merkleProofItems\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"merkleProofOrderBitField\",\"type\":\"uint64\"}],\"internalType\":\"structSimplifiedMMRProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"completeSignatureCommitment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyLightClient.BeefyMMRLeaf\",\"name\":\"leaf\",\"type\":\"tuple\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"merkleProofItems\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"merkleProofOrderBitField\",\"type\":\"uint64\"}],\"internalType\":\"structSimplifiedMMRProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"verifyNewestMMRLeaf\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"numValidators\",\"type\":\"uint256\"}],\"name\":\"requiredNumberOfSignatures\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"requiredNumberOfSignatures\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"payload\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"validatorSetId\",\"type\":\"uint32\"}],\"internalType\":\"structBeefyLightClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"}],\"name\":\"createCommitmentHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyLightClient.BeefyMMRLeaf\",\"name\":\"leaf\",\"type\":\"tuple\"}],\"name\":\"encodeMMRLeaf\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"leaf\",\"type\":\"bytes\"}],\"name\":\"hashMMRLeaf\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]"
 
 // Contract is an auto generated Go binding around an Ethereum contract.
 type Contract struct {
@@ -771,10 +777,13 @@ func (_Contract *ContractCaller) ValidationData(opts *bind.CallOpts, arg0 *big.I
 		CommitmentHash [32]byte
 		BlockNumber    *big.Int
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.SenderAddress = out[0].(common.Address)
-	outstruct.CommitmentHash = out[1].([32]byte)
-	outstruct.BlockNumber = out[2].(*big.Int)
+	outstruct.SenderAddress = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.CommitmentHash = *abi.ConvertType(out[1], new([32]byte)).(*[32]byte)
+	outstruct.BlockNumber = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
 
@@ -833,25 +842,85 @@ func (_Contract *ContractCallerSession) ValidatorRegistry() (common.Address, err
 	return _Contract.Contract.ValidatorRegistry(&_Contract.CallOpts)
 }
 
-// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0xfadaf830.
+// VerifyBeefyMerkleLeaf is a free data retrieval call binding the contract method 0x2d268c9e.
 //
-// Solidity: function completeSignatureCommitment(uint256 id, (bytes32,uint64,uint32) commitment, (bytes[],uint256[],address[],bytes32[][]) validatorProof, (uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) latestMMRLeaf, uint64 leafIndex, uint64 leafCount, bytes32[] mmrProofItems) returns()
-func (_Contract *ContractTransactor) CompleteSignatureCommitment(opts *bind.TransactOpts, id *big.Int, commitment BeefyLightClientCommitment, validatorProof BeefyLightClientValidatorProof, latestMMRLeaf BeefyLightClientBeefyMMRLeaf, leafIndex uint64, leafCount uint64, mmrProofItems [][32]byte) (*types.Transaction, error) {
-	return _Contract.contract.Transact(opts, "completeSignatureCommitment", id, commitment, validatorProof, latestMMRLeaf, leafIndex, leafCount, mmrProofItems)
+// Solidity: function verifyBeefyMerkleLeaf(bytes32 beefyMMRLeaf, (bytes32[],uint64) proof) view returns(bool)
+func (_Contract *ContractCaller) VerifyBeefyMerkleLeaf(opts *bind.CallOpts, beefyMMRLeaf [32]byte, proof SimplifiedMMRProof) (bool, error) {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "verifyBeefyMerkleLeaf", beefyMMRLeaf, proof)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
-// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0xfadaf830.
+// VerifyBeefyMerkleLeaf is a free data retrieval call binding the contract method 0x2d268c9e.
 //
-// Solidity: function completeSignatureCommitment(uint256 id, (bytes32,uint64,uint32) commitment, (bytes[],uint256[],address[],bytes32[][]) validatorProof, (uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) latestMMRLeaf, uint64 leafIndex, uint64 leafCount, bytes32[] mmrProofItems) returns()
-func (_Contract *ContractSession) CompleteSignatureCommitment(id *big.Int, commitment BeefyLightClientCommitment, validatorProof BeefyLightClientValidatorProof, latestMMRLeaf BeefyLightClientBeefyMMRLeaf, leafIndex uint64, leafCount uint64, mmrProofItems [][32]byte) (*types.Transaction, error) {
-	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, commitment, validatorProof, latestMMRLeaf, leafIndex, leafCount, mmrProofItems)
+// Solidity: function verifyBeefyMerkleLeaf(bytes32 beefyMMRLeaf, (bytes32[],uint64) proof) view returns(bool)
+func (_Contract *ContractSession) VerifyBeefyMerkleLeaf(beefyMMRLeaf [32]byte, proof SimplifiedMMRProof) (bool, error) {
+	return _Contract.Contract.VerifyBeefyMerkleLeaf(&_Contract.CallOpts, beefyMMRLeaf, proof)
 }
 
-// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0xfadaf830.
+// VerifyBeefyMerkleLeaf is a free data retrieval call binding the contract method 0x2d268c9e.
 //
-// Solidity: function completeSignatureCommitment(uint256 id, (bytes32,uint64,uint32) commitment, (bytes[],uint256[],address[],bytes32[][]) validatorProof, (uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) latestMMRLeaf, uint64 leafIndex, uint64 leafCount, bytes32[] mmrProofItems) returns()
-func (_Contract *ContractTransactorSession) CompleteSignatureCommitment(id *big.Int, commitment BeefyLightClientCommitment, validatorProof BeefyLightClientValidatorProof, latestMMRLeaf BeefyLightClientBeefyMMRLeaf, leafIndex uint64, leafCount uint64, mmrProofItems [][32]byte) (*types.Transaction, error) {
-	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, commitment, validatorProof, latestMMRLeaf, leafIndex, leafCount, mmrProofItems)
+// Solidity: function verifyBeefyMerkleLeaf(bytes32 beefyMMRLeaf, (bytes32[],uint64) proof) view returns(bool)
+func (_Contract *ContractCallerSession) VerifyBeefyMerkleLeaf(beefyMMRLeaf [32]byte, proof SimplifiedMMRProof) (bool, error) {
+	return _Contract.Contract.VerifyBeefyMerkleLeaf(&_Contract.CallOpts, beefyMMRLeaf, proof)
+}
+
+// VerifyNewestMMRLeaf is a free data retrieval call binding the contract method 0x5f74f579.
+//
+// Solidity: function verifyNewestMMRLeaf((uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) leaf, bytes32 root, (bytes32[],uint64) proof) view returns()
+func (_Contract *ContractCaller) VerifyNewestMMRLeaf(opts *bind.CallOpts, leaf BeefyLightClientBeefyMMRLeaf, root [32]byte, proof SimplifiedMMRProof) error {
+	var out []interface{}
+	err := _Contract.contract.Call(opts, &out, "verifyNewestMMRLeaf", leaf, root, proof)
+
+	if err != nil {
+		return err
+	}
+
+	return err
+
+}
+
+// VerifyNewestMMRLeaf is a free data retrieval call binding the contract method 0x5f74f579.
+//
+// Solidity: function verifyNewestMMRLeaf((uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) leaf, bytes32 root, (bytes32[],uint64) proof) view returns()
+func (_Contract *ContractSession) VerifyNewestMMRLeaf(leaf BeefyLightClientBeefyMMRLeaf, root [32]byte, proof SimplifiedMMRProof) error {
+	return _Contract.Contract.VerifyNewestMMRLeaf(&_Contract.CallOpts, leaf, root, proof)
+}
+
+// VerifyNewestMMRLeaf is a free data retrieval call binding the contract method 0x5f74f579.
+//
+// Solidity: function verifyNewestMMRLeaf((uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) leaf, bytes32 root, (bytes32[],uint64) proof) view returns()
+func (_Contract *ContractCallerSession) VerifyNewestMMRLeaf(leaf BeefyLightClientBeefyMMRLeaf, root [32]byte, proof SimplifiedMMRProof) error {
+	return _Contract.Contract.VerifyNewestMMRLeaf(&_Contract.CallOpts, leaf, root, proof)
+}
+
+// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0x3713a271.
+//
+// Solidity: function completeSignatureCommitment(uint256 id, (bytes32,uint64,uint32) commitment, (bytes[],uint256[],address[],bytes32[][]) validatorProof, (uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) latestMMRLeaf, (bytes32[],uint64) proof) returns()
+func (_Contract *ContractTransactor) CompleteSignatureCommitment(opts *bind.TransactOpts, id *big.Int, commitment BeefyLightClientCommitment, validatorProof BeefyLightClientValidatorProof, latestMMRLeaf BeefyLightClientBeefyMMRLeaf, proof SimplifiedMMRProof) (*types.Transaction, error) {
+	return _Contract.contract.Transact(opts, "completeSignatureCommitment", id, commitment, validatorProof, latestMMRLeaf, proof)
+}
+
+// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0x3713a271.
+//
+// Solidity: function completeSignatureCommitment(uint256 id, (bytes32,uint64,uint32) commitment, (bytes[],uint256[],address[],bytes32[][]) validatorProof, (uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) latestMMRLeaf, (bytes32[],uint64) proof) returns()
+func (_Contract *ContractSession) CompleteSignatureCommitment(id *big.Int, commitment BeefyLightClientCommitment, validatorProof BeefyLightClientValidatorProof, latestMMRLeaf BeefyLightClientBeefyMMRLeaf, proof SimplifiedMMRProof) (*types.Transaction, error) {
+	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, commitment, validatorProof, latestMMRLeaf, proof)
+}
+
+// CompleteSignatureCommitment is a paid mutator transaction binding the contract method 0x3713a271.
+//
+// Solidity: function completeSignatureCommitment(uint256 id, (bytes32,uint64,uint32) commitment, (bytes[],uint256[],address[],bytes32[][]) validatorProof, (uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) latestMMRLeaf, (bytes32[],uint64) proof) returns()
+func (_Contract *ContractTransactorSession) CompleteSignatureCommitment(id *big.Int, commitment BeefyLightClientCommitment, validatorProof BeefyLightClientValidatorProof, latestMMRLeaf BeefyLightClientBeefyMMRLeaf, proof SimplifiedMMRProof) (*types.Transaction, error) {
+	return _Contract.Contract.CompleteSignatureCommitment(&_Contract.TransactOpts, id, commitment, validatorProof, latestMMRLeaf, proof)
 }
 
 // NewSignatureCommitment is a paid mutator transaction binding the contract method 0xe54d1543.
@@ -873,48 +942,6 @@ func (_Contract *ContractSession) NewSignatureCommitment(commitmentHash [32]byte
 // Solidity: function newSignatureCommitment(bytes32 commitmentHash, uint256[] validatorClaimsBitfield, bytes validatorSignature, uint256 validatorPosition, address validatorPublicKey, bytes32[] validatorPublicKeyMerkleProof) payable returns()
 func (_Contract *ContractTransactorSession) NewSignatureCommitment(commitmentHash [32]byte, validatorClaimsBitfield []*big.Int, validatorSignature []byte, validatorPosition *big.Int, validatorPublicKey common.Address, validatorPublicKeyMerkleProof [][32]byte) (*types.Transaction, error) {
 	return _Contract.Contract.NewSignatureCommitment(&_Contract.TransactOpts, commitmentHash, validatorClaimsBitfield, validatorSignature, validatorPosition, validatorPublicKey, validatorPublicKeyMerkleProof)
-}
-
-// VerifyBeefyMerkleLeaf is a paid mutator transaction binding the contract method 0x2c307093.
-//
-// Solidity: function verifyBeefyMerkleLeaf(bytes32 beefyMMRLeaf, uint256 beefyMMRLeafIndex, uint256 beefyMMRLeafCount, bytes32[] beefyMMRLeafProof) returns(bool)
-func (_Contract *ContractTransactor) VerifyBeefyMerkleLeaf(opts *bind.TransactOpts, beefyMMRLeaf [32]byte, beefyMMRLeafIndex *big.Int, beefyMMRLeafCount *big.Int, beefyMMRLeafProof [][32]byte) (*types.Transaction, error) {
-	return _Contract.contract.Transact(opts, "verifyBeefyMerkleLeaf", beefyMMRLeaf, beefyMMRLeafIndex, beefyMMRLeafCount, beefyMMRLeafProof)
-}
-
-// VerifyBeefyMerkleLeaf is a paid mutator transaction binding the contract method 0x2c307093.
-//
-// Solidity: function verifyBeefyMerkleLeaf(bytes32 beefyMMRLeaf, uint256 beefyMMRLeafIndex, uint256 beefyMMRLeafCount, bytes32[] beefyMMRLeafProof) returns(bool)
-func (_Contract *ContractSession) VerifyBeefyMerkleLeaf(beefyMMRLeaf [32]byte, beefyMMRLeafIndex *big.Int, beefyMMRLeafCount *big.Int, beefyMMRLeafProof [][32]byte) (*types.Transaction, error) {
-	return _Contract.Contract.VerifyBeefyMerkleLeaf(&_Contract.TransactOpts, beefyMMRLeaf, beefyMMRLeafIndex, beefyMMRLeafCount, beefyMMRLeafProof)
-}
-
-// VerifyBeefyMerkleLeaf is a paid mutator transaction binding the contract method 0x2c307093.
-//
-// Solidity: function verifyBeefyMerkleLeaf(bytes32 beefyMMRLeaf, uint256 beefyMMRLeafIndex, uint256 beefyMMRLeafCount, bytes32[] beefyMMRLeafProof) returns(bool)
-func (_Contract *ContractTransactorSession) VerifyBeefyMerkleLeaf(beefyMMRLeaf [32]byte, beefyMMRLeafIndex *big.Int, beefyMMRLeafCount *big.Int, beefyMMRLeafProof [][32]byte) (*types.Transaction, error) {
-	return _Contract.Contract.VerifyBeefyMerkleLeaf(&_Contract.TransactOpts, beefyMMRLeaf, beefyMMRLeafIndex, beefyMMRLeafCount, beefyMMRLeafProof)
-}
-
-// VerifyNewestMMRLeaf is a paid mutator transaction binding the contract method 0x3ff09606.
-//
-// Solidity: function verifyNewestMMRLeaf((uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) leaf, bytes32[] proof, bytes32 root, uint64 leafIndex, uint64 leafCount) returns()
-func (_Contract *ContractTransactor) VerifyNewestMMRLeaf(opts *bind.TransactOpts, leaf BeefyLightClientBeefyMMRLeaf, proof [][32]byte, root [32]byte, leafIndex uint64, leafCount uint64) (*types.Transaction, error) {
-	return _Contract.contract.Transact(opts, "verifyNewestMMRLeaf", leaf, proof, root, leafIndex, leafCount)
-}
-
-// VerifyNewestMMRLeaf is a paid mutator transaction binding the contract method 0x3ff09606.
-//
-// Solidity: function verifyNewestMMRLeaf((uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) leaf, bytes32[] proof, bytes32 root, uint64 leafIndex, uint64 leafCount) returns()
-func (_Contract *ContractSession) VerifyNewestMMRLeaf(leaf BeefyLightClientBeefyMMRLeaf, proof [][32]byte, root [32]byte, leafIndex uint64, leafCount uint64) (*types.Transaction, error) {
-	return _Contract.Contract.VerifyNewestMMRLeaf(&_Contract.TransactOpts, leaf, proof, root, leafIndex, leafCount)
-}
-
-// VerifyNewestMMRLeaf is a paid mutator transaction binding the contract method 0x3ff09606.
-//
-// Solidity: function verifyNewestMMRLeaf((uint8,uint32,bytes32,bytes32,uint64,uint32,bytes32) leaf, bytes32[] proof, bytes32 root, uint64 leafIndex, uint64 leafCount) returns()
-func (_Contract *ContractTransactorSession) VerifyNewestMMRLeaf(leaf BeefyLightClientBeefyMMRLeaf, proof [][32]byte, root [32]byte, leafIndex uint64, leafCount uint64) (*types.Transaction, error) {
-	return _Contract.Contract.VerifyNewestMMRLeaf(&_Contract.TransactOpts, leaf, proof, root, leafIndex, leafCount)
 }
 
 // ContractFinalVerificationSuccessfulIterator is returned from FilterFinalVerificationSuccessful and is used to iterate over the raw logs and unpacked data for FinalVerificationSuccessful events raised by the Contract contract.

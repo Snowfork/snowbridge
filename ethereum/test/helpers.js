@@ -6,7 +6,7 @@ const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ValidatorRegistry = artifacts.require("ValidatorRegistry");
-const MMRVerification = artifacts.require("MMRVerification");
+const SimplifiedMMRVerification = artifacts.require("SimplifiedMMRVerification");
 const BeefyLightClient = artifacts.require("BeefyLightClient");
 
 const fixture = require('./fixtures/full-flow-basic.json');
@@ -84,11 +84,11 @@ const deployBeefyLightClient = async (root, numberOfValidators) => {
 
   const validatorRegistry = await initValidatorRegistry(root,
     numberOfValidators, 0);
-  const mmrVerification = await MMRVerification.new();
+  const simplifiedMMRVerification = await SimplifiedMMRVerification.new();
 
   const beefyLightClient = await BeefyLightClient.new(
     validatorRegistry.address,
-    mmrVerification.address,
+    simplifiedMMRVerification.address,
     0
   );
 

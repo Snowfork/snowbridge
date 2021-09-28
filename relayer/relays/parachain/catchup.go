@@ -3,6 +3,7 @@ package parachain
 import (
 	"context"
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -201,6 +202,12 @@ func (li *BeefyListener) parablocksWithProofs(
 			return nil, err
 		}
 
+		simplifiedProof, err := merkle.ConvertToSimplifiedMMRProof(mmrProof.BlockHash, uint64(mmrProof.Proof.LeafIndex), mmrProof.Leaf, uint64(mmrProof.Proof.LeafCount), mmrProof.Proof.Items)
+		if err != nil {
+			log.WithError(err).Error("Failed to simplify mmr proof")
+			return nil, err
+		}
+
 		mmrRootHashKey, err := types.CreateStorageKey(li.relaychainConn.Metadata(), "Mmr", "RootHash", nil, nil)
 		if err != nil {
 			log.Error(err)
@@ -232,7 +239,7 @@ func (li *BeefyListener) parablocksWithProofs(
 
 		blockWithProof := ParaBlockWithProofs{
 			Block:            block,
-			MMRProofResponse: mmrProof,
+			MMRProof: simplifiedProof,
 			MMRRootHash:      mmrRootHash,
 			Header:           ownParaHead,
 			MerkleProofData:  merkleProofData,

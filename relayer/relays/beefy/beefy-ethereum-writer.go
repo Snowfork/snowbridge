@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -94,6 +95,12 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 					return err
 				}
 			}
+			// Rate-limit transaction sending to reduce the chance of transactions using the same pending nonce.
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(2 * time.Second):
+			}
 		}
 	}
 }
@@ -141,11 +148,10 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 	}
 
 	signedValidators := []*big.Int{}
-	for i := range beefyJustification.SignedCommitment.Signatures {
-		// TODO: skip over empty/missing signatures
-		// if signature.Option.IsSome() {
-		signedValidators = append(signedValidators, big.NewInt(int64(i)))
-		// }
+	for i, signature := range beefyJustification.SignedCommitment.Signatures {
+		if signature.Option.IsSome() {
+			signedValidators = append(signedValidators, big.NewInt(int64(i)))
+		}
 	}
 	numberOfValidators := big.NewInt(int64(len(beefyJustification.SignedCommitment.Signatures)))
 	initialBitfield, err := contract.CreateInitialBitfield(
@@ -264,9 +270,10 @@ func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Cont
 		msg.Commitment,
 		validatorProof,
 		msg.LatestMMRLeaf,
-		msg.MMRLeafIndex,
-		msg.MMRLeafCount,
-		msg.MMRProofItems)
+		beefylightclient.SimplifiedMMRProof{
+			MerkleProofItems:         msg.SimplifiedProof.MerkleProofItems,
+			MerkleProofOrderBitField: msg.SimplifiedProof.MerkleProofOrderBitField,
+		})
 
 	if err != nil {
 		log.WithError(err).Error("Failed to submit transaction")
