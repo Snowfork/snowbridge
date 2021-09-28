@@ -820,6 +820,36 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn benchmark_metadata(extra: bool) -> (
+			Vec<frame_benchmarking::BenchmarkList>,
+			Vec<frame_support::traits::StorageInfo>,
+		) {
+			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+			use frame_support::traits::StorageInfoTrait;
+			use frame_system_benchmarking::Pallet as SystemBench;
+
+			let mut list = Vec::<BenchmarkList>::new();
+
+			list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
+			list_benchmark!(list, extra, pallet_balances, Balances);
+			list_benchmark!(list, extra, pallet_collective, LocalCouncil);
+			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
+			list_benchmark!(list, extra, pallet_utility, Utility);
+			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
+			list_benchmark!(list, extra, assets, Assets);
+			list_benchmark!(list, extra, basic_channel::inbound, BasicInboundChannel);
+			list_benchmark!(list, extra, basic_channel::outbound, BasicOutboundChannel);
+			list_benchmark!(list, extra, incentivized_channel::inbound, IncentivizedInboundChannel);
+			list_benchmark!(list, extra, incentivized_channel::outbound, IncentivizedOutboundChannel);
+			list_benchmark!(list, extra, dot_app, DotApp);
+			list_benchmark!(list, extra, erc20_app, Erc20App);
+			list_benchmark!(list, extra, eth_app, EthApp);
+
+			let storage_info = AllPalletsWithSystem::storage_info();
+
+			return (list, storage_info)
+		}
+
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
