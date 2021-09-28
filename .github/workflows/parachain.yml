@@ -85,11 +85,12 @@ jobs:
           args: >-
             --manifest-path parachain/Cargo.toml
             --verbose --workspace
-            --exclude artemis
+            --exclude snowbridge
             --exclude snowbridge-runtime
-            --exclude artemis-rococo-runtime
+            --exclude snowbridge-rococo-runtime
             --exclude local-runtime
             --exclude-files '*/mock.rs,*/tests.rs'
             --features runtime-benchmarks
+            --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
           toolchain: nightly-2021-07-01
