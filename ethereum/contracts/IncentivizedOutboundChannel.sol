@@ -17,8 +17,8 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     // Nonce for last submitted message
     uint64 public nonce;
 
-    uint256 private fee;
-    FeeSource private feeSource;
+    uint256 public fee;
+    FeeSource public feeSource;
 
     event Message(
         address source,
