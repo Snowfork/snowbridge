@@ -1,6 +1,6 @@
-
 use super::*;
 
+use frame_support::traits::GenesisBuild;
 use sp_core::{H160, H256};
 use frame_support::{
 	assert_ok, assert_noop,
@@ -19,7 +19,6 @@ use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 use hex_literal::hex;
 
 use crate::inbound::Error;
-
 use crate::inbound as basic_inbound_channel;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -32,7 +31,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		BasicInboundChannel: basic_inbound_channel::{Pallet, Call, Storage, Event},
+		BasicInboundChannel: basic_inbound_channel::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -43,7 +42,7 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
-impl system::Config for Test {
+impl frame_system::Config for Test {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
 	type BlockLength = ();
@@ -89,7 +88,7 @@ impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
 	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_dispatch_event(_: MessageId) -> Option<<Test as system::Config>::Event> {
+	fn successful_dispatch_event(_: MessageId) -> Option<<Test as frame_system::Config>::Event> {
 		None
 	}
 }
@@ -110,7 +109,7 @@ pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
 pub fn new_tester_with_config(config: basic_inbound_channel::GenesisConfig) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	config.assimilate_storage(&mut storage).unwrap();
+	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
@@ -197,7 +196,7 @@ fn test_submit() {
 			},
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_1));
-		let nonce: u64 = Nonce::get();
+		let nonce: u64 = <Nonce<Test>>::get();
 		assert_eq!(nonce, 1);
 
 		// Submit message 2
@@ -210,7 +209,7 @@ fn test_submit() {
 			},
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_2));
-		let nonce: u64 = Nonce::get();
+		let nonce: u64 = <Nonce<Test>>::get();
 		assert_eq!(nonce, 2);
 	});
 }
@@ -231,7 +230,7 @@ fn test_submit_with_invalid_nonce() {
 			},
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message.clone()));
-		let nonce: u64 = Nonce::get();
+		let nonce: u64 = <Nonce<Test>>::get();
 		assert_eq!(nonce, 1);
 
 		// Submit the same again

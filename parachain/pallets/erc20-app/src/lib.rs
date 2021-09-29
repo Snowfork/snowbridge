@@ -16,24 +16,9 @@
 //!
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_system::{self as system, ensure_signed};
-use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::{DispatchError, DispatchResult},
-	traits::EnsureOrigin,
-	transactional,
-	weights::Weight,
-};
-use sp_runtime::traits::StaticLookup;
-use sp_std::prelude::*;
-use sp_core::{H160, U256};
-
-use snowbridge_core::{ChannelId, OutboundRouter, AssetId, MultiAsset};
-
 mod payload;
-use payload::OutboundPayload;
-
 mod benchmarking;
+pub mod weights;
 
 #[cfg(test)]
 mod mock;
@@ -41,66 +26,99 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// Weight functions needed for this pallet.
-pub trait WeightInfo {
-	fn burn() -> Weight;
-	fn mint() -> Weight;
-}
+use frame_system::{ensure_signed};
+use frame_support::{
+	dispatch::{DispatchError, DispatchResult},
+	traits::EnsureOrigin,
+	transactional,
+};
+use sp_runtime::traits::StaticLookup;
+use sp_std::prelude::*;
+use sp_core::{H160, U256};
 
-impl WeightInfo for () {
-	fn burn() -> Weight { 0 }
-	fn mint() -> Weight { 0 }
-}
+use snowbridge_core::{ChannelId, OutboundRouter, AssetId, MultiAsset};
 
-pub trait Config: system::Config {
-	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
+use payload::OutboundPayload;
+pub use weights::WeightInfo;
 
-	type Assets: MultiAsset<<Self as system::Config>::AccountId>;
+pub use pallet::*;
 
-	type OutboundRouter: OutboundRouter<Self::AccountId>;
+#[frame_support::pallet]
+pub mod pallet {
 
-	type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
+	use super::*;
 
-	type WeightInfo: WeightInfo;
-}
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 
-decl_storage! {
-	trait Store for Module<T: Config> as Erc20Module {
-		/// Address of the peer application on the Ethereum side.
-		Address get(fn address) config(): H160;
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
+
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		type Assets:  MultiAsset<<Self as frame_system::Config>::AccountId>;
+
+		type OutboundRouter: OutboundRouter<Self::AccountId>;
+
+		type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
+
+		type WeightInfo: WeightInfo;
 	}
-}
 
-decl_event! {
-    /// Events for the ERC20 module.
-	pub enum Event<T>
-	where
-		AccountId = <T as system::Config>::AccountId,
-	{
-		Burned(H160, AccountId, H160, U256),
-		Minted(H160, H160, AccountId, U256),
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	#[pallet::metadata(T::AccountId = "AccountId")]
+	pub enum Event<T: Config> {
+		Burned(H160, T::AccountId, H160, U256),
+		Minted(H160, H160, T::AccountId, U256),
 	}
-}
 
-decl_error! {
-	pub enum Error for Module<T: Config> {
-		/// The submitted payload could not be decoded.
-		InvalidPayload,
+	#[pallet::storage]
+	#[pallet::getter(fn address)]
+	pub(super) type Address<T: Config> = StorageValue<_, H160, ValueQuery>;
+
+	#[pallet::error]
+	pub enum Error<T> {}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig {
+		pub address: H160,
 	}
-}
 
-decl_module! {
+	#[cfg(feature = "std")]
+	impl Default for GenesisConfig {
+		fn default() -> Self {
+			Self {
+				address: Default::default(),
+			}
+		}
+	}
 
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+		fn build(&self) {
+			<Address<T>>::put(self.address);
+		}
+	}
 
-		type Error = Error<T>;
-
-		fn deposit_event() = default;
-
-		/// Burn an ERC20 token balance
-		#[weight = T::WeightInfo::burn()]
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		#[pallet::weight(T::WeightInfo::burn())]
 		#[transactional]
-		pub fn burn(origin, channel_id: ChannelId, token: H160, recipient: H160, amount: U256) -> DispatchResult {
+		pub fn burn(
+			origin: OriginFor<T>,
+			channel_id: ChannelId,
+			token: H160,
+			recipient: H160,
+			amount: U256
+		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Assets::withdraw(AssetId::Token(token), &who, amount)?;
@@ -112,26 +130,34 @@ decl_module! {
 				amount: amount
 			};
 
-			T::OutboundRouter::submit(channel_id, &who, Address::get(), &message.encode())?;
-			Self::deposit_event(RawEvent::Burned(token, who.clone(), recipient, amount));
+			T::OutboundRouter::submit(channel_id, &who, <Address<T>>::get(), &message.encode())?;
+			Self::deposit_event(Event::Burned(token, who.clone(), recipient, amount));
 
 			Ok(())
 		}
 
-		#[weight = T::WeightInfo::mint()]
+		#[pallet::weight(T::WeightInfo::mint())]
 		#[transactional]
-		pub fn mint(origin, token: H160, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, amount: U256) -> DispatchResult {
+		pub fn mint(
+			origin: OriginFor<T>,
+			token: H160,
+			sender: H160,
+			recipient: <T::Lookup as StaticLookup>::Source,
+			amount: U256
+		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
-			if who != Address::get() {
+			if who != <Address<T>>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
 			T::Assets::deposit(AssetId::Token(token), &recipient, amount)?;
-			Self::deposit_event(RawEvent::Minted(token, sender, recipient, amount));
+			Self::deposit_event(Event::Minted(token, sender, recipient, amount));
 
 			Ok(())
 		}
-
 	}
 }
+
+
+

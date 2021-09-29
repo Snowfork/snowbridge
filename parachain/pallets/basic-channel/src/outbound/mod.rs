@@ -1,27 +1,29 @@
-use codec::{Encode, Decode};
-use ethabi::{self, Token};
-use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage,
-	weights::Weight,
-	dispatch::DispatchResult,
-	traits::{Get, EnsureOrigin},
-	ensure,
-};
-use frame_system::{self as system};
-use sp_core::{H160, H256, RuntimeDebug};
-use sp_io::offchain_index;
-use sp_runtime::{
-	traits::{Hash, Zero, StaticLookup},
-};
-use sp_std::prelude::*;
-
-use snowbridge_core::{ChannelId, MessageNonce, types::AuxiliaryDigestItem};
+pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
 #[cfg(test)]
 mod test;
+
+use codec::{Encode, Decode};
+use ethabi::{self, Token};
+use frame_support::{
+	dispatch::DispatchResult,
+	traits::{Get, EnsureOrigin},
+	ensure,
+};
+use sp_core::{H160, H256, RuntimeDebug};
+use sp_io::offchain_index;
+use sp_runtime::{
+	traits::{Hash, Zero, StaticLookup},
+};
+
+use sp_std::prelude::*;
+
+use snowbridge_core::{ChannelId, MessageNonce, types::AuxiliaryDigestItem};
+
+pub use weights::WeightInfo;
 
 /// Wire-format for committed messages
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
@@ -34,64 +36,51 @@ pub struct Message {
 	payload: Vec<u8>,
 }
 
-/// Weight functions needed for this pallet.
-pub trait WeightInfo {
-	fn on_initialize(num_messages: u32, avg_payload_bytes: u32) -> Weight;
-	fn on_initialize_non_interval() -> Weight;
-	fn on_initialize_no_messages() -> Weight;
-	fn set_principal() -> Weight;
-}
+pub use pallet::*;
 
-impl WeightInfo for () {
-	fn on_initialize(_: u32, _: u32) -> Weight { 0 }
-	fn on_initialize_non_interval() -> Weight { 0 }
-	fn on_initialize_no_messages() -> Weight { 0 }
-	fn set_principal() -> Weight { 0 }
-}
+#[frame_support::pallet]
+pub mod pallet {
 
-pub trait Config: system::Config {
-	type Event: From<Event> + Into<<Self as system::Config>::Event>;
+	use super::*;
 
-	/// Prefix for offchain storage keys.
-	const INDEXING_PREFIX: &'static [u8];
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 
-	type Hashing: Hash<Output = H256>;
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
-	// Max bytes in a message payload
-	type MaxMessagePayloadSize: Get<usize>;
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-	/// Max number of messages that can be queued and committed in one go for a given channel.
-	type MaxMessagesPerCommit: Get<usize>;
+		/// Prefix for offchain storage keys.
+		const INDEXING_PREFIX: &'static [u8];
 
-	type SetPrincipalOrigin: EnsureOrigin<Self::Origin>;
+		type Hashing: Hash<Output = H256>;
 
-	/// Weight information for extrinsics in this pallet
-	type WeightInfo: WeightInfo;
-}
+		/// Max bytes in a message payload
+		#[pallet::constant]
+		type MaxMessagePayloadSize: Get<u64>;
 
-decl_storage! {
-	trait Store for Module<T: Config> as BasicOutboundModule {
-		/// Interval between committing messages.
-		Interval get(fn interval) config(): T::BlockNumber;
+		/// Max number of messages per commitment
+		#[pallet::constant]
+		type MaxMessagesPerCommit: Get<u64>;
 
-		/// Messages waiting to be committed.
-		MessageQueue: Vec<Message>;
+		type SetPrincipalOrigin: EnsureOrigin<Self::Origin>;
 
-		/// The Account authorized to submit messages
-		Principal get(fn principal) config(): T::AccountId;
-
-		pub Nonce: u64;
+		/// Weight information for extrinsics in this pallet
+		type WeightInfo: WeightInfo;
 	}
-}
 
-decl_event! {
-	pub enum Event {
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T> {
 		MessageAccepted(MessageNonce),
 	}
-}
 
-decl_error! {
-	pub enum Error for Module<T: Config> {
+	#[pallet::error]
+	pub enum Error<T> {
 		/// The message payload exceeds byte limit.
 		PayloadTooLarge,
 		/// No more messages can be queued for the channel during this commit cycle.
@@ -101,13 +90,50 @@ decl_error! {
 		/// Not authorized to send message
 		NotAuthorized,
 	}
-}
 
-decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
-		type Error = Error<T>;
-		fn deposit_event() = default;
+	/// Interval between commitments
+	#[pallet::storage]
+	#[pallet::getter(fn interval)]
+	pub(super) type Interval<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
 
+	/// Messages waiting to be committed.
+	#[pallet::storage]
+	pub(super) type MessageQueue<T: Config> = StorageValue<_, Vec<Message>, ValueQuery>;
+
+	/// Fee for accepting a message
+	#[pallet::storage]
+	#[pallet::getter(fn principal)]
+	pub(super) type Principal<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+
+	#[pallet::storage]
+	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub interval: T::BlockNumber,
+		pub principal: T::AccountId,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self {
+				interval: Default::default(),
+				principal: Default::default(),
+			}
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			<Interval<T>>::put(self.interval);
+			<Principal<T>>::put(self.principal.clone());
+		}
+	}
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		// Generate a message commitment every [`Interval`] blocks.
 		//
 		// The commitment hash is included in an [`AuxiliaryDigestItem`] in the block header,
@@ -119,101 +145,104 @@ decl_module! {
 				T::WeightInfo::on_initialize_non_interval()
 			}
 		}
+	}
 
-		#[weight = T::WeightInfo::set_principal()]
-		pub fn set_principal(origin, principal: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		#[pallet::weight(T::WeightInfo::set_principal())]
+		pub fn set_principal(origin: OriginFor<T>, principal: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
 			T::SetPrincipalOrigin::ensure_origin(origin)?;
 			let principal = T::Lookup::lookup(principal)?;
 			<Principal<T>>::put(principal);
 			Ok(())
 		}
 	}
-}
 
-impl<T: Config> Module<T> {
-
-	/// Submit message on the outbound channel
-	pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
-		ensure!(
-			*who == Self::principal(),
-			Error::<T>::NotAuthorized,
-		);
-		ensure!(
-			MessageQueue::decode_len().unwrap_or(0) < T::MaxMessagesPerCommit::get(),
-			Error::<T>::QueueSizeLimitReached,
-		);
-		ensure!(
-			payload.len() <= T::MaxMessagePayloadSize::get(),
-			Error::<T>::PayloadTooLarge,
-		);
-
-		Nonce::try_mutate(|nonce| -> DispatchResult {
-			if let Some(v) = nonce.checked_add(1) {
-				*nonce = v;
-			} else {
-				return Err(Error::<T>::Overflow.into())
-			}
-
-			MessageQueue::append(
-				Message {
-					target,
-					nonce: *nonce,
-					payload: payload.to_vec(),
-				},
+	impl<T: Config> Pallet<T> {
+		/// Submit message on the outbound channel
+		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
+			ensure!(
+				*who == Self::principal(),
+				Error::<T>::NotAuthorized,
 			);
-			<Module<T>>::deposit_event(Event::MessageAccepted(*nonce));
-			Ok(())
-		})
-	}
+			ensure!(
+				<MessageQueue<T>>::decode_len().unwrap_or(0) < T::MaxMessagesPerCommit::get() as usize,
+				Error::<T>::QueueSizeLimitReached,
+			);
+			ensure!(
+				payload.len() <= T::MaxMessagePayloadSize::get() as usize,
+				Error::<T>::PayloadTooLarge,
+			);
 
-	fn commit() -> Weight {
-		let messages: Vec<Message> = MessageQueue::take();
-		if messages.is_empty() {
-			return T::WeightInfo::on_initialize_no_messages();
+			<Nonce<T>>::try_mutate(|nonce| -> DispatchResult {
+				if let Some(v) = nonce.checked_add(1) {
+					*nonce = v;
+				} else {
+					return Err(Error::<T>::Overflow.into())
+				}
+
+				<MessageQueue<T>>::append(
+					Message {
+						target,
+						nonce: *nonce,
+						payload: payload.to_vec(),
+					},
+				);
+				Self::deposit_event(Event::MessageAccepted(*nonce));
+				Ok(())
+			})
 		}
 
-		let commitment_hash = Self::make_commitment_hash(&messages);
-		let average_payload_size = Self::average_payload_size(&messages);
+		fn commit() -> Weight {
+			let messages: Vec<Message> = <MessageQueue<T>>::take();
+			if messages.is_empty() {
+				return T::WeightInfo::on_initialize_no_messages();
+			}
 
-		let digest_item = AuxiliaryDigestItem::Commitment(
-			ChannelId::Basic,
-			commitment_hash.clone()
-		).into();
-		<frame_system::Pallet<T>>::deposit_log(digest_item);
+			let commitment_hash = Self::make_commitment_hash(&messages);
+			let average_payload_size = Self::average_payload_size(&messages);
 
-		let key = Self::make_offchain_key(commitment_hash);
-		offchain_index::set(&*key, &messages.encode());
+			let digest_item = AuxiliaryDigestItem::Commitment(
+				ChannelId::Incentivized,
+				commitment_hash.clone()
+			).into();
+			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
-		T::WeightInfo::on_initialize(
-			messages.len() as u32,
-			average_payload_size as u32
-		)
-	}
+			let key = Self::make_offchain_key(commitment_hash);
+			offchain_index::set(&*key, &messages.encode());
 
-	fn make_commitment_hash(messages: &[Message]) -> H256 {
-		let messages: Vec<Token> = messages
-			.iter()
-			.map(|message| {
-				Token::Tuple(vec![
-					Token::Address(message.target),
-					Token::Uint(message.nonce.into()),
-					Token::Bytes(message.payload.clone())
-				])
-			})
-			.collect();
-		let input = ethabi::encode(&vec![Token::Array(messages)]);
-		<T as Config>::Hashing::hash(&input)
-	}
+			T::WeightInfo::on_initialize(
+				messages.len() as u32,
+				average_payload_size as u32
+			)
+		}
 
-	fn average_payload_size(messages: &[Message]) -> usize {
-		let sum: usize = messages.iter()
-			.fold(0, |acc, x| acc + x.payload.len());
-		// We overestimate message payload size rather than underestimate.
-		// So add 1 here to account for integer division truncation.
-		(sum / messages.len()).saturating_add(1)
-	}
+		fn make_commitment_hash(messages: &[Message]) -> H256 {
+			let messages: Vec<Token> = messages
+				.iter()
+				.map(|message| {
+					Token::Tuple(vec![
+						Token::Address(message.target),
+						Token::Uint(message.nonce.into()),
+						Token::Bytes(message.payload.clone())
+					])
+				})
+				.collect();
+			let input = ethabi::encode(&vec![Token::Array(messages)]);
+			<T as Config>::Hashing::hash(&input)
+		}
 
-	fn make_offchain_key(hash: H256) -> Vec<u8> {
-		(T::INDEXING_PREFIX, ChannelId::Basic, hash).encode()
+		fn average_payload_size(messages: &[Message]) -> usize {
+			let sum: usize = messages.iter()
+				.fold(0, |acc, x| acc + x.payload.len());
+			// We overestimate message payload size rather than underestimate.
+			// So add 1 here to account for integer division truncation.
+			(sum / messages.len()).saturating_add(1)
+		}
+
+		fn make_offchain_key(hash: H256) -> Vec<u8> {
+			(T::INDEXING_PREFIX, ChannelId::Incentivized, hash).encode()
+		}
 	}
 }
+

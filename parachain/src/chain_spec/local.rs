@@ -130,7 +130,6 @@ fn testnet_genesis(
 		},
 		dot_app: local_runtime::DotAppConfig {
 			address: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
-			phantom: Default::default(),
 		},
 		eth_app: local_runtime::EthAppConfig {
 			address: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into()

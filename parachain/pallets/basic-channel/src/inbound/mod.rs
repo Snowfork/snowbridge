@@ -1,11 +1,12 @@
-use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::DispatchResult,
-	weights::Weight,
-};
-use frame_system::{self as system, ensure_signed};
+mod envelope;
+mod benchmarking;
+pub mod weights;
+
+#[cfg(test)]
+mod test;
+
+use frame_system::ensure_signed;
 use sp_core::H160;
-use sp_std::prelude::*;
 use sp_std::convert::TryFrom;
 use snowbridge_core::{
 	ChannelId, Message, MessageId,
@@ -13,51 +14,44 @@ use snowbridge_core::{
 };
 
 use envelope::Envelope;
+pub use weights::WeightInfo;
 
-mod benchmarking;
+pub use pallet::*;
 
-#[cfg(test)]
-mod test;
+#[frame_support::pallet]
+pub mod pallet {
 
-mod envelope;
+	use super::*;
 
-/// Weight functions needed for this pallet.
-pub trait WeightInfo {
-	fn submit() -> Weight;
-}
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 
-impl WeightInfo for () {
-	fn submit() -> Weight { 0 }
-}
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
-pub trait Config: system::Config {
-	type Event: From<Event> + Into<<Self as system::Config>::Event>;
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-	/// Verifier module for message verification.
-	type Verifier: Verifier;
+		/// Verifier module for message verification.
+		type Verifier: Verifier;
 
-	/// Verifier module for message verification.
-	type MessageDispatch: MessageDispatch<Self, MessageId>;
+		/// Verifier module for message verification.
+		type MessageDispatch: MessageDispatch<Self, MessageId>;
 
-	/// Weight information for extrinsics in this pallet
-	type WeightInfo: WeightInfo;
-}
-
-decl_storage! {
-	trait Store for Module<T: Config> as BasicInboundModule {
-		pub SourceChannel get(fn source_channel) config(): H160;
-		pub Nonce: u64;
+		/// Weight information for extrinsics in this pallet
+		type WeightInfo: WeightInfo;
 	}
-}
 
-decl_event! {
-	pub enum Event {
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
-	}
-}
+	#[pallet::event]
+	pub enum Event<T> {}
 
-decl_error! {
-	pub enum Error for Module<T: Config> {
+	#[pallet::error]
+	pub enum Error<T> {
 		/// Message came from an invalid outbound channel on the Ethereum side.
 		InvalidSourceChannel,
 		/// Message has an invalid envelope.
@@ -65,17 +59,40 @@ decl_error! {
 		/// Message has an unexpected nonce.
 		InvalidNonce,
 	}
-}
 
-decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
+	/// Source channel on the ethereum side
+	#[pallet::storage]
+	#[pallet::getter(fn source_channel)]
+	pub type SourceChannel<T: Config> = StorageValue<_, H160, ValueQuery>;
 
-		type Error = Error<T>;
+	#[pallet::storage]
+	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
 
-		fn deposit_event() = default;
+	#[pallet::genesis_config]
+	pub struct GenesisConfig {
+		pub source_channel: H160,
+	}
 
-		#[weight = T::WeightInfo::submit()]
-		pub fn submit(origin, message: Message) -> DispatchResult {
+	#[cfg(feature = "std")]
+	impl Default for GenesisConfig {
+		fn default() -> Self {
+			Self {
+				source_channel: Default::default(),
+			}
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+		fn build(&self) {
+			<SourceChannel<T>>::put(self.source_channel);
+		}
+	}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		#[pallet::weight(T::WeightInfo::submit())]
+		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			ensure_signed(origin)?;
 			// submit message to verifier for verification
 			let log = T::Verifier::verify(&message)?;
@@ -85,12 +102,12 @@ decl_module! {
 
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
-			if envelope.channel != SourceChannel::get() {
+			if envelope.channel != <SourceChannel<T>>::get() {
 				return Err(Error::<T>::InvalidSourceChannel.into())
 			}
 
 			// Verify message nonce
-			Nonce::try_mutate(|nonce| -> DispatchResult {
+			<Nonce<T>>::try_mutate(|nonce| -> DispatchResult {
 				if envelope.nonce != *nonce + 1 {
 					Err(Error::<T>::InvalidNonce.into())
 				} else {

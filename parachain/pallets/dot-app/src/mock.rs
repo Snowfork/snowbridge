@@ -30,7 +30,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
         Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
-        DotApp: dot_app::{Pallet, Call, Config<T>, Storage, Event<T>},
+        DotApp: dot_app::{Pallet, Call, Config, Storage, Event<T>},
     }
 );
 
@@ -129,12 +129,10 @@ pub fn new_tester() -> sp_io::TestExternalities {
         .build_storage::<Test>()
         .unwrap();
 
-    let config: dot_app::GenesisConfig<Test> = dot_app::GenesisConfig {
+    let config = dot_app::GenesisConfig {
         address: H160::repeat_byte(1),
-        phantom: Default::default(),
     };
-
-    config.assimilate_storage(&mut storage).unwrap();
+    GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
     let mut ext: sp_io::TestExternalities = storage.into();
     ext.execute_with(|| System::set_block_number(1));

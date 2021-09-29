@@ -1,6 +1,7 @@
 use sp_std::marker::PhantomData;
 
 // Mock runtime
+use frame_support::traits::GenesisBuild;
 use sp_core::{H160, H256};
 use frame_support::{
 	parameter_types,
@@ -112,7 +113,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	let config = eth_app::GenesisConfig {
 		address: H160::repeat_byte(1),
 	};
-	config.assimilate_storage(&mut storage).unwrap();
+	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));

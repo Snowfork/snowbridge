@@ -1,8 +1,7 @@
-use crate::mock::{new_tester, AccountId, Origin, Event, System, Asset, EthApp};
+use crate::mock::{Test, new_tester, AccountId, Origin, Event, System, Asset, EthApp};
 use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
-use crate::RawEvent;
 
 use snowbridge_core::{SingleAsset, ChannelId};
 
@@ -19,7 +18,7 @@ fn mints_after_handling_ethereum_event() {
 		let amount = 10;
 		assert_ok!(
 			EthApp::mint(
-				snowbridge_dispatch::Origin(peer_contract).into(),
+				snowbridge_dispatch::RawOrigin(peer_contract).into(),
 				sender,
 				recipient.clone(),
 				amount.into()
@@ -28,7 +27,7 @@ fn mints_after_handling_ethereum_event() {
 		assert_eq!(Asset::balance(&recipient), amount.into());
 
 		assert_eq!(
-			Event::EthApp(RawEvent::Minted(sender, recipient, amount.into())),
+			Event::EthApp(crate::Event::<Test>::Minted(sender, recipient, amount.into())),
 			last_event()
 		);
 	});
@@ -48,7 +47,7 @@ fn burn_should_emit_bridge_event() {
 			20.into()));
 
 		assert_eq!(
-			Event::EthApp(RawEvent::Burned(bob, recipient, 20.into())),
+			Event::EthApp(crate::Event::<Test>::Burned(bob, recipient, 20.into())),
 			last_event()
 		);
 	});

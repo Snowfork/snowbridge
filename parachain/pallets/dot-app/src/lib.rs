@@ -68,19 +68,6 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 	}
 
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		// Verify that `T::Decimals` is 10 (DOT), or 12 (KSM) to guarantee
-		// safe conversions between native and wrapped DOT.
-		#[cfg(feature = "std")]
-		fn integrity_test() {
-			sp_io::TestExternalities::new_empty().execute_with(|| {
-				let allowed_decimals: &[u32] = &[10, 12];
-				let decimals = T::Decimals::get();
-				assert!(allowed_decimals.contains(&decimals))
-			});
-		}
-	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -105,23 +92,21 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig<T> {
+	pub struct GenesisConfig {
 		pub address: H160,
-		pub phantom: sp_std::marker::PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
+	impl Default for GenesisConfig {
 		fn default() -> Self {
 			Self {
 				address: Default::default(),
-				phantom: Default::default(),
 			}
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
 			<Address<T>>::put(self.address);
 		}

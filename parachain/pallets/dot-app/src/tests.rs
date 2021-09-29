@@ -53,7 +53,7 @@ fn should_unlock() {
 
 		assert_ok!(
 			DotApp::unlock(
-				snowbridge_dispatch::Origin(peer_contract).into(),
+				snowbridge_dispatch::RawOrigin(peer_contract).into(),
 				sender,
 				recipient.clone(),
 				amount_wrapped,
@@ -83,7 +83,7 @@ fn should_not_unlock_on_bad_origin_failure() {
 
 		assert_noop!(
 			DotApp::unlock(
-				snowbridge_dispatch::Origin(unknown_peer_contract).into(),
+				snowbridge_dispatch::RawOrigin(unknown_peer_contract).into(),
 				sender,
 				recipient.clone(),
 				amount_wrapped,
