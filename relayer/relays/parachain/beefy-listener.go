@@ -3,6 +3,7 @@ package parachain
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -109,16 +110,31 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
-		messagePackages, err := li.buildMissedMessagePackages(ctx,
-			beefyBlockNumber, beefyBlockHash, paraBlockNumber, paraBlockHash)
+		tasks, err := li.buildMissedMessagePackages(
+			ctx,
+			beefyBlockNumber,
+			beefyBlockHash,
+			paraBlockNumber,
+			paraBlockHash,
+		)
 		if err != nil {
-			log.WithError(err).Error("Failed to build missed message package")
+			log.WithError(err).Error("Failed to build tasks")
 			return err
 		}
 
-		err = li.emitMessagePackages(ctx, messagePackages)
-		if err != nil {
-			return err
+		// sort tasks by ascending block number
+		sort.SliceStable(tasks, func(i, j int) bool {
+			return tasks[i].BlockNumber < tasks[j].BlockNumber
+		})
+
+		for _, task := range tasks {
+			task.ProofOutput, err = li.generateProof(ctx, task.ProofInput)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case li.messages <- task:
+				log.Info("Beefy Listener emitted new task")
+			}
 		}
 
 		err = li.subBeefyJustifications(ctx)
@@ -221,7 +237,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 	return nil
 }
 
-func (li *BeefyListener) emitMessagePackages(ctx context.Context, packages []MessagePackage) error {
+func (li *BeefyListener) emitTask(ctx context.Context, task *Task) error {
 	for _, messagePackage := range packages {
 		select {
 		case <-ctx.Done():

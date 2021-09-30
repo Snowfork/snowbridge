@@ -3,7 +3,6 @@ package parachain
 import (
 	"context"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -12,6 +11,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -20,8 +20,12 @@ import (
 // This method creates proofs based on the mmr root at the specific given relaychainBlock and so
 // the proofs will need to be verified by the mmr root for that relay chain block
 func (li *BeefyListener) buildMissedMessagePackages(
-	ctx context.Context, relaychainBlock uint64, relaychainBlockHash types.Hash, paraBlock uint64, paraHash types.Hash) (
-	[]MessagePackage, error) {
+	ctx context.Context,
+	polkadotBlockNumber uint64,
+	polkadotBlockHash types.Hash,
+	paraBlock uint64,
+	paraHash types.Hash,
+) ([]*Task, error) {
 	basicContract, err := basic.NewBasicInboundChannel(common.HexToAddress(
 		li.config.Contracts.BasicInboundChannel),
 		li.ethereumConn.GetClient(),
@@ -101,7 +105,7 @@ func (li *BeefyListener) buildMissedMessagePackages(
 
 	log.Info("Nonces are not all up to date - searching for lost commitments")
 
-	paraBlocks, err := li.searchForLostCommitments(paraBlock, ethBasicNonce, ethIncentivizedNonce)
+	tasks, err := li.scanForCommitments(paraBlock, ethBasicNonce, ethIncentivizedNonce)
 	if err != nil {
 		return nil, err
 	}
@@ -109,152 +113,147 @@ func (li *BeefyListener) buildMissedMessagePackages(
 	log.Info("Stopped searching for lost commitments")
 
 	log.WithFields(log.Fields{
-		"blocks": paraBlocks,
-	}).Info("Found these blocks and commitments")
+		"tasks": tasks,
+	}).Info("Found these tasks")
 
-	blocksWithProofs, err := li.parablocksWithProofs(paraBlocks, relaychainBlock, relaychainBlockHash)
+	li.gatherProofInputs(polkadotBlockNumber, polkadotBlockHash, tasks)
+
+	return tasks, nil
+}
+
+func (li *BeefyListener) gatherProofInputs(
+	polkadotBlockNumber uint64,
+	polkadotBlockHash types.Hash,
+	tasks []*Task,
+) error {
+	api := li.relaychainConn.API()
+
+	// build mapping: Parachain block number -> Task
+	items := make(map[uint64]*Task)
+	for _, task := range tasks {
+		items[task.BlockNumber] = task
+	}
+
+	for len(items) > 0 && polkadotBlockNumber > 0 {
+		paraHeads, err := li.relaychainConn.FetchParaHeads(polkadotBlockHash)
+		if err != nil {
+			return err
+		}
+
+		if _, ok := paraHeads[li.paraID]; !ok {
+			return fmt.Errorf("snowbridge is not a registered parachain")
+		}
+
+		paraHeadsAsSlice := make([]relaychain.ParaHead, 0, len(paraHeads))
+		for _, v := range paraHeads {
+			paraHeadsAsSlice = append(paraHeadsAsSlice, v)
+		}
+
+		var snowbridgeHeader types.Header
+		if err := types.DecodeFromBytes(paraHeads[li.paraID].Data, &snowbridgeHeader); err != nil {
+			log.WithError(err).Error("Failed to decode Header")
+			return err
+		}
+
+		snowbridgeBlockNumber := uint64(snowbridgeHeader.Number)
+
+		if task, ok := items[snowbridgeBlockNumber]; ok {
+			task.ProofInput = &ProofInput{
+				polkadotBlockNumber,
+				paraHeadsAsSlice,
+			}
+			delete(items, snowbridgeBlockNumber)
+		}
+
+		polkadotBlockNumber--
+		polkadotBlockHash, err = api.RPC.Chain.GetBlockHash(polkadotBlockNumber)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(items) > 0 {
+		return fmt.Errorf("Could not gather all proof inputs")
+	}
+
+	return nil
+}
+
+func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (*ProofOutput, error) {
+
+	polkadotBlockNumber, polkadotBlockHash, err := li.fetchLatestBeefyBlock(ctx)
+	if err != nil {
+		log.WithError(err).Error("Failed to get latest relay chain block number and hash")
+		return nil, err
+	}
+
+	mmrProof, err := li.relaychainConn.GetMMRLeafForBlock(
+		polkadotBlockNumber + 1,
+		polkadotBlockHash,
+		li.config.Polkadot.BeefyStartingBlock,
+	)
+	if err != nil {
+		log.WithError(err).Error("Failed to get mmr leaf")
+		return nil, err
+	}
+
+	simplifiedProof, err := merkle.ConvertToSimplifiedMMRProof(
+		mmrProof.BlockHash,
+		uint64(mmrProof.Proof.LeafIndex),
+		mmrProof.Leaf,
+		uint64(mmrProof.Proof.LeafCount),
+		mmrProof.Proof.Items,
+	)
+	if err != nil {
+		log.WithError(err).Error("Failed to simplify mmr proof")
+		return nil, err
+	}
+
+	mmrRootHashKey, err := types.CreateStorageKey(li.relaychainConn.Metadata(), "Mmr", "RootHash", nil, nil)
 	if err != nil {
 		log.Error(err)
 		return nil, err
 	}
-
-	// Reverse blocks to be in ascending order
-	for i, j := 0, len(blocksWithProofs)-1; i < j; i, j = i+1, j-1 {
-		blocksWithProofs[i], blocksWithProofs[j] = blocksWithProofs[j], blocksWithProofs[i]
+	var mmrRootHash types.Hash
+	ok, err := li.relaychainConn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, polkadotBlockHash)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	if !ok {
+		return nil, fmt.Errorf("could not get mmr root hash")
 	}
 
-	log.Info("Packaging blocks and proofs")
-
-	mmrLeafCount, err := li.relaychainConn.FetchMMRLeafCount(relaychainBlockHash)
+	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, li.paraID)
 	if err != nil {
-		log.WithError(err).Error("Failed get MMR Leaf Count")
+		log.WithError(err).Error("Failed to create parachain header proof")
 		return nil, err
 	}
 
-	messagePackages, err := CreateMessagePackages(blocksWithProofs, mmrLeafCount, li.paraID)
-	if err != nil {
-		log.WithError(err).Error("Failed to create message packages")
+	if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
+		err = fmt.Errorf("MMR parachain merkle root does not match calculated parachain merkle root - calculated: %s, mmr: %s", merkleProofData.Root.String(), mmrProof.Leaf.ParachainHeads.Hex())
+		log.WithError(err).Error("Failed to create parachain merkle root")
 		return nil, err
 	}
 
-	log.Info("Created message packages")
+	log.Debug("Created all parachain merkle proof data")
 
-	return messagePackages, nil
-}
-
-// Takes a slice of parachain blocks and augments them with their respective
-// header, header proof and MMR proof at the given relay chain block mmr root
-func (li *BeefyListener) parablocksWithProofs(
-	blocks []ParaBlockWithDigest,
-	latestRelayChainBlockNumber uint64,
-	latestRelaychainBlockHash types.Hash,
-) ([]ParaBlockWithProofs, error) {
-	relayChainBlockNumber := latestRelayChainBlockNumber
-	var relayBlockHash types.Hash
-	var err error
-	var blocksWithProof []ParaBlockWithProofs
-	for _, block := range blocks {
-		var ownParaHead types.Header
-		var heads map[uint32]relaychain.ParaHead
-
-		// Loop back over relay chain blocks to find the one that finalized the given parachain block
-		for ownParaHead.Number != types.BlockNumber(block.BlockNumber) {
-			log.WithField("relayChainBlockNumber", relayChainBlockNumber).Info("Getting hash for relay chain block")
-			relayBlockHash, err = li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(relayChainBlockNumber))
-			if err != nil {
-				log.WithError(err).Error("Failed to get block hash")
-				return nil, err
-			}
-
-			log.WithField("relayBlockHash", relayBlockHash.Hex()).Info("Got relay chain blockhash")
-			heads, err = li.relaychainConn.FetchParaHeads(relayBlockHash)
-			if err != nil {
-				log.WithError(err).Error("Failed to get paraheads")
-				return nil, err
-			}
-
-			log.WithFields(log.Fields{
-				"count": len(heads),
-			}).Info("Fetched para heads")
-
-			if _, ok := heads[li.paraID]; !ok {
-				return nil, fmt.Errorf("chain is not a registered parachain")
-			}
-
-			var header types.Header
-			if err := types.DecodeFromBytes(heads[li.paraID].Data, &header); err != nil {
-				log.WithError(err).Error("Failed to decode Header")
-				return nil, err
-			}
-
-			ownParaHead = header
-
-			relayChainBlockNumber--
-		}
-
-		// Note - relayChainBlockNumber will be one less than the actual block number we want
-		// due to the decrement at the end of the loop, so we increment by 1. Additionally,
-		// parachain merkle roots are created 1 block later than the actual parachain headers,
-		// so we increment twice.
-		mmrProof, err := li.relaychainConn.GetMMRLeafForBlock(uint64(relayChainBlockNumber+2), latestRelaychainBlockHash, li.config.Polkadot.BeefyStartingBlock)
-		if err != nil {
-			log.WithError(err).Error("Failed to get mmr leaf")
-			return nil, err
-		}
-
-		simplifiedProof, err := merkle.ConvertToSimplifiedMMRProof(mmrProof.BlockHash, uint64(mmrProof.Proof.LeafIndex), mmrProof.Leaf, uint64(mmrProof.Proof.LeafCount), mmrProof.Proof.Items)
-		if err != nil {
-			log.WithError(err).Error("Failed to simplify mmr proof")
-			return nil, err
-		}
-
-		mmrRootHashKey, err := types.CreateStorageKey(li.relaychainConn.Metadata(), "Mmr", "RootHash", nil, nil)
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-		var mmrRootHash types.Hash
-		ok, err := li.relaychainConn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, latestRelaychainBlockHash)
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-		if !ok {
-			return nil, fmt.Errorf("could not get mmr root hash")
-		}
-
-		merkleProofData, err := CreateParachainMerkleProof(heads, li.paraID)
-		if err != nil {
-			log.WithError(err).Error("Failed to create parachain header proof")
-			return nil, err
-		}
-
-		if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
-			err = fmt.Errorf("MMR parachain merkle root does not match calculated parachain merkle root - calculated: %s, mmr: %s", merkleProofData.Root.String(), mmrProof.Leaf.ParachainHeads.Hex())
-			log.WithError(err).Error("Failed to create parachain merkle root")
-			return nil, err
-		}
-
-		log.Debug("Created all parachain merkle proof data")
-
-		blockWithProof := ParaBlockWithProofs{
-			Block:            block,
-			MMRProof: simplifiedProof,
-			MMRRootHash:      mmrRootHash,
-			Header:           ownParaHead,
-			MerkleProofData:  merkleProofData,
-		}
-		blocksWithProof = append(blocksWithProof, blockWithProof)
+	output := ProofOutput {
+		MMRProof: simplifiedProof,
+		MMRRootHash: mmrRootHash,
+		MerkleProofData: merkleProofData,
 	}
-	return blocksWithProof, nil
+
+	return &output, nil
 }
 
 // Searches for all lost commitments on each channel from the given parachain block number backwards
 // until it finds the given basic and incentivized nonce
-func (li *BeefyListener) searchForLostCommitments(
+func (li *BeefyListener) scanForCommitments(
 	lastParaBlockNumber uint64,
 	basicNonceToFind uint64,
-	incentivizedNonceToFind uint64) ([]ParaBlockWithDigest, error) {
+	incentivizedNonceToFind uint64,
+) ([]*Task, error) {
 	log.WithFields(log.Fields{
 		"basicNonce":        basicNonceToFind,
 		"incentivizedNonce": incentivizedNonceToFind,
@@ -264,8 +263,10 @@ func (li *BeefyListener) searchForLostCommitments(
 	currentBlockNumber := lastParaBlockNumber + 1
 	basicNonceFound := false
 	incentivizedNonceFound := false
-	var blocks []ParaBlockWithDigest
-	for (!basicNonceFound || !incentivizedNonceFound) && currentBlockNumber != 0 {
+
+	var tasks []*Task
+
+	for (!basicNonceFound || !incentivizedNonceFound) && currentBlockNumber > 0 {
 		currentBlockNumber--
 		log.WithFields(log.Fields{
 			"blockNumber": currentBlockNumber,
@@ -290,48 +291,69 @@ func (li *BeefyListener) searchForLostCommitments(
 			return nil, err
 		}
 
-		var digestItemsWithData []DigestItemWithData
+		commitments := make(map[parachain.ChannelID]Commitment)
 
 		for _, digestItem := range digestItems {
-			if digestItem.IsCommitment {
-				channelID := digestItem.AsCommitment.ChannelID
-				if channelID.IsBasic && !basicNonceFound {
-					isRelayed, messageData, err := li.checkBasicMessageNonces(&digestItem, basicNonceToFind)
-					if err != nil {
-						return nil, err
-					}
-					if isRelayed {
-						basicNonceFound = true
-					} else {
-						item := DigestItemWithData{digestItem, messageData}
-						digestItemsWithData = append(digestItemsWithData, item)
-					}
+			if !digestItem.IsCommitment {
+				continue
+			}
+			channelID := digestItem.AsCommitment.ChannelID
+			if channelID.IsBasic && !basicNonceFound {
+				isRelayed, messageData, err := li.checkBasicMessageNonces(&digestItem, basicNonceToFind)
+				if err != nil {
+					return nil, err
 				}
-				if channelID.IsIncentivized && !incentivizedNonceFound {
-					isRelayed, messageData, err := li.checkIncentivizedMessageNonces(&digestItem, incentivizedNonceToFind)
+				if !isRelayed {
+					var messages []parachain.BasicOutboundChannelMessage
+					err := types.DecodeFromBytes(messageData, &messages)
 					if err != nil {
+						log.WithError(err).Error("Failed to decode commitment messages")
 						return nil, err
 					}
-					if isRelayed {
-						incentivizedNonceFound = true
-					} else {
-						item := DigestItemWithData{digestItem, messageData}
-						digestItemsWithData = append(digestItemsWithData, item)
+					commitments[channelID] = Commitment{
+						digestItem.AsCommitment.Hash,
+						messages,
 					}
+				} else {
+					basicNonceFound = true
+				}
+			}
+			if channelID.IsIncentivized && !incentivizedNonceFound {
+				isRelayed, messageData, err := li.checkIncentivizedMessageNonces(&digestItem, incentivizedNonceToFind)
+				if err != nil {
+					return nil, err
+				}
+				if !isRelayed {
+					var messages []parachain.BasicOutboundChannelMessage
+					err := types.DecodeFromBytes(messageData, &messages)
+					if err != nil {
+						log.WithError(err).Error("Failed to decode commitment messages")
+						return nil, err
+					}
+					commitments[channelID] = Commitment{
+						digestItem.AsCommitment.Hash,
+						messages,
+					}
+				} else {
+					incentivizedNonceFound = true
 				}
 			}
 		}
 
-		if len(digestItemsWithData) != 0 {
-			block := ParaBlockWithDigest{
-				BlockNumber:         currentBlockNumber,
-				DigestItemsWithData: digestItemsWithData,
+		if len(commitments) > 0 {
+			task := Task{
+				ParaID: li.paraID,
+				BlockNumber: currentBlockNumber,
+				Header: header,
+				Commitments: commitments,
+				ProofInput: nil,
+				ProofOutput: nil,
 			}
-			blocks = append(blocks, block)
+			tasks = append(tasks, &task)
 		}
 	}
 
-	return blocks, nil
+	return tasks, nil
 }
 
 func (li *BeefyListener) checkBasicMessageNonces(
