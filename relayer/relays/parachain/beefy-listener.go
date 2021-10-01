@@ -26,7 +26,7 @@ type BeefyListener struct {
 	relaychainConn      *relaychain.Connection
 	parachainConnection *parachain.Connection
 	paraID              uint32
-	messages            chan<- MessagePackage
+	messages            chan<- *Task
 }
 
 func NewBeefyListener(
@@ -34,7 +34,7 @@ func NewBeefyListener(
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
-	messages chan<- MessagePackage,
+	messages chan<- *Task,
 ) *BeefyListener {
 	return &BeefyListener{
 		config:              config,
