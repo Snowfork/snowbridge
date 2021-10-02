@@ -17,8 +17,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod payload;
-mod benchmarking;
 pub mod weights;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 #[cfg(test)]
 mod mock;

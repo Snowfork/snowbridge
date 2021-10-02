@@ -9,7 +9,7 @@ use frame_benchmarking::{
 use frame_support::traits::OnInitialize;
 
 #[allow(unused_imports)]
-use crate::outbound::Module as BasicOutboundChannel;
+use crate::outbound::Pallet as BasicOutboundChannel;
 
 const SEED: u32 = 0;
 
@@ -22,7 +22,7 @@ benchmarks! {
 
 		for _ in 0 .. m {
 			let payload: Vec<u8> = (0..).take(p as usize).collect();
-			MessageQueue::append(Message {
+			<MessageQueue<T>>::append(Message {
 				target: H160::zero(),
 				nonce: 0u64,
 				payload,
@@ -33,16 +33,16 @@ benchmarks! {
 
 	}: { BasicOutboundChannel::<T>::on_initialize(block_number) }
 	verify {
-		assert_eq!(MessageQueue::get().len(), 0);
+		assert_eq!(<MessageQueue<T>>::get().len(), 0);
 	}
 
 	// Benchmark 'on_initialize` for the best case, i.e. nothing is done
 	// because it's not a commitment interval.
 	on_initialize_non_interval {
-		MessageQueue::append(Message {
+		<MessageQueue<T>>::append(Message {
 			target: H160::zero(),
 			nonce: 0u64,
-			payload: vec![1u8; T::MaxMessagePayloadSize::get()],
+			payload: vec![1u8; T::MaxMessagePayloadSize::get() as usize],
 		});
 
 		Interval::<T>::put::<T::BlockNumber>(10u32.into());
@@ -50,13 +50,13 @@ benchmarks! {
 
 	}: { BasicOutboundChannel::<T>::on_initialize(block_number) }
 	verify {
-		assert_eq!(MessageQueue::get().len(), 1);
+		assert_eq!(<MessageQueue<T>>::get().len(), 1);
 	}
 
 	// Benchmark 'on_initialize` for the case where it is a commitment interval
 	// but there are no messages in the queue.
 	on_initialize_no_messages {
-		MessageQueue::kill();
+		<MessageQueue<T>>::kill();
 
 		let block_number = Interval::<T>::get();
 

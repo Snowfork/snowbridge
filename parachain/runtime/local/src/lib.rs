@@ -46,8 +46,6 @@ pub use frame_support::{
 	match_type,
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
-pub use pallet_balances::Call as BalancesCall;
-pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 #[cfg(any(feature = "std", test))]
@@ -508,7 +506,7 @@ use incentivized_channel::outbound as incentivized_channel_outbound;
 
 impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
-	type Verifier = ethereum_light_client::Module<Runtime>;
+	type Verifier = ethereum_light_client::Pallet<Runtime>;
 	type MessageDispatch = dispatch::Pallet<Runtime>;
 	type WeightInfo = ();
 }
@@ -538,7 +536,7 @@ impl Convert<U256, Balance> for FeeConverter {
 
 impl incentivized_channel_inbound::Config for Runtime {
 	type Event = Event;
-	type Verifier = ethereum_light_client::Module<Runtime>;
+	type Verifier = ethereum_light_client::Pallet<Runtime>;
 	type MessageDispatch = dispatch::Pallet<Runtime>;
 	type Currency = Balances;
 	type SourceAccount = SourceAccount;
@@ -656,7 +654,7 @@ construct_runtime!(
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<Test>} = 13,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
-		EthereumLightClient: ethereum_light_client::{Pallet, Call, Storage, Event, Config} = 15,
+		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 15,
 		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
 		NFT: nft::{Pallet, Call, Config<T>, Storage} = 24,
 

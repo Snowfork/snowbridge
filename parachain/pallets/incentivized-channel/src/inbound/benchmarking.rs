@@ -8,12 +8,13 @@ use frame_system::{RawOrigin, self, EventRecord};
 use frame_benchmarking::{benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 use hex_literal::hex;
 use sp_std::convert::TryInto;
+use sp_std::prelude::*;
 
 use snowbridge_core::{ChannelId, Message, MessageId, Proof};
 use snowbridge_ethereum::{Log, Header};
 
 #[allow(unused_imports)]
-use crate::inbound::Module as IncentivizedInboundChannel;
+use crate::inbound::Pallet as IncentivizedInboundChannel;
 
 fn assert_last_event<T: Config>(system_event: <T as frame_system::Config>::Event) {
 	let events = frame_system::Pallet::<T>::events();
@@ -39,8 +40,8 @@ benchmarks! {
 		let envelope: envelope::Envelope<T> = rlp::decode::<Log>(&message.data)
 			.map(|log| log.try_into().unwrap())
 			.unwrap();
-		Nonce::put(envelope.nonce - 1);
-		SourceChannel::put(envelope.channel);
+		<Nonce<T>>::put(envelope.nonce - 1);
+		<SourceChannel<T>>::put(envelope.channel);
 
 		T::Verifier::initialize_storage(
 			vec![header],
@@ -50,7 +51,7 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(caller.clone()), message)
 	verify {
-		assert_eq!(envelope.nonce, Nonce::get());
+		assert_eq!(envelope.nonce, <Nonce<T>>::get());
 
 		let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
 		if let Some(event) = T::MessageDispatch::successful_dispatch_event(message_id) {
@@ -68,11 +69,11 @@ benchmarks! {
 
 		// Pick a value that is different from the initial RewardFraction
 		let fraction = Perbill::from_percent(50);
-		assert!(RewardFraction::get() != fraction);
+		assert!(<RewardFraction<T>>::get() != fraction);
 
 	}: _(authorized_origin, fraction)
 	verify {
-		assert_eq!(RewardFraction::get(), fraction);
+		assert_eq!(<RewardFraction<T>>::get(), fraction);
 	}
 
 	#[extra]
@@ -82,8 +83,8 @@ benchmarks! {
 		let envelope: envelope::Envelope<T> = rlp::decode::<Log>(&message.data)
 			.map(|log| log.try_into().unwrap())
 			.unwrap();
-		Nonce::put(envelope.nonce - 1);
-		SourceChannel::put(envelope.channel);
+		<Nonce<T>>::put(envelope.nonce - 1);
+		<SourceChannel<T>>::put(envelope.channel);
 
 		T::Verifier::initialize_storage(
 			vec![header],
@@ -93,7 +94,7 @@ benchmarks! {
 
 	}: submit(RawOrigin::Signed(caller.clone()), message)
 	verify {
-		assert_eq!(envelope.nonce, Nonce::get());
+		assert_eq!(envelope.nonce, <Nonce<T>>::get());
 
 		let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
 		if let Some(event) = T::MessageDispatch::successful_dispatch_event(message_id) {
@@ -108,8 +109,8 @@ benchmarks! {
 		let envelope: envelope::Envelope<T> = rlp::decode::<Log>(&message.data)
 			.map(|log| log.try_into().unwrap())
 			.unwrap();
-		Nonce::put(envelope.nonce - 1);
-		SourceChannel::put(envelope.channel);
+		<Nonce<T>>::put(envelope.nonce - 1);
+		<SourceChannel<T>>::put(envelope.channel);
 
 		T::Verifier::initialize_storage(
 			vec![header],
@@ -119,7 +120,7 @@ benchmarks! {
 
 	}: submit(RawOrigin::Signed(caller.clone()), message)
 	verify {
-		assert_eq!(envelope.nonce, Nonce::get());
+		assert_eq!(envelope.nonce, <Nonce<T>>::get());
 
 		let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
 		if let Some(event) = T::MessageDispatch::successful_dispatch_event(message_id) {
