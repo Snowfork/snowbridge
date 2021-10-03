@@ -14,7 +14,15 @@ class SubClient {
     const provider = new WsProvider(this.endpoint);
     this.api = await ApiPromise.create({
       provider,
-      typesBundle: bundle
+      typesBundle: bundle,
+      types: {
+        EthereumDifficultyConfig: {
+          byzantiumForkBlock: "u64",
+          constantinopleForkBlock: "u64",
+          muirGlacierForkBlock: "u64",
+          londonForkBlock: "u64"
+        }
+      }
     })
 
     this.keyring = new Keyring({ type: 'sr25519' });

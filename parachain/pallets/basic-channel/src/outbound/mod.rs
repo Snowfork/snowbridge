@@ -203,7 +203,7 @@ pub mod pallet {
 			let average_payload_size = Self::average_payload_size(&messages);
 
 			let digest_item = AuxiliaryDigestItem::Commitment(
-				ChannelId::Incentivized,
+				ChannelId::Basic,
 				commitment_hash.clone()
 			).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
@@ -241,7 +241,7 @@ pub mod pallet {
 		}
 
 		fn make_offchain_key(hash: H256) -> Vec<u8> {
-			(T::INDEXING_PREFIX, ChannelId::Incentivized, hash).encode()
+			(T::INDEXING_PREFIX, ChannelId::Basic, hash).encode()
 		}
 	}
 }
