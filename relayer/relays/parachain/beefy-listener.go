@@ -238,7 +238,7 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 }
 
 func (li *BeefyListener) emitTask(ctx context.Context, task *Task) error {
-	for _, messagePackage := range packages {
+	for _, messagePackage := range task {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
