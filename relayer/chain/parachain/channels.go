@@ -6,7 +6,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 )
 
-
 type BasicOutboundChannelMessages []BasicOutboundChannelMessage
 
 func (ms BasicOutboundChannelMessages) IntoInboundMessages() []basic.BasicInboundChannelMessage {
@@ -14,8 +13,8 @@ func (ms BasicOutboundChannelMessages) IntoInboundMessages() []basic.BasicInboun
 	for _, m := range ms {
 		output = append(output, m.IntoInboundMessage())
 	}
+	return output
 }
-
 
 type BasicOutboundChannelMessage struct {
 	Target  [20]byte

@@ -26,7 +26,7 @@ type BeefyListener struct {
 	relaychainConn      *relaychain.Connection
 	parachainConnection *parachain.Connection
 	paraID              uint32
-	messages            chan<- *Task
+	tasks               chan<- *Task
 }
 
 func NewBeefyListener(
@@ -34,14 +34,14 @@ func NewBeefyListener(
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
-	messages chan<- *Task,
+	tasks chan<- *Task,
 ) *BeefyListener {
 	return &BeefyListener{
 		config:              config,
 		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
-		messages:            messages,
+		tasks:               tasks,
 	}
 }
 
@@ -76,6 +76,8 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	li.paraID = paraID
 
 	eg.Go(func() error {
+		defer close(li.tasks)
+
 		beefyBlockNumber, beefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
 		if err != nil {
 			log.WithError(err).Error("Failed to get latest relay chain block number and hash")
@@ -129,10 +131,13 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 		for _, task := range tasks {
 			task.ProofOutput, err = li.generateProof(ctx, task.ProofInput)
+			if err != nil {
+				return err
+			}
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case li.messages <- task:
+			case li.tasks <- task:
 				log.Info("Beefy Listener emitted new task")
 			}
 		}
@@ -158,9 +163,6 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			log.WithField("reason", ctx.Err()).Info("Shutting down beefy listener")
-			if li.messages != nil {
-				close(li.messages)
-			}
 			return nil
 		case err := <-sub.Err():
 			log.WithError(err).Error("Error with ethereum header subscription")
@@ -223,30 +225,25 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 			return err
 		}
 
-		messagePackages, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, beefyBlockHash, paraBlockNumber, paraBlockHash)
+		tasks, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, beefyBlockHash, paraBlockNumber, paraBlockHash)
 		if err != nil {
 			log.WithError(err).Error("Failed to build missed message packages")
 			return err
 		}
 
-		err = li.emitMessagePackages(ctx, messagePackages)
-		if err != nil {
-			return err
+		for _, task := range tasks {
+			task.ProofOutput, err = li.generateProof(ctx, task.ProofInput)
+			if err != nil {
+				return err
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case li.tasks <- task:
+				log.Info("Beefy Listener emitted new task")
+			}
 		}
 	}
-	return nil
-}
-
-func (li *BeefyListener) emitTask(ctx context.Context, task *Task) error {
-	for _, messagePackage := range task {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case li.messages <- messagePackage:
-			log.Info("Beefy Listener emitted new message package")
-		}
-	}
-
 	return nil
 }
 

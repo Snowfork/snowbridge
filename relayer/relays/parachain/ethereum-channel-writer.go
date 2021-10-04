@@ -138,6 +138,8 @@ func (wr *EthereumChannelWriter) WriteChannel(
 			if !ok {
 				return fmt.Errorf("Invalid commitment message data")
 			}
+			fmt.Printf("FOO TASK %+v\n", task)
+
 			err := wr.WriteBasicChannel(
 				options,
 				commitment.Hash,

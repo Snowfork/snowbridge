@@ -181,15 +181,17 @@ func (li *BeefyListener) gatherProofInputs(
 
 func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (*ProofOutput, error) {
 
-	polkadotBlockNumber, polkadotBlockHash, err := li.fetchLatestBeefyBlock(ctx)
+	_, latestBeefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
 	if err != nil {
 		log.WithError(err).Error("Failed to get latest relay chain block number and hash")
 		return nil, err
 	}
 
+	li.relaychainConn.API().RPC.Chain.GetBlockHash(input.PolkadotBlockNumber)
+
 	mmrProof, err := li.relaychainConn.GetMMRLeafForBlock(
-		polkadotBlockNumber + 1,
-		polkadotBlockHash,
+		input.PolkadotBlockNumber + 1,
+		latestBeefyBlockHash,
 		li.config.Polkadot.BeefyStartingBlock,
 	)
 	if err != nil {
@@ -215,7 +217,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 		return nil, err
 	}
 	var mmrRootHash types.Hash
-	ok, err := li.relaychainConn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, polkadotBlockHash)
+	ok, err := li.relaychainConn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, latestBeefyBlockHash)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -304,15 +306,15 @@ func (li *BeefyListener) scanForCommitments(
 					return nil, err
 				}
 				if !isRelayed {
-					var messages []parachain.BasicOutboundChannelMessage
+					var messages parachain.BasicOutboundChannelMessages
 					err := types.DecodeFromBytes(messageData, &messages)
 					if err != nil {
 						log.WithError(err).Error("Failed to decode commitment messages")
 						return nil, err
 					}
 					commitments[channelID] = Commitment{
-						digestItem.AsCommitment.Hash,
-						messages,
+						Hash: digestItem.AsCommitment.Hash,
+						Data: messages,
 					}
 				} else {
 					basicNonceFound = true

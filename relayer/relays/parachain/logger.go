@@ -232,7 +232,7 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	mmrLeafEncoded, _ := types.EncodeToBytes(mmrLeaf)
 	mmrLeafOpaqueEncoded, _ := types.EncodeToHexString(mmrLeafEncoded)
 	mmrLeafOpaqueEncodedBytes, _ := types.EncodeToBytes(mmrLeafEncoded)
-	scaleParaId, _ := types.EncodeToHexString(paraID)
+	scaleParaID, _ := types.EncodeToHexString(paraID)
 	scaleParaHead, _ := types.EncodeToHexString(paraHead)
 	scaleParaHeadParentHash, _ := types.EncodeToHexString(paraHead.ParentHash)
 	scaleparaHeadNumber, _ := types.EncodeToHexString(paraHead.Number)
@@ -252,7 +252,7 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 		"mmrLeafOpaqueEncoded":        mmrLeafOpaqueEncoded,
 		"mmrRootHash":                 "0x" + hex.EncodeToString(mmrRootHash[:]),
 		"merkleProofData":             merkleProofData,
-		"scaleParaId":                 scaleParaId,
+		"scaleParaId":                 scaleParaID,
 		"scaleParaHead":               scaleParaHead,
 		"scaleParaHeadParentHash":     scaleParaHeadParentHash,
 		"scaleparaHeadNumber":         scaleparaHeadNumber,
