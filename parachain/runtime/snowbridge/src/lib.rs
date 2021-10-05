@@ -187,7 +187,7 @@ parameter_types! {
 
 impl frame_system::Config for Runtime {
 	/// The basic call filter to use in dispatchable.
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	/// Block & extrinsics weights: base values and limits.
 	type BlockWeights = BlockWeights;
 	/// The maximum length of a block (in bytes).
@@ -889,11 +889,15 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, erc20_app, Erc20App);
 			add_benchmark!(params, batches, eth_app, EthApp);
 
-			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
+			if batches.is_empty() {
+				return Err("Benchmark not found for this pallet.".into())
+			}
+
 			Ok(batches)
 		}
 	}
 }
+
 struct CheckInherents;
 
 impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
