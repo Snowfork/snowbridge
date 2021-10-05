@@ -70,12 +70,12 @@ func (co *Connection) Close() {
 
 func (co *Connection) GetMMRLeafForBlock(
 	blockNumber uint64,
-	blockHash types.Hash,
-	beefyStartingBlock uint64,
+	latestBeefyBlockHash types.Hash,
+	beefyActivationBlock uint64,
 ) (types.GenerateMMRProofResponse, error) {
 	log.WithFields(log.Fields{
 		"blockNumber": blockNumber,
-		"blockHash":   blockHash.Hex(),
+		"blockHash":   latestBeefyBlockHash.Hex(),
 	}).Info("Getting MMR Leaf for block...")
 
 	// We expect 1 mmr leaf for each block. MMR leaf indexes start from 0, but block numbers start from 1,
@@ -83,9 +83,15 @@ func (co *Connection) GetMMRLeafForBlock(
 	// However, some chains only started using beefy late in their existence, so there are no leafs for
 	// blocks produced before beefy was activated. We subtract the block in which beefy was started on the
 	// chain to account for this.
-	leafIndex := blockNumber - beefyStartingBlock - 1
 
-	proofResponse, err := co.API().RPC.MMR.GenerateProof(leafIndex, blockHash)
+	var leafIndex uint64
+	if beefyActivationBlock == 0 {
+		leafIndex = blockNumber - 1
+	} else {
+		leafIndex = blockNumber - beefyActivationBlock
+	}
+
+	proofResponse, err := co.API().RPC.MMR.GenerateProof(leafIndex, latestBeefyBlockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate mmr proof")
 		return types.GenerateMMRProofResponse{}, err
