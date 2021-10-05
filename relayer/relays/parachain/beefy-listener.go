@@ -115,7 +115,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
-		tasks, err := li.buildMissedMessagePackages(
+		tasks, err := li.discoverCatchupTasks(
 			ctx,
 			beefyBlockNumber,
 			beefyBlockHash,
@@ -123,7 +123,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			paraBlockHash,
 		)
 		if err != nil {
-			log.WithError(err).Error("Failed to build tasks")
+			log.WithError(err).Error("Failed to discover catchup tasks")
 			return err
 		}
 
@@ -223,9 +223,9 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 			return err
 		}
 
-		tasks, err := li.buildMissedMessagePackages(ctx, beefyBlockNumber, beefyBlockHash, paraBlockNumber, paraBlockHash)
+		tasks, err := li.discoverCatchupTasks(ctx, beefyBlockNumber, beefyBlockHash, paraBlockNumber, paraBlockHash)
 		if err != nil {
-			log.WithError(err).Error("Failed to build missed message packages")
+			log.WithError(err).Error("Failed to discover catchup tasks")
 			return err
 		}
 
@@ -461,7 +461,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 	mmrProof, err := li.relaychainConn.GetMMRLeafForBlock(
 		input.PolkadotBlockNumber + 1,
 		latestBeefyBlockHash,
-		li.config.Polkadot.BeefyStartingBlock,
+		li.config.BeefyActivationBlock,
 	)
 	if err != nil {
 		log.WithError(err).Error("Failed to get mmr leaf")

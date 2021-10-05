@@ -83,7 +83,6 @@ func (co *Connection) GetMMRLeafForBlock(
 	// However, some chains only started using beefy late in their existence, so there are no leafs for
 	// blocks produced before beefy was activated. We subtract the block in which beefy was started on the
 	// chain to account for this.
-
 	var leafIndex uint64
 	if beefyActivationBlock == 0 {
 		leafIndex = blockNumber - 1

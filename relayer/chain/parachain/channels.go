@@ -8,18 +8,6 @@ import (
 
 type BasicOutboundChannelMessages []BasicOutboundChannelMessage
 
-func (ms BasicOutboundChannelMessages) IsRelayed(nonceToFind uint64) bool {
-
-	ms[len(ms)-1]
-
-	for _, message := range ms {
-		if message.Nonce <= nonceToFind {
-			return true
-		}
-	}
-	return false
-}
-
 func (ms BasicOutboundChannelMessages) IntoInboundMessages() []basic.BasicInboundChannelMessage {
 	var output []basic.BasicInboundChannelMessage
 	for _, m := range ms {

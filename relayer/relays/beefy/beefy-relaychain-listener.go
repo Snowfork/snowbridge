@@ -225,7 +225,7 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 	}
 	log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
 
-	latestMMRProof, err := li.relaychainConn.GetMMRLeafForBlock(blockNumber-1, blockHash, li.config.Source.Polkadot.BeefyStartingBlock)
+	latestMMRProof, err := li.relaychainConn.GetMMRLeafForBlock(blockNumber, blockHash, li.config.Source.BeefyActivationBlock)
 	if err != nil {
 		log.WithError(err).Error("Failed get MMR Leaf")
 		return err

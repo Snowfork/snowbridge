@@ -11,11 +11,13 @@ type SourceConfig struct {
 	Polkadot  config.PolkadotConfig  `mapstructure:"polkadot"`
 	Parachain config.ParachainConfig `mapstructure:"parachain"`
 	Ethereum  config.EthereumConfig  `mapstructure:"ethereum"`
-	Contracts SourceContractsConfig   `mapstructure:"contracts"`
+	Contracts SourceContractsConfig  `mapstructure:"contracts"`
+	// Block number when Beefy was activated
+	BeefyActivationBlock uint64 `mapstructure:"beefy-activation-block"`
 }
 
 type SourceContractsConfig struct {
-	BeefyLightClient string `mapstructure:"BeefyLightClient"`
+	BeefyLightClient           string `mapstructure:"BeefyLightClient"`
 	BasicInboundChannel        string `mapstructure:"BasicInboundChannel"`
 	IncentivizedInboundChannel string `mapstructure:"IncentivizedInboundChannel"`
 }
