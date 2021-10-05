@@ -4,7 +4,7 @@
             "endpoint": "ws://localhost:8546"
         },
         "polkadot": {
-            "endpoint": "ws://localhost:9944",
+            "endpoint": "ws://localhost:9944"
         },
         "parachain": {
             "endpoint": "ws://localhost:11144"

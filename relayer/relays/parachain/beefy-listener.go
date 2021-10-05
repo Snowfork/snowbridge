@@ -459,7 +459,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 	li.relaychainConn.API().RPC.Chain.GetBlockHash(input.PolkadotBlockNumber)
 
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
-		input.PolkadotBlockNumber,
+		input.PolkadotBlockNumber + 1,
 		latestBeefyBlockHash,
 		li.config.BeefyActivationBlock,
 	)
