@@ -68,7 +68,7 @@ func (co *Connection) Close() {
 	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
 }
 
-func (co *Connection) GetMMRLeafForBlock(
+func (co *Connection) GenerateProofForBlock(
 	blockNumber uint64,
 	latestBeefyBlockHash types.Hash,
 	beefyActivationBlock uint64,
@@ -81,8 +81,21 @@ func (co *Connection) GetMMRLeafForBlock(
 	// We expect 1 mmr leaf for each block. MMR leaf indexes start from 0, but block numbers start from 1,
 	// so the mmr leaf index should be 1 less than the block number.
 	// However, some chains only started using beefy late in their existence, so there are no leafs for
-	// blocks produced before beefy was activated. We subtract the block in which beefy was started on the
+	// blocks produced before beefy was activated. We subtract the block in which beefy was activated on the
 	// chain to account for this.
+	//
+	// LeafIndex(curBlock, activationBlock) := curBlock - Max(activationBlock, 1)
+	//
+	// Example: LeafIndex(5, 3) = 2
+	//
+	// Block Number: 1 -> 2 -> 3 -> 4 -> 5
+	// Leaf Index:             0 -> 1 -> 2
+	//                         ^         ^
+	//                         |         |
+	//                         |         Leaf we want
+	//                         |
+	//                         Activation Block
+	//
 	var leafIndex uint64
 	if beefyActivationBlock == 0 {
 		leafIndex = blockNumber - 1
@@ -113,6 +126,7 @@ func (co *Connection) GetMMRLeafForBlock(
 		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
 		"Proof.Items":                     proofItemsHex,
 	}).Info("Generated MMR Proof")
+
 	return proofResponse, nil
 }
 
