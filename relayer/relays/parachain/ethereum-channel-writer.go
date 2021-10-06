@@ -138,8 +138,6 @@ func (wr *EthereumChannelWriter) WriteChannel(
 			if !ok {
 				return fmt.Errorf("Invalid commitment message data")
 			}
-			fmt.Printf("FOO TASK %+v\n", task)
-
 			err := wr.WriteBasicChannel(
 				options,
 				commitment.Hash,
@@ -153,17 +151,24 @@ func (wr *EthereumChannelWriter) WriteChannel(
 				return err
 			}
 		}
-		// if channelID.IsIncentivized {
-		// 	messages, ok := commitment.Data.([]parachain.IncentivizedOutboundChannelMessage)
-		// 	if !ok {
-		// 		return fmt.Errorf("Invalid commitment message data")
-		// 	}
-		// 	err := wr.WriteIncentivizedChannel(options, task, messages)
-		// 	if err != nil {
-		// 		log.WithError(err).Error("Failed to write to basic channel")
-		// 		return err
-		// 	}
-		// }
+		if channelID.IsIncentivized {
+			messages, ok := commitment.Data.(parachain.IncentivizedOutboundChannelMessages)
+			if !ok {
+				return fmt.Errorf("Invalid commitment message data")
+			}
+			err := wr.WriteIncentivizedChannel(
+				options,
+				commitment.Hash,
+				messages,
+				task.ParaID,
+				task.Header,
+				task.ProofOutput,
+			)
+			if err != nil {
+				log.WithError(err).Error("Failed to write to basic channel")
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -261,97 +266,92 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 }
 
 
-// func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
-// 	options *bind.TransactOpts,
-// 	msgPackage *MessagePackage,
-// 	msgs []parachain.IncentivizedOutboundChannelMessage,
-// ) error {
-// 	var messages []incentivized.IncentivizedInboundChannelMessage
-// 	for _, m := range msgs {
-// 		messages = append(messages,
-// 			incentivized.IncentivizedInboundChannelMessage{
-// 				Target:  m.Target,
-// 				Nonce:   m.Nonce,
-// 				Fee:     m.Fee.Int,
-// 				Payload: m.Payload,
-// 			},
-// 		)
-// 	}
+func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
+	options *bind.TransactOpts,
+	commitmentHash gsrpcTypes.H256,
+	commitment parachain.IncentivizedOutboundChannelMessages,
+	paraID uint32,
+	paraHead *gsrpcTypes.Header,
+	proof *ProofOutput,
+) error {
+	messages := commitment.IntoInboundMessages()
 
-// 	paraHeadProof := incentivized.ParachainLightClientParachainHeadProof{
-// 		Pos:   big.NewInt(int64(msgPackage.merkleProofData.ProvenLeafIndex)),
-// 		Width: big.NewInt(int64(msgPackage.merkleProofData.NumberOfLeaves)),
-// 		Proof: msgPackage.merkleProofData.Proof,
-// 	}
+	paraHeadProof := incentivized.ParachainLightClientParachainHeadProof{
+		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
+		Width: big.NewInt(int64(proof.MerkleProofData.NumberOfLeaves)),
+		Proof: proof.MerkleProofData.Proof,
+	}
 
-// 	ownParachainHeadBytes := msgPackage.merkleProofData.ProvenPreLeaf
-// 	ownParachainHeadBytesString := hex.EncodeToString(ownParachainHeadBytes)
-// 	commitmentHashString := hex.EncodeToString(msgPackage.commitmentHash[:])
-// 	prefixSuffix := strings.Split(ownParachainHeadBytesString, commitmentHashString)
-// 	if len(prefixSuffix) != 2 {
-// 		return errors.New("error splitting parachain header into prefix and suffix")
-// 	}
-// 	paraIDHex, err := gsrpcTypes.EncodeToHexString(msgPackage.paraId)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	prefixWithoutParaID := strings.TrimPrefix(prefixSuffix[0], strings.TrimPrefix(paraIDHex, "0x"))
-// 	prefix, err := hex.DecodeString(prefixWithoutParaID)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	suffix, err := hex.DecodeString(prefixSuffix[1])
-// 	if err != nil {
-// 		return err
-// 	}
+	ownParachainHeadBytes := proof.MerkleProofData.ProvenPreLeaf
+	ownParachainHeadBytesString := hex.EncodeToString(ownParachainHeadBytes)
+	commitmentHashString := hex.EncodeToString(commitmentHash[:])
+	prefixSuffix := strings.Split(ownParachainHeadBytesString, commitmentHashString)
+	if len(prefixSuffix) != 2 {
+		return errors.New("error splitting parachain header into prefix and suffix")
+	}
+	paraIDHex, err := gsrpcTypes.EncodeToHexString(paraID)
+	if err != nil {
+		return err
+	}
+	prefixWithoutParaID := strings.TrimPrefix(prefixSuffix[0], strings.TrimPrefix(paraIDHex, "0x"))
+	prefix, err := hex.DecodeString(prefixWithoutParaID)
+	if err != nil {
+		return err
+	}
+	suffix, err := hex.DecodeString(prefixSuffix[1])
+	if err != nil {
+		return err
+	}
 
-// 	paraVerifyInput := incentivized.ParachainLightClientParachainVerifyInput{
-// 		OwnParachainHeadPrefixBytes: prefix,
-// 		OwnParachainHeadSuffixBytes: suffix,
-// 		ParachainHeadProof:          paraHeadProof,
-// 	}
+	paraVerifyInput := incentivized.ParachainLightClientParachainVerifyInput{
+		OwnParachainHeadPrefixBytes: prefix,
+		OwnParachainHeadSuffixBytes: suffix,
+		ParachainHeadProof:          paraHeadProof,
+	}
 
-// 	beefyMMRLeafPartial := incentivized.ParachainLightClientBeefyMMRLeafPartial{
-// 		Version:              uint8(msgPackage.simplifiedMMRProof.Leaf.Version),
-// 		ParentNumber:         uint32(msgPackage.simplifiedMMRProof.Leaf.ParentNumberAndHash.ParentNumber),
-// 		ParentHash:           msgPackage.simplifiedMMRProof.Leaf.ParentNumberAndHash.Hash,
-// 		NextAuthoritySetId:   uint64(msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.ID),
-// 		NextAuthoritySetLen:  uint32(msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.Len),
-// 		NextAuthoritySetRoot: msgPackage.simplifiedMMRProof.Leaf.BeefyNextAuthoritySet.Root,
-// 	}
+	beefyMMRLeafPartial := incentivized.ParachainLightClientBeefyMMRLeafPartial{
+		Version:              uint8(proof.MMRProof.Leaf.Version),
+		ParentNumber:         uint32(proof.MMRProof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           proof.MMRProof.Leaf.ParentNumberAndHash.Hash,
+		NextAuthoritySetId:   uint64(proof.MMRProof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(proof.MMRProof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: proof.MMRProof.Leaf.BeefyNextAuthoritySet.Root,
+	}
 
-// 	var merkleProofItems [][32]byte
-// 	for _, proofItem := range msgPackage.simplifiedMMRProof.MerkleProofItems {
-// 		merkleProofItems = append(merkleProofItems, proofItem)
-// 	}
+	var merkleProofItems [][32]byte
+	for _, proofItem := range proof.MMRProof.MerkleProofItems {
+		merkleProofItems = append(merkleProofItems, proofItem)
+	}
 
-// 	simplifiedMMRProof := incentivized.SimplifiedMMRProof{
-// 		MerkleProofItems:         merkleProofItems,
-// 		MerkleProofOrderBitField: msgPackage.simplifiedMMRProof.MerkleProofOrder,
-// 	}
+	simplifiedMMRProof := incentivized.SimplifiedMMRProof{
+		MerkleProofItems:         merkleProofItems,
+		MerkleProofOrderBitField: proof.MMRProof.MerkleProofOrder,
+	}
 
-// 	err = wr.logIncentivizedTx(messages, paraVerifyInput,
-// 		beefyMMRLeafPartial, simplifiedMMRProof,
-// 		msgPackage.paraHead, msgPackage.merkleProofData, msgPackage.simplifiedMMRProof.Leaf,
-// 		msgPackage.commitmentHash, msgPackage.paraId, msgPackage.mmrRootHash,
-// 	)
-// 	if err != nil {
-// 		log.WithError(err).Error("Failed to log transaction input")
-// 		return err
-// 	}
+	err = wr.logIncentivizedTx(
+		messages, paraVerifyInput,
+		beefyMMRLeafPartial, simplifiedMMRProof,
+		paraHead, proof.MerkleProofData, proof.MMRProof.Leaf,
+		commitmentHash, paraID, proof.MMRRootHash,
+	)
+	if err != nil {
+		log.WithError(err).Error("Failed to log transaction input")
+		return err
+	}
 
-// 	tx, err := wr.incentivizedInboundChannel.Submit(options, messages,
-// 		paraVerifyInput, beefyMMRLeafPartial,
-// 		simplifiedMMRProof)
-// 	if err != nil {
-// 		log.WithError(err).Error("Failed to submit transaction")
-// 		return err
-// 	}
+	tx, err := wr.incentivizedInboundChannel.Submit(
+		options, messages,
+		paraVerifyInput, beefyMMRLeafPartial,
+		simplifiedMMRProof)
+	if err != nil {
+		log.WithError(err).Error("Failed to submit transaction")
+		return err
+	}
 
-// 	log.WithFields(log.Fields{
-// 		"txHash":  tx.Hash().Hex(),
-// 		"channel": "Incentivized",
-// 	}).Info("Transaction submitted")
+	log.WithFields(log.Fields{
+		"txHash":  tx.Hash().Hex(),
+		"channel": "Incentivized",
+	}).Info("Transaction submitted")
 
-// 	return nil
-// }
+	return nil
+}

@@ -178,8 +178,12 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 	paraVerifyInput incentivized.ParachainLightClientParachainVerifyInput,
 	beefyMMRLeafPartial incentivized.ParachainLightClientBeefyMMRLeafPartial,
 	beefyMMRSimplifiedProof incentivized.SimplifiedMMRProof,
-	paraHead types.Header, merkleProofData MerkleProofData, mmrLeaf types.MMRLeaf,
-	commitmentHash types.H256, paraID uint32, mmrRootHash types.Hash,
+	paraHead *types.Header,
+	merkleProofData MerkleProofData,
+	mmrLeaf types.MMRLeaf,
+	commitmentHash types.H256,
+	paraID uint32,
+	mmrRootHash types.Hash,
 ) error {
 	var incentivizedMessagesLog []IncentivizedInboundChannelMessageLog
 	for _, item := range messages {

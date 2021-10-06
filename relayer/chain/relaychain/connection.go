@@ -84,7 +84,7 @@ func (co *Connection) GenerateProofForBlock(
 	// blocks produced before beefy was activated. We subtract the block in which beefy was activated on the
 	// chain to account for this.
 	//
-	// LeafIndex(curBlock, activationBlock) := curBlock - Max(activationBlock, 1)
+	// LeafIndex(currentBlock, activationBlock) := currentBlock - Max(activationBlock, 1)
 	//
 	// Example: LeafIndex(5, 3) = 2
 	//
@@ -105,7 +105,6 @@ func (co *Connection) GenerateProofForBlock(
 
 	proofResponse, err := co.API().RPC.MMR.GenerateProof(leafIndex, latestBeefyBlockHash)
 	if err != nil {
-		log.WithError(err).Error("Failed to generate mmr proof")
 		return types.GenerateMMRProofResponse{}, err
 	}
 
@@ -185,11 +184,6 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 				return nil, err
 			}
 
-			log.WithFields(log.Fields{
-				"ParaID":   paraID,
-				"HeadData": fmt.Sprintf("%#x", headData),
-			}).Debug("Processed storage key for head in Paras.Heads")
-
 			heads[paraID] = ParaHead{
 				ParaID: paraID,
 				Data:   headData,
@@ -265,7 +259,8 @@ func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types
 	log.WithFields(log.Fields{
 		"keyPrefix": keyPrefix,
 		"blockHash": blockHash.Hex(),
-		"pageSize":  pageSize}).Info("Fetching paged keys.")
+		"pageSize":  pageSize,
+	}).Trace("Fetching paged keys.")
 
 	pageIndex := 0
 	for {
@@ -276,7 +271,8 @@ func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types
 
 		log.WithFields(log.Fields{
 			"keysInPage": len(response),
-			"pageIndex":  pageIndex}).Info("Fetched a page of keys.")
+			"pageIndex":  pageIndex,
+		}).Trace("Fetched a page of keys.")
 
 		results = append(results, response...)
 		if uint32(len(response)) < pageSize {
@@ -289,7 +285,8 @@ func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types
 
 	log.WithFields(log.Fields{
 		"totalNumKeys":  len(results),
-		"totalNumPages": pageIndex + 1}).Info("Fetching of paged keys complete.")
+		"totalNumPages": pageIndex + 1,
+	}).Trace("Fetching of paged keys complete.")
 
 	return results, nil
 }

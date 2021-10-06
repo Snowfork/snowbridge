@@ -25,6 +25,13 @@ type Commitment struct {
 	Data interface{}
 }
 
+func NewCommitment(hash types.H256, data interface{}) Commitment {
+	return Commitment{
+		Hash: hash,
+		Data: data,
+	}
+}
+
 // A ProofInput is data needed to generate a proof of parachain header inclusion
 type ProofInput struct {
 	PolkadotBlockNumber uint64

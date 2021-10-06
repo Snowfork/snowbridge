@@ -32,6 +32,14 @@ func (m *BasicOutboundChannelMessage) IntoInboundMessage() basic.BasicInboundCha
 
 type IncentivizedOutboundChannelMessages []IncentivizedOutboundChannelMessage
 
+func (ms IncentivizedOutboundChannelMessages) IntoInboundMessages() []incentivized.IncentivizedInboundChannelMessage {
+	var output []incentivized.IncentivizedInboundChannelMessage
+	for _, m := range ms {
+		output = append(output, m.IntoInboundMessage())
+	}
+	return output
+}
+
 type IncentivizedOutboundChannelMessage struct {
 	Target  [20]byte
 	Nonce   uint64
@@ -39,8 +47,8 @@ type IncentivizedOutboundChannelMessage struct {
 	Payload []byte
 }
 
-func (m *IncentivizedOutboundChannelMessage) IntoInboundMessage() *incentivized.IncentivizedInboundChannelMessage {
-	return &incentivized.IncentivizedInboundChannelMessage{
+func (m *IncentivizedOutboundChannelMessage) IntoInboundMessage() incentivized.IncentivizedInboundChannelMessage {
+	return incentivized.IncentivizedInboundChannelMessage{
 		Target:  m.Target,
 		Nonce:   m.Nonce,
 		Fee:     m.Fee.Int,
