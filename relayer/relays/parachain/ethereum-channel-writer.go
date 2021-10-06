@@ -165,7 +165,7 @@ func (wr *EthereumChannelWriter) WriteChannel(
 				task.ProofOutput,
 			)
 			if err != nil {
-				log.WithError(err).Error("Failed to write to basic channel")
+				log.WithError(err).Error("Failed to write to incentivized channel")
 				return err
 			}
 		}
