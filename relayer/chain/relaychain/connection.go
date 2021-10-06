@@ -154,7 +154,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 		"numKeys":          len(keys),
 		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
 		"block":            blockHash.Hex(),
-	}).Debug("Found keys for Paras.Heads storage map")
+	}).Trace("Found keys for Paras.Heads storage map")
 
 	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
 	if err != nil {

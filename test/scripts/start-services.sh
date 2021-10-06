@@ -170,18 +170,18 @@ start_relayer()
     ) &
 
     # Launch parachain relay
-    # (
-    #     : > parachain-relay.log
-    #     while :
-    #     do
-    #         echo "Starting parachain relay at $(date)"
-    #         "${relay_bin}" run parachain \
-    #             --config "$output_dir/parachain-relay.json" \
-    #             --ethereum.private-key "0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a" \
-    #             >>parachain-relay.log 2>&1 || true
-    #         sleep 20
-    #     done
-    # ) &
+    (
+        : > parachain-relay.log
+        while :
+        do
+          echo "Starting parachain relay at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay.json" \
+                --ethereum.private-key "0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a" \
+                >>parachain-relay.log 2>&1 || true
+            sleep 20
+        done
+    ) &
 
     # Launch ethereum relay
     (
