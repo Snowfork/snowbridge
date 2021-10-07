@@ -62,6 +62,12 @@ export const types: RegistryTypes = {
     oldestUnprunedBlock: "u64",
     oldestBlockToKeep: "u64",
   },
+  EthereumDifficultyConfig: {
+    byzantiumForkBlock: "u64",
+    constantinopleForkBlock: "u64",
+    muirGlacierForkBlock: "u64",
+    londonForkBlock: "u64"
+  },
   AssetId: {
     _enum: {
       ETH: null,
