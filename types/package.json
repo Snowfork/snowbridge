@@ -1,6 +1,6 @@
 {
   "name": "@snowfork/snowbridge-types",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Type definitions for the Snowbridge parachain",
   "repository": {
     "type": "git",
