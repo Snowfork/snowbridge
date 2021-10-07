@@ -1,14 +1,11 @@
 //! EthereumLightClient pallet benchmarking
-
-#![cfg(feature = "runtime-benchmarks")]
-
 use super::*;
 
 use frame_system::RawOrigin;
 use frame_benchmarking::{benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 
 #[allow(unused_imports)]
-use crate::Module as EthereumLightClient;
+use crate::Pallet as EthereumLightClient;
 
 mod data;
 
@@ -18,16 +15,16 @@ mod data;
 /// contain strictly increasing block numbers.
 const RESERVED_FOR_PRUNING: usize = HEADERS_TO_PRUNE_IN_SINGLE_IMPORT as usize;
 
-fn get_best_block() -> (EthereumHeaderId, U256) {
-	BestBlock::get()
+fn get_best_block<T: Config>() -> (EthereumHeaderId, U256) {
+	<BestBlock<T>>::get()
 }
 
-fn get_blocks_to_prune() -> PruningRange {
-	BlocksToPrune::get()
+fn get_blocks_to_prune<T: Config>() -> PruningRange {
+	<BlocksToPrune<T>>::get()
 }
 
-fn set_blocks_to_prune(oldest_unpruned: u64, oldest_to_keep: u64) {
-	BlocksToPrune::put(PruningRange {
+fn set_blocks_to_prune<T: Config>(oldest_unpruned: u64, oldest_to_keep: u64) {
+	<BlocksToPrune<T>>::put(PruningRange {
 		oldest_unpruned_block: oldest_unpruned,
 		oldest_block_to_keep: oldest_to_keep,
 	});
@@ -36,7 +33,7 @@ fn set_blocks_to_prune(oldest_unpruned: u64, oldest_to_keep: u64) {
 fn assert_header_pruned<T: Config>(hash: H256, number: u64) {
 	assert!(Headers::<T>::get(hash).is_none());
 
-	let hashes_at_number = HeadersByNumber::get(number);
+	let hashes_at_number = <HeadersByNumber<T>>::get(number);
 	assert!(
 		hashes_at_number.is_none() || !hashes_at_number.unwrap().contains(&hash),
 	);
@@ -52,7 +49,7 @@ benchmarks! {
 	// * Pruned headers will come from distinct block numbers so that we have the max
 	//   number of HeaderByNumber::take calls.
 	// * The last pruned header will have siblings that we don't prune and have to
-	//   re-insert using HeadersByNumber::insert.
+	//   re-insert using <HeadersByNumber<T>>::insert.
 	import_header {
 		let caller: T::AccountId = whitelisted_caller();
 		let descendants_until_final = T::DescendantsUntilFinalized::get();
@@ -69,7 +66,7 @@ benchmarks! {
 			descendants_until_final,
 		)?;
 
-		set_blocks_to_prune(
+		set_blocks_to_prune::<T>(
 			headers[0].number,
 			headers[next_finalized_idx].number,
 		);
@@ -79,7 +76,7 @@ benchmarks! {
 		// Check that the best header has been updated
 		let best = &headers[next_tip_idx];
 		assert_eq!(
-			get_best_block().0,
+			get_best_block::<T>().0,
 			EthereumHeaderId {
 				number: best.number,
 				hash: best.compute_hash(),
@@ -93,7 +90,7 @@ benchmarks! {
 			.for_each(|h| assert_header_pruned::<T>(h.compute_hash(), h.number));
 		let last_pruned_sibling = &headers[RESERVED_FOR_PRUNING];
 		assert_eq!(
-			get_blocks_to_prune().oldest_unpruned_block,
+			get_blocks_to_prune::<T>().oldest_unpruned_block,
 			last_pruned_sibling.number,
 		);
 	}
@@ -107,7 +104,7 @@ benchmarks! {
 	// * Pruned headers will come from distinct block numbers so that we have the max
 	//   number of HeaderByNumber::take calls.
 	// * The last pruned header will have siblings that we don't prune and have to
-	//   re-insert using HeadersByNumber::insert.
+	//   re-insert using <HeadersByNumber<T>>::insert.
 	import_header_not_new_finalized_with_max_prune {
 		let caller: T::AccountId = whitelisted_caller();
 		let descendants_until_final = T::DescendantsUntilFinalized::get();
@@ -129,7 +126,7 @@ benchmarks! {
 			descendants_until_final,
 		)?;
 
-		set_blocks_to_prune(
+		set_blocks_to_prune::<T>(
 			headers[0].number,
 			headers[finalized_idx].number,
 		);
@@ -139,7 +136,7 @@ benchmarks! {
 		// Check that the best header has been updated
 		let best = &headers[next_tip_idx];
 		assert_eq!(
-			get_best_block().0,
+			get_best_block::<T>().0,
 			EthereumHeaderId {
 				number: best.number,
 				hash: best.compute_hash(),
@@ -153,7 +150,7 @@ benchmarks! {
 			.for_each(|h| assert_header_pruned::<T>(h.compute_hash(), h.number));
 		let last_pruned_sibling = &headers[RESERVED_FOR_PRUNING];
 		assert_eq!(
-			get_blocks_to_prune().oldest_unpruned_block,
+			get_blocks_to_prune::<T>().oldest_unpruned_block,
 			last_pruned_sibling.number,
 		);
 	}
@@ -180,7 +177,7 @@ benchmarks! {
 			descendants_until_final,
 		)?;
 
-		set_blocks_to_prune(
+		set_blocks_to_prune::<T>(
 			headers[0].number,
 			headers[0].number + 1,
 		);
@@ -190,7 +187,7 @@ benchmarks! {
 		// Check that the best header has been updated
 		let best = &headers[next_tip_idx];
 		assert_eq!(
-			get_best_block().0,
+			get_best_block::<T>().0,
 			EthereumHeaderId {
 				number: best.number,
 				hash: best.compute_hash(),
@@ -201,7 +198,7 @@ benchmarks! {
 		let oldest_header = &headers[0];
 		assert_header_pruned::<T>(oldest_header.compute_hash(), oldest_header.number);
 		assert_eq!(
-			get_blocks_to_prune().oldest_unpruned_block,
+			get_blocks_to_prune::<T>().oldest_unpruned_block,
 			oldest_header.number + 1,
 		);
 	}
@@ -233,7 +230,7 @@ benchmarks! {
 			descendants_until_final,
 		)?;
 
-		set_blocks_to_prune(
+		set_blocks_to_prune::<T>(
 			headers[0].number,
 			headers[0].number + 1,
 		);
@@ -243,7 +240,7 @@ benchmarks! {
 		// Check that the best header has been updated
 		let best = &headers[next_tip_idx];
 		assert_eq!(
-			get_best_block().0,
+			get_best_block::<T>().0,
 			EthereumHeaderId {
 				number: best.number,
 				hash: best.compute_hash(),
@@ -254,7 +251,7 @@ benchmarks! {
 		let oldest_header = &headers[0];
 		assert_header_pruned::<T>(oldest_header.compute_hash(), oldest_header.number);
 		assert_eq!(
-			get_blocks_to_prune().oldest_unpruned_block,
+			get_blocks_to_prune::<T>().oldest_unpruned_block,
 			oldest_header.number + 1,
 		);
 	}

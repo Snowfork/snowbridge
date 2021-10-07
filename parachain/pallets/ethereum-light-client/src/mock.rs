@@ -1,4 +1,5 @@
 // Mock runtime
+use frame_support::traits::GenesisBuild;
 use snowbridge_core::{Message, Proof};
 use snowbridge_testutils::BlockWithProofs;
 use crate::{EthashProofData, EthereumHeader, EthereumDifficultyConfig};
@@ -36,11 +37,11 @@ pub mod mock_verifier {
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
-			Verifier: verifier::{Pallet, Call, Storage, Event},
+			Verifier: verifier::{Pallet, Call, Config, Storage, Event<T>},
 		}
 	);
 
-	impl system::Config for Test {
+	impl frame_system::Config for Test {
 		type BaseCallFilter = ();
 		type BlockWeights = ();
 		type BlockLength = ();
@@ -95,7 +96,7 @@ pub mod mock_verifier_with_pow {
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
 			System: frame_system::{Pallet, Call, Storage, Event<T>},
-			Verifier: verifier::{Pallet, Call, Storage, Event},
+			Verifier: verifier::{Pallet, Call, Config, Storage, Event<T>},
 		}
 	);
 
@@ -269,7 +270,7 @@ pub fn new_tester<T: crate::Config>() -> sp_io::TestExternalities {
 pub fn new_tester_with_config<T: crate::Config>(config: crate::GenesisConfig) -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<T>().unwrap();
 
-	config.assimilate_storage::<T>(&mut storage).unwrap();
+	GenesisBuild::<T>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let ext: sp_io::TestExternalities = storage.into();
 	//ext.execute_with(|| <frame_system::Module<T>>::set_block_number();

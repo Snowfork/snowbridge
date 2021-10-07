@@ -16,7 +16,6 @@ use crate::mock::mock_verifier::{
 	Origin,
 };
 
-use crate::sp_api_hidden_includes_decl_storage::hidden_include::{StorageMap, StorageValue};
 use frame_support::{assert_err, assert_ok};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::DispatchError;
@@ -24,6 +23,7 @@ use crate::{
 	BestBlock, Error, EthereumHeader, FinalizedBlock, GenesisConfig, Headers,
 	HeadersByNumber, PruningRange,
 };
+
 
 #[test]
 fn it_tracks_highest_difficulty_ethereum_chain() {
@@ -46,7 +46,7 @@ fn it_tracks_highest_difficulty_ethereum_chain() {
 			Default::default(),
 		));
 
-		let (header_id, highest_difficulty) = BestBlock::get();
+		let (header_id, highest_difficulty) = <BestBlock<Test>>::get();
 		assert_eq!(header_id.hash, child1_hash);
 		assert_eq!(highest_difficulty, 0xbc140caa61087i64.into());
 	});
@@ -74,9 +74,9 @@ fn it_tracks_multiple_unfinalized_ethereum_forks() {
 			Default::default(),
 		));
 
-		assert!(Headers::<Test>::contains_key(child1_hash));
-		assert!(Headers::<Test>::contains_key(child2_hash));
-		assert_eq!(HeadersByNumber::get(1).unwrap(), vec![child1_hash, child2_hash]);
+		assert!(<Headers<Test>>::contains_key(child1_hash));
+		assert!(<Headers<Test>>::contains_key(child2_hash));
+		assert_eq!(<HeadersByNumber<Test>>::get(1).unwrap(), vec![child1_hash, child2_hash]);
 	});
 }
 
@@ -113,10 +113,10 @@ fn it_tracks_only_one_finalized_ethereum_fork() {
 			));
 		}
 		// Relies on DescendantsUntilFinalized = 2
-		assert_eq!(FinalizedBlock::get().hash, block1_hash);
-		assert!(Headers::<Test>::get(block1_hash).unwrap().finalized);
-		assert!(Headers::<Test>::get(block2_hash).unwrap().finalized == false);
-		assert_eq!(BestBlock::get().0.hash, block3_hash);
+		assert_eq!(<FinalizedBlock<Test>>::get().hash, block1_hash);
+		assert!(<Headers<Test>>::get(block1_hash).unwrap().finalized);
+		assert!(<Headers<Test>>::get(block2_hash).unwrap().finalized == false);
+		assert_eq!(BestBlock::<Test>::get().0.hash, block3_hash);
 
 		// With invalid forks (invalid since B1 is final):
 		//       B0
@@ -185,8 +185,8 @@ fn it_prunes_ethereum_headers_correctly() {
 			new_range,
 			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 1 },
 		);
-		assert!(!Headers::<Test>::contains_key(genesis_ethereum_block_hash()));
-		assert!(!HeadersByNumber::contains_key(0));
+		assert!(!<Headers<Test>>::contains_key(genesis_ethereum_block_hash()));
+		assert!(!<HeadersByNumber<Test>>::contains_key(0));
 
 		// Prune next block (B1)
 		let new_range = Verifier::prune_header_range(
@@ -198,9 +198,9 @@ fn it_prunes_ethereum_headers_correctly() {
 			new_range,
 			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 2 },
 		);
-		assert!(!Headers::<Test>::contains_key(block1_hash));
-		assert!(Headers::<Test>::contains_key(block4_hash));
-		assert_eq!(HeadersByNumber::get(1).unwrap(), vec![block4_hash]);
+		assert!(!<Headers<Test>>::contains_key(block1_hash));
+		assert!(<Headers<Test>>::contains_key(block4_hash));
+		assert_eq!(<HeadersByNumber<Test>>::get(1).unwrap(), vec![block4_hash]);
 
 		// Prune next two blocks (B4, B2)
 		let new_range = Verifier::prune_header_range(
@@ -212,14 +212,14 @@ fn it_prunes_ethereum_headers_correctly() {
 			new_range,
 			PruningRange { oldest_unpruned_block: 3, oldest_block_to_keep: 4 },
 		);
-		assert!(!Headers::<Test>::contains_key(block4_hash));
-		assert!(!HeadersByNumber::contains_key(1));
-		assert!(!Headers::<Test>::contains_key(block2_hash));
-		assert!(!HeadersByNumber::contains_key(2));
+		assert!(!<Headers<Test>>::contains_key(block4_hash));
+		assert!(!<HeadersByNumber<Test>>::contains_key(1));
+		assert!(!<Headers<Test>>::contains_key(block2_hash));
+		assert!(!<HeadersByNumber<Test>>::contains_key(2));
 
 		// Finally, we're left with B3
-		assert!(Headers::<Test>::contains_key(block3_hash));
-		assert_eq!(HeadersByNumber::get(3).unwrap(), vec![block3_hash]);
+		assert!(<Headers<Test>>::contains_key(block3_hash));
+		assert_eq!(HeadersByNumber::<Test>::get(3).unwrap(), vec![block3_hash]);
 	});
 }
 
@@ -451,7 +451,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 				Default::default(),
 			));
 		}
-		assert_eq!(FinalizedBlock::get().hash, block1_alt_hash);
+		assert_eq!(<FinalizedBlock<Test>>::get().hash, block1_alt_hash);
 
 		// A finalized header at this height exists, but it's not block1
 		assert_err!(

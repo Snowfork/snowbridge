@@ -1,5 +1,6 @@
 use super::*;
 
+use frame_support::traits::GenesisBuild;
 use sp_core::{H160, H256};
 use frame_support::{
 	assert_ok, assert_noop,
@@ -24,7 +25,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		BasicOutboundChannel: basic_outbound_channel::{Pallet, Call, Storage, Event},
+		BasicOutboundChannel: basic_outbound_channel::{Pallet, Call, Config<T>, Storage, Event<T>},
 	}
 );
 
@@ -35,7 +36,7 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
-impl system::Config for Test {
+impl frame_system::Config for Test {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
 	type BlockLength = ();
@@ -62,8 +63,8 @@ impl system::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMessagePayloadSize: usize = 128;
-	pub const MaxMessagesPerCommit: usize = 5;
+	pub const MaxMessagePayloadSize: u64 = 128;
+	pub const MaxMessagesPerCommit: u64 = 5;
 }
 
 impl basic_outbound_channel::Config for Test {
@@ -98,10 +99,10 @@ fn test_submit() {
 		let who: AccountId = Keyring::Bob.into();
 
 		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-		assert_eq!(Nonce::get(), 1);
+		assert_eq!(<Nonce<Test>>::get(), 1);
 
 		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-		assert_eq!(Nonce::get(), 2);
+		assert_eq!(<Nonce<Test>>::get(), 2);
 	});
 }
 
@@ -130,7 +131,7 @@ fn test_submit_exceeds_payload_limit() {
 		let who: AccountId = Keyring::Bob.into();
 
 		let max_payload_bytes = MaxMessagePayloadSize::get();
-		let payload: Vec<u8> = (0..).take(max_payload_bytes + 1).collect();
+		let payload: Vec<u8> = (0..).take(max_payload_bytes as usize + 1).collect();
 
 		assert_noop!(
 			BasicOutboundChannel::submit(&who, target, payload.as_slice()),
@@ -145,7 +146,7 @@ fn test_submit_fails_on_nonce_overflow() {
 		let target = H160::zero();
 		let who: AccountId = Keyring::Bob.into();
 
-		Nonce::set(u64::MAX);
+		<Nonce<Test>>::set(u64::MAX);
 		assert_noop!(
 			BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
 			Error::<Test>::Overflow,

@@ -22,7 +22,7 @@ fn mints_after_handling_ethereum_event() {
 		let recipient: AccountId = Keyring::Bob.into();
 
 		assert_ok!(Erc721App::mint(
-			snowbridge_dispatch::Origin(peer_contract).into(),
+			snowbridge_dispatch::RawOrigin(peer_contract).into(),
 			sender,
 			recipient.clone(),
 			token_contract,

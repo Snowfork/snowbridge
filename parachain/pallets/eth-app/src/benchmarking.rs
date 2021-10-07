@@ -1,7 +1,4 @@
 //! ETHApp pallet benchmarking
-
-#![cfg(feature = "runtime-benchmarks")]
-
 use super::*;
 
 use frame_system::RawOrigin;
@@ -10,7 +7,7 @@ use frame_benchmarking::{account, benchmarks, whitelisted_caller, impl_benchmark
 use sp_core::H160;
 
 #[allow(unused_imports)]
-use crate::Module as ETHApp;
+use crate::Pallet as ETHApp;
 
 benchmarks! {
 	// Benchmark `burn` extrinsic under worst case conditions:
@@ -27,13 +24,13 @@ benchmarks! {
 	verify {
 		assert_eq!(T::Asset::balance(&caller), U256::zero());
 	}
-	
+
 	// Benchmark `mint` extrinsic under worst case conditions:
 	// * `mint` successfully adds amount to recipient account
 	mint {
 		let origin = T::CallOrigin::successful_origin();
 		if let Ok(caller) = T::CallOrigin::try_origin(origin.clone()) {
-			Address::put(caller);
+			<Address<T>>::put(caller);
 		} else {
 			return Err("Failed to extract caller address from origin");
 		}

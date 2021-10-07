@@ -50,16 +50,16 @@ where
 {
 	fn submit(channel_id: ChannelId, who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 		match channel_id {
-			ChannelId::Basic => basic_channel::outbound::Module::<T>::submit(who, target, payload),
-			ChannelId::Incentivized => incentivized_channel::outbound::Module::<T>::submit(who, target, payload),
+			ChannelId::Basic => basic_channel::outbound::Pallet::<T>::submit(who, target, payload),
+			ChannelId::Incentivized => incentivized_channel::outbound::Pallet::<T>::submit(who, target, payload),
 		}
 	}
 }
 
 parameter_types! {
 	pub const Ether: AssetId = AssetId::ETH;
-	pub const MaxMessagePayloadSize: usize = 256;
-	pub const MaxMessagesPerCommit: usize = 20;
+	pub const MaxMessagePayloadSize: u64 = 256;
+	pub const MaxMessagesPerCommit: u64 = 20;
 }
 
 parameter_types! {

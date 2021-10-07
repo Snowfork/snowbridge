@@ -1,7 +1,4 @@
 //! DotApp pallet benchmarking
-
-#![cfg(feature = "runtime-benchmarks")]
-
 use super::*;
 
 use frame_system::RawOrigin;
@@ -27,7 +24,7 @@ benchmarks! {
 		// The amount is chosen such that balance - amount < existential_deposit
 		// so that the account is reaped
 		let amount = existential_deposit * 9u32.into() + 1u32.into();
-		
+
 		T::Currency::make_free_balance_be(&caller, balance);
 		T::Currency::make_free_balance_be(&lock_account, 0u32.into());
 
@@ -51,7 +48,7 @@ benchmarks! {
 
 		let balance = existential_deposit * 10u32.into();
 		let amount = existential_deposit * 8u32.into();
-		
+
 		T::Currency::make_free_balance_be(&caller, balance);
 		T::Currency::make_free_balance_be(&lock_account, 0u32.into());
 
@@ -77,11 +74,11 @@ benchmarks! {
 		let recipient: T::AccountId = account("recipient", 0, 0);
 		let recipient_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(recipient.clone());
 		let sender = H160::zero();
-		
+
 		let balance = existential_deposit * 10u32.into();
 		let amount = existential_deposit * 8u32.into();
 		let amount_wrapped = wrap::<T>(amount, T::Decimals::get()).unwrap();
-		
+
 		T::Currency::make_free_balance_be(&lock_account, balance);
 
 		let call = Call::<T>::unlock(sender, recipient_lookup, amount_wrapped);

@@ -120,10 +120,7 @@ pub mod module {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
-			Address::<T>::try_mutate(|addr| -> Result<H160, DispatchError> {
-				*addr = self.address;
-				Ok(*addr)
-			}).expect("Setting address cannot fail during genesis");
+			<Address<T>>::put(self.address);
 		}
  	}
 

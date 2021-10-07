@@ -14,7 +14,7 @@ class SubClient {
     const provider = new WsProvider(this.endpoint);
     this.api = await ApiPromise.create({
       provider,
-      typesBundle: bundle
+      typesBundle: bundle,
     })
 
     this.keyring = new Keyring({ type: 'sr25519' });

@@ -3,6 +3,8 @@ use ethereum_types::U256;
 use sp_runtime::RuntimeDebug;
 use sp_std::convert::TryFrom;
 
+use codec::{Encode, Decode};
+
 const DIFFICULTY_BOUND_DIVISOR: u32 = 11;  // right-shifts equivalent to division by 2048
 const EXP_DIFFICULTY_PERIOD: u64 = 100000;
 const MINIMUM_DIFFICULTY: u32 = 131072;
@@ -21,7 +23,7 @@ pub enum BombDelay {
 
 /// Describes when hard forks occurred that affect difficulty calculations. These
 /// values are network-specific.
-#[derive(PartialEq, RuntimeDebug)]
+#[derive(Copy, Clone, Encode, Decode, PartialEq, RuntimeDebug)]
 pub struct DifficultyConfig {
 	// Block number on which Byzantium (EIP-649) rules activated
 	pub byzantium_fork_block: u64,

@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-	decl_event, decl_module, decl_storage,
 	dispatch::{Parameter, Dispatchable, DispatchResult},
 	traits::{EnsureOrigin, Contains},
 	weights::GetDispatchInfo,
@@ -9,7 +8,6 @@ use frame_support::{
 
 use sp_core::RuntimeDebug;
 
-use frame_system::{self as system};
 use sp_core::H160;
 use sp_std::prelude::*;
 
@@ -18,11 +16,11 @@ use snowbridge_core::MessageDispatch;
 use codec::{Encode, Decode};
 
 #[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
-pub struct Origin(pub H160);
+pub struct RawOrigin(pub H160);
 
-impl From<H160> for Origin {
-	fn from(hash: H160) -> Origin {
-		Origin(hash)
+impl From<H160> for RawOrigin {
+	fn from(hash: H160) -> RawOrigin {
+		RawOrigin(hash)
 	}
 }
 
@@ -30,7 +28,7 @@ pub struct EnsureEthereumAccount;
 
 impl<OuterOrigin> EnsureOrigin<OuterOrigin> for EnsureEthereumAccount
 where
-	OuterOrigin: Into<Result<Origin, OuterOrigin>> + From<Origin>
+	OuterOrigin: Into<Result<RawOrigin, OuterOrigin>> + From<RawOrigin>
 {
 	type Success = H160;
 
@@ -40,89 +38,103 @@ where
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> OuterOrigin {
-		OuterOrigin::from(Origin(H160::repeat_byte(2)))
+		OuterOrigin::from(RawOrigin(H160::repeat_byte(2)))
 	}
 }
 
-pub trait Config: system::Config {
+pub use pallet::*;
 
-	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
+#[frame_support::pallet]
+pub mod pallet {
 
-	/// The overarching origin type.
-	type Origin: From<Origin>;
+	use super::*;
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 
-	/// Id of the message. Whenever message is passed to the dispatch module, it emits
-	/// event with this id + dispatch result.
-	type MessageId: Parameter;
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
-	/// The overarching dispatch call type.
-	type Call: Parameter
-		+ GetDispatchInfo
-		+ Dispatchable<
-			Origin = <Self as Config>::Origin,
-			PostInfo = frame_support::dispatch::PostDispatchInfo,
-		>;
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		/// The overarching event type.
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-	/// The pallet will filter all incoming calls right before they're dispatched. If this filter
-	/// rejects the call, special event (`Event::MessageRejected`) is emitted.
-	type CallFilter: Contains<<Self as Config>::Call>;
-}
+		/// The overarching origin type.
+		type Origin: From<RawOrigin>;
 
-decl_storage! {
-	trait Store for Module<T: Config> as Dispatch {}
-}
+		/// Id of the message. Whenever message is passed to the dispatch module, it emits
+		/// event with this id + dispatch result.
+		type MessageId: Parameter;
 
-decl_event! {
-    /// Events for the Bridge module.
-	pub enum Event<T> where <T as Config>::MessageId {
+		/// The overarching dispatch call type.
+		type Call: Parameter
+			+ GetDispatchInfo
+			+ Dispatchable<
+				Origin = <Self as Config>::Origin,
+				PostInfo = frame_support::dispatch::PostDispatchInfo,
+			>;
+
+		/// The pallet will filter all incoming calls right before they're dispatched. If this filter
+		/// rejects the call, special event (`Event::MessageRejected`) is emitted.
+		type CallFilter: Contains<<Self as Config>::Call>;
+	}
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {}
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	#[pallet::metadata(T::MessageId = "MessageId")]
+	pub enum Event<T: Config> {
 		/// Message has been dispatched with given result.
-		MessageDispatched(MessageId, DispatchResult),
+		MessageDispatched(T::MessageId, DispatchResult),
 		/// Message has been rejected
-		MessageRejected(MessageId),
+		MessageRejected(T::MessageId),
 		/// We have failed to decode a Call from the message.
-		MessageDecodeFailed(MessageId),
+		MessageDecodeFailed(T::MessageId),
 	}
-}
 
-decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: <T as frame_system::Config>::Origin {
-		fn deposit_event() = default;
-	}
-}
+	#[pallet::origin]
+	pub type Origin = RawOrigin;
 
-pub type MessageIdOf<T> = <T as Config>::MessageId;
+	pub type MessageIdOf<T> = <T as Config>::MessageId;
 
-impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Module<T> {
-	fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8]) {
-		let call = match <T as Config>::Call::decode(&mut &payload[..]) {
-			Ok(call) => call,
-			Err(_) => {
-				Self::deposit_event(RawEvent::MessageDecodeFailed(id));
+	impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Pallet<T> {
+		fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8]) {
+			let call = match <T as Config>::Call::decode(&mut &payload[..]) {
+				Ok(call) => call,
+				Err(_) => {
+					Self::deposit_event(Event::MessageDecodeFailed(id));
+					return;
+				}
+			};
+
+			if !T::CallFilter::contains(&call) {
+				Self::deposit_event(Event::MessageRejected(id));
 				return;
 			}
-		};
 
-		if !T::CallFilter::contains(&call) {
-			Self::deposit_event(RawEvent::MessageRejected(id));
-			return;
+			let origin = RawOrigin(source).into();
+			let result = call.dispatch(origin);
+
+			Self::deposit_event(Event::MessageDispatched(
+				id,
+				result.map(drop).map_err(|e| e.error),
+			));
 		}
 
-		let origin = Origin(source).into();
-		let result = call.dispatch(origin);
-
-		Self::deposit_event(RawEvent::MessageDispatched(
-			id,
-			result.map(drop).map_err(|e| e.error),
-		));
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_dispatch_event(id: MessageIdOf<T>) -> Option<<T as system::Config>::Event> {
-		let event: <T as Config>::Event = RawEvent::MessageDispatched(id, Ok(())).into();
-		Some(event.into())
+		#[cfg(feature = "runtime-benchmarks")]
+		fn successful_dispatch_event(id: MessageIdOf<T>) -> Option<<T as frame_system::Config>::Event> {
+			let event: <T as Config>::Event = Event::MessageDispatched(id, Ok(())).into();
+			Some(event.into())
+		}
 	}
 }
+
 
 #[cfg(test)]
 mod tests {

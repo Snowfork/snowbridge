@@ -1,18 +1,20 @@
+mod envelope;
+mod benchmarking;
+pub mod weights;
+
+#[cfg(test)]
+mod test;
+
 use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage,
-	dispatch::DispatchResult,
 	traits::{
 		Currency, Get, ExistenceRequirement::KeepAlive,
 		WithdrawReasons, Imbalance,
 		EnsureOrigin,
 	},
-	storage::StorageValue,
 	log,
-	weights::Weight,
 };
-use frame_system::{self as system, ensure_signed};
+use frame_system::{ensure_signed};
 use sp_core::{U256, H160};
-use sp_std::prelude::*;
 use sp_std::convert::TryFrom;
 use snowbridge_core::{
 	ChannelId, Message, MessageId,
@@ -20,72 +22,61 @@ use snowbridge_core::{
 };
 
 use envelope::Envelope;
+pub use weights::WeightInfo;
 
 use sp_runtime::{Perbill, traits::{Zero, Convert}};
 
-mod benchmarking;
+pub use pallet::*;
 
-#[cfg(test)]
-mod test;
+#[frame_support::pallet]
+pub mod pallet {
 
-mod envelope;
+	use super::*;
 
-type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-type PositiveImbalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::PositiveImbalance;
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 
-/// Weight functions needed for this pallet.
-pub trait WeightInfo {
-	fn submit() -> Weight;
-	fn set_reward_fraction() -> Weight;
-}
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
-impl WeightInfo for () {
-	fn submit() -> Weight { 0 }
-	fn set_reward_fraction() -> Weight { 0 }
-}
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-pub trait Config: system::Config {
-	type Event: From<Event> + Into<<Self as system::Config>::Event>;
+		/// Verifier module for message verification.
+		type Verifier: Verifier;
 
-	/// Verifier module for message verification.
-	type Verifier: Verifier;
+		/// Verifier module for message verification.
+		type MessageDispatch: MessageDispatch<Self, MessageId>;
 
-	/// Verifier module for message verification.
-	type MessageDispatch: MessageDispatch<Self, MessageId>;
+		type Currency: Currency<Self::AccountId>;
 
-	type Currency: Currency<Self::AccountId>;
+		/// Source of funds to pay relayers
+		#[pallet::constant]
+		type SourceAccount: Get<Self::AccountId>;
 
-	/// Source of funds to pay relayers
-	type SourceAccount: Get<Self::AccountId>;
+		/// Treasury Account
+		#[pallet::constant]
+		type TreasuryAccount: Get<Self::AccountId>;
 
-	/// Treasury Account
-	type TreasuryAccount: Get<Self::AccountId>;
+		type FeeConverter: Convert<U256, BalanceOf<Self>>;
 
-	type FeeConverter: Convert<U256, BalanceOf<Self>>;
+		/// The origin which may update reward related params
+		type UpdateOrigin: EnsureOrigin<Self::Origin>;
 
-	/// The origin which may update reward related params
-	type UpdateOrigin: EnsureOrigin<Self::Origin>;
-
-	/// Weight information for extrinsics in this pallet
-	type WeightInfo: WeightInfo;
-}
-
-decl_storage! {
-	trait Store for Module<T: Config> as IncentivizedInboundModule {
-		pub SourceChannel get(fn source_channel) config(): H160;
-		pub Nonce: u64;
-		pub RewardFraction get(fn reward_fraction) config(): Perbill;
-
+		/// Weight information for extrinsics in this pallet
+		type WeightInfo: WeightInfo;
 	}
-}
 
-decl_event! {
-	pub enum Event {
-	}
-}
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
-decl_error! {
-	pub enum Error for Module<T: Config> {
+	#[pallet::event]
+	pub enum Event<T> {}
+
+	#[pallet::error]
+	pub enum Error<T> {
 		/// Message came from an invalid outbound channel on the Ethereum side.
 		InvalidSourceChannel,
 		/// Message has an invalid envelope.
@@ -93,17 +84,51 @@ decl_error! {
 		/// Message has an unexpected nonce.
 		InvalidNonce,
 	}
-}
 
-decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
+	/// Source channel on the ethereum side
+	#[pallet::storage]
+	#[pallet::getter(fn source_channel)]
+	pub type SourceChannel<T: Config> = StorageValue<_, H160, ValueQuery>;
 
-		type Error = Error<T>;
+	#[pallet::storage]
+	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
 
-		fn deposit_event() = default;
+	/// Fraction of reward going to relayer
+	#[pallet::storage]
+	#[pallet::getter(fn reward_fraction)]
+	pub type RewardFraction<T: Config> = StorageValue<_, Perbill, ValueQuery>;
 
-		#[weight = T::WeightInfo::submit()]
-		pub fn submit(origin, message: Message) -> DispatchResult {
+	#[pallet::genesis_config]
+	pub struct GenesisConfig {
+		pub source_channel: H160,
+		pub reward_fraction: Perbill,
+	}
+
+	#[cfg(feature = "std")]
+	impl Default for GenesisConfig {
+		fn default() -> Self {
+			Self {
+				source_channel: Default::default(),
+				reward_fraction: Perbill::one()
+			}
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+		fn build(&self) {
+			<SourceChannel<T>>::put(self.source_channel);
+			<RewardFraction<T>>::put(self.reward_fraction);
+		}
+	}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		#[pallet::weight(T::WeightInfo::submit())]
+		pub fn submit(
+			origin: OriginFor<T>,
+			message: Message
+		) -> DispatchResult {
 			let relayer = ensure_signed(origin)?;
 			// submit message to verifier for verification
 			let log = T::Verifier::verify(&message)?;
@@ -113,12 +138,12 @@ decl_module! {
 
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
-			if envelope.channel != SourceChannel::get() {
+			if envelope.channel != <SourceChannel<T>>::get() {
 				return Err(Error::<T>::InvalidSourceChannel.into())
 			}
 
 			// Verify message nonce
-			Nonce::try_mutate(|nonce| -> DispatchResult {
+			<Nonce<T>>::try_mutate(|nonce| -> DispatchResult {
 				if envelope.nonce != *nonce + 1 {
 					Err(Error::<T>::InvalidNonce.into())
 				} else {
@@ -135,55 +160,58 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::WeightInfo::set_reward_fraction()]
-		pub fn set_reward_fraction(origin, fraction: Perbill) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::set_reward_fraction())]
+		pub fn set_reward_fraction(origin: OriginFor<T>, fraction: Perbill) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			RewardFraction::set(fraction);
+			<RewardFraction<T>>::set(fraction);
 			Ok(())
 		}
-
 	}
-}
 
-impl<T: Config> Module<T> {
-	/*
-	* Pay the message submission fee into the relayer and treasury account.
-	*
-	* - If the fee is zero, do nothing
-	* - Otherwise, withdraw the fee amount from the DotApp module account, returning a negative imbalance
-	* - Figure out the fraction of the fee amount that should be paid to the relayer
-	* - Pay the relayer if their account exists, returning a positive imbalance.
-	* - Adjust the negative imbalance by offsetting the amount paid to the relayer
-	* - Resolve the negative imbalance by depositing it into the treasury account
-	*/
-	fn handle_fee(amount: BalanceOf<T>, relayer: &T::AccountId) {
-		if amount.is_zero() {
-			return;
+	pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	pub type PositiveImbalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::PositiveImbalance;
+
+	impl<T: Config> Pallet<T> {
+		/*
+		* Pay the message submission fee into the relayer and treasury account.
+		*
+		* - If the fee is zero, do nothing
+		* - Otherwise, withdraw the fee amount from the DotApp module account, returning a negative imbalance
+		* - Figure out the fraction of the fee amount that should be paid to the relayer
+		* - Pay the relayer if their account exists, returning a positive imbalance.
+		* - Adjust the negative imbalance by offsetting the amount paid to the relayer
+		* - Resolve the negative imbalance by depositing it into the treasury account
+		*/
+		pub(super) fn handle_fee(amount: BalanceOf<T>, relayer: &T::AccountId) {
+			if amount.is_zero() {
+				return;
+			}
+
+			let imbalance = match T::Currency::withdraw(&T::SourceAccount::get(), amount, WithdrawReasons::TRANSFER, KeepAlive) {
+				Ok(imbalance) => imbalance,
+				Err(err) => {
+					log::error!("Unable to withdraw from source account: {:?}", err);
+					return;
+				}
+			};
+
+			let reward_fraction: Perbill = <RewardFraction<T>>::get();
+			let reward_amount = reward_fraction.mul_ceil(amount);
+
+			let rewarded = T::Currency::deposit_into_existing(relayer, reward_amount)
+				.unwrap_or_else(|_| PositiveImbalanceOf::<T>::zero());
+
+			let adjusted_imbalance = match imbalance.offset(rewarded).same() {
+				Ok(imbalance) => imbalance,
+				Err(_) => {
+					log::error!("Unable to offset imbalance");
+					return;
+				}
+			};
+
+			T::Currency::resolve_creating(&T::TreasuryAccount::get(), adjusted_imbalance);
 		}
-
-		let imbalance = match T::Currency::withdraw(&T::SourceAccount::get(), amount, WithdrawReasons::TRANSFER, KeepAlive) {
-			Ok(imbalance) => imbalance,
-			Err(err) => {
-				log::error!("Unable to withdraw from source account: {:?}", err);
-				return;
-			}
-		};
-
-		let reward_fraction: Perbill = RewardFraction::get();
-		let reward_amount = reward_fraction.mul_ceil(amount);
-
-		let rewarded = T::Currency::deposit_into_existing(relayer, reward_amount)
-			.unwrap_or_else(|_| PositiveImbalanceOf::<T>::zero());
-
-		let adjusted_imbalance = match imbalance.offset(rewarded).same() {
-			Ok(imbalance) => imbalance,
-			Err(_) => {
-				log::error!("Unable to offset imbalance");
-				return;
-			}
-		};
-
-		T::Currency::resolve_creating(&T::TreasuryAccount::get(), adjusted_imbalance);
 	}
-
 }
+
+

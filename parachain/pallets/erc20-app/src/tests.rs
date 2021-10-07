@@ -1,10 +1,8 @@
-use crate::mock::{new_tester, Event, System, AccountId, Origin, Assets, Erc20App};
+use crate::mock::{Test, new_tester, Event, System, AccountId, Origin, Assets, Erc20App};
 use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_core::H160;
 use snowbridge_core::{ChannelId, AssetId, MultiAsset};
-
-use crate::RawEvent;
 
 fn last_event() -> Event {
 	System::events().pop().expect("Event expected").event
@@ -20,7 +18,7 @@ fn mints_after_handling_ethereum_event() {
 		let amount = 10;
 		assert_ok!(
 			Erc20App::mint(
-				snowbridge_dispatch::Origin(peer_contract).into(),
+				snowbridge_dispatch::RawOrigin(peer_contract).into(),
 				token,
 				sender,
 				recipient.clone(),
@@ -30,7 +28,7 @@ fn mints_after_handling_ethereum_event() {
 		assert_eq!(Assets::balance(AssetId::Token(token), &recipient), amount.into());
 
 		assert_eq!(
-			Event::Erc20App(RawEvent::Minted(token, sender, recipient, amount.into())),
+			Event::Erc20App(crate::Event::<Test>::Minted(token, sender, recipient, amount.into())),
 			last_event()
 		);
 	});
@@ -52,7 +50,7 @@ fn burn_should_emit_bridge_event() {
 			20.into()));
 
 		assert_eq!(
-			Event::Erc20App(RawEvent::Burned(token_id, bob, recipient, 20.into())),
+			Event::Erc20App(crate::Event::<Test>::Burned(token_id, bob, recipient, 20.into())),
 			last_event()
 		);
 	});
