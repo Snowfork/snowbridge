@@ -68,26 +68,43 @@ func (co *Connection) Close() {
 	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
 }
 
-func (co *Connection) GetMMRLeafForBlock(
+func (co *Connection) GenerateProofForBlock(
 	blockNumber uint64,
-	blockHash types.Hash,
-	beefyStartingBlock uint64,
+	latestBeefyBlockHash types.Hash,
+	beefyActivationBlock uint64,
 ) (types.GenerateMMRProofResponse, error) {
 	log.WithFields(log.Fields{
 		"blockNumber": blockNumber,
-		"blockHash":   blockHash.Hex(),
+		"blockHash":   latestBeefyBlockHash.Hex(),
 	}).Info("Getting MMR Leaf for block...")
 
 	// We expect 1 mmr leaf for each block. MMR leaf indexes start from 0, but block numbers start from 1,
 	// so the mmr leaf index should be 1 less than the block number.
 	// However, some chains only started using beefy late in their existence, so there are no leafs for
-	// blocks produced before beefy was activated. We subtract the block in which beefy was started on the
+	// blocks produced before beefy was activated. We subtract the block in which beefy was activated on the
 	// chain to account for this.
-	leafIndex := blockNumber - beefyStartingBlock - 1
+	//
+	// LeafIndex(currentBlock, activationBlock) := currentBlock - Max(activationBlock, 1)
+	//
+	// Example: LeafIndex(5, 3) = 2
+	//
+	// Block Number: 1 -> 2 -> 3 -> 4 -> 5
+	// Leaf Index:             0 -> 1 -> 2
+	//                         ^         ^
+	//                         |         |
+	//                         |         Leaf we want
+	//                         |
+	//                         Activation Block
+	//
+	var leafIndex uint64
+	if beefyActivationBlock == 0 {
+		leafIndex = blockNumber - 1
+	} else {
+		leafIndex = blockNumber - beefyActivationBlock
+	}
 
-	proofResponse, err := co.API().RPC.MMR.GenerateProof(leafIndex, blockHash)
+	proofResponse, err := co.API().RPC.MMR.GenerateProof(leafIndex, latestBeefyBlockHash)
 	if err != nil {
-		log.WithError(err).Error("Failed to generate mmr proof")
 		return types.GenerateMMRProofResponse{}, err
 	}
 
@@ -108,6 +125,7 @@ func (co *Connection) GetMMRLeafForBlock(
 		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
 		"Proof.Items":                     proofItemsHex,
 	}).Info("Generated MMR Proof")
+
 	return proofResponse, nil
 }
 
@@ -136,7 +154,7 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 		"numKeys":          len(keys),
 		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
 		"block":            blockHash.Hex(),
-	}).Debug("Found keys for Paras.Heads storage map")
+	}).Trace("Found keys for Paras.Heads storage map")
 
 	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
 	if err != nil {
@@ -165,11 +183,6 @@ func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 				log.WithError(err).Error("Failed to decode HeadData wrapper")
 				return nil, err
 			}
-
-			log.WithFields(log.Fields{
-				"ParaID":   paraID,
-				"HeadData": fmt.Sprintf("%#x", headData),
-			}).Debug("Processed storage key for head in Paras.Heads")
 
 			heads[paraID] = ParaHead{
 				ParaID: paraID,
@@ -246,7 +259,8 @@ func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types
 	log.WithFields(log.Fields{
 		"keyPrefix": keyPrefix,
 		"blockHash": blockHash.Hex(),
-		"pageSize":  pageSize}).Info("Fetching paged keys.")
+		"pageSize":  pageSize,
+	}).Trace("Fetching paged keys.")
 
 	pageIndex := 0
 	for {
@@ -257,7 +271,8 @@ func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types
 
 		log.WithFields(log.Fields{
 			"keysInPage": len(response),
-			"pageIndex":  pageIndex}).Info("Fetched a page of keys.")
+			"pageIndex":  pageIndex,
+		}).Trace("Fetched a page of keys.")
 
 		results = append(results, response...)
 		if uint32(len(response)) < pageSize {
@@ -270,7 +285,8 @@ func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types
 
 	log.WithFields(log.Fields{
 		"totalNumKeys":  len(results),
-		"totalNumPages": pageIndex + 1}).Info("Fetching of paged keys complete.")
+		"totalNumPages": pageIndex + 1,
+	}).Trace("Fetching of paged keys complete.")
 
 	return results, nil
 }

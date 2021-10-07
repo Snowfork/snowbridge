@@ -12,9 +12,9 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 	"github.com/snowfork/snowbridge/relayer/substrate"
-	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -225,7 +225,7 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 	}
 	log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
 
-	latestMMRProof, err := li.relaychainConn.GetMMRLeafForBlock(blockNumber-1, blockHash, li.config.Source.Polkadot.BeefyStartingBlock)
+	latestMMRProof, err := li.relaychainConn.GenerateProofForBlock(blockNumber, blockHash, li.config.Source.BeefyActivationBlock)
 	if err != nil {
 		log.WithError(err).Error("Failed get MMR Leaf")
 		return err
