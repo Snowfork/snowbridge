@@ -1,5 +1,8 @@
 mod envelope;
+
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
 pub mod weights;
 
 #[cfg(test)]

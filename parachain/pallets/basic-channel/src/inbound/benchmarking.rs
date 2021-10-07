@@ -1,7 +1,3 @@
-//! BasicInboundChannel pallet benchmarking
-
-#![cfg(feature = "runtime-benchmarks")]
-
 use super::*;
 
 use frame_system::{RawOrigin, self, EventRecord};
@@ -14,7 +10,7 @@ use snowbridge_core::{ChannelId, Message, MessageId, Proof};
 use snowbridge_ethereum::{Log, Header};
 
 #[allow(unused_imports)]
-use crate::inbound::pallet as BasicInboundChannel;
+use crate::inbound::Pallet as BasicInboundChannel;
 
 fn assert_last_event<T: Config>(system_event: <T as frame_system::Config>::Event) {
 	let events = frame_system::Pallet::<T>::events();
