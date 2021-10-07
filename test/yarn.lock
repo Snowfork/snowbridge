@@ -585,10 +585,10 @@
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-0.14.0.tgz#9fb3a3cf3132328151f353de4632e01e52102bea"
   integrity sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==
 
-"@snowfork/snowbridge-types@^0.2.5":
-  version "0.2.5"
-  resolved "https://registry.yarnpkg.com/@snowfork/snowbridge-types/-/snowbridge-types-0.2.5.tgz#59b86e7f6f4de7636a5f25ba97cea19ca1182e14"
-  integrity sha512-wqUgfDd1frjzUpbAsOisaezoBLNOgIJiSRhSknKZYDegEqrg+/0jcPhrgXKqJxqMiQnrYmh0KXH9lo2FaadyzQ==
+"@snowfork/snowbridge-types@0.2.6":
+  version "0.2.6"
+  resolved "https://registry.yarnpkg.com/@snowfork/snowbridge-types/-/snowbridge-types-0.2.6.tgz#b195d3e37ad3f4d686a38bbc4fb32eeb47163724"
+  integrity sha512-a05XjY0Gt/PX2sB0osuJIyMVY/UGH6fRRJf4xhLRB/6YfstysMkrnMC4nTWGnM9z73FOJB2UiATehV9Frj4I5A==
   dependencies:
     "@polkadot/keyring" "^7.1.1"
     "@polkadot/types" "^5.3.2"
