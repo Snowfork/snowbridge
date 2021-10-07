@@ -32,12 +32,12 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
-	var messagePackages = make(chan MessagePackage, 1)
+	var tasks = make(chan *Task, 1)
 
 	ethereumChannelWriter, err := NewEthereumChannelWriter(
 		&config.Sink,
 		ethereumConn,
-		messagePackages,
+		tasks,
 	)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 		ethereumConn,
 		relaychainConn,
 		parachainConn,
-		messagePackages,
+		tasks,
 	)
 
 	return &Relay{

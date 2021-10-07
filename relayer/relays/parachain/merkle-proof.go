@@ -69,21 +69,15 @@ func (d MerkleProofData) String() string {
 	return string(b)
 }
 
-func CreateParachainMerkleProof(heads map[uint32]relaychain.ParaHead, paraID uint32) (MerkleProofData, error) {
-	// convert header mapping into slice
-	headsAsSlice := make([]relaychain.ParaHead, 0, len(heads))
-	for _, v := range heads {
-		headsAsSlice = append(headsAsSlice, v)
-	}
-
+func CreateParachainMerkleProof(heads []relaychain.ParaHead, paraID uint32) (MerkleProofData, error) {
 	// sort slice by para ID
-	sort.Sort(ByParaID(headsAsSlice))
+	sort.Sort(ByParaID(heads))
 
 	// loop headers, convert to pre leaves and find header being proven
-	preLeaves := make([][]byte, 0, len(headsAsSlice))
+	preLeaves := make([][]byte, 0, len(heads))
 	var headerToProve []byte
 	var headerIndex int64
-	for i, head := range headsAsSlice {
+	for i, head := range heads {
 		preLeaf, err := types.EncodeToBytes(head)
 		if err != nil {
 			return MerkleProofData{}, err

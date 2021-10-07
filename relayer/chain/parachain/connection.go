@@ -128,11 +128,11 @@ func (co *Connection) GetDataForDigestItem(digestItem *AuxiliaryDigestItem) (typ
 	return *data, nil
 }
 
-func (co *Connection) GetBasicOutboundMessages(digestItem AuxiliaryDigestItem) (
-	[]BasicOutboundChannelMessage, types.StorageDataRaw, error) {
+func (co *Connection) ReadBasicOutboundMessages(digestItem AuxiliaryDigestItem) (
+	BasicOutboundChannelMessages, error) {
 	data, err := co.GetDataForDigestItem(&digestItem)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var messages []BasicOutboundChannelMessage
@@ -140,17 +140,17 @@ func (co *Connection) GetBasicOutboundMessages(digestItem AuxiliaryDigestItem) (
 	err = types.DecodeFromBytes(data, &messages)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, nil, err
+		return nil, err
 	}
 
-	return messages, data, nil
+	return messages, nil
 }
 
-func (co *Connection) GetIncentivizedOutboundMessages(digestItem AuxiliaryDigestItem) (
-	[]IncentivizedOutboundChannelMessage, types.StorageDataRaw, error) {
+func (co *Connection) ReadIncentivizedOutboundMessages(digestItem AuxiliaryDigestItem) (
+	IncentivizedOutboundChannelMessages, error) {
 	data, err := co.GetDataForDigestItem(&digestItem)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var messages []IncentivizedOutboundChannelMessage
@@ -158,8 +158,8 @@ func (co *Connection) GetIncentivizedOutboundMessages(digestItem AuxiliaryDigest
 	err = types.DecodeFromBytes(data, &messages)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, nil, err
+		return nil, err
 	}
 
-	return messages, data, nil
+	return messages, nil
 }

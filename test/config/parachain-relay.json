@@ -4,8 +4,7 @@
             "endpoint": "ws://localhost:8546"
         },
         "polkadot": {
-            "endpoint": "ws://localhost:9944",
-            "beefy-starting-block": 0
+            "endpoint": "ws://localhost:9944"
         },
         "parachain": {
             "endpoint": "ws://localhost:11144"
@@ -14,7 +13,8 @@
             "BeefyLightClient": null,
             "BasicInboundChannel": null,
             "IncentivizedInboundChannel": null
-        }
+        },
+        "beefy-activation-block": 0
     },
     "sink": {
         "ethereum": {
