@@ -180,7 +180,7 @@ fn it_prunes_ethereum_headers_correctly() {
 			&PruningRange { oldest_unpruned_block: 0, oldest_block_to_keep: 1 },
 			2,
 			1,
-		);
+		).expect("");
 		assert_eq!(
 			new_range,
 			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 1 },
@@ -193,7 +193,7 @@ fn it_prunes_ethereum_headers_correctly() {
 			&PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 1 },
 			1,
 			2,
-		);
+		).expect("");
 		assert_eq!(
 			new_range,
 			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 2 },
@@ -207,7 +207,7 @@ fn it_prunes_ethereum_headers_correctly() {
 			&PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 2 },
 			2,
 			4,
-		);
+		).expect("");
 		assert_eq!(
 			new_range,
 			PruningRange { oldest_unpruned_block: 3, oldest_block_to_keep: 4 },

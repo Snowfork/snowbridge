@@ -35,6 +35,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::Get,
 	log,
+	BoundedSlice,
 };
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
@@ -113,6 +114,9 @@ pub mod pallet {
 		type VerifyPoW: Get<bool>;
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
+		/// The maximum numbers of headers to store in storage.
+		#[pallet::constant]
+		type MaxHeaders: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -139,6 +143,8 @@ pub mod pallet {
 		InvalidProof,
 		/// Log could not be decoded
 		DecodeFailed,
+		// Total number of headers reached
+		AtMaxHeadersForNumber,
 		/// This should never be returned - indicates a bug
 		Unknown,
 	}
@@ -164,7 +170,7 @@ pub mod pallet {
 
 	/// Map of imported header hashes by number.
 	#[pallet::storage]
-	pub(super) type HeadersByNumber<T: Config> = StorageMap<_, Twox64Concat, u64, Vec<H256>, OptionQuery>;
+	pub(super) type HeadersByNumber<T: Config> = StorageMap<_, Twox64Concat, u64, BoundedVec<H256, T::MaxHeaders>, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -375,13 +381,21 @@ pub mod pallet {
 			if <HeadersByNumber<T>>::contains_key(header.number) {
 				<HeadersByNumber<T>>::mutate(header.number, |option| -> DispatchResult {
 					if let Some(hashes) = option {
-						hashes.push(hash);
+						if let Err(()) = hashes.try_push(hash) {
+							return Err(Error::<T>::AtMaxHeadersForNumber.into()); 
+						}
 						return Ok(());
 					}
 					Err(Error::<T>::Unknown.into())
 				})?;
 			} else {
-				<HeadersByNumber<T>>::insert(header.number, vec![hash]);
+				use std::convert::TryFrom;
+				if let Ok(vec) = BoundedVec::try_from(vec![hash]) {
+					<HeadersByNumber<T>>::insert(header.number, vec);
+				}
+				else {
+					return Err(Error::<T>::AtMaxHeadersForNumber.into());
+				}
 			}
 
 			// Maybe track new highest difficulty chain
@@ -416,7 +430,7 @@ pub mod pallet {
 					&pruning_range,
 					HEADERS_TO_PRUNE_IN_SINGLE_IMPORT,
 					new_finalized_block_id.number.saturating_sub(FINALIZED_HEADERS_TO_KEEP),
-				);
+				)?;
 				if new_pruning_range != pruning_range {
 					<BlocksToPrune<T>>::put(new_pruning_range);
 				}
@@ -462,7 +476,7 @@ pub mod pallet {
 			pruning_range: &PruningRange,
 			max_headers_to_prune: u64,
 			prune_end: u64,
-		) -> PruningRange {
+		) -> Result<PruningRange, Error<T>> {
 			let mut new_pruning_range = pruning_range.clone();
 
 			// We can only increase this since pruning cannot be reverted...
@@ -491,7 +505,13 @@ pub mod pallet {
 
 					if remaining > 0 {
 						let remainder = &hashes_at_number[hashes_at_number.len() - remaining..];
-						<HeadersByNumber<T>>::insert(number, remainder);
+						use std::convert::TryFrom;
+						if let Ok(slice) = BoundedSlice::try_from(remainder) {
+							<HeadersByNumber<T>>::insert(number, slice);
+						}
+						else {
+							return Err(Error::<T>::AtMaxHeadersForNumber.into());
+						}
 					} else {
 						new_pruning_range.oldest_unpruned_block = number + 1;
 					}
@@ -500,7 +520,7 @@ pub mod pallet {
 				}
 			}
 
-			new_pruning_range
+			Ok(new_pruning_range)
 		}
 
 		// Verifies that the receipt encoded in proof.data is included
@@ -587,17 +607,19 @@ pub mod pallet {
 						finalized: false,
 					},
 				);
-				<HeadersByNumber<T>>::append(header.number, hash);
+				if let Err(()) = <HeadersByNumber<T>>::try_append(header.number, hash) {
+					return Err("Could not append header");
+				}
 
-				EthereumHeaderId {
+				Ok(EthereumHeaderId {
 					number: header.number,
 					hash: hash,
-				}
+				})
 			};
 
 			let oldest_header = headers.get(0).ok_or("Need at least one header")?;
 			let mut best_block_difficulty = initial_difficulty;
-			let mut best_block_id = insert_header_fn(&oldest_header, best_block_difficulty);
+			let mut best_block_id = insert_header_fn(&oldest_header, best_block_difficulty)?;
 
 			for (i, header) in headers.iter().enumerate().skip(1) {
 				let prev_block_num = headers[i - 1].number;
@@ -611,7 +633,7 @@ pub mod pallet {
 					parent.total_difficulty + header.difficulty
 				};
 
-				let block_id = insert_header_fn(&header, total_difficulty);
+				let block_id = insert_header_fn(&header, total_difficulty)?;
 
 				if total_difficulty > best_block_difficulty {
 					best_block_difficulty = total_difficulty;
