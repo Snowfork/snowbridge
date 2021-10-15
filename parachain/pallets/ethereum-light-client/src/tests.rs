@@ -180,9 +180,10 @@ fn it_prunes_ethereum_headers_correctly() {
 			&PruningRange { oldest_unpruned_block: 0, oldest_block_to_keep: 1 },
 			2,
 			1,
-		).expect("");
+		);
+		assert_ok!(&new_range);
 		assert_eq!(
-			new_range,
+			new_range.unwrap(),
 			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 1 },
 		);
 		assert!(!<Headers<Test>>::contains_key(genesis_ethereum_block_hash()));
@@ -193,9 +194,10 @@ fn it_prunes_ethereum_headers_correctly() {
 			&PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 1 },
 			1,
 			2,
-		).expect("");
+		);
+		assert_ok!(&new_range);
 		assert_eq!(
-			new_range,
+			new_range.unwrap(),
 			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 2 },
 		);
 		assert!(!<Headers<Test>>::contains_key(block1_hash));
@@ -207,9 +209,10 @@ fn it_prunes_ethereum_headers_correctly() {
 			&PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 2 },
 			2,
 			4,
-		).expect("");
+		);
+		assert_ok!(&new_range);
 		assert_eq!(
-			new_range,
+			new_range.unwrap(),
 			PruningRange { oldest_unpruned_block: 3, oldest_block_to_keep: 4 },
 		);
 		assert!(!<Headers<Test>>::contains_key(block4_hash));
