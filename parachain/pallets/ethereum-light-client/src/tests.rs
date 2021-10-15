@@ -483,3 +483,45 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 		));
 	});
 }
+
+
+#[test]
+fn it_can_only_import_max_headers_worth_of_headers() {
+	new_tester::<Test>().execute_with(|| {
+		const MAX_BLOCKS: u32 = 10;
+		let ferdie: AccountId = Keyring::Ferdie.into();
+
+		let first_block = child_of_genesis_ethereum_header();
+
+		let mut blocks = Vec::new();
+
+		for idx in 1..(MAX_BLOCKS+1) {
+			let mut child = child_of_header(&first_block);
+			child.difficulty = idx.into();
+			blocks.push(child);
+		}
+
+		let mut last_child = child_of_header(&first_block);
+		last_child.difficulty = (MAX_BLOCKS + 1).into();
+
+		assert_ok!(Verifier::import_header(
+			Origin::signed(ferdie.clone()),
+			first_block,
+			Default::default(),
+		));
+
+		for b in blocks {
+			assert_ok!(Verifier::import_header(
+				Origin::signed(ferdie.clone()),
+				b,
+				Default::default(),
+			));
+		}
+
+		assert_err!(Verifier::import_header(
+			Origin::signed(ferdie.clone()),
+			last_child,
+			Default::default(),
+		), Error::<Test>::AtMaxHeadersForNumber);
+	});
+}

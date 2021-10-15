@@ -39,6 +39,7 @@ use frame_support::{
 };
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
+use sp_std::convert::TryFrom;
 use codec::{Encode, Decode};
 
 use snowbridge_core::{Message, Verifier, Proof};
@@ -389,7 +390,6 @@ pub mod pallet {
 					Err(Error::<T>::Unknown.into())
 				})?;
 			} else {
-				use std::convert::TryFrom;
 				if let Ok(vec) = BoundedVec::try_from(vec![hash]) {
 					<HeadersByNumber<T>>::insert(header.number, vec);
 				}
@@ -505,7 +505,6 @@ pub mod pallet {
 
 					if remaining > 0 {
 						let remainder = &hashes_at_number[hashes_at_number.len() - remaining..];
-						use std::convert::TryFrom;
 						if let Ok(slice) = BoundedSlice::try_from(remainder) {
 							<HeadersByNumber<T>>::insert(number, slice);
 						}
