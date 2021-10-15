@@ -24,7 +24,6 @@ use crate::{
 	HeadersByNumber, PruningRange,
 };
 
-
 #[test]
 fn it_tracks_highest_difficulty_ethereum_chain() {
 	new_tester::<Test>().execute_with(|| {
@@ -355,7 +354,6 @@ fn it_confirms_receipt_inclusion_in_ropsten_london_header() {
 	});
 }
 
-
 #[test]
 fn it_denies_receipt_inclusion_for_invalid_proof() {
 	new_tester::<Test>().execute_with(|| {
@@ -484,7 +482,6 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 	});
 }
 
-
 #[test]
 fn it_can_only_import_max_headers_worth_of_headers() {
 	new_tester::<Test>().execute_with(|| {
@@ -501,8 +498,8 @@ fn it_can_only_import_max_headers_worth_of_headers() {
 			blocks.push(child);
 		}
 
-		let mut last_child = child_of_header(&first_block);
-		last_child.difficulty = (MAX_BLOCKS + 1).into();
+		let mut last_block = child_of_header(&first_block);
+		last_block.difficulty = (MAX_BLOCKS + 1).into();
 
 		assert_ok!(Verifier::import_header(
 			Origin::signed(ferdie.clone()),
@@ -510,17 +507,17 @@ fn it_can_only_import_max_headers_worth_of_headers() {
 			Default::default(),
 		));
 
-		for b in blocks {
+		for block in blocks {
 			assert_ok!(Verifier::import_header(
 				Origin::signed(ferdie.clone()),
-				b,
+				block,
 				Default::default(),
 			));
 		}
 
 		assert_err!(Verifier::import_header(
 			Origin::signed(ferdie.clone()),
-			last_child,
+			last_block,
 			Default::default(),
 		), Error::<Test>::AtMaxHeadersForNumber);
 	});
