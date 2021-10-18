@@ -379,24 +379,8 @@ pub mod pallet {
 
 			<Headers<T>>::insert(hash, header_to_store);
 
-			if <HeadersByNumber<T>>::contains_key(header.number) {
-				<HeadersByNumber<T>>::mutate(header.number, |option| -> DispatchResult {
-					if let Some(hashes) = option {
-						if let Err(()) = hashes.try_push(hash) {
-							return Err(Error::<T>::AtMaxHeadersForNumber.into()); 
-						}
-						return Ok(());
-					}
-					Err(Error::<T>::Unknown.into())
-				})?;
-			} else {
-				if let Ok(vec) = BoundedVec::try_from(vec![hash]) {
-					<HeadersByNumber<T>>::insert(header.number, vec);
-				}
-				else {
-					return Err(Error::<T>::AtMaxHeadersForNumber.into());
-				}
-			}
+			<HeadersByNumber<T>>::try_append(header.number, hash)
+				.map_err(|_| Error::<T>::AtMaxHeadersForNumber)?;
 
 			// Maybe track new highest difficulty chain
 			let (_, highest_difficulty) = <BestBlock<T>>::get();
