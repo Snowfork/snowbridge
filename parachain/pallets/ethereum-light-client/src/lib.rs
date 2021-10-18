@@ -115,9 +115,9 @@ pub mod pallet {
 		type VerifyPoW: Get<bool>;
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
-		/// The maximum numbers of headers to store in storage.
+		/// The maximum numbers of headers to store in storage per block number.
 		#[pallet::constant]
-		type MaxHeaders: Get<u32>;
+		type MaxHeadersForNumber: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -144,7 +144,7 @@ pub mod pallet {
 		InvalidProof,
 		/// Log could not be decoded
 		DecodeFailed,
-		// Total number of headers reached
+		// Maximum quantity of headers for number reached
 		AtMaxHeadersForNumber,
 		/// This should never be returned - indicates a bug
 		Unknown,
@@ -171,7 +171,7 @@ pub mod pallet {
 
 	/// Map of imported header hashes by number.
 	#[pallet::storage]
-	pub(super) type HeadersByNumber<T: Config> = StorageMap<_, Twox64Concat, u64, BoundedVec<H256, T::MaxHeaders>, OptionQuery>;
+	pub(super) type HeadersByNumber<T: Config> = StorageMap<_, Twox64Concat, u64, BoundedVec<H256, T::MaxHeadersForNumber>, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -476,7 +476,7 @@ pub mod pallet {
 			pruning_range: &PruningRange,
 			max_headers_to_prune: u64,
 			prune_end: u64,
-		) -> Result<PruningRange, Error<T>> {
+		) -> Result<PruningRange, DispatchError> {
 			let mut new_pruning_range = pruning_range.clone();
 
 			// We can only increase this since pruning cannot be reverted...
@@ -606,14 +606,13 @@ pub mod pallet {
 						finalized: false,
 					},
 				);
-				if let Err(()) = <HeadersByNumber<T>>::try_append(header.number, hash) {
-					return Err("Could not append header");
-				}
 
-				Ok(EthereumHeaderId {
-					number: header.number,
-					hash: hash,
-				})
+				<HeadersByNumber<T>>::try_append(header.number, hash)
+					.map_err(|_| "Could not append header")
+					.map(|_| EthereumHeaderId {
+						number: header.number,
+						hash: hash,
+					})
 			};
 
 			let oldest_header = headers.get(0).ok_or("Need at least one header")?;

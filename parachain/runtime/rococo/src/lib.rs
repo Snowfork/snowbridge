@@ -567,7 +567,7 @@ parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 8;
 	pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::ropsten();
 	pub const VerifyPoW: bool = true;
-	pub const MaxHeaders: u32 = 100;
+	pub const MaxHeadersForNumber: u32 = 100;
 }
 
 impl ethereum_light_client::Config for Runtime {
@@ -576,7 +576,7 @@ impl ethereum_light_client::Config for Runtime {
 	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
 	type WeightInfo = weights::ethereum_light_client_weights::WeightInfo<Runtime>;
-	type MaxHeaders = MaxHeaders;
+	type MaxHeadersForNumber = MaxHeadersForNumber;
 }
 
 impl assets::Config for Runtime {

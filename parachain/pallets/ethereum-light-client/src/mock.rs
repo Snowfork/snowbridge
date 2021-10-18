@@ -71,7 +71,7 @@ pub mod mock_verifier {
 		pub const DescendantsUntilFinalized: u8 = 2;
 		pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::mainnet();
 		pub const VerifyPoW: bool = false;
-		pub const MaxHeaders: u32 = 10;
+		pub const MaxHeadersForNumber: u32 = 10;
 	}
 
 	impl verifier::Config for Test {
@@ -80,7 +80,7 @@ pub mod mock_verifier {
 		type DifficultyConfig = DifficultyConfig;
 		type VerifyPoW = VerifyPoW;
 		type WeightInfo = ();
-		type MaxHeaders = MaxHeaders;
+		type MaxHeadersForNumber = MaxHeadersForNumber;
 	}
 }
 
@@ -132,7 +132,7 @@ pub mod mock_verifier_with_pow {
 		pub const DescendantsUntilFinalized: u8 = 2;
 		pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::mainnet();
 		pub const VerifyPoW: bool = true;
-		pub const MaxHeaders: u32 = 10;
+		pub const MaxHeadersForNumber: u32 = 10;
 	}
 
 	impl verifier::Config for Test {
@@ -141,7 +141,7 @@ pub mod mock_verifier_with_pow {
 		type DifficultyConfig = DifficultyConfig;
 		type VerifyPoW = VerifyPoW;
 		type WeightInfo = ();
-		type MaxHeaders = MaxHeaders;
+		type MaxHeadersForNumber = MaxHeadersForNumber;
 	}
 }
 

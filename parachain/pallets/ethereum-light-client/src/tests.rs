@@ -14,7 +14,7 @@ use crate::mock::mock_verifier::{
 	Verifier,
 	Test,
 	Origin,
-	MaxHeaders,
+	MaxHeadersForNumber,
 };
 
 use frame_support::{assert_err, assert_ok};
@@ -486,7 +486,7 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 #[test]
 fn it_can_only_import_max_headers_worth_of_headers() {
 	new_tester::<Test>().execute_with(|| {
-		const MAX_BLOCKS: u32 = MaxHeaders::get();
+		const MAX_BLOCKS: u32 = MaxHeadersForNumber::get();
 		let ferdie: AccountId = Keyring::Ferdie.into();
 
 		let first_block = child_of_genesis_ethereum_header();
