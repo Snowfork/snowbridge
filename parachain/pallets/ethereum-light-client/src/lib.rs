@@ -35,11 +35,10 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::Get,
 	log,
-	BoundedSlice,
 };
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use sp_std::convert::TryFrom;
+use sp_std::convert::{TryInto};
 use codec::{Encode, Decode};
 
 use snowbridge_core::{Message, Verifier, Proof};
@@ -92,7 +91,7 @@ pub mod pallet {
 
 	use super::*;
 
-	use frame_support::pallet_prelude::*;
+	use frame_support::{BoundedVec, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
@@ -488,13 +487,11 @@ pub mod pallet {
 					}
 
 					if remaining > 0 {
-						let remainder = &hashes_at_number[hashes_at_number.len() - remaining..];
-						if let Ok(slice) = BoundedSlice::try_from(remainder) {
-							<HeadersByNumber<T>>::insert(number, slice);
-						}
-						else {
-							return Err(Error::<T>::AtMaxHeadersForNumber.into());
-						}
+						let remainder: BoundedVec<H256, T::MaxHeadersForNumber> = hashes_at_number[hashes_at_number.len() - remaining..]
+							.to_vec()
+							.try_into()
+							.map_err(|_| Error::<T>::AtMaxHeadersForNumber)?;
+						<HeadersByNumber<T>>::insert(number, remainder);
 					} else {
 						new_pruning_range.oldest_unpruned_block = number + 1;
 					}
