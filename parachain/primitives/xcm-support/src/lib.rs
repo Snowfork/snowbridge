@@ -25,12 +25,8 @@ impl<
 	> AssetsTransactor<Assets, AccountIdConverter, AccountId> {
 	fn match_assets(a: &MultiAsset) -> result::Result<(SnowbridgeAssetId, U256), XcmError> {
 		let (id, amount) = match a {
-			MultiAsset { id, fun } =>
-				if let Fungibility::Fungible(amount) = fun {
-					(id, amount)
-				} else {
-					return Err(XcmError::AssetNotFound);
-				}
+			MultiAsset { id, fun: Fungibility::Fungible(amount) } => (id, amount),
+			_ => return Err(XcmError::AssetNotFound),
 		};
 
 		let key = match id {
