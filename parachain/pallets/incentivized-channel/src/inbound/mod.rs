@@ -60,7 +60,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type TreasuryAccount: Get<Self::AccountId>;
 
-		type FeeConverter: Convert<U256, BalanceOf<Self>>;
+		type FeeConverter: Convert<U256, Option<BalanceOf<Self>>>;
 
 		/// The origin which may update reward related params
 		type UpdateOrigin: EnsureOrigin<Self::Origin>;

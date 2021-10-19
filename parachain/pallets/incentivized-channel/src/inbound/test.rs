@@ -127,9 +127,9 @@ parameter_types! {
 
 pub struct FeeConverter<T: Config>(PhantomData<T>);
 
-impl<T: Config> Convert<U256, BalanceOf<T>> for FeeConverter<T> {
-	fn convert(_: U256) -> BalanceOf<T> {
-		100u32.into()
+impl<T: Config> Convert<U256, Option<BalanceOf<T>>> for FeeConverter<T> {
+	fn convert(_: U256) -> Option<BalanceOf<T>> {
+		Some(100u32.into())
 	}
 }
 

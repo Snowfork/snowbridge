@@ -527,10 +527,9 @@ parameter_types! {
 }
 
 pub struct FeeConverter;
-impl Convert<U256, Balance> for FeeConverter {
-	fn convert(amount: U256) -> Balance {
+impl Convert<U256, Option<Balance>> for FeeConverter {
+	fn convert(amount: U256) -> Option<Balance> {
 		dot_app::primitives::unwrap::<Runtime>(amount, Decimals::get())
-			.expect("Should not panic unless runtime is misconfigured")
 	}
 }
 
