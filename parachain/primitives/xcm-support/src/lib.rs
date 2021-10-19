@@ -9,7 +9,7 @@ use sp_core::U256;
 use sp_std::{result, marker::PhantomData, prelude::*};
 use codec::Decode;
 
-use xcm::v1::{Error as XcmError, Junction, MultiAsset, MultiLocation, Result as XcmResult, Fungibility, AssetId};
+use xcm::latest::prelude::*;
 use xcm_executor::traits::{Convert, TransactAsset};
 
 use snowbridge_core::assets::{AssetId as SnowbridgeAssetId, MultiAsset as SnowbridgeMultiAsset};
@@ -24,19 +24,20 @@ impl<
 		AccountId: Clone,
 	> AssetsTransactor<Assets, AccountIdConverter, AccountId> {
 	fn match_assets(a: &MultiAsset) -> result::Result<(SnowbridgeAssetId, U256), XcmError> {
-		let (id, amount) = match a {
-			MultiAsset { id, fun: Fungibility::Fungible(amount) } => (id, amount),
-			_ => return Err(XcmError::AssetNotFound),
+		let (id, amount) = if let MultiAsset { id, fun: Fungible(amount) } = a {
+			(id, amount)
+		} else {
+			return Err(XcmError::AssetNotFound)
 		};
 
-		let key = match id {
-			AssetId::Concrete(location) => {
-				match location.last() {
-					Some(Junction::GeneralKey(key)) => key,
-					_ => return Err(XcmError::AssetNotFound),
-				}
+		let key = if let Concrete(location) = id {
+			if let Some(GeneralKey(key)) = location.last() {
+				key
+			} else {
+				return Err(XcmError::AssetNotFound)
 			}
-			_ => return Err(XcmError::AssetNotFound),
+		} else {
+			return Err(XcmError::AssetNotFound)
 		};
 
 		let asset_id: SnowbridgeAssetId = SnowbridgeAssetId::decode(&mut key.as_ref())

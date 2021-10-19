@@ -22,7 +22,9 @@ use sp_runtime::{
 	ApplyExtrinsicResult, MultiSignature,
 };
 
+
 use sp_std::prelude::*;
+use xcm::latest::prelude::*;
 
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -61,7 +63,8 @@ use dispatch::EnsureEthereumAccount;
 pub use ethereum_light_client::{EthereumDifficultyConfig, EthereumHeader};
 
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{Junction, MultiLocation, NetworkId, BodyId};
+
+use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
 	EnsureXcmOrigin, UsingComponents, FixedWeightBounds, IsConcrete, LocationInverter,
@@ -372,16 +375,16 @@ parameter_types! {
 }
 
 match_type! {
-	pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
-		MultiLocation::X1(Junction::Parent) |
-		MultiLocation::X2(Junction::Parent, Junction::Plurality { id: BodyId::Executive, .. })
+	pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
+		MultiLocation { parents: 1, interior: Here } |
+		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Unit, .. }) }
 	};
 }
 
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<Everything>,
-	AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
+	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
 );
 
 pub struct XcmConfig;
