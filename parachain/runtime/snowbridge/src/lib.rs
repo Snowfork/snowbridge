@@ -378,7 +378,6 @@ match_type! {
 		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Unit, .. }) }
 	};
 }
-}
 
 pub type Barrier = (
 	TakeWeightCredit,
