@@ -84,4 +84,10 @@ export const types: RegistryTypes = {
     metadata: "Vec<u8>",
     data: "TokenData",
   },
+  VersionedMultiAssets: {
+    _enum: {
+      V0: "Vec<MultiAssetV0>",
+      V1: "MutliAssetV1",
+    },
+  },
 };
