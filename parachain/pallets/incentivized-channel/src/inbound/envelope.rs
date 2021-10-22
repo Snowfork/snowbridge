@@ -63,7 +63,7 @@ impl<T> TryFrom<Log> for Envelope<T>
 		};
 
 		let fee = match iter.next().ok_or(EnvelopeDecodeError)? {
-			Token::Uint(value) => T::FeeConverter::convert(value),
+			Token::Uint(value) => T::FeeConverter::convert(value).unwrap_or(0u32.into()),
 			_ => return Err(EnvelopeDecodeError)
 		};
 
