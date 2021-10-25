@@ -34,6 +34,7 @@ use frame_system::ensure_signed;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::Get,
+	transactional,
 	log,
 };
 use sp_runtime::RuntimeDebug;
@@ -219,6 +220,7 @@ pub mod pallet {
 		/// - Iterating over ancestors: min `DescendantsUntilFinalized` reads to find the
 		///   newly finalized ancestor of a header.
 		#[pallet::weight(T::WeightInfo::import_header())]
+		#[transactional]
 		pub fn import_header(
 			origin: OriginFor<T>,
 			header: EthereumHeader,
@@ -376,10 +378,11 @@ pub mod pallet {
 				finalized: false,
 			};
 
-			<Headers<T>>::insert(hash, header_to_store);
 
 			<HeadersByNumber<T>>::try_append(header.number, hash)
 				.map_err(|_| Error::<T>::AtMaxHeadersForNumber)?;
+
+			<Headers<T>>::insert(hash, header_to_store);
 
 			// Maybe track new highest difficulty chain
 			let (_, highest_difficulty) = <BestBlock<T>>::get();
