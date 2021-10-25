@@ -378,7 +378,6 @@ pub mod pallet {
 				finalized: false,
 			};
 
-
 			<HeadersByNumber<T>>::try_append(header.number, hash)
 				.map_err(|_| Error::<T>::AtMaxHeadersForNumber)?;
 
