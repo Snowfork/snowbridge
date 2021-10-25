@@ -38,7 +38,7 @@ use frame_support::{
 };
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use sp_std::convert::{TryInto};
+use sp_std::convert::TryInto;
 use codec::{Encode, Decode};
 
 use snowbridge_core::{Message, Verifier, Proof};
@@ -576,7 +576,7 @@ pub mod pallet {
 			initial_difficulty: U256,
 			descendants_until_final: u8,
 		) -> Result<(), &'static str> {
-			let insert_header_fn = |header: &EthereumHeader, total_difficulty: U256| {
+			let insert_header_fn = |header: &EthereumHeader, total_difficulty: U256| -> Result<EthereumHeaderId, &'static str> {
 				let hash = header.compute_hash();
 				<Headers<T>>::insert(
 					hash,
@@ -589,8 +589,9 @@ pub mod pallet {
 				);
 
 				<HeadersByNumber<T>>::try_append(header.number, hash)
-					.map_err(|_| "Could not append header")
-					.map(|_| EthereumHeaderId {
+					.map_err(|_| "Could not append header")?;
+
+					Ok(EthereumHeaderId {
 						number: header.number,
 						hash: hash,
 					})
