@@ -14,6 +14,7 @@ use crate::mock::mock_verifier::{
 	Verifier,
 	Test,
 	Origin,
+	MaxHeadersForNumber,
 };
 
 use frame_support::{assert_err, assert_ok};
@@ -23,7 +24,6 @@ use crate::{
 	BestBlock, Error, EthereumHeader, FinalizedBlock, GenesisConfig, Headers,
 	HeadersByNumber, PruningRange,
 };
-
 
 #[test]
 fn it_tracks_highest_difficulty_ethereum_chain() {
@@ -181,8 +181,9 @@ fn it_prunes_ethereum_headers_correctly() {
 			2,
 			1,
 		);
+		assert_ok!(&new_range);
 		assert_eq!(
-			new_range,
+			new_range.unwrap(),
 			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 1 },
 		);
 		assert!(!<Headers<Test>>::contains_key(genesis_ethereum_block_hash()));
@@ -194,8 +195,9 @@ fn it_prunes_ethereum_headers_correctly() {
 			1,
 			2,
 		);
+		assert_ok!(&new_range);
 		assert_eq!(
-			new_range,
+			new_range.unwrap(),
 			PruningRange { oldest_unpruned_block: 1, oldest_block_to_keep: 2 },
 		);
 		assert!(!<Headers<Test>>::contains_key(block1_hash));
@@ -208,8 +210,9 @@ fn it_prunes_ethereum_headers_correctly() {
 			2,
 			4,
 		);
+		assert_ok!(&new_range);
 		assert_eq!(
-			new_range,
+			new_range.unwrap(),
 			PruningRange { oldest_unpruned_block: 3, oldest_block_to_keep: 4 },
 		);
 		assert!(!<Headers<Test>>::contains_key(block4_hash));
@@ -352,7 +355,6 @@ fn it_confirms_receipt_inclusion_in_ropsten_london_header() {
 	});
 }
 
-
 #[test]
 fn it_denies_receipt_inclusion_for_invalid_proof() {
 	new_tester::<Test>().execute_with(|| {
@@ -478,5 +480,46 @@ fn it_denies_receipt_inclusion_for_invalid_header() {
 		assert_ok!(Verifier::verify(
 			&message_with_receipt_proof(log.clone(), block1_alt_hash, receipt_proof.clone()),
 		));
+	});
+}
+
+#[test]
+fn it_can_only_import_max_headers_worth_of_headers() {
+	new_tester::<Test>().execute_with(|| {
+		const MAX_BLOCKS: u32 = MaxHeadersForNumber::get();
+		let ferdie: AccountId = Keyring::Ferdie.into();
+
+		let first_block = child_of_genesis_ethereum_header();
+
+		let mut blocks = Vec::new();
+
+		for idx in 1..(MAX_BLOCKS+1) {
+			let mut child = child_of_header(&first_block);
+			child.difficulty = idx.into();
+			blocks.push(child);
+		}
+
+		let mut last_block = child_of_header(&first_block);
+		last_block.difficulty = (MAX_BLOCKS + 1).into();
+
+		assert_ok!(Verifier::import_header(
+			Origin::signed(ferdie.clone()),
+			first_block,
+			Default::default(),
+		));
+
+		for block in blocks {
+			assert_ok!(Verifier::import_header(
+				Origin::signed(ferdie.clone()),
+				block,
+				Default::default(),
+			));
+		}
+
+		assert_err!(Verifier::import_header(
+			Origin::signed(ferdie.clone()),
+			last_block,
+			Default::default(),
+		), Error::<Test>::AtMaxHeadersForNumber);
 	});
 }

@@ -34,10 +34,12 @@ use frame_system::ensure_signed;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::Get,
+	transactional,
 	log,
 };
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
+use sp_std::convert::TryInto;
 use codec::{Encode, Decode};
 
 use snowbridge_core::{Message, Verifier, Proof};
@@ -90,7 +92,7 @@ pub mod pallet {
 
 	use super::*;
 
-	use frame_support::pallet_prelude::*;
+	use frame_support::{BoundedVec, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
@@ -113,6 +115,9 @@ pub mod pallet {
 		type VerifyPoW: Get<bool>;
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
+		/// The maximum numbers of headers to store in storage per block number.
+		#[pallet::constant]
+		type MaxHeadersForNumber: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -139,6 +144,8 @@ pub mod pallet {
 		InvalidProof,
 		/// Log could not be decoded
 		DecodeFailed,
+		// Maximum quantity of headers for number reached
+		AtMaxHeadersForNumber,
 		/// This should never be returned - indicates a bug
 		Unknown,
 	}
@@ -164,7 +171,7 @@ pub mod pallet {
 
 	/// Map of imported header hashes by number.
 	#[pallet::storage]
-	pub(super) type HeadersByNumber<T: Config> = StorageMap<_, Twox64Concat, u64, Vec<H256>, OptionQuery>;
+	pub(super) type HeadersByNumber<T: Config> = StorageMap<_, Twox64Concat, u64, BoundedVec<H256, T::MaxHeadersForNumber>, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -213,6 +220,7 @@ pub mod pallet {
 		/// - Iterating over ancestors: min `DescendantsUntilFinalized` reads to find the
 		///   newly finalized ancestor of a header.
 		#[pallet::weight(T::WeightInfo::import_header())]
+		#[transactional]
 		pub fn import_header(
 			origin: OriginFor<T>,
 			header: EthereumHeader,
@@ -370,19 +378,10 @@ pub mod pallet {
 				finalized: false,
 			};
 
-			<Headers<T>>::insert(hash, header_to_store);
+			<HeadersByNumber<T>>::try_append(header.number, hash)
+				.map_err(|_| Error::<T>::AtMaxHeadersForNumber)?;
 
-			if <HeadersByNumber<T>>::contains_key(header.number) {
-				<HeadersByNumber<T>>::mutate(header.number, |option| -> DispatchResult {
-					if let Some(hashes) = option {
-						hashes.push(hash);
-						return Ok(());
-					}
-					Err(Error::<T>::Unknown.into())
-				})?;
-			} else {
-				<HeadersByNumber<T>>::insert(header.number, vec![hash]);
-			}
+			<Headers<T>>::insert(hash, header_to_store);
 
 			// Maybe track new highest difficulty chain
 			let (_, highest_difficulty) = <BestBlock<T>>::get();
@@ -416,7 +415,7 @@ pub mod pallet {
 					&pruning_range,
 					HEADERS_TO_PRUNE_IN_SINGLE_IMPORT,
 					new_finalized_block_id.number.saturating_sub(FINALIZED_HEADERS_TO_KEEP),
-				);
+				)?;
 				if new_pruning_range != pruning_range {
 					<BlocksToPrune<T>>::put(new_pruning_range);
 				}
@@ -462,7 +461,7 @@ pub mod pallet {
 			pruning_range: &PruningRange,
 			max_headers_to_prune: u64,
 			prune_end: u64,
-		) -> PruningRange {
+		) -> Result<PruningRange, DispatchError> {
 			let mut new_pruning_range = pruning_range.clone();
 
 			// We can only increase this since pruning cannot be reverted...
@@ -490,7 +489,10 @@ pub mod pallet {
 					}
 
 					if remaining > 0 {
-						let remainder = &hashes_at_number[hashes_at_number.len() - remaining..];
+						let remainder: BoundedVec<H256, T::MaxHeadersForNumber> = hashes_at_number[hashes_at_number.len() - remaining..]
+							.to_vec()
+							.try_into()
+							.map_err(|_| Error::<T>::AtMaxHeadersForNumber)?;
 						<HeadersByNumber<T>>::insert(number, remainder);
 					} else {
 						new_pruning_range.oldest_unpruned_block = number + 1;
@@ -500,7 +502,7 @@ pub mod pallet {
 				}
 			}
 
-			new_pruning_range
+			Ok(new_pruning_range)
 		}
 
 		// Verifies that the receipt encoded in proof.data is included
@@ -576,7 +578,7 @@ pub mod pallet {
 			initial_difficulty: U256,
 			descendants_until_final: u8,
 		) -> Result<(), &'static str> {
-			let insert_header_fn = |header: &EthereumHeader, total_difficulty: U256| {
+			let insert_header_fn = |header: &EthereumHeader, total_difficulty: U256| -> Result<EthereumHeaderId, &'static str> {
 				let hash = header.compute_hash();
 				<Headers<T>>::insert(
 					hash,
@@ -587,17 +589,19 @@ pub mod pallet {
 						finalized: false,
 					},
 				);
-				<HeadersByNumber<T>>::append(header.number, hash);
 
-				EthereumHeaderId {
-					number: header.number,
-					hash: hash,
-				}
+				<HeadersByNumber<T>>::try_append(header.number, hash)
+					.map_err(|_| "Could not append header")?;
+
+					Ok(EthereumHeaderId {
+						number: header.number,
+						hash: hash,
+					})
 			};
 
 			let oldest_header = headers.get(0).ok_or("Need at least one header")?;
 			let mut best_block_difficulty = initial_difficulty;
-			let mut best_block_id = insert_header_fn(&oldest_header, best_block_difficulty);
+			let mut best_block_id = insert_header_fn(&oldest_header, best_block_difficulty)?;
 
 			for (i, header) in headers.iter().enumerate().skip(1) {
 				let prev_block_num = headers[i - 1].number;
@@ -611,7 +615,7 @@ pub mod pallet {
 					parent.total_difficulty + header.difficulty
 				};
 
-				let block_id = insert_header_fn(&header, total_difficulty);
+				let block_id = insert_header_fn(&header, total_difficulty)?;
 
 				if total_difficulty > best_block_difficulty {
 					best_block_difficulty = total_difficulty;
