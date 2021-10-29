@@ -4,14 +4,13 @@
 
 use super::*;
 
-use frame_system::{RawOrigin, self, EventRecord};
-use frame_benchmarking::{benchmarks, whitelisted_caller, impl_benchmark_test_suite};
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_system::{self, EventRecord, RawOrigin};
 use hex_literal::hex;
-use sp_std::convert::TryInto;
-use sp_std::prelude::*;
+use sp_std::{convert::TryInto, prelude::*};
 
 use snowbridge_core::{ChannelId, Message, MessageId, Proof};
-use snowbridge_ethereum::{Log, Header};
+use snowbridge_ethereum::{Header, Log};
 
 #[allow(unused_imports)]
 use crate::inbound::Pallet as IncentivizedInboundChannel;

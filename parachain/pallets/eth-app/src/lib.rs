@@ -4,16 +4,15 @@
 //!
 //! ## Overview
 //!
-//! ETH balances are stored in the tightly-coupled [`asset`] runtime module. When an account holder burns
-//! some of their balance, a `Transfer` event is emitted. An external relayer will listen for this event
-//! and relay it to the other chain.
+//! ETH balances are stored in the tightly-coupled [`asset`] runtime module. When an account holder
+//! burns some of their balance, a `Transfer` event is emitted. An external relayer will listen for
+//! this event and relay it to the other chain.
 //!
 //! ## Interface
 //!
 //! ### Dispatchable Calls
 //!
 //! - `burn`: Burn an ETH balance.
-//!
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod payload;
@@ -28,17 +27,17 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use frame_system::ensure_signed;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::EnsureOrigin,
 	transactional,
 };
+use frame_system::ensure_signed;
+use sp_core::{H160, U256};
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
-use sp_core::{H160, U256};
 
-use snowbridge_core::{ChannelId, SingleAsset, OutboundRouter};
+use snowbridge_core::{ChannelId, OutboundRouter, SingleAsset};
 
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
@@ -65,7 +64,7 @@ pub mod pallet {
 
 		type OutboundRouter: OutboundRouter<Self::AccountId>;
 
-		type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
+		type CallOrigin: EnsureOrigin<Self::Origin, Success = H160>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -96,9 +95,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self {
-				address: Default::default(),
-			}
+			Self { address: Default::default() }
 		}
 	}
 
@@ -118,17 +115,14 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			channel_id: ChannelId,
 			recipient: H160,
-			amount: U256
+			amount: U256,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			T::Asset::withdraw(&who, amount)?;
 
-			let message = OutboundPayload {
-				sender: who.clone(),
-				recipient: recipient.clone(),
-				amount: amount
-			};
+			let message =
+				OutboundPayload { sender: who.clone(), recipient: recipient.clone(), amount };
 
 			T::OutboundRouter::submit(channel_id, &who, <Address<T>>::get(), &message.encode())?;
 			Self::deposit_event(Event::Burned(who.clone(), recipient, amount));
@@ -142,11 +136,11 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			sender: H160,
 			recipient: <T::Lookup as StaticLookup>::Source,
-			amount: U256
+			amount: U256,
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into());
+				return Err(DispatchError::BadOrigin.into())
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
@@ -156,6 +150,4 @@ pub mod pallet {
 			Ok(())
 		}
 	}
-
 }
-

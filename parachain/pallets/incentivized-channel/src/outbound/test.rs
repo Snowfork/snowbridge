@@ -1,20 +1,19 @@
 use super::*;
 
-use frame_support::traits::GenesisBuild;
-use sp_core::{H160, H256};
 use frame_support::{
-	assert_ok, assert_noop,
-	parameter_types,
-	dispatch::DispatchError
+	assert_noop, assert_ok, dispatch::DispatchError, parameter_types, traits::GenesisBuild,
 };
-use sp_runtime::{
-	traits::{BlakeTwo256, Keccak256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
-};
+use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
+	MultiSignature,
+};
 use sp_std::convert::From;
 
+use snowbridge_assets::SingleAssetAdaptor;
 use snowbridge_core::{AssetId, SingleAsset};
-use snowbridge_assets::{SingleAssetAdaptor};
 
 use crate::outbound as incentivized_outbound_channel;
 
@@ -93,10 +92,8 @@ impl incentivized_outbound_channel::Config for Test {
 pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	let config: incentivized_outbound_channel::GenesisConfig<Test> = incentivized_outbound_channel::GenesisConfig {
-		interval: 1u64,
-		fee: 100.into(),
-	};
+	let config: incentivized_outbound_channel::GenesisConfig<Test> =
+		incentivized_outbound_channel::GenesisConfig { interval: 1u64, fee: 100.into() };
 	config.assimilate_storage(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
@@ -149,7 +146,6 @@ fn test_submit_not_enough_funds() {
 			IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
 			Error::<Test>::NoFunds
 		);
-
 	})
 }
 
@@ -163,9 +159,9 @@ fn test_submit_exceeds_queue_limit() {
 		FeeCurrency::deposit(&who, 1000.into()).unwrap();
 
 		let max_messages = MaxMessagesPerCommit::get();
-		(0..max_messages).for_each(
-			|_| IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]).unwrap()
-		);
+		(0..max_messages).for_each(|_| {
+			IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]).unwrap()
+		});
 
 		assert_noop!(
 			IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
@@ -179,10 +175,7 @@ fn test_set_fee_not_authorized() {
 	new_tester().execute_with(|| {
 		let bob: AccountId = Keyring::Bob.into();
 		assert_noop!(
-			IncentivizedOutboundChannel::set_fee(
-				Origin::signed(bob),
-				1000.into()
-			),
+			IncentivizedOutboundChannel::set_fee(Origin::signed(bob), 1000.into()),
 			DispatchError::BadOrigin
 		);
 	});

@@ -8,8 +8,16 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-	fn import_header() -> Weight { 0 }
-	fn import_header_not_new_finalized_with_max_prune() -> Weight { 0 }
-	fn import_header_new_finalized_with_single_prune() -> Weight { 0 }
-	fn import_header_not_new_finalized_with_single_prune() -> Weight { 0 }
+	fn import_header() -> Weight {
+		0
+	}
+	fn import_header_not_new_finalized_with_max_prune() -> Weight {
+		0
+	}
+	fn import_header_new_finalized_with_single_prune() -> Weight {
+		0
+	}
+	fn import_header_not_new_finalized_with_single_prune() -> Weight {
+		0
+	}
 }

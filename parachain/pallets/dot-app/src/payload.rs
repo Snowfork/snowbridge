@@ -1,6 +1,6 @@
-use sp_core::{U256, RuntimeDebug};
-use sp_std::prelude::*;
 use codec::Encode;
+use sp_core::{RuntimeDebug, U256};
+use sp_std::prelude::*;
 
 use ethabi::{self, Token};
 use snowbridge_ethereum::H160;
@@ -16,11 +16,10 @@ pub struct OutboundPayload<AccountId: Encode> {
 impl<AccountId: Encode> OutboundPayload<AccountId> {
 	/// ABI-encode this payload
 	pub fn encode(&self) -> Vec<u8> {
-
 		let tokens = vec![
 			Token::FixedBytes(self.sender.encode()),
 			Token::Address(self.recipient),
-			Token::Uint(self.amount)
+			Token::Uint(self.amount),
 		];
 		ethabi::encode_function("mint(bytes32,address,uint256)", tokens.as_ref())
 	}

@@ -8,29 +8,24 @@
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
 use frame_system::Config;
+use snowbridge_ethereum::{Header, Log, U256};
 use sp_core::H160;
 use sp_std::prelude::*;
-use snowbridge_ethereum::{Header, Log, U256};
 
-pub mod types;
 pub mod assets;
 pub mod nft;
+pub mod types;
 
-pub use types::{
-	Message,
-	Proof,
-	ChannelId,
-	MessageId,
-	MessageNonce,
-};
+pub use types::{ChannelId, Message, MessageId, MessageNonce, Proof};
 
 pub use assets::{AssetId, MultiAsset, SingleAsset};
 
-pub use nft::{TokenInfo, ERC721TokenData};
+pub use nft::{ERC721TokenData, TokenInfo};
 
 /// A trait for verifying messages.
 ///
-/// This trait should be implemented by runtime modules that wish to provide message verification functionality.
+/// This trait should be implemented by runtime modules that wish to provide message verification
+/// functionality.
 pub trait Verifier {
 	fn verify(message: &Message) -> Result<Log, DispatchError>;
 	fn initialize_storage(
@@ -42,7 +37,12 @@ pub trait Verifier {
 
 /// Outbound submission for applications
 pub trait OutboundRouter<AccountId> {
-	fn submit(channel_id: ChannelId, who: &AccountId, target: H160, payload: &[u8]) -> DispatchResult;
+	fn submit(
+		channel_id: ChannelId,
+		who: &AccountId,
+		target: H160,
+		payload: &[u8],
+	) -> DispatchResult;
 }
 
 /// Add a message to a commitment

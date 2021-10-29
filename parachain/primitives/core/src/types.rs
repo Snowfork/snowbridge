@@ -1,11 +1,11 @@
 //! Types for representing messages
 
+use codec::{Decode, Encode};
+use enum_iterator::IntoEnumIterator;
 use frame_support::RuntimeDebug;
-use sp_std::vec::Vec;
 use sp_core::H256;
 use sp_runtime::DigestItem;
-use enum_iterator::IntoEnumIterator;
-use codec::{Encode, Decode};
+use sp_std::vec::Vec;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct MessageId {
@@ -15,9 +15,7 @@ pub struct MessageId {
 
 impl MessageId {
 	pub fn new(channel_id: ChannelId, nonce: u64) -> Self {
-		Self {
-			channel_id, nonce
-		}
+		Self { channel_id, nonce }
 	}
 }
 
@@ -26,7 +24,7 @@ pub type MessageNonce = u64;
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug)]
 pub enum ChannelId {
 	Basic,
-	Incentivized
+	Incentivized,
 }
 
 /// A message relayed from Ethereum.
@@ -56,11 +54,11 @@ pub struct Proof {
 #[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
 pub enum AuxiliaryDigestItem {
 	/// A batch of messages has been committed.
-	Commitment(ChannelId, H256)
+	Commitment(ChannelId, H256),
 }
 
 impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
-    fn into(self) -> DigestItem<T> {
-        DigestItem::Other(self.encode())
-    }
+	fn into(self) -> DigestItem<T> {
+		DigestItem::Other(self.encode())
+	}
 }

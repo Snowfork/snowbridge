@@ -19,7 +19,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
 use frame_support::{ensure, pallet_prelude::*, Parameter};
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
@@ -27,7 +26,7 @@ use sp_runtime::{
 };
 use sp_std::vec::Vec;
 
-use snowbridge_core::nft::{TokenInfo, Nft};
+use snowbridge_core::nft::{Nft, TokenInfo};
 
 // TODO add
 // mod benchmarking;
@@ -47,7 +46,6 @@ mod tests;
 // impl WeightInfo for () {
 // 	fn transfer() -> Weight { 0 }
 // }
-
 pub use module::*;
 
 #[frame_support::pallet]
@@ -56,18 +54,19 @@ pub mod module {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// The token ID type, which is the identifier on this parachain and different from the token_id on other chains
-		/// such as in an ERC721 contract
+		/// The token ID type, which is the identifier on this parachain and different from the
+		/// token_id on other chains such as in an ERC721 contract
 		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
 		/// The token properties type
 		type TokenData: Parameter + Member + MaybeSerializeDeserialize;
 	}
 
-	pub type TokenInfoOf<T> = TokenInfo<<T as frame_system::Config>::AccountId, <T as Config>::TokenData>;
+	pub type TokenInfoOf<T> =
+		TokenInfo<<T as frame_system::Config>::AccountId, <T as Config>::TokenData>;
 
 	pub type GenesisTokenData<T> = (
 		<T as frame_system::Config>::AccountId, // Token owner
-		Vec<u8>,                               // Token metadata
+		Vec<u8>,                                // Token metadata
 		<T as Config>::TokenData,               // Token data
 	);
 
@@ -133,8 +132,7 @@ pub mod module {
 	impl<T: Config> Pallet<T> {}
 }
 
-impl<T: Config> Nft<T::AccountId, T::TokenId, T::TokenData> for Pallet<T>
-{
+impl<T: Config> Nft<T::AccountId, T::TokenId, T::TokenData> for Pallet<T> {
 	/// Mint NFT (non-fungible token) to `owner`
 	fn mint(
 		owner: &T::AccountId,
@@ -146,11 +144,7 @@ impl<T: Config> Nft<T::AccountId, T::TokenId, T::TokenData> for Pallet<T>
 			// Should never happen with a sufficiently wide integer, but we check for overflow
 			*id = id.checked_add(&One::one()).ok_or(Error::<T>::NumOverflow)?;
 
-			let token_info = TokenInfo {
-				metadata,
-				owner: owner.clone(),
-				data,
-			};
+			let token_info = TokenInfo { metadata, owner: owner.clone(), data };
 			Tokens::<T>::insert(token_id, token_info);
 			TokensByOwner::<T>::insert(owner, token_id, ());
 
@@ -177,7 +171,7 @@ impl<T: Config> Nft<T::AccountId, T::TokenId, T::TokenData> for Pallet<T>
 			ensure!(info.owner == *from, Error::<T>::NoPermission);
 			if from == to {
 				// no change needed
-				return Ok(());
+				return Ok(())
 			}
 
 			info.owner = to.clone();

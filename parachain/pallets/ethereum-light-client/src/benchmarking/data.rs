@@ -1,8 +1,8 @@
-use sp_std::prelude::*;
 use hex_literal::hex;
+use sp_std::prelude::*;
 
+use crate::{EthashProofData, EthereumHeader, H256};
 use codec::Decode;
-use crate::{EthereumHeader, H256, EthashProofData};
 
 pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 	vec![
@@ -977,10 +977,14 @@ pub fn headers_11963025_to_11963069() -> Vec<EthereumHeader> {
 
 pub fn header_proof(hash: H256) -> Option<Vec<EthashProofData>> {
 	let mut data = match hash.as_bytes() {
-		hex!("d9b1938b61813fde7cfe2cd957fd031655a527186140f3f2328e74afdb3cd598") => &RAW_PROOF_11963035[..],
-		hex!("3ed36d8242ac3bff178ed1c76a9c7fc95c78a626b90b52dc60af218850a2af01") => &RAW_PROOF_11963036[..],
-		hex!("84b31d182372d5bd320c3a4c76faf722d9278a41296f59b3e8286bf696312925") => &RAW_PROOF_11963043[..],
-		hex!("f65cce2b6380b2e7e651bac8f2b982a9e05aa63c77aa07df6b6b203af5e1fa87") => &RAW_PROOF_11963069[..],
+		hex!("d9b1938b61813fde7cfe2cd957fd031655a527186140f3f2328e74afdb3cd598") =>
+			&RAW_PROOF_11963035[..],
+		hex!("3ed36d8242ac3bff178ed1c76a9c7fc95c78a626b90b52dc60af218850a2af01") =>
+			&RAW_PROOF_11963036[..],
+		hex!("84b31d182372d5bd320c3a4c76faf722d9278a41296f59b3e8286bf696312925") =>
+			&RAW_PROOF_11963043[..],
+		hex!("f65cce2b6380b2e7e651bac8f2b982a9e05aa63c77aa07df6b6b203af5e1fa87") =>
+			&RAW_PROOF_11963069[..],
 		_ => return None,
 	};
 	Decode::decode(&mut data).ok()

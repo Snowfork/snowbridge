@@ -3,9 +3,9 @@ use ethereum_types::U256;
 use sp_runtime::RuntimeDebug;
 use sp_std::convert::TryFrom;
 
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 
-const DIFFICULTY_BOUND_DIVISOR: u32 = 11;  // right-shifts equivalent to division by 2048
+const DIFFICULTY_BOUND_DIVISOR: u32 = 11; // right-shifts equivalent to division by 2048
 const EXP_DIFFICULTY_PERIOD: u64 = 100000;
 const MINIMUM_DIFFICULTY: u32 = 131072;
 
@@ -36,7 +36,6 @@ pub struct DifficultyConfig {
 }
 
 impl DifficultyConfig {
-
 	// Correct block numbers for mainnet and various testnets can be found here:
 	// https://github.com/ethereum/go-ethereum/blob/498458b4102c0d32d7453035a115e6b9df5e485d/params/config.go#L55-L258
 	pub const fn mainnet() -> Self {
@@ -44,7 +43,7 @@ impl DifficultyConfig {
 			byzantium_fork_block: 4370000,
 			constantinople_fork_block: 7280000,
 			muir_glacier_fork_block: 9200000,
-			london_fork_block: 12965000
+			london_fork_block: 12965000,
 		}
 	}
 
@@ -53,19 +52,19 @@ impl DifficultyConfig {
 			byzantium_fork_block: 1700000,
 			constantinople_fork_block: 4230000,
 			muir_glacier_fork_block: 7117117,
-			london_fork_block: 10499401
+			london_fork_block: 10499401,
 		}
 	}
 
 	pub fn bomb_delay(&self, block_number: u64) -> Option<BombDelay> {
 		if block_number >= self.london_fork_block {
-			return Some(BombDelay::London);
+			return Some(BombDelay::London)
 		} else if block_number >= self.muir_glacier_fork_block {
-			return Some(BombDelay::MuirGlacier);
+			return Some(BombDelay::MuirGlacier)
 		} else if block_number >= self.constantinople_fork_block {
-			return Some(BombDelay::Constantinople);
+			return Some(BombDelay::Constantinople)
 		} else if block_number >= self.byzantium_fork_block {
-			return Some(BombDelay::Byzantium);
+			return Some(BombDelay::Byzantium)
 		}
 		None
 	}
@@ -78,22 +77,24 @@ pub fn calc_difficulty(
 	time: u64,
 	parent: &Header,
 ) -> Result<U256, &'static str> {
-	let bomb_delay = config.bomb_delay(parent.number + 1)
+	let bomb_delay = config
+		.bomb_delay(parent.number + 1)
 		.ok_or("Cannot calculate difficulty for block number prior to Byzantium")?;
 
-	let block_time_div_9: i64 = time.checked_sub(parent.timestamp)
+	let block_time_div_9: i64 = time
+		.checked_sub(parent.timestamp)
 		.ok_or("Invalid block time")
-		.and_then(|x| {
-			i64::try_from(x / 9).or(Err("Invalid block time"))
-		})?;
+		.and_then(|x| i64::try_from(x / 9).or(Err("Invalid block time")))?;
 	let sigma2: i64 = match parent.has_ommers() {
 		true => 2 - block_time_div_9,
 		false => 1 - block_time_div_9,
-	}.max(-99);
+	}
+	.max(-99);
 
 	let mut difficulty_without_exp = parent.difficulty;
 	if sigma2 < 0 {
-		difficulty_without_exp -= (parent.difficulty >> DIFFICULTY_BOUND_DIVISOR) * sigma2.abs() as u64;
+		difficulty_without_exp -=
+			(parent.difficulty >> DIFFICULTY_BOUND_DIVISOR) * sigma2.abs() as u64;
 	} else {
 		difficulty_without_exp += (parent.difficulty >> DIFFICULTY_BOUND_DIVISOR) * sigma2 as u64;
 	}
@@ -106,7 +107,7 @@ pub fn calc_difficulty(
 
 	// If period_count < 2, exp is fractional and we can skip adding it
 	if period_count >= 2 {
-		return Ok(difficulty_without_exp + U256::from(2).pow((period_count - 2).into()));
+		return Ok(difficulty_without_exp + U256::from(2).pow((period_count - 2).into()))
 	}
 
 	Ok(difficulty_without_exp)
@@ -145,7 +146,7 @@ mod tests {
 				};
 				match maybe_uint {
 					Err(e) => Err(serde::de::Error::custom(e)),
-					Ok(uint) => uint.try_into().map_err(serde::de::Error::custom)
+					Ok(uint) => uint.try_into().map_err(serde::de::Error::custom),
 				}
 			},
 			StringOrInt::Number(i) => Ok(i),
@@ -180,7 +181,8 @@ mod tests {
 	impl DifficultyTest {
 		/// Loads test from json.
 		pub fn from_fixture(fixture: &str) -> Self {
-			let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", fixture].iter().collect();
+			let path: PathBuf =
+				[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", fixture].iter().collect();
 			serde_json::from_reader(File::open(&path).unwrap()).unwrap()
 		}
 	}

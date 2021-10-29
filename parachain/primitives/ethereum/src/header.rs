@@ -1,19 +1,18 @@
+use codec::{Decode, Encode};
 use ethbloom::Bloom as EthBloom;
 use hex_literal::hex;
 use parity_bytes::Bytes;
 use rlp::RlpStream;
 use sp_io::hashing::keccak_256;
 use sp_runtime::RuntimeDebug;
-use sp_std::convert::TryInto;
-use sp_std::prelude::*;
-use codec::{Encode, Decode};
+use sp_std::{convert::TryInto, prelude::*};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use serde_big_array::big_array;
 
-use ethereum_types::{Address, H64, H256, U256};
+use ethereum_types::{Address, H256, H64, U256};
 
 use crate::{mpt, receipt};
 
@@ -26,7 +25,8 @@ pub struct HeaderId {
 	pub hash: H256,
 }
 
-const EMPTY_OMMERS_HASH: [u8; 32] = hex!("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347");
+const EMPTY_OMMERS_HASH: [u8; 32] =
+	hex!("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347");
 
 /// An Ethereum block header.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug)]
@@ -79,11 +79,14 @@ impl Header {
 		keccak_256(&self.rlp(false)).into()
 	}
 
-	pub fn check_receipt_proof(&self, proof: &[Vec<u8>]) -> Option<Result<receipt::Receipt, rlp::DecoderError>> {
+	pub fn check_receipt_proof(
+		&self,
+		proof: &[Vec<u8>],
+	) -> Option<Result<receipt::Receipt, rlp::DecoderError>> {
 		match self.apply_merkle_proof(proof) {
 			Some((root, data)) if root == self.receipts_root => Some(rlp::decode(&data)),
 			Some((_, _)) => None,
-			None => None
+			None => None,
 		}
 	}
 
@@ -95,14 +98,15 @@ impl Header {
 		};
 		let item_to_prove: mpt::ShortNode = rlp::decode(first_bytes).ok()?;
 
-		let final_hash: Option<[u8; 32]> = iter.fold(Some(keccak_256(first_bytes)), |maybe_hash, bytes| {
-			let expected_hash = maybe_hash?;
-			let node: Box<dyn mpt::Node> = bytes.as_slice().try_into().ok()?;
-			if (*node).contains_hash(expected_hash.into()) {
-				return Some(keccak_256(bytes))
-			}
-			None
-		});
+		let final_hash: Option<[u8; 32]> =
+			iter.fold(Some(keccak_256(first_bytes)), |maybe_hash, bytes| {
+				let expected_hash = maybe_hash?;
+				let node: Box<dyn mpt::Node> = bytes.as_slice().try_into().ok()?;
+				if (*node).contains_hash(expected_hash.into()) {
+					return Some(keccak_256(bytes))
+				}
+				None
+			});
 
 		final_hash.map(|hash| (hash.into(), item_to_prove.value))
 	}
@@ -134,7 +138,7 @@ impl Header {
 	fn decoded_seal_field(&self, index: usize, max_len: usize) -> Option<Bytes> {
 		let bytes: Bytes = rlp::decode(self.seal.get(index)?).ok()?;
 		if bytes.len() > max_len {
-			return None;
+			return None
 		}
 		Some(bytes)
 	}
@@ -145,11 +149,7 @@ impl Header {
 	fn rlp(&self, with_seal: bool) -> Bytes {
 		let mut s = RlpStream::new();
 
-		let stream_length_without_seal = if self.base_fee.is_some() {
-			14
-		} else {
-			13
-		};
+		let stream_length_without_seal = if self.base_fee.is_some() { 14 } else { 13 };
 
 		if with_seal {
 			s.begin_list(stream_length_without_seal + self.seal.len());
@@ -219,8 +219,8 @@ impl rlp::Decodable for Bloom {
 				let mut bytes = [0u8; 256];
 				bytes.copy_from_slice(&v);
 				Ok(Self(bytes))
-			}
-			_ => Err(rlp::DecoderError::Custom("Expected 256 bytes"))
+			},
+			_ => Err(rlp::DecoderError::Custom("Expected 256 bytes")),
 		}
 	}
 }
@@ -232,7 +232,8 @@ mod tests {
 
 	#[test]
 	fn bloom_decode_rlp() {
-		let raw_bloom = hex!("
+		let raw_bloom = hex!(
+			"
 			b901000420000000000000000000008002000000000001000000000001000000000000000000
 			0000000000000000000000000002000000080000000000000000200000000000000000000000
 			0000080000002200000000004000100000000000000000000000000000000000000000000000
@@ -240,7 +241,8 @@ mod tests {
 			0000080000004000000000020000000000020000000000000000000000000000000000000000
 			0000040000000000020000000001000000000000000000000000000010000000020000200000
 			10200000000000010000000000000000000000000000000000000010000000
-		");
+		"
+		);
 		let expected_bytes = &raw_bloom[3..];
 		let bloom: Bloom = rlp::decode(&raw_bloom).unwrap();
 		assert_eq!(bloom.0, expected_bytes);
@@ -254,11 +256,17 @@ mod tests {
 			timestamp: 0,
 			number: 0,
 			author: Default::default(),
-			transactions_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
-			ommers_hash: hex!("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347").into(),
+			transactions_root: hex!(
+				"56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+			)
+			.into(),
+			ommers_hash: hex!("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347")
+				.into(),
 			extra_data: vec![],
-			state_root: hex!("eccf6b74c2bcbe115c71116a23fe963c54406010c244d9650526028ad3e32cce").into(),
-			receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
+			state_root: hex!("eccf6b74c2bcbe115c71116a23fe963c54406010c244d9650526028ad3e32cce")
+				.into(),
+			receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+				.into(),
 			logs_bloom: Default::default(),
 			gas_used: Default::default(),
 			gas_limit: 0x222222.into(),
@@ -268,7 +276,7 @@ mod tests {
 				vec.resize(67, 0);
 				vec
 			}],
-			base_fee: None
+			base_fee: None,
 		};
 		assert_eq!(
 			header.compute_hash().as_bytes(),
@@ -280,26 +288,31 @@ mod tests {
 	fn header_compute_hash_pow() {
 		// https://etherscan.io/block/11090290
 		let nonce = hex!("6935bbe7b63c4f8e").to_vec();
-		let mix_hash = hex!("be3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").to_vec();
+		let mix_hash =
+			hex!("be3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").to_vec();
 		let header = Header {
-			parent_hash: hex!("bede0bddd6f32c895fc505ffe0c39d9bde58e9a5272f31a3dee448b796edcbe3").into(),
+			parent_hash: hex!("bede0bddd6f32c895fc505ffe0c39d9bde58e9a5272f31a3dee448b796edcbe3")
+				.into(),
 			timestamp: 1603160977,
 			number: 11090290,
 			author: hex!("ea674fdde714fd979de3edf0f56aa9716b898ec8").into(),
-			transactions_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
-			ommers_hash: hex!("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347").into(),
+			transactions_root: hex!(
+				"56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+			)
+			.into(),
+			ommers_hash: hex!("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347")
+				.into(),
 			extra_data: hex!("65746865726d696e652d61736961312d33").to_vec(),
-			state_root: hex!("7dcb8aca872b712bad81df34a89d4efedc293566ffc3eeeb5cbcafcc703e42c9").into(),
-			receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
+			state_root: hex!("7dcb8aca872b712bad81df34a89d4efedc293566ffc3eeeb5cbcafcc703e42c9")
+				.into(),
+			receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+				.into(),
 			logs_bloom: Default::default(),
 			gas_used: 0.into(),
 			gas_limit: 0xbe8c19.into(),
 			difficulty: 0xbc140caa61087i64.into(),
-			seal: vec![
-				rlp::encode(&mix_hash).to_vec(),
-				rlp::encode(&nonce).to_vec(),
-			],
-			base_fee: None
+			seal: vec![rlp::encode(&mix_hash).to_vec(), rlp::encode(&nonce).to_vec()],
+			base_fee: None,
 		};
 		assert_eq!(
 			header.compute_hash().as_bytes(),
@@ -310,7 +323,8 @@ mod tests {
 	#[test]
 	fn header_pow_seal_fields_extracted_correctly() {
 		let nonce: H64 = hex!("6935bbe7b63c4f8e").into();
-		let mix_hash: H256 = hex!("be3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").into();
+		let mix_hash: H256 =
+			hex!("be3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").into();
 		let mut header: Header = Default::default();
 		header.seal = vec![
 			rlp::encode(&mix_hash.0.to_vec()).to_vec(),
@@ -323,12 +337,10 @@ mod tests {
 	#[test]
 	fn header_pow_seal_fields_return_none_for_invalid_values() {
 		let nonce = hex!("696935bbe7b63c4f8e").to_vec();
-		let mix_hash = hex!("bebe3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").to_vec();
+		let mix_hash =
+			hex!("bebe3adfb0087be62b28b716e2cdf3c79329df5caa04c9eee035d35b5d52102815").to_vec();
 		let mut header: Header = Default::default();
-		header.seal = vec![
-			rlp::encode(&mix_hash).to_vec(),
-			rlp::encode(&nonce).to_vec(),
-		];
+		header.seal = vec![rlp::encode(&mix_hash).to_vec(), rlp::encode(&nonce).to_vec()];
 		assert_eq!(header.nonce(), None);
 		assert_eq!(header.mix_hash(), None);
 
@@ -340,7 +352,8 @@ mod tests {
 	#[test]
 	fn header_check_receipt_proof() {
 		let mut header: Header = Default::default();
-		header.receipts_root = hex!("fd5e397a84884641f53c496804f24b5276cbb8c5c9cfc2342246be8e3ce5ad02").into();
+		header.receipts_root =
+			hex!("fd5e397a84884641f53c496804f24b5276cbb8c5c9cfc2342246be8e3ce5ad02").into();
 
 		// Valid proof
 		let proof_receipt5 = vec!(
@@ -351,12 +364,12 @@ mod tests {
 		assert!(header.check_receipt_proof(&proof_receipt5).is_some());
 
 		// Various invalid proofs
-		let proof_empty: Vec<Vec<u8>> = vec!();
-		let proof_missing_full_node = vec!(proof_receipt5[0].clone(), proof_receipt5[2].clone());
-		let proof_missing_short_node1 = vec!(proof_receipt5[0].clone(), proof_receipt5[1].clone());
-		let proof_missing_short_node2 = vec!(proof_receipt5[0].clone());
-		let proof_invalid_encoding = vec!(proof_receipt5[2][2..].to_vec());
-		let proof_no_full_node = vec!(proof_receipt5[2].clone(), proof_receipt5[2].clone());
+		let proof_empty: Vec<Vec<u8>> = vec![];
+		let proof_missing_full_node = vec![proof_receipt5[0].clone(), proof_receipt5[2].clone()];
+		let proof_missing_short_node1 = vec![proof_receipt5[0].clone(), proof_receipt5[1].clone()];
+		let proof_missing_short_node2 = vec![proof_receipt5[0].clone()];
+		let proof_invalid_encoding = vec![proof_receipt5[2][2..].to_vec()];
+		let proof_no_full_node = vec![proof_receipt5[2].clone(), proof_receipt5[2].clone()];
 		assert!(header.check_receipt_proof(&proof_empty).is_none());
 		assert!(header.check_receipt_proof(&proof_missing_full_node).is_none());
 
@@ -377,7 +390,8 @@ mod tests {
 	#[test]
 	fn header_check_receipt_proof_with_intermediate_short_node() {
 		let mut header: Header = Default::default();
-		header.receipts_root = hex!("d128e3a57142d2bf15bc0cbcac7ad54f40750d571b5c3097e425882c10c9ba66").into();
+		header.receipts_root =
+			hex!("d128e3a57142d2bf15bc0cbcac7ad54f40750d571b5c3097e425882c10c9ba66").into();
 
 		let proof_receipt263 = vec![
 			hex!("f90131a00d3cb8d3f57ac1c0e12918a2ebe0cafed8c273577b9dd73e7ed1079b403ef494a0678b9835b834f8a287c0dd33a8fca9146e456ca688555ed4ec1361a2180b778da0fe42da181a46677a043b3d9d4b8bb05a6a17b7b5c010c17e7c1d31cfb7c4f911a0c89f0e2c53241cdb578e1f2b4caf6ba36e00500bdc57fecd66b84a6a58394c19a086c3c1fae5a0575940b5d38e111c469d07883106c26856f3ef608469a2081f13a06c5992ff00aab6226a70a032fd2f571ba22f797321f45e2daa73020d638d21b0a050861e9503ef68728f6c90a44f7fe1bceb2a9bdab6957bbe7136166bd849561ea006aa6eaca8a07e57176e9aa41e6a09edfb7678d1a112404e0ec779d7e567e82ea0bb0b430d303ba21b0af11c487b8a218bd75db54c98940b3f11bad8ff47cad3ef8080808080808080").to_vec(),

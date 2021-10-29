@@ -1,10 +1,9 @@
 use codec::{Decode, Encode};
-#[cfg(feature = "std")]
-use serde_derive::{Serialize, Deserialize};
 use frame_support::dispatch::{DispatchError, DispatchResult};
-use sp_runtime::RuntimeDebug;
+#[cfg(feature = "std")]
+use serde_derive::{Deserialize, Serialize};
 use sp_core::H160;
-use sp_runtime::sp_std::prelude::Vec;
+use sp_runtime::{sp_std::prelude::Vec, RuntimeDebug};
 
 use snowbridge_ethereum::U256;
 
@@ -28,8 +27,7 @@ pub struct ERC721TokenData {
 	pub token_id: U256,
 }
 
-pub trait Nft<AccountId, TokenId, TokenData>
-{
+pub trait Nft<AccountId, TokenId, TokenData> {
 	fn mint(
 		owner: &AccountId,
 		metadata: Vec<u8>,

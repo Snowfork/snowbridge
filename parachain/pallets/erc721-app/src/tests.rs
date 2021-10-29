@@ -1,10 +1,13 @@
-use crate::mock::{self, new_tester, System, AccountId, Origin, Erc721App, NftApp};
-use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
-use sp_keyring::AccountKeyring as Keyring;
+use crate::mock::{self, new_tester, AccountId, Erc721App, NftApp, Origin, System};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use sp_core::H160;
+use sp_keyring::AccountKeyring as Keyring;
 
+use snowbridge_core::{
+	nft::{ERC721TokenData, Nft},
+	ChannelId,
+};
 use snowbridge_ethereum::U256;
-use snowbridge_core::{ChannelId, nft::{ERC721TokenData, Nft}};
 
 use crate::Event;
 
@@ -46,10 +49,7 @@ fn burn_should_emit_bridge_event() {
 		let token_contract = H160::repeat_byte(4);
 		let token_id = U256::one();
 		let bob: AccountId = Keyring::Bob.into();
-		let data = ERC721TokenData {
-			token_contract,
-			token_id,
-		};
+		let data = ERC721TokenData { token_contract, token_id };
 
 		NftApp::mint(&bob, Vec::<u8>::new(), data).unwrap();
 
@@ -57,7 +57,8 @@ fn burn_should_emit_bridge_event() {
 			Origin::signed(bob.clone()),
 			ChannelId::Incentivized,
 			token,
-			recipient.clone()));
+			recipient.clone()
+		));
 
 		assert_eq!(
 			mock::Event::Erc721App(Event::Burned(token_contract, token_id, bob, recipient)),
@@ -73,12 +74,9 @@ fn should_not_burn_on_commitment_failure() {
 		let sender: AccountId = Keyring::Bob.into();
 		let recipient = H160::repeat_byte(9);
 		let token_contract = H160::repeat_byte(3);
-		let data = ERC721TokenData {
-			token_contract,
-			token_id: U256::one(),
-		};
+		let data = ERC721TokenData { token_contract, token_id: U256::one() };
 
-		NftApp::mint(&sender, vec![0,1,2], data).unwrap();
+		NftApp::mint(&sender, vec![0, 1, 2], data).unwrap();
 
 		assert_noop!(
 			Erc721App::burn(

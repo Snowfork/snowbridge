@@ -5,5 +5,7 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-	fn submit() -> Weight { 0 }
+	fn submit() -> Weight {
+		0
+	}
 }

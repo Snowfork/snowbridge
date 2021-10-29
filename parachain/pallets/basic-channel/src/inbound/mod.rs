@@ -9,12 +9,9 @@ pub mod weights;
 mod test;
 
 use frame_system::ensure_signed;
+use snowbridge_core::{ChannelId, Message, MessageDispatch, MessageId, Verifier};
 use sp_core::H160;
 use sp_std::convert::TryFrom;
-use snowbridge_core::{
-	ChannelId, Message, MessageId,
-	MessageDispatch, Verifier,
-};
 
 use envelope::Envelope;
 pub use weights::WeightInfo;
@@ -79,9 +76,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self {
-				source_channel: Default::default(),
-			}
+			Self { source_channel: Default::default() }
 		}
 	}
 
@@ -106,7 +101,7 @@ pub mod pallet {
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
 			if envelope.channel != <SourceChannel<T>>::get() {
-				return Err(Error::<T>::InvalidSourceChannel.into())
+				return Err(Error::<T>::InvalidSourceChannel.into());
 			}
 
 			// Verify message nonce

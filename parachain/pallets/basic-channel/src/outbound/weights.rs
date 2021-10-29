@@ -8,8 +8,16 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-	fn on_initialize(_: u32, _: u32) -> Weight { 0 }
-	fn on_initialize_non_interval() -> Weight { 0 }
-	fn on_initialize_no_messages() -> Weight { 0 }
-	fn set_principal() -> Weight { 0 }
+	fn on_initialize(_: u32, _: u32) -> Weight {
+		0
+	}
+	fn on_initialize_non_interval() -> Weight {
+		0
+	}
+	fn on_initialize_no_messages() -> Weight {
+		0
+	}
+	fn set_principal() -> Weight {
+		0
+	}
 }

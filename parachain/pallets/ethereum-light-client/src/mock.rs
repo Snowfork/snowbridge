@@ -1,16 +1,16 @@
 // Mock runtime
-use frame_support::traits::GenesisBuild;
+use crate::{EthashProofData, EthereumDifficultyConfig, EthereumHeader};
+use frame_support::{parameter_types, traits::GenesisBuild};
+use frame_system as system;
 use snowbridge_core::{Message, Proof};
 use snowbridge_testutils::BlockWithProofs;
-use crate::{EthashProofData, EthereumHeader, EthereumDifficultyConfig};
 use sp_core::H256;
-use frame_support::{parameter_types};
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
+	testing::Header,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	MultiSignature,
 };
-use frame_system as system;
-use std::fs::File;
-use std::path::PathBuf;
+use std::{fs::File, path::PathBuf};
 
 use hex_literal::hex;
 
@@ -145,8 +145,6 @@ pub mod mock_verifier_with_pow {
 	}
 }
 
-
-
 pub fn genesis_ethereum_header() -> EthereumHeader {
 	Default::default()
 }
@@ -190,7 +188,6 @@ pub fn ropsten_london_header() -> EthereumHeader {
 	}
 }
 
-
 fn fixture_path(name: &str) -> PathBuf {
 	[env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", name].iter().collect()
 }
@@ -206,15 +203,12 @@ pub fn ethereum_header_proof_from_file(block_num: u64, suffix: &str) -> Vec<Etha
 		.to_double_node_with_merkle_proof_vec(EthashProofData::from_values)
 }
 
-pub fn message_with_receipt_proof(payload: Vec<u8>, block_hash: H256, proof_data: (Vec<Vec<u8>>, Vec<Vec<u8>>)) -> Message {
-	Message {
-		data: payload,
-		proof: Proof {
-			block_hash,
-			tx_index: 0,
-			data: proof_data,
-		},
-	}
+pub fn message_with_receipt_proof(
+	payload: Vec<u8>,
+	block_hash: H256,
+	proof_data: (Vec<Vec<u8>>, Vec<Vec<u8>>),
+) -> Message {
+	Message { data: payload, proof: Proof { block_hash, tx_index: 0, data: proof_data } }
 }
 
 // from https://ropsten.etherscan.io/tx/0x3541903322b74942aa9dd436ac6277d36d874865c35032fe915518d2659fc64c
@@ -255,14 +249,16 @@ pub fn receipt_root_and_proof() -> (H256, (Vec<Vec<u8>>, Vec<Vec<u8>>)) {
 }
 
 pub fn log_payload() -> Vec<u8> {
-	hex!("
+	hex!(
+		"
 		f89b94c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2f863a0ddf252ad1be2c89b69c2b068fc37
 		8daa952ba7f163c4a11628f55a4df523b3efa0000000000000000000000000e9c1281aae66801fa3
 		5ec404d5f2aea393ff6988a00000000000000000000000007a250d5630b4cf539739df2c5dacb4c6
 		59f2488da000000000000000000000000000000000000000000000000003e973b5a5d1078e
-	").to_vec()
+	"
+	)
+	.to_vec()
 }
-
 
 pub fn new_tester<T: crate::Config>() -> sp_io::TestExternalities {
 	new_tester_with_config::<T>(crate::GenesisConfig {
@@ -271,7 +267,9 @@ pub fn new_tester<T: crate::Config>() -> sp_io::TestExternalities {
 	})
 }
 
-pub fn new_tester_with_config<T: crate::Config>(config: crate::GenesisConfig) -> sp_io::TestExternalities {
+pub fn new_tester_with_config<T: crate::Config>(
+	config: crate::GenesisConfig,
+) -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<T>().unwrap();
 
 	GenesisBuild::<T>::assimilate_storage(&config, &mut storage).unwrap();

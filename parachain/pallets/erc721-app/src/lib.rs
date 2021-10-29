@@ -7,23 +7,23 @@
 //! ETH balances are stored in the tightly-coupled [`nft`] runtime module. When an NFT holder burns
 //! the token, a `Transfer` event is emitted. An external relayer will listen for this event
 //! and relay it to the other chain.
-//!
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-	dispatch::DispatchError,
-	traits::EnsureOrigin,
+	dispatch::DispatchError, pallet_prelude::*, traits::EnsureOrigin, transactional,
 	weights::Weight,
 };
-use frame_support::{pallet_prelude::*, transactional};
 use frame_system::{ensure_signed, pallet_prelude::*};
 
 use sp_std::prelude::*;
 
-use sp_runtime::traits::{AtLeast32BitUnsigned, StaticLookup};
 use sp_core::H160;
+use sp_runtime::traits::{AtLeast32BitUnsigned, StaticLookup};
 
-use snowbridge_core::{ChannelId, OutboundRouter, nft::{Nft, ERC721TokenData}};
+use snowbridge_core::{
+	nft::{ERC721TokenData, Nft},
+	ChannelId, OutboundRouter,
+};
 use snowbridge_ethereum::U256;
 
 mod payload;
@@ -50,8 +50,12 @@ pub mod module {
 	}
 
 	impl WeightInfo for () {
-		fn burn() -> Weight { 0 }
-		fn mint() -> Weight { 0 }
+		fn burn() -> Weight {
+			0
+		}
+		fn mint() -> Weight {
+			0
+		}
 	}
 
 	#[pallet::config]
@@ -60,13 +64,13 @@ pub mod module {
 
 		type OutboundRouter: OutboundRouter<Self::AccountId>;
 
-		type CallOrigin: EnsureOrigin<Self::Origin, Success=H160>;
+		type CallOrigin: EnsureOrigin<Self::Origin, Success = H160>;
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
 
-		/// The token ID type, which is the identifier on this parachain and different from the token_id on other chains
-		/// such as in an ERC721 contract
+		/// The token ID type, which is the identifier on this parachain and different from the
+		/// token_id on other chains such as in an ERC721 contract
 		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
 
 		/// The NFT pallet trait
@@ -83,8 +87,7 @@ pub mod module {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
-	pub enum Event<T: Config>
-	{
+	pub enum Event<T: Config> {
 		/// Burned event: token_contract, token_id, sender, recipient
 		Burned(H160, U256, T::AccountId, H160),
 		/// Minted event: token_contract, token_id, sender, recipient
@@ -111,9 +114,7 @@ pub mod module {
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
-			GenesisConfig {
-				address: H160::default(),
-			}
+			GenesisConfig { address: H160::default() }
 		}
 	}
 
@@ -122,7 +123,7 @@ pub mod module {
 		fn build(&self) {
 			<Address<T>>::put(self.address);
 		}
- 	}
+	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
@@ -135,7 +136,12 @@ pub mod module {
 		/// Burn an ERC721 token
 		#[pallet::weight(T::WeightInfo::burn())]
 		#[transactional]
-		pub fn burn(origin: OriginFor<T>, channel_id: ChannelId, token: T::TokenId, recipient: H160) -> DispatchResultWithPostInfo {
+		pub fn burn(
+			origin: OriginFor<T>,
+			channel_id: ChannelId,
+			token: T::TokenId,
+			recipient: H160,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			let token_data = T::Nft::get_token_data(token).ok_or(Error::<T>::TokenNotFound)?;
@@ -144,15 +150,12 @@ pub mod module {
 
 			T::Nft::burn(&who, token)?;
 
-			// We can assume that the map contains the key, since the token_contract and token_id are extracted from it
+			// We can assume that the map contains the key, since the token_contract and token_id
+			// are extracted from it
 			TokensByERC721Id::<T>::remove((token_contract, token_id));
 
-			let message = OutboundPayload {
-				token_contract,
-				token_id,
-				sender: who.clone(),
-				recipient,
-			};
+			let message =
+				OutboundPayload { token_contract, token_id, sender: who.clone(), recipient };
 
 			T::OutboundRouter::submit(channel_id, &who, Address::<T>::get(), &message.encode())?;
 			Self::deposit_event(Event::<T>::Burned(token_contract, token_id, who, recipient));
@@ -162,20 +165,24 @@ pub mod module {
 
 		#[pallet::weight(T::WeightInfo::mint())]
 		#[transactional]
-		pub fn mint(origin: OriginFor<T>, sender: H160, recipient: <T::Lookup as StaticLookup>::Source, token_contract: H160, token_id: U256, token_uri: Vec<u8>) -> DispatchResultWithPostInfo {
+		pub fn mint(
+			origin: OriginFor<T>,
+			sender: H160,
+			recipient: <T::Lookup as StaticLookup>::Source,
+			token_contract: H160,
+			token_id: U256,
+			token_uri: Vec<u8>,
+		) -> DispatchResultWithPostInfo {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != Address::<T>::get() {
-				return Err(DispatchError::BadOrigin.into());
+				return Err(DispatchError::BadOrigin.into())
 			}
 			if TokensByERC721Id::<T>::contains_key((token_contract, token_id)) {
-				return Err(Error::<T>::TokenAlreadyMinted.into());
+				return Err(Error::<T>::TokenAlreadyMinted.into())
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
-			let token_data = ERC721TokenData{
-				token_contract,
-				token_id,
-			};
+			let token_data = ERC721TokenData { token_contract, token_id };
 			let nft_token_id = T::Nft::mint(&recipient, token_uri, token_data)?;
 			TokensByERC721Id::<T>::insert((token_contract, token_id), nft_token_id);
 
@@ -183,6 +190,5 @@ pub mod module {
 
 			Ok(().into())
 		}
-
 	}
 }

@@ -6,22 +6,20 @@ mod benchmarking;
 #[cfg(test)]
 mod test;
 
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 use ethabi::{self, Token};
 use frame_support::{
 	dispatch::DispatchResult,
-	traits::{Get, EnsureOrigin},
 	ensure,
+	traits::{EnsureOrigin, Get},
 };
-use sp_core::{H160, H256, RuntimeDebug};
+use sp_core::{RuntimeDebug, H160, H256};
 use sp_io::offchain_index;
-use sp_runtime::{
-	traits::{Hash, Zero, StaticLookup},
-};
+use sp_runtime::traits::{Hash, StaticLookup, Zero};
 
 use sp_std::prelude::*;
 
-use snowbridge_core::{ChannelId, MessageNonce, types::AuxiliaryDigestItem};
+use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId, MessageNonce};
 
 pub use weights::WeightInfo;
 
@@ -117,10 +115,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self {
-				interval: Default::default(),
-				principal: Default::default(),
-			}
+			Self { interval: Default::default(), principal: Default::default() }
 		}
 	}
 
@@ -150,7 +145,10 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::set_principal())]
-		pub fn set_principal(origin: OriginFor<T>, principal: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
+		pub fn set_principal(
+			origin: OriginFor<T>,
+			principal: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResult {
 			T::SetPrincipalOrigin::ensure_origin(origin)?;
 			let principal = T::Lookup::lookup(principal)?;
 			<Principal<T>>::put(principal);
@@ -161,12 +159,10 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
+			ensure!(*who == Self::principal(), Error::<T>::NotAuthorized,);
 			ensure!(
-				*who == Self::principal(),
-				Error::<T>::NotAuthorized,
-			);
-			ensure!(
-				<MessageQueue<T>>::decode_len().unwrap_or(0) < T::MaxMessagesPerCommit::get() as usize,
+				<MessageQueue<T>>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerCommit::get() as usize,
 				Error::<T>::QueueSizeLimitReached,
 			);
 			ensure!(
@@ -181,13 +177,11 @@ pub mod pallet {
 					return Err(Error::<T>::Overflow.into())
 				}
 
-				<MessageQueue<T>>::append(
-					Message {
-						target,
-						nonce: *nonce,
-						payload: payload.to_vec(),
-					},
-				);
+				<MessageQueue<T>>::append(Message {
+					target,
+					nonce: *nonce,
+					payload: payload.to_vec(),
+				});
 				Self::deposit_event(Event::MessageAccepted(*nonce));
 				Ok(())
 			})
@@ -196,25 +190,20 @@ pub mod pallet {
 		fn commit() -> Weight {
 			let messages: Vec<Message> = <MessageQueue<T>>::take();
 			if messages.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages();
+				return T::WeightInfo::on_initialize_no_messages()
 			}
 
 			let commitment_hash = Self::make_commitment_hash(&messages);
 			let average_payload_size = Self::average_payload_size(&messages);
 
-			let digest_item = AuxiliaryDigestItem::Commitment(
-				ChannelId::Basic,
-				commitment_hash.clone()
-			).into();
+			let digest_item =
+				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
 			let key = Self::make_offchain_key(commitment_hash);
 			offchain_index::set(&*key, &messages.encode());
 
-			T::WeightInfo::on_initialize(
-				messages.len() as u32,
-				average_payload_size as u32
-			)
+			T::WeightInfo::on_initialize(messages.len() as u32, average_payload_size as u32)
 		}
 
 		fn make_commitment_hash(messages: &[Message]) -> H256 {
@@ -224,7 +213,7 @@ pub mod pallet {
 					Token::Tuple(vec![
 						Token::Address(message.target),
 						Token::Uint(message.nonce.into()),
-						Token::Bytes(message.payload.clone())
+						Token::Bytes(message.payload.clone()),
 					])
 				})
 				.collect();
@@ -233,8 +222,7 @@ pub mod pallet {
 		}
 
 		fn average_payload_size(messages: &[Message]) -> usize {
-			let sum: usize = messages.iter()
-				.fold(0, |acc, x| acc + x.payload.len());
+			let sum: usize = messages.iter().fold(0, |acc, x| acc + x.payload.len());
 			// We overestimate message payload size rather than underestimate.
 			// So add 1 here to account for integer division truncation.
 			(sum / messages.len()).saturating_add(1)
@@ -245,4 +233,3 @@ pub mod pallet {
 		}
 	}
 }
-

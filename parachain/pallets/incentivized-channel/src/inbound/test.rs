@@ -1,21 +1,21 @@
 use super::*;
 
-use frame_support::traits::GenesisBuild;
-use sp_core::{H160, H256};
 use frame_support::{
-	assert_ok, assert_noop,
-	parameter_types,
+	assert_noop, assert_ok,
 	dispatch::DispatchError,
-	traits::Currency,
+	parameter_types,
+	traits::{Currency, GenesisBuild},
 };
-use sp_runtime::{
-	Perbill,
-	traits::{Convert, BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
-};
+use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
-use sp_std::{marker::PhantomData, convert::From};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, Convert, IdentifyAccount, IdentityLookup, Verify},
+	MultiSignature, Perbill,
+};
+use sp_std::{convert::From, marker::PhantomData};
 
-use snowbridge_core::{MessageDispatch, Message, Proof};
+use snowbridge_core::{Message, MessageDispatch, Proof};
 use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
@@ -72,7 +72,6 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ();
 	type OnSetCode = ();
 }
-
 
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 1;
@@ -148,11 +147,13 @@ impl incentivized_inbound_channel::Config for Test {
 pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
 	new_tester_with_config(incentivized_inbound_channel::GenesisConfig {
 		source_channel,
-		reward_fraction: Perbill::from_percent(80)
+		reward_fraction: Perbill::from_percent(80),
 	})
 }
 
-pub fn new_tester_with_config(config: incentivized_inbound_channel::GenesisConfig) -> sp_io::TestExternalities {
+pub fn new_tester_with_config(
+	config: incentivized_inbound_channel::GenesisConfig,
+) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
@@ -162,12 +163,12 @@ pub fn new_tester_with_config(config: incentivized_inbound_channel::GenesisConfi
 	ext
 }
 
-
 // The originating channel address for the messages below
 const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["4130819912a398f4eb84e7f16ed443232ba638b5"];
 
 // Message with nonce = 1
-const MESSAGE_DATA_0: [u8; 317] = hex!("
+const MESSAGE_DATA_0: [u8; 317] = hex!(
+	"
 	f9013a944130819912a398f4eb84e7f16ed443232ba638b5e1a05e9ae1d7c484
 	f74d554a503aa825e823725531d97e784dd9b1aacdb58d1f7076b90100000000
 	000000000000000000c2c5d46481c291be111d5e3a0b52114bdf212a01000000
@@ -178,10 +179,12 @@ const MESSAGE_DATA_0: [u8; 317] = hex!("
 	13dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd
 	04a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d780300000000
 	0000000000000000000000000000000000000000000000000000000000
-");
+"
+);
 
 // Message with nonce = 2
-const MESSAGE_DATA_1: [u8; 317] = hex!("
+const MESSAGE_DATA_1: [u8; 317] = hex!(
+	"
 	f9013a944130819912a398f4eb84e7f16ed443232ba638b5e1a05e9ae1d7c484
 	f74d554a503aa825e823725531d97e784dd9b1aacdb58d1f7076b90100000000
 	000000000000000000c2c5d46481c291be111d5e3a0b52114bdf212a01000000
@@ -192,7 +195,8 @@ const MESSAGE_DATA_1: [u8; 317] = hex!("
 	13dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd
 	04a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d780300000000
 	0000000000000000000000000000000000000000000000000000000000
-");
+"
+);
 
 #[test]
 fn test_submit_with_invalid_source_channel() {
@@ -206,7 +210,7 @@ fn test_submit_with_invalid_source_channel() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default()
+				data: Default::default(),
 			},
 		};
 		assert_noop!(
@@ -228,7 +232,7 @@ fn test_submit() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default()
+				data: Default::default(),
 			},
 		};
 		assert_ok!(IncentivizedInboundChannel::submit(origin.clone(), message_1));
@@ -241,7 +245,7 @@ fn test_submit() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default()
+				data: Default::default(),
 			},
 		};
 		assert_ok!(IncentivizedInboundChannel::submit(origin.clone(), message_2));
@@ -262,7 +266,7 @@ fn test_submit_with_invalid_nonce() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default()
+				data: Default::default(),
 			},
 		};
 		assert_ok!(IncentivizedInboundChannel::submit(origin.clone(), message.clone()));

@@ -1,8 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-	dispatch::{Parameter, Dispatchable, DispatchResult},
-	traits::{EnsureOrigin, Contains},
+	dispatch::{DispatchResult, Dispatchable, Parameter},
+	traits::{Contains, EnsureOrigin},
 	weights::GetDispatchInfo,
 };
 
@@ -13,7 +13,7 @@ use sp_std::prelude::*;
 
 use snowbridge_core::MessageDispatch;
 
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 
 #[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
 pub struct RawOrigin(pub H160);
@@ -28,7 +28,7 @@ pub struct EnsureEthereumAccount;
 
 impl<OuterOrigin> EnsureOrigin<OuterOrigin> for EnsureEthereumAccount
 where
-	OuterOrigin: Into<Result<RawOrigin, OuterOrigin>> + From<RawOrigin>
+	OuterOrigin: Into<Result<RawOrigin, OuterOrigin>> + From<RawOrigin>,
 {
 	type Success = H160;
 
@@ -75,8 +75,8 @@ pub mod pallet {
 				PostInfo = frame_support::dispatch::PostDispatchInfo,
 			>;
 
-		/// The pallet will filter all incoming calls right before they're dispatched. If this filter
-		/// rejects the call, special event (`Event::MessageRejected`) is emitted.
+		/// The pallet will filter all incoming calls right before they're dispatched. If this
+		/// filter rejects the call, special event (`Event::MessageRejected`) is emitted.
 		type CallFilter: Contains<<Self as Config>::Call>;
 	}
 
@@ -109,13 +109,13 @@ pub mod pallet {
 				Ok(call) => call,
 				Err(_) => {
 					Self::deposit_event(Event::MessageDecodeFailed(id));
-					return;
-				}
+					return
+				},
 			};
 
 			if !T::CallFilter::contains(&call) {
 				Self::deposit_event(Event::MessageRejected(id));
-				return;
+				return
 			}
 
 			let origin = RawOrigin(source).into();
@@ -128,21 +128,19 @@ pub mod pallet {
 		}
 
 		#[cfg(feature = "runtime-benchmarks")]
-		fn successful_dispatch_event(id: MessageIdOf<T>) -> Option<<T as frame_system::Config>::Event> {
+		fn successful_dispatch_event(
+			id: MessageIdOf<T>,
+		) -> Option<<T as frame_system::Config>::Event> {
 			let event: <T as Config>::Event = Event::MessageDispatched(id, Ok(())).into();
 			Some(event.into())
 		}
 	}
 }
 
-
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use frame_support::{
-		parameter_types,
-		dispatch::DispatchError,
-	};
+	use frame_support::{dispatch::DispatchError, parameter_types};
 	use frame_system::{EventRecord, Phase};
 	use sp_core::H256;
 	use sp_runtime::{
@@ -203,7 +201,7 @@ mod tests {
 		fn contains(call: &Call) -> bool {
 			match call {
 				Call::System(frame_system::pallet::Call::<Test>::remark(_)) => true,
-				_ => false
+				_ => false,
 			}
 		}
 	}
@@ -217,9 +215,7 @@ mod tests {
 	}
 
 	fn new_test_ext() -> sp_io::TestExternalities {
-		let t = frame_system::GenesisConfig::default()
-			.build_storage::<Test>()
-			.unwrap();
+		let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 		sp_io::TestExternalities::new(t)
 	}
 
@@ -238,7 +234,10 @@ mod tests {
 				System::events(),
 				vec![EventRecord {
 					phase: Phase::Initialization,
-					event: Event::Dispatch(crate::Event::<Test>::MessageDispatched(id, Err(DispatchError::BadOrigin))),
+					event: Event::Dispatch(crate::Event::<Test>::MessageDispatched(
+						id,
+						Err(DispatchError::BadOrigin)
+					)),
 					topics: vec![],
 				}],
 			);
@@ -288,6 +287,4 @@ mod tests {
 			);
 		})
 	}
-
-
 }
