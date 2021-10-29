@@ -6,6 +6,10 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-	fn burn() -> Weight { 0 }
-	fn mint() -> Weight { 0 }
+	fn burn() -> Weight {
+		0
+	}
+	fn mint() -> Weight {
+		0
+	}
 }

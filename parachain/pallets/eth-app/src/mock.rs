@@ -1,21 +1,21 @@
 use sp_std::marker::PhantomData;
 
 // Mock runtime
-use frame_support::traits::GenesisBuild;
-use sp_core::{H160, H256};
 use frame_support::{
-	parameter_types,
 	dispatch::{DispatchError, DispatchResult},
-};
-use sp_runtime::{
-	traits::{
-		BlakeTwo256, IdentityLookup, IdentifyAccount, Verify,
-	}, testing::Header, MultiSignature,
+	parameter_types,
+	traits::GenesisBuild,
 };
 use frame_system as system;
+use sp_core::{H160, H256};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	MultiSignature,
+};
 
-use snowbridge_core::{ChannelId, AssetId, OutboundRouter};
 use snowbridge_assets::SingleAssetAdaptor;
+use snowbridge_core::{AssetId, ChannelId, OutboundRouter};
 
 use crate as eth_app;
 
@@ -86,9 +86,9 @@ pub struct MockOutboundRouter<AccountId>(PhantomData<AccountId>);
 
 impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
 	fn submit(channel: ChannelId, _: &AccountId, _: H160, _: &[u8]) -> DispatchResult {
-        if channel == ChannelId::Basic {
-            return Err(DispatchError::Other("some error!"));
-        }
+		if channel == ChannelId::Basic {
+			return Err(DispatchError::Other("some error!"))
+		}
 		Ok(())
 	}
 }
@@ -110,9 +110,7 @@ pub type Asset = SingleAssetAdaptor<Test, EthAssetId>;
 pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	let config = eth_app::GenesisConfig {
-		address: H160::repeat_byte(1),
-	};
+	let config = eth_app::GenesisConfig { address: H160::repeat_byte(1) };
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();

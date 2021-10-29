@@ -1,7 +1,7 @@
 use sp_core::U256;
 use sp_runtime::traits::CheckedConversion;
 
-use crate::{Config, BalanceOf};
+use crate::{BalanceOf, Config};
 
 pub fn unwrap<T: Config>(value: U256, decimals: u32) -> Option<BalanceOf<T>> {
 	let granularity = match granularity(decimals) {
@@ -39,24 +39,18 @@ fn granularity(decimals: u32) -> Option<U256> {
 mod tests {
 	use super::*;
 
-	use crate::mock::{Test, Balance};
+	use crate::mock::{Balance, Test};
 	#[test]
 	fn should_wrap_without_overflow() {
 		// largest possible value
 		let max_possible_amount = Balance::MAX;
 		let min_possible_decimals = 0;
-		assert_ne!(
-			wrap::<Test>(max_possible_amount, min_possible_decimals),
-			None
-		);
+		assert_ne!(wrap::<Test>(max_possible_amount, min_possible_decimals), None);
 
 		// smallest possible value
 		let min_possible_amount = 1;
 		let max_possible_decimals = 18;
-		assert_ne!(
-			wrap::<Test>(min_possible_amount, max_possible_decimals),
-			None
-		)
+		assert_ne!(wrap::<Test>(min_possible_amount, max_possible_decimals), None)
 	}
 
 	#[test]
@@ -64,18 +58,11 @@ mod tests {
 		// largest possible value
 		let max_possible_amount = U256::from(Balance::MAX);
 		let min_possible_decimals = 0;
-		assert_ne!(
-			unwrap::<Test>(max_possible_amount, min_possible_decimals),
-			None
-		);
+		assert_ne!(unwrap::<Test>(max_possible_amount, min_possible_decimals), None);
 
 		// smallest possible value
 		let min_possible_amount = U256::from(1);
 		let max_possible_decimals = 18;
-		assert_ne!(
-			unwrap::<Test>(min_possible_amount, max_possible_decimals),
-			None
-		)
+		assert_ne!(unwrap::<Test>(min_possible_amount, max_possible_decimals), None)
 	}
-
 }

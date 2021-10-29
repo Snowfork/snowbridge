@@ -1,8 +1,8 @@
 //! EthereumLightClient pallet benchmarking
 use super::*;
 
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
-use frame_benchmarking::{benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 
 #[allow(unused_imports)]
 use crate::Pallet as EthereumLightClient;
@@ -34,9 +34,7 @@ fn assert_header_pruned<T: Config>(hash: H256, number: u64) {
 	assert!(Headers::<T>::get(hash).is_none());
 
 	let hashes_at_number = <HeadersByNumber<T>>::get(number);
-	assert!(
-		hashes_at_number.is_none() || !hashes_at_number.unwrap().contains(&hash),
-	);
+	assert!(hashes_at_number.is_none() || !hashes_at_number.unwrap().contains(&hash),);
 }
 
 benchmarks! {

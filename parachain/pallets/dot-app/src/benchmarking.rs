@@ -1,9 +1,9 @@
 //! DotApp pallet benchmarking
 use super::*;
 
-use frame_system::RawOrigin;
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::traits::UnfilteredDispatchable;
-use frame_benchmarking::{account, benchmarks, whitelisted_caller, impl_benchmark_test_suite};
+use frame_system::RawOrigin;
 use sp_core::H160;
 use sp_runtime::traits::Zero;
 
@@ -91,8 +91,4 @@ benchmarks! {
 	}
 }
 
-impl_benchmark_test_suite!(
-	DotApp,
-	crate::mock::new_tester(),
-	crate::mock::Test,
-);
+impl_benchmark_test_suite!(DotApp, crate::mock::new_tester(), crate::mock::Test,);

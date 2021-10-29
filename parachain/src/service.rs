@@ -1,9 +1,7 @@
 use cumulus_client_consensus_aura::{
 	build_aura_consensus, BuildAuraConsensusParams, SlotProportion,
 };
-use cumulus_client_consensus_common::{
-	ParachainConsensus
-};
+use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::build_block_announce_validator;
 use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
@@ -27,13 +25,13 @@ pub use sc_executor::NativeExecutor;
 type Hash = sp_core::H256;
 
 #[cfg(feature = "with-snowbridge-runtime")]
-use snowbridge_runtime::{RuntimeApi, opaque::Block};
+use snowbridge_runtime::{opaque::Block, RuntimeApi};
 
 #[cfg(feature = "with-rococo-runtime")]
-use rococo_runtime::{RuntimeApi, opaque::Block};
+use rococo_runtime::{opaque::Block, RuntimeApi};
 
 #[cfg(feature = "with-local-runtime")]
-use local_runtime::{RuntimeApi, opaque::Block};
+use local_runtime::{opaque::Block, RuntimeApi};
 
 #[cfg(feature = "with-snowbridge-runtime")]
 native_executor_instance!(
@@ -328,10 +326,7 @@ pub fn build_import_queue(
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 ) -> Result<
-	sc_consensus::DefaultImportQueue<
-		Block,
-		TFullClient<Block, RuntimeApi, ExecutorDispatch>,
-	>,
+	sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, ExecutorDispatch>>,
 	sc_service::Error,
 > {
 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
@@ -371,10 +366,8 @@ pub async fn start_node(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	id: ParaId,
-) -> sc_service::error::Result<(
-	TaskManager,
-	Arc<TFullClient<Block, RuntimeApi, ExecutorDispatch>>,
-)> {
+) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, ExecutorDispatch>>)>
+{
 	start_node_impl::<RuntimeApi, ExecutorDispatch, _, _, _>(
 		parachain_config,
 		polkadot_config,

@@ -3,18 +3,18 @@ use sp_std::marker::PhantomData;
 
 use super::*;
 
-use sp_core::{H160, H256};
 use frame_support::{
+	dispatch::{DispatchError, DispatchResult},
 	parameter_types,
-	dispatch::{DispatchResult, DispatchError},
 };
+use sp_core::{H160, H256};
 use sp_runtime::{
-	traits::{
-		BlakeTwo256, IdentityLookup, IdentifyAccount, Verify,
-	}, testing::Header, MultiSignature,
+	testing::Header,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	MultiSignature,
 };
 
-use snowbridge_core::{ChannelId, OutboundRouter, nft::ERC721TokenData};
+use snowbridge_core::{nft::ERC721TokenData, ChannelId, OutboundRouter};
 
 use crate as erc721_app;
 
@@ -68,7 +68,6 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ();
 }
 
-
 impl snowbridge_nft::Config for Test {
 	type TokenId = u64;
 	type TokenData = ERC721TokenData;
@@ -86,9 +85,9 @@ pub struct MockOutboundRouter<AccountId>(PhantomData<AccountId>);
 
 impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
 	fn submit(channel: ChannelId, _: &AccountId, _: H160, _: &[u8]) -> DispatchResult {
-        if channel == ChannelId::Basic {
-            return Err(DispatchError::Other("some error!"));
-        }
+		if channel == ChannelId::Basic {
+			return Err(DispatchError::Other("some error!"))
+		}
 		Ok(())
 	}
 }
@@ -103,13 +102,9 @@ impl erc721_app::Config for Test {
 }
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let mut storage = frame_system::GenesisConfig::default()
-		.build_storage::<Test>()
-		.unwrap();
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	let config = erc721_app::GenesisConfig {
-		address: H160::repeat_byte(1),
-	};
+	let config = erc721_app::GenesisConfig { address: H160::repeat_byte(1) };
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();

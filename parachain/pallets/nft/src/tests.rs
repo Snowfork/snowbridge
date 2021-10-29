@@ -14,7 +14,10 @@ fn mint_should_work() {
 		assert_eq!(NonFungibleTokenModule::next_token_id(), 0);
 		let token_id = NonFungibleTokenModule::mint(&BOB, vec![1], ()).unwrap();
 		assert_eq!(token_id, 0);
-		assert_eq!(NonFungibleTokenModule::tokens(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
+		assert_eq!(
+			NonFungibleTokenModule::tokens(0),
+			Some(TokenInfo { metadata: vec![1], owner: BOB, data: () })
+		);
 		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
 		assert_eq!(NonFungibleTokenModule::is_owner(&BOB, 0), true);
 
@@ -33,10 +36,7 @@ fn mint_should_fail() {
 			*id = <Test as Config>::TokenId::max_value();
 		});
 		assert_eq!(NonFungibleTokenModule::next_token_id(), <Test as Config>::TokenId::max_value());
-		assert_noop!(
-			NonFungibleTokenModule::mint(&BOB, vec![1], ()),
-			Error::<Test>::NumOverflow
-		);
+		assert_noop!(NonFungibleTokenModule::mint(&BOB, vec![1], ()), Error::<Test>::NumOverflow);
 		assert_eq!(NonFungibleTokenModule::next_token_id(), <Test as Config>::TokenId::max_value());
 	});
 }
@@ -50,7 +50,10 @@ fn burn_should_work() {
 		assert_ok!(NonFungibleTokenModule::mint(&BOB, vec![1], ()));
 
 		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
-		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
+		assert_eq!(
+			Tokens::<Test>::get(0),
+			Some(TokenInfo { metadata: vec![1], owner: BOB, data: () })
+		);
 
 		assert_ok!(NonFungibleTokenModule::burn(&BOB, TOKEN_ID));
 
@@ -66,7 +69,10 @@ fn burn_should_fail() {
 		assert_eq!(token_id, 0);
 
 		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
-		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
+		assert_eq!(
+			Tokens::<Test>::get(0),
+			Some(TokenInfo { metadata: vec![1], owner: BOB, data: () })
+		);
 
 		assert_noop!(
 			NonFungibleTokenModule::burn(&BOB, TOKEN_ID_NOT_EXIST),
@@ -74,15 +80,18 @@ fn burn_should_fail() {
 		);
 
 		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
-		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
-
-		assert_noop!(
-			NonFungibleTokenModule::burn(&ALICE, TOKEN_ID),
-			Error::<Test>::NoPermission
+		assert_eq!(
+			Tokens::<Test>::get(0),
+			Some(TokenInfo { metadata: vec![1], owner: BOB, data: () })
 		);
 
+		assert_noop!(NonFungibleTokenModule::burn(&ALICE, TOKEN_ID), Error::<Test>::NoPermission);
+
 		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
-		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
+		assert_eq!(
+			Tokens::<Test>::get(0),
+			Some(TokenInfo { metadata: vec![1], owner: BOB, data: () })
+		);
 	});
 }
 
@@ -95,24 +104,36 @@ fn transfer_should_work() {
 		assert_ok!(NonFungibleTokenModule::mint(&BOB, vec![1], ()));
 
 		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
-		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
+		assert_eq!(
+			Tokens::<Test>::get(0),
+			Some(TokenInfo { metadata: vec![1], owner: BOB, data: () })
+		);
 
 		assert_ok!(NonFungibleTokenModule::transfer(&BOB, &BOB, TOKEN_ID));
 
 		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
-		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
+		assert_eq!(
+			Tokens::<Test>::get(0),
+			Some(TokenInfo { metadata: vec![1], owner: BOB, data: () })
+		);
 
 		assert_ok!(NonFungibleTokenModule::transfer(&BOB, &ALICE, TOKEN_ID));
 
 		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), false);
 		assert_eq!(TokensByOwner::<Test>::contains_key(ALICE, 0), true);
-		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: ALICE, data: ()}));
+		assert_eq!(
+			Tokens::<Test>::get(0),
+			Some(TokenInfo { metadata: vec![1], owner: ALICE, data: () })
+		);
 
 		assert_ok!(NonFungibleTokenModule::transfer(&ALICE, &BOB, TOKEN_ID));
 
 		assert_eq!(TokensByOwner::<Test>::contains_key(ALICE, 0), false);
 		assert_eq!(TokensByOwner::<Test>::contains_key(BOB, 0), true);
-		assert_eq!(Tokens::<Test>::get(0), Some(TokenInfo{metadata: vec![1], owner: BOB, data: ()}));
+		assert_eq!(
+			Tokens::<Test>::get(0),
+			Some(TokenInfo { metadata: vec![1], owner: BOB, data: () })
+		);
 
 		assert!(NonFungibleTokenModule::is_owner(&BOB, TOKEN_ID));
 	});

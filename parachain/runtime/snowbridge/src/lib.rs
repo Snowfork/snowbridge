@@ -13,11 +13,11 @@ use sp_core::{
 	u32_trait::{_1, _2},
 	OpaqueMetadata, U256,
 };
-use sp_runtime::traits::{
-	AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, IdentifyAccount, Keccak256, Verify,
-};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
+	traits::{
+		AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, IdentifyAccount, Keccak256, Verify,
+	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature,
 };
@@ -32,58 +32,48 @@ use sp_version::RuntimeVersion;
 pub use frame_support::{
 	construct_runtime,
 	dispatch::DispatchResult,
-	parameter_types,
-	traits::{Everything, Contains, IsInVec, KeyOwnerProofSystem, Randomness},
+	match_type, parameter_types,
+	traits::{Contains, Everything, IsInVec, KeyOwnerProofSystem, Randomness},
 	weights::{
-		constants::{
-			BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight,
-			WEIGHT_PER_SECOND,
-		},
-		IdentityFee,
-		Weight
+		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+		IdentityFee, Weight,
 	},
 	StorageValue,
-	match_type,
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
-pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 
-pub use snowbridge_core::{AssetId, ChannelId, MessageId, ERC721TokenData};
 use dispatch::EnsureEthereumAccount;
+pub use snowbridge_core::{AssetId, ChannelId, ERC721TokenData, MessageId};
 
 pub use ethereum_light_client::{EthereumDifficultyConfig, EthereumHeader};
 
 use polkadot_parachain::primitives::Sibling;
 
+use pallet_xcm::XcmPassthrough;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, UsingComponents, FixedWeightBounds, IsConcrete, LocationInverter,
-	NativeAsset, ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SovereignSignedViaLocation, TakeWeightCredit, SignedToAccountId32,
+	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
+	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
-use pallet_xcm::XcmPassthrough;
 
-use snowbridge_xcm_support::AssetsTransactor;
 use assets::SingleAssetAdaptor;
+use snowbridge_xcm_support::AssetsTransactor;
 
 use runtime_common::{
-	INDEXING_PREFIX,
-	OutboundRouter,
-	Ether,
-	MaxMessagePayloadSize,
-	MaxMessagesPerCommit,
-	DotPalletId,
-	TreasuryPalletId,
+	DotPalletId, Ether, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter,
+	TreasuryPalletId, INDEXING_PREFIX,
 };
 
 mod weights;
@@ -160,10 +150,7 @@ pub const DAYS: BlockNumber = HOURS * 24;
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
-	NativeVersion {
-		runtime_version: VERSION,
-		can_author_with: Default::default(),
-	}
+	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
 }
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -339,7 +326,7 @@ type LocalAssetTransactor2 = CurrencyAdapter<
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId,
 	// We don't track any teleports.
-	()
+	(),
 >;
 
 type LocalAssetTransactor = (LocalAssetTransactor1, LocalAssetTransactor2);
@@ -407,9 +394,7 @@ parameter_types! {
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
-pub type LocalOriginToLocation = (
-	SignedToAccountId32<Origin, AccountId, RococoNetwork>,
-);
+pub type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, RococoNetwork>,);
 
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
@@ -506,10 +491,10 @@ impl dispatch::Config for Runtime {
 	type CallFilter = Everything;
 }
 
-use basic_channel::inbound as basic_channel_inbound;
-use basic_channel::outbound as basic_channel_outbound;
-use incentivized_channel::inbound as incentivized_channel_inbound;
-use incentivized_channel::outbound as incentivized_channel_outbound;
+use basic_channel::{inbound as basic_channel_inbound, outbound as basic_channel_outbound};
+use incentivized_channel::{
+	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
+};
 
 impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;

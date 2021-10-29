@@ -5,9 +5,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_core::U256;
-use sp_std::{result, marker::PhantomData, prelude::*};
 use codec::Decode;
+use sp_core::U256;
+use sp_std::{marker::PhantomData, prelude::*, result};
 
 use xcm::latest::prelude::*;
 use xcm_executor::traits::{Convert, TransactAsset};
@@ -22,7 +22,8 @@ impl<
 		Assets: SnowbridgeMultiAsset<AccountId>,
 		AccountIdConverter: Convert<MultiLocation, AccountId>,
 		AccountId: Clone,
-	> AssetsTransactor<Assets, AccountIdConverter, AccountId> {
+	> AssetsTransactor<Assets, AccountIdConverter, AccountId>
+{
 	fn match_assets(a: &MultiAsset) -> result::Result<(SnowbridgeAssetId, U256), XcmError> {
 		let (id, amount) = if let MultiAsset { id, fun: Fungible(amount) } = a {
 			(id, amount)

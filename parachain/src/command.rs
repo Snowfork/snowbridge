@@ -1,33 +1,33 @@
 use crate::{
-	service,
 	cli::{Cli, RelayChainCli, Subcommand},
+	service,
 };
 use codec::Encode;
-use cumulus_primitives_core::ParaId;
 use cumulus_client_service::genesis::generate_genesis_block;
+use cumulus_primitives_core::ParaId;
 use log::info;
 
 use crate::chain_spec::Extensions;
 
 #[cfg(feature = "with-snowbridge-runtime")]
-use snowbridge_runtime::opaque::Block;
-#[cfg(feature = "with-snowbridge-runtime")]
 use crate::chain_spec::snowbridge::{get_chain_spec, ChainSpec};
+#[cfg(feature = "with-snowbridge-runtime")]
+use snowbridge_runtime::opaque::Block;
 
-#[cfg(feature = "with-rococo-runtime")]
-use rococo_runtime::opaque::Block;
 #[cfg(feature = "with-rococo-runtime")]
 use crate::chain_spec::rococo::{get_chain_spec, ChainSpec};
+#[cfg(feature = "with-rococo-runtime")]
+use rococo_runtime::opaque::Block;
 
 #[cfg(feature = "with-local-runtime")]
-use local_runtime::opaque::Block;
-#[cfg(feature = "with-local-runtime")]
 use crate::chain_spec::local::{get_chain_spec, ChainSpec};
+#[cfg(feature = "with-local-runtime")]
+use local_runtime::opaque::Block;
 
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
-	CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
-	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
+	CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams,
+	Result, RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::{
 	config::{BasePath, PrometheusConfig},
@@ -156,53 +156,39 @@ pub fn run() -> Result<()> {
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
-		}
+		},
 		Some(Subcommand::CheckBlock(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents {
-					client,
-					task_manager,
-					import_queue,
-					..
-				} = crate::service::new_partial(&config, crate::service::build_import_queue)?;
+				let PartialComponents { client, task_manager, import_queue, .. } =
+					crate::service::new_partial(&config, crate::service::build_import_queue)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
-		}
+		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents {
-					client,
-					task_manager,
-					..
-				} = crate::service::new_partial(&config, crate::service::build_import_queue)?;
+				let PartialComponents { client, task_manager, .. } =
+					crate::service::new_partial(&config, crate::service::build_import_queue)?;
 				Ok((cmd.run(client, config.database), task_manager))
 			})
-		}
+		},
 		Some(Subcommand::ExportState(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents {
-					client,
-					task_manager,
-					..
-				} = crate::service::new_partial(&config, crate::service::build_import_queue)?;
+				let PartialComponents { client, task_manager, .. } =
+					crate::service::new_partial(&config, crate::service::build_import_queue)?;
 				Ok((cmd.run(client, config.chain_spec), task_manager))
 			})
-		}
+		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents {
-					client,
-					task_manager,
-					import_queue,
-					..
-				} = crate::service::new_partial(&config, crate::service::build_import_queue)?;
+				let PartialComponents { client, task_manager, import_queue, .. } =
+					crate::service::new_partial(&config, crate::service::build_import_queue)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
-		}
+		},
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
@@ -223,19 +209,15 @@ pub fn run() -> Result<()> {
 
 				cmd.run(config, polkadot_config)
 			})
-		}
+		},
 		Some(Subcommand::Revert(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents {
-					client,
-					task_manager,
-					backend,
-					..
-				} = crate::service::new_partial(&config, crate::service::build_import_queue)?;
+				let PartialComponents { client, task_manager, backend, .. } =
+					crate::service::new_partial(&config, crate::service::build_import_queue)?;
 				Ok((cmd.run(client, backend), task_manager))
 			})
-		}
+		},
 		Some(Subcommand::ExportGenesisState(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
@@ -259,7 +241,7 @@ pub fn run() -> Result<()> {
 			}
 
 			Ok(())
-		}
+		},
 		Some(Subcommand::ExportGenesisWasm(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
@@ -280,17 +262,17 @@ pub fn run() -> Result<()> {
 			}
 
 			Ok(())
-		}
-		Some(Subcommand::Benchmark(cmd)) => {
+		},
+		Some(Subcommand::Benchmark(cmd)) =>
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
 
 				runner.sync_run(|config| cmd.run::<Block, service::ExecutorDispatch>(config))
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
-				You can enable it with `--features runtime-benchmarks`.".into())
-			}
-		}
+				You can enable it with `--features runtime-benchmarks`."
+					.into())
+			},
 		None => {
 			let runner = cli.create_runner(&*cli.run)?;
 
@@ -314,27 +296,21 @@ pub fn run() -> Result<()> {
 				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
 				let task_executor = config.task_executor.clone();
-				let polkadot_config = SubstrateCli::create_configuration(
-					&polkadot_cli,
-					&polkadot_cli,
-					task_executor,
-				)
-				.map_err(|err| format!("Relay chain argument error: {}", err))?;
+				let polkadot_config =
+					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, task_executor)
+						.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
 				info!("Parachain genesis state: {}", genesis_state);
-				info!(
-					"Is collating: {}",
-					if config.role.is_authority() { "yes" } else { "no" }
-				);
+				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
 				crate::service::start_node(config, polkadot_config, id)
 					.await
 					.map(|r| r.0)
 					.map_err(Into::into)
 			})
-		}
+		},
 	}
 }
 
@@ -403,11 +379,7 @@ impl CliConfiguration<Self> for RelayChainCli {
 	fn chain_id(&self, is_dev: bool) -> Result<String> {
 		let chain_id = self.base.base.chain_id(is_dev)?;
 
-		Ok(if chain_id.is_empty() {
-			self.chain_id.clone().unwrap_or_default()
-		} else {
-			chain_id
-		})
+		Ok(if chain_id.is_empty() { self.chain_id.clone().unwrap_or_default() } else { chain_id })
 	}
 
 	fn role(&self, is_dev: bool) -> Result<sc_service::Role> {

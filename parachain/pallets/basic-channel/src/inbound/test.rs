@@ -1,25 +1,23 @@
 use super::*;
 
-use frame_support::traits::GenesisBuild;
-use sp_core::{H160, H256};
 use frame_support::{
-	assert_ok, assert_noop,
-	parameter_types,
-	dispatch::DispatchError
+	assert_noop, assert_ok, dispatch::DispatchError, parameter_types, traits::GenesisBuild,
 };
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
-};
+use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	MultiSignature,
+};
 use sp_std::convert::From;
 
-use snowbridge_core::{MessageDispatch, Message, Proof};
+use snowbridge_core::{Message, MessageDispatch, Proof};
 use snowbridge_ethereum::{Header as EthereumHeader, Log, U256};
 
 use hex_literal::hex;
 
-use crate::inbound::Error;
-use crate::inbound as basic_inbound_channel;
+use crate::{inbound as basic_inbound_channel, inbound::Error};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -101,12 +99,12 @@ impl basic_inbound_channel::Config for Test {
 }
 
 pub fn new_tester(source_channel: H160) -> sp_io::TestExternalities {
-	new_tester_with_config(basic_inbound_channel::GenesisConfig {
-		source_channel,
-	})
+	new_tester_with_config(basic_inbound_channel::GenesisConfig { source_channel })
 }
 
-pub fn new_tester_with_config(config: basic_inbound_channel::GenesisConfig) -> sp_io::TestExternalities {
+pub fn new_tester_with_config(
+	config: basic_inbound_channel::GenesisConfig,
+) -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
@@ -115,7 +113,6 @@ pub fn new_tester_with_config(config: basic_inbound_channel::GenesisConfig) -> s
 	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
-
 
 // The originating channel address for the messages below
 const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["2d02f2234d0B6e35D8d8fD77705f535ACe681327"];
@@ -127,7 +124,8 @@ const SOURCE_CHANNEL_ADDR: [u8; 20] = hex!["2d02f2234d0B6e35D8d8fD77705f535ACe68
 //     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
 //     nonce: 1
 //     payload ...
-const MESSAGE_DATA_0: [u8; 284] = hex!("
+const MESSAGE_DATA_0: [u8; 284] = hex!(
+	"
 	f90119942d02f2234d0b6e35d8d8fd77705f535ace681327e1a0779b38144a38
 	cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
 	00000000000000000a42cba2b7960a0ce216ade5d6a82574257023d800000000
@@ -137,7 +135,8 @@ const MESSAGE_DATA_0: [u8; 284] = hex!("
 	dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd04
 	a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d78030000000000
 	00000000000000000000000000000000000000000000000000000000
-");
+"
+);
 
 // Ethereum Log:
 //   address: 0xe4ab635d0bdc5668b3fcb4eaee1dec587998f4af (outbound channel contract)
@@ -146,7 +145,8 @@ const MESSAGE_DATA_0: [u8; 284] = hex!("
 //     source: 0x8f5acf5f15d4c3d654a759b96bb674a236c8c0f3  (ETH bank contract)
 //     nonce: 1
 //     payload ...
-const MESSAGE_DATA_1: [u8; 284] = hex!("
+const MESSAGE_DATA_1: [u8; 284] = hex!(
+	"
 	f90119942d02f2234d0b6e35d8d8fd77705f535ace681327e1a0779b38144a38
 	cfc4351816442048b17fe24ba2b0e0c63446b576e8281160b15bb8e000000000
 	00000000000000000a42cba2b7960a0ce216ade5d6a82574257023d800000000
@@ -156,7 +156,8 @@ const MESSAGE_DATA_1: [u8; 284] = hex!("
 	dae5f9c236beab905c8305cb159c5fa1aae500d43593c715fdd31c61141abd04
 	a99fd6822c8558854ccde39a5684e7a56da27d0000d9e9ac2d78030000000000
 	00000000000000000000000000000000000000000000000000000000
-");
+"
+);
 
 #[test]
 fn test_submit_with_invalid_source_channel() {
@@ -170,7 +171,7 @@ fn test_submit_with_invalid_source_channel() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default()
+				data: Default::default(),
 			},
 		};
 		assert_noop!(
@@ -192,7 +193,7 @@ fn test_submit() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default()
+				data: Default::default(),
 			},
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_1));
@@ -205,7 +206,7 @@ fn test_submit() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default()
+				data: Default::default(),
 			},
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message_2));
@@ -226,7 +227,7 @@ fn test_submit_with_invalid_nonce() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default()
+				data: Default::default(),
 			},
 		};
 		assert_ok!(BasicInboundChannel::submit(origin.clone(), message.clone()));

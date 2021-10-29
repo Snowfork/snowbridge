@@ -1,6 +1,6 @@
+use codec::Encode;
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
-use codec::Encode;
 
 use ethabi::{self, Token};
 use snowbridge_ethereum::{H160, U256};
@@ -21,7 +21,7 @@ impl<AccountId: Encode> OutboundPayload<AccountId> {
 			Token::Address(self.token_contract),
 			Token::Uint(self.token_id),
 			Token::FixedBytes(self.sender.encode()),
-			Token::Address(self.recipient)
+			Token::Address(self.recipient),
 		];
 		ethabi::encode_function("unlock(address,uint256,bytes32,address)", tokens.as_ref())
 	}
@@ -30,8 +30,8 @@ impl<AccountId: Encode> OutboundPayload<AccountId> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use hex_literal::hex;
 	use hex::ToHex;
+	use hex_literal::hex;
 
 	#[test]
 	fn test_outbound_payload_encode() {

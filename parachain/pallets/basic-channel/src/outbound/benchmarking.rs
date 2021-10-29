@@ -1,11 +1,7 @@
 //! BasicOutboundChannel pallet benchmarking
 use super::*;
 
-use frame_benchmarking::{
-	benchmarks,
-	impl_benchmark_test_suite,
-	account,
-};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::traits::OnInitialize;
 
 #[allow(unused_imports)]
