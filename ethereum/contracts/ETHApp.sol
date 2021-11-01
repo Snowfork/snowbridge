@@ -7,7 +7,10 @@ import "./RewardSource.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
-enum ChannelId {Basic, Incentivized}
+enum ChannelId {
+    Basic,
+    Incentivized
+}
 
 contract ETHApp is RewardSource, AccessControl {
     using ScaleCodec for uint256;
@@ -16,7 +19,12 @@ contract ETHApp is RewardSource, AccessControl {
 
     mapping(ChannelId => Channel) public channels;
 
-    event Locked(address sender, bytes32 recipient, uint32 _paraId, uint256 amount);
+    event Locked(
+        address sender,
+        bytes32 recipient,
+        uint256 amount,
+        uint32 paraId
+    );
 
     event Unlocked(bytes32 sender, address recipient, uint256 amount);
 
@@ -52,7 +60,11 @@ contract ETHApp is RewardSource, AccessControl {
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
 
-    function lock(bytes32 _recipient, ChannelId _channelId, uint32 _paraId) public payable {
+    function lock(
+        bytes32 _recipient,
+        ChannelId _channelId,
+        uint32 _paraId
+    ) public payable {
         require(msg.value > 0, "Value of transaction must be positive");
         require(
             _channelId == ChannelId.Basic ||
@@ -62,12 +74,18 @@ contract ETHApp is RewardSource, AccessControl {
 
         balance = balance + msg.value;
 
-        emit Locked(msg.sender, _recipient, _paraId, msg.value);
+        emit Locked(msg.sender, _recipient, msg.value, _paraId);
 
-        bytes memory call = encodeCall(msg.sender, _recipient, _paraId, msg.value);
+        bytes memory call = encodeCall(
+            msg.sender,
+            _recipient,
+            msg.value,
+            _paraId
+        );
 
-        OutboundChannel channel =
-            OutboundChannel(channels[_channelId].outbound);
+        OutboundChannel channel = OutboundChannel(
+            channels[_channelId].outbound
+        );
         channel.submit(msg.sender, call);
     }
 
@@ -92,8 +110,8 @@ contract ETHApp is RewardSource, AccessControl {
     function encodeCall(
         address _sender,
         bytes32 _recipient,
-        uint32 _paraId,
-        uint256 _amount
+        uint256 _amount,
+        uint32 _paraId
     ) private pure returns (bytes memory) {
         return
             abi.encodePacked(

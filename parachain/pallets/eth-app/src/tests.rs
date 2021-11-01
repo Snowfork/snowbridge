@@ -20,12 +20,13 @@ fn mints_after_handling_ethereum_event() {
 			snowbridge_dispatch::RawOrigin(peer_contract).into(),
 			sender,
 			recipient.clone(),
-			amount.into()
+			amount.into(),
+			0u32,
 		));
 		assert_eq!(Asset::balance(&recipient), amount.into());
 
 		assert_eq!(
-			Event::EthApp(crate::Event::<Test>::Minted(sender, recipient, amount.into())),
+			Event::EthApp(crate::Event::<Test>::Minted(sender, recipient, 0u32, amount.into())),
 			last_event()
 		);
 	});

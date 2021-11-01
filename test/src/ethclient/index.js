@@ -109,7 +109,7 @@ class EthClient {
   async lockETH(from, amount, polkadotRecipient, channelId) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
-    let receipt = await this.appETH.methods.lock(recipientBytes, channelId).send({
+    let receipt = await this.appETH.methods.lock(recipientBytes, channelId, 0).send({
       from: from,
       gas: 500000,
       value: this.web3.utils.toBN(amount)
