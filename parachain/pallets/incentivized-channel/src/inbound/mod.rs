@@ -119,8 +119,8 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::submit())]
-		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::submit() + 500_000_000)]
+		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResultWithPostInfo {
 			let relayer = ensure_signed(origin)?;
 			// submit message to verifier for verification
 			let log = T::Verifier::verify(&message)?;
@@ -132,7 +132,7 @@ pub mod pallet {
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
 			if envelope.channel != <SourceChannel<T>>::get() {
-				return Err(Error::<T>::InvalidSourceChannel.into())
+				return Err(Error::<T>::InvalidSourceChannel.into());
 			}
 
 			// Verify message nonce
@@ -148,9 +148,10 @@ pub mod pallet {
 			Self::handle_fee(envelope.fee, &relayer);
 
 			let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
-			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
+			let actual_weight =
+				T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
-			Ok(())
+			Ok(actual_weight)
 		}
 
 		#[pallet::weight(T::WeightInfo::set_reward_fraction())]
@@ -181,7 +182,7 @@ pub mod pallet {
 		 */
 		pub(super) fn handle_fee(amount: BalanceOf<T>, relayer: &T::AccountId) {
 			if amount.is_zero() {
-				return
+				return;
 			}
 
 			let imbalance = match T::Currency::withdraw(
@@ -193,8 +194,8 @@ pub mod pallet {
 				Ok(imbalance) => imbalance,
 				Err(err) => {
 					log::error!("Unable to withdraw from source account: {:?}", err);
-					return
-				},
+					return;
+				}
 			};
 
 			let reward_fraction: Perbill = <RewardFraction<T>>::get();
@@ -207,8 +208,8 @@ pub mod pallet {
 				Ok(imbalance) => imbalance,
 				Err(_) => {
 					log::error!("Unable to offset imbalance");
-					return
-				},
+					return;
+				}
 			};
 
 			T::Currency::resolve_creating(&T::TreasuryAccount::get(), adjusted_imbalance);
