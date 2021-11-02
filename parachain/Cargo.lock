@@ -9700,26 +9700,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-dispatch2"
-version = "0.1.1"
-dependencies = [
- "cumulus-pallet-xcm",
- "cumulus-primitives-core",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "parity-scale-codec",
- "serde",
- "snowbridge-core",
- "sp-core",
- "sp-io",
- "sp-keyring",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "snowbridge-dot-app"
 version = "0.1.1"
 dependencies = [

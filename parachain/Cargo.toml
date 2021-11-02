@@ -110,7 +110,6 @@ members = [
     "pallets/basic-channel",
     "pallets/incentivized-channel",
     "pallets/dispatch",
-    "pallets/dispatch2",
     "pallets/assets",
     "pallets/nft",
     "pallets/ethereum-light-client",
