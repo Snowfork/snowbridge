@@ -119,7 +119,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::submit() + 500_000_000)]
+		#[pallet::weight(500_000_000)]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResultWithPostInfo {
 			let relayer = ensure_signed(origin)?;
 			// submit message to verifier for verification
@@ -147,11 +147,24 @@ pub mod pallet {
 
 			Self::handle_fee(envelope.fee, &relayer);
 
-			let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
-			let actual_weight =
-				T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
-
-			Ok(actual_weight)
+			match envelope.dest_para_id {
+				// forward to dest para
+				Some(para_id) => {}
+				// dispatch locally
+				None => {
+					let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
+					let maybe_call_weight = T::MessageDispatch::dispatch(
+						envelope.source,
+						message_id,
+						&envelope.payload,
+					);
+					if let Some(actual_call_weight) = maybe_call_weight {
+						Ok(Some(T::WeightInfo::submit_base_weight() + actual_call_weight).into())
+					} else {
+						Ok(Some(T::WeightInfo::submit_base_weight()).into())
+					}
+				}
+			}
 		}
 
 		#[pallet::weight(T::WeightInfo::set_reward_fraction())]

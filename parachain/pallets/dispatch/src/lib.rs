@@ -3,13 +3,19 @@
 use frame_support::{
 	dispatch::{DispatchResult, Dispatchable, Parameter},
 	traits::{Contains, EnsureOrigin},
-	weights::GetDispatchInfo,
+	weights::{extract_actual_weight, GetDispatchInfo},
 };
 
 use sp_core::RuntimeDebug;
 
 use sp_core::H160;
 use sp_std::prelude::*;
+
+use xcm::{
+	latest::prelude::*, Version as XcmVersion, VersionedMultiAssets, VersionedMultiLocation,
+	VersionedXcm,
+};
+use xcm_executor::traits::InvertLocation;
 
 use snowbridge_core::MessageDispatch;
 
@@ -78,6 +84,12 @@ pub mod pallet {
 		/// The pallet will filter all incoming calls right before they're dispatched. If this
 		/// filter rejects the call, special event (`Event::MessageRejected`) is emitted.
 		type CallFilter: Contains<<Self as Config>::Call>;
+
+		/// The type used to actually dispatch an XCM to its destination.
+		type XcmRouter: SendXcm;
+
+		/// Means of inverting a location.
+		type LocationInverter: InvertLocation;
 	}
 
 	#[pallet::hooks]
@@ -92,6 +104,8 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Message has been dispatched with given result.
 		MessageDispatched(T::MessageId, DispatchResult),
+		/// Message has been dispatched with given result.
+		MessageForwarded(T::MessageId),
 		/// Message has been rejected
 		MessageRejected(T::MessageId),
 		/// We have failed to decode a Call from the message.
@@ -104,20 +118,24 @@ pub mod pallet {
 	pub type MessageIdOf<T> = <T as Config>::MessageId;
 
 	impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Pallet<T> {
-		fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8]) -> Weight {
+		fn dispatch_locally(source: H160, id: MessageIdOf<T>, payload: &[u8]) -> Option<Weight> {
 			let call = match <T as Config>::Call::decode(&mut &payload[..]) {
 				Ok(call) => call,
 				Err(_) => {
 					Self::deposit_event(Event::MessageDecodeFailed(id));
-					return;
+					return None;
 				}
 			};
 
 			if !T::CallFilter::contains(&call) {
 				Self::deposit_event(Event::MessageRejected(id));
-				return;
+				return None;
 			}
 
+			// Get pre-dispatch weight
+			let dispatch_info = call.get_dispatch_info();
+
+			// dispatch call
 			let origin = RawOrigin(source).into();
 			let result = call.dispatch(origin);
 
@@ -125,6 +143,14 @@ pub mod pallet {
 				id,
 				result.map(drop).map_err(|e| e.error),
 			));
+
+			let actual_call_weight = extract_actual_weight(&result, &dispatch_info);
+
+			Some(actual_call_weight)
+		}
+
+		fn dispatch_remotely(source: H160, id: MessageIdOf<T>, para_id: u32, payload: &[u8]) {
+			T::XcmRouter::send_xcm(dest, message)
 		}
 
 		#[cfg(feature = "runtime-benchmarks")]

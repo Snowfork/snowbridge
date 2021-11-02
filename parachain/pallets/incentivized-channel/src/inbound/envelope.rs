@@ -8,11 +8,12 @@ use super::{BalanceOf, Config};
 
 // Used to decode a raw Ethereum log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
-	signature: "Message(address,uint64,uint256,bytes)",
+	signature: "Message(address,uint64,uint256,uint32,bytes)",
 	inputs: &[
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Uint(64), indexed: false },
 		Param { kind: ParamKind::Uint(256), indexed: false },
+		Param { kind: ParamKind::Uint(32), indexed: false },
 		Param { kind: ParamKind::Bytes, indexed: false },
 	],
 	anonymous: false,
@@ -32,6 +33,8 @@ where
 	pub nonce: u64,
 	/// Fee paid by user for relaying the message
 	pub fee: BalanceOf<T>,
+	/// Destination parachain
+	pub dest_para_id: Option<u32>,
 	/// The inner payload generated from the source application.
 	pub payload: Vec<u8>,
 }
@@ -65,11 +68,22 @@ where
 			_ => return Err(EnvelopeDecodeError),
 		};
 
+		let dest_para_id = match iter.next().ok_or(EnvelopeDecodeError)? {
+			Token::Uint(value) => {
+				let v = value.low_u32();
+				match v {
+					0 => None,
+					_ => Some(v),
+				}
+			}
+			_ => return Err(EnvelopeDecodeError),
+		};
+
 		let payload = match iter.next().ok_or(EnvelopeDecodeError)? {
 			Token::Bytes(payload) => payload,
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		Ok(Self { channel: log.address, source, nonce, fee, payload })
+		Ok(Self { channel: log.address, source, nonce, fee, dest_para_id, payload })
 	}
 }
