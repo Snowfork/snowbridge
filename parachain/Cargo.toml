@@ -24,7 +24,7 @@ jsonrpc-pubsub = "14.2.0"
 log = "0.4.13"
 rand = "0.7.2"
 structopt = "0.3.8"
-tracing = "0.1.25"
+tracing = "^0.1.29"
 parking_lot = "0.10.0"
 
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.10" }
