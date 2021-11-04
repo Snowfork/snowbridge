@@ -1,7 +1,7 @@
 use codec::{Decode, Encode};
 use ethereum_types::{H128, H256, H512, H64};
 use sp_io::hashing::{keccak_256, keccak_512, sha2_256};
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{scale_info::TypeInfo, RuntimeDebug};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap, prelude::*};
 
 pub use crate::ethashdata::{DAGS_MERKLE_ROOTS, DAGS_START_EPOCH};
@@ -16,7 +16,7 @@ const HASH_BYTES: usize = 64;
 /// Numver of accesses in hashimoto loop
 const ACCESSES: usize = 64;
 
-#[derive(Default, Clone, Encode, Decode, PartialEq, RuntimeDebug)]
+#[derive(Default, Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct DoubleNodeWithMerkleProof {
 	pub dag_nodes: [H512; 2],
 	pub proof: Vec<H128>,
@@ -165,7 +165,7 @@ impl EthashProver {
 		// Check that we have the expected number of nodes with proofs
 		const MIXHASHES: usize = MIX_BYTES / HASH_BYTES;
 		if nodes.len() != MIXHASHES * ACCESSES / 2 {
-			return Err(Error::UnexpectedNumberOfNodes)
+			return Err(Error::UnexpectedNumberOfNodes);
 		}
 
 		let epoch = header_number / EPOCH_LENGTH;
@@ -227,7 +227,7 @@ impl EthashProver {
 			None => panic!("EthashProver wasn't configured with hashimoto light cache"),
 		};
 		let full_size = ethash::get_full_size(epoch as usize);
-		return ethash::hashimoto_light(header_hash, nonce, full_size, cache.as_slice())
+		return ethash::hashimoto_light(header_hash, nonce, full_size, cache.as_slice());
 	}
 }
 

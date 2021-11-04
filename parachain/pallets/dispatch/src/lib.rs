@@ -2,6 +2,7 @@
 
 use frame_support::{
 	dispatch::{DispatchResult, Dispatchable, Parameter},
+	pallet::*,
 	traits::{Contains, EnsureOrigin},
 	weights::GetDispatchInfo,
 };
@@ -41,8 +42,6 @@ where
 		OuterOrigin::from(RawOrigin(H160::repeat_byte(2)))
 	}
 }
-
-pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -109,13 +108,13 @@ pub mod pallet {
 				Ok(call) => call,
 				Err(_) => {
 					Self::deposit_event(Event::MessageDecodeFailed(id));
-					return
-				},
+					return;
+				}
 			};
 
 			if !T::CallFilter::contains(&call) {
 				Self::deposit_event(Event::MessageRejected(id));
-				return
+				return;
 			}
 
 			let origin = RawOrigin(source).into();

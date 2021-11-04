@@ -13,6 +13,7 @@ use frame_support::{
 	ensure,
 	traits::{EnsureOrigin, Get},
 };
+use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256, U256};
 use sp_io::offchain_index;
 use sp_runtime::traits::{Hash, Zero};
@@ -24,7 +25,7 @@ use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId, MessageNonce, Singl
 pub use weights::WeightInfo;
 
 /// Wire-format for committed messages
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Message {
 	/// Target application on the Ethereum side.
 	target: H160,
@@ -161,8 +162,8 @@ pub mod pallet {
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 			ensure!(
-				<MessageQueue<T>>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerCommit::get() as usize,
+				<MessageQueue<T>>::decode_len().unwrap_or(0)
+					< T::MaxMessagesPerCommit::get() as usize,
 				Error::<T>::QueueSizeLimitReached,
 			);
 			ensure!(
@@ -174,7 +175,7 @@ pub mod pallet {
 				if let Some(v) = nonce.checked_add(1) {
 					*nonce = v;
 				} else {
-					return Err(Error::<T>::Overflow.into())
+					return Err(Error::<T>::Overflow.into());
 				}
 
 				// Attempt to charge a fee for message submission
@@ -195,7 +196,7 @@ pub mod pallet {
 		fn commit() -> Weight {
 			let messages: Vec<Message> = <MessageQueue<T>>::take();
 			if messages.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages()
+				return T::WeightInfo::on_initialize_no_messages();
 			}
 
 			let commitment_hash = Self::make_commitment_hash(&messages);

@@ -9527,6 +9527,7 @@ dependencies = [
  "rand 0.7.3",
  "rlp",
  "rustc-hex",
+ "scale-info",
  "serde",
  "serde-big-array",
  "serde_json",
