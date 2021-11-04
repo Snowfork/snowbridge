@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode};
 use enum_iterator::IntoEnumIterator;
-use frame_support::RuntimeDebug;
+use frame_support::{scale_info::TypeInfo, RuntimeDebug};
 use sp_core::H256;
 use sp_runtime::DigestItem;
 use sp_std::vec::Vec;
@@ -21,14 +21,14 @@ impl MessageId {
 
 pub type MessageNonce = u64;
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug, TypeInfo)]
 pub enum ChannelId {
 	Basic,
 	Incentivized,
 }
 
 /// A message relayed from Ethereum.
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Message {
 	/// The raw message data.
 	pub data: Vec<u8>,
@@ -40,7 +40,7 @@ pub struct Message {
 ///
 /// This data type allows us to support multiple verification schemes. In the near future,
 /// A light-client scheme will be added too.
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Proof {
 	// The block hash of the block in which the receipt was included.
 	pub block_hash: H256,
