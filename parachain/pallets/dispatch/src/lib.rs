@@ -2,7 +2,6 @@
 
 use frame_support::{
 	dispatch::{DispatchResult, Dispatchable, Parameter},
-	pallet::*,
 	traits::{Contains, EnsureOrigin},
 	weights::GetDispatchInfo,
 };
@@ -42,6 +41,8 @@ where
 		OuterOrigin::from(RawOrigin(H160::repeat_byte(2)))
 	}
 }
+
+pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
