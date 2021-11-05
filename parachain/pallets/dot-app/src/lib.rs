@@ -35,7 +35,7 @@ use payload::OutboundPayload;
 use primitives::{unwrap, wrap};
 pub use weights::WeightInfo;
 
-pub use pallet::*;
+pub use frame_system::pallet::*;
 
 type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -149,7 +149,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into())
+				return Err(DispatchError::BadOrigin.into());
 			}
 
 			let amount_unwrapped =

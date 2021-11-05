@@ -42,7 +42,7 @@ where
 	}
 }
 
-pub use pallet::*;
+pub use frame_system::pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {

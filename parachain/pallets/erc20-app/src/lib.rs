@@ -42,7 +42,7 @@ use snowbridge_core::{AssetId, ChannelId, MultiAsset, OutboundRouter};
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
 
-pub use pallet::*;
+pub use frame_system::pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -145,7 +145,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into())
+				return Err(DispatchError::BadOrigin.into());
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
