@@ -77,7 +77,7 @@ contract ERC20App is AccessControl {
         OutboundChannel channel = OutboundChannel(
             channels[_channelId].outbound
         );
-        channel.submit(msg.sender, call);
+        channel.submit(msg.sender, 0, 0, call);
 
         require(
             IERC20(_token).transferFrom(msg.sender, address(this), _amount),

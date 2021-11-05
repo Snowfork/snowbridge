@@ -16,7 +16,7 @@ describe("BasicOutboundChannel", function () {
   const testPayload = ethers.utils.formatBytes32String("arbitrary-payload");
   const iface = new ethers.utils.Interface(BasicOutboundChannel.abi);
 
-  before(async function() {
+  before(async function () {
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
     appAddress = accounts[1];
@@ -33,12 +33,13 @@ describe("BasicOutboundChannel", function () {
     it("should send messages out with the correct event and fields", async function () {
       const tx = await this.channel.submit(
         origin,
+        0, 0,
         testPayload,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
       const log = tx.receipt.rawLogs[0];
-      const event = iface.decodeEventLog('Message(address,uint64,bytes)', log.data, log.topics);
+      const event = iface.decodeEventLog('Message(address,uint64,uint32,uint64,bytes)', log.data, log.topics);
 
       log.address.should.be.equal(this.channel.address);
       event.source.should.be.equal(appAddress);
@@ -49,24 +50,27 @@ describe("BasicOutboundChannel", function () {
     it("should increment nonces correctly", async function () {
       const tx = await this.channel.submit(
         origin,
+        0, 0,
         testPayload,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
       const tx2 = await this.channel.submit(
         origin,
+        0, 0,
         testPayload,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
       const tx3 = await this.channel.submit(
         origin,
+        0, 0,
         testPayload,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
       const log = tx3.receipt.rawLogs[0];
-      const event = iface.decodeEventLog('Message(address,uint64,bytes)', log.data, log.topics);
+      const event = iface.decodeEventLog('Message(address,uint64,uint32,uint64,bytes)', log.data, log.topics);
       event.nonce.eq(ethers.BigNumber.from(3)).should.be.true;
     });
 

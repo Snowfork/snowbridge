@@ -27,6 +27,18 @@ pub enum ChannelId {
 	Incentivized,
 }
 
+#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+pub enum MessageDispatchKind {
+	Local,
+	Remote { para_id: u32 },
+}
+
+#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct MessageDispatchInfo {
+	pub weight: u64,
+	pub kind: DispatchKind,
+}
+
 /// A message relayed from Ethereum.
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct Message {

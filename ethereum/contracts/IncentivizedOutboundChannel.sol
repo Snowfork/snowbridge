@@ -9,10 +9,14 @@ import "./FeeSource.sol";
 
 // IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have
 // incentivization too.
-contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessControl {
-
+contract IncentivizedOutboundChannel is
+    OutboundChannel,
+    ChannelAccess,
+    AccessControl
+{
     // Governance contracts will administer using this role.
-    bytes32 public constant CONFIG_UPDATE_ROLE = keccak256("CONFIG_UPDATE_ROLE");
+    bytes32 public constant CONFIG_UPDATE_ROLE =
+        keccak256("CONFIG_UPDATE_ROLE");
 
     // Nonce for last submitted message
     uint64 public nonce;
@@ -22,15 +26,14 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
 
     event Message(
         address source,
-        uint64  nonce,
+        uint64 nonce,
         uint256 fee,
-        bytes   payload
+        uint32 para_id,
+        uint64 weight,
+        bytes payload
     );
 
-    event FeeChanged(
-        uint256 oldFee,
-        uint256 newFee
-    );
+    event FeeChanged(uint256 oldFee, uint256 newFee);
 
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -41,12 +44,11 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
         address _configUpdater,
         address _feeSource,
         address[] memory defaultOperators
-    )
-    external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Set initial configuration
         feeSource = FeeSource(_feeSource);
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
-        for (uint i = 0; i < defaultOperators.length; i++) {
+        for (uint256 i = 0; i < defaultOperators.length; i++) {
             _authorizeDefaultOperator(defaultOperators[i]);
         }
 
@@ -61,22 +63,36 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     }
 
     // Authorize an operator/app to submit messages for *all* users.
-    function authorizeDefaultOperator(address operator) external onlyRole(CONFIG_UPDATE_ROLE) {
+    function authorizeDefaultOperator(address operator)
+        external
+        onlyRole(CONFIG_UPDATE_ROLE)
+    {
         _authorizeDefaultOperator(operator);
     }
 
     // Revoke authorization.
-    function revokeDefaultOperator(address operator) external onlyRole(CONFIG_UPDATE_ROLE) {
+    function revokeDefaultOperator(address operator)
+        external
+        onlyRole(CONFIG_UPDATE_ROLE)
+    {
         _revokeDefaultOperator(operator);
     }
 
     /**
      * @dev Sends a message across the channel
      */
-    function submit(address feePayer, bytes calldata payload) external override {
-        require(isOperatorFor(msg.sender, feePayer), "Caller is not an operator for fee payer");
+    function submit(
+        address feePayer,
+        uint32 para_id,
+        uint64 weight,
+        bytes calldata payload
+    ) external override {
+        require(
+            isOperatorFor(msg.sender, feePayer),
+            "Caller is not an operator for fee payer"
+        );
         feeSource.burnFee(feePayer, fee);
         nonce = nonce + 1;
-        emit Message(msg.sender, nonce, fee, payload);
+        emit Message(msg.sender, nonce, fee, para_id, weight, payload);
     }
 }

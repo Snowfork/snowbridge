@@ -8,7 +8,10 @@ import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 import "./FeeSource.sol";
 
-enum ChannelId {Basic, Incentivized}
+enum ChannelId {
+    Basic,
+    Incentivized
+}
 
 contract DOTApp is FeeSource, AccessControl {
     using ScaleCodec for uint256;
@@ -63,11 +66,12 @@ contract DOTApp is FeeSource, AccessControl {
         );
         token.burn(msg.sender, _amount, abi.encodePacked(_recipient));
 
-        OutboundChannel channel =
-            OutboundChannel(channels[_channelId].outbound);
+        OutboundChannel channel = OutboundChannel(
+            channels[_channelId].outbound
+        );
 
         bytes memory call = encodeCall(msg.sender, _recipient, _amount);
-        channel.submit(msg.sender, call);
+        channel.submit(msg.sender, 0, 0, call);
     }
 
     function mint(
@@ -79,7 +83,11 @@ contract DOTApp is FeeSource, AccessControl {
     }
 
     // Incentivized channel calls this to charge (burn) fees
-    function burnFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
+    function burnFee(address feePayer, uint256 _amount)
+        external
+        override
+        onlyRole(FEE_BURNER_ROLE)
+    {
         token.burn(feePayer, _amount, "");
     }
 

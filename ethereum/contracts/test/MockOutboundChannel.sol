@@ -5,7 +5,10 @@ pragma experimental ABIEncoderV2;
 import "../OutboundChannel.sol";
 
 contract MockOutboundChannel is OutboundChannel {
-    function submit(address, bytes calldata) external override {
-
-    }
+    function submit(
+        address,
+        uint32,
+        uint64,
+        bytes calldata
+    ) external override {}
 }

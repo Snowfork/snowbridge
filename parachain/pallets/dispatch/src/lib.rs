@@ -11,13 +11,11 @@ use sp_core::RuntimeDebug;
 use sp_core::H160;
 use sp_std::prelude::*;
 
-use xcm::{
-	latest::prelude::*, Version as XcmVersion, VersionedMultiAssets, VersionedMultiLocation,
-	VersionedXcm,
-};
+use xcm::{latest::prelude::*, latest::NetworkId};
+
 use xcm_executor::traits::InvertLocation;
 
-use snowbridge_core::MessageDispatch;
+use snowbridge_core::{MessageDispatch, MessageDispatchInfo, MessageDispatchKind};
 
 use codec::{Decode, Encode};
 
@@ -104,8 +102,10 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Message has been dispatched with given result.
 		MessageDispatched(T::MessageId, DispatchResult),
-		/// Message has been dispatched with given result.
-		MessageForwarded(T::MessageId),
+		/// Message has been forwarded using xcmp
+		MessageForwarded(T::MessageId, u32),
+		/// Message forwarding failed
+		MessageForwardingFailed(T::MessageId, u32, XcmError),
 		/// Message has been rejected
 		MessageRejected(T::MessageId),
 		/// We have failed to decode a Call from the message.
@@ -118,6 +118,20 @@ pub mod pallet {
 	pub type MessageIdOf<T> = <T as Config>::MessageId;
 
 	impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Pallet<T> {
+		fn dispatch(
+			source: H160,
+			id: MessageIdOf<T>,
+			dispatch_info: MessageDispatchInfo,
+			payload: &[u8],
+		) -> DispatchResult {
+			match dispatch_info.kind {
+				MessageDispatchKind::Local => Self::dispatch_locally(source, id, payload),
+				MessageDispatchKind::Remote { para_id } => {
+					Self::dispatch_remotely(source, id, para_id, dispatch_info.weight, payload)
+				}
+			}
+		}
+
 		fn dispatch_locally(source: H160, id: MessageIdOf<T>, payload: &[u8]) -> Option<Weight> {
 			let call = match <T as Config>::Call::decode(&mut &payload[..]) {
 				Ok(call) => call,
@@ -149,16 +163,29 @@ pub mod pallet {
 			Some(actual_call_weight)
 		}
 
-		fn dispatch_remotely(source: H160, id: MessageIdOf<T>, para_id: u32, payload: &[u8]) {
-			T::XcmRouter::send_xcm(dest, message)
-		}
-
-		#[cfg(feature = "runtime-benchmarks")]
-		fn successful_dispatch_event(
+		fn dispatch_remotely(
+			source: H160,
 			id: MessageIdOf<T>,
-		) -> Option<<T as frame_system::Config>::Event> {
-			let event: <T as Config>::Event = Event::MessageDispatched(id, Ok(())).into();
-			Some(event.into())
+			para_id: u32,
+			weight: u64,
+			payload: &[u8],
+		) {
+			let message = RelayedFrom {
+				who: Junctions::X1(AccountKey20 { network: NetworkId::Any, key: source.into() }),
+				message: Box::new(Transact {
+					origin_type: OriginKind::SovereignAccount,
+					require_weight_at_most: weight,
+					call: payload.to_vec().into(),
+				}),
+			};
+
+			let dest = MultiLocation { parents: 1, interior: X1(Parachain(para_id)) };
+			match T::XcmRouter::send_xcm(dest, message) {
+				Ok(()) => Self::deposit_event(Event::MessageForwarded(id, para_id)),
+				Err(error) => {
+					Self::deposit_event(Event::MessageForwardingFailed(id, para_id, error))
+				}
+			}
 		}
 	}
 }
@@ -301,6 +328,7 @@ mod tests {
 			let message = Call::System(<frame_system::Call<Test>>::set_code(vec![])).encode();
 
 			System::set_block_number(1);
+
 			Dispatch::dispatch(source, id, &message);
 
 			assert_eq!(

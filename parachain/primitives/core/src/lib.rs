@@ -19,7 +19,9 @@ pub mod assets;
 pub mod nft;
 pub mod types;
 
-pub use types::{ChannelId, Message, MessageId, MessageNonce, Proof};
+pub use types::{
+	ChannelId, Message, MessageDispatchInfo, MessageDispatchKind, MessageId, MessageNonce, Proof,
+};
 
 pub use assets::{AssetId, MultiAsset, SingleAsset};
 
@@ -55,9 +57,13 @@ pub trait MessageCommitment {
 
 /// Dispatch a message
 pub trait MessageDispatch<T: Config, MessageId> {
-	fn dispatch_locally(source: H160, id: MessageId, payload: &[u8]) -> Option<Weight>;
-	fn dispatch_remotely(source: H160, id: MessageId, para_id: u32, payload: &[u8]);
+	fn dispatch(
+		source: H160,
+		id: MessageIdOf<T>,
+		dispatch_info: DispatchInfo,
+		payload: &[u8],
+	) -> Result<Option<Weight>, DispatchError>;
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_dispatch_event(id: MessageId) -> Option<<T as Config>::Event>;
+	fn dispatch_locally(source: H160, id: MessageId, payload: &[u8]) -> Option<Weight>;
+	fn dispatch_remotely(source: H160, id: MessageId, para_id: u32, weight: u64, payload: &[u8]);
 }

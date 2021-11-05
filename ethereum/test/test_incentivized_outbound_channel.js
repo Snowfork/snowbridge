@@ -34,6 +34,7 @@ describe("IncentivizedOutboundChannel", function () {
     it("should send messages out with the correct event and fields", async function () {
       const txPromise = this.channel.submit(
         origin,
+        0, 0,
         testPayload,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
@@ -41,7 +42,7 @@ describe("IncentivizedOutboundChannel", function () {
       const tx = await txPromise;
 
       const log = tx.receipt.rawLogs[0];
-      const event = iface.decodeEventLog('Message(address,uint64,uint256,bytes)', log.data, log.topics);
+      const event = iface.decodeEventLog('Message(address,uint64,uint256,uint32,uint64,bytes)', log.data, log.topics);
 
       log.address.should.be.equal(this.channel.address);
       event.source.should.be.equal(appAddress);
@@ -52,24 +53,27 @@ describe("IncentivizedOutboundChannel", function () {
     it("should increment nonces correctly", async function () {
       await this.channel.submit(
         origin,
+        0, 0,
         testPayload,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
       await this.channel.submit(
         origin,
+        0, 0,
         testPayload,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
       const { receipt } = await this.channel.submit(
         origin,
+        0, 0,
         testPayload,
         { from: appAddress, value: 0 }
       ).should.be.fulfilled;
 
       const log = receipt.rawLogs[0];
-      const event = iface.decodeEventLog('Message(address,uint64,uint256,bytes)', log.data, log.topics);
+      const event = iface.decodeEventLog('Message(address,uint64,uint256,uint32,uint64,bytes)', log.data, log.topics);
       event.nonce.eq(ethers.BigNumber.from(3)).should.be.true;
     });
 
@@ -80,6 +84,7 @@ describe("IncentivizedOutboundChannel", function () {
 
       await this.channel.submit(
         origin,
+        0, 0,
         testPayload,
         { from: appAddress, value: 0 }
       ).should.not.be.fulfilled;

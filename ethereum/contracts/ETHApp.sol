@@ -7,7 +7,10 @@ import "./RewardSource.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
-enum ChannelId {Basic, Incentivized}
+enum ChannelId {
+    Basic,
+    Incentivized
+}
 
 contract ETHApp is RewardSource, AccessControl {
     using ScaleCodec for uint256;
@@ -66,9 +69,10 @@ contract ETHApp is RewardSource, AccessControl {
 
         bytes memory call = encodeCall(msg.sender, _recipient, msg.value);
 
-        OutboundChannel channel =
-            OutboundChannel(channels[_channelId].outbound);
-        channel.submit(msg.sender, call);
+        OutboundChannel channel = OutboundChannel(
+            channels[_channelId].outbound
+        );
+        channel.submit(msg.sender, 0, 0, call);
     }
 
     function unlock(

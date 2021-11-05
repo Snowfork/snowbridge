@@ -88,7 +88,7 @@ contract ERC721App is AccessControl {
         OutboundChannel channel = OutboundChannel(
             channels[_channelId].outbound
         );
-        channel.submit(msg.sender, call);
+        channel.submit(msg.sender, 0, 0, call);
 
         token.transferFrom(msg.sender, address(this), _tokenId);
     }

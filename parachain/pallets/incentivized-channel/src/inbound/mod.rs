@@ -1,4 +1,6 @@
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
 mod envelope;
 pub mod weights;
 
@@ -12,7 +14,7 @@ use frame_support::{
 	},
 };
 use frame_system::ensure_signed;
-use snowbridge_core::{ChannelId, Message, MessageDispatch, MessageId, Verifier};
+use snowbridge_core::{ChannelId, DispatchInfo, Message, MessageDispatch, MessageId, Verifier};
 use sp_core::{H160, U256};
 use sp_std::convert::TryFrom;
 
@@ -81,6 +83,8 @@ pub mod pallet {
 		InvalidEnvelope,
 		/// Message has an unexpected nonce.
 		InvalidNonce,
+		/// Dispatch info is invalid.
+		InvalidDispatchInfo,
 	}
 
 	/// Source channel on the ethereum side
@@ -119,55 +123,60 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(500_000_000)]
-		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResultWithPostInfo {
+		// #[pallet::weight({
+		// 	match dispatch.kind {
+		// 		DispatchKind::Local => {
+		// 			T::WeightInfo::submit_for_local_dispatch() + dispatch.weight
+		// 		},
+		// 		DispatchKind::Remote { .. } => {
+		// 			0
+		// 		}
+		// 	}
+		// })]
+		#[pallet::weight(0)]
+		pub fn submit(
+			origin: OriginFor<T>,
+			dispatch: DispatchInfo,
+			message: Message,
+		) -> DispatchResultWithPostInfo {
 			let relayer = ensure_signed(origin)?;
-			// submit message to verifier for verification
-			let log = T::Verifier::verify(&message)?;
 
-			// Decode log into an Envelope
-			let envelope: Envelope<T> =
-				Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
-
-			// Verify that the message was submitted to us from a known
-			// outbound channel on the ethereum side
-			if envelope.channel != <SourceChannel<T>>::get() {
-				return Err(Error::<T>::InvalidSourceChannel.into());
-			}
-
-			// Verify message nonce
-			<Nonce<T>>::try_mutate(|nonce| -> DispatchResult {
-				if envelope.nonce != *nonce + 1 {
-					Err(Error::<T>::InvalidNonce.into())
-				} else {
-					*nonce += 1;
-					Ok(())
-				}
-			})?;
-
+			let envelope = Self::verify_message(&relayer, dispatch, &message)?;
+			Self::verify_nonce(&envelope)?;
 			Self::handle_fee(envelope.fee, &relayer);
 
-			match envelope.dest_para_id {
-				// forward to dest para
-				Some(para_id) => {}
-				// dispatch locally
-				None => {
+			match dispatch.kind {
+				DispatchKind::Local => {
 					let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
-					let maybe_call_weight = T::MessageDispatch::dispatch(
+					let maybe_call_weight = T::MessageDispatch::dispatch_locally(
 						envelope.source,
 						message_id,
 						&envelope.payload,
 					);
 					if let Some(actual_call_weight) = maybe_call_weight {
-						Ok(Some(T::WeightInfo::submit_base_weight() + actual_call_weight).into())
+						Ok(Some(T::WeightInfo::submit_for_local_dispatch() + actual_call_weight)
+							.into())
 					} else {
-						Ok(Some(T::WeightInfo::submit_base_weight()).into())
+						Ok(Some(T::WeightInfo::submit_for_local_dispatch()).into())
 					}
+				}
+				DispatchKind::Remote { para_id } => {
+					let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
+					T::MessageDispatch::dispatch_remotely(
+						envelope.source,
+						message_id,
+						para_id,
+						envelope.weight,
+						&envelope.payload,
+					);
+					// TODO: Get weights from XCM subsystem
+					Ok(Some(100_000_000).into())
 				}
 			}
 		}
 
-		#[pallet::weight(T::WeightInfo::set_reward_fraction())]
+		// #[pallet::weight(T::WeightInfo::set_reward_fraction())]
+		#[pallet::weight(0)]
 		pub fn set_reward_fraction(origin: OriginFor<T>, fraction: Perbill) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			<RewardFraction<T>>::set(fraction);
@@ -182,6 +191,42 @@ pub mod pallet {
 	>>::PositiveImbalance;
 
 	impl<T: Config> Pallet<T> {
+		pub(super) fn verify_message(
+			relayer: &T::AccountId,
+			dispatch: DispatchInfo,
+			message: &Message,
+		) -> Result<Envelope<T>, DispatchError> {
+			let log = T::Verifier::verify(message)?;
+
+			// Decode log into an Envelope
+			let envelope: Envelope<T> =
+				Envelope::try_from(log).map_err(|_| Error::<T>::InvalidEnvelope)?;
+
+			if !envelope.validate_dispatch(dispatch) {
+				return Err(Error::<T>::InvalidDispatchInfo.into());
+			}
+
+			// Verify that the message was submitted to us from a known
+			// outbound channel on the ethereum side
+			if envelope.channel != <SourceChannel<T>>::get() {
+				return Err(Error::<T>::InvalidSourceChannel.into());
+			}
+
+			Ok(envelope)
+		}
+
+		pub(super) fn verify_nonce(envelope: &Envelope<T>) -> DispatchResult {
+			<Nonce<T>>::try_mutate(|nonce| -> DispatchResult {
+				if envelope.nonce != *nonce + 1 {
+					Err(Error::<T>::InvalidNonce.into())
+				} else {
+					*nonce += 1;
+					Ok(())
+				}
+			})
+			.into()
+		}
+
 		/*
 		 * Pay the message submission fee into the relayer and treasury account.
 		 *

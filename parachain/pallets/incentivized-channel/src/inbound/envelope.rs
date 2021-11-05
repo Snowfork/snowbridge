@@ -4,16 +4,19 @@ use sp_core::RuntimeDebug;
 use sp_runtime::traits::Convert;
 use sp_std::{convert::TryFrom, prelude::*};
 
+use snowbridge_core::{DispatchInfo, DispatchKind};
+
 use super::{BalanceOf, Config};
 
 // Used to decode a raw Ethereum log into an [`Envelope`].
 static EVENT_ABI: &Event = &Event {
-	signature: "Message(address,uint64,uint256,uint32,bytes)",
+	signature: "Message(address,uint64,uint256,uint32,uint64,bytes)",
 	inputs: &[
 		Param { kind: ParamKind::Address, indexed: false },
 		Param { kind: ParamKind::Uint(64), indexed: false },
 		Param { kind: ParamKind::Uint(256), indexed: false },
 		Param { kind: ParamKind::Uint(32), indexed: false },
+		Param { kind: ParamKind::Uint(64), indexed: false },
 		Param { kind: ParamKind::Bytes, indexed: false },
 	],
 	anonymous: false,
@@ -34,7 +37,9 @@ where
 	/// Fee paid by user for relaying the message
 	pub fee: BalanceOf<T>,
 	/// Destination parachain
-	pub dest_para_id: Option<u32>,
+	pub para_id: Option<u32>,
+	/// payload weight when dispatched
+	pub weight: u64,
 	/// The inner payload generated from the source application.
 	pub payload: Vec<u8>,
 }
@@ -68,7 +73,7 @@ where
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		let dest_para_id = match iter.next().ok_or(EnvelopeDecodeError)? {
+		let para_id = match iter.next().ok_or(EnvelopeDecodeError)? {
 			Token::Uint(value) => {
 				let v = value.low_u32();
 				match v {
@@ -79,11 +84,28 @@ where
 			_ => return Err(EnvelopeDecodeError),
 		};
 
+		let weight = match iter.next().ok_or(EnvelopeDecodeError)? {
+			Token::Uint(value) => value.low_u64(),
+			_ => return Err(EnvelopeDecodeError),
+		};
+
 		let payload = match iter.next().ok_or(EnvelopeDecodeError)? {
 			Token::Bytes(payload) => payload,
 			_ => return Err(EnvelopeDecodeError),
 		};
 
-		Ok(Self { channel: log.address, source, nonce, fee, dest_para_id, payload })
+		Ok(Self { channel: log.address, source, nonce, fee, para_id, weight, payload })
+	}
+}
+
+impl<T: Config> Envelope<T> {
+	/// Ensure that the dispatch info matches the same data in the envelope
+	pub fn validate_dispatch(&self, dispatch: DispatchInfo) -> bool {
+		match dispatch.kind {
+			DispatchKind::Local => self.para_id == None && self.weight == dispatch.weight,
+			DispatchKind::Remote { para_id } => {
+				self.para_id.unwrap_or_default() == para_id && self.weight == dispatch.weight
+			}
+		}
 	}
 }

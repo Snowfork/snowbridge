@@ -111,7 +111,11 @@ impl Verifier for MockVerifier {
 pub struct MockMessageDispatch;
 
 impl MessageDispatch<Test, MessageId> for MockMessageDispatch {
-	fn dispatch(_: H160, _: MessageId, _: &[u8]) {}
+	fn dispatch_locally(_: H160, _: MessageId, _: &[u8]) -> Option<frame_support::weights::Weight> {
+		Some(100_000_000)
+	}
+
+	fn dispatch_remotely(_: H160, _: MessageId, _: u32, _: u64, _: &[u8]) {}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_dispatch_event(_: MessageId) -> Option<<Test as frame_system::Config>::Event> {

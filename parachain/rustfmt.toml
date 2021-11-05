@@ -23,4 +23,5 @@ trailing_semicolon = false
 use_field_init_shorthand = true
 ignore = [
     "pallets/assets",
+    "module-weight-template.hbs"
 ]

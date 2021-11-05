@@ -74,7 +74,7 @@ contract MaliciousDOTApp is FeeSource, AccessControl {
         );
 
         bytes memory call = encodeCall(msg.sender, _recipient, _amount);
-        channel.submit(msg.sender, call);
+        channel.submit(msg.sender, 0, 0, call);
     }
 
     function mint(
@@ -86,7 +86,11 @@ contract MaliciousDOTApp is FeeSource, AccessControl {
     }
 
     // Incentivized channel calls this to charge (burn) fees
-    function burnFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
+    function burnFee(address feePayer, uint256 _amount)
+        external
+        override
+        onlyRole(FEE_BURNER_ROLE)
+    {
         token.burn(feePayer, _amount, "");
     }
 

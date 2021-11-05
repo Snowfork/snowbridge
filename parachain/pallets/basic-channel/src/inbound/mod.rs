@@ -3,7 +3,7 @@ mod envelope;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-pub mod weights;
+//pub mod weights;
 
 #[cfg(test)]
 mod test;
@@ -14,7 +14,7 @@ use sp_core::H160;
 use sp_std::convert::TryFrom;
 
 use envelope::Envelope;
-pub use weights::WeightInfo;
+//pub use weights::WeightInfo;
 
 pub use pallet::*;
 
@@ -114,8 +114,8 @@ pub mod pallet {
 				}
 			})?;
 
-			let message_id = MessageId::new(ChannelId::Basic, envelope.nonce);
-			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
+			//let message_id = MessageId::new(ChannelId::Basic, envelope.nonce);
+			//T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
 
 			Ok(())
 		}

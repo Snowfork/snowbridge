@@ -1,12 +1,12 @@
 use frame_support::weights::Weight;
 
 pub trait WeightInfo {
-	fn submit_base_weight() -> Weight;
+	fn submit_for_local_dispatch() -> Weight;
 	fn set_reward_fraction() -> Weight;
 }
 
 impl WeightInfo for () {
-	fn submit_base_weight() -> Weight {
+	fn submit_for_local_dispatch() -> Weight {
 		0
 	}
 
