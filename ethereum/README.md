@@ -41,7 +41,7 @@ Example: Deploy contracts to a local [ganache instance](https://www.npmjs.com/pa
 npx hardhat node
 ```
 
-Then, in seperate terminal:
+Then, in a seperate terminal:
 
 ```
 npx hardhat deploy --network localhost
