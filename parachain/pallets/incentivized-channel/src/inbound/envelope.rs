@@ -4,7 +4,7 @@ use sp_core::RuntimeDebug;
 use sp_runtime::traits::Convert;
 use sp_std::{convert::TryFrom, prelude::*};
 
-use snowbridge_core::{DispatchInfo, DispatchKind};
+use snowbridge_core::{MessageDispatchInfo, MessageDispatchKind};
 
 use super::{BalanceOf, Config};
 
@@ -100,11 +100,11 @@ where
 
 impl<T: Config> Envelope<T> {
 	/// Ensure that the dispatch info matches the same data in the envelope
-	pub fn validate_dispatch(&self, dispatch: DispatchInfo) -> bool {
-		match dispatch.kind {
-			DispatchKind::Local => self.para_id == None && self.weight == dispatch.weight,
-			DispatchKind::Remote { para_id } => {
-				self.para_id.unwrap_or_default() == para_id && self.weight == dispatch.weight
+	pub fn validate_dispatch(&self, info: MessageDispatchInfo) -> bool {
+		match info.kind {
+			MessageDispatchKind::Local => self.para_id == None && self.weight == info.weight,
+			MessageDispatchKind::Remote { para_id } => {
+				self.para_id.unwrap_or_default() == para_id && self.weight == info.weight
 			}
 		}
 	}

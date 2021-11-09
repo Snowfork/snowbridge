@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode};
 use enum_iterator::IntoEnumIterator;
-use frame_support::RuntimeDebug;
+use frame_support::{dispatch::DispatchResult, RuntimeDebug};
 use sp_core::H256;
 use sp_runtime::DigestItem;
 use sp_std::vec::Vec;
@@ -27,16 +27,21 @@ pub enum ChannelId {
 	Incentivized,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 pub enum MessageDispatchKind {
 	Local,
 	Remote { para_id: u32 },
 }
 
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 pub struct MessageDispatchInfo {
 	pub weight: u64,
-	pub kind: DispatchKind,
+	pub kind: MessageDispatchKind,
+}
+
+pub enum MessageDispatchResult {
+	Local { result: DispatchResult },
+	Remote { para_id: u32, result: Result<(), XcmError> },
 }
 
 /// A message relayed from Ethereum.

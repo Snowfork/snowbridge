@@ -59,10 +59,10 @@ pub trait MessageCommitment {
 pub trait MessageDispatch<T: Config, MessageId> {
 	fn dispatch(
 		source: H160,
-		id: MessageIdOf<T>,
-		dispatch_info: DispatchInfo,
+		id: MessageId,
+		dispatch_info: MessageDispatchInfo,
 		payload: &[u8],
-	) -> Result<Option<Weight>, DispatchError>;
+	) -> Option<Weight>;
 
 	fn dispatch_locally(source: H160, id: MessageId, payload: &[u8]) -> Option<Weight>;
 	fn dispatch_remotely(source: H160, id: MessageId, para_id: u32, weight: u64, payload: &[u8]);

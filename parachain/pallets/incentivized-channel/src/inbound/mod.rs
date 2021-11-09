@@ -14,7 +14,9 @@ use frame_support::{
 	},
 };
 use frame_system::ensure_signed;
-use snowbridge_core::{ChannelId, DispatchInfo, Message, MessageDispatch, MessageId, Verifier};
+use snowbridge_core::{
+	ChannelId, Message, MessageDispatch, MessageDispatchInfo, MessageId, Verifier,
+};
 use sp_core::{H160, U256};
 use sp_std::convert::TryFrom;
 
@@ -136,43 +138,25 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn submit(
 			origin: OriginFor<T>,
-			dispatch: DispatchInfo,
+			dispatch: MessageDispatchInfo,
 			message: Message,
 		) -> DispatchResultWithPostInfo {
 			let relayer = ensure_signed(origin)?;
 
-			let envelope = Self::verify_message(&relayer, dispatch, &message)?;
+			let envelope = Self::verify_message(dispatch, &message)?;
 			Self::verify_nonce(&envelope)?;
 			Self::handle_fee(envelope.fee, &relayer);
 
-			match dispatch.kind {
-				DispatchKind::Local => {
-					let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
-					let maybe_call_weight = T::MessageDispatch::dispatch_locally(
-						envelope.source,
-						message_id,
-						&envelope.payload,
-					);
-					if let Some(actual_call_weight) = maybe_call_weight {
-						Ok(Some(T::WeightInfo::submit_for_local_dispatch() + actual_call_weight)
-							.into())
-					} else {
-						Ok(Some(T::WeightInfo::submit_for_local_dispatch()).into())
-					}
-				}
-				DispatchKind::Remote { para_id } => {
-					let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
-					T::MessageDispatch::dispatch_remotely(
-						envelope.source,
-						message_id,
-						para_id,
-						envelope.weight,
-						&envelope.payload,
-					);
-					// TODO: Get weights from XCM subsystem
-					Ok(Some(100_000_000).into())
-				}
-			}
+			let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
+
+			let weight = T::MessageDispatch::dispatch(
+				envelope.source,
+				message_id,
+				dispatch,
+				&envelope.payload,
+			);
+
+			Ok(weight.into())
 		}
 
 		// #[pallet::weight(T::WeightInfo::set_reward_fraction())]
@@ -192,8 +176,7 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		pub(super) fn verify_message(
-			relayer: &T::AccountId,
-			dispatch: DispatchInfo,
+			dispatch: MessageDispatchInfo,
 			message: &Message,
 		) -> Result<Envelope<T>, DispatchError> {
 			let log = T::Verifier::verify(message)?;

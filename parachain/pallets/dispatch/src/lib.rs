@@ -101,7 +101,7 @@ pub mod pallet {
 	#[pallet::metadata(T::MessageId = "MessageId")]
 	pub enum Event<T: Config> {
 		/// Message has been dispatched with given result.
-		MessageDispatched(T::MessageId, DispatchResult),
+		MessageDispatched(T::MessageId, MessageDispatchKind, DispatchResult),
 		/// Message has been forwarded using xcmp
 		MessageForwarded(T::MessageId, u32),
 		/// Message forwarding failed
