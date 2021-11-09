@@ -27,19 +27,17 @@ cp env.template .env
 
 ## Testing
 
-Run tests on the hardhat network:
+Run tests on the [hardhat network](https://hardhat.org/getting-started/):
 
 ```bash
-npm install --save-dev hardhat
 npx hardhat test
 ```
 
 ## Deployment
 
-Example: Deploy contracts to a local ganache instance
+Example: Deploy contracts to a local [ganache instance](https://www.npmjs.com/package/ganache-cli)
 
 ```
-yarn global add ganache-cli
 npx hardhat deploy --network localhost
 ```
 
