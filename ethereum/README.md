@@ -14,6 +14,7 @@ nvm use 14.16.1
 Install dependencies with yarn:
 
 ```bash
+npm install --global yarn
 yarn install
 ```
 
