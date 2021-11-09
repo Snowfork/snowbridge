@@ -38,6 +38,7 @@ npx hardhat test
 Example: Deploy contracts to a local [ganache instance](https://www.npmjs.com/package/ganache-cli)
 
 ```
+npx hardhat node
 npx hardhat deploy --network localhost
 ```
 
