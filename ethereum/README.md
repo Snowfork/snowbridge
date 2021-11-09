@@ -11,10 +11,9 @@ nvm install 14.16.1
 nvm use 14.16.1
 ```
 
-Install dependencies with yarn:
+Install dependencies with [yarn](https://classic.yarnpkg.com/lang/en/docs/install/#windows-stable):
 
 ```bash
-npm install --global yarn
 yarn install
 ```
 
