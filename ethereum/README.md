@@ -30,6 +30,7 @@ cp env.template .env
 Run tests on the hardhat network:
 
 ```bash
+npm install --save-dev hardhat
 npx hardhat test
 ```
 
@@ -38,6 +39,7 @@ npx hardhat test
 Example: Deploy contracts to a local ganache instance
 
 ```
+yarn global add ganache-cli
 npx hardhat deploy --network localhost
 ```
 
