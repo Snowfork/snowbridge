@@ -6,6 +6,7 @@ use frame_support::{
 	weights::GetDispatchInfo,
 };
 
+use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
 
 use sp_core::H160;
@@ -15,7 +16,7 @@ use snowbridge_core::MessageDispatch;
 
 use codec::{Decode, Encode};
 
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct RawOrigin(pub H160);
 
 impl From<H160> for RawOrigin {
@@ -42,7 +43,7 @@ where
 	}
 }
 
-pub use frame_system::pallet::*;
+pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -88,7 +89,6 @@ pub mod pallet {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	#[pallet::metadata(T::MessageId = "MessageId")]
 	pub enum Event<T: Config> {
 		/// Message has been dispatched with given result.
 		MessageDispatched(T::MessageId, DispatchResult),

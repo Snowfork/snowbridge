@@ -7,7 +7,7 @@ use sp_core::H256;
 use sp_runtime::DigestItem;
 use sp_std::vec::Vec;
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct MessageId {
 	pub channel_id: ChannelId,
 	pub nonce: u64,
@@ -51,7 +51,7 @@ pub struct Proof {
 }
 
 /// Auxiliary [`DigestItem`] to include in header digest.
-#[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum AuxiliaryDigestItem {
 	/// A batch of messages has been committed.
 	Commitment(ChannelId, H256),

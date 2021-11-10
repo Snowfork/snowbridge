@@ -1,8 +1,9 @@
 use codec::{Decode, Encode};
 use ethereum_types::{H160, H256};
+use scale_info::TypeInfo;
 use sp_std::prelude::*;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq, Eq, Default, TypeInfo)]
 pub struct Log {
 	pub address: H160,
 	pub topics: Vec<H256>,

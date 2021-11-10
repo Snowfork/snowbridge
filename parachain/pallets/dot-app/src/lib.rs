@@ -35,7 +35,7 @@ use payload::OutboundPayload;
 use primitives::{unwrap, wrap};
 pub use weights::WeightInfo;
 
-pub use frame_system::pallet::*;
+pub use pallet::*;
 
 type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -72,7 +72,6 @@ pub mod pallet {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	#[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
 	pub enum Event<T: Config> {
 		Locked(T::AccountId, H160, BalanceOf<T>),
 		Unlocked(H160, T::AccountId, BalanceOf<T>),
