@@ -23,7 +23,7 @@ Follow these steps to prepare your local environment for Substrate development.
 Refer to the instructions at the
 [Substrate Developer Hub](https://substrate.dev/docs/en/knowledgebase/getting-started/#manual-installation).
 
-To add context to the above instructions, the parachain is known to compile with the following [versions of Rust](https://doc.bccnsoft.com/docs/rust-1.36.0-docs-html/edition-guide/rust-2018/rustup-for-managing-rust-versions.html):
+To add context to the above instructions, the parachain is known to compile with the following versions of Rust:
 
 - stable: 1.51.0
 - nightly: 1.53.0-nightly
