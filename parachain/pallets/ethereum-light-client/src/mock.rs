@@ -1,6 +1,9 @@
 // Mock runtime
 use crate::{EthashProofData, EthereumDifficultyConfig, EthereumHeader};
-use frame_support::{parameter_types, traits::GenesisBuild};
+use frame_support::{
+	parameter_types,
+	traits::{Everything, GenesisBuild},
+};
 use frame_system as system;
 use snowbridge_core::{Message, Proof};
 use snowbridge_testutils::BlockWithProofs;
@@ -42,7 +45,7 @@ pub mod mock_verifier {
 	);
 
 	impl frame_system::Config for Test {
-		type BaseCallFilter = ();
+		type BaseCallFilter = Everything;
 		type BlockWeights = ();
 		type BlockLength = ();
 		type Origin = Origin;
@@ -103,7 +106,7 @@ pub mod mock_verifier_with_pow {
 	);
 
 	impl system::Config for Test {
-		type BaseCallFilter = ();
+		type BaseCallFilter = Everything;
 		type BlockWeights = ();
 		type BlockLength = ();
 		type Origin = Origin;
