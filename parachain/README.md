@@ -47,12 +47,12 @@ yarn global add polkadot-launch
 cd -
 ```
 
-or 
+  or 
 
-```bash
-npm i polkadot-launch -g
-cd -
-```
+  ```bash
+  npm i polkadot-launch -g
+  cd -
+  ```
 
 Build polkadot:
 
