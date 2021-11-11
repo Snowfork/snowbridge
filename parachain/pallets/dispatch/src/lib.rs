@@ -140,7 +140,7 @@ pub mod pallet {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use frame_support::{dispatch::DispatchError, parameter_types};
+	use frame_support::{dispatch::DispatchError, parameter_types, traits::Everything};
 	use frame_system::{EventRecord, Phase};
 	use sp_core::H256;
 	use sp_runtime::{

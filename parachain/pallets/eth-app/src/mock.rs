@@ -4,7 +4,7 @@ use sp_std::marker::PhantomData;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	parameter_types,
-	traits::GenesisBuild,
+	traits::{Everything, GenesisBuild},
 };
 use frame_system as system;
 use sp_core::{H160, H256};

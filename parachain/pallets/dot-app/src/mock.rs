@@ -4,7 +4,7 @@ use sp_std::marker::PhantomData;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	parameter_types,
-	traits::GenesisBuild,
+	traits::{Everything, GenesisBuild},
 	PalletId,
 };
 use frame_system as system;
@@ -84,7 +84,7 @@ pub struct MockOutboundRouter<AccountId>(PhantomData<AccountId>);
 impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
 	fn submit(channel: ChannelId, _: &AccountId, _: H160, _: &[u8]) -> DispatchResult {
 		if channel == ChannelId::Basic {
-			return Err(DispatchError::Other("some error!"))
+			return Err(DispatchError::Other("some error!"));
 		}
 		Ok(())
 	}

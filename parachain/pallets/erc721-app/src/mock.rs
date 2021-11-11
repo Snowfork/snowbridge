@@ -6,6 +6,7 @@ use super::*;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	parameter_types,
+	traits::Everything,
 };
 use sp_core::{H160, H256};
 use sp_runtime::{
@@ -86,7 +87,7 @@ pub struct MockOutboundRouter<AccountId>(PhantomData<AccountId>);
 impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
 	fn submit(channel: ChannelId, _: &AccountId, _: H160, _: &[u8]) -> DispatchResult {
 		if channel == ChannelId::Basic {
-			return Err(DispatchError::Other("some error!"))
+			return Err(DispatchError::Other("some error!"));
 		}
 		Ok(())
 	}

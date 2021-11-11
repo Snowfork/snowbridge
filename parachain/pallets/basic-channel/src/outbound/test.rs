@@ -1,7 +1,10 @@
 use super::*;
 
 use frame_support::{
-	assert_noop, assert_ok, dispatch::DispatchError, parameter_types, traits::GenesisBuild,
+	assert_noop, assert_ok,
+	dispatch::DispatchError,
+	parameter_types,
+	traits::{Everything, GenesisBuild},
 };
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
