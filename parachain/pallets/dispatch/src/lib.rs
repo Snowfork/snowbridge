@@ -200,7 +200,7 @@ mod tests {
 	impl frame_support::traits::Contains<Call> for CallFilter {
 		fn contains(call: &Call) -> bool {
 			match call {
-				Call::System(frame_system::pallet::Call::<Test>::remark(_)) => true,
+				Call::System(frame_system::pallet::Call::<Test>::remark { remark: _ }) => true,
 				_ => false,
 			}
 		}
@@ -225,7 +225,7 @@ mod tests {
 			let id = 37;
 			let source = H160::repeat_byte(7);
 
-			let message = Call::System(<frame_system::Call<Test>>::remark(vec![])).encode();
+			let message = Call::System(frame_system::Call::remark { remark: vec![] }).encode();
 
 			System::set_block_number(1);
 			Dispatch::dispatch(source, id, &message);
@@ -272,7 +272,7 @@ mod tests {
 			let id = 37;
 			let source = H160::repeat_byte(7);
 
-			let message = Call::System(<frame_system::Call<Test>>::set_code(vec![])).encode();
+			let message = Call::System(frame_system::Call::set_code { code: vec![] }).encode();
 
 			System::set_block_number(1);
 			Dispatch::dispatch(source, id, &message);
