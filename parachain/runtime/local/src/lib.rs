@@ -353,6 +353,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	pub UnitWeightCost: Weight = 1_000_000;
+	pub const MaxInstructions: u32 = 100;
 }
 
 match_type! {
@@ -379,7 +380,7 @@ impl Config for XcmConfig {
 	type IsTeleporter = NativeAsset; // <- should be enough to allow teleportation of ROC
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
-	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
 	type Trader = UsingComponents<IdentityFee<Balance>, RococoLocation, AccountId, Balances, ()>;
 	type ResponseHandler = (); // Don't handle responses for now.
 	type SubscriptionService = PolkadotXcm;
@@ -410,7 +411,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = Everything;
 	type XcmReserveTransferFilter = Everything;
-	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
 	type LocationInverter = LocationInverter<Ancestry>;
 }
 
