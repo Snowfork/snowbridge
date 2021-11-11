@@ -1,7 +1,7 @@
 //! BasicOutboundChannel pallet benchmarking
 use super::*;
 
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, BenchmarkError};
 use frame_support::traits::OnInitialize;
 
 #[allow(unused_imports)]
@@ -61,7 +61,7 @@ benchmarks! {
 	set_principal {
 		let authorized_origin = match T::SetPrincipalOrigin::successful_origin().into() {
 			Ok(raw) => raw,
-			Err(_) => return Err("Failed to get raw origin from origin"),
+			Err(_) => return Err(BenchmarkError::Stop("Failed to get raw origin from origin")),
 		};
 		let alice = T::Lookup::unlookup(account("alice", 0, SEED));
 	}: _(authorized_origin, alice)

@@ -1,7 +1,9 @@
 //! ERC20App pallet benchmarking
 use super::*;
 
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{
+	account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, BenchmarkError,
+};
 use frame_support::traits::UnfilteredDispatchable;
 use frame_system::RawOrigin;
 use sp_core::H160;
@@ -33,7 +35,7 @@ benchmarks! {
 		if let Ok(caller) = T::CallOrigin::try_origin(origin.clone()) {
 			<Address<T>>::put(caller);
 		} else {
-			return Err("Failed to extract caller address from origin");
+			return Err(BenchmarkError::Stop("Failed to extract caller address from origin"));
 		}
 
 		let token = H160::repeat_byte(1);
