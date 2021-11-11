@@ -83,7 +83,7 @@ benchmarks! {
 
 		T::Currency::make_free_balance_be(&lock_account, balance);
 
-		let call = Call::<T>::unlock(sender, recipient_lookup, amount_wrapped);
+		let call = Call::<T>::unlock { sender: sender, recipient: recipient_lookup, amount: amount_wrapped };
 
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {
