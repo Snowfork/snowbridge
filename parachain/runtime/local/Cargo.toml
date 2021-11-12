@@ -87,6 +87,7 @@ default = ["std"]
 std = [
     "serde",
     "codec/std",
+    "scale-info/std",
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
