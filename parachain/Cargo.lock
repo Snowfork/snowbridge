@@ -9278,7 +9278,6 @@ dependencies = [
  "jsonrpc-pubsub 14.2.0",
  "local-runtime",
  "log",
- "pallet-transaction-payment-rpc",
  "parity-scale-codec",
  "parking_lot 0.10.2",
  "polkadot-cli",
@@ -9322,7 +9321,6 @@ dependencies = [
  "sp-trie",
  "structopt",
  "substrate-build-script-utils",
- "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
  "tracing",
 ]
