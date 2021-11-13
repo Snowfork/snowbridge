@@ -21,7 +21,7 @@ use std::sync::Arc;
 use substrate_prometheus_endpoint::Registry;
 
 #[cfg(feature = "with-snowbridge-runtime")]
-use snowbridge_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
+use snowbridge_runtime::{opaque::Block, Hash, RuntimeApi};
 
 #[cfg(feature = "with-rococo-runtime")]
 use rococo_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
