@@ -29,15 +29,19 @@ mod tests;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
-	traits::EnsureOrigin,
-	transactional,
+	traits::tokens::fungibles::{Create, Mutate},
+	traits::{EnsureOrigin, Randomness},
+	transactional, PalletId,
 };
 use frame_system::ensure_signed;
-use sp_core::{H160, U256};
-use sp_runtime::traits::StaticLookup;
+use sp_core::{H160, H256};
+use sp_runtime::{
+	traits::{AccountIdConversion, Hash, StaticLookup, TrailingZeroInput},
+	TokenError,
+};
 use sp_std::prelude::*;
 
-use snowbridge_core::{AssetId, ChannelId, MultiAsset, OutboundRouter};
+use snowbridge_core::{ChannelId, OutboundRouter};
 
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
@@ -60,7 +64,14 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type Assets: MultiAsset<<Self as frame_system::Config>::AccountId>;
+		type PalletId: Get<PalletId>;
+
+		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
+
+		type Hashing: Hash<Output = H256>;
+
+		type Assets: Create<Self::AccountId, Balance = u128, AssetId = u128>
+			+ Mutate<Self::AccountId, Balance = u128, AssetId = u128>;
 
 		type OutboundRouter: OutboundRouter<Self::AccountId>;
 
@@ -75,13 +86,17 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Burned(H160, T::AccountId, H160, U256),
-		Minted(H160, H160, T::AccountId, U256),
+		Burned(H160, T::AccountId, H160, u128),
+		Minted(H160, H160, T::AccountId, u128),
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn address)]
 	pub(super) type Address<T: Config> = StorageValue<_, H160, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn asset_id)]
+	pub(super) type AssetId<T: Config> = StorageMap<_, Identity, H160, u128, OptionQuery>;
 
 	#[pallet::error]
 	pub enum Error<T> {}
@@ -114,11 +129,14 @@ pub mod pallet {
 			channel_id: ChannelId,
 			token: H160,
 			recipient: H160,
-			amount: U256,
+			amount: u128,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			T::Assets::withdraw(AssetId::Token(token), &who, amount)?;
+			let asset_id =
+				Self::asset_id(token).ok_or(DispatchError::Token(TokenError::UnknownAsset))?;
+
+			T::Assets::burn_from(asset_id, &who, amount)?;
 
 			let message = OutboundPayload {
 				token,
@@ -140,18 +158,58 @@ pub mod pallet {
 			token: H160,
 			sender: H160,
 			recipient: <T::Lookup as StaticLookup>::Source,
-			amount: U256,
+			amount: u128,
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
+			let asset_id =
+				Self::asset_id(token).ok_or(DispatchError::Token(TokenError::UnknownAsset))?;
+
 			let recipient = T::Lookup::lookup(recipient)?;
-			T::Assets::deposit(AssetId::Token(token), &recipient, amount)?;
+			T::Assets::mint_into(asset_id, &recipient, amount)?;
 			Self::deposit_event(Event::Minted(token, sender, recipient, amount));
 
 			Ok(())
+		}
+
+		#[pallet::weight(100_000_000)]
+		#[transactional]
+		pub fn create(origin: OriginFor<T>, token: H160) -> DispatchResult {
+			let who = T::CallOrigin::ensure_origin(origin)?;
+			if who != <Address<T>>::get() {
+				return Err(DispatchError::BadOrigin.into());
+			}
+
+			let asset_id = Self::make_asset_id(token);
+			T::Assets::create(asset_id, T::PalletId::get().into_account(), true, 1)?;
+
+			<AssetId<T>>::insert(token, asset_id);
+
+			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		fn make_asset_id(address: H160) -> u128 {
+			let (seed, _) = T::Randomness::random(b"erc20app");
+
+			let mut input = [0u8; 52];
+
+			// seed should be at least 32 bytes
+			let seed = <[u8; 32]>::decode(&mut TrailingZeroInput::new(seed.as_ref()))
+				.expect("input is padded with zeroes; qed");
+
+			input[..32].copy_from_slice(&seed);
+			input[32..].copy_from_slice(address.as_fixed_bytes().as_ref());
+
+			let hash = <T as Config>::Hashing::hash(&input);
+			let mut output = [0u8; 16];
+			output.copy_from_slice(&hash.as_fixed_bytes()[..16]);
+
+			u128::from_le_bytes(output)
 		}
 	}
 }

@@ -26,11 +26,12 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
-snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 
 [dev-dependencies]
-snowbridge-assets = { path = "../../pallets/assets" }
 snowbridge-dispatch = { path = "../../pallets/dispatch" }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
+pallet-assets = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
+pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 
 [features]
@@ -41,12 +42,12 @@ std = [
     "codec/std",
     "frame-support/std",
     "frame-system/std",
+    "frame-benchmarking/std",
     "sp-core/std",
     "sp-std/std",
     "sp-io/std",
     "sp-runtime/std",
     "snowbridge-core/std",
-    "snowbridge-ethereum/std",
     "ethabi/std",
     "rlp/std"
 ]
@@ -54,4 +55,5 @@ runtime-benchmarks = [
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "snowbridge-dispatch/runtime-benchmarks"
 ]

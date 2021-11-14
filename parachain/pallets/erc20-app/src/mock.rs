@@ -5,6 +5,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	parameter_types,
 	traits::{Everything, GenesisBuild},
+	PalletId,
 };
 use frame_system as system;
 use sp_core::{H160, H256};
@@ -14,7 +15,7 @@ use sp_runtime::{
 	MultiSignature,
 };
 
-use snowbridge_core::{AssetId, ChannelId, OutboundRouter};
+use snowbridge_core::{ChannelId, OutboundRouter};
 
 use crate as erc20_app;
 
@@ -28,7 +29,9 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Assets: snowbridge_assets::{Pallet, Call, Storage, Event<T>},
+		Randomness: pallet_randomness_collective_flip::{Pallet, Storage},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
 		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
 		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>},
 	}
@@ -60,7 +63,7 @@ impl system::Config for Test {
 	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -68,9 +71,46 @@ impl system::Config for Test {
 	type OnSetCode = ();
 }
 
-impl snowbridge_assets::Config for Test {
+impl pallet_randomness_collective_flip::Config for Test {}
+
+parameter_types! {
+		pub const ExistentialDeposit: u64 = 1;
+}
+
+impl pallet_balances::Config for Test {
+	type Balance = u64;
+	type DustRemoval = ();
 	type Event = Event;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
 	type WeightInfo = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+}
+
+parameter_types! {
+		pub const AssetDeposit: u64 = 1;
+		pub const ApprovalDeposit: u64 = 1;
+		pub const StringLimit: u32 = 50;
+		pub const MetadataDepositBase: u64 = 1;
+		pub const MetadataDepositPerByte: u64 = 1;
+}
+
+impl pallet_assets::Config for Test {
+	type Event = Event;
+	type Balance = u128;
+	type AssetId = u128;
+	type Currency = Balances;
+	type ForceOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type AssetDeposit = AssetDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = StringLimit;
+	type Freezer = ();
+	type WeightInfo = ();
+	type Extra = ();
 }
 
 impl snowbridge_dispatch::Config for Test {
@@ -93,11 +133,14 @@ impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
 }
 
 parameter_types! {
-	pub const EthAssetId: AssetId = AssetId::ETH;
+	pub const Erc20AppPalletId: PalletId = PalletId(*b"erc20app");
 }
 
 impl erc20_app::Config for Test {
 	type Event = Event;
+	type PalletId = Erc20AppPalletId;
+	type Hashing = BlakeTwo256;
+	type Randomness = Randomness;
 	type Assets = Assets;
 	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
