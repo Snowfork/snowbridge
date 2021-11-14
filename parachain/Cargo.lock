@@ -3214,19 +3214,6 @@ dependencies = [
 
 [[package]]
 name = "jsonrpc-core"
-version = "15.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0745a6379e3edc893c84ec203589790774e4247420033e71a76d3ab4687991fa"
-dependencies = [
- "futures 0.1.31",
- "log",
- "serde",
- "serde_derive",
- "serde_json",
-]
-
-[[package]]
-name = "jsonrpc-core"
 version = "18.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14f7f76aef2d054868398427f6c54943cf3d1caa9a7ec7d0c38d69df97a965eb"
@@ -9301,7 +9288,7 @@ dependencies = [
  "frame-benchmarking-cli",
  "futures 0.3.17",
  "hex-literal",
- "jsonrpc-core 15.1.0",
+ "jsonrpc-core 18.0.0",
  "jsonrpc-pubsub 14.2.0",
  "local-runtime",
  "log",

@@ -9,7 +9,7 @@ use cumulus_client_service::{
 use cumulus_primitives_core::ParaId;
 
 use sc_client_api::ExecutorProvider;
-use sc_executor::native_executor_instance;
+use sc_executor::NativeElseWasmExecutor;
 use sc_network::NetworkService;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
@@ -20,42 +20,55 @@ use sp_runtime::traits::BlakeTwo256;
 use std::sync::Arc;
 use substrate_prometheus_endpoint::Registry;
 
-pub use sc_executor::NativeExecutor;
-
-type Hash = sp_core::H256;
-
 #[cfg(feature = "with-snowbridge-runtime")]
-use snowbridge_runtime::{opaque::Block, RuntimeApi};
+use snowbridge_runtime::{opaque::Block, Hash, RuntimeApi};
 
 #[cfg(feature = "with-rococo-runtime")]
-use rococo_runtime::{opaque::Block, RuntimeApi};
+use rococo_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
 
 #[cfg(feature = "with-local-runtime")]
-use local_runtime::{opaque::Block, RuntimeApi};
+use local_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
+
+pub struct ExecutorDispatch;
 
 #[cfg(feature = "with-snowbridge-runtime")]
-native_executor_instance!(
-	pub ExecutorDispatch,
-	snowbridge_runtime::api::dispatch,
-	snowbridge_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
+impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
+	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		snowbridge_runtime::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		snowbridge_runtime::native_version()
+	}
+}
 
 #[cfg(feature = "with-rococo-runtime")]
-native_executor_instance!(
-	pub ExecutorDispatch,
-	rococo_runtime::api::dispatch,
-	rococo_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
+impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
+	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		rococo_runtime::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		rococo_runtime::native_version()
+	}
+}
 
 #[cfg(feature = "with-local-runtime")]
-native_executor_instance!(
-	pub ExecutorDispatch,
-	local_runtime::api::dispatch,
-	local_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
+impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
+	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		local_runtime::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		local_runtime::native_version()
+	}
+}
 
 /// Starts a `ServiceBuilder` for a full service.
 ///
@@ -66,17 +79,23 @@ pub fn new_partial<RuntimeApi, Executor, BIQ>(
 	build_import_queue: BIQ,
 ) -> Result<
 	PartialComponents<
-		TFullClient<Block, RuntimeApi, Executor>,
+		TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
 		TFullBackend<Block>,
 		(),
-		sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
-		sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>,
+		sc_consensus::DefaultImportQueue<
+			Block,
+			TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+		>,
+		sc_transaction_pool::FullPool<
+			Block,
+			TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+		>,
 		(Option<Telemetry>, Option<TelemetryWorkerHandle>),
 	>,
 	sc_service::Error,
 >
 where
-	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>>
+	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
 		+ Send
 		+ Sync
 		+ 'static,
@@ -91,12 +110,15 @@ where
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	BIQ: FnOnce(
-		Arc<TFullClient<Block, RuntimeApi, Executor>>,
+		Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
 		&Configuration,
 		Option<TelemetryHandle>,
 		&TaskManager,
 	) -> Result<
-		sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
+		sc_consensus::DefaultImportQueue<
+			Block,
+			TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+		>,
 		sc_service::Error,
 	>,
 {
@@ -111,10 +133,17 @@ where
 		})
 		.transpose()?;
 
+	let executor = sc_executor::NativeElseWasmExecutor::<Executor>::new(
+		config.wasm_method,
+		config.default_heap_pages,
+		config.max_runtime_instances,
+	);
+
 	let (client, backend, keystore_container, task_manager) =
-		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(
-			&config,
+		sc_service::new_full_parts::<Block, RuntimeApi, _>(
+			config,
 			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+			executor,
 		)?;
 	let client = Arc::new(client);
 
@@ -162,12 +191,15 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	id: ParaId,
-	rpc_ext_builder: RB,
+	_rpc_ext_builder: RB,
 	build_import_queue: BIQ,
 	build_consensus: BIC,
-) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)>
+) -> sc_service::error::Result<(
+	TaskManager,
+	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+)>
 where
-	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>>
+	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
 		+ Send
 		+ Sync
 		+ 'static,
@@ -183,33 +215,41 @@ where
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	RB: Fn(
-			Arc<TFullClient<Block, RuntimeApi, Executor>>,
+			Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
 		) -> Result<jsonrpc_core::IoHandler<sc_rpc::Metadata>, sc_service::Error>
 		+ Send
 		+ 'static,
 	BIQ: FnOnce(
-		Arc<TFullClient<Block, RuntimeApi, Executor>>,
-		&Configuration,
-		Option<TelemetryHandle>,
-		&TaskManager,
-	) -> Result<
-		sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
-		sc_service::Error,
-	>,
+			Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+			&Configuration,
+			Option<TelemetryHandle>,
+			&TaskManager,
+		) -> Result<
+			sc_consensus::DefaultImportQueue<
+				Block,
+				TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+			>,
+			sc_service::Error,
+		> + 'static,
 	BIC: FnOnce(
-		Arc<TFullClient<Block, RuntimeApi, Executor>>,
+		Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
 		Option<&Registry>,
 		Option<TelemetryHandle>,
 		&TaskManager,
 		&polkadot_service::NewFull<polkadot_service::Client>,
-		Arc<sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>>,
+		Arc<
+			sc_transaction_pool::FullPool<
+				Block,
+				TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+			>,
+		>,
 		Arc<NetworkService<Block, Hash>>,
 		SyncCryptoStorePtr,
 		bool,
 	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
 	if matches!(parachain_config.role, Role::Light) {
-		return Err("Light client not supported!".into())
+		return Err("Light client not supported!".into());
 	}
 
 	let parachain_config = prepare_node_config(parachain_config);
@@ -252,7 +292,7 @@ where
 		})?;
 
 	let rpc_client = client.clone();
-	let rpc_extensions_builder = Box::new(move |_, _| rpc_ext_builder(rpc_client.clone()));
+	let rpc_extensions_builder = Box::new(move |_, _| _rpc_ext_builder(rpc_client.clone()));
 
 	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
 		on_demand: None,
@@ -321,12 +361,15 @@ where
 
 /// Build the import queue for the the parachain runtime.
 pub fn build_import_queue(
-	client: Arc<TFullClient<Block, RuntimeApi, ExecutorDispatch>>,
+	client: Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>>,
 	config: &Configuration,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 ) -> Result<
-	sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, ExecutorDispatch>>,
+	sc_consensus::DefaultImportQueue<
+		Block,
+		TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>,
+	>,
 	sc_service::Error,
 > {
 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
@@ -353,7 +396,7 @@ pub fn build_import_queue(
 
 			Ok((time, slot))
 		},
-		registry: config.prometheus_registry().clone(),
+		registry: config.prometheus_registry(),
 		can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
 		spawner: &task_manager.spawn_essential_handle(),
 		telemetry,
@@ -362,12 +405,14 @@ pub fn build_import_queue(
 }
 
 /// Start a normal parachain node.
-pub async fn start_node(
+pub async fn start_parachain_node(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	id: ParaId,
-) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, ExecutorDispatch>>)>
-{
+) -> sc_service::error::Result<(
+	TaskManager,
+	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>>,
+)> {
 	start_node_impl::<RuntimeApi, ExecutorDispatch, _, _, _>(
 		parachain_config,
 		polkadot_config,
@@ -389,7 +434,7 @@ pub async fn start_node(
 				task_manager.spawn_handle(),
 				client.clone(),
 				transaction_pool,
-				prometheus_registry.clone(),
+				prometheus_registry,
 				telemetry.clone(),
 			);
 
@@ -437,7 +482,7 @@ pub async fn start_node(
 				block_import: client.clone(),
 				relay_chain_client: relay_chain_node.client.clone(),
 				relay_chain_backend: relay_chain_node.backend.clone(),
-				para_client: client.clone(),
+				para_client: client,
 				backoff_authoring_blocks: Option::<()>::None,
 				sync_oracle,
 				keystore,

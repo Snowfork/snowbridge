@@ -27,6 +27,7 @@ std = [
     "serde",
     "serde_derive",
     "codec/std",
+    "scale-info/std",
     "frame-support/std",
     "sp-std/std",
     "sp-core/std",

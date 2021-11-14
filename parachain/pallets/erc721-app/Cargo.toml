@@ -36,8 +36,9 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "po
 default = ["std"]
 std = [
     "serde",
-    "hex/std",
     "codec/std",
+    "scale-info/std",
+    "hex/std",
     "frame-support/std",
     "frame-system/std",
     "sp-core/std",
