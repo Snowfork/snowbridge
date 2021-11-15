@@ -1,5 +1,6 @@
 use codec::{Decode, Encode};
 use frame_support::dispatch::{DispatchError, DispatchResult};
+use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde_derive::{Deserialize, Serialize};
 use sp_core::H160;
@@ -8,7 +9,7 @@ use sp_runtime::{sp_std::prelude::Vec, RuntimeDebug};
 use snowbridge_ethereum::U256;
 
 /// Token info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct TokenInfo<AccountId, Data> {
 	/// Token owner
 	pub owner: AccountId,
@@ -19,7 +20,7 @@ pub struct TokenInfo<AccountId, Data> {
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct ERC721TokenData {
 	/// The ERC721 smart contract on Ethereum
 	pub token_contract: H160,

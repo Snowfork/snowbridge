@@ -4,8 +4,8 @@
 
 use super::*;
 
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
-use frame_benchmarking::{account, benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 use sp_core::H160;
 
 #[allow(unused_imports)]
@@ -41,8 +41,4 @@ benchmarks! {
 	}
 }
 
-impl_benchmark_test_suite!(
-	Assets,
-	crate::mock::new_tester(),
-	crate::mock::Test,
-);
+impl_benchmark_test_suite!(Assets, crate::mock::new_tester(), crate::mock::Test,);

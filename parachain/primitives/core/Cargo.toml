@@ -5,17 +5,18 @@ authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2018"
 
 [dependencies]
-enum-iterator = "0.6.0"
-serde = { version = "1.0.101", optional = true }
-serde_derive = { version = "1.0.101", optional = true }
+serde = { version = "1.0.130", optional = true }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+enum-iterator = "0.6.0"
+serde_derive = { version = "1.0.101", optional = true }
 snowbridge-ethereum = { path = "../ethereum", default-features = false }
 
-frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.10", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.10", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.10", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.10", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.10", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
 
 [dev-dependencies]
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
@@ -26,6 +27,7 @@ std = [
     "serde",
     "serde_derive",
     "codec/std",
+    "scale-info/std",
     "frame-support/std",
     "sp-std/std",
     "sp-core/std",

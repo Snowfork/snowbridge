@@ -3,6 +3,7 @@ use ethbloom::Bloom as EthBloom;
 use hex_literal::hex;
 use parity_bytes::Bytes;
 use rlp::RlpStream;
+use scale_info::TypeInfo;
 use sp_io::hashing::keccak_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::{convert::TryInto, prelude::*};
@@ -17,7 +18,7 @@ use ethereum_types::{Address, H256, H64, U256};
 use crate::{mpt, receipt};
 
 /// Complete block header id.
-#[derive(Clone, Copy, Default, Encode, Decode, PartialEq, RuntimeDebug)]
+#[derive(Clone, Copy, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct HeaderId {
 	/// Header number.
 	pub number: u64,
@@ -29,7 +30,7 @@ const EMPTY_OMMERS_HASH: [u8; 32] =
 	hex!("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347");
 
 /// An Ethereum block header.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Header {
 	/// Parent block hash.
@@ -189,7 +190,7 @@ impl Header {
 big_array! { BigArray; }
 
 /// Logs bloom.
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Bloom(#[cfg_attr(feature = "std", serde(with = "BigArray"))] [u8; 256]);
 

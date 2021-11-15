@@ -6,6 +6,7 @@ use frame_support::{
 	weights::GetDispatchInfo,
 };
 
+use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
 
 use sp_core::H160;
@@ -15,7 +16,7 @@ use snowbridge_core::MessageDispatch;
 
 use codec::{Decode, Encode};
 
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct RawOrigin(pub H160);
 
 impl From<H160> for RawOrigin {
@@ -88,7 +89,6 @@ pub mod pallet {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	#[pallet::metadata(T::MessageId = "MessageId")]
 	pub enum Event<T: Config> {
 		/// Message has been dispatched with given result.
 		MessageDispatched(T::MessageId, DispatchResult),
@@ -140,7 +140,7 @@ pub mod pallet {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use frame_support::{dispatch::DispatchError, parameter_types};
+	use frame_support::{dispatch::DispatchError, parameter_types, traits::Everything};
 	use frame_system::{EventRecord, Phase};
 	use sp_core::H256;
 	use sp_runtime::{
@@ -187,7 +187,7 @@ mod tests {
 		type AccountData = ();
 		type OnNewAccount = ();
 		type OnKilledAccount = ();
-		type BaseCallFilter = ();
+		type BaseCallFilter = Everything;
 		type SystemWeightInfo = ();
 		type BlockWeights = ();
 		type BlockLength = ();
@@ -200,7 +200,7 @@ mod tests {
 	impl frame_support::traits::Contains<Call> for CallFilter {
 		fn contains(call: &Call) -> bool {
 			match call {
-				Call::System(frame_system::pallet::Call::<Test>::remark(_)) => true,
+				Call::System(frame_system::pallet::Call::<Test>::remark { remark: _ }) => true,
 				_ => false,
 			}
 		}
@@ -225,7 +225,7 @@ mod tests {
 			let id = 37;
 			let source = H160::repeat_byte(7);
 
-			let message = Call::System(<frame_system::Call<Test>>::remark(vec![])).encode();
+			let message = Call::System(frame_system::Call::remark { remark: vec![] }).encode();
 
 			System::set_block_number(1);
 			Dispatch::dispatch(source, id, &message);
@@ -272,7 +272,7 @@ mod tests {
 			let id = 37;
 			let source = H160::repeat_byte(7);
 
-			let message = Call::System(<frame_system::Call<Test>>::set_code(vec![])).encode();
+			let message = Call::System(frame_system::Call::set_code { code: vec![] }).encode();
 
 			System::set_block_number(1);
 			Dispatch::dispatch(source, id, &message);
