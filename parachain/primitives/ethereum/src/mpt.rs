@@ -16,11 +16,11 @@ impl TryFrom<&[u8]> for Box<dyn Node> {
 			2 => {
 				let node: ShortNode = rlp.as_val()?;
 				Ok(Box::new(node))
-			},
+			}
 			17 => {
 				let node: FullNode = rlp.as_val()?;
 				Ok(Box::new(node))
-			},
+			}
 			_ => Err(rlp::DecoderError::Custom("Invalid number of list elements")),
 		}
 	}
@@ -45,7 +45,7 @@ impl rlp::Decodable for FullNode {
 						let mut bytes = [0u8; 32];
 						bytes.copy_from_slice(&v);
 						Ok(Some(bytes.into()))
-					},
+					}
 					_ => Err(rlp::DecoderError::Custom("Expected 32-byte hash or empty child")),
 				}
 			})

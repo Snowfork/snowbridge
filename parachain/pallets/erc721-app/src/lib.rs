@@ -175,10 +175,10 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != Address::<T>::get() {
-				return Err(DispatchError::BadOrigin.into())
+				return Err(DispatchError::BadOrigin.into());
 			}
 			if TokensByERC721Id::<T>::contains_key((token_contract, token_id)) {
-				return Err(Error::<T>::TokenAlreadyMinted.into())
+				return Err(Error::<T>::TokenAlreadyMinted.into());
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;

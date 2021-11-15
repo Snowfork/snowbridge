@@ -171,7 +171,7 @@ impl<T: Config> Nft<T::AccountId, T::TokenId, T::TokenData> for Pallet<T> {
 			ensure!(info.owner == *from, Error::<T>::NoPermission);
 			if from == to {
 				// no change needed
-				return Ok(())
+				return Ok(());
 			}
 
 			info.owner = to.clone();
