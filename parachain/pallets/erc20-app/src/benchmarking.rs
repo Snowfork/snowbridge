@@ -19,7 +19,7 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 		let token = H160::repeat_byte(1);
 		let recipient = H160::repeat_byte(2);
-		let amount: U256 = 500.into();
+		let amount = 500;
 
 		T::Assets::deposit(AssetId::Token(token), &caller, amount)?;
 
