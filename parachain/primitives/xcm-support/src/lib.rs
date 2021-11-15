@@ -28,17 +28,17 @@ impl<
 		let (id, amount) = if let MultiAsset { id, fun: Fungible(amount) } = a {
 			(id, amount)
 		} else {
-			return Err(XcmError::AssetNotFound);
+			return Err(XcmError::AssetNotFound)
 		};
 
 		let key = if let Concrete(location) = id {
 			if let Some(GeneralKey(key)) = location.last() {
 				key
 			} else {
-				return Err(XcmError::AssetNotFound);
+				return Err(XcmError::AssetNotFound)
 			}
 		} else {
-			return Err(XcmError::AssetNotFound);
+			return Err(XcmError::AssetNotFound)
 		};
 
 		let asset_id: SnowbridgeAssetId = SnowbridgeAssetId::decode(&mut key.as_ref())
@@ -62,7 +62,7 @@ impl<
 			.map_err(|()| XcmError::FailedToTransactAsset("AccountIdConversionFailed"))?;
 		Assets::deposit(asset_id, &who, amount)
 			.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
-		return Ok(());
+		return Ok(())
 	}
 
 	fn withdraw_asset(
