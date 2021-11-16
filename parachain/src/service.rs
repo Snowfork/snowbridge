@@ -24,10 +24,10 @@ use substrate_prometheus_endpoint::Registry;
 use snowbridge_runtime::{opaque::Block, Hash, RuntimeApi};
 
 #[cfg(feature = "with-rococo-runtime")]
-use rococo_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
+use rococo_runtime::{opaque::Block, Hash, RuntimeApi};
 
 #[cfg(feature = "with-local-runtime")]
-use local_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
+use local_runtime::{opaque::Block, Hash, RuntimeApi};
 
 pub struct ExecutorDispatch;
 
@@ -249,7 +249,7 @@ where
 	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
 	if matches!(parachain_config.role, Role::Light) {
-		return Err("Light client not supported!".into());
+		return Err("Light client not supported!".into())
 	}
 
 	let parachain_config = prepare_node_config(parachain_config);

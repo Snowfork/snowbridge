@@ -1,13 +1,14 @@
 use crate::mock::{new_tester, AccountId, Assets, Test};
-use frame_support::{assert_ok, assert_noop};
-use sp_keyring::AccountKeyring as Keyring;
 use crate::{Balances, TotalIssuance};
+use frame_support::{assert_noop, assert_ok};
 use snowbridge_core::{AssetId, MultiAsset};
+use sp_keyring::AccountKeyring as Keyring;
 
 use super::*;
 
 fn set_balance<T>(asset_id: AssetId, account_id: &AccountId, amount: T)
-	where T : Into<U256> + Copy
+where
+	T: Into<U256> + Copy,
 {
 	let value = amount.into();
 	Balances::<Test>::insert(asset_id, &account_id, &value);
@@ -80,7 +81,6 @@ fn withdrawal_should_raise_total_issuance_underflow_error() {
 			<Assets as MultiAsset<_>>::withdraw(asset_id, &alice, 10.into()),
 			Error::<Test>::TotalIssuanceUnderflow
 		);
-
 	});
 }
 
@@ -95,14 +95,12 @@ fn withdrawal_should_raise_balance_underflow_error() {
 			<Assets as MultiAsset<_>>::withdraw(asset_id, &alice, 10.into()),
 			Error::<Test>::InsufficientBalance
 		);
-
 	});
 }
 
 #[test]
 fn transfer_free_balance() {
 	new_tester().execute_with(|| {
-
 		let asset_id = AssetId::ETH;
 		let alice: AccountId = Keyring::Alice.into();
 		let bob: AccountId = Keyring::Bob.into();
@@ -120,7 +118,6 @@ fn transfer_free_balance() {
 #[test]
 fn transfer_should_raise_insufficient_balance() {
 	new_tester().execute_with(|| {
-
 		let asset_id = AssetId::ETH;
 		let alice: AccountId = Keyring::Alice.into();
 		let bob: AccountId = Keyring::Bob.into();
