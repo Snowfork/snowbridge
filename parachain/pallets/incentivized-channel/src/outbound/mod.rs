@@ -11,16 +11,17 @@ use ethabi::{self, Token};
 use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
-	traits::{EnsureOrigin, Get},
+	traits::{fungible::Mutate, EnsureOrigin, Get},
 };
+
 use scale_info::TypeInfo;
-use sp_core::{RuntimeDebug, H160, H256, U256};
+use sp_core::{RuntimeDebug, H160, H256};
 use sp_io::offchain_index;
 use sp_runtime::traits::{Hash, Zero};
 
 use sp_std::prelude::*;
 
-use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId, MessageNonce, SingleAsset};
+use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId, MessageNonce};
 
 pub use weights::WeightInfo;
 
@@ -32,7 +33,7 @@ pub struct Message {
 	/// A nonce for replay protection and ordering.
 	nonce: u64,
 	/// Fee for accepting message on this channel.
-	fee: U256,
+	fee: u128,
 	/// Payload for target application.
 	payload: Vec<u8>,
 }
@@ -68,7 +69,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxMessagesPerCommit: Get<u64>;
 
-		type FeeCurrency: SingleAsset<<Self as frame_system::Config>::AccountId>;
+		type FeeCurrency: Mutate<<Self as frame_system::Config>::AccountId, Balance = u128>;
 
 		/// The origin which may update reward related params
 		type SetFeeOrigin: EnsureOrigin<Self::Origin>;
@@ -107,7 +108,7 @@ pub mod pallet {
 	/// Fee for accepting a message
 	#[pallet::storage]
 	#[pallet::getter(fn fee)]
-	pub(super) type Fee<T: Config> = StorageValue<_, U256, ValueQuery>;
+	pub(super) type Fee<T: Config> = StorageValue<_, u128, ValueQuery>;
 
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
@@ -115,7 +116,7 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub interval: T::BlockNumber,
-		pub fee: U256,
+		pub fee: u128,
 	}
 
 	#[cfg(feature = "std")]
@@ -151,7 +152,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::set_fee())]
-		pub fn set_fee(origin: OriginFor<T>, amount: U256) -> DispatchResult {
+		pub fn set_fee(origin: OriginFor<T>, amount: u128) -> DispatchResult {
 			T::SetFeeOrigin::ensure_origin(origin)?;
 			<Fee<T>>::put(amount);
 			Ok(())
@@ -162,8 +163,8 @@ pub mod pallet {
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 			ensure!(
-				<MessageQueue<T>>::decode_len().unwrap_or(0)
-					< T::MaxMessagesPerCommit::get() as usize,
+				<MessageQueue<T>>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerCommit::get() as usize,
 				Error::<T>::QueueSizeLimitReached,
 			);
 			ensure!(
@@ -175,12 +176,12 @@ pub mod pallet {
 				if let Some(v) = nonce.checked_add(1) {
 					*nonce = v;
 				} else {
-					return Err(Error::<T>::Overflow.into());
+					return Err(Error::<T>::Overflow.into())
 				}
 
 				// Attempt to charge a fee for message submission
 				let fee = Self::fee();
-				T::FeeCurrency::withdraw(who, fee).map_err(|_| Error::<T>::NoFunds)?;
+				T::FeeCurrency::burn_from(who, fee).map_err(|_| Error::<T>::NoFunds)?;
 
 				<MessageQueue<T>>::append(Message {
 					target,
@@ -196,7 +197,7 @@ pub mod pallet {
 		fn commit() -> Weight {
 			let messages: Vec<Message> = <MessageQueue<T>>::take();
 			if messages.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages();
+				return T::WeightInfo::on_initialize_no_messages()
 			}
 
 			let commitment_hash = Self::make_commitment_hash(&messages);
