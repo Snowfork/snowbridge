@@ -29,15 +29,15 @@ mod tests;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
-	traits::EnsureOrigin,
+	traits::{fungible::Mutate, EnsureOrigin},
 	transactional,
 };
 use frame_system::ensure_signed;
-use sp_core::{H160, U256};
+use sp_core::H160;
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
-use snowbridge_core::{ChannelId, OutboundRouter, SingleAsset};
+use snowbridge_core::{ChannelId, OutboundRouter};
 
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
@@ -60,7 +60,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type Asset: SingleAsset<<Self as frame_system::Config>::AccountId>;
+		type Asset: Mutate<Self::AccountId, Balance = u128>;
 
 		type OutboundRouter: OutboundRouter<Self::AccountId>;
 
@@ -75,8 +75,8 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Burned(T::AccountId, H160, U256),
-		Minted(H160, T::AccountId, U256),
+		Burned(T::AccountId, H160, u128),
+		Minted(H160, T::AccountId, u128),
 	}
 
 	#[pallet::storage]
@@ -114,11 +114,11 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			channel_id: ChannelId,
 			recipient: H160,
-			amount: U256,
+			amount: u128,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			T::Asset::withdraw(&who, amount)?;
+			T::Asset::burn_from(&who, amount)?;
 
 			let message =
 				OutboundPayload { sender: who.clone(), recipient: recipient.clone(), amount };
@@ -135,15 +135,15 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			sender: H160,
 			recipient: <T::Lookup as StaticLookup>::Source,
-			amount: U256,
+			amount: u128,
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into());
+				return Err(DispatchError::BadOrigin.into())
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
-			T::Asset::deposit(&recipient, amount)?;
+			T::Asset::mint_into(&recipient, amount)?;
 			Self::deposit_event(Event::Minted(sender, recipient.clone(), amount));
 
 			Ok(())

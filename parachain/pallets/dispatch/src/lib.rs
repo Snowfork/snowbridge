@@ -39,7 +39,7 @@ where
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> OuterOrigin {
-		OuterOrigin::from(RawOrigin(H160::repeat_byte(2)))
+		OuterOrigin::from(RawOrigin(H160::repeat_byte(1)))
 	}
 }
 
@@ -109,13 +109,13 @@ pub mod pallet {
 				Ok(call) => call,
 				Err(_) => {
 					Self::deposit_event(Event::MessageDecodeFailed(id));
-					return;
-				}
+					return
+				},
 			};
 
 			if !T::CallFilter::contains(&call) {
 				Self::deposit_event(Event::MessageRejected(id));
-				return;
+				return
 			}
 
 			let origin = RawOrigin(source).into();

@@ -27,8 +27,10 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 
+snowbridge-dispatch = { path = "../../pallets/dispatch", optional = true }
+
 [dev-dependencies]
-snowbridge-dispatch = { path = "../../pallets/dispatch" }
+
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 pallet-assets = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
