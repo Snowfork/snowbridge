@@ -623,6 +623,7 @@ parameter_types! {
 
 impl eth_app::Config for Runtime {
 	type Event = Event;
+	type PalletId = EtherAppPalletId;
 	type Asset = ItemOf<Assets, EtherAssetId, AccountId>;
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
@@ -705,10 +706,10 @@ construct_runtime!(
 		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 10,
 		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 11,
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<Test>} = 13,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 13,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
 		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 15,
-		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 16,
+		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
 		NFT: nft::{Pallet, Call, Config<T>, Storage} = 17,
 
 		// XCM

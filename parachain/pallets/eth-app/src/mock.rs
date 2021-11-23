@@ -139,6 +139,7 @@ pub type Ether = ItemOf<Assets, EtherAssetId, AccountId>;
 
 impl eth_app::Config for Test {
 	type Event = Event;
+	type PalletId = EtherAppPalletId;
 	type Asset = Ether;
 	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;

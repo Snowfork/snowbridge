@@ -30,7 +30,7 @@ mod tests;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::{fungible::Mutate, EnsureOrigin},
-	transactional,
+	transactional, PalletId,
 };
 use frame_system::ensure_signed;
 use sp_core::H160;
@@ -59,6 +59,8 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		type PalletId: Get<PalletId>;
 
 		type Asset: Mutate<Self::AccountId, Balance = u128>;
 
