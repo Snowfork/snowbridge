@@ -34,7 +34,7 @@ ethash = { git = "https://github.com/snowfork/ethash.git", branch = "master", de
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 hex-literal = { version = "0.3.1" }
 snowbridge-testutils = { path = "../../primitives/testutils" }
-serde_json = "1.0"
+serde_json = "1.0.68"
 
 [features]
 default = ["std"]

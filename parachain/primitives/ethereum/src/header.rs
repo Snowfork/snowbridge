@@ -10,8 +10,9 @@ use sp_std::{convert::TryInto, prelude::*};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+
 #[cfg(feature = "std")]
-use serde_big_array::big_array;
+use serde_big_array::BigArray;
 
 use ethereum_types::{Address, H256, H64, U256};
 
@@ -185,9 +186,6 @@ impl Header {
 		s.out().to_vec()
 	}
 }
-
-#[cfg(feature = "std")]
-big_array! { BigArray; }
 
 /// Logs bloom.
 #[derive(Clone, Debug, Encode, Decode, TypeInfo)]

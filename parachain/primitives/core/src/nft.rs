@@ -1,8 +1,6 @@
 use codec::{Decode, Encode};
 use frame_support::dispatch::{DispatchError, DispatchResult};
 use scale_info::TypeInfo;
-#[cfg(feature = "std")]
-use serde_derive::{Deserialize, Serialize};
 use sp_core::H160;
 use sp_runtime::{sp_std::prelude::Vec, RuntimeDebug};
 
@@ -19,7 +17,7 @@ pub struct TokenInfo<AccountId, Data> {
 	pub data: Data,
 }
 
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct ERC721TokenData {
 	/// The ERC721 smart contract on Ethereum

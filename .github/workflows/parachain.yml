@@ -45,7 +45,7 @@ jobs:
           args: >-
             --manifest-path parachain/Cargo.toml
             --workspace
-            --exclude artemis
+            --exclude snowbridge
             --features runtime-benchmarks
 
   test:
