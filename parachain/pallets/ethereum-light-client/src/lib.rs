@@ -239,7 +239,7 @@ pub mod pallet {
 					"Validation for header {} returned error. Skipping import",
 					header.number,
 				);
-				return Err(err)
+				return Err(err);
 			}
 
 			log::trace!(
@@ -254,7 +254,7 @@ pub mod pallet {
 					"Import of header {} failed",
 					header.number,
 				);
-				return Err(err)
+				return Err(err);
 			}
 
 			log::trace!(
@@ -298,18 +298,18 @@ pub mod pallet {
 			);
 
 			if !T::VerifyPoW::get() {
-				return Ok(())
+				return Ok(());
 			}
 
 			// See YellowPaper formula (50) in section 4.3.4
 			ensure!(
-				header.gas_used <= header.gas_limit &&
-					header.gas_limit < parent.gas_limit * 1025 / 1024 &&
-					header.gas_limit > parent.gas_limit * 1023 / 1024 &&
-					header.gas_limit >= 5000.into() &&
-					header.timestamp > parent.timestamp &&
-					header.number == parent.number + 1 &&
-					header.extra_data.len() <= 32,
+				header.gas_used <= header.gas_limit
+					&& header.gas_limit < parent.gas_limit * 1025 / 1024
+					&& header.gas_limit > parent.gas_limit * 1023 / 1024
+					&& header.gas_limit >= 5000.into()
+					&& header.timestamp > parent.timestamp
+					&& header.number == parent.number + 1
+					&& header.extra_data.len() <= 32,
 				Error::<T>::InvalidHeader,
 			);
 
@@ -342,8 +342,8 @@ pub mod pallet {
 				header.number
 			);
 			ensure!(
-				mix_hash == header_mix_hash &&
-					U256::from(result.0) < ethash::cross_boundary(header.difficulty),
+				mix_hash == header_mix_hash
+					&& U256::from(result.0) < ethash::cross_boundary(header.difficulty),
 				Error::<T>::InvalidHeader,
 			);
 
@@ -376,8 +376,8 @@ pub mod pallet {
 
 			// Maybe track new highest difficulty chain
 			let (_, highest_difficulty) = <BestBlock<T>>::get();
-			if total_difficulty > highest_difficulty ||
-				(!T::VerifyPoW::get() && total_difficulty == U256::zero())
+			if total_difficulty > highest_difficulty
+				|| (!T::VerifyPoW::get() && total_difficulty == U256::zero())
 			{
 				let best_block_id = EthereumHeaderId { number: header.number, hash };
 				<BestBlock<T>>::put((best_block_id, total_difficulty));
@@ -393,7 +393,7 @@ pub mod pallet {
 						|option| -> DispatchResult {
 							if let Some(header) = option {
 								header.finalized = true;
-								return Ok(())
+								return Ok(());
 							}
 							Err(Error::<T>::Unknown.into())
 						},
@@ -431,13 +431,13 @@ pub mod pallet {
 					// The header is newly finalized if it is younger than the current
 					// finalized block
 					if header.number > finalized_block_id.number {
-						return Ok(EthereumHeaderId { hash, number: header.number })
+						return Ok(EthereumHeaderId { hash, number: header.number });
 					}
 					if hash != finalized_block_id.hash {
-						return Err(Error::<T>::Unknown.into())
+						return Err(Error::<T>::Unknown.into());
 					}
 					Ok(finalized_block_id.clone())
-				},
+				}
 				None => Ok(finalized_block_id.clone()),
 			}
 		}
@@ -462,7 +462,7 @@ pub mod pallet {
 			let mut blocks_pruned = 0;
 			for number in start..end {
 				if blocks_pruned == max_headers_to_prune {
-					break
+					break;
 				}
 
 				if let Some(hashes_at_number) = <HeadersByNumber<T>>::take(number) {
@@ -472,7 +472,7 @@ pub mod pallet {
 						blocks_pruned += 1;
 						remaining -= 1;
 						if blocks_pruned == max_headers_to_prune {
-							break
+							break;
 						}
 					}
 
@@ -517,7 +517,7 @@ pub mod pallet {
 						err
 					);
 					Err(Error::<T>::InvalidProof.into())
-				},
+				}
 			}
 		}
 	}
@@ -552,7 +552,7 @@ pub mod pallet {
 					"Event log not found in receipt for transaction at index {} in block {}",
 					message.proof.tx_index, message.proof.block_hash,
 				);
-				return Err(Error::<T>::InvalidProof.into())
+				return Err(Error::<T>::InvalidProof.into());
 			}
 
 			Ok(log)
@@ -627,14 +627,15 @@ pub mod pallet {
 				let mut next_hash = Ok(hash);
 				loop {
 					match next_hash {
-						Ok(hash) =>
+						Ok(hash) => {
 							next_hash = <Headers<T>>::mutate(hash, |option| {
 								if let Some(header) = option {
 									header.finalized = true;
-									return Ok(header.header.parent_hash)
+									return Ok(header.header.parent_hash);
 								}
 								Err("No header at hash")
-							}),
+							})
+						}
 						_ => break,
 					}
 				}

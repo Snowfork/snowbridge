@@ -33,12 +33,15 @@ pub use frame_support::{
 	construct_runtime,
 	dispatch::DispatchResult,
 	match_type, parameter_types,
-	traits::{Contains, Everything, IsInVec, KeyOwnerProofSystem, Randomness},
+	traits::{
+		tokens::fungible::ItemOf, Contains, Everything, IsInVec, KeyOwnerProofSystem, Nothing,
+		Randomness,
+	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		IdentityFee, Weight,
 	},
-	StorageValue,
+	PalletId, StorageValue,
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
 pub use pallet_balances::Call as BalancesCall;
@@ -51,7 +54,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
 
 use dispatch::EnsureEthereumAccount;
-pub use snowbridge_core::{AssetId, ChannelId, ERC721TokenData, MessageId};
+pub use snowbridge_core::{ChannelId, ERC721TokenData, MessageId};
 
 pub use ethereum_light_client::{EthereumDifficultyConfig, EthereumHeader};
 
@@ -60,20 +63,18 @@ use polkadot_parachain::primitives::Sibling;
 use pallet_xcm::XcmPassthrough;
 use xcm::latest::prelude::*;
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
+	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
+	AsPrefixedGeneralIndex, ConvertedConcreteAssetId, CurrencyAdapter, EnsureXcmOrigin,
+	FixedWeightBounds, FungiblesAdapter, IsConcrete, LocationInverter, NativeAsset,
 	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
 	SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
-use xcm_executor::{Config, XcmExecutor};
-
-use assets::SingleAssetAdaptor;
-use snowbridge_xcm_support::AssetsTransactor;
+use xcm_executor::{traits::JustTry, Config, XcmExecutor};
 
 use runtime_common::{
-	DotPalletId, Ether, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter,
-	TreasuryPalletId, INDEXING_PREFIX,
+	DotPalletId, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter, TreasuryPalletId,
+	INDEXING_PREFIX,
 };
 
 mod weights;
@@ -303,6 +304,7 @@ parameter_types! {
 	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
+	pub const Local: MultiLocation = Here.into();
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -317,8 +319,22 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RococoNetwork, AccountId>,
 );
 
-type LocalAssetTransactor1 = AssetsTransactor<Assets, LocationToAccountId, AccountId>;
-type LocalAssetTransactor2 = CurrencyAdapter<
+pub type FungiblesTransactor = FungiblesAdapter<
+	// Use this fungibles implementation:
+	Assets,
+	// Use this currency when it is a fungible asset matching the given location or name:
+	ConvertedConcreteAssetId<u128, Balance, AsPrefixedGeneralIndex<Local, u128, JustTry>, JustTry>,
+	// Convert MultiLocation into a native chain account ID:
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+	// We dont allow teleports.
+	Nothing,
+	// We dont track any teleports
+	(),
+>;
+
+type LocalAssetTransactor = CurrencyAdapter<
 	// Use this currency:
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
@@ -331,7 +347,7 @@ type LocalAssetTransactor2 = CurrencyAdapter<
 	(),
 >;
 
-type LocalAssetTransactor = (LocalAssetTransactor1, LocalAssetTransactor2);
+type AssetTransactors = (LocalAssetTransactor, FungiblesTransactor);
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
@@ -380,7 +396,7 @@ impl Config for XcmConfig {
 	type Call = Call;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = LocalAssetTransactor;
+	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = NativeAsset;
 	type IsTeleporter = NativeAsset; // <- should be enough to allow teleportation of ROC
@@ -491,6 +507,36 @@ impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
 	type WeightInfo = ();
 }
 
+// Assets
+
+parameter_types! {
+	pub const AssetDeposit: Balance = 0;
+	pub const ApprovalDeposit: Balance = 0;
+	pub const AssetsStringLimit: u32 = 50;
+	pub const MetadataDepositBase: Balance = 0;
+	pub const MetadataDepositPerByte: Balance = 0;
+	pub const ExecutiveBody: BodyId = BodyId::Executive;
+}
+
+pub type AssetsForceOrigin =
+	EnsureOneOf<AccountId, EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
+
+impl pallet_assets::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type AssetId = u128;
+	type Currency = Balances;
+	type ForceOrigin = AssetsForceOrigin;
+	type AssetDeposit = AssetDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = AssetsStringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = ();
+}
+
 // Our pallets
 
 impl dispatch::Config for Runtime {
@@ -553,7 +599,7 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
-	type FeeCurrency = SingleAssetAdaptor<Runtime, Ether>;
+	type FeeCurrency = ItemOf<Assets, EtherAssetId, AccountId>;
 	type SetFeeOrigin = EnsureRootOrHalfLocalCouncil;
 	type WeightInfo = weights::incentivized_channel_outbound_weights::WeightInfo<Runtime>;
 }
@@ -574,28 +620,30 @@ impl ethereum_light_client::Config for Runtime {
 	type MaxHeadersForNumber = MaxHeadersForNumber;
 }
 
-impl assets::Config for Runtime {
-	type Event = Event;
-	type WeightInfo = weights::assets_weights::WeightInfo<Runtime>;
-}
-
 parameter_types! {
-	pub const EthAssetId: AssetId = AssetId::ETH;
+	pub const EtherAssetId: u128 = 0;
+	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
 }
 
 impl eth_app::Config for Runtime {
 	type Event = Event;
-	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
+	type PalletId = EtherAppPalletId;
+	type Asset = ItemOf<Assets, EtherAssetId, AccountId>;
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = weights::eth_app_weights::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub const Erc20AppPalletId: PalletId = PalletId(*b"erc20app");
+}
+
 impl erc20_app::Config for Runtime {
 	type Event = Event;
-	type Assets = assets::Module<Runtime>;
-	type OutboundRouter = OutboundRouter<Runtime>;
-	type CallOrigin = EnsureEthereumAccount;
+	type PalletId = Erc20AppPalletId;
+	type Randomness = RandomnessCollectiveFlip;
+	type Hashing = BlakeTwo256;
+	type Assets = Assets;
 	type WeightInfo = weights::erc20_app_weights::WeightInfo<Runtime>;
 }
 
@@ -663,20 +711,20 @@ construct_runtime!(
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 13,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
 		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 15,
-		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
-		NFT: nft::{Pallet, Call, Config<T>, Storage} = 24,
+		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
+		NFT: nft::{Pallet, Call, Config<T>, Storage} = 17,
 
 		// XCM
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 17,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 18,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 19,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 20,
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 18,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 19,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 20,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 21,
 
-		Aura: pallet_aura::{Pallet, Config<T>} = 21,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 22,
+		Aura: pallet_aura::{Pallet, Config<T>} = 22,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 23,
 
 		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 23,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 24,
 
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating

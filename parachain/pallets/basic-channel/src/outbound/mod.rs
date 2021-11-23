@@ -162,8 +162,8 @@ pub mod pallet {
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 			ensure!(*who == Self::principal(), Error::<T>::NotAuthorized,);
 			ensure!(
-				<MessageQueue<T>>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerCommit::get() as usize,
+				<MessageQueue<T>>::decode_len().unwrap_or(0)
+					< T::MaxMessagesPerCommit::get() as usize,
 				Error::<T>::QueueSizeLimitReached,
 			);
 			ensure!(
@@ -175,7 +175,7 @@ pub mod pallet {
 				if let Some(v) = nonce.checked_add(1) {
 					*nonce = v;
 				} else {
-					return Err(Error::<T>::Overflow.into())
+					return Err(Error::<T>::Overflow.into());
 				}
 
 				<MessageQueue<T>>::append(Message {
@@ -191,7 +191,7 @@ pub mod pallet {
 		fn commit() -> Weight {
 			let messages: Vec<Message> = <MessageQueue<T>>::take();
 			if messages.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages()
+				return T::WeightInfo::on_initialize_no_messages();
 			}
 
 			let commitment_hash = Self::make_commitment_hash(&messages);

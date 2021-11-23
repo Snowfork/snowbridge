@@ -1,15 +1,15 @@
-//! ETHApp pallet benchmarking
+//! EtherApp pallet benchmarking
 use super::*;
 
-use frame_benchmarking::{
-	account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, BenchmarkError,
-};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller, BenchmarkError};
 use frame_support::traits::UnfilteredDispatchable;
 use frame_system::RawOrigin;
 use sp_core::H160;
 
+use frame_support::traits::fungible::Inspect;
+
 #[allow(unused_imports)]
-use crate::Pallet as ETHApp;
+use crate::Pallet as EtherApp;
 
 benchmarks! {
 	// Benchmark `burn` extrinsic under worst case conditions:
@@ -18,13 +18,13 @@ benchmarks! {
 	burn {
 		let caller: T::AccountId = whitelisted_caller();
 		let recipient = H160::repeat_byte(2);
-		let amount: U256 = 500.into();
+		let amount = 500;
 
-		T::Asset::deposit(&caller, amount)?;
+		T::Asset::mint_into(&caller, amount)?;
 
 	}: _(RawOrigin::Signed(caller.clone()), ChannelId::Incentivized, recipient, amount)
 	verify {
-		assert_eq!(T::Asset::balance(&caller), U256::zero());
+		assert_eq!(T::Asset::balance(&caller), 0);
 	}
 
 	// Benchmark `mint` extrinsic under worst case conditions:
@@ -40,7 +40,7 @@ benchmarks! {
 		let recipient: T::AccountId = account("recipient", 0, 0);
 		let recipient_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(recipient.clone());
 		let sender = H160::zero();
-		let amount: U256 = 500.into();
+		let amount = 500;
 
 		let call = Call::<T>::mint { sender: sender, recipient: recipient_lookup, amount : amount};
 
@@ -48,6 +48,6 @@ benchmarks! {
 	verify {
 		assert_eq!(T::Asset::balance(&recipient), amount);
 	}
-}
 
-impl_benchmark_test_suite!(ETHApp, crate::mock::new_tester(), crate::mock::Test,);
+	impl_benchmark_test_suite!(EtherApp, crate::mock::new_tester(), crate::mock::Test,);
+}
