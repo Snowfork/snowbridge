@@ -2,7 +2,9 @@
 
 use super::*;
 
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{
+	benchmarks, impl_benchmark_test_suite, whitelisted_caller, BenchmarkError,
+};
 use frame_system::{self, EventRecord, RawOrigin};
 use hex_literal::hex;
 use sp_std::{convert::TryInto, prelude::*};
@@ -57,7 +59,7 @@ benchmarks! {
 	set_reward_fraction {
 		let authorized_origin = match T::UpdateOrigin::successful_origin().into() {
 			Ok(raw) => raw,
-			Err(_) => return Err("Failed to get raw origin from origin"),
+			Err(_) => return Err(BenchmarkError::Stop("Failed to get raw origin from origin")),
 		};
 
 		// Pick a value that is different from the initial RewardFraction

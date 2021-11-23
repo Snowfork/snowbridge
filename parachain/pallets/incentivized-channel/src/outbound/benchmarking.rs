@@ -1,7 +1,7 @@
 //! IncentivizedOutboundChannel pallet benchmarking
 use super::*;
 
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, BenchmarkError};
 use frame_support::traits::OnInitialize;
 use sp_core::U256;
 
@@ -64,7 +64,7 @@ benchmarks! {
 	set_fee {
 		let authorized_origin = match T::SetFeeOrigin::successful_origin().into() {
 			Ok(raw) => raw,
-			Err(_) => return Err("Failed to get raw origin from origin"),
+			Err(_) => return Err(BenchmarkError::Stop("Failed to get raw origin from origin")),
 		};
 
 		let new_fee : U256 = 32000000.into();

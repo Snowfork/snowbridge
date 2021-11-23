@@ -4,7 +4,7 @@ use sp_std::marker::PhantomData;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	parameter_types,
-	traits::GenesisBuild,
+	traits::{Everything, GenesisBuild},
 };
 use frame_system as system;
 use sp_core::{H160, H256};
@@ -43,7 +43,7 @@ parameter_types! {
 }
 
 impl system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type Origin = Origin;
@@ -78,7 +78,7 @@ impl snowbridge_dispatch::Config for Test {
 	type Event = Event;
 	type MessageId = u64;
 	type Call = Call;
-	type CallFilter = ();
+	type CallFilter = Everything;
 }
 
 pub struct MockOutboundRouter<AccountId>(PhantomData<AccountId>);

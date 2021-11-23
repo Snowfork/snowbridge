@@ -1,10 +1,12 @@
 // Mock runtime
 use super::*;
 
+use frame_support::{parameter_types, traits::Everything};
 use sp_core::H256;
-use frame_support::parameter_types;
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}, testing::Header, MultiSignature
+	testing::Header,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	MultiSignature,
 };
 use sp_std::convert::From;
 
@@ -32,7 +34,7 @@ parameter_types! {
 }
 
 impl system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type Origin = Origin;

@@ -13,6 +13,7 @@ use frame_support::{
 	ensure,
 	traits::{EnsureOrigin, Get},
 };
+use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256};
 use sp_io::offchain_index;
 use sp_runtime::traits::{Hash, StaticLookup, Zero};
@@ -24,7 +25,7 @@ use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId, MessageNonce};
 pub use weights::WeightInfo;
 
 /// Wire-format for committed messages
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Message {
 	/// Target application on the Ethereum side.
 	target: H160,

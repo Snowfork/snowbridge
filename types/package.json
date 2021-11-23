@@ -25,6 +25,7 @@
     "prepack": "tsc"
   },
   "dependencies": {
+    "@polkadot/api": "^6.8.1",
     "@polkadot/keyring": "^7.1.1",
     "@polkadot/types": "^5.3.2"
   },

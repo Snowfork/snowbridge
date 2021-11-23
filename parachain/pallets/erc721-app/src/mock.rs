@@ -6,6 +6,7 @@ use super::*;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	parameter_types,
+	traits::Everything,
 };
 use sp_core::{H160, H256};
 use sp_runtime::{
@@ -43,7 +44,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type Origin = Origin;
@@ -78,7 +79,7 @@ impl snowbridge_dispatch::Config for Test {
 	type Event = Event;
 	type MessageId = u64;
 	type Call = Call;
-	type CallFilter = ();
+	type CallFilter = Everything;
 }
 
 pub struct MockOutboundRouter<AccountId>(PhantomData<AccountId>);

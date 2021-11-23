@@ -1,9 +1,10 @@
 use crate::{Bloom, Log};
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Receipt {
 	pub post_state_or_status: Vec<u8>,
 	pub cumulative_gas_used: u64,

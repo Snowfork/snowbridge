@@ -26,17 +26,17 @@
 //! - `transfer`: Transferring a balance between accounts.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::prelude::*;
-use frame_system::{self as system, ensure_signed};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
+	dispatch::{DispatchError, DispatchResult},
 	traits::Get,
-	dispatch::{DispatchResult, DispatchError},
 	weights::Weight,
 };
+use frame_system::{self as system, ensure_signed};
+use sp_std::prelude::*;
 
-use sp_runtime::traits::StaticLookup;
 use sp_core::U256;
+use sp_runtime::traits::StaticLookup;
 
 use snowbridge_core::assets::{AssetId, MultiAsset, SingleAsset};
 use sp_std::marker;
@@ -55,7 +55,9 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-	fn transfer() -> Weight { 0 }
+	fn transfer() -> Weight {
+		0
+	}
 }
 
 pub trait Config: system::Config {
@@ -120,7 +122,6 @@ decl_module! {
 }
 
 impl<T: Config> MultiAsset<T::AccountId> for Module<T> {
-
 	fn total_issuance(asset_id: AssetId) -> U256 {
 		Module::<T>::total_issuance(asset_id)
 	}
@@ -129,31 +130,31 @@ impl<T: Config> MultiAsset<T::AccountId> for Module<T> {
 		Module::<T>::balances(asset_id, who)
 	}
 
-	fn deposit(asset_id: AssetId, who: &T::AccountId, amount: U256) -> DispatchResult  {
+	fn deposit(asset_id: AssetId, who: &T::AccountId, amount: U256) -> DispatchResult {
 		if amount.is_zero() {
-			return Ok(())
+			return Ok(());
 		}
 		<Balances<T>>::try_mutate(asset_id, who, |balance| -> Result<(), DispatchError> {
 			let current_total_issuance = Self::total_issuance(asset_id);
-			let new_total_issuance = current_total_issuance.checked_add(amount)
+			let new_total_issuance = current_total_issuance
+				.checked_add(amount)
 				.ok_or(Error::<T>::TotalIssuanceOverflow)?;
-			*balance = balance.checked_add(amount)
-				.ok_or(Error::<T>::BalanceOverflow)?;
+			*balance = balance.checked_add(amount).ok_or(Error::<T>::BalanceOverflow)?;
 			<TotalIssuance>::insert(asset_id, new_total_issuance);
 			Ok(())
 		})
 	}
 
-	fn withdraw(asset_id: AssetId, who: &T::AccountId, amount: U256) -> DispatchResult  {
+	fn withdraw(asset_id: AssetId, who: &T::AccountId, amount: U256) -> DispatchResult {
 		if amount.is_zero() {
-			return Ok(())
+			return Ok(());
 		}
 		<Balances<T>>::try_mutate(asset_id, who, |balance| -> Result<(), DispatchError> {
 			let current_total_issuance = Self::total_issuance(asset_id);
-			let new_total_issuance = current_total_issuance.checked_sub(amount)
+			let new_total_issuance = current_total_issuance
+				.checked_sub(amount)
 				.ok_or(Error::<T>::TotalIssuanceUnderflow)?;
-			*balance = balance.checked_sub(amount)
-				.ok_or(Error::<T>::InsufficientBalance)?;
+			*balance = balance.checked_sub(amount).ok_or(Error::<T>::InsufficientBalance)?;
 			<TotalIssuance>::insert(asset_id, new_total_issuance);
 			Ok(())
 		})
@@ -163,21 +164,21 @@ impl<T: Config> MultiAsset<T::AccountId> for Module<T> {
 		asset_id: AssetId,
 		from: &T::AccountId,
 		to: &T::AccountId,
-		amount: U256)
-	-> DispatchResult {
+		amount: U256,
+	) -> DispatchResult {
 		if amount.is_zero() || from == to {
-			return Ok(())
+			return Ok(());
 		}
 		<Balances<T>>::try_mutate(asset_id, from, |from_balance| -> DispatchResult {
 			<Balances<T>>::try_mutate(asset_id, to, |to_balance| -> DispatchResult {
-				*from_balance = from_balance.checked_sub(amount).ok_or(Error::<T>::InsufficientBalance)?;
+				*from_balance =
+					from_balance.checked_sub(amount).ok_or(Error::<T>::InsufficientBalance)?;
 				*to_balance = to_balance.checked_add(amount).ok_or(Error::<T>::BalanceOverflow)?;
 				Ok(())
 			})
 		})
 	}
 }
-
 
 pub struct SingleAssetAdaptor<T, I>(marker::PhantomData<(T, I)>);
 
@@ -186,7 +187,6 @@ where
 	T: Config,
 	I: Get<AssetId>,
 {
-
 	fn total_issuance() -> U256 {
 		Module::<T>::total_issuance(I::get())
 	}
@@ -195,25 +195,15 @@ where
 		Module::<T>::balances(I::get(), who)
 	}
 
-	fn deposit(
-		who: &T::AccountId,
-		amount: U256,
-	) -> DispatchResult {
+	fn deposit(who: &T::AccountId, amount: U256) -> DispatchResult {
 		<Module<T> as MultiAsset<_>>::deposit(I::get(), who, amount)
 	}
 
-	fn withdraw(
-		who: &T::AccountId,
-		amount: U256,
-	) -> DispatchResult {
+	fn withdraw(who: &T::AccountId, amount: U256) -> DispatchResult {
 		<Module<T> as MultiAsset<_>>::withdraw(I::get(), who, amount)
 	}
 
-	fn transfer(
-		source: &T::AccountId,
-		dest: &T::AccountId,
-		amount: U256,
-	) -> DispatchResult {
+	fn transfer(source: &T::AccountId, dest: &T::AccountId, amount: U256) -> DispatchResult {
 		<Module<T> as MultiAsset<_>>::transfer(I::get(), source, dest, amount)
 	}
 }

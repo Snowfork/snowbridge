@@ -37,6 +37,7 @@ use frame_support::{
 	transactional,
 };
 use frame_system::ensure_signed;
+use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::{convert::TryInto, prelude::*};
 
@@ -58,7 +59,7 @@ const FINALIZED_HEADERS_TO_KEEP: u64 = 50_000;
 const HEADERS_TO_PRUNE_IN_SINGLE_IMPORT: u64 = 8;
 
 /// Ethereum block header as it is stored in the runtime storage.
-#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct StoredHeader<Submitter> {
 	/// Submitter of this header. This will be None for the initial header
 	/// or the account ID of the relay.
@@ -73,7 +74,7 @@ pub struct StoredHeader<Submitter> {
 }
 
 /// Blocks range that we want to prune.
-#[derive(Clone, Encode, Decode, Default, PartialEq, RuntimeDebug)]
+#[derive(Clone, Encode, Decode, Default, PartialEq, RuntimeDebug, TypeInfo)]
 struct PruningRange {
 	/// Number of the oldest unpruned block(s). This might be the block that we do not
 	/// want to prune now (then it is equal to `oldest_block_to_keep`).
