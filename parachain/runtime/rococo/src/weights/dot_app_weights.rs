@@ -34,13 +34,18 @@ use sp_std::marker::PhantomData;
 /// Weight functions for dot_app.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> dot_app::WeightInfo for WeightInfo<T> {
-	fn lock() -> Weight {
-		(168_259_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+	fn lock_basic_channel() -> Weight {
+		(113_638_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
+	fn lock_incentivized_channel() -> Weight {
+		(128_797_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(7 as Weight))
+			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+	}
 	fn unlock() -> Weight {
-		(101_556_000 as Weight)
+		(65_152_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}

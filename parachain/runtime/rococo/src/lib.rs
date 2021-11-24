@@ -831,6 +831,7 @@ impl_runtime_apis! {
 			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
+			use dot_app::benchmarking::Pallet as DotAppBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
 
@@ -845,7 +846,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, basic_channel::outbound, BasicOutboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::inbound, IncentivizedInboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::outbound, IncentivizedOutboundChannel);
-			list_benchmark!(list, extra, dot_app, DotApp);
+			list_benchmark!(list, extra, dot_app, DotAppBench::<Runtime>);
 			list_benchmark!(list, extra, erc20_app, Erc20App);
 			list_benchmark!(list, extra, eth_app, EthApp);
 
@@ -861,6 +862,9 @@ impl_runtime_apis! {
 
 			use frame_system_benchmarking::Pallet as SystemBench;
 			impl frame_system_benchmarking::Config for Runtime {}
+
+			use dot_app::benchmarking::Pallet as DotAppBench;
+			impl dot_app::benchmarking::Config for Runtime {}
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
 				// Block Number
@@ -889,7 +893,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
-			add_benchmark!(params, batches, dot_app, DotApp);
+			add_benchmark!(params, batches, dot_app, DotAppBench::<Runtime>);
 			add_benchmark!(params, batches, erc20_app, Erc20App);
 			add_benchmark!(params, batches, eth_app, EthApp);
 

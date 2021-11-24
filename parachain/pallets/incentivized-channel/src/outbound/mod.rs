@@ -107,7 +107,7 @@ pub mod pallet {
 	/// Fee for accepting a message
 	#[pallet::storage]
 	#[pallet::getter(fn fee)]
-	pub(super) type Fee<T: Config> = StorageValue<_, U256, ValueQuery>;
+	pub type Fee<T: Config> = StorageValue<_, U256, ValueQuery>;
 
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;

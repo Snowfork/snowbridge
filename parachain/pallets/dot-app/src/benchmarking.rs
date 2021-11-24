@@ -1,63 +1,83 @@
 //! DotApp pallet benchmarking
-use super::*;
 
-use frame_benchmarking::{
-	account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, BenchmarkError,
+use frame_benchmarking::{account, benchmarks, whitelisted_caller, BenchmarkError};
+use frame_support::traits::{
+	tokens::currency::Currency, EnsureOrigin, Get, UnfilteredDispatchable,
 };
-use frame_support::traits::UnfilteredDispatchable;
+
 use frame_system::RawOrigin;
 use sp_core::H160;
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::{StaticLookup, Zero};
+use sp_std::prelude::*;
 
-use crate::Pallet as DotApp;
+use crate::{primitives::wrap, Address, Call, Config as DotAppConfig, Pallet as DotApp};
+use snowbridge_core::ChannelId;
+
+use snowbridge_assets::Config as AssetsConfig;
+use snowbridge_basic_channel::outbound::{Config as BasicOutboundChannelConfig, Principal};
+use snowbridge_core::SingleAsset;
+use snowbridge_incentivized_channel::outbound::{Config as IncentivizedOutboundChannelConfig, Fee};
+
+pub struct Pallet<T: Config>(DotApp<T>);
+
+pub trait Config:
+	AssetsConfig + BasicOutboundChannelConfig + IncentivizedOutboundChannelConfig + DotAppConfig
+{
+}
 
 benchmarks! {
-	// Benchmark `lock` extrinsic under worst case conditions:
-	// * The amount is successfully locked
-	// * The sender account is killed
-	// * The channel executes incentivization logic
-	lock {
+	lock_basic_channel {
 		let existential_deposit = T::Currency::minimum_balance();
 		let caller: T::AccountId = whitelisted_caller();
 		let lock_account = DotApp::<T>::account_id();
 		let recipient = H160::zero();
+
+		// set principal for basic channel
+		Principal::<T>::set(caller.clone());
 
 		let balance = existential_deposit * 10u32.into();
 		// The amount is chosen such that balance - amount < existential_deposit
 		// so that the account is reaped
 		let amount = existential_deposit * 9u32.into() + 1u32.into();
 
+		// Create DOT account for caller
 		T::Currency::make_free_balance_be(&caller, balance);
+
+		// Create account to store locked DOT
 		T::Currency::make_free_balance_be(&lock_account, 0u32.into());
 
-	}: _(RawOrigin::Signed(caller.clone()), ChannelId::Incentivized, recipient, amount)
+	}: lock(RawOrigin::Signed(caller.clone()), ChannelId::Basic, recipient, amount)
 	verify {
 		assert!(!balance.is_zero() && !amount.is_zero());
 		assert_eq!(T::Currency::free_balance(&caller), Zero::zero());
 		assert_eq!(T::Currency::free_balance(&lock_account), amount);
 	}
 
-	// Benchmark `lock` extrinsic for the average case:
-	// * The amount is successfully locked
-	// * The sender remains alive
-	// * The channel executes incentivization logic
-	#[extra]
-	lock_sender_alive {
+	lock_incentivized_channel {
 		let existential_deposit = T::Currency::minimum_balance();
 		let caller: T::AccountId = whitelisted_caller();
 		let lock_account = DotApp::<T>::account_id();
 		let recipient = H160::zero();
 
-		let balance = existential_deposit * 10u32.into();
-		let amount = existential_deposit * 8u32.into();
+		// deposit enough money to cover fees
+		<T as IncentivizedOutboundChannelConfig>::FeeCurrency::deposit(&caller, 100.into())?;
+		Fee::<T>::set(50.into());
 
+		let balance = existential_deposit * 10u32.into();
+		// The amount is chosen such that balance - amount < existential_deposit
+		// so that the account is reaped
+		let amount = existential_deposit * 9u32.into() + 1u32.into();
+
+		// Create DOT account for caller
 		T::Currency::make_free_balance_be(&caller, balance);
+
+		// Create account to store locked DOT
 		T::Currency::make_free_balance_be(&lock_account, 0u32.into());
 
 	}: lock(RawOrigin::Signed(caller.clone()), ChannelId::Incentivized, recipient, amount)
 	verify {
 		assert!(!balance.is_zero() && !amount.is_zero());
-		assert_eq!(T::Currency::free_balance(&caller), balance - amount);
+		assert_eq!(T::Currency::free_balance(&caller), Zero::zero());
 		assert_eq!(T::Currency::free_balance(&lock_account), amount);
 	}
 
@@ -81,6 +101,10 @@ benchmarks! {
 		let amount = existential_deposit * 8u32.into();
 		let amount_wrapped = wrap::<T>(amount, T::Decimals::get()).unwrap();
 
+		// Create DOT account for caller
+		T::Currency::make_free_balance_be(&recipient, 0u32.into());
+
+		// Create account to store locked DOT
 		T::Currency::make_free_balance_be(&lock_account, balance);
 
 		let call = Call::<T>::unlock { sender: sender, recipient: recipient_lookup, amount: amount_wrapped };
@@ -91,6 +115,6 @@ benchmarks! {
 		assert_eq!(T::Currency::free_balance(&lock_account), balance - amount);
 		assert_eq!(T::Currency::free_balance(&recipient), amount);
 	}
-}
 
-impl_benchmark_test_suite!(DotApp, crate::mock::new_tester(), crate::mock::Test,);
+	impl_benchmark_test_suite!(Pallet, crate::mock::new_tester(), crate::mock::Test);
+}
