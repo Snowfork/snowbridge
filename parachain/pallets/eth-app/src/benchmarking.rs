@@ -1,9 +1,10 @@
 //! ETHApp pallet benchmarking
 use frame_benchmarking::{account, benchmarks, whitelisted_caller, BenchmarkError};
-use frame_support::traits::UnfilteredDispatchable;
+use frame_support::traits::{EnsureOrigin, UnfilteredDispatchable};
 use frame_system::RawOrigin;
 use sp_core::{H160, U256};
-use sp_runtime::traits::{StaticLookup, Zero};
+use sp_runtime::traits::StaticLookup;
+use sp_std::prelude::*;
 
 use crate::{Address, Call, Config as EtherAppConfig, Pallet as EtherApp};
 use snowbridge_core::ChannelId;

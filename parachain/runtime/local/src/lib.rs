@@ -656,7 +656,7 @@ construct_runtime!(
 		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 10,
 		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 11,
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<Test>} = 13,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 13,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
 		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 15,
 		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
@@ -828,6 +828,8 @@ impl_runtime_apis! {
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use dot_app::benchmarking::Pallet as DotAppBench;
+			use eth_app::benchmarking::Pallet as EthAppBench;
+			use erc20_app::benchmarking::Pallet as Erc20AppBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
 
@@ -843,8 +845,8 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, incentivized_channel::inbound, IncentivizedInboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::outbound, IncentivizedOutboundChannel);
 			list_benchmark!(list, extra, dot_app, DotAppBench::<Runtime>);
-			list_benchmark!(list, extra, erc20_app, Erc20App);
-			list_benchmark!(list, extra, eth_app, EthApp);
+			list_benchmark!(list, extra, erc20_app, Erc20AppBench::<Runtime>);
+			list_benchmark!(list, extra, eth_app, EthAppBench::<Runtime>);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -861,6 +863,12 @@ impl_runtime_apis! {
 
 			use dot_app::benchmarking::Pallet as DotAppBench;
 			impl dot_app::benchmarking::Config for Runtime {}
+
+			use eth_app::benchmarking::Pallet as EthAppBench;
+			impl eth_app::benchmarking::Config for Runtime {}
+
+			use erc20_app::benchmarking::Pallet as Erc20AppBench;
+			impl erc20_app::benchmarking::Config for Runtime {}
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
 				// Block Number
@@ -890,8 +898,8 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
 			add_benchmark!(params, batches, dot_app, DotAppBench::<Runtime>);
-			add_benchmark!(params, batches, erc20_app, Erc20App);
-			add_benchmark!(params, batches, eth_app, EthApp);
+			add_benchmark!(params, batches, erc20_app, Erc20AppBench::<Runtime>);
+			add_benchmark!(params, batches, eth_app, EthAppBench::<Runtime>);
 
 			if batches.is_empty() {
 				return Err("Benchmark not found for this pallet.".into())

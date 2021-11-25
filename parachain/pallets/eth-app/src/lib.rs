@@ -19,7 +19,7 @@ mod payload;
 pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+pub mod benchmarking;
 
 #[cfg(test)]
 mod mock;
@@ -107,8 +107,13 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// Users should burn their holdings to release funds on the Ethereum side
-		#[pallet::weight(T::WeightInfo::burn())]
+		/// Users can burn their holdings to release funds on the Ethereum side
+		#[pallet::weight({
+			match channel_id {
+				ChannelId::Basic => T::WeightInfo::burn_basic_channel(),
+				ChannelId::Incentivized => T::WeightInfo::burn_incentivized_channel(),
+			}
+		})]
 		#[transactional]
 		pub fn burn(
 			origin: OriginFor<T>,

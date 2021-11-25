@@ -92,6 +92,8 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
+    "frame-benchmarking/std",
+    "frame-system-benchmarking/std",
     "pallet-aura/std",
     "pallet-sudo/std",
     "pallet-balances/std",

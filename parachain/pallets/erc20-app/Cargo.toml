@@ -28,18 +28,21 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 
+snowbridge-dispatch = { path = "../dispatch", default-features = false, optional = true }
+snowbridge-basic-channel = { path = "../basic-channel", default-features = false, optional = true }
+snowbridge-incentivized-channel = { path = "../incentivized-channel", default-features = false, optional = true }
+snowbridge-assets = { path = "../assets", default-features = false, optional = true }
+
 [dev-dependencies]
-snowbridge-assets = { path = "../../pallets/assets" }
-snowbridge-dispatch = { path = "../../pallets/dispatch" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 
 [features]
 default = ["std"]
 std = [
     "serde",
+    "hex/std",
     "codec/std",
     "scale-info/std",
-    "hex/std",
     "frame-support/std",
     "frame-system/std",
     "sp-core/std",
@@ -48,11 +51,22 @@ std = [
     "sp-runtime/std",
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
+
+    "frame-benchmarking/std",
+    "snowbridge-dispatch/std",
+    "snowbridge-basic-channel/std",
+    "snowbridge-incentivized-channel/std",
+    "snowbridge-assets/std",
+
     "ethabi/std",
     "rlp/std"
 ]
 runtime-benchmarks = [
     "frame-benchmarking",
+    "snowbridge-basic-channel",
+    "snowbridge-incentivized-channel",
+    "snowbridge-assets",
+    "snowbridge-dispatch/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
 ]

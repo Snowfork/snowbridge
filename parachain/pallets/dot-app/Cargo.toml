@@ -53,6 +53,7 @@ std = [
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
 
+    "frame-benchmarking/std",
     "snowbridge-dispatch/std",
     "snowbridge-basic-channel/std",
     "snowbridge-incentivized-channel/std",

@@ -40,9 +40,9 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "po
 default = ["std"]
 std = [
     "serde",
+    "hex/std",
     "codec/std",
     "scale-info/std",
-    "hex/std",
     "frame-support/std",
     "frame-system/std",
     "sp-core/std",
@@ -51,10 +51,13 @@ std = [
     "sp-runtime/std",
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
+
+    "frame-benchmarking/std",
     "snowbridge-dispatch/std",
     "snowbridge-basic-channel/std",
     "snowbridge-incentivized-channel/std",
     "snowbridge-assets/std",
+
     "ethabi/std",
     "rlp/std"
 ]
