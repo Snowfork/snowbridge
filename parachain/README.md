@@ -70,47 +70,19 @@ The parachain will output logs to `200.log`.
 
 ## Configuration
 
-For a fully operational chain, further configuration may be required.
+Note: This section is not necessary for local development, as there are scripts to auto-configure the parachain.
 
-### Ethereum Genesis Block
+For a fully operational chain, further configuration of the initial chain spec is required. The specific configuration will depend heavily on your environment, so this guide will remain high-level.
 
-The parachain needs to be synced with the Ethereum chain before it can verify and dispatch Ethereum events. To bootstrap / sync the parachain quickly, it's advisable to set a newly finalized Ethereum block in the chain spec.
-
-To get a newly finalized Ethereum block in a format compatible with Substrate's chain spec, use the `getblock` relayer command:
-
+Build an initial spec:
 ```bash
-cd ../relayer
-# Alternatively, use '--format rust' to get the Rust code
-build/snowbridge-relay getblock --config /tmp/relay-config.toml --format json
+target/debug/snowbridge build-spec --disable-default-bootnode > spec.json
 ```
 
-Insert the output of the `getblock` command in the `initial_header` field in the `ethereum_light_client` section of the chain spec.
+Now edit the spec and configure the following:
+1. Recently finalized ethereum header and difficulty for the ethereum light client
+2. Contract addresses for the Ether, Erc20, and Dot apps.
+3. Authorized principal for the basic channel
+4. Fee and reward parameters for the incentivized channel
 
-### Ethereum Contract Addresses
-
-Each application module (ETH, ERC20) within the parachain must be configured with the contract address for its peer application on the Ethereum side. These addresses are included in Genesis storage via the chain spec.
-
-For development and testing, it is not necessary to configure these. The builtin chain-spec already includes addresses that work out of the box with contracts deployed via `ganache-cli`.
-
-To change the config to use your own addresses, follow these steps:
-
-Generate a development chain-spec:
-
-```bash
-target/debug/snowbridge-node build-spec --dev > spec.json
-```
-
-Edit the generated spec file and replace the following addresses:
-
-```json
-      "ethApp": {
-        "address": "0xfc97a6197dc90bef6bbefd672742ed75e9768553"
-      },
-      "erc20App": {
-        "address": "0xeda338e4dc46038493b885327842fd3e301cab39"
-      }
-```
-
-## API Documentation
-
-See our [Rustdocs](https://polkaeth-rustdocs.netlify.app) for an overview of the crates, APIs, and types that make up our parachain.
+For an example configuration, consult the [setup script](https://github.com/Snowfork/snowbridge/blob/main/test/scripts/start-services.sh) for our local development stack. Specifically the `start_polkadot_launch` bash function.
