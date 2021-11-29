@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.5;
-pragma experimental ABIEncoderV2;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./utils/Bits.sol";
@@ -8,11 +8,13 @@ import "./utils/Bitfield.sol";
 import "./ValidatorRegistry.sol";
 import "./SimplifiedMMRVerification.sol";
 import "./ScaleCodec.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /**
  * @title A entry contract for the Ethereum light client
  */
-contract BeefyLightClient {
+contract BeefyLightClient is OwnableUpgradeable, UUPSUpgradeable {
     using Bits for uint256;
     using Bitfield for uint256[];
     using ScaleCodec for uint256;
@@ -144,11 +146,12 @@ contract BeefyLightClient {
      * @param _validatorRegistry The contract to be used as the validator registry
      * @param _mmrVerification The contract to be used for MMR verification
      */
-    constructor(
+    function initialize(
         ValidatorRegistry _validatorRegistry,
         SimplifiedMMRVerification _mmrVerification,
         uint64 _startingBeefyBlock
-    ) {
+    ) public {
+        __Ownable_init();
         validatorRegistry = _validatorRegistry;
         mmrVerification = _mmrVerification;
         currentId = 0;
@@ -594,4 +597,6 @@ contract BeefyLightClient {
     function hashMMRLeaf(bytes memory leaf) public pure returns (bytes32) {
         return keccak256(leaf);
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

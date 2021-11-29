@@ -14,12 +14,14 @@ require("chai")
 
 const { expect } = require("chai");
 
-describe("Beefy Light Client", function () {
+describe.only("Beefy Light Client", function () {
+  let owner;
 
   before(async function () {
     this.timeout(10 * 1000)
-
-    this.beefyLightClient = await deployBeefyLightClient();
+    accounts = await web3.eth.getAccounts();
+    owner = accounts[0];
+    this.beefyLightClient = await deployBeefyLightClient(undefined, undefined, owner);
   });
 
   it("encodes, hashes and verifies beefy mmr leaves correctly", async function () {
@@ -55,25 +57,25 @@ describe("Beefy Light Client", function () {
     )
 
     await tx.should.be.fulfilled
-
-    const lastId = (await this.beefyLightClient.currentId()).sub(new web3.utils.BN(1));
-
+    console.log("ok")
+    const lastId = (await this.beefyLightClient.currentId()).sub(1);
+    
     await catchRevert(this.beefyLightClient.createRandomBitfield(lastId), 'Error: Block wait period not over');
-
+    
     await mine(45);
-
+    
     const bitfield = await this.beefyLightClient.createRandomBitfield(lastId);
     const bitfieldString = printBitfield(bitfield);
     const bitFieldHasOneBit = bitfieldString === '1' || bitfieldString === '10' // (trailing 0's are removed)
     expect(bitFieldHasOneBit).to.be.true
-
+    
     const validatorProofs = {
       signatures: [],
       positions: [],
       publicKeys: [],
       publicKeyMerkleProofs: [],
     }
-
+    
     const ascendingBitfield = bitfieldString.split('').reverse().join('');
     for (let position = 0; position < ascendingBitfield.length; position++) {
       const bit = ascendingBitfield[position]

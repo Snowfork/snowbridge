@@ -1,13 +1,15 @@
 const rlp = require("rlp");
 const { keccakFromHexString, keccak } = require("ethereumjs-util");
 const MerkleTree = require("merkletreejs").MerkleTree;
-
+// const { deployProxy } = require('@openzeppelin/truffle-upgrades');
+const { ethers, upgrades } = require("hardhat");
 const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ValidatorRegistry = artifacts.require("ValidatorRegistry");
 const SimplifiedMMRVerification = artifacts.require("SimplifiedMMRVerification");
 const BeefyLightClient = artifacts.require("BeefyLightClient");
+
 
 const fixture = require('./fixtures/full-flow-basic.json');
 
@@ -74,7 +76,7 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployBeefyLightClient = async (root, numberOfValidators) => {
+const deployBeefyLightClient = async (root, numberOfValidators, owner) => {
   if (!root) {
     root = fixture.completeSubmitInput.latestMMRLeaf.nextAuthoritySetRoot;
   }
@@ -86,11 +88,30 @@ const deployBeefyLightClient = async (root, numberOfValidators) => {
     numberOfValidators, 0);
   const simplifiedMMRVerification = await SimplifiedMMRVerification.new();
 
-  const beefyLightClient = await BeefyLightClient.new(
+  // const beefyLightClient = await BeefyLightClient.new(
+  //   validatorRegistry.address,
+  //   simplifiedMMRVerification.address,
+  //   0
+  // );
+  console.log(owner)
+  // console.log(BeefyLightClient)
+  const bitfield = await Bitfield.new();
+  const scaleCodec = await ScaleCodec.new();
+  const BeefyLightClient = await ethers.getContractFactory("BeefyLightClient", {
+    libraries: {
+      ScaleCodec: scaleCodec.address,
+      Bitfield: bitfield.address
+    }
+  })
+  // await BeefyLightClient.link(bitfield); // ce679fb3689ba2b0521c393162ea0c3c96$
+  // await BeefyLightClient.link(scaleCodec); // 7cdc5241ea8d29c91205423c213999ecf3
+
+  const beefyLightClient = await upgrades.deployProxy(BeefyLightClient, [
     validatorRegistry.address,
     simplifiedMMRVerification.address,
     0
-  );
+  ], { kind: "uups", unsafeAllowLinkedLibraries: true });
+  console.log(beefyLightClient.address)
 
   await validatorRegistry.transferOwnership(beefyLightClient.address)
 
