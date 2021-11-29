@@ -14,7 +14,7 @@ require("chai")
 
 const { expect } = require("chai");
 
-describe.only("Beefy Light Client", function () {
+describe("Beefy Light Client", function () {
   let owner;
 
   before(async function () {
@@ -57,7 +57,7 @@ describe.only("Beefy Light Client", function () {
     )
 
     await tx.should.be.fulfilled
-    console.log("ok")
+
     const lastId = (await this.beefyLightClient.currentId()).sub(1);
     
     await catchRevert(this.beefyLightClient.createRandomBitfield(lastId), 'Error: Block wait period not over');

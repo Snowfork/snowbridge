@@ -91,7 +91,7 @@ describe("Beefy Light Client Gas Usage", function () {
     printTxPromiseGas(newSigTxPromise)
     await newSigTxPromise.should.be.fulfilled
 
-    const lastId = (await beefyLightClient.currentId()).sub(new web3.utils.BN(1));
+    const lastId = (await beefyLightClient.currentId()).sub(1);
 
     await mine(45);
 

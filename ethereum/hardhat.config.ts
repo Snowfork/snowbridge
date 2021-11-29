@@ -1,6 +1,6 @@
 import { config as dotenv } from "dotenv";
 import { resolve } from "path";
-import "solidity-coverage"
+import "solidity-coverage";
 
 dotenv({ path: resolve(__dirname, ".env") });
 
@@ -8,17 +8,18 @@ import "@nomiclabs/hardhat-truffle5";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
+import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
 import { HardhatUserConfig } from "hardhat/config";
 
 const getenv = (name: string) => {
   if (name in process.env) {
-    return process.env[name]
+    return process.env[name];
   } else {
     throw new Error(`Please set your ${name} in a .env file`);
   }
-}
+};
 
 const ropstenPrivateKey = getenv("ROPSTEN_PRIVATE_KEY");
 const infuraKey = getenv("INFURA_PROJECT_ID");
@@ -32,7 +33,8 @@ const config: HardhatUserConfig = {
     localhost: {
       url: "http://127.0.0.1:8545",
       accounts: {
-        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
+        mnemonic:
+          "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
       },
       chainId: 15,
     },
@@ -42,24 +44,24 @@ const config: HardhatUserConfig = {
       accounts: [ropstenPrivateKey],
       gas: 6000000,
       gasPrice: 5000000000,
-    }
+    },
   },
   solidity: {
-    version: "0.8.6"
+    version: "0.8.6",
   },
   paths: {
     sources: "contracts",
-    deployments: '.deployments',
+    deployments: ".deployments",
     tests: "test",
     cache: ".cache",
-    artifacts: "artifacts"
+    artifacts: "artifacts",
   },
   mocha: {
-    timeout: 60000
+    timeout: 60000,
   },
   etherscan: {
-    apiKey: etherscanKey
-  }
+    apiKey: etherscanKey,
+  },
 };
 
 export default config;

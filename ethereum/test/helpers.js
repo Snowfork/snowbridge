@@ -88,13 +88,6 @@ const deployBeefyLightClient = async (root, numberOfValidators, owner) => {
     numberOfValidators, 0);
   const simplifiedMMRVerification = await SimplifiedMMRVerification.new();
 
-  // const beefyLightClient = await BeefyLightClient.new(
-  //   validatorRegistry.address,
-  //   simplifiedMMRVerification.address,
-  //   0
-  // );
-  console.log(owner)
-  // console.log(BeefyLightClient)
   const bitfield = await Bitfield.new();
   const scaleCodec = await ScaleCodec.new();
   const BeefyLightClient = await ethers.getContractFactory("BeefyLightClient", {
@@ -103,15 +96,12 @@ const deployBeefyLightClient = async (root, numberOfValidators, owner) => {
       Bitfield: bitfield.address
     }
   })
-  // await BeefyLightClient.link(bitfield); // ce679fb3689ba2b0521c393162ea0c3c96$
-  // await BeefyLightClient.link(scaleCodec); // 7cdc5241ea8d29c91205423c213999ecf3
 
   const beefyLightClient = await upgrades.deployProxy(BeefyLightClient, [
     validatorRegistry.address,
     simplifiedMMRVerification.address,
     0
   ], { kind: "uups", unsafeAllowLinkedLibraries: true });
-  console.log(beefyLightClient.address)
 
   await validatorRegistry.transferOwnership(beefyLightClient.address)
 
