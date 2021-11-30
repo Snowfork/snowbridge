@@ -16,7 +16,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod payload;
-mod weights;
+pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
@@ -107,7 +107,12 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::burn())]
+		#[pallet::weight({
+			match channel_id {
+				ChannelId::Basic => T::WeightInfo::burn_basic_channel(),
+				ChannelId::Incentivized => T::WeightInfo::burn_incentivized_channel(),
+			}
+		})]
 		#[transactional]
 		pub fn burn(
 			origin: OriginFor<T>,

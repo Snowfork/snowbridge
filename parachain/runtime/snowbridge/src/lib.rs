@@ -41,8 +41,6 @@ pub use frame_support::{
 	StorageValue,
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
-pub use pallet_balances::Call as BalancesCall;
-pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -215,7 +213,7 @@ impl frame_system::Config for Runtime {
 	/// The data to be stored in an account.
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// Weight information for the extrinsics of this pallet.
-	type SystemWeightInfo = ();
+	type SystemWeightInfo = frame_system::weights::SubstrateWeight<Self>;
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
@@ -230,13 +228,13 @@ impl pallet_timestamp::Config for Runtime {
 	type Moment = u64;
 	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
-	type WeightInfo = ();
+	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Self>;
 }
 
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
-	type WeightInfo = ();
+	type WeightInfo = pallet_utility::weights::SubstrateWeight<Self>;
 }
 
 parameter_types! {
@@ -254,7 +252,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = ();
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Self>;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 }
@@ -472,7 +470,7 @@ impl pallet_collective::Config<LocalCouncilInstance> for Runtime {
 	type MaxProposals = LocalCouncilMaxProposals;
 	type MaxMembers = LocalCouncilMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type WeightInfo = ();
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Self>;
 }
 
 type LocalCouncilMembershipInstance = pallet_membership::Instance1;
@@ -486,7 +484,7 @@ impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
 	type MembershipInitialized = LocalCouncil;
 	type MembershipChanged = LocalCouncil;
 	type MaxMembers = LocalCouncilMaxMembers;
-	type WeightInfo = ();
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Self>;
 }
 
 // Our pallets
@@ -518,7 +516,7 @@ impl basic_channel_outbound::Config for Runtime {
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 	type SetPrincipalOrigin = EnsureRootOrHalfLocalCouncil;
-	type WeightInfo = ();
+	type WeightInfo = basic_channel::outbound::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -542,7 +540,7 @@ impl incentivized_channel_inbound::Config for Runtime {
 	type TreasuryAccount = TreasuryAccount;
 	type FeeConverter = FeeConverter;
 	type UpdateOrigin = EnsureRootOrHalfLocalCouncil;
-	type WeightInfo = ();
+	type WeightInfo = incentivized_channel::inbound::weights::SnowbridgeWeight<Self>;
 }
 
 impl incentivized_channel_outbound::Config for Runtime {
@@ -553,7 +551,7 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 	type FeeCurrency = SingleAssetAdaptor<Runtime, Ether>;
 	type SetFeeOrigin = EnsureRootOrHalfLocalCouncil;
-	type WeightInfo = ();
+	type WeightInfo = incentivized_channel::outbound::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -569,12 +567,12 @@ impl ethereum_light_client::Config for Runtime {
 	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
 	type MaxHeadersForNumber = MaxHeadersForNumber;
-	type WeightInfo = ();
+	type WeightInfo = ethereum_light_client::weights::SnowbridgeWeight<Self>;
 }
 
 impl assets::Config for Runtime {
 	type Event = Event;
-	type WeightInfo = ();
+	type WeightInfo = assets::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -586,7 +584,7 @@ impl eth_app::Config for Runtime {
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
-	type WeightInfo = ();
+	type WeightInfo = eth_app::weights::SnowbridgeWeight<Self>;
 }
 
 impl erc20_app::Config for Runtime {
@@ -594,7 +592,7 @@ impl erc20_app::Config for Runtime {
 	type Assets = assets::Module<Runtime>;
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
-	type WeightInfo = ();
+	type WeightInfo = erc20_app::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -608,7 +606,7 @@ impl dot_app::Config for Runtime {
 	type CallOrigin = EnsureEthereumAccount;
 	type PalletId = DotPalletId;
 	type Decimals = Decimals;
-	type WeightInfo = ();
+	type WeightInfo = dot_app::weights::SnowbridgeWeight<Self>;
 }
 
 impl nft::Config for Runtime {
@@ -646,7 +644,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
-		Utility: pallet_utility::{Pallet, Call, Event} = 5,
+		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 5,
 
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>} = 7,
