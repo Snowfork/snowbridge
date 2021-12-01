@@ -75,7 +75,7 @@ const runBeefyLightClientFlow = async (realWorldFixture, beefyLightClient, beefy
     allValidatorProofs[0].proof,
   )
 
-  const lastId = (await beefyLightClient.currentId()).sub(new web3.utils.BN(1));
+  const lastId = (await beefyLightClient.currentId()).sub(1);
 
   await mine(45);
 

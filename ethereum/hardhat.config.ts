@@ -10,7 +10,9 @@ import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
+import "hardhat-deploy-ethers";
 import "@openzeppelin/hardhat-upgrades";
+import "hardhat-gas-reporter";
 import { HardhatUserConfig } from "hardhat/config";
 
 const getenv = (name: string) => {

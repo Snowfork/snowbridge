@@ -141,6 +141,11 @@ contract BeefyLightClient is OwnableUpgradeable, UUPSUpgradeable {
     uint64 public constant MAXIMUM_BLOCK_GAP =
         NUMBER_OF_BLOCKS_PER_SESSION - ERROR_AND_SAFETY_BUFFER;
 
+    // Including in an overabundance of caution,
+    // see: https://forum.openzeppelin.com/t/security-advisory-initialize-uups-implementation-contracts/15301/17
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
     /**
      * @notice Deploys the BeefyLightClient contract
      * @param _validatorRegistry The contract to be used as the validator registry
