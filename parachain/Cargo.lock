@@ -9500,6 +9500,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "pallet-xcm",
  "parity-scale-codec",
  "rlp",
  "rustc-hex",

@@ -39,10 +39,9 @@ use sp_std::prelude::*;
 
 use snowbridge_core::{ChannelId, OutboundRouter, SingleAsset};
 
+pub use pallet::*;
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
-
-pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -67,6 +66,8 @@ pub mod pallet {
 		type CallOrigin: EnsureOrigin<Self::Origin, Success = H160>;
 
 		type WeightInfo: WeightInfo;
+
+        type PolkadotXcm: pallet_xcm::Pallet<Self>;
 	}
 
 	#[pallet::hooks]
@@ -94,7 +95,9 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self { address: Default::default() }
+            Self {
+                address: Default::default(),
+            }
 		}
 	}
 
@@ -125,8 +128,11 @@ pub mod pallet {
 
 			T::Asset::withdraw(&who, amount)?;
 
-			let message =
-				OutboundPayload { sender: who.clone(), recipient: recipient.clone(), amount };
+            let message = OutboundPayload {
+                sender: who.clone(),
+                recipient: recipient.clone(),
+                amount,
+            };
 
 			T::OutboundRouter::submit(channel_id, &who, <Address<T>>::get(), &message.encode())?;
 			Self::deposit_event(Event::Burned(who.clone(), recipient, amount));
@@ -149,7 +155,7 @@ pub mod pallet {
 			}
 
 			if para_id != 0 {
-				// Do Xcm send here.
+                pallet_xcm::Pallet::<T::Config>::execute();
 				return Ok(());
 			}
 

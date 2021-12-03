@@ -137,6 +137,7 @@ impl crate::Config for Test {
 	type OutboundRouter = OutboundRouter<Test>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
 	type WeightInfo = ();
+	type PolkadotXcm = ();
 }
 
 pub type Asset = SingleAssetAdaptor<Test, Ether>;
