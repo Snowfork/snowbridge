@@ -595,6 +595,7 @@ impl eth_app::Config for Runtime {
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = eth_app::weights::SnowbridgeWeight<Self>;
+    type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 

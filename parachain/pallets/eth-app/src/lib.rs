@@ -36,6 +36,7 @@ use frame_system::ensure_signed;
 use sp_core::{H160, U256};
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
+use xcm::latest::{ExecuteXcm, MultiLocation};
 
 use snowbridge_core::{ChannelId, OutboundRouter, SingleAsset};
 
@@ -50,7 +51,6 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-    use xcm::latest::ExecuteXcm;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -67,6 +67,8 @@ pub mod pallet {
 		type CallOrigin: EnsureOrigin<Self::Origin, Success = H160>;
 
 		type WeightInfo: WeightInfo;
+
+        type ExecuteXcmOrigin: EnsureOrigin<Self::Origin, Success = MultiLocation>;
 
         type XcmExecutor: ExecuteXcm<Self::Call>;
 	}
@@ -150,13 +152,17 @@ pub mod pallet {
 			amount: U256,
 			para_id: u32,
 		) -> DispatchResult {
-			let who = T::CallOrigin::ensure_origin(origin)?;
+            let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
 			if para_id != 0 {
-				return Ok(());
+                let origin_location = T::ExecuteXcmOrigin::ensure_origin(origin.clone())?;
+                let xcm = xcm::latest::Xcm(vec![]);
+                return T::XcmExecutor::execute_xcm(origin_location, xcm, 100_000u64)
+                    .ensure_complete()
+                    .map_err(|_| DispatchError::Other("Xcm execution failed."));
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
