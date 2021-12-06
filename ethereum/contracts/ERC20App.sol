@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
@@ -14,6 +15,7 @@ enum ChannelId {
 
 contract ERC20App is AccessControl {
     using ScaleCodec for uint256;
+    using SafeERC20 for IERC20;
 
     mapping(address => uint256) public balances;
 
@@ -79,10 +81,7 @@ contract ERC20App is AccessControl {
         );
         channel.submit(msg.sender, call);
 
-        require(
-            IERC20(_token).transferFrom(msg.sender, address(this), _amount),
-            "Contract token allowances insufficient to complete this lock request"
-        );
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
     function unlock(
@@ -98,10 +97,7 @@ contract ERC20App is AccessControl {
         );
 
         balances[_token] = balances[_token] - _amount;
-        require(
-            IERC20(_token).transfer(_recipient, _amount),
-            "ERC20 token transfer failed"
-        );
+        IERC20(_token).safeTransfer(_recipient, _amount);
         emit Unlocked(_token, _sender, _recipient, _amount);
     }
 
