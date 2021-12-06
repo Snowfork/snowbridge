@@ -9500,7 +9500,6 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
- "pallet-xcm",
  "parity-scale-codec",
  "rlp",
  "rustc-hex",
@@ -9517,6 +9516,9 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]

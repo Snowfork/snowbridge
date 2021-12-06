@@ -595,7 +595,7 @@ impl eth_app::Config for Runtime {
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = eth_app::weights::SnowbridgeWeight<Self>;
-    type PolkadotXcm = pallet_xcm::Pallet<Runtime>;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
 impl erc20_app::Config for Runtime {

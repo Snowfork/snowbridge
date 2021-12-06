@@ -50,6 +50,7 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+    use xcm::latest::ExecuteXcm;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -67,7 +68,7 @@ pub mod pallet {
 
 		type WeightInfo: WeightInfo;
 
-        type PolkadotXcm: pallet_xcm::Pallet<Self>;
+        type XcmExecutor: ExecuteXcm<Self::Call>;
 	}
 
 	#[pallet::hooks]
@@ -155,7 +156,6 @@ pub mod pallet {
 			}
 
 			if para_id != 0 {
-                pallet_xcm::Pallet::<T::Config>::execute();
 				return Ok(());
 			}
 
