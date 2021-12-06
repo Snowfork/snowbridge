@@ -98,9 +98,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
-            Self {
-                address: Default::default(),
-            }
+			Self { address: Default::default() }
 		}
 	}
 
@@ -131,11 +129,8 @@ pub mod pallet {
 
 			T::Asset::withdraw(&who, amount)?;
 
-            let message = OutboundPayload {
-                sender: who.clone(),
-                recipient: recipient.clone(),
-                amount,
-            };
+			let message =
+				OutboundPayload { sender: who.clone(), recipient: recipient.clone(), amount };
 
 			T::OutboundRouter::submit(channel_id, &who, <Address<T>>::get(), &message.encode())?;
 			Self::deposit_event(Event::Burned(who.clone(), recipient, amount));
@@ -154,7 +149,7 @@ pub mod pallet {
 		) -> DispatchResult {
             let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into());
+				return Err(DispatchError::BadOrigin.into())
 			}
 
 			if para_id != 0 {
@@ -162,7 +157,7 @@ pub mod pallet {
                 let xcm = xcm::latest::Xcm(vec![]);
                 return T::XcmExecutor::execute_xcm(origin_location, xcm, 100_000u64)
                     .ensure_complete()
-                    .map_err(|_| DispatchError::Other("Xcm execution failed."));
+					.map_err(|_| DispatchError::Other("Xcm execution failed."))
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
