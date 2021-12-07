@@ -840,7 +840,6 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_utility, Utility);
 			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
 			list_benchmark!(list, extra, assets, Assets);
-			list_benchmark!(list, extra, basic_channel::inbound, BasicInboundChannel);
 			list_benchmark!(list, extra, basic_channel::outbound, BasicOutboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::inbound, IncentivizedInboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::outbound, IncentivizedOutboundChannel);
@@ -893,7 +892,6 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, ethereum_light_client, EthereumLightClient);
 			add_benchmark!(params, batches, assets, Assets);
-			add_benchmark!(params, batches, basic_channel::inbound, BasicInboundChannel);
 			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
