@@ -158,7 +158,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
         .build_storage::<Test>()
         .unwrap();
 
-    let config = crate::GenesisConfig {
+    let config = eth_app::GenesisConfig {
         address: H160::repeat_byte(1),
     };
     GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
