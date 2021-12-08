@@ -36,7 +36,15 @@ use frame_system::ensure_signed;
 use sp_core::{H160, U256};
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
-use xcm::latest::{ExecuteXcm, MultiLocation};
+use xcm::latest::{
+    ExecuteXcm,
+    Instruction::{BuyExecution, DepositAsset, TransferReserveAsset},
+    MultiAssetFilter::Wild,
+    MultiLocation,
+    WildMultiAsset::All,
+    Xcm,
+};
+use xcm_executor::traits::WeightBounds;
 
 use snowbridge_core::{ChannelId, OutboundRouter, SingleAsset};
 
@@ -71,6 +79,9 @@ pub mod pallet {
         type ExecuteXcmOrigin: EnsureOrigin<Self::Origin, Success = MultiLocation>;
 
         type XcmExecutor: ExecuteXcm<Self::Call>;
+
+        /// Means of measuring the weight consumed by an XCM message locally.
+        type Weigher: WeightBounds<<Self as frame_system::Config>::Call>;
 	}
 
 	#[pallet::hooks]
@@ -88,7 +99,9 @@ pub mod pallet {
 	pub(super) type Address<T: Config> = StorageValue<_, H160, ValueQuery>;
 
 	#[pallet::error]
-	pub enum Error<T> {}
+    pub enum Error<T> {
+        UnweighableMessage,
+    }
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -98,7 +111,9 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self { address: Default::default() }
+            Self {
+                address: Default::default(),
+            }
 		}
 	}
 
@@ -129,8 +144,11 @@ pub mod pallet {
 
 			T::Asset::withdraw(&who, amount)?;
 
-			let message =
-				OutboundPayload { sender: who.clone(), recipient: recipient.clone(), amount };
+            let message = OutboundPayload {
+                sender: who.clone(),
+                recipient: recipient.clone(),
+                amount,
+            };
 
 			T::OutboundRouter::submit(channel_id, &who, <Address<T>>::get(), &message.encode())?;
 			Self::deposit_event(Event::Burned(who.clone(), recipient, amount));
@@ -149,15 +167,31 @@ pub mod pallet {
 		) -> DispatchResult {
             let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into())
+                return Err(DispatchError::BadOrigin.into());
 			}
 
 			if para_id != 0 {
                 let origin_location = T::ExecuteXcmOrigin::ensure_origin(origin.clone())?;
-                let xcm = xcm::latest::Xcm(vec![]);
-                return T::XcmExecutor::execute_xcm(origin_location, xcm, 100_000u64)
+                let mut message = Xcm(vec![TransferReserveAsset {
+                    assets: todo!(),
+                    dest: todo!(),
+                    xcm: Xcm(vec![
+                        BuyExecution {
+                            fees: todo!(),
+                            weight_limit: todo!(),
+                        },
+                        DepositAsset {
+                            assets: Wild(All),
+                            max_assets: todo!(),
+                            beneficiary: todo!(),
+                        },
+                    ]),
+                }]);
+                let weight = T::Weigher::weight(&mut message)
+                    .map_err(|()| Error::<T>::UnweighableMessage)?;
+                return T::XcmExecutor::execute_xcm(origin_location, message, 100_000u64)
                     .ensure_complete()
-					.map_err(|_| DispatchError::Other("Xcm execution failed."))
+                    .map_err(|_| DispatchError::Other("Xcm execution failed."));
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;

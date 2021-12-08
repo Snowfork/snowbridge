@@ -145,6 +145,7 @@ impl crate::Config for Test {
     type WeightInfo = ();
     type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type XcmExecutor = ();
+    type Weigher = ();
 }
 
 pub type Asset = SingleAssetAdaptor<Test, Ether>;
