@@ -189,7 +189,7 @@ pub mod pallet {
                 }]);
                 let weight = T::Weigher::weight(&mut message)
                     .map_err(|()| Error::<T>::UnweighableMessage)?;
-                return T::XcmExecutor::execute_xcm(origin_location, message, 100_000u64)
+                return T::XcmExecutor::execute_xcm(origin_location, message, weight)
                     .ensure_complete()
                     .map_err(|_| DispatchError::Other("Xcm execution failed."));
 			}
