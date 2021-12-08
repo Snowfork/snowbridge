@@ -183,7 +183,7 @@ pub mod pallet {
                     .map_err(|()| Error::<T>::UnweighableMessage)?;
                 return T::XcmExecutor::execute_xcm(origin_location, message, weight)
                     .ensure_complete()
-					.map_err(|_| DispatchError::<T>::Other("Xcm execution failed."))
+					.map_err(|_| DispatchError::Other("Xcm execution failed."))
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
