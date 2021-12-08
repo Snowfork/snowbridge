@@ -60,14 +60,24 @@ fn should_not_burn_on_commitment_failure() {
 
 		Asset::deposit(&sender, 500.into()).unwrap();
 
+		// fill up message queue
+		for _ in 0..3 {
+			let _ = EthApp::burn(
+				Origin::signed(sender.clone()),
+				ChannelId::Incentivized,
+				recipient.clone(),
+				20.into(),
+			);
+		}
+
 		assert_noop!(
 			EthApp::burn(
 				Origin::signed(sender.clone()),
-				ChannelId::Basic,
+				ChannelId::Incentivized,
 				recipient.clone(),
 				20.into()
 			),
-			DispatchError::Other("some error!")
+			snowbridge_incentivized_channel::outbound::Error::<Test>::QueueSizeLimitReached
 		);
 	});
 }
