@@ -2,7 +2,7 @@ use sp_std::marker::PhantomData;
 
 // Mock runtime
 use frame_support::{
-	dispatch::{DispatchError, DispatchResult},
+	dispatch::DispatchResult,
 	parameter_types,
 	traits::{Everything, GenesisBuild},
 };
@@ -10,14 +10,12 @@ use frame_system as system;
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
 	MultiSignature,
 };
 
 use snowbridge_assets::SingleAssetAdaptor;
-use snowbridge_core::{AssetId, ChannelId, OutboundRouter};
-
-use crate as eth_app;
+use snowbridge_core::{AssetId, ChannelId};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -30,8 +28,10 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Assets: snowbridge_assets::{Pallet, Call, Storage, Event<T>},
+		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
+		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
-		EthApp: eth_app::{Pallet, Call, Config, Storage, Event<T>},
+		EthApp: crate::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
 
@@ -69,11 +69,6 @@ impl system::Config for Test {
 	type OnSetCode = ();
 }
 
-impl snowbridge_assets::Config for Test {
-	type Event = Event;
-	type WeightInfo = ();
-}
-
 impl snowbridge_dispatch::Config for Test {
 	type Origin = Origin;
 	type Event = Event;
@@ -82,35 +77,77 @@ impl snowbridge_dispatch::Config for Test {
 	type CallFilter = Everything;
 }
 
-pub struct MockOutboundRouter<AccountId>(PhantomData<AccountId>);
+pub struct OutboundRouter<T>(PhantomData<T>);
 
-impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
-	fn submit(channel: ChannelId, _: &AccountId, _: H160, _: &[u8]) -> DispatchResult {
-		if channel == ChannelId::Basic {
-			return Err(DispatchError::Other("some error!"))
+impl<T> snowbridge_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
+where
+	T: snowbridge_basic_channel::outbound::Config
+		+ snowbridge_incentivized_channel::outbound::Config,
+{
+	fn submit(
+		channel_id: ChannelId,
+		who: &T::AccountId,
+		target: H160,
+		payload: &[u8],
+	) -> DispatchResult {
+		match channel_id {
+			ChannelId::Basic =>
+				snowbridge_basic_channel::outbound::Pallet::<T>::submit(who, target, payload),
+			ChannelId::Incentivized =>
+				snowbridge_incentivized_channel::outbound::Pallet::<T>::submit(who, target, payload),
 		}
-		Ok(())
 	}
 }
 
 parameter_types! {
-	pub const EthAssetId: AssetId = AssetId::ETH;
+	pub const Ether: AssetId = AssetId::ETH;
+	pub const MaxMessagePayloadSize: u64 = 256;
+	pub const MaxMessagesPerCommit: u64 = 3;
 }
 
-impl eth_app::Config for Test {
+impl snowbridge_assets::Config for Test {
+	type Event = Event;
+	type WeightInfo = ();
+}
+
+impl snowbridge_basic_channel::outbound::Config for Test {
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+	type Event = Event;
+	type Hashing = Keccak256;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type SetPrincipalOrigin = frame_system::EnsureRoot<AccountId>;
+	type WeightInfo = ();
+}
+
+impl snowbridge_incentivized_channel::outbound::Config for Test {
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+	type Event = Event;
+	type Hashing = Keccak256;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type FeeCurrency = SingleAssetAdaptor<Test, Ether>;
+	type SetFeeOrigin = frame_system::EnsureRoot<AccountId>;
+	type WeightInfo = ();
+}
+
+impl crate::Config for Test {
 	type Event = Event;
 	type Asset = Asset;
-	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
+	type OutboundRouter = OutboundRouter<Test>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
 	type WeightInfo = ();
 }
 
-pub type Asset = SingleAssetAdaptor<Test, EthAssetId>;
+pub type Asset = SingleAssetAdaptor<Test, Ether>;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl crate::benchmarking::Config for Test {}
 
 pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	let config = eth_app::GenesisConfig { address: H160::repeat_byte(1) };
+	let config = crate::GenesisConfig { address: H160::repeat_byte(1) };
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();

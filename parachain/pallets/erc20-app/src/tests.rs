@@ -1,5 +1,5 @@
 use crate::mock::{new_tester, AccountId, Assets, Erc20App, Event, Origin, System, Test};
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
+use frame_support::{assert_noop, assert_ok};
 use snowbridge_core::{AssetId, ChannelId, MultiAsset};
 use sp_core::H160;
 use sp_keyring::AccountKeyring as Keyring;
@@ -64,15 +64,25 @@ fn should_not_burn_on_commitment_failure() {
 
 		Assets::deposit(AssetId::Token(token_id), &sender, 500.into()).unwrap();
 
+		for _ in 0..3 {
+			let _ = Erc20App::burn(
+				Origin::signed(sender.clone()),
+				ChannelId::Incentivized,
+				token_id,
+				recipient.clone(),
+				20.into(),
+			);
+		}
+
 		assert_noop!(
 			Erc20App::burn(
 				Origin::signed(sender.clone()),
-				ChannelId::Basic,
+				ChannelId::Incentivized,
 				token_id,
 				recipient.clone(),
 				20.into()
 			),
-			DispatchError::Other("some error!")
+			snowbridge_incentivized_channel::outbound::Error::<Test>::QueueSizeLimitReached
 		);
 	});
 }

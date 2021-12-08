@@ -41,8 +41,6 @@ pub use frame_support::{
 	StorageValue,
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
-pub use pallet_balances::Call as BalancesCall;
-pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -75,8 +73,6 @@ use runtime_common::{
 	DotPalletId, Ether, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter,
 	TreasuryPalletId, INDEXING_PREFIX,
 };
-
-mod weights;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -161,8 +157,8 @@ parameter_types! {
 	pub const BlockHashCount: BlockNumber = 2400;
 	/// We allow for 0.5 seconds of compute with a 12 second average block time.
 	pub BlockWeights: frame_system::limits::BlockWeights = runtime_common::build_block_weights(
-		weights::constants::BlockExecutionWeight::get(),
-		weights::constants::ExtrinsicBaseWeight::get(),
+		BlockExecutionWeight::get(),
+		ExtrinsicBaseWeight::get(),
 		MAXIMUM_BLOCK_WEIGHT,
 		NORMAL_DISPATCH_RATIO,
 	);
@@ -203,7 +199,7 @@ impl frame_system::Config for Runtime {
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 	type BlockHashCount = BlockHashCount;
 	/// The weight of database operations that the runtime can invoke.
-	type DbWeight = weights::constants::RocksDbWeight;
+	type DbWeight = RocksDbWeight;
 	/// Version of the runtime.
 	type Version = Version;
 	/// Converts a module to the index of the module in `construct_runtime!`.
@@ -217,7 +213,7 @@ impl frame_system::Config for Runtime {
 	/// The data to be stored in an account.
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// Weight information for the extrinsics of this pallet.
-	type SystemWeightInfo = weights::frame_system_weights::WeightInfo<Runtime>;
+	type SystemWeightInfo = frame_system::weights::SubstrateWeight<Self>;
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
@@ -232,13 +228,13 @@ impl pallet_timestamp::Config for Runtime {
 	type Moment = u64;
 	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
-	type WeightInfo = weights::pallet_timestamp_weights::WeightInfo<Runtime>;
+	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Self>;
 }
 
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
-	type WeightInfo = weights::pallet_utility_weights::WeightInfo<Runtime>;
+	type WeightInfo = pallet_utility::weights::SubstrateWeight<Self>;
 }
 
 parameter_types! {
@@ -256,7 +252,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = weights::pallet_balances_weights::WeightInfo<Runtime>;
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Self>;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 }
@@ -474,7 +470,7 @@ impl pallet_collective::Config<LocalCouncilInstance> for Runtime {
 	type MaxProposals = LocalCouncilMaxProposals;
 	type MaxMembers = LocalCouncilMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type WeightInfo = weights::pallet_collective_weights::WeightInfo<Runtime>;
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Self>;
 }
 
 type LocalCouncilMembershipInstance = pallet_membership::Instance1;
@@ -488,7 +484,7 @@ impl pallet_membership::Config<LocalCouncilMembershipInstance> for Runtime {
 	type MembershipInitialized = LocalCouncil;
 	type MembershipChanged = LocalCouncil;
 	type MaxMembers = LocalCouncilMaxMembers;
-	type WeightInfo = ();
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Self>;
 }
 
 // Our pallets
@@ -510,7 +506,7 @@ impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
 	type Verifier = ethereum_light_client::Pallet<Runtime>;
 	type MessageDispatch = dispatch::Pallet<Runtime>;
-	type WeightInfo = weights::basic_channel_inbound_weights::WeightInfo<Runtime>;
+	type WeightInfo = ();
 }
 
 impl basic_channel_outbound::Config for Runtime {
@@ -520,7 +516,7 @@ impl basic_channel_outbound::Config for Runtime {
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 	type SetPrincipalOrigin = EnsureRootOrHalfLocalCouncil;
-	type WeightInfo = weights::basic_channel_outbound_weights::WeightInfo<Runtime>;
+	type WeightInfo = basic_channel::outbound::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -544,7 +540,7 @@ impl incentivized_channel_inbound::Config for Runtime {
 	type TreasuryAccount = TreasuryAccount;
 	type FeeConverter = FeeConverter;
 	type UpdateOrigin = EnsureRootOrHalfLocalCouncil;
-	type WeightInfo = weights::incentivized_channel_inbound_weights::WeightInfo<Runtime>;
+	type WeightInfo = incentivized_channel::inbound::weights::SnowbridgeWeight<Self>;
 }
 
 impl incentivized_channel_outbound::Config for Runtime {
@@ -555,7 +551,7 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 	type FeeCurrency = SingleAssetAdaptor<Runtime, Ether>;
 	type SetFeeOrigin = EnsureRootOrHalfLocalCouncil;
-	type WeightInfo = weights::incentivized_channel_outbound_weights::WeightInfo<Runtime>;
+	type WeightInfo = incentivized_channel::outbound::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -570,13 +566,13 @@ impl ethereum_light_client::Config for Runtime {
 	type DescendantsUntilFinalized = DescendantsUntilFinalized;
 	type DifficultyConfig = DifficultyConfig;
 	type VerifyPoW = VerifyPoW;
-	type WeightInfo = weights::ethereum_light_client_weights::WeightInfo<Runtime>;
 	type MaxHeadersForNumber = MaxHeadersForNumber;
+	type WeightInfo = ethereum_light_client::weights::SnowbridgeWeight<Self>;
 }
 
 impl assets::Config for Runtime {
 	type Event = Event;
-	type WeightInfo = weights::assets_weights::WeightInfo<Runtime>;
+	type WeightInfo = assets::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -588,7 +584,7 @@ impl eth_app::Config for Runtime {
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
-	type WeightInfo = weights::eth_app_weights::WeightInfo<Runtime>;
+	type WeightInfo = eth_app::weights::SnowbridgeWeight<Self>;
 }
 
 impl erc20_app::Config for Runtime {
@@ -596,7 +592,7 @@ impl erc20_app::Config for Runtime {
 	type Assets = assets::Module<Runtime>;
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
-	type WeightInfo = weights::erc20_app_weights::WeightInfo<Runtime>;
+	type WeightInfo = erc20_app::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -610,7 +606,7 @@ impl dot_app::Config for Runtime {
 	type CallOrigin = EnsureEthereumAccount;
 	type PalletId = DotPalletId;
 	type Decimals = Decimals;
-	type WeightInfo = weights::dot_app_weights::WeightInfo<Runtime>;
+	type WeightInfo = dot_app::weights::SnowbridgeWeight<Self>;
 }
 
 impl nft::Config for Runtime {
@@ -622,9 +618,9 @@ impl erc721_app::Config for Runtime {
 	type Event = Event;
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
-	type WeightInfo = ();
 	type TokenId = <Runtime as nft::Config>::TokenId;
 	type Nft = nft::Pallet<Runtime>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -648,7 +644,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
-		Utility: pallet_utility::{Pallet, Call, Event} = 5,
+		Utility: pallet_utility::{Pallet, Call, Event, Storage} = 5,
 
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>} = 7,
@@ -831,6 +827,9 @@ impl_runtime_apis! {
 			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
+			use dot_app::benchmarking::Pallet as DotAppBench;
+			use eth_app::benchmarking::Pallet as EthAppBench;
+			use erc20_app::benchmarking::Pallet as Erc20AppBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
 
@@ -841,13 +840,12 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_utility, Utility);
 			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
 			list_benchmark!(list, extra, assets, Assets);
-			list_benchmark!(list, extra, basic_channel::inbound, BasicInboundChannel);
 			list_benchmark!(list, extra, basic_channel::outbound, BasicOutboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::inbound, IncentivizedInboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::outbound, IncentivizedOutboundChannel);
-			list_benchmark!(list, extra, dot_app, DotApp);
-			list_benchmark!(list, extra, erc20_app, Erc20App);
-			list_benchmark!(list, extra, eth_app, EthApp);
+			list_benchmark!(list, extra, dot_app, DotAppBench::<Runtime>);
+			list_benchmark!(list, extra, erc20_app, Erc20AppBench::<Runtime>);
+			list_benchmark!(list, extra, eth_app, EthAppBench::<Runtime>);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -861,6 +859,15 @@ impl_runtime_apis! {
 
 			use frame_system_benchmarking::Pallet as SystemBench;
 			impl frame_system_benchmarking::Config for Runtime {}
+
+			use dot_app::benchmarking::Pallet as DotAppBench;
+			impl dot_app::benchmarking::Config for Runtime {}
+
+			use eth_app::benchmarking::Pallet as EthAppBench;
+			impl eth_app::benchmarking::Config for Runtime {}
+
+			use erc20_app::benchmarking::Pallet as Erc20AppBench;
+			impl erc20_app::benchmarking::Config for Runtime {}
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
 				// Block Number
@@ -885,13 +892,12 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, ethereum_light_client, EthereumLightClient);
 			add_benchmark!(params, batches, assets, Assets);
-			add_benchmark!(params, batches, basic_channel::inbound, BasicInboundChannel);
 			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
-			add_benchmark!(params, batches, dot_app, DotApp);
-			add_benchmark!(params, batches, erc20_app, Erc20App);
-			add_benchmark!(params, batches, eth_app, EthApp);
+			add_benchmark!(params, batches, dot_app, DotAppBench::<Runtime>);
+			add_benchmark!(params, batches, erc20_app, Erc20AppBench::<Runtime>);
+			add_benchmark!(params, batches, eth_app, EthAppBench::<Runtime>);
 
 			if batches.is_empty() {
 				return Err("Benchmark not found for this pallet.".into())

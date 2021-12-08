@@ -1,8 +1,11 @@
 // Mock runtime
+
+use super::*;
+
 use sp_std::marker::PhantomData;
 
 use frame_support::{
-	dispatch::{DispatchError, DispatchResult},
+	dispatch::DispatchResult,
 	parameter_types,
 	traits::{Everything, GenesisBuild},
 	PalletId,
@@ -11,13 +14,12 @@ use frame_system as system;
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
 	MultiSignature,
 };
 
-use snowbridge_core::{ChannelId, OutboundRouter};
-
-use crate as dot_app;
+use snowbridge_assets::SingleAssetAdaptor;
+use snowbridge_core::{AssetId, ChannelId};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -30,8 +32,11 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+		Assets: snowbridge_assets::{Pallet, Call, Config<T>, Storage, Event<T>},
+		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
+		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
-		DotApp: dot_app::{Pallet, Call, Config, Storage, Event<T>},
+		DotApp: crate::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
 
@@ -79,14 +84,25 @@ impl snowbridge_dispatch::Config for Test {
 	type CallFilter = Everything;
 }
 
-pub struct MockOutboundRouter<AccountId>(PhantomData<AccountId>);
+pub struct OutboundRouter<T>(PhantomData<T>);
 
-impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
-	fn submit(channel: ChannelId, _: &AccountId, _: H160, _: &[u8]) -> DispatchResult {
-		if channel == ChannelId::Basic {
-			return Err(DispatchError::Other("some error!"))
+impl<T> snowbridge_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
+where
+	T: snowbridge_basic_channel::outbound::Config
+		+ snowbridge_incentivized_channel::outbound::Config,
+{
+	fn submit(
+		channel_id: ChannelId,
+		who: &T::AccountId,
+		target: H160,
+		payload: &[u8],
+	) -> DispatchResult {
+		match channel_id {
+			ChannelId::Basic =>
+				snowbridge_basic_channel::outbound::Pallet::<T>::submit(who, target, payload),
+			ChannelId::Incentivized =>
+				snowbridge_incentivized_channel::outbound::Pallet::<T>::submit(who, target, payload),
 		}
-		Ok(())
 	}
 }
 
@@ -111,24 +127,59 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
+	pub const Ether: AssetId = AssetId::ETH;
+	pub const MaxMessagePayloadSize: u64 = 256;
+	pub const MaxMessagesPerCommit: u64 = 3;
+}
+
+impl snowbridge_assets::Config for Test {
+	type Event = Event;
+	type WeightInfo = ();
+}
+
+impl snowbridge_basic_channel::outbound::Config for Test {
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+	type Event = Event;
+	type Hashing = Keccak256;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type SetPrincipalOrigin = frame_system::EnsureRoot<AccountId>;
+	type WeightInfo = ();
+}
+
+impl snowbridge_incentivized_channel::outbound::Config for Test {
+	const INDEXING_PREFIX: &'static [u8] = b"commitment";
+	type Event = Event;
+	type Hashing = Keccak256;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type FeeCurrency = SingleAssetAdaptor<Test, Ether>;
+	type SetFeeOrigin = frame_system::EnsureRoot<AccountId>;
+	type WeightInfo = ();
+}
+
+parameter_types! {
 	pub const DotPalletId: PalletId = PalletId(*b"s/dotapp");
 	pub const Decimals: u32 = 12;
 }
 
-impl dot_app::Config for Test {
+impl crate::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
-	type OutboundRouter = MockOutboundRouter<Self::AccountId>;
+	type OutboundRouter = OutboundRouter<Test>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
 	type PalletId = DotPalletId;
 	type Decimals = Decimals;
 	type WeightInfo = ();
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+impl crate::benchmarking::Config for Test {}
+
 pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	let config = dot_app::GenesisConfig { address: H160::repeat_byte(1) };
+	let config = crate::GenesisConfig { address: H160::repeat_byte(1) };
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();

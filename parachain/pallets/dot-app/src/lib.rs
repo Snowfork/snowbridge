@@ -5,7 +5,7 @@ pub mod primitives;
 pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+pub mod benchmarking;
 
 #[cfg(test)]
 mod mock;
@@ -79,7 +79,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn address)]
-	pub(super) type Address<T: Config> = StorageValue<_, H160, ValueQuery>;
+	pub type Address<T: Config> = StorageValue<_, H160, ValueQuery>;
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -112,7 +112,12 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::lock())]
+		#[pallet::weight({
+			match channel_id {
+				ChannelId::Basic => T::WeightInfo::lock_basic_channel(),
+				ChannelId::Incentivized => T::WeightInfo::lock_incentivized_channel(),
+			}
+		})]
 		#[transactional]
 		pub fn lock(
 			origin: OriginFor<T>,

@@ -16,7 +16,8 @@
 //!
 //! - [`MultiAsset`](../snowbridge_core/assets/trait.MultiAsset.html): Functions for dealing with a
 //! multiple fungible assets.
-//! - [`SingleAsset`](../snowbridge_core/assets/trait.SingleAsset.html): Functions for dealing with a
+//! - [`SingleAsset`](../snowbridge_core/assets/trait.SingleAsset.html): Functions for dealing with
+//!   a
 //! single fungible asset.
 //!
 //! ## Interface
@@ -30,7 +31,6 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::{DispatchError, DispatchResult},
 	traits::Get,
-	weights::Weight,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
@@ -40,25 +40,17 @@ use sp_runtime::traits::StaticLookup;
 
 use snowbridge_core::assets::{AssetId, MultiAsset, SingleAsset};
 use sp_std::marker;
+pub use weights::WeightInfo;
 
 mod benchmarking;
+
+pub mod weights;
 
 #[cfg(test)]
 mod mock;
 
 #[cfg(test)]
 mod tests;
-
-/// Weight functions needed for this pallet.
-pub trait WeightInfo {
-	fn transfer() -> Weight;
-}
-
-impl WeightInfo for () {
-	fn transfer() -> Weight {
-		0
-	}
-}
 
 pub trait Config: system::Config {
 	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
@@ -132,7 +124,7 @@ impl<T: Config> MultiAsset<T::AccountId> for Module<T> {
 
 	fn deposit(asset_id: AssetId, who: &T::AccountId, amount: U256) -> DispatchResult {
 		if amount.is_zero() {
-			return Ok(());
+			return Ok(())
 		}
 		<Balances<T>>::try_mutate(asset_id, who, |balance| -> Result<(), DispatchError> {
 			let current_total_issuance = Self::total_issuance(asset_id);
@@ -147,7 +139,7 @@ impl<T: Config> MultiAsset<T::AccountId> for Module<T> {
 
 	fn withdraw(asset_id: AssetId, who: &T::AccountId, amount: U256) -> DispatchResult {
 		if amount.is_zero() {
-			return Ok(());
+			return Ok(())
 		}
 		<Balances<T>>::try_mutate(asset_id, who, |balance| -> Result<(), DispatchError> {
 			let current_total_issuance = Self::total_issuance(asset_id);
@@ -167,7 +159,7 @@ impl<T: Config> MultiAsset<T::AccountId> for Module<T> {
 		amount: U256,
 	) -> DispatchResult {
 		if amount.is_zero() || from == to {
-			return Ok(());
+			return Ok(())
 		}
 		<Balances<T>>::try_mutate(asset_id, from, |from_balance| -> DispatchResult {
 			<Balances<T>>::try_mutate(asset_id, to, |to_balance| -> DispatchResult {

@@ -109,14 +109,23 @@ fn should_not_lock_on_add_commitment_failure() {
 
 		let _ = Balances::deposit_creating(&sender, amount * 10);
 
+		for _ in 0..3 {
+			let _ = DotApp::lock(
+				Origin::signed(sender.clone()),
+				ChannelId::Incentivized,
+				recipient.clone(),
+				1,
+			);
+		}
+
 		assert_noop!(
 			DotApp::lock(
 				Origin::signed(sender.clone()),
-				ChannelId::Basic,
+				ChannelId::Incentivized,
 				recipient.clone(),
-				amount.into()
+				amount
 			),
-			DispatchError::Other("some error!")
+			snowbridge_incentivized_channel::outbound::Error::<Test>::QueueSizeLimitReached
 		);
 	});
 }

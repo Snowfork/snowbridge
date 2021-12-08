@@ -1,4 +1,6 @@
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
 mod envelope;
 pub mod weights;
 
@@ -119,7 +121,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::submit())]
+		#[pallet::weight(100_000_000)]
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			let relayer = ensure_signed(origin)?;
 			// submit message to verifier for verification
