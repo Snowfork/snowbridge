@@ -82,12 +82,13 @@ contract IncentivizedInboundChannel is AccessControl {
         Message[] calldata _messages
     ) internal {
         uint256 _rewardAmount = 0;
+        // Using tempNonce variable to store nonce value
+        uint64 tempNonce = nonce;
 
         for (uint256 i = 0; i < _messages.length; i++) {
             // Check message nonce is correct and increment nonce for replay protection
-            require(_messages[i].nonce == nonce + 1, "invalid nonce");
-
-            nonce = nonce + 1;
+            require(_messages[i].nonce == tempNonce + 1, "invalid nonce");
+            tempNonce = tempNonce + 1;
 
             // Deliver the message to the target
             // Delivery will have fixed maximum gas allowed for the target app
@@ -102,5 +103,6 @@ contract IncentivizedInboundChannel is AccessControl {
 
         // reward the relayer
         rewardSource.reward(_relayer, _rewardAmount);
+        nonce = tempNonce;
     }
 }
