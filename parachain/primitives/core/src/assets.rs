@@ -32,6 +32,8 @@ pub trait MultiAsset<AccountId> {
 }
 
 pub trait SingleAsset<AccountId> {
+	fn asset_id() -> AssetId;
+
 	fn total_issuance() -> U256;
 
 	fn balance(who: &AccountId) -> U256;
@@ -41,4 +43,8 @@ pub trait SingleAsset<AccountId> {
 	fn withdraw(who: &AccountId, amount: U256) -> DispatchResult;
 
 	fn deposit(who: &AccountId, amount: U256) -> DispatchResult;
+}
+
+pub trait XcmTransactAsset<AccountId> {
+	fn reserve_transfer(asset_id: AssetId, dest: &AccountId, amount: U256) -> DispatchResult;
 }

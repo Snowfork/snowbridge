@@ -12,7 +12,9 @@ use sp_std::{marker::PhantomData, prelude::*, result};
 use xcm::latest::prelude::*;
 use xcm_executor::traits::{Convert, TransactAsset};
 
-use snowbridge_core::assets::{AssetId as SnowbridgeAssetId, MultiAsset as SnowbridgeMultiAsset};
+use snowbridge_core::assets::{
+	AssetId as SnowbridgeAssetId, MultiAsset as SnowbridgeMultiAsset, XcmTransactAsset,
+};
 
 pub struct AssetsTransactor<Assets, AccountIdConverter, AccountId>(
 	PhantomData<(Assets, AccountIdConverter, AccountId)>,
@@ -75,5 +77,52 @@ impl<
 		Assets::withdraw(asset_id, &who, amount)
 			.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 		Ok(asset.clone().into())
+	}
+}
+
+pub struct XcmAssetTransactor<AccountId>(PhantomData<AccountId>);
+
+impl<AccountId> XcmTransactAsset<AccountId> for XcmAssetTransactor<AccountId> {
+	fn reserve_transfer(
+		_asset_id: SnowbridgeAssetId,
+		_dest: &AccountId,
+		_amount: U256,
+	) -> frame_support::dispatch::DispatchResult {
+		//let origin_location = T::ExecuteXcmOrigin::ensure_origin(origin.clone())?;
+		//	use xcm::latest::{
+		//		ExecuteXcm,
+		//		Instruction::{BuyExecution, DepositAsset, TransferReserveAsset},
+		//		MultiAssetFilter::Wild,
+		//		MultiLocation,
+		//		WildMultiAsset::All,
+		//		Xcm,
+		//};
+		//pub use weights::WeightInfo;
+		//use xcm_executor::traits::WeightBounds;
+		//type ExecuteXcmOrigin: EnsureOrigin<Self::Origin, Success = MultiLocation>;
+		//type XcmExecutor: ExecuteXcm<Self::Call>;
+		// Means of measuring the weight consumed by an XCM message locally.
+		//type Weigher: WeightBounds<<Self as frame_system::Config>::Call>;
+		//let mut message = Xcm(vec![TransferReserveAsset {
+		//    assets: todo!(),
+		//    dest: todo!(),
+		//    xcm: Xcm(vec![
+		//        BuyExecution {
+		//            fees: todo!(),
+		//            weight_limit: todo!(),
+		//        },
+		//        DepositAsset {
+		//            assets: Wild(All),
+		//            max_assets: todo!(),
+		//            beneficiary: todo!(),
+		//        },
+		//    ]),
+		//}]);
+		//let weight = T::Weigher::weight(&mut message)
+		//    .map_err(|_| DispatchError::Other("Unweighable message."))?;
+		//T::XcmExecutor::execute_xcm(origin_location, message, weight)
+		//    .ensure_complete()
+		//    .map_err(|_| DispatchError::Other("Xcm execution failed."))?;
+		Ok(())
 	}
 }
