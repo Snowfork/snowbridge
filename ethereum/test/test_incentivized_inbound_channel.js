@@ -1,6 +1,8 @@
+const BigNumber = require('bignumber.js');
 const { ethers } = require("ethers");
 require("chai")
   .use(require("chai-as-promised"))
+  .use(require("chai-bignumber")(BigNumber))
   .should();
 
 const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
@@ -45,12 +47,17 @@ describe("IncentivizedInboundChannel", function () {
     });
 
     it("should accept a valid commitment and dispatch messages", async function () {
+      const nonceBeforeSubmit = BigNumber(await this.channel.nonce());
+
       // Send commitment
       const tx = this.channel.submit(
         ...Object.values(fixture.incentivizedSubmitInput),
       ).should.be.fulfilled
       printTxPromiseGas(tx)
       const { receipt } = await tx;
+
+      const nonceAfterSubmit = BigNumber(await this.channel.nonce());
+      nonceAfterSubmit.minus(nonceBeforeSubmit).should.be.bignumber.equal(1);
 
       let event;
 
