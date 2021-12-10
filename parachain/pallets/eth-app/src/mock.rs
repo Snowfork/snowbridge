@@ -15,9 +15,7 @@ use sp_runtime::{
 };
 
 use snowbridge_assets::SingleAssetAdaptor;
-use snowbridge_core::{AssetId, ChannelId, OutboundRouter};
-use xcm::v0::NetworkId;
-use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
+use snowbridge_core::{assets::XcmTransactAsset, AssetId, ChannelId};
 
 use crate as eth_app;
 
@@ -135,12 +133,24 @@ impl snowbridge_incentivized_channel::outbound::Config for Test {
 	type WeightInfo = ();
 }
 
+pub struct XcmAssetTransactorMock<AccountId>(PhantomData<AccountId>);
+impl XcmTransactAsset<AccountId> for XcmAssetTransactorMock<AccountId> {
+	fn reserve_transfer(
+		_asset_id: AssetId,
+		_dest: &AccountId,
+		_amount: ethabi::U256,
+	) -> DispatchResult {
+		todo!()
+	}
+}
+
 impl crate::Config for Test {
 	type Event = Event;
 	type Asset = Asset;
 	type OutboundRouter = OutboundRouter<Test>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
 	type WeightInfo = ();
+	type XcmTransactAsset = XcmAssetTransactorMock<AccountId>;
 }
 
 pub type Asset = SingleAssetAdaptor<Test, Ether>;

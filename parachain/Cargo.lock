@@ -9516,9 +9516,6 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std",
- "xcm",
- "xcm-builder",
- "xcm-executor",
 ]
 
 [[package]]
