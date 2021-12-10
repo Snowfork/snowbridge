@@ -3,14 +3,13 @@ pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./RewardSource.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
 enum ChannelId {Basic, Incentivized}
 
-contract ETHApp is RewardSource, AccessControl, ReentrancyGuard  {
+contract ETHApp is RewardSource, AccessControl {
     using ScaleCodec for uint256;
 
     uint256 public balance;
@@ -76,7 +75,7 @@ contract ETHApp is RewardSource, AccessControl, ReentrancyGuard  {
         bytes32 _sender,
         address payable _recipient,
         uint256 _amount
-    ) public onlyRole(INBOUND_CHANNEL_ROLE) nonReentrant(){
+    ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         require(_amount > 0, "Must unlock a positive amount");
         require(
             balance >= _amount,
@@ -109,7 +108,6 @@ contract ETHApp is RewardSource, AccessControl, ReentrancyGuard  {
         external
         override
         onlyRole(REWARD_ROLE)
-        nonReentrant()
     {
         (bool success, ) = _recipient.call{value: _amount}("");
         require(success, "Unable to send Ether");
