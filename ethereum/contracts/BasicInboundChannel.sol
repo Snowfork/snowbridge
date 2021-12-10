@@ -56,14 +56,14 @@ contract BasicInboundChannel {
     }
 
     function processMessages(Message[] calldata _messages) internal {
-        // Using tempNonce variable to store nonce value
-        uint64 tempNonce = nonce;
+        // Caching nonce for gas optimization
+        uint64 cachedNonce = nonce;
 
         for (uint256 i = 0; i < _messages.length; i++) {
             // Check message nonce is correct and increment nonce for replay protection
-            require(_messages[i].nonce ==  tempNonce + 1, "invalid nonce");
+            require(_messages[i].nonce ==  cachedNonce + 1, "invalid nonce");
 
-            tempNonce = tempNonce + 1;
+            cachedNonce = cachedNonce + 1;
 
             // Deliver the message to the target
             (bool success, ) = _messages[i].target.call{
@@ -73,6 +73,6 @@ contract BasicInboundChannel {
 
             emit MessageDispatched(_messages[i].nonce, success);
         }
-        nonce = tempNonce;
+        nonce = cachedNonce;
     }
 }
