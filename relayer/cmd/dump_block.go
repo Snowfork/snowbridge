@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
+	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/spf13/viper"
 )
@@ -129,7 +129,7 @@ func getEthHeaderProof(header *gethTypes.Header) ([]ethereum.DoubleNodeWithMerkl
 	dataDir := viper.GetString("global.data-dir")
 
 	ethashproofCacheLoader := &ethereum.DefaultCacheLoader{
-		DataDir: path.Join(dataDir, "ethash-data"),
+		DataDir:  path.Join(dataDir, "ethash-data"),
 		CacheDir: path.Join(dataDir, "ethash-cache"),
 	}
 
@@ -149,7 +149,7 @@ func printEthBlockForSub(header *gethTypes.Header, format Format) error {
 
 	if format == RustFmt {
 		fmt.Printf(
-`EthereumHeader {
+			`EthereumHeader {
 	parent_hash: hex!("%x").into(),
 	timestamp: %du64.into(),
 	number: %du64.into(),
@@ -205,7 +205,7 @@ func printEthBlockForSub(header *gethTypes.Header, format Format) error {
 		}
 
 		fmt.Printf(
-`{
+			`{
   "parent_hash": "%s",
   "timestamp": %d,
   "number": %d,

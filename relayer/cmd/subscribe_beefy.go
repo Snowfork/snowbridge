@@ -5,7 +5,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 	"github.com/spf13/cobra"
@@ -14,10 +14,10 @@ import (
 
 func subBeefyCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "sub-beefy",
-		Short:   "Subscribe beefy messages",
-		Args:    cobra.ExactArgs(0),
-		RunE:    SubBeefyFn,
+		Use:   "sub-beefy",
+		Short: "Subscribe beefy messages",
+		Args:  cobra.ExactArgs(0),
+		RunE:  SubBeefyFn,
 	}
 
 	cmd.Flags().StringP("url", "u", "", "Polkadot URL")
@@ -147,7 +147,6 @@ func fetchParaHeads(co *relaychain.Connection, blockHash types.Hash) (map[uint32
 
 	return heads, nil
 }
-
 
 func GetMMRLeafForBlock(blockNumber uint64, blockHash types.Hash, relaychainConn *relaychain.Connection) {
 	log.WithFields(logrus.Fields{
