@@ -9,9 +9,9 @@ import (
 
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "run",
-		Short:   "Start a relay service",
-		Args:    cobra.MinimumNArgs(1),
+		Use:   "run",
+		Short: "Start a relay service",
+		Args:  cobra.MinimumNArgs(1),
 	}
 
 	cmd.AddCommand(beefy.Command())
