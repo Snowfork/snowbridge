@@ -592,7 +592,12 @@ impl eth_app::Config for Runtime {
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = eth_app::weights::SnowbridgeWeight<Self>;
-	type XcmTransactAsset = XcmAssetTransactor<AccountId>;
+	type XcmTransactAsset = XcmAssetTransactor<
+		Runtime,
+		ExecuteXcm<Self::Call>,
+		ExecuteXcmOrigin,
+		WeightBounds<<Self as frame_system::Config>::Call>,
+	>;
 }
 
 impl erc20_app::Config for Runtime {

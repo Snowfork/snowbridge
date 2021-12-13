@@ -591,8 +591,13 @@ impl eth_app::Config for Runtime {
 	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
-	type XcmTransactAsset = XcmAssetTransactor<AccountId>;
 	type WeightInfo = eth_app::weights::SnowbridgeWeight<Self>;
+	type XcmTransactAsset = XcmAssetTransactor<
+		Runtime,
+		ExecuteXcm<Self::Call>,
+		ExecuteXcmOrigin,
+		WeightBounds<<Self as frame_system::Config>::Call>,
+	>;
 }
 
 impl erc20_app::Config for Runtime {

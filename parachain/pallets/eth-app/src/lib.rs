@@ -67,7 +67,7 @@ pub mod pallet {
 
 		type WeightInfo: WeightInfo;
 
-		type XcmTransactAsset: XcmTransactAsset<Self::AccountId>;
+		type XcmTransactAsset: XcmTransactAsset<Self::AccountId, Self::Origin>;
 	}
 
 	#[pallet::hooks]
@@ -144,14 +144,19 @@ pub mod pallet {
 			amount: U256,
 			para_id: u32,
 		) -> DispatchResult {
-			let who = T::CallOrigin::ensure_origin(origin)?;
+			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
 				return Err(DispatchError::BadOrigin.into())
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
 			if para_id != 0 {
-				T::XcmTransactAsset::reserve_transfer(T::Asset::asset_id(), &recipient, amount)?;
+				T::XcmTransactAsset::reserve_transfer(
+					origin,
+					T::Asset::asset_id(),
+					&recipient,
+					amount,
+				)?;
 				return Ok(())
 			}
 

@@ -8,6 +8,7 @@ edition = "2018"
 codec = { package = "parity-scale-codec", version = "2.2.0", default-features = false }
 
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
@@ -17,6 +18,8 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "r
 xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.12", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
+eth-app = { path = "../../pallets/eth-app", package = "snowbridge-eth-app", default-features = false }
+erc20-app = { path = "../../pallets/erc20-app", package = "snowbridge-erc20-app", default-features = false }
 
 [features]
 default = ["std"]
@@ -25,6 +28,7 @@ std = [
         "sp-std/std",
         "sp-runtime/std",
         "frame-support/std",
+        "frame-system/std",
         "xcm/std",
         "xcm-executor/std",
         "xcm-builder/std",

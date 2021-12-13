@@ -6,11 +6,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Decode;
+use frame_support::traits::EnsureOrigin;
+use frame_system::pallet_prelude::OriginFor;
 use sp_core::U256;
+use sp_runtime::DispatchError;
 use sp_std::{marker::PhantomData, prelude::*, result};
 
 use xcm::latest::prelude::*;
-use xcm_executor::traits::{Convert, TransactAsset};
+use xcm_executor::traits::{Convert, TransactAsset, WeightBounds};
 
 use snowbridge_core::assets::{
 	AssetId as SnowbridgeAssetId, MultiAsset as SnowbridgeMultiAsset, XcmTransactAsset,
@@ -80,15 +83,26 @@ impl<
 	}
 }
 
-pub struct XcmAssetTransactor<AccountId>(PhantomData<AccountId>);
+pub struct XcmAssetTransactor<T, XcmExecutor, ExecuteXcmOrigin, Weigher>(
+	PhantomData<(T, XcmExecutor, ExecuteXcmOrigin, Weigher)>,
+);
 
-impl<AccountId> XcmTransactAsset<AccountId> for XcmAssetTransactor<AccountId> {
+impl<T, XcmExecutor, ExecuteXcmOrigin, Weigher> XcmTransactAsset<T::AccountId, OriginFor<T>>
+	for XcmAssetTransactor<T, XcmExecutor, ExecuteXcmOrigin, Weigher>
+where
+	T: eth_app::Config + erc20_app::Config,
+	XcmExecutor: ExecuteXcm<T::Call>,
+	ExecuteXcmOrigin: EnsureOrigin<T::Origin, Success = MultiLocation>,
+	Weigher: WeightBounds<<T as frame_system::Config>::Call>,
+{
 	fn reserve_transfer(
+		origin: T::Origin,
 		_asset_id: SnowbridgeAssetId,
-		_dest: &AccountId,
+		_dest: &T::AccountId,
 		_amount: U256,
 	) -> frame_support::dispatch::DispatchResult {
-		//let origin_location = T::ExecuteXcmOrigin::ensure_origin(origin.clone())?;
+		//pub use weights::WeightInfo;
+		//use xcm_executor::traits::WeightBounds;
 		//	use xcm::latest::{
 		//		ExecuteXcm,
 		//		Instruction::{BuyExecution, DepositAsset, TransferReserveAsset},
@@ -97,32 +111,23 @@ impl<AccountId> XcmTransactAsset<AccountId> for XcmAssetTransactor<AccountId> {
 		//		WildMultiAsset::All,
 		//		Xcm,
 		//};
-		//pub use weights::WeightInfo;
-		//use xcm_executor::traits::WeightBounds;
-		//type ExecuteXcmOrigin: EnsureOrigin<Self::Origin, Success = MultiLocation>;
-		//type XcmExecutor: ExecuteXcm<Self::Call>;
-		// Means of measuring the weight consumed by an XCM message locally.
 		//type Weigher: WeightBounds<<Self as frame_system::Config>::Call>;
-		//let mut message = Xcm(vec![TransferReserveAsset {
-		//    assets: todo!(),
-		//    dest: todo!(),
-		//    xcm: Xcm(vec![
-		//        BuyExecution {
-		//            fees: todo!(),
-		//            weight_limit: todo!(),
-		//        },
-		//        DepositAsset {
-		//            assets: Wild(All),
-		//            max_assets: todo!(),
-		//            beneficiary: todo!(),
-		//        },
-		//    ]),
-		//}]);
-		//let weight = T::Weigher::weight(&mut message)
-		//    .map_err(|_| DispatchError::Other("Unweighable message."))?;
-		//T::XcmExecutor::execute_xcm(origin_location, message, weight)
-		//    .ensure_complete()
-		//    .map_err(|_| DispatchError::Other("Xcm execution failed."))?;
+
+		let origin_location = ExecuteXcmOrigin::ensure_origin(origin.clone())?;
+		// Means of measuring the weight consumed by an XCM message locally.
+		let mut message = Xcm(vec![TransferReserveAsset {
+			assets: todo!(),
+			dest: todo!(),
+			xcm: Xcm(vec![
+				BuyExecution { fees: todo!(), weight_limit: todo!() },
+				DepositAsset { assets: Wild(All), max_assets: todo!(), beneficiary: todo!() },
+			]),
+		}]);
+		let weight = Weigher::weight(&mut message)
+			.map_err(|_| DispatchError::Other("Unweighable message."))?;
+		XcmExecutor::execute_xcm(origin_location, message, weight)
+			.ensure_complete()
+			.map_err(|_| DispatchError::Other("Xcm execution failed."))?;
 		Ok(())
 	}
 }

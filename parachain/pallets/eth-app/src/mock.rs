@@ -150,7 +150,12 @@ impl crate::Config for Test {
 	type OutboundRouter = OutboundRouter<Test>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
 	type WeightInfo = ();
-	type XcmTransactAsset = XcmAssetTransactorMock<AccountId>;
+	type XcmTransactAsset = XcmAssetTransactor<
+		Runtime,
+		ExecuteXcm<Self::Call>,
+		ExecuteXcmOrigin,
+		WeightBounds<<Self as frame_system::Config>::Call>,
+	>;
 }
 
 pub type Asset = SingleAssetAdaptor<Test, Ether>;
