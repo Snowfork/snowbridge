@@ -83,37 +83,19 @@ impl<
 	}
 }
 
-pub struct XcmAssetTransactor<T, XcmExecutor, ExecuteXcmOrigin, Weigher>(
-	PhantomData<(T, XcmExecutor, ExecuteXcmOrigin, Weigher)>,
-);
+pub struct XcmAssetTransactor<T>(PhantomData<T>);
 
-impl<T, XcmExecutor, ExecuteXcmOrigin, Weigher> XcmTransactAsset<T::AccountId, OriginFor<T>>
-	for XcmAssetTransactor<T, XcmExecutor, ExecuteXcmOrigin, Weigher>
+impl<T> XcmTransactAsset<T::AccountId, OriginFor<T>> for XcmAssetTransactor<T>
 where
-	T: eth_app::Config + erc20_app::Config,
-	XcmExecutor: ExecuteXcm<T::Call>,
-	ExecuteXcmOrigin: EnsureOrigin<T::Origin, Success = MultiLocation>,
-	Weigher: WeightBounds<<T as frame_system::Config>::Call>,
+	T: pallet_xcm::Config,
 {
 	fn reserve_transfer(
-		origin: T::Origin,
+		origin: <T as frame_system::Config>::Origin,
 		_asset_id: SnowbridgeAssetId,
 		_dest: &T::AccountId,
 		_amount: U256,
 	) -> frame_support::dispatch::DispatchResult {
-		//pub use weights::WeightInfo;
-		//use xcm_executor::traits::WeightBounds;
-		//	use xcm::latest::{
-		//		ExecuteXcm,
-		//		Instruction::{BuyExecution, DepositAsset, TransferReserveAsset},
-		//		MultiAssetFilter::Wild,
-		//		MultiLocation,
-		//		WildMultiAsset::All,
-		//		Xcm,
-		//};
-		//type Weigher: WeightBounds<<Self as frame_system::Config>::Call>;
-
-		let origin_location = ExecuteXcmOrigin::ensure_origin(origin.clone())?;
+		let origin_location = T::ExecuteXcmOrigin::ensure_origin(origin.clone())?;
 		// Means of measuring the weight consumed by an XCM message locally.
 		let mut message = Xcm(vec![TransferReserveAsset {
 			assets: todo!(),
@@ -123,9 +105,9 @@ where
 				DepositAsset { assets: Wild(All), max_assets: todo!(), beneficiary: todo!() },
 			]),
 		}]);
-		let weight = Weigher::weight(&mut message)
+		let weight = T::Weigher::weight(&mut message)
 			.map_err(|_| DispatchError::Other("Unweighable message."))?;
-		XcmExecutor::execute_xcm(origin_location, message, weight)
+		T::XcmExecutor::execute_xcm(origin_location, message, weight)
 			.ensure_complete()
 			.map_err(|_| DispatchError::Other("Xcm execution failed."))?;
 		Ok(())

@@ -133,9 +133,10 @@ impl snowbridge_incentivized_channel::outbound::Config for Test {
 	type WeightInfo = ();
 }
 
-pub struct XcmAssetTransactorMock<AccountId>(PhantomData<AccountId>);
-impl XcmTransactAsset<AccountId> for XcmAssetTransactorMock<AccountId> {
+pub struct XcmAssetTransactorMock<T>(PhantomData<T>);
+impl XcmTransactAsset<AccountId, Origin> for XcmAssetTransactorMock<Test> {
 	fn reserve_transfer(
+		_origin: Origin,
 		_asset_id: AssetId,
 		_dest: &AccountId,
 		_amount: ethabi::U256,
@@ -150,12 +151,7 @@ impl crate::Config for Test {
 	type OutboundRouter = OutboundRouter<Test>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
 	type WeightInfo = ();
-	type XcmTransactAsset = XcmAssetTransactor<
-		Runtime,
-		ExecuteXcm<Self::Call>,
-		ExecuteXcmOrigin,
-		WeightBounds<<Self as frame_system::Config>::Call>,
-	>;
+	type XcmTransactAsset = XcmAssetTransactorMock<Self>;
 }
 
 pub type Asset = SingleAssetAdaptor<Test, Ether>;

@@ -9782,10 +9782,9 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-xcm",
  "parity-scale-codec",
  "snowbridge-core",
- "snowbridge-erc20-app",
- "snowbridge-eth-app",
  "sp-core",
  "sp-runtime",
  "sp-std",
