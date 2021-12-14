@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
@@ -27,7 +27,7 @@ type CompleteSignatureCommitmentMessage struct {
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
 	LatestMMRLeaf                  beefylightclient.BeefyLightClientBeefyMMRLeaf
-	SimplifiedProof beefylightclient.SimplifiedMMRProof
+	SimplifiedProof                beefylightclient.SimplifiedMMRProof
 }
 
 type BeefyJustification struct {

@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
@@ -17,10 +17,10 @@ import (
 )
 
 type Relay struct {
-	config     *Config
-	keypair    *sr25519.Keypair
-	ethconn    *ethereum.Connection
-	paraconn   *parachain.Connection
+	config   *Config
+	keypair  *sr25519.Keypair
+	ethconn  *ethereum.Connection
+	paraconn *parachain.Connection
 }
 
 func NewRelay(
@@ -56,7 +56,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	listener := NewEthereumListener(
 		&r.config.Source,
 		r.ethconn,
-		finalizedBlockNumber + 1,
+		finalizedBlockNumber+1,
 		uint64(r.config.Source.DescendantsUntilFinal),
 	)
 

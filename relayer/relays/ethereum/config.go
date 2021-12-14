@@ -24,4 +24,3 @@ type ContractsConfig struct {
 type SinkConfig struct {
 	Parachain config.ParachainConfig `mapstructure:"parachain"`
 }
-

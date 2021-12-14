@@ -13,8 +13,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/ethashproof"
 	"github.com/snowfork/ethashproof/ethash"
-	"github.com/snowfork/go-substrate-rpc-client/v3/scale"
-	types "github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
+	types "github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain"
 )
 
@@ -43,7 +43,7 @@ type headerSCALE struct {
 
 type optionBaseFee struct {
 	HasValue bool
-	Value types.U256
+	Value    types.U256
 }
 
 func (o optionBaseFee) Encode(encoder scale.Encoder) error {
@@ -89,7 +89,7 @@ type DoubleNodeWithMerkleProof struct {
 func MakeHeaderFromEthHeader(
 	gethheader *etypes.Header,
 	proofcache *ethashproof.DatasetMerkleTreeCache,
-	dataDir     string,
+	dataDir string,
 ) (*chain.Header, error) {
 	headerData, err := MakeHeaderData(gethheader)
 	if err != nil {
@@ -166,7 +166,7 @@ func MakeHeaderData(gethheader *etypes.Header) (*Header, error) {
 func MakeProofData(
 	gethheader *etypes.Header,
 	proofcache *ethashproof.DatasetMerkleTreeCache,
-	dataDir    string,
+	dataDir string,
 ) ([]DoubleNodeWithMerkleProof, error) {
 	// Generate merkle proofs for Ethash
 	blockNumber := gethheader.Number.Uint64()

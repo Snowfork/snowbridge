@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
-	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v3/types"
+	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 )
@@ -42,18 +42,18 @@ type BeefyLightClientBeefyMMRLeafLog struct {
 }
 
 type SimplifiedMMRProofLog struct {
-	BeefyMMRRestOfThePeaks []string `json:"RestOfThePeaks"`
-	BeefyMMRRightBaggedPeak string `json:"RightBaggedPeak"`
-	MerkleProofItems   []string `json:"MerkleProofItems"`
-	MerkleProofOrder   uint64 `json:"MerkleProofOrder"`
+	BeefyMMRRestOfThePeaks  []string `json:"RestOfThePeaks"`
+	BeefyMMRRightBaggedPeak string   `json:"RightBaggedPeak"`
+	MerkleProofItems        []string `json:"MerkleProofItems"`
+	MerkleProofOrder        uint64   `json:"MerkleProofOrder"`
 }
 
 type CompleteSignatureCommitmentTxInput struct {
-	Id             *big.Int                          `json:"id"` //  revive:disable-line
-	Commitment     BeefyLightClientCommitmentLog     `json:"commitment"`
-	ValidatorProof BeefyLightClientValidatorProofLog `json:"validatorProof"`
-	LatestMMRLeaf  BeefyLightClientBeefyMMRLeafLog   `json:"latestMMRLeaf"`
-	SimplifiedMMRProof SimplifiedMMRProofLog `json:"simplifiedMMRProof"`
+	Id                 *big.Int                          `json:"id"` //  revive:disable-line
+	Commitment         BeefyLightClientCommitmentLog     `json:"commitment"`
+	ValidatorProof     BeefyLightClientValidatorProofLog `json:"validatorProof"`
+	LatestMMRLeaf      BeefyLightClientBeefyMMRLeafLog   `json:"latestMMRLeaf"`
+	SimplifiedMMRProof SimplifiedMMRProofLog             `json:"simplifiedMMRProof"`
 }
 
 func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
@@ -113,8 +113,8 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 			NextAuthoritySetRoot: "0x" + hex.EncodeToString(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
 		},
 		SimplifiedMMRProof: SimplifiedMMRProofLog{
-			MerkleProofItems:        beefyMMRMerkleProofItems,
-			MerkleProofOrder:        msg.SimplifiedProof.MerkleProofOrderBitField,
+			MerkleProofItems: beefyMMRMerkleProofItems,
+			MerkleProofOrder: msg.SimplifiedProof.MerkleProofOrderBitField,
 		},
 	}
 	b, err := json.Marshal(input)

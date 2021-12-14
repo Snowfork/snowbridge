@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	gsrpc "github.com/snowfork/go-substrate-rpc-client/v3"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 
 	log "github.com/sirupsen/logrus"
 )

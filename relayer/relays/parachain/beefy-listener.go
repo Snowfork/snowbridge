@@ -10,7 +10,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
@@ -294,7 +294,6 @@ func (li *BeefyListener) fetchLatestBeefyBlock(ctx context.Context) (uint64, typ
 	return number, hash, nil
 }
 
-
 // discoverCatchupTasks finds all the commitments which need to be relayed
 func (li *BeefyListener) discoverCatchupTasks(
 	ctx context.Context,
@@ -478,7 +477,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 
 	// The mmr_generateProof(leafIndex, AtBlock) rpc will fail if
 	// the following is true. So we'll need to self-terminate and try again.
-	if input.PolkadotBlockNumber + 1 >= latestBeefyBlockNumber {
+	if input.PolkadotBlockNumber+1 >= latestBeefyBlockNumber {
 		return nil, fmt.Errorf("Not able to create a valid proof this round")
 	}
 
@@ -487,7 +486,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 	// Parachain merkle roots are created 1 block later than the actual parachain headers,
 	// so we increment input.PolkadotBlockNumber by 1
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
-		input.PolkadotBlockNumber + 1,
+		input.PolkadotBlockNumber+1,
 		latestBeefyBlockHash,
 		li.config.BeefyActivationBlock,
 	)
@@ -537,9 +536,9 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 
 	log.Debug("Created all parachain merkle proof data")
 
-	output := ProofOutput {
-		MMRProof: simplifiedProof,
-		MMRRootHash: mmrRootHash,
+	output := ProofOutput{
+		MMRProof:        simplifiedProof,
+		MMRRootHash:     mmrRootHash,
 		MerkleProofData: merkleProofData,
 	}
 
@@ -614,10 +613,10 @@ func (li *BeefyListener) scanForCommitments(
 				if messages[0].Nonce < basicNonceToFind {
 					scanBasicChannelDone = true
 					log.Debug("Halting scan. Messages not committed yet on basic channel")
-				// Collect these commitments
+					// Collect these commitments
 				} else if messages[0].Nonce > basicNonceToFind {
 					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
-				// collect this commitment and terminate scan
+					// collect this commitment and terminate scan
 				} else if messages[0].Nonce == basicNonceToFind {
 					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
 					scanBasicChannelDone = true
@@ -639,10 +638,10 @@ func (li *BeefyListener) scanForCommitments(
 				if messages[0].Nonce < incentivizedNonceToFind {
 					scanIncentivizedChannelDone = true
 					continue
-				// Collect these commitments
+					// Collect these commitments
 				} else if messages[0].Nonce > incentivizedNonceToFind {
 					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
-				// collect this commitment and terminate scan
+					// collect this commitment and terminate scan
 				} else if messages[0].Nonce == incentivizedNonceToFind {
 					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
 					scanIncentivizedChannelDone = true
@@ -652,11 +651,11 @@ func (li *BeefyListener) scanForCommitments(
 
 		if len(commitments) > 0 {
 			task := Task{
-				ParaID: li.paraID,
+				ParaID:      li.paraID,
 				BlockNumber: currentBlockNumber,
-				Header: header,
+				Header:      header,
 				Commitments: commitments,
-				ProofInput: nil,
+				ProofInput:  nil,
 				ProofOutput: nil,
 			}
 			tasks = append(tasks, &task)

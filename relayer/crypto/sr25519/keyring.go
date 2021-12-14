@@ -6,7 +6,7 @@ package sr25519
 // Keypairs for use in tests
 
 import (
-	"github.com/snowfork/go-substrate-rpc-client/v3/signature"
+	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 )
 
 func Alice() *Keypair {

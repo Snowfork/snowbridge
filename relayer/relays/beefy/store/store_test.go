@@ -12,7 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/sync/errgroup"
@@ -248,7 +248,6 @@ func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
 	}
 }
 
-
 func (t *StoreTestSuite) TestMarshalOptionalBeefySignature() {
 
 	// Test Some(signature) case
@@ -261,17 +260,16 @@ func (t *StoreTestSuite) TestMarshalOptionalBeefySignature() {
 	copy(sig1Input[:], sig1Bytes)
 	beefySig1 := store.BeefySignature(sig1Input)
 
-
 	optionalBeefySig1 := store.NewOptionBeefySignature(beefySig1)
 
 	bytes, err := json.Marshal(optionalBeefySig1)
-	if (err != nil) {
+	if err != nil {
 		panic(err)
 	}
 
 	var foo store.OptionBeefySignature
 	err = json.Unmarshal(bytes, &foo)
-	if (err != nil) {
+	if err != nil {
 		panic(err)
 	}
 
@@ -282,13 +280,13 @@ func (t *StoreTestSuite) TestMarshalOptionalBeefySignature() {
 	optionalBeefySig2 := store.NewOptionBeefySignatureEmpty()
 
 	bytes2, err := json.Marshal(optionalBeefySig2)
-	if (err != nil) {
+	if err != nil {
 		panic(err)
 	}
 
 	var foo2 store.OptionBeefySignature
 	err = json.Unmarshal(bytes2, &foo2)
-	if (err != nil) {
+	if err != nil {
 		panic(err)
 	}
 

@@ -10,7 +10,7 @@
     "@nomiclabs/hardhat-etherscan": "^2.1.4",
     "@openzeppelin/contracts": "^4.1.0",
     "@openzeppelin/test-helpers": "https://github.com/Snowfork/openzeppelin-test-helpers.git#3f9c4b8",
-    "@polkadot/api": "^6.8.1",
+    "@polkadot/api": "^6.10.3",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
     "chai-bignumber": "^3.0.0",

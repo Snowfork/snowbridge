@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -48,24 +48,24 @@ type IncentivizedInboundChannelMessageLog struct {
 }
 
 type SimplifiedMMRProofLog struct {
-	BeefyMMRRestOfThePeaks []string `json:"RestOfThePeaks"`
-	BeefyMMRRightBaggedPeak string `json:"RightBaggedPeak"`
-	MerkleProofItems   []string `json:"MerkleProofItems"`
-	MerkleProofOrder   uint64 `json:"MerkleProofOrder"`
+	BeefyMMRRestOfThePeaks  []string `json:"RestOfThePeaks"`
+	BeefyMMRRightBaggedPeak string   `json:"RightBaggedPeak"`
+	MerkleProofItems        []string `json:"MerkleProofItems"`
+	MerkleProofOrder        uint64   `json:"MerkleProofOrder"`
 }
 
 type BasicSubmitInput struct {
 	Messages            []BasicInboundChannelMessageLog `json:"_messages"`
 	ParaVerifyInput     ParaVerifyInputLog              `json:"_paraVerifyInput"`
 	BeefyMMRLeafPartial BeefyMMRLeafPartialLog          `json:"_beefyMMRLeafPartial"`
-	SimplifiedMMRProof SimplifiedMMRProofLog `json:"_beefyMMRSimplifiedProof"`
+	SimplifiedMMRProof  SimplifiedMMRProofLog           `json:"_beefyMMRSimplifiedProof"`
 }
 
 type IncentivizedSubmitInput struct {
 	Messages            []IncentivizedInboundChannelMessageLog `json:"_messages"`
 	ParaVerifyInput     ParaVerifyInputLog                     `json:"_paraVerifyInput"`
 	BeefyMMRLeafPartial BeefyMMRLeafPartialLog                 `json:"_beefyMMRLeafPartial"`
-	SimplifiedMMRProof SimplifiedMMRProofLog `json:"_beefyMMRSimplifiedProof"`
+	SimplifiedMMRProof  SimplifiedMMRProofLog                  `json:"_beefyMMRSimplifiedProof"`
 }
 
 func (wr *EthereumChannelWriter) logBasicTx(
@@ -99,7 +99,6 @@ func (wr *EthereumChannelWriter) logBasicTx(
 		beefyMMRMerkleProofItems = append(beefyMMRMerkleProofItems, "0x"+hex.EncodeToString(item[:]))
 	}
 
-
 	input := &BasicSubmitInput{
 		Messages: basicMessagesLog,
 		ParaVerifyInput: ParaVerifyInputLog{
@@ -120,8 +119,8 @@ func (wr *EthereumChannelWriter) logBasicTx(
 			NextAuthoritySetRoot: "0x" + hex.EncodeToString(beefyMMRLeafPartial.NextAuthoritySetRoot[:]),
 		},
 		SimplifiedMMRProof: SimplifiedMMRProofLog{
-			MerkleProofItems:        beefyMMRMerkleProofItems,
-			MerkleProofOrder:        beefyMMRSimplifiedProof.MerkleProofOrderBitField,
+			MerkleProofItems: beefyMMRMerkleProofItems,
+			MerkleProofOrder: beefyMMRSimplifiedProof.MerkleProofOrderBitField,
 		},
 	}
 	b, err := json.Marshal(input)
@@ -224,8 +223,8 @@ func (wr *EthereumChannelWriter) logIncentivizedTx(
 			NextAuthoritySetRoot: "0x" + hex.EncodeToString(beefyMMRLeafPartial.NextAuthoritySetRoot[:]),
 		},
 		SimplifiedMMRProof: SimplifiedMMRProofLog{
-			MerkleProofItems:        beefyMMRMerkleProofItems,
-			MerkleProofOrder:        beefyMMRSimplifiedProof.MerkleProofOrderBitField,
+			MerkleProofItems: beefyMMRMerkleProofItems,
+			MerkleProofOrder: beefyMMRSimplifiedProof.MerkleProofOrderBitField,
 		},
 	}
 	b, err := json.Marshal(input)

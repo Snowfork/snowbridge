@@ -19,7 +19,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 
-	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v3/types"
+	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -264,7 +264,6 @@ func (wr *EthereumChannelWriter) WriteBasicChannel(
 
 	return nil
 }
-
 
 func (wr *EthereumChannelWriter) WriteIncentivizedChannel(
 	options *bind.TransactOpts,
