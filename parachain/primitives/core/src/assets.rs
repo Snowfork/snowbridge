@@ -49,6 +49,7 @@ pub trait XcmTransactAsset<AccountId, Origin> {
 	fn reserve_transfer(
 		origin: Origin,
 		asset_id: AssetId,
+		para_id: u32,
 		dest: &AccountId,
 		amount: U256,
 	) -> DispatchResult;

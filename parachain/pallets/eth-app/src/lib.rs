@@ -154,6 +154,7 @@ pub mod pallet {
 				T::XcmTransactAsset::reserve_transfer(
 					origin,
 					T::Asset::asset_id(),
+					para_id,
 					&recipient,
 					amount,
 				)?;

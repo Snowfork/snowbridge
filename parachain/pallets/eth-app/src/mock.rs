@@ -138,6 +138,7 @@ impl XcmTransactAsset<AccountId, Origin> for XcmAssetTransactorMock<Test> {
 	fn reserve_transfer(
 		_origin: Origin,
 		_asset_id: AssetId,
+		_para_id: u32,
 		_dest: &AccountId,
 		_amount: ethabi::U256,
 	) -> DispatchResult {
