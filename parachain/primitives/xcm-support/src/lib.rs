@@ -10,7 +10,7 @@ use frame_support::traits::EnsureOrigin;
 use frame_system::pallet_prelude::OriginFor;
 use sp_core::U256;
 use sp_runtime::DispatchError;
-use sp_std::{marker::PhantomData, prelude::*, result};
+use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*, result};
 
 use xcm::latest::prelude::*;
 use xcm_executor::traits::{Convert, TransactAsset, WeightBounds};
@@ -93,15 +93,22 @@ where
 		origin: <T as frame_system::Config>::Origin,
 		_asset_id: SnowbridgeAssetId,
 		_dest: &T::AccountId,
-		_amount: U256,
+		amount: U256,
 	) -> frame_support::dispatch::DispatchResult {
 		let origin_location = T::ExecuteXcmOrigin::ensure_origin(origin.clone())?;
-		// Means of measuring the weight consumed by an XCM message locally.
+
+		let amount = u128::try_from(amount).map_err(|e| DispatchError::Other(e))?;
+
 		let mut message = Xcm(vec![TransferReserveAsset {
-			assets: todo!(),
-			dest: todo!(),
+			assets: MultiAssets::from(vec![
+				MultiAsset {
+					id: AssetId::Concrete(MultiLocation { parents: todo!(), interior: todo!() }),
+					fun: Fungibility::Fungible(amount),
+				}
+			]),
+			dest: MultiLocation { parents: 1, interior: todo!() },
 			xcm: Xcm(vec![
-				BuyExecution { fees: todo!(), weight_limit: todo!() },
+				BuyExecution { fees: todo!(), weight_limit: Limited(0) },
 				DepositAsset { assets: Wild(All), max_assets: todo!(), beneficiary: todo!() },
 			]),
 		}]);
