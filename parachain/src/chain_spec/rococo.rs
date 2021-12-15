@@ -25,6 +25,20 @@ where
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
+/// Helper function to generate a crypto pair from seed
+pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+	TPublic::Pair::from_string(&format!("//{}", seed), None)
+		.expect("static values are valid; qed")
+		.public()
+}
+
+/// Generate collator keys from seed.
+///
+/// This function's return type must always match the session keys of the chain in tuple format.
+pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
+	get_public_from_seed::<AuraId>(seed)
+}
+
 pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 	let mut props = Properties::new();
 	props.insert("tokenSymbol".into(), "ROC".into());
@@ -36,7 +50,17 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		ChainType::Local,
 		move || {
 			testnet_genesis(
-				vec![get_from_seed::<AuraId>("Alice"), get_from_seed::<AuraId>("Bob")],
+				// initial collators.
+				vec![
+					(
+						get_account_id_from_seed::<sr25519::Public>("Alice"),
+						get_collator_keys_from_seed("Alice"),
+					),
+					(
+						get_account_id_from_seed::<sr25519::Public>("Bob"),
+						get_collator_keys_from_seed("Bob"),
+					),
+				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -65,7 +89,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
-	initial_authorities: Vec<AuraId>,
+	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	para_id: ParaId,
 ) -> GenesisConfig {
@@ -132,7 +156,25 @@ fn testnet_genesis(
 			address: hex!["F67EFf5250cD974E6e86c9B53dc5290905Bd8916"].into(),
 		},
 		parachain_info: rococo_runtime::ParachainInfoConfig { parachain_id: para_id },
-		aura: rococo_runtime::AuraConfig { authorities: initial_authorities },
+		collator_selection: rococo_runtime::CollatorSelectionConfig {
+			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
+			candidacy_bond: rococo_runtime::ExistentialDeposit::get() * 16,
+			..Default::default()
+		},
+		session: rococo_runtime::SessionConfig {
+			keys: invulnerables
+				.into_iter()
+				.map(|(acc, aura)| {
+					(
+						acc.clone(),                          // account id
+						acc,                                  // validator id
+						rococo_runtime::SessionKeys { aura }, // session keys
+					)
+				})
+				.collect(),
+		},
+		aura: Default::default(),
 		aura_ext: Default::default(),
+		parachain_system: Default::default(),
 	}
 }
