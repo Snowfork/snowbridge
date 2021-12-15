@@ -93,21 +93,19 @@ where
 		origin: <T as frame_system::Config>::Origin,
 		asset_id: SnowbridgeAssetId,
 		para_id: u32,
-		_dest: &T::AccountId,
+		recipient: &T::AccountId,
 		amount: U256,
 	) -> frame_support::dispatch::DispatchResult {
 		let origin_location = T::ExecuteXcmOrigin::ensure_origin(origin.clone())?;
 
 		let amount = u128::try_from(amount).map_err(|e| DispatchError::Other(e))?;
+		let weight: u64 = todo!();
 
 		let mut message = Xcm(vec![TransferReserveAsset {
 			assets: MultiAssets::from(vec![MultiAsset {
 				id: AssetId::Concrete(MultiLocation {
-					parents: 1,
-					interior: Junctions::X2(
-						Junction::Parachain(1000),
-						Junction::GeneralKey(asset_id.encode()),
-					),
+					parents: 0,
+					interior: Junctions::X1(Junction::GeneralKey(asset_id.encode())),
 				}),
 				fun: Fungibility::Fungible(amount),
 			}]),
@@ -119,15 +117,37 @@ where
 				),
 			},
 			xcm: Xcm(vec![
-				BuyExecution { fees: todo!(), weight_limit: Limited(0) },
-				DepositAsset { assets: Wild(All), max_assets: todo!(), beneficiary: todo!() },
+				BuyExecution {
+					fees: MultiAsset {
+						id: AssetId::Concrete(MultiLocation {
+							parents: 0,
+							interior: Junctions::Here,
+						}),
+						fun: Fungibility::Fungible(weight.into()),
+					},
+					weight_limit: Limited(weight),
+				},
+				DepositAsset {
+					assets: Wild(All),
+					max_assets: 1,
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: Junctions::X1(Junction::AccountId32 {
+							network: NetworkId::Any,
+							id: todo!(),
+						}),
+					},
+				},
 			]),
 		}]);
+
 		let weight = T::Weigher::weight(&mut message)
 			.map_err(|_| DispatchError::Other("Unweighable message."))?;
+
 		T::XcmExecutor::execute_xcm(origin_location, message, weight)
 			.ensure_complete()
 			.map_err(|_| DispatchError::Other("Xcm execution failed."))?;
+
 		Ok(())
 	}
 }

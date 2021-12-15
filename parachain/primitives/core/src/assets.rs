@@ -50,7 +50,7 @@ pub trait XcmTransactAsset<AccountId, Origin> {
 		origin: Origin,
 		asset_id: AssetId,
 		para_id: u32,
-		dest: &AccountId,
+		recipient: &AccountId,
 		amount: U256,
 	) -> DispatchResult;
 }
