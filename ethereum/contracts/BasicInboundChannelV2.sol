@@ -6,7 +6,7 @@ import "./ParachainLightClient.sol";
 import "./BeefyLightClient.sol";
 import "./SimplifiedMMRVerification.sol";
 
-contract BasicInboundChannel {
+contract BasicInboundChannelV2 {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
     uint256 public constant GAS_BUFFER = 60000;
 
@@ -31,12 +31,16 @@ contract BasicInboundChannel {
         beefyLightClient = _beefyLightClient;
     }
 
- //@TODO
     function generateCommitmentHash(Leaf calldata _leaf,bytes32[] calldata _leafProof)
     internal  returns (bytes32)
     {
-        // The commitment is now the root hash of a Merkle Tree,  
-        return computeMerkleHash(_leaf,leafProof);
+        bytes32 leafNodeHash = keccak256(abi.encodePacked(_leaf));
+
+        for (uint currentPosition = 0; currentPosition < _leafProof.length; currentPosition++) {
+                leafNodeHash = keccak256(abi.encodePacked(_leafProof[currentPosition], leafNodeHash));
+            }
+
+        return leafNodeHash;
     }
 
     function submit(
