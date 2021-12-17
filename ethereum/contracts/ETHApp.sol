@@ -14,6 +14,7 @@ enum ChannelId {
 
 contract ETHApp is RewardSource, AccessControl {
     using ScaleCodec for uint256;
+    using ScaleCodec for uint32;
 
     uint256 public balance;
 
@@ -113,14 +114,25 @@ contract ETHApp is RewardSource, AccessControl {
         uint256 _amount,
         uint32 _paraId
     ) private pure returns (bytes memory) {
-        return
-            abi.encodePacked(
+        if(_paraId == 0) {
+            return abi.encodePacked(
+                    MINT_CALL,
+                    _sender,
+                    bytes1(0x00), // Encode recipient as MultiAddress::Id
+                    _recipient,
+                    _amount.encode256(),
+                    bytes1(0x00)
+                );
+        }
+
+        return abi.encodePacked(
                 MINT_CALL,
                 _sender,
                 bytes1(0x00), // Encode recipient as MultiAddress::Id
                 _recipient,
                 _amount.encode256(),
-                _paraId
+                bytes1(0x01),
+                _paraId.encode32()
             );
     }
 
