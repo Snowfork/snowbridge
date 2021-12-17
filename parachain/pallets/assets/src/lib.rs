@@ -131,7 +131,7 @@ impl<T: Config> MultiAsset<T::AccountId> for Module<T> {
 			let new_total_issuance = current_total_issuance
 				.checked_add(amount)
 				.ok_or(Error::<T>::TotalIssuanceOverflow)?;
-      *balance = balance.checked_add(amount).ok_or(Error::<T>::BalanceOverflow)?;
+			*balance = balance.checked_add(amount).ok_or(Error::<T>::BalanceOverflow)?;
 			<TotalIssuance>::insert(asset_id, new_total_issuance);
 			Ok(())
 		})
@@ -163,7 +163,8 @@ impl<T: Config> MultiAsset<T::AccountId> for Module<T> {
 		}
 		<Balances<T>>::try_mutate(asset_id, from, |from_balance| -> DispatchResult {
 			<Balances<T>>::try_mutate(asset_id, to, |to_balance| -> DispatchResult {
-				*from_balance = from_balance.checked_sub(amount).ok_or(Error::<T>::InsufficientBalance)?;
+				*from_balance = 
+					from_balance.checked_sub(amount).ok_or(Error::<T>::InsufficientBalance)?;
 				*to_balance = to_balance.checked_add(amount).ok_or(Error::<T>::BalanceOverflow)?;
 				Ok(())
 			})
