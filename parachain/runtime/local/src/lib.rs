@@ -67,7 +67,7 @@ use xcm_builder::{
 use xcm_executor::{Config, XcmExecutor};
 
 use assets::SingleAssetAdaptor;
-use snowbridge_xcm_support::{AssetsTransactor, XcmAssetTransactor};
+use snowbridge_xcm_support::{AssetsTransactor, XcmAssetTransferer};
 
 use runtime_common::{
 	DotPalletId, Ether, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter,
@@ -592,7 +592,7 @@ impl eth_app::Config for Runtime {
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = eth_app::weights::SnowbridgeWeight<Self>;
-	type XcmTransactAsset = XcmAssetTransactor<Runtime>;
+	type XcmReserveTransfer = XcmAssetTransferer<Runtime>;
 }
 
 impl erc20_app::Config for Runtime {

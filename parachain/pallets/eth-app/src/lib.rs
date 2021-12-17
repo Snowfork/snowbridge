@@ -37,7 +37,7 @@ use sp_core::{H160, U256};
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
-use snowbridge_core::{assets::XcmTransactAsset, ChannelId, OutboundRouter, SingleAsset};
+use snowbridge_core::{assets::XcmReserveTransfer, ChannelId, OutboundRouter, SingleAsset};
 
 pub use pallet::*;
 use payload::OutboundPayload;
@@ -67,7 +67,7 @@ pub mod pallet {
 
 		type WeightInfo: WeightInfo;
 
-		type XcmTransactAsset: XcmTransactAsset<Self::AccountId, Self::Origin>;
+		type XcmReserveTransfer: XcmReserveTransfer<Self::AccountId, Self::Origin>;
 	}
 
 	#[pallet::hooks]
@@ -151,7 +151,7 @@ pub mod pallet {
 
 			let recipient = T::Lookup::lookup(recipient)?;
 			if para_id != 0 {
-				T::XcmTransactAsset::reserve_transfer(
+				T::XcmReserveTransfer::reserve_transfer(
 					origin,
 					T::Asset::asset_id(),
 					para_id,

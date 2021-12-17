@@ -16,7 +16,7 @@ use xcm::latest::prelude::*;
 use xcm_executor::traits::{Convert, TransactAsset, WeightBounds};
 
 use snowbridge_core::assets::{
-	AssetId as SnowbridgeAssetId, MultiAsset as SnowbridgeMultiAsset, XcmTransactAsset,
+	AssetId as SnowbridgeAssetId, MultiAsset as SnowbridgeMultiAsset, XcmReserveTransfer,
 };
 
 pub struct AssetsTransactor<Assets, AccountIdConverter, AccountId>(
@@ -83,9 +83,9 @@ impl<
 	}
 }
 
-pub struct XcmAssetTransactor<T>(PhantomData<T>);
+pub struct XcmAssetTransferer<T>(PhantomData<T>);
 
-impl<T> XcmTransactAsset<T::AccountId, OriginFor<T>> for XcmAssetTransactor<T>
+impl<T> XcmReserveTransfer<T::AccountId, OriginFor<T>> for XcmAssetTransferer<T>
 where
 	T: pallet_xcm::Config,
 	T::AccountId: AsRef<[u8; 32]>,

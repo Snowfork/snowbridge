@@ -45,7 +45,7 @@ pub trait SingleAsset<AccountId> {
 	fn deposit(who: &AccountId, amount: U256) -> DispatchResult;
 }
 
-pub trait XcmTransactAsset<AccountId, Origin> {
+pub trait XcmReserveTransfer<AccountId, Origin> {
 	fn reserve_transfer(
 		origin: Origin,
 		asset_id: AssetId,
