@@ -100,16 +100,54 @@ where
 		let origin_location = T::ExecuteXcmOrigin::ensure_origin(origin.clone())?;
 
 		let amount = u128::try_from(amount).map_err(|e| DispatchError::Other(e))?;
-		let weight: u64 = todo!();
+
+		let mut remote_message = Xcm(vec![
+			BuyExecution {
+				fees: MultiAsset {
+					id: AssetId::Concrete(MultiLocation { parents: 0, interior: Junctions::Here }),
+					fun: Fungibility::Fungible(0),
+				},
+				weight_limit: Limited(0),
+			},
+			DepositAsset {
+				assets: Wild(All),
+				max_assets: 2,
+				beneficiary: MultiLocation {
+					parents: 0,
+					interior: Junctions::X1(Junction::AccountId32 {
+						network: NetworkId::Any,
+						id: recipient.as_ref().clone(),
+					}),
+				},
+			},
+		]);
+
+		let remote_weight: u64 = T::Weigher::weight(&mut remote_message)
+			.map_err(|_| DispatchError::Other("Unweighable message."))?;
+
+		if let Some(BuyExecution {
+			weight_limit: Limited(ref mut limit),
+			fees: MultiAsset { fun: Fungibility::Fungible(ref mut fee), .. },
+		}) = remote_message.0.get_mut(0)
+		{
+			*limit = remote_weight;
+			*fee = remote_weight.into();
+		}
 
 		let mut message = Xcm(vec![TransferReserveAsset {
-			assets: MultiAssets::from(vec![MultiAsset {
-				id: AssetId::Concrete(MultiLocation {
-					parents: 0,
-					interior: Junctions::X1(Junction::GeneralKey(asset_id.encode())),
-				}),
-				fun: Fungibility::Fungible(amount),
-			}]),
+			assets: MultiAssets::from(vec![
+				MultiAsset {
+					id: AssetId::Concrete(MultiLocation { parents: 0, interior: Junctions::Here }),
+					fun: Fungibility::Fungible(remote_weight.into()),
+				},
+				MultiAsset {
+					id: AssetId::Concrete(MultiLocation {
+						parents: 0,
+						interior: Junctions::X1(Junction::GeneralKey(asset_id.encode())),
+					}),
+					fun: Fungibility::Fungible(amount),
+				},
+			]),
 			dest: MultiLocation {
 				parents: 1,
 				interior: Junctions::X2(
@@ -117,35 +155,13 @@ where
 					Junction::GeneralKey(asset_id.encode()),
 				),
 			},
-			xcm: Xcm(vec![
-				BuyExecution {
-					fees: MultiAsset {
-						id: AssetId::Concrete(MultiLocation {
-							parents: 0,
-							interior: Junctions::Here,
-						}),
-						fun: Fungibility::Fungible(weight.into()),
-					},
-					weight_limit: Limited(weight),
-				},
-				DepositAsset {
-					assets: Wild(All),
-					max_assets: 1,
-					beneficiary: MultiLocation {
-						parents: 0,
-						interior: Junctions::X1(Junction::AccountId32 {
-							network: NetworkId::Any,
-							id: recipient.as_ref().clone(),
-						}),
-					},
-				},
-			]),
+			xcm: remote_message.into(),
 		}]);
 
 		let weight = T::Weigher::weight(&mut message)
 			.map_err(|_| DispatchError::Other("Unweighable message."))?;
 
-		T::XcmExecutor::execute_xcm(origin_location, message, weight)
+		T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
 			.ensure_complete()
 			.map_err(|_| DispatchError::Other("Xcm execution failed."))?;
 
