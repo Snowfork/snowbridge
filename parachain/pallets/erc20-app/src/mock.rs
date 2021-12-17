@@ -15,7 +15,7 @@ use sp_runtime::{
 };
 
 use snowbridge_assets::SingleAssetAdaptor;
-use snowbridge_core::{AssetId, ChannelId, assets::XcmReserveTransfer};
+use snowbridge_core::{assets::XcmReserveTransfer, AssetId, ChannelId};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

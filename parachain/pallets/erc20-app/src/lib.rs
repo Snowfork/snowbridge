@@ -37,7 +37,7 @@ use sp_core::{H160, U256};
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
-use snowbridge_core::{AssetId, ChannelId, MultiAsset, OutboundRouter, assets::XcmReserveTransfer};
+use snowbridge_core::{assets::XcmReserveTransfer, AssetId, ChannelId, MultiAsset, OutboundRouter};
 
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
@@ -160,13 +160,7 @@ pub mod pallet {
 			let asset_id = AssetId::Token(token);
 
 			if let Some(id) = para_id {
-				T::XcmReserveTransfer::reserve_transfer(
-					origin,
-					asset_id,
-					id,
-					&recipient,
-					amount,
-				)?;
+				T::XcmReserveTransfer::reserve_transfer(origin, asset_id, id, &recipient, amount)?;
 				return Ok(())
 			}
 
