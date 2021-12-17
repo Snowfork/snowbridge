@@ -88,6 +88,7 @@ pub struct XcmAssetTransactor<T>(PhantomData<T>);
 impl<T> XcmTransactAsset<T::AccountId, OriginFor<T>> for XcmAssetTransactor<T>
 where
 	T: pallet_xcm::Config,
+	T::AccountId: AsRef<[u8; 32]>,
 {
 	fn reserve_transfer(
 		origin: <T as frame_system::Config>::Origin,
@@ -134,7 +135,7 @@ where
 						parents: 0,
 						interior: Junctions::X1(Junction::AccountId32 {
 							network: NetworkId::Any,
-							id: todo!(),
+							id: recipient.as_ref().clone(),
 						}),
 					},
 				},
