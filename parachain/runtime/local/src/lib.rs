@@ -601,6 +601,7 @@ impl erc20_app::Config for Runtime {
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = erc20_app::weights::SnowbridgeWeight<Self>;
+	type XcmReserveTransfer = XcmAssetTransferer<Runtime>;
 }
 
 parameter_types! {

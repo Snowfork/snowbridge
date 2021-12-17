@@ -15,7 +15,7 @@ use sp_runtime::{
 };
 
 use snowbridge_assets::SingleAssetAdaptor;
-use snowbridge_core::{AssetId, ChannelId};
+use snowbridge_core::{AssetId, ChannelId, assets::XcmReserveTransfer};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -131,12 +131,26 @@ impl snowbridge_incentivized_channel::outbound::Config for Test {
 	type WeightInfo = ();
 }
 
+pub struct XcmAssetTransfererMock<T>(PhantomData<T>);
+impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
+	fn reserve_transfer(
+		_origin: Origin,
+		_asset_id: AssetId,
+		_para_id: u32,
+		_dest: &AccountId,
+		_amount: ethabi::U256,
+	) -> DispatchResult {
+		todo!()
+	}
+}
+
 impl crate::Config for Test {
 	type Event = Event;
 	type Assets = Assets;
 	type OutboundRouter = OutboundRouter<Test>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
 	type WeightInfo = ();
+	type XcmReserveTransfer = XcmAssetTransfererMock<Self>;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

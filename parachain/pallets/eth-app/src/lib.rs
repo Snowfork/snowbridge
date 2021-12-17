@@ -142,7 +142,7 @@ pub mod pallet {
 			sender: H160,
 			recipient: <T::Lookup as StaticLookup>::Source,
 			amount: U256,
-			para_id: u32,
+			para_id: Option<u32>,
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
@@ -150,11 +150,12 @@ pub mod pallet {
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
-			if para_id != 0 {
+
+			if let Some(id) = para_id {
 				T::XcmReserveTransfer::reserve_transfer(
 					origin,
 					T::Asset::asset_id(),
-					para_id,
+					id,
 					&recipient,
 					amount,
 				)?;

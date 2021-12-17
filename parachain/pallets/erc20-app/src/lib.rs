@@ -37,7 +37,7 @@ use sp_core::{H160, U256};
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
-use snowbridge_core::{AssetId, ChannelId, MultiAsset, OutboundRouter};
+use snowbridge_core::{AssetId, ChannelId, MultiAsset, OutboundRouter, assets::XcmReserveTransfer};
 
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
@@ -67,6 +67,8 @@ pub mod pallet {
 		type CallOrigin: EnsureOrigin<Self::Origin, Success = H160>;
 
 		type WeightInfo: WeightInfo;
+
+		type XcmReserveTransfer: XcmReserveTransfer<Self::AccountId, Self::Origin>;
 	}
 
 	#[pallet::hooks]
@@ -146,14 +148,29 @@ pub mod pallet {
 			sender: H160,
 			recipient: <T::Lookup as StaticLookup>::Source,
 			amount: U256,
+			para_id: Option<u32>,
 		) -> DispatchResult {
-			let who = T::CallOrigin::ensure_origin(origin)?;
+			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
 				return Err(DispatchError::BadOrigin.into())
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
-			T::Assets::deposit(AssetId::Token(token), &recipient, amount)?;
+
+			let asset_id = AssetId::Token(token);
+
+			if let Some(id) = para_id {
+				T::XcmReserveTransfer::reserve_transfer(
+					origin,
+					asset_id,
+					id,
+					&recipient,
+					amount,
+				)?;
+				return Ok(())
+			}
+
+			T::Assets::deposit(asset_id, &recipient, amount)?;
 			Self::deposit_event(Event::Minted(token, sender, recipient, amount));
 
 			Ok(())
