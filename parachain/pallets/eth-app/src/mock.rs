@@ -17,8 +17,6 @@ use sp_runtime::{
 use snowbridge_assets::SingleAssetAdaptor;
 use snowbridge_core::{assets::XcmReserveTransfer, AssetId, ChannelId};
 
-use crate as eth_app;
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -163,7 +161,7 @@ impl crate::benchmarking::Config for Test {}
 pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	let config = eth_app::GenesisConfig { address: H160::repeat_byte(1) };
+	let config = crate::GenesisConfig { address: H160::repeat_byte(1) };
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
