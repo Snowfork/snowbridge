@@ -161,7 +161,8 @@ class EthClient {
       this.TestTokenAddress,
       recipientBytes,
       this.web3.utils.toBN(amount),
-      channelId
+      channelId,
+      0
     ).send({
       from,
       gas: 500000,
