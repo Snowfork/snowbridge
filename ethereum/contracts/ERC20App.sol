@@ -81,7 +81,10 @@ contract ERC20App is AccessControl {
         );
         channel.submit(msg.sender, call);
 
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+        require(
+            IERC20(_token).transferFrom(msg.sender, address(this), _amount),
+            "Contract token allowances insufficient to complete this lock request"
+        );
     }
 
     function unlock(
