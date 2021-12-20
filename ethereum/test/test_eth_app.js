@@ -12,6 +12,7 @@ require("chai")
   .should();
 
 const { ethers } = require("ethers");
+const { expect } = require("chai");
 
 const ETHApp = artifacts.require("ETHApp");
 const ScaleCodec = artifacts.require("ScaleCodec");
@@ -126,6 +127,44 @@ describe("ETHApp", function () {
 
       afterBalance.should.be.bignumber.equal(beforeBalance.minus(amount));
       afterRecipientBalance.minus(beforeRecipientBalance).should.be.bignumber.equal(amount);
+    });
+  });
+
+  describe("upgradeability", function () {
+    beforeEach(async function () {
+      this.outboundChannel = await MockOutboundChannel.new()
+      this.newInboundChannel = accounts[2];
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ETHApp, inboundChannel);
+    });
+    
+    it("should revert when called by non-admin", async function () {
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: userOne}).should.be.rejectedWith(/AccessControl/);
+    });
+    
+    it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
+      await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: owner}
+      ).should.be.rejectedWith(/AccessControl/)
+    })
+
+    it("should succeed when called by CHANNEL_UPGRADE_ROLE", async function () {
+      const oldBasic = await this.app.channels(0);
+      const oldIncentivized = await this.app.channels(1);
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: owner}
+      );
+      const newBasic = await this.app.channels(0);
+      const newIncentivized = await this.app.channels(1);
+      expect(newBasic.inbound !== oldBasic.inbound).to.be.true;
+      expect(newIncentivized.inbound !== oldIncentivized.inbound).to.be.true;
     });
   });
 });
