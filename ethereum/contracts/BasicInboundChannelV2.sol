@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
-
 import "./ParachainLightClient.sol";
 import "./BeefyLightClient.sol";
 import "./SimplifiedMMRVerification.sol";
+import "./utils/MerkleProof.sol";
 
 contract BasicInboundChannelV2 {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
@@ -31,29 +31,26 @@ contract BasicInboundChannelV2 {
         beefyLightClient = _beefyLightClient;
     }
 
-    function generateCommitmentHash(Leaf calldata _leaf,bytes32[] calldata _leafProof)
-    internal  returns (bytes32)
+    function generateCommitmentHash(Leaf calldata _leaf,bytes32[] calldata _leafProof,bool[] calldata nodeSide)
+    internal pure returns (bytes32)
     {
-        bytes32 leafNodeHash = keccak256(abi.encodePacked(_leaf));
+        bytes32 leafNodeHash = keccak256(abi.encode(_leaf));
 
-        for (uint currentPosition = 0; currentPosition < _leafProof.length; currentPosition++) {
-                leafNodeHash = keccak256(abi.encodePacked(_leafProof[currentPosition], leafNodeHash));
-            }
-
-        return leafNodeHash;
+        return MerkleProof.computeRootFromProofAndSide(leafNodeHash,_leafProof,nodeSide);
     }
 
     function submit(
        Leaf calldata _leaf,
        bytes32[] calldata leafProof,
+        bool[] calldata nodeSide,
         ParachainLightClient.ParachainVerifyInput
             calldata _parachainVerifyInput,
         ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         SimplifiedMMRProof calldata proof
     ) public {
 
-        bytes32 commitment = generateCommitmentHash(_leaf,leafProof);
- 
+        bytes32 commitment = generateCommitmentHash(_leaf,leafProof,nodeSide);
+
         ParachainLightClient.verifyCommitmentInParachain(
             commitment,
             _parachainVerifyInput,
