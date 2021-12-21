@@ -8,6 +8,7 @@ import "./utils/Bitfield.sol";
 import "./ValidatorRegistry.sol";
 import "./SimplifiedMMRVerification.sol";
 import "./ScaleCodec.sol";
+import "./SparseMerkleMultiProof.sol";
 
 /**
  * @title A entry contract for the Ethereum light client
@@ -79,6 +80,22 @@ contract BeefyLightClient {
         uint256[] positions;
         address[] publicKeys;
         bytes32[][] publicKeyMerkleProofs;
+    }
+
+    /**
+     * The MultiProof is a collection of proofs used to verify the signatures from the signers signing
+     * each new justification.
+     * @param depth Depth of the Merkle tree. Equal to log2(number of leafs)
+     * @param signatures an array of signatures from the chosen signers
+     * @param positions an array of the positions of the chosen signers
+     * @param decommitments multi merkle proof from the chosen validators proving that their addresses
+     * are in the validator set
+     */
+    struct MultiProof {
+        uint256 depth;
+        bytes[] signatures;
+        uint256[] positions;
+        bytes32[] decommitments;
     }
 
     /**
@@ -280,7 +297,7 @@ contract BeefyLightClient {
     function completeSignatureCommitment(
         uint256 id,
         Commitment calldata commitment,
-        ValidatorProof calldata validatorProof,
+        MultiProof calldata validatorProof,
         BeefyMMRLeaf calldata latestMMRLeaf,
         SimplifiedMMRProof calldata proof
     ) public {
@@ -412,7 +429,7 @@ contract BeefyLightClient {
     function verifyCommitment(
         uint256 id,
         Commitment calldata commitment,
-        ValidatorProof calldata proof
+        MultiProof calldata proof
     ) internal view {
         ValidationData storage data = validationData[id];
 
@@ -454,7 +471,7 @@ contract BeefyLightClient {
 
     function verifyValidatorProofLengths(
         uint256 requiredNumOfSignatures,
-        ValidatorProof calldata proof
+        MultiProof calldata proof
     ) internal pure {
         /**
          * @dev verify that required number of signatures, positions, public keys and merkle proofs are
@@ -468,79 +485,75 @@ contract BeefyLightClient {
             proof.positions.length == requiredNumOfSignatures,
             "Error: Number of validator positions does not match required"
         );
-        require(
-            proof.publicKeys.length == requiredNumOfSignatures,
-            "Error: Number of validator public keys does not match required"
-        );
-        require(
-            proof.publicKeyMerkleProofs.length == requiredNumOfSignatures,
-            "Error: Number of validator public keys does not match required"
-        );
+    }
+
+    function roundUpToPow2(uint256 len) internal pure returns (uint256) {
+        if (len <= 1) return 1;
+        else return 2 * roundUpToPow2((len + 1) / 2);
     }
 
     function verifyValidatorProofSignatures(
         uint256[] memory randomBitfield,
-        ValidatorProof calldata proof,
+        MultiProof calldata proof,
         uint256 requiredNumOfSignatures,
         Commitment calldata commitment
-    ) internal view {
-        // Encode and hash the commitment
+    ) private view {
         bytes32 commitmentHash = createCommitmentHash(commitment);
+        verifyProofSignatures(
+            validatorRegistry.root(),
+            validatorRegistry.numOfValidators(),
+            randomBitfield,
+            proof,
+            requiredNumOfSignatures,
+            commitmentHash
+        );
+    }
 
+    function verifyProofSignatures(
+        bytes32 root,
+        uint256 len,
+        uint256[] memory bitfield,
+        MultiProof memory proof,
+        uint256 requiredNumOfSignatures,
+        bytes32 commitmentHash
+    ) private pure {
+
+        uint256 width = roundUpToPow2(len);
         /**
          *  @dev For each randomSignature, do:
          */
+        bytes32[] memory leaves = new bytes32[](requiredNumOfSignatures);
         for (uint256 i = 0; i < requiredNumOfSignatures; i++) {
-            verifyValidatorSignature(
-                randomBitfield,
-                proof.signatures[i],
-                proof.positions[i],
-                proof.publicKeys[i],
-                proof.publicKeyMerkleProofs[i],
-                commitmentHash
+            uint256 pos = proof.positions[i];
+
+            require(pos < len, "Error: invalid signer position");
+            /**
+             * @dev Check if validator in bitfield
+             */
+            require(
+                bitfield.isSet(pos),
+                "Error: signer must be once in bitfield"
             );
+
+            /**
+             * @dev Remove validator from bitfield such that no validator can appear twice in signatures
+             */
+            bitfield.clear(pos);
+
+            address signer = ECDSA.recover(commitmentHash, proof.signatures[i]);
+            leaves[i] = keccak256(abi.encodePacked(signer));
         }
-    }
 
-    function verifyValidatorSignature(
-        uint256[] memory randomBitfield,
-        bytes calldata signature,
-        uint256 position,
-        address publicKey,
-        bytes32[] calldata publicKeyMerkleProof,
-        bytes32 commitmentHash
-    ) internal view {
-        /**
-         * @dev Check if validator in randomBitfield
-         */
+        require(1 << proof.depth == width, "Error: invalid depth");
         require(
-            randomBitfield.isSet(position),
-            "Error: Validator must be once in bitfield"
-        );
-
-        /**
-         * @dev Remove validator from randomBitfield such that no validator can appear twice in signatures
-         */
-        randomBitfield.clear(position);
-
-        /**
-         * @dev Check if merkle proof is valid
-         */
-        require(
-            validatorRegistry.checkValidatorInSet(
-                publicKey,
-                position,
-                publicKeyMerkleProof
+            SparseMerkleMultiProof.verify(
+                root,
+                proof.depth,
+                proof.positions,
+                leaves,
+                proof.decommitments
             ),
-            "Error: Validator must be in validator set at correct position"
-        );
-
-        /**
-         * @dev Check if signature is correct
-         */
-        require(
-            ECDSA.recover(commitmentHash, signature) == publicKey,
-            "Error: Invalid Signature"
+            "Error: invalid multi proof"
         );
     }
 

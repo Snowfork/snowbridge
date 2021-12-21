@@ -60,8 +60,13 @@ contract ValidatorRegistry is Ownable {
                 root,
                 hashedLeaf,
                 pos,
-                numOfValidators,
+                roundUpToPow2(numOfValidators),
                 proof
             );
+    }
+
+    function roundUpToPow2(uint256 len) internal pure returns (uint256) {
+        if (len <= 1) return 1;
+        else return 2 * roundUpToPow2((len + 1) / 2);
     }
 }
