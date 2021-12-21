@@ -70,22 +70,18 @@ contract BasicInboundChannelV2 {
 
     function processMessages(Leaf calldata _leaf) public { 
         // User nonce for replay protection
-        uint64 usercachedNonce =  userNonce[_leaf.account];
-        
-        require(usercachedNonce + 1  == _leaf.nonce , "invalid nonce");
+        require(userNonce[_leaf.account] + 1  == _leaf.nonce , "invalid nonce");
+ 
+        userNonce[_leaf.account] = userNonce[_leaf.account] + 1;
 
-         for (uint256 i = usercachedNonce; i <  _leaf.messages.length + userNonce[_leaf.account]; i++) {
-            
-            usercachedNonce = usercachedNonce +1;
-            
+        for (uint256 i = 0; i < _leaf.messages.length; i++) {
             // Deliver the message to the target
             (bool success, ) = _leaf.messages[i].target.call{
                 value: 0,
                 gas: MAX_GAS_PER_MESSAGE
             }(_leaf.messages[i].payload);
-
-            emit MessageDispatched(usercachedNonce, success);
+ 
+            emit MessageDispatched(userNonce[_leaf.account], success);
         }
-        userNonce[_leaf.account] = usercachedNonce;
     }
 }
