@@ -77,7 +77,12 @@ contract ERC20App is AccessControl {
 
         emit Locked(_token, msg.sender, _recipient, _amount, _paraId);
 
-        bytes memory call = encodeCall(_token, msg.sender, _recipient, _amount, _paraId);
+        bytes memory call;
+        if(_paraId == 0) {
+            call = encodeCall(_token, msg.sender, _recipient, _amount);
+        } else {
+            call = encodeCall(_token, msg.sender, _recipient, _amount, _paraId);
+        }
 
         OutboundChannel channel = OutboundChannel(
             channels[_channelId].outbound
@@ -112,21 +117,27 @@ contract ERC20App is AccessControl {
         address _token,
         address _sender,
         bytes32 _recipient,
+        uint256 _amount
+    ) private pure returns (bytes memory) {
+        return abi.encodePacked(
+                MINT_CALL,
+                _token,
+                _sender,
+                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                _recipient,
+                _amount.encode256(),
+                bytes1(0x00)
+            );
+    }
+
+    // SCALE-encode payload with parachain Id
+    function encodeCall(
+        address _token,
+        address _sender,
+        bytes32 _recipient,
         uint256 _amount,
         uint32 _paraId
     ) private pure returns (bytes memory) {
-        if(_paraId == 0) {
-            return abi.encodePacked(
-                    MINT_CALL,
-                    _token,
-                    _sender,
-                    bytes1(0x00), // Encode recipient as MultiAddress::Id
-                    _recipient,
-                    _amount.encode256(),
-                    bytes1(0x00)
-                );
-        }
-
         return abi.encodePacked(
                 MINT_CALL,
                 _token,
