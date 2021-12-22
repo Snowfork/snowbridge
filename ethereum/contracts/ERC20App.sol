@@ -81,7 +81,7 @@ contract ERC20App is AccessControl {
         if(_paraId == 0) {
             call = encodeCall(_token, msg.sender, _recipient, _amount);
         } else {
-            call = encodeCall(_token, msg.sender, _recipient, _amount, _paraId);
+            call = encodeCallWithParaId(_token, msg.sender, _recipient, _amount, _paraId);
         }
 
         OutboundChannel channel = OutboundChannel(
@@ -131,7 +131,7 @@ contract ERC20App is AccessControl {
     }
 
     // SCALE-encode payload with parachain Id
-    function encodeCall(
+    function encodeCallWithParaId(
         address _token,
         address _sender,
         bytes32 _recipient,

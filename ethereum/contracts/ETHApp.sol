@@ -85,7 +85,7 @@ contract ETHApp is RewardSource, AccessControl {
                 msg.value
             );
         } else {
-            call = encodeCall(
+            call = encodeCallWithParaId(
                 msg.sender,
                 _recipient,
                 msg.value,
@@ -133,7 +133,7 @@ contract ETHApp is RewardSource, AccessControl {
     }
 
     // SCALE-encode payload with parachain Id
-    function encodeCall(
+    function encodeCallWithParaId(
         address _sender,
         bytes32 _recipient,
         uint256 _amount,
