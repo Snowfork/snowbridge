@@ -18,7 +18,7 @@ name = "snowbridge-test-collator"
 path = "src/main.rs"
 
 [features]
-runtime-benchmarks = ["snowbridge-test-runtime/runtime-benchmarks"]
+runtime-benchmarks = ["test-runtime/runtime-benchmarks"]
 
 [dependencies]
 derive_more = "0.99.2"
@@ -32,7 +32,7 @@ hex-literal = "0.3.1"
 jsonrpc-core = "18.0.0"
 
 # Local Dependencies
-test-runtime = { path = "../runtime" }
+test-runtime = { path = "../runtime", package = "snowbridge-test-runtime", default-features = false }
 
 # Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }

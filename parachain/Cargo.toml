@@ -120,4 +120,7 @@ members = [
     "runtime/snowbridge",
     "runtime/rococo",
     "runtime/local",
+    "utils/test-parachain/node",
+    "utils/test-parachain/pallets/test",
+    "utils/test-parachain/runtime",
 ]

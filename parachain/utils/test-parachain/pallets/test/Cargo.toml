@@ -1,11 +1,9 @@
 [package]
-name = "pallet-template"
-authors = ["Anonymous"]
-description = "FRAME pallet template for defining custom runtime logic."
-version = "0.1.0"
-license = "Unlicense"
-homepage = "https://substrate.io"
-repository = "https://github.com/paritytech/substrate/"
+name = "snowbridge-test-pallet"
+authors = ["Snowfork <contact@snowfork.com>"]
+description = "Snowbridge test pallet for custom logic."
+version = "0.1.1"
+repository = "https://github.com/Snowfork/snowbridge"
 edition = "2018"
 
 [package.metadata.docs.rs]
