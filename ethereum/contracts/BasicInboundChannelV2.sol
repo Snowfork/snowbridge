@@ -68,7 +68,7 @@ contract BasicInboundChannelV2 {
         processMessages(_leaf);
     }
 
-    function processMessages(Leaf calldata _leaf) public { 
+    function processMessages(Leaf calldata _leaf) internal { 
         // User nonce for replay protection
         require(userNonce[_leaf.account] + 1  == _leaf.nonce , "invalid nonce");
  
