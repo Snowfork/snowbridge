@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 // Local Runtime Types
-use parachain_template_runtime::{
+use test_runtime::{
 	opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi,
 };
 
@@ -38,11 +38,11 @@ impl sc_executor::NativeExecutionDispatch for TemplateRuntimeExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		parachain_template_runtime::api::dispatch(method, data)
+		test_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		parachain_template_runtime::native_version()
+		test_runtime::native_version()
 	}
 }
 
