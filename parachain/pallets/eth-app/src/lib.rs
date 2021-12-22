@@ -150,6 +150,7 @@ pub mod pallet {
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
+			T::Asset::deposit(&recipient, amount)?;
 
 			if let Some(id) = para_id {
 				T::XcmReserveTransfer::reserve_transfer(
@@ -159,10 +160,8 @@ pub mod pallet {
 					&recipient,
 					amount,
 				)?;
-				return Ok(())
 			}
 
-			T::Asset::deposit(&recipient, amount)?;
 			Self::deposit_event(Event::Minted(sender, recipient.clone(), amount));
 
 			Ok(())
