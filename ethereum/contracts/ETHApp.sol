@@ -83,7 +83,8 @@ contract ETHApp is RewardSource, AccessControl {
         );
 
         balance = balance - _amount;
-        _recipient.transfer(_amount);
+        (bool success, ) = _recipient.call{value: _amount}("");
+        require(success, "Unable to send Ether");
         emit Unlocked(_sender, _recipient, _amount);
     }
 
@@ -108,6 +109,7 @@ contract ETHApp is RewardSource, AccessControl {
         override
         onlyRole(REWARD_ROLE)
     {
-        _recipient.transfer(_amount);
+        (bool success, ) = _recipient.call{value: _amount}("");
+        require(success, "Unable to send Ether");
     }
 }
