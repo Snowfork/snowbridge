@@ -1,8 +1,8 @@
 [package]
-name = "test-parachain"
+name = "snowbridge-test-node"
 version = "0.1.1"
 authors = ["Snowfork <contact@snowfork.com>"]
-description = "A test parachain for the Snowbrigde"
+description = "A test node for the Snowbrigde"
 repository = 'https://github.com/Snowfork/snowbridge'
 edition = "2018"
 build = "build.rs"
@@ -14,11 +14,11 @@ targets = ["x86_64-unknown-linux-gnu"]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
 [[bin]]
-name = "test-parachain"
+name = "snowbridge-test-collator"
 path = "src/main.rs"
 
 [features]
-runtime-benchmarks = ["test-parachain/runtime-benchmarks"]
+runtime-benchmarks = ["snowbridge-test-runtime/runtime-benchmarks"]
 
 [dependencies]
 derive_more = "0.99.2"
@@ -32,7 +32,7 @@ hex-literal = "0.3.1"
 jsonrpc-core = "18.0.0"
 
 # Local Dependencies
-parachain-template-runtime = { path = "../runtime" }
+test-runtime = { path = "../runtime" }
 
 # Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
