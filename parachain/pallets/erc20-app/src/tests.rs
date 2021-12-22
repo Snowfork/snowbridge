@@ -21,7 +21,8 @@ fn mints_after_handling_ethereum_event() {
 			token,
 			sender,
 			recipient.clone(),
-			amount.into()
+			amount.into(),
+			None
 		));
 		assert_eq!(Assets::balance(AssetId::Token(token), &recipient), amount.into());
 

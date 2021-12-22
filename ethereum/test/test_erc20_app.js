@@ -30,6 +30,7 @@ const lockupFunds = (contract, token, sender, recipient, amount, channel) => {
     addressBytes(recipient),
     amount.toString(),
     channel,
+    0, // paraId
     {
       from: sender,
       value: 0
@@ -125,7 +126,7 @@ describe("ERC20App", function () {
         amount.toString(),
         {
           from: inboundChannel,
-        }
+        },
       ).should.be.fulfilled;
       printTxPromiseGas(txPromise)
       const { receipt } = await txPromise;

@@ -20,6 +20,7 @@ const lockupFunds = (contract, sender, recipient, amount, channel) => {
   return contract.lock(
     addressBytes(recipient),
     channel,
+    0, // paraId
     {
       from: sender,
       value: amount.toString(),

@@ -8,9 +8,11 @@ edition = "2018"
 codec = { package = "parity-scale-codec", version = "2.2.0", default-features = false }
 
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.12", default-features = false }
 
 xcm = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.12", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.12", default-features = false }
@@ -25,8 +27,10 @@ std = [
         "sp-std/std",
         "sp-runtime/std",
         "frame-support/std",
+        "frame-system/std",
         "xcm/std",
         "xcm-executor/std",
         "xcm-builder/std",
-        "snowbridge-core/std"
+        "snowbridge-core/std",
+        "pallet-xcm/std",
 ]

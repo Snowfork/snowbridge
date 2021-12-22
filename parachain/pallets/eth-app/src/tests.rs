@@ -1,5 +1,5 @@
 use crate::mock::{new_tester, AccountId, Asset, EthApp, Event, Origin, System, Test};
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
+use frame_support::{assert_noop, assert_ok};
 use sp_core::H160;
 use sp_keyring::AccountKeyring as Keyring;
 
@@ -20,7 +20,8 @@ fn mints_after_handling_ethereum_event() {
 			snowbridge_dispatch::RawOrigin(peer_contract).into(),
 			sender,
 			recipient.clone(),
-			amount.into()
+			amount.into(),
+			None,
 		));
 		assert_eq!(Asset::balance(&recipient), amount.into());
 

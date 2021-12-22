@@ -179,6 +179,10 @@ where
 	T: Config,
 	I: Get<AssetId>,
 {
+	fn asset_id() -> AssetId {
+		I::get()
+	}
+
 	fn total_issuance() -> U256 {
 		Module::<T>::total_issuance(I::get())
 	}

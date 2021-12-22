@@ -7,16 +7,25 @@ import "./RewardSource.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
-enum ChannelId {Basic, Incentivized}
+enum ChannelId {
+    Basic,
+    Incentivized
+}
 
 contract ETHApp is RewardSource, AccessControl {
     using ScaleCodec for uint256;
+    using ScaleCodec for uint32;
 
     uint256 public balance;
 
     mapping(ChannelId => Channel) public channels;
 
-    event Locked(address sender, bytes32 recipient, uint256 amount);
+    event Locked(
+        address sender,
+        bytes32 recipient,
+        uint256 amount,
+        uint32 paraId
+    );
 
     event Unlocked(bytes32 sender, address recipient, uint256 amount);
 
@@ -52,7 +61,11 @@ contract ETHApp is RewardSource, AccessControl {
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
 
-    function lock(bytes32 _recipient, ChannelId _channelId) public payable {
+    function lock(
+        bytes32 _recipient,
+        ChannelId _channelId,
+        uint32 _paraId
+    ) public payable {
         require(msg.value > 0, "Value of transaction must be positive");
         require(
             _channelId == ChannelId.Basic ||
@@ -62,12 +75,27 @@ contract ETHApp is RewardSource, AccessControl {
 
         balance = balance + msg.value;
 
-        emit Locked(msg.sender, _recipient, msg.value);
+        emit Locked(msg.sender, _recipient, msg.value, _paraId);
 
-        bytes memory call = encodeCall(msg.sender, _recipient, msg.value);
+        bytes memory call;
+        if(_paraId == 0) {
+            call = encodeCall(
+                msg.sender,
+                _recipient,
+                msg.value
+            );
+        } else {
+            call = encodeCallWithParaId(
+                msg.sender,
+                _recipient,
+                msg.value,
+                _paraId
+            );
+        }
 
-        OutboundChannel channel =
-            OutboundChannel(channels[_channelId].outbound);
+        OutboundChannel channel = OutboundChannel(
+            channels[_channelId].outbound
+        );
         channel.submit(msg.sender, call);
     }
 
@@ -94,13 +122,31 @@ contract ETHApp is RewardSource, AccessControl {
         bytes32 _recipient,
         uint256 _amount
     ) private pure returns (bytes memory) {
-        return
-            abi.encodePacked(
+        return abi.encodePacked(
                 MINT_CALL,
                 _sender,
                 bytes1(0x00), // Encode recipient as MultiAddress::Id
                 _recipient,
-                _amount.encode256()
+                _amount.encode256(),
+                bytes1(0x00)
+            );
+    }
+
+    // SCALE-encode payload with parachain Id
+    function encodeCallWithParaId(
+        address _sender,
+        bytes32 _recipient,
+        uint256 _amount,
+        uint32 _paraId
+    ) private pure returns (bytes memory) {
+        return abi.encodePacked(
+                MINT_CALL,
+                _sender,
+                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                _recipient,
+                _amount.encode256(),
+                bytes1(0x01),
+                _paraId.encode32()
             );
     }
 
