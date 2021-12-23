@@ -34,7 +34,7 @@ describe("BasicInboundChannelV2", function () {
     await runBeefyLightClientFlow(fixture, this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
   });
 
-  describe("submit", function () {
+  describe.skip("submit", function () {
     beforeEach(async function () {
       this.channel = await BasicInboundChannelV2.new(this.beefyLightClient.address);
     });

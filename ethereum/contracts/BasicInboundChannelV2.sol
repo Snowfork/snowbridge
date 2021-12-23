@@ -31,25 +31,31 @@ contract BasicInboundChannelV2 {
         beefyLightClient = _beefyLightClient;
     }
 
-    function generateCommitmentHash(Leaf calldata _leaf,bytes32[] calldata _leafProof,bool[] calldata nodeSide)
-    internal pure returns (bytes32)
-    {
+    function generateCommitmentHash(
+        Leaf calldata _leaf,
+        bytes32[] calldata _leafProof,
+        bool[] calldata nodeSide
+    ) internal pure returns (bytes32) {
         bytes32 leafNodeHash = keccak256(abi.encode(_leaf));
 
-        return MerkleProof.computeRootFromProofAndSide(leafNodeHash,_leafProof,nodeSide);
+        return
+            MerkleProof.computeRootFromProofAndSide(
+                leafNodeHash,
+                _leafProof,
+                nodeSide
+            );
     }
 
     function submit(
-       Leaf calldata _leaf,
-       bytes32[] calldata leafProof,
+        Leaf calldata _leaf,
+        bytes32[] calldata leafProof,
         bool[] calldata nodeSide,
         ParachainLightClient.ParachainVerifyInput
             calldata _parachainVerifyInput,
         ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
         SimplifiedMMRProof calldata proof
     ) public {
-
-        bytes32 commitment = generateCommitmentHash(_leaf,leafProof,nodeSide);
+        bytes32 commitment = generateCommitmentHash(_leaf, leafProof, nodeSide);
 
         ParachainLightClient.verifyCommitmentInParachain(
             commitment,
@@ -68,10 +74,10 @@ contract BasicInboundChannelV2 {
         processMessages(_leaf);
     }
 
-    function processMessages(Leaf calldata _leaf) internal { 
+    function processMessages(Leaf calldata _leaf) internal {
         // User nonce for replay protection
-        require(userNonce[_leaf.account] + 1  == _leaf.nonce , "invalid nonce");
- 
+        require(userNonce[_leaf.account] + 1 == _leaf.nonce, "invalid nonce");
+
         userNonce[_leaf.account] = userNonce[_leaf.account] + 1;
 
         for (uint256 i = 0; i < _leaf.messages.length; i++) {
