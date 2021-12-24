@@ -113,7 +113,7 @@ describe("ETHApp", function () {
       // decode event
       var iface = new ethers.utils.Interface(ETHApp.abi);
       let event = iface.decodeEventLog(
-        'Unlocked(bytes32,address,uint256)',
+        'Unlocked(bytes32,address,uint128)',
         receipt.rawLogs[0].data,
         receipt.rawLogs[0].topics
       );
