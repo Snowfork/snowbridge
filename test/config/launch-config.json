@@ -67,15 +67,36 @@
           ]
         }
       ]
-    }
-  ],
-  "simpleParachains": [
+    },
     {
+      "bin": null,
       "id": "1001",
-      "port": 31202,
-      "bin": null
+      "balance": "1000000000000000000000",
+      "nodes": [
+        {
+          "wsPort": 13144,
+          "name": "alice",
+          "port": 31202,
+          "flags": [
+            "--force-authoring",
+            "--",
+            "--execution=wasm"
+          ]
+        },
+        {
+          "wsPort": 13155,
+          "name": "bob",
+          "port": 31203,
+          "flags": [
+            "--force-authoring",
+            "--",
+            "--execution=wasm"
+          ]
+        }
+      ]
     }
   ],
+  "simpleParachains": [],
   "hrmpChannels": [],
   "types": {}
 }

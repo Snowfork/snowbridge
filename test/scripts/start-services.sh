@@ -71,7 +71,7 @@ start_polkadot_launch()
         --features with-local-runtime
 
     echo "Generating chain specification"
-    "$parachain_bin" build-spec --disable-default-bootnode > "$output_dir/spec.json"
+    "$parachain_bin" build-spec --disable-default-bootnode > "$output_dir/snowbridge_spec.json"
 
     echo "Updating chain specification with ethereum state"
     header=$(curl http://localhost:8545 \
@@ -87,22 +87,34 @@ start_polkadot_launch()
         | .genesis.runtime.parachainInfo.parachainId = 1000
         | .para_id = 1000
         ' \
-        "$output_dir/spec.json" | sponge "$output_dir/spec.json"
+        "$output_dir/snowbridge_spec.json" | sponge "$output_dir/snowbridge_spec.json"
 
     if [[ -n "${TEST_MALICIOUS_APP+x}" ]]; then
         jq '.genesis.runtime.dotApp.address = "0x433488cec14C4478e5ff18DDC7E7384Fc416f148"' \
-        "$output_dir/spec.json" | sponge "$output_dir/spec.json"
+        "$output_dir/snowbridge_spec.json" | sponge "$output_dir/snowbridge_spec.json"
     fi
+
+    echo "Generating test chain specification"
+    "$test_collator_bin" build-spec --disable-default-bootnode > "$output_dir/snowbridge_test_spec.json"
+
+    echo "Updating test chain specification"
+    jq \
+        ' .genesis.runtime.parachainInfo.parachainId = 1001
+        | .para_id = 1001
+        ' \
+        "$output_dir/snowbridge_test_spec.json" | sponge "$output_dir/snowbridge_test_spec.json"
 
     jq \
         --arg polkadot "$(realpath $POLKADOT_BIN)" \
-        --arg test_collator "$(realpath $test_collator_bin)" \
         --arg bin "$parachain_bin" \
-        --arg spec "$output_dir/spec.json" \
+        --arg spec "$output_dir/snowbridge_spec.json" \
+        --arg test_collator "$(realpath $test_collator_bin)" \
+        --arg test_spec "$output_dir/snowbridge_test_spec.json" \
         ' .relaychain.bin = $polkadot
         | .parachains[0].bin = $bin
         | .parachains[0].chain = $spec
-        | .simpleParachains[0].bin = $test_collator
+        | .parachains[1].bin = $test_collator
+        | .parachains[1].chain = $test_spec
         ' \
         config/launch-config.json \
         > "$output_dir/launch-config.json"
@@ -110,6 +122,7 @@ start_polkadot_launch()
     polkadot-launch "$output_dir/launch-config.json" &
 
     scripts/wait-for-it.sh -t 120 localhost:11144
+    scripts/wait-for-it.sh -t 120 localhost:13144
 }
 
 configure_contracts()
