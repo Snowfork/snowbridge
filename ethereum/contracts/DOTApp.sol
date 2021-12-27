@@ -11,7 +11,7 @@ import "./FeeSource.sol";
 enum ChannelId {Basic, Incentivized}
 
 contract DOTApp is FeeSource, AccessControl {
-    using ScaleCodec for uint128;
+    using ScaleCodec for uint256;
 
     mapping(ChannelId => Channel) public channels;
 
@@ -53,7 +53,7 @@ contract DOTApp is FeeSource, AccessControl {
 
     function burn(
         bytes32 _recipient,
-        uint128 _amount,
+        uint256 _amount,
         ChannelId _channelId
     ) external {
         require(
@@ -73,21 +73,20 @@ contract DOTApp is FeeSource, AccessControl {
     function mint(
         bytes32 _sender,
         address _recipient,
-        uint128 _amount
+        uint256 _amount
     ) external onlyRole(INBOUND_CHANNEL_ROLE) {
-
         token.mint(_recipient, _amount, abi.encodePacked(_sender));
     }
 
     // Incentivized channel calls this to charge (burn) fees
-    function burnFee(address feePayer, uint128 _amount) external override onlyRole(FEE_BURNER_ROLE) {
+    function burnFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
         token.burn(feePayer, _amount, "");
     }
 
     function encodeCall(
         address _sender,
         bytes32 _recipient,
-        uint128 _amount
+        uint256 _amount
     ) private pure returns (bytes memory) {
         return
             abi.encodePacked(
@@ -95,7 +94,7 @@ contract DOTApp is FeeSource, AccessControl {
                 _sender,
                 bytes1(0x00), // Encoding recipient as MultiAddress::Id
                 _recipient,
-                _amount.encode128()
+                _amount.encode256()
             );
     }
 }
