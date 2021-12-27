@@ -32,7 +32,7 @@ hex-literal = "0.3.1"
 jsonrpc-core = "18.0.0"
 
 # Local Dependencies
-test-runtime = { path = "../runtime", package = "snowbridge-test-runtime", default-features = false }
+test-runtime = { path = "../runtime", package = "snowbridge-test-runtime" }
 
 # Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }

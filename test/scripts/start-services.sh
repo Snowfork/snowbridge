@@ -60,14 +60,12 @@ start_polkadot_launch()
         echo "Please specify the path to the polkadot binary. Variable POLKADOT_BIN is unset."
     fi
 
-    if [[ -z "${ADDER_COLLATOR_BIN+x}" ]]; then
-        echo "Please specify the path to the adder-collator binary. Variable ADDER_COLLATOR_BIN is unset."
-    fi
-
     local parachain_bin="$parachain_dir/target/release/snowbridge"
+    local test_collator_bin="$parachain_dir/target/release/snowbridge-test-collator"
 
     echo "Building parachain node"
-    cargo build --manifest-path "$parachain_dir/Cargo.toml" \
+    cargo build --workspace \
+        --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
         --features with-local-runtime
@@ -98,13 +96,13 @@ start_polkadot_launch()
 
     jq \
         --arg polkadot "$(realpath $POLKADOT_BIN)" \
-        --arg adder_collator "$(realpath $ADDER_COLLATOR_BIN)" \
+        --arg test_collator "$(realpath $test_collator_bin)" \
         --arg bin "$parachain_bin" \
         --arg spec "$output_dir/spec.json" \
         ' .relaychain.bin = $polkadot
         | .parachains[0].bin = $bin
         | .parachains[0].chain = $spec
-        | .simpleParachains[0].bin = $adder_collator
+        | .simpleParachains[0].bin = $test_collator
         ' \
         config/launch-config.json \
         > "$output_dir/launch-config.json"
