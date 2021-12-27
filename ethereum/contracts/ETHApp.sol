@@ -18,7 +18,7 @@ contract ETHApp is RewardSource, AccessControl {
     using ScaleCodec for uint32;
     using SafeCast for uint256;
 
-    uint256 public balance;
+    uint128 public balance;
 
     mapping(ChannelId => Channel) public channels;
 
@@ -74,6 +74,7 @@ contract ETHApp is RewardSource, AccessControl {
                 _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
+        //Revert in case of overflow.
         uint128 value = (msg.value).toUint128();
 
         balance = balance + value;
