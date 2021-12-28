@@ -33,7 +33,7 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot,
+	EnsureOneOf, EnsureRoot,
 };
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
@@ -42,7 +42,7 @@ pub use sp_runtime::{MultiAddress, Perbill, Permill};
 pub use sp_runtime::BuildStorage;
 
 // Polkadot Imports
-use pallet_xcm::XcmPassthrough;
+use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::{BlockHashCount, RocksDbWeight, SlowAdjustingFeeUpdate};
 
@@ -380,6 +380,59 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 impl parachain_info::Config for Runtime {}
 
 impl cumulus_pallet_aura_ext::Config for Runtime {}
+pub mod currency {
+	pub type Balance = u128;
+
+	/// The existential deposit. Set to 1/10 of its parent Relay Chain (v9010).
+	pub const EXISTENTIAL_DEPOSIT: Balance = 10 * CENTS;
+
+	pub const UNITS: Balance = 10_000_000_000;
+	pub const DOLLARS: Balance = UNITS;
+	pub const CENTS: Balance = UNITS / 100; // 100_000_000
+	pub const MILLICENTS: Balance = CENTS / 1_000; // 100_000
+
+	pub const fn deposit(items: u32, bytes: u32) -> Balance {
+		// 1/10 of Polkadot v9010
+		(items as Balance * 20 * DOLLARS + (bytes as Balance) * 100 * MILLICENTS) / 10
+	}
+}
+
+parameter_types! {
+	pub const DotLocation: MultiLocation = MultiLocation::parent();
+	pub const AssetDeposit: Balance = 100 * currency::DOLLARS; // 100 DOLLARS deposit to create asset
+	pub const ApprovalDeposit: Balance = currency::EXISTENTIAL_DEPOSIT;
+	pub const AssetsStringLimit: u32 = 50;
+	/// Key = 32 bytes, Value = 36 bytes (32+1+1+1+1)
+	// https://github.com/paritytech/substrate/blob/069917b/frame/assets/src/lib.rs#L257L271
+	pub const MetadataDepositBase: Balance = currency::deposit(1, 68);
+	pub const MetadataDepositPerByte: Balance = currency::deposit(0, 1);
+	pub const ExecutiveBody: BodyId = BodyId::Executive;
+	pub const Local: MultiLocation = Here.into();
+}
+
+pub type AssetsForceOrigin = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	EnsureXcm<IsMajorityOfBody<DotLocation, ExecutiveBody>>,
+>;
+
+pub type AssetId = u32;
+
+impl pallet_assets::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Currency = Balances;
+	type ForceOrigin = AssetsForceOrigin;
+	type AssetDeposit = AssetDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = AssetsStringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+}
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -561,7 +614,6 @@ parameter_types! {
 	pub const MinCandidates: u32 = 5;
 	pub const SessionLength: BlockNumber = 6 * HOURS;
 	pub const MaxInvulnerables: u32 = 100;
-	pub const ExecutiveBody: BodyId = BodyId::Executive;
 }
 
 // We allow root only to execute privileged collator selection operations.
@@ -622,6 +674,8 @@ construct_runtime!(
 
 		// Template
 		TemplatePallet: test_pallet::{Pallet, Call, Storage, Event<T>}  = 40,
+
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 41,
 	}
 );
 
