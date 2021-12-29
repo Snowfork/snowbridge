@@ -1,5 +1,4 @@
 const BigNumber = require('bignumber.js');
-const { ethers } = require("ethers");
 const {
   deployAppWithMockChannels,
   addressBytes,
@@ -24,9 +23,12 @@ const approveFunds = (token, contract, account, amount) => {
   return token.approve(contract.address, amount, { from: account })
 }
 
-const lockupFunds = (contract, token, sender, recipient, amount, channel) => {
+const lockupFunds = (contract, token, name, symbol, decimals, sender, recipient, amount, channel) => {
   return contract.lock(
     token.address,
+    name,
+    symbol,
+    decimals,
     addressBytes(recipient),
     amount.toString(),
     channel,
@@ -37,6 +39,16 @@ const lockupFunds = (contract, token, sender, recipient, amount, channel) => {
     }
   )
 }
+
+const addTokenDeatils = (contract, token, sender) => {
+  return contract.addWrapppedToken(
+    token.address,
+    {
+      from: sender
+    }
+  )
+}
+
 
 describe("ERC20App", function () {
   // Accounts
@@ -59,12 +71,16 @@ describe("ERC20App", function () {
 
   describe("deposits", function () {
     beforeEach(async function () {
-      let outboundChannel = await MockOutboundChannel.new()
-      this.app = await deployAppWithMockChannels(owner, [inboundChannel, outboundChannel.address], ERC20App);
+      this.outboundChannel = await MockOutboundChannel.new()
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ERC20App);
       this.symbol = "TEST";
-      this.token = await TestToken.new("Test Token", this.symbol);
-
+      this.name = "Test Token";
+      this.decimals = 18;
+      this.token = await TestToken.new(this.name, this.symbol);
       await this.token.mint(userOne, "10000").should.be.fulfilled;
+
+      this.wtoken = await TestToken.new("Wrapped Token", "WTKN");
+      await this.wtoken.mint(userOne, "10000").should.be.fulfilled;
     });
 
     it("should lock funds", async function () {
@@ -75,11 +91,11 @@ describe("ERC20App", function () {
       await approveFunds(this.token, this.app, userOne, amount * 2)
         .should.be.fulfilled;
 
-      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+      let createMintTokenTransaction = await lockupFunds(this.app, this.token, this.name, this.symbol, this.decimals, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
-      const event = tx.logs.find(
+      const event = createMintTokenTransaction.logs.find(
         e => e.event === "Locked"
       );
 
@@ -92,6 +108,38 @@ describe("ERC20App", function () {
 
       afterVaultBalance.should.be.bignumber.equal(beforeVaultBalance.plus(100));
       afterUserBalance.should.be.bignumber.equal(beforeUserBalance.minus(100));
+ 
+      let MyContract = new web3.eth.Contract(this.outboundChannel.abi, this.outboundChannel.address);
+
+      await addTokenDeatils(this.app, this.wtoken, inboundChannel)
+      .should.be.fulfilled;
+
+      (await this.app.wrappedTokenList(this.wtoken.address))
+      .should.be.equal(true);
+      
+      await approveFunds(this.wtoken, this.app, userOne, amount * 2)
+      .should.be.fulfilled;
+
+      let mintOnlyTokenTransaction = await lockupFunds(this.app, this.wtoken, this.name, this.symbol, this.decimals, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+        .should.be.fulfilled;
+
+      const pastEvents = await MyContract.getPastEvents({fromBlock: 0})
+
+      let messageEventCountforminttx = 0, messageEventCountforMintNcreateTx = 0;
+
+      pastEvents.forEach(event => {
+          if(event.transactionHash === createMintTokenTransaction.tx)
+            messageEventCountforMintNcreateTx++;
+
+          if(event.transactionHash === mintOnlyTokenTransaction.tx)
+            messageEventCountforminttx++;
+        });
+
+        // Confirm message event emitted only twice for 1.create token and 2.mint call.
+      messageEventCountforMintNcreateTx.should.be.equal(2)
+
+      // Confirm message event emitted only once for 1.mint call.
+      messageEventCountforminttx.should.be.equal(1)
     });
   })
 
@@ -101,7 +149,9 @@ describe("ERC20App", function () {
       let outboundChannel = await MockOutboundChannel.new()
       this.app = await deployAppWithMockChannels(owner, [owner, outboundChannel.address], ERC20App);
       this.symbol = "TEST";
-      this.token = await TestToken.new("Test Token", this.symbol);
+      this.name = "Test Token";
+      this.decimals = 18;
+      this.token = await TestToken.new(this.name, this.symbol);
 
       await this.token.mint(userOne, "10000").should.be.fulfilled;
     });
@@ -110,7 +160,7 @@ describe("ERC20App", function () {
       const lockupAmount = 200;
       await approveFunds(this.token, this.app, userOne, lockupAmount * 2)
         .should.be.fulfilled;
-      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Basic)
+      let tx = await lockupFunds(this.app, this.token, this.name, this.symbol, this.decimals, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Basic)
         .should.be.fulfilled;
 
       // recipient on the ethereum side

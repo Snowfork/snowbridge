@@ -16,6 +16,7 @@ enum ChannelId {
 contract ERC20App is AccessControl {
     using ScaleCodec for uint256;
     using ScaleCodec for uint32;
+    using ScaleCodec for uint8;
     using SafeERC20 for IERC20;
 
     mapping(address => uint256) public balances;
@@ -23,6 +24,10 @@ contract ERC20App is AccessControl {
     mapping(ChannelId => Channel) public channels;
 
     bytes2 constant MINT_CALL = 0x4201;
+
+    bytes2 constant CREATE_CALL = 0x4202;
+
+    mapping(address => bool) public wrappedTokenList;
 
     event Locked(
         address token,
@@ -38,6 +43,8 @@ contract ERC20App is AccessControl {
         address recipient,
         uint256 amount
     );
+
+    event TokenWrapped(address token, address operator);
 
     struct Channel {
         address inbound;
@@ -60,8 +67,21 @@ contract ERC20App is AccessControl {
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
 
+    function addWrapppedToken(address _token)
+        public
+        onlyRole(INBOUND_CHANNEL_ROLE)
+    {
+        require(!wrappedTokenList[_token], "Wrapped token already exists");
+        wrappedTokenList[_token] = true;
+
+        emit TokenWrapped(_token, msg.sender);
+    }
+
     function lock(
         address _token,
+        string calldata _name,
+        string calldata _symbol,
+        uint8 _decimals,
         bytes32 _recipient,
         uint256 _amount,
         ChannelId _channelId,
@@ -77,6 +97,21 @@ contract ERC20App is AccessControl {
 
         emit Locked(_token, msg.sender, _recipient, _amount, _paraId);
 
+        OutboundChannel channel = OutboundChannel(
+            channels[_channelId].outbound
+        );
+
+        bytes memory createCall;
+        if (!wrappedTokenList[_token]) {
+            createCall = encodeCreateTokenCall(
+                _token,
+                _name,
+                _symbol,
+                _decimals
+            );
+            channel.submit(msg.sender, createCall);
+        }
+
         bytes memory call;
         if(_paraId == 0) {
             call = encodeCall(_token, msg.sender, _recipient, _amount);
@@ -84,9 +119,6 @@ contract ERC20App is AccessControl {
             call = encodeCallWithParaId(_token, msg.sender, _recipient, _amount, _paraId);
         }
 
-        OutboundChannel channel = OutboundChannel(
-            channels[_channelId].outbound
-        );
         channel.submit(msg.sender, call);
 
         require(
@@ -147,6 +179,23 @@ contract ERC20App is AccessControl {
                 _amount.encode256(),
                 bytes1(0x01),
                 _paraId.encode32()
+            );
+    }
+
+    function encodeCreateTokenCall(
+        address _token,
+        string calldata _name,
+        string calldata _symbol,
+        uint8 _decimals
+    ) private pure returns (bytes memory) {
+        return
+            abi.encodePacked(
+                CREATE_CALL,
+                _token,
+                _name,
+                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                _symbol,
+                _decimals.encode8()
             );
     }
 }
