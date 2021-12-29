@@ -40,7 +40,6 @@ yarn global add polkadot-launch@1.9.0
 
 * Clone the polkadot repository somewhere on your machine
 * Checkout commit `release-v0.9.12`.
-* Build polkadot and the adder-collator parachain
 
 Example:
 ```bash
@@ -48,17 +47,15 @@ git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
 git checkout release-v0.9.12
 cargo build --release
-cargo build --manifest-path parachain/test-parachains/adder/collator/Cargo.toml --release
 ```
 
 ### Configure testnet
 
-Create an `.env` file with variables that point to the binaries for polkadot and adder-collator
+Create an `.env` file with variables that point to the binary for polkadot
 
 Example:
 ```
 POLKADOT_BIN=/path/to/polkadot/target/release/polkadot
-ADDER_COLLATOR_BIN=/path/to/polkadot/target/release/adder-collator
 ```
 
 ## Launch the testnet
