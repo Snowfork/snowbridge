@@ -44,8 +44,6 @@ contract ERC20App is AccessControl {
         uint256 amount
     );
 
-    event TokenWrapped(address token, address operator);
-
     struct Channel {
         address inbound;
         address outbound;
@@ -65,16 +63,6 @@ contract ERC20App is AccessControl {
 
         _setupRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
-    }
-
-    function addWrapppedToken(address _token)
-        public
-        onlyRole(INBOUND_CHANNEL_ROLE)
-    {
-        require(!wrappedTokenList[_token], "Wrapped token already exists");
-        wrappedTokenList[_token] = true;
-
-        emit TokenWrapped(_token, msg.sender);
     }
 
     function lock(
@@ -109,6 +97,7 @@ contract ERC20App is AccessControl {
                 _symbol,
                 _decimals
             );
+            wrappedTokenList[_token] = true;
             channel.submit(msg.sender, createCall);
         }
 

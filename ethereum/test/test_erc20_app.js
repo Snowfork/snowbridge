@@ -79,8 +79,6 @@ describe("ERC20App", function () {
       this.token = await TestToken.new(this.name, this.symbol);
       await this.token.mint(userOne, "10000").should.be.fulfilled;
 
-      this.wtoken = await TestToken.new("Wrapped Token", "WTKN");
-      await this.wtoken.mint(userOne, "10000").should.be.fulfilled;
     });
 
     it("should lock funds", async function () {
@@ -111,16 +109,13 @@ describe("ERC20App", function () {
  
       let MyContract = new web3.eth.Contract(this.outboundChannel.abi, this.outboundChannel.address);
 
-      await addTokenDeatils(this.app, this.wtoken, inboundChannel)
-      .should.be.fulfilled;
-
-      (await this.app.wrappedTokenList(this.wtoken.address))
+      (await this.app.wrappedTokenList(this.token.address))
       .should.be.equal(true);
       
-      await approveFunds(this.wtoken, this.app, userOne, amount * 2)
+      await approveFunds(this.token, this.app, userOne, amount * 2)
       .should.be.fulfilled;
 
-      let mintOnlyTokenTransaction = await lockupFunds(this.app, this.wtoken, this.name, this.symbol, this.decimals, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+      let mintOnlyTokenTransaction = await lockupFunds(this.app, this.token, this.name, this.symbol, this.decimals, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
 
       const pastEvents = await MyContract.getPastEvents({fromBlock: 0})
