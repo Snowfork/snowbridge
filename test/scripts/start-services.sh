@@ -15,10 +15,10 @@ address_for()
 
 start_geth() {
 
-    if [[ -n "${DIFFICULTY}" ]]; then
+    if [[ -n "${DIFFICULTY+x}" ]]; then
         jq --arg difficulty "${DIFFICULTY}" \
-            '.difficulty = $difficulty'
-            config/genesis.json
+            '.difficulty = $difficulty' \
+            config/genesis.json \
             > "$output_dir/genesis.json"
     else
         cp config/genesis.json "$output_dir/genesis.json"
