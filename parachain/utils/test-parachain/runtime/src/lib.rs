@@ -23,7 +23,7 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{Everything, Nothing},
+	traits::{Everything, Nothing, Contains},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
@@ -467,6 +467,24 @@ pub type LocalAssetTransactor = CurrencyAdapter<
 	(),
 >;
 
+//pub struct NonZeroIssuance<AccountId, Assets>(PhantomData<(AccountId, Assets)>);
+//impl<AccountId, Assets> Contains<<Assets as fungibles::Inspect<AccountId>>::AssetId>
+//	for NonZeroIssuance<AccountId, Assets>
+//where
+//	Assets: fungibles::Inspect<AccountId>,
+//{
+//	fn contains(id: &<Assets as fungibles::Inspect<AccountId>>::AssetId) -> bool {
+//		!Assets::total_issuance(*id).is_zero()
+//	}
+//}
+
+pub struct Issuance;
+impl Contains<AssetId> for Issuance {
+    fn contains(_t: &AssetId) -> bool {
+        todo!()
+    }
+}
+
 /// Means for transacting assets besides the native currency on this chain.
 pub type FungiblesTransactor = FungiblesAdapter<
 	// Use this fungibles implementation:
@@ -482,9 +500,16 @@ pub type FungiblesTransactor = FungiblesAdapter<
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId,
+
 	// We do not support teleports so no need for obj implementing Contains check
-	(),
+	//(),
 	// The account to use for tracking teleports (Empty because we do not support teleports)
+	//(),
+
+		// We only want to allow teleports of known assets. We use non-zero issuance as an indication
+	// that this asset is known.
+	Issuance,
+	// The account to use for tracking teleports.
 	(),
 >;
 
