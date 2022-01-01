@@ -43,7 +43,7 @@ cargo build --release --no-default-features --features with-local-runtime
 Install `polkadot-launch`:
 
 ```bash
-yarn global add polkadot-launch
+yarn global add polkadot-launch@1.9.0
 cd -
 ```
 

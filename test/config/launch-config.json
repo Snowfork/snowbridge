@@ -39,7 +39,6 @@
           "port": 31200,
           "name": "alice",
           "flags": [
-            "-lruntime=debug,ethereum-light-client=trace",
             "--rpc-port=8081",
             "--rpc-cors=all",
             "--ws-external",
@@ -56,7 +55,6 @@
           "port": 31201,
           "name": "bob",
           "flags": [
-            "-lruntime=debug,ethereum-light-client=trace",
             "--rpc-port=8082",
             "--rpc-cors=all",
             "--ws-external",
