@@ -10,6 +10,7 @@ import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-deploy";
 import { HardhatUserConfig } from "hardhat/config";
+import "./tasks/upgrade";
 
 const getenv = (name: string) => {
   if (name in process.env) {
@@ -27,13 +28,16 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       throwOnTransactionFailures: true,
+      accounts: {
+        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
+      },
     },
     localhost: {
       url: "http://127.0.0.1:8545",
       accounts: {
         mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
       },
-      chainId: 15,
+      chainId: 31337,
     },
     ropsten: {
       chainId: 3,
