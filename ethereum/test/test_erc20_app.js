@@ -144,6 +144,43 @@ describe("ERC20App", function () {
     });
 
   });
+  describe("upgradeability", function () {
+    beforeEach(async function () {
+      this.outboundChannel = await MockOutboundChannel.new()
+      this.newInboundChannel = accounts[2];
+      this.app = await deployAppWithMockChannels(owner, [owner, this.outboundChannel.address], ERC20App);
+    });
+    
+    it("should revert when called by non-admin", async function () {
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: userOne}).should.be.rejectedWith(/AccessControl/);
+    });
+    
+    it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
+      await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: owner}
+      ).should.be.rejectedWith(/AccessControl/)
+    })
+
+    it("should succeed when called by CHANNEL_UPGRADE_ROLE", async function () {
+      const oldBasic = await this.app.channels(0);
+      const oldIncentivized = await this.app.channels(1);
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: owner}
+      );
+      const newBasic = await this.app.channels(0);
+      const newIncentivized = await this.app.channels(1);
+      expect(newBasic.inbound !== oldBasic.inbound).to.be.true;
+      expect(newIncentivized.inbound !== oldIncentivized.inbound).to.be.true;
+    });
+  });
 });
 
 module.exports = { lockupERC20: lockupFunds };
