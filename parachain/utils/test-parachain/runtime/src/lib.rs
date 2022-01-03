@@ -478,10 +478,10 @@ pub type LocalAssetTransactor = CurrencyAdapter<
 //	}
 //}
 
-pub struct Issuance;
-impl Contains<AssetId> for Issuance {
+pub struct NeverIssue;
+impl Contains<AssetId> for NeverIssue {
     fn contains(_t: &AssetId) -> bool {
-        todo!()
+        false
     }
 }
 
@@ -508,7 +508,7 @@ pub type FungiblesTransactor = FungiblesAdapter<
 
 		// We only want to allow teleports of known assets. We use non-zero issuance as an indication
 	// that this asset is known.
-	Issuance,
+	NeverIssue,
 	// The account to use for tracking teleports.
 	(),
 >;
