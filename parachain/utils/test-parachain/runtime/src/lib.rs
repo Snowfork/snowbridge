@@ -23,7 +23,7 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{Everything, Nothing, Contains},
+	traits::{Contains, Everything, Nothing},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
@@ -49,13 +49,14 @@ use polkadot_runtime_common::{BlockHashCount, RocksDbWeight, SlowAdjustingFeeUpd
 // XCM Imports
 use xcm::latest::prelude::*;
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset, ParentIsDefault,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
+	AsPrefixedGeneralIndex, ConvertedConcreteAssetId, CurrencyAdapter, EnsureXcmOrigin,
+	FixedWeightBounds, FungiblesAdapter, IsConcrete, LocationInverter, NativeAsset,
+	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-	UsingComponents, AsPrefixedGeneralIndex, ConvertedConcreteAssetId, FungiblesAdapter,
+	UsingComponents,
 };
-use xcm_executor::{Config, XcmExecutor, traits::JustTry};
+use xcm_executor::{traits::JustTry, Config, XcmExecutor};
 
 /// Import the template pallet.
 pub use test_pallet;
@@ -467,22 +468,11 @@ pub type LocalAssetTransactor = CurrencyAdapter<
 	(),
 >;
 
-//pub struct NonZeroIssuance<AccountId, Assets>(PhantomData<(AccountId, Assets)>);
-//impl<AccountId, Assets> Contains<<Assets as fungibles::Inspect<AccountId>>::AssetId>
-//	for NonZeroIssuance<AccountId, Assets>
-//where
-//	Assets: fungibles::Inspect<AccountId>,
-//{
-//	fn contains(id: &<Assets as fungibles::Inspect<AccountId>>::AssetId) -> bool {
-//		!Assets::total_issuance(*id).is_zero()
-//	}
-//}
-
 pub struct NeverIssue;
 impl Contains<AssetId> for NeverIssue {
-    fn contains(_t: &AssetId) -> bool {
-        false
-    }
+	fn contains(_t: &AssetId) -> bool {
+		false
+	}
 }
 
 /// Means for transacting assets besides the native currency on this chain.
@@ -500,16 +490,9 @@ pub type FungiblesTransactor = FungiblesAdapter<
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId,
-
-	// We do not support teleports so no need for obj implementing Contains check
-	//(),
-	// The account to use for tracking teleports (Empty because we do not support teleports)
-	//(),
-
-		// We only want to allow teleports of known assets. We use non-zero issuance as an indication
-	// that this asset is known.
+	// We do not support teleports so implement Contains to always return false.
 	NeverIssue,
-	// The account to use for tracking teleports.
+	// The account to use for tracking teleports (Empty because we do not support teleports)
 	(),
 >;
 
