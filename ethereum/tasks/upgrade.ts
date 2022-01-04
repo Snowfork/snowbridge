@@ -15,6 +15,7 @@ task("upgrade")
     [incinbound, incoutbound]
   );
   console.log(`tx submitted... https://etherscan.io/tx/${tx.hash}`);
-  await tx.wait();
-  console.log(`tx mined`);
+  const receipt = await tx.wait();
+  console.log(`tx mined, receipt:`);
+  console.log(JSON.stringify(receipt, undefined, 2))
 });
