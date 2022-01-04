@@ -29,6 +29,12 @@ contract ETHApp is RewardSource, AccessControl {
 
     event Unlocked(bytes32 sender, address recipient, uint256 amount);
 
+    event Upgraded(
+        address ugprader,
+        Channel basic,
+        Channel incentivized
+    );
+
     bytes2 constant MINT_CALL = 0x4101;
 
     bytes32 public constant REWARD_ROLE = keccak256("REWARD_ROLE");
@@ -180,5 +186,6 @@ contract ETHApp is RewardSource, AccessControl {
         c2.outbound = _incentivized.outbound;
         grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
         grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
+        emit Upgraded(msg.sender, c1, c2);
     }
 }

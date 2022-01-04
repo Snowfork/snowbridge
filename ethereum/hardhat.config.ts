@@ -24,19 +24,14 @@ const getenv = (name: string) => {
 const ropstenPrivateKey = getenv("ROPSTEN_PRIVATE_KEY");
 const infuraKey = getenv("INFURA_PROJECT_ID");
 const etherscanKey = getenv("ETHERSCAN_API_KEY");
-const devMnemonic = "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
 
 const config: HardhatUserConfig = {
   networks: {
-    hardhat: {
-      accounts: {
-        mnemonic: devMnemonic
-      },
-    },
+    hardhat: {},
     localhost: {
       url: "http://127.0.0.1:8545",
       accounts: {
-        mnemonic: devMnemonic
+        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
       },
       chainId: 31337,
     },

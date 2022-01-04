@@ -26,6 +26,12 @@ contract DOTApp is FeeSource, AccessControl {
     bytes32 public constant CHANNEL_UPGRADE_ROLE =
         keccak256("CHANNEL_UPGRADE_ROLE");
 
+    event Upgraded(
+        address ugprader,
+        Channel basic,
+        Channel incentivized
+    );
+
     struct Channel {
         address inbound;
         address outbound;
@@ -119,5 +125,6 @@ contract DOTApp is FeeSource, AccessControl {
         c2.outbound = _incentivized.outbound;
         grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
         grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
+        emit Upgraded(msg.sender, c1, c2);
     }
 }
