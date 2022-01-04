@@ -40,7 +40,7 @@ sc-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", bra
 sc-rpc = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 sc-rpc-api = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 sc-service = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
-sc-telemetry = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+sc-telemetry = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 sc-transaction-pool = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 sp-api = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 sp-block-builder = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
@@ -120,4 +120,7 @@ members = [
     "runtime/snowbridge",
     "runtime/rococo",
     "runtime/local",
+    "utils/test-parachain/node",
+    "utils/test-parachain/pallets/test",
+    "utils/test-parachain/runtime",
 ]
