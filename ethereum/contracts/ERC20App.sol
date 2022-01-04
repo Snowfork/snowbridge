@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
@@ -67,9 +68,6 @@ contract ERC20App is AccessControl {
 
     function lock(
         address _token,
-        string calldata _name,
-        string calldata _symbol,
-        uint8 _decimals,
         bytes32 _recipient,
         uint256 _amount,
         ChannelId _channelId,
@@ -80,6 +78,12 @@ contract ERC20App is AccessControl {
                 _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
+
+        uint8 _decimals;
+        string memory _name;
+        string memory _symbol;
+
+        (_name, _symbol, _decimals) = tokenDetails(_token);
 
         balances[_token] = balances[_token] + _amount;
 
@@ -173,8 +177,8 @@ contract ERC20App is AccessControl {
 
     function encodeCreateTokenCall(
         address _token,
-        string calldata _name,
-        string calldata _symbol,
+        string memory _name,
+        string memory _symbol,
         uint8 _decimals
     ) private pure returns (bytes memory) {
         return
@@ -186,5 +190,40 @@ contract ERC20App is AccessControl {
                 _symbol,
                 _decimals.encode8()
             );
+    }
+
+    function tokenDetails(address _token)
+        private
+        view
+        returns (
+            string memory,
+            string memory,
+            uint8
+        )
+    {
+        ERC20 metadata = ERC20(_token);
+
+        uint8 _decimals;
+        string memory _name;
+        string memory _symbol;
+
+        try metadata.name() returns (string memory name) {
+            _name = name;
+        } catch {
+            _name = "";
+        }
+
+        try metadata.symbol() returns (string memory symbol) {
+            _symbol = symbol;
+        } catch {
+            _symbol = "";
+        }
+
+        try metadata.decimals() returns (uint8 decimal) {
+            _decimals = decimal;
+        } catch {
+            _decimals = 0;
+        }
+        return (_name, _symbol, _decimals);
     }
 }

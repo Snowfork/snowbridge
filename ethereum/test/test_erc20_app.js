@@ -23,12 +23,9 @@ const approveFunds = (token, contract, account, amount) => {
   return token.approve(contract.address, amount, { from: account })
 }
 
-const lockupFunds = (contract, token, name, symbol, decimals, sender, recipient, amount, channel) => {
+const lockupFunds = (contract, token, sender, recipient, amount, channel) => {
   return contract.lock(
     token.address,
-    name,
-    symbol,
-    decimals,
     addressBytes(recipient),
     amount.toString(),
     channel,
@@ -89,7 +86,7 @@ describe("ERC20App", function () {
       await approveFunds(this.token, this.app, userOne, amount * 2)
         .should.be.fulfilled;
 
-      let createMintTokenTransaction = await lockupFunds(this.app, this.token, this.name, this.symbol, this.decimals, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+      let createMintTokenTransaction = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
@@ -115,7 +112,7 @@ describe("ERC20App", function () {
       await approveFunds(this.token, this.app, userOne, amount * 2)
       .should.be.fulfilled;
 
-      let mintOnlyTokenTransaction = await lockupFunds(this.app, this.token, this.name, this.symbol, this.decimals, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+      let mintOnlyTokenTransaction = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
 
       const pastEvents = await MyContract.getPastEvents({fromBlock: 0})
@@ -155,7 +152,7 @@ describe("ERC20App", function () {
       const lockupAmount = 200;
       await approveFunds(this.token, this.app, userOne, lockupAmount * 2)
         .should.be.fulfilled;
-      let tx = await lockupFunds(this.app, this.token, this.name, this.symbol, this.decimals, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Basic)
+      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Basic)
         .should.be.fulfilled;
 
       // recipient on the ethereum side
