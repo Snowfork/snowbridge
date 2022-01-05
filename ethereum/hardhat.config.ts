@@ -27,6 +27,9 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       throwOnTransactionFailures: true,
+      accounts:{
+        accountsBalance:"350282366920938463463374607431816338090430000000"
+      }
     },
     localhost: {
       url: "http://127.0.0.1:8545",

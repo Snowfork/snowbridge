@@ -134,7 +134,7 @@ describe("ERC20App", function () {
       // decode event
       var iface = new ethers.utils.Interface(ERC20App.abi);
       let event = iface.decodeEventLog(
-        'Unlocked(address,bytes32,address,uint256)',
+        'Unlocked(address,bytes32,address,uint128)',
         receipt.rawLogs[1].data,
         receipt.rawLogs[1].topics
       );
