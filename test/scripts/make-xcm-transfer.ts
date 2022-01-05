@@ -4,82 +4,105 @@ import { Keyring } from "@polkadot/api";
 import { bundle } from "@snowfork/snowbridge-types";
 import yargs from "yargs"
 
-import type { MultiLocation } from "@polkadot/types/interfaces/xcm/types";
+import type { XcmAssetId } from "@polkadot/types/interfaces/xcm/types";
 
 const createTransferXcm = (
   api: ApiPromise,
-  fromLocation: MultiLocation,
+  fromLocation: XcmAssetId,
   toParaId: number,
   amount: number,
   toAddr: string
 ) => {
-  return api.createType("Xcm", {
-    WithdrawAsset: api.createType("XcmWithdrawAsset", {
-      assets: [
-        api.createType("MultiAsset", {
-          ConcreteFungible: api.createType("MultiAssetConcreteFungible", {
-            id: api.createType("MultiLocation", {
-              X1: api.createType("Junction", "Parent"),
+  return api.createType("VersionedXcm", {
+    V2: api.createType("XcmV2", [
+      api.createType("InstructionV2", {
+        BuyExecution: {
+          fees: api.createType("MultiAssetV2", {
+            id: api.createType("XcmAssetId", {
+              Concrete: api.createType("MultiLocationV2", {
+                parents: api.createType("u8", 1),
+                interior: "Here"
+              })
             }),
-            amount: api.createType("Compact<U128>", 10_000_000),
+            fungibility: api.createType("FungibilityV2", {
+              Fungible: api.createType("Compact<u128>", 3_000_000)
+            })
           }),
-        }),
-        api.createType("MultiAsset", {
-          ConcreteFungible: api.createType("MultiAssetConcreteFungible", {
+          weightLimit: api.createType("WeightLimitV2", {
+            Limited: api.createType("Compact<u64>", 3_000_000)
+          }),
+        }
+      }),
+      api.createType("InstructionV2", {
+        WithdrawAsset: api.createType("MultiAssetsV2", [
+          api.createType("MultiAssetV2", {
             id: fromLocation,
-            amount: api.createType("Compact<U128>", amount),
+            fungibility: api.createType("FungibilityV2", {
+              Fungible: api.createType("Compact<u128>", amount)
+            })
           }),
-        }),
-      ],
-      effects: [
-        api.createType("XcmOrder", {
-          BuyExecution: api.createType("XcmOrderBuyExecution", {
-            fees: api.createType("MultiAsset", "All"),
-            weight: 0,
-            debt: 3_000_000,
-            haltOnError: false,
-            xcm: [],
+        ])
+      }),
+      api.createType("InstructionV2", {
+        DepositReserveAsset: {
+          assets: api.createType("MultiAssetFilterV2", {
+            Wild: api.createType("WildMultiAssetV2", "All")
           }),
-        }),
-        api.createType("XcmOrder", {
-          DepositReserveAsset: api.createType("XcmOrderDepositReserveAsset", {
-            assets: [api.createType("MultiAsset", "All")],
-            dest: api.createType("MultiLocation", {
-              X2: [
-                api.createType("Junction", "Parent"),
-                api.createType("Junction", {
-                  Parachain: api.createType("Compact<U32>", toParaId),
-                }),
-              ],
-            }),
-            effects: [
-              api.createType("XcmOrder", {
-                BuyExecution: api.createType("XcmOrderBuyExecution", {
-                  fees: api.createType("MultiAsset", "All"),
-                  weight: 0,
-                  debt: 3_000_000,
-                  haltOnError: false,
-                  xcm: [],
-                }),
+          maxAssets: api.createType("u32", 1),
+          dest: api.createType("MultiLocationV2", {
+            parents: api.createType("u8", 1),
+            interior: api.createType("JunctionsV2", {
+              X1: api.createType("JunctionV2", {
+                Parachain: api.createType("Compact<u32>", toParaId),
               }),
-              api.createType("XcmOrder", {
-                DepositAsset: api.createType("XcmOrderDepositAsset", {
-                  assets: [api.createType("MultiAsset", "All")],
-                  dest: api.createType("MultiLocation", {
-                    X1: api.createType("Junction", {
-                      AccountId32: api.createType("AccountId32Junction", {
-                        network: api.createType("NetworkId", "Any"),
-                        id: toAddr,
+            }),
+          }),
+          xcm: api.createType("XcmV2", [
+            api.createType("InstructionV2", {
+              BuyExecution: {
+                fees: api.createType("MultiAssetV2", {
+                  id: api.createType("XcmAssetId", {
+                    Concrete: api.createType("MultiLocationV2", {
+                      parents: api.createType("u8", 1),
+                      interior: api.createType("JunctionsV2", {
+                        X1: api.createType("JunctionV2", {
+                          Parachain: api.createType("Compact<u32>", toParaId),
+                        }),
                       }),
+                    })
+                  }),
+                  fungibility: api.createType("FungibilityV2", {
+                    Fungible: api.createType("Compact<u128>", 3_000_000)
+                  })
+                }),
+                weightLimit: api.createType("WeightLimitV2", {
+                  Limited: api.createType("Compact<u64>", 3_000_000)
+                }),
+              }
+            }),
+            api.createType("InstructionV2", {
+              DepositAsset: {
+                assets: api.createType("MultiAssetFilterV2", {
+                  Wild: api.createType("WildMultiAssetV2", "All")
+                }),
+                maxAssets: api.createType("u32", 1),
+                beneficiary: api.createType("MultiLocationV2", {
+                  parents: api.createType("u8", 0),
+                  interior: api.createType("JunctionsV2", {
+                    X1: api.createType("JunctionV2", {
+                      AccountId32: {
+                        network: api.createType("NetworkId", "Any"),
+                        id: api.createType("AccountId", toAddr)
+                      }
                     }),
                   }),
                 }),
-              }),
-            ],
-          }),
-        }),
-      ],
-    }),
+              }
+            })
+          ])
+        }
+      }),
+    ])
   });
 };
 
@@ -103,10 +126,15 @@ let main = async () => {
   const alice = keyring.addFromUri(argv.keyUri);
 
   let assetId = api.createType("AssetId", "ETH");
-  let location = api.createType("MultiLocation", {
-    X1: api.createType("Junction", {
-      GeneralKey: assetId.toHex(),
-    }),
+  let location : XcmAssetId = api.createType('XcmAssetId', {
+    Concrete: api.createType("MultiLocationV2", {
+      parents: api.createType('u8', 0),
+      interior: api.createType("JunctionsV2", {
+        X1: api.createType("JunctionV2", {
+          GeneralKey: assetId.toHex()
+        })
+      })
+    })
   });
 
   let xcm = createTransferXcm(
@@ -118,7 +146,7 @@ let main = async () => {
   );
 
   let unsub = await api.tx.polkadotXcm
-    .execute(xcm, 100000000)
+    .execute(xcm, 100_000_000)
     .signAndSend(alice, async (result) => {
       console.log(`Current status is ${result.status}`);
 
