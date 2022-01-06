@@ -165,14 +165,24 @@ describe("ERC20App", function () {
       const pastEvents = await MyContract.getPastEvents({fromBlock: 0})
 
       let messageEventCountforminttx = 0, messageEventCountforMintNcreateTx = 0;
+      let noNameTokenCreateEventTrigged = false;
+
       pastEvents.forEach(event => {
           if(event.transactionHash === createMintTokenTransaction.tx){
             messageEventCountforMintNcreateTx++;
+            const encodeValue =  web3.utils.soliditySha3({type: 'bytes2', value: '0x4202'},this.token1.address, {type: 'bytes1', value: '0x00'}, {type: 'bytes1', value: '0x00'})
+            const encodeTokenData = web3.utils.keccak256(event.returnValues.data);
+
+            if(encodeValue == encodeTokenData) {
+                noNameTokenCreateEventTrigged = true;
+              }
           }
           
           if(event.transactionHash === mintOnlyTokenTransaction.tx)
             messageEventCountforminttx++;
         });
+
+        noNameTokenCreateEventTrigged.should.be.true;
 
         // Confirm message event emitted only twice for 1.create token and 2.mint call.
       messageEventCountforMintNcreateTx.should.be.equal(2)
