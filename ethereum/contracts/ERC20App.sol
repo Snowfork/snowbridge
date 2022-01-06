@@ -79,12 +79,6 @@ contract ERC20App is AccessControl {
             "Invalid channel ID"
         );
 
-        uint8 _decimals;
-        string memory _name;
-        string memory _symbol;
-
-        (_name, _symbol, _decimals) = tokenDetails(_token);
-
         balances[_token] = balances[_token] + _amount;
 
         emit Locked(_token, msg.sender, _recipient, _amount, _paraId);
@@ -93,14 +87,8 @@ contract ERC20App is AccessControl {
             channels[_channelId].outbound
         );
 
-        bytes memory createCall;
         if (!wrappedTokenList[_token]) {
-            createCall = encodeCreateTokenCall(
-                _token,
-                _name,
-                _symbol,
-                _decimals
-            );
+            bytes memory createCall = encodeToken(_token);
             wrappedTokenList[_token] = true;
             channel.submit(msg.sender, createCall);
         }
@@ -225,5 +213,16 @@ contract ERC20App is AccessControl {
             _decimals = 0;
         }
         return (_name, _symbol, _decimals);
+    }
+
+    function encodeToken(address _token) private view returns (bytes memory) {
+        uint8 _decimals;
+        string memory _name;
+        string memory _symbol;
+
+        (_name, _symbol, _decimals) = tokenDetails(_token);
+        bytes memory createCall;
+        createCall = encodeCreateTokenCall(_token, _name, _symbol, _decimals);
+        return (createCall);
     }
 }

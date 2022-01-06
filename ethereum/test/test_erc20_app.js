@@ -14,6 +14,7 @@ const MockOutboundChannel = artifacts.require("MockOutboundChannel");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ERC20App = artifacts.require("ERC20App");
 const TestToken = artifacts.require("TestToken");
+const TestNoNameToken = artifacts.require("TestToken20");
 
 const {
   printTxPromiseGas
@@ -33,15 +34,6 @@ const lockupFunds = (contract, token, sender, recipient, amount, channel) => {
     {
       from: sender,
       value: 0
-    }
-  )
-}
-
-const addTokenDeatils = (contract, token, sender) => {
-  return contract.addWrapppedToken(
-    token.address,
-    {
-      from: sender
     }
   )
 }
@@ -74,8 +66,9 @@ describe("ERC20App", function () {
       this.name = "Test Token";
       this.decimals = 18;
       this.token = await TestToken.new(this.name, this.symbol);
+      this.token1 = await TestNoNameToken.new();
+      await this.token1.mint(userOne, "10000").should.be.fulfilled;
       await this.token.mint(userOne, "10000").should.be.fulfilled;
-
     });
 
     it("should lock funds", async function () {
@@ -123,6 +116,60 @@ describe("ERC20App", function () {
           if(event.transactionHash === createMintTokenTransaction.tx)
             messageEventCountforMintNcreateTx++;
 
+          if(event.transactionHash === mintOnlyTokenTransaction.tx)
+            messageEventCountforminttx++;
+        });
+
+        // Confirm message event emitted only twice for 1.create token and 2.mint call.
+      messageEventCountforMintNcreateTx.should.be.equal(2)
+
+      // Confirm message event emitted only once for 1.mint call.
+      messageEventCountforminttx.should.be.equal(1)
+    });
+    it("should lock funds with token with No Name,Symbol function", async function () {
+      amount = 100;
+      const beforeVaultBalance = BigNumber(await this.app.balances(this.token1.address));
+      const beforeUserBalance = BigNumber(await this.token1.balanceOf(userOne));
+
+      await approveFunds(this.token1, this.app, userOne, amount * 2)
+        .should.be.fulfilled;
+
+      let createMintTokenTransaction = await lockupFunds(this.app, this.token1, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+        .should.be.fulfilled;
+
+      // Confirm app event emitted with expected values
+      const event = createMintTokenTransaction.logs.find(
+        e => e.event === "Locked"
+      );
+
+      event.args.sender.should.be.equal(userOne);
+      event.args.recipient.should.be.equal(POLKADOT_ADDRESS);
+      BigNumber(event.args.amount).should.be.bignumber.equal(amount);
+
+      const afterVaultBalance = BigNumber(await this.app.balances(this.token1.address));
+      const afterUserBalance = BigNumber(await this.token1.balanceOf(userOne));
+
+      afterVaultBalance.should.be.bignumber.equal(beforeVaultBalance.plus(100));
+      afterUserBalance.should.be.bignumber.equal(beforeUserBalance.minus(100));
+
+      let MyContract = new web3.eth.Contract(this.outboundChannel.abi, this.outboundChannel.address); 
+      (await this.app.wrappedTokenList(this.token1.address))
+      .should.be.equal(true);
+
+      await approveFunds(this.token1, this.app, userOne, amount * 2)
+      .should.be.fulfilled;
+
+      let mintOnlyTokenTransaction = await lockupFunds(this.app, this.token1, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+        .should.be.fulfilled;
+      const txHash =  await web3.eth.getTransactionReceipt(mintOnlyTokenTransaction.tx);
+      const pastEvents = await MyContract.getPastEvents({fromBlock: 0})
+
+      let messageEventCountforminttx = 0, messageEventCountforMintNcreateTx = 0;
+      pastEvents.forEach(event => {
+          if(event.transactionHash === createMintTokenTransaction.tx){
+            messageEventCountforMintNcreateTx++;
+          }
+          
           if(event.transactionHash === mintOnlyTokenTransaction.tx)
             messageEventCountforminttx++;
         });
