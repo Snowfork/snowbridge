@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
@@ -16,6 +17,7 @@ enum ChannelId {
 contract ERC20App is AccessControl {
     using ScaleCodec for uint128;
     using ScaleCodec for uint32;
+    using ScaleCodec for uint8;
     using SafeERC20 for IERC20;
 
     mapping(address => uint256) public balances;
@@ -23,6 +25,10 @@ contract ERC20App is AccessControl {
     mapping(ChannelId => Channel) public channels;
 
     bytes2 constant MINT_CALL = 0x4201;
+
+    bytes2 constant CREATE_CALL = 0x4202;
+
+    mapping(address => bool) public wrappedTokenList;
 
     event Locked(
         address token,
@@ -77,6 +83,16 @@ contract ERC20App is AccessControl {
 
         emit Locked(_token, msg.sender, _recipient, _amount, _paraId);
 
+        OutboundChannel channel = OutboundChannel(
+            channels[_channelId].outbound
+        );
+
+        if (!wrappedTokenList[_token]) {
+            bytes memory createCall = encodeToken(_token);
+            wrappedTokenList[_token] = true;
+            channel.submit(msg.sender, createCall);
+        }
+
         bytes memory call;
         if (_paraId == 0) {
             call = encodeCall(_token, msg.sender, _recipient, _amount);
@@ -90,9 +106,6 @@ contract ERC20App is AccessControl {
             );
         }
 
-        OutboundChannel channel = OutboundChannel(
-            channels[_channelId].outbound
-        );
         channel.submit(msg.sender, call);
 
         require(
@@ -156,5 +169,68 @@ contract ERC20App is AccessControl {
                 bytes1(0x01),
                 _paraId.encode32()
             );
+    }
+
+    function encodeCreateTokenCall(
+        address _token,
+        string memory _name,
+        string memory _symbol,
+        uint8 _decimals
+    ) private pure returns (bytes memory) {
+        return
+            abi.encodePacked(
+                CREATE_CALL,
+                _token,
+                _name,
+                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                _symbol,
+                _decimals.encode8()
+            );
+    }
+
+    function tokenDetails(address _token)
+        private
+        view
+        returns (
+            string memory,
+            string memory,
+            uint8
+        )
+    {
+        ERC20 metadata = ERC20(_token);
+
+        uint8 _decimals;
+        string memory _name;
+        string memory _symbol;
+
+        try metadata.name() returns (string memory name) {
+            _name = name;
+        } catch {
+            _name = "";
+        }
+
+        try metadata.symbol() returns (string memory symbol) {
+            _symbol = symbol;
+        } catch {
+            _symbol = "";
+        }
+
+        try metadata.decimals() returns (uint8 decimal) {
+            _decimals = decimal;
+        } catch {
+            _decimals = 0;
+        }
+        return (_name, _symbol, _decimals);
+    }
+
+    function encodeToken(address _token) private view returns (bytes memory) {
+        uint8 _decimals;
+        string memory _name;
+        string memory _symbol;
+
+        (_name, _symbol, _decimals) = tokenDetails(_token);
+        bytes memory createCall;
+        createCall = encodeCreateTokenCall(_token, _name, _symbol, _decimals);
+        return (createCall);
     }
 }
