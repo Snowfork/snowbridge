@@ -7,10 +7,10 @@
     "test": "mocha --timeout 280000 --exit"
   },
   "devDependencies": {
-    "@polkadot/api": "^6.10.3",
-    "@polkadot/util": "^7.1.1",
-    "@polkadot/util-crypto": "^7.1.1",
-    "@snowfork/snowbridge-types": "0.2.6",
+    "@polkadot/api": "^7.2.1",
+    "@polkadot/util": "^8.2.2",
+    "@polkadot/util-crypto": "^8.2.2",
+    "@snowfork/snowbridge-types": "file:../types",
     "@types/node": "^16.4.2",
     "@types/yargs": "^17.0.2",
     "bignumber.js": "^9.0.0",
