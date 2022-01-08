@@ -1,7 +1,6 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { createType } from "@polkadot/types";
 import { Keyring } from "@polkadot/api";
-import { bundle } from "@snowfork/snowbridge-types";
 import yargs from "yargs"
 
 import type { MultiLocation } from "@polkadot/types/interfaces/xcm/types";
@@ -96,7 +95,6 @@ let main = async () => {
 
   let api = await ApiPromise.create({
     provider,
-    typesBundle: bundle as any,
   });
 
   const keyring = new Keyring({ type: "sr25519" });

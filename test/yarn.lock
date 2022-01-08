@@ -556,7 +556,7 @@
     "@babel/runtime" "^7.16.7"
     "@polkadot/util" "^8.2.2"
 
-"@polkadot/types@7.2.1", "@polkadot/types@^7.2.1":
+"@polkadot/types@7.2.1":
   version "7.2.1"
   resolved "https://registry.yarnpkg.com/@polkadot/types/-/types-7.2.1.tgz#b8b1d8a8c38fad979df00ff20e3724d52328edfb"
   integrity sha512-9LDi13JjULcCMMRM8lHcQm/qlEoh+nebqBd1k3f1jbbLnhV0ddTFp1s/ldkbpeL4eXIIV2E3+uENfuTcDdEruQ==
@@ -687,13 +687,6 @@
   version "0.14.0"
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-0.14.0.tgz#9fb3a3cf3132328151f353de4632e01e52102bea"
   integrity sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==
-
-"@snowfork/snowbridge-types@file:../types":
-  version "0.2.7"
-  dependencies:
-    "@polkadot/api" "^7.2.1"
-    "@polkadot/keyring" "^8.2.2"
-    "@polkadot/types" "^7.2.1"
 
 "@szmarczak/http-timer@^1.1.2":
   version "1.1.2"
