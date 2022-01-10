@@ -60,6 +60,7 @@ contract ERC721App is AccessControl {
 
         _setupRole(CHANNEL_UPGRADE_ROLE, msg.sender);
         _setRoleAdmin(INBOUND_CHANNEL_ROLE, CHANNEL_UPGRADE_ROLE);
+        _setRoleAdmin(CHANNEL_UPGRADE_ROLE, CHANNEL_UPGRADE_ROLE);
         _setupRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }

@@ -135,6 +135,8 @@ describe("ETHApp", function () {
       this.outboundChannel = await MockOutboundChannel.new()
       this.newInboundChannel = accounts[2];
       this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ETHApp, inboundChannel);
+      const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
+      this.iface = new ethers.utils.Interface(abi);
     });
     
     it("should revert when called by non-admin", async function () {
@@ -166,5 +168,21 @@ describe("ETHApp", function () {
       expect(newBasic.inbound !== oldBasic.inbound).to.be.true;
       expect(newIncentivized.inbound !== oldIncentivized.inbound).to.be.true;
     });
-  });
+
+    it("CHANNEL_UPGRADE_ROLE can change CHANNEL_UPGRADE_ROLE", async function () {
+      const newUpgrader = ethers.Wallet.createRandom().address;
+      const tx = await this.app.grantRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), newUpgrader);
+      const event = this.iface.decodeEventLog('RoleGranted', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
+      expect(event.account).to.equal(newUpgrader);
+    });
+
+    it("reverts when non-upgrader attempts to change CHANNEL_UPGRADE_ROLE", async function () {
+      const newUpgrader = ethers.Wallet.createRandom().address;
+      await this.app.grantRole(
+        web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"),
+        newUpgrader,
+        {from: userOne}
+      ).should.be.rejectedWith(/AccessControl/);
+    })
+  })
 });
