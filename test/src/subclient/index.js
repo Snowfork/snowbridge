@@ -1,4 +1,5 @@
 let { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
+let { bundle } = require("@snowfork/snowbridge-types");
 const { default: BigNumber } = require('bignumber.js');
 
 class SubClient {
@@ -13,6 +14,7 @@ class SubClient {
     const provider = new WsProvider(this.endpoint);
     this.api = await ApiPromise.create({
       provider,
+      typesBundle: bundle,
     })
 
     this.keyring = new Keyring({ type: 'sr25519' });

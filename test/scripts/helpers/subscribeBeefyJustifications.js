@@ -9,6 +9,7 @@ const { ApiPromise, WsProvider } = require('@polkadot/api');
 const WebSocket = require('ws');
 const { base58Decode, addressToEvm, secp256k1Expand, secp256k1Compress, decodeAddress, encodeAddress, ethereumEncode, blake2AsHex, keccakAsHex } = require("@polkadot/util-crypto");
 const { hexToU8a, u8aToHex, u8aToU8a } = require("@polkadot/util");
+let { bundle } = require("@snowfork/snowbridge-types");
 
 const RELAY_CHAIN_RPC_ENDPOINT = 'ws://localhost:9944';
 const RELAY_CHAIN_HTTP_RPC_ENDPOINT = 'http://localhost:30444';
@@ -195,6 +196,7 @@ async function getParaHeadData(paraHead) {
   const parachainWsProvider = new WsProvider(PARACHAIN_RPC_ENDPOINT);
   const parachainApi = await ApiPromise.create({
     provider: parachainWsProvider,
+    typesBundle: bundle,
   });
 
   const truncatedHead = paraHead.toHuman().slice(0, 66);

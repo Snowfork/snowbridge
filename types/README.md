@@ -1,9 +1,6 @@
 # Snowbridge Types
 
-_Note: This package is obsolete and is slated for removal._
-
-Type definitions for the Snowbridge parachain.
-
+Type definitions for the Snowbridge parachain
 
 ## Development
 
