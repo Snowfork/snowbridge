@@ -30,7 +30,7 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 
 [dev-dependencies]
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
-snowbridge-assets = { path = "../assets" }
+pallet-assets = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 hex-literal = { version = "0.3.1" }
 rlp = { version = "0.5" }

@@ -4209,6 +4209,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "getrandom 0.2.3",
  "hex-literal",
+ "pallet-assets",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -4228,7 +4229,6 @@ dependencies = [
  "polkadot-parachain",
  "scale-info",
  "serde",
- "snowbridge-assets",
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-dispatch",
@@ -4872,6 +4872,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ff55baddef9e4ad00f88b6c743a2a8062d4c6ade126c2a528644b8e444d52ce"
 dependencies = [
  "stable_deref_trait",
+]
+
+[[package]]
+name = "pallet-assets"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -9336,25 +9350,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-assets"
-version = "0.1.1"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "rustc-hex",
- "scale-info",
- "serde",
- "snowbridge-core",
- "sp-core",
- "sp-io",
- "sp-keyring",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "snowbridge-basic-channel"
 version = "0.1.1"
 dependencies = [
@@ -9421,17 +9416,16 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
  "rlp",
  "rustc-hex",
  "scale-info",
  "serde",
- "snowbridge-assets",
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-dispatch",
- "snowbridge-ethereum",
  "snowbridge-incentivized-channel",
  "sp-core",
  "sp-io",
@@ -9449,16 +9443,17 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-randomness-collective-flip",
  "parity-scale-codec",
  "rlp",
  "rustc-hex",
  "scale-info",
  "serde",
- "snowbridge-assets",
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-dispatch",
- "snowbridge-ethereum",
  "snowbridge-incentivized-channel",
  "sp-core",
  "sp-io",
@@ -9500,16 +9495,16 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "pallet-assets",
+ "pallet-balances",
  "parity-scale-codec",
  "rlp",
  "rustc-hex",
  "scale-info",
  "serde",
- "snowbridge-assets",
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-dispatch",
- "snowbridge-ethereum",
  "snowbridge-incentivized-channel",
  "sp-core",
  "sp-io",
@@ -9580,12 +9575,12 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
  "rlp",
  "scale-info",
  "serde",
- "snowbridge-assets",
  "snowbridge-core",
  "snowbridge-ethereum",
  "sp-core",
@@ -9634,6 +9629,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "getrandom 0.2.3",
  "hex-literal",
+ "pallet-assets",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -9653,7 +9649,6 @@ dependencies = [
  "polkadot-parachain",
  "scale-info",
  "serde",
- "snowbridge-assets",
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-dispatch",
@@ -9703,6 +9698,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "getrandom 0.2.3",
  "hex-literal",
+ "pallet-assets",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -9722,7 +9718,6 @@ dependencies = [
  "polkadot-parachain",
  "scale-info",
  "serde",
- "snowbridge-assets",
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-dispatch",

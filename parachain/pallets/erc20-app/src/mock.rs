@@ -4,18 +4,18 @@ use sp_std::marker::PhantomData;
 use frame_support::{
 	dispatch::DispatchResult,
 	parameter_types,
-	traits::{Everything, GenesisBuild},
+	traits::{tokens::fungible::ItemOf, Everything, GenesisBuild},
+	PalletId,
 };
 use frame_system as system;
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
+	traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
 	MultiSignature,
 };
 
-use snowbridge_assets::SingleAssetAdaptor;
-use snowbridge_core::{assets::XcmReserveTransfer, AssetId, ChannelId};
+use snowbridge_core::{assets::XcmReserveTransfer, ChannelId};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -27,7 +27,9 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Assets: snowbridge_assets::{Pallet, Call, Storage, Event<T>},
+		Randomness: pallet_randomness_collective_flip::{Pallet, Storage},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
 		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
 		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
@@ -61,12 +63,54 @@ impl system::Config for Test {
 	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 	type OnSetCode = ();
+}
+
+impl pallet_randomness_collective_flip::Config for Test {}
+
+parameter_types! {
+		pub const ExistentialDeposit: u64 = 1;
+}
+
+impl pallet_balances::Config for Test {
+	type Balance = u64;
+	type DustRemoval = ();
+	type Event = Event;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+}
+
+parameter_types! {
+	pub const AssetDeposit: u64 = 1;
+	pub const ApprovalDeposit: u64 = 1;
+	pub const StringLimit: u32 = 50;
+	pub const MetadataDepositBase: u64 = 1;
+	pub const MetadataDepositPerByte: u64 = 1;
+}
+
+impl pallet_assets::Config for Test {
+	type Event = Event;
+	type Balance = u128;
+	type AssetId = u128;
+	type Currency = Balances;
+	type ForceOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type AssetDeposit = AssetDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = StringLimit;
+	type Freezer = ();
+	type WeightInfo = ();
+	type Extra = ();
 }
 
 impl snowbridge_dispatch::Config for Test {
@@ -76,7 +120,6 @@ impl snowbridge_dispatch::Config for Test {
 	type Call = Call;
 	type CallFilter = Everything;
 }
-
 pub struct OutboundRouter<T>(PhantomData<T>);
 
 impl<T> snowbridge_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
@@ -100,15 +143,14 @@ where
 }
 
 parameter_types! {
-	pub const Ether: AssetId = AssetId::ETH;
+	pub const EtherAssetId: u128 = 0;
+	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
+	pub const Erc20AppPalletId: PalletId = PalletId(*b"erc20app");
 	pub const MaxMessagePayloadSize: u64 = 256;
 	pub const MaxMessagesPerCommit: u64 = 3;
 }
 
-impl snowbridge_assets::Config for Test {
-	type Event = Event;
-	type WeightInfo = ();
-}
+pub type Ether = ItemOf<Assets, EtherAssetId, AccountId>;
 
 impl snowbridge_basic_channel::outbound::Config for Test {
 	const INDEXING_PREFIX: &'static [u8] = b"commitment";
@@ -126,19 +168,18 @@ impl snowbridge_incentivized_channel::outbound::Config for Test {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
-	type FeeCurrency = SingleAssetAdaptor<Test, Ether>;
+	type FeeCurrency = Ether;
 	type SetFeeOrigin = frame_system::EnsureRoot<AccountId>;
 	type WeightInfo = ();
 }
-
 pub struct XcmAssetTransfererMock<T>(PhantomData<T>);
 impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 	fn reserve_transfer(
 		_origin: Origin,
-		_asset_id: AssetId,
+		_asset_id: u128,
 		_para_id: u32,
 		_dest: &AccountId,
-		_amount: ethabi::U256,
+		_amount: u128,
 	) -> DispatchResult {
 		todo!()
 	}
@@ -146,6 +187,9 @@ impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 
 impl crate::Config for Test {
 	type Event = Event;
+	type PalletId = Erc20AppPalletId;
+	type Hashing = BlakeTwo256;
+	type Randomness = Randomness;
 	type Assets = Assets;
 	type OutboundRouter = OutboundRouter<Test>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
@@ -161,6 +205,13 @@ pub fn new_tester() -> sp_io::TestExternalities {
 
 	let config = crate::GenesisConfig { address: H160::repeat_byte(1) };
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
+
+	let assets_config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
+		assets: vec![(0, EtherAppPalletId::get().into_account(), true, 1)],
+		metadata: vec![],
+		accounts: vec![],
+	};
+	GenesisBuild::<Test>::assimilate_storage(&assets_config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));
