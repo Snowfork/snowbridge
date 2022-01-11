@@ -25,10 +25,9 @@ contract ERC20App is AccessControl {
     mapping(ChannelId => Channel) public channels;
 
     bytes2 constant MINT_CALL = 0x4201;
-
     bytes2 constant CREATE_CALL = 0x4202;
 
-    mapping(address => bool) public wrappedTokenList;
+    mapping(address => bool) public tokens;
 
     event Locked(
         address token,
@@ -66,7 +65,6 @@ contract ERC20App is AccessControl {
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
 
-
     function lock(
         address _token,
         bytes32 _recipient,
@@ -87,9 +85,9 @@ contract ERC20App is AccessControl {
             channels[_channelId].outbound
         );
 
-        if (!wrappedTokenList[_token]) {
-            bytes memory createCall = encodeToken(_token);
-            wrappedTokenList[_token] = true;
+        if (!tokens[_token]) {
+            bytes memory createCall = encodeCreateTokenCall(_token);
+            tokens[_token] = true;
             channel.submit(msg.sender, createCall);
         }
 
@@ -172,65 +170,12 @@ contract ERC20App is AccessControl {
     }
 
     function encodeCreateTokenCall(
-        address _token,
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals
+        address _token
     ) private pure returns (bytes memory) {
         return
             abi.encodePacked(
                 CREATE_CALL,
-                _token,
-                _name,
-                bytes1(0x00), // Encode recipient as MultiAddress::Id
-                _symbol,
-                _decimals.encode8()
+                _token
             );
-    }
-
-    function tokenDetails(address _token)
-        private
-        view
-        returns (
-            string memory,
-            string memory,
-            uint8
-        )
-    {
-        ERC20 metadata = ERC20(_token);
-
-        uint8 _decimals;
-        string memory _name;
-        string memory _symbol;
-
-        try metadata.name() returns (string memory name) {
-            _name = name;
-        } catch {
-            _name = "";
-        }
-
-        try metadata.symbol() returns (string memory symbol) {
-            _symbol = symbol;
-        } catch {
-            _symbol = "";
-        }
-
-        try metadata.decimals() returns (uint8 decimal) {
-            _decimals = decimal;
-        } catch {
-            _decimals = 0;
-        }
-        return (_name, _symbol, _decimals);
-    }
-
-    function encodeToken(address _token) private view returns (bytes memory) {
-        uint8 _decimals;
-        string memory _name;
-        string memory _symbol;
-
-        (_name, _symbol, _decimals) = tokenDetails(_token);
-        bytes memory createCall;
-        createCall = encodeCreateTokenCall(_token, _name, _symbol, _decimals);
-        return (createCall);
     }
 }

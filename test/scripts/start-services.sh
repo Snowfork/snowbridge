@@ -65,26 +65,20 @@ start_polkadot_launch()
     echo "Generating chain specification"
     "$parachain_bin" build-spec --disable-default-bootnode > "$output_dir/spec.json"
 
-    echo "Updating chain specification with ethereum state"
-    header=$(curl http://localhost:8545 \
+    echo "Updating chain specification"
+    curl http://localhost:8545 \
         -X POST \
         -H "Content-Type: application/json" \
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
-        | node ../test/scripts/helpers/transformEthHeader.js)
+        | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
 
-    jq \
-        --argjson header "$header" \
-        ' .genesis.runtime.ethereumLightClient.initialHeader = $header
-        | .genesis.runtime.ethereumLightClient.initialDifficulty = "0x0"
-        | .genesis.runtime.parachainInfo.parachainId = 1000
-        | .para_id = 1000
-        ' \
-        "$output_dir/spec.json" | sponge "$output_dir/spec.json"
+    cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" | sponge "$output_dir/spec.json"
 
-    if [[ -n "${TEST_MALICIOUS_APP+x}" ]]; then
-        jq '.genesis.runtime.dotApp.address = "0x433488cec14C4478e5ff18DDC7E7384Fc416f148"' \
-        "$output_dir/spec.json" | sponge "$output_dir/spec.json"
-    fi
+    # TODO: add back
+    # if [[ -n "${TEST_MALICIOUS_APP+x}" ]]; then
+    #     jq '.genesis.runtime.dotApp.address = "0x433488cec14C4478e5ff18DDC7E7384Fc416f148"' \
+    #     "$output_dir/spec.json" | sponge "$output_dir/spec.json"
+    # fi
 
     jq \
         --arg polkadot "$(realpath $POLKADOT_BIN)" \

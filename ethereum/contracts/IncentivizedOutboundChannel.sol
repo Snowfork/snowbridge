@@ -17,19 +17,19 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     // Nonce for last submitted message
     uint64 public nonce;
 
-    uint128 public fee;
+    uint256 public fee;
     FeeSource public feeSource;
 
     event Message(
         address source,
         uint64  nonce,
-        uint128 fee,
+        uint256 fee,
         bytes   payload
     );
 
     event FeeChanged(
-        uint128 oldFee,
-        uint128 newFee
+        uint256 oldFee,
+        uint256 newFee
     );
 
     constructor() {
@@ -55,7 +55,7 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     }
 
     // Update message submission fee.
-    function setFee(uint128 _amount) external onlyRole(CONFIG_UPDATE_ROLE) {
+    function setFee(uint256 _amount) external onlyRole(CONFIG_UPDATE_ROLE) {
         emit FeeChanged(fee, _amount);
         fee = _amount;
     }
