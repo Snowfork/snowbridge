@@ -39,6 +39,7 @@
           "port": 31200,
           "name": "alice",
           "flags": [
+            "-lxcm=trace",
             "--rpc-port=8081",
             "--rpc-cors=all",
             "--ws-external",
@@ -55,6 +56,7 @@
           "port": 31201,
           "name": "bob",
           "flags": [
+            "-lxcm=trace",
             "--rpc-port=8082",
             "--rpc-cors=all",
             "--ws-external",
@@ -78,6 +80,7 @@
           "name": "alice",
           "port": 31202,
           "flags": [
+            "-lxcm=trace",
             "--force-authoring",
             "--rpc-port=8083",
             "--rpc-cors=all",
@@ -95,6 +98,7 @@
           "name": "bob",
           "port": 31203,
           "flags": [
+            "-lxcm=trace",
             "--force-authoring",
             "--rpc-port=8084",
             "--rpc-cors=all",
@@ -111,6 +115,19 @@
     }
   ],
   "simpleParachains": [],
-  "hrmpChannels": [],
+  "hrmpChannels": [
+    {
+			"sender": 1000,
+			"recipient": 1001,
+			"maxCapacity": 8,
+			"maxMessageSize": 512
+		},
+    {
+			"sender": 1001,
+			"recipient": 1000,
+			"maxCapacity": 8,
+			"maxMessageSize": 512
+		}
+  ],
   "types": {}
 }
