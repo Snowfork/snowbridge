@@ -23,7 +23,15 @@ const createTransferXcm = (
               }
             },
             fungibility: {
-              Fungible: 18_000_000
+              Fungible: 5_004_000_000
+            }
+          },
+          {
+            id: {
+              Concrete: fromLocation
+            },
+            fungibility: {
+              Fungible: amount
             }
           }
         ]
@@ -54,7 +62,7 @@ const createTransferXcm = (
             parents: 1,
             interior: {
               X1: {
-                Parachain: 1001
+                Parachain: toParaId
               }
             }
           },
@@ -69,7 +77,7 @@ const createTransferXcm = (
                     }
                   },
                   fungibility: {
-                    Fungible: 4_000_000
+                    Fungible: 5_000_000_000
                   }
                 },
                 weightLimit: "Unlimited"
@@ -87,7 +95,7 @@ const createTransferXcm = (
                     X1: {
                       AccountId32: {
                         network: "Any",
-                        id: 0x0000000000000000000000000000000000000000000000000000000000000000
+                        id: toAddr
                       }
                     }
                   }
@@ -124,12 +132,12 @@ let main = async () => {
 
   let assetId = api.createType("AssetId", "ETH");
   let location : MultiLocationV2 = api.createType("MultiLocationV2", {
-    parents: api.createType('u8', 0),
-    interior: api.createType("JunctionsV2", {
-      X1: api.createType("JunctionV2", {
+    parents: 0,
+    interior: {
+      X1: {
         GeneralKey: assetId.toHex()
-      })
-    })
+      }
+    }
   });
 
   let xcm = createTransferXcm(
@@ -140,7 +148,7 @@ let main = async () => {
     argv.recipient
   );
 
-  let call = api.tx.polkadotXcm.execute(xcm, 8_000_000);
+  let call = api.tx.polkadotXcm.execute(xcm, 4_000_000);
   console.log("Encoded Xcm", xcm.toHex());
   console.log("Encoded Call", call.toHex());
   console.log("Human Call", JSON.stringify(call.toHuman(), null, 2));

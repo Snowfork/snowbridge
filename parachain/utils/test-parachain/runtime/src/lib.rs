@@ -540,6 +540,15 @@ pub type Barrier = (
 	// ^^^ Parent and its exec plurality get free execution
 );
 
+pub struct TestAssetTwo;
+impl xcm_executor::traits::FilterAssetLocation for TestAssetTwo {
+	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		// log::error!("HELLLLLLPPPPPPPPP {:?} {:?}", asset, origin);
+		// matches!(asset.id, Concrete(ref id) if id == origin)
+		true
+	}
+}
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type Call = Call;
@@ -547,7 +556,7 @@ impl Config for XcmConfig {
 	// How to withdraw and deposit an asset.
 	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = NativeAsset;
+	type IsReserve = TestAssetTwo;
 	type IsTeleporter = (); // Teleporting is disabled.
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
