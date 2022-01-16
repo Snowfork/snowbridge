@@ -13,6 +13,7 @@ Relayer service that streams transactions from blockchain networks, packages dat
 
 This project requires the following tools for day to day development:
 
+- [Golang](https://go.dev/)
 - [Mage](https://magefile.org/): Used for build tasks
 - [Revive](https://github.com/mgechev/revive): Used for linting instead of golint
 
