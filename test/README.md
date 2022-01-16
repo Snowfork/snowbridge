@@ -18,11 +18,10 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
   (cd ../ethereum && yarn install)
   ```
 
-* Development environment for the relay services. See relayer [requirements](../relayer/README.md#development).
-* `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
+* Development environment for the relay services. See setup [instructions](../relayer/README.md#development).
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
-* sponge - Is available in the moreutils package. On Mac see https://formulae.brew.sh/formula/moreutils. On Linux:
+* sponge - Is available in the `moreutils` package.
 
   ```bash
   apt install moreutils
@@ -31,10 +30,16 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
 * polkadot-launch
 
   ```bash
-yarn global add polkadot-launch@1.9.0
+  yarn global add polkadot-launch@1.9.0
   ```
 
 ## Setup
+
+### Install NPM dependencies
+
+```bash
+yarn install
+```
 
 ### Polkadot
 
@@ -51,7 +56,7 @@ cargo build --release
 
 ### Configure testnet
 
-Create an `.env` file with variables that point to the binary for polkadot
+Create an `.env` file, and set the `POLKADOT_BIN` variable to the location of the polkadot binary built in the previous step.
 
 Example:
 ```
@@ -65,7 +70,7 @@ Run the following script
 scripts/start-services.sh
 ```
 
-Wait until the "System has been initialized" message
+Wait until the "Testnet has been initialized" message
 
 Go to polkadot-js and wait until the parachain has started producing blocks:
 https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A11144#/explorer
@@ -84,19 +89,7 @@ The `start-services.sh` script writes the following logs:
 
 ## E2E tests
 
-### Setup
-
-Download dependencies:
-
-```bash
-yarn install
-```
-
-You should now be good to go!
-
-## Run Tests
-
-### Integration Tests
+Run the tests using the following command:
 
 ```bash
 yarn test

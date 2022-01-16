@@ -4,12 +4,9 @@ This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge
 
 ## Development
 
-Make sure you use a recent node version, e. g. with [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
-
-```bash
-nvm install 14.16.1
-nvm use 14.16.1
-```
+Requirements:
+* Node 14 LTS. See installation [instructions](https://www.digitalocean.com/community/tutorials/how-to-install-node-js-on-ubuntu-20-04#option-3-%E2%80%94-installing-node-using-the-node-version-manager).
+* Yarn
 
 Install dependencies with yarn:
 
