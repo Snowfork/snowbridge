@@ -54,7 +54,8 @@ describe("ETHApp", function () {
     });
 
     it("should lock funds", async function () {
-      const beforeBalance = BigNumber(await this.app.balance());
+
+      const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
       const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
 
       const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
@@ -71,11 +72,8 @@ describe("ETHApp", function () {
 
       // Confirm contract's balance has increased
       const afterBalance = await web3.eth.getBalance(this.app.address);
-      afterBalance.should.be.bignumber.equal(amount);
+      afterBalance.should.be.bignumber.equal(beforeBalance.plus(amount));
 
-      // Confirm contract's locked balance state has increased by amount locked
-      const afterBalanceState = BigNumber(await this.app.balance());
-      afterBalanceState.should.be.bignumber.equal(beforeBalance.plus(amount));
     });
   })
 
@@ -98,9 +96,20 @@ describe("ETHApp", function () {
       // expected amount to unlock
       const amount = web3.utils.toWei("1", "ether");
 
-      const beforeBalance = BigNumber(await this.app.balance());
+      const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
       const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
+      const unlockAmount = web3.utils.toBN( web3.utils.toWei("2", "ether")).add(web3.utils.toBN(1))
+      
+       await this.app.unlock(
+        addressBytes(POLKADOT_ADDRESS),
+        recipient,
+        unlockAmount.toString(),
+        {
+          from: inboundChannel,
+        }
+      ).should.not.be.fulfilled;
+      
       let { receipt } = await this.app.unlock(
         addressBytes(POLKADOT_ADDRESS),
         recipient,
@@ -121,7 +130,7 @@ describe("ETHApp", function () {
       event.recipient.should.be.equal(recipient);
       event.amount.eq(ethers.BigNumber.from(amount)).should.be.true;
 
-      const afterBalance = BigNumber(await this.app.balance());
+      const afterBalance = BigNumber(await web3.eth.getBalance(this.app.address));
       const afterRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
       afterBalance.should.be.bignumber.equal(beforeBalance.minus(amount));
