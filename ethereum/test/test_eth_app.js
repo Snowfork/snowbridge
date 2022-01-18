@@ -108,7 +108,7 @@ describe("ETHApp", function () {
         {
           from: inboundChannel,
         }
-      ).should.not.be.fulfilled;
+      ).should.be.rejectedWith(/ETH token balances insufficient to fulfill the unlock request/);
       
       let { receipt } = await this.app.unlock(
         addressBytes(POLKADOT_ADDRESS),
