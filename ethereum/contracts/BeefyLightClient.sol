@@ -339,10 +339,9 @@ contract BeefyLightClient {
         bytes memory encodedLeaf = encodeMMRLeaf(leaf);
         bytes32 hashedLeaf = hashMMRLeaf(encodedLeaf);
 
-        mmrVerification.verifyInclusionProof(
-            root,
-            hashedLeaf,
-            proof
+        require(
+            mmrVerification.verifyInclusionProof(root, hashedLeaf, proof),
+            "Invalid proof"
         );
     }
 
