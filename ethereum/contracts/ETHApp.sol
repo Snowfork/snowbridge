@@ -100,10 +100,6 @@ contract ETHApp is RewardSource, AccessControl {
         uint256 _amount
     ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         require(_amount > 0, "Must unlock a positive amount");
-        require(
-            address(this).balance >= _amount,
-            "ETH token balances insufficient to fulfill the unlock request"
-        );
 
         (bool success, ) = _recipient.call{value: _amount}("");
         require(success, "Unable to send Ether");
