@@ -35,8 +35,8 @@ contract BasicInboundChannel is AccessControl {
         nonce = 0;
         beefyLightClient = _beefyLightClient;
         _setupRole(BEEFY_UPGRADE_ROLE, msg.sender);
-        _setupRoleAdmin(BEEFY_UPGRADE_ROLE, BEEFY_UPGRADE_ROLE);
-    };
+        _setRoleAdmin(BEEFY_UPGRADE_ROLE, BEEFY_UPGRADE_ROLE);
+    }
 
     function submit(
         Message[] calldata _messages,
@@ -88,7 +88,7 @@ contract BasicInboundChannel is AccessControl {
     }
 
     function upgrade(
-        BeefyLightClient storage _beefyLightClient
+        BeefyLightClient _beefyLightClient
     ) external onlyRole(BEEFY_UPGRADE_ROLE) {
         beefyLightClient = _beefyLightClient;
         emit Upgraded(msg.sender, beefyLightClient);
