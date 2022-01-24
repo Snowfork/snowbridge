@@ -2,13 +2,17 @@
 pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./ParachainLightClient.sol";
 import "./BeefyLightClient.sol";
 import "./SimplifiedMMRVerification.sol";
 
-contract BasicInboundChannel {
+contract BasicInboundChannel is AccessControl {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
     uint256 public constant GAS_BUFFER = 60000;
+
+    bytes32 public constant BEEFY_UPGRADE_ROLE =
+        keccak256("BEEFY_UPGRADE_ROLE");
 
     uint64 public nonce;
 
@@ -22,10 +26,17 @@ contract BasicInboundChannel {
 
     event MessageDispatched(uint64 nonce, bool result);
 
+    event Upgraded(
+        address upgrader,
+        BeefyLightClient beefyLightClient
+    );
+
     constructor(BeefyLightClient _beefyLightClient) {
         nonce = 0;
         beefyLightClient = _beefyLightClient;
-    }
+        _setupRole(BEEFY_UPGRADE_ROLE, msg.sender);
+        _setupRoleAdmin(BEEFY_UPGRADE_ROLE, BEEFY_UPGRADE_ROLE);
+    };
 
     function submit(
         Message[] calldata _messages,
@@ -74,5 +85,12 @@ contract BasicInboundChannel {
             emit MessageDispatched(_messages[i].nonce, success);
         }
         nonce = cachedNonce;
+    }
+
+    function upgrade(
+        BeefyLightClient storage _beefyLightClient
+    ) external onlyRole(BEEFY_UPGRADE_ROLE) {
+        beefyLightClient = _beefyLightClient;
+        emit Upgraded(msg.sender, beefyLightClient);
     }
 }
