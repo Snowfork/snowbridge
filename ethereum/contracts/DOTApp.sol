@@ -27,7 +27,7 @@ contract DOTApp is FeeSource, AccessControl {
         keccak256("CHANNEL_UPGRADE_ROLE");
 
     event Upgraded(
-        address ugprader,
+        address upgrader,
         Channel basic,
         Channel incentivized
     );

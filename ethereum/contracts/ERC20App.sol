@@ -40,7 +40,7 @@ contract ERC20App is AccessControl {
     );
 
     event Upgraded(
-        address ugprader,
+        address upgrader,
         Channel basic,
         Channel incentivized
     );

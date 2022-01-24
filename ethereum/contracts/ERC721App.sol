@@ -34,7 +34,7 @@ contract ERC721App is AccessControl {
     );
 
     event Upgraded(
-        address ugprader,
+        address upgrader,
         Channel basic,
         Channel incentivized
     );

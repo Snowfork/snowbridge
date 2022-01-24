@@ -30,7 +30,7 @@ contract ETHApp is RewardSource, AccessControl {
     event Unlocked(bytes32 sender, address recipient, uint256 amount);
 
     event Upgraded(
-        address ugprader,
+        address upgrader,
         Channel basic,
         Channel incentivized
     );
