@@ -16,8 +16,6 @@ contract ETHApp is RewardSource, AccessControl {
     using ScaleCodec for uint256;
     using ScaleCodec for uint32;
 
-    uint256 public balance;
-
     mapping(ChannelId => Channel) public channels;
 
     event Locked(
@@ -46,7 +44,6 @@ contract ETHApp is RewardSource, AccessControl {
         Channel memory _basic,
         Channel memory _incentivized
     ) {
-        balance = 0;
 
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
@@ -72,8 +69,6 @@ contract ETHApp is RewardSource, AccessControl {
                 _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
-
-        balance = balance + msg.value;
 
         emit Locked(msg.sender, _recipient, msg.value, _paraId);
 
@@ -105,12 +100,7 @@ contract ETHApp is RewardSource, AccessControl {
         uint256 _amount
     ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         require(_amount > 0, "Must unlock a positive amount");
-        require(
-            balance >= _amount,
-            "ETH token balances insufficient to fulfill the unlock request"
-        );
 
-        balance = balance - _amount;
         (bool success, ) = _recipient.call{value: _amount}("");
         require(success, "Unable to send Ether");
         emit Unlocked(_sender, _recipient, _amount);
