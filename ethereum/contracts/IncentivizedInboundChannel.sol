@@ -22,27 +22,32 @@ contract IncentivizedInboundChannel is AccessControl {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
     uint256 public constant GAS_BUFFER = 60000;
 
-    // Governance contracts will administer using this role.
-    bytes32 public constant CONFIG_UPDATE_ROLE =
-        keccak256("CONFIG_UPDATE_ROLE");
+    bytes32 public constant BEEFY_UPGRADE_ROLE =
+        keccak256("BEEFY_UPGRADE_ROLE");
+
 
     RewardSource private rewardSource;
 
     BeefyLightClient public beefyLightClient;
 
+    event Upgraded(
+        address upgrader,
+        BeefyLightClient beefyLightClient
+    );
+
     constructor(BeefyLightClient _beefyLightClient) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(BEEFY_UPGRADE_ROLE, msg.sender);
+        _setRoleAdmin(BEEFY_UPGRADE_ROLE, BEEFY_UPGRADE_ROLE);
         beefyLightClient = _beefyLightClient;
         nonce = 0;
     }
 
     // Once-off post-construction call to set initial configuration.
-    function initialize(address _configUpdater, address _rewardSource)
+    function initialize(address _rewardSource)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        // Set initial configuration
-        grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
         rewardSource = RewardSource(_rewardSource);
 
         // drop admin privileges
@@ -104,5 +109,12 @@ contract IncentivizedInboundChannel is AccessControl {
         // reward the relayer
         rewardSource.reward(_relayer, _rewardAmount);
         nonce = cachedNonce;
+    }
+
+    function upgrade(
+        BeefyLightClient _beefyLightClient
+    ) external onlyRole(BEEFY_UPGRADE_ROLE) {
+        beefyLightClient = _beefyLightClient;
+        emit Upgraded(msg.sender, beefyLightClient);
     }
 }
