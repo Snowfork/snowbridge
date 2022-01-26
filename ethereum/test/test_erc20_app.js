@@ -144,6 +144,61 @@ describe("ERC20App", function () {
     });
 
   });
-});
+  describe("upgradeability", function () {
+    beforeEach(async function () {
+      this.outboundChannel = await MockOutboundChannel.new()
+      this.newInboundChannel = accounts[2];
+      this.app = await deployAppWithMockChannels(owner, [owner, this.outboundChannel.address], ERC20App);
+      const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
+      this.iface = new ethers.utils.Interface(abi);
+    });
+    
+    it("should revert when called by non-admin", async function () {
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: userOne}).should.be.rejectedWith(/AccessControl/);
+    });
+    
+    it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
+      await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: owner}
+      ).should.be.rejectedWith(/AccessControl/)
+    })
+
+    it("should succeed when called by CHANNEL_UPGRADE_ROLE", async function () {
+      const oldBasic = await this.app.channels(0);
+      const oldIncentivized = await this.app.channels(1);
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: owner}
+      );
+      const newBasic = await this.app.channels(0);
+      const newIncentivized = await this.app.channels(1);
+      expect(newBasic.inbound !== oldBasic.inbound).to.be.true;
+      expect(newIncentivized.inbound !== oldIncentivized.inbound).to.be.true;
+    });
+
+    it("CHANNEL_UPGRADE_ROLE can change CHANNEL_UPGRADE_ROLE", async function () {
+      const newUpgrader = ethers.Wallet.createRandom().address;
+      const tx = await this.app.grantRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), newUpgrader);
+      const event = this.iface.decodeEventLog('RoleGranted', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
+      expect(event.account).to.equal(newUpgrader);
+    });
+
+    it("reverts when non-upgrader attempts to change CHANNEL_UPGRADE_ROLE", async function () {
+      const newUpgrader = ethers.Wallet.createRandom().address;
+      await this.app.grantRole(
+        web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"),
+        newUpgrader,
+        {from: userOne}
+      ).should.be.rejectedWith(/AccessControl/);
+    })
+  });
+  });
 
 module.exports = { lockupERC20: lockupFunds };
