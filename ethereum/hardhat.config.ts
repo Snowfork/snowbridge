@@ -27,13 +27,18 @@ const etherscanKey = getenv("ETHERSCAN_API_KEY");
 
 const config: HardhatUserConfig = {
   networks: {
-    hardhat: {},
+    hardhat: {
+      accounts: {
+        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
+      },
+      chainId: 15,
+    },
     localhost: {
       url: "http://127.0.0.1:8545",
       accounts: {
         mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
       },
-      chainId: 31337,
+      chainId: 15,
     },
     ropsten: {
       chainId: 3,
