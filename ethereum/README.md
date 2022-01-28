@@ -55,7 +55,7 @@ Example: upgrade an app to use a different set of channels
 ```sh
 # Do something first to deploy new channels, then provide addresses below
 yarn hardhat upgrade \
-  --appaddr       0x9A676e781A523b5d0C0e43731313A708CB607508 \
+  --appaddr       0x3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d \
   --basicinbound  0x0000000000000000000000000000000000000001 \
   --basicoutbound 0x0000000000000000000000000000000000000002 \
   --incinbound    0x0000000000000000000000000000000000000003 \
@@ -67,7 +67,7 @@ yarn hardhat upgrade \
 
 ```sh
 yarn hardhat renounce \
-  --appaddr 0x9A676e781A523b5d0C0e43731313A708CB607508 \
+  --appaddr 0x3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d \
   --network localhost
 ```
 
