@@ -24,6 +24,7 @@ const getenv = (name: string) => {
 const ropstenPrivateKey = getenv("ROPSTEN_PRIVATE_KEY");
 const infuraKey = getenv("INFURA_PROJECT_ID");
 const etherscanKey = getenv("ETHERSCAN_API_KEY");
+const kintsugiPrivateKey = getenv("KINTSUGI_PRIVATE_KEY");
 
 const config: HardhatUserConfig = {
   networks: {
@@ -41,6 +42,11 @@ const config: HardhatUserConfig = {
         mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
       },
       chainId: 15,
+    },
+    kintsugi: {
+      url: "https://rpc.kintsugi.themerge.dev",
+      accounts: [kintsugiPrivateKey],
+      chainId: 1337702,
     },
     ropsten: {
       chainId: 3,
