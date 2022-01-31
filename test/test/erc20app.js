@@ -6,7 +6,7 @@ const { expect } = require("chai")
 
 const { TestTokenAddress, polkadotRecipientSS58, polkadotRecipient, bootstrap } = require('../src/fixtures');
 
-const { ChannelId } = require("../src/helpers");
+const { ChannelId, sleep } = require("../src/helpers");
 
 describe('Bridge', function () {
 
@@ -26,18 +26,32 @@ describe('Bridge', function () {
     it('should transfer ERC20 tokens from Ethereum to Substrate', async function () {
       const amount = BigNumber('1000');
       const ethAccount = ethClient.accounts[1];
-      const subBalances = await subClient.subscribeAssetBalances(
-        polkadotRecipientSS58, this.erc20AssetId, 2
-      );
 
-      const beforeEthBalance = await ethClient.getErc20Balance(ethAccount);
-      const beforeSubBalance = await subBalances[0];
+      // Check if there is already a registered asset for the token
+      let maybeAssetId = await subClient.api.query.erc20App.assetId(TestTokenAddress);
+      let assetId = maybeAssetId.unwrapOr(null)
+
+      // Query the account balance for the asset if it exists
+      let beforeSubBalance;
+      if (assetId) {
+        beforeSubBalance = await subClient.queryAssetsAccountBalance(assetId, polkadotRecipientSS58)
+      } else {
+        beforeSubBalance = await BigNumber('0');
+      }
+
+      let beforeEthBalance = await ethClient.getErc20Balance(ethAccount);
 
       await ethClient.approveERC20(ethAccount, amount);
       await ethClient.lockERC20(ethAccount, amount, polkadotRecipient, ChannelId.BASIC);
 
-      const afterEthBalance = await ethClient.getErc20Balance(ethAccount);
-      const afterSubBalance = await subBalances[1];
+      await sleep(60 * 1000)
+
+      // Ensure there is now a registered asset for the token
+      maybeAssetId = await subClient.api.query.erc20App.assetId(TestTokenAddress);
+      assetId = maybeAssetId.unwrap()
+
+      let afterEthBalance = await ethClient.getErc20Balance(ethAccount);
+      let afterSubBalance = await subClient.queryAssetsAccountBalance(assetId, polkadotRecipientSS58)
 
       expect(afterEthBalance).to.be.bignumber.equal(beforeEthBalance.minus(amount));
       expect(afterSubBalance).to.be.bignumber.equal(beforeSubBalance.plus(amount));
@@ -53,14 +67,18 @@ describe('Bridge', function () {
       const amount = BigNumber('1000');
       const ethAccount = ethClient.accounts[1];
 
+      // Query the asset id for the token
+      maybeAssetId = await subClient.api.query.erc20App.assetId(TestTokenAddress);
+      assetId = maybeAssetId.unwrap()
+
       const beforeEthBalance = await ethClient.getErc20Balance(ethAccount);
-      const beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
+      const beforeSubBalance = await subClient.queryAssetsAccountBalance(assetId, polkadotRecipientSS58);
 
       await subClient.burnERC20(subClient.alice, TestTokenAddress, ethAccount, amount.toFixed(), ChannelId.BASIC);
       await ethClient.waitForNextEventData({ appName: 'appERC20', eventName: 'Unlocked' });
 
       const afterEthBalance = await ethClient.getErc20Balance(ethAccount);
-      const afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.erc20AssetId);
+      const afterSubBalance = await subClient.queryAssetsAccountBalance(assetId, polkadotRecipientSS58);
 
       expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amount);
       expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.equal(amount);

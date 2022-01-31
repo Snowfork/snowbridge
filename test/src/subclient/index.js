@@ -26,7 +26,7 @@ class SubClient {
     return BigNumber(account.balance.toBigInt())
   }
 
-  async subscribeAssetsAccountBalances(accountId, assetId, length) {
+  async subscribeAssetsAccountBalances(assetId, accountId, length) {
     const [promises, resolvers] = createPromiseResolverMap(length)
 
     // Setup our balance subscription and resolve each promise one by one

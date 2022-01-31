@@ -25,8 +25,8 @@ describe('Bridge', function () {
       const amount = BigNumber(Web3.utils.toWei('1', "ether"));
       const ethAccount = ethClient.accounts[1];
 
-      const subBalances = await subClient.subscribeAssetBalances(
-        polkadotRecipientSS58, this.ethAssetId, 2
+      const subBalances = await subClient.subscribeAssetsAccountBalances(
+        0, polkadotRecipientSS58, 2
       );
 
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
@@ -54,13 +54,13 @@ describe('Bridge', function () {
       const ethAccount = ethClient.accounts[1];
 
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
-      const beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
+      const beforeSubBalance = await subClient.queryAssetsAccountBalance(0, polkadotRecipientSS58);
 
       await subClient.burnETH(subClient.alice, ethAccount, amount.toFixed(), ChannelId.INCENTIVIZED)
       await ethClient.waitForNextEventData({ appName: 'appETH', eventName: 'Unlocked' });
 
       const afterEthBalance = await ethClient.getEthBalance(ethAccount);
-      const afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
+      const afterSubBalance = await subClient.queryAssetsAccountBalance(0, polkadotRecipientSS58);
 
       expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amount);
       expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.equal(amount.plus(fee));

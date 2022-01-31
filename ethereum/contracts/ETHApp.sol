@@ -83,10 +83,11 @@ contract ETHApp is RewardSource, AccessControl {
                 _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
-        //Revert in case of overflow.
+
+        // evert in case of overflow.
         uint128 value = (msg.value).toUint128();
 
-        emit Locked(msg.sender, _recipient, msg.value, _paraId);
+        emit Locked(msg.sender, _recipient, value, _paraId);
 
         bytes memory call;
         if (_paraId == 0) {
