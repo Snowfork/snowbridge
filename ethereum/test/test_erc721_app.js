@@ -205,7 +205,7 @@ contract("ERC721App", function (accounts) {
         {
           from: userTwo
         }
-      ).should.be.rejectedWith(/AccessControl: account 0x90f79bf6eb2c4f870365e785982e1f101e93b906 is missing role 0xf857e99667b61d9feb64d6cb140ba8a8ba3501d58a4940223c8e74c45932fbf4/);;
+      ).should.be.rejectedWith(/AccessControl/);
     });
   });
 
