@@ -12,6 +12,7 @@ require("chai")
   .should();
 
 const { ethers } = require("ethers");
+const { expect } = require("chai");
 
 const ETHApp = artifacts.require("ETHApp");
 const ScaleCodec = artifacts.require("ScaleCodec");
@@ -55,7 +56,8 @@ describe("ETHApp", function () {
     });
 
     it("should lock funds", async function () {
-      const beforeBalance = BigNumber(await this.app.balance());
+
+      const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
       const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
  
       await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, web3.utils.toBN(web3.utils.toBN(MAX_ETH)).add(web3.utils.toBN(1)), ChannelId.Basic)
@@ -75,11 +77,8 @@ describe("ETHApp", function () {
 
       // Confirm contract's balance has increased
       const afterBalance = await web3.eth.getBalance(this.app.address);
-      afterBalance.should.be.bignumber.equal(amount);
+      afterBalance.should.be.bignumber.equal(beforeBalance.plus(amount));
 
-      // Confirm contract's locked balance state has increased by amount locked
-      const afterBalanceState = BigNumber(await this.app.balance());
-      afterBalanceState.should.be.bignumber.equal(beforeBalance.plus(amount));
     });
   })
 
@@ -102,9 +101,20 @@ describe("ETHApp", function () {
       // expected amount to unlock
       const amount = web3.utils.toWei("1", "ether");
 
-      const beforeBalance = BigNumber(await this.app.balance());
+      const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
       const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
+      const unlockAmount = web3.utils.toBN( web3.utils.toWei("2", "ether")).add(web3.utils.toBN(1))
+      
+       await this.app.unlock(
+        addressBytes(POLKADOT_ADDRESS),
+        recipient,
+        unlockAmount.toString(),
+        {
+          from: inboundChannel,
+        }
+      ).should.be.rejectedWith(/Unable to send Ether/);
+      
       let { receipt } = await this.app.unlock(
         addressBytes(POLKADOT_ADDRESS),
         recipient,
@@ -125,11 +135,67 @@ describe("ETHApp", function () {
       event.recipient.should.be.equal(recipient);
       event.amount.eq(ethers.BigNumber.from(amount)).should.be.true;
 
-      const afterBalance = BigNumber(await this.app.balance());
+      const afterBalance = BigNumber(await web3.eth.getBalance(this.app.address));
       const afterRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
       afterBalance.should.be.bignumber.equal(beforeBalance.minus(amount));
       afterRecipientBalance.minus(beforeRecipientBalance).should.be.bignumber.equal(amount);
     });
   });
+
+  describe("upgradeability", function () {
+    beforeEach(async function () {
+      this.outboundChannel = await MockOutboundChannel.new()
+      this.newInboundChannel = accounts[2];
+      this.app = await deployAppWithMockChannels(owner, [inboundChannel, this.outboundChannel.address], ETHApp, inboundChannel);
+      const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
+      this.iface = new ethers.utils.Interface(abi);
+    });
+    
+    it("should revert when called by non-admin", async function () {
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: userOne}).should.be.rejectedWith(/AccessControl/);
+    });
+    
+    it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
+      await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: owner}
+      ).should.be.rejectedWith(/AccessControl/)
+    })
+
+    it("should succeed when called by CHANNEL_UPGRADE_ROLE", async function () {
+      const oldBasic = await this.app.channels(0);
+      const oldIncentivized = await this.app.channels(1);
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: owner}
+      );
+      const newBasic = await this.app.channels(0);
+      const newIncentivized = await this.app.channels(1);
+      expect(newBasic.inbound !== oldBasic.inbound).to.be.true;
+      expect(newIncentivized.inbound !== oldIncentivized.inbound).to.be.true;
+    });
+
+    it("CHANNEL_UPGRADE_ROLE can change CHANNEL_UPGRADE_ROLE", async function () {
+      const newUpgrader = ethers.Wallet.createRandom().address;
+      const tx = await this.app.grantRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), newUpgrader);
+      const event = this.iface.decodeEventLog('RoleGranted', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
+      expect(event.account).to.equal(newUpgrader);
+    });
+
+    it("reverts when non-upgrader attempts to change CHANNEL_UPGRADE_ROLE", async function () {
+      const newUpgrader = ethers.Wallet.createRandom().address;
+      await this.app.grantRole(
+        web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"),
+        newUpgrader,
+        {from: userOne}
+      ).should.be.rejectedWith(/AccessControl/);
+    })
+  })
 });

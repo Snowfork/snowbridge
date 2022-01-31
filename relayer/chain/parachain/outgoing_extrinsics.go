@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-const MaxWatchedExtrinsics = 30
+const MaxWatchedExtrinsics = 10
 
 type ExtrinsicPool struct {
 	conn *Connection

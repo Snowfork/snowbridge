@@ -1,9 +1,10 @@
 # Local Testnet
 
-The E2E tests run against local deployments of the parachain, relayer and ganache.
+The E2E tests run against local deployments of the parachain, relayer and ethereum (geth).
 
 ## Requirements
 
+* Ubuntu 20.04 or later. MacOs may work, but its not currently a supported configuration. 
 * Development environment for Rust and Substrate. See parachain [requirements](../parachain/README.md#requirements).
 * Node 14 LTS. Can install using [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
 
@@ -18,11 +19,10 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
   (cd ../ethereum && yarn install)
   ```
 
-* Development environment for the relay services. See relayer [requirements](../relayer/README.md#development).
-* `timeout` - native package on Ubuntu, on macOS try ```brew install coreutils```
+* Development environment for the relay services. See setup [instructions](../relayer/README.md#development).
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
-* sponge - Is available in the moreutils package. On Mac see https://formulae.brew.sh/formula/moreutils. On Linux:
+* sponge - Is available in the `moreutils` package.
 
   ```bash
   apt install moreutils
@@ -31,19 +31,21 @@ The E2E tests run against local deployments of the parachain, relayer and ganach
 * polkadot-launch
 
   ```bash
-  git clone -b fix-simple-paras https://github.com/Snowfork/polkadot-launch.git
-  yarn install
-  yarn build
-  yarn global add file:$(pwd)
+  yarn global add polkadot-launch@1.9.0
   ```
 
 ## Setup
+
+### Install NPM dependencies
+
+```bash
+yarn install
+```
 
 ### Polkadot
 
 * Clone the polkadot repository somewhere on your machine
 * Checkout commit `release-v0.9.12`.
-* Build polkadot and the adder-collator parachain
 
 Example:
 ```bash
@@ -51,17 +53,15 @@ git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
 git checkout release-v0.9.12
 cargo build --release
-cargo build --manifest-path parachain/test-parachains/adder/collator/Cargo.toml --release
 ```
 
 ### Configure testnet
 
-Create an `.env` file with variables that point to the binaries for polkadot and adder-collator
+Create an `.env` file, and set the `POLKADOT_BIN` variable to the location of the polkadot binary built in the previous step.
 
 Example:
 ```
 POLKADOT_BIN=/path/to/polkadot/target/release/polkadot
-ADDER_COLLATOR_BIN=/path/to/polkadot/target/release/adder-collator
 ```
 
 ## Launch the testnet
@@ -71,7 +71,7 @@ Run the following script
 scripts/start-services.sh
 ```
 
-Wait until the "System has been initialized" message
+Wait until the "Testnet has been initialized" message
 
 Go to polkadot-js and wait until the parachain has started producing blocks:
 https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A11144#/explorer
@@ -90,19 +90,7 @@ The `start-services.sh` script writes the following logs:
 
 ## E2E tests
 
-### Setup
-
-Download dependencies:
-
-```bash
-yarn install
-```
-
-You should now be good to go!
-
-## Run Tests
-
-### Integration Tests
+Run the tests using the following command:
 
 ```bash
 yarn test

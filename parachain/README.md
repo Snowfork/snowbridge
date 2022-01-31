@@ -25,8 +25,8 @@ Refer to the instructions at the
 
 To add context to the above instructions, the parachain is known to compile with the following versions of Rust:
 
-- stable: 1.51.0
-- nightly: 1.53.0-nightly
+- stable: 1.58
+- nightly: 1.60.0-nightly
 
 ### Build
 
@@ -43,7 +43,7 @@ cargo build --release --no-default-features --features with-local-runtime
 Install `polkadot-launch`:
 
 ```bash
-yarn global add polkadot-launch
+yarn global add polkadot-launch@1.9.0
 cd -
 ```
 
@@ -56,17 +56,6 @@ git checkout release-v0.9.12
 cargo build --release
 cd -
 ```
-
-Launch Polkadot and the parachain:
-
-```bash
-cd -
-polkadot-launch config.json
-```
-
-It will take about 1-2 minutes for the parachain to start producing blocks.
-
-The parachain will output logs to `200.log`.
 
 ## Configuration
 

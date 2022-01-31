@@ -14,6 +14,16 @@ address_for()
 }
 
 start_geth() {
+
+    if [[ -n "${DIFFICULTY+x}" ]]; then
+        jq --arg difficulty "${DIFFICULTY}" \
+            '.difficulty = $difficulty' \
+            config/genesis.json \
+            > "$output_dir/genesis.json"
+    else
+        cp config/genesis.json "$output_dir/genesis.json"
+    fi
+
     local data_dir="$output_dir/geth"
 
     geth init --datadir "$data_dir" config/genesis.json
@@ -50,14 +60,12 @@ start_polkadot_launch()
         echo "Please specify the path to the polkadot binary. Variable POLKADOT_BIN is unset."
     fi
 
-    if [[ -z "${ADDER_COLLATOR_BIN+x}" ]]; then
-        echo "Please specify the path to the adder-collator binary. Variable ADDER_COLLATOR_BIN is unset."
-    fi
-
     local parachain_bin="$parachain_dir/target/release/snowbridge"
+    local test_collator_bin="$parachain_dir/target/release/snowbridge-test-collator"
 
     echo "Building parachain node"
-    cargo build --manifest-path "$parachain_dir/Cargo.toml" \
+    cargo build --workspace \
+        --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
         --features with-local-runtime
@@ -80,15 +88,27 @@ start_polkadot_launch()
     #     "$output_dir/spec.json" | sponge "$output_dir/spec.json"
     # fi
 
+    echo "Generating test chain specification"
+    "$test_collator_bin" build-spec --disable-default-bootnode > "$output_dir/test_spec.json"
+
+    echo "Updating test chain specification"
+    jq \
+        ' .genesis.runtime.parachainInfo.parachainId = 1001
+        | .para_id = 1001
+        ' \
+        "$output_dir/test_spec.json" | sponge "$output_dir/test_spec.json"
+
     jq \
         --arg polkadot "$(realpath $POLKADOT_BIN)" \
-        --arg adder_collator "$(realpath $ADDER_COLLATOR_BIN)" \
         --arg bin "$parachain_bin" \
         --arg spec "$output_dir/spec.json" \
+        --arg test_collator "$(realpath $test_collator_bin)" \
+        --arg test_spec "$output_dir/test_spec.json" \
         ' .relaychain.bin = $polkadot
         | .parachains[0].bin = $bin
         | .parachains[0].chain = $spec
-        | .simpleParachains[0].bin = $adder_collator
+        | .parachains[1].bin = $test_collator
+        | .parachains[1].chain = $test_spec
         ' \
         config/launch-config.json \
         > "$output_dir/launch-config.json"
@@ -96,6 +116,7 @@ start_polkadot_launch()
     polkadot-launch "$output_dir/launch-config.json" &
 
     scripts/wait-for-it.sh -t 120 localhost:11144
+    scripts/wait-for-it.sh -t 120 localhost:13144
 }
 
 configure_contracts()
