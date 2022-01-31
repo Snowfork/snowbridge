@@ -1,7 +1,8 @@
 import { Signer } from "@ethersproject/abstract-signer";
 import { task } from "hardhat/config";
 import { TaskArguments } from "hardhat/types";
-task("upgrade")
+
+task("upgrade-app")
     .addParam("appaddr", "The app you want to upgrade")
     .addParam("basicinbound")
     .addParam("basicoutbound")
@@ -18,4 +19,16 @@ task("upgrade")
   const receipt = await tx.wait();
   console.log(`tx mined, receipt:`);
   console.log(JSON.stringify(receipt, undefined, 2))
+});
+
+task("upgrade-channel")
+    .addParam("channeladdr", "The channel you want to upgrade")
+    .addParam("beefyaddr")
+    .setAction(async ({channeladdr, beefyaddr}: TaskArguments, { ethers }) => {
+  const accounts: Signer[] = await ethers.getSigners();
+  const channel = await ethers.getContractAt(["function upgrade(address _beefyLightClient)"], channeladdr)
+  const tx = await channel.upgrade(beefyaddr);
+  console.log(`tx submitted... https://etherscan.io/tx/${tx.hash}`);
+  await tx.wait();
+  console.log(`tx mined!`)
 });

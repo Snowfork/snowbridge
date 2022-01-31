@@ -54,12 +54,23 @@ Example: upgrade an app to use a different set of channels
 
 ```sh
 # Do something first to deploy new channels, then provide addresses below
-yarn hardhat upgrade \
+yarn hardhat upgrade-app \
   --appaddr       0x3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d \
   --basicinbound  0x0000000000000000000000000000000000000001 \
   --basicoutbound 0x0000000000000000000000000000000000000002 \
   --incinbound    0x0000000000000000000000000000000000000003 \
   --incoutbound   0x0000000000000000000000000000000000000004 \
+  --network       localhost # change to ropsten or mainnet accordingly
+```
+
+### Upgrade a channel
+
+Example: upgrade a channel to use a different beefy light client
+```sh
+# Do something first to deploy new channels, then provide addresses below
+yarn hardhat upgrade-channel \
+  --channeladdr   0xa513E6E4b8f2a923D98304ec87F64353C4D5C853 \
+  --beefyaddr     0x0000000000000000000000000000000000000001 \
   --network       localhost # change to ropsten or mainnet accordingly
 ```
 
