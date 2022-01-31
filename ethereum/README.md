@@ -69,7 +69,7 @@ Example: upgrade a channel to use a different beefy light client
 ```sh
 # Do something first to deploy new channels, then provide addresses below
 yarn hardhat upgrade-channel \
-  --channeladdr   0xa513E6E4b8f2a923D98304ec87F64353C4D5C853 \
+  --channeladdr   0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23 \
   --beefyaddr     0x0000000000000000000000000000000000000001 \
   --network       localhost # change to ropsten or mainnet accordingly
 ```
@@ -78,7 +78,17 @@ yarn hardhat upgrade-channel \
 
 ```sh
 yarn hardhat renounce \
-  --appaddr 0x3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d \
+  --addr 0x3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d \
+  --role CHANNEL_UPGRADE_ROLE \
+  --network localhost
+```
+
+### Renounce ownership of the BEEFY_UPGRADE_ROLE
+
+```sh
+yarn hardhat renounce \
+  --addr 0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23 \
+  --role BEEFY_UPGRADE_ROLE \
   --network localhost
 ```
 
