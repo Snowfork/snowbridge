@@ -4,7 +4,7 @@ The E2E tests run against local deployments of the parachain, relayer and ethere
 
 ## Requirements
 
-* Ubuntu 20.04 or later. MacOs may work, but its not currently a supported configuration. 
+* Ubuntu 20.04 or later. MacOs may work, but its not currently a supported configuration.
 * Development environment for Rust and Substrate. See parachain [requirements](../parachain/README.md#requirements).
 * Node 14 LTS. Can install using [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
 
@@ -31,7 +31,7 @@ The E2E tests run against local deployments of the parachain, relayer and ethere
 * polkadot-launch
 
   ```bash
-  yarn global add polkadot-launch@1.9.0
+  yarn global add polkadot-launch@2.1.0
   ```
 
 ## Setup
