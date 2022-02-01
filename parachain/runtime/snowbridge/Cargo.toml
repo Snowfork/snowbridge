@@ -66,6 +66,7 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branc
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-xcm-support = { path = "../../primitives/xcm-support", default-features = false }
+snowbridge-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-basic-channel", default-features = false }
 incentivized-channel = { path = "../../pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }
 dispatch = { path = "../../pallets/dispatch", package = "snowbridge-dispatch", default-features = false }
@@ -142,7 +143,9 @@ std = [
     "eth-app/std",
     "erc20-app/std",
     "erc721-app/std",
+    "snowbridge-core/std",
     "snowbridge-xcm-support/std",
+    "snowbridge-asset-registry/std",
     "runtime-common/std",
 ]
 runtime-benchmarks = [

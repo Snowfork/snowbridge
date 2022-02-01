@@ -137,6 +137,9 @@ fn testnet_genesis(
 			metadata: vec![],
 			accounts: vec![],
 		},
+		asset_registry: local_runtime::AssetRegistryConfig {
+			next_asset_id: 1,
+		},
 		nft: snowbridge_runtime::NFTConfig { tokens: vec![] },
 		ethereum_light_client: snowbridge_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),

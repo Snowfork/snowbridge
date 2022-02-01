@@ -135,6 +135,9 @@ fn testnet_genesis(
 			metadata: vec![],
 			accounts: vec![],
 		},
+		asset_registry: local_runtime::AssetRegistryConfig {
+			next_asset_id: 1,
+		},
 		nft: rococo_runtime::NFTConfig { tokens: vec![] },
 		ethereum_light_client: rococo_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),

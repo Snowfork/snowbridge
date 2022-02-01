@@ -30,18 +30,19 @@ mod tests;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::tokens::fungibles::{Create, Mutate},
-	traits::{EnsureOrigin, Randomness},
+	traits::EnsureOrigin,
 	transactional, PalletId,
 };
 use frame_system::ensure_signed;
-use sp_core::{H160, H256};
+use sp_core::{H160};
 use sp_runtime::{
-	traits::{AccountIdConversion, Hash, StaticLookup, TrailingZeroInput},
+	traits::{AccountIdConversion, StaticLookup},
 	TokenError,
 };
 use sp_std::prelude::*;
 
 use snowbridge_core::{assets::XcmReserveTransfer, ChannelId, OutboundRouter};
+use snowbridge_asset_registry_primitives::NextAssetId;
 
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
@@ -66,12 +67,10 @@ pub mod pallet {
 
 		type PalletId: Get<PalletId>;
 
-		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
-
-		type Hashing: Hash<Output = H256>;
-
 		type Assets: Create<Self::AccountId, Balance = u128, AssetId = u128>
 			+ Mutate<Self::AccountId, Balance = u128, AssetId = u128>;
+
+		type NextAssetId: NextAssetId;
 
 		type OutboundRouter: OutboundRouter<Self::AccountId>;
 
@@ -197,33 +196,12 @@ pub mod pallet {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
-			let asset_id = Self::make_asset_id(token);
+			let asset_id = T::NextAssetId::next()?;
 			T::Assets::create(asset_id, T::PalletId::get().into_account(), true, 1)?;
 
 			<AssetId<T>>::insert(token, asset_id);
 
 			Ok(())
-		}
-	}
-
-	impl<T: Config> Pallet<T> {
-		fn make_asset_id(address: H160) -> u128 {
-			let (seed, _) = T::Randomness::random(b"erc20app");
-
-			let mut input = [0u8; 52];
-
-			// seed should be at least 32 bytes
-			let seed = <[u8; 32]>::decode(&mut TrailingZeroInput::new(seed.as_ref()))
-				.expect("input is padded with zeroes; qed");
-
-			input[..32].copy_from_slice(&seed);
-			input[32..].copy_from_slice(address.as_fixed_bytes().as_ref());
-
-			let hash = <T as Config>::Hashing::hash(&input);
-			let mut output = [0u8; 16];
-			output.copy_from_slice(&hash.as_fixed_bytes()[..16]);
-
-			u128::from_le_bytes(output)
 		}
 	}
 }

@@ -27,9 +27,9 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Randomness: pallet_randomness_collective_flip::{Pallet, Storage},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
+		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage},
 		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
 		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
@@ -113,6 +113,9 @@ impl pallet_assets::Config for Test {
 	type Extra = ();
 }
 
+impl snowbridge_asset_registry::Config for Test {
+}
+
 impl snowbridge_dispatch::Config for Test {
 	type Origin = Origin;
 	type Event = Event;
@@ -120,6 +123,7 @@ impl snowbridge_dispatch::Config for Test {
 	type Call = Call;
 	type CallFilter = Everything;
 }
+
 pub struct OutboundRouter<T>(PhantomData<T>);
 
 impl<T> snowbridge_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
@@ -188,9 +192,8 @@ impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 impl crate::Config for Test {
 	type Event = Event;
 	type PalletId = Erc20AppPalletId;
-	type Hashing = BlakeTwo256;
-	type Randomness = Randomness;
 	type Assets = Assets;
+	type NextAssetId = AssetRegistry;
 	type OutboundRouter = OutboundRouter<Test>;
 	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
 	type WeightInfo = ();
@@ -212,6 +215,11 @@ pub fn new_tester() -> sp_io::TestExternalities {
 		accounts: vec![],
 	};
 	GenesisBuild::<Test>::assimilate_storage(&assets_config, &mut storage).unwrap();
+
+	let asset_registry_config = snowbridge_asset_registry::GenesisConfig {
+		next_asset_id: 1,
+	};
+	GenesisBuild::<Test>::assimilate_storage(&asset_registry_config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));

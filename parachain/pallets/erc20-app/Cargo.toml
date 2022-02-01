@@ -26,10 +26,12 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
+snowbridge-asset-registry-primitives = { path = "../../primitives/asset-registry", default-features = false }
 
 snowbridge-dispatch = { path = "../dispatch", default-features = false, optional = true }
 snowbridge-basic-channel = { path = "../basic-channel", default-features = false, optional = true }
 snowbridge-incentivized-channel = { path = "../incentivized-channel", default-features = false, optional = true }
+snowbridge-asset-registry = { path = "../asset-registry", default-features = false, optional = true }
 pallet-assets = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false, optional = true }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false, optional = true }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false, optional = true }
@@ -51,12 +53,15 @@ std = [
     "sp-std/std",
     "sp-io/std",
     "sp-runtime/std",
+
     "snowbridge-core/std",
+    "snowbridge-asset-registry-primitives/std",
 
     "frame-benchmarking/std",
     "snowbridge-dispatch/std",
     "snowbridge-basic-channel/std",
     "snowbridge-incentivized-channel/std",
+    "snowbridge-asset-registry/std",
     "pallet-assets/std",
     "pallet-balances/std",
     "pallet-randomness-collective-flip/std",
@@ -68,6 +73,7 @@ runtime-benchmarks = [
     "frame-benchmarking",
     "snowbridge-basic-channel",
     "snowbridge-incentivized-channel",
+    "snowbridge-asset-registry",
     "pallet-assets",
     "pallet-balances",
     "pallet-randomness-collective-flip",

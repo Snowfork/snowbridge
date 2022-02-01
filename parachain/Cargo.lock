@@ -4229,6 +4229,7 @@ dependencies = [
  "polkadot-parachain",
  "scale-info",
  "serde",
+ "snowbridge-asset-registry",
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-dispatch",
@@ -9464,6 +9465,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowbridge-asset-registry"
+version = "0.1.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-asset-registry-primitives",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "snowbridge-asset-registry-primitives"
+version = "0.1.1"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+]
+
+[[package]]
 name = "snowbridge-basic-channel"
 version = "0.1.1"
 dependencies = [
@@ -9565,6 +9591,8 @@ dependencies = [
  "rustc-hex",
  "scale-info",
  "serde",
+ "snowbridge-asset-registry",
+ "snowbridge-asset-registry-primitives",
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-dispatch",
@@ -9763,6 +9791,7 @@ dependencies = [
  "polkadot-parachain",
  "scale-info",
  "serde",
+ "snowbridge-asset-registry",
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-dispatch",
@@ -9832,6 +9861,7 @@ dependencies = [
  "polkadot-parachain",
  "scale-info",
  "serde",
+ "snowbridge-asset-registry",
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-dispatch",

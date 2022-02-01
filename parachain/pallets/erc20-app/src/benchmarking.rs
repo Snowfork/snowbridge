@@ -55,8 +55,8 @@ benchmarks! {
 
 	burn_incentivized_channel {
 		let caller: T::AccountId = whitelisted_caller();
-		let token = H160::repeat_byte(2);
-		let recipient = H160::repeat_byte(3);
+		let token = H160::repeat_byte(1);
+		let recipient = H160::repeat_byte(2);
 		let amount = 500;
 
 		// deposit enough money to cover fees
