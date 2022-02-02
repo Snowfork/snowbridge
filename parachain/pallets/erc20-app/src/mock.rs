@@ -74,7 +74,7 @@ impl system::Config for Test {
 impl pallet_randomness_collective_flip::Config for Test {}
 
 parameter_types! {
-		pub const ExistentialDeposit: u64 = 1;
+	pub const ExistentialDeposit: u64 = 1;
 }
 
 impl pallet_balances::Config for Test {
