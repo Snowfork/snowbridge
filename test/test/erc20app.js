@@ -44,7 +44,7 @@ describe('Bridge', function () {
       await ethClient.approveERC20(ethAccount, amount);
       await ethClient.lockERC20(ethAccount, amount, polkadotRecipient, ChannelId.BASIC);
 
-      await sleep(60 * 1000)
+      await sleep(90 * 1000)
 
       // Ensure there is now a registered asset for the token
       maybeAssetId = await subClient.api.query.erc20App.assetId(TestTokenAddress);
