@@ -20,7 +20,7 @@ contract ERC20App is AccessControl {
     using ScaleCodec for uint8;
     using SafeERC20 for IERC20;
 
-    mapping(address => uint256) public balances;
+    mapping(address => uint128) public balances;
 
     mapping(ChannelId => Channel) public channels;
 
