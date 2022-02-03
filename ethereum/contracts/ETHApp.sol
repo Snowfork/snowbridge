@@ -124,10 +124,10 @@ contract ETHApp is RewardSource, AccessControl {
         bytes32 _recipient,
         uint256 _amount
     ) private pure returns (bytes memory) {
-        return abi.encodePacked(
+        return bytes.concat(
                 MINT_CALL,
-                _sender,
-                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                abi.encodePacked(_sender),
+                bytes1(0x00), // Encoding recipient as MultiAddress::Id
                 _recipient,
                 _amount.encode256(),
                 bytes1(0x00)
@@ -141,10 +141,10 @@ contract ETHApp is RewardSource, AccessControl {
         uint256 _amount,
         uint32 _paraId
     ) private pure returns (bytes memory) {
-        return abi.encodePacked(
+        return bytes.concat(
                 MINT_CALL,
-                _sender,
-                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                abi.encodePacked(_sender),
+                bytes1(0x00), // Encoding recipient as MultiAddress::Id
                 _recipient,
                 _amount.encode256(),
                 bytes1(0x01),

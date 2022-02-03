@@ -132,12 +132,12 @@ contract ERC721App is AccessControl {
         string memory
     ) private pure returns (bytes memory) {
         return
-            abi.encodePacked(
+            bytes.concat(
                 MINT_CALL,
-                _sender,
-                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                abi.encodePacked(_sender),
+                bytes1(0x00), // Encoding recipient as MultiAddress::Id
                 _recipient,
-                _tokenContract,
+                abi.encodePacked(_tokenContract),
                 _tokenId.encode256(),
                 bytes1(0x00) // Use an empty _tokenURI instead of SCALE encoded _tokenURI
             );
