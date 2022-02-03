@@ -11,7 +11,7 @@ use sp_core::H160;
 use sp_runtime::Perbill;
 use sp_std::marker::PhantomData;
 
-use snowbridge_core::{AssetId, ChannelId};
+use snowbridge_core::ChannelId;
 
 // This function replicates BlockWeights::with_sensible_defaults but uses custom
 // base block and extrinsic weights.
@@ -63,7 +63,6 @@ where
 }
 
 parameter_types! {
-	pub const Ether: AssetId = AssetId::ETH;
 	pub const MaxMessagePayloadSize: u64 = 256;
 	pub const MaxMessagesPerCommit: u64 = 20;
 }

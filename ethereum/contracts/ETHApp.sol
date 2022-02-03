@@ -3,6 +3,7 @@ pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./RewardSource.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
@@ -13,19 +14,20 @@ enum ChannelId {
 }
 
 contract ETHApp is RewardSource, AccessControl {
-    using ScaleCodec for uint256;
+    using ScaleCodec for uint128;
     using ScaleCodec for uint32;
+    using SafeCast for uint256;
 
     mapping(ChannelId => Channel) public channels;
 
     event Locked(
         address sender,
         bytes32 recipient,
-        uint256 amount,
+        uint128 amount,
         uint32 paraId
     );
 
-    event Unlocked(bytes32 sender, address recipient, uint256 amount);
+    event Unlocked(bytes32 sender, address recipient, uint128 amount);
 
     event Upgraded(
         address upgrader,
@@ -82,22 +84,16 @@ contract ETHApp is RewardSource, AccessControl {
             "Invalid channel ID"
         );
 
-        emit Locked(msg.sender, _recipient, msg.value, _paraId);
+        // evert in case of overflow.
+        uint128 value = (msg.value).toUint128();
+
+        emit Locked(msg.sender, _recipient, value, _paraId);
 
         bytes memory call;
-        if(_paraId == 0) {
-            call = encodeCall(
-                msg.sender,
-                _recipient,
-                msg.value
-            );
+        if (_paraId == 0) {
+            call = encodeCall(msg.sender, _recipient, value);
         } else {
-            call = encodeCallWithParaId(
-                msg.sender,
-                _recipient,
-                msg.value,
-                _paraId
-            );
+            call = encodeCallWithParaId(msg.sender, _recipient, value, _paraId);
         }
 
         OutboundChannel channel = OutboundChannel(
@@ -109,7 +105,7 @@ contract ETHApp is RewardSource, AccessControl {
     function unlock(
         bytes32 _sender,
         address payable _recipient,
-        uint256 _amount
+        uint128 _amount
     ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         require(_amount > 0, "Must unlock a positive amount");
 
@@ -122,14 +118,15 @@ contract ETHApp is RewardSource, AccessControl {
     function encodeCall(
         address _sender,
         bytes32 _recipient,
-        uint256 _amount
+        uint128 _amount
     ) private pure returns (bytes memory) {
-        return abi.encodePacked(
+        return
+            abi.encodePacked(
                 MINT_CALL,
                 _sender,
                 bytes1(0x00), // Encode recipient as MultiAddress::Id
                 _recipient,
-                _amount.encode256(),
+                _amount.encode128(),
                 bytes1(0x00)
             );
     }
@@ -138,21 +135,22 @@ contract ETHApp is RewardSource, AccessControl {
     function encodeCallWithParaId(
         address _sender,
         bytes32 _recipient,
-        uint256 _amount,
+        uint128 _amount,
         uint32 _paraId
     ) private pure returns (bytes memory) {
-        return abi.encodePacked(
+        return
+            abi.encodePacked(
                 MINT_CALL,
                 _sender,
                 bytes1(0x00), // Encode recipient as MultiAddress::Id
                 _recipient,
-                _amount.encode256(),
+                _amount.encode128(),
                 bytes1(0x01),
                 _paraId.encode32()
             );
     }
 
-    function reward(address payable _recipient, uint256 _amount)
+    function reward(address payable _recipient, uint128 _amount)
         external
         override
         onlyRole(REWARD_ROLE)
