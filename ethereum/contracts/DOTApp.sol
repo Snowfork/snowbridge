@@ -101,9 +101,9 @@ contract DOTApp is FeeSource, AccessControl {
         uint256 _amount
     ) private pure returns (bytes memory) {
         return
-            abi.encodePacked(
+            bytes.concat(
                 UNLOCK_CALL,
-                _sender,
+                abi.encodePacked(_sender),
                 bytes1(0x00), // Encoding recipient as MultiAddress::Id
                 _recipient,
                 _amount.encode256()
