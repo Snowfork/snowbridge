@@ -3,9 +3,10 @@
 use frame_support::{
 	dispatch::DispatchResult,
 	parameter_types,
-	weights::{DispatchClass, Weight},
+	weights::{DispatchClass, Weight, constants::WEIGHT_PER_SECOND},
 	PalletId,
 };
+
 use frame_system::limits::BlockWeights;
 use sp_core::H160;
 use sp_runtime::Perbill;

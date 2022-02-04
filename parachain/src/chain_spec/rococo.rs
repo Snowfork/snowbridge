@@ -8,7 +8,7 @@ use sp_runtime::{
 	Perbill,
 };
 
-use super::{get_accound_id_from_seed, Extensions};
+use super::{get_accound_id_from_seed, get_collator_keys_from_seed, Extensions};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;

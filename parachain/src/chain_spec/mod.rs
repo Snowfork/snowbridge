@@ -1,10 +1,10 @@
-use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
-use serde::{Deserialize, Serialize};
-use sp_core::{Pair, Public};
-
 pub mod snowbridge;
 pub mod rococo;
 pub mod local;
+
+use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
+use serde::{Deserialize, Serialize};
+use sp_core::{Pair, Public};
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
