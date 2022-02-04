@@ -10,6 +10,8 @@ import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-deploy";
 import { HardhatUserConfig } from "hardhat/config";
+import "./tasks/upgrade";
+import "./tasks/renounce";
 
 const getenv = (name: string) => {
   if (name in process.env) {
@@ -26,12 +28,15 @@ const etherscanKey = getenv("ETHERSCAN_API_KEY");
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
-      throwOnTransactionFailures: true,
+      accounts: {
+        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
+      },
+      chainId: 15,
     },
     localhost: {
       url: "http://127.0.0.1:8545",
       accounts: {
-        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
+        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
       },
       chainId: 15,
     },

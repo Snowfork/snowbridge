@@ -11,6 +11,7 @@ const {
   addressBytes,
   ChannelId,
 } = require("./helpers");
+const { expect } = require("chai");
 
 const DOTApp = artifacts.require("DOTApp");
 const ScaleCodec = artifacts.require("ScaleCodec");
@@ -45,7 +46,7 @@ describe("DOTApp", function () {
   let accounts;
   let owner;
   let inboundChannel;
-  let user;
+  let userOne;
 
   const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
@@ -55,7 +56,7 @@ describe("DOTApp", function () {
     accounts = await web3.eth.getAccounts();
     owner = accounts[0];
     inboundChannel =  accounts[0];
-    user = accounts[1];
+    userOne = accounts[1];
   });
 
   describe("minting", function () {
@@ -74,13 +75,13 @@ describe("DOTApp", function () {
 
     it("should mint funds", async function () {
       const beforeTotalSupply = BigNumber(await this.token.totalSupply());
-      const beforeUserBalance = BigNumber(await this.token.balanceOf(user));
+      const beforeUserBalance = BigNumber(await this.token.balanceOf(userOne));
       const amountNative = BigNumber("10000000000"); // 1 DOT, uint128
       const amountWrapped = wrapped(amountNative);
 
       let tx = await this.app.mint(
         addressBytes(POLKADOT_ADDRESS),
-        user,
+        userOne,
         amountWrapped.toString(),
         {
           from: inboundChannel,
@@ -93,10 +94,10 @@ describe("DOTApp", function () {
       let event = iface.decodeEventLog('Minted(address,address,uint256,bytes,bytes)', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
 
       const afterTotalSupply = BigNumber(await this.token.totalSupply());
-      const afterUserBalance = BigNumber(await this.token.balanceOf(user));
+      const afterUserBalance = BigNumber(await this.token.balanceOf(userOne));
 
       event.operator.should.be.equal(this.app.address);
-      event.to.should.be.equal(user);
+      event.to.should.be.equal(userOne);
       BigNumber(event.amount.toString()).should.be.bignumber.equal(amountWrapped);
 
       afterTotalSupply.minus(beforeTotalSupply).should.be.bignumber.equal(amountWrapped);
@@ -121,7 +122,7 @@ describe("DOTApp", function () {
       let amountWrapped = wrapped(amountNative);
       await this.app.mint(
         addressBytes(POLKADOT_ADDRESS),
-        user,
+        userOne,
         amountWrapped.toString(),
         {
           from: owner,
@@ -132,10 +133,10 @@ describe("DOTApp", function () {
 
     it("should burn funds", async function () {
       const beforeTotalSupply = BigNumber(await this.token.totalSupply());
-      const beforeUserBalance = BigNumber(await this.token.balanceOf(user));
+      const beforeUserBalance = BigNumber(await this.token.balanceOf(userOne));
       const amountWrapped = wrapped(BigNumber("10000000000"));
 
-      let tx = await burnTokens(this.app, user, POLKADOT_ADDRESS, amountWrapped, ChannelId.Basic).should.be.fulfilled;
+      let tx = await burnTokens(this.app, userOne, POLKADOT_ADDRESS, amountWrapped, ChannelId.Basic).should.be.fulfilled;
 
       // decode expected IERC777.Burned event
       var abi = ["event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)"];
@@ -143,14 +144,75 @@ describe("DOTApp", function () {
       let event = iface.decodeEventLog('Burned(address,address,uint256,bytes,bytes)', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
 
       const afterTotalSupply = BigNumber(await this.token.totalSupply());
-      const afterUserBalance = BigNumber(await this.token.balanceOf(user));
+      const afterUserBalance = BigNumber(await this.token.balanceOf(userOne));
 
       event.operator.should.be.equal(this.app.address);
-      event.from.should.be.equal(user);
+      event.from.should.be.equal(userOne);
       BigNumber(event.amount.toString()).should.be.bignumber.equal(amountWrapped);
 
       beforeTotalSupply.minus(afterTotalSupply).should.be.bignumber.equal(amountWrapped);
       beforeUserBalance.minus(afterUserBalance).should.be.bignumber.equal(amountWrapped);
     });
+  });
+
+  describe("upgradeability", function () {
+    beforeEach(async function () {
+      this.outboundChannel = await MockOutboundChannel.new()
+      this.newInboundChannel = accounts[2];
+      this.app = await deployAppWithMockChannels(
+        owner,
+        [owner, this.outboundChannel.address],
+        DOTApp,
+        "Snowfork DOT", "SnowDOT", this.outboundChannel.address
+      );
+      const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
+      this.iface = new ethers.utils.Interface(abi);
+    });
+    
+    it("should revert when called by non-admin", async function () {
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: userOne}).should.be.rejectedWith(/AccessControl/);
+    });
+    
+    it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
+      await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: owner}
+      ).should.be.rejectedWith(/AccessControl/)
+    })
+
+    it("should succeed when called by CHANNEL_UPGRADE_ROLE", async function () {
+      const oldBasic = await this.app.channels(0);
+      const oldIncentivized = await this.app.channels(1);
+      await this.app.upgrade(
+        [this.newInboundChannel, this.outboundChannel.address],
+        [this.newInboundChannel, this.outboundChannel.address],
+        {from: owner}
+      );
+      const newBasic = await this.app.channels(0);
+      const newIncentivized = await this.app.channels(1);
+      expect(newBasic.inbound !== oldBasic.inbound).to.be.true;
+      expect(newIncentivized.inbound !== oldIncentivized.inbound).to.be.true;
+    });
+
+    it("CHANNEL_UPGRADE_ROLE can change CHANNEL_UPGRADE_ROLE", async function () {
+      const newUpgrader = ethers.Wallet.createRandom().address;
+      const tx = await this.app.grantRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), newUpgrader);
+      const event = this.iface.decodeEventLog('RoleGranted', tx.receipt.rawLogs[0].data, tx.receipt.rawLogs[0].topics);
+      expect(event.account).to.equal(newUpgrader);
+    });
+
+    it("reverts when non-upgrader attempts to change CHANNEL_UPGRADE_ROLE", async function () {
+      const newUpgrader = ethers.Wallet.createRandom().address;
+      await this.app.grantRole(
+        web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"),
+        newUpgrader,
+        {from: userOne}
+      ).should.be.rejectedWith(/AccessControl/);
+    })
   });
 });

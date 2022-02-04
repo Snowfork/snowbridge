@@ -3,7 +3,7 @@ use sp_core::{RuntimeDebug, U256};
 use sp_std::prelude::*;
 
 use ethabi::{self, Token};
-use snowbridge_ethereum::H160;
+use sp_core::H160;
 
 // Message to Ethereum (ABI-encoded)
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug)]

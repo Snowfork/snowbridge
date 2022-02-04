@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
@@ -14,21 +15,25 @@ enum ChannelId {
 }
 
 contract ERC20App is AccessControl {
-    using ScaleCodec for uint256;
+    using ScaleCodec for uint128;
     using ScaleCodec for uint32;
+    using ScaleCodec for uint8;
     using SafeERC20 for IERC20;
 
-    mapping(address => uint256) public balances;
+    mapping(address => uint128) public balances;
 
     mapping(ChannelId => Channel) public channels;
 
     bytes2 constant MINT_CALL = 0x4201;
+    bytes2 constant CREATE_CALL = 0x4202;
+
+    mapping(address => bool) public tokens;
 
     event Locked(
         address token,
         address sender,
         bytes32 recipient,
-        uint256 amount,
+        uint128 amount,
         uint32 paraId
     );
 
@@ -36,7 +41,13 @@ contract ERC20App is AccessControl {
         address token,
         bytes32 sender,
         address recipient,
-        uint256 amount
+        uint128 amount
+    );
+
+    event Upgraded(
+        address upgrader,
+        Channel basic,
+        Channel incentivized
     );
 
     struct Channel {
@@ -47,6 +58,10 @@ contract ERC20App is AccessControl {
     bytes32 public constant INBOUND_CHANNEL_ROLE =
         keccak256("INBOUND_CHANNEL_ROLE");
 
+    bytes32 public constant CHANNEL_UPGRADE_ROLE =
+        keccak256("CHANNEL_UPGRADE_ROLE");
+
+
     constructor(Channel memory _basic, Channel memory _incentivized) {
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
@@ -56,6 +71,9 @@ contract ERC20App is AccessControl {
         c2.inbound = _incentivized.inbound;
         c2.outbound = _incentivized.outbound;
 
+        _setupRole(CHANNEL_UPGRADE_ROLE, msg.sender);
+        _setRoleAdmin(INBOUND_CHANNEL_ROLE, CHANNEL_UPGRADE_ROLE);
+        _setRoleAdmin(CHANNEL_UPGRADE_ROLE, CHANNEL_UPGRADE_ROLE);
         _setupRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
@@ -63,7 +81,7 @@ contract ERC20App is AccessControl {
     function lock(
         address _token,
         bytes32 _recipient,
-        uint256 _amount,
+        uint128 _amount,
         ChannelId _channelId,
         uint32 _paraId
     ) public {
@@ -72,21 +90,33 @@ contract ERC20App is AccessControl {
                 _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
-
         balances[_token] = balances[_token] + _amount;
 
         emit Locked(_token, msg.sender, _recipient, _amount, _paraId);
 
-        bytes memory call;
-        if(_paraId == 0) {
-            call = encodeCall(_token, msg.sender, _recipient, _amount);
-        } else {
-            call = encodeCallWithParaId(_token, msg.sender, _recipient, _amount, _paraId);
-        }
-
         OutboundChannel channel = OutboundChannel(
             channels[_channelId].outbound
         );
+
+        if (!tokens[_token]) {
+            bytes memory createCall = encodeCreateTokenCall(_token);
+            tokens[_token] = true;
+            channel.submit(msg.sender, createCall);
+        }
+
+        bytes memory call;
+        if (_paraId == 0) {
+            call = encodeCall(_token, msg.sender, _recipient, _amount);
+        } else {
+            call = encodeCallWithParaId(
+                _token,
+                msg.sender,
+                _recipient,
+                _amount,
+                _paraId
+            );
+        }
+
         channel.submit(msg.sender, call);
 
         require(
@@ -99,7 +129,7 @@ contract ERC20App is AccessControl {
         address _token,
         bytes32 _sender,
         address _recipient,
-        uint256 _amount
+        uint128 _amount
     ) public onlyRole(INBOUND_CHANNEL_ROLE) {
         require(_amount > 0, "Must unlock a positive amount");
         require(
@@ -117,15 +147,16 @@ contract ERC20App is AccessControl {
         address _token,
         address _sender,
         bytes32 _recipient,
-        uint256 _amount
+        uint128 _amount
     ) private pure returns (bytes memory) {
-        return abi.encodePacked(
+        return
+            abi.encodePacked(
                 MINT_CALL,
                 _token,
                 _sender,
                 bytes1(0x00), // Encode recipient as MultiAddress::Id
                 _recipient,
-                _amount.encode256(),
+                _amount.encode128(),
                 bytes1(0x00)
             );
     }
@@ -135,18 +166,48 @@ contract ERC20App is AccessControl {
         address _token,
         address _sender,
         bytes32 _recipient,
-        uint256 _amount,
+        uint128 _amount,
         uint32 _paraId
     ) private pure returns (bytes memory) {
-        return abi.encodePacked(
+        return
+            abi.encodePacked(
                 MINT_CALL,
                 _token,
                 _sender,
                 bytes1(0x00), // Encode recipient as MultiAddress::Id
                 _recipient,
-                _amount.encode256(),
+                _amount.encode128(),
                 bytes1(0x01),
                 _paraId.encode32()
             );
+    }
+
+    function encodeCreateTokenCall(
+        address _token
+    ) private pure returns (bytes memory) {
+        return
+            abi.encodePacked(
+                CREATE_CALL,
+                _token
+            );
+    }
+
+    function upgrade(
+        Channel memory _basic,
+        Channel memory _incentivized
+    ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
+        Channel storage c1 = channels[ChannelId.Basic];
+        Channel storage c2 = channels[ChannelId.Incentivized];
+        // revoke old channel
+        revokeRole(INBOUND_CHANNEL_ROLE, c1.inbound);
+        revokeRole(INBOUND_CHANNEL_ROLE, c2.inbound);
+        // set new channel
+        c1.inbound = _basic.inbound;
+        c1.outbound = _basic.outbound;
+        c2.inbound = _incentivized.inbound;
+        c2.outbound = _incentivized.outbound;
+        grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
+        grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
+        emit Upgraded(msg.sender, c1, c2);
     }
 }
