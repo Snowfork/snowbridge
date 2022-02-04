@@ -1,10 +1,10 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use rococo_runtime::{AccountId, AuraId, GenesisConfig, Signature, WASM_BINARY};
+use rococo_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, Signature, WASM_BINARY};
 use sc_service::{ChainType, Properties};
-use sp_core::{sr25519, Pair, Public, U256};
+use sp_core::{sr25519, Pair, Public};
 use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
+	traits::{AccountIdConversion, IdentifyAccount, Verify},
 	Perbill,
 };
 
@@ -12,8 +12,6 @@ use super::{get_from_seed, Extensions};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
-
-use snowbridge_core::AssetId;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -128,15 +126,17 @@ fn testnet_genesis(
 			reward_fraction: Perbill::from_percent(80),
 		},
 		incentivized_outbound_channel: rococo_runtime::IncentivizedOutboundChannelConfig {
-			fee: U256::from_str_radix("10000000000000000", 10).unwrap(), // 0.01 SnowEther
+			fee: u128::from_str_radix("10000000000000000", 10).unwrap(), // 0.01 SnowEther
 			interval: 1,
 		},
 		assets: rococo_runtime::AssetsConfig {
-			balances: vec![(
-				AssetId::ETH,
-				get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-				U256::from_str_radix("1000000000000000000", 10).unwrap(),
-			)],
+			// Initialize the wrapped Ether asset
+			assets: vec![(0, EtherAppPalletId::get().into_account(), true, 1)],
+			metadata: vec![],
+			accounts: vec![],
+		},
+		asset_registry: local_runtime::AssetRegistryConfig {
+			next_asset_id: 1,
 		},
 		nft: rococo_runtime::NFTConfig { tokens: vec![] },
 		ethereum_light_client: rococo_runtime::EthereumLightClientConfig {

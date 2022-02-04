@@ -29,15 +29,20 @@ mod tests;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
+	traits::tokens::fungibles::{Create, Mutate},
 	traits::EnsureOrigin,
-	transactional,
+	transactional, PalletId,
 };
 use frame_system::ensure_signed;
-use sp_core::{H160, U256};
-use sp_runtime::traits::StaticLookup;
+use sp_core::{H160};
+use sp_runtime::{
+	traits::{AccountIdConversion, StaticLookup},
+	TokenError,
+};
 use sp_std::prelude::*;
 
-use snowbridge_core::{assets::XcmReserveTransfer, AssetId, ChannelId, MultiAsset, OutboundRouter};
+use snowbridge_core::{assets::XcmReserveTransfer, ChannelId, OutboundRouter};
+use snowbridge_asset_registry_primitives::NextAssetId;
 
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
@@ -60,7 +65,12 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type Assets: MultiAsset<<Self as frame_system::Config>::AccountId>;
+		type PalletId: Get<PalletId>;
+
+		type Assets: Create<Self::AccountId, Balance = u128, AssetId = u128>
+			+ Mutate<Self::AccountId, Balance = u128, AssetId = u128>;
+
+		type NextAssetId: NextAssetId;
 
 		type OutboundRouter: OutboundRouter<Self::AccountId>;
 
@@ -77,13 +87,17 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Burned(H160, T::AccountId, H160, U256),
-		Minted(H160, H160, T::AccountId, U256),
+		Burned(H160, T::AccountId, H160, u128),
+		Minted(H160, H160, T::AccountId, u128),
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn address)]
 	pub(super) type Address<T: Config> = StorageValue<_, H160, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn asset_id)]
+	pub(super) type AssetId<T: Config> = StorageMap<_, Identity, H160, u128, OptionQuery>;
 
 	#[pallet::error]
 	pub enum Error<T> {}
@@ -121,11 +135,14 @@ pub mod pallet {
 			channel_id: ChannelId,
 			token: H160,
 			recipient: H160,
-			amount: U256,
+			amount: u128,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			T::Assets::withdraw(AssetId::Token(token), &who, amount)?;
+			let asset_id =
+				Self::asset_id(token).ok_or(DispatchError::Token(TokenError::UnknownAsset))?;
+
+			T::Assets::burn_from(asset_id, &who, amount)?;
 
 			let message = OutboundPayload {
 				token,
@@ -147,23 +164,42 @@ pub mod pallet {
 			token: H160,
 			sender: H160,
 			recipient: <T::Lookup as StaticLookup>::Source,
-			amount: U256,
+			amount: u128,
 			para_id: Option<u32>,
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into())
+				return Err(DispatchError::BadOrigin.into());
 			}
 
+			let asset_id =
+				Self::asset_id(token).ok_or(DispatchError::Token(TokenError::UnknownAsset))?;
+
 			let recipient = T::Lookup::lookup(recipient)?;
-			let asset_id = AssetId::Token(token);
-			T::Assets::deposit(asset_id, &recipient, amount)?;
+
+			T::Assets::mint_into(asset_id, &recipient, amount)?;
 
 			if let Some(id) = para_id {
 				T::XcmReserveTransfer::reserve_transfer(origin, asset_id, id, &recipient, amount)?;
 			}
 
 			Self::deposit_event(Event::Minted(token, sender, recipient, amount));
+
+			Ok(())
+		}
+
+		#[pallet::weight(100_000_000)]
+		#[transactional]
+		pub fn create(origin: OriginFor<T>, token: H160) -> DispatchResult {
+			let who = T::CallOrigin::ensure_origin(origin)?;
+			if who != <Address<T>>::get() {
+				return Err(DispatchError::BadOrigin.into());
+			}
+
+			let asset_id = T::NextAssetId::next()?;
+			T::Assets::create(asset_id, T::PalletId::get().into_account(), true, 1)?;
+
+			<AssetId<T>>::insert(token, asset_id);
 
 			Ok(())
 		}

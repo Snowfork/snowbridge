@@ -24,7 +24,7 @@ const lockupFunds = (contract, sender, recipient, amount, channel) => {
     0, // paraId
     {
       from: sender,
-      value: amount.toString(),
+      value: BigNumber(amount),
     }
   )
 }
@@ -38,6 +38,7 @@ describe("ETHApp", function () {
 
   // Constants
   const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+  const MAX_ETH =  web3.utils.toWei("340285366920938463463374607431.768211455", "ether");
 
   before(async function () {
     const codec = await ScaleCodec.new();
@@ -58,6 +59,9 @@ describe("ETHApp", function () {
 
       const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
       const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
+ 
+      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, web3.utils.toBN(web3.utils.toBN(MAX_ETH)).add(web3.utils.toBN(1)), ChannelId.Basic)
+        .should.be.rejectedWith(/SafeCast: value doesn\'t fit in 128 bits/);
 
       const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
@@ -123,7 +127,7 @@ describe("ETHApp", function () {
       // decode event
       var iface = new ethers.utils.Interface(ETHApp.abi);
       let event = iface.decodeEventLog(
-        'Unlocked(bytes32,address,uint256)',
+        'Unlocked(bytes32,address,uint128)',
         receipt.rawLogs[0].data,
         receipt.rawLogs[0].topics
       );
