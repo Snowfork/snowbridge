@@ -76,6 +76,11 @@ describe("ETHApp", function () {
       afterBalance.should.be.bignumber.equal(beforeBalance.plus(amount));
 
     });
+
+    it("should not lock funds for amounts greater than 128-bits", async function() {
+      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, "340282366920938463463374607431768211457", ChannelId.Basic)
+        .should.be.rejectedWith(/SafeCast: value doesn\'t fit in 128 bits/);
+    });
   })
 
   describe("withdrawals", function () {
