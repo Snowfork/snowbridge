@@ -5,6 +5,10 @@ pub mod local;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};
 use sp_core::{Pair, Public};
+use snowbridge_runtime_primitives::{Signature, AccountId};
+use sp_runtime::traits::{Verify, IdentifyAccount};
+pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -30,7 +34,7 @@ pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
 	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
-	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+	AccountPublic::from(get_public_from_seed::<TPublic>(seed)).into_account()
 }
 
 /// Helper function to generate a crypto pair from seed

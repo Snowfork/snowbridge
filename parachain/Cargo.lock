@@ -9443,6 +9443,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-rococo-runtime",
  "snowbridge-runtime",
+ "snowbridge-runtime-primitives",
  "sp-api",
  "sp-block-builder",
  "sp-blockchain",
@@ -9900,6 +9901,20 @@ dependencies = [
  "snowbridge-basic-channel",
  "snowbridge-core",
  "snowbridge-incentivized-channel",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-runtime-primitives"
+version = "0.1.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
  "sp-core",
  "sp-runtime",
  "sp-std",

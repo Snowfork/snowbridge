@@ -1,6 +1,5 @@
 use crate::{
 	cli::{Cli, RelayChainCli, Subcommand},
-	service,
 };
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
@@ -9,20 +8,11 @@ use log::info;
 
 use crate::chain_spec::Extensions;
 
-#[cfg(feature = "with-snowbridge-runtime")]
-use crate::chain_spec::snowbridge::{get_chain_spec, ChainSpec};
-#[cfg(feature = "with-snowbridge-runtime")]
-use snowbridge_runtime::opaque::Block;
+use crate::chain_spec::snowbridge::{get_chain_spec as get_snowbridge_chain_spec, ChainSpec as SnowbridgeChainSpec};
+use crate::chain_spec::rococo::{get_chain_spec as get_rococo_chain_spec, ChainSpec as RococoChainSpec};
+use crate::chain_spec::local::{get_chain_spec as get_local_chain_spec, ChainSpec as LocalChainSpec};
 
-#[cfg(feature = "with-rococo-runtime")]
-use crate::chain_spec::rococo::{get_chain_spec, ChainSpec};
-#[cfg(feature = "with-rococo-runtime")]
-use rococo_runtime::opaque::Block;
-
-#[cfg(feature = "with-local-runtime")]
-use crate::chain_spec::local::{get_chain_spec, ChainSpec};
-#[cfg(feature = "with-local-runtime")]
-use local_runtime::opaque::Block;
+use snowbridge_runtime_primitives::Block;
 
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
@@ -31,23 +21,100 @@ use sc_cli::{
 };
 use sc_service::{
 	config::{BasePath, PrometheusConfig},
-	PartialComponents,
 };
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Block as BlockT;
 use std::{io::Write, net::SocketAddr};
 
+pub type DummyChainSpec = sc_service::GenericChainSpec<(), Extensions>;
+
 const DEFAULT_PARA_ID: u32 = 1000;
+
+trait IdentifyVariant {
+    fn is_snowbridge(&self) -> bool;
+    fn is_rococo(&self) -> bool;
+    fn is_local(&self) -> bool;
+}
+
+impl IdentifyVariant for dyn sc_service::ChainSpec {
+    fn is_snowbridge(&self) -> bool {
+        self.id().starts_with("snowbridge")
+    }
+    fn is_rococo(&self) -> bool {
+        self.id().starts_with("rococo")
+    }
+    fn is_local(&self) -> bool {
+        self.id().starts_with("local")
+    }
+}
+
+impl<T: sc_service::ChainSpec + 'static> IdentifyVariant for T {
+    fn is_snowbridge(&self) -> bool {
+        <dyn sc_service::ChainSpec>::is_snowbridge(self)
+    }
+    fn is_rococo(&self) -> bool {
+        <dyn sc_service::ChainSpec>::is_rococo(self)
+    }
+    fn is_local(&self) -> bool {
+        <dyn sc_service::ChainSpec>::is_local(self)
+    }
+}
+
+
+macro_rules! construct_async_run {
+	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
+		let runner = $cli.create_runner($cmd)?;
+		if runner.config().chain_spec.is_snowbridge() {
+			runner.async_run(|$config| {
+				let $components = crate::service::new_partial::<snowbridge_runtime::RuntimeApi, crate::service::SnowbridgeRuntimeExecutor>(
+					&$config,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		} else if runner.config().chain_spec.is_rococo() {
+			runner.async_run(|$config| {
+				let $components = crate::service::new_partial::<rococo_runtime::RuntimeApi, crate::service::RococoRuntimeExecutor>(
+					&$config,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		} else {
+			runner.async_run(|$config| {
+				let $components = crate::service::new_partial::<local_runtime::RuntimeApi, crate::service::LocalRuntimeExecutor>(
+					&$config,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		}
+	}}
+}
 
 fn load_spec(
 	id: &str,
 	para_id: ParaId,
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	match id {
-		"" => Ok(Box::new(get_chain_spec(para_id))),
-		path => Ok(Box::new(ChainSpec::from_json_file(path.into())?)),
+		"local" => Ok(Box::new(get_local_chain_spec(para_id))),
+		"rococo" => Ok(Box::new(get_rococo_chain_spec(para_id))),
+		"snowbridge" => Ok(Box::new(get_snowbridge_chain_spec(para_id))),
+        path => {
+            let chain_spec = DummyChainSpec::from_json_file(path.into())?;
+            if chain_spec.is_snowbridge() {
+                Ok(Box::new(SnowbridgeChainSpec::from_json_file(path.into())?))
+            } else if chain_spec.is_rococo() {
+                Ok(Box::new(RococoChainSpec::from_json_file(path.into())?))
+            } else if chain_spec.is_local() {
+                Ok(Box::new(LocalChainSpec::from_json_file(path.into())?))
+            } else {
+                Ok(Box::new(chain_spec))
+            }
+        }
 	}
 }
+
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
@@ -84,20 +151,15 @@ impl SubstrateCli for Cli {
 		load_spec(id, self.run.parachain_id.unwrap_or(DEFAULT_PARA_ID).into())
 	}
 
-	#[cfg(feature = "with-snowbridge-runtime")]
-	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
-		&snowbridge_runtime::VERSION
-	}
-
-	#[cfg(feature = "with-rococo-runtime")]
-	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
-		&rococo_runtime::VERSION
-	}
-
-	#[cfg(feature = "with-local-runtime")]
-	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
-		&local_runtime::VERSION
-	}
+    fn native_runtime_version(chain_spec: &Box<dyn sc_service::ChainSpec>) -> &'static RuntimeVersion {
+        if chain_spec.is_snowbridge() {
+            &snowbridge_runtime::VERSION
+        } else if chain_spec.is_rococo() {
+            &rococo_runtime::VERSION
+        } else {
+            &local_runtime::VERSION
+        }
+    }
 }
 
 impl SubstrateCli for RelayChainCli {
@@ -158,36 +220,24 @@ pub fn run() -> Result<()> {
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
 		}
 		Some(Subcommand::CheckBlock(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, import_queue, .. } =
-					crate::service::new_partial(&config, crate::service::build_import_queue)?;
-				Ok((cmd.run(client, import_queue), task_manager))
-			})
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, components.import_queue))
+            })
 		}
 		Some(Subcommand::ExportBlocks(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, .. } =
-					crate::service::new_partial(&config, crate::service::build_import_queue)?;
-				Ok((cmd.run(client, config.database), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, config.database))
 			})
 		}
 		Some(Subcommand::ExportState(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, .. } =
-					crate::service::new_partial(&config, crate::service::build_import_queue)?;
-				Ok((cmd.run(client, config.chain_spec), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, config.chain_spec))
 			})
 		}
 		Some(Subcommand::ImportBlocks(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, import_queue, .. } =
-					crate::service::new_partial(&config, crate::service::build_import_queue)?;
-				Ok((cmd.run(client, import_queue), task_manager))
-			})
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, components.import_queue))
+            })
 		}
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
@@ -211,11 +261,8 @@ pub fn run() -> Result<()> {
 			})
 		}
 		Some(Subcommand::Revert(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, backend, .. } =
-					crate::service::new_partial(&config, crate::service::build_import_queue)?;
-				Ok((cmd.run(client, backend), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.backend))
 			})
 		}
 		Some(Subcommand::ExportGenesisState(params)) => {
@@ -265,9 +312,16 @@ pub fn run() -> Result<()> {
 		}
 		Some(Subcommand::Benchmark(cmd)) => {
 			if cfg!(feature = "runtime-benchmarks") {
-				let runner = cli.create_runner(cmd)?;
-
-				runner.sync_run(|config| cmd.run::<Block, service::ExecutorDispatch>(config))
+                let runner = cli.create_runner(cmd)?;
+                if runner.config().chain_spec.is_snowbridge() {
+                    runner.sync_run(|config| cmd.run::<Block, crate::service::SnowbridgeRuntimeExecutor>(config))
+                } else if runner.config().chain_spec.is_rococo() {
+                    runner.sync_run(|config| cmd.run::<Block, crate::service::RococoRuntimeExecutor>(config))
+                } else if runner.config().chain_spec.is_local() {
+                    runner.sync_run(|config| cmd.run::<Block, crate::service::LocalRuntimeExecutor>(config))
+                } else {
+                    Err("Chain doesn't support benchmarking".into())
+                }
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
@@ -306,10 +360,24 @@ pub fn run() -> Result<()> {
 				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
-				crate::service::start_parachain_node(config, polkadot_config, id)
-					.await
-					.map(|r| r.0)
-					.map_err(Into::into)
+				if config.chain_spec.is_snowbridge() {
+					crate::service::start_parachain_node::<snowbridge_runtime::RuntimeApi, crate::service::SnowbridgeRuntimeExecutor>(config, polkadot_config, id)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
+				} else if config.chain_spec.is_rococo() {
+					crate::service::start_parachain_node::<rococo_runtime::RuntimeApi, crate::service::RococoRuntimeExecutor>(config, polkadot_config, id)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
+				} else {
+					crate::service::start_parachain_node::<local_runtime::RuntimeApi, crate::service::LocalRuntimeExecutor>(config, polkadot_config, id)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
+				}
+
+
 			})
 		}
 	}

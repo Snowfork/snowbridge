@@ -1,10 +1,10 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use local_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, Signature, WASM_BINARY};
+use local_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
 use sc_service::{ChainType, Properties};
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{sr25519};
 use sp_runtime::{
-	traits::{AccountIdConversion, IdentifyAccount, Verify},
+	traits::{AccountIdConversion},
 	Perbill,
 };
 

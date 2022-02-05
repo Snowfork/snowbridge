@@ -1,14 +1,14 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use rococo_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, Signature, WASM_BINARY};
+use rococo_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
 use sc_service::{ChainType, Properties};
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{sr25519};
 use sp_runtime::{
-	traits::{AccountIdConversion, IdentifyAccount, Verify},
+	traits::{AccountIdConversion},
 	Perbill,
 };
 
-use super::{get_accound_id_from_seed, get_collator_keys_from_seed, Extensions};
+use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
