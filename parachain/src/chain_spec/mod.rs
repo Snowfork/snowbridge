@@ -1,5 +1,5 @@
 pub mod snowbridge;
-pub mod rococo;
+pub mod snowfall;
 pub mod local;
 
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};

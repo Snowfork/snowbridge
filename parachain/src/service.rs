@@ -37,17 +37,17 @@ impl sc_executor::NativeExecutionDispatch for SnowbridgeRuntimeExecutor {
 	}
 }
 
-pub struct RococoRuntimeExecutor;
+pub struct SnowfallRuntimeExecutor;
 
-impl sc_executor::NativeExecutionDispatch for RococoRuntimeExecutor {
+impl sc_executor::NativeExecutionDispatch for SnowfallRuntimeExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		rococo_runtime::api::dispatch(method, data)
+		snowfall_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		rococo_runtime::native_version()
+		snowfall_runtime::native_version()
 	}
 }
 

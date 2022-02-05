@@ -9,7 +9,7 @@ use log::info;
 use crate::chain_spec::Extensions;
 
 use crate::chain_spec::snowbridge::{get_chain_spec as get_snowbridge_chain_spec, ChainSpec as SnowbridgeChainSpec};
-use crate::chain_spec::rococo::{get_chain_spec as get_rococo_chain_spec, ChainSpec as RococoChainSpec};
+use crate::chain_spec::snowfall::{get_chain_spec as get_rococo_chain_spec, ChainSpec as RococoChainSpec};
 use crate::chain_spec::local::{get_chain_spec as get_local_chain_spec, ChainSpec as LocalChainSpec};
 
 use snowbridge_runtime_primitives::Block;
@@ -32,7 +32,7 @@ const DEFAULT_PARA_ID: u32 = 1000;
 
 trait IdentifyVariant {
     fn is_snowbridge(&self) -> bool;
-    fn is_rococo(&self) -> bool;
+    fn is_snowfall(&self) -> bool;
     fn is_local(&self) -> bool;
 }
 
@@ -40,7 +40,7 @@ impl IdentifyVariant for dyn sc_service::ChainSpec {
     fn is_snowbridge(&self) -> bool {
         self.id().starts_with("snowbridge")
     }
-    fn is_rococo(&self) -> bool {
+    fn is_snowfall(&self) -> bool {
         self.id().starts_with("rococo")
     }
     fn is_local(&self) -> bool {
@@ -52,8 +52,8 @@ impl<T: sc_service::ChainSpec + 'static> IdentifyVariant for T {
     fn is_snowbridge(&self) -> bool {
         <dyn sc_service::ChainSpec>::is_snowbridge(self)
     }
-    fn is_rococo(&self) -> bool {
-        <dyn sc_service::ChainSpec>::is_rococo(self)
+    fn is_snowfall(&self) -> bool {
+        <dyn sc_service::ChainSpec>::is_snowfall(self)
     }
     fn is_local(&self) -> bool {
         <dyn sc_service::ChainSpec>::is_local(self)
@@ -72,9 +72,9 @@ macro_rules! construct_async_run {
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
 			})
-		} else if runner.config().chain_spec.is_rococo() {
+		} else if runner.config().chain_spec.is_snowfall() {
 			runner.async_run(|$config| {
-				let $components = crate::service::new_partial::<rococo_runtime::RuntimeApi, crate::service::RococoRuntimeExecutor>(
+				let $components = crate::service::new_partial::<snowfall_runtime::RuntimeApi, crate::service::SnowfallRuntimeExecutor>(
 					&$config,
 				)?;
 				let task_manager = $components.task_manager;
@@ -104,7 +104,7 @@ fn load_spec(
             let chain_spec = DummyChainSpec::from_json_file(path.into())?;
             if chain_spec.is_snowbridge() {
                 Ok(Box::new(SnowbridgeChainSpec::from_json_file(path.into())?))
-            } else if chain_spec.is_rococo() {
+            } else if chain_spec.is_snowfall() {
                 Ok(Box::new(RococoChainSpec::from_json_file(path.into())?))
             } else if chain_spec.is_local() {
                 Ok(Box::new(LocalChainSpec::from_json_file(path.into())?))
@@ -114,7 +114,6 @@ fn load_spec(
         }
 	}
 }
-
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
@@ -154,8 +153,8 @@ impl SubstrateCli for Cli {
     fn native_runtime_version(chain_spec: &Box<dyn sc_service::ChainSpec>) -> &'static RuntimeVersion {
         if chain_spec.is_snowbridge() {
             &snowbridge_runtime::VERSION
-        } else if chain_spec.is_rococo() {
-            &rococo_runtime::VERSION
+        } else if chain_spec.is_snowfall() {
+            &snowfall_runtime::VERSION
         } else {
             &local_runtime::VERSION
         }
@@ -315,8 +314,8 @@ pub fn run() -> Result<()> {
                 let runner = cli.create_runner(cmd)?;
                 if runner.config().chain_spec.is_snowbridge() {
                     runner.sync_run(|config| cmd.run::<Block, crate::service::SnowbridgeRuntimeExecutor>(config))
-                } else if runner.config().chain_spec.is_rococo() {
-                    runner.sync_run(|config| cmd.run::<Block, crate::service::RococoRuntimeExecutor>(config))
+                } else if runner.config().chain_spec.is_snowfall() {
+                    runner.sync_run(|config| cmd.run::<Block, crate::service::SnowfallRuntimeExecutor>(config))
                 } else if runner.config().chain_spec.is_local() {
                     runner.sync_run(|config| cmd.run::<Block, crate::service::LocalRuntimeExecutor>(config))
                 } else {
@@ -365,8 +364,8 @@ pub fn run() -> Result<()> {
 						.await
 						.map(|r| r.0)
 						.map_err(Into::into)
-				} else if config.chain_spec.is_rococo() {
-					crate::service::start_parachain_node::<rococo_runtime::RuntimeApi, crate::service::RococoRuntimeExecutor>(config, polkadot_config, id)
+				} else if config.chain_spec.is_snowfall() {
+					crate::service::start_parachain_node::<snowfall_runtime::RuntimeApi, crate::service::SnowfallRuntimeExecutor>(config, polkadot_config, id)
 						.await
 						.map(|r| r.0)
 						.map_err(Into::into)

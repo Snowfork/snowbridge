@@ -76,8 +76,9 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branc
 
 snowbridge-core = { path = "primitives/core" }
 snowbridge-runtime-primitives = { path = "primitives/runtime" }
+
 snowbridge-runtime = { path = "runtime/snowbridge" }
-rococo-runtime = { path = "runtime/rococo", package = "snowbridge-rococo-runtime" }
+snowfall-runtime = { path = "runtime/snowfall" }
 local-runtime = { path = "runtime/local"}
 
 # These dependencies are used for runtime benchmarking
@@ -91,7 +92,7 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.
 default = []
 runtime-benchmarks = [
     "snowbridge-runtime/runtime-benchmarks",
-    "rococo-runtime/runtime-benchmarks",
+    "snowfall-runtime/runtime-benchmarks",
     "local-runtime/runtime-benchmarks",
     "polkadot-service/runtime-benchmarks",
 ]
@@ -119,7 +120,7 @@ members = [
     "pallets/dot-app",
     "pallets/asset-registry",
     "runtime/snowbridge",
-    "runtime/rococo",
+    "runtime/snowfall",
     "runtime/local",
     "utils/test-parachain/node",
     "utils/test-parachain/pallets/test",
