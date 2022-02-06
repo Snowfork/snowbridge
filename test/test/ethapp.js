@@ -17,7 +17,6 @@ describe('Bridge', function () {
     const clients = await bootstrap();
     ethClient = clients.ethClient;
     subClient = clients.subClient;
-    this.ethAssetId = subClient.api.createType('AssetId', 'ETH');
   });
 
   describe('ETH App', function () {

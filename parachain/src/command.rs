@@ -14,8 +14,8 @@ use crate::chain_spec::snowbridge::{get_chain_spec as get_snowbridge_chain_spec,
 #[cfg(feature = "snowblink-native")]
 use crate::chain_spec::snowblink::{get_chain_spec as get_snowblink_chain_spec, ChainSpec as SnowblinkChainSpec};
 
-#[cfg(feature = "snowball-native")]
-use crate::chain_spec::snowball::{get_chain_spec as get_snowball_chain_spec, ChainSpec as SnowballChainSpec};
+#[cfg(feature = "snowbase-native")]
+use crate::chain_spec::snowbase::{get_chain_spec as get_snowbase_chain_spec, ChainSpec as SnowbaseChainSpec};
 
 use snowbridge_runtime_primitives::Block;
 
@@ -38,7 +38,7 @@ const DEFAULT_PARA_ID: u32 = 1000;
 trait IdentifyVariant {
     fn is_snowbridge(&self) -> bool;
     fn is_snowblink(&self) -> bool;
-    fn is_snowball(&self) -> bool;
+    fn is_snowbase(&self) -> bool;
 }
 
 impl IdentifyVariant for dyn sc_service::ChainSpec {
@@ -48,8 +48,8 @@ impl IdentifyVariant for dyn sc_service::ChainSpec {
     fn is_snowblink(&self) -> bool {
         self.id().starts_with("snowblink")
     }
-    fn is_snowball(&self) -> bool {
-        self.id().starts_with("snowball")
+    fn is_snowbase(&self) -> bool {
+        self.id().starts_with("snowbase")
     }
 }
 
@@ -60,8 +60,8 @@ impl<T: sc_service::ChainSpec + 'static> IdentifyVariant for T {
     fn is_snowblink(&self) -> bool {
         <dyn sc_service::ChainSpec>::is_snowblink(self)
     }
-    fn is_snowball(&self) -> bool {
-        <dyn sc_service::ChainSpec>::is_snowball(self)
+    fn is_snowbase(&self) -> bool {
+        <dyn sc_service::ChainSpec>::is_snowbase(self)
     }
 }
 
@@ -92,10 +92,10 @@ macro_rules! construct_async_run {
 			})
 		}
 
-		#[cfg(feature = "snowball-native")]
-		if runner.config().chain_spec.is_snowball() {
+		#[cfg(feature = "snowbase-native")]
+		if runner.config().chain_spec.is_snowbase() {
 			return runner.async_run(|$config| {
-				let $components = crate::service::new_partial::<snowball_runtime::RuntimeApi, crate::service::SnowballRuntimeExecutor>(
+				let $components = crate::service::new_partial::<snowbase_runtime::RuntimeApi, crate::service::SnowbaseRuntimeExecutor>(
 					&$config,
 				)?;
 				let task_manager = $components.task_manager;
@@ -113,8 +113,8 @@ fn load_spec(
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 
 	match id {
-		#[cfg(feature = "snowball-native")]
-		"snowball" => Ok(Box::new(get_snowball_chain_spec(para_id))),
+		#[cfg(feature = "snowbase-native")]
+		"snowbase" => Ok(Box::new(get_snowbase_chain_spec(para_id))),
 		#[cfg(feature = "snowblink-native")]
 		"snowblink" => Ok(Box::new(get_snowblink_chain_spec(para_id))),
 		#[cfg(feature = "snowbridge-native")]
@@ -138,12 +138,12 @@ fn load_spec(
 				#[cfg(not(feature = "snowblink-native"))]
 				Err(format!("`{}` only supported with `snowblink-native` feature enabled.", chain_spec.id()))
             } else {
-				#[cfg(feature = "snowball-native")]
+				#[cfg(feature = "snowbase-native")]
 				{
-                	Ok(Box::new(SnowballChainSpec::from_json_file(path.into())?))
+                	Ok(Box::new(SnowbaseChainSpec::from_json_file(path.into())?))
 				}
-				#[cfg(not(feature = "snowball-native"))]
-				Err(format!("`{}` only supported with `snowball-native` feature enabled.", chain_spec.id()))
+				#[cfg(not(feature = "snowbase-native"))]
+				Err(format!("`{}` only supported with `snowbase-native` feature enabled.", chain_spec.id()))
             }
         }
 	}
@@ -196,10 +196,10 @@ impl SubstrateCli for Cli {
 			#[cfg(not(feature = "snowblink-native"))]
 			panic!("`snowblink-native` feature is not enabled");
 		} else {
-			#[cfg(feature = "snowball-native")]
-            return &snowball_runtime::VERSION;
-			#[cfg(not(feature = "snowball-native"))]
-			panic!("`snowball-native` feature is not enabled");
+			#[cfg(feature = "snowbase-native")]
+            return &snowbase_runtime::VERSION;
+			#[cfg(not(feature = "snowbase-native"))]
+			panic!("`snowbase-native` feature is not enabled");
 		}
     }
 }
@@ -366,9 +366,9 @@ pub fn run() -> Result<()> {
                     return runner.sync_run(|config| cmd.run::<Block, crate::service::SnowblinkRuntimeExecutor>(config))
                 }
 
-				#[cfg(feature = "snowball-native")]
-				if runner.config().chain_spec.is_snowball() {
-                    return runner.sync_run(|config| cmd.run::<Block, crate::service::SnowballRuntimeExecutor>(config))
+				#[cfg(feature = "snowbase-native")]
+				if runner.config().chain_spec.is_snowbase() {
+                    return runner.sync_run(|config| cmd.run::<Block, crate::service::SnowbaseRuntimeExecutor>(config))
                 }
 
                 Err("Chain doesn't support benchmarking".into())
@@ -426,9 +426,9 @@ pub fn run() -> Result<()> {
 						.map_err(Into::into)
 				}
 
-				#[cfg(feature = "snowball-native")]
-				if config.chain_spec.is_snowball() {
-					return crate::service::start_parachain_node::<snowball_runtime::RuntimeApi, crate::service::SnowballRuntimeExecutor>(config, polkadot_config, id)
+				#[cfg(feature = "snowbase-native")]
+				if config.chain_spec.is_snowbase() {
+					return crate::service::start_parachain_node::<snowbase_runtime::RuntimeApi, crate::service::SnowbaseRuntimeExecutor>(config, polkadot_config, id)
 						.await
 						.map(|r| r.0)
 						.map_err(Into::into)

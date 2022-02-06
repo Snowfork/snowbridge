@@ -79,7 +79,7 @@ snowbridge-runtime-primitives = { path = "primitives/runtime" }
 
 snowbridge-runtime = { path = "runtime/snowbridge", optional = true }
 snowblink-runtime = { path = "runtime/snowblink", optional = true }
-snowball-runtime = { path = "runtime/snowball", optional = true }
+snowbase-runtime = { path = "runtime/snowbase", optional = true }
 
 # These dependencies are used for runtime benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
@@ -89,16 +89,17 @@ frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate.git", 
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 
 [features]
-default = ["snowblink-native", "snowball-native"]
+default = ["snowblink-native", "snowbase-native"]
 runtime-benchmarks = [
     "snowbridge-runtime/runtime-benchmarks",
     "snowblink-runtime/runtime-benchmarks",
-    "snowball-runtime/runtime-benchmarks",
+    "snowbase-runtime/runtime-benchmarks",
     "polkadot-service/runtime-benchmarks",
 ]
 snowbridge-native = ["snowbridge-runtime"]
 snowblink-native = ["snowblink-runtime"]
-snowball-native = ["snowball-runtime"]
+snowbase-native = ["snowbase-runtime"]
+rococo-native = [ "polkadot-cli/rococo-native" ]
 
 
 [profile.release]
@@ -124,7 +125,7 @@ members = [
     "pallets/asset-registry",
     "runtime/snowbridge",
     "runtime/snowblink",
-    "runtime/snowball",
+    "runtime/snowbase",
     "utils/test-parachain/node",
     "utils/test-parachain/pallets/test",
     "utils/test-parachain/runtime",

@@ -21,8 +21,8 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 	props.insert("tokenDecimals".into(), 12.into());
 
 	ChainSpec::from_genesis(
-		"Snowbridge Local Testnet",
-		"local_testnet",
+		"Snowbridge Testnet",
+		"snowbridge_testnet",
 		ChainType::Local,
 		move || {
 			testnet_genesis(
@@ -113,7 +113,7 @@ fn testnet_genesis(
 			metadata: vec![],
 			accounts: vec![],
 		},
-		asset_registry: snowball_runtime::AssetRegistryConfig {
+		asset_registry: snowbase_runtime::AssetRegistryConfig {
 			next_asset_id: 1,
 		},
 		nft: snowbridge_runtime::NFTConfig { tokens: vec![] },

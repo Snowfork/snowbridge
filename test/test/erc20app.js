@@ -15,9 +15,6 @@ describe('Bridge', function () {
     const clients = await bootstrap();
     ethClient = clients.ethClient;
     subClient = clients.subClient;
-    this.erc20AssetId = subClient.api.createType('AssetId',
-      { Token: TestTokenAddress }
-    );
 
     await ethClient.mintERC20("10000", ethClient.accounts[1], ethClient.accounts[0]);
   });

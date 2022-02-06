@@ -5,8 +5,8 @@ pub mod snowbridge;
 #[cfg(feature = "snowblink-native")]
 pub mod snowblink;
 
-#[cfg(feature = "snowball-native")]
-pub mod snowball;
+#[cfg(feature = "snowbase-native")]
+pub mod snowbase;
 
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};

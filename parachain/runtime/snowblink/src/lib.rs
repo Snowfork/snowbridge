@@ -128,8 +128,8 @@ impl_opaque_keys! {
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("snowbridge"),
-	impl_name: create_runtime_str!("snowbridge"),
+	spec_name: create_runtime_str!("snowblink"),
+	impl_name: create_runtime_str!("snowblink"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 1,

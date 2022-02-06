@@ -55,19 +55,19 @@ impl sc_executor::NativeExecutionDispatch for SnowblinkRuntimeExecutor {
 	}
 }
 
-#[cfg(feature = "snowball-native")]
-pub struct SnowballRuntimeExecutor;
+#[cfg(feature = "snowbase-native")]
+pub struct SnowbaseRuntimeExecutor;
 
-#[cfg(feature = "snowball-native")]
-impl sc_executor::NativeExecutionDispatch for SnowballRuntimeExecutor {
+#[cfg(feature = "snowbase-native")]
+impl sc_executor::NativeExecutionDispatch for SnowbaseRuntimeExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		snowball_runtime::api::dispatch(method, data)
+		snowbase_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		snowball_runtime::native_version()
+		snowbase_runtime::native_version()
 	}
 }
 
