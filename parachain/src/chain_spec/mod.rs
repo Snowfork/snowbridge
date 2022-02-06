@@ -1,6 +1,12 @@
+
+#[cfg(feature = "snowbridge-native")]
 pub mod snowbridge;
-pub mod snowfall;
-pub mod local;
+
+#[cfg(feature = "snowblink-native")]
+pub mod snowblink;
+
+#[cfg(feature = "snowball-native")]
+pub mod snowball;
 
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};

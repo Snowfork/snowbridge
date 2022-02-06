@@ -1,6 +1,6 @@
 [package]
-name = "snowfall-runtime"
-description = "Snowfall Runtime"
+name = "snowblink-runtime"
+description = "Snowblink Runtime"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]

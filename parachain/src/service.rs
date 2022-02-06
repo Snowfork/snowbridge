@@ -23,8 +23,10 @@ use substrate_prometheus_endpoint::Registry;
 
 use snowbridge_runtime_primitives::{Hash, Block};
 
+#[cfg(feature = "snowbridge-native")]
 pub struct SnowbridgeRuntimeExecutor;
 
+#[cfg(feature = "snowbridge-native")]
 impl sc_executor::NativeExecutionDispatch for SnowbridgeRuntimeExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
@@ -37,31 +39,35 @@ impl sc_executor::NativeExecutionDispatch for SnowbridgeRuntimeExecutor {
 	}
 }
 
-pub struct SnowfallRuntimeExecutor;
+#[cfg(feature = "snowblink-native")]
+pub struct SnowblinkRuntimeExecutor;
 
-impl sc_executor::NativeExecutionDispatch for SnowfallRuntimeExecutor {
+#[cfg(feature = "snowblink-native")]
+impl sc_executor::NativeExecutionDispatch for SnowblinkRuntimeExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		snowfall_runtime::api::dispatch(method, data)
+		snowblink_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		snowfall_runtime::native_version()
+		snowblink_runtime::native_version()
 	}
 }
 
-pub struct LocalRuntimeExecutor;
+#[cfg(feature = "snowball-native")]
+pub struct SnowballRuntimeExecutor;
 
-impl sc_executor::NativeExecutionDispatch for LocalRuntimeExecutor {
+#[cfg(feature = "snowball-native")]
+impl sc_executor::NativeExecutionDispatch for SnowballRuntimeExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		local_runtime::api::dispatch(method, data)
+		snowball_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		local_runtime::native_version()
+		snowball_runtime::native_version()
 	}
 }
 

@@ -1,6 +1,6 @@
 [package]
-name = "local-runtime"
-description = "Snowbridge Local Runtime"
+name = "snowball-runtime"
+description = "Snowball Runtime"
 version = "0.1.1"
 edition = "2018"
 authors = ["Snowfork <contact@snowfork.com>"]
