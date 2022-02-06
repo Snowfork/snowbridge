@@ -1,14 +1,9 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use sc_service::{ChainType, Properties};
-use snowbridge_runtime::{
-	AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY,
-};
-use sp_core::{sr25519};
-use sp_runtime::{
-	traits::{AccountIdConversion},
-	Perbill,
-};
+use snowbridge_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
+use sp_core::sr25519;
+use sp_runtime::{traits::AccountIdConversion, Perbill};
 
 use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 
@@ -113,9 +108,7 @@ fn testnet_genesis(
 			metadata: vec![],
 			accounts: vec![],
 		},
-		asset_registry: snowbase_runtime::AssetRegistryConfig {
-			next_asset_id: 1,
-		},
+		asset_registry: snowbase_runtime::AssetRegistryConfig { next_asset_id: 1 },
 		nft: snowbridge_runtime::NFTConfig { tokens: vec![] },
 		ethereum_light_client: snowbridge_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),

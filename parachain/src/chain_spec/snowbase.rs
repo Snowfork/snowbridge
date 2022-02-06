@@ -1,12 +1,9 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use snowbase_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
 use sc_service::{ChainType, Properties};
-use sp_core::{sr25519};
-use sp_runtime::{
-	traits::{AccountIdConversion},
-	Perbill,
-};
+use snowbase_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
+use sp_core::sr25519;
+use sp_runtime::{traits::AccountIdConversion, Perbill};
 
 use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 
@@ -111,9 +108,7 @@ fn testnet_genesis(
 			metadata: vec![],
 			accounts: vec![],
 		},
-		asset_registry: snowbase_runtime::AssetRegistryConfig {
-			next_asset_id: 1,
-		},
+		asset_registry: snowbase_runtime::AssetRegistryConfig { next_asset_id: 1 },
 		nft: snowbase_runtime::NFTConfig { tokens: vec![] },
 		ethereum_light_client: snowbase_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
@@ -142,8 +137,8 @@ fn testnet_genesis(
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                         // account id
-						acc,                                 // validator id
+						acc.clone(),                            // account id
+						acc,                                    // validator id
 						snowbase_runtime::SessionKeys { aura }, // session keys
 					)
 				})

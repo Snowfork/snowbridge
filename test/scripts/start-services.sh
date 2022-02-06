@@ -68,13 +68,13 @@ start_polkadot_launch()
         --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
-        --features snowball-native,rococo-native
+        --features snowbase-native,rococo-native
 
     echo "Building test parachain"
     cargo build --manifest-path "$parachain_dir/Cargo.toml" --release -p snowbridge-test-node
 
     echo "Generating chain specification"
-    "$parachain_bin" build-spec --chain snowball --disable-default-bootnode > "$output_dir/spec.json"
+    "$parachain_bin" build-spec --chain base --disable-default-bootnode > "$output_dir/spec.json"
 
     echo "Updating chain specification"
     curl http://localhost:8545 \

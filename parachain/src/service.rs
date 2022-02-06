@@ -8,7 +8,6 @@ use cumulus_client_service::{
 };
 use cumulus_primitives_core::ParaId;
 
-use sp_consensus_aura::sr25519::{AuthorityId as AuraId, AuthorityPair as AuraPair};
 use sc_client_api::ExecutorProvider;
 use sc_executor::NativeElseWasmExecutor;
 use sc_network::NetworkService;
@@ -16,12 +15,13 @@ use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClie
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus::SlotData;
+use sp_consensus_aura::sr25519::{AuthorityId as AuraId, AuthorityPair as AuraPair};
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::traits::BlakeTwo256;
 use std::sync::Arc;
 use substrate_prometheus_endpoint::Registry;
 
-use snowbridge_runtime_primitives::{Hash, Block};
+use snowbridge_runtime_primitives::{Block, Hash};
 
 #[cfg(feature = "snowbridge-native")]
 pub struct SnowbridgeRuntimeExecutor;
@@ -88,8 +88,10 @@ where
 impl<Api> RuntimeApiCollection for Api
 where
 	Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::ApiExt<Block, StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>>
-		+ sp_block_builder::BlockBuilder<Block>
+		+ sp_api::ApiExt<
+			Block,
+			StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
+		> + sp_block_builder::BlockBuilder<Block>
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>
@@ -170,30 +172,32 @@ where
 		client.clone(),
 	);
 
-    let import_queue = {
-        let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
+	let import_queue = {
+		let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
-        cumulus_client_consensus_aura::import_queue::<AuraPair, _, _, _, _, _, _>(
-            cumulus_client_consensus_aura::ImportQueueParams {
-                block_import: client.clone(),
-                client: client.clone(),
-                create_inherent_data_providers: move |_, _| async move {
-                    let time = sp_timestamp::InherentDataProvider::from_system_time();
+		cumulus_client_consensus_aura::import_queue::<AuraPair, _, _, _, _, _, _>(
+			cumulus_client_consensus_aura::ImportQueueParams {
+				block_import: client.clone(),
+				client: client.clone(),
+				create_inherent_data_providers: move |_, _| async move {
+					let time = sp_timestamp::InherentDataProvider::from_system_time();
 
-                    let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+					let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
                         *time,
                         slot_duration.slot_duration(),
                     );
 
-                    Ok((time, slot))
-                },
-                registry: config.prometheus_registry(),
-                can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
-                spawner: &task_manager.spawn_essential_handle(),
-                telemetry: telemetry.as_ref().map(|telemetry| telemetry.handle()),
-            },
-        )?
-    };
+					Ok((time, slot))
+				},
+				registry: config.prometheus_registry(),
+				can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(
+					client.executor().clone(),
+				),
+				spawner: &task_manager.spawn_essential_handle(),
+				telemetry: telemetry.as_ref().map(|telemetry| telemetry.handle()),
+			},
+		)?
+	};
 
 	let params = PartialComponents {
 		backend,
@@ -253,7 +257,7 @@ where
 	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
 	if matches!(parachain_config.role, Role::Light) {
-		return Err("Light client not supported!".into())
+		return Err("Light client not supported!".into());
 	}
 
 	let parachain_config = prepare_node_config(parachain_config);
@@ -368,7 +372,10 @@ pub async fn start_parachain_node<RuntimeApi, Executor>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	id: ParaId,
-) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>)>
+) -> sc_service::error::Result<(
+	TaskManager,
+	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+)>
 where
 	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
 		+ Send

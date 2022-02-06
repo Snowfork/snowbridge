@@ -65,6 +65,8 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot.git", branch = "re
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.12", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
+runtime-primitives = { path = "../../primitives/runtime", default-features = false, package = "snowbridge-runtime-primitives" }
+
 snowbridge-xcm-support = { path = "../../primitives/xcm-support", default-features = false }
 snowbridge-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-basic-channel", default-features = false }
@@ -144,6 +146,7 @@ std = [
     "erc20-app/std",
     "erc721-app/std",
     "snowbridge-core/std",
+    "runtime-primitives/std",
     "snowbridge-xcm-support/std",
     "snowbridge-asset-registry/std",
     "runtime-common/std",

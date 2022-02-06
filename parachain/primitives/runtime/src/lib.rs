@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_runtime::{
-	generic, MultiSignature,
+	generic, MultiSignature, MultiAddress,
 	traits::{Verify, BlakeTwo256, IdentifyAccount},
 };
 
@@ -12,6 +12,9 @@ pub type BlockNumber = u32;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
+
+/// The address format for describing accounts.
+pub type Address = MultiAddress<AccountId, ()>;
 
 /// Some way of identifying an account on the chain. We intentionally make it equivalent
 /// to the public key of our transaction signing scheme.
@@ -33,11 +36,12 @@ pub type Hash = sp_core::H256;
 /// Digest item type.
 pub type DigestItem = generic::DigestItem<Hash>;
 
+/// Opaque header
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 
+/// Opaque block
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
+/// Opaque block id
 pub type BlockId = generic::BlockId<Block>;
-
-
 
