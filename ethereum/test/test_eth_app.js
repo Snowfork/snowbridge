@@ -38,7 +38,6 @@ describe("ETHApp", function () {
 
   // Constants
   const POLKADOT_ADDRESS = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
-  const MAX_ETH =  web3.utils.toWei("340285366920938463463374607431.768211455", "ether");
 
   before(async function () {
     const codec = await ScaleCodec.new();
@@ -59,9 +58,6 @@ describe("ETHApp", function () {
 
       const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
       const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
- 
-      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, web3.utils.toBN(web3.utils.toBN(MAX_ETH)).add(web3.utils.toBN(1)), ChannelId.Basic)
-        .should.be.rejectedWith(/SafeCast: value doesn\'t fit in 128 bits/);
 
       const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
         .should.be.fulfilled;
@@ -79,6 +75,11 @@ describe("ETHApp", function () {
       const afterBalance = await web3.eth.getBalance(this.app.address);
       afterBalance.should.be.bignumber.equal(beforeBalance.plus(amount));
 
+    });
+
+    it("should not lock funds for amounts greater than 128-bits", async function() {
+      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, "340282366920938463463374607431768211457", ChannelId.Basic)
+        .should.be.rejectedWith(/SafeCast: value doesn\'t fit in 128 bits/);
     });
   })
 
@@ -105,7 +106,7 @@ describe("ETHApp", function () {
       const beforeRecipientBalance = BigNumber(await web3.eth.getBalance(recipient));
 
       const unlockAmount = web3.utils.toBN( web3.utils.toWei("2", "ether")).add(web3.utils.toBN(1))
-      
+
        await this.app.unlock(
         addressBytes(POLKADOT_ADDRESS),
         recipient,
@@ -114,7 +115,7 @@ describe("ETHApp", function () {
           from: inboundChannel,
         }
       ).should.be.rejectedWith(/Unable to send Ether/);
-      
+
       let { receipt } = await this.app.unlock(
         addressBytes(POLKADOT_ADDRESS),
         recipient,
@@ -151,14 +152,14 @@ describe("ETHApp", function () {
       const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
       this.iface = new ethers.utils.Interface(abi);
     });
-    
+
     it("should revert when called by non-admin", async function () {
       await this.app.upgrade(
         [this.newInboundChannel, this.outboundChannel.address],
         [this.newInboundChannel, this.outboundChannel.address],
         {from: userOne}).should.be.rejectedWith(/AccessControl/);
     });
-    
+
     it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
       await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
       await this.app.upgrade(
