@@ -78,6 +78,7 @@ module.exports = async ({
       autoMine: true,
     },
     "initialize",
+    deployer,
     ethApp.address
   );
 

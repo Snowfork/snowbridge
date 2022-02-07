@@ -45,7 +45,7 @@ describe("IncentivizedInboundChannel", function () {
       this.channel = await IncentivizedInboundChannel.new(this.beefyLightClient.address,
         { from: accounts[0] }
       );
-      await this.channel.initialize(rewardSource.address);
+      await this.channel.initialize(accounts[0], rewardSource.address);
     });
 
     it("should accept a valid commitment and dispatch messages", async function () {
@@ -89,11 +89,11 @@ describe("IncentivizedInboundChannel", function () {
   describe("upgradeability", function () {
     beforeEach(async function () {
       const rewardSource = await MockRewardSource.new();
-      this.channel = await IncentivizedInboundChannel.new(this.beefyLightClient.address,
+      this.channel = await IncentivizedInboundChannel.new(
+        this.beefyLightClient.address,
         { from: owner }
       );
-      await this.channel.initialize(rewardSource.address);
-      // this.channel = await BasicInboundChannel.new(this.beefyLightClient.address);
+      await this.channel.initialize(owner, rewardSource.address);
       const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
       this.newBeefy = ethers.Wallet.createRandom().address;
       this.iface = new ethers.utils.Interface(abi);
