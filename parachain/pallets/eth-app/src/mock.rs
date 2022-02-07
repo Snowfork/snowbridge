@@ -7,7 +7,7 @@ use frame_support::{
 	traits::{tokens::fungible::ItemOf, Everything, GenesisBuild},
 	PalletId,
 };
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::{traits::AccountIdConversion, DispatchError};
 
 use sp_core::{H160, H256};
 use sp_runtime::{
@@ -16,7 +16,10 @@ use sp_runtime::{
 	MultiSignature,
 };
 
-use snowbridge_core::{assets::{RemoteParachain, XcmReserveTransfer}, ChannelId};
+use snowbridge_core::{
+	assets::{RemoteParachain, XcmReserveTransfer},
+	ChannelId,
+};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -173,9 +176,13 @@ impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 		_asset_id: u128,
 		_recipient: &AccountId,
 		_amount: u128,
-		_destination: RemoteParachain,
+		destination: RemoteParachain,
 	) -> DispatchResult {
-		todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator.")
+		match destination.para_id {
+			1001 => Ok(()),
+			2001 => Err(DispatchError::Other("Parachain 2001 not found.")),
+			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator.")
+		}
 	}
 }
 

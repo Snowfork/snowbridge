@@ -11,8 +11,10 @@ use frame_system as system;
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
-	MultiSignature,
+	traits::{
+		AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify,
+	},
+	DispatchError, MultiSignature,
 };
 
 use snowbridge_core::{
@@ -116,8 +118,7 @@ impl pallet_assets::Config for Test {
 	type Extra = ();
 }
 
-impl snowbridge_asset_registry::Config for Test {
-}
+impl snowbridge_asset_registry::Config for Test {}
 
 impl snowbridge_dispatch::Config for Test {
 	type Origin = Origin;
@@ -185,9 +186,13 @@ impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 		_asset_id: u128,
 		_recipient: &AccountId,
 		_amount: u128,
-		_destination: RemoteParachain,
+		destination: RemoteParachain,
 	) -> DispatchResult {
-		todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator.")
+		match destination.para_id {
+			1001 => Ok(()),
+			2001 => Err(DispatchError::Other("Parachain 2001 not found.")),
+			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator.")
+		}
 	}
 }
 

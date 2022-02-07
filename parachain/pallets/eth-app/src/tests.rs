@@ -6,7 +6,7 @@ use frame_support::{
 use sp_core::H160;
 use sp_keyring::AccountKeyring as Keyring;
 
-use snowbridge_core::ChannelId;
+use snowbridge_core::{assets::RemoteParachain, ChannelId};
 
 fn last_event() -> Event {
 	System::events().pop().expect("Event expected").event
@@ -26,6 +26,30 @@ fn mints_after_handling_ethereum_event() {
 			recipient.clone(),
 			amount,
 			None,
+		));
+		assert_eq!(Ether::balance(&recipient), amount);
+
+		assert_eq!(
+			Event::EtherApp(crate::Event::<Test>::Minted(sender, recipient, amount)),
+			last_event()
+		);
+	});
+}
+
+#[test]
+fn mints_after_xcm_error() {
+	new_tester().execute_with(|| {
+		let peer_contract = H160::repeat_byte(1);
+		let sender = H160::repeat_byte(7);
+		let recipient: AccountId = Keyring::Bob.into();
+		let amount = 10;
+
+		assert_ok!(EtherApp::mint(
+			snowbridge_dispatch::RawOrigin(peer_contract).into(),
+			sender,
+			recipient.clone(),
+			amount,
+			Some(RemoteParachain { para_id: 2001, fee: 1000000u128 }),
 		));
 		assert_eq!(Ether::balance(&recipient), amount);
 

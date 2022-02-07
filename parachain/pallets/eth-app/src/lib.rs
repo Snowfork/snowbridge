@@ -29,6 +29,7 @@ mod tests;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
+	log,
 	traits::{fungible::Mutate, EnsureOrigin},
 	transactional, PalletId,
 };
@@ -37,7 +38,10 @@ use sp_core::H160;
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
-use snowbridge_core::{assets::{RemoteParachain, XcmReserveTransfer}, ChannelId, OutboundRouter};
+use snowbridge_core::{
+	assets::{RemoteParachain, XcmReserveTransfer},
+	ChannelId, OutboundRouter,
+};
 
 pub use pallet::*;
 use payload::OutboundPayload;
@@ -153,18 +157,19 @@ pub mod pallet {
 
 			let recipient = T::Lookup::lookup(recipient)?;
 			T::Asset::mint_into(&recipient, amount)?;
-
-			if let Some(destination) = destination {
-				T::XcmReserveTransfer::reserve_transfer(
-					0,
-					&recipient,
-					amount,
-					destination,
-				)?;
-			}
-
 			Self::deposit_event(Event::Minted(sender, recipient.clone(), amount));
 
+			if let Some(destination) = destination {
+				let result =
+					T::XcmReserveTransfer::reserve_transfer(0, &recipient, amount, destination);
+				if let Err(err) = result {
+					log::error!(
+						"Failed to execute xcm transfer to parachain {} - {:?}.",
+						destination.para_id,
+						err
+					);
+				}
+			}
 			Ok(())
 		}
 	}
