@@ -41,7 +41,7 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 
-use snowbridge_core::{assets::XcmReserveTransfer, ChannelId, OutboundRouter};
+use snowbridge_core::{assets::{RemoteParachain, XcmReserveTransfer}, ChannelId, OutboundRouter};
 use snowbridge_asset_registry_primitives::NextAssetId;
 
 use payload::OutboundPayload;
@@ -165,7 +165,7 @@ pub mod pallet {
 			sender: H160,
 			recipient: <T::Lookup as StaticLookup>::Source,
 			amount: u128,
-			para_id: Option<u32>,
+			destination: Option<RemoteParachain>,
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
@@ -179,8 +179,8 @@ pub mod pallet {
 
 			T::Assets::mint_into(asset_id, &recipient, amount)?;
 
-			if let Some(id) = para_id {
-				T::XcmReserveTransfer::reserve_transfer(origin, asset_id, id, &recipient, amount)?;
+			if let Some(destination) = destination {
+				T::XcmReserveTransfer::reserve_transfer(asset_id, &recipient, amount, destination)?;
 			}
 
 			Self::deposit_event(Event::Minted(token, sender, recipient, amount));

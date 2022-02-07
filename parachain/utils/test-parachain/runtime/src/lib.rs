@@ -15,6 +15,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature,
 };
+use sp_std::result::Result;
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -23,7 +24,7 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{Contains, Everything, Nothing},
+	traits::{Everything, Nothing},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
@@ -50,13 +51,16 @@ use polkadot_runtime_common::{BlockHashCount, RocksDbWeight, SlowAdjustingFeeUpd
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
-	AsPrefixedGeneralIndex, ConvertedConcreteAssetId, CurrencyAdapter, EnsureXcmOrigin,
+	AsPrefixedGeneralIndex, Case, ConvertedConcreteAssetId, CurrencyAdapter, EnsureXcmOrigin,
 	FixedWeightBounds, FungiblesAdapter, IsConcrete, LocationInverter, NativeAsset,
 	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	UsingComponents,
 };
-use xcm_executor::{traits::JustTry, Config, XcmExecutor};
+use xcm_executor::{
+	traits::JustTry,
+	Config, XcmExecutor,
+};
 
 /// Import the template pallet.
 pub use test_pallet;
@@ -417,7 +421,7 @@ pub type AssetsForceOrigin = EnsureOneOf<
 	EnsureXcm<IsMajorityOfBody<DotLocation, ExecutiveBody>>,
 >;
 
-pub type AssetId = u32;
+pub type AssetId = u128;
 
 impl pallet_assets::Config for Runtime {
 	type Event = Event;
@@ -468,30 +472,30 @@ pub type LocalAssetTransactor = CurrencyAdapter<
 	(),
 >;
 
-pub struct NeverIssue;
-impl Contains<AssetId> for NeverIssue {
-	fn contains(_t: &AssetId) -> bool {
-		false
-	}
+parameter_types! {
+	pub const Snowbridge: MultiLocation = MultiLocation { parents: 1, interior: X1(Parachain(1000)) };
+	pub const SnowbridgeAssetFilter: (MultiAssetFilter, MultiLocation) = (Wild(WildMultiAsset::All), Snowbridge::get());
 }
+
+type IsReserveAsset = (Case<SnowbridgeAssetFilter>, NativeAsset);
+
+type ConvertAssetId = (
+	AsPrefixedGeneralIndex<Snowbridge, AssetId, JustTry>,
+	AsPrefixedGeneralIndex<Local, AssetId, JustTry>,
+);
 
 /// Means for transacting assets besides the native currency on this chain.
 pub type FungiblesTransactor = FungiblesAdapter<
 	// Use this fungibles implementation:
 	Assets,
 	// Use this currency when it is a fungible asset matching the given location or name:
-	ConvertedConcreteAssetId<
-		AssetId,
-		Balance,
-		AsPrefixedGeneralIndex<Local, AssetId, JustTry>,
-		JustTry,
-	>,
+	ConvertedConcreteAssetId<AssetId, Balance, ConvertAssetId, JustTry>,
 	// Convert an XCM MultiLocation into a local account id:
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId,
 	// We do not support teleports so implement Contains to always return false.
-	NeverIssue,
+	Nothing,
 	// The account to use for tracking teleports (Empty because we do not support teleports)
 	(),
 >;
@@ -522,22 +526,21 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
-	pub UnitWeightCost: Weight = 1_000_000_000;
+	pub UnitWeightCost: Weight = 1_000_000;
 	pub const MaxInstructions: u32 = 100;
 }
 
 match_type! {
-	pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
+	pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
 		MultiLocation { parents: 1, interior: Here } |
-		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
+		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Unit, .. }) }
 	};
 }
 
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<Everything>,
-	AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
-	// ^^^ Parent and its exec plurality get free execution
+	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
 );
 
 pub struct XcmConfig;
@@ -547,7 +550,7 @@ impl Config for XcmConfig {
 	// How to withdraw and deposit an asset.
 	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = NativeAsset;
+	type IsReserve = IsReserveAsset;
 	type IsTeleporter = (); // Teleporting is disabled.
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
@@ -707,7 +710,7 @@ construct_runtime!(
 		// Template
 		TemplatePallet: test_pallet::{Pallet, Call, Storage, Event<T>}  = 40,
 
-		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 41,
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>} = 41,
 	}
 );
 

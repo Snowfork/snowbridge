@@ -34,7 +34,8 @@ contract ERC20App is AccessControl {
         address sender,
         bytes32 recipient,
         uint128 amount,
-        uint32 paraId
+        uint32 paraId,
+        uint128 fee
     );
 
     event Unlocked(
@@ -83,16 +84,18 @@ contract ERC20App is AccessControl {
         bytes32 _recipient,
         uint128 _amount,
         ChannelId _channelId,
-        uint32 _paraId
+        uint32 _paraId,
+        uint128 _fee
     ) public {
         require(
             _channelId == ChannelId.Basic ||
                 _channelId == ChannelId.Incentivized,
             "Invalid channel ID"
         );
+
         balances[_token] = balances[_token] + _amount;
 
-        emit Locked(_token, msg.sender, _recipient, _amount, _paraId);
+        emit Locked(_token, msg.sender, _recipient, _amount, _paraId, _fee);
 
         OutboundChannel channel = OutboundChannel(
             channels[_channelId].outbound
@@ -108,13 +111,7 @@ contract ERC20App is AccessControl {
         if (_paraId == 0) {
             call = encodeCall(_token, msg.sender, _recipient, _amount);
         } else {
-            call = encodeCallWithParaId(
-                _token,
-                msg.sender,
-                _recipient,
-                _amount,
-                _paraId
-            );
+            call = encodeCallWithParaId(_token, msg.sender, _recipient, _amount, _paraId, _fee);
         }
 
         channel.submit(msg.sender, call);
@@ -166,7 +163,8 @@ contract ERC20App is AccessControl {
         address _sender,
         bytes32 _recipient,
         uint128 _amount,
-        uint32 _paraId
+        uint32 _paraId,
+        uint128 _fee
     ) private pure returns (bytes memory) {
         return bytes.concat(
                 MINT_CALL,
@@ -176,7 +174,8 @@ contract ERC20App is AccessControl {
                 _recipient,
                 _amount.encode128(),
                 bytes1(0x01),
-                _paraId.encode32()
+                _paraId.encode32(),
+                _fee.encode128()
             );
     }
 

@@ -17,11 +17,12 @@ const { expect } = require("chai");
 const ETHApp = artifacts.require("ETHApp");
 const ScaleCodec = artifacts.require("ScaleCodec");
 
-const lockupFunds = (contract, sender, recipient, amount, channel) => {
+const lockupFunds = (contract, sender, recipient, amount, channel, paraId, fee) => {
   return contract.lock(
     addressBytes(recipient),
     channel,
-    0, // paraId
+    paraId,
+    fee,
     {
       from: sender,
       value: BigNumber(amount),
@@ -59,7 +60,7 @@ describe("ETHApp", function () {
       const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
       const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
 
-      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
         .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
@@ -69,6 +70,8 @@ describe("ETHApp", function () {
 
       event.args.sender.should.be.equal(userOne);
       event.args.recipient.should.be.equal(POLKADOT_ADDRESS);
+      BigNumber(event.args.paraId).should.be.bignumber.equal(0);
+      BigNumber(event.args.fee).should.be.bignumber.equal(0);
       BigNumber(event.args.amount).should.be.bignumber.equal(amount);
 
       // Confirm contract's balance has increased
@@ -77,11 +80,38 @@ describe("ETHApp", function () {
 
     });
 
+    it("should lock funds to destination parachain", async function () {
+      const beforeBalance = BigNumber(await web3.eth.getBalance(this.app.address));
+      const amount = BigNumber(web3.utils.toWei("0.25", "ether"));
+
+      const tx = await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 1001, 4_000_000)
+        .should.be.fulfilled;
+
+      // Confirm app event emitted with expected values
+      const event = tx.logs.find(
+        e => e.event === "Locked"
+      );
+
+      event.args.sender.should.be.equal(userOne);
+      event.args.recipient.should.be.equal(POLKADOT_ADDRESS);
+      BigNumber(event.args.paraId).should.be.bignumber.equal(1001);
+      BigNumber(event.args.fee).should.be.bignumber.equal(4_000_000);
+      BigNumber(event.args.amount).should.be.bignumber.equal(amount);
+
+      // Confirm contract's balance has increased
+      const afterBalance = await web3.eth.getBalance(this.app.address);
+      afterBalance.should.be.bignumber.equal(amount);
+
+      // Confirm contract's locked balance state has increased by amount locked
+      const afterBalanceState = BigNumber(await web3.eth.getBalance(this.app.address));
+      afterBalanceState.should.be.bignumber.equal(beforeBalance.plus(amount));
+    });
+
     it("should not lock funds for amounts greater than 128-bits", async function() {
       await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, "340282366920938463463374607431768211457", ChannelId.Basic)
         .should.be.rejectedWith(/SafeCast: value doesn\'t fit in 128 bits/);
     });
-  })
+  });
 
   describe("withdrawals", function () {
 
@@ -93,7 +123,7 @@ describe("ETHApp", function () {
     it("should unlock", async function () {
       // Lockup funds in app
       const lockupAmount = BigNumber(web3.utils.toWei("2", "ether"));
-      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Incentivized)
+      await lockupFunds(this.app, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Incentivized, 0, 0)
         .should.be.fulfilled;
 
       // recipient on the ethereum side

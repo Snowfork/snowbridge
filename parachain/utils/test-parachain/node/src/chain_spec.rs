@@ -106,7 +106,7 @@ pub fn development_config() -> ChainSpec {
 		None,
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
+			para_id: 1001,
 		},
 	)
 }
@@ -151,7 +151,7 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				1000.into(),
+				1001.into(),
 			)
 		},
 		// Bootnodes
@@ -165,7 +165,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
+			para_id: 1001,
 		},
 	)
 }
@@ -184,6 +184,17 @@ fn testnet_genesis(
 		},
 		balances: test_runtime::BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
+		},
+		assets: test_runtime::AssetsConfig {
+			assets: vec![
+				(0, get_account_id_from_seed::<sr25519::Public>("Eve"), true, 1),
+				(1, get_account_id_from_seed::<sr25519::Public>("Eve"), true, 1),
+			],
+			metadata: vec![
+				(0, "SnowETH".into(), vec![], 18),
+				(1, "TestToken".into(), vec![], 18),
+			],
+			accounts: vec![],
 		},
 		parachain_info: test_runtime::ParachainInfoConfig { parachain_id: id },
 		collator_selection: test_runtime::CollatorSelectionConfig {

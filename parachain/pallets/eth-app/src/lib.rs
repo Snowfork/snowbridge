@@ -37,7 +37,7 @@ use sp_core::H160;
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
-use snowbridge_core::{assets::XcmReserveTransfer, ChannelId, OutboundRouter};
+use snowbridge_core::{assets::{RemoteParachain, XcmReserveTransfer}, ChannelId, OutboundRouter};
 
 pub use pallet::*;
 use payload::OutboundPayload;
@@ -144,7 +144,7 @@ pub mod pallet {
 			sender: H160,
 			recipient: <T::Lookup as StaticLookup>::Source,
 			amount: u128,
-			para_id: Option<u32>,
+			destination: Option<RemoteParachain>,
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
@@ -154,13 +154,12 @@ pub mod pallet {
 			let recipient = T::Lookup::lookup(recipient)?;
 			T::Asset::mint_into(&recipient, amount)?;
 
-			if let Some(id) = para_id {
+			if let Some(destination) = destination {
 				T::XcmReserveTransfer::reserve_transfer(
-					origin,
 					0,
-					id,
 					&recipient,
 					amount,
+					destination,
 				)?;
 			}
 

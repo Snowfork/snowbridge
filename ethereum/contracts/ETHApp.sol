@@ -24,7 +24,8 @@ contract ETHApp is RewardSource, AccessControl {
         address sender,
         bytes32 recipient,
         uint128 amount,
-        uint32 paraId
+        uint32 paraId,
+        uint128 fee
     );
 
     event Unlocked(bytes32 sender, address recipient, uint128 amount);
@@ -75,7 +76,8 @@ contract ETHApp is RewardSource, AccessControl {
     function lock(
         bytes32 _recipient,
         ChannelId _channelId,
-        uint32 _paraId
+        uint32 _paraId,
+        uint128 _fee
     ) public payable {
         require(msg.value > 0, "Value of transaction must be positive");
         require(
@@ -84,16 +86,16 @@ contract ETHApp is RewardSource, AccessControl {
             "Invalid channel ID"
         );
 
-        // evert in case of overflow.
+        // revert in case of overflow.
         uint128 value = (msg.value).toUint128();
 
-        emit Locked(msg.sender, _recipient, value, _paraId);
+        emit Locked(msg.sender, _recipient, value, _paraId, _fee);
 
         bytes memory call;
         if (_paraId == 0) {
             call = encodeCall(msg.sender, _recipient, value);
         } else {
-            call = encodeCallWithParaId(msg.sender, _recipient, value, _paraId);
+            call = encodeCallWithParaId(msg.sender, _recipient, value, _paraId, _fee);
         }
 
         OutboundChannel channel = OutboundChannel(
@@ -135,7 +137,8 @@ contract ETHApp is RewardSource, AccessControl {
         address _sender,
         bytes32 _recipient,
         uint128 _amount,
-        uint32 _paraId
+        uint32 _paraId,
+        uint128 _fee
     ) private pure returns (bytes memory) {
         return bytes.concat(
                 MINT_CALL,
@@ -144,7 +147,8 @@ contract ETHApp is RewardSource, AccessControl {
                 _recipient,
                 _amount.encode128(),
                 bytes1(0x01),
-                _paraId.encode32()
+                _paraId.encode32(),
+                _fee.encode128()
             );
     }
 

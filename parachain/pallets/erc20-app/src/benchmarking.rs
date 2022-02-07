@@ -110,7 +110,7 @@ benchmarks! {
 
 		let asset_id = <AssetId<T>>::get(token).unwrap();
 
-		let call = Call::<T>::mint { token: token, sender: sender, recipient: recipient_lookup, amount : amount, para_id: None};
+		let call = Call::<T>::mint { token: token, sender: sender, recipient: recipient_lookup, amount : amount, destination: None };
 
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {
