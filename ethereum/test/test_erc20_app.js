@@ -24,13 +24,14 @@ const approveFunds = (token, contract, account, amount) => {
   return token.approve(contract.address, amount, { from: account })
 }
 
-const lockupFunds = (contract, token, sender, recipient, amount, channel) => {
+const lockupFunds = (contract, token, sender, recipient, amount, channel, paraId, fee) => {
   return contract.lock(
     token.address,
     addressBytes(recipient),
     amount.toString(),
     channel,
-    0, // paraId
+    paraId,
+    fee.toString(),
     {
       from: sender,
       value: 0
@@ -79,7 +80,7 @@ describe("ERC20App", function () {
       await approveFunds(this.token, this.app, userOne, amount * 2)
         .should.be.fulfilled;
 
-      let createMintTokenTransaction = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+      let createMintTokenTransaction = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
         .should.be.fulfilled;
 
       // Confirm app event emitted with expected values
@@ -89,6 +90,8 @@ describe("ERC20App", function () {
 
       event.args.sender.should.be.equal(userOne);
       event.args.recipient.should.be.equal(POLKADOT_ADDRESS);
+      BigNumber(event.args.paraId).should.be.bignumber.equal(0);
+      BigNumber(event.args.fee).should.be.bignumber.equal(0);
       BigNumber(event.args.amount).should.be.bignumber.equal(amount);
 
       const afterVaultBalance = BigNumber(await this.app.balances(this.token.address));
@@ -105,7 +108,7 @@ describe("ERC20App", function () {
       await approveFunds(this.token, this.app, userOne, amount * 2)
       .should.be.fulfilled;
 
-      let mintOnlyTokenTransaction = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic)
+      let mintOnlyTokenTransaction = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 0, 0)
         .should.be.fulfilled;
 
       const pastEvents = await MyContract.getPastEvents({fromBlock: 0})
@@ -126,7 +129,36 @@ describe("ERC20App", function () {
       // Confirm message event emitted only once for 1.mint call.
       messageEventCountforminttx.should.be.equal(1)
     });
-  })
+
+    it("should lock funds to destination parachain", async function () {
+      amount = 100;
+      const beforeVaultBalance = BigNumber(await this.app.balances(this.token.address));
+      const beforeUserBalance = BigNumber(await this.token.balanceOf(userOne));
+
+      await approveFunds(this.token, this.app, userOne, amount * 2)
+        .should.be.fulfilled;
+
+      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, amount, ChannelId.Basic, 1001, 4_000_000)
+        .should.be.fulfilled;
+
+      // Confirm app event emitted with expected values
+      const event = tx.logs.find(
+        e => e.event === "Locked"
+      );
+
+      event.args.sender.should.be.equal(userOne);
+      event.args.recipient.should.be.equal(POLKADOT_ADDRESS);
+      BigNumber(event.args.paraId).should.be.bignumber.equal(1001);
+      BigNumber(event.args.fee).should.be.bignumber.equal(4_000_000);
+      BigNumber(event.args.amount).should.be.bignumber.equal(amount);
+
+      const afterVaultBalance = BigNumber(await this.app.balances(this.token.address));
+      const afterUserBalance = BigNumber(await this.token.balanceOf(userOne));
+
+      afterVaultBalance.should.be.bignumber.equal(beforeVaultBalance.plus(100));
+      afterUserBalance.should.be.bignumber.equal(beforeUserBalance.minus(100));
+    });
+  });
 
   describe("withdrawals", function () {
 
@@ -145,7 +177,7 @@ describe("ERC20App", function () {
       const lockupAmount = 200;
       await approveFunds(this.token, this.app, userOne, lockupAmount * 2)
         .should.be.fulfilled;
-      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Basic)
+      let tx = await lockupFunds(this.app, this.token, userOne, POLKADOT_ADDRESS, lockupAmount, ChannelId.Basic, 0, 0)
         .should.be.fulfilled;
 
       // recipient on the ethereum side

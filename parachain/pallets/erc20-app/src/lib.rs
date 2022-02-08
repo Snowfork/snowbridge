@@ -29,20 +29,26 @@ mod tests;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
-	traits::tokens::fungibles::{Create, Mutate},
-	traits::EnsureOrigin,
+	log,
+	traits::{
+		tokens::fungibles::{Create, Mutate},
+		EnsureOrigin,
+	},
 	transactional, PalletId,
 };
 use frame_system::ensure_signed;
-use sp_core::{H160};
+use sp_core::H160;
 use sp_runtime::{
 	traits::{AccountIdConversion, StaticLookup},
 	TokenError,
 };
 use sp_std::prelude::*;
 
-use snowbridge_core::{assets::XcmReserveTransfer, ChannelId, OutboundRouter};
 use snowbridge_asset_registry_primitives::NextAssetId;
+use snowbridge_core::{
+	assets::{RemoteParachain, XcmReserveTransfer},
+	ChannelId, OutboundRouter,
+};
 
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
@@ -165,26 +171,35 @@ pub mod pallet {
 			sender: H160,
 			recipient: <T::Lookup as StaticLookup>::Source,
 			amount: u128,
-			para_id: Option<u32>,
+			destination: Option<RemoteParachain>,
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into());
+				return Err(DispatchError::BadOrigin.into())
 			}
 
 			let asset_id =
 				Self::asset_id(token).ok_or(DispatchError::Token(TokenError::UnknownAsset))?;
 
 			let recipient = T::Lookup::lookup(recipient)?;
-
 			T::Assets::mint_into(asset_id, &recipient, amount)?;
+			Self::deposit_event(Event::Minted(token, sender, recipient.clone(), amount));
 
-			if let Some(id) = para_id {
-				T::XcmReserveTransfer::reserve_transfer(origin, asset_id, id, &recipient, amount)?;
+			if let Some(destination) = destination {
+				let result = T::XcmReserveTransfer::reserve_transfer(
+					asset_id,
+					&recipient,
+					amount,
+					destination,
+				);
+				if let Err(err) = result {
+					log::error!(
+						"Failed to execute xcm transfer to parachain {} - {:?}.",
+						destination.para_id,
+						err
+					);
+				}
 			}
-
-			Self::deposit_event(Event::Minted(token, sender, recipient, amount));
-
 			Ok(())
 		}
 
@@ -193,7 +208,7 @@ pub mod pallet {
 		pub fn create(origin: OriginFor<T>, token: H160) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into());
+				return Err(DispatchError::BadOrigin.into())
 			}
 
 			let asset_id = T::NextAssetId::next()?;
