@@ -13,6 +13,7 @@ const polkadotSenderSS58 = polkadotRecipientSS58;
 const treasuryAddressSS58 = "5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS";
 const ethEndpoint = 'ws://localhost:8546';
 const parachainEndpoint = 'ws://localhost:11144';
+const testParachainEndpoint = 'ws://localhost:13144';
 const testNetworkID = '15';
 
 const TestTokenAddress = TestToken.address;
@@ -25,8 +26,10 @@ async function bootstrap() {
   const ethClient = new EthClient(ethEndpoint, testNetworkID);
   const subClient = new SubClient(parachainEndpoint);
   await subClient.connect();
+  const testSubClient = new SubClient(testParachainEndpoint);
+  await testSubClient.connect();
   await ethClient.initialize();
-  return { ethClient, subClient };
+  return { ethClient, subClient, testSubClient };
 }
 
 module.exports = {

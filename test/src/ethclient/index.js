@@ -106,10 +106,10 @@ class EthClient {
     return BigNumber(await instance.methods.allowance(account, this.appERC20._address).call());
   }
 
-  async lockETH(from, amount, polkadotRecipient, channelId) {
+  async lockETH(from, amount, polkadotRecipient, channelId, paraId, fee) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
-    let receipt = await this.appETH.methods.lock(recipientBytes, channelId, 0).send({
+    let receipt = await this.appETH.methods.lock(recipientBytes, channelId, paraId, fee).send({
       from: from,
       gas: 500000,
       value: this.web3.utils.toBN(amount)
@@ -154,7 +154,7 @@ class EthClient {
       });
   }
 
-  async lockERC20(from, amount, polkadotRecipient, channelId) {
+  async lockERC20(from, amount, polkadotRecipient, channelId, paraId, fee) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
     return await this.appERC20.methods.lock(
@@ -162,7 +162,8 @@ class EthClient {
       recipientBytes,
       this.web3.utils.toBN(amount),
       channelId,
-      0
+      paraId,
+      fee
     ).send({
       from,
       gas: 500000,
