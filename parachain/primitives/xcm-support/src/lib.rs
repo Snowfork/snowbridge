@@ -11,7 +11,7 @@ use sp_runtime::DispatchError;
 use sp_std::{marker::PhantomData, prelude::*};
 
 use xcm::latest::prelude::*;
-use xcm_executor::traits::{WeightBounds};
+use xcm_executor::traits::WeightBounds;
 
 use snowbridge_core::assets::{RemoteParachain, XcmReserveTransfer};
 
@@ -42,6 +42,11 @@ where
 		};
 
 		let mut message = Xcm(vec![
+			SetErrorHandler(Xcm(vec![DepositAsset {
+				assets: Wild(All),
+				max_assets: 2,
+				beneficiary: origin_location.clone(),
+			}])),
 			WithdrawAsset(
 				vec![
 					MultiAsset {
