@@ -11,14 +11,13 @@ const { ChannelId } = require("../src/helpers");
 
 describe('Bridge', function () {
 
-  let ethClient, subClient;
+  let ethClient, subClient, testSubClient;
 
   before(async function () {
     const clients = await bootstrap();
     ethClient = clients.ethClient;
     subClient = clients.subClient;
     testSubClient = clients.testSubClient;
-    this.ethAssetId = subClient.api.createType('AssetId', 'ETH');
     this.testParaEthAssetId = 0;
   });
 

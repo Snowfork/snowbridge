@@ -63,15 +63,18 @@ start_polkadot_launch()
     local parachain_bin="$parachain_dir/target/release/snowbridge"
     local test_collator_bin="$parachain_dir/target/release/snowbridge-test-collator"
 
-    echo "Building parachain node"
-    cargo build --workspace \
+    echo "Building snowbridge parachain"
+    cargo build \
         --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
-        --features with-local-runtime
+        --features snowbase-native,rococo-native
+
+    echo "Building test parachain"
+    cargo build --manifest-path "$parachain_dir/Cargo.toml" --release -p snowbridge-test-node
 
     echo "Generating chain specification"
-    "$parachain_bin" build-spec --disable-default-bootnode > "$output_dir/spec.json"
+    "$parachain_bin" build-spec --chain snowbase --disable-default-bootnode > "$output_dir/spec.json"
 
     echo "Updating chain specification"
     curl http://localhost:8545 \

@@ -10,16 +10,12 @@ const { ChannelId, sleep } = require("../src/helpers");
 
 describe('Bridge', function () {
 
-  let ethClient, subClient;
+  let ethClient, subClient, testSubClient;
   before(async function () {
     const clients = await bootstrap();
     ethClient = clients.ethClient;
     subClient = clients.subClient;
     testSubClient = clients.testSubClient;
-    this.erc20AssetId = subClient.api.createType('AssetId',
-      { Token: TestTokenAddress }
-    );
-
     await ethClient.mintERC20("10000", ethClient.accounts[1], ethClient.accounts[0]);
   });
 
