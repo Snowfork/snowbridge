@@ -1,0 +1,34 @@
+diff --git a/node_modules/hardhat/internal/core/providers/chainId.js b/node_modules/hardhat/internal/core/providers/chainId.js
+index bc815ec..d045a92 100644
+--- a/node_modules/hardhat/internal/core/providers/chainId.js
++++ b/node_modules/hardhat/internal/core/providers/chainId.js
+@@ -13,7 +13,7 @@ class ProviderWrapperWithChainId extends wrapper_1.ProviderWrapper {
+             }
+             catch (_a) {
+                 // If eth_chainId fails we default to net_version
+-                this._chainId = await this._getChainIdFromEthNetVersion();
++                this._chainId = await this._getChainIdFromEthNetVersion().catch(() => this._expectedChainId);
+             }
+         }
+         return this._chainId;
+@@ -43,7 +43,7 @@ class ChainIdValidatorProvider extends ProviderWrapperWithChainId {
+     async request(args) {
+         if (!this._alreadyValidated) {
+             const actualChainId = await this._getChainId();
+-            if (actualChainId !== this._expectedChainId) {
++            if (actualChainId != this._expectedChainId) {
+                 throw new errors_1.HardhatError(errors_list_1.ERRORS.NETWORK.INVALID_GLOBAL_CHAIN_ID, {
+                     configChainId: this._expectedChainId,
+                     connectionChainId: actualChainId,
+diff --git a/node_modules/hardhat/internal/core/providers/gas-providers.js b/node_modules/hardhat/internal/core/providers/gas-providers.js
+index 82bedfc..9e0f232 100644
+--- a/node_modules/hardhat/internal/core/providers/gas-providers.js
++++ b/node_modules/hardhat/internal/core/providers/gas-providers.js
+@@ -225,6 +225,7 @@ class GanacheGasMultiplierProvider extends MultipliedGasEstimationProvider {
+         return this._wrappedProvider.request(args);
+     }
+     async _isGanache() {
++        this._cachedIsGanache = false;
+         if (this._cachedIsGanache === undefined) {
+             const clientVersion = (await this._wrappedProvider.request({
+                 method: "web3_clientVersion",

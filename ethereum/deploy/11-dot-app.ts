@@ -48,6 +48,7 @@ module.exports = async ({
     },
     log: true,
     autoMine: true,
+    gasLimit: 16621562
   });
 
 };
