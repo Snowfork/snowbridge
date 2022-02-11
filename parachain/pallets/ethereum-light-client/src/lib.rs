@@ -274,9 +274,10 @@ pub mod pallet {
 		/// can happen.
 		///
 		/// Requires sudo user.
-		#[pallet::weight(T::WeightInfo::import_header())]
+		#[pallet::weight(1_000_000)]
 		#[transactional]
 		pub fn handle_long_range_fork(origin: OriginFor<T>, forked_at: H256) -> DispatchResult {
+			let _sender = ensure_root(origin)?;
 			Ok(())
 		}
 	}

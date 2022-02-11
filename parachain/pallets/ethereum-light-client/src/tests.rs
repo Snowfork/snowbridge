@@ -528,7 +528,7 @@ fn it_can_only_import_max_headers_worth_of_headers() {
 }
 
 #[test]
-fn it_fork() {
+fn it_should_be_able_to_handle_long_range_fork() {
 	new_tester::<Test>().execute_with(|| {
 		let block1 = child_of_genesis_ethereum_header();
 		let block1_hash = block1.compute_hash();
