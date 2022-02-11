@@ -265,6 +265,23 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		/// Reset's the internal state of the light client.
+		///
+		/// `forked_at` - The hash of the header where the fork originated. The common ancestor.
+		///
+		/// This is only meant to be used in staging environments where long range forks
+		/// can happen.
+		///
+		/// Requires sudo user.
+		#[pallet::weight(T::WeightInfo::import_header())]
+		#[transactional]
+		pub fn handle_long_range_fork(
+			origin: OriginFor<T>,
+			forked_at: H256,
+		) -> DispatchResult {
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
