@@ -78,7 +78,7 @@ fn it_tracks_only_one_finalized_ethereum_fork() {
 	new_tester::<Test>().execute_with(|| {
 		let block1 = child_of_genesis_ethereum_header();
 		let block1_hash = block1.compute_hash();
-		let block2 = child_of_header(&block1,None);
+		let block2 = child_of_header(&block1, None);
 		let block2_hash = block2.compute_hash();
 		let block3 = child_of_header(&block2, None);
 		let block3_hash = block3.compute_hash();

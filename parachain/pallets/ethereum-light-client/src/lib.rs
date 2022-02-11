@@ -276,10 +276,7 @@ pub mod pallet {
 		/// Requires sudo user.
 		#[pallet::weight(T::WeightInfo::import_header())]
 		#[transactional]
-		pub fn handle_long_range_fork(
-			origin: OriginFor<T>,
-			forked_at: H256,
-		) -> DispatchResult {
+		pub fn handle_long_range_fork(origin: OriginFor<T>, forked_at: H256) -> DispatchResult {
 			Ok(())
 		}
 	}
