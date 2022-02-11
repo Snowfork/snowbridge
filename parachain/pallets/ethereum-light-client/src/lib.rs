@@ -277,7 +277,34 @@ pub mod pallet {
 		#[pallet::weight(1_000_000)]
 		#[transactional]
 		pub fn handle_long_range_fork(origin: OriginFor<T>, forked_at: H256) -> DispatchResult {
-			let _sender = ensure_root(origin)?;
+			ensure_root(origin)?;
+
+			let stored_header = <Headers<T>>::get(forked_at).ok_or(Error::<T>::MissingHeader)?;
+			let header = stored_header.header;
+
+			let required_descendants = T::DescendantsUntilFinalized::get() as usize;
+			let best_block_id = EthereumHeaderId { number: header.number, hash: forked_at };
+
+			// Return error if the fork occurs after the current finalized block
+			let current_finalized = <FinalizedBlock<T>>::get();
+			if best_block_id.number >= current_finalized.number {
+				return Err(Error::<T>::Unknown.into())
+			}
+
+			// Return error if the fork does not have the required number of decendants
+			let (new_finalized_hash, _) =
+				Self::find_finalized_decendant(&best_block_id, required_descendants)
+					.ok_or(Error::<T>::Unknown)?;
+
+			let finalized_stored_header =
+				<Headers<T>>::get(new_finalized_hash).ok_or(Error::<T>::MissingHeader)?;
+			let header = finalized_stored_header.header;
+			let finalized_block_id =
+				EthereumHeaderId { number: header.number, hash: new_finalized_hash };
+
+			<FinalizedBlock<T>>::put(finalized_block_id);
+			<BestBlock<T>>::put((best_block_id, header.difficulty));
+
 			Ok(())
 		}
 	}
@@ -430,6 +457,19 @@ pub mod pallet {
 			Ok(())
 		}
 
+		fn find_finalized_decendant(
+			best_block_id: &EthereumHeaderId,
+			required_descendants: usize,
+		) -> Option<(H256, EthereumHeader)> {
+			ancestry::<T>(best_block_id.hash).enumerate().find_map(|(i, pair)| {
+				if i < required_descendants {
+					None
+				} else {
+					Some(pair)
+				}
+			})
+		}
+
 		// Return the latest block that can be finalized based on the given
 		// highest difficulty chain and previously finalized block.
 		fn get_best_finalized_header(
@@ -437,22 +477,18 @@ pub mod pallet {
 			finalized_block_id: &EthereumHeaderId,
 		) -> Result<EthereumHeaderId, DispatchError> {
 			let required_descendants = T::DescendantsUntilFinalized::get() as usize;
-			let maybe_newly_finalized_ancestor = ancestry::<T>(best_block_id.hash)
-				.enumerate()
-				.find_map(|(i, pair)| if i < required_descendants { None } else { Some(pair) });
-
-			match maybe_newly_finalized_ancestor {
+			match Self::find_finalized_decendant(&best_block_id, required_descendants) {
 				Some((hash, header)) => {
 					// The header is newly finalized if it is younger than the current
 					// finalized block
 					if header.number > finalized_block_id.number {
-						return Ok(EthereumHeaderId { hash, number: header.number });
+						return Ok(EthereumHeaderId { hash, number: header.number })
 					}
 					if hash != finalized_block_id.hash {
-						return Err(Error::<T>::Unknown.into());
+						return Err(Error::<T>::Unknown.into())
 					}
 					Ok(finalized_block_id.clone())
-				}
+				},
 				None => Ok(finalized_block_id.clone()),
 			}
 		}
@@ -629,15 +665,9 @@ pub mod pallet {
 
 			<BestBlock<T>>::put((best_block_id, best_block_difficulty));
 
-			let maybe_finalized_ancestor =
-				ancestry::<T>(best_block_id.hash).enumerate().find_map(|(i, pair)| {
-					if i < descendants_until_final as usize {
-						None
-					} else {
-						Some(pair)
-					}
-				});
-			if let Some((hash, header)) = maybe_finalized_ancestor {
+			if let Some((hash, header)) =
+				Self::find_finalized_decendant(&best_block_id, descendants_until_final.into())
+			{
 				<FinalizedBlock<T>>::put(EthereumHeaderId { hash, number: header.number });
 				let mut next_hash = Ok(hash);
 				loop {
