@@ -43,13 +43,13 @@ const MIN_SYNC_COMMITTEE_PARTICIPANTS: u8 = 1;
 const UPDATE_TIMEOUT: u64 = 8; // TODO update
 
 /// Beacon block header as it is stored in the runtime storage.
-#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct BeaconBlockHeader {
     // TODO: Add
 }
 
 /// Sync committee as it is stored in the runtime storage.
-#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncCommittee {
     // TODO: Add
 }
@@ -78,6 +78,8 @@ pub mod pallet {
 		/// Next sync committee index - TODO not a useful comment, will elaborate as understanding grows
 		#[pallet::constant]
 		type NextSyncCommitteeIndex: Get<u16>;
+        /// Weight information for extrinsics in this pallet
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -105,8 +107,6 @@ pub mod pallet {
     pub(super) type NextSyncCommittee<T: Config> = StorageValue<_, SyncCommittee, ValueQuery>;
 
     /// Best available header to switch finalized head to if we see nothing else
-    /// Not sure of the type header, doc says Optional[LightClientUpdate] where LightClientUpdate is class LightClientUpdate(Container)
-    /// Not sure what a container is
     #[pallet::storage]
     pub(super) type BestValidUpdate<T: Config> = StorageValue<_, BeaconBlockHeader, ValueQuery>;
 
@@ -126,13 +126,13 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
-		pub initial_header: BeaconBlockHeader,
+		// genesis header goes header, maybe?
 	}
 
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self { initial_header: Default::default(), initial_difficulty: Default::default() }
+			Self {}
 		}
 	}
 
@@ -150,7 +150,6 @@ pub mod pallet {
 		pub fn import_header(
 			origin: OriginFor<T>,
 			header: EthereumHeader,
-			proof: Vec<EthashProofData>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
