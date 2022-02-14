@@ -9783,6 +9783,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowbridge-ethereum2-light-client"
+version = "0.0.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "snowbridge-core",
+ "snowbridge-ethereum",
+ "snowbridge-testutils",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "snowbridge-incentivized-channel"
 version = "0.1.1"
 dependencies = [
