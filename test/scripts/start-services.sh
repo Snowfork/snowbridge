@@ -5,6 +5,7 @@ root_dir="$(realpath ..)"
 parachain_dir="$root_dir/parachain"
 ethereum_dir="$root_dir/ethereum"
 relay_dir="$root_dir/relayer"
+test_dir="$root_dir/test"
 
 output_dir=/tmp/snowbridge
 
@@ -52,6 +53,15 @@ deploy_contracts()
     )
 
     echo "Exported contract artifacts: $output_dir/contracts.json"
+}
+
+contract_addresses()
+{
+    echo "Store Contract Addresses inside JSON file"
+    (
+        cd "$test_dir/scripts/helpers"
+        node contractAddresses.js
+    )
 }
 
 start_polkadot_launch()
@@ -233,6 +243,7 @@ mkdir "$output_dir"
 
 start_geth
 deploy_contracts
+contract_addresses
 start_polkadot_launch
 
 echo "Waiting for consensus between polkadot and parachain"
