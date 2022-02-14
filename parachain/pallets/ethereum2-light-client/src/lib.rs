@@ -145,7 +145,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::import_header())]
+		#[pallet::weight(1_000_000)]
 		#[transactional]
 		pub fn import_header(
 			origin: OriginFor<T>,
