@@ -25,6 +25,7 @@ use frame_system::ensure_signed;
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
+use sp_core::H256;
 
 pub use snowbridge_ethereum::{
 	Header as EthereumHeader,
@@ -46,6 +47,34 @@ pub struct BeaconBlockHeader {
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncCommittee {
     // TODO: Add
+}
+
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct SyncAggregate {
+
+}
+
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct Version {
+
+}
+
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct LightClientUpdate {
+	/// The beacon block header that is attested to by the sync committee
+    pub attested_header: BeaconBlockHeader,
+    ///  Next sync committee corresponding to the active header
+    pub next_sync_committee: SyncCommittee,
+	/// Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_INDEX)]
+    pub next_sync_committee_branch: Vec<H256>,
+    /// The finalized beacon block header attested to by Merkle branch
+    pub finalized_header: BeaconBlockHeader,
+	/// Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
+    pub finality_branch: Vec<H256>,
+    ///  Sync committee aggregate signature
+	pub  sync_aggregate: SyncAggregate,
+    ///  Fork version for the aggregate signature
+    pubfork_version: Version,
 }
 
 pub use pallet::*;
@@ -141,14 +170,14 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_header(
 			origin: OriginFor<T>,
-			header: EthereumHeader,
+			update: LightClientUpdate,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
 			log::trace!(
 				target: "ethereum2-light-client",
-				"Received header {}. Starting validation",
-				header.number,
+				"Received update {:?}. Starting validation",
+				update
 			);
 
 			Ok(())
