@@ -61,8 +61,6 @@ parameter_types! {
 
 impl ethereum2_light_client::Config for Test {
 	type Event = Event;
-	type FinalizedRootIndex = FinalizedRootIndex;
-	type NextSyncCommitteeIndex = NextSyncCommitteeIndex;
 }
 
 // Build genesis storage according to the mock runtime.
