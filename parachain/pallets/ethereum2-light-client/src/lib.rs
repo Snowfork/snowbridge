@@ -66,7 +66,7 @@ pub struct SyncCommittee {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncAggregate {
-	pub sync_committee_bits: Vec<H256> // TODO this isn't right
+	pub sync_committee_bits: u64, // TODO is this right even
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -124,7 +124,7 @@ pub mod pallet {
 		AncientHeader,
 		SkippedSyncCommitteePeriod,
 		Unknown,
-		InsufficientSyncCommitteeParticipants
+		InsufficientSyncCommitteeParticipants,
 	}
 
 	#[pallet::hooks]
@@ -192,11 +192,53 @@ pub mod pallet {
 				update
 			);
 
+			Self::process_light_client_update(update, 1, Root {});
+
 			Ok(())
 		}
 	}
 
 	impl<T: Config> Pallet<T> {
+		fn process_light_client_update(
+			update: LightClientUpdate,
+			current_slot: u64,
+			genesis_validators_root: Root,
+		) {
+			let sync_committee_bits = update.clone().sync_aggregate.sync_committee_bits;
+
+			// Update the best update in case we have to force-update to it if the timeout elapses
+			if <BestValidUpdate<T>>::get().is_none() || true
+			// TODO figure out this bit, no pun intended :)
+			//sum(sync_committee_bits) > sum(store.best_valid_update.sync_aggregate.sync_committee_bits)
+			{
+				<BestValidUpdate<T>>::put(Some(update.clone()));
+			}
+
+			// Track the maximum number of active participants in the committee signatures
+			<CurrentMaxActiveParticipants<T>>::put(cmp::max(
+				<CurrentMaxActiveParticipants<T>>::get(),
+				sync_committee_bits,
+			));
+
+			// Update the optimistic header
+			if sync_committee_bits
+				> Self::get_safety_threshold(
+					<PreviousMaxActiveParticipants<T>>::get(),
+					<CurrentMaxActiveParticipants<T>>::get(),
+				) && update.attested_header.slot > <OptimisticHeader<T>>::get().slot
+			{
+				<OptimisticHeader<T>>::put(update.clone().attested_header);
+			}
+
+			// Update finalized header
+			// TODO figure out sync committee bits if (sync_committee_bits * 3 >= len(sync_committee_bits) * 2) && update.finalized_header.is_none() {
+			if (sync_committee_bits * 3 >= sync_committee_bits * 2) && update.finalized_header.is_none() {
+				// Normal update through 2/3 threshold
+				Self::apply_light_client_update(update);
+				<BestValidUpdate<T>>::kill();
+			}
+		}
+
 		fn validate_light_client_update(
 			update: LightClientUpdate,
 			current_slot: u64,
@@ -253,13 +295,24 @@ pub mod pallet {
 				//	root=active_header.state_root,
 				ensure!(Self::is_valid_merkle_branch(), Error::<T>::Unknown);
 			}
-        
 			let sync_aggregate = update.sync_aggregate;
 
-			// TODO .len isn't right
+			// TODO Not sure I'm understanding the sync commitee bits
 			// assert sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
-			ensure!(sync_aggregate.sync_committee_bits.len() >= MIN_SYNC_COMMITTEE_PARTICIPANTS as usize, Error::<T>::InsufficientSyncCommitteeParticipants);
-		
+			ensure!(
+				sync_aggregate.sync_committee_bits >= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
+				Error::<T>::InsufficientSyncCommitteeParticipants
+			);
+			// TODO Convert to Rust
+			// # Verify sync committee aggregate signature
+			// participant_pubkeys = [
+			//	pubkey for (bit, pubkey) in zip(sync_aggregate.sync_committee_bits, sync_committee.pubkeys)
+			//	if bit
+			// ]
+			// domain = compute_domain(DOMAIN_SYNC_COMMITTEE, update.fork_version, genesis_validators_root)
+			// signing_root = compute_signing_root(update.attested_header, domain)
+			// assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)
+
 			Ok(())
 		}
 
