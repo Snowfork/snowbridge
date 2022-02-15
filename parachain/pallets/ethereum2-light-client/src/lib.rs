@@ -74,7 +74,7 @@ pub struct LightClientUpdate {
     ///  Sync committee aggregate signature
 	pub  sync_aggregate: SyncAggregate,
     ///  Fork version for the aggregate signature
-    pubfork_version: Version,
+    pub pubfork_version: Version,
 }
 
 pub use pallet::*;
