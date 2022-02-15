@@ -201,9 +201,9 @@ pub mod pallet {
 			update: LightClientUpdate,
 			current_slot: u64,
 			genesis_validators_root: Root,
-		) {
+		) -> DispatchResult {
 			// Verify update slot is larger than slot of current best finalized header
-			let active_header = Self::get_active_header(update);
+			let active_header = Self::get_active_header(update.clone());
 			let finalized_header = <FinalizedHeader<T>>::get();
 			ensure!(
 				(current_slot >= active_header.slot)
@@ -259,6 +259,8 @@ pub mod pallet {
 			// TODO .len isn't right
 			// assert sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
 			ensure!(sync_aggregate.sync_committee_bits.len() >= MIN_SYNC_COMMITTEE_PARTICIPANTS as usize, Error::<T>::InsufficientSyncCommitteeParticipants);
+		
+			Ok(())
 		}
 
 		fn process_slot_for_light_client_store(current_slot: u64) {
@@ -281,7 +283,7 @@ pub mod pallet {
 		}
 
 		fn apply_light_client_update(update: LightClientUpdate) {
-			let active_header = Self::get_active_header(update);
+			let active_header = Self::get_active_header(update.clone());
 
 			let finalized_header = <FinalizedHeader<T>>::get();
 
