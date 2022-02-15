@@ -290,15 +290,13 @@ pub mod pallet {
 				return Err("Cannot reset to fork after the current finalized block.".into())
 			}
 
-			let (new_finalized_hash, _) =
+			let (new_finalized_hash, finalized_header) =
 				Self::find_finalized_ancestor(forked_at, required_descendants).ok_or(
 					"Cannot reset to fork if it does not have the required number of decendants.",
 				)?;
 
-			let finalized_stored_header =
-				<Headers<T>>::get(new_finalized_hash).ok_or(Error::<T>::MissingHeader)?;
 			let finalized_block_id = EthereumHeaderId {
-				number: finalized_stored_header.header.number,
+				number: finalized_header.number,
 				hash: new_finalized_hash,
 			};
 
