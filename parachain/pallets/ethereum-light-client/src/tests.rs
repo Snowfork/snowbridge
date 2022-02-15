@@ -536,7 +536,7 @@ fn it_should_reject_non_root_origin_calling_handle_long_range_fork() {
 		let ferdie: AccountId = Keyring::Ferdie.into();
 
 		assert_err!(
-			Verifier::handle_long_range_fork(Origin::signed(ferdie.clone()), block1_hash),
+			Verifier::force_reset_to_fork(Origin::signed(ferdie.clone()), block1_hash),
 			DispatchError::BadOrigin
 		);
 	});
@@ -644,7 +644,7 @@ fn it_should_be_able_to_handle_long_range_fork() {
 			Error::<Test>::AncientHeader
 		);
 
-		assert_ok!(Verifier::handle_long_range_fork(Origin::root(), block3_hash));
+		assert_ok!(Verifier::force_reset_to_fork(Origin::root(), block3_hash));
 
 		// Once best block is set the relayer will import the fork
 		for header in vec![fork_block4, fork_block5, fork_block6, fork_block7].into_iter() {
@@ -704,8 +704,10 @@ fn it_should_not_allow_handle_long_range_fork_for_blocks_that_cannot_be_finalize
 		assert_eq!(BestBlock::<Test>::get().0.hash, block4_hash);
 
 		assert_err!(
-			Verifier::handle_long_range_fork(Origin::root(), block1_hash),
-			Error::<Test>::Unknown
+			Verifier::force_reset_to_fork(Origin::root(), block1_hash),
+			DispatchError::Other(
+				"Cannot reset to fork if it does not have the required number of decendants."
+			)
 		);
 
 		assert_eq!(<FinalizedBlock<Test>>::get().hash, block2_hash);
@@ -715,7 +717,6 @@ fn it_should_not_allow_handle_long_range_fork_for_blocks_that_cannot_be_finalize
 		assert_eq!(BestBlock::<Test>::get().0.hash, block4_hash);
 	});
 }
-
 
 #[test]
 fn it_should_not_allow_handle_long_range_fork_for_blocks_at_or_after_current_finalized() {
@@ -758,8 +759,8 @@ fn it_should_not_allow_handle_long_range_fork_for_blocks_at_or_after_current_fin
 		assert_eq!(BestBlock::<Test>::get().0.hash, block4_hash);
 
 		assert_err!(
-			Verifier::handle_long_range_fork(Origin::root(), block3_hash),
-			Error::<Test>::Unknown
+			Verifier::force_reset_to_fork(Origin::root(), block3_hash),
+			DispatchError::Other("Cannot reset to fork after the current finalized block.")
 		);
 
 		assert_eq!(<FinalizedBlock<Test>>::get().hash, block2_hash);

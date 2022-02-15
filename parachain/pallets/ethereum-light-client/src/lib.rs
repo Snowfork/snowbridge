@@ -266,7 +266,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Reset's the internal state of the light client.
+		/// Reset's the internal state of the light client to a previously imported header.
 		///
 		/// `forked_at` - The hash of the header where the fork originated. The common ancestor.
 		///
@@ -276,34 +276,34 @@ pub mod pallet {
 		/// Requires sudo user.
 		#[pallet::weight(1_000_000)]
 		#[transactional]
-		pub fn handle_long_range_fork(origin: OriginFor<T>, forked_at: H256) -> DispatchResult {
+		pub fn force_reset_to_fork(origin: OriginFor<T>, forked_at: H256) -> DispatchResult {
 			ensure_root(origin)?;
 
 			let stored_header = <Headers<T>>::get(forked_at).ok_or(Error::<T>::MissingHeader)?;
-			let header = stored_header.header;
 
 			let required_descendants = T::DescendantsUntilFinalized::get() as usize;
-			let best_block_id = EthereumHeaderId { number: header.number, hash: forked_at };
+			let best_block_id =
+				EthereumHeaderId { number: stored_header.header.number, hash: forked_at };
 
-			// Return error if the fork occurs after the current finalized block
 			let current_finalized = <FinalizedBlock<T>>::get();
 			if best_block_id.number >= current_finalized.number {
-				return Err(Error::<T>::Unknown.into())
+				return Err("Cannot reset to fork after the current finalized block.".into())
 			}
 
-			// Return error if the fork does not have the required number of decendants
 			let (new_finalized_hash, _) =
-				Self::find_finalized_decendant(&best_block_id, required_descendants)
-					.ok_or(Error::<T>::Unknown)?;
+				Self::find_finalized_ancestor(forked_at, required_descendants).ok_or(
+					"Cannot reset to fork if it does not have the required number of decendants.",
+				)?;
 
 			let finalized_stored_header =
 				<Headers<T>>::get(new_finalized_hash).ok_or(Error::<T>::MissingHeader)?;
-			let header = finalized_stored_header.header;
-			let finalized_block_id =
-				EthereumHeaderId { number: header.number, hash: new_finalized_hash };
+			let finalized_block_id = EthereumHeaderId {
+				number: finalized_stored_header.header.number,
+				hash: new_finalized_hash,
+			};
 
 			<FinalizedBlock<T>>::put(finalized_block_id);
-			<BestBlock<T>>::put((best_block_id, header.difficulty));
+			<BestBlock<T>>::put((best_block_id, stored_header.total_difficulty));
 
 			Ok(())
 		}
@@ -457,11 +457,11 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn find_finalized_decendant(
-			best_block_id: &EthereumHeaderId,
+		fn find_finalized_ancestor(
+			block_hash: H256,
 			required_descendants: usize,
 		) -> Option<(H256, EthereumHeader)> {
-			ancestry::<T>(best_block_id.hash).enumerate().find_map(|(i, pair)| {
+			ancestry::<T>(block_hash).enumerate().find_map(|(i, pair)| {
 				if i < required_descendants {
 					None
 				} else {
@@ -477,7 +477,7 @@ pub mod pallet {
 			finalized_block_id: &EthereumHeaderId,
 		) -> Result<EthereumHeaderId, DispatchError> {
 			let required_descendants = T::DescendantsUntilFinalized::get() as usize;
-			match Self::find_finalized_decendant(&best_block_id, required_descendants) {
+			match Self::find_finalized_ancestor(best_block_id.hash, required_descendants) {
 				Some((hash, header)) => {
 					// The header is newly finalized if it is younger than the current
 					// finalized block
@@ -666,7 +666,7 @@ pub mod pallet {
 			<BestBlock<T>>::put((best_block_id, best_block_difficulty));
 
 			if let Some((hash, header)) =
-				Self::find_finalized_decendant(&best_block_id, descendants_until_final.into())
+				Self::find_finalized_ancestor(best_block_id.hash, descendants_until_final.into())
 			{
 				<FinalizedBlock<T>>::put(EthereumHeaderId { hash, number: header.number });
 				let mut next_hash = Ok(hash);
