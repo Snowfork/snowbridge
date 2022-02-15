@@ -1,12 +1,8 @@
-use crate::mock::{new_tester};
-
-use frame_support::assert_ok;
-use sp_runtime::DispatchError;
-use crate::mock::mock_verifier::{Origin, Test, Verifier};
+use crate::mock::*;
 
 #[test]
-fn it_checks_ok() {
-	new_tester::<Test>().execute_with(|| {
-		assert_ok!(Ok);
+fn it_works() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(true, true);
 	});
 }

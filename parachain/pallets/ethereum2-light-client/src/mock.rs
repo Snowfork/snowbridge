@@ -1,50 +1,69 @@
-use frame_support::{
-	parameter_types,
-	traits::{Everything, GenesisBuild},
+use crate as ethereum2_light_client;
+use sp_core::H256;
+use frame_support::parameter_types;
+use sp_runtime::{
+	traits::{BlakeTwo256, IdentityLookup}, testing::Header,
 };
 use frame_system as system;
 
-use crate as verifier;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-pub mod mock_verifier {
-
-	use super::*;
-
-	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-	type Block = frame_system::mocking::MockBlock<Test>;
-
-	frame_support::construct_runtime!(
-		pub enum Test where
-			Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
-		{
-			System: frame_system::{Pallet, Call, Storage, Event<T>},
-			Verifier: verifier::{Pallet, Call, Config, Storage, Event<T>},
-		}
-	);
-
-	impl frame_system::Config for Test {
-		type Origin = Origin;
-		type AccountId = AccountId;
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Ethereum2LightClient: crate::{Pallet, Call, Storage, Event<T>},
 	}
+);
 
-	impl verifier::Config for Test {}
+parameter_types! {
+	pub const BlockHashCount: u64 = 250;
+	pub const SS58Prefix: u8 = 42;
 }
 
-pub fn new_tester<T: crate::Config>() -> sp_io::TestExternalities {
-	new_tester_with_config::<T>(crate::GenesisConfig {})
+impl system::Config for Test {
+	type BaseCallFilter = frame_support::traits::Everything;
+	type OnSetCode = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
+	type Origin = Origin;
+	type Call = Call;
+	type Index = u64;
+	type BlockNumber = u64;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type Header = Header;
+	type Event = Event;
+	type BlockHashCount = BlockHashCount;
+	type Version = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = ();
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
+	type SS58Prefix = SS58Prefix;
 }
 
-pub fn new_tester_with_config<T: crate::Config>(
-	config: crate::GenesisConfig,
-) -> sp_io::TestExternalities {
-	let mut storage = system::GenesisConfig::default().build_storage::<T>().unwrap();
+parameter_types! {
+    pub const FinalizedRootIndex: u16 = 1;
+	pub const NextSyncCommitteeIndex: u16 = 1;
+}
 
-	GenesisBuild::<T>::assimilate_storage(&config, &mut storage).unwrap();
+impl ethereum2_light_client::Config for Test {
+	type Event = Event;
+	type FinalizedRootIndex = FinalizedRootIndex;
+	type NextSyncCommitteeIndex = NextSyncCommitteeIndex;
+}
 
-	let ext: sp_io::TestExternalities = storage.into();
-	ext
+// Build genesis storage according to the mock runtime.
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }

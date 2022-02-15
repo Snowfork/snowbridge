@@ -5,8 +5,6 @@
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod weights;
-
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
@@ -18,7 +16,7 @@ mod tests;
 
 use codec::{Decode, Encode};
 use frame_support::{
-	dispatch::{DispatchError, DispatchResult},
+	dispatch::DispatchResult,
 	log,
 	traits::Get,
 	transactional,
@@ -26,15 +24,11 @@ use frame_support::{
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
-use sp_std::{convert::TryInto, prelude::*};
+use sp_std::prelude::*;
 
-use snowbridge_core::{Message, Proof, Verifier};
-use snowbridge_ethereum::{Log, Receipt, H256, U256,};
 pub use snowbridge_ethereum::{
 	Header as EthereumHeader,
 };
-
-pub use weights::WeightInfo;
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 /// The minimum number of validators
@@ -61,7 +55,7 @@ pub mod pallet {
 
 	use super::*;
 
-	use frame_support::{pallet_prelude::*, BoundedVec};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
@@ -78,8 +72,6 @@ pub mod pallet {
 		/// Next sync committee index - TODO not a useful comment, will elaborate as understanding grows
 		#[pallet::constant]
 		type NextSyncCommitteeIndex: Get<u16>;
-        /// Weight information for extrinsics in this pallet
-		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
