@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 import { ethers } from "hardhat";
 import {HardhatRuntimeEnvironment} from "hardhat/types";
 
@@ -55,5 +53,5 @@ module.exports = async ({
     log: true,
   });
 
-  
+
 };
