@@ -1,5 +1,5 @@
+use super::*;
 use crate as ethereum2_light_client;
-use crate::{LightClientUpdate, BeaconBlockHeader};
 use sp_core::H256;
 use frame_support::parameter_types;
 use sp_runtime::{
@@ -18,8 +18,8 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Ethereum2LightClient: crate::{Pallet, Call, Storage, Event<T>},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Ethereum2LightClient: ethereum2_light_client::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
 
@@ -28,7 +28,7 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 }
 
-impl system::Config for Test {
+impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type OnSetCode = ();
 	type BlockWeights = ();
@@ -55,22 +55,24 @@ impl system::Config for Test {
 }
 
 parameter_types! {
-    pub const FinalizedRootIndex: u16 = 1;
+	pub const FinalizedRootIndex: u16 = 1;
 	pub const NextSyncCommitteeIndex: u16 = 1;
 }
 
 impl ethereum2_light_client::Config for Test {
 	type Event = Event;
+	type FinalizedRootIndex = FinalizedRootIndex;
+	type NextSyncCommitteeIndex = NextSyncCommitteeIndex;
 }
 
 // Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
+pub fn new_tester() -> sp_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
 
-pub fn get_update() -> LightClientUpdate {
-	let mut beaconBlock: BeaconBlockHeader = Default::default();
-	let mut update: LightClientUpdate = Default::default();
+pub fn get_update() -> ethereum2_light_client::LightClientUpdate {
+	let mut beaconBlock: ethereum2_light_client::BeaconBlockHeader = Default::default();
+	let mut update: ethereum2_light_client::LightClientUpdate = Default::default();
 	update.attested_header = beaconBlock;
 	update
 }

@@ -5,9 +5,6 @@
 #![allow(unused_variables)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
-
 #[cfg(test)]
 mod mock;
 
@@ -27,30 +24,40 @@ pub use snowbridge_ethereum::Header as EthereumHeader;
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 /// The minimum number of validators that needs to sign update
-const MIN_SYNC_COMMITTEE_PARTICIPANTS: u8 = 1;
+const MIN_SYNC_COMMITTEE_PARTICIPANTS: u64 = 1;
 
-const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u32 = 512;
+const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 512;
 
-const SECONDS_PER_SLOT: u32 = 12;
+const SECONDS_PER_SLOT: u64 = 12;
 
-const SLOTS_PER_EPOCH: u32 = 32;
+const SLOTS_PER_EPOCH: u64 = 32;
 
-const SYNC_COMMITTEE_SIZE: u32 = 256;
+const SYNC_COMMITTEE_SIZE: u64 = 512;
 
-const UPDATE_TIMEOUT: u32 = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+const UPDATE_TIMEOUT: u64 = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+
+type Epoch = u64;
+type Slot = u64;
+
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct ValidatorIndex {
+	// TODO: Add
+}
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 // https://yeeth.github.io/BeaconChain.swift/Structs/BeaconBlockHeader.html#/s:11BeaconChain0A11BlockHeaderV9signature10Foundation4DataVvp
+// https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#beaconblock
 pub struct BeaconBlockHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
-	pub slot: u64,
+	pub slot: Slot,
 	// The block root of the parent block, forming a block chain.
 	pub parent_root: H256,
 	// The hash root of the post state of running the state transition through this block.
 	pub state_root: H256,
 	// BLS Signature of the block by the block proposer, TODO type isn't right yet
 	pub signature: String,
+	proposer_index: ValidatorIndex,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -90,7 +97,7 @@ pub struct LightClientUpdate {
 	pub pubfork_version: Version,
 }
 
-pub use frame_system::pallet::*;
+pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -362,12 +369,12 @@ pub mod pallet {
 			}
 		}
 
-		fn compute_epoch_at_slot(slot: u64) -> u64 {
-			1 // TODO
+		fn compute_epoch_at_slot(slot: Slot) -> Epoch {
+			slot / SLOTS_PER_EPOCH
 		}
 
 		fn compute_sync_committee_period(epoch_at_slot: u64) -> u64 {
-			1 // TODO
+			epoch_at_slot / SYNC_COMMITTEE_SIZE // TODO not sure this is right
 		}
 
 		fn is_valid_merkle_branch() -> bool {
