@@ -774,7 +774,7 @@ fn should_fail_reset_for_blocks_at_or_after_current_finalized() {
 }
 
 #[test]
-fn it_should_not_allow_force_reset_to_fork_for_blocks_that_are_not_finalized() {
+fn should_fail_reset_for_blocks_that_are_not_finalized() {
 	new_tester::<Test>().execute_with(|| {
 		let block1 = child_of_genesis_ethereum_header();
 		let block1_hash = block1.compute_hash();
