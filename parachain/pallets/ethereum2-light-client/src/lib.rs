@@ -59,14 +59,14 @@ pub struct BeaconBlockHeader {
 	// The hash root of the post state of running the state transition through this block.
 	pub state_root: H256,
 	// BLS Signature of the block by the block proposer, TODO type isn't right yet
-	pub signature: String,
+	pub signature: Vec<u8>,
 	proposer_index: ValidatorIndex,
 }
 
 /// Sync committee as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncCommittee {
-	pub pubkeys: Vec<String>, // TODO most likely not a string
+	pub pubkeys: Vec<u8>, // TODO most likely not a string
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -326,14 +326,14 @@ pub mod pallet {
 			);
 
 			// Verify sync committee aggregate signature
-			let mut participant_pubkeys: Vec<String> = Vec::new(); // TODO String type probably not right
+			let mut participant_pubkeys: Vec<u8> = Vec::new();
 
 			for it in
 				sync_aggregate.clone().sync_committee_bits.iter().zip(sync_committee.pubkeys.iter_mut())
 			{
 				let (bit, pubkey) = it;
 				if *bit == 1 as u64 {
-					participant_pubkeys.push(pubkey.to_string());
+					participant_pubkeys.push(*pubkey);
 				}
 			}
 
@@ -436,11 +436,11 @@ pub mod pallet {
 			todo!()
 		}
 
-		fn compute_signing_root(attested_header: BeaconBlockHeader, domain: u64) -> String {
+		fn compute_signing_root(attested_header: BeaconBlockHeader, domain: u64) -> Vec<u8> {
 			todo!()
 		}
 
-		fn bls_fast_aggregate_verify(participant_pubkeys: Vec<String>, signing_root: String, sync_committee_signature: H256) -> bool {
+		fn bls_fast_aggregate_verify(participant_pubkeys: Vec<u8>, signing_root: Vec<u8>, sync_committee_signature: H256) -> bool {
 			todo!()
 		}
 	}

@@ -21,7 +21,7 @@ fn it_gets_an_update() {
 			Origin::signed(1),
 			update,
 			897,
-			hex!("fd5e397a84884641f53c496804f24b5276cbb8c5c9cfc2342246be8e3ce5ad02").into()
+			hex!("043db0d9a83813551ee2f33450d23797757d430911a9320530ad8a0eabc43efb").into()
 		), Error::<Test>::AncientHeader);
 	});
 }
