@@ -280,6 +280,9 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			let stored_header = <Headers<T>>::get(forked_at).ok_or(Error::<T>::MissingHeader)?;
+			if !stored_header.finalized {
+				return Err("Cannot reset to a header that is not finalized.".into())
+			}
 
 			let required_descendants = T::DescendantsUntilFinalized::get() as usize;
 			let best_block_id =
