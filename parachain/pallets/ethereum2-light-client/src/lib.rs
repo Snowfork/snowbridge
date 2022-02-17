@@ -36,6 +36,8 @@ const SYNC_COMMITTEE_SIZE: u64 = 512;
 
 const UPDATE_TIMEOUT: u64 = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
+const DOMAIN_SYNC_COMMITTEE: u64 = 1; // TODO figure out what this is
+
 type Epoch = u64;
 type Slot = u64;
 
@@ -68,13 +70,15 @@ pub struct Root {
 /// Sync committee as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncCommittee {
-	// TODO: Add SyncCommittee type / struct
+	pub pubkeys: Vec<String>, // TODO most likely not a string
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncAggregate {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
-	pub sync_committee_bits: Vec<u64>
+	pub sync_committee_bits: Vec<u64>,
+
+	pub sync_committee_signature: H256,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -133,6 +137,7 @@ pub mod pallet {
 		SkippedSyncCommitteePeriod,
 		Unknown,
 		InsufficientSyncCommitteeParticipants,
+		InvalidSyncCommiteeSignature,
 	}
 
 	#[pallet::hooks]
@@ -200,9 +205,7 @@ pub mod pallet {
 				update
 			);
 
-			Self::process_light_client_update(update, 1, Root {});
-
-			Ok(())
+			Self::process_light_client_update(update, 1, Root {})
 		}
 	}
 
@@ -211,18 +214,26 @@ pub mod pallet {
 			update: LightClientUpdate,
 			current_slot: u64,
 			genesis_validators_root: Root,
-		) {
+		) -> DispatchResult {
+			Self::validate_light_client_update(
+				update.clone(),
+				current_slot,
+				genesis_validators_root,
+			)?;
+
 			let sync_committee_bits = update.clone().sync_aggregate.sync_committee_bits;
 
+			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits.clone());
+
 			// Update the best update in case we have to force-update to it if the timeout elapses
-			if <BestValidUpdate<T>>::get().is_none() || 
-			(Self::get_sync_committee_sum(sync_committee_bits) > 
-			Self::get_sync_committee_sum(<BestValidUpdate<T>>::get().unwrap().sync_aggregate.sync_committee_bits)) // unwrap should be safe here because of short circuiting
-			{
+			if <BestValidUpdate<T>>::get().is_none()
+				|| (sync_committee_sum
+					> Self::get_sync_committee_sum(
+						<BestValidUpdate<T>>::get().unwrap().sync_aggregate.sync_committee_bits,
+					)) {
+				// unwrap should be safe here because of short circuiting
 				<BestValidUpdate<T>>::put(Some(update.clone()));
 			}
-
-			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits)
 
 			// Track the maximum number of active participants in the committee signatures
 			<CurrentMaxActiveParticipants<T>>::put(cmp::max(
@@ -231,21 +242,25 @@ pub mod pallet {
 			));
 
 			// Update the optimistic header
-			if Self::get_sync_committee_sum(sync_committee_bits)
+			if sync_committee_sum
 				> Self::get_safety_threshold(
 					<PreviousMaxActiveParticipants<T>>::get(),
 					<CurrentMaxActiveParticipants<T>>::get(),
-				) && update.attested_header.slot > <OptimisticHeader<T>>::get().slot
+				) && update.clone().attested_header.slot > <OptimisticHeader<T>>::get().slot
 			{
 				<OptimisticHeader<T>>::put(update.clone().attested_header);
 			}
 
 			// Update finalized header if sync commitee votes were 2/3 or more
-			if (sync_committee_sum * 3 >= sync_committee_bits.clone().len() as u64 * 2) && update.finalized_header.is_none() {
+			if (sync_committee_sum * 3 >= sync_committee_bits.clone().len() as u64 * 2)
+				&& update.clone().finalized_header.is_none()
+			{
 				// Normal update through 2/3 threshold
 				Self::apply_light_client_update(update);
 				<BestValidUpdate<T>>::kill();
 			}
+
+			Ok(())
 		}
 
 		fn validate_light_client_update(
@@ -289,13 +304,15 @@ pub mod pallet {
 				ensure!(Self::is_valid_merkle_branch(), Error::<T>::Unknown);
 			}
 
+			let mut sync_committee: SyncCommittee;
+
 			// Verify update next sync committee if the update period incremented
 			if update_period == finalized_period {
-				let sync_committee = <CurrentSyncCommittee<T>>::get();
+				sync_committee = <CurrentSyncCommittee<T>>::get();
 				//a ssert update.next_sync_committee_branch == [Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))]
 				ensure!(true, Error::<T>::Unknown); // TODO
 			} else {
-				let sync_committee = <NextSyncCommittee<T>>::get();
+				sync_committee = <NextSyncCommittee<T>>::get();
 				// assert is_valid_merkle_branch(
 				//	leaf=hash_tree_root(update.next_sync_committee),
 				//	branch=update.next_sync_committee_branch,
@@ -304,25 +321,34 @@ pub mod pallet {
 				//	root=active_header.state_root,
 				ensure!(Self::is_valid_merkle_branch(), Error::<T>::Unknown);
 			}
-			let sync_aggregate = update.sync_aggregate;
+			let sync_aggregate = update.sync_aggregate.clone();
 
 			ensure!(
-				Self::get_sync_committee_sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
+				Self::get_sync_committee_sum(sync_aggregate.clone().sync_committee_bits)
+					>= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
 				Error::<T>::InsufficientSyncCommitteeParticipants
 			);
-			// TODO Convert to Rust
-			// # Verify sync committee aggregate signature
-			// participant_pubkeys = [
-			//	pubkey for (bit, pubkey) in zip(sync_aggregate.sync_committee_bits, sync_committee.pubkeys)
-			//	if bit
-			// ]
-			// domain = compute_domain(DOMAIN_SYNC_COMMITTEE, update.fork_version, genesis_validators_root)
-			// signing_root = compute_signing_root(update.attested_header, domain)
-			// assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)
+
+			// Verify sync committee aggregate signature
+			let mut participant_pubkeys: Vec<String> = Vec::new(); // TODO String type probably not right
+
+			for it in
+				sync_aggregate.clone().sync_committee_bits.iter().zip(sync_committee.pubkeys.iter_mut())
+			{
+				let (bit, pubkey) = it;
+				if *bit == 1 as u64 {
+					participant_pubkeys.push(pubkey.to_string());
+				}
+			}
+
+			let domain = Self::compute_domain(DOMAIN_SYNC_COMMITTEE, update.pubfork_version, genesis_validators_root);
+			let signing_root = Self::compute_signing_root(update.attested_header, domain);
+			ensure!(Self::bls_fast_aggregate_verify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature), Error::<T>::InvalidSyncCommiteeSignature);
 
 			Ok(())
 		}
 
+		/// Is triggered every time the current slot increments.
 		fn process_slot_for_light_client_store(current_slot: u64) {
 			if current_slot % UPDATE_TIMEOUT as u64 == 0 {
 				let curr_max_active_participants = <PreviousMaxActiveParticipants<T>>::get();
@@ -378,7 +404,7 @@ pub mod pallet {
 		}
 
 		fn is_valid_merkle_branch() -> bool {
-			true // TODO Implement merkle proof check
+			todo!() // TODO Implement merkle proof check
 		}
 
 		//** Helper functions **//
@@ -405,9 +431,21 @@ pub mod pallet {
 		) -> u64 {
 			cmp::max(prev_max_active_participants, curr_max_active_participants)
 		}
-		
+
 		fn get_sync_committee_sum(sync_committee_bits: Vec<u64>) -> u64 {
 			sync_committee_bits.iter().sum()
+		}
+
+		fn compute_domain(domain_sync_committee: u64, fork: Version, root: Root) -> u64 {
+			todo!()
+		}
+
+		fn compute_signing_root(attested_header: BeaconBlockHeader, domain: u64) -> String {
+			todo!()
+		}
+
+		fn bls_fast_aggregate_verify(participant_pubkeys: Vec<String>, signing_root: String, sync_committee_signature: H256) -> bool {
+			todo!()
 		}
 	}
 }
