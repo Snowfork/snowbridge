@@ -40,6 +40,7 @@ const DOMAIN_SYNC_COMMITTEE: u64 = 1; // TODO figure out what this is
 
 type Epoch = u64;
 type Slot = u64;
+type Root = H256;
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct ValidatorIndex {
@@ -60,11 +61,6 @@ pub struct BeaconBlockHeader {
 	// BLS Signature of the block by the block proposer, TODO type isn't right yet
 	pub signature: String,
 	proposer_index: ValidatorIndex,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Root {
-	// TODO: Add Root type / struct
 }
 
 /// Sync committee as it is stored in the runtime storage.
@@ -196,7 +192,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(1_000_000)]
 		#[transactional]
-		pub fn import_header(origin: OriginFor<T>, update: LightClientUpdate) -> DispatchResult {
+		pub fn import_header(origin: OriginFor<T>, update: LightClientUpdate, current_slot: u64, genesis_validators_root: Root) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
 			log::trace!(
@@ -205,7 +201,7 @@ pub mod pallet {
 				update
 			);
 
-			Self::process_light_client_update(update, 1, Root {})
+			Self::process_light_client_update(update, current_slot, genesis_validators_root)
 		}
 	}
 
