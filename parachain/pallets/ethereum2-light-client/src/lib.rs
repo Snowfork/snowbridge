@@ -62,18 +62,19 @@ pub struct BeaconBlockHeader {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Root {
-	// TODO: Add
+	// TODO: Add Root type / struct
 }
 
 /// Sync committee as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncCommittee {
-	// TODO: Add
+	// TODO: Add SyncCommittee type / struct
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncAggregate {
-	pub sync_committee_bits: u64, // TODO is this right even
+	// 1 or 0 bit, indicates whether a sync committee participated in a vote
+	pub sync_committee_bits: Vec<u64>
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -153,7 +154,7 @@ pub mod pallet {
 	/// Best available header to switch finalized head to if we see nothing else
 	#[pallet::storage]
 	pub(super) type BestValidUpdate<T: Config> =
-		StorageValue<_, Option<LightClientUpdate>, ValueQuery>; // TODO: maybe I should use OptionQuery here?
+		StorageValue<_, Option<LightClientUpdate>, ValueQuery>; // TODO: Maybe I should use OptionQuery here instead of Option?
 
 	/// Most recent available reasonably-safe header
 	#[pallet::storage]
@@ -214,21 +215,23 @@ pub mod pallet {
 			let sync_committee_bits = update.clone().sync_aggregate.sync_committee_bits;
 
 			// Update the best update in case we have to force-update to it if the timeout elapses
-			if <BestValidUpdate<T>>::get().is_none() || true
-			// TODO figure out this bit, no pun intended :)
-			//sum(sync_committee_bits) > sum(store.best_valid_update.sync_aggregate.sync_committee_bits)
+			if <BestValidUpdate<T>>::get().is_none() || 
+			(Self::get_sync_committee_sum(sync_committee_bits) > 
+			Self::get_sync_committee_sum(<BestValidUpdate<T>>::get().unwrap().sync_aggregate.sync_committee_bits)) // unwrap should be safe here because of short circuiting
 			{
 				<BestValidUpdate<T>>::put(Some(update.clone()));
 			}
 
+			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits)
+
 			// Track the maximum number of active participants in the committee signatures
 			<CurrentMaxActiveParticipants<T>>::put(cmp::max(
 				<CurrentMaxActiveParticipants<T>>::get(),
-				sync_committee_bits,
+				sync_committee_sum,
 			));
 
 			// Update the optimistic header
-			if sync_committee_bits
+			if Self::get_sync_committee_sum(sync_committee_bits)
 				> Self::get_safety_threshold(
 					<PreviousMaxActiveParticipants<T>>::get(),
 					<CurrentMaxActiveParticipants<T>>::get(),
@@ -237,9 +240,8 @@ pub mod pallet {
 				<OptimisticHeader<T>>::put(update.clone().attested_header);
 			}
 
-			// Update finalized header
-			// TODO figure out sync committee bits if (sync_committee_bits * 3 >= len(sync_committee_bits) * 2) && update.finalized_header.is_none() {
-			if (sync_committee_bits * 3 >= sync_committee_bits * 2) && update.finalized_header.is_none() {
+			// Update finalized header if sync commitee votes were 2/3 or more
+			if (sync_committee_sum * 3 >= sync_committee_bits.clone().len() as u64 * 2) && update.finalized_header.is_none() {
 				// Normal update through 2/3 threshold
 				Self::apply_light_client_update(update);
 				<BestValidUpdate<T>>::kill();
@@ -304,10 +306,8 @@ pub mod pallet {
 			}
 			let sync_aggregate = update.sync_aggregate;
 
-			// TODO Not sure I'm understanding the sync commitee bits
-			// assert sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
 			ensure!(
-				sync_aggregate.sync_committee_bits >= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
+				Self::get_sync_committee_sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
 				Error::<T>::InsufficientSyncCommitteeParticipants
 			);
 			// TODO Convert to Rust
@@ -374,11 +374,11 @@ pub mod pallet {
 		}
 
 		fn compute_sync_committee_period(epoch_at_slot: u64) -> u64 {
-			epoch_at_slot / SYNC_COMMITTEE_SIZE // TODO not sure this is right
+			epoch_at_slot / SYNC_COMMITTEE_SIZE // TODO Not sure this is right
 		}
 
 		fn is_valid_merkle_branch() -> bool {
-			true // TODO
+			true // TODO Implement merkle proof check
 		}
 
 		//** Helper functions **//
@@ -386,7 +386,7 @@ pub mod pallet {
 
 		fn get_subtree_index() -> u64 {
 			// return uint64(generalized_index % 2**(floorlog2(generalized_index)))
-			1
+			1 // TODO implement subtree index get
 		}
 
 		fn get_active_header(update: LightClientUpdate) -> BeaconBlockHeader {
@@ -404,6 +404,10 @@ pub mod pallet {
 			curr_max_active_participants: u64,
 		) -> u64 {
 			cmp::max(prev_max_active_participants, curr_max_active_participants)
+		}
+		
+		fn get_sync_committee_sum(sync_committee_bits: Vec<u64>) -> u64 {
+			sync_committee_bits.iter().sum()
 		}
 	}
 }
