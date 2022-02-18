@@ -41,11 +41,8 @@ const DOMAIN_SYNC_COMMITTEE: u64 = 1; // TODO figure out what this is
 type Epoch = u64;
 type Slot = u64;
 type Root = H256;
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct ValidatorIndex {
-	// TODO: Add
-}
+type ValidatorIndex = u32;
+type Version = u8;
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -58,6 +55,8 @@ pub struct BeaconBlockHeader {
 	pub parent_root: H256,
 	// The hash root of the post state of running the state transition through this block.
 	pub state_root: H256,
+	// The hash root of the Eth1 block
+	pub block_root: H256,
 	// BLS Signature of the block by the block proposer, TODO type isn't right yet
 	pub signature: Vec<u8>,
 	proposer_index: ValidatorIndex,
@@ -66,19 +65,16 @@ pub struct BeaconBlockHeader {
 /// Sync committee as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncCommittee {
-	pub pubkeys: Vec<u8>, // TODO most likely not a string
+	pub pubkeys: Vec<Vec<u8>>, 
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncAggregate {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
-	pub sync_committee_bits: Vec<u64>,
+	pub sync_committee_bits: Vec<u8>,
 
 	pub sync_committee_signature: H256,
 }
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Version {}
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct LightClientUpdate {
@@ -87,11 +83,11 @@ pub struct LightClientUpdate {
 	///  Next sync committee corresponding to the active header
 	pub next_sync_committee: SyncCommittee,
 	/// Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_INDEX)]
-	pub next_sync_committee_branch: Vec<H256>,
+	pub next_sync_committee_branch: H256,
 	/// The finalized beacon block header attested to by Merkle branch
 	pub finalized_header: Option<BeaconBlockHeader>,
 	/// Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
-	pub finality_branch: Vec<H256>,
+	pub finality_branch: H256,
 	///  Sync committee aggregate signature
 	pub sync_aggregate: SyncAggregate,
 	///  Fork version for the aggregate signature
@@ -326,14 +322,15 @@ pub mod pallet {
 			);
 
 			// Verify sync committee aggregate signature
-			let mut participant_pubkeys: Vec<u8> = Vec::new();
+			let mut participant_pubkeys: Vec<Vec<u8>> = Vec::new();
 
 			for it in
 				sync_aggregate.clone().sync_committee_bits.iter().zip(sync_committee.pubkeys.iter_mut())
 			{
 				let (bit, pubkey) = it;
-				if *bit == 1 as u64 {
-					participant_pubkeys.push(*pubkey);
+				if *bit == 1 as u8 {
+					let pubk = pubkey.clone();
+					participant_pubkeys.push(pubk);
 				}
 			}
 
@@ -400,7 +397,21 @@ pub mod pallet {
 		}
 
 		fn is_valid_merkle_branch() -> bool {
-			todo!() // TODO Implement merkle proof check
+			//fn is_valid_merkle_branch(leaf: Vec<u8>, branch: Vec<Vec<u8>>, depth: u64, index: u64, root: Root) -> bool {
+			/*
+			let mut value = leaf;
+			for i in 0..depth {
+				let base: u32 = 2; 
+				if (index / (base.pow(i as u32) as u64) % 2) == 0 {
+					value = hash(branch[i as usize] + value)
+				}
+				else {
+					value = hash(value + branch[i as usize])
+				}	
+			}
+			return value == root
+			*/
+			todo!()
 		}
 
 		//** Helper functions **//
@@ -428,8 +439,8 @@ pub mod pallet {
 			cmp::max(prev_max_active_participants, curr_max_active_participants)
 		}
 
-		fn get_sync_committee_sum(sync_committee_bits: Vec<u64>) -> u64 {
-			sync_committee_bits.iter().sum()
+		fn get_sync_committee_sum(sync_committee_bits: Vec<u8>) -> u64 {
+			sync_committee_bits.iter().sum::<u8>() as u64
 		}
 
 		fn compute_domain(domain_sync_committee: u64, fork: Version, root: Root) -> u64 {
@@ -440,8 +451,12 @@ pub mod pallet {
 			todo!()
 		}
 
-		fn bls_fast_aggregate_verify(participant_pubkeys: Vec<u8>, signing_root: Vec<u8>, sync_committee_signature: H256) -> bool {
+		fn bls_fast_aggregate_verify(participant_pubkeys: Vec<Vec<u8>>, signing_root: Vec<u8>, sync_committee_signature: H256) -> bool {
 			todo!()
 		}
+
+		/*fn hash_tree_root(object: SSZSerializable) -> Root {
+
+		}*/
 	}
 }
