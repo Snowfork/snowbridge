@@ -20,6 +20,8 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use std::cmp;
 use sp_io::hashing::sha2_256;
+use ssz::{Decode as SSZDecode, Encode as SSZEncode};
+use ssz_derive::{Decode as SSZDecode, Encode as SSZEncode};
 
 pub use snowbridge_ethereum::Header as EthereumHeader;
 
@@ -55,34 +57,36 @@ type Version = Vec<u8>;
 type GeneralizedIndex = u16;
 
 /// Beacon block header as it is stored in the runtime storage.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode)]
 // https://yeeth.github.io/BeaconChain.swift/Structs/BeaconBlockHeader.html#/s:11BeaconChain0A11BlockHeaderV9signature10Foundation4DataVvp
 // https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#beaconblock
+// https://github.com/ethereum/consensus-specs/blob/042ca57a617736e6bdd6f6dcdd6d32c247e5a67f/specs/phase0/beacon-chain.md#beaconblockheader
 pub struct BeaconBlockHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
 	pub slot: Slot,
-	// The block root of the parent block, forming a block chain.
-	pub parent_root: H256,
-	// The hash root of the post state of running the state transition through this block.
-	pub state_root: H256,
-	// The hash root of the Eth1 block
-	pub block_root: H256,
-	// BLS Signature of the block by the block proposer, TODO type isn't right yet
-	pub signature: Vec<u8>,
+	// The index of the validator that proposed the block.
 	proposer_index: ValidatorIndex,
+	// The block root of the parent block, forming a block chain.
+	pub parent_root: Root,
+	// The hash root of the post state of running the state transition through this block.
+	pub state_root: Root,
+	// The hash root of the Eth1 block
+	pub body_root: Root,
 }
 
 /// Sync committee as it is stored in the runtime storage.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+/// https://github.com/ethereum/consensus-specs/blob/02b32100ed26c3c7a4a44f41b932437859487fd2/specs/altair/beacon-chain.md#synccommittee
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode)]
 pub struct SyncCommittee {
 	pub pubkeys: Vec<Vec<u8>>, 
+	pub aggregate_pubkey: Vec<u8>,
 }
 
+/// https://github.com/ethereum/consensus-specs/blob/02b32100ed26c3c7a4a44f41b932437859487fd2/specs/altair/beacon-chain.md#syncaggregate
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncAggregate {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
 	pub sync_committee_bits: Vec<u8>,
-
 	pub sync_committee_signature: Vec<u8>,
 }
 
@@ -312,13 +316,13 @@ pub mod pallet {
 			// Verify update next sync committee if the update period incremented
 			if update_period == finalized_period {
 				sync_committee = <CurrentSyncCommittee<T>>::get();
-				//a ssert update.next_sync_committee_branch == [Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))]
+				//assert update.next_sync_committee_branch == [Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))]
 				ensure!(true, Error::<T>::Unknown); // TODO
 			} else {
 				sync_committee = <NextSyncCommittee<T>>::get();
 
 				ensure!(Self::is_valid_merkle_branch(
-					Self::hash_tree_root_2(update.next_sync_committee),
+					Self::hash_tree_root(update.next_sync_committee),
 					update.next_sync_committee_branch,
 					(NEXT_SYNC_COMMITTEE_INDEX as f64).log2().floor() as u64,
 					Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
@@ -439,7 +443,6 @@ pub mod pallet {
 
 		//** Helper functions **//
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#helper-functions
-
 		fn get_subtree_index(generalized_index: u64) -> u64 {
 			let base: u32 = 2; 
 
@@ -481,30 +484,10 @@ pub mod pallet {
 			todo!()
 		}
 
-		// Converts a path (eg. `[7, "foo", 3]` for `x[7].foo[3]`, `[12, "bar", "__len__"]` for
-		// len(x[12].bar)`) into the generalized index representing its position in the Merkle tree.
-		//fn get_generalized_index(typ: SSZType, path: Sequence[Union[int, SSZVariableName]]) -> GeneralizedIndex {
-		//	let root = GeneralizedIndex(1);
-		//	for p in path:
-		//		assert not issubclass(typ, BasicValue)  // If we descend to a basic type, the path cannot continue further
-		//		if p == '__len__':
-		//			typ = uint64
-		//			assert issubclass(typ, (List, ByteList))
-		//			root = GeneralizedIndex(root * 2 + 1)
-		//		else:
-		//			pos, _, _ = get_item_position(typ, p)
-		//			base_index = (GeneralizedIndex(2) if issubclass(typ, (List, ByteList)) else GeneralizedIndex(1))
-		//			root = GeneralizedIndex(root * base_index * get_power_of_two_ceil(chunk_count(typ)) + pos)
-		//			typ = get_elem_type(typ, p)
-		//	return root
-		//}
+		fn hash_tree_root<B: SSZEncode>(object: B) -> Root {
+			let ssz_bytes: Vec<u8> = object.as_ssz_bytes();
 
-		fn hash_tree_root(object: BeaconBlockHeader) -> Root {
-			todo!()
-		}
-
-		fn hash_tree_root_2(object: SyncCommittee) -> Root {
-			todo!()
+			sha2_256(&ssz_bytes).into()
 		}
 	}
 }
