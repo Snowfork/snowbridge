@@ -1,7 +1,55 @@
-import { ApiPromise, WsProvider } from "@polkadot/api";
+import { ApiPromise, Keyring, WsProvider } from "@polkadot/api";
+import { ISubmittableResult } from "@polkadot/types/types";
 import { assert } from "console";
+import { exit } from "process";
 import Web3 from "web3";
 import yargs from "yargs";
+import { createInterface } from "readline";
+
+const rl = createInterface({ input: process.stdin, output: process.stdout });
+const keyring = new Keyring({ type: "sr25519" });
+
+const areYouSure = (prompt: string, yes: string): Promise<boolean> => {
+  return new Promise<boolean>((ok) => {
+    rl.question(prompt, (answer) => {
+      ok(answer === yes);
+    });
+  });
+};
+
+const forceResetToFork = (
+  api: ApiPromise,
+  hash: string,
+  user: string
+): Promise<ISubmittableResult> => {
+  const sudo = keyring.addFromUri(user);
+  const call = api.tx.ethereumLightClient.forceResetToFork(
+    api.createType("H256", hash)
+  );
+
+  return new Promise<ISubmittableResult>(async (ok, err) => {
+    const unsub = await api.tx.sudo
+      .sudo(call)
+      .signAndSend(sudo, async (result) => {
+        console.log(`Current status is ${result.status}`);
+
+        if (result.isError) {
+          err(result);
+          unsub();
+        } else if (result.status.isInBlock) {
+          console.log(
+            `Transaction included at blockHash ${result.status.asInBlock}`
+          );
+        } else if (result.status.isFinalized) {
+          console.log(
+            `Transaction finalized at blockHash ${result.status.asFinalized}`
+          );
+          ok(result);
+          unsub();
+        }
+      });
+  });
+};
 
 const fetchFinalized = async (api: ApiPromise) => {
   const key =
@@ -47,6 +95,12 @@ const main = async () => {
       type: "string",
       demandOption: false,
       describe: "The ethereum block number or hash to start the search.",
+      default: null,
+    },
+    "force-reset-to-fork-with-sudo": {
+      type: "string",
+      demandOption: false,
+      describe: "Fix the fork with the following user. e.g. '//Alice'",
       default: null,
     },
   }).argv as any;
@@ -111,6 +165,19 @@ const main = async () => {
     console.log(`Parachain Finalized:        ${paraBlock.finalized}`);
     console.log(`Parachain Total Difficulty: ${paraBlock.totalDifficulty}`);
     console.log(`Ethereum Total Difficulty:  ${ethBlock.totalDifficulty}`);
+
+    let fixWithUser: string = argv["force-reset-to-fork-with-sudo"];
+    if (fixWithUser !== null && fixWithUser !== "") {
+      console.log(
+        `Going to force reset to ${ethBlock.hash} with user ${fixWithUser}.`
+      );
+      if (!(await areYouSure("Are you sure? ", "yes"))) {
+        exit(0);
+      }
+
+      await forceResetToFork(parachainApi, ethBlock.hash, fixWithUser);
+    }
+
     process.exit(0);
   }
 
