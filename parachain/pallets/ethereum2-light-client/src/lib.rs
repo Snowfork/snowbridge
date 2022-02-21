@@ -19,6 +19,7 @@ use sp_core::H256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use std::cmp;
+use sp_io::hashing::sha2_256;
 
 pub use snowbridge_ethereum::Header as EthereumHeader;
 
@@ -26,7 +27,7 @@ pub use snowbridge_ethereum::Header as EthereumHeader;
 /// The minimum number of validators that needs to sign update
 const MIN_SYNC_COMMITTEE_PARTICIPANTS: u64 = 1;
 
-const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 512;
+const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 256;
 
 const SECONDS_PER_SLOT: u64 = 12;
 
@@ -38,11 +39,20 @@ const UPDATE_TIMEOUT: u64 = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
 const DOMAIN_SYNC_COMMITTEE: u64 = 1; // TODO figure out what this is
 
+// Since each field in BeaconState has a known, and non-changing location in the merklized tree
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#constants
+const FINALIZED_ROOT_INDEX: u64 = 105;
+
+// Since each field in BeaconState has a known, and non-changing location in the merklized tree
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#constants
+const NEXT_SYNC_COMMITTEE_INDEX: u64 = 55;
+
 type Epoch = u64;
 type Slot = u64;
 type Root = H256;
 type ValidatorIndex = u32;
-type Version = u8;
+type Version = Vec<u8>;
+type GeneralizedIndex = u16;
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -73,7 +83,7 @@ pub struct SyncAggregate {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
 	pub sync_committee_bits: Vec<u8>,
 
-	pub sync_committee_signature: H256,
+	pub sync_committee_signature: Vec<u8>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -83,11 +93,11 @@ pub struct LightClientUpdate {
 	///  Next sync committee corresponding to the active header
 	pub next_sync_committee: SyncCommittee,
 	/// Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_INDEX)]
-	pub next_sync_committee_branch: H256,
+	pub next_sync_committee_branch: Vec<H256>,
 	/// The finalized beacon block header attested to by Merkle branch
 	pub finalized_header: Option<BeaconBlockHeader>,
 	/// Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
-	pub finality_branch: H256,
+	pub finality_branch: Vec<H256>,
 	///  Sync committee aggregate signature
 	pub sync_aggregate: SyncAggregate,
 	///  Fork version for the aggregate signature
@@ -130,6 +140,7 @@ pub mod pallet {
 		Unknown,
 		InsufficientSyncCommitteeParticipants,
 		InvalidSyncCommiteeSignature,
+		InvalidMerkleProof
 	}
 
 	#[pallet::hooks]
@@ -287,13 +298,13 @@ pub mod pallet {
 				// update.finality_branch == [Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))]
 				ensure!(true, Error::<T>::Unknown); // TODO
 			} else {
-				//  assert is_valid_merkle_branch(
-				//	leaf=hash_tree_root(update.finalized_header),
-				//	branch=update.finality_branch,
-				//	depth=floorlog2(FINALIZED_ROOT_INDEX),
-				//	index=get_subtree_index(FINALIZED_ROOT_INDEX),
-				//	root=update.attested_header.state_root,
-				ensure!(Self::is_valid_merkle_branch(), Error::<T>::Unknown);
+				ensure!(Self::is_valid_merkle_branch(
+					Self::hash_tree_root(update.finalized_header.unwrap()),
+					update.finality_branch,
+					(FINALIZED_ROOT_INDEX as f64).log2().floor() as u64,
+					Self::get_subtree_index(FINALIZED_ROOT_INDEX),
+					update.attested_header.state_root
+				), Error::<T>::InvalidMerkleProof);
 			}
 
 			let mut sync_committee: SyncCommittee;
@@ -305,13 +316,14 @@ pub mod pallet {
 				ensure!(true, Error::<T>::Unknown); // TODO
 			} else {
 				sync_committee = <NextSyncCommittee<T>>::get();
-				// assert is_valid_merkle_branch(
-				//	leaf=hash_tree_root(update.next_sync_committee),
-				//	branch=update.next_sync_committee_branch,
-				//	depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
-				//	index=get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
-				//	root=active_header.state_root,
-				ensure!(Self::is_valid_merkle_branch(), Error::<T>::Unknown);
+
+				ensure!(Self::is_valid_merkle_branch(
+					Self::hash_tree_root_2(update.next_sync_committee),
+					update.next_sync_committee_branch,
+					(NEXT_SYNC_COMMITTEE_INDEX as f64).log2().floor() as u64,
+					Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
+					active_header.state_root
+				), Error::<T>::InvalidMerkleProof);
 			}
 			let sync_aggregate = update.sync_aggregate.clone();
 
@@ -388,38 +400,52 @@ pub mod pallet {
 			}
 		}
 
+		/// Returns the epooch at the specified slot.
 		fn compute_epoch_at_slot(slot: Slot) -> Epoch {
 			slot / SLOTS_PER_EPOCH
 		}
 
-		fn compute_sync_committee_period(epoch_at_slot: u64) -> u64 {
-			epoch_at_slot / SYNC_COMMITTEE_SIZE // TODO Not sure this is right
+		/// Return the sync committee period at epoch.
+		fn compute_sync_committee_period(epoch: Epoch) -> u64 {
+			epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 		}
 
-		fn is_valid_merkle_branch() -> bool {
-			//fn is_valid_merkle_branch(leaf: Vec<u8>, branch: Vec<Vec<u8>>, depth: u64, index: u64, root: Root) -> bool {
-			/*
+		pub fn is_valid_merkle_branch(
+			leaf: H256,
+			branch: Vec<H256>,
+			depth: u64,
+			index: u64,
+			root: Root
+		) -> bool {
 			let mut value = leaf;
+
 			for i in 0..depth {
 				let base: u32 = 2; 
 				if (index / (base.pow(i as u32) as u64) % 2) == 0 {
-					value = hash(branch[i as usize] + value)
+					let mut data = [0u8; 64];
+					data[0..32].copy_from_slice(&(branch[i as usize].0));
+					data[32..64].copy_from_slice(&(value.0));
+					value = sha2_256(&data).into();
 				}
 				else {
-					value = hash(value + branch[i as usize])
+					let mut data = [0u8; 64];
+					data[0..32].copy_from_slice(&(value.0));
+					data[32..64].copy_from_slice(&(branch[i as usize].0));
+					value = sha2_256(&data).into();
 				}	
 			}
 			return value == root
-			*/
-			todo!()
 		}
 
 		//** Helper functions **//
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#helper-functions
 
-		fn get_subtree_index() -> u64 {
-			// return uint64(generalized_index % 2**(floorlog2(generalized_index)))
-			1 // TODO implement subtree index get
+		fn get_subtree_index(generalized_index: u64) -> u64 {
+			let base: u32 = 2; 
+
+			let floorlog2_finalized_root_index = (FINALIZED_ROOT_INDEX as f64).log2().floor();
+
+			generalized_index % base.pow(floorlog2_finalized_root_index as u32) as u64
 		}
 
 		fn get_active_header(update: LightClientUpdate) -> BeaconBlockHeader {
@@ -451,12 +477,34 @@ pub mod pallet {
 			todo!()
 		}
 
-		fn bls_fast_aggregate_verify(participant_pubkeys: Vec<Vec<u8>>, signing_root: Vec<u8>, sync_committee_signature: H256) -> bool {
+		fn bls_fast_aggregate_verify(participant_pubkeys: Vec<Vec<u8>>, signing_root: Vec<u8>, sync_committee_signature: Vec<u8>) -> bool {
 			todo!()
 		}
 
-		/*fn hash_tree_root(object: SSZSerializable) -> Root {
+		// Converts a path (eg. `[7, "foo", 3]` for `x[7].foo[3]`, `[12, "bar", "__len__"]` for
+		// len(x[12].bar)`) into the generalized index representing its position in the Merkle tree.
+		//fn get_generalized_index(typ: SSZType, path: Sequence[Union[int, SSZVariableName]]) -> GeneralizedIndex {
+		//	let root = GeneralizedIndex(1);
+		//	for p in path:
+		//		assert not issubclass(typ, BasicValue)  // If we descend to a basic type, the path cannot continue further
+		//		if p == '__len__':
+		//			typ = uint64
+		//			assert issubclass(typ, (List, ByteList))
+		//			root = GeneralizedIndex(root * 2 + 1)
+		//		else:
+		//			pos, _, _ = get_item_position(typ, p)
+		//			base_index = (GeneralizedIndex(2) if issubclass(typ, (List, ByteList)) else GeneralizedIndex(1))
+		//			root = GeneralizedIndex(root * base_index * get_power_of_two_ceil(chunk_count(typ)) + pos)
+		//			typ = get_elem_type(typ, p)
+		//	return root
+		//}
 
-		}*/
+		fn hash_tree_root(object: BeaconBlockHeader) -> Root {
+			todo!()
+		}
+
+		fn hash_tree_root_2(object: SyncCommittee) -> Root {
+			todo!()
+		}
 	}
 }
