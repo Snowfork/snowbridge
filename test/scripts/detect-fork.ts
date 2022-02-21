@@ -97,7 +97,7 @@ const main = async () => {
       describe: "The ethereum block number or hash to start the search.",
       default: null,
     },
-    "force-reset-to-fork-with-sudo": {
+    "fix": {
       type: "string",
       demandOption: false,
       describe: "Fix the fork with the following user. e.g. '//Alice'",
@@ -166,7 +166,7 @@ const main = async () => {
     console.log(`Parachain Total Difficulty: ${paraBlock.totalDifficulty}`);
     console.log(`Ethereum Total Difficulty:  ${ethBlock.totalDifficulty}`);
 
-    let fixWithUser: string = argv["force-reset-to-fork-with-sudo"];
+    let fixWithUser: string = argv["fix"];
     if (fixWithUser !== null && fixWithUser !== "") {
       console.log(
         `Going to force reset to ${ethBlock.hash} with user ${fixWithUser}.`
