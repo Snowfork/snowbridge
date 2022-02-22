@@ -1,11 +1,8 @@
 #!/bin/bash
 
-set -o errexit
-
 artifacts_dir=$1
 network=$2
 deployment_dir=$artifacts_dir/$network
-etherscan_api_key=$3
 
 verify_contract() {
   echo Verifying contract $1
