@@ -15,12 +15,12 @@ Install dependencies with yarn:
 yarn install
 ```
 
-Create an `.envrc` file using the `envrc.template` as a template. Note that deploying to ropsten network requires setting the INFURA_PROJECT_ID and ROPSTEN_PRIVATE_KEY environment variables.
+Create an `.envrc` file using [.envrc.template](.envrc.template) as a template. Note that deploying to ropsten network requires setting the INFURA_PROJECT_ID and ROPSTEN_PRIVATE_KEY environment variables.
 
 Example:
 
 ```bash
-cp envrc.template .envrc
+cp .envrc-example .envrc
 direnv allow
 ```
 

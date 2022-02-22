@@ -10,17 +10,9 @@ import { HardhatUserConfig } from "hardhat/config";
 import "./tasks/upgrade";
 import "./tasks/renounce";
 
-const getenv = (name: string) => {
-  if (name in process.env) {
-    return process.env[name]
-  } else {
-    throw new Error(`Please set your ${name} in a .env file`);
-  }
-}
-
-const ropstenPrivateKey = getenv("ROPSTEN_PRIVATE_KEY");
-const infuraKey = getenv("INFURA_PROJECT_ID");
-const etherscanKey = getenv("ETHERSCAN_API_KEY");
+let INFURA_KEY = process.env.INFURA_PROJECT_ID
+let ROPSTEN_KEY = process.env.ROPSTEN_PRIVATE_KEY || "0x00"
+let ETHERSCAN_KEY = process.env.ETHERSCAN_API_KEY
 
 const config: HardhatUserConfig = {
   networks: {
@@ -41,8 +33,8 @@ const config: HardhatUserConfig = {
     },
     ropsten: {
       chainId: 3,
-      url: `https://ropsten.infura.io/v3/${infuraKey}`,
-      accounts: [ropstenPrivateKey],
+      url: `https://ropsten.infura.io/v3/${INFURA_KEY}`,
+      accounts: [ROPSTEN_KEY],
       gas: 6000000,
       gasPrice: 5000000000,
     }
@@ -61,7 +53,7 @@ const config: HardhatUserConfig = {
     timeout: 60000
   },
   etherscan: {
-    apiKey: etherscanKey
+    apiKey: ETHERSCAN_KEY
   }
 };
 
