@@ -7,7 +7,6 @@ This directory contains smart contracts utilized by the Polkadot-Ethereum Bridge
 Requirements:
 * Node 14 LTS. See installation [instructions](https://www.digitalocean.com/community/tutorials/how-to-install-node-js-on-ubuntu-20-04#option-3-%E2%80%94-installing-node-using-the-node-version-manager).
 * Yarn
-* direnv: https://direnv.net/docs/installation.html
 
 Install dependencies with yarn:
 
@@ -15,13 +14,12 @@ Install dependencies with yarn:
 yarn install
 ```
 
-Create an `.envrc` file using the `envrc.template` as a template. Note that deploying to ropsten network requires setting the INFURA_PROJECT_ID and ROPSTEN_PRIVATE_KEY environment variables.
+Create an `.env` file using the `env.template` as a template. Note that deploying to ropsten network requires setting the INFURA_PROJECT_ID and ROPSTEN_PRIVATE_KEY environment variables.
 
 Example:
 
 ```bash
-cp envrc.template .envrc
-direnv allow
+cp env.template .env
 ```
 
 ## Testing
