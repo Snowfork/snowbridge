@@ -36,8 +36,6 @@ The E2E tests run against local deployments of the parachain, relayer and ethere
 
 * direnv - https://direnv.net/
 
-
-
 ## Setup
 
 ### Install NPM dependencies
