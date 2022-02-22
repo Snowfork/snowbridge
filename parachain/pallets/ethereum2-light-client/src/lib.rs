@@ -20,7 +20,7 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use std::cmp;
 use sp_io::hashing::sha2_256;
-use ssz::{Decode as SSZDecode, Encode as SSZEncode};
+use ssz::Encode as SSZEncode;
 use ssz_derive::{Decode as SSZDecode, Encode as SSZEncode};
 
 pub use snowbridge_ethereum::Header as EthereumHeader;
@@ -29,16 +29,21 @@ pub use snowbridge_ethereum::Header as EthereumHeader;
 /// The minimum number of validators that needs to sign update
 const MIN_SYNC_COMMITTEE_PARTICIPANTS: u64 = 1;
 
+/// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/altair.yaml#L18
 const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 256;
 
 const SECONDS_PER_SLOT: u64 = 12;
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
+/// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/altair.yaml#L16
 const SYNC_COMMITTEE_SIZE: u64 = 512;
 
+/// /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 const UPDATE_TIMEOUT: u64 = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
+/// DomainType('0x07000000')
+/// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
 const DOMAIN_SYNC_COMMITTEE: u64 = 1; // TODO figure out what this is
 
 // Since each field in BeaconState has a known, and non-changing location in the merklized tree
@@ -54,7 +59,6 @@ type Slot = u64;
 type Root = H256;
 type ValidatorIndex = u32;
 type Version = Vec<u8>;
-type GeneralizedIndex = u16;
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode)]
@@ -65,7 +69,7 @@ pub struct BeaconBlockHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
 	pub slot: Slot,
 	// The index of the validator that proposed the block.
-	proposer_index: ValidatorIndex,
+	pub proposer_index: ValidatorIndex,
 	// The block root of the parent block, forming a block chain.
 	pub parent_root: Root,
 	// The hash root of the post state of running the state transition through this block.
@@ -305,7 +309,7 @@ pub mod pallet {
 				ensure!(Self::is_valid_merkle_branch(
 					Self::hash_tree_root(update.finalized_header.unwrap()),
 					update.finality_branch,
-					(FINALIZED_ROOT_INDEX as f64).log2().floor() as u64,
+					Self::floorlog2(FINALIZED_ROOT_INDEX),
 					Self::get_subtree_index(FINALIZED_ROOT_INDEX),
 					update.attested_header.state_root
 				), Error::<T>::InvalidMerkleProof);
@@ -324,7 +328,7 @@ pub mod pallet {
 				ensure!(Self::is_valid_merkle_branch(
 					Self::hash_tree_root(update.next_sync_committee),
 					update.next_sync_committee_branch,
-					(NEXT_SYNC_COMMITTEE_INDEX as f64).log2().floor() as u64,
+					Self::floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
 					Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
 					active_header.state_root
 				), Error::<T>::InvalidMerkleProof);
@@ -414,6 +418,21 @@ pub mod pallet {
 			epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 		}
 
+		pub fn is_valid_merkle_branch_wrapper<Z: SSZEncode>(
+			leaf: Z, 
+			branch: Vec<H256>,
+			root_index: u64,
+			root: Root
+		) -> bool {
+			Self::is_valid_merkle_branch(
+				Self::hash_tree_root(leaf),
+				branch,
+				Self::floorlog2(root_index),
+				Self::get_subtree_index(root_index),
+				root
+			)
+		}
+
 		pub fn is_valid_merkle_branch(
 			leaf: H256,
 			branch: Vec<H256>,
@@ -422,12 +441,38 @@ pub mod pallet {
 			root: Root
 		) -> bool {
 			let mut value = leaf;
+			for i in 0..depth {
+				let base: u32 = 2; 
+				if (index / (base.pow(i as u32) as u64) % 2) == 0 { // left node
+					let mut data = [0u8; 64];
+					data[0..32].copy_from_slice(&(value.0));
+					data[32..64].copy_from_slice(&(branch[i as usize].0));
+					value = sha2_256(&data).into();
+				}
+				else {
+					let mut data = [0u8; 64]; // right node
+					data[0..32].copy_from_slice(&(branch[i as usize].0));
+					data[32..64].copy_from_slice(&(value.0));
+					value = sha2_256(&data).into();
+				}	
+			}
+			return value == root
+		}
+
+		/*
+		fn compute_merkle_proof(leaf: H256, depth: u64, index: u64) -> (H256, Vec<u8>) {
+			let proof: Vec<u8>;
+
+			let mut value = leaf;
 
 			for i in 0..depth {
 				let base: u32 = 2; 
+				proof.push(i as u8);
 				if (index / (base.pow(i as u32) as u64) % 2) == 0 {
 					let mut data = [0u8; 64];
-					data[0..32].copy_from_slice(&(branch[i as usize].0));
+					let mut tmp = 
+
+					data[0..32].copy_from_slice(&(proof[i as usize]));
 					data[32..64].copy_from_slice(&(value.0));
 					value = sha2_256(&data).into();
 				}
@@ -438,15 +483,15 @@ pub mod pallet {
 					value = sha2_256(&data).into();
 				}	
 			}
-			return value == root
-		}
+			return (value, proof)
+		}*/
 
 		//** Helper functions **//
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#helper-functions
 		fn get_subtree_index(generalized_index: u64) -> u64 {
 			let base: u32 = 2; 
 
-			let floorlog2_finalized_root_index = (FINALIZED_ROOT_INDEX as f64).log2().floor();
+			let floorlog2_finalized_root_index = Self::floorlog2(FINALIZED_ROOT_INDEX);
 
 			generalized_index % base.pow(floorlog2_finalized_root_index as u32) as u64
 		}
@@ -484,7 +529,11 @@ pub mod pallet {
 			todo!()
 		}
 
-		fn hash_tree_root<B: SSZEncode>(object: B) -> Root {
+		fn floorlog2(num: u64) -> u64 {
+			(num as f64).log2().floor() as u64
+		}
+
+		fn hash_tree_root<Z: SSZEncode>(object: Z) -> Root {
 			let ssz_bytes: Vec<u8> = object.as_ssz_bytes();
 
 			sha2_256(&ssz_bytes).into()

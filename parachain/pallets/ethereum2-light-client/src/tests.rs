@@ -1,5 +1,6 @@
 use crate::mock::*;
 use crate::Error;
+use crate as ethereum2_light_client;
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
 
@@ -52,18 +53,38 @@ pub fn test_ssz() {
 pub fn test_is_valid_merkle_proof() {
 	new_tester().execute_with(|| {
 		assert_eq!(Ethereum2LightClient::is_valid_merkle_branch(
-			hex!("5d0cb03baca66860a9d039c7579503c2b0e7e9d5d8d767b007e0064ce22df0c8").into(),
+			hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 			vec![
-				hex!("3670c5c45d82686c844a30e23854f2e32cdcadf654c285998d3267d99d7d165e").into(),
-				hex!("83a0ee3b3352e98d0918d59a427670261af75b7903fdfefc73a85ad39abf8b32").into(),
-				hex!("731eaeba1ccf1d442b915a537f89ae9f211677535e142b5d14750e692c7a42ca").into(),
-				hex!("ac5925beb9ef24aa3c84522d168ac722a83970ca92908dbdfc9d770fca5cb659").into(),
-				hex!("fee14011611c7e0c3e70c264522ee739a25c82af1530533f5eeefa18787e3dad").into(),
-				hex!("5d0cb03baca66860a9d039c7579503c2b0e7e9d5d8d767b007e0064ce22df0c8").into(),
+				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+				hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
+				hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
+				hex!("002c1fe5bc0bd62db6f299a582f2a80a6d5748ccc82e7ed843eaf0ae0739f74a").into(),
+				hex!("d2dc4ba9fd4edff6716984136831e70a6b2e74fca27b8097a820cbbaa5a6e3c3").into(),
+				hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584").into(),
 			],
-			3,
-			7,
-			hex!("5d0cb03baca66860a9d039c7579503c2b0e7e9d5d8d767b007e0064ce22df0c8").into()
+			6,
+			41,
+			hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
+		), true);
+	});
+}
+
+#[test]
+pub fn test_is_not_valid_merkle_proof() {
+	new_tester().execute_with(|| {
+		assert_eq!(Ethereum2LightClient::is_valid_merkle_branch(
+			hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+			vec![
+				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+				hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
+				hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
+				hex!("333c1fe5bc0bd62db6f299a582f2a80a6d5748ccc82e7ed843eaf0ae0739f74a").into(),
+				hex!("d2dc4ba9fd4edff6716984136831e70a6b2e74fca27b8097a820cbbaa5a6e3c3").into(),
+				hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584").into(),
+			],
+			6,
+			41,
+			hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
 		), false);
 	});
 }
