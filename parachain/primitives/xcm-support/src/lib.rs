@@ -5,10 +5,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-	ensure,
-	storage::{with_transaction, TransactionOutcome},
-};
+use frame_support::ensure;
 use frame_system::pallet_prelude::OriginFor;
 use sp_runtime::DispatchError;
 use sp_std::{marker::PhantomData, prelude::*};
@@ -88,18 +85,10 @@ where
 		let weight = T::Weigher::weight(&mut message)
 			.map_err(|_| DispatchError::Other("Unweighable message."))?;
 
-		with_transaction(|| {
-			let result =
-				T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
-					.ensure_complete();
+		T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
+			.ensure_complete()
+			.map_err(|_| DispatchError::Other("Xcm execution failed."))?;
 
-			match result {
-				Ok(()) => TransactionOutcome::Commit(Ok(())),
-				Err(_) =>
-					return TransactionOutcome::Rollback(Err(DispatchError::Other(
-						"Xcm execution failed.",
-					))),
-			}
-		})
+		Ok(())
 	}
 }
