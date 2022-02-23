@@ -42,10 +42,6 @@ const SYNC_COMMITTEE_SIZE: u64 = 512;
 /// /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 const UPDATE_TIMEOUT: u64 = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
-/// DomainType('0x07000000')
-/// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
-const DOMAIN_SYNC_COMMITTEE: u64 = 1; // TODO figure out what this is
-
 // Since each field in BeaconState has a known, and non-changing location in the merklized tree
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#constants
 const FINALIZED_ROOT_INDEX: u64 = 105;
@@ -57,8 +53,9 @@ const NEXT_SYNC_COMMITTEE_INDEX: u64 = 55;
 type Epoch = u64;
 type Slot = u64;
 type Root = H256;
+type Domain = H256;
 type ValidatorIndex = u32;
-type Version = Vec<u8>;
+type Version = Vec<u8>; 
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode)]
@@ -94,6 +91,13 @@ pub struct SyncAggregate {
 	pub sync_committee_signature: Vec<u8>,
 }
 
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode)]
+pub struct ForkData {
+	// 1 or 0 bit, indicates whether a sync committee participated in a vote
+	pub current_version: Version,
+	pub genesis_validators_root: Vec<u8>,
+}
+
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct LightClientUpdate {
 	/// The beacon block header that is attested to by the sync committee
@@ -109,7 +113,7 @@ pub struct LightClientUpdate {
 	///  Sync committee aggregate signature
 	pub sync_aggregate: SyncAggregate,
 	///  Fork version for the aggregate signature
-	pub pubfork_version: Version,
+	pub pubfork_version: Option<Version>,
 }
 
 pub use pallet::*;
@@ -207,7 +211,12 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(1_000_000)]
 		#[transactional]
-		pub fn import_header(origin: OriginFor<T>, update: LightClientUpdate, current_slot: u64, genesis_validators_root: Root) -> DispatchResult {
+		pub fn light_client_update(
+			origin: OriginFor<T>, 
+			update: LightClientUpdate, 
+			current_slot: u64, 
+			genesis_validators_root: Root
+		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
 			log::trace!(
@@ -354,7 +363,7 @@ pub mod pallet {
 				}
 			}
 
-			let domain = Self::compute_domain(DOMAIN_SYNC_COMMITTEE, update.pubfork_version, genesis_validators_root);
+			let domain = Self::compute_domain(Self::get_domain_sync_committee(), update.pubfork_version, genesis_validators_root);
 			let signing_root = Self::compute_signing_root(update.attested_header, domain);
 			ensure!(Self::bls_fast_aggregate_verify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature), Error::<T>::InvalidSyncCommiteeSignature);
 
@@ -490,11 +499,36 @@ pub mod pallet {
 			sync_committee_bits.iter().sum::<u8>() as u64
 		}
 
-		fn compute_domain(domain_sync_committee: u64, fork: Version, root: Root) -> u64 {
-			todo!()
+		/// Return the domain for the domain_type and fork_version.
+		fn compute_domain(domain_type: Vec<u8>, fork_version: Option<Version>, genesis_validators_root: Root) -> Domain {
+			let unwrapped_fork_version: Version;
+			if fork_version.is_none() {
+				unwrapped_fork_version = Self::get_genesis_fork_version();
+			} else {
+				unwrapped_fork_version = fork_version.unwrap();
+			}
+			// TODO this may not be needed because we pass genesis_validators_root from relayer.
+			//if genesis_validators_root is None:
+			//	genesis_validators_root = Root()  # all bytes zero by default
+			
+			let fork_data_root = Self::compute_fork_data_root(unwrapped_fork_version, genesis_validators_root);
+
+			let mut domain = [0u8; 32];
+
+			domain[0..4].copy_from_slice(&(domain_type));
+			domain[4..32].copy_from_slice(&(genesis_validators_root.0));
+
+			domain.into()
 		}
 
-		fn compute_signing_root(attested_header: BeaconBlockHeader, domain: u64) -> Vec<u8> {
+		fn compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Root {
+			Self::hash_tree_root(ForkData{
+				current_version: current_version,
+				genesis_validators_root: genesis_validators_root.as_bytes().to_vec(),
+			})
+		}
+
+		fn compute_signing_root(attested_header: BeaconBlockHeader, domain: H256) -> Vec<u8> {
 			todo!()
 		}
 
@@ -510,6 +544,19 @@ pub mod pallet {
 			let ssz_bytes: Vec<u8> = object.as_ssz_bytes();
 
 			sha2_256(&ssz_bytes).into()
+		}
+
+		/// DomainType('0x07000000') DOMAIN_SYNC_COMMITTEE
+		/// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
+		/// TODO this is a hack because I can't initialize a vector as a constant. Also can't get hex macro to work here, hmmm. Can't find crate.
+		fn get_domain_sync_committee() -> Vec<u8> {
+			vec![30, 37, 30, 30, 30, 30, 30, 30]
+		}
+
+		/// 0x00000000 GENESIS_FORK_VERSION
+		/// TODO this is a hack because I can't initialize a vector as a constant. Also can't get hex macro to work here, hmmm. Can't find crate.
+		fn get_genesis_fork_version() -> Vec<u8> {
+			vec![30, 30, 30, 30, 30, 30, 30, 30]
 		}
 	}
 }

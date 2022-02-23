@@ -19,7 +19,7 @@ fn it_gets_an_update() {
 	let update = get_update();
 
 	new_tester().execute_with(|| {
-		assert_err!(EthereumBeaconLightClient::import_header(
+		assert_err!(EthereumBeaconLightClient::light_client_update(
 			Origin::signed(1),
 			update,
 			897,
