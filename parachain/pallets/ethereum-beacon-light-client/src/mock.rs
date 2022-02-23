@@ -1,5 +1,5 @@
 use super::*;
-use crate as ethereum2_light_client;
+use crate as ethereum_beacon_light_client;
 use sp_core::H256;
 use frame_support::parameter_types;
 use sp_runtime::{
@@ -20,7 +20,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Ethereum2LightClient: ethereum2_light_client::{Pallet, Call, Config, Storage, Event<T>},
+		EthereumBeaconLightClient: ethereum_beacon_light_client::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
 
@@ -60,7 +60,7 @@ parameter_types! {
 	pub const NextSyncCommitteeIndex: u16 = 1;
 }
 
-impl ethereum2_light_client::Config for Test {
+impl ethereum_beacon_light_client::Config for Test {
 	type Event = Event;
 	type FinalizedRootIndex = FinalizedRootIndex;
 	type NextSyncCommitteeIndex = NextSyncCommitteeIndex;
@@ -71,11 +71,8 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
 
-pub fn get_update() -> ethereum2_light_client::LightClientUpdate {
-	// https://simpleserialize.com/
-
-
-	let attested_header: ethereum2_light_client::BeaconBlockHeader = BeaconBlockHeader{
+pub fn get_update() -> ethereum_beacon_light_client::LightClientUpdate {
+	let attested_header: ethereum_beacon_light_client::BeaconBlockHeader = BeaconBlockHeader{
 		parent_root: hex!("bb3c91ab6ac7ad8e780d4425f9482aedaf51328f2bb9d5741aa2ca44dc6ba461").into(),
 		state_root: hex!("adc929aa6a86230d2608e97ce95aa6a89e56d182b15822f4f302332e7b658312").into(),
 		body_root: hex!("70ecb5ff5cc1c12ec223b4136cba6454eca822aca187f5c18c0d86a5c30ee5dc").into(),
@@ -83,7 +80,7 @@ pub fn get_update() -> ethereum2_light_client::LightClientUpdate {
 		slot: 2_382_682,
 	};
 
-	let finalized_header: ethereum2_light_client::BeaconBlockHeader = BeaconBlockHeader{
+	let finalized_header: ethereum_beacon_light_client::BeaconBlockHeader = BeaconBlockHeader{
 		parent_root: hex!("bb3c91ab6ac7ad8e780d4425f9482aedaf51328f2bb9d5741aa2ca44dc6ba461").into(),
 		state_root: hex!("adc929aa6a86230d2608e97ce95aa6a89e56d182b15822f4f302332e7b658312").into(),
 		body_root: hex!("70ecb5ff5cc1c12ec223b4136cba6454eca822aca187f5c18c0d86a5c30ee5dc").into(),
@@ -91,7 +88,7 @@ pub fn get_update() -> ethereum2_light_client::LightClientUpdate {
 		slot: 2_382_672,
 	};
 
-	let update: ethereum2_light_client::LightClientUpdate = LightClientUpdate{
+	let update: ethereum_beacon_light_client::LightClientUpdate = LightClientUpdate{
 		attested_header: attested_header,
 		finality_branch: vec![
 			hex!("3670c5c45d82686c844a30e23854f2e32cdcadf654c285998d3267d99d7d165e").into(),

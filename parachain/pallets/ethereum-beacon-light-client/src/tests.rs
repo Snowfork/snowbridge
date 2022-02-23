@@ -1,6 +1,6 @@
 use crate::mock::*;
 use crate::Error;
-use crate as ethereum2_light_client;
+use crate as ethereum_beacon_light_client;
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
 
@@ -18,10 +18,8 @@ fn it_works() {
 fn it_gets_an_update() {
 	let update = get_update();
 
-	//let test_hex = hex!("fd5e397a84884641f53c496804f24b5276cbb8c5c9cfc2342246be8e3ce5ad02").into();
-
 	new_tester().execute_with(|| {
-		assert_err!(Ethereum2LightClient::import_header(
+		assert_err!(EthereumBeaconLightClient::import_header(
 			Origin::signed(1),
 			update,
 			897,
@@ -52,7 +50,7 @@ pub fn test_ssz() {
 #[test]
 pub fn test_is_valid_merkle_proof() {
 	new_tester().execute_with(|| {
-		assert_eq!(Ethereum2LightClient::is_valid_merkle_branch(
+		assert_eq!(EthereumBeaconLightClient::is_valid_merkle_branch(
 			hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 			vec![
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
@@ -72,7 +70,7 @@ pub fn test_is_valid_merkle_proof() {
 #[test]
 pub fn test_is_not_valid_merkle_proof() {
 	new_tester().execute_with(|| {
-		assert_eq!(Ethereum2LightClient::is_valid_merkle_branch(
+		assert_eq!(EthereumBeaconLightClient::is_valid_merkle_branch(
 			hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
 			vec![
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),

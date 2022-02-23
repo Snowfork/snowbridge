@@ -211,7 +211,7 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 
 			log::trace!(
-				target: "ethereum2-light-client",
+				target: "ethereum-beacon-light-client",
 				"Received update {:?}. Starting validation",
 				update
 			);
@@ -458,33 +458,6 @@ pub mod pallet {
 			}
 			return value == root
 		}
-
-		/*
-		fn compute_merkle_proof(leaf: H256, depth: u64, index: u64) -> (H256, Vec<u8>) {
-			let proof: Vec<u8>;
-
-			let mut value = leaf;
-
-			for i in 0..depth {
-				let base: u32 = 2; 
-				proof.push(i as u8);
-				if (index / (base.pow(i as u32) as u64) % 2) == 0 {
-					let mut data = [0u8; 64];
-					let mut tmp = 
-
-					data[0..32].copy_from_slice(&(proof[i as usize]));
-					data[32..64].copy_from_slice(&(value.0));
-					value = sha2_256(&data).into();
-				}
-				else {
-					let mut data = [0u8; 64];
-					data[0..32].copy_from_slice(&(value.0));
-					data[32..64].copy_from_slice(&(branch[i as usize].0));
-					value = sha2_256(&data).into();
-				}	
-			}
-			return (value, proof)
-		}*/
 
 		//** Helper functions **//
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#helper-functions

@@ -9821,10 +9821,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-ethereum-light-client"
-version = "0.1.1"
+name = "snowbridge-ethereum-beacon-light-client"
+version = "0.0.1"
 dependencies = [
- "ethash",
+ "eth2_ssz",
+ "eth2_ssz_derive",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -9846,11 +9847,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-ethereum2-light-client"
-version = "0.0.1"
+name = "snowbridge-ethereum-light-client"
+version = "0.1.1"
 dependencies = [
- "eth2_ssz",
- "eth2_ssz_derive",
+ "ethash",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
