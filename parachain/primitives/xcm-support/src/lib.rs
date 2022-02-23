@@ -5,7 +5,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::ensure;
+use frame_support::{ensure, log};
 use frame_system::pallet_prelude::OriginFor;
 use sp_runtime::DispatchError;
 use sp_std::{marker::PhantomData, prelude::*};
@@ -87,7 +87,11 @@ where
 
 		T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
 			.ensure_complete()
-			.map_err(|_| DispatchError::Other("Xcm execution failed."))?;
+			.map_err(|err| {
+				let message = "Xcm execution failed.";
+				log::error!("{} Reason: {:?}", message, err);
+				DispatchError::Other(message)
+			})?;
 
 		Ok(())
 	}
