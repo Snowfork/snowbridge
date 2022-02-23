@@ -9,10 +9,6 @@ A Polkadot parachain for bridging arbitrary data from and to Ethereum.
   - [Build](#build)
   - [Run](#run)
 - [Configuration](#configuration)
-  - [Ethereum Genesis Block](#ethereum-genesis-block)
-  - [Ethereum Contract Addresses](#ethereum-contract-addresses)
-- [API Documentation](#api-documentation)
-- [Custom Types](#custom-types)
 
 ## Development
 
@@ -34,27 +30,14 @@ Once the development environment is set up, build the parachain. This command wi
 [Wasm](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution) and
 [native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
 
+Several runtimes can be built:
+* snowbase: Local development
+* snowblink: Staging & Kusama parachain
+* snowbridge: Polkadot parachain
+
+To build with snowbase and snowblink runtimes (the default):
 ```bash
-cargo build --release --no-default-features --features with-local-runtime
-```
-
-### Run
-
-Install `polkadot-launch`:
-
-```bash
-yarn global add polkadot-launch@1.9.0
-cd -
-```
-
-Build polkadot:
-
-```bash
-git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
-cd /tmp/polkadot
-git checkout release-v0.9.12
-cargo build --release
-cd -
+cargo build --release --features rococo-native
 ```
 
 ## Configuration
@@ -63,9 +46,9 @@ Note: This section is not necessary for local development, as there are scripts 
 
 For a fully operational chain, further configuration of the initial chain spec is required. The specific configuration will depend heavily on your environment, so this guide will remain high-level.
 
-Build an initial spec:
+Build an initial spec for the snowbase runtime:
 ```bash
-target/debug/snowbridge build-spec --disable-default-bootnode > spec.json
+target/debug/snowbridge build-spec --chain snowbase --disable-default-bootnode > spec.json
 ```
 
 Now edit the spec and configure the following:

@@ -1,5 +1,4 @@
 let { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
-let { bundle } = require("@snowfork/snowbridge-types");
 const { default: BigNumber } = require('bignumber.js');
 
 class SubClient {
@@ -14,25 +13,24 @@ class SubClient {
     const provider = new WsProvider(this.endpoint);
     this.api = await ApiPromise.create({
       provider,
-      typesBundle: bundle,
     })
 
     this.keyring = new Keyring({ type: 'sr25519' });
     this.alice = this.keyring.addFromUri('//Alice', { name: 'Alice' });
   }
 
-  async queryAssetBalance(accountId, assetId) {
-    let balance = await this.api.query.assets.balances(assetId, accountId);
-    return BigNumber(balance.toBigInt())
+  async queryAssetsAccountBalance(assetId, accountId) {
+    let account = await this.api.query.assets.account(assetId, accountId);
+    return BigNumber(account.balance.toBigInt())
   }
 
-  async subscribeAssetBalances(accountId, assetId, length) {
+  async subscribeAssetsAccountBalances(assetId, accountId, length) {
     const [promises, resolvers] = createPromiseResolverMap(length)
 
     // Setup our balance subscription and resolve each promise one by one
     let count = 0;
-    const unsubscribe = await this.api.query.assets.balances(assetId, accountId, newBalance => {
-      resolvers[count](BigNumber(newBalance.toBigInt()));
+    const unsubscribe = await this.api.query.assets.account(assetId, accountId, (account) => {
+      resolvers[count](BigNumber(account.balance.toBigInt()));
       count++;
       if (count === length) {
         unsubscribe();

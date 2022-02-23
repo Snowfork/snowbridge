@@ -29,15 +29,19 @@ mod tests;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
-	traits::EnsureOrigin,
-	transactional,
+	log,
+	traits::{fungible::Mutate, EnsureOrigin},
+	transactional, PalletId,
 };
 use frame_system::ensure_signed;
-use sp_core::{H160, U256};
+use sp_core::H160;
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
-use snowbridge_core::{assets::XcmReserveTransfer, ChannelId, OutboundRouter, SingleAsset};
+use snowbridge_core::{
+	assets::{RemoteParachain, XcmReserveTransfer},
+	ChannelId, OutboundRouter,
+};
 
 pub use pallet::*;
 use payload::OutboundPayload;
@@ -59,7 +63,9 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type Asset: SingleAsset<<Self as frame_system::Config>::AccountId>;
+		type PalletId: Get<PalletId>;
+
+		type Asset: Mutate<Self::AccountId, Balance = u128>;
 
 		type OutboundRouter: OutboundRouter<Self::AccountId>;
 
@@ -76,8 +82,8 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Burned(T::AccountId, H160, U256),
-		Minted(H160, T::AccountId, U256),
+		Burned(T::AccountId, H160, u128),
+		Minted(H160, T::AccountId, u128),
 	}
 
 	#[pallet::storage]
@@ -120,11 +126,11 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			channel_id: ChannelId,
 			recipient: H160,
-			amount: U256,
+			amount: u128,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			T::Asset::withdraw(&who, amount)?;
+			T::Asset::burn_from(&who, amount)?;
 
 			let message =
 				OutboundPayload { sender: who.clone(), recipient: recipient.clone(), amount };
@@ -141,8 +147,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			sender: H160,
 			recipient: <T::Lookup as StaticLookup>::Source,
-			amount: U256,
-			para_id: Option<u32>,
+			amount: u128,
+			destination: Option<RemoteParachain>,
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
@@ -150,20 +156,20 @@ pub mod pallet {
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
-			T::Asset::deposit(&recipient, amount)?;
-
-			if let Some(id) = para_id {
-				T::XcmReserveTransfer::reserve_transfer(
-					origin,
-					T::Asset::asset_id(),
-					id,
-					&recipient,
-					amount,
-				)?;
-			}
-
+			T::Asset::mint_into(&recipient, amount)?;
 			Self::deposit_event(Event::Minted(sender, recipient.clone(), amount));
 
+			if let Some(destination) = destination {
+				let result =
+					T::XcmReserveTransfer::reserve_transfer(0, &recipient, amount, destination);
+				if let Err(err) = result {
+					log::error!(
+						"Failed to execute xcm transfer to parachain {} - {:?}.",
+						destination.para_id,
+						err
+					);
+				}
+			}
 			Ok(())
 		}
 	}

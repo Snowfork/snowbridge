@@ -1,52 +1,23 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use rococo_runtime::{AccountId, AuraId, GenesisConfig, Signature, WASM_BINARY};
 use sc_service::{ChainType, Properties};
-use sp_core::{sr25519, Pair, Public, U256};
-use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
-	Perbill,
-};
+use snowbase_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
+use sp_core::sr25519;
+use sp_runtime::{traits::AccountIdConversion, Perbill};
 
-use super::{get_from_seed, Extensions};
+use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
-use snowbridge_core::AssetId;
-
-type AccountPublic = <Signature as Verify>::Signer;
-
-/// Helper function to generate an account ID from seed
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
-
-/// Helper function to generate a crypto pair from seed
-pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-	TPublic::Pair::from_string(&format!("//{}", seed), None)
-		.expect("static values are valid; qed")
-		.public()
-}
-
-/// Generate collator keys from seed.
-///
-/// This function's return type must always match the session keys of the chain in tuple format.
-pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
-	get_public_from_seed::<AuraId>(seed)
-}
-
 pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 	let mut props = Properties::new();
-	props.insert("tokenSymbol".into(), "ROC".into());
+	props.insert("tokenSymbol".into(), "DEV".into());
 	props.insert("tokenDecimals".into(), 12.into());
 
 	ChainSpec::from_genesis(
-		"Snowbridge Local Testnet",
-		"local_testnet",
+		"Snowbase Testnet",
+		"snowbase_testnet",
 		ChainType::Local,
 		move || {
 			testnet_genesis(
@@ -94,20 +65,20 @@ fn testnet_genesis(
 	para_id: ParaId,
 ) -> GenesisConfig {
 	GenesisConfig {
-		system: rococo_runtime::SystemConfig {
+		system: snowbase_runtime::SystemConfig {
 			// Add Wasm runtime to storage.
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		balances: rococo_runtime::BalancesConfig {
+		balances: snowbase_runtime::BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
 		},
-		sudo: rococo_runtime::SudoConfig {
+		sudo: snowbase_runtime::SudoConfig {
 			key: get_account_id_from_seed::<sr25519::Public>("Alice"),
 		},
 		local_council: Default::default(),
-		local_council_membership: rococo_runtime::LocalCouncilMembershipConfig {
+		local_council_membership: snowbase_runtime::LocalCouncilMembershipConfig {
 			members: vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -116,59 +87,59 @@ fn testnet_genesis(
 			],
 			phantom: Default::default(),
 		},
-		basic_inbound_channel: rococo_runtime::BasicInboundChannelConfig {
-			source_channel: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
+		basic_inbound_channel: snowbase_runtime::BasicInboundChannelConfig {
+			source_channel: hex!["F8F7758FbcEfd546eAEff7dE24AFf666B6228e73"].into(),
 		},
-		basic_outbound_channel: rococo_runtime::BasicOutboundChannelConfig {
+		basic_outbound_channel: snowbase_runtime::BasicOutboundChannelConfig {
 			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
 			interval: 1,
 		},
-		incentivized_inbound_channel: rococo_runtime::IncentivizedInboundChannelConfig {
-			source_channel: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
+		incentivized_inbound_channel: snowbase_runtime::IncentivizedInboundChannelConfig {
+			source_channel: hex!["EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"].into(),
 			reward_fraction: Perbill::from_percent(80),
 		},
-		incentivized_outbound_channel: rococo_runtime::IncentivizedOutboundChannelConfig {
-			fee: U256::from_str_radix("10000000000000000", 10).unwrap(), // 0.01 SnowEther
+		incentivized_outbound_channel: snowbase_runtime::IncentivizedOutboundChannelConfig {
+			fee: u128::from_str_radix("10000000000000000", 10).unwrap(), // 0.01 SnowEther
 			interval: 1,
 		},
-		assets: rococo_runtime::AssetsConfig {
-			balances: vec![(
-				AssetId::ETH,
-				get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-				U256::from_str_radix("1000000000000000000", 10).unwrap(),
-			)],
+		assets: snowbase_runtime::AssetsConfig {
+			// Initialize the wrapped Ether asset
+			assets: vec![(0, EtherAppPalletId::get().into_account(), true, 1)],
+			metadata: vec![],
+			accounts: vec![],
 		},
-		nft: rococo_runtime::NFTConfig { tokens: vec![] },
-		ethereum_light_client: rococo_runtime::EthereumLightClientConfig {
+		asset_registry: snowbase_runtime::AssetRegistryConfig { next_asset_id: 1 },
+		nft: snowbase_runtime::NFTConfig { tokens: vec![] },
+		ethereum_light_client: snowbase_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
 		},
-		dot_app: rococo_runtime::DotAppConfig {
-			address: hex!["3f839E70117C64744930De8567Ae7A5363487cA3"].into(),
+		dot_app: snowbase_runtime::DotAppConfig {
+			address: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
 		},
-		eth_app: rococo_runtime::EthAppConfig {
+		eth_app: snowbase_runtime::EthAppConfig {
+			address: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
+		},
+		erc_20_app: snowbase_runtime::Erc20AppConfig {
 			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into(),
 		},
-		erc_20_app: rococo_runtime::Erc20AppConfig {
-			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into(),
+		erc_721_app: snowbase_runtime::Erc721AppConfig {
+			address: hex!["54D6643762E46036b3448659791adAf554225541"].into(),
 		},
-		erc_721_app: rococo_runtime::Erc721AppConfig {
-			address: hex!["F67EFf5250cD974E6e86c9B53dc5290905Bd8916"].into(),
-		},
-		parachain_info: rococo_runtime::ParachainInfoConfig { parachain_id: para_id },
-		collator_selection: rococo_runtime::CollatorSelectionConfig {
+		parachain_info: snowbase_runtime::ParachainInfoConfig { parachain_id: para_id },
+		collator_selection: snowbase_runtime::CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
-			candidacy_bond: rococo_runtime::ExistentialDeposit::get() * 16,
+			candidacy_bond: snowbase_runtime::ExistentialDeposit::get() * 16,
 			..Default::default()
 		},
-		session: rococo_runtime::SessionConfig {
+		session: snowbase_runtime::SessionConfig {
 			keys: invulnerables
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                          // account id
-						acc,                                  // validator id
-						rococo_runtime::SessionKeys { aura }, // session keys
+						acc.clone(),                            // account id
+						acc,                                    // validator id
+						snowbase_runtime::SessionKeys { aura }, // session keys
 					)
 				})
 				.collect(),

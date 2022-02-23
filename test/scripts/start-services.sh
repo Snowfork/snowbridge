@@ -63,53 +63,50 @@ start_polkadot_launch()
     local parachain_bin="$parachain_dir/target/release/snowbridge"
     local test_collator_bin="$parachain_dir/target/release/snowbridge-test-collator"
 
-    echo "Building parachain node"
-    cargo build --workspace \
+    echo "Building snowbridge parachain"
+    cargo build \
         --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
-        --features with-local-runtime
+        --features snowbase-native,rococo-native
+
+    echo "Building test parachain"
+    cargo build --manifest-path "$parachain_dir/Cargo.toml" --release -p snowbridge-test-node
 
     echo "Generating chain specification"
-    "$parachain_bin" build-spec --disable-default-bootnode > "$output_dir/snowbridge_spec.json"
+    "$parachain_bin" build-spec --chain snowbase --disable-default-bootnode > "$output_dir/spec.json"
 
-    echo "Updating chain specification with ethereum state"
-    header=$(curl http://localhost:8545 \
+    echo "Updating chain specification"
+    curl http://localhost:8545 \
         -X POST \
         -H "Content-Type: application/json" \
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
-        | node ../test/scripts/helpers/transformEthHeader.js)
+        | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
 
-    jq \
-        --argjson header "$header" \
-        ' .genesis.runtime.ethereumLightClient.initialHeader = $header
-        | .genesis.runtime.ethereumLightClient.initialDifficulty = "0x0"
-        | .genesis.runtime.parachainInfo.parachainId = 1000
-        | .para_id = 1000
-        ' \
-        "$output_dir/snowbridge_spec.json" | sponge "$output_dir/snowbridge_spec.json"
+    cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" | sponge "$output_dir/spec.json"
 
-    if [[ -n "${TEST_MALICIOUS_APP+x}" ]]; then
-        jq '.genesis.runtime.dotApp.address = "0x433488cec14C4478e5ff18DDC7E7384Fc416f148"' \
-        "$output_dir/snowbridge_spec.json" | sponge "$output_dir/snowbridge_spec.json"
-    fi
+    # TODO: add back
+    # if [[ -n "${TEST_MALICIOUS_APP+x}" ]]; then
+    #     jq '.genesis.runtime.dotApp.address = "0x433488cec14C4478e5ff18DDC7E7384Fc416f148"' \
+    #     "$output_dir/spec.json" | sponge "$output_dir/spec.json"
+    # fi
 
     echo "Generating test chain specification"
-    "$test_collator_bin" build-spec --disable-default-bootnode > "$output_dir/snowbridge_test_spec.json"
+    "$test_collator_bin" build-spec --disable-default-bootnode > "$output_dir/test_spec.json"
 
     echo "Updating test chain specification"
     jq \
         ' .genesis.runtime.parachainInfo.parachainId = 1001
         | .para_id = 1001
         ' \
-        "$output_dir/snowbridge_test_spec.json" | sponge "$output_dir/snowbridge_test_spec.json"
+        "$output_dir/test_spec.json" | sponge "$output_dir/test_spec.json"
 
     jq \
         --arg polkadot "$(realpath $POLKADOT_BIN)" \
         --arg bin "$parachain_bin" \
-        --arg spec "$output_dir/snowbridge_spec.json" \
+        --arg spec "$output_dir/spec.json" \
         --arg test_collator "$(realpath $test_collator_bin)" \
-        --arg test_spec "$output_dir/snowbridge_test_spec.json" \
+        --arg test_spec "$output_dir/test_spec.json" \
         ' .relaychain.bin = $polkadot
         | .parachains[0].bin = $bin
         | .parachains[0].chain = $spec
@@ -226,10 +223,6 @@ cleanup() {
 }
 
 trap cleanup SIGINT SIGTERM EXIT
-
-if [[ -f ".env" ]]; then
-    export $(<.env)
-fi
 
 rm -rf "$output_dir"
 mkdir "$output_dir"

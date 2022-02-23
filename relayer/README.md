@@ -47,13 +47,13 @@ sudo apt install jq
 Install [abigen](https://geth.ethereum.org/docs/dapp/native-bindings):
 
 ```
-go install github.com/ethereum/go-ethereum/cmd/abigen
+go install github.com/ethereum/go-ethereum/cmd/abigen@v1.10.6
 ```
 
 Compile the contracts in the [ethereum](../ethereum) directory:
 
 ```bash
-truffle compile --all
+npx hardhat compile
 ```
 
 Generate the bindings:
@@ -64,7 +64,7 @@ go generate ./...
 
 ## Configuration
 
-Note: For local development and testing, we use our E2E test stack described [here](../test/README.md). It automatically generates a suitable configuration for testing.
+Note: For local development and testing, we use our E2E test stack described [here](../test/README.md). It automatically generates suitable relayer configurations for testing.
 
 For an example configuration, please consult the [setup script](https://github.com/Snowfork/snowbridge/blob/main/test/scripts/start-services.sh) for our local development stack. Specifically the `start_relayer` bash function.
 

@@ -1,43 +1,14 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use sc_service::{ChainType, Properties};
-use snowbridge_runtime::{AccountId, AuraId, GenesisConfig, Signature, WASM_BINARY};
-use sp_core::{sr25519, Pair, Public, U256};
-use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
-	Perbill,
-};
+use snowbridge_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
+use sp_core::sr25519;
+use sp_runtime::{traits::AccountIdConversion, Perbill};
 
-use super::{get_from_seed, Extensions};
+use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
-
-use snowbridge_core::AssetId;
-
-type AccountPublic = <Signature as Verify>::Signer;
-
-/// Helper function to generate an account ID from seed
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
-
-/// Helper function to generate a crypto pair from seed
-pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-	TPublic::Pair::from_string(&format!("//{}", seed), None)
-		.expect("static values are valid; qed")
-		.public()
-}
-
-/// Generate collator keys from seed.
-///
-/// This function's return type must always match the session keys of the chain in tuple format.
-pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
-	get_public_from_seed::<AuraId>(seed)
-}
 
 pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 	let mut props = Properties::new();
@@ -45,8 +16,8 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 	props.insert("tokenDecimals".into(), 12.into());
 
 	ChainSpec::from_genesis(
-		"Snowbridge Local Testnet",
-		"local_testnet",
+		"Snowbridge Testnet",
+		"snowbridge_testnet",
 		ChainType::Local,
 		move || {
 			testnet_genesis(
@@ -128,16 +99,16 @@ fn testnet_genesis(
 			reward_fraction: Perbill::from_percent(80),
 		},
 		incentivized_outbound_channel: snowbridge_runtime::IncentivizedOutboundChannelConfig {
-			fee: U256::from_str_radix("10000000000000000", 10).unwrap(), // 0.01 SnowEther
+			fee: u128::from_str_radix("10000000000000000", 10).unwrap(), // 0.01 SnowEther
 			interval: 1,
 		},
 		assets: snowbridge_runtime::AssetsConfig {
-			balances: vec![(
-				AssetId::ETH,
-				get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-				U256::from_str_radix("1000000000000000000", 10).unwrap(),
-			)],
+			// Initialize the wrapped Ether asset
+			assets: vec![(0, EtherAppPalletId::get().into_account(), true, 1)],
+			metadata: vec![],
+			accounts: vec![],
 		},
+		asset_registry: snowbridge_runtime::AssetRegistryConfig { next_asset_id: 1 },
 		nft: snowbridge_runtime::NFTConfig { tokens: vec![] },
 		ethereum_light_client: snowbridge_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),

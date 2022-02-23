@@ -33,6 +33,12 @@ contract ERC721App is AccessControl {
         address recipient
     );
 
+    event Upgraded(
+        address upgrader,
+        Channel basic,
+        Channel incentivized
+    );
+
     struct Channel {
         address inbound;
         address outbound;
@@ -41,6 +47,8 @@ contract ERC721App is AccessControl {
     bytes32 public constant INBOUND_CHANNEL_ROLE =
         keccak256("INBOUND_CHANNEL_ROLE");
 
+    bytes32 public constant CHANNEL_UPGRADE_ROLE =
+        keccak256("CHANNEL_UPGRADE_ROLE");
     constructor(Channel memory _basic, Channel memory _incentivized) {
         Channel storage c1 = channels[ChannelId.Basic];
         c1.inbound = _basic.inbound;
@@ -50,6 +58,9 @@ contract ERC721App is AccessControl {
         c2.inbound = _incentivized.inbound;
         c2.outbound = _incentivized.outbound;
 
+        _setupRole(CHANNEL_UPGRADE_ROLE, msg.sender);
+        _setRoleAdmin(INBOUND_CHANNEL_ROLE, CHANNEL_UPGRADE_ROLE);
+        _setRoleAdmin(CHANNEL_UPGRADE_ROLE, CHANNEL_UPGRADE_ROLE);
         _setupRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
     }
@@ -121,14 +132,33 @@ contract ERC721App is AccessControl {
         string memory
     ) private pure returns (bytes memory) {
         return
-            abi.encodePacked(
+            bytes.concat(
                 MINT_CALL,
-                _sender,
-                bytes1(0x00), // Encode recipient as MultiAddress::Id
+                abi.encodePacked(_sender),
+                bytes1(0x00), // Encoding recipient as MultiAddress::Id
                 _recipient,
-                _tokenContract,
+                abi.encodePacked(_tokenContract),
                 _tokenId.encode256(),
                 bytes1(0x00) // Use an empty _tokenURI instead of SCALE encoded _tokenURI
             );
+    }
+
+    function upgrade(
+        Channel memory _basic,
+        Channel memory _incentivized
+    ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
+        Channel storage c1 = channels[ChannelId.Basic];
+        Channel storage c2 = channels[ChannelId.Incentivized];
+        // revoke old channel
+        revokeRole(INBOUND_CHANNEL_ROLE, c1.inbound);
+        revokeRole(INBOUND_CHANNEL_ROLE, c2.inbound);
+        // set new channel
+        c1.inbound = _basic.inbound;
+        c1.outbound = _basic.outbound;
+        c2.inbound = _incentivized.inbound;
+        c2.outbound = _incentivized.outbound;
+        grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
+        grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
+        emit Upgraded(msg.sender, c1, c2);
     }
 }

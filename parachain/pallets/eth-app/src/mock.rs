@@ -4,9 +4,11 @@ use sp_std::marker::PhantomData;
 use frame_support::{
 	dispatch::DispatchResult,
 	parameter_types,
-	traits::{Everything, GenesisBuild},
+	traits::{tokens::fungible::ItemOf, Everything, GenesisBuild},
+	PalletId,
 };
-use frame_system as system;
+use sp_runtime::{traits::AccountIdConversion, DispatchError};
+
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
@@ -14,8 +16,10 @@ use sp_runtime::{
 	MultiSignature,
 };
 
-use snowbridge_assets::SingleAssetAdaptor;
-use snowbridge_core::{assets::XcmReserveTransfer, AssetId, ChannelId};
+use snowbridge_core::{
+	assets::{RemoteParachain, XcmReserveTransfer},
+	ChannelId,
+};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -27,11 +31,12 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Assets: snowbridge_assets::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
 		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
 		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
-		EthApp: crate::{Pallet, Call, Config, Storage, Event<T>},
+		EtherApp: crate::{Pallet, Call, Config, Storage, Event<T>},
 	}
 );
 
@@ -43,7 +48,7 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
-impl system::Config for Test {
+impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
@@ -61,12 +66,52 @@ impl system::Config for Test {
 	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 	type OnSetCode = ();
+}
+
+parameter_types! {
+	pub const ExistentialDeposit: u64 = 1;
+}
+
+impl pallet_balances::Config for Test {
+	type Balance = u64;
+	type DustRemoval = ();
+	type Event = Event;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+}
+
+parameter_types! {
+	pub const AssetDeposit: u64 = 1;
+	pub const ApprovalDeposit: u64 = 1;
+	pub const StringLimit: u32 = 50;
+	pub const MetadataDepositBase: u64 = 1;
+	pub const MetadataDepositPerByte: u64 = 1;
+}
+
+impl pallet_assets::Config for Test {
+	type Event = Event;
+	type Balance = u128;
+	type AssetId = u128;
+	type Currency = Balances;
+	type ForceOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type AssetDeposit = AssetDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = StringLimit;
+	type Freezer = ();
+	type WeightInfo = ();
+	type Extra = ();
 }
 
 impl snowbridge_dispatch::Config for Test {
@@ -100,14 +145,8 @@ where
 }
 
 parameter_types! {
-	pub const Ether: AssetId = AssetId::ETH;
 	pub const MaxMessagePayloadSize: u64 = 256;
 	pub const MaxMessagesPerCommit: u64 = 3;
-}
-
-impl snowbridge_assets::Config for Test {
-	type Event = Event;
-	type WeightInfo = ();
 }
 
 impl snowbridge_basic_channel::outbound::Config for Test {
@@ -126,7 +165,7 @@ impl snowbridge_incentivized_channel::outbound::Config for Test {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
-	type FeeCurrency = SingleAssetAdaptor<Test, Ether>;
+	type FeeCurrency = Ether;
 	type SetFeeOrigin = frame_system::EnsureRoot<AccountId>;
 	type WeightInfo = ();
 }
@@ -134,35 +173,51 @@ impl snowbridge_incentivized_channel::outbound::Config for Test {
 pub struct XcmAssetTransfererMock<T>(PhantomData<T>);
 impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 	fn reserve_transfer(
-		_origin: Origin,
-		_asset_id: AssetId,
-		_para_id: u32,
-		_dest: &AccountId,
-		_amount: ethabi::U256,
+		_asset_id: u128,
+		_recipient: &AccountId,
+		_amount: u128,
+		destination: RemoteParachain,
 	) -> DispatchResult {
-		todo!()
+		match destination.para_id {
+			1001 => Ok(()),
+			2001 => Err(DispatchError::Other("Parachain 2001 not found.")),
+			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator.")
+		}
 	}
 }
 
-impl crate::Config for Test {
-	type Event = Event;
-	type Asset = Asset;
-	type OutboundRouter = OutboundRouter<Test>;
-	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
-	type WeightInfo = ();
-	type XcmReserveTransfer = XcmAssetTransfererMock<Self>;
+parameter_types! {
+	pub const EtherAssetId: u128 = 0;
+	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
 }
 
-pub type Asset = SingleAssetAdaptor<Test, Ether>;
+pub type Ether = ItemOf<Assets, EtherAssetId, AccountId>;
+
+impl crate::Config for Test {
+	type Event = Event;
+	type Asset = Ether;
+	type OutboundRouter = OutboundRouter<Test>;
+	type PalletId = EtherAppPalletId;
+	type XcmReserveTransfer = XcmAssetTransfererMock<Self>;
+	type CallOrigin = snowbridge_dispatch::EnsureEthereumAccount;
+	type WeightInfo = ();
+}
 
 #[cfg(feature = "runtime-benchmarks")]
 impl crate::benchmarking::Config for Test {}
 
 pub fn new_tester() -> sp_io::TestExternalities {
-	let mut storage = system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	let config = crate::GenesisConfig { address: H160::repeat_byte(1) };
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
+
+	let assets_config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
+		assets: vec![(0, EtherAppPalletId::get().into_account(), true, 1)],
+		metadata: vec![],
+		accounts: vec![],
+	};
+	GenesisBuild::<Test>::assimilate_storage(&assets_config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 	ext.execute_with(|| System::set_block_number(1));

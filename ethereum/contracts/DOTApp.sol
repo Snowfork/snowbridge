@@ -23,6 +23,15 @@ contract DOTApp is FeeSource, AccessControl {
     bytes32 public constant INBOUND_CHANNEL_ROLE =
         keccak256("INBOUND_CHANNEL_ROLE");
 
+    bytes32 public constant CHANNEL_UPGRADE_ROLE =
+        keccak256("CHANNEL_UPGRADE_ROLE");
+
+    event Upgraded(
+        address upgrader,
+        Channel basic,
+        Channel incentivized
+    );
+
     struct Channel {
         address inbound;
         address outbound;
@@ -46,6 +55,9 @@ contract DOTApp is FeeSource, AccessControl {
         c2.inbound = _incentivized.inbound;
         c2.outbound = _incentivized.outbound;
 
+        _setupRole(CHANNEL_UPGRADE_ROLE, msg.sender);
+        _setRoleAdmin(INBOUND_CHANNEL_ROLE, CHANNEL_UPGRADE_ROLE);
+        _setRoleAdmin(CHANNEL_UPGRADE_ROLE, CHANNEL_UPGRADE_ROLE);
         _setupRole(FEE_BURNER_ROLE, feeBurner);
         _setupRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
         _setupRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
@@ -89,12 +101,31 @@ contract DOTApp is FeeSource, AccessControl {
         uint256 _amount
     ) private pure returns (bytes memory) {
         return
-            abi.encodePacked(
+            bytes.concat(
                 UNLOCK_CALL,
-                _sender,
+                abi.encodePacked(_sender),
                 bytes1(0x00), // Encoding recipient as MultiAddress::Id
                 _recipient,
                 _amount.encode256()
             );
+    }
+
+    function upgrade(
+        Channel memory _basic,
+        Channel memory _incentivized
+    ) external onlyRole(CHANNEL_UPGRADE_ROLE) {
+        Channel storage c1 = channels[ChannelId.Basic];
+        Channel storage c2 = channels[ChannelId.Incentivized];
+        // revoke old channel
+        revokeRole(INBOUND_CHANNEL_ROLE, c1.inbound);
+        revokeRole(INBOUND_CHANNEL_ROLE, c2.inbound);
+        // set new channel
+        c1.inbound = _basic.inbound;
+        c1.outbound = _basic.outbound;
+        c2.inbound = _incentivized.inbound;
+        c2.outbound = _incentivized.outbound;
+        grantRole(INBOUND_CHANNEL_ROLE, _basic.inbound);
+        grantRole(INBOUND_CHANNEL_ROLE, _incentivized.inbound);
+        emit Upgraded(msg.sender, c1, c2);
     }
 }

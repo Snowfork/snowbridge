@@ -157,14 +157,17 @@ pub fn genesis_ethereum_block_hash() -> H256 {
 }
 
 pub fn child_of_genesis_ethereum_header() -> EthereumHeader {
-	child_of_header(&genesis_ethereum_header())
+	child_of_header(&genesis_ethereum_header(), None)
 }
 
-pub fn child_of_header(header: &EthereumHeader) -> EthereumHeader {
+pub fn child_of_header(header: &EthereumHeader, timestamp: Option<u64>) -> EthereumHeader {
 	let mut child: EthereumHeader = Default::default();
 	child.difficulty = 1.into();
 	child.parent_hash = header.compute_hash();
 	child.number = header.number + 1;
+	if let Some(timestamp) = timestamp {
+		child.timestamp = timestamp
+	}
 	child
 }
 

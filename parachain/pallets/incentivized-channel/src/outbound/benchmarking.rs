@@ -1,9 +1,8 @@
 //! IncentivizedOutboundChannel pallet benchmarking
 use super::*;
 
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, BenchmarkError};
+use frame_benchmarking::{benchmarks, BenchmarkError};
 use frame_support::traits::OnInitialize;
-use sp_core::U256;
 
 #[allow(unused_imports)]
 use crate::outbound::Pallet as IncentivizedOutboundChannel;
@@ -20,7 +19,7 @@ benchmarks! {
 			<MessageQueue<T>>::append(Message {
 				target: H160::zero(),
 				nonce: 0u64,
-				fee: U256::zero(),
+				fee: 0,
 				payload,
 			});
 		}
@@ -38,7 +37,7 @@ benchmarks! {
 		<MessageQueue<T>>::append(Message {
 			target: H160::zero(),
 			nonce: 0u64,
-			fee: U256::zero(),
+			fee: 0,
 			payload: vec![1u8; T::MaxMessagePayloadSize::get() as usize],
 		});
 
@@ -67,17 +66,17 @@ benchmarks! {
 			Err(_) => return Err(BenchmarkError::Stop("Failed to get raw origin from origin")),
 		};
 
-		let new_fee : U256 = 32000000.into();
+		let new_fee = 32000000;
 		assert!(<Fee<T>>::get() != new_fee);
 
 	}: _(authorized_origin, new_fee)
 	verify {
 		assert_eq!(<Fee<T>>::get(), new_fee);
 	}
-}
 
-impl_benchmark_test_suite!(
-	IncentivizedOutboundChannel,
-	crate::outbound::test::new_tester(),
-	crate::outbound::test::Test,
-);
+	impl_benchmark_test_suite!(
+		IncentivizedOutboundChannel,
+		crate::outbound::test::new_tester(),
+		crate::outbound::test::Test,
+	);
+}
