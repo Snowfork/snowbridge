@@ -224,10 +224,6 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM EXIT
 
-if [[ -f ".env" ]]; then
-    export $(<.env)
-fi
-
 rm -rf "$output_dir"
 mkdir "$output_dir"
 
