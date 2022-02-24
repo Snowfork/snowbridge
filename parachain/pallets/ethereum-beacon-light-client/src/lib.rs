@@ -598,11 +598,11 @@ pub mod pallet {
 			let public_keys: Vec<PublicKey> = pubkeys
 				.iter()
 				.map(|bytes| {
-					PublicKey::from_bytes(&bytes).unwrap()
+					PublicKey::from_bytes(&bytes).unwrap() // TODO handle properly
 				})
 				.collect();
 
-			let agg_pub_key = AggregatePublicKey::into_aggregate(&public_keys).unwrap();
+			let agg_pub_key = AggregatePublicKey::into_aggregate(&public_keys).unwrap(); // TODO handle properly
 
 			agg_sig.fast_aggregate_verify_pre_aggregated(&message.as_bytes(), &agg_pub_key)
 		}
