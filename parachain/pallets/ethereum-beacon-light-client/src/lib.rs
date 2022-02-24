@@ -22,6 +22,7 @@ use sp_std::prelude::*;
 use ssz::Encode as SSZEncode;
 use ssz_derive::{Decode as SSZDecode, Encode as SSZEncode};
 use std::cmp;
+use milagro_bls::{AggregateSignature, AggregatePublicKey, Signature, PublicKey};
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 /// The minimum number of validators that needs to sign update
@@ -173,6 +174,7 @@ pub mod pallet {
 		InsufficientSyncCommitteeParticipants,
 		InvalidSyncCommiteeSignature,
 		InvalidMerkleProof,
+		InvalidSignature,
 	}
 
 	#[pallet::hooks]
@@ -581,12 +583,28 @@ pub mod pallet {
 			})
 		}
 
-		fn bls_fast_aggregate_verify(
-			participant_pubkeys: Vec<Vec<u8>>,
-			signing_root: H256,
-			sync_committee_signature: Vec<u8>,
+		pub fn bls_fast_aggregate_verify(
+			pubkeys: Vec<Vec<u8>>,
+			message: H256,
+			signature: Vec<u8>,
 		) -> bool {
-			todo!()
+			let sig = match Signature::from_bytes(&signature[..]) {
+				Ok(sig) => sig,
+				Err(error) => return false,
+			}; 
+
+			let agg_sig = AggregateSignature::from_signature(&sig);
+
+			let public_keys: Vec<PublicKey> = pubkeys
+				.iter()
+				.map(|bytes| {
+					PublicKey::from_bytes(&bytes).unwrap()
+				})
+				.collect();
+
+			let agg_pub_key = AggregatePublicKey::into_aggregate(&public_keys).unwrap();
+
+			agg_sig.fast_aggregate_verify_pre_aggregated(&message.as_bytes(), &agg_pub_key)
 		}
 
 		fn floorlog2(num: u64) -> u64 {

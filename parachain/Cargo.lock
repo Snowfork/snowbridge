@@ -98,6 +98,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbf688625d06217d5b1bb0ea9d9c44a1635fd0ee3534466388d18203174f4d11"
 
 [[package]]
+name = "amcl"
+version = "0.3.0"
+source = "git+https://github.com/sigp/milagro_bls?tag=v1.4.2#16655aa033175a90c10ef02aa144e2835de23aec"
+
+[[package]]
 name = "ansi_term"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4455,6 +4460,18 @@ dependencies = [
  "futures 0.3.17",
  "rand 0.7.3",
  "thrift",
+]
+
+[[package]]
+name = "milagro_bls"
+version = "1.4.2"
+source = "git+https://github.com/sigp/milagro_bls?tag=v1.4.2#16655aa033175a90c10ef02aa144e2835de23aec"
+dependencies = [
+ "amcl",
+ "hex",
+ "lazy_static",
+ "rand 0.7.3",
+ "zeroize",
 ]
 
 [[package]]
@@ -9830,6 +9847,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "milagro_bls",
  "parity-scale-codec",
  "rlp",
  "rustc-hex",
