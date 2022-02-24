@@ -16,14 +16,12 @@ use frame_support::{dispatch::DispatchResult, log, traits::Get, transactional};
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
 use sp_core::H256;
+use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use std::cmp;
-use sp_io::hashing::sha2_256;
 use ssz::Encode as SSZEncode;
 use ssz_derive::{Decode as SSZDecode, Encode as SSZEncode};
-
-pub use snowbridge_ethereum::Header as EthereumHeader;
+use std::cmp;
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 /// The minimum number of validators that needs to sign update
@@ -50,15 +48,24 @@ const FINALIZED_ROOT_INDEX: u64 = 105;
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#constants
 const NEXT_SYNC_COMMITTEE_INDEX: u64 = 55;
 
+/// DomainType('0x07000000')
+/// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
+const DOMAIN_SYNC_COMMITTEE: [u8; 8] = [30, 37, 30, 30, 30, 30, 30, 30];
+
+/// GENESIS_FORK_VERSION('0x00000000')
+const GENESIS_FORK_VERSION: [u8; 8] = [30, 30, 30, 30, 30, 30, 30, 30];
+
 type Epoch = u64;
 type Slot = u64;
 type Root = H256;
 type Domain = H256;
 type ValidatorIndex = u32;
-type Version = Vec<u8>; 
+type Version = Vec<u8>;
 
 /// Beacon block header as it is stored in the runtime storage.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode)]
+#[derive(
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode,
+)]
 // https://yeeth.github.io/BeaconChain.swift/Structs/BeaconBlockHeader.html#/s:11BeaconChain0A11BlockHeaderV9signature10Foundation4DataVvp
 // https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#beaconblock
 // https://github.com/ethereum/consensus-specs/blob/042ca57a617736e6bdd6f6dcdd6d32c247e5a67f/specs/phase0/beacon-chain.md#beaconblockheader
@@ -77,9 +84,11 @@ pub struct BeaconBlockHeader {
 
 /// Sync committee as it is stored in the runtime storage.
 /// https://github.com/ethereum/consensus-specs/blob/02b32100ed26c3c7a4a44f41b932437859487fd2/specs/altair/beacon-chain.md#synccommittee
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode)]
+#[derive(
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode,
+)]
 pub struct SyncCommittee {
-	pub pubkeys: Vec<Vec<u8>>, 
+	pub pubkeys: Vec<Vec<u8>>,
 	pub aggregate_pubkey: Vec<u8>,
 }
 
@@ -91,11 +100,22 @@ pub struct SyncAggregate {
 	pub sync_committee_signature: Vec<u8>,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode)]
+#[derive(
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode,
+)]
 pub struct ForkData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
 	pub current_version: Version,
 	pub genesis_validators_root: Vec<u8>,
+}
+
+#[derive(
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode,
+)]
+pub struct SigningData {
+	// 1 or 0 bit, indicates whether a sync committee participated in a vote
+	pub object_root: Root,
+	pub domain: Domain,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -152,7 +172,7 @@ pub mod pallet {
 		Unknown,
 		InsufficientSyncCommitteeParticipants,
 		InvalidSyncCommiteeSignature,
-		InvalidMerkleProof
+		InvalidMerkleProof,
 	}
 
 	#[pallet::hooks]
@@ -212,10 +232,10 @@ pub mod pallet {
 		#[pallet::weight(1_000_000)]
 		#[transactional]
 		pub fn light_client_update(
-			origin: OriginFor<T>, 
-			update: LightClientUpdate, 
-			current_slot: u64, 
-			genesis_validators_root: Root
+			origin: OriginFor<T>,
+			update: LightClientUpdate,
+			current_slot: u64,
+			genesis_validators_root: Root,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -315,13 +335,16 @@ pub mod pallet {
 				// update.finality_branch == [Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))]
 				ensure!(true, Error::<T>::Unknown); // TODO
 			} else {
-				ensure!(Self::is_valid_merkle_branch(
-					Self::hash_tree_root(update.finalized_header.unwrap()),
-					update.finality_branch,
-					Self::floorlog2(FINALIZED_ROOT_INDEX),
-					Self::get_subtree_index(FINALIZED_ROOT_INDEX),
-					update.attested_header.state_root
-				), Error::<T>::InvalidMerkleProof);
+				ensure!(
+					Self::is_valid_merkle_branch(
+						Self::hash_tree_root(update.finalized_header.unwrap()),
+						update.finality_branch,
+						Self::floorlog2(FINALIZED_ROOT_INDEX),
+						Self::get_subtree_index(FINALIZED_ROOT_INDEX),
+						update.attested_header.state_root
+					),
+					Error::<T>::InvalidMerkleProof
+				);
 			}
 
 			let mut sync_committee: SyncCommittee;
@@ -334,13 +357,16 @@ pub mod pallet {
 			} else {
 				sync_committee = <NextSyncCommittee<T>>::get();
 
-				ensure!(Self::is_valid_merkle_branch(
-					Self::hash_tree_root(update.next_sync_committee),
-					update.next_sync_committee_branch,
-					Self::floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
-					Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
-					active_header.state_root
-				), Error::<T>::InvalidMerkleProof);
+				ensure!(
+					Self::is_valid_merkle_branch(
+						Self::hash_tree_root(update.next_sync_committee),
+						update.next_sync_committee_branch,
+						Self::floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
+						Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
+						active_header.state_root
+					),
+					Error::<T>::InvalidMerkleProof
+				);
 			}
 			let sync_aggregate = update.sync_aggregate.clone();
 
@@ -353,19 +379,34 @@ pub mod pallet {
 			// Verify sync committee aggregate signature
 			let mut participant_pubkeys: Vec<Vec<u8>> = Vec::new();
 
-			for it in
-				sync_aggregate.clone().sync_committee_bits.iter().zip(sync_committee.pubkeys.iter_mut())
+			for (bit, pubkey) in sync_aggregate
+				.clone()
+				.sync_committee_bits
+				.iter()
+				.zip(sync_committee.pubkeys.iter_mut())
 			{
-				let (bit, pubkey) = it;
 				if *bit == 1 as u8 {
 					let pubk = pubkey.clone();
 					participant_pubkeys.push(pubk);
 				}
 			}
 
-			let domain = Self::compute_domain(Self::get_domain_sync_committee(), update.pubfork_version, genesis_validators_root);
+			let domain = Self::compute_domain(
+				DOMAIN_SYNC_COMMITTEE.to_vec(),
+				update.pubfork_version,
+				genesis_validators_root,
+			);
+
 			let signing_root = Self::compute_signing_root(update.attested_header, domain);
-			ensure!(Self::bls_fast_aggregate_verify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature), Error::<T>::InvalidSyncCommiteeSignature);
+
+			ensure!(
+				Self::bls_fast_aggregate_verify(
+					participant_pubkeys,
+					signing_root,
+					sync_aggregate.sync_committee_signature
+				),
+				Error::<T>::InvalidSyncCommiteeSignature
+			);
 
 			Ok(())
 		}
@@ -428,17 +469,17 @@ pub mod pallet {
 		}
 
 		pub fn is_valid_merkle_branch_wrapper<Z: SSZEncode>(
-			leaf: Z, 
+			leaf: Z,
 			branch: Vec<H256>,
 			root_index: u64,
-			root: Root
+			root: Root,
 		) -> bool {
 			Self::is_valid_merkle_branch(
 				Self::hash_tree_root(leaf),
 				branch,
 				Self::floorlog2(root_index),
 				Self::get_subtree_index(root_index),
-				root
+				root,
 			)
 		}
 
@@ -447,31 +488,31 @@ pub mod pallet {
 			branch: Vec<H256>,
 			depth: u64,
 			index: u64,
-			root: Root
+			root: Root,
 		) -> bool {
 			let mut value = leaf;
 			for i in 0..depth {
-				let base: u32 = 2; 
-				if (index / (base.pow(i as u32) as u64) % 2) == 0 { // left node
+				let base: u32 = 2;
+				if (index / (base.pow(i as u32) as u64) % 2) == 0 {
+					// left node
 					let mut data = [0u8; 64];
 					data[0..32].copy_from_slice(&(value.0));
 					data[32..64].copy_from_slice(&(branch[i as usize].0));
 					value = sha2_256(&data).into();
-				}
-				else {
+				} else {
 					let mut data = [0u8; 64]; // right node
 					data[0..32].copy_from_slice(&(branch[i as usize].0));
 					data[32..64].copy_from_slice(&(value.0));
 					value = sha2_256(&data).into();
-				}	
+				}
 			}
-			return value == root
+			return value == root;
 		}
 
 		//** Helper functions **//
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#helper-functions
 		fn get_subtree_index(generalized_index: u64) -> u64 {
-			let base: u32 = 2; 
+			let base: u32 = 2;
 
 			let floorlog2_finalized_root_index = Self::floorlog2(FINALIZED_ROOT_INDEX);
 
@@ -496,22 +537,27 @@ pub mod pallet {
 		}
 
 		fn get_sync_committee_sum(sync_committee_bits: Vec<u8>) -> u64 {
-			sync_committee_bits.iter().sum::<u8>() as u64
+			sync_committee_bits.iter().fold(0, |acc: u64, x| acc + *x as u64)
 		}
 
 		/// Return the domain for the domain_type and fork_version.
-		fn compute_domain(domain_type: Vec<u8>, fork_version: Option<Version>, genesis_validators_root: Root) -> Domain {
+		fn compute_domain(
+			domain_type: Vec<u8>,
+			fork_version: Option<Version>,
+			genesis_validators_root: Root,
+		) -> Domain {
 			let unwrapped_fork_version: Version;
 			if fork_version.is_none() {
-				unwrapped_fork_version = Self::get_genesis_fork_version();
+				unwrapped_fork_version = GENESIS_FORK_VERSION.to_vec();
 			} else {
 				unwrapped_fork_version = fork_version.unwrap();
 			}
 			// TODO this may not be needed because we pass genesis_validators_root from relayer.
 			//if genesis_validators_root is None:
 			//	genesis_validators_root = Root()  # all bytes zero by default
-			
-			let fork_data_root = Self::compute_fork_data_root(unwrapped_fork_version, genesis_validators_root);
+
+			let fork_data_root =
+				Self::compute_fork_data_root(unwrapped_fork_version, genesis_validators_root);
 
 			let mut domain = [0u8; 32];
 
@@ -522,17 +568,24 @@ pub mod pallet {
 		}
 
 		fn compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Root {
-			Self::hash_tree_root(ForkData{
-				current_version: current_version,
-				genesis_validators_root: genesis_validators_root.as_bytes().to_vec(),
+			Self::hash_tree_root(ForkData {
+				current_version,
+				genesis_validators_root: genesis_validators_root.as_bytes().to_vec(), // TODO maybe change type to Vec<u8> from the start
 			})
 		}
 
-		fn compute_signing_root(attested_header: BeaconBlockHeader, domain: H256) -> Vec<u8> {
-			todo!()
+		fn compute_signing_root(ssz_object: BeaconBlockHeader, domain: Domain) -> Root {
+			Self::hash_tree_root(SigningData {
+				object_root: Self::hash_tree_root(ssz_object),
+				domain,
+			})
 		}
 
-		fn bls_fast_aggregate_verify(participant_pubkeys: Vec<Vec<u8>>, signing_root: Vec<u8>, sync_committee_signature: Vec<u8>) -> bool {
+		fn bls_fast_aggregate_verify(
+			participant_pubkeys: Vec<Vec<u8>>,
+			signing_root: H256,
+			sync_committee_signature: Vec<u8>,
+		) -> bool {
 			todo!()
 		}
 
@@ -544,19 +597,6 @@ pub mod pallet {
 			let ssz_bytes: Vec<u8> = object.as_ssz_bytes();
 
 			sha2_256(&ssz_bytes).into()
-		}
-
-		/// DomainType('0x07000000') DOMAIN_SYNC_COMMITTEE
-		/// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
-		/// TODO this is a hack because I can't initialize a vector as a constant. Also can't get hex macro to work here, hmmm. Can't find crate.
-		fn get_domain_sync_committee() -> Vec<u8> {
-			vec![30, 37, 30, 30, 30, 30, 30, 30]
-		}
-
-		/// 0x00000000 GENESIS_FORK_VERSION
-		/// TODO this is a hack because I can't initialize a vector as a constant. Also can't get hex macro to work here, hmmm. Can't find crate.
-		fn get_genesis_fork_version() -> Vec<u8> {
-			vec![30, 30, 30, 30, 30, 30, 30, 30]
 		}
 	}
 }

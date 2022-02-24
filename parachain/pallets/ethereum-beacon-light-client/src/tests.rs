@@ -1,7 +1,7 @@
 use crate::mock::*;
 use crate::Error;
 use crate as ethereum_beacon_light_client;
-use frame_support::{assert_err, assert_ok};
+use frame_support::assert_err;
 use hex_literal::hex;
 
 use ssz::{Decode, Encode};
