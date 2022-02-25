@@ -22,7 +22,7 @@ use sp_std::prelude::*;
 use ssz::Encode as SSZEncode;
 use ssz_derive::{Decode as SSZDecode, Encode as SSZEncode};
 use std::cmp;
-use milagro_bls::{AggregateSignature, AggregatePublicKey, Signature, PublicKey};
+use milagro_bls::{AggregateSignature, AggregatePublicKey, Signature, PublicKey, AmclError};
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 /// The minimum number of validators that needs to sign update
@@ -175,6 +175,9 @@ pub mod pallet {
 		InvalidSyncCommiteeSignature,
 		InvalidMerkleProof,
 		InvalidSignature,
+		InvalidSignaturePoint,
+		InvalidAggregatePublicKeys,
+		SignatureVerificationFailed,
 	}
 
 	#[pallet::hooks]
@@ -401,14 +404,11 @@ pub mod pallet {
 
 			let signing_root = Self::compute_signing_root(update.attested_header, domain);
 
-			ensure!(
-				Self::bls_fast_aggregate_verify(
-					participant_pubkeys,
-					signing_root,
-					sync_aggregate.sync_committee_signature
-				),
-				Error::<T>::InvalidSyncCommiteeSignature
-			);
+			Self::bls_fast_aggregate_verify(
+				participant_pubkeys,
+				signing_root,
+				sync_aggregate.sync_committee_signature
+			)?;
 
 			Ok(())
 		}
@@ -587,24 +587,38 @@ pub mod pallet {
 			pubkeys: Vec<Vec<u8>>,
 			message: H256,
 			signature: Vec<u8>,
-		) -> bool {
-			let sig = match Signature::from_bytes(&signature[..]) {
-				Ok(sig) => sig,
-				Err(error) => return false,
-			}; 
+		) -> DispatchResult {
+			let sig = Signature::from_bytes(&signature[..]);
 
-			let agg_sig = AggregateSignature::from_signature(&sig);
+			if let Err(e) = sig {
+				return Err(Error::<T>::InvalidSignature.into());
+			}
 
-			let public_keys: Vec<PublicKey> = pubkeys
+			let agg_sig = AggregateSignature::from_signature(&sig.unwrap());
+
+			let public_keys_res: Result<Vec<PublicKey>, _> = pubkeys
 				.iter()
 				.map(|bytes| {
-					PublicKey::from_bytes(&bytes).unwrap() // TODO handle properly
+					PublicKey::from_bytes(&bytes)
 				})
 				.collect();
 
-			let agg_pub_key = AggregatePublicKey::into_aggregate(&public_keys).unwrap(); // TODO handle properly
+			if let Err(e) = public_keys_res {
+				match e {
+    				AmclError::InvalidPoint => return Err(Error::<T>::InvalidSignaturePoint.into()),
+					_ => return Err(Error::<T>::InvalidSignature.into()),
+				};
+			}
 
-			agg_sig.fast_aggregate_verify_pre_aggregated(&message.as_bytes(), &agg_pub_key)
+			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap()); 
+
+			if let Err(e) = agg_pub_key_res {
+				return Err(Error::<T>::InvalidAggregatePublicKeys.into());
+			}
+
+			ensure!(agg_sig.fast_aggregate_verify_pre_aggregated(&message.as_bytes(), &agg_pub_key_res.unwrap()), Error::<T>::SignatureVerificationFailed);
+
+			Ok(())
 		}
 
 		fn floorlog2(num: u64) -> u64 {

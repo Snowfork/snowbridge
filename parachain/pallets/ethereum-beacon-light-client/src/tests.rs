@@ -1,18 +1,11 @@
 use crate::mock::*;
 use crate::Error;
 use crate as ethereum_beacon_light_client;
-use frame_support::assert_err;
+use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
 
 use ssz::{Decode, Encode};
 use ssz_derive::{Decode, Encode};
-
-#[test]
-fn it_works() {
-	new_tester().execute_with(|| {
-		assert_eq!(true, true);
-	});
-}
 
 #[test]
 fn it_gets_an_update() {
@@ -26,25 +19,6 @@ fn it_gets_an_update() {
 			hex!("043db0d9a83813551ee2f33450d23797757d430911a9320530ad8a0eabc43efb").into()
 		), Error::<Test>::AncientHeader);
 	});
-}
-
-#[derive(PartialEq, Debug, Encode, Decode)]
-struct Foo {
-    a: u64,
-    b: Vec<u16>,
-}
-#[test]
-pub fn test_ssz() {
-	let foo = Foo {
-        a: 42,
-        b: vec![1, 3, 3, 7]
-    };
-
-    let ssz_bytes: Vec<u8> = foo.as_ssz_bytes();
-
-    let decoded_foo = Foo::from_ssz_bytes(&ssz_bytes).unwrap();
-
-    assert_eq!(foo, decoded_foo);
 }
 
 #[test]
@@ -88,10 +62,9 @@ pub fn test_is_not_valid_merkle_proof() {
 }
 
 #[test]
-/// FIX not passing yet
 pub fn test_bls_fast_aggregate_verify() {
 	new_tester().execute_with(|| {
-		assert_eq!(EthereumBeaconLightClient::bls_fast_aggregate_verify(
+		assert_ok!(EthereumBeaconLightClient::bls_fast_aggregate_verify(
 			vec![
 				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
 				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
@@ -100,6 +73,54 @@ pub fn test_bls_fast_aggregate_verify() {
 			],
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
 			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
-		), false);
+		));
+	});
+}
+
+#[test]
+pub fn test_bls_fast_aggregate_verify_invalid_point() {
+	new_tester().execute_with(|| {
+		assert_err!(EthereumBeaconLightClient::bls_fast_aggregate_verify(
+			vec![
+				hex!("973eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
+			],
+			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
+			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
+		), Error::<Test>::InvalidSignaturePoint);
+	});
+}
+
+#[test]
+pub fn test_bls_fast_aggregate_verify_invalid_message() {
+	new_tester().execute_with(|| {
+		assert_err!(EthereumBeaconLightClient::bls_fast_aggregate_verify(
+			vec![
+				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
+			],
+			hex!("99241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
+			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
+		), Error::<Test>::SignatureVerificationFailed);
+	});
+}
+
+#[test]
+pub fn test_bls_fast_aggregate_verify_invalid_signature() {
+	new_tester().execute_with(|| {
+		assert_err!(EthereumBeaconLightClient::bls_fast_aggregate_verify(
+			vec![
+				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
+			],
+			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
+			hex!("c204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
+		), Error::<Test>::InvalidSignature);
 	});
 }
