@@ -21,6 +21,7 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use ssz::Encode as SSZEncode;
 use ssz_derive::{Decode as SSZDecode, Encode as SSZEncode};
+use tree_hash_derive::TreeHash;
 use std::cmp;
 use milagro_bls::{AggregateSignature, AggregatePublicKey, Signature, PublicKey, AmclError};
 
@@ -35,10 +36,10 @@ const SECONDS_PER_SLOT: u64 = 12;
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
-/// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/altair.yaml#L16
-const SYNC_COMMITTEE_SIZE: u64 = 512;
+// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/altair.yaml#L16
+//const SYNC_COMMITTEE_SIZE: u64 = 512;
 
-/// /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
+/// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 const UPDATE_TIMEOUT: u64 = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
 // Since each field in BeaconState has a known, and non-changing location in the merklized tree
@@ -60,27 +61,64 @@ type Epoch = u64;
 type Slot = u64;
 type Root = H256;
 type Domain = H256;
-type ValidatorIndex = u32;
+type ValidatorIndex = u64;
 type Version = Vec<u8>;
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode,
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHash,
 )]
 // https://yeeth.github.io/BeaconChain.swift/Structs/BeaconBlockHeader.html#/s:11BeaconChain0A11BlockHeaderV9signature10Foundation4DataVvp
 // https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#beaconblock
 // https://github.com/ethereum/consensus-specs/blob/042ca57a617736e6bdd6f6dcdd6d32c247e5a67f/specs/phase0/beacon-chain.md#beaconblockheader
 pub struct BeaconBlockHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
+	#[tree_hash]
 	pub slot: Slot,
 	// The index of the validator that proposed the block.
+	#[tree_hash]
 	pub proposer_index: ValidatorIndex,
 	// The block root of the parent block, forming a block chain.
+	#[tree_hash]
 	pub parent_root: Root,
 	// The hash root of the post state of running the state transition through this block.
+	#[tree_hash]
 	pub state_root: Root,
 	// The hash root of the Eth1 block
+	#[tree_hash]
 	pub body_root: Root,
+}
+
+// Only used for testing purposes
+#[derive(
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHash,
+)]
+pub struct Checkpoint {
+	#[tree_hash]
+	pub epoch: u64,
+	#[tree_hash]
+	pub root: [u8; 32],
+}
+
+#[derive(
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHash,
+)]
+pub struct BeaconBlockHeader2 {
+	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
+	#[tree_hash]
+	pub slot: u64,
+	// The index of the validator that proposed the block.
+	#[tree_hash]
+	pub proposer_index: u64,
+	// The block root of the parent block, forming a block chain.
+	#[tree_hash]
+	pub parent_root: [u8; 32],
+	// The hash root of the post state of running the state transition through this block.
+	#[tree_hash]
+	pub state_root: [u8; 32],
+	// The hash root of the Eth1 block
+	#[tree_hash]
+	pub body_root: [u8; 32],
 }
 
 /// Sync committee as it is stored in the runtime storage.
@@ -146,6 +184,7 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -178,6 +217,7 @@ pub mod pallet {
 		InvalidSignaturePoint,
 		InvalidAggregatePublicKeys,
 		SignatureVerificationFailed,
+		NoBranchExpected,
 	}
 
 	#[pallet::hooks]
@@ -334,17 +374,18 @@ pub mod pallet {
 				Error::<T>::SkippedSyncCommitteePeriod
 			);
 
+			let floor_log_2_finalized_root_index = Self::floorlog2(FINALIZED_ROOT_INDEX);
+
 			// Verify that the `finalized_header`, if present, actually is the finalized header saved in the
 			// state of the `attested header`.
-			if update.finalized_header.is_some() {
-				// update.finality_branch == [Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))]
-				ensure!(true, Error::<T>::Unknown); // TODO
+			if update.finalized_header.is_none() {
+				ensure!(update.finality_branch.len() == 0, Error::<T>::NoBranchExpected); 
 			} else {
 				ensure!(
 					Self::is_valid_merkle_branch(
 						Self::hash_tree_root(update.finalized_header.unwrap()),
 						update.finality_branch,
-						Self::floorlog2(FINALIZED_ROOT_INDEX),
+						floor_log_2_finalized_root_index,
 						Self::get_subtree_index(FINALIZED_ROOT_INDEX),
 						update.attested_header.state_root
 					),
@@ -357,8 +398,7 @@ pub mod pallet {
 			// Verify update next sync committee if the update period incremented
 			if update_period == finalized_period {
 				sync_committee = <CurrentSyncCommittee<T>>::get();
-				//assert update.next_sync_committee_branch == [Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))]
-				ensure!(true, Error::<T>::Unknown); // TODO
+				ensure!(update.next_sync_committee_branch.len() == 0, Error::<T>::NoBranchExpected); 
 			} else {
 				sync_committee = <NextSyncCommittee<T>>::get();
 
@@ -621,14 +661,18 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn floorlog2(num: u64) -> u64 {
+		pub fn floorlog2(num: u64) -> u64 {
 			(num as f64).log2().floor() as u64
 		}
 
-		fn hash_tree_root<Z: SSZEncode>(object: Z) -> Root {
-			let ssz_bytes: Vec<u8> = object.as_ssz_bytes();
+		pub fn hash_tree_root<Z: SSZEncode>(object: Z) -> Root {
+			let ssz_bytes = Self::ssz_encode(object);
 
-			sha2_256(&ssz_bytes).into()
+			merkle_root(&ssz_bytes, 0)
+		}
+
+		pub fn ssz_encode<Z: SSZEncode>(object: Z) -> Vec<u8> {
+			object.as_ssz_bytes()
 		}
 	}
 }

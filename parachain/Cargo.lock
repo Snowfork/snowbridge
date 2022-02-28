@@ -2126,6 +2126,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "eth2_hashing"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b67737df7e3769e823d9d583eb5d60bcc4b2ef97ca674d1964ef287a02f8517"
+dependencies = [
+ "cpufeatures 0.1.5",
+ "lazy_static",
+ "ring",
+ "sha2 0.9.8",
+]
+
+[[package]]
 name = "eth2_ssz"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9862,6 +9874,8 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std",
+ "tree_hash",
+ "tree_hash_derive",
 ]
 
 [[package]]
@@ -11532,6 +11546,28 @@ dependencies = [
  "tracing-core",
  "tracing-log",
  "tracing-serde",
+]
+
+[[package]]
+name = "tree_hash"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f9c8a86fad3169a65aad2265d3c6a8bc119d0b771046af3c1b2fb0e9b12182b"
+dependencies = [
+ "eth2_hashing",
+ "ethereum-types",
+ "smallvec",
+]
+
+[[package]]
+name = "tree_hash_derive"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cd22d128157837a4434bb51119aef11103f17bfe8c402ce688cf25aa1e608ad"
+dependencies = [
+ "darling",
+ "quote",
+ "syn",
 ]
 
 [[package]]
