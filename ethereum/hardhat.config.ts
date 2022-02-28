@@ -12,6 +12,7 @@ import "hardhat-deploy";
 import { HardhatUserConfig } from "hardhat/config";
 import "./tasks/upgrade";
 import "./tasks/renounce";
+import "./tasks/contractAddress";
 
 const getenv = (name: string) => {
   if (name in process.env) {
