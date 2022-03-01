@@ -4,9 +4,6 @@ use crate as ethereum_beacon_light_client;
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
 
-use ssz::{Decode, Encode};
-use ssz_derive::{Decode, Encode};
-
 #[test]
 fn it_gets_an_update() {
 	let update = get_update();
@@ -137,30 +134,6 @@ pub fn test_hash_tree_root() {
 				body_root: hex!("a18d7fcefbb74a177c959160e0ee89c23546482154e6831237710414465dcae5").into(),
 			}
 		), hex!("7d42595818709e805dd2fa710a2d2c1f62576ef1ab7273941ac9130fb94b91f7").into());
-	});
-}
-
-#[test]
-pub fn test_hash_tree_root_checkpoint() {
-	new_tester().execute_with(|| {
-		assert_eq!(EthereumBeaconLightClient::hash_tree_root(
-			ethereum_beacon_light_client::Checkpoint{
-				epoch: 1,
-				root: hex!("ffeffd88ce0305f2e8518c3ac9368e9ec493460cad83f13c54566e3ee0938b83").into(),
-			}
-		), hex!("96b6f4404b29574e19efc3bddc0967fa76dde2217780b0f09c58f58924ec0540").into());
-	});
-}
-
-#[test]
-pub fn test_ssz_encode() {
-	new_tester().execute_with(|| {
-		assert_eq!(EthereumBeaconLightClient::ssz_encode(
-			ethereum_beacon_light_client::Checkpoint{
-				epoch: 1,
-				root: hex!("ffeffd88ce0305f2e8518c3ac9368e9ec493460cad83f13c54566e3ee0938b83").into(),
-			}
-		), hex!("0100000000000000ffeffd88ce0305f2e8518c3ac9368e9ec493460cad83f13c54566e3ee0938b83").to_vec());
 	});
 }
 

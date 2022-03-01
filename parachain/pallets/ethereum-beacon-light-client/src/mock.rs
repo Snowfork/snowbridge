@@ -115,7 +115,7 @@ pub fn get_update() -> ethereum_beacon_light_client::LightClientUpdate {
 			hex!("dda8f3041d8687637583f222357743e0906d7b020f77782eac4eeda93b6d22bc").into(),
 			hex!("47bb833d2cc75e7dc85f198fcd1a93fceaff60c960b50496d9cc88d4a2fb6dbf").into(),
 		],
-		pubfork_version: Some(hex!("47bb833d2cc0075e").into()),
+		pubfork_version: Some(hex!("47bb875e").into()),
 		sync_aggregate: SyncAggregate{
 			sync_committee_bits: vec!(0, 1, 0, 1),
 			sync_committee_signature: hex!("0bf8234d9f2462bb7523beae163a392afe715b72072e2611323fe14a4

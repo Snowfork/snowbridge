@@ -23,7 +23,6 @@ use sp_std::prelude::*;
 use ssz::Encode as SSZEncode;
 use ssz_derive::{Decode as SSZDecode, Encode as SSZEncode};
 use std::cmp;
-use tree_hash::TreeHash;
 use tree_hash_derive::TreeHash;
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
@@ -33,12 +32,7 @@ const MIN_SYNC_COMMITTEE_PARTICIPANTS: u64 = 1;
 /// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/altair.yaml#L18
 const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 256;
 
-const SECONDS_PER_SLOT: u64 = 12;
-
 const SLOTS_PER_EPOCH: u64 = 32;
-
-// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/altair.yaml#L16
-//const SYNC_COMMITTEE_SIZE: u64 = 512;
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 const UPDATE_TIMEOUT: u64 = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
@@ -56,14 +50,14 @@ const NEXT_SYNC_COMMITTEE_INDEX: u64 = 55;
 const DOMAIN_SYNC_COMMITTEE: [u8; 8] = [30, 37, 30, 30, 30, 30, 30, 30];
 
 /// GENESIS_FORK_VERSION('0x00000000')
-const GENESIS_FORK_VERSION: [u8; 8] = [30, 30, 30, 30, 30, 30, 30, 30];
+const GENESIS_FORK_VERSION: [u8; 4] = [30, 30, 30, 30];
 
 type Epoch = u64;
 type Slot = u64;
 type Root = H256;
 type Domain = H256;
 type ValidatorIndex = u64;
-type Version = [u8; 8];
+type Version = [u8; 4];
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(
@@ -97,26 +91,6 @@ pub struct BeaconBlockHeader {
 	// The hash root of the Eth1 block
 	#[tree_hash]
 	pub body_root: Root,
-}
-
-// Only used for testing purposes
-#[derive(
-	Clone,
-	Default,
-	Encode,
-	Decode,
-	PartialEq,
-	RuntimeDebug,
-	TypeInfo,
-	SSZDecode,
-	SSZEncode,
-	TreeHash,
-)]
-pub struct Checkpoint {
-	#[tree_hash]
-	pub epoch: u64,
-	#[tree_hash]
-	pub root: [u8; 32],
 }
 
 #[derive(
@@ -181,7 +155,7 @@ pub struct SyncAggregate {
 )]
 pub struct ForkData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
-	pub current_version: [u8; 32],
+	pub current_version: [u8; 4],
 	pub genesis_validators_root: [u8; 32],
 }
 
@@ -230,7 +204,6 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use tree_hash::{merkle_root, merkleize_padded, merkleize_standard};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -429,7 +402,7 @@ pub mod pallet {
 			} else {
 				ensure!(
 					Self::is_valid_merkle_branch(
-						Self::hash_tree_root(update.finalized_header.unwrap()),
+						Self::hash_tree_root(update.finalized_header.clone().unwrap()),
 						update.finality_branch,
 						floor_log_2_finalized_root_index,
 						Self::get_subtree_index(FINALIZED_ROOT_INDEX),
@@ -451,7 +424,7 @@ pub mod pallet {
 				ensure!(
 					Self::is_valid_merkle_branch(
 						//Self::hash_tree_root(update.next_sync_committee),
-						Self::hash_tree_root(update.finalized_header.unwrap()),
+						Self::hash_tree_root(update.finalized_header.clone().unwrap()),
 						update.next_sync_committee_branch,
 						Self::floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
 						Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
@@ -642,19 +615,17 @@ pub mod pallet {
 		}
 
 		fn compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Root {
-			/*Self::hash_tree_root(ForkData {
+			Self::hash_tree_root(ForkData {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
-			})*/
-			todo!()
+			})
 		}
 
 		fn compute_signing_root(ssz_object: BeaconBlockHeader, domain: Domain) -> Root {
-			/*Self::hash_tree_root(SigningData {
+			Self::hash_tree_root(SigningData {
 				object_root: Self::hash_tree_root(ssz_object),
 				domain,
-			})*/
-			todo!()
+			})
 		}
 
 		pub fn bls_fast_aggregate_verify(
@@ -701,8 +672,8 @@ pub mod pallet {
 			(num as f64).log2().floor() as u64
 		}
 
-		pub fn hash_tree_root<U: TreeHash + SSZEncode>(object: U) -> Root {
-			object.hash_tree_root()
+		pub fn hash_tree_root<U: tree_hash::TreeHash + SSZEncode>(object: U) -> Root {
+			object.tree_hash_root()
 		}
 
 		pub fn ssz_encode<Z: SSZEncode>(object: Z) -> Vec<u8> {
