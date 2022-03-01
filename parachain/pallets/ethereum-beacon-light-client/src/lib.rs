@@ -21,9 +21,10 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use ssz::Encode as SSZEncode;
 use ssz_derive::{Decode as SSZDecode, Encode as SSZEncode};
-use tree_hash_derive::TreeHash;
+use tree_hash_derive::TreeHash as TreeHashDerive;
 use std::cmp;
 use milagro_bls::{AggregateSignature, AggregatePublicKey, Signature, PublicKey, AmclError};
+use tree_hash::TreeHash;
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 /// The minimum number of validators that needs to sign update
@@ -62,11 +63,11 @@ type Slot = u64;
 type Root = H256;
 type Domain = H256;
 type ValidatorIndex = u64;
-type Version = Vec<u8>;
+type Version = [u8; 8];
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHash,
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHashDerive,
 )]
 // https://yeeth.github.io/BeaconChain.swift/Structs/BeaconBlockHeader.html#/s:11BeaconChain0A11BlockHeaderV9signature10Foundation4DataVvp
 // https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#beaconblock
@@ -91,7 +92,7 @@ pub struct BeaconBlockHeader {
 
 // Only used for testing purposes
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHash,
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHashDerive,
 )]
 pub struct Checkpoint {
 	#[tree_hash]
@@ -101,7 +102,7 @@ pub struct Checkpoint {
 }
 
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHash,
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHashDerive,
 )]
 pub struct BeaconBlockHeader2 {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
@@ -140,16 +141,16 @@ pub struct SyncAggregate {
 }
 
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode,
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHashDerive,
 )]
 pub struct ForkData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
-	pub current_version: Version,
-	pub genesis_validators_root: Vec<u8>,
+	pub current_version:  [u8; 32],
+	pub genesis_validators_root: [u8; 32],
 }
 
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode,
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHashDerive,
 )]
 pub struct SigningData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
@@ -404,7 +405,8 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 
 				ensure!(
 					Self::is_valid_merkle_branch(
-						Self::hash_tree_root(update.next_sync_committee),
+						//Self::hash_tree_root(update.next_sync_committee),
+						Self::hash_tree_root(update.finalized_header.unwrap()),
 						update.next_sync_committee_branch,
 						Self::floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
 						Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
@@ -510,21 +512,6 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 			epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 		}
 
-		pub fn is_valid_merkle_branch_wrapper<Z: SSZEncode>(
-			leaf: Z,
-			branch: Vec<H256>,
-			root_index: u64,
-			root: Root,
-		) -> bool {
-			Self::is_valid_merkle_branch(
-				Self::hash_tree_root(leaf),
-				branch,
-				Self::floorlog2(root_index),
-				Self::get_subtree_index(root_index),
-				root,
-			)
-		}
-
 		pub fn is_valid_merkle_branch(
 			leaf: H256,
 			branch: Vec<H256>,
@@ -590,7 +577,7 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 		) -> Domain {
 			let unwrapped_fork_version: Version;
 			if fork_version.is_none() {
-				unwrapped_fork_version = GENESIS_FORK_VERSION.to_vec();
+				unwrapped_fork_version = GENESIS_FORK_VERSION;
 			} else {
 				unwrapped_fork_version = fork_version.unwrap();
 			}
@@ -610,17 +597,19 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 		}
 
 		fn compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Root {
-			Self::hash_tree_root(ForkData {
+			/*Self::hash_tree_root(ForkData {
 				current_version,
-				genesis_validators_root: genesis_validators_root.as_bytes().to_vec(), // TODO maybe change type to Vec<u8> from the start
-			})
+				genesis_validators_root: genesis_validators_root.into(), 
+			})*/
+			todo!()
 		}
 
 		fn compute_signing_root(ssz_object: BeaconBlockHeader, domain: Domain) -> Root {
-			Self::hash_tree_root(SigningData {
+			/*Self::hash_tree_root(SigningData {
 				object_root: Self::hash_tree_root(ssz_object),
 				domain,
-			})
+			})*/
+			todo!()
 		}
 
 		pub fn bls_fast_aggregate_verify(
@@ -665,11 +654,9 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 			(num as f64).log2().floor() as u64
 		}
 
-		pub fn hash_tree_root<Z: SSZEncode>(object: Z) -> Root {
-			let ssz_bytes = Self::ssz_encode(object);
-
-			merkle_root(&ssz_bytes, 0)
-		}
+		pub fn hash_tree_root<U: TreeHash + SSZEncode>(object: U) -> Root {
+            object.hash_tree_root()
+        }
 
 		pub fn ssz_encode<Z: SSZEncode>(object: Z) -> Vec<u8> {
 			object.as_ssz_bytes()
