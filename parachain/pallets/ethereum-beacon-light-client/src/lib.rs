@@ -14,6 +14,7 @@ mod tests;
 use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, traits::Get, transactional};
 use frame_system::ensure_signed;
+use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, PublicKey, Signature};
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
@@ -21,10 +22,9 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use ssz::Encode as SSZEncode;
 use ssz_derive::{Decode as SSZDecode, Encode as SSZEncode};
-use tree_hash_derive::TreeHash as TreeHashDerive;
 use std::cmp;
-use milagro_bls::{AggregateSignature, AggregatePublicKey, Signature, PublicKey, AmclError};
 use tree_hash::TreeHash;
+use tree_hash_derive::TreeHash;
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 /// The minimum number of validators that needs to sign update
@@ -67,7 +67,16 @@ type Version = [u8; 8];
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHashDerive,
+	Clone,
+	Default,
+	Encode,
+	Decode,
+	PartialEq,
+	RuntimeDebug,
+	TypeInfo,
+	SSZDecode,
+	SSZEncode,
+	TreeHash,
 )]
 // https://yeeth.github.io/BeaconChain.swift/Structs/BeaconBlockHeader.html#/s:11BeaconChain0A11BlockHeaderV9signature10Foundation4DataVvp
 // https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#beaconblock
@@ -92,7 +101,16 @@ pub struct BeaconBlockHeader {
 
 // Only used for testing purposes
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHashDerive,
+	Clone,
+	Default,
+	Encode,
+	Decode,
+	PartialEq,
+	RuntimeDebug,
+	TypeInfo,
+	SSZDecode,
+	SSZEncode,
+	TreeHash,
 )]
 pub struct Checkpoint {
 	#[tree_hash]
@@ -102,7 +120,16 @@ pub struct Checkpoint {
 }
 
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHashDerive,
+	Clone,
+	Default,
+	Encode,
+	Decode,
+	PartialEq,
+	RuntimeDebug,
+	TypeInfo,
+	SSZDecode,
+	SSZEncode,
+	TreeHash,
 )]
 pub struct BeaconBlockHeader2 {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
@@ -141,16 +168,34 @@ pub struct SyncAggregate {
 }
 
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHashDerive,
+	Clone,
+	Default,
+	Encode,
+	Decode,
+	PartialEq,
+	RuntimeDebug,
+	TypeInfo,
+	SSZDecode,
+	SSZEncode,
+	TreeHash,
 )]
 pub struct ForkData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
-	pub current_version:  [u8; 32],
+	pub current_version: [u8; 32],
 	pub genesis_validators_root: [u8; 32],
 }
 
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, TreeHashDerive,
+	Clone,
+	Default,
+	Encode,
+	Decode,
+	PartialEq,
+	RuntimeDebug,
+	TypeInfo,
+	SSZDecode,
+	SSZEncode,
+	TreeHash,
 )]
 pub struct SigningData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
@@ -185,7 +230,7 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
+	use tree_hash::{merkle_root, merkleize_padded, merkleize_standard};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -380,7 +425,7 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 			// Verify that the `finalized_header`, if present, actually is the finalized header saved in the
 			// state of the `attested header`.
 			if update.finalized_header.is_none() {
-				ensure!(update.finality_branch.len() == 0, Error::<T>::NoBranchExpected); 
+				ensure!(update.finality_branch.len() == 0, Error::<T>::NoBranchExpected);
 			} else {
 				ensure!(
 					Self::is_valid_merkle_branch(
@@ -399,7 +444,7 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 			// Verify update next sync committee if the update period incremented
 			if update_period == finalized_period {
 				sync_committee = <CurrentSyncCommittee<T>>::get();
-				ensure!(update.next_sync_committee_branch.len() == 0, Error::<T>::NoBranchExpected); 
+				ensure!(update.next_sync_committee_branch.len() == 0, Error::<T>::NoBranchExpected);
 			} else {
 				sync_committee = <NextSyncCommittee<T>>::get();
 
@@ -449,7 +494,7 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 			Self::bls_fast_aggregate_verify(
 				participant_pubkeys,
 				signing_root,
-				sync_aggregate.sync_committee_signature
+				sync_aggregate.sync_committee_signature,
 			)?;
 
 			Ok(())
@@ -599,7 +644,7 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 		fn compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Root {
 			/*Self::hash_tree_root(ForkData {
 				current_version,
-				genesis_validators_root: genesis_validators_root.into(), 
+				genesis_validators_root: genesis_validators_root.into(),
 			})*/
 			todo!()
 		}
@@ -625,27 +670,29 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 
 			let agg_sig = AggregateSignature::from_signature(&sig.unwrap());
 
-			let public_keys_res: Result<Vec<PublicKey>, _> = pubkeys
-				.iter()
-				.map(|bytes| {
-					PublicKey::from_bytes(&bytes)
-				})
-				.collect();
+			let public_keys_res: Result<Vec<PublicKey>, _> =
+				pubkeys.iter().map(|bytes| PublicKey::from_bytes(&bytes)).collect();
 
 			if let Err(e) = public_keys_res {
 				match e {
-    				AmclError::InvalidPoint => return Err(Error::<T>::InvalidSignaturePoint.into()),
+					AmclError::InvalidPoint => return Err(Error::<T>::InvalidSignaturePoint.into()),
 					_ => return Err(Error::<T>::InvalidSignature.into()),
 				};
 			}
 
-			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap()); 
+			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
 
 			if let Err(e) = agg_pub_key_res {
 				return Err(Error::<T>::InvalidAggregatePublicKeys.into());
 			}
 
-			ensure!(agg_sig.fast_aggregate_verify_pre_aggregated(&message.as_bytes(), &agg_pub_key_res.unwrap()), Error::<T>::SignatureVerificationFailed);
+			ensure!(
+				agg_sig.fast_aggregate_verify_pre_aggregated(
+					&message.as_bytes(),
+					&agg_pub_key_res.unwrap()
+				),
+				Error::<T>::SignatureVerificationFailed
+			);
 
 			Ok(())
 		}
@@ -655,8 +702,8 @@ use tree_hash::{merkle_root, merkleize_standard, merkleize_padded};
 		}
 
 		pub fn hash_tree_root<U: TreeHash + SSZEncode>(object: U) -> Root {
-            object.hash_tree_root()
-        }
+			object.hash_tree_root()
+		}
 
 		pub fn ssz_encode<Z: SSZEncode>(object: Z) -> Vec<u8> {
 			object.as_ssz_bytes()
