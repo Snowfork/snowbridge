@@ -2138,6 +2138,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "eth2_serde_utils"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "477fffc25490dfc866288273f96344c6879676a1337187fc39245cd422e10825"
+dependencies = [
+ "hex",
+ "serde",
+ "serde_derive",
+]
+
+[[package]]
 name = "eth2_ssz"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2157,6 +2168,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "eth2_ssz_types"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9423ac7fb37037f828a32b724cdfa65ea62290055811731402a90fb8a5bcbb1"
+dependencies = [
+ "eth2_serde_utils",
+ "eth2_ssz",
+ "serde",
+ "serde_derive",
+ "tree_hash",
+ "typenum",
 ]
 
 [[package]]
@@ -9855,6 +9880,7 @@ version = "0.0.1"
 dependencies = [
  "eth2_ssz",
  "eth2_ssz_derive",
+ "eth2_ssz_types",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

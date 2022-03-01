@@ -16,10 +16,11 @@ scale-info = { version = "1.0", default-features = false, features = ["derive"] 
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 hex-literal = { version = "0.3.1", optional = true }
 rlp = { version = "0.5", default-features = false }
-eth2_ssz = { version = "0.4.0"}
-eth2_ssz_derive = { version = "0.3.0"}
-tree_hash = { version = "0.4.0"}
-tree_hash_derive = { version = "0.4.0"}
+eth2_ssz = { version = "0.4.0" }
+eth2_ssz_derive = { version = "0.3.0" }
+eth2_ssz_types = { version = "0.2.1" }
+tree_hash = { version = "0.4.0" }
+tree_hash_derive = { version = "0.4.0" }
 milagro_bls = { git = "https://github.com/sigp/milagro_bls", tag = "v1.4.2" }
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false, optional = true }

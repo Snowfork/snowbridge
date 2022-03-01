@@ -1,6 +1,6 @@
+use crate as ethereum_beacon_light_client;
 use crate::mock::*;
 use crate::Error;
-use crate as ethereum_beacon_light_client;
 use frame_support::{assert_err, assert_ok};
 use hex_literal::hex;
 
@@ -9,52 +9,61 @@ fn it_gets_an_update() {
 	let update = get_update();
 
 	new_tester().execute_with(|| {
-		assert_err!(EthereumBeaconLightClient::light_client_update(
-			Origin::signed(1),
-			update,
-			897,
-			hex!("043db0d9a83813551ee2f33450d23797757d430911a9320530ad8a0eabc43efb").into()
-		), Error::<Test>::AncientHeader);
+		assert_err!(
+			EthereumBeaconLightClient::light_client_update(
+				Origin::signed(1),
+				update,
+				897,
+				hex!("043db0d9a83813551ee2f33450d23797757d430911a9320530ad8a0eabc43efb").into()
+			),
+			Error::<Test>::AncientHeader
+		);
 	});
 }
 
 #[test]
 pub fn test_is_valid_merkle_proof() {
 	new_tester().execute_with(|| {
-		assert_eq!(EthereumBeaconLightClient::is_valid_merkle_branch(
-			hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-			vec![
+		assert_eq!(
+			EthereumBeaconLightClient::is_valid_merkle_branch(
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-				hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
-				hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
-				hex!("002c1fe5bc0bd62db6f299a582f2a80a6d5748ccc82e7ed843eaf0ae0739f74a").into(),
-				hex!("d2dc4ba9fd4edff6716984136831e70a6b2e74fca27b8097a820cbbaa5a6e3c3").into(),
-				hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584").into(),
-			],
-			6,
-			41,
-			hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
-		), true);
+				vec![
+					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+					hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
+					hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
+					hex!("002c1fe5bc0bd62db6f299a582f2a80a6d5748ccc82e7ed843eaf0ae0739f74a").into(),
+					hex!("d2dc4ba9fd4edff6716984136831e70a6b2e74fca27b8097a820cbbaa5a6e3c3").into(),
+					hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584").into(),
+				],
+				6,
+				41,
+				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
+			),
+			true
+		);
 	});
 }
 
 #[test]
 pub fn test_is_not_valid_merkle_proof() {
 	new_tester().execute_with(|| {
-		assert_eq!(EthereumBeaconLightClient::is_valid_merkle_branch(
-			hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-			vec![
+		assert_eq!(
+			EthereumBeaconLightClient::is_valid_merkle_branch(
 				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-				hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
-				hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
-				hex!("333c1fe5bc0bd62db6f299a582f2a80a6d5748ccc82e7ed843eaf0ae0739f74a").into(),
-				hex!("d2dc4ba9fd4edff6716984136831e70a6b2e74fca27b8097a820cbbaa5a6e3c3").into(),
-				hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584").into(),
-			],
-			6,
-			41,
-			hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
-		), false);
+				vec![
+					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+					hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
+					hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
+					hex!("333c1fe5bc0bd62db6f299a582f2a80a6d5748ccc82e7ed843eaf0ae0739f74a").into(),
+					hex!("d2dc4ba9fd4edff6716984136831e70a6b2e74fca27b8097a820cbbaa5a6e3c3").into(),
+					hex!("91f77a19d8afa4a08e81164bb2e570ecd10477b3b65c305566a6d2be88510584").into(),
+				],
+				6,
+				41,
+				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
+			),
+			false
+		);
 	});
 }
 
@@ -125,15 +134,27 @@ pub fn test_bls_fast_aggregate_verify_invalid_signature() {
 #[test]
 pub fn test_hash_tree_root() {
 	new_tester().execute_with(|| {
-		assert_eq!(EthereumBeaconLightClient::hash_tree_root(
-			ethereum_beacon_light_client::BeaconBlockHeader{
-				slot: 3,
-				proposer_index: 2,
-				parent_root: hex!("796ea53efb534eab7777809cc5ee2d84e7f25024b9d0c4d7e5bcaab657e4bdbd").into(),
-				state_root: hex!("ba3ff080912be5c9c158b2e962c1b39a91bc0615762ba6fa2ecacafa94e9ae0a").into(),
-				body_root: hex!("a18d7fcefbb74a177c959160e0ee89c23546482154e6831237710414465dcae5").into(),
-			}
-		), hex!("7d42595818709e805dd2fa710a2d2c1f62576ef1ab7273941ac9130fb94b91f7").into());
+		assert_eq!(
+			EthereumBeaconLightClient::hash_tree_root(
+				ethereum_beacon_light_client::BeaconBlockHeader {
+					slot: 3,
+					proposer_index: 2,
+					parent_root: hex!(
+						"796ea53efb534eab7777809cc5ee2d84e7f25024b9d0c4d7e5bcaab657e4bdbd"
+					)
+					.into(),
+					state_root: hex!(
+						"ba3ff080912be5c9c158b2e962c1b39a91bc0615762ba6fa2ecacafa94e9ae0a"
+					)
+					.into(),
+					body_root: hex!(
+						"a18d7fcefbb74a177c959160e0ee89c23546482154e6831237710414465dcae5"
+					)
+					.into(),
+				}
+			),
+			hex!("7d42595818709e805dd2fa710a2d2c1f62576ef1ab7273941ac9130fb94b91f7").into()
+		);
 	});
 }
 
@@ -155,9 +176,12 @@ pub fn test_ssz_beacon_header() {
 #[test]
 pub fn test_hash_tree_root_with_root_value() {
 	new_tester().execute_with(|| {
-		assert_eq!(EthereumBeaconLightClient::hash_tree_root(
-			hex!("6807a67bb39d237056f96a6c04cbfcb244b7ffbe763e817d643bd756e7df0cf0")
-		), hex!("6807a67bb39d237056f96a6c04cbfcb244b7ffbe763e817d643bd756e7df0cf0").into());
+		assert_eq!(
+			EthereumBeaconLightClient::hash_tree_root(hex!(
+				"6807a67bb39d237056f96a6c04cbfcb244b7ffbe763e817d643bd756e7df0cf0"
+			)),
+			hex!("6807a67bb39d237056f96a6c04cbfcb244b7ffbe763e817d643bd756e7df0cf0").into()
+		);
 	});
 }
 
@@ -165,9 +189,30 @@ pub fn test_hash_tree_root_with_root_value() {
 pub fn test_hash_tree_root_slot() {
 	let slot: ethereum_beacon_light_client::Slot = 2;
 	new_tester().execute_with(|| {
-		assert_eq!(EthereumBeaconLightClient::hash_tree_root(
-			slot
-		), hex!("0200000000000000000000000000000000000000000000000000000000000000").into());
+		assert_eq!(
+			EthereumBeaconLightClient::hash_tree_root(slot),
+			hex!("0200000000000000000000000000000000000000000000000000000000000000").into()
+		);
+	});
+}
+
+#[test]
+pub fn test_compute_epoch_at_slot() {
+	new_tester().execute_with(|| {
+		assert_eq!(EthereumBeaconLightClient::compute_epoch_at_slot(0), 0);
+	});
+	new_tester().execute_with(|| {
+		assert_eq!(EthereumBeaconLightClient::compute_epoch_at_slot(4), 0);
+	});
+	new_tester().execute_with(|| {
+		assert_eq!(EthereumBeaconLightClient::compute_epoch_at_slot(36), 1);
+	});
+}
+
+#[test]
+pub fn test_get_subtree_index() {
+	new_tester().execute_with(|| {
+		assert_eq!(EthereumBeaconLightClient::get_subtree_index(105), 41);
 	});
 }
 
@@ -178,5 +223,36 @@ pub fn test_floor_log2() {
 	});
 	new_tester().execute_with(|| {
 		assert_eq!(EthereumBeaconLightClient::floorlog2(16), 4);
+	});
+}
+
+#[test]
+pub fn test_get_safety_threshold() {
+	new_tester().execute_with(|| {
+		assert_eq!(EthereumBeaconLightClient::get_safety_threshold(30, 55), 55);
+	});
+}
+
+#[test]
+pub fn test_get_sync_committee_sum() {
+	new_tester().execute_with(|| {
+		assert_eq!(
+			EthereumBeaconLightClient::get_sync_committee_sum(vec![0, 1, 0, 1, 1, 0, 1, 0, 1]),
+			5
+		);
+	});
+}
+
+#[test]
+pub fn test_compute_domain() {
+	new_tester().execute_with(|| {
+		assert_eq!(
+			EthereumBeaconLightClient::compute_domain(
+				hex!("05000000").into(),
+				hex!("00000001").into(),
+				hex!("5dec7ae03261fde20d5b024dfabce8bac3276c9a4908e23d50ba8c9b50b0adff").into(),
+			),
+			hex!("0500000046324489ceb6ada6d118eacdbe94f49b1fcb49d5481a685979670c7c").into()
+		);
 	});
 }

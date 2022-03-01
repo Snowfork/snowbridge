@@ -126,10 +126,10 @@ pub struct BeaconBlockHeader2 {
 /// Sync committee as it is stored in the runtime storage.
 /// https://github.com/ethereum/consensus-specs/blob/02b32100ed26c3c7a4a44f41b932437859487fd2/specs/altair/beacon-chain.md#synccommittee
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode,
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, //TreeHash,
 )]
 pub struct SyncCommittee {
-	pub pubkeys: Vec<Vec<u8>>,
+	pub pubkeys: Vec<Vec<u8>>, // TODO convert to fixed size vector
 	pub aggregate_pubkey: Vec<u8>,
 }
 
@@ -402,7 +402,7 @@ pub mod pallet {
 			} else {
 				ensure!(
 					Self::is_valid_merkle_branch(
-						Self::hash_tree_root(update.finalized_header.clone().unwrap()),
+						Self::hash_tree_root(update.finalized_header.unwrap()),
 						update.finality_branch,
 						floor_log_2_finalized_root_index,
 						Self::get_subtree_index(FINALIZED_ROOT_INDEX),
@@ -424,7 +424,7 @@ pub mod pallet {
 				ensure!(
 					Self::is_valid_merkle_branch(
 						//Self::hash_tree_root(update.next_sync_committee),
-						Self::hash_tree_root(update.finalized_header.clone().unwrap()),
+						Self::hash_tree_root(GENESIS_FORK_VERSION), // TODO need to fix
 						update.next_sync_committee_branch,
 						Self::floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
 						Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
@@ -452,7 +452,7 @@ pub mod pallet {
 			{
 				if *bit == 1 as u8 {
 					let pubk = pubkey.clone();
-					participant_pubkeys.push(pubk);
+					participant_pubkeys.push(pubk.to_vec());
 				}
 			}
 
@@ -521,7 +521,7 @@ pub mod pallet {
 		}
 
 		/// Returns the epooch at the specified slot.
-		fn compute_epoch_at_slot(slot: Slot) -> Epoch {
+		pub(super) fn compute_epoch_at_slot(slot: Slot) -> Epoch {
 			slot / SLOTS_PER_EPOCH
 		}
 
@@ -530,7 +530,7 @@ pub mod pallet {
 			epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 		}
 
-		pub fn is_valid_merkle_branch(
+		pub(super) fn is_valid_merkle_branch(
 			leaf: H256,
 			branch: Vec<H256>,
 			depth: u64,
@@ -539,8 +539,7 @@ pub mod pallet {
 		) -> bool {
 			let mut value = leaf;
 			for i in 0..depth {
-				let base: u32 = 2;
-				if (index / (base.pow(i as u32) as u64) % 2) == 0 {
+				if (index / (2u32.pow(i as u32) as u64) % 2) == 0 {
 					// left node
 					let mut data = [0u8; 64];
 					data[0..32].copy_from_slice(&(value.0));
@@ -558,12 +557,8 @@ pub mod pallet {
 
 		//** Helper functions **//
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#helper-functions
-		fn get_subtree_index(generalized_index: u64) -> u64 {
-			let base: u32 = 2;
-
-			let floorlog2_finalized_root_index = Self::floorlog2(FINALIZED_ROOT_INDEX);
-
-			generalized_index % base.pow(floorlog2_finalized_root_index as u32) as u64
+		pub(super) fn get_subtree_index(generalized_index: u64) -> u64 {
+			generalized_index % 2u32.pow(Self::floorlog2(FINALIZED_ROOT_INDEX) as u32) as u64
 		}
 
 		fn get_active_header(update: LightClientUpdate) -> BeaconBlockHeader {
@@ -576,19 +571,19 @@ pub mod pallet {
 			}
 		}
 
-		fn get_safety_threshold(
+		pub(super) fn get_safety_threshold(
 			prev_max_active_participants: u64,
 			curr_max_active_participants: u64,
 		) -> u64 {
 			cmp::max(prev_max_active_participants, curr_max_active_participants)
 		}
 
-		fn get_sync_committee_sum(sync_committee_bits: Vec<u8>) -> u64 {
+		pub(super) fn get_sync_committee_sum(sync_committee_bits: Vec<u8>) -> u64 {
 			sync_committee_bits.iter().fold(0, |acc: u64, x| acc + *x as u64)
 		}
 
 		/// Return the domain for the domain_type and fork_version.
-		fn compute_domain(
+		pub(super) fn compute_domain(
 			domain_type: Vec<u8>,
 			fork_version: Option<Version>,
 			genesis_validators_root: Root,
@@ -609,7 +604,7 @@ pub mod pallet {
 			let mut domain = [0u8; 32];
 
 			domain[0..4].copy_from_slice(&(domain_type));
-			domain[4..32].copy_from_slice(&(genesis_validators_root.0));
+			domain[4..32].copy_from_slice(&(fork_data_root.0[..28]));
 
 			domain.into()
 		}
@@ -628,7 +623,7 @@ pub mod pallet {
 			})
 		}
 
-		pub fn bls_fast_aggregate_verify(
+		pub(super) fn bls_fast_aggregate_verify(
 			pubkeys: Vec<Vec<u8>>,
 			message: H256,
 			signature: Vec<u8>,
@@ -668,15 +663,15 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn floorlog2(num: u64) -> u64 {
+		pub(super) fn floorlog2(num: u64) -> u64 {
 			(num as f64).log2().floor() as u64
 		}
 
-		pub fn hash_tree_root<U: tree_hash::TreeHash + SSZEncode>(object: U) -> Root {
+		pub(super) fn hash_tree_root<U: tree_hash::TreeHash + SSZEncode>(object: U) -> Root {
 			object.tree_hash_root()
 		}
 
-		pub fn ssz_encode<Z: SSZEncode>(object: Z) -> Vec<u8> {
+		pub(super) fn ssz_encode<Z: SSZEncode>(object: Z) -> Vec<u8> {
 			object.as_ssz_bytes()
 		}
 	}
