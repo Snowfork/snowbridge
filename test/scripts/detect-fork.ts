@@ -27,23 +27,21 @@ const forceResetToFork = (
   const sudo = keyring.addFromUri(user);
 
   const calls = [
-    api.tx.ethereumLightClient.forceResetToFork(
-      api.createType("H256", hash)
-    )
+    api.tx.ethereumLightClient.forceResetToFork(api.createType("H256", hash)),
   ];
 
-  if(updates.length > 0) {
+  if (updates.length > 0) {
     const items = [];
-    for(const update of updates) {
+    for (const update of updates) {
       items.push([
         updates.storageKey,
-        api.createType('u64', update.nonce).toHex()
+        api.createType("u64", update.nonce).toHex(),
       ]);
     }
     calls.push(api.tx.system.setStorage(items));
   }
 
-  const batch = api.tx.utility.batchAll(...calls)
+  const batch = api.tx.utility.batchAll(...calls);
 
   return new Promise<ISubmittableResult>(async (ok, err) => {
     const unsub = await api.tx.sudo
@@ -112,10 +110,30 @@ const getContracts = (url: string): Promise<any> => {
 };
 
 const NONCES = [
-  { name: "BasicInboundChannel", event: "MessageDispatched", storageKey: "0x684b82bef882079feeabe54a5bd7b94a718368a0ace36e2b1b8b6dbd7f8093c0" },
-  { name: "IncentivizedInboundChannel", event: "MessageDispatched", storageKey: "0xf0f4d0b91e760c07da58bc0498033acb718368a0ace36e2b1b8b6dbd7f8093c0" },
-  { name: "BasicOutboundChannel", event: "Message", storageKey: "0x664ff6e369f56e1c7deca5487e631a5c718368a0ace36e2b1b8b6dbd7f8093c0" },
-  { name: "IncentivizedOutboundChannel", event: "Message", storageKey: "0x557df379daaf1cd514a7452dcbf6fccc718368a0ace36e2b1b8b6dbd7f8093c0" },
+  {
+    name: "BasicInboundChannel",
+    event: "MessageDispatched",
+    storageKey:
+      "0x684b82bef882079feeabe54a5bd7b94a718368a0ace36e2b1b8b6dbd7f8093c0",
+  },
+  {
+    name: "IncentivizedInboundChannel",
+    event: "MessageDispatched",
+    storageKey:
+      "0xf0f4d0b91e760c07da58bc0498033acb718368a0ace36e2b1b8b6dbd7f8093c0",
+  },
+  {
+    name: "BasicOutboundChannel",
+    event: "Message",
+    storageKey:
+      "0x664ff6e369f56e1c7deca5487e631a5c718368a0ace36e2b1b8b6dbd7f8093c0",
+  },
+  {
+    name: "IncentivizedOutboundChannel",
+    event: "Message",
+    storageKey:
+      "0x557df379daaf1cd514a7452dcbf6fccc718368a0ace36e2b1b8b6dbd7f8093c0",
+  },
 ];
 
 const fetchEthNonces = async (
@@ -124,13 +142,12 @@ const fetchEthNonces = async (
   commonAnscestorBlockNumber: number,
   decendantsUntilFinalized: number
 ): Promise<any> => {
-
   const pastEvents = {};
   const nonces = {};
   for (const nonce of NONCES) {
     var contract = new ethApi.eth.Contract(
       contractsConfig[nonce.name].abi,
-      contractsConfig[nonce.name].address,
+      contractsConfig[nonce.name].address
     );
     // get all nonce changing events that happened after the new finalized
     pastEvents[nonce.name] = contract.getPastEvents(nonce.event, {
@@ -146,7 +163,7 @@ const fetchEthNonces = async (
   for (const nonce of NONCES) {
     const events = await pastEvents[nonce.name];
     // take the first event if there are any else get take the current nonce.
-    if(events.length > 0) {
+    if (events.length > 0) {
       result[nonce.name] = Number(events[0].returnValues["nonce"]) - 1;
     } else {
       result[nonce.name] = Number(await nonces[nonce.name]);
@@ -158,7 +175,10 @@ const fetchEthNonces = async (
 const fetchParachainNonces = async (parachainApi: ApiPromise): Promise<any> => {
   const promises = {};
   for (const nonce of NONCES) {
-    promises[nonce.name] = parachainApi.query[`${nonce.name[0].toLowerCase()}${nonce.name.substring(1)}`].nonce();
+    promises[nonce.name] =
+      parachainApi.query[
+        `${nonce.name[0].toLowerCase()}${nonce.name.substring(1)}`
+      ].nonce();
   }
 
   await Promise.all(Object.values(promises));
@@ -172,17 +192,39 @@ const fetchParachainNonces = async (parachainApi: ApiPromise): Promise<any> => {
 
 const generateUpdates = (ethNonces, parachainNonces) => {
   const result = [];
-  if(parachainNonces.BasicInboundChannel !== ethNonces.BasicOutboundChannel) {
-    result.push({ name: NONCES[0].name, storageKey: NONCES[0].storageKey, nonce: ethNonces.BasicOutboundChannel });
+  if (parachainNonces.BasicInboundChannel !== ethNonces.BasicOutboundChannel) {
+    result.push({
+      name: NONCES[0].name,
+      storageKey: NONCES[0].storageKey,
+      nonce: ethNonces.BasicOutboundChannel,
+    });
   }
-  if(parachainNonces.IncentivizedInboundChannel !== ethNonces.IncentivizedOutboundChannel) {
-    result.push({ name: NONCES[1].name, storageKey: NONCES[1].storageKey, nonce: ethNonces.IncentivizedOutboundChannel });
+  if (
+    parachainNonces.IncentivizedInboundChannel !==
+    ethNonces.IncentivizedOutboundChannel
+  ) {
+    result.push({
+      name: NONCES[1].name,
+      storageKey: NONCES[1].storageKey,
+      nonce: ethNonces.IncentivizedOutboundChannel,
+    });
   }
-  if(parachainNonces.BasicOutboundChannel !== ethNonces.BasicInboundChannel) {
-    result.push({ name: NONCES[2].name, storageKey: NONCES[2].storageKey, nonce: ethNonces.BasicInboundChannel });
+  if (parachainNonces.BasicOutboundChannel !== ethNonces.BasicInboundChannel) {
+    result.push({
+      name: NONCES[2].name,
+      storageKey: NONCES[2].storageKey,
+      nonce: ethNonces.BasicInboundChannel,
+    });
   }
-  if(parachainNonces.IncentivizedOutboundChannel !== ethNonces.IncentivizedInboundChannel) {
-    result.push({ name: NONCES[3].name, storageKey: NONCES[3].storageKey, nonce: ethNonces.IncentivizedInboundChannel });
+  if (
+    parachainNonces.IncentivizedOutboundChannel !==
+    ethNonces.IncentivizedInboundChannel
+  ) {
+    result.push({
+      name: NONCES[3].name,
+      storageKey: NONCES[3].storageKey,
+      nonce: ethNonces.IncentivizedInboundChannel,
+    });
   }
   return result;
 };
@@ -225,7 +267,8 @@ const main = async () => {
     "decendants-until-finalized": {
       type: "number",
       demandOption: false,
-      describe: "The number of decendants until a block is considered finalized.",
+      describe:
+        "The number of decendants until a block is considered finalized.",
       default: 8,
     },
   }).argv as any;
@@ -295,15 +338,28 @@ const main = async () => {
 
     console.log("Checking nonces.");
     const parachainNonces = await fetchParachainNonces(parachainApi);
-    const ethNonces = await fetchEthNonces(contractsConfig.contracts, ethApi, ethBlock.number, argv["decendants-until-finalized"]);
+    const ethNonces = await fetchEthNonces(
+      contractsConfig.contracts,
+      ethApi,
+      ethBlock.number,
+      argv["decendants-until-finalized"]
+    );
 
     console.log("Nonces                Parachain -> ETH");
-    console.log(`Basic Channel:        ${parachainNonces.BasicOutboundChannel} -> ${ethNonces.BasicInboundChannel}`);
-    console.log(`Incentivized Channel: ${parachainNonces.IncentivizedOutboundChannel} -> ${ethNonces.IncentivizedInboundChannel}`);
+    console.log(
+      `Basic Channel:        ${parachainNonces.BasicOutboundChannel} -> ${ethNonces.BasicInboundChannel}`
+    );
+    console.log(
+      `Incentivized Channel: ${parachainNonces.IncentivizedOutboundChannel} -> ${ethNonces.IncentivizedInboundChannel}`
+    );
 
     console.log("Nonces                Parachain <- ETH");
-    console.log(`Basic Channel:        ${parachainNonces.BasicInboundChannel} <- ${ethNonces.BasicOutboundChannel}`);
-    console.log(`Incentivized Channel: ${parachainNonces.IncentivizedInboundChannel} <- ${ethNonces.IncentivizedOutboundChannel}`);
+    console.log(
+      `Basic Channel:        ${parachainNonces.BasicInboundChannel} <- ${ethNonces.BasicOutboundChannel}`
+    );
+    console.log(
+      `Incentivized Channel: ${parachainNonces.IncentivizedInboundChannel} <- ${ethNonces.IncentivizedOutboundChannel}`
+    );
 
     let fixWithUser: string = argv["fix"];
     if (fixWithUser !== null && fixWithUser !== "") {
@@ -312,8 +368,10 @@ const main = async () => {
       console.log(
         `Going to force reset to number ${ethBlock.number} hash ${ethBlock.hash} with user ${fixWithUser}.`
       );
-      for(const update of updates) {
-        console.log(`Going to reset ${update.name}'s nonce to ${update.nonce}.`);
+      for (const update of updates) {
+        console.log(
+          `Going to reset ${update.name}'s nonce to ${update.nonce}.`
+        );
       }
       if (!(await areYouSure("Are you sure? ", "yes"))) {
         exit(0);
