@@ -21,16 +21,33 @@ const areYouSure = (prompt: string, yes: string): Promise<boolean> => {
 const forceResetToFork = (
   api: ApiPromise,
   hash: string,
-  user: string
+  user: string,
+  updates: any
 ): Promise<ISubmittableResult> => {
   const sudo = keyring.addFromUri(user);
-  const call = api.tx.ethereumLightClient.forceResetToFork(
-    api.createType("H256", hash)
-  );
+
+  const calls = [
+    api.tx.ethereumLightClient.forceResetToFork(
+      api.createType("H256", hash)
+    )
+  ];
+
+  if(updates.length > 0) {
+    const items = [];
+    for(const update of updates) {
+      items.push([
+        updates.storageKey,
+        api.createType('u64', update.nonce).toHex()
+      ]);
+    }
+    calls.push(api.tx.system.setStorage(items));
+  }
+
+  const batch = api.tx.utility.batchAll(...calls)
 
   return new Promise<ISubmittableResult>(async (ok, err) => {
     const unsub = await api.tx.sudo
-      .sudo(call)
+      .sudo(batch)
       .signAndSend(sudo, async (result) => {
         console.log(`Current status is ${result.status}`);
 
@@ -95,7 +112,7 @@ const getContracts = (url: string): Promise<any> => {
 };
 
 const NONCES = [
-  { name: "BasicInboundChannel", event: "MessageDispatched", storageKey: "0x684b82bef882079feeabe54a5bd7b94a718368a0ace36e2b1b8b6dbd7f8093c0", },
+  { name: "BasicInboundChannel", event: "MessageDispatched", storageKey: "0x684b82bef882079feeabe54a5bd7b94a718368a0ace36e2b1b8b6dbd7f8093c0" },
   { name: "IncentivizedInboundChannel", event: "MessageDispatched", storageKey: "0xf0f4d0b91e760c07da58bc0498033acb718368a0ace36e2b1b8b6dbd7f8093c0" },
   { name: "BasicOutboundChannel", event: "Message", storageKey: "0x664ff6e369f56e1c7deca5487e631a5c718368a0ace36e2b1b8b6dbd7f8093c0" },
   { name: "IncentivizedOutboundChannel", event: "Message", storageKey: "0x557df379daaf1cd514a7452dcbf6fccc718368a0ace36e2b1b8b6dbd7f8093c0" },
@@ -104,7 +121,8 @@ const NONCES = [
 const fetchEthNonces = async (
   contractsConfig: any,
   ethApi: Web3,
-  commonAnscestorBlockNumber: number
+  commonAnscestorBlockNumber: number,
+  decendantsUntilFinalized: number
 ): Promise<any> => {
 
   const pastEvents = {};
@@ -116,7 +134,7 @@ const fetchEthNonces = async (
     );
     // get all nonce changing events that happened after the new finalized
     pastEvents[nonce.name] = contract.getPastEvents(nonce.event, {
-      fromBlock: commonAnscestorBlockNumber + 1 - 8,
+      fromBlock: commonAnscestorBlockNumber + 1 - decendantsUntilFinalized,
       toBlock: "latest",
     });
     nonces[nonce.name] = contract.methods.nonce().call();
@@ -154,7 +172,18 @@ const fetchParachainNonces = async (parachainApi: ApiPromise): Promise<any> => {
 
 const generateUpdates = (ethNonces, parachainNonces) => {
   const result = [];
-
+  if(parachainNonces.BasicInboundChannel !== ethNonces.BasicOutboundChannel) {
+    result.push({ name: NONCES[0].name, storageKey: NONCES[0].storageKey, nonce: ethNonces.BasicOutboundChannel });
+  }
+  if(parachainNonces.IncentivizedInboundChannel !== ethNonces.IncentivizedOutboundChannel) {
+    result.push({ name: NONCES[1].name, storageKey: NONCES[1].storageKey, nonce: ethNonces.IncentivizedOutboundChannel });
+  }
+  if(parachainNonces.BasicOutboundChannel !== ethNonces.BasicInboundChannel) {
+    result.push({ name: NONCES[2].name, storageKey: NONCES[2].storageKey, nonce: ethNonces.BasicInboundChannel });
+  }
+  if(parachainNonces.IncentivizedOutboundChannel !== ethNonces.IncentivizedInboundChannel) {
+    result.push({ name: NONCES[3].name, storageKey: NONCES[3].storageKey, nonce: ethNonces.IncentivizedInboundChannel });
+  }
   return result;
 };
 
@@ -193,6 +222,12 @@ const main = async () => {
       describe: "Fix the fork with the following user. e.g. '//Alice'",
       default: null,
     },
+    "decendants-until-finalized": {
+      type: "number",
+      demandOption: false,
+      describe: "The number of decendants until a block is considered finalized.",
+      default: 8,
+    },
   }).argv as any;
 
   console.log("Fetching contracts.");
@@ -230,22 +265,6 @@ const main = async () => {
   }
 
   // Walk backwards until we find a finalized block.
-  console.log("Fork found. Checking nonces.");
-
-  const ethNonces = await fetchEthNonces(contractsConfig.contracts, ethApi, 12007719);
-  const parachainNonces = await fetchParachainNonces(parachainApi);
-
-  console.log("Nonces                Parachain -> ETH");
-  console.log(`Basic Channel:        ${parachainNonces.BasicOutboundChannel} -> ${ethNonces.BasicInboundChannel}`);
-  console.log(`Incentivized Channel: ${parachainNonces.IncentivizedOutboundChannel} -> ${ethNonces.IncentivizedInboundChannel}`);
-
-  console.log("Nonces                Parachain <- ETH");
-  console.log(`Basic Channel:        ${parachainNonces.BasicInboundChannel} <- ${ethNonces.BasicOutboundChannel}`);
-  console.log(`Incentivized Channel: ${parachainNonces.IncentivizedInboundChannel} <- ${ethNonces.IncentivizedOutboundChannel}`);
-
-  console.log(generateUpdates(ethNonces, parachainNonces));
-
-  process.exit(1);// TODO:::::: REMOVE
   const startNumber = (
     await ethApi.eth.getBlock(
       argv["probe-from"] ?? ethFinalized.number - 1,
@@ -274,16 +293,32 @@ const main = async () => {
     console.log(`Parachain Total Difficulty: ${paraBlock.totalDifficulty}`);
     console.log(`Ethereum Total Difficulty:  ${ethBlock.totalDifficulty}`);
 
+    console.log("Checking nonces.");
+    const parachainNonces = await fetchParachainNonces(parachainApi);
+    const ethNonces = await fetchEthNonces(contractsConfig.contracts, ethApi, ethBlock.number, argv["decendants-until-finalized"]);
+
+    console.log("Nonces                Parachain -> ETH");
+    console.log(`Basic Channel:        ${parachainNonces.BasicOutboundChannel} -> ${ethNonces.BasicInboundChannel}`);
+    console.log(`Incentivized Channel: ${parachainNonces.IncentivizedOutboundChannel} -> ${ethNonces.IncentivizedInboundChannel}`);
+
+    console.log("Nonces                Parachain <- ETH");
+    console.log(`Basic Channel:        ${parachainNonces.BasicInboundChannel} <- ${ethNonces.BasicOutboundChannel}`);
+    console.log(`Incentivized Channel: ${parachainNonces.IncentivizedInboundChannel} <- ${ethNonces.IncentivizedOutboundChannel}`);
+
     let fixWithUser: string = argv["fix"];
     if (fixWithUser !== null && fixWithUser !== "") {
+      console.log(`Fixing fork`);
+      const updates = generateUpdates(ethNonces, parachainNonces);
       console.log(
-        `Going to force reset to ${ethBlock.hash} with user ${fixWithUser}.`
+        `Going to force reset to number ${ethBlock.number} hash ${ethBlock.hash} with user ${fixWithUser}.`
       );
+      for(const update of updates) {
+        console.log(`Going to reset ${update.name}'s nonce to ${update.nonce}.`);
+      }
       if (!(await areYouSure("Are you sure? ", "yes"))) {
         exit(0);
       }
-
-      await forceResetToFork(parachainApi, ethBlock.hash, fixWithUser);
+      //await forceResetToFork(parachainApi, ethBlock.hash, fixWithUser, updates);
     }
 
     process.exit(0);
