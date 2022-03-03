@@ -261,7 +261,7 @@ const main = async () => {
   );
   if (ethFinalized.hash === paraFinalized.hash) {
     console.log("There is no fork.");
-    // process.exit(0);
+    process.exit(0);
   }
 
   // Walk backwards until we find a finalized block.
@@ -318,7 +318,7 @@ const main = async () => {
       if (!(await areYouSure("Are you sure? ", "yes"))) {
         exit(0);
       }
-      //await forceResetToFork(parachainApi, ethBlock.hash, fixWithUser, updates);
+      await forceResetToFork(parachainApi, ethBlock.hash, fixWithUser, updates);
     }
 
     process.exit(0);
