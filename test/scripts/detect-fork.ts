@@ -34,14 +34,14 @@ const forceResetToFork = (
     const items = [];
     for (const update of updates) {
       items.push([
-        updates.storageKey,
+        update.storageKey,
         api.createType("u64", update.nonce).toHex(),
       ]);
     }
     calls.push(api.tx.system.setStorage(items));
   }
 
-  const batch = api.tx.utility.batchAll(...calls);
+  const batch = api.tx.utility.batchAll(calls);
 
   return new Promise<ISubmittableResult>(async (ok, err) => {
     const unsub = await api.tx.sudo
