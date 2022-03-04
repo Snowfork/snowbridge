@@ -140,7 +140,7 @@ const fetchEthNonces = async (
   contractsConfig: any,
   ethApi: Web3,
   commonAnscestorBlockNumber: number,
-  decendantsUntilFinalized: number
+  descendantsUntilFinalized: number
 ): Promise<any> => {
   const pastEvents = {};
   const nonces = {};
@@ -151,7 +151,7 @@ const fetchEthNonces = async (
     );
     // get all nonce changing events that happened after the new finalized
     pastEvents[nonce.name] = contract.getPastEvents(nonce.event, {
-      fromBlock: commonAnscestorBlockNumber + 1 - decendantsUntilFinalized,
+      fromBlock: commonAnscestorBlockNumber + 1 - descendantsUntilFinalized,
       toBlock: "latest",
     });
     nonces[nonce.name] = contract.methods.nonce().call();
@@ -264,11 +264,11 @@ const main = async () => {
       describe: "Fix the fork with the following user. e.g. '//Alice'",
       default: null,
     },
-    "decendants-until-finalized": {
+    "descendants-until-finalized": {
       type: "number",
       demandOption: false,
       describe:
-        "The number of decendants until a block is considered finalized.",
+        "The number of descendants until a block is considered finalized.",
       default: 8,
     },
   }).argv as any;
@@ -342,7 +342,7 @@ const main = async () => {
       contractsConfig.contracts,
       ethApi,
       ethBlock.number,
-      argv["decendants-until-finalized"]
+      argv["descendants-until-finalized"]
     );
 
     console.log("Nonces                Parachain -> ETH");
