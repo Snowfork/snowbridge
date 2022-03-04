@@ -159,21 +159,6 @@ pub fn test_hash_tree_root() {
 }
 
 #[test]
-pub fn test_ssz_beacon_header() {
-	new_tester().execute_with(|| {
-		assert_eq!(EthereumBeaconLightClient::ssz_encode(
-			ethereum_beacon_light_client::BeaconBlockHeader{
-				slot: 3,
-				proposer_index: 6,
-				parent_root: hex!("94ea256cd0407e5b505bc5206bcd485e7367fe52bb0541fda3970b1a3cf651a2").into(),
-				state_root: hex!("478e8580b66fe6dddad826acba5dce35051a7b671b4409207816c45891388a67").into(),
-				body_root: hex!("aed0abba2c0d37380252e876fab4468b96d9227204845c398f330e618df7de76").into(),
-			}
-		), hex!("0300000000000000060000000000000094ea256cd0407e5b505bc5206bcd485e7367fe52bb0541fda3970b1a3cf651a2478e8580b66fe6dddad826acba5dce35051a7b671b4409207816c45891388a67aed0abba2c0d37380252e876fab4468b96d9227204845c398f330e618df7de76").to_vec());
-	});
-}
-
-#[test]
 pub fn test_hash_tree_root_with_root_value() {
 	new_tester().execute_with(|| {
 		assert_eq!(

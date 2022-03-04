@@ -275,11 +275,31 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-light-client",
-				"Received update {:?}. Starting validation",
+				"Received update {:?}. Starting process_light_client_update",
 				update
 			);
 
 			Self::process_light_client_update(update, current_slot, genesis_validators_root)
+		}
+		
+		#[pallet::weight(1_000_000)]
+		pub fn process_slot(
+			origin: OriginFor<T>,
+			update: LightClientUpdate,
+			current_slot: u64,
+			genesis_validators_root: Root,
+		) -> DispatchResult{
+			let sender = ensure_signed(origin)?;
+
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"Received update {:?}. Starting process_slot",
+				update
+			);
+
+			Self::process_slot_for_light_client_store(current_slot);
+
+			Ok(())
 		}
 	}
 
@@ -327,7 +347,7 @@ pub mod pallet {
 
 			// Update finalized header if sync commitee votes were 2/3 or more
 			if (sync_committee_sum * 3 >= sync_committee_bits.clone().len() as u64 * 2)
-				&& update.clone().finalized_header.is_none()
+				&& update.clone().finalized_header.is_some()
 			{
 				// Normal update through 2/3 threshold
 				Self::apply_light_client_update(update);
@@ -335,6 +355,35 @@ pub mod pallet {
 			}
 
 			Ok(())
+		}
+
+		fn apply_light_client_update(update: LightClientUpdate) {
+			let active_header = Self::get_active_header(update.clone());
+
+			let finalized_header = <FinalizedHeader<T>>::get();
+
+			let finalized_period = Self::compute_sync_committee_period(
+				Self::compute_epoch_at_slot(finalized_header.slot),
+			);
+
+			let update_period = Self::compute_sync_committee_period(Self::compute_epoch_at_slot(
+				active_header.slot,
+			));
+
+			// If it is the next update period, the sync committee changes and we need to update it.
+			if update_period == (finalized_period + 1) {
+				<CurrentSyncCommittee<T>>::put(<NextSyncCommittee<T>>::get());
+				<NextSyncCommittee<T>>::put(update.next_sync_committee);
+			}
+			<FinalizedHeader<T>>::put(active_header.clone());
+
+			let optimistic_header = <OptimisticHeader<T>>::get();
+
+			let finalized_header = <FinalizedHeader<T>>::get();
+
+			if finalized_header.slot > optimistic_header.slot {
+				<OptimisticHeader<T>>::put(finalized_header.clone());
+			}
 		}
 
 		fn validate_light_client_update(
@@ -463,33 +512,6 @@ pub mod pallet {
 			}
 		}
 
-		fn apply_light_client_update(update: LightClientUpdate) {
-			let active_header = Self::get_active_header(update.clone());
-
-			let finalized_header = <FinalizedHeader<T>>::get();
-
-			let finalized_period = Self::compute_sync_committee_period(
-				Self::compute_epoch_at_slot(finalized_header.slot),
-			);
-			let update_period = Self::compute_sync_committee_period(Self::compute_epoch_at_slot(
-				active_header.slot,
-			));
-
-			if update_period == (finalized_period + 1) {
-				<CurrentSyncCommittee<T>>::put(<NextSyncCommittee<T>>::get());
-				<NextSyncCommittee<T>>::put(update.next_sync_committee);
-			}
-			<FinalizedHeader<T>>::put(active_header.clone());
-
-			let optimistic_header = <OptimisticHeader<T>>::get();
-
-			let finalized_header = <FinalizedHeader<T>>::get();
-
-			if finalized_header.slot > optimistic_header.slot {
-				<OptimisticHeader<T>>::put(finalized_header.clone());
-			}
-		}
-
 		/// Returns the epooch at the specified slot.
 		pub(super) fn compute_epoch_at_slot(slot: Slot) -> Epoch {
 			slot / SLOTS_PER_EPOCH
@@ -531,10 +553,10 @@ pub mod pallet {
 			generalized_index % 2u32.pow(Self::floorlog2(FINALIZED_ROOT_INDEX) as u32) as u64
 		}
 
+		/// The "active header" is the header that the update is trying to convince us
+		/// to accept. If a finalized header is present, it's the finalized header,
+		/// otherwise it's the attested header
 		fn get_active_header(update: LightClientUpdate) -> BeaconBlockHeader {
-			// The "active header" is the header that the update is trying to convince us
-			// to accept. If a finalized header is present, it's the finalized header,
-			// otherwise it's the attested header
 			match update.finalized_header {
 				Some(finalized_header) => finalized_header,
 				None => update.attested_header,
@@ -639,10 +661,6 @@ pub mod pallet {
 
 		pub(super) fn hash_tree_root<U: tree_hash::TreeHash + SSZEncode>(object: U) -> Root {
 			object.tree_hash_root()
-		}
-
-		pub(super) fn ssz_encode<Z: SSZEncode>(object: Z) -> Vec<u8> {
-			object.as_ssz_bytes()
 		}
 	}
 }
