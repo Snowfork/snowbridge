@@ -35,7 +35,7 @@ const forceResetToFork = (
     for (const update of updates) {
       items.push([
         update.storageKey,
-        api.createType("u64", update.nonce).toHex(),
+        api.createType("u64", update.nonce).toHex(true),
       ]);
     }
     calls.push(api.tx.system.setStorage(items));
