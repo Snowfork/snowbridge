@@ -93,36 +93,6 @@ pub struct BeaconBlockHeader {
 	pub body_root: Root,
 }
 
-#[derive(
-	Clone,
-	Default,
-	Encode,
-	Decode,
-	PartialEq,
-	RuntimeDebug,
-	TypeInfo,
-	SSZDecode,
-	SSZEncode,
-	TreeHash,
-)]
-pub struct BeaconBlockHeader2 {
-	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
-	#[tree_hash]
-	pub slot: u64,
-	// The index of the validator that proposed the block.
-	#[tree_hash]
-	pub proposer_index: u64,
-	// The block root of the parent block, forming a block chain.
-	#[tree_hash]
-	pub parent_root: [u8; 32],
-	// The hash root of the post state of running the state transition through this block.
-	#[tree_hash]
-	pub state_root: [u8; 32],
-	// The hash root of the Eth1 block
-	#[tree_hash]
-	pub body_root: [u8; 32],
-}
-
 /// Sync committee as it is stored in the runtime storage.
 /// https://github.com/ethereum/consensus-specs/blob/02b32100ed26c3c7a4a44f41b932437859487fd2/specs/altair/beacon-chain.md#synccommittee
 #[derive(
