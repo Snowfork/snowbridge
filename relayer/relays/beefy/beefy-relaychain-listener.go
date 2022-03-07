@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 	"github.com/snowfork/snowbridge/relayer/substrate"
@@ -218,28 +219,15 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 		return err
 	}
 
-	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(blockNumber))
+	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber);
 	if err != nil {
 		log.WithError(err).Error("Failed to get block hash")
 		return err
 	}
-	log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
 
-	latestMMRProof, err := li.relaychainConn.GenerateProofForBlock(blockNumber, blockHash, li.config.Source.BeefyActivationBlock)
+	latestMMRProof, err := li.relaychainConn.GenerateProofForBlock(blockNumber-1, blockHash, li.config.Source.BeefyActivationBlock)
 	if err != nil {
 		log.WithError(err).Error("Failed get MMR Leaf")
-		return err
-	}
-
-	mmrLeafCount, err := li.relaychainConn.FetchMMRLeafCount(blockHash)
-	if err != nil {
-		log.WithError(err).Error("Failed get MMR Leaf Count")
-		return err
-	}
-
-	if mmrLeafCount == 0 {
-		err := fmt.Errorf("MMR is empty and has no leaves")
-		log.WithError(err)
 		return err
 	}
 
@@ -247,6 +235,10 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 
 	simplifiedProof, err := merkle.ConvertToSimplifiedMMRProof(latestMMRProof.BlockHash, uint64(latestMMRProof.Proof.LeafIndex), latestMMRProof.Leaf, uint64(latestMMRProof.Proof.LeafCount), latestMMRProof.Proof.Items)
 	log.WithField("simplifiedProof", simplifiedProof).Info("Converted latestMMRProof to simplified proof")
+
+	// Verify Proof
+	root, err := li.calculateMerkleRoot(&simplifiedProof, &latestMMRProof.Leaf)
+	log.Info("FOO proof verification: Expected=", signedCommitment.Commitment.Payload.Hex(), ", Got=", root.Hex())
 
 	serializedProof, err := types.EncodeToBytes(simplifiedProof)
 	if err != nil {
@@ -259,7 +251,6 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 		SignedCommitment:         signedCommitmentBytes,
 		Status:                   store.CommitmentWitnessed,
 		SerializedLatestMMRProof: serializedProof,
-		MMRLeafCount:             mmrLeafCount,
 	}
 
 	select {
@@ -268,6 +259,35 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 	case li.beefyMessages <- info:
 		return nil
 	}
+}
+
+func (li *BeefyRelaychainListener) calculateMerkleRoot(proof *merkle.SimplifiedMMRProof, leafNode *types.MMRLeaf) (*types.Hash, error) {
+
+	leafNodeBytes, err := types.EncodeToBytes(leafNode)
+	if err != nil {
+		return nil, err
+	}
+
+	currentHash := (&keccak.Keccak256{}).Hash(leafNodeBytes)
+
+	for i := 0; i < int(len(proof.MerkleProofItems)); i++ {
+		isSiblingLeft := (proof.MerkleProofOrder >> i) & 1 == 1
+		sibling := proof.MerkleProofItems[i]
+
+		var buf []byte
+		if isSiblingLeft {
+			buf = append(buf, sibling[:]...)
+			buf = append(buf, currentHash...)
+		} else {
+			buf = append(buf, currentHash...)
+			buf = append(buf, sibling[:]...)
+		}
+		currentHash = (&keccak.Keccak256{}).Hash(buf)
+	}
+
+	root := types.NewHash(currentHash)
+
+	return &root, nil
 }
 
 func (li *BeefyRelaychainListener) getBeefyAuthorities(blockNumber uint64) ([]common.Address, error) {

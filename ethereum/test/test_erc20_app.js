@@ -1,7 +1,6 @@
 const BigNumber = require('bignumber.js');
 const {
   deployAppWithMockChannels,
-  addressBytes,
   ChannelId,
 } = require("./helpers");
 require("chai")
@@ -27,7 +26,7 @@ const approveFunds = (token, contract, account, amount) => {
 const lockupFunds = (contract, token, sender, recipient, amount, channel, paraId, fee) => {
   return contract.lock(
     token.address,
-    addressBytes(recipient),
+    recipient,
     amount.toString(),
     channel,
     paraId,
@@ -188,7 +187,7 @@ describe("ERC20App", function () {
 
       let txPromise = this.app.unlock(
         this.token.address,
-        addressBytes(POLKADOT_ADDRESS),
+        POLKADOT_ADDRESS,
         recipient,
         amount.toString(),
         {

@@ -11,7 +11,7 @@ import "./tasks/upgrade";
 import "./tasks/renounce";
 
 let INFURA_KEY = process.env.INFURA_PROJECT_ID
-let ROPSTEN_KEY = process.env.ROPSTEN_PRIVATE_KEY || "0x00"
+let ROPSTEN_KEY = process.env.ROPSTEN_PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"
 let ETHERSCAN_KEY = process.env.ETHERSCAN_API_KEY
 
 const config: HardhatUserConfig = {
