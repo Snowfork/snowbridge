@@ -35,10 +35,10 @@ type BeefyLightClientBeefyMMRLeafLog struct {
 	Version              uint8  `json:"version"`
 	ParentNumber         uint32 `json:"parentNumber"`
 	ParentHash           string `json:"parentHash"`
-	ParachainHeadsRoot   string `json:"parachainHeadsRoot"`
 	NextAuthoritySetId   uint64 `json:"nextAuthoritySetId"` // revive:disable-line
 	NextAuthoritySetLen  uint32 `json:"nextAuthoritySetLen"`
 	NextAuthoritySetRoot string `json:"nextAuthoritySetRoot"`
+	ParachainHeadsRoot   string `json:"parachainHeadsRoot"`
 }
 
 type SimplifiedMMRProofLog struct {
@@ -57,7 +57,9 @@ type CompleteSignatureCommitmentTxInput struct {
 }
 
 func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
-	msg store.CompleteSignatureCommitmentMessage, info store.BeefyRelayInfo) error {
+	msg store.CompleteSignatureCommitmentMessage,
+	_ store.BeefyRelayInfo,
+) error {
 
 	var hasher Keccak256
 

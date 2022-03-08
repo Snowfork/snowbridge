@@ -109,10 +109,10 @@ contract BeefyLightClient {
         uint8 version;
         uint32 parentNumber;
         bytes32 parentHash;
-        bytes32 parachainHeadsRoot;
         uint64 nextAuthoritySetId;
         uint32 nextAuthoritySetLen;
         bytes32 nextAuthoritySetRoot;
+        bytes32 parachainHeadsRoot;
     }
 
     /* State */
@@ -558,26 +558,12 @@ contract BeefyLightClient {
             );
     }
 
-    // To scale encode the byte array, we need to prefix it
-    // with it's length. This is the expected current length of a leaf.
-    // The length here is 113 bytes:
-    // - 1 byte for the version
-    // - 4 bytes for the block number
-    // - 32 bytes for the block hash
-    // - 8 bytes for the next validator set ID
-    // - 4 bytes for the length of it
-    // - 32 bytes for the root hash of it
-    // - 32 bytes for the parachain heads merkle root
-    // That number is then compact encoded unsigned integer - see SCALE spec
-    bytes2 public constant MMR_LEAF_LENGTH_SCALE_ENCODED =
-        bytes2(uint16(0xc501));
-
     function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
         public
         pure
         returns (bytes memory)
     {
-        bytes memory scaleEncodedMMRLeaf = abi.encodePacked(
+        return bytes.concat(
             ScaleCodec.encode8(leaf.version),
             ScaleCodec.encode32(leaf.parentNumber),
             leaf.parentHash,
@@ -586,11 +572,5 @@ contract BeefyLightClient {
             leaf.nextAuthoritySetRoot,
             leaf.parachainHeadsRoot
         );
-
-        return bytes.concat(MMR_LEAF_LENGTH_SCALE_ENCODED, scaleEncodedMMRLeaf);
-    }
-
-    function hashMMRLeaf(bytes memory leaf) public pure returns (bytes32) {
-        return keccak256(leaf);
     }
 }
