@@ -151,7 +151,7 @@ const fetchEthNonces = async (
     );
     // get all nonce changing events that happened after the new finalized
     pastEvents[nonce.name] = contract.getPastEvents(nonce.event, {
-      fromBlock: commonAnscestorBlockNumber + 1 - descendantsUntilFinalized,
+      fromBlock: commonAnscestorBlockNumber - descendantsUntilFinalized,
       toBlock: "latest",
     });
     nonces[nonce.name] = contract.methods.nonce().call();
@@ -323,7 +323,7 @@ const main = async () => {
     console.log(`Checking block number ${number}...`);
     const ethBlock = await ethApi.eth.getBlock(number, false);
     const paraBlock: any = await fetchImported(parachainApi, ethBlock.hash);
-    if (paraBlock === null && !paraBlock.finalized) continue;
+    if (paraBlock === null || !paraBlock.finalized) continue;
 
     assert(
       ethBlock.number === paraBlock.header.number,
