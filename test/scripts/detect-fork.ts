@@ -209,23 +209,6 @@ const generateUpdates = (ethNonces, parachainNonces) => {
       nonce: ethNonces.IncentivizedOutboundChannel,
     });
   }
-  if (parachainNonces.BasicOutboundChannel !== ethNonces.BasicInboundChannel) {
-    result.push({
-      name: NONCES[2].name,
-      storageKey: NONCES[2].storageKey,
-      nonce: ethNonces.BasicInboundChannel,
-    });
-  }
-  if (
-    parachainNonces.IncentivizedOutboundChannel !==
-    ethNonces.IncentivizedInboundChannel
-  ) {
-    result.push({
-      name: NONCES[3].name,
-      storageKey: NONCES[3].storageKey,
-      nonce: ethNonces.IncentivizedInboundChannel,
-    });
-  }
   return result;
 };
 
