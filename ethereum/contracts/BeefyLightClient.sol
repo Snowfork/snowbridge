@@ -337,7 +337,7 @@ contract BeefyLightClient {
         SimplifiedMMRProof calldata proof
     ) public view {
         bytes memory encodedLeaf = encodeMMRLeaf(leaf);
-        bytes32 hashedLeaf = hashMMRLeaf(encodedLeaf);
+        bytes32 hashedLeaf = keccak256(encodedLeaf);
 
         require(
             mmrVerification.verifyInclusionProof(root, hashedLeaf, proof),
