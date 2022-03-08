@@ -35,6 +35,7 @@ const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 256;
 const SLOTS_PER_EPOCH: u64 = 32;
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
+/// ~27.3 hours
 const UPDATE_TIMEOUT: u64 = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
 // Since each field in BeaconState has a known, and non-changing location in the merklized tree
@@ -304,11 +305,13 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// Processes a light client update as it is received.
 		fn process_light_client_update(
 			update: LightClientUpdate,
 			current_slot: u64,
 			genesis_validators_root: Root,
 		) -> DispatchResult {
+			// First thing, check if the update received is actually valid
 			Self::validate_light_client_update(
 				update.clone(),
 				current_slot,
@@ -320,22 +323,17 @@ pub mod pallet {
 			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits.clone());
 
 			// Update the best update in case we have to force-update to it if the timeout elapses
-			if <BestValidUpdate<T>>::get().is_none()
-				|| (sync_committee_sum
-					> Self::get_sync_committee_sum(
-						<BestValidUpdate<T>>::get().unwrap().sync_aggregate.sync_committee_bits,
-					)) {
-				// unwrap should be safe here because of short circuiting
+			if <BestValidUpdate<T>>::get().is_none() || (sync_committee_sum> Self::get_sync_committee_sum(<BestValidUpdate<T>>::get().unwrap().sync_aggregate.sync_committee_bits)) {
 				<BestValidUpdate<T>>::put(Some(update.clone()));
 			}
 
-			// Track the maximum number of active participants in the committee signatures
+			// Track the maximum number of active participants in the committee signatures.
 			<CurrentMaxActiveParticipants<T>>::put(cmp::max(
 				<CurrentMaxActiveParticipants<T>>::get(),
 				sync_committee_sum,
 			));
 
-			// Update the optimistic header
+			// Update the optimistic header if we have a better update.
 			if sync_committee_sum
 				> Self::get_safety_threshold(
 					<PreviousMaxActiveParticipants<T>>::get(),
@@ -346,24 +344,27 @@ pub mod pallet {
 			}
 
 			// Update finalized header if sync commitee votes were 2/3 or more
-			if (sync_committee_sum * 3 >= sync_committee_bits.clone().len() as u64 * 2)
-				&& update.clone().finalized_header.is_some()
+			if (sync_committee_sum * 3 >= sync_committee_bits.clone().len() as u64 * 2) && update.clone().finalized_header.is_some()
 			{
 				// Normal update through 2/3 threshold
 				Self::apply_light_client_update(update);
+				// Clear the best valid update after applying the update, since it did not timeout.
 				<BestValidUpdate<T>>::kill();
 			}
 
 			Ok(())
 		}
 
+		// Apply the update to the store, updating the sync committee if the period has elapsed, as well
+		// as the finalized header and optimistic header.
 		fn apply_light_client_update(update: LightClientUpdate) {
+			// active header is either the finalized_header or the attested_header in the update.
 			let active_header = Self::get_active_header(update.clone());
 
-			let finalized_header = <FinalizedHeader<T>>::get();
+			let stored_finalized_header = <FinalizedHeader<T>>::get();
 
-			let finalized_period = Self::compute_sync_committee_period(
-				Self::compute_epoch_at_slot(finalized_header.slot),
+			let stored_finalized_period = Self::compute_sync_committee_period(
+				Self::compute_epoch_at_slot(stored_finalized_header.slot),
 			);
 
 			let update_period = Self::compute_sync_committee_period(Self::compute_epoch_at_slot(
@@ -371,59 +372,64 @@ pub mod pallet {
 			));
 
 			// If it is the next update period, the sync committee changes and we need to update it.
-			if update_period == (finalized_period + 1) {
+			if update_period == (stored_finalized_period + 1) {
 				<CurrentSyncCommittee<T>>::put(<NextSyncCommittee<T>>::get());
 				<NextSyncCommittee<T>>::put(update.next_sync_committee);
 			}
+
+			// Store the active header as the latest finalized header.
 			<FinalizedHeader<T>>::put(active_header.clone());
 
 			let optimistic_header = <OptimisticHeader<T>>::get();
 
 			let finalized_header = <FinalizedHeader<T>>::get();
 
+			// Updates the optimistic header with the finalized header, if it is a newer slot.
 			if finalized_header.slot > optimistic_header.slot {
 				<OptimisticHeader<T>>::put(finalized_header.clone());
 			}
 		}
 
+		// Validates that the light client update is valid.
 		fn validate_light_client_update(
 			update: LightClientUpdate,
 			current_slot: u64,
 			genesis_validators_root: Root,
 		) -> DispatchResult {
-			// Verify update slot is larger than slot of current best finalized header
+			// active header is either the finalized_header or the attested_header in the update.
 			let active_header = Self::get_active_header(update.clone());
-			let finalized_header = <FinalizedHeader<T>>::get();
-			ensure!(
-				(current_slot >= active_header.slot)
-					&& (active_header.slot > finalized_header.slot),
-				Error::<T>::AncientHeader
+			let stored_finalized_header = <FinalizedHeader<T>>::get();
+
+			// Verify update slot is larger than slot of current best finalized header and that the active header is an ancestor in the past.
+			ensure!((current_slot >= active_header.slot) && (active_header.slot > stored_finalized_header.slot), Error::<T>::AncientHeader);
+
+			// Verify update does not skip a sync committee period. 
+			let stored_finalized_period = Self::compute_sync_committee_period(
+				Self::compute_epoch_at_slot(stored_finalized_header.slot),
 			);
 
-			//Verify update does not skip a sync committee period
-			let finalized_period = Self::compute_sync_committee_period(
-				Self::compute_epoch_at_slot(finalized_header.slot),
-			);
 			let update_period = Self::compute_sync_committee_period(Self::compute_epoch_at_slot(
 				active_header.slot,
 			));
+
 			ensure!(
-				(update_period == finalized_period) || (update_period == finalized_period + 1),
+				(update_period == stored_finalized_period) || (update_period == stored_finalized_period + 1),
 				Error::<T>::SkippedSyncCommitteePeriod
+				//TODO need to look into cases where this could happen and how to recover from it.
 			);
 
-			let floor_log_2_finalized_root_index = Self::floorlog2(FINALIZED_ROOT_INDEX);
-
-			// Verify that the `finalized_header`, if present, actually is the finalized header saved in the
-			// state of the `attested header`.
+			// Verify that the finalized_header, if present, actually is the finalized header saved in the
+			// state of the attested_header. If the finality_header is not present, neither should finality_branch.
+			// TODO figure out why you can use the attested header state root.
 			if update.finalized_header.is_none() {
 				ensure!(update.finality_branch.len() == 0, Error::<T>::NoBranchExpected);
 			} else {
 				ensure!(
+					// Verifies the beacon state.
 					Self::is_valid_merkle_branch(
 						Self::hash_tree_root(update.finalized_header.unwrap()),
 						update.finality_branch,
-						floor_log_2_finalized_root_index,
+						Self::floorlog2(FINALIZED_ROOT_INDEX),
 						Self::get_subtree_index(FINALIZED_ROOT_INDEX),
 						update.attested_header.state_root
 					),
@@ -431,19 +437,22 @@ pub mod pallet {
 				);
 			}
 
+			// Setting the sync commitee from either the current or next sync committee, to provide pubkeys for BLS verification.
 			let mut sync_committee: SyncCommittee;
 
 			// Verify update next sync committee if the update period incremented
-			if update_period == finalized_period {
+			if update_period == stored_finalized_period {
 				sync_committee = <CurrentSyncCommittee<T>>::get();
 				ensure!(update.next_sync_committee_branch.len() == 0, Error::<T>::NoBranchExpected);
 			} else {
 				sync_committee = <NextSyncCommittee<T>>::get();
 
 				ensure!(
+					// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#beaconstate
+					// Verifies the beacon state.
 					Self::is_valid_merkle_branch(
 						//Self::hash_tree_root(update.next_sync_committee),
-						Self::hash_tree_root(GENESIS_FORK_VERSION), // TODO need to fix
+						Self::hash_tree_root(GENESIS_FORK_VERSION), // TODO need to fix, can't use Vec for HashTree
 						update.next_sync_committee_branch,
 						Self::floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
 						Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
@@ -452,17 +461,18 @@ pub mod pallet {
 					Error::<T>::InvalidMerkleProof
 				);
 			}
+
+			// Sync aggregate contains sync committee participation and the aggregated signature.
 			let sync_aggregate = update.sync_aggregate.clone();
 
-			ensure!(
-				Self::get_sync_committee_sum(sync_aggregate.clone().sync_committee_bits)
-					>= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
+			// Checks that at least 1 sync committee member participated.
+			ensure!(Self::get_sync_committee_sum(sync_aggregate.clone().sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
 				Error::<T>::InsufficientSyncCommitteeParticipants
 			);
 
-			// Verify sync committee aggregate signature
 			let mut participant_pubkeys: Vec<Vec<u8>> = Vec::new();
 
+			// Gathers all the pubkeys of the sync committee members that participated in siging the header.
 			for (bit, pubkey) in sync_aggregate
 				.clone()
 				.sync_committee_bits
@@ -475,14 +485,17 @@ pub mod pallet {
 				}
 			}
 
+			// Domains are used for for seeds, for signatures, and for selecting aggregators.
 			let domain = Self::compute_domain(
 				DOMAIN_SYNC_COMMITTEE.to_vec(),
 				update.pubfork_version,
 				genesis_validators_root,
 			);
 
+			// Hash tree root of SigningData - object root + domain
 			let signing_root = Self::compute_signing_root(update.attested_header, domain);
 
+			// Verify sync committee aggregate signature.
 			Self::bls_fast_aggregate_verify(
 				participant_pubkeys,
 				signing_root,
@@ -494,6 +507,7 @@ pub mod pallet {
 
 		/// Is triggered every time the current slot increments.
 		fn process_slot_for_light_client_store(current_slot: u64) {
+			// Check if the slot is on a new sync committee boundary point
 			if current_slot % UPDATE_TIMEOUT as u64 == 0 {
 				let curr_max_active_participants = <PreviousMaxActiveParticipants<T>>::get();
 				<PreviousMaxActiveParticipants<T>>::put(curr_max_active_participants);
@@ -503,10 +517,9 @@ pub mod pallet {
 			let finalized_header = <FinalizedHeader<T>>::get();
 			let best_valid_update = <BestValidUpdate<T>>::get();
 
-			if current_slot > (finalized_header.slot + UPDATE_TIMEOUT as u64)
-				&& best_valid_update.is_some()
+			// Forced best update when the update timeout has elapsed.
+			if current_slot > (finalized_header.slot + UPDATE_TIMEOUT as u64) && best_valid_update.is_some()
 			{
-				// Forced best update when the update timeout has elapsed
 				Self::apply_light_client_update(best_valid_update.unwrap());
 				<BestValidUpdate<T>>::kill(); // TODO does this set the value to None?
 			}
@@ -570,6 +583,12 @@ pub mod pallet {
 			cmp::max(prev_max_active_participants, curr_max_active_participants)
 		}
 
+		/// Sums the bit vector of sync committee particpation.
+		/// 
+		/// # Examples
+		/// 
+		/// let sync_committee_bits = vec![0, 1, 0, 1, 1, 1];
+		/// ensure!(get_sync_committee_sum(sync_committee_bits), 4);
 		pub(super) fn get_sync_committee_sum(sync_committee_bits: Vec<u8>) -> u64 {
 			sync_committee_bits.iter().fold(0, |acc: u64, x| acc + *x as u64)
 		}
