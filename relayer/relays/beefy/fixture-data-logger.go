@@ -20,8 +20,8 @@ import (
 
 type BeefyLightClientCommitmentLog struct {
 	Payload        string `json:"payload"`
-	BlockNumber    uint64 `json:"blockNumber"`
-	ValidatorSetId uint32 `json:"validatorSetId"` // revive:disable-line
+	BlockNumber    uint32 `json:"blockNumber"`
+	ValidatorSetId uint64 `json:"validatorSetId"` // revive:disable-line
 }
 
 type BeefyLightClientValidatorProofLog struct {

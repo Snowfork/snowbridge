@@ -128,8 +128,8 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 
 	commitment := beefylightclient.BeefyLightClientCommitment{
 		Payload:        b.SignedCommitment.Commitment.Payload,
-		BlockNumber:    uint64(b.SignedCommitment.Commitment.BlockNumber),
-		ValidatorSetId: uint32(b.SignedCommitment.Commitment.ValidatorSetID),
+		BlockNumber:    uint32(b.SignedCommitment.Commitment.BlockNumber),
+		ValidatorSetId: uint64(b.SignedCommitment.Commitment.ValidatorSetID),
 	}
 
 	var latestMMRProof merkle.SimplifiedMMRProof

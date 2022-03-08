@@ -61,8 +61,8 @@ contract BeefyLightClient {
      */
     struct Commitment {
         bytes32 payload;
-        uint64 blockNumber;
-        uint32 validatorSetId;
+        uint32 blockNumber;
+        uint64 validatorSetId;
     }
 
     /**
@@ -552,8 +552,8 @@ contract BeefyLightClient {
             keccak256(
                 abi.encodePacked(
                     commitment.payload,
-                    commitment.blockNumber.encode64(),
-                    commitment.validatorSetId.encode32()
+                    commitment.blockNumber.encode32(),
+                    commitment.validatorSetId.encode64()
                 )
             );
     }
