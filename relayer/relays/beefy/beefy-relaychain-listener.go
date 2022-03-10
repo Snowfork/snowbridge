@@ -218,32 +218,17 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 		return err
 	}
 
-	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(blockNumber))
+	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber);
 	if err != nil {
 		log.WithError(err).Error("Failed to get block hash")
 		return err
 	}
-	log.WithField("blockHash", blockHash.Hex()).Info("Got next blockhash")
 
-	latestMMRProof, err := li.relaychainConn.GenerateProofForBlock(blockNumber, blockHash, li.config.Source.BeefyActivationBlock)
+	latestMMRProof, err := li.relaychainConn.GenerateProofForBlock(blockNumber-1, blockHash, li.config.Source.BeefyActivationBlock)
 	if err != nil {
-		log.WithError(err).Error("Failed get MMR Leaf")
+		log.WithError(err).Error("Failed to generate proof for block")
 		return err
 	}
-
-	mmrLeafCount, err := li.relaychainConn.FetchMMRLeafCount(blockHash)
-	if err != nil {
-		log.WithError(err).Error("Failed get MMR Leaf Count")
-		return err
-	}
-
-	if mmrLeafCount == 0 {
-		err := fmt.Errorf("MMR is empty and has no leaves")
-		log.WithError(err)
-		return err
-	}
-
-	log.WithField("latestMMRProof", latestMMRProof.Leaf.Version).Info("Got latestMMRProof")
 
 	simplifiedProof, err := merkle.ConvertToSimplifiedMMRProof(latestMMRProof.BlockHash, uint64(latestMMRProof.Proof.LeafIndex), latestMMRProof.Leaf, uint64(latestMMRProof.Proof.LeafCount), latestMMRProof.Proof.Items)
 	log.WithField("simplifiedProof", simplifiedProof).Info("Converted latestMMRProof to simplified proof")
@@ -259,7 +244,6 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 		SignedCommitment:         signedCommitmentBytes,
 		Status:                   store.CommitmentWitnessed,
 		SerializedLatestMMRProof: serializedProof,
-		MMRLeafCount:             mmrLeafCount,
 	}
 
 	select {
