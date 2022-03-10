@@ -8,6 +8,7 @@ require("chai")
 
 const {
   deployAppWithMockChannels,
+  addressBytes,
   ChannelId,
 } = require("./helpers");
 const { expect } = require("chai");
@@ -30,7 +31,7 @@ const unwrapped = (amount) =>
 
 const burnTokens = (contract, sender, recipient, amount, channel) => {
   return contract.burn(
-    recipient,
+    addressBytes(recipient),
     amount.toString(),
     channel,
     {
@@ -79,7 +80,7 @@ describe("DOTApp", function () {
       const amountWrapped = wrapped(amountNative);
 
       let tx = await this.app.mint(
-        POLKADOT_ADDRESS,
+        addressBytes(POLKADOT_ADDRESS),
         userOne,
         amountWrapped.toString(),
         {
@@ -120,7 +121,7 @@ describe("DOTApp", function () {
       let amountNative = BigNumber("20000000000"); // 2 DOT, uint128
       let amountWrapped = wrapped(amountNative);
       await this.app.mint(
-        POLKADOT_ADDRESS,
+        addressBytes(POLKADOT_ADDRESS),
         userOne,
         amountWrapped.toString(),
         {
@@ -167,14 +168,14 @@ describe("DOTApp", function () {
       const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
       this.iface = new ethers.utils.Interface(abi);
     });
-
+    
     it("should revert when called by non-admin", async function () {
       await this.app.upgrade(
         [this.newInboundChannel, this.outboundChannel.address],
         [this.newInboundChannel, this.outboundChannel.address],
         {from: userOne}).should.be.rejectedWith(/AccessControl/);
     });
-
+    
     it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
       await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
       await this.app.upgrade(

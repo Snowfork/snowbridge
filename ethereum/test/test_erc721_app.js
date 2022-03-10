@@ -1,6 +1,7 @@
 const BigNumber = require('bignumber.js');
 const {
   deployAppWithMockChannels,
+  addressBytes,
   ChannelId,
 } = require("./helpers");
 require("chai")
@@ -22,7 +23,7 @@ const lockupToken = (app, tokenContract, tokenId, sender, recipient, channel) =>
   return app.lock(
     tokenContract.address,
     tokenId.toString(),
-    recipient,
+    addressBytes(recipient),
     channel,
     {
       from: sender,
@@ -159,7 +160,7 @@ contract("ERC721App", function (accounts) {
       let tx = await this.app.unlock(
         this.token.address,
         tokenId.toString(),
-        POLKADOT_ACCOUNT_ID,
+        addressBytes(POLKADOT_ACCOUNT_ID),
         userTwo,
         {
           from: inboundChannel
@@ -181,7 +182,7 @@ contract("ERC721App", function (accounts) {
       await this.app.unlock(
         this.token.address,
         tokenId.toString(),
-        POLKADOT_ACCOUNT_ID,
+        addressBytes(POLKADOT_ACCOUNT_ID),
         userTwo,
         {
           from: inboundChannel
@@ -199,7 +200,7 @@ contract("ERC721App", function (accounts) {
       await this.app.unlock(
         this.token.address,
         tokenId.toString(),
-        POLKADOT_ACCOUNT_ID,
+        addressBytes(POLKADOT_ACCOUNT_ID),
         userTwo,
         {
           from: userTwo
@@ -216,14 +217,14 @@ contract("ERC721App", function (accounts) {
       const abi = ["event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)"];
       this.iface = new ethers.utils.Interface(abi);
     });
-
+    
     it("should revert when called by non-admin", async function () {
       await this.app.upgrade(
         [this.newInboundChannel, this.outboundChannel.address],
         [this.newInboundChannel, this.outboundChannel.address],
         {from: userOne}).should.be.rejectedWith(/AccessControl/);
     });
-
+    
     it("should revert once CHANNEL_UPGRADE_ROLE has been renounced", async function () {
       await this.app.renounceRole(web3.utils.soliditySha3("CHANNEL_UPGRADE_ROLE"), owner, {from: owner});
       await this.app.upgrade(

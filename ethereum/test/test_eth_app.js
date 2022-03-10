@@ -2,6 +2,7 @@ const BigNumber = require('bignumber.js');
 const MockOutboundChannel = artifacts.require("MockOutboundChannel");
 const {
   deployAppWithMockChannels,
+  addressBytes,
   ChannelId,
 } = require("./helpers");
 
@@ -18,7 +19,7 @@ const ScaleCodec = artifacts.require("ScaleCodec");
 
 const lockupFunds = (contract, sender, recipient, amount, channel, paraId, fee) => {
   return contract.lock(
-    recipient,
+    addressBytes(recipient),
     channel,
     paraId,
     fee,
@@ -137,7 +138,7 @@ describe("ETHApp", function () {
       const unlockAmount = web3.utils.toBN( web3.utils.toWei("2", "ether")).add(web3.utils.toBN(1))
 
        await this.app.unlock(
-        POLKADOT_ADDRESS,
+        addressBytes(POLKADOT_ADDRESS),
         recipient,
         unlockAmount.toString(),
         {
@@ -146,7 +147,7 @@ describe("ETHApp", function () {
       ).should.be.rejectedWith(/Unable to send Ether/);
 
       let { receipt } = await this.app.unlock(
-        POLKADOT_ADDRESS,
+        addressBytes(POLKADOT_ADDRESS),
         recipient,
         amount.toString(),
         {
