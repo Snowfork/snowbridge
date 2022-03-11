@@ -36,6 +36,8 @@ func run(_ *cobra.Command, _ []string) error {
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 	logrus.SetLevel(logrus.DebugLevel)
 
+	logrus.Info("Beacon relayer started up")
+
 	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
 		return err
