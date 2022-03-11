@@ -252,7 +252,7 @@ const main = async () => {
       demandOption: false,
       describe:
         "The number of descendants until a block is considered finalized.",
-      default: 8,
+      default: 16,
     },
   }).argv as any;
 
