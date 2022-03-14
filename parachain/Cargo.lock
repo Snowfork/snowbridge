@@ -9725,7 +9725,6 @@ dependencies = [
  "ethereum-types",
  "getrandom 0.2.3",
  "hex-literal",
- "libsecp256k1 0.7.0",
  "parity-bytes",
  "parity-scale-codec",
  "rand 0.7.3",
