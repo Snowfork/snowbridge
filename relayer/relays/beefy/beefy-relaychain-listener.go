@@ -218,7 +218,7 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 		return err
 	}
 
-	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber);
+	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber)
 	if err != nil {
 		log.WithError(err).Error("Failed to get block hash")
 		return err
