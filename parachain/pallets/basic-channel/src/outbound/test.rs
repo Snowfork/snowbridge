@@ -84,7 +84,10 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	let config: basic_outbound_channel::GenesisConfig<Test> =
-		basic_outbound_channel::GenesisConfig { principal: Some(Keyring::Bob.into()), interval: 1u64 };
+		basic_outbound_channel::GenesisConfig {
+			principal: Some(Keyring::Bob.into()),
+			interval: 1u64,
+		};
 	config.assimilate_storage(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();

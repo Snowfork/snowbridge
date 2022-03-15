@@ -195,10 +195,7 @@ fn testnet_genesis(
 				(0, get_account_id_from_seed::<sr25519::Public>("Eve"), true, 1),
 				(1, get_account_id_from_seed::<sr25519::Public>("Eve"), true, 1),
 			],
-			metadata: vec![
-				(0, "SnowETH".into(), vec![], 18),
-				(1, "TestToken".into(), vec![], 18),
-			],
+			metadata: vec![(0, "SnowETH".into(), vec![], 18), (1, "TestToken".into(), vec![], 18)],
 			accounts: vec![],
 		},
 		parachain_info: test_runtime::ParachainInfoConfig { parachain_id: id },
@@ -224,8 +221,6 @@ fn testnet_genesis(
 		aura: Default::default(),
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
-		polkadot_xcm: test_runtime::PolkadotXcmConfig {
-			safe_xcm_version: Some(SAFE_XCM_VERSION),
-		},
+		polkadot_xcm: test_runtime::PolkadotXcmConfig { safe_xcm_version: Some(SAFE_XCM_VERSION) },
 	}
 }

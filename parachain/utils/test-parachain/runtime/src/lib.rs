@@ -24,7 +24,7 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{Everything, Nothing, EnsureOneOf},
+	traits::{EnsureOneOf, Everything, Nothing},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
@@ -52,15 +52,12 @@ use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
 	AsPrefixedGeneralIndex, Case, ConvertedConcreteAssetId, CurrencyAdapter, EnsureXcmOrigin,
-	FixedWeightBounds, FungiblesAdapter, IsConcrete, LocationInverter, NativeAsset,
-	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	FixedWeightBounds, FungiblesAdapter, IsConcrete, LocationInverter, NativeAsset, ParentIsPreset,
+	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	UsingComponents,
 };
-use xcm_executor::{
-	traits::JustTry,
-	Config, XcmExecutor,
-};
+use xcm_executor::{traits::JustTry, Config, XcmExecutor};
 
 /// Import the template pallet.
 pub use test_pallet;
@@ -419,10 +416,8 @@ parameter_types! {
 	pub const Local: MultiLocation = Here.into();
 }
 
-pub type AssetsForceOrigin = EnsureOneOf<
-	EnsureRoot<AccountId>,
-	EnsureXcm<IsMajorityOfBody<DotLocation, ExecutiveBody>>,
->;
+pub type AssetsForceOrigin =
+	EnsureOneOf<EnsureRoot<AccountId>, EnsureXcm<IsMajorityOfBody<DotLocation, ExecutiveBody>>>;
 
 pub type AssetId = u128;
 
@@ -727,13 +722,13 @@ extern crate frame_benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
-       define_benchmarks!(
-               [frame_system, SystemBench::<Runtime>]
-               [pallet_balances, Balances]
-               [pallet_session, SessionBench::<Runtime>]
-               [pallet_timestamp, Timestamp]
-               [pallet_collator_selection, CollatorSelection]
-       );
+	define_benchmarks!(
+			[frame_system, SystemBench::<Runtime>]
+			[pallet_balances, Balances]
+			[pallet_session, SessionBench::<Runtime>]
+			[pallet_timestamp, Timestamp]
+			[pallet_collator_selection, CollatorSelection]
+	);
 }
 
 impl_runtime_apis! {
@@ -844,16 +839,16 @@ impl_runtime_apis! {
 	}
 
 	#[cfg(feature = "try-runtime")]
-    impl frame_try_runtime::TryRuntime<Block> for Runtime {
-        fn on_runtime_upgrade() -> (Weight, Weight) {
-            log::info!("try-runtime::on_runtime_upgrade parachain-template.");
-            let weight = Executive::try_runtime_upgrade().unwrap();
-            (weight, RuntimeBlockWeights::get().max_block)
-        }
+	impl frame_try_runtime::TryRuntime<Block> for Runtime {
+		fn on_runtime_upgrade() -> (Weight, Weight) {
+			log::info!("try-runtime::on_runtime_upgrade parachain-template.");
+			let weight = Executive::try_runtime_upgrade().unwrap();
+			(weight, RuntimeBlockWeights::get().max_block)
+		}
 
-        fn execute_block_no_check(block: Block) -> Weight {
-            Executive::execute_block_no_check(block)
-        }
+		fn execute_block_no_check(block: Block) -> Weight {
+			Executive::execute_block_no_check(block)
+		}
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]

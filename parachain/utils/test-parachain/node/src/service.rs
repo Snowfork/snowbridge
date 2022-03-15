@@ -7,9 +7,7 @@ use std::{sync::Arc, time::Duration};
 use test_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
 
 // Cumulus Imports
-use cumulus_client_consensus_aura::{
-	AuraConsensus, BuildAuraConsensusParams, SlotProportion,
-};
+use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
@@ -237,12 +235,12 @@ where
 	let params = new_partial::<RuntimeApi, Executor, BIQ>(&parachain_config, build_import_queue)?;
 	let (mut telemetry, telemetry_worker_handle) = params.other;
 
-    let client = params.client.clone();
-    let backend = params.backend.clone();
-    let mut task_manager = params.task_manager;
+	let client = params.client.clone();
+	let backend = params.backend.clone();
+	let mut task_manager = params.task_manager;
 
-    let (relay_chain_interface, collator_key) =
-        build_relay_chain_interface(polkadot_config, telemetry_worker_handle, &mut task_manager)
+	let (relay_chain_interface, collator_key) =
+		build_relay_chain_interface(polkadot_config, telemetry_worker_handle, &mut task_manager)
 			.map_err(|e| match e {
 				polkadot_service::Error::Sub(x) => x,
 				s => format!("{}", s).into(),
@@ -329,7 +327,7 @@ where
 			parachain_consensus,
 			import_queue,
 			collator_key,
-			relay_chain_slot_duration	
+			relay_chain_slot_duration,
 		};
 
 		start_collator(params).await?;

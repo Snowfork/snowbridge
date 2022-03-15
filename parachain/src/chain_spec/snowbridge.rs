@@ -57,7 +57,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		None,
 		None,
 		None,
-		Some(props)
+		Some(props),
 		Extensions { relay_chain: "rococo-local".into(), para_id: para_id.into() },
 	)
 }

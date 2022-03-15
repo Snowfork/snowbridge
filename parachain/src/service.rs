@@ -1,8 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use cumulus_client_consensus_aura::{
-	AuraConsensus, BuildAuraConsensusParams, SlotProportion,
-};
+use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
@@ -261,7 +259,7 @@ where
 	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
 	if matches!(parachain_config.role, Role::Light) {
-		return Err("Light client not supported!".into());
+		return Err("Light client not supported!".into())
 	}
 
 	let parachain_config = prepare_node_config(parachain_config);
@@ -269,12 +267,12 @@ where
 	let params = new_partial::<RuntimeApi, Executor>(&parachain_config)?;
 	let (mut telemetry, telemetry_worker_handle) = params.other;
 
-    let client = params.client.clone();
-    let backend = params.backend.clone();
-    let mut task_manager = params.task_manager;
+	let client = params.client.clone();
+	let backend = params.backend.clone();
+	let mut task_manager = params.task_manager;
 
-    let (relay_chain_interface, collator_key) =
-        build_relay_chain_interface(polkadot_config, telemetry_worker_handle, &mut task_manager)
+	let (relay_chain_interface, collator_key) =
+		build_relay_chain_interface(polkadot_config, telemetry_worker_handle, &mut task_manager)
 			.map_err(|e| match e {
 				polkadot_service::Error::Sub(x) => x,
 				s => format!("{}", s).into(),
@@ -349,7 +347,7 @@ where
 			parachain_consensus,
 			import_queue,
 			collator_key,
-			relay_chain_slot_duration	
+			relay_chain_slot_duration,
 		};
 
 		start_collator(params).await?;
@@ -415,29 +413,29 @@ where
 
 			Ok(AuraConsensus::build::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(
 				BuildAuraConsensusParams {
-				proposer_factory,
-				create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
-					let relay_chain_interface = relay_chain_interface.clone();
-					async move {
-						let parachain_inherent =
-							cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
+					proposer_factory,
+					create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
+						let relay_chain_interface = relay_chain_interface.clone();
+						async move {
+							let parachain_inherent =
+								cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
 									relay_parent,
 									&relay_chain_interface,
 									&validation_data,
 									id,
-						).await;
-						let time = sp_timestamp::InherentDataProvider::from_system_time();
+								).await;
+							let time = sp_timestamp::InherentDataProvider::from_system_time();
 
-						let slot =
+							let slot =
 						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
 							*time,
 							slot_duration.slot_duration(),
 						);
-						
-						let parachain_inherent = parachain_inherent.ok_or_else(|| {
-							Box::<dyn std::error::Error + Send + Sync>::from(
-								"Failed to create parachain inherent",
-							    )
+
+							let parachain_inherent = parachain_inherent.ok_or_else(|| {
+								Box::<dyn std::error::Error + Send + Sync>::from(
+									"Failed to create parachain inherent",
+								)
 							})?;
 							Ok((time, slot, parachain_inherent))
 						}
@@ -455,7 +453,7 @@ where
 					max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
 					telemetry,
 				},
-		))
+			))
 		},
 	)
 	.await

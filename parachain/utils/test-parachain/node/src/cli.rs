@@ -38,8 +38,8 @@ pub enum Subcommand {
 	#[clap(name = "benchmark", about = "Benchmark runtime pallets.")]
 	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
-    /// Try some testing command against a specified runtime state.
-    TryRuntime(try_runtime_cli::TryRuntimeCmd),
+	/// Try some testing command against a specified runtime state.
+	TryRuntime(try_runtime_cli::TryRuntimeCmd),
 }
 
 /// Command for exporting the genesis state of the parachain
@@ -80,9 +80,9 @@ pub struct ExportGenesisWasmCommand {
 
 #[derive(Debug, Parser)]
 #[clap(
-    propagate_version = true,
-    args_conflicts_with_subcommands = true,
-    subcommand_negates_reqs = true
+	propagate_version = true,
+	args_conflicts_with_subcommands = true,
+	subcommand_negates_reqs = true
 )]
 pub struct Cli {
 	#[clap(subcommand)]

@@ -1,8 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_runtime::{
-	generic, MultiSignature, MultiAddress,
-	traits::{Verify, BlakeTwo256, IdentifyAccount},
+	generic,
+	traits::{BlakeTwo256, IdentifyAccount, Verify},
+	MultiAddress, MultiSignature,
 };
 
 pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
@@ -44,4 +45,3 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
 /// Opaque block id
 pub type BlockId = generic::BlockId<Block>;
-

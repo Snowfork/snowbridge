@@ -184,7 +184,7 @@ impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 		match destination.para_id {
 			1001 => Ok(()),
 			2001 => Err(DispatchError::Other("Parachain 2001 not found.")),
-			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator.")
+			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator."),
 		}
 	}
 }

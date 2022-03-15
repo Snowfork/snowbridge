@@ -182,7 +182,6 @@ where
 	}
 }
 
-
 parameter_types! {
 	pub const DotPalletId: PalletId = PalletId(*b"s/dotapp");
 	pub const Decimals: u32 = 12;

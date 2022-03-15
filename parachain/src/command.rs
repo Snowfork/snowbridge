@@ -25,8 +25,8 @@ use snowbridge_runtime_primitives::Block;
 
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
-	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams,
-	Result, RuntimeVersion, SharedParams, SubstrateCli,
+	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
+	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
@@ -197,20 +197,20 @@ impl SubstrateCli for Cli {
 		chain_spec: &Box<dyn sc_service::ChainSpec>,
 	) -> &'static RuntimeVersion {
 		if chain_spec.is_snowbridge() {
-			#[cfg(feature = "snowbridge-native")]
-			return &snowbridge_runtime::VERSION;
 			#[cfg(not(feature = "snowbridge-native"))]
 			panic!("`snowbridge-native` feature is not enabled");
+			#[cfg(feature = "snowbridge-native")]
+			return &snowbridge_runtime::VERSION
 		} else if chain_spec.is_snowblink() {
-			#[cfg(feature = "snowblink-native")]
-			return &snowblink_runtime::VERSION;
 			#[cfg(not(feature = "snowblink-native"))]
 			panic!("`snowblink-native` feature is not enabled");
+			#[cfg(feature = "snowblink-native")]
+			return &snowblink_runtime::VERSION
 		} else {
-			#[cfg(feature = "snowbase-native")]
-			return &snowbase_runtime::VERSION;
 			#[cfg(not(feature = "snowbase-native"))]
 			panic!("`snowbase-native` feature is not enabled");
+			#[cfg(feature = "snowbase-native")]
+			return &snowbase_runtime::VERSION
 		}
 	}
 }
@@ -323,7 +323,8 @@ pub fn run() -> Result<()> {
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
 
-			let spec = load_spec(&params.chain.clone().unwrap_or_default(), params.parachain_id.into())?;
+			let spec =
+				load_spec(&params.chain.clone().unwrap_or_default(), params.parachain_id.into())?;
 			let state_version = Cli::native_runtime_version(&spec).state_version();
 			let block: Block = generate_genesis_block(&spec, state_version)?;
 			let raw_header = block.header().encode();
@@ -362,7 +363,7 @@ pub fn run() -> Result<()> {
 
 			Ok(())
 		},
-		Some(Subcommand::Benchmark(cmd)) => {
+		Some(Subcommand::Benchmark(cmd)) =>
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
 
@@ -370,21 +371,21 @@ pub fn run() -> Result<()> {
 				if runner.config().chain_spec.is_snowbridge() {
 					return runner.sync_run(|config| {
 						cmd.run::<Block, crate::service::SnowbridgeRuntimeExecutor>(config)
-					});
+					})
 				}
 
 				#[cfg(feature = "snowblink-native")]
 				if runner.config().chain_spec.is_snowblink() {
 					return runner.sync_run(|config| {
 						cmd.run::<Block, crate::service::SnowblinkRuntimeExecutor>(config)
-					});
+					})
 				}
 
 				#[cfg(feature = "snowbase-native")]
 				if runner.config().chain_spec.is_snowbase() {
 					return runner.sync_run(|config| {
 						cmd.run::<Block, crate::service::SnowbaseRuntimeExecutor>(config)
-					});
+					})
 				}
 
 				Err("Chain doesn't support benchmarking".into())
@@ -392,8 +393,7 @@ pub fn run() -> Result<()> {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
 					.into())
-			}
-		},
+			},
 		None => {
 			let runner = cli.create_runner(&*cli.run)?;
 
@@ -436,7 +436,7 @@ pub fn run() -> Result<()> {
 					>(config, polkadot_config, id)
 					.await
 					.map(|r| r.0)
-					.map_err(Into::into);
+					.map_err(Into::into)
 				}
 
 				#[cfg(feature = "snowblink-native")]
@@ -447,7 +447,7 @@ pub fn run() -> Result<()> {
 					>(config, polkadot_config, id)
 					.await
 					.map(|r| r.0)
-					.map_err(Into::into);
+					.map_err(Into::into)
 				}
 
 				#[cfg(feature = "snowbase-native")]
@@ -458,7 +458,7 @@ pub fn run() -> Result<()> {
 					>(config, polkadot_config, id)
 					.await
 					.map(|r| r.0)
-					.map_err(Into::into);
+					.map_err(Into::into)
 				}
 
 				Err("unknown runtime".into())
@@ -538,7 +538,7 @@ impl CliConfiguration<Self> for RelayChainCli {
 	) -> Result<()>
 	where
 		F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
-	{	
+	{
 		unreachable!("PolkadotCli is never initialized; qed");
 	}
 

@@ -195,7 +195,7 @@ pub fn run() -> Result<()> {
 			let spec = load_spec(&params.chain.clone().unwrap_or_default())?;
 			let state_version = Cli::native_runtime_version(&spec).state_version();
 			let block: Block = generate_genesis_block(&spec, state_version)?;
-			
+
 			let raw_header = block.header().encode();
 			let output_buf = if params.raw {
 				raw_header
@@ -241,21 +241,21 @@ pub fn run() -> Result<()> {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
 					.into())
-			},	
+			},
 		Some(Subcommand::TryRuntime(cmd)) => {
 			if cfg!(feature = "try-runtime") {
-			        let runner = cli.create_runner(cmd)?;
+				let runner = cli.create_runner(cmd)?;
 
-			        // grab the task manager.
-			        let registry = &runner.config().prometheus_config.as_ref().map(|cfg| &cfg.registry);
-			        let task_manager =
-			                TaskManager::new(runner.config().tokio_handle.clone(), *registry)
-			                        .map_err(|e| format!("Error: {:?}", e))?;
-			        runner.async_run(|config| {
-			                Ok((cmd.run::<Block, TemplateRuntimeExecutor>(config), task_manager))
-			        })
+				// grab the task manager.
+				let registry = &runner.config().prometheus_config.as_ref().map(|cfg| &cfg.registry);
+				let task_manager =
+					TaskManager::new(runner.config().tokio_handle.clone(), *registry)
+						.map_err(|e| format!("Error: {:?}", e))?;
+				runner.async_run(|config| {
+					Ok((cmd.run::<Block, TemplateRuntimeExecutor>(config), task_manager))
+				})
 			} else {
-			        Err("Try-runtime must be enabled by `--features try-runtime`.".into())
+				Err("Try-runtime must be enabled by `--features try-runtime`.".into())
 			}
 		},
 		None => {
@@ -372,7 +372,7 @@ impl CliConfiguration<Self> for RelayChainCli {
 	) -> Result<()>
 	where
 		F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
-	{	
+	{
 		unreachable!("PolkadotCli is never initialized; qed");
 	}
 

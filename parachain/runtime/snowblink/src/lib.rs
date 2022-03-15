@@ -32,8 +32,8 @@ pub use frame_support::{
 	dispatch::DispatchResult,
 	match_type, parameter_types,
 	traits::{
-		tokens::fungible::ItemOf, Contains, Everything, EnsureOneOf, IsInVec, KeyOwnerProofSystem, Nothing,
-		Randomness,
+		tokens::fungible::ItemOf, Contains, EnsureOneOf, Everything, IsInVec, KeyOwnerProofSystem,
+		Nothing, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -41,7 +41,7 @@ pub use frame_support::{
 	},
 	PalletId, StorageValue,
 };
-use frame_system::{EnsureRoot};
+use frame_system::EnsureRoot;
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -485,8 +485,7 @@ parameter_types! {
 	pub const AssetAccountDeposit: Balance = 0;
 }
 
-pub type AssetsForceOrigin =
-	EnsureOneOf<EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
+pub type AssetsForceOrigin = EnsureOneOf<EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
 
 impl pallet_assets::Config for Runtime {
 	type Event = Event;

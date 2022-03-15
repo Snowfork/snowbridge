@@ -11,10 +11,10 @@ use frame_support::traits::fungible::Mutate;
 use crate::{Address, Call, Config as EtherAppConfig, Pallet as EtherApp};
 use snowbridge_core::ChannelId;
 
+use frame_support::traits::fungible::Inspect;
 use pallet_assets::Config as AssetsConfig;
 use snowbridge_basic_channel::outbound::{Config as BasicOutboundChannelConfig, Principal};
 use snowbridge_incentivized_channel::outbound::{Config as IncentivizedOutboundChannelConfig, Fee};
-use frame_support::traits::fungible::Inspect;
 
 pub struct Pallet<T: Config>(EtherApp<T>);
 
