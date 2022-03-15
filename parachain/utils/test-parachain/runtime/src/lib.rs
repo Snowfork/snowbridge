@@ -308,6 +308,7 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -406,6 +407,7 @@ pub mod currency {
 parameter_types! {
 	pub const DotLocation: MultiLocation = MultiLocation::parent();
 	pub const AssetDeposit: Balance = 100 * currency::DOLLARS; // 100 DOLLARS deposit to create asset
+	pub const AssetAccountDeposit: Balance = 100 * currency::DOLLARS;
 	pub const ApprovalDeposit: Balance = currency::EXISTENTIAL_DEPOSIT;
 	pub const AssetsStringLimit: u32 = 50;
 	/// Key = 32 bytes, Value = 36 bytes (32+1+1+1+1)
@@ -430,6 +432,7 @@ impl pallet_assets::Config for Runtime {
 	type Currency = Balances;
 	type ForceOrigin = AssetsForceOrigin;
 	type AssetDeposit = AssetDeposit;
+	type AssetAccountDeposit = AssetAccountDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type ApprovalDeposit = ApprovalDeposit;
