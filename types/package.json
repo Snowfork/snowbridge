@@ -25,13 +25,13 @@
     "prepack": "tsc"
   },
   "dependencies": {
-    "@polkadot/api": "^7.2.1",
-    "@polkadot/keyring": "^8.2.2",
-    "@polkadot/types": "^7.2.1"
+    "@polkadot/api": "^7.7.1",
+    "@polkadot/keyring": "^8.3.3",
+    "@polkadot/types": "^7.7.1"
   },
   "devDependencies": {
-    "@polkadot/util": "^8.2.2",
-    "@polkadot/util-crypto": "^8.2.2",
+    "@polkadot/util": "^8.3.3",
+    "@polkadot/util-crypto": "^8.3.3",
     "typescript": "^4.3.5"
   }
 }
