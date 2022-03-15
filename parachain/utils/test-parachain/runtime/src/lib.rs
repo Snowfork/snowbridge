@@ -447,6 +447,7 @@ parameter_types! {
 	pub const RelayNetwork: NetworkId = NetworkId::Any;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -500,7 +501,7 @@ pub type FungiblesTransactor = FungiblesAdapter<
 	// We do not support teleports so implement Contains to always return false.
 	Nothing,
 	// The account to use for tracking teleports (Empty because we do not support teleports)
-	(),
+	CheckingAccount,
 >;
 
 /// Means for transacting assets on this chain.
