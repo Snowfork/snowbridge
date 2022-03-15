@@ -103,7 +103,7 @@ pub mod pallet {
 	/// Fee for accepting a message
 	#[pallet::storage]
 	#[pallet::getter(fn principal)]
-	pub type Principal<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+	pub type Principal<T: Config> = StorageValue<_, Option<T::AccountId>, ValueQuery>;
 
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
@@ -111,7 +111,7 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub interval: T::BlockNumber,
-		pub principal: T::AccountId,
+		pub principal: Option<T::AccountId>,
 	}
 
 	#[cfg(feature = "std")]
@@ -153,7 +153,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::SetPrincipalOrigin::ensure_origin(origin)?;
 			let principal = T::Lookup::lookup(principal)?;
-			<Principal<T>>::put(principal);
+			<Principal<T>>::put(Some(principal));
 			Ok(())
 		}
 	}
@@ -161,7 +161,9 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
-			ensure!(*who == Self::principal(), Error::<T>::NotAuthorized,);
+			let principal = Self::principal();
+			ensure!(principal.is_some(), Error::<T>::NotAuthorized,);
+			ensure!(*who == principal.unwrap(), Error::<T>::NotAuthorized,);
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0)
 					< T::MaxMessagesPerCommit::get() as usize,
