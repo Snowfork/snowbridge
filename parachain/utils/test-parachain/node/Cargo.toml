@@ -4,7 +4,7 @@ version = "0.1.1"
 authors = ["Snowfork <contact@snowfork.com>"]
 description = "A test node for the Snowbrigde"
 repository = 'https://github.com/Snowfork/snowbridge'
-edition = "2021"
+edition = "2018"
 build = "build.rs"
 
 [package.metadata.docs.rs]
