@@ -32,7 +32,7 @@ benchmarks! {
 		let amount: u128 = 500;
 
 		// set principal for basic channel
-		Principal::<T>::set(caller.clone());
+		Principal::<T>::set(Some(caller.clone()));
 
 		// create wrapped token
 		let origin = T::CallOrigin::successful_origin();
