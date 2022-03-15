@@ -721,6 +721,21 @@ construct_runtime!(
 	}
 );
 
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benches {
+       define_benchmarks!(
+               [frame_system, SystemBench::<Runtime>]
+               [pallet_balances, Balances]
+               [pallet_session, SessionBench::<Runtime>]
+               [pallet_timestamp, Timestamp]
+               [pallet_collator_selection, CollatorSelection]
+       );
+}
+
 impl_runtime_apis! {
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> sp_consensus_aura::SlotDuration {
