@@ -249,7 +249,7 @@ parameter_types! {
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
-	type OnValidationData = ();
+	type OnSystemEvent = ();
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
@@ -481,7 +481,7 @@ parameter_types! {
 }
 
 pub type AssetsForceOrigin =
-	EnsureOneOf<AccountId, EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
+	EnsureOneOf<EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
 
 impl pallet_assets::Config for Runtime {
 	type Event = Event;
