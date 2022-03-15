@@ -102,6 +102,7 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: u64 = 1;
 	pub const MetadataDepositPerByte: u64 = 1;
+	pub const AssetAccountDeposit: u64 = 1;
 }
 
 impl pallet_assets::Config for Test {
