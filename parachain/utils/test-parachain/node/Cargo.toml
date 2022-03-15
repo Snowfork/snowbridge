@@ -4,7 +4,7 @@ version = "0.1.1"
 authors = ["Snowfork <contact@snowfork.com>"]
 description = "A test node for the Snowbrigde"
 repository = 'https://github.com/Snowfork/snowbridge'
-edition = "2018"
+edition = "2021"
 build = "build.rs"
 
 [package.metadata.docs.rs]
@@ -18,14 +18,18 @@ name = "snowbridge-test-collator"
 path = "src/main.rs"
 
 [features]
-runtime-benchmarks = ["test-runtime/runtime-benchmarks"]
+runtime-benchmarks = [
+       "test-runtime/runtime-benchmarks",
+       "polkadot-cli/runtime-benchmarks",
+]
+try-runtime = ["test-runtime/try-runtime"]
 
 [dependencies]
+clap = { version = "3.1", features = ["derive"] }
 derive_more = "0.99.17"
 log = "0.4.14"
 codec = { package = "parity-scale-codec", version = "2.0.0" }
-structopt = "0.3.8"
-serde = { version = "1.0.119", features = ["derive"] }
+serde = { version = "1.0.132", features = ["derive"] }
 hex-literal = "0.3.4"
 
 # RPC related Dependencies
@@ -37,6 +41,7 @@ test-runtime = { path = "../runtime", package = "snowbridge-test-runtime" }
 # Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17" }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17" }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17" }
 
@@ -92,4 +97,4 @@ polkadot-cli = { git = "https://github.com/paritytech/polkadot.git", branch = "r
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.17" }
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.17" }
 polkadot-service = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.17" }
-polkadot-test-service = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.17" }
+xcm = { git = "https://github.com/paritytech/polkadot.git", default-features = false, branch = "release-v0.9.17" }

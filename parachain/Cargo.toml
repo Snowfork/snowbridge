@@ -15,6 +15,7 @@ name = "snowbridge"
 path = "src/main.rs"
 
 [dependencies]
+clap = { version = "3.1", features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "2.2.0" }
 serde = { version = "1.0.130", features = ["derive"] }
 futures = { version = "0.3.1", features = ["compat"] }
@@ -23,7 +24,6 @@ jsonrpc-core = "18.0.0"
 jsonrpc-pubsub = "14.2.0"
 log = "0.4.14"
 rand = "0.7.2"
-structopt = "0.3.8"
 tracing = "^0.1.29"
 parking_lot = "0.10.0"
 
@@ -68,11 +68,14 @@ cumulus-client-service = { git = "https://github.com/paritytech/cumulus.git", br
 cumulus-client-network = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.17" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.17" }
 cumulus-primitives-parachain-inherent = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.17" }
+cumulus-relay-chain-interface = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.17" }
+cumulus-relay-chain-local = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.17" }
 
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.17" }
 polkadot-service = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.17" }
 polkadot-cli = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.17" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.17" }
+xcm = { git = "https://github.com/paritytech/polkadot.git", default-features = false, branch = "release-v0.9.17" }
 
 snowbridge-core = { path = "primitives/core" }
 snowbridge-runtime-primitives = { path = "primitives/runtime" }
