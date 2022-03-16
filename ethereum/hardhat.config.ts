@@ -37,7 +37,6 @@ const config: HardhatUserConfig = {
       url: `https://ropsten.infura.io/v3/${INFURA_KEY}`,
       accounts: [ROPSTEN_KEY],
       gas: 6000000,
-      gasPrice: 5000000000,
     }
   },
   solidity: {
