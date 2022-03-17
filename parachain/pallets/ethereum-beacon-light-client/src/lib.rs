@@ -17,13 +17,13 @@ use frame_system::ensure_signed;
 use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, PublicKey, Signature};
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_io::hashing::sha2_256;
+use sp_core::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use ssz::Encode as SSZEncode;
-use ssz_derive::{Decode as SSZDecode, Encode as SSZEncode};
+use ssz_rs_derive::SimpleSerialize;
+use ssz_rs::{SimpleSerialize as SimpleSerializeTrait};
+use ssz_rs::prelude::*;
 use std::cmp;
-use tree_hash_derive::TreeHash;
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 /// The minimum number of validators that needs to sign update
@@ -55,49 +55,35 @@ const GENESIS_FORK_VERSION: [u8; 4] = [30, 30, 30, 30];
 
 type Epoch = u64;
 type Slot = u64;
-type Root = H256;
-type Domain = H256;
+type Root = [u8; 32];
+type Domain = [u8; 32];
 type ValidatorIndex = u64;
 type Version = [u8; 4];
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(
-	Clone,
-	Default,
-	Encode,
-	Decode,
-	PartialEq,
-	RuntimeDebug,
-	TypeInfo,
-	SSZDecode,
-	SSZEncode,
-	TreeHash,
+	PartialEq, Eq, Debug, Default, Clone, SimpleSerialize
 )]
 // https://yeeth.github.io/BeaconChain.swift/Structs/BeaconBlockHeader.html#/s:11BeaconChain0A11BlockHeaderV9signature10Foundation4DataVvp
 // https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#beaconblock
 // https://github.com/ethereum/consensus-specs/blob/042ca57a617736e6bdd6f6dcdd6d32c247e5a67f/specs/phase0/beacon-chain.md#beaconblockheader
 pub struct BeaconBlockHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
-	#[tree_hash]
-	pub slot: Slot,
+	<u64 as ssz_rs::Sized>::pub slot: u64,
 	// The index of the validator that proposed the block.
-	#[tree_hash]
 	pub proposer_index: ValidatorIndex,
 	// The block root of the parent block, forming a block chain.
-	#[tree_hash]
 	pub parent_root: Root,
 	// The hash root of the post state of running the state transition through this block.
-	#[tree_hash]
 	pub state_root: Root,
 	// The hash root of the Eth1 block
-	#[tree_hash]
 	pub body_root: Root,
 }
 
 /// Sync committee as it is stored in the runtime storage.
 /// https://github.com/ethereum/consensus-specs/blob/02b32100ed26c3c7a4a44f41b932437859487fd2/specs/altair/beacon-chain.md#synccommittee
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, SSZDecode, SSZEncode, //TreeHash,
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, //SimpleSerialize
 )]
 pub struct SyncCommittee {
 	pub pubkeys: Vec<Vec<u8>>, // TODO convert to fixed size vector
@@ -120,9 +106,7 @@ pub struct SyncAggregate {
 	PartialEq,
 	RuntimeDebug,
 	TypeInfo,
-	SSZDecode,
-	SSZEncode,
-	TreeHash,
+	//SimpleSerialize
 )]
 pub struct ForkData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
@@ -138,9 +122,7 @@ pub struct ForkData {
 	PartialEq,
 	RuntimeDebug,
 	TypeInfo,
-	SSZDecode,
-	SSZEncode,
-	TreeHash,
+	//SimpleSerialize
 )]
 pub struct SigningData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
@@ -678,8 +660,15 @@ pub mod pallet {
 			(num as f64).log2().floor() as u64
 		}
 
-		pub(super) fn hash_tree_root<U: tree_hash::TreeHash + SSZEncode>(object: U) -> Root {
-			object.tree_hash_root()
+		pub(super) fn hash_tree_root<U: SimpleSerializeTrait>(object: U) -> Root {
+			match object.hash_tree_root() {
+				Ok(node)=> {
+					let node_bytes = node.as_bytes();
+					let root = node_bytes.into();
+					return root;
+				}, 
+				Err(e) => panic!("could not merkleize root")
+			}
 		}
 	}
 }

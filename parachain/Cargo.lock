@@ -561,9 +561,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitvec"
-version = "0.19.5"
+version = "0.19.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8942c8d352ae1838c9dda0b0ca2ab657696ef2232a20147cf1b30ae1a9cb4321"
+checksum = "a7ba35e9565969edb811639dbebfe34edc0368e472c5018474c8eb2543397f81"
 dependencies = [
  "funty",
  "radium 0.5.3",
@@ -573,9 +573,9 @@ dependencies = [
 
 [[package]]
 name = "bitvec"
-version = "0.20.4"
+version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7774144344a4faa177370406a7ff5f1da24303817368584c6206c8303eb07848"
+checksum = "f5011ffc90248764d7005b0e10c7294f5aa1bd87d9dd7248f4ad475b347c294d"
 dependencies = [
  "funty",
  "radium 0.6.2",
@@ -734,7 +734,7 @@ name = "bp-messages"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "bp-runtime",
  "frame-support",
  "frame-system",
@@ -1097,7 +1097,7 @@ dependencies = [
  "ansi_term 0.11.0",
  "atty",
  "bitflags",
- "strsim 0.8.0",
+ "strsim",
  "textwrap",
  "unicode-width",
  "vec_map",
@@ -1794,41 +1794,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "darling"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0d720b8683f8dd83c65155f0530560cba68cd2bf395f6513a483caee57ff7f4"
-dependencies = [
- "darling_core",
- "darling_macro",
-]
-
-[[package]]
-name = "darling_core"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a340f241d2ceed1deb47ae36c4144b2707ec7dd0b649f894cb39bb595986324"
-dependencies = [
- "fnv",
- "ident_case",
- "proc-macro2",
- "quote",
- "strsim 0.10.0",
- "syn",
-]
-
-[[package]]
-name = "darling_macro"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72c41b3b7352feb3211a0d743dc5700a4e3b60f51bd2b368892d1e0f9a95f44b"
-dependencies = [
- "darling_core",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "data-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2123,65 +2088,6 @@ checksum = "aa68f1b12764fab894d2755d2518754e71b4fd80ecfb822714a1206c2aab39bf"
 dependencies = [
  "cc",
  "libc",
-]
-
-[[package]]
-name = "eth2_hashing"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b67737df7e3769e823d9d583eb5d60bcc4b2ef97ca674d1964ef287a02f8517"
-dependencies = [
- "cpufeatures 0.1.5",
- "lazy_static",
- "ring",
- "sha2 0.9.8",
-]
-
-[[package]]
-name = "eth2_serde_utils"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "477fffc25490dfc866288273f96344c6879676a1337187fc39245cd422e10825"
-dependencies = [
- "hex",
- "serde",
- "serde_derive",
-]
-
-[[package]]
-name = "eth2_ssz"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "948e343aa022785c07193f41ed37adfd9dd0350368060803b8302c7f798e8306"
-dependencies = [
- "ethereum-types",
- "smallvec",
-]
-
-[[package]]
-name = "eth2_ssz_derive"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "635b86d2c941bb71e7419a571e1763d65c93e51a1bafc400352e3bef6ff59fc9"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "eth2_ssz_types"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9423ac7fb37037f828a32b724cdfa65ea62290055811731402a90fb8a5bcbb1"
-dependencies = [
- "eth2_serde_utils",
- "eth2_ssz",
- "serde",
- "serde_derive",
- "tree_hash",
- "typenum",
 ]
 
 [[package]]
@@ -3062,12 +2968,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ident_case"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
-
-[[package]]
 name = "idna"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3511,7 +3411,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "beefy-primitives",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",
@@ -3644,6 +3544,9 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+dependencies = [
+ "spin",
+]
 
 [[package]]
 name = "lazycell"
@@ -4768,12 +4671,11 @@ checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
 
 [[package]]
 name = "nom"
-version = "6.1.2"
+version = "6.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7413f999671bd4745a7b624bd370a569fb6bc574b23c83a3c5ed2e453f3d5e2"
+checksum = "3d521ee2250f619dd5e06515ba405858d249edc8fae9ddee2dba0695e57db01b"
 dependencies = [
- "bitvec 0.19.5",
- "funty",
+ "bitvec 0.19.4",
  "memchr",
  "version_check",
 ]
@@ -5145,7 +5047,7 @@ name = "pallet-bridge-messages"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "bp-message-dispatch",
  "bp-messages",
  "bp-rialto",
@@ -5862,7 +5764,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "373b1a4c1338d9cd3d1fa53b3a11bdab5ab6bd80a20f7f7becd76953ae2be909"
 dependencies = [
  "arrayvec 0.7.2",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "byte-slice-cast",
  "impl-trait-for-tuples",
  "parity-scale-codec-derive",
@@ -6435,7 +6337,7 @@ name = "polkadot-node-core-approval-voting"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "derive_more",
  "futures 0.3.17",
  "futures-timer 3.0.2",
@@ -6463,7 +6365,7 @@ name = "polkadot-node-core-av-store"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "futures 0.3.17",
  "futures-timer 3.0.2",
  "kvdb",
@@ -6483,7 +6385,7 @@ name = "polkadot-node-core-backing"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "futures 0.3.17",
  "polkadot-erasure-coding",
  "polkadot-node-primitives",
@@ -6566,7 +6468,7 @@ name = "polkadot-node-core-dispute-coordinator"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "derive_more",
  "futures 0.3.17",
  "kvdb",
@@ -6615,7 +6517,7 @@ name = "polkadot-node-core-provisioner"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "futures 0.3.17",
  "futures-timer 3.0.2",
  "polkadot-node-subsystem",
@@ -6870,7 +6772,7 @@ name = "polkadot-primitives"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-system",
  "hex-literal",
  "parity-scale-codec",
@@ -6932,7 +6834,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "beefy-primitives",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",
@@ -7009,7 +6911,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "beefy-primitives",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-support",
@@ -7056,7 +6958,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "bitflags",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "derive_more",
  "frame-benchmarking",
  "frame-support",
@@ -7224,7 +7126,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "beefy-primitives",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-election-provider-support",
  "frame-executive",
  "frame-support",
@@ -9074,7 +8976,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c55b744399c25532d63a0d2789b109df8d46fc93752d46b0782991a931a782f"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "cfg-if 1.0.0",
  "derive_more",
  "parity-scale-codec",
@@ -9878,17 +9780,12 @@ dependencies = [
 name = "snowbridge-ethereum-beacon-light-client"
 version = "0.0.1"
 dependencies = [
- "eth2_ssz",
- "eth2_ssz_derive",
- "eth2_ssz_types",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex-literal",
  "milagro_bls",
  "parity-scale-codec",
- "rlp",
- "rustc-hex",
  "scale-info",
  "serde",
  "serde_json",
@@ -9900,8 +9797,8 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std",
- "tree_hash",
- "tree_hash_derive",
+ "ssz_rs",
+ "ssz_rs_derive",
 ]
 
 [[package]]
@@ -10965,6 +10862,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "ssz_rs"
+version = "0.7.0"
+source = "git+https://github.com/Snowfork/ssz_rs?branch=feat/no-std#b70aee0be5c3ab0f08b40d23aaa4202532fc2de4"
+dependencies = [
+ "bitvec 0.20.1",
+ "funty",
+ "lazy_static",
+ "sha2 0.9.8",
+ "ssz_rs_derive",
+]
+
+[[package]]
+name = "ssz_rs_derive"
+version = "0.7.0"
+source = "git+https://github.com/Snowfork/ssz_rs?branch=feat/no-std#b70aee0be5c3ab0f08b40d23aaa4202532fc2de4"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11019,12 +10938,6 @@ name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
-
-[[package]]
-name = "strsim"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "structopt"
@@ -11572,28 +11485,6 @@ dependencies = [
  "tracing-core",
  "tracing-log",
  "tracing-serde",
-]
-
-[[package]]
-name = "tree_hash"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f9c8a86fad3169a65aad2265d3c6a8bc119d0b771046af3c1b2fb0e9b12182b"
-dependencies = [
- "eth2_hashing",
- "ethereum-types",
- "smallvec",
-]
-
-[[package]]
-name = "tree_hash_derive"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cd22d128157837a4434bb51119aef11103f17bfe8c402ce688cf25aa1e608ad"
-dependencies = [
- "darling",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -12256,7 +12147,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "beefy-primitives",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",
