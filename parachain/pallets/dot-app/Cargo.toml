@@ -9,11 +9,9 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 serde = { version = "1.0.130", optional = true }
-codec = { version = "2.2.0", package = "parity-scale-codec", default-features = false, features = ["derive"] }
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+codec = { version = "2.2.0", package = "parity-scale-codec", default-features = false }
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 rlp = { version = "0.5", default-features = false }
-hex-literal = { version = "0.3.1", default-features = false }
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
@@ -42,7 +40,6 @@ std = [
     "serde",
     "hex/std",
     "codec/std",
-    "scale-info/std",
     "frame-support/std",
     "frame-system/std",
     "sp-core/std",
@@ -59,7 +56,7 @@ std = [
     "pallet-balances/std",
 
     "ethabi/std",
-    "rlp/std"
+    "rlp/std",
 ]
 
 runtime-benchmarks = [

@@ -9532,10 +9532,7 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "scale-info",
- "serde",
  "snowbridge-asset-registry-primitives",
- "sp-core",
- "sp-io",
  "sp-runtime",
 ]
 
@@ -9544,9 +9541,6 @@ name = "snowbridge-asset-registry-primitives"
 version = "0.1.1"
 dependencies = [
  "frame-support",
- "parity-scale-codec",
- "scale-info",
- "serde",
 ]
 
 [[package]]
@@ -9577,7 +9571,6 @@ version = "0.1.1"
 dependencies = [
  "enum-iterator",
  "frame-support",
- "frame-system",
  "parity-scale-codec",
  "rustc-hex",
  "scale-info",
@@ -9615,13 +9608,11 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hex-literal",
  "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
  "rlp",
  "rustc-hex",
- "scale-info",
  "serde",
  "snowbridge-basic-channel",
  "snowbridge-core",
@@ -9723,7 +9714,6 @@ dependencies = [
  "ethash",
  "ethbloom",
  "ethereum-types",
- "getrandom 0.2.3",
  "hex-literal",
  "parity-bytes",
  "parity-scale-codec",
