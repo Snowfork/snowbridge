@@ -69,7 +69,7 @@ type Version = [u8; 4];
 // https://github.com/ethereum/consensus-specs/blob/042ca57a617736e6bdd6f6dcdd6d32c247e5a67f/specs/phase0/beacon-chain.md#beaconblockheader
 pub struct BeaconBlockHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
-	<u64 as ssz_rs::Sized>::pub slot: u64,
+	pub slot: u64,
 	// The index of the validator that proposed the block.
 	pub proposer_index: ValidatorIndex,
 	// The block root of the parent block, forming a block chain.
