@@ -48,7 +48,7 @@ pub mod pallet {
 		type Verifier: Verifier;
 
 		/// Verifier module for message verification.
-		type MessageDispatch: MessageDispatch<Self, MessageId>;
+		type MessageDispatch: MessageDispatch<MessageId>;
 
 		type Currency: Currency<Self::AccountId>;
 
@@ -134,7 +134,7 @@ pub mod pallet {
 			// Verify that the message was submitted to us from a known
 			// outbound channel on the ethereum side
 			if envelope.channel != <SourceChannel<T>>::get() {
-				return Err(Error::<T>::InvalidSourceChannel.into())
+				return Err(Error::<T>::InvalidSourceChannel.into());
 			}
 
 			// Verify message nonce
@@ -183,7 +183,7 @@ pub mod pallet {
 		 */
 		pub(super) fn handle_fee(amount: BalanceOf<T>, relayer: &T::AccountId) {
 			if amount.is_zero() {
-				return
+				return;
 			}
 
 			let imbalance = match T::Currency::withdraw(
@@ -195,7 +195,7 @@ pub mod pallet {
 				Ok(imbalance) => imbalance,
 				Err(err) => {
 					log::error!("Unable to withdraw from source account: {:?}", err);
-					return
+					return;
 				},
 			};
 
@@ -209,7 +209,7 @@ pub mod pallet {
 				Ok(imbalance) => imbalance,
 				Err(_) => {
 					log::error!("Unable to offset imbalance");
-					return
+					return;
 				},
 			};
 

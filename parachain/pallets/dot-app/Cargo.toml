@@ -1,15 +1,16 @@
 [package]
 name = "snowbridge-dot-app"
 version = "0.1.1"
-authors = ["Snowfork <contact@snowfork.com>"]
+authors = [ "Snowfork <contact@snowfork.com>" ]
 edition = "2018"
 
 [package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
+targets = [ "x86_64-unknown-linux-gnu" ]
 
 [dependencies]
 serde = { version = "1.0.130", optional = true }
 codec = { version = "2.2.0", package = "parity-scale-codec", default-features = false }
+scale-info = { version = "1.0", default-features = false, features = [ "derive" ] }
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }
 rlp = { version = "0.5", default-features = false }
 
@@ -35,11 +36,12 @@ pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch 
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12" }
 
 [features]
-default = ["std"]
+default = [ "std" ]
 std = [
     "serde",
     "hex/std",
     "codec/std",
+    "scale-info/std",
     "frame-support/std",
     "frame-system/std",
     "sp-core/std",
@@ -56,7 +58,7 @@ std = [
     "pallet-balances/std",
 
     "ethabi/std",
-    "rlp/std",
+    "rlp/std"
 ]
 
 runtime-benchmarks = [
@@ -67,5 +69,5 @@ runtime-benchmarks = [
     "pallet-balances",
     "snowbridge-dispatch/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks",
+    "frame-system/runtime-benchmarks"
 ]

@@ -103,19 +103,19 @@ pub mod pallet {
 
 	pub type MessageIdOf<T> = <T as Config>::MessageId;
 
-	impl<T: Config> MessageDispatch<T, MessageIdOf<T>> for Pallet<T> {
+	impl<T: Config> MessageDispatch<MessageIdOf<T>> for Pallet<T> {
 		fn dispatch(source: H160, id: MessageIdOf<T>, payload: &[u8]) {
 			let call = match <T as Config>::Call::decode(&mut &payload[..]) {
 				Ok(call) => call,
 				Err(_) => {
 					Self::deposit_event(Event::MessageDecodeFailed(id));
-					return
+					return;
 				},
 			};
 
 			if !T::CallFilter::contains(&call) {
 				Self::deposit_event(Event::MessageRejected(id));
-				return
+				return;
 			}
 
 			let origin = RawOrigin(source).into();
