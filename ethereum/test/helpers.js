@@ -126,8 +126,6 @@ async function mine(n) {
   }
 }
 
-const addressBytes = (address) => Buffer.from(address.replace(/^0x/, ""), "hex");
-
 const encodeLog = (log) => {
   return rlp.encode([log.address, log.topics, log.data]).toString("hex")
 }
@@ -189,7 +187,6 @@ module.exports = {
   createMerkleTree,
   signatureSubstrateToEthereum,
   mine,
-  addressBytes,
   ChannelId,
   encodeLog,
   mergeKeccak256,

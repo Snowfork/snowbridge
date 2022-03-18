@@ -89,28 +89,4 @@ describe("Simple MMR Verification", function () {
             });
         });
     })
-
-    describe("another test", function () {
-
-        let simplifiedMMRVerification;
-        beforeEach(async function () {
-            simplifiedMMRVerification = await SimpleMMRVerification.new();
-        })
-
-        it("whatever", async function() {
-            expect(await simplifiedMMRVerification.verifyInclusionProof.call(
-                "0x8f836c64528031e7e9252d7b0a2c5328f34142f2be83bba27543419ff96b2216",
-                "0x581725f950ac2c4e2172df60c6128bbaf3acd5d869e814f3139d66e599026e97",
-                {
-                    merkleProofItems: [
-                        "0x097113f3480b168fedf1cc813964fd98c076a4d34e3cf4ec248982de2865f5a0",
-                        "0xa62134c15c19430695a31fe7781065132c71ad10897f838831a6a2ef7aaa8700",
-                        "0x4576b4e71c3f2808f9bc98a93989dbf3066bd4446a61c440357f8f8ea3046450",
-                        "0x06a6e84c57ff5eeec44c8a308e666672b13b7f063d2a0ea1711565e74e03eeda"
-                    ],
-                    merkleProofOrderBitField: 15
-                }
-            )).to.be.true;
-        })
-    })
 });
