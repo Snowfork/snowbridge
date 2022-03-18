@@ -180,13 +180,16 @@ pub fn test_get_sync_committee_sum() {
 #[test]
 pub fn test_compute_domain() {
 	new_tester().execute_with(|| {
-		assert_eq!(
-			EthereumBeaconLightClient::compute_domain(
-				hex!("05000000").into(),
-				hex!("00000001").into(),
-				hex!("5dec7ae03261fde20d5b024dfabce8bac3276c9a4908e23d50ba8c9b50b0adff").into(),
-			),
-			hex!("0500000046324489ceb6ada6d118eacdbe94f49b1fcb49d5481a685979670c7c").into()
+		let domain = EthereumBeaconLightClient::compute_domain(
+			hex!("05000000").into(),
+			hex!("00000001").into(),
+			hex!("5dec7ae03261fde20d5b024dfabce8bac3276c9a4908e23d50ba8c9b50b0adff").into(),
 		);
+
+		assert_ok!(&domain);
+        assert_eq!(
+            domain.unwrap(),
+            hex!("0500000046324489ceb6ada6d118eacdbe94f49b1fcb49d5481a685979670c7c").into()
+        );
 	});
 }

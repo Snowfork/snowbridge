@@ -400,10 +400,14 @@ pub mod pallet {
 			if update.finalized_header.is_none() {
 				ensure!(update.finality_branch.len() == 0, Error::<T>::NoBranchExpected);
 			} else {
+				let header = update.finalized_header.unwrap();
+
+				let beacon_header_root = merklization::hash_tree_root_beacon_header(header).map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?;
+
 				ensure!(
 					// Verifies the beacon state.
 					Self::is_valid_merkle_branch(
-						merklization::hash_tree_root_beacon_header(update.finalized_header.unwrap()).into(),
+						beacon_header_root.into(),
 						update.finality_branch,
 						Self::floorlog2(FINALIZED_ROOT_INDEX),
 						Self::get_subtree_index(FINALIZED_ROOT_INDEX),
@@ -423,11 +427,13 @@ pub mod pallet {
 			} else {
 				sync_committee = <NextSyncCommittee<T>>::get();
 
+				let sync_committee_root = merklization::hash_tree_root_sync_committee(update.next_sync_committee).map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
+
 				ensure!(
 					// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#beaconstate
 					// Verifies the beacon state.
 					Self::is_valid_merkle_branch(
-						merklization::hash_tree_root_sync_committee(update.next_sync_committee).into(),
+						sync_committee_root.into(),
 						update.next_sync_committee_branch,
 						Self::floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
 						Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
@@ -437,7 +443,7 @@ pub mod pallet {
 				);
 			}
 
-			// Sync aggregate contains sync committee participation and the aggregated signature.
+			// Sync aggregate cosntains sync committee participation and the aggregated signature.
 			let sync_aggregate = update.sync_aggregate.clone();
 
 			// Checks that at least 1 sync committee member participated.
@@ -465,10 +471,10 @@ pub mod pallet {
 				DOMAIN_SYNC_COMMITTEE.to_vec(),
 				update.pubfork_version,
 				genesis_validators_root,
-			);
+			)?;
 
 			// Hash tree root of SigningData - object root + domain
-			let signing_root = Self::compute_signing_root(update.attested_header, domain);
+			let signing_root = Self::compute_signing_root(update.attested_header, domain)?;
 
 			// Verify sync committee aggregate signature.
 			Self::bls_fast_aggregate_verify(
@@ -573,7 +579,7 @@ pub mod pallet {
 			domain_type: Vec<u8>,
 			fork_version: Option<Version>,
 			genesis_validators_root: Root,
-		) -> Domain {
+		) -> Result<Domain, DispatchError> {
 			let unwrapped_fork_version: Version;
 			if fork_version.is_none() {
 				unwrapped_fork_version = GENESIS_FORK_VERSION;
@@ -585,28 +591,34 @@ pub mod pallet {
 			//	genesis_validators_root = Root()  # all bytes zero by default
 
 			let fork_data_root =
-				Self::compute_fork_data_root(unwrapped_fork_version, genesis_validators_root);
+				Self::compute_fork_data_root(unwrapped_fork_version, genesis_validators_root)?;
 
 			let mut domain = [0u8; 32];
 
 			domain[0..4].copy_from_slice(&(domain_type));
 			domain[4..32].copy_from_slice(&(fork_data_root.0[..28]));
 
-			domain.into()
+			Ok(domain.into())
 		}
 
-		fn compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Root {
-			merklization::hash_tree_root_fork_data(ForkData {
+		fn compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Result<Root, DispatchError> {		
+			let hash_root = merklization::hash_tree_root_fork_data(ForkData {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
-			}).into()
+			}).map_err(|_| DispatchError::Other("Fork data hash tree root failed"))?;
+
+			Ok(hash_root.into())
 		}
 
-		fn compute_signing_root(beacon_header: BeaconBlockHeader, domain: Domain) -> Root {
-			merklization::hash_tree_root_signing_data(SigningData {
-				object_root: merklization::hash_tree_root_beacon_header(beacon_header).into(),
+		fn compute_signing_root(beacon_header: BeaconBlockHeader, domain: Domain) -> Result<Root, DispatchError> {
+			let beacon_header_root = merklization::hash_tree_root_beacon_header(beacon_header).map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?;
+
+			let hash_root = merklization::hash_tree_root_signing_data(SigningData {
+				object_root: beacon_header_root.into(),
 				domain,
-			}).into()
+			}).map_err(|_| DispatchError::Other("Signing root hash tree root failed"))?;
+
+			Ok(hash_root.into())
 		}
 
 		pub(super) fn bls_fast_aggregate_verify(
