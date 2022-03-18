@@ -1,4 +1,3 @@
-use crate as ethereum_beacon_light_client;
 use crate::mock::*;
 use crate::Error;
 use frame_support::{assert_err, assert_ok};
@@ -128,56 +127,6 @@ pub fn test_bls_fast_aggregate_verify_invalid_signature() {
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
 			hex!("c204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
 		), Error::<Test>::InvalidSignature);
-	});
-}
-
-#[test]
-pub fn test_hash_tree_root() {
-	new_tester().execute_with(|| {
-		assert_eq!(
-			EthereumBeaconLightClient::hash_tree_root(
-				ethereum_beacon_light_client::BeaconBlockHeader {
-					slot: 3,
-					proposer_index: 2,
-					parent_root: hex!(
-						"796ea53efb534eab7777809cc5ee2d84e7f25024b9d0c4d7e5bcaab657e4bdbd"
-					)
-					.into(),
-					state_root: hex!(
-						"ba3ff080912be5c9c158b2e962c1b39a91bc0615762ba6fa2ecacafa94e9ae0a"
-					)
-					.into(),
-					body_root: hex!(
-						"a18d7fcefbb74a177c959160e0ee89c23546482154e6831237710414465dcae5"
-					)
-					.into(),
-				}
-			),
-			hex!("7d42595818709e805dd2fa710a2d2c1f62576ef1ab7273941ac9130fb94b91f7").into()
-		);
-	});
-}
-
-#[test]
-pub fn test_hash_tree_root_with_root_value() {
-	new_tester().execute_with(|| {
-		assert_eq!(
-			EthereumBeaconLightClient::hash_tree_root(hex!(
-				"6807a67bb39d237056f96a6c04cbfcb244b7ffbe763e817d643bd756e7df0cf0"
-			)),
-			hex!("6807a67bb39d237056f96a6c04cbfcb244b7ffbe763e817d643bd756e7df0cf0").into()
-		);
-	});
-}
-
-#[test]
-pub fn test_hash_tree_root_slot() {
-	let slot: ethereum_beacon_light_client::Slot = 2;
-	new_tester().execute_with(|| {
-		assert_eq!(
-			EthereumBeaconLightClient::hash_tree_root(slot),
-			hex!("0200000000000000000000000000000000000000000000000000000000000000").into()
-		);
 	});
 }
 

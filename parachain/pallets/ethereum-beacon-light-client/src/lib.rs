@@ -10,6 +10,7 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
+mod merklization;
 
 use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, traits::Get, transactional};
@@ -20,10 +21,8 @@ use sp_core::H256;
 use sp_core::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use ssz_rs_derive::SimpleSerialize;
-use ssz_rs::{SimpleSerialize as SimpleSerializeTrait};
 use ssz_rs::prelude::*;
-use std::cmp;
+use sp_std::cmp;
 
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#misc
 /// The minimum number of validators that needs to sign update
@@ -55,15 +54,13 @@ const GENESIS_FORK_VERSION: [u8; 4] = [30, 30, 30, 30];
 
 type Epoch = u64;
 type Slot = u64;
-type Root = [u8; 32];
-type Domain = [u8; 32];
+type Root = H256;
+type Domain = H256;
 type ValidatorIndex = u64;
 type Version = [u8; 4];
 
 /// Beacon block header as it is stored in the runtime storage.
-#[derive(
-	PartialEq, Eq, Debug, Default, Clone, SimpleSerialize
-)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 // https://yeeth.github.io/BeaconChain.swift/Structs/BeaconBlockHeader.html#/s:11BeaconChain0A11BlockHeaderV9signature10Foundation4DataVvp
 // https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#beaconblock
 // https://github.com/ethereum/consensus-specs/blob/042ca57a617736e6bdd6f6dcdd6d32c247e5a67f/specs/phase0/beacon-chain.md#beaconblockheader
@@ -83,10 +80,10 @@ pub struct BeaconBlockHeader {
 /// Sync committee as it is stored in the runtime storage.
 /// https://github.com/ethereum/consensus-specs/blob/02b32100ed26c3c7a4a44f41b932437859487fd2/specs/altair/beacon-chain.md#synccommittee
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, //SimpleSerialize
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo
 )]
 pub struct SyncCommittee {
-	pub pubkeys: Vec<Vec<u8>>, // TODO convert to fixed size vector
+	pub pubkeys: Vec<Vec<u8>>,
 	pub aggregate_pubkey: Vec<u8>,
 }
 
@@ -106,7 +103,6 @@ pub struct SyncAggregate {
 	PartialEq,
 	RuntimeDebug,
 	TypeInfo,
-	//SimpleSerialize
 )]
 pub struct ForkData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote
@@ -122,10 +118,8 @@ pub struct ForkData {
 	PartialEq,
 	RuntimeDebug,
 	TypeInfo,
-	//SimpleSerialize
 )]
 pub struct SigningData {
-	// 1 or 0 bit, indicates whether a sync committee participated in a vote
 	pub object_root: Root,
 	pub domain: Domain,
 }
@@ -409,7 +403,7 @@ pub mod pallet {
 				ensure!(
 					// Verifies the beacon state.
 					Self::is_valid_merkle_branch(
-						Self::hash_tree_root(update.finalized_header.unwrap()),
+						merklization::hash_tree_root_beacon_header(update.finalized_header.unwrap()).into(),
 						update.finality_branch,
 						Self::floorlog2(FINALIZED_ROOT_INDEX),
 						Self::get_subtree_index(FINALIZED_ROOT_INDEX),
@@ -433,8 +427,7 @@ pub mod pallet {
 					// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#beaconstate
 					// Verifies the beacon state.
 					Self::is_valid_merkle_branch(
-						//Self::hash_tree_root(update.next_sync_committee),
-						Self::hash_tree_root(GENESIS_FORK_VERSION), // TODO need to fix, can't use Vec for HashTree
+						merklization::hash_tree_root_sync_committee(update.next_sync_committee).into(),
 						update.next_sync_committee_branch,
 						Self::floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
 						Self::get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
@@ -603,17 +596,17 @@ pub mod pallet {
 		}
 
 		fn compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Root {
-			Self::hash_tree_root(ForkData {
+			merklization::hash_tree_root_fork_data(ForkData {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
-			})
+			}).into()
 		}
 
-		fn compute_signing_root(ssz_object: BeaconBlockHeader, domain: Domain) -> Root {
-			Self::hash_tree_root(SigningData {
-				object_root: Self::hash_tree_root(ssz_object),
+		fn compute_signing_root(beacon_header: BeaconBlockHeader, domain: Domain) -> Root {
+			merklization::hash_tree_root_signing_data(SigningData {
+				object_root: merklization::hash_tree_root_beacon_header(beacon_header).into(),
 				domain,
-			})
+			}).into()
 		}
 
 		pub(super) fn bls_fast_aggregate_verify(
@@ -658,17 +651,6 @@ pub mod pallet {
 
 		pub(super) fn floorlog2(num: u64) -> u64 {
 			(num as f64).log2().floor() as u64
-		}
-
-		pub(super) fn hash_tree_root<U: SimpleSerializeTrait>(object: U) -> Root {
-			match object.hash_tree_root() {
-				Ok(node)=> {
-					let node_bytes = node.as_bytes();
-					let root = node_bytes.into();
-					return root;
-				}, 
-				Err(e) => panic!("could not merkleize root")
-			}
 		}
 	}
 }
