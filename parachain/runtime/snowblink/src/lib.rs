@@ -178,6 +178,23 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
+	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
+		BlockWeights::get().max_block;
+	pub const MaxScheduledPerBlock: u32 = 50;
+}
+
+impl pallet_scheduler::Config for Runtime {
+	type Event = Event;
+	type Origin = Origin;
+	type PalletsOrigin = OriginCaller;
+	type Call = Call;
+	type MaximumWeight = MaximumSchedulerWeight;
+	type ScheduleOrigin = EnsureRoot<AccountId>;
+	type MaxScheduledPerBlock = MaxScheduledPerBlock;
+	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Self>;
+}
+
+parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 }
 
@@ -749,6 +766,9 @@ construct_runtime!(
 		// For dev only, will be removed in production
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 28,
 
+		// Scheduler pallet
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 29,
+
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating
 		//   the peer apps (smart contracts) on the Ethereum side.
@@ -964,6 +984,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_collective, LocalCouncil);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, pallet_utility, Utility);
+			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
 			add_benchmark!(params, batches, ethereum_light_client, EthereumLightClient);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);
