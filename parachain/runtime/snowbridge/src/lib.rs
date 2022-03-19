@@ -932,6 +932,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_collective, LocalCouncil);
 			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
 			list_benchmark!(list, extra, pallet_utility, Utility);
+			list_benchmark!(list, extra, pallet_scheduler, Scheduler);
 			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
 			list_benchmark!(list, extra, assets, Assets);
 			list_benchmark!(list, extra, basic_channel::outbound, BasicOutboundChannel);

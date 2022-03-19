@@ -145,6 +145,7 @@ runtime-benchmarks = [
 	"pallet-collator-selection/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
+    "pallet-scheduler/runtime-benchmarks",
 	"test-pallet/runtime-benchmarks",
 	"cumulus-pallet-session-benchmarking/runtime-benchmarks",
 ]

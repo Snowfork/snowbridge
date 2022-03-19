@@ -167,6 +167,7 @@ runtime-benchmarks = [
     "pallet-collective/runtime-benchmarks",
     "pallet-utility/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
+    "pallet-scheduler/runtime-benchmarks",
     # Snowbridge pallets & support
     "snowbridge-core/runtime-benchmarks",
     "basic-channel/runtime-benchmarks",
