@@ -14,17 +14,17 @@ module.exports = async ({
   let channels = {
     basic: {
       inbound: await deployments.get("BasicInboundChannel"),
-      outbound: await deployments.get("BasicOutboundChannel")
+      outbound: await deployments.get("BasicOutboundChannel"),
     },
     incentivized: {
       inbound: await deployments.get("IncentivizedInboundChannel"),
-      outbound: await deployments.get("IncentivizedOutboundChannel")
-    }
-  }
+      outbound: await deployments.get("IncentivizedOutboundChannel"),
+    },
+  };
 
-  let scaleCodecLibrary = await deployments.get("ScaleCodec")
+  let scaleCodecLibrary = await deployments.get("ScaleCodec");
 
-  if (['hardhat', 'localhost'].includes(network.name)) {
+  if (["hardhat", "localhost"].includes(network.name)) {
     await singletons.ERC1820Registry(deployer);
   }
 
@@ -41,14 +41,12 @@ module.exports = async ({
       {
         inbound: channels.incentivized.inbound.address,
         outbound: channels.incentivized.outbound.address,
-      }
+      },
     ],
     libraries: {
-      ScaleCodec: scaleCodecLibrary.address
+      ScaleCodec: scaleCodecLibrary.address,
     },
     log: true,
     autoMine: true,
-    gasLimit: 16621562
   });
-
 };

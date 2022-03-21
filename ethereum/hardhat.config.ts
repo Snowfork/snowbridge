@@ -1,6 +1,6 @@
 import { config as dotenv } from "dotenv";
 import { resolve } from "path";
-import "solidity-coverage"
+import "solidity-coverage";
 
 dotenv({ path: resolve(__dirname, ".env") });
 
@@ -12,14 +12,15 @@ import "hardhat-deploy";
 import { HardhatUserConfig } from "hardhat/config";
 import "./tasks/upgrade";
 import "./tasks/renounce";
+import "hardhat-gas-reporter";
 
 const getenv = (name: string) => {
   if (name in process.env) {
-    return process.env[name]
+    return process.env[name];
   } else {
     throw new Error(`Please set your ${name} in a .env file`);
   }
-}
+};
 
 const ropstenPrivateKey = getenv("ROPSTEN_PRIVATE_KEY");
 const infuraKey = getenv("INFURA_PROJECT_ID");
@@ -30,16 +31,18 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       accounts: {
-        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
+        mnemonic:
+          "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
         // Need to give huge account balance to test certain constraints in EthApp.sol::lock()
-        accountsBalance: "350000000000000000000000000000000000000"
+        accountsBalance: "350000000000000000000000000000000000000",
       },
       chainId: 15,
     },
     localhost: {
       url: "http://127.0.0.1:8545",
       accounts: {
-        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
+        mnemonic:
+          "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
       },
       chainId: 15,
     },
@@ -48,30 +51,36 @@ const config: HardhatUserConfig = {
       accounts: [kintsugiPrivateKey],
       chainId: 1337702,
     },
+    kiln: {
+      url: "http://localhost:8545",
+      accounts: [kintsugiPrivateKey],
+      chainId: 1337802,
+      blockGasLimit: 8000000,
+    },
     ropsten: {
       chainId: 3,
       url: `https://ropsten.infura.io/v3/${infuraKey}`,
       accounts: [ropstenPrivateKey],
       gas: 6000000,
       gasPrice: 5000000000,
-    }
+    },
   },
   solidity: {
-    version: "0.8.6"
+    version: "0.8.6",
   },
   paths: {
     sources: "contracts",
-    deployments: '.deployments',
+    deployments: ".deployments",
     tests: "test",
     cache: ".cache",
-    artifacts: "artifacts"
+    artifacts: "artifacts",
   },
   mocha: {
-    timeout: 60000
+    timeout: 60000,
   },
   etherscan: {
-    apiKey: etherscanKey
-  }
+    apiKey: etherscanKey,
+  },
 };
 
 export default config;
