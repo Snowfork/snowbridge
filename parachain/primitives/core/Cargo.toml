@@ -2,7 +2,7 @@
 name = "snowbridge-core"
 version = "0.1.1"
 authors = ["Snowfork <contact@snowfork.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 serde = { version = "1.0.130", optional = true, features = ["derive"] }

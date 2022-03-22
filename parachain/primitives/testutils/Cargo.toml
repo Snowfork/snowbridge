@@ -2,7 +2,7 @@
 name = "snowbridge-testutils"
 version = "0.1.0"
 authors = ["Snowfork <contact@snowfork.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 ethereum-types = { version = "0.12.0", default-features = false }

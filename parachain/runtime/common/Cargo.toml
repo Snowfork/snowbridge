@@ -3,7 +3,7 @@ name = "snowbridge-runtime-common"
 description = "Snowbridge Runtime Common"
 version = "0.1.0"
 authors = ["Snowfork <contact@snowfork.com>"]
-edition = "2018"
+edition = "2021"
 repository = "https://github.com/Snowfork/snowbridge"
 
 [dependencies]
