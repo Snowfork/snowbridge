@@ -3,16 +3,6 @@ pragma solidity >=0.7.6;
 
 library ScaleCodec {
 
-    // function encodeCompact(uint8 value) public pure returns (bytes memory) {
-    //     if (value < 64) {
-    //         bytes memory buf = new bytes(1);
-    //         buf[0] = value << 2;
-    //         return buf
-    //     } else {
-    //         return 1 << 8 | (value & 0xFC) << 8 | (value & 0x03);
-    //     }
-    // }
-
     // Sources:
     //   * https://ethereum.stackexchange.com/questions/15350/how-to-convert-an-bytes-to-address-in-solidity/50528
     //   * https://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel

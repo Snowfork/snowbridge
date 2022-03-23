@@ -8,6 +8,7 @@ import "./utils/Bitfield.sol";
 import "./ValidatorRegistry.sol";
 import "./SimplifiedMMRVerification.sol";
 import "./ScaleCodec.sol";
+import "hardhat/console.sol";
 
 /**
  * @title A entry contract for the Ethereum light client
@@ -292,11 +293,11 @@ contract BeefyLightClient {
         verifyCommitment(id, commitment, validatorProof);
         verifyNewestMMRLeaf(
             latestMMRLeaf,
-            commitment.payload,
+            bytes32(commitment.payload[0].data),
             proof
         );
 
-        processPayload(commitment.payload, commitment.blockNumber);
+        processPayload(bytes32(commitment.payload[0].data), commitment.blockNumber);
 
         applyValidatorSetChanges(
             latestMMRLeaf.nextAuthoritySetId,
@@ -550,60 +551,49 @@ contract BeefyLightClient {
 
     function createCommitmentHash(Commitment calldata commitment)
         public
-        pure
-        returns (bytes32)
-    {
-        return
-            keccak256(
-                abi.encodePacked(
-                    commitment.payload,
-                    commitment.blockNumber.encode32(),
-                    commitment.validatorSetId.encode64()
-                )
-            );
-    }
-
-    function createCommitmentHash(Commitment calldata commitment)
-        public
-        pure
+        view
         returns (bytes32)
     {
         uint offs = 0;
         uint payloadSize = 0;
 
         // calculate required size of buffer
-        for (uint i = 0; i < items.length; i++) {
+        for (uint i = 0; i < commitment.payload.length; i++) {
             // len(payload_item_id) + compact_length_of_data + len(data)
-            payloadSize += 2 + 1 + items.data.length;
+            payloadSize += 2 + 1 + commitment.payload[i].data.length;
         }
 
-        buf = new bytes(payloadSize + 32 + 64);
+        bytes memory buf = new bytes(1 + payloadSize + 4 + 8);
 
-        // encode items to buffer
-        for (uint i = 0; i < items.length; i++) {
-            buf[offs + 0] = items[i].id[0];
-            buf[offs + 1] = items[i].id[1];
-            buf[offs + 2] = items[i].data.length << 2;
+        // encode compact length of payload items
+        buf[offs++] = bytes1(uint8(commitment.payload.length) << 2);
+
+        // encode payload items to buffer
+        for (uint i = 0; i < commitment.payload.length; i++) {
+
+            buf[offs + 0] = commitment.payload[i].id[0];
+            buf[offs + 1] = commitment.payload[i].id[1];
+            buf[offs + 2] = bytes1(uint8(commitment.payload[i].data.length)) << 2;
             offs += 3;
 
-            for (uint j = 0; j < items[i].data.length; i++) {
-                data[offs + j] = items[i].data[j];
+            for (uint j = 0; j < commitment.payload[i].data.length; j++) {
+                buf[offs + j] = commitment.payload[i].data[j];
             }
-            offs += items[i].data.length;
+
+            offs += commitment.payload[i].data.length;
         }
 
         // encode block number
-        bytes32 blockNumber = commitment.blockNumber.encode32();
-        assembly {
-            mstore(add(buf, offs), blockNumber)
+        bytes4 blockNumber = commitment.blockNumber.encode32();
+        for (uint i = 0; i < blockNumber.length; i++) {
+            buf[offs + i] = blockNumber[blockNumber.length - i - 1];
         }
 
         // encode validatorSetId
-        offs += 32;
-        bytes64 validatorSetId = commitment.validatorSetId.encode64();
-        assembly {
-            mstore(add(buf, offs), validatorSetId)
-            mstore(add(add(buf, offs), 32), add(validatorSetId, 32))
+        offs += blockNumber.length;
+        bytes8 validatorSetId = commitment.validatorSetId.encode64();
+        for (uint i = 0; i < validatorSetId.length; i++) {
+            buf[offs + i] = validatorSetId[i];
         }
 
         return keccak256(buf);
