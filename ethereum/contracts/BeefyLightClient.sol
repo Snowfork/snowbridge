@@ -559,7 +559,7 @@ contract BeefyLightClient {
 
         // calculate required size of buffer
         for (uint i = 0; i < commitment.payload.length; i++) {
-            // len(payload_item_id) + compact_length_of_data + len(data)
+            // len(payload_item.id) + compact_length_prefix + len(data)
             payloadSize += 2 + 1 + commitment.payload[i].data.length;
         }
 
@@ -586,7 +586,7 @@ contract BeefyLightClient {
         // encode block number
         bytes4 blockNumber = commitment.blockNumber.encode32();
         for (uint i = 0; i < blockNumber.length; i++) {
-            buf[offs + i] = blockNumber[blockNumber.length - i - 1];
+            buf[offs + i] = blockNumber[i];
         }
 
         // encode validatorSetId
