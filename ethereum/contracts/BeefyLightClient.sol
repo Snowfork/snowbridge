@@ -60,9 +60,14 @@ contract BeefyLightClient {
      * @param validatorSetId validator set id that signed the given commitment
      */
     struct Commitment {
-        bytes32 payload;
+        PayloadItem[] payload;
         uint32 blockNumber;
         uint64 validatorSetId;
+    }
+
+    struct PayloadItem {
+        bytes2 id;
+        bytes data;
     }
 
     /**
@@ -556,6 +561,52 @@ contract BeefyLightClient {
                     commitment.validatorSetId.encode64()
                 )
             );
+    }
+
+    function createCommitmentHash(Commitment calldata commitment)
+        public
+        pure
+        returns (bytes32)
+    {
+        uint offs = 0;
+        uint payloadSize = 0;
+
+        // calculate required size of buffer
+        for (uint i = 0; i < items.length; i++) {
+            // len(payload_item_id) + compact_length_of_data + len(data)
+            payloadSize += 2 + 1 + items.data.length;
+        }
+
+        buf = new bytes(payloadSize + 32 + 64);
+
+        // encode items to buffer
+        for (uint i = 0; i < items.length; i++) {
+            buf[offs + 0] = items[i].id[0];
+            buf[offs + 1] = items[i].id[1];
+            buf[offs + 2] = items[i].data.length << 2;
+            offs += 3;
+
+            for (uint j = 0; j < items[i].data.length; i++) {
+                data[offs + j] = items[i].data[j];
+            }
+            offs += items[i].data.length;
+        }
+
+        // encode block number
+        bytes32 blockNumber = commitment.blockNumber.encode32();
+        assembly {
+            mstore(add(buf, offs), blockNumber)
+        }
+
+        // encode validatorSetId
+        offs += 32;
+        bytes64 validatorSetId = commitment.validatorSetId.encode64();
+        assembly {
+            mstore(add(buf, offs), validatorSetId)
+            mstore(add(add(buf, offs), 32), add(validatorSetId, 32))
+        }
+
+        return keccak256(buf);
     }
 
     function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
