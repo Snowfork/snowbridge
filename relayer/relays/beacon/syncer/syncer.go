@@ -2,13 +2,19 @@ package syncer
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 )
+
+const SLOTS_IN_EPOCH uint64 = 32
+
+const EPOCHS_IN_PERIOD uint64 = 512
 
 type Syncer interface {
 	GetHeader() error
@@ -26,9 +32,32 @@ func New(endpoint string) Sync {
 	}
 }
 
-func (s *Sync) GetFinalizedHeader() (BeaconHeader, error) {
-	client := &http.Client{}
+type BeaconHeaderResponse struct {
+	Data struct {
+		Root      string `json:"root"`
+		Canonical bool   `json:"canonical"`
+		Header    struct {
+			Message struct {
+				Slot          string `json:"slot"`
+				ProposerIndex string `json:"proposer_index"`
+				ParentRoot    string `json:"parent_root"`
+				StateRoot     string `json:"state_root"`
+				BodyRoot      string `json:"body_root"`
+			} `json:"message"`
+			Signature string `json:"signature"`
+		} `json:"header"`
+	} `json:"data"`
+}
 
+type BeaconHeader struct {
+	Slot          uint64
+	ProposerIndex uint64
+	ParentRoot    common.Hash
+	StateRoot     common.Hash
+	BodyRoot      common.Hash
+}
+
+func (s *Sync) GetFinalizedHeader() (BeaconHeader, error) {
 	req, err := http.NewRequest(http.MethodGet, s.endpoint+"/eth/v1/beacon/headers/finalized", nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct beacon header request")
@@ -37,7 +66,7 @@ func (s *Sync) GetFinalizedHeader() (BeaconHeader, error) {
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := client.Do(req)
+	res, err := s.httpClient.Do(req)
 	if err != nil {
 		logrus.WithError(err).Error("failed to do http request")
 
@@ -91,9 +120,42 @@ func (s *Sync) GetFinalizedHeader() (BeaconHeader, error) {
 	}, nil
 }
 
-func (s *Sync) GetBlockSyncAggregate() (SyncAggregate, error) {
-	client := &http.Client{}
+type BeaconBlockResponse struct {
+	Data struct {
+		Message struct {
+			Slot          string `json:"slot"`
+			ProposerIndex string `json:"proposer_index"`
+			ParentRoot    string `json:"parent_root"`
+			StateRoot     string `json:"state_root"`
+			Body          struct {
+				Eth1Data struct {
+					DepositRoot  string `json:"deposit_root"`
+					DepositCount string `json:"deposit_count"`
+					BlockHash    string `json:"block_hash"`
+				} `json:"eth1_data"`
+				SyncAggregate struct {
+					SyncCommitteeBits      string `json:"sync_committee_bits"`
+					SyncCommitteeSignature string `json:"sync_committee_signature"`
+				} `json:"sync_aggregate"`
+			} `json:"body"`
+		} `json:"message"`
+	} `json:"data"`
+}
 
+type BeaconBlock struct {
+	Slot          uint64
+	ProposerIndex uint64
+	ParentRoot    common.Hash
+	StateRoot     common.Hash
+	BodyRoot      common.Hash
+}
+
+type SyncAggregate struct {
+	SyncCommitteeBits      string
+	SyncCommitteeSignature string
+}
+
+func (s *Sync) GetBlockSyncAggregate() (SyncAggregate, error) {
 	req, err := http.NewRequest(http.MethodGet, s.endpoint+"/eth/v1/beacon/blocks/finalized", nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct beacon block request")
@@ -102,7 +164,7 @@ func (s *Sync) GetBlockSyncAggregate() (SyncAggregate, error) {
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := client.Do(req)
+	res, err := s.httpClient.Do(req)
 	if err != nil {
 		logrus.WithError(err).Error("failed to do http request")
 
@@ -123,8 +185,6 @@ func (s *Sync) GetBlockSyncAggregate() (SyncAggregate, error) {
 		return SyncAggregate{}, nil
 	}
 
-	logrus.WithField("body", string(bodyBytes)).Info("body")
-
 	var response BeaconBlockResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
@@ -137,18 +197,24 @@ func (s *Sync) GetBlockSyncAggregate() (SyncAggregate, error) {
 
 	logrus.WithField("sync agg", response).Info("sync agg")
 
-	bytes := common.Hex2BytesFixed(response.Data.Message.Body.SyncAggregate.SyncCommitteeBits, 512)
-
 	return SyncAggregate{
-		SyncCommitteeBits:      bytes,
+		SyncCommitteeBits:      HexToBinaryString(response.Data.Message.Body.SyncAggregate.SyncCommitteeBits),
 		SyncCommitteeSignature: response.Data.Message.Body.SyncAggregate.SyncCommitteeSignature,
 	}, nil
 }
 
-func (s *Sync) GetSyncCommittee() (SyncCommittee, error) {
-	client := &http.Client{}
+type SyncCommitteeResponse struct {
+	Data struct {
+		Validators []string `json:"validators"`
+	} `json:"data"`
+}
 
-	req, err := http.NewRequest(http.MethodGet, s.endpoint+"/eth/v1/beacon/states/finalized/sync_committees", nil)
+type SyncCommittee struct {
+	Indexes []uint64
+}
+
+func (s *Sync) GetSyncCommittee(epoch uint64) (SyncCommittee, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/finalized/sync_committees?epoch=%v", s.endpoint, epoch), nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct sync committee request")
 
@@ -156,7 +222,7 @@ func (s *Sync) GetSyncCommittee() (SyncCommittee, error) {
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := client.Do(req)
+	res, err := s.httpClient.Do(req)
 	if err != nil {
 		logrus.WithError(err).Error("failed to do http request")
 
@@ -203,4 +269,97 @@ func (s *Sync) GetSyncCommittee() (SyncCommittee, error) {
 	}
 
 	return syncCommittee, nil
+}
+
+type ForkResponse struct {
+	Data struct {
+		PreviousVersion string `json:"previous_version"`
+		CurrentVersion  string `json:"current_version"`
+		Epoch           string `json:"epoch"`
+	} `json:"data"`
+}
+
+func (s *Sync) GetPubforkVersion(slot uint64) (string, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/%d/fork", s.endpoint, slot), nil)
+	if err != nil {
+		logrus.WithError(err).Error("unable to construct fork version request")
+
+		return "", nil
+	}
+
+	req.Header.Set("accept", "application/json")
+	res, err := s.httpClient.Do(req)
+	if err != nil {
+		logrus.WithError(err).Error("failed to do http request")
+
+		return "", nil
+	}
+
+	if res.StatusCode != http.StatusOK {
+		logrus.Error("request to beacon node failed")
+
+		return "", nil
+	}
+
+	bodyBytes, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		logrus.Error("unable to get response body")
+
+		return "", nil
+	}
+
+	var response ForkResponse
+
+	err = json.Unmarshal(bodyBytes, &response)
+
+	if err != nil {
+		logrus.WithError(err).Error("unable to unmarshal fork json response")
+
+		return "", nil
+	}
+
+	return response.Data.CurrentVersion, nil
+}
+
+func ComputeEpochAtSlot(slot uint64) uint64 {
+	return slot / SLOTS_IN_EPOCH
+}
+
+func ComputeEpochForNextPeriod(epoch uint64) uint64 {
+	return epoch + (EPOCHS_IN_PERIOD - (epoch % EPOCHS_IN_PERIOD))
+}
+
+func HexToBinaryString(rawHex string) string {
+	hex := strings.Replace(rawHex, "0x", "", -1)
+
+	// Chunkify strings into array of strings of 8 characters long (to ParseUint safely below)
+	chunkSize := 8
+
+	resultStr := ""
+	chunks := []string{}
+	for i, r := range hex {
+		resultStr = resultStr + string(r)
+		if i > 0 && (i+1)%chunkSize == 0 {
+			chunks = append(chunks, resultStr)
+			resultStr = ""
+		}
+	}
+
+	// If there was a remainder, add the last string to the chunks as well.
+	if resultStr != "" {
+		chunks = append(chunks, resultStr)
+	}
+
+	// Convert chunks into binary string
+	binaryStr := ""
+	for _, str := range chunks {
+		i, err := strconv.ParseUint(str, 16, 32)
+		if err != nil {
+			fmt.Printf("%s", err)
+		}
+		binaryStr = binaryStr + fmt.Sprintf("%b", i)
+	}
+
+	return binaryStr
 }

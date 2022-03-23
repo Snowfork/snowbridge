@@ -20,32 +20,68 @@ func NewRelay(
 	}
 }
 
+type LightClientUpdate struct {
+	FinalityHeader    syncer.BeaconHeader
+	SyncCommittee     syncer.SyncCommittee
+	NextSyncCommittee syncer.SyncCommittee
+	SyncAggregate     syncer.SyncAggregate
+	FinalityBranch    []string
+	PubforkVersion    string
+}
+
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	s := syncer.New(r.config.Source.Beacon.Endpoint)
 
 	header, err := s.GetFinalizedHeader()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch header")
+
+		return err
 	}
 
 	SyncAggregate, err := s.GetBlockSyncAggregate()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch block")
+
+		return err
 	}
 
-	syncCommittee, err := s.GetSyncCommittee()
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch sync committee")
-	}
+	currentEpoch := syncer.ComputeEpochAtSlot(header.Slot)
+	nextPeriodEpoch := syncer.ComputeEpochForNextPeriod(currentEpoch)
 
 	logrus.WithFields(logrus.Fields{
-		"indexes": syncCommittee.Indexes,
-	}).Info("fetched sync committee")
+		"currentEpoch":    currentEpoch,
+		"nextPeriodEpoch": nextPeriodEpoch,
+	}).Info("computed epochs")
+
+	syncCommittee, err := s.GetSyncCommittee(currentEpoch)
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch sync committee")
+
+		return err
+	}
+
+	nextSyncCommittee, err := s.GetSyncCommittee(nextPeriodEpoch)
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch sync committee")
+
+		return err
+	}
+
+	pubforkVersion, err := s.GetPubforkVersion(header.Slot)
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch sync committee")
+
+		return err
+	}
 
 	lightClientUpdate := syncer.LightClientUpdate{
-		FinalityHeader: header,
-		SyncCommittee:  syncCommittee,
-		SyncAggregate: SyncAggregate,
+		FinalityHeader:    header,
+		FinalityBranch:    []string{},
+		SyncCommittee:     syncCommittee,
+		NextSyncCommittee: nextSyncCommittee,
+		SyncAggregate:     SyncAggregate,
+		PubforkVersion:    pubforkVersion,
 	}
 
 	logrus.WithFields(logrus.Fields{
