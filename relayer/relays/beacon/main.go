@@ -21,29 +21,66 @@ func NewRelay(
 }
 
 type LightClientUpdate struct {
-	FinalityHeader    syncer.BeaconHeader
-	SyncCommittee     syncer.SyncCommittee
-	NextSyncCommittee syncer.SyncCommittee
-	SyncAggregate     syncer.SyncAggregate
-	FinalityBranch    []string
-	PubforkVersion    string
+	FinalityHeader      syncer.BeaconHeader
+	SyncCommittee       syncer.SyncCommittee
+	SyncCommitteeBranch []string
+	NextSyncCommittee   syncer.SyncCommittee
+	SyncAggregate       syncer.SyncAggregate
+	FinalityBranch      []string
+	PubforkVersion      string
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	s := syncer.New(r.config.Source.Beacon.Endpoint)
 
-	header, err := s.GetFinalizedHeader()
+	lightClientUpdate, err := buildLightClientUpdateDate(s)
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch header")
+		logrus.WithError(err).Error("unable to build light client snapshot")
 
 		return err
 	}
+	
+	logrus.WithFields(logrus.Fields{
+		"lightClientUpdate": lightClientUpdate,
+	}).Info("compiled Light Client Update")
 
-	SyncAggregate, err := s.GetBlockSyncAggregate()
+	return nil
+}
+
+func buildLightClientUpdateDate(s syncer.Sync) (LightClientUpdate, error) {
+	finalizedCheckpoint, err := s.GetFinalizedCheckpoint();
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
+
+		return LightClientUpdate{}, err
+	}
+
+	snapshot, err := s.GetLightClientSnapshot(finalizedCheckpoint.Data.Finalized.Root)
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch snapshot")
+
+		return LightClientUpdate{}, err
+	}
+
+	//header, err := s.GetFinalizedHeader()
+	//if err != nil {
+	//	logrus.WithError(err).Error("unable to fetch header")
+	//
+	//	return LightClientUpdate{}, err
+	//}
+
+	header, err := snapshot.ToBeaconHeader();
+	if err != nil {
+		logrus.WithError(err).Error("unable to parse beacon header")
+
+		return LightClientUpdate{}, err
+	}
+
+	SyncAggregate, err := s.GetBlockSyncAggregate(header.Slot)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch block")
 
-		return err
+		return LightClientUpdate{}, err
 	}
 
 	currentEpoch := syncer.ComputeEpochAtSlot(header.Slot)
@@ -58,35 +95,32 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch sync committee")
 
-		return err
+		return LightClientUpdate{}, err
 	}
 
 	nextSyncCommittee, err := s.GetSyncCommittee(nextPeriodEpoch)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch sync committee")
 
-		return err
+		return LightClientUpdate{}, err
 	}
 
 	pubforkVersion, err := s.GetPubforkVersion(header.Slot)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch sync committee")
 
-		return err
+		return LightClientUpdate{}, err
 	}
 
-	lightClientUpdate := syncer.LightClientUpdate{
-		FinalityHeader:    header,
-		FinalityBranch:    []string{},
-		SyncCommittee:     syncCommittee,
-		NextSyncCommittee: nextSyncCommittee,
-		SyncAggregate:     SyncAggregate,
-		PubforkVersion:    pubforkVersion,
+	lightClientUpdate := LightClientUpdate{
+		FinalityHeader:      header,
+		FinalityBranch:      []string{},
+		SyncCommittee:       syncCommittee,
+		SyncCommitteeBranch: snapshot.Data.CurrentSyncCommitteeBranch,
+		NextSyncCommittee:   nextSyncCommittee,
+		SyncAggregate:       SyncAggregate,
+		PubforkVersion:      pubforkVersion,
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"lightClientUpdate": lightClientUpdate,
-	}).Info("compiled Light Client Update")
-
-	return nil
+	return lightClientUpdate, nil
 }
