@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/ChainSafe/go-schnorrkel v0.0.0-20210527232834-58622d036665 // indirect
 	github.com/allegro/bigcache v1.2.1 // indirect
-	github.com/ethereum/go-ethereum v1.10.6
+	github.com/ethereum/go-ethereum v1.10.16
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jinzhu/gorm v1.9.16
@@ -31,7 +31,6 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
