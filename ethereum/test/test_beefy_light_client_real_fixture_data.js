@@ -22,21 +22,6 @@ describe("Beefy Light Client", function () {
     this.beefyLightClient = await deployBeefyLightClient();
   });
 
-  it("foo", async function () {
-    let commitment = {
-      payload: [{
-        id: "0x6d68",
-        data: "0x3048656c6c6f20576f726c6421"
-      }],
-      blockNumber: 5,
-      validatorSetId: 0
-    }
-
-    let hash = await this.beefyLightClient.createCommitmentHash(commitment).should.be.fulfilled
-
-    console.log(hash)
-  });
-
   it("encodes, hashes and verifies beefy mmr leaves correctly", async function () {
     await this.beefyLightClient.verifyNewestMMRLeaf(
       fixture.completeSubmitInput.latestMMRLeaf,

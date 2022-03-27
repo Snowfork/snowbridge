@@ -296,13 +296,15 @@ contract BeefyLightClient {
         SimplifiedMMRProof calldata proof
     ) public {
         verifyCommitment(id, commitment, validatorProof);
+
+        bytes32 mmrRootHash = getMmrRootHash(commitment.payload);
         verifyNewestMMRLeaf(
             latestMMRLeaf,
-            bytes32(commitment.payload[0].data),
+            mmrRootHash,
             proof
         );
 
-        processPayload(bytes32(commitment.payload[0].data), commitment.blockNumber);
+        processPayload(mmrRootHash, commitment.blockNumber);
 
         applyValidatorSetChanges(
             latestMMRLeaf.nextAuthoritySetId,
@@ -319,6 +321,15 @@ contract BeefyLightClient {
     }
 
     /* Private Functions */
+
+    function getMmrRootHash(PayloadItem[] calldata payload) internal pure returns (bytes32) {
+        for (uint i = 0; i < payload.length; i++) {
+            if (payload[i].id == 0x6d68) {
+                return bytes32(payload[i].data);
+            }
+        }
+        revert InvalidCommitment();
+    }
 
     /**
      * @notice Deterministically generates a seed from the block hash at the block number of creation of the validation
