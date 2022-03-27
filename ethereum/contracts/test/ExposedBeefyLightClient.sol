@@ -10,8 +10,6 @@ contract ExposedBeefyLightClient is BeefyLightClient {
 
     constructor() BeefyLightClient(ValidatorRegistry(address(0)), SimplifiedMMRVerification(address(0)), 0) {}
 
-    event EncodedCommitment(bytes data);
-
     function encodeCommitmentExposed(Commitment calldata commitment)
         external
         pure
@@ -19,5 +17,4 @@ contract ExposedBeefyLightClient is BeefyLightClient {
     {
         return encodeCommitment(commitment);
     }
-
 }

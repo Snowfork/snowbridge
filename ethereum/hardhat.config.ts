@@ -6,7 +6,6 @@ import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-deploy";
-import "hardhat-gas-reporter"
 import "./tasks/upgrade";
 import "./tasks/renounce";
 import "./tasks/contractAddress";
@@ -62,12 +61,6 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: ETHERSCAN_KEY
-  },
-  gasReporter: {
-    enabled: (process.env.REPORT_GAS) ? true : false,
-    currency: 'USD',
-    onlyCalledMethods: true,
-    src: 'artifacts/contracts'
   }
 };
 
