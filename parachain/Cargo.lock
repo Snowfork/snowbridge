@@ -9783,7 +9783,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ssz_rs",
- "ssz_rs_derive 0.7.0 (git+https://github.com/Snowfork/ssz_rs)",
+ "ssz_rs_derive",
 ]
 
 [[package]]
@@ -10849,23 +10849,13 @@ dependencies = [
 [[package]]
 name = "ssz_rs"
 version = "0.7.0"
-source = "git+https://github.com/Snowfork/ssz_rs?branch=feat/no-std#b70aee0be5c3ab0f08b40d23aaa4202532fc2de4"
+source = "git+https://github.com/Snowfork/ssz_rs#6d6729294fb8764cacfc72b2b76cb3a6ceacf415"
 dependencies = [
  "bitvec 0.20.1",
  "funty",
  "lazy_static",
  "sha2 0.9.8",
- "ssz_rs_derive 0.7.0 (git+https://github.com/Snowfork/ssz_rs?branch=feat/no-std)",
-]
-
-[[package]]
-name = "ssz_rs_derive"
-version = "0.7.0"
-source = "git+https://github.com/Snowfork/ssz_rs?branch=feat/no-std#b70aee0be5c3ab0f08b40d23aaa4202532fc2de4"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
+ "ssz_rs_derive",
 ]
 
 [[package]]
