@@ -74,6 +74,7 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 	type OnSetCode = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 impl pallet_randomness_collective_flip::Config for Test {}
@@ -100,6 +101,7 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: u64 = 1;
 	pub const MetadataDepositPerByte: u64 = 1;
+	pub const AssetAccountDeposit: u64 = 1;
 }
 
 impl pallet_assets::Config for Test {
@@ -109,6 +111,7 @@ impl pallet_assets::Config for Test {
 	type Currency = Balances;
 	type ForceOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type AssetDeposit = AssetDeposit;
+	type AssetAccountDeposit = AssetAccountDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type ApprovalDeposit = ApprovalDeposit;
@@ -191,7 +194,7 @@ impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 		match destination.para_id {
 			1001 => Ok(()),
 			2001 => Err(DispatchError::Other("Parachain 2001 not found.")),
-			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator.")
+			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator."),
 		}
 	}
 }
@@ -223,9 +226,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	};
 	GenesisBuild::<Test>::assimilate_storage(&assets_config, &mut storage).unwrap();
 
-	let asset_registry_config = snowbridge_asset_registry::GenesisConfig {
-		next_asset_id: 1,
-	};
+	let asset_registry_config = snowbridge_asset_registry::GenesisConfig { next_asset_id: 1 };
 	GenesisBuild::<Test>::assimilate_storage(&asset_registry_config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();

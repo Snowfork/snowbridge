@@ -740,9 +740,9 @@ fn it_should_fail_reset_for_blocks_at_or_after_current_finalized() {
 		// 1      B1
 		//        |
 		// 2      B2      Finalized Block
-		//        |    
-		// 3      B3   
-		//        |    
+		//        |
+		// 3      B3
+		//        |
 		// 4      B4      Best Block
 		let ferdie: AccountId = Keyring::Ferdie.into();
 		for header in vec![block1.clone(), block2, block3, block4].into_iter() {
