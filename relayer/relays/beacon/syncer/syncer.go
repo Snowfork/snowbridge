@@ -74,7 +74,9 @@ func (s *Sync) GetFinalizedHeader() (BeaconHeader, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		logrus.Error("request to beacon node failed")
+		bodyBytes, _ := io.ReadAll(res.Body)
+
+		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
 
 		return BeaconHeader{}, nil
 	}
@@ -346,7 +348,15 @@ type FinalizedCheckpointResponse struct {
 }
 
 func (s *Sync) GetFinalizedCheckpoint() (FinalizedCheckpointResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/finalized/finality_checkpoints", s.endpoint), nil)
+	return s.GetCheckpoint("finalized")
+}
+
+func (s *Sync) GetHeadCheckpoint() (FinalizedCheckpointResponse, error) {
+	return s.GetCheckpoint("head")
+}
+
+func (s *Sync) GetCheckpoint(state string) (FinalizedCheckpointResponse, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/%s/finality_checkpoints", s.endpoint, state), nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct finalized checkpoint request")
 
@@ -390,7 +400,7 @@ func (s *Sync) GetFinalizedCheckpoint() (FinalizedCheckpointResponse, error) {
 	return response, nil
 }
 
-type LightSnapshotResponse struct {
+type LightClientSnapshotResponse struct {
 	Data struct {
 		Header struct {
 			Slot          string `json:"slot"`
@@ -407,12 +417,12 @@ type LightSnapshotResponse struct {
 	} `json:"data"`
 }
 
-func (s *Sync) GetLightClientSnapshot(blockRoot string) (LightSnapshotResponse, error) {
+func (s *Sync) GetLightClientSnapshot(blockRoot string) (LightClientSnapshotResponse, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/snapshot/%s", s.endpoint, blockRoot), nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct light client snapshot request")
 
-		return LightSnapshotResponse{}, nil
+		return LightClientSnapshotResponse{}, nil
 	}
 
 	req.Header.Set("accept", "application/json")
@@ -420,7 +430,7 @@ func (s *Sync) GetLightClientSnapshot(blockRoot string) (LightSnapshotResponse, 
 	if err != nil {
 		logrus.WithError(err).Error("failed to do http request")
 
-		return LightSnapshotResponse{}, nil
+		return LightClientSnapshotResponse{}, nil
 	}
 
 	if res.StatusCode != http.StatusOK {
@@ -428,7 +438,7 @@ func (s *Sync) GetLightClientSnapshot(blockRoot string) (LightSnapshotResponse, 
 
 		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
 
-		return LightSnapshotResponse{}, nil
+		return LightClientSnapshotResponse{}, nil
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
@@ -436,17 +446,17 @@ func (s *Sync) GetLightClientSnapshot(blockRoot string) (LightSnapshotResponse, 
 	if err != nil {
 		logrus.Error("unable to get response body")
 
-		return LightSnapshotResponse{}, nil
+		return LightClientSnapshotResponse{}, nil
 	}
 
-	var response LightSnapshotResponse
+	var response LightClientSnapshotResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
 
 	if err != nil {
 		logrus.WithError(err).Error("unable to unmarshal fork json response")
 
-		return LightSnapshotResponse{}, nil
+		return LightClientSnapshotResponse{}, nil
 	}
 
 	//logrus.WithFields(logrus.Fields{"body": response}).Info("snapshot")
@@ -454,7 +464,7 @@ func (s *Sync) GetLightClientSnapshot(blockRoot string) (LightSnapshotResponse, 
 	return response, nil
 }
 
-func (l LightSnapshotResponse) ToBeaconHeader() (BeaconHeader, error) {
+func (l LightClientSnapshotResponse) ToBeaconHeader() (BeaconHeader, error) {
 	slot, err := strconv.ParseUint(l.Data.Header.Slot, 10, 64)
 	if err != nil {
 		logrus.WithError(err).Error("unable parse slot as int")

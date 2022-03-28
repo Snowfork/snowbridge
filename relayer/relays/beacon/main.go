@@ -20,107 +20,74 @@ func NewRelay(
 	}
 }
 
-type LightClientUpdate struct {
-	FinalityHeader      syncer.BeaconHeader
-	SyncCommittee       syncer.SyncCommittee
-	SyncCommitteeBranch []string
-	NextSyncCommittee   syncer.SyncCommittee
-	SyncAggregate       syncer.SyncAggregate
-	FinalityBranch      []string
-	PubforkVersion      string
+type Header struct {
+	Slot          string
+	ProposerIndex string
+	ParentRoot    string
+	StateRoot     string
+	BodyRoot      string
+}
+
+type CurrentSyncCommittee struct {
+	Pubkeys          []string
+	AggregatePubkeys string
+}
+
+type LightClientSnapshot struct {
+	Header                     Header
+	CurrentSyncCommittee       CurrentSyncCommittee
+	CurrentSyncCommitteeBranch []string
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	s := syncer.New(r.config.Source.Beacon.Endpoint)
 
-	lightClientUpdate, err := buildLightClientUpdateDate(s)
+	lightClientSnapshot, err := buildSnapShotUpdate(s)
 	if err != nil {
 		logrus.WithError(err).Error("unable to build light client snapshot")
 
 		return err
 	}
-	
+
 	logrus.WithFields(logrus.Fields{
-		"lightClientUpdate": lightClientUpdate,
-	}).Info("compiled Light Client Update")
+		"lightClientSnapshot": lightClientSnapshot,
+	}).Info("compiled Light Client Snapshot")
 
 	return nil
 }
 
-func buildLightClientUpdateDate(s syncer.Sync) (LightClientUpdate, error) {
-	finalizedCheckpoint, err := s.GetFinalizedCheckpoint();
+func buildSnapShotUpdate(s syncer.Sync) (LightClientSnapshot, error) {
+	checkpoint, err := s.GetHeadCheckpoint()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
 
-		return LightClientUpdate{}, err
+		return LightClientSnapshot{}, err
 	}
 
-	snapshot, err := s.GetLightClientSnapshot(finalizedCheckpoint.Data.Finalized.Root)
+	logrus.WithFields(logrus.Fields{
+		"checkpoint": checkpoint,
+	}).Info("fetched finalized checkpoint")
+
+	snapshot, err := s.GetLightClientSnapshot(checkpoint.Data.Finalized.Root)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch snapshot")
 
-		return LightClientUpdate{}, err
+		return LightClientSnapshot{}, err
 	}
 
-	//header, err := s.GetFinalizedHeader()
-	//if err != nil {
-	//	logrus.WithError(err).Error("unable to fetch header")
-	//
-	//	return LightClientUpdate{}, err
-	//}
-
-	header, err := snapshot.ToBeaconHeader();
-	if err != nil {
-		logrus.WithError(err).Error("unable to parse beacon header")
-
-		return LightClientUpdate{}, err
+	lightClientSnapshot := LightClientSnapshot{
+		Header: Header{
+			Slot:          snapshot.Data.Header.Slot,
+			ProposerIndex: snapshot.Data.Header.ProposerIndex,
+			ParentRoot:    snapshot.Data.Header.ParentRoot,
+			StateRoot:     snapshot.Data.Header.StateRoot,
+		},
+		CurrentSyncCommittee: CurrentSyncCommittee{
+			Pubkeys:          snapshot.Data.CurrentSyncCommittee.Pubkeys,
+			AggregatePubkeys: snapshot.Data.CurrentSyncCommittee.AggregatePubkeys,
+		},
+		CurrentSyncCommitteeBranch: snapshot.Data.CurrentSyncCommitteeBranch,
 	}
 
-	SyncAggregate, err := s.GetBlockSyncAggregate(header.Slot)
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch block")
-
-		return LightClientUpdate{}, err
-	}
-
-	currentEpoch := syncer.ComputeEpochAtSlot(header.Slot)
-	nextPeriodEpoch := syncer.ComputeEpochForNextPeriod(currentEpoch)
-
-	logrus.WithFields(logrus.Fields{
-		"currentEpoch":    currentEpoch,
-		"nextPeriodEpoch": nextPeriodEpoch,
-	}).Info("computed epochs")
-
-	syncCommittee, err := s.GetSyncCommittee(currentEpoch)
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch sync committee")
-
-		return LightClientUpdate{}, err
-	}
-
-	nextSyncCommittee, err := s.GetSyncCommittee(nextPeriodEpoch)
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch sync committee")
-
-		return LightClientUpdate{}, err
-	}
-
-	pubforkVersion, err := s.GetPubforkVersion(header.Slot)
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch sync committee")
-
-		return LightClientUpdate{}, err
-	}
-
-	lightClientUpdate := LightClientUpdate{
-		FinalityHeader:      header,
-		FinalityBranch:      []string{},
-		SyncCommittee:       syncCommittee,
-		SyncCommitteeBranch: snapshot.Data.CurrentSyncCommitteeBranch,
-		NextSyncCommittee:   nextSyncCommittee,
-		SyncAggregate:       SyncAggregate,
-		PubforkVersion:      pubforkVersion,
-	}
-
-	return lightClientUpdate, nil
+	return lightClientSnapshot, nil
 }
