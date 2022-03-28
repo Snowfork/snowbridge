@@ -60,9 +60,14 @@ contract BeefyLightClient {
      * @param validatorSetId validator set id that signed the given commitment
      */
     struct Commitment {
-        bytes32 payload;
+        PayloadItem[] payload;
         uint32 blockNumber;
         uint64 validatorSetId;
+    }
+
+    struct PayloadItem {
+        bytes2 id;
+        bytes data;
     }
 
     /**
@@ -138,6 +143,11 @@ contract BeefyLightClient {
     uint64 public constant ERROR_AND_SAFETY_BUFFER = 10;
     uint64 public constant MAXIMUM_BLOCK_GAP =
         NUMBER_OF_BLOCKS_PER_SESSION - ERROR_AND_SAFETY_BUFFER;
+
+    /* Errors */
+
+    // Unsupported commitment payloads
+    error InvalidCommitment();
 
     /**
      * @notice Deploys the BeefyLightClient contract
@@ -285,13 +295,15 @@ contract BeefyLightClient {
         SimplifiedMMRProof calldata proof
     ) public {
         verifyCommitment(id, commitment, validatorProof);
+
+        bytes32 mmrRootHash = getMmrRootHash(commitment.payload);
         verifyNewestMMRLeaf(
             latestMMRLeaf,
-            commitment.payload,
+            mmrRootHash,
             proof
         );
 
-        processPayload(commitment.payload, commitment.blockNumber);
+        processPayload(mmrRootHash, commitment.blockNumber);
 
         applyValidatorSetChanges(
             latestMMRLeaf.nextAuthoritySetId,
@@ -308,6 +320,16 @@ contract BeefyLightClient {
     }
 
     /* Private Functions */
+
+    function getMmrRootHash(PayloadItem[] calldata payload) internal pure returns (bytes32) {
+        for (uint i = 0; i < payload.length; i++) {
+            // search for id "mh" (0x6d68 in binary)
+            if (payload[i].id == 0x6d68) {
+                return bytes32(payload[i].data);
+            }
+        }
+        revert InvalidCommitment();
+    }
 
     /**
      * @notice Deterministically generates a seed from the block hash at the block number of creation of the validation
@@ -484,7 +506,8 @@ contract BeefyLightClient {
         Commitment calldata commitment
     ) internal view {
         // Encode and hash the commitment
-        bytes32 commitmentHash = createCommitmentHash(commitment);
+        bytes memory encodedCommitment = encodeCommitment(commitment);
+        bytes32 commitmentHash = keccak256(encodedCommitment);
 
         /**
          *  @dev For each randomSignature, do:
@@ -543,23 +566,102 @@ contract BeefyLightClient {
         );
     }
 
-    function createCommitmentHash(Commitment calldata commitment)
-        public
+    function encodeCommitment(Commitment calldata commitment)
+        internal
         pure
-        returns (bytes32)
+        returns (bytes memory)
     {
-        return
-            keccak256(
-                abi.encodePacked(
-                    commitment.payload,
-                    commitment.blockNumber.encode32(),
-                    commitment.validatorSetId.encode64()
-                )
-            );
+        bytes memory payload;
+        if (commitment.payload.length == 1 && commitment.payload[0].data.length == 32) {
+            payload = encodePayloadFast(commitment.payload[0]);
+        } else {
+            payload = encodePayloadSlow(commitment.payload);
+        }
+
+        return bytes.concat(
+            payload,
+            commitment.blockNumber.encode32(),
+            commitment.validatorSetId.encode64()
+        );
+    }
+
+    function encodePayloadFast(PayloadItem calldata item) internal pure returns (bytes memory) {
+        return bytes.concat(
+            bytes1(uint8(1) << 2),
+            item.id,
+            bytes1(uint8(32) << 2),
+            item.data
+        );
+    }
+
+    function encodePayloadSlow(PayloadItem[] calldata payload) internal pure returns (bytes memory) {
+        uint offs = 0;
+
+        bytes memory buf = new bytes(encodedLength(payload));
+
+        // encode compact length of payload items
+        buf[offs++] = bytes1(uint8(payload.length) << 2);
+
+        // encode payload items to buffer
+        for (uint i = 0; i < payload.length; i++) {
+            PayloadItem calldata item = payload[i];
+
+            buf[offs++] = item.id[0];
+            buf[offs++] = item.id[1];
+
+            if (item.data.length < 64) {
+                buf[offs++] = bytes1(uint8(payload[i].data.length) << 2);
+            } else if (item.data.length < 2**14) {
+                bytes2 prefix = bytes2((uint16(item.data.length) << 2) + 1);
+                buf[offs++] = prefix[1];
+                buf[offs++] = prefix[0];
+            } else {
+                revert InvalidCommitment();
+            }
+
+            for (uint j = 0; j < item.data.length; j++) {
+                buf[offs++] = item.data[j];
+            }
+        }
+
+        return buf;
+    }
+
+    function encodedLength(PayloadItem[] calldata payload)
+        internal
+        pure
+        returns (uint)
+    {
+        // Only support up to 63 payload items since it is unlikely there will be more than a few payload items.
+        if (payload.length >= 64) {
+            revert InvalidCommitment();
+        }
+
+        // Compact length prefix takes up 1 byte
+        uint size = 1;
+
+        for (uint i = 0; i < payload.length; i++) {
+            bytes calldata data = payload[i].data;
+
+            // Payload item ID: u8[2]
+            size += 2;
+
+            // Length of data: Vec<u8>
+            if (data.length < 64) {
+                size += 1 + data.length;
+            } else if (data.length < 2**14) {
+                size += 2 + data.length;
+            } else {
+                // Again, only support length of up to 256 for reasons stated above.
+                revert InvalidCommitment();
+            }
+        }
+
+        return size;
     }
 
     function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
-        public
+        internal
         pure
         returns (bytes memory)
     {
