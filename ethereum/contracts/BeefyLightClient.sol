@@ -323,6 +323,7 @@ contract BeefyLightClient {
 
     function getMmrRootHash(PayloadItem[] calldata payload) internal pure returns (bytes32) {
         for (uint i = 0; i < payload.length; i++) {
+            // search for id "mh" (0x6d68 in binary)
             if (payload[i].id == 0x6d68) {
                 return bytes32(payload[i].data);
             }
