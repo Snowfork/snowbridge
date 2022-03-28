@@ -98,6 +98,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbf688625d06217d5b1bb0ea9d9c44a1635fd0ee3534466388d18203174f4d11"
 
 [[package]]
+name = "amcl"
+version = "0.3.0"
+source = "git+https://github.com/sigp/milagro_bls?tag=v1.4.2#16655aa033175a90c10ef02aa144e2835de23aec"
+
+[[package]]
 name = "ansi_term"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -556,9 +561,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitvec"
-version = "0.19.5"
+version = "0.19.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8942c8d352ae1838c9dda0b0ca2ab657696ef2232a20147cf1b30ae1a9cb4321"
+checksum = "a7ba35e9565969edb811639dbebfe34edc0368e472c5018474c8eb2543397f81"
 dependencies = [
  "funty",
  "radium 0.5.3",
@@ -568,9 +573,9 @@ dependencies = [
 
 [[package]]
 name = "bitvec"
-version = "0.20.4"
+version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7774144344a4faa177370406a7ff5f1da24303817368584c6206c8303eb07848"
+checksum = "f5011ffc90248764d7005b0e10c7294f5aa1bd87d9dd7248f4ad475b347c294d"
 dependencies = [
  "funty",
  "radium 0.6.2",
@@ -729,7 +734,7 @@ name = "bp-messages"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "bp-runtime",
  "frame-support",
  "frame-system",
@@ -3406,7 +3411,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "beefy-primitives",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",
@@ -3539,6 +3544,9 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+dependencies = [
+ "spin",
+]
 
 [[package]]
 name = "lazycell"
@@ -4381,6 +4389,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "milagro_bls"
+version = "1.4.2"
+source = "git+https://github.com/sigp/milagro_bls?tag=v1.4.2#16655aa033175a90c10ef02aa144e2835de23aec"
+dependencies = [
+ "amcl",
+ "hex",
+ "lazy_static",
+ "rand 0.7.3",
+ "zeroize",
+]
+
+[[package]]
 name = "minicbor"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4637,12 +4657,11 @@ checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
 
 [[package]]
 name = "nom"
-version = "6.1.2"
+version = "6.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7413f999671bd4745a7b624bd370a569fb6bc574b23c83a3c5ed2e453f3d5e2"
+checksum = "3d521ee2250f619dd5e06515ba405858d249edc8fae9ddee2dba0695e57db01b"
 dependencies = [
- "bitvec 0.19.5",
- "funty",
+ "bitvec 0.19.4",
  "memchr",
  "version_check",
 ]
@@ -5014,7 +5033,7 @@ name = "pallet-bridge-messages"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "bp-message-dispatch",
  "bp-messages",
  "bp-rialto",
@@ -5731,7 +5750,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "373b1a4c1338d9cd3d1fa53b3a11bdab5ab6bd80a20f7f7becd76953ae2be909"
 dependencies = [
  "arrayvec 0.7.2",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "byte-slice-cast",
  "impl-trait-for-tuples",
  "parity-scale-codec-derive",
@@ -6304,7 +6323,7 @@ name = "polkadot-node-core-approval-voting"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "derive_more",
  "futures 0.3.17",
  "futures-timer 3.0.2",
@@ -6332,7 +6351,7 @@ name = "polkadot-node-core-av-store"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "futures 0.3.17",
  "futures-timer 3.0.2",
  "kvdb",
@@ -6352,7 +6371,7 @@ name = "polkadot-node-core-backing"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "futures 0.3.17",
  "polkadot-erasure-coding",
  "polkadot-node-primitives",
@@ -6435,7 +6454,7 @@ name = "polkadot-node-core-dispute-coordinator"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "derive_more",
  "futures 0.3.17",
  "kvdb",
@@ -6484,7 +6503,7 @@ name = "polkadot-node-core-provisioner"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "futures 0.3.17",
  "futures-timer 3.0.2",
  "polkadot-node-subsystem",
@@ -6739,7 +6758,7 @@ name = "polkadot-primitives"
 version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-system",
  "hex-literal",
  "parity-scale-codec",
@@ -6801,7 +6820,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "beefy-primitives",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",
@@ -6878,7 +6897,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "beefy-primitives",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-support",
@@ -6925,7 +6944,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "bitflags",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "derive_more",
  "frame-benchmarking",
  "frame-support",
@@ -7093,7 +7112,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "beefy-primitives",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-election-provider-support",
  "frame-executive",
  "frame-support",
@@ -8943,7 +8962,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c55b744399c25532d63a0d2789b109df8d46fc93752d46b0782991a931a782f"
 dependencies = [
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "cfg-if 1.0.0",
  "derive_more",
  "parity-scale-codec",
@@ -9740,6 +9759,31 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "wasm-bindgen-test",
+]
+
+[[package]]
+name = "snowbridge-ethereum-beacon-light-client"
+version = "0.0.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "milagro_bls",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "snowbridge-core",
+ "snowbridge-ethereum",
+ "snowbridge-testutils",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+ "ssz_rs",
+ "ssz_rs_derive",
 ]
 
 [[package]]
@@ -10800,6 +10844,28 @@ dependencies = [
  "serde",
  "serde_json",
  "unicode-xid",
+]
+
+[[package]]
+name = "ssz_rs"
+version = "0.7.0"
+source = "git+https://github.com/Snowfork/ssz_rs?branch=feat/no-std#b70aee0be5c3ab0f08b40d23aaa4202532fc2de4"
+dependencies = [
+ "bitvec 0.20.1",
+ "funty",
+ "lazy_static",
+ "sha2 0.9.8",
+ "ssz_rs_derive",
+]
+
+[[package]]
+name = "ssz_rs_derive"
+version = "0.7.0"
+source = "git+https://github.com/Snowfork/ssz_rs?branch=feat/no-std#b70aee0be5c3ab0f08b40d23aaa4202532fc2de4"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -12066,7 +12132,7 @@ version = "0.9.12"
 source = "git+https://github.com/paritytech/polkadot.git?branch=release-v0.9.12#5feed981cf0fe671447eabaa9c0d235a8dd0003e"
 dependencies = [
  "beefy-primitives",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",
