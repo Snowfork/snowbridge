@@ -8,7 +8,6 @@ import "./utils/Bitfield.sol";
 import "./ValidatorRegistry.sol";
 import "./SimplifiedMMRVerification.sol";
 import "./ScaleCodec.sol";
-import "hardhat/console.sol";
 
 /**
  * @title A entry contract for the Ethereum light client
@@ -585,6 +584,15 @@ contract BeefyLightClient {
         );
     }
 
+    function encodePayloadFast(PayloadItem calldata item) internal pure returns (bytes memory) {
+        return bytes.concat(
+            bytes1(uint8(1) << 2),
+            item.id,
+            bytes1(uint8(32) << 2),
+            item.data
+        );
+    }
+
     function encodePayloadSlow(PayloadItem[] calldata payload) internal pure returns (bytes memory) {
         uint offs = 0;
 
@@ -601,7 +609,7 @@ contract BeefyLightClient {
             buf[offs++] = item.id[1];
 
             if (item.data.length < 64) {
-                buf[offs++] = bytes1(uint8(payload[i].data.length)) << 2;
+                buf[offs++] = bytes1(uint8(payload[i].data.length) << 2);
             } else if (item.data.length < 2**14) {
                 bytes2 prefix = bytes2((uint16(item.data.length) << 2) + 1);
                 buf[offs++] = prefix[1];
@@ -616,15 +624,6 @@ contract BeefyLightClient {
         }
 
         return buf;
-    }
-
-    function encodePayloadFast(PayloadItem calldata item) internal pure returns (bytes memory) {
-        return bytes.concat(
-            bytes1(uint8(1) << 2),
-            item.id,
-            bytes1(uint8(32) << 2),
-            item.data
-        );
     }
 
     function encodedLength(PayloadItem[] calldata payload)
