@@ -153,6 +153,9 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type FinalizedHeaders<T: Config> = StorageMap<_, Identity, H256, BeaconBlockHeader, OptionQuery>;
 
+	#[pallet::storage]
+	pub(super) type FinalizedHeadersBySlot<T: Config> = StorageMap<_, Identity, u64, H256, OptionQuery>;
+
 	/// Current sync committee corresponding to the active header
 	#[pallet::storage]
 	pub(super) type CurrentSyncCommittee<T: Config> = StorageValue<_, SyncCommittee, ValueQuery>;
@@ -202,7 +205,9 @@ pub mod pallet {
 		fn process_initial_sync(
 			initial_sync: LightClientInitialSync,
 		) -> DispatchResult {
-			Self::verify_sync_committee(initial_sync)?;
+			Self::verify_sync_committee(initial_sync.clone())?;
+
+			Self::store_header(initial_sync.header);
 			
 			Ok(())
 		}
@@ -228,6 +233,12 @@ pub mod pallet {
 			);
 
 			Ok(())
+		}
+
+		fn store_header(header: BeaconBlockHeader) {
+			<FinalizedHeaders<T>>::insert(header.body_root.clone(), header.clone());
+
+			<FinalizedHeadersBySlot<T>>::insert(header.slot, header.body_root);
 		}
 
 		pub(super) fn is_valid_merkle_branch(

@@ -1,5 +1,5 @@
+use crate::{FinalizedHeaders, FinalizedHeadersBySlot};
 use crate::mock::*;
-use crate::Error;
 use frame_support::{assert_ok};
 
 #[test]
@@ -10,9 +10,12 @@ fn it_syncs_from_an_initial_checkpoint() {
 		assert_ok!(
 			EthereumBeaconLightClient::initial_sync(
 				Origin::signed(1),
-				initial_sync,
+				initial_sync.clone(),
 			)
 		);
+
+		assert!(<FinalizedHeaders<Test>>::contains_key(initial_sync.header.body_root));
+		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(initial_sync.header.slot));
 	});
 }
 
