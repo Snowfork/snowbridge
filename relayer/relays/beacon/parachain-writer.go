@@ -113,12 +113,12 @@ func (wr *ParachainWriter) write(
 		return err
 	}
 
-	log.WithFields(logrus.Fields{
+	logrus.WithFields(logrus.Fields{
 		"nonce": wr.nonce,
 	}).Info("Submitting transaction")
 	err = wr.pool.WaitForSubmitAndWatch(ctx, &extI, onFinalized)
 	if err != nil {
-		log.WithError(err).WithField("nonce", wr.nonce).Debug("Failed to submit extrinsic")
+		logrus.WithError(err).WithField("nonce", wr.nonce).Debug("Failed to submit extrinsic")
 		return err
 	}
 

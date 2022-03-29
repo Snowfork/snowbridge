@@ -19,11 +19,14 @@ use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use ssz_rs::prelude::*;
+use sp_core::hashing::sha2_256;
 
 type Root = H256;
 type Domain = H256;
 type ValidatorIndex = u64;
+
+const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
+const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;
 
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -139,6 +142,7 @@ pub mod pallet {
 		InvalidSignature,
 		InvalidSignaturePoint,
 		InvalidAggregatePublicKeys,
+		InvalidHash,
 		SignatureVerificationFailed,
 		NoBranchExpected,
 	}
@@ -146,10 +150,8 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
-	// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/sync-protocol.md#lightclientstore
-	/// Beacon block header that is finalized
 	#[pallet::storage]
-	pub(super) type FinalizedHeaders<T: Config> = StorageValue<_, BeaconBlockHeader, ValueQuery>;
+	pub(super) type FinalizedHeaders<T: Config> = StorageMap<_, Identity, H256, BeaconBlockHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header
 	#[pallet::storage]
@@ -199,10 +201,58 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		fn process_initial_sync(
 			initial_sync: LightClientInitialSync,
-		
 		) -> DispatchResult {
+			Self::verify_sync_committee(initial_sync)?;
 			
 			Ok(())
+		}
+
+		fn verify_sync_committee(initial_sync: LightClientInitialSync) -> DispatchResult {
+			let sync_committee_root = merklization::hash_tree_root_sync_committee(initial_sync.current_sync_committee).map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
+
+			let mut branch =  Vec::<H256>::new();
+
+			for vec_branch in initial_sync.current_sync_committee_branch.branch.iter() {
+				branch.push(H256::from_slice(vec_branch.as_slice()));
+			}
+
+			ensure!(
+				Self::is_valid_merkle_branch(
+					sync_committee_root.into(),
+					branch,
+					CURRENT_SYNC_COMMITTEE_DEPTH,
+					CURRENT_SYNC_COMMITTEE_INDEX,
+					initial_sync.header.state_root
+				),
+				Error::<T>::InvalidMerkleProof
+			);
+
+			Ok(())
+		}
+
+		pub(super) fn is_valid_merkle_branch(
+			leaf: H256,
+			branch: Vec<H256>,
+			depth: u64,
+			index: u64,
+			root: Root,
+		) -> bool {
+			let mut value = leaf;
+			for i in 0..depth {
+				if (index / (2u32.pow(i as u32) as u64) % 2) == 0 {
+					// left node
+					let mut data = [0u8; 64];
+					data[0..32].copy_from_slice(&(value.0));
+					data[32..64].copy_from_slice(&(branch[i as usize].0));
+					value = sha2_256(&data).into();
+				} else {
+					let mut data = [0u8; 64]; // right node
+					data[0..32].copy_from_slice(&(branch[i as usize].0));
+					data[32..64].copy_from_slice(&(value.0));
+					value = sha2_256(&data).into();
+				}
+			}
+			return value == root;
 		}
 	}
 }

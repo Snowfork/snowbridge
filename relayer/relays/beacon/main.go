@@ -81,6 +81,7 @@ func buildSnapShotUpdate(s syncer.Sync) (LightClientSnapshot, error) {
 			ProposerIndex: snapshot.Data.Header.ProposerIndex,
 			ParentRoot:    snapshot.Data.Header.ParentRoot,
 			StateRoot:     snapshot.Data.Header.StateRoot,
+			BodyRoot:      snapshot.Data.Header.BodyRoot,
 		},
 		CurrentSyncCommittee: CurrentSyncCommittee{
 			Pubkeys:          snapshot.Data.CurrentSyncCommittee.Pubkeys,
