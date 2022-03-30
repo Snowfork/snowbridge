@@ -95,7 +95,7 @@ func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
 	input := &CompleteSignatureCommitmentTxInput{
 		Id: msg.ID,
 		Commitment: BeefyLightClientCommitmentLog{
-			Payload:        "0x" + hex.EncodeToString(msg.Commitment.Payload[:]),
+			Payload:        "0xdeadbeef",
 			BlockNumber:    msg.Commitment.BlockNumber,
 			ValidatorSetId: msg.Commitment.ValidatorSetId,
 		},

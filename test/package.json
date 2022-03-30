@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "test": "mocha --timeout 280000 --exit"
+    "test": "mocha --timeout 400000 --exit"
   },
   "devDependencies": {
     "@polkadot/api": "^7.7.1",

@@ -106,26 +106,27 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context, 
 			return err
 		}
 
-		commitments := []store.SignedCommitment{}
+		commitments := []types.SignedCommitment{}
 		for j := range block.Justifications {
-			sc := store.OptionalSignedCommitment{}
+			sc := types.OptionalSignedCommitment{}
 			if block.Justifications[j].EngineID() == "BEEF" {
 				err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
 				if err != nil {
 					log.WithFields(logFields).WithError(err).Error("Failed to decode BEEFY commitment messages")
-				} else if sc.IsSome() {
-					commitments = append(commitments, sc.Value)
+					return err
+				}
+				ok, value := sc.Unwrap()
+				if ok {
+					commitments = append(commitments, value)
 				}
 			}
 		}
 
 		for c := range commitments {
 			log.WithFields(logFields).WithFields(log.Fields{
-				"signedCommitment.Commitment.BlockNumber":    commitments[c].Commitment.BlockNumber,
-				"signedCommitment.Commitment.Payload":        commitments[c].Commitment.Payload.Hex(),
-				"signedCommitment.Commitment.ValidatorSetID": commitments[c].Commitment.ValidatorSetID,
-				"signedCommitment.Signatures":                commitments[c].Signatures,
-			}).Info("Synchronizing a BEEFY commitment.")
+				"Commitment.BlockNumber":    commitments[c].Commitment.BlockNumber,
+				"Commitment.ValidatorSetID": commitments[c].Commitment.ValidatorSetID,
+			}).Info("Synchronizing a BEEFY commitment")
 
 			err = li.processBeefyJustifications(ctx, &commitments[c])
 			if err != nil {
@@ -140,22 +141,13 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context, 
 			current += beefySkipPeriod
 		} else {
 			log.WithFields(logFields).Info("Justifications not found.")
-			current += 1
+			current++
 		}
 	}
 }
 
 func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) error {
-	ch := make(chan interface{})
-
-	sub, err := li.relaychainConn.API().Client.Subscribe(
-		context.Background(),
-		"beefy",
-		"subscribeJustifications",
-		"unsubscribeJustifications",
-		"justifications",
-		ch,
-	)
+	sub, err := li.relaychainConn.API().RPC.Beefy.SubscribeJustifications()
 	if err != nil {
 		return err
 	}
@@ -165,26 +157,17 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case msg, ok := <-ch:
+		case sc, ok := <-sub.Chan():
 			if !ok {
 				return nil
 			}
 
-			signedCommitment := &store.SignedCommitment{}
-			err := types.DecodeFromHexString(msg.(string), signedCommitment)
-			if err != nil {
-				log.WithError(err).Error("Failed to decode BEEFY commitment messages")
-			}
-
 			log.WithFields(log.Fields{
-				"signedCommitment.Commitment.BlockNumber":    signedCommitment.Commitment.BlockNumber,
-				"signedCommitment.Commitment.Payload":        signedCommitment.Commitment.Payload.Hex(),
-				"signedCommitment.Commitment.ValidatorSetID": signedCommitment.Commitment.ValidatorSetID,
-				"signedCommitment.Signatures":                signedCommitment.Signatures,
-				"rawMessage":                                 msg.(string),
-			}).Info("Witnessed a new BEEFY commitment.")
+				"Commitment.BlockNumber":    sc.Commitment.BlockNumber,
+				"Commitment.ValidatorSetID": sc.Commitment.ValidatorSetID,
+			}).Info("Witnessed a new BEEFY commitment")
 
-			err = li.processBeefyJustifications(ctx, signedCommitment)
+			err = li.processBeefyJustifications(ctx, &sc)
 			if err != nil {
 				return err
 			}
@@ -192,13 +175,13 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 	}
 }
 
-func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Context, signedCommitment *store.SignedCommitment) error {
+func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Context, signedCommitment *types.SignedCommitment) error {
 	if len(signedCommitment.Signatures) == 0 {
 		log.Info("BEEFY commitment has no signatures, skipping...")
 		return nil
 	}
 
-	signedCommitmentBytes, err := json.Marshal(signedCommitment)
+	signedCommitmentBytes, err := types.EncodeToBytes(signedCommitment)
 	if err != nil {
 		log.WithField("signedCommitment", signedCommitment).WithError(err).Error("Failed to marshal signed commitment.")
 		return nil

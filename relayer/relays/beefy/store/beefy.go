@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -32,10 +33,10 @@ type CompleteSignatureCommitmentMessage struct {
 
 type BeefyJustification struct {
 	ValidatorAddresses []common.Address
-	SignedCommitment   SignedCommitment
+	SignedCommitment   types.SignedCommitment
 }
 
-func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment SignedCommitment) BeefyJustification {
+func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment types.SignedCommitment) BeefyJustification {
 	return BeefyJustification{
 		ValidatorAddresses: validatorAddresses,
 		SignedCommitment:   signedCommitment,
@@ -43,7 +44,12 @@ func NewBeefyJustification(validatorAddresses []common.Address, signedCommitment
 }
 
 func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int64, initialBitfield []*big.Int) (NewSignatureCommitmentMessage, error) {
-	commitmentHash := (&keccak.Keccak256{}).Hash(b.SignedCommitment.Commitment.Bytes())
+	commitmentBytes, err := types.EncodeToBytes(b.SignedCommitment.Commitment)
+	if err != nil {
+		return NewSignatureCommitmentMessage{}, err
+	}
+
+	commitmentHash := (&keccak.Keccak256{}).Hash(commitmentBytes)
 
 	var commitmentHash32 [32]byte
 	copy(commitmentHash32[:], commitmentHash[0:32])
@@ -53,7 +59,12 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 		return NewSignatureCommitmentMessage{}, err
 	}
 
-	sigValEthereum := BeefySigToEthSig(b.SignedCommitment.Signatures[valAddrIndex].Value)
+	ok, beefySig := b.SignedCommitment.Signatures[valAddrIndex].Unwrap()
+	if !ok {
+		return NewSignatureCommitmentMessage{}, fmt.Errorf("signature is empty")
+	}
+
+	sigValEthereum := BeefySigToEthSig(beefySig)
 
 	msg := NewSignatureCommitmentMessage{
 		CommitmentHash:                commitmentHash32,
@@ -67,7 +78,7 @@ func (b *BeefyJustification) BuildNewSignatureCommitmentMessage(valAddrIndex int
 	return msg, nil
 }
 
-func BeefySigToEthSig(beefySig BeefySignature) []byte {
+func BeefySigToEthSig(beefySig types.BeefySignature) []byte {
 	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
 	// Split signature into r, s, v and add 27 to v
 	sigValrs := beefySig[:64]
@@ -111,7 +122,12 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 	validatorPublicKeys := []common.Address{}
 	validatorPublicKeyMerkleProofs := [][][32]byte{}
 	for _, validatorPosition := range validatorPositions {
-		beefySig := b.SignedCommitment.Signatures[validatorPosition.Int64()].Value
+
+		ok, beefySig := b.SignedCommitment.Signatures[validatorPosition.Int64()].Unwrap()
+		if !ok {
+			return CompleteSignatureCommitmentMessage{}, fmt.Errorf("signature is empty")
+		}
+
 		ethSig := BeefySigToEthSig(beefySig)
 		signatures = append(signatures, ethSig)
 
@@ -126,10 +142,18 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		validatorPublicKeyMerkleProofs = append(validatorPublicKeyMerkleProofs, merkleProof)
 	}
 
+	var items []beefylightclient.BeefyLightClientPayloadItem
+	for _, payloadItem := range b.SignedCommitment.Commitment.Payload {
+		items = append(items, beefylightclient.BeefyLightClientPayloadItem{
+			Id: payloadItem.ID,
+			Data: payloadItem.Data,
+		})
+	}
+
 	commitment := beefylightclient.BeefyLightClientCommitment{
-		Payload:        b.SignedCommitment.Commitment.Payload,
-		BlockNumber:    uint32(b.SignedCommitment.Commitment.BlockNumber),
-		ValidatorSetId: uint64(b.SignedCommitment.Commitment.ValidatorSetID),
+		Payload:        items,
+		BlockNumber:    b.SignedCommitment.Commitment.BlockNumber,
+		ValidatorSetId: b.SignedCommitment.Commitment.ValidatorSetID,
 	}
 
 	var latestMMRProof merkle.SimplifiedMMRProof

@@ -205,7 +205,7 @@ func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
 	}
 	var sig1Input [65]byte
 	copy(sig1Input[:], sig1Bytes)
-	beefySig1 := store.BeefySignature(sig1Input)
+	beefySig1 := types.BeefySignature(sig1Input)
 
 	sig2 := "daf339e4e248cdc46b4b84640ffc3987ab843ab336b9e39fcf7cc9bb65841b2a0b224d5116c8b0e7b7bb3a99df92d53d4ffe0f7857a753ada3d28be130585ab801"
 	sig2Bytes, err := hex.DecodeString(sig2)
@@ -214,17 +214,17 @@ func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
 	}
 	var sig2Input [65]byte
 	copy(sig2Input[:], sig2Bytes)
-	beefySig2 := store.BeefySignature(sig2Input)
+	beefySig2 := types.BeefySignature(sig2Input)
 
-	signedCommitment := store.SignedCommitment{
-		Commitment: store.Commitment{
+	signedCommitment := types.SignedCommitment{
+		Commitment: types.Commitment{
 			Payload:        types.NewH256(payloadBytes),
 			BlockNumber:    types.NewU32(930),
 			ValidatorSetID: types.NewU64(0),
 		},
-		Signatures: []store.OptionBeefySignature{
-			store.NewOptionBeefySignature(beefySig1),
-			store.NewOptionBeefySignature(beefySig2),
+		Signatures: []types.OptionBeefySignature{
+			types.NewOptionBeefySignature(beefySig1),
+			types.NewOptionBeefySignature(beefySig2),
 		},
 	}
 
@@ -248,47 +248,3 @@ func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
 	}
 }
 
-func (t *StoreTestSuite) TestMarshalOptionalBeefySignature() {
-
-	// Test Some(signature) case
-	sig1 := "d0834df8b658963611deecf57b845f906f517c1a9b9467f31e8dc292d1a131d22ccb2201dc6e49043fce104418442f9d20acaa3c5d86d2ce20285de0e64b057a01"
-	sig1Bytes, err := hex.DecodeString(sig1)
-	if err != nil {
-		panic(err)
-	}
-	var sig1Input [65]byte
-	copy(sig1Input[:], sig1Bytes)
-	beefySig1 := store.BeefySignature(sig1Input)
-
-	optionalBeefySig1 := store.NewOptionBeefySignature(beefySig1)
-
-	bytes, err := json.Marshal(optionalBeefySig1)
-	if err != nil {
-		panic(err)
-	}
-
-	var foo store.OptionBeefySignature
-	err = json.Unmarshal(bytes, &foo)
-	if err != nil {
-		panic(err)
-	}
-
-	t.Equal(optionalBeefySig1, foo)
-
-	// Test None case
-
-	optionalBeefySig2 := store.NewOptionBeefySignatureEmpty()
-
-	bytes2, err := json.Marshal(optionalBeefySig2)
-	if err != nil {
-		panic(err)
-	}
-
-	var foo2 store.OptionBeefySignature
-	err = json.Unmarshal(bytes2, &foo2)
-	if err != nil {
-		panic(err)
-	}
-
-	t.Equal(optionalBeefySig2, foo2)
-}

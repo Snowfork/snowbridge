@@ -149,7 +149,7 @@ func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, 
 
 	signedValidators := []*big.Int{}
 	for i, signature := range beefyJustification.SignedCommitment.Signatures {
-		if signature.Option.IsSome() {
+		if signature.IsSome() {
 			signedValidators = append(signedValidators, big.NewInt(int64(i)))
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3" // required by gorm
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"golang.org/x/sync/errgroup"
 
 	log "github.com/sirupsen/logrus"
@@ -64,8 +65,8 @@ func (b *BeefyRelayInfo) ToBeefyJustification() (BeefyJustification, error) {
 		return BeefyJustification{}, err
 	}
 
-	var signedCommitment SignedCommitment
-	if err := json.Unmarshal(b.SignedCommitment, &signedCommitment); err != nil {
+	var signedCommitment types.SignedCommitment
+	if err := types.DecodeFromBytes(b.SignedCommitment, &signedCommitment); err != nil {
 		return BeefyJustification{}, err
 	}
 
