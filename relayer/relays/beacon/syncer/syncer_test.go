@@ -1,6 +1,7 @@
 package syncer
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -44,17 +45,17 @@ func TestComputeEpochForNextPeriod(t *testing.T) {
 		{
 			name:     "first epoch",
 			epoch:    0,
-			expected: 512,
+			expected: 256,
 		},
 		{
 			name:     "another epoch",
 			epoch:    30,
-			expected: 512,
+			expected: 256,
 		},
 		{
 			name:     "another epoch",
 			epoch:    513,
-			expected: 1024,
+			expected: 768,
 		},
 	}
 
@@ -95,4 +96,15 @@ func TestHexToBinaryString(t *testing.T) {
 			t.Errorf("HexToBinaryString was incorrect, got: %s, want: %s", result, tt.expected)
 		}
 	}
+}
+
+func TestProofs(t *testing.T) {
+	syncer := New("http://localhost:9596")
+
+	mew, err := syncer.GetFinalizedCheckpointProofs("0xe1c879117085b9dfe94243b22fa1944e2ddedc22cbb7b166affb8c2576b8fc30")
+	if err != nil {
+		t.Errorf("unable to get proofs")
+	}
+
+	fmt.Printf("%v", mew)
 }
