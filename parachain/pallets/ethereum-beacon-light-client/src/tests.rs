@@ -19,3 +19,17 @@ fn it_syncs_from_an_initial_checkpoint() {
 	});
 }
 
+#[test]
+fn it_updates_a_committee_period_sync_update() {
+	let update = get_committee_sync_period_update();
+
+	new_tester().execute_with(|| {
+		assert_ok!(
+			EthereumBeaconLightClient::sync_committee_period_update(
+				Origin::signed(1),
+				update,
+			)
+		);
+
+	});
+}

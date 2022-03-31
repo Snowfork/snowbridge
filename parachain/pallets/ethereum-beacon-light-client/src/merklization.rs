@@ -127,6 +127,34 @@ mod tests {
     }
 
     #[test]
+    pub fn test_hash_tree_root_beacon_header_2() {
+        let hash_root = merklization::hash_tree_root_beacon_header(
+            ethereum_beacon_light_client::BeaconBlockHeader {
+                slot: 3476424,
+                proposer_index: 314905,
+                parent_root: hex!(
+                    "c069d7b49cffd2b815b0fb8007eb9ca91202ea548df6f3db60000f29b2489f28"
+                )
+                .into(),
+                state_root: hex!(
+                    "444d293e4533501ee508ad608783a7d677c3c566f001313e8a02ce08adf590a3"
+                )
+                .into(),
+                body_root: hex!(
+                    "6508a0241047f21ba88f05d05b15534156ab6a6f8e029a9a5423da429834e04a"
+                )
+                .into(),
+            }
+        );
+
+        assert_ok!(&hash_root);
+        assert_eq!(
+            hash_root.unwrap(),
+            hex!("0aa41166ff01e58e111ac8c42309a738ab453cf8d7285ed8477b1c484acb123e")
+        );
+    }
+
+    #[test]
     pub fn test_hash_tree_root_sync_committee() {
         let hash_root = merklization::hash_tree_root_sync_committee(
             ethereum_beacon_light_client::SyncCommittee { 

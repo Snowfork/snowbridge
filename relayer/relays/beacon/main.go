@@ -43,6 +43,11 @@ type CurrentSyncCommittee struct {
 	AggregatePubkeys string
 }
 
+type SyncAggregate struct {
+	SyncCommitteeBits      string
+	SyncCommitteeSignature string
+}
+
 type LightClientSnapshot struct {
 	Header                     Header
 	CurrentSyncCommittee       CurrentSyncCommittee
@@ -50,9 +55,9 @@ type LightClientSnapshot struct {
 }
 
 type FinalizedBlockUpdate struct {
-	Header                     Header
-	CurrentSyncCommittee       CurrentSyncCommittee
-	CurrentSyncCommitteeBranch []string
+	FinalizedHeader Header
+	FinalityBranch  []string
+	SyncAggregate   SyncAggregate
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
@@ -67,12 +72,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"lightClientSnapshot": lightClientSnapshot,
-	}).Info("compiled light client snapshot, sending for intial sync")
-
-	// TODO make intial_sync dispatchable call
-
 	err = r.SyncCommitteePeriodUpdates(lightClientSnapshot.Header.Slot)
 	if err != nil {
 		logrus.WithError(err).Error("unable to sync committee updates")
@@ -81,35 +80,18 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
-	finalizedBlockUpdate, err := r.buildFinalizedBlockUpdate()
+	err = r.buildFinalizedBlockUpdate()
 	if err != nil {
 		logrus.WithError(err).Error("unable to build light client snapshot")
 
 		return err
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"finalizedBlockUpdate": finalizedBlockUpdate,
-	}).Info("compiled finalized block")
-
-	// TODO make import_finalized_header dispatchable call
-
 	return nil
 }
 
 func (r *Relay) buildSnapShotUpdate(blockId string) (LightClientSnapshot, error) {
-	checkpoint, err := r.syncer.GetHeadCheckpoint()
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
-
-		return LightClientSnapshot{}, err
-	}
-
-	logrus.WithFields(logrus.Fields{
-		"checkpoint": checkpoint,
-	}).Trace("fetched finalized checkpoint")
-
-	snapshot, err := r.syncer.GetLightClientSnapshot(checkpoint.Data.Finalized.Root)
+	snapshot, err := r.syncer.GetTrustedLightClientSnapshot()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch snapshot")
 
@@ -140,10 +122,16 @@ func (r *Relay) buildSnapShotUpdate(blockId string) (LightClientSnapshot, error)
 		},
 		CurrentSyncCommittee: CurrentSyncCommittee{
 			Pubkeys:          snapshot.Data.CurrentSyncCommittee.Pubkeys,
-			AggregatePubkeys: snapshot.Data.CurrentSyncCommittee.AggregatePubkeys,
+			AggregatePubkeys: snapshot.Data.CurrentSyncCommittee.AggregatePubkey,
 		},
 		CurrentSyncCommitteeBranch: snapshot.Data.CurrentSyncCommitteeBranch,
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"lightClientSnapshot": lightClientSnapshot,
+	}).Info("compiled light client snapshot, sending for intial sync")
+
+	// TODO make intial_sync dispatchable call
 
 	return lightClientSnapshot, nil
 }
@@ -159,20 +147,41 @@ func (r *Relay) SyncCommitteePeriodUpdates(checkpointSlot uint64) error {
 	currentEpoch := syncer.ComputeEpochAtSlot(head.Slot)
 	checkpointEpoch := syncer.ComputeEpochAtSlot(checkpointSlot)
 
-	logrus.WithFields(logrus.Fields{
-		"currentEpoch":    currentEpoch,
-		"checkpointEpoch": checkpointEpoch,
-	}).Info("computed epochs")
-
 	currentSyncPeriod := syncer.ComputeSyncPeriodAtEpoch(currentEpoch)
 	checkpointSyncPeriod := syncer.ComputeSyncPeriodAtEpoch(checkpointEpoch)
 
 	syncPeriodMarker := checkpointSyncPeriod
 
+	logrus.WithFields(logrus.Fields{
+		"currentEpoch":         currentEpoch,
+		"checkpointEpoch":      checkpointEpoch,
+		"currentSyncPeriod":    currentSyncPeriod,
+		"checkpointSyncPeriod": checkpointSyncPeriod,
+	}).Info("computed epochs")
+
+	var toPeriod uint64
 	// Incrementally move the chain forward by fetching an update per sync period and sending that to the parachain
-	for syncPeriodMarker+SYNC_COMMITTEE_INCREMENT < currentSyncPeriod {
-		err = r.syncCommitteeForPeriod(syncPeriodMarker, syncPeriodMarker+SYNC_COMMITTEE_INCREMENT)
+	for syncPeriodMarker < currentSyncPeriod {
+		logrus.WithFields(logrus.Fields{
+			"syncPeriodMarker":  syncPeriodMarker,
+			"currentSyncPeriod": currentSyncPeriod,
+		}).Info("checking...")
+
+		toPeriod := syncPeriodMarker + SYNC_COMMITTEE_INCREMENT
+
+		if toPeriod > currentSyncPeriod {
+			toPeriod = currentSyncPeriod
+		}
+
+		err = r.syncCommitteeForPeriod(syncPeriodMarker, toPeriod)
+
+		syncPeriodMarker = toPeriod + 1
 		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"from": syncPeriodMarker,
+				"to":   toPeriod,
+			}).Error("unable to get sync committeee update for period")
+
 			return err
 		}
 	}
@@ -188,7 +197,7 @@ func (r *Relay) SyncCommitteePeriodUpdates(checkpointSlot uint64) error {
 	currentUpdatedEpoch := syncer.ComputeEpochAtSlot(head.Slot)
 	currentUpdatedSyncPeriod := syncer.ComputeSyncPeriodAtEpoch(currentUpdatedEpoch)
 
-	if currentUpdatedSyncPeriod != currentSyncPeriod {
+	if currentUpdatedSyncPeriod != toPeriod {
 		err = r.syncCommitteeForPeriod(currentUpdatedSyncPeriod, currentUpdatedSyncPeriod)
 		if err != nil {
 			return err
@@ -217,24 +226,27 @@ func (r *Relay) syncCommitteeForPeriod(from, to uint64) error {
 	return nil
 }
 
-func (r *Relay) buildFinalizedBlockUpdate() (FinalizedBlockUpdate, error) {
+func (r *Relay) buildFinalizedBlockUpdate() error {
 	checkpoint, err := r.syncer.GetHeadCheckpoint()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
 
-		return FinalizedBlockUpdate{}, err
+		return err
 	}
 
 	header, err := r.syncer.GetHeader(checkpoint.Data.Finalized.Root)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch header")
 
-		return FinalizedBlockUpdate{}, err
+		return err
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"checkpoint": checkpoint,
-	}).Info("fetched finalized checkpoint")
+	block, err := r.syncer.GetBeaconBlock(header.Slot)
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch header")
+
+		return err
+	}
 
 	/*
 		proofs, err := s.GetFinalizedCheckpointProofs(header.StateRoot.String())
@@ -248,9 +260,28 @@ func (r *Relay) buildFinalizedBlockUpdate() (FinalizedBlockUpdate, error) {
 			"proofs": proofs,
 		}).Info("fetched proofs")*/
 
-	return FinalizedBlockUpdate{
-		Header: Header{
-			Slot: header.Slot,
+	update := FinalizedBlockUpdate{
+		FinalizedHeader: Header{
+			Slot:          header.Slot,
+			ProposerIndex: header.ProposerIndex,
+			ParentRoot:    header.ParentRoot,
+			StateRoot:     header.StateRoot,
+			BodyRoot:      header.BodyRoot,
 		},
-	}, nil
+		FinalityBranch: []string{},
+		SyncAggregate: SyncAggregate{
+			SyncCommitteeBits:      block.Data.Message.Body.SyncAggregate.SyncCommitteeBits,
+			SyncCommitteeSignature: block.Data.Message.Body.SyncAggregate.SyncCommitteeSignature,
+		},
+		// TODO add Pubfork version
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"finalizedBlockUpdate": update,
+	}).Info("compiled finalized block")
+
+	// TODO make import_finalized_header dispatchable call
+
+	return nil
+
 }
