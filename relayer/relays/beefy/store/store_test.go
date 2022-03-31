@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
@@ -168,9 +169,11 @@ func (suite *StoreTestSuite) TestDeleteItem() {
 	time.Sleep(2 * time.Second)
 
 	foundItem, err := suite.database.GetItemByID(id)
-	suite.Equal(err, nil)
-	suite.Equal(item.ID, foundItem.ID)
-	suite.Equal(item.CompleteOnBlock, foundItem.CompleteOnBlock)
+	if suite.NoError(err) {
+		suite.Equal(item.ID, foundItem.ID)
+		suite.Equal(item.CompleteOnBlock, foundItem.CompleteOnBlock)
+	}
+
 
 	// Pass delete command to write loop
 	deleteCmd := store.NewDatabaseCmd(&item, store.Delete, nil)
@@ -178,11 +181,8 @@ func (suite *StoreTestSuite) TestDeleteItem() {
 
 	time.Sleep(2 * time.Second)
 
-	deletedItem, err := suite.database.GetItemByID(id)
-	suite.Equal(err, nil)
-	suite.Equal(store.Status(0), deletedItem.Status)
-	suite.Equal(uint(0), deletedItem.ID)
-	suite.Equal(uint64(0), deletedItem.CompleteOnBlock)
+	_, err = suite.database.GetItemByID(id)
+	suite.ErrorIs(err, gorm.ErrRecordNotFound)
 }
 
 func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
@@ -218,9 +218,12 @@ func loadSampleBeefyRelayInfo() store.BeefyRelayInfo {
 
 	signedCommitment := types.SignedCommitment{
 		Commitment: types.Commitment{
-			Payload:        types.NewH256(payloadBytes),
-			BlockNumber:    types.NewU32(930),
-			ValidatorSetID: types.NewU64(0),
+			Payload:        	[]types.PayloadItem{{
+				ID: [2]byte{109, 104},
+				Data: payloadBytes,
+			}},
+			BlockNumber:    930,
+			ValidatorSetID: 0,
 		},
 		Signatures: []types.OptionBeefySignature{
 			types.NewOptionBeefySignature(beefySig1),
