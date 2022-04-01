@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 
@@ -142,22 +143,19 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		validatorPublicKeyMerkleProofs = append(validatorPublicKeyMerkleProofs, merkleProof)
 	}
 
-	var items []beefylightclient.BeefyLightClientPayloadItem
-	for _, payloadItem := range b.SignedCommitment.Commitment.Payload {
-		items = append(items, beefylightclient.BeefyLightClientPayloadItem{
-			Id: payloadItem.ID,
-			Data: payloadItem.Data,
-		})
+	payload, err := buildPayload(b.SignedCommitment.Commitment.Payload)
+	if err != nil {
+		return CompleteSignatureCommitmentMessage{}, err
 	}
 
 	commitment := beefylightclient.BeefyLightClientCommitment{
-		Payload:        items,
+		Payload:        *payload,
 		BlockNumber:    b.SignedCommitment.Commitment.BlockNumber,
 		ValidatorSetId: b.SignedCommitment.Commitment.ValidatorSetID,
 	}
 
 	var latestMMRProof merkle.SimplifiedMMRProof
-	err := types.DecodeFromBytes(info.SerializedLatestMMRProof, &latestMMRProof)
+	err = types.DecodeFromBytes(info.SerializedLatestMMRProof, &latestMMRProof)
 	if err != nil {
 		return CompleteSignatureCommitmentMessage{}, err
 	}
@@ -192,4 +190,44 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 		},
 	}
 	return msg, nil
+}
+
+func buildPayload(items []types.PayloadItem) (*beefylightclient.BeefyLightClientPayload, error) {
+	index := -1
+
+	for i, payloadItem := range items {
+		if payloadItem.ID == [2]byte{0x6d, 0x68} {
+			index = i
+		}
+	}
+
+	if index < 0 {
+		return nil, fmt.Errorf("Did not find mmr root hash in commitment")
+	}
+
+	mmrRootHash := [32]byte{}
+
+	if len(items[index].Data) != 32 {
+		return nil, fmt.Errorf("Mmr root hash is invalid")
+	}
+
+	if copy(mmrRootHash[:], items[index].Data) != 32 {
+		return nil, fmt.Errorf("Mmr root hash is invalid")
+	}
+
+	payloadBytes, err := types.EncodeToBytes(items)
+	if err != nil {
+		return nil, err
+	}
+
+	slices := bytes.Split(payloadBytes, mmrRootHash[:])
+	if len(slices) != 2 {
+		return nil, fmt.Errorf("Expected 2 slices")
+	}
+
+	return &beefylightclient.BeefyLightClientPayload{
+		MmrRootHash: mmrRootHash,
+		Prefix: slices[0],
+		Suffix: slices[1],
+	}, nil
 }
