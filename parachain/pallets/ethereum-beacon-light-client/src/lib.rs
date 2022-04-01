@@ -186,7 +186,8 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 		Unknown,
 		InsufficientSyncCommitteeParticipants,
 		InvalidSyncCommiteeSignature,
-		InvalidMerkleProof,
+		InvalidHeaderMerkleProof,
+		InvalidSyncCommitteeMerkleProof,
 		InvalidSignature,
 		InvalidSignaturePoint,
 		InvalidAggregatePublicKeys,
@@ -306,12 +307,10 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			Self::verify_sync_committee(
 				update.next_sync_committee, 
 				update.next_sync_committee_branch, 
-				update.attested_header.state_root,
+				update.finalized_header.state_root,
 				NEXT_SYNC_COMMITTEE_DEPTH,
 				NEXT_SYNC_COMMITTEE_INDEX
 			)?;
-
-			let header_root = merklization::hash_tree_root_beacon_header(update.finalized_header.clone()).map_err(|_| DispatchError::Other("Header hash tree root failed"))?;
 
 			Self::verify_header(
 				update.finalized_header, 
@@ -437,7 +436,7 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 					index,
 					header_state_root
 				),
-				Error::<T>::InvalidMerkleProof
+				Error::<T>::InvalidSyncCommitteeMerkleProof
 			);
 
 			Ok(())
@@ -460,7 +459,7 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 					index,
 					attested_header_state_root
 				),
-				Error::<T>::InvalidMerkleProof
+				Error::<T>::InvalidHeaderMerkleProof
 			);
 
 			Ok(())
