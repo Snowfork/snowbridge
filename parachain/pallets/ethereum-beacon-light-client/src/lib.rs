@@ -328,9 +328,7 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			update: LightClientFinalizedHeaderUpdate,
 		) -> DispatchResult {		
 			// TODO merkle proof
-
-			// TODO convert sync_committee_bits to bitvec
-			let sync_commitee_bits = update.sync_committee_aggregate.sync_committee_bits.clone();
+			let sync_commitee_bits = Self::convert_to_binary(update.sync_committee_aggregate.sync_committee_bits.clone());
 
 			ensure!(Self::get_sync_committee_sum(update.sync_committee_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
 				Error::<T>::InsufficientSyncCommitteeParticipants
@@ -543,6 +541,28 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 				}
 			}
 			return value == root;
+		}
+
+		pub(super) fn convert_to_binary(input: Vec<u8>) -> Vec<u8> {
+			let mut result = Vec::new();
+
+			for input_decimal in input.iter() {
+				let mut tmp = Vec::new();
+
+				let mut remaining = *input_decimal;
+
+				while remaining != 0 {
+					let remainder = remaining % 2;
+					tmp.push(remainder);
+					remaining = remaining / 2;
+				}
+				
+				tmp.reverse();
+
+				result.append(&mut tmp);
+			}
+			 
+			result
 		}
 	}
 }
