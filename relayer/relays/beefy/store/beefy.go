@@ -192,6 +192,8 @@ func (b *BeefyJustification) BuildCompleteSignatureCommitmentMessage(info BeefyR
 	return msg, nil
 }
 
+// Builds a payload which is partially SCALE-encoded. This is more efficient for the light client to verify
+// as it does not have to implement a fully fledged SCALE-encoder.
 func buildPayload(items []types.PayloadItem) (*beefylightclient.BeefyLightClientPayload, error) {
 	index := -1
 
@@ -222,6 +224,7 @@ func buildPayload(items []types.PayloadItem) (*beefylightclient.BeefyLightClient
 
 	slices := bytes.Split(payloadBytes, mmrRootHash[:])
 	if len(slices) != 2 {
+		// Its theoretically possible that the payload items may contain mmrRootHash more than once, causing an invalid split
 		return nil, fmt.Errorf("Expected 2 slices")
 	}
 
