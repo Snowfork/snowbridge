@@ -56,7 +56,7 @@ type CompleteSignatureCommitmentTxInput struct {
 	SimplifiedMMRProof SimplifiedMMRProofLog             `json:"simplifiedMMRProof"`
 }
 
-func (wr *BeefyEthereumWriter) LogBeefyFixtureDataAll(
+func (wr *EthereumWriter) LogBeefyFixtureDataAll(
 	msg store.CompleteSignatureCommitmentMessage,
 	_ store.BeefyRelayInfo,
 ) error {
@@ -147,7 +147,7 @@ func (h *Keccak256) Hash(data []byte) []byte {
 	return hash[:]
 }
 
-func (wr *BeefyEthereumWriter) GetFailingMessage(client ethclient.Client, hash common.Hash) (string, error) {
+func (wr *EthereumWriter) GetFailingMessage(client ethclient.Client, hash common.Hash) (string, error) {
 	tx, _, err := client.TransactionByHash(context.Background(), hash)
 	if err != nil {
 		return "", err

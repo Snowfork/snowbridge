@@ -23,7 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type BeefyEthereumWriter struct {
+type EthereumWriter struct {
 	config           *SinkConfig
 	ethereumConn     *ethereum.Connection
 	beefyDB          *store.Database
@@ -32,14 +32,14 @@ type BeefyEthereumWriter struct {
 	beefyMessages    <-chan store.BeefyRelayInfo
 }
 
-func NewBeefyEthereumWriter(
+func NewEthereumWriter(
 	config *SinkConfig,
 	ethereumConn *ethereum.Connection,
 	beefyDB *store.Database,
 	databaseMessages chan<- store.DatabaseCmd,
 	beefyMessages <-chan store.BeefyRelayInfo,
-) *BeefyEthereumWriter {
-	return &BeefyEthereumWriter{
+) *EthereumWriter {
+	return &EthereumWriter{
 		config:           config,
 		ethereumConn:     ethereumConn,
 		beefyDB:          beefyDB,
@@ -48,7 +48,7 @@ func NewBeefyEthereumWriter(
 	}
 }
 
-func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
+func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	address := common.HexToAddress(wr.config.Contracts.BeefyLightClient)
 	beefyLightClientContract, err := beefylightclient.NewContract(address, wr.ethereumConn.GetClient())
@@ -72,7 +72,7 @@ func (wr *BeefyEthereumWriter) Start(ctx context.Context, eg *errgroup.Group) er
 	return nil
 }
 
-func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
+func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -105,7 +105,7 @@ func (wr *BeefyEthereumWriter) writeMessagesLoop(ctx context.Context) error {
 	}
 }
 
-func (wr *BeefyEthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
+func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 	chainID := wr.ethereumConn.ChainID()
 	keypair := wr.ethereumConn.GetKP()
 
@@ -136,7 +136,7 @@ func (wr *BeefyEthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpt
 	return &options
 }
 
-func (wr *BeefyEthereumWriter) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
+func (wr *EthereumWriter) WriteNewSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
 		return fmt.Errorf("error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())
@@ -223,7 +223,7 @@ func BitfieldToString(bitfield []*big.Int) string {
 }
 
 // WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the BeefyLightClient contract
-func (wr *BeefyEthereumWriter) WriteCompleteSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
+func (wr *EthereumWriter) WriteCompleteSignatureCommitment(ctx context.Context, info store.BeefyRelayInfo) error {
 	beefyJustification, err := info.ToBeefyJustification()
 	if err != nil {
 		return fmt.Errorf("error converting BeefyRelayInfo to BeefyJustification: %s", err.Error())

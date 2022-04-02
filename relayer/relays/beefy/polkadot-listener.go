@@ -19,25 +19,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type BeefyRelaychainListener struct {
+type PolkadotListener struct {
 	config         *Config
 	relaychainConn *relaychain.Connection
 	beefyMessages  chan<- store.BeefyRelayInfo
 }
 
-func NewBeefyRelaychainListener(
+func NewPolkadotListener(
 	config *Config,
 	relaychainConn *relaychain.Connection,
 	beefyMessages chan<- store.BeefyRelayInfo,
-) *BeefyRelaychainListener {
-	return &BeefyRelaychainListener{
+) *PolkadotListener {
+	return &PolkadotListener{
 		config:         config,
 		relaychainConn: relaychainConn,
 		beefyMessages:  beefyMessages,
 	}
 }
 
-func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group, startingBeefyBlock uint64) error {
+func (li *PolkadotListener) Start(ctx context.Context, eg *errgroup.Group, startingBeefyBlock uint64) error {
 	eg.Go(func() error {
 		defer close(li.beefyMessages)
 
@@ -59,7 +59,7 @@ func (li *BeefyRelaychainListener) Start(ctx context.Context, eg *errgroup.Group
 	return nil
 }
 
-func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context, latestBeefyBlock uint64) error {
+func (li *PolkadotListener) syncBeefyJustifications(ctx context.Context, latestBeefyBlock uint64) error {
 	beefySkipPeriod := li.config.Source.BeefySkipPeriod
 
 	log.WithFields(
@@ -146,7 +146,7 @@ func (li *BeefyRelaychainListener) syncBeefyJustifications(ctx context.Context, 
 	}
 }
 
-func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) error {
+func (li *PolkadotListener) subBeefyJustifications(ctx context.Context) error {
 	sub, err := li.relaychainConn.API().RPC.Beefy.SubscribeJustifications()
 	if err != nil {
 		return err
@@ -175,7 +175,7 @@ func (li *BeefyRelaychainListener) subBeefyJustifications(ctx context.Context) e
 	}
 }
 
-func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Context, signedCommitment *types.SignedCommitment) error {
+func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, signedCommitment *types.SignedCommitment) error {
 	if len(signedCommitment.Signatures) == 0 {
 		log.Info("BEEFY commitment has no signatures, skipping...")
 		return nil
@@ -237,7 +237,7 @@ func (li *BeefyRelaychainListener) processBeefyJustifications(ctx context.Contex
 	}
 }
 
-func (li *BeefyRelaychainListener) getBeefyAuthorities(blockNumber uint64) ([]common.Address, error) {
+func (li *PolkadotListener) getBeefyAuthorities(blockNumber uint64) ([]common.Address, error) {
 	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber)
 	if err != nil {
 		return nil, err

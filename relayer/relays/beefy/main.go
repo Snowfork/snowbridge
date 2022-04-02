@@ -15,15 +15,15 @@ import (
 )
 
 type Relay struct {
-	config                  *Config
-	relaychainConn          *relaychain.Connection
-	ethereumConn            *ethereum.Connection
-	beefyEthereumListener   *BeefyEthereumListener
-	beefyRelaychainListener *BeefyRelaychainListener
-	beefyEthereumWriter     *BeefyEthereumWriter
-	beefyDB                 *store.Database
-	beefyMessages           chan store.BeefyRelayInfo
-	ethHeaders              chan chain.Header
+	config           *Config
+	relaychainConn   *relaychain.Connection
+	ethereumConn     *ethereum.Connection
+	ethereumListener *EthereumListener
+	polkadotListener *PolkadotListener
+	ethereumWriter   *EthereumWriter
+	beefyDB          *store.Database
+	beefyMessages    chan store.BeefyRelayInfo
+	ethHeaders       chan chain.Header
 }
 
 func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
@@ -43,28 +43,28 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 	beefyMessages := make(chan store.BeefyRelayInfo)
 	ethHeaders := make(chan chain.Header)
 
-	beefyEthereumListener := NewBeefyEthereumListener(&config.Sink,
+	ethereumListener := NewEthereumListener(&config.Sink,
 		ethereumConn, beefyDB, beefyMessages, dbMessages, ethHeaders)
 
-	beefyEthereumWriter := NewBeefyEthereumWriter(&config.Sink, ethereumConn,
+	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn,
 		beefyDB, dbMessages, beefyMessages)
 
-	beefyRelaychainListener := NewBeefyRelaychainListener(
+	polkadotListener := NewPolkadotListener(
 		config,
 		relaychainConn,
 		beefyMessages,
 	)
 
 	return &Relay{
-		config:                  config,
-		relaychainConn:          relaychainConn,
-		beefyEthereumListener:   beefyEthereumListener,
-		ethereumConn:            ethereumConn,
-		beefyEthereumWriter:     beefyEthereumWriter,
-		beefyRelaychainListener: beefyRelaychainListener,
-		beefyDB:                 beefyDB,
-		beefyMessages:           beefyMessages,
-		ethHeaders:              ethHeaders,
+		config:           config,
+		relaychainConn:   relaychainConn,
+		ethereumListener: ethereumListener,
+		ethereumConn:     ethereumConn,
+		ethereumWriter:   ethereumWriter,
+		polkadotListener: polkadotListener,
+		beefyDB:          beefyDB,
+		beefyMessages:    beefyMessages,
+		ethHeaders:       ethHeaders,
 	}, nil
 }
 
@@ -85,17 +85,17 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	latestBeefyBlock, err := relay.beefyEthereumListener.Start(ctx, eg)
+	latestBeefyBlock, err := relay.ethereumListener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	err = relay.beefyRelaychainListener.Start(ctx, eg, latestBeefyBlock)
+	err = relay.polkadotListener.Start(ctx, eg, latestBeefyBlock)
 	if err != nil {
 		return err
 	}
 
-	err = relay.beefyEthereumWriter.Start(ctx, eg)
+	err = relay.ethereumWriter.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
