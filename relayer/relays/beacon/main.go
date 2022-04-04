@@ -48,10 +48,17 @@ type SyncAggregate struct {
 	SyncCommitteeSignature string
 }
 
+type Genesis struct {
+	ValidatorsRoot string
+	Time           string
+	ForkVersion    string
+}
+
 type LightClientSnapshot struct {
 	Header                     Header
 	CurrentSyncCommittee       CurrentSyncCommittee
 	CurrentSyncCommitteeBranch []string
+	Genesis                    Genesis
 }
 
 type FinalizedBlockUpdate struct {
@@ -65,9 +72,9 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	//r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 
 	// Get an initial snapshot of the chain from a verified block
-	lightClientSnapshot, err := r.buildSnapShotUpdate("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
+	lightClientSnapshot, err := r.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
 	if err != nil {
-		logrus.WithError(err).Error("unable to build light client snapshot")
+		logrus.WithError(err).Error("unable to do intial beacon chain sync")
 
 		return err
 	}
@@ -82,7 +89,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
 	err = r.buildFinalizedBlockUpdate()
 	if err != nil {
-		logrus.WithError(err).Error("unable to build light client snapshot")
+		logrus.WithError(err).Error("unable to sync finalized header")
 
 		return err
 	}
@@ -90,7 +97,14 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (r *Relay) buildSnapShotUpdate(blockId string) (LightClientSnapshot, error) {
+func (r *Relay) InitialSync(blockId string) (LightClientSnapshot, error) {
+	genesis, err := r.syncer.GetGenesis()
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch snapshot")
+
+		return LightClientSnapshot{}, err
+	}
+
 	snapshot, err := r.syncer.GetTrustedLightClientSnapshot()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch snapshot")
@@ -125,6 +139,11 @@ func (r *Relay) buildSnapShotUpdate(blockId string) (LightClientSnapshot, error)
 			AggregatePubkeys: snapshot.Data.CurrentSyncCommittee.AggregatePubkey,
 		},
 		CurrentSyncCommitteeBranch: snapshot.Data.CurrentSyncCommitteeBranch,
+		Genesis: Genesis{
+			ValidatorsRoot: genesis.Data.ValidatorsRoot,
+			Time:           genesis.Data.Time,
+			ForkVersion:    genesis.Data.ForkVersion,
+		},
 	}
 
 	logrus.WithFields(logrus.Fields{

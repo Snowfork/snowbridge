@@ -26,6 +26,7 @@ type Syncer interface {
 	GetLightClientSnapshot(blockRoot string) (LightClientSnapshotResponse, error)
 	GetTrustedLightClientSnapshot() (LightClientSnapshotResponse, error)
 	GetBeaconBlock(slot uint64) (BeaconBlockResponse, error)
+	GetGenesis() (GenesisResponse, error)
 }
 
 type Sync struct {
@@ -529,6 +530,59 @@ func (s *Sync) GetLightClientSnapshot(blockRoot string) (LightClientSnapshotResp
 	}
 
 	//logrus.WithFields(logrus.Fields{"body": response}).Info("snapshot")
+
+	return response, nil
+}
+
+type GenesisResponse struct {
+	Data struct {
+		ValidatorsRoot string `json:"genesis_validators_root"`
+		Time           string `json:"genesis_time"`
+		ForkVersion    string `json:"genesis_fork_version"`
+	} `json:"data"`
+}
+
+func (s *Sync) GetGenesis() (GenesisResponse, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/genesis", s.endpoint), nil)
+	if err != nil {
+		logrus.WithError(err).Error("unable to construct genesis request")
+
+		return GenesisResponse{}, nil
+	}
+
+	req.Header.Set("accept", "application/json")
+	res, err := s.httpClient.Do(req)
+	if err != nil {
+		logrus.WithError(err).Error("failed to do http request")
+
+		return GenesisResponse{}, nil
+	}
+
+	if res.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(res.Body)
+
+		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
+
+		return GenesisResponse{}, nil
+	}
+
+	bodyBytes, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		logrus.Error("unable to get response body")
+
+		return GenesisResponse{}, nil
+	}
+
+	var response GenesisResponse
+
+	err = json.Unmarshal(bodyBytes, &response)
+
+	if err != nil {
+		logrus.WithError(err).Error("unable to unmarshal genesis json response")
+
+		return GenesisResponse{}, nil
+	}
 
 	return response, nil
 }

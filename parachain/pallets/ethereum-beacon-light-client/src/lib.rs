@@ -39,7 +39,7 @@ const FINALIZED_ROOT_INDEX: u64 = 41;
 const MIN_SYNC_COMMITTEE_PARTICIPANTS: u64 = 1;
 
 /// GENESIS_FORK_VERSION('0x00000000')
-const GENESIS_FORK_VERSION: [u8; 4] = [30, 30, 30, 30];
+const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
 
 /// DomainType('0x07000000')
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
@@ -89,6 +89,7 @@ pub struct LightClientInitialSync {
 	pub header: BeaconBlockHeader,
 	pub current_sync_committee: SyncCommittee,
 	pub current_sync_committee_branch: ProofBranch,
+	pub genesis: Genesis,
 }
 
 #[derive(
@@ -106,7 +107,7 @@ pub struct LightClientSyncCommitteePeriodUpdate {
 	pub next_sync_committee_branch: ProofBranch,
 	pub finalized_header: BeaconBlockHeader,
 	pub finality_branch: ProofBranch,
-	pub sync_committee_aggregate: SyncAggregate,
+	pub sync_aggregate: SyncAggregate,
 	pub fork_version: ForkVersion,
 }
 
@@ -122,9 +123,8 @@ pub struct LightClientSyncCommitteePeriodUpdate {
 pub struct LightClientFinalizedHeaderUpdate {
 	pub finalized_header: BeaconBlockHeader,
 	pub finality_branch: ProofBranch,
-	pub sync_committee_aggregate: SyncAggregate,
+	pub sync_aggregate: SyncAggregate,
 	pub fork_version: ForkVersion,
-	pub genesis_validators_root: H256,
 }
 
 #[derive(
@@ -154,6 +154,21 @@ pub struct ForkData {
 pub struct SigningData {
 	pub object_root: Root,
 	pub domain: Domain,
+}
+
+#[derive(
+	Clone,
+	Default,
+	Encode,
+	Decode,
+	PartialEq,
+	RuntimeDebug,
+	TypeInfo,
+)]
+pub struct Genesis {
+	pub validators_root: Root,
+	pub time: u64,
+	pub fork_version: ForkVersion,
 }
 
 pub use pallet::*;
@@ -212,6 +227,9 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 	/// Next sync committee corresponding to the active header
 	#[pallet::storage]
 	pub(super) type NextSyncCommittee<T: Config> = StorageValue<_, SyncCommittee, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type ChainGenesis<T: Config> = StorageValue<_, Genesis, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -297,6 +315,8 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			)?;
 
 			Self::store_header(initial_sync.header);
+
+			Self::store_genesis(initial_sync.genesis);
 			
 			Ok(())
 		}
@@ -320,6 +340,13 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 				FINALIZED_ROOT_INDEX
 			)?;
 
+			/*Self::verify_signed_header(
+				update.sync_aggregate.sync_committee_bits,
+				update.sync_aggregate.sync_committee_signature,
+				update.fork_version,
+				update.attested_header,
+			)*/
+
 			Ok(())
 		}
 
@@ -327,11 +354,23 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			update: LightClientFinalizedHeaderUpdate,
 		) -> DispatchResult {		
 			// TODO merkle proof
-			let sync_commitee_bits = Self::convert_to_binary(update.sync_committee_aggregate.sync_committee_bits.clone());
 
-			ensure!(Self::get_sync_committee_sum(update.sync_committee_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
+			Self::verify_signed_header(
+				update.sync_aggregate.sync_committee_bits,
+				update.sync_aggregate.sync_committee_signature,
+				update.fork_version,
+				update.finalized_header,
+			)
+		}
+
+		fn verify_signed_header(sync_committee_bits_hex: Vec<u8>, sync_committee_signature: Vec<u8>, fork_version: ForkVersion, header: BeaconBlockHeader) -> DispatchResult {
+			let sync_commitee_bits = Self::convert_to_binary(sync_committee_bits_hex);
+
+			ensure!(Self::get_sync_committee_sum(sync_commitee_bits.clone()) >= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
 				Error::<T>::InsufficientSyncCommitteeParticipants
 			);
+
+			let genesis = <ChainGenesis<T>>::get();
 
 			let mut sync_committee = <CurrentSyncCommittee<T>>::get();
 
@@ -351,18 +390,18 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			// Domains are used for for seeds, for signatures, and for selecting aggregators.
 			let domain = Self::compute_domain(
 				DOMAIN_SYNC_COMMITTEE.to_vec(),
-				Some(update.fork_version),
-				update.genesis_validators_root,
+				Some(fork_version),
+				genesis.validators_root,
 			)?;
 
 			// Hash tree root of SigningData - object root + domain
-			let signing_root = Self::compute_signing_root(update.finalized_header, domain)?;
+			let signing_root = Self::compute_signing_root(header, domain)?;
 
 			// Verify sync committee aggregate signature.
 			Self::bls_fast_aggregate_verify(
 				participant_pubkeys,
 				signing_root,
-				update.sync_committee_aggregate.sync_committee_signature,
+				sync_committee_signature,
 			)?;
 
 			Ok(())
@@ -469,6 +508,10 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			<FinalizedHeaders<T>>::insert(header.body_root.clone(), header.clone());
 
 			<FinalizedHeadersBySlot<T>>::insert(header.slot, header.body_root);
+		}
+
+		fn store_genesis(genesis: Genesis) {
+			<ChainGenesis<T>>::put(genesis);
 		}
 
 		/// Sums the bit vector of sync committee particpation.

@@ -599,6 +599,11 @@ pub fn get_initial_sync() -> ethereum_beacon_light_client::LightClientInitialSyn
 			hex!("c78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c").into(),
 			hex!("2c287827800c33e2f309a5b10237eaf839b42a1d982338b933e44e3d593752a8").into(),
 		],
+		genesis: ethereum_beacon_light_client::Genesis{
+			validators_root: hex!("4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95").into(),
+			time: 1606824023,
+			fork_version: hex!("00000000").into(),
+		}
 	};
 	
 	initial_sync
@@ -1152,7 +1157,7 @@ pub fn get_committee_sync_period_update() -> ethereum_beacon_light_client::Light
 			hex!("c78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c").into(),
 			hex!("941e3f7af14acb4059a66274ecbcaf7c6097e88940987075aa9ced89b2ca086d").into(),
 		],
-		sync_committee_aggregate: SyncAggregate{
+		sync_aggregate: SyncAggregate{
 			sync_committee_bits: hex!("ffffffffffffffffffffffffffffffffffffffffffffffffdffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdffffffff").into(),
 			sync_committee_signature: hex!("83352c170f17b6c9e344556e80875855023c819edb3b23d005bd9351eba1c4adbf01250622647703493dcb6504325d84049c3a8a526f0c18341f7b232c1eb0577417c1d92841ea19488a31953ae2c7515e27110f15ef1b10ae95a05682f44e27").into()
 		},
