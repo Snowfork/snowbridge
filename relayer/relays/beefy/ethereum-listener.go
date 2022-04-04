@@ -181,11 +181,6 @@ func (li *EthereumListener) processInitialVerificationSuccessfulEvents(
 		return err
 	}
 
-	log.WithFields(log.Fields{
-		"block": blockNumber,
-		"count": len(events),
-	}).Debug("Queried for InitialVerificationSuccessful events")
-
 	for _, event := range events {
 		log.WithFields(logrus.Fields{
 			"blockHash":   event.Raw.BlockHash.Hex(),

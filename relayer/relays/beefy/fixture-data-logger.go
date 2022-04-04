@@ -17,9 +17,15 @@ import (
 )
 
 type BeefyLightClientCommitmentLog struct {
-	Payload        string `json:"payload"`
-	BlockNumber    uint32 `json:"blockNumber"`
-	ValidatorSetId uint64 `json:"validatorSetId"` // revive:disable-line
+	BlockNumber    uint32                     `json:"blockNumber"`
+	ValidatorSetId uint64                     `json:"validatorSetId"` // revive:disable-line
+	Payload        BeefyLightClientPayloadLog `json:"payload"`
+}
+
+type BeefyLightClientPayloadLog struct {
+	MmrRootHash string `json:"mmrRootHash"`
+	Prefix      string `json:"prefix"`
+	Suffix      string `json:"suffix"`
 }
 
 type BeefyLightClientValidatorProofLog struct {
@@ -54,36 +60,34 @@ type CompleteSignatureCommitmentTxInput struct {
 	SimplifiedMMRProof SimplifiedMMRProofLog             `json:"simplifiedMMRProof"`
 }
 
+func Hex(b []byte) string {
+	return gsrpcTypes.HexEncodeToString(b)
+}
+
 func (wr *EthereumWriter) LogBeefyFixtureDataAll(
 	msg *FinalSignatureCommitment,
 ) error {
-
 	var hasher Keccak256
 
 	bytesEncodedMMRLeaf, _ := gsrpcTypes.EncodeToBytes(msg.LatestMMRLeaf)
-
-	// Leaf is double encoded
 	hexEncodedLeaf, _ := gsrpcTypes.EncodeToHexString(bytesEncodedMMRLeaf)
-	bytesEncodedLeaf, _ := gsrpcTypes.EncodeToBytes(bytesEncodedMMRLeaf)
-
-	hashedLeaf := "0x" + hex.EncodeToString(hasher.Hash(bytesEncodedLeaf))
+	hashedLeaf := Hex(hasher.Hash(bytesEncodedMMRLeaf))
 
 	var beefyMMRMerkleProofItems []string
 	for _, item := range msg.SimplifiedProof.MerkleProofItems {
-		beefyMMRMerkleProofItems = append(beefyMMRMerkleProofItems, "0x"+hex.EncodeToString(item[:]))
+		beefyMMRMerkleProofItems = append(beefyMMRMerkleProofItems, Hex(item[:]))
 	}
 
 	var signatures []string
 	for _, item := range msg.Signatures {
-		hex := hex.EncodeToString(item)
-		signatures = append(signatures, "0x"+hex)
+		signatures = append(signatures, Hex(item))
 	}
 
 	var pubKeyMerkleProofs [][]string
 	for _, pubkeyProof := range msg.ValidatorPublicKeyMerkleProofs {
 		var pubkeyProofS []string
 		for _, item := range pubkeyProof {
-			hex := "0x" + hex.EncodeToString(item[:])
+			hex := Hex(item[:])
 			pubkeyProofS = append(pubkeyProofS, hex)
 		}
 		pubKeyMerkleProofs = append(pubKeyMerkleProofs, pubkeyProofS)
@@ -92,7 +96,11 @@ func (wr *EthereumWriter) LogBeefyFixtureDataAll(
 	input := &CompleteSignatureCommitmentTxInput{
 		Id: msg.ID,
 		Commitment: BeefyLightClientCommitmentLog{
-			Payload:        "0xdeadbeef",
+			Payload: BeefyLightClientPayloadLog{
+				MmrRootHash: Hex(msg.Commitment.Payload.MmrRootHash[:]),
+				Prefix:      Hex(msg.Commitment.Payload.Prefix),
+				Suffix:      Hex(msg.Commitment.Payload.Suffix),
+			},
 			BlockNumber:    msg.Commitment.BlockNumber,
 			ValidatorSetId: msg.Commitment.ValidatorSetId,
 		},
@@ -105,17 +113,18 @@ func (wr *EthereumWriter) LogBeefyFixtureDataAll(
 		LatestMMRLeaf: BeefyLightClientBeefyMMRLeafLog{
 			Version:              msg.LatestMMRLeaf.Version,
 			ParentNumber:         msg.LatestMMRLeaf.ParentNumber,
-			ParentHash:           "0x" + hex.EncodeToString(msg.LatestMMRLeaf.ParentHash[:]),
-			ParachainHeadsRoot:   "0x" + hex.EncodeToString(msg.LatestMMRLeaf.ParachainHeadsRoot[:]),
+			ParentHash:           Hex(msg.LatestMMRLeaf.ParentHash[:]),
+			ParachainHeadsRoot:   Hex(msg.LatestMMRLeaf.ParachainHeadsRoot[:]),
 			NextAuthoritySetId:   msg.LatestMMRLeaf.NextAuthoritySetId,
 			NextAuthoritySetLen:  msg.LatestMMRLeaf.NextAuthoritySetLen,
-			NextAuthoritySetRoot: "0x" + hex.EncodeToString(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
+			NextAuthoritySetRoot: Hex(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
 		},
 		SimplifiedMMRProof: SimplifiedMMRProofLog{
 			MerkleProofItems: beefyMMRMerkleProofItems,
 			MerkleProofOrder: msg.SimplifiedProof.MerkleProofOrderBitField,
 		},
 	}
+
 	b, err := json.Marshal(input)
 	if err != nil {
 		return err
