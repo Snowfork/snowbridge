@@ -14,8 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
-
-	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 )
 
 type BeefyLightClientCommitmentLog struct {
@@ -57,8 +55,7 @@ type CompleteSignatureCommitmentTxInput struct {
 }
 
 func (wr *EthereumWriter) LogBeefyFixtureDataAll(
-	msg store.CompleteSignatureCommitmentMessage,
-	_ store.BeefyRelayInfo,
+	msg *FinalSignatureCommitment,
 ) error {
 
 	var hasher Keccak256

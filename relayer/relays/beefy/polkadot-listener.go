@@ -2,7 +2,6 @@ package beefy
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -13,7 +12,6 @@ import (
 
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
-	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 	"github.com/snowfork/snowbridge/relayer/substrate"
 
 	log "github.com/sirupsen/logrus"
@@ -22,24 +20,24 @@ import (
 type PolkadotListener struct {
 	config         *Config
 	relaychainConn *relaychain.Connection
-	beefyMessages  chan<- store.BeefyRelayInfo
+	tasks  chan<- Task
 }
 
 func NewPolkadotListener(
 	config *Config,
 	relaychainConn *relaychain.Connection,
-	beefyMessages chan<- store.BeefyRelayInfo,
+	tasks chan<- Task,
 ) *PolkadotListener {
 	return &PolkadotListener{
 		config:         config,
 		relaychainConn: relaychainConn,
-		beefyMessages:  beefyMessages,
+		tasks:  tasks,
 	}
 }
 
 func (li *PolkadotListener) Start(ctx context.Context, eg *errgroup.Group, startingBeefyBlock uint64) error {
 	eg.Go(func() error {
-		defer close(li.beefyMessages)
+		defer close(li.tasks)
 
 		err := li.syncBeefyJustifications(ctx, startingBeefyBlock)
 		if err != nil {
@@ -181,23 +179,11 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 		return nil
 	}
 
-	signedCommitmentBytes, err := types.EncodeToBytes(signedCommitment)
-	if err != nil {
-		log.WithField("signedCommitment", signedCommitment).WithError(err).Error("Failed to marshal signed commitment.")
-		return nil
-	}
-
 	blockNumber := uint64(signedCommitment.Commitment.BlockNumber)
 
-	beefyAuthorities, err := li.getBeefyAuthorities(blockNumber)
+	validators, err := li.getBeefyAuthorities(blockNumber)
 	if err != nil {
 		log.WithError(err).Error("Failed to get Beefy authorities from on-chain storage")
-		return err
-	}
-
-	beefyAuthoritiesBytes, err := json.Marshal(beefyAuthorities)
-	if err != nil {
-		log.WithField("beefyAuthorities", beefyAuthorities).WithError(err).Error("Failed to marshal BEEFY authorities.")
 		return err
 	}
 
@@ -207,32 +193,27 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 		return err
 	}
 
-	latestMMRProof, err := li.relaychainConn.GenerateProofForBlock(blockNumber-1, blockHash, li.config.Source.BeefyActivationBlock)
+	response, err := li.relaychainConn.GenerateProofForBlock(blockNumber-1, blockHash, li.config.Source.BeefyActivationBlock)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate proof for block")
 		return err
 	}
 
-	simplifiedProof, err := merkle.ConvertToSimplifiedMMRProof(latestMMRProof.BlockHash, uint64(latestMMRProof.Proof.LeafIndex), latestMMRProof.Leaf, uint64(latestMMRProof.Proof.LeafCount), latestMMRProof.Proof.Items)
-	log.WithField("simplifiedProof", simplifiedProof).Info("Converted latestMMRProof to simplified proof")
+	proof, err := merkle.ConvertToSimplifiedMMRProof(response.BlockHash, uint64(response.Proof.LeafIndex),
+		response.Leaf, uint64(response.Proof.LeafCount), response.Proof.Items)
+	log.WithField("proof", proof).Info("Generated simplified proof")
 
-	serializedProof, err := types.EncodeToBytes(simplifiedProof)
-	if err != nil {
-		log.WithError(err).Error("Failed to serialize MMR Proof")
-		return err
-	}
-
-	info := store.BeefyRelayInfo{
-		ValidatorAddresses:       beefyAuthoritiesBytes,
-		SignedCommitment:         signedCommitmentBytes,
-		Status:                   store.CommitmentWitnessed,
-		SerializedLatestMMRProof: serializedProof,
+	task := Task{
+		TaskRecord: TaskRecord{Status: CommitmentWitnessed},
+		Validators:       validators,
+		SignedCommitment: *signedCommitment,
+		Proof:            proof,
 	}
 
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case li.beefyMessages <- info:
+	case li.tasks <- task:
 		return nil
 	}
 }
