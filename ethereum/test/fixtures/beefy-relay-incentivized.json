@@ -1,0 +1,59 @@
+{
+    "@timestamp": "2022-04-07T11:23:50.205371612Z",
+    "commitmentHash": "0xda4c9be4016156269fab68e663ca841820adcfe4cafd87878303833a4ae0dc77",
+    "encodedLeaf": "0x007f0000002e7ef1b492616c554adc5fca88ca6044bf32958be85704a39693453b5e87461a0c000000000000000300000042b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365261413be19287366e4d95afff86ade22d55217ec115ee710f5a22febef9e87d5",
+    "finalSignatureCommitment": {
+        "commitment": {
+            "blockNumber": 129,
+            "payload": {
+                "mmrRootHash": "0x87602f84e41e3648463996a94415aa5634201ede4c13fe5039c9891575e4dce2",
+                "prefix": "0x046d6880",
+                "suffix": "0x"
+            },
+            "validatorSetId": 11
+        },
+        "id": 18,
+        "leaf": {
+            "nextAuthoritySetId": 12,
+            "nextAuthoritySetLen": 3,
+            "nextAuthoritySetRoot": "0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365",
+            "parachainHeadsRoot": "0x261413be19287366e4d95afff86ade22d55217ec115ee710f5a22febef9e87d5",
+            "parentHash": "0x2e7ef1b492616c554adc5fca88ca6044bf32958be85704a39693453b5e87461a",
+            "parentNumber": 127,
+            "version": 0
+        },
+        "proof": {
+            "merkleProofItems": [
+                "0x402db08a1f62b422e0a2ebec7eeeb1649af915f181120cabfb201d5e86c6e749",
+                "0xa239cfd0aff9e89aa2729d737adff21f77e7b1eee4c17200e7eb6e65108ff88c",
+                "0xde738e13d79d8740c87e8b67fb6bc633b65f5143a9425bc57edf71f9220e30a2",
+                "0x991c82ba3315721b0b9fd4dfe2f52c37ebdfc753ebd93853f477b989c9a938a0",
+                "0x328496322c9cc93e8048ce8efb0e9daab958bd6d63137f2ae9f61ec92c7ec641",
+                "0xc13e75de046fd2e6c23675a7f4ed6a1499ab9da24738b26a7bac33837ee70941",
+                "0x8494cf2ddffcf8a1403b01fee2b73a0271e7b988175312f6a3848a75ccc9e917",
+                "0x385d6495b98f4b7b4bad7dcd34eb37ea31364766e963271e1285287f1601e49e"
+            ],
+            "merkleProofOrderBitField": 255
+        },
+        "validatorProof": {
+            "positions": [
+                0
+            ],
+            "publicKeyMerkleProofs": [
+                [
+                    "0xf68aec7304bf37f340dae2ea20fb5271ee28a3128812b84a615da4789e458bde",
+                    "0x3eb799651607280e854bd2e42c1df1c8e4a6167772dfb3c64a813e40f6e87136"
+                ]
+            ],
+            "publicKeys": [
+                "0xe04cc55ebee1cbce552f250e85c57b70b2e2625b"
+            ],
+            "signatures": [
+                "0xfbabdb27279b421deaf024ee92ad9448d45821959a8173b9b6c6ccc8995a3173180d7b37eb30084c66273c3e6c80a907df8a17fbade1a03891b95ef6a0d536381c"
+            ]
+        }
+    },
+    "leafHash": "0x28c079fc717bdcb4ebde1f449135c53e321ff9cce07083f0499d8a8748a90f9c",
+    "level": "debug",
+    "message": "State for final signature commitment"
+}

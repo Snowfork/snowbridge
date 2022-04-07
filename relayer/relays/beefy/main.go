@@ -9,30 +9,29 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
-	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type Relay struct {
-	config                  *Config
-	relaychainConn          *relaychain.Connection
-	ethereumConn            *ethereum.Connection
-	beefyEthereumListener   *BeefyEthereumListener
-	beefyRelaychainListener *BeefyRelaychainListener
-	beefyEthereumWriter     *BeefyEthereumWriter
-	beefyDB                 *store.Database
-	beefyMessages           chan store.BeefyRelayInfo
-	ethHeaders              chan chain.Header
+	config           *Config
+	relaychainConn   *relaychain.Connection
+	ethereumConn     *ethereum.Connection
+	ethereumListener *EthereumListener
+	polkadotListener *PolkadotListener
+	ethereumWriter   *EthereumWriter
+	store          *Database
+	tasks    chan Task
+	ethHeaders       chan chain.Header
 }
 
 func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
 	log.Info("Relay created")
 
-	dbMessages := make(chan store.DatabaseCmd)
-	beefyDB := store.NewDatabase(dbMessages)
+	dbMessages := make(chan DatabaseCmd)
+	store := NewDatabase(dbMessages)
 
-	err := beefyDB.Initialize()
+	err := store.Initialize()
 	if err != nil {
 		return nil, err
 	}
@@ -40,36 +39,36 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, ethereumKeypair)
 
-	beefyMessages := make(chan store.BeefyRelayInfo)
+	tasks := make(chan Task)
 	ethHeaders := make(chan chain.Header)
 
-	beefyEthereumListener := NewBeefyEthereumListener(&config.Sink,
-		ethereumConn, beefyDB, beefyMessages, dbMessages, ethHeaders)
+	ethereumListener := NewEthereumListener(&config.Sink,
+		ethereumConn, store, tasks, dbMessages, ethHeaders)
 
-	beefyEthereumWriter := NewBeefyEthereumWriter(&config.Sink, ethereumConn,
-		beefyDB, dbMessages, beefyMessages)
+	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn,
+		store, dbMessages, tasks)
 
-	beefyRelaychainListener := NewBeefyRelaychainListener(
+	polkadotListener := NewPolkadotListener(
 		config,
 		relaychainConn,
-		beefyMessages,
+		tasks,
 	)
 
 	return &Relay{
-		config:                  config,
-		relaychainConn:          relaychainConn,
-		beefyEthereumListener:   beefyEthereumListener,
-		ethereumConn:            ethereumConn,
-		beefyEthereumWriter:     beefyEthereumWriter,
-		beefyRelaychainListener: beefyRelaychainListener,
-		beefyDB:                 beefyDB,
-		beefyMessages:           beefyMessages,
-		ethHeaders:              ethHeaders,
+		config:           config,
+		relaychainConn:   relaychainConn,
+		ethereumListener: ethereumListener,
+		ethereumConn:     ethereumConn,
+		ethereumWriter:   ethereumWriter,
+		polkadotListener: polkadotListener,
+		store:          store,
+		tasks:    tasks,
+		ethHeaders:       ethHeaders,
 	}, nil
 }
 
 func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := relay.beefyDB.Start(ctx, eg)
+	err := relay.store.Start(ctx, eg)
 	if err != nil {
 		log.WithError(err).Error("Failed to start database")
 		return err
@@ -85,17 +84,17 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	latestBeefyBlock, err := relay.beefyEthereumListener.Start(ctx, eg)
+	latestBeefyBlock, err := relay.ethereumListener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	err = relay.beefyRelaychainListener.Start(ctx, eg, latestBeefyBlock)
+	err = relay.polkadotListener.Start(ctx, eg, latestBeefyBlock)
 	if err != nil {
 		return err
 	}
 
-	err = relay.beefyEthereumWriter.Start(ctx, eg)
+	err = relay.ethereumWriter.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
