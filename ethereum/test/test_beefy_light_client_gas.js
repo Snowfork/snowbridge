@@ -5,7 +5,8 @@ const {
 
 const { createBeefyValidatorFixture, createRandomPositions,
   createAllValidatorProofs, createCompleteValidatorProofs } = require("./beefy-helpers");
-const realWorldFixture = require('./fixtures/full-flow-basic.json');
+
+const realWorldFixture = require('./fixtures/beefy-relay-basic.json')
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -76,7 +77,7 @@ describe("Beefy Light Client Gas Usage", function () {
       initialBitfieldPositions, totalNumberOfValidators
     );
 
-    const commitmentHash = await beefyLightClient.createCommitmentHash(realWorldFixture.completeSubmitInput.commitment);
+    const commitmentHash = realWorldFixture.commitmentHash
 
     const allValidatorProofs = await createAllValidatorProofs(commitmentHash, fixture);
 
@@ -99,12 +100,12 @@ describe("Beefy Light Client Gas Usage", function () {
 
     const completeSigTxPromise = beefyLightClient.completeSignatureCommitment(
       fail ? 99 : lastId,
-      realWorldFixture.completeSubmitInput.commitment,
+      realWorldFixture.finalSignatureCommitment.commitment,
       completeValidatorProofs,
-      realWorldFixture.completeSubmitInput.latestMMRLeaf,
+      realWorldFixture.finalSignatureCommitment.leaf,
        {
-          merkleProofItems: realWorldFixture.completeSubmitInput.simplifiedMMRProof.merkleProofItems,
-          merkleProofOrderBitField: realWorldFixture.completeSubmitInput.simplifiedMMRProof.merkleProofOrderBitField
+          merkleProofItems: realWorldFixture.finalSignatureCommitment.proof.merkleProofItems,
+          merkleProofOrderBitField: realWorldFixture.finalSignatureCommitment.proof.merkleProofOrderBitField
        }
     )
     printTxPromiseGas(completeSigTxPromise)
@@ -113,7 +114,7 @@ describe("Beefy Light Client Gas Usage", function () {
     } else {
       await completeSigTxPromise.should.be.fulfilled
       latestMMRRoot = await beefyLightClient.latestMMRRoot()
-      expect(latestMMRRoot).to.eq(realWorldFixture.completeSubmitInput.commitment.payload)
+      expect(latestMMRRoot).to.eq(realWorldFixture.finalSignatureCommitment.commitment.payload.mmrRootHash)
     }
   }
 

@@ -13,18 +13,18 @@ codec = { version = "2.2.0", package = "parity-scale-codec", default-features = 
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 hex = { version = "2.1.0", package = "rustc-hex", default-features = false }
 
-frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 
 [dev-dependencies]
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
 
 [features]
 default = ["std"]

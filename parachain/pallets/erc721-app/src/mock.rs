@@ -67,6 +67,7 @@ impl frame_system::Config for Test {
 	type OnSetCode = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 impl snowbridge_nft::Config for Test {
@@ -87,7 +88,7 @@ pub struct MockOutboundRouter<AccountId>(PhantomData<AccountId>);
 impl<AccountId> OutboundRouter<AccountId> for MockOutboundRouter<AccountId> {
 	fn submit(channel: ChannelId, _: &AccountId, _: H160, _: &[u8]) -> DispatchResult {
 		if channel == ChannelId::Basic {
-			return Err(DispatchError::Other("some error!"));
+			return Err(DispatchError::Other("some error!"))
 		}
 		Ok(())
 	}

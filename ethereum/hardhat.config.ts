@@ -6,10 +6,11 @@ import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-deploy";
-import { HardhatUserConfig } from "hardhat/config";
 import "./tasks/upgrade";
 import "./tasks/renounce";
 import "./tasks/contractAddress";
+import type { HardhatUserConfig } from "hardhat/config";
+
 
 let INFURA_KEY = process.env.INFURA_PROJECT_ID
 let ROPSTEN_KEY = process.env.ROPSTEN_PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -40,7 +41,13 @@ const config: HardhatUserConfig = {
     }
   },
   solidity: {
-    version: "0.8.6"
+    version: "0.8.6",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      }
+    }
   },
   paths: {
     sources: "contracts",
