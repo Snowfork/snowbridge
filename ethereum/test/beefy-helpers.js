@@ -55,19 +55,17 @@ async function createRandomPositions(numberOfPositions, numberOfValidators) {
 }
 
 
-const runBeefyLightClientFlow = async (realWorldFixture, beefyLightClient, beefyFixture, totalNumberOfSignatures, totalNumberOfValidators) => {
+const runBeefyLightClientFlow = async (fixture, beefyLightClient, beefyFixture, totalNumberOfSignatures, totalNumberOfValidators) => {
   const initialBitfieldPositions = await createRandomPositions(totalNumberOfSignatures, totalNumberOfValidators)
 
   const initialBitfield = await beefyLightClient.createInitialBitfield(
     initialBitfieldPositions, totalNumberOfValidators
   );
 
-  const commitmentHash = await beefyLightClient.createCommitmentHash(realWorldFixture.completeSubmitInput.commitment);
-
-  const allValidatorProofs = await createAllValidatorProofs(commitmentHash, beefyFixture);
+  const allValidatorProofs = await createAllValidatorProofs(fixture.commitmentHash, beefyFixture);
 
   await beefyLightClient.newSignatureCommitment(
-    commitmentHash,
+    fixture.commitmentHash,
     initialBitfield,
     allValidatorProofs[0].signature,
     allValidatorProofs[0].position,
@@ -83,12 +81,12 @@ const runBeefyLightClientFlow = async (realWorldFixture, beefyLightClient, beefy
 
   await beefyLightClient.completeSignatureCommitment(
     lastId,
-    realWorldFixture.completeSubmitInput.commitment,
+    fixture.finalSignatureCommitment.commitment,
     completeValidatorProofs,
-    realWorldFixture.completeSubmitInput.latestMMRLeaf,
+    fixture.finalSignatureCommitment.leaf,
     {
-        merkleProofItems: realWorldFixture.completeSubmitInput.simplifiedMMRProof.merkleProofItems,
-        merkleProofOrderBitField: realWorldFixture.completeSubmitInput.simplifiedMMRProof.merkleProofOrderBitField
+        merkleProofItems: fixture.finalSignatureCommitment.proof.merkleProofItems,
+        merkleProofOrderBitField: fixture.finalSignatureCommitment.proof.merkleProofOrderBitField
     }
   )
 

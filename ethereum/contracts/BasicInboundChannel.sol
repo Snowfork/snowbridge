@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./ParachainLightClient.sol";
 import "./BeefyLightClient.sol";
 import "./SimplifiedMMRVerification.sol";
+import "hardhat/console.sol";
 
 contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
