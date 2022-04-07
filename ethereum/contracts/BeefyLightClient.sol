@@ -145,11 +145,6 @@ contract BeefyLightClient {
     uint64 public constant MAXIMUM_BLOCK_GAP =
         NUMBER_OF_BLOCKS_PER_SESSION - ERROR_AND_SAFETY_BUFFER;
 
-    /* Errors */
-
-    // Unsupported commitment payloads
-    error InvalidCommitment();
-
     /**
      * @notice Deploys the BeefyLightClient contract
      * @param _validatorRegistry The contract to be used as the validator registry
