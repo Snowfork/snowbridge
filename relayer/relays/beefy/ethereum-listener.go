@@ -3,7 +3,6 @@ package beefy
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -197,7 +196,7 @@ func (li *EthereumListener) processInitialVerificationSuccessfulEvents(
 			continue
 		}
 
-		item, err := li.store.GetTaskByInitialVerificationTx(event.Raw.TxHash)
+		task, err := li.store.GetTaskByInitialVerificationTx(event.Raw.TxHash)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				log.WithField("txHash", event.Raw.TxHash.Hex()).Info("Query for items by InitialVerificationTx returned no results")
@@ -213,10 +212,18 @@ func (li *EthereumListener) processInitialVerificationSuccessfulEvents(
 			"complete_on_block": event.Raw.BlockNumber + li.blockWaitPeriod,
 		}
 
+		log.WithFields(log.Fields{
+			"task": log.Fields{
+				"ID": task.ID,
+				"ValidationID": event.Id.Int64(),
+				"CompleteOnBlock": event.Raw.BlockNumber + li.blockWaitPeriod,
+			},
+		}).Debug("Task completed initial signature commitment")
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case li.dbMessages <- NewDatabaseCmd(item, Update, instructions):
+		case li.dbMessages <- NewDatabaseCmd(task, Update, instructions):
 		}
 	}
 
@@ -330,27 +337,26 @@ func (li *EthereumListener) forwardWitnessedBeefyJustifications(ctx context.Cont
 // current block number has passed their CompleteOnBlock number
 func (li *EthereumListener) forwardReadyToCompleteItems(ctx context.Context, blockNumber, descendantsUntilFinal uint64) error {
 	// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
-	initialVerificationItems, err := li.store.GetTasksByStatus(InitialVerificationTxConfirmed)
+	tasks, err := li.store.GetTasksByStatus(InitialVerificationTxConfirmed)
 	if err != nil {
 		log.WithError(err).Error("Failure querying beefy DB for items by InitialVerificationTxConfirmed status")
 		return err
 	}
 
-	if len(initialVerificationItems) > 0 {
-		log.Info(fmt.Sprintf("Found %d item(s) in database awaiting completion block", len(initialVerificationItems)))
-	}
-	for _, item := range initialVerificationItems {
-		if item.CompleteOnBlock+descendantsUntilFinal <= blockNumber {
-			log.Infof(
-				"4: Updating item %v status from 'InitialVerificationTxConfirmed' to 'ReadyToComplete'",
-				item.ID,
-			)
-			item.Status = ReadyToComplete
+	for _, task := range tasks {
+		if task.CompleteOnBlock+descendantsUntilFinal <= blockNumber {
+			task.Status = ReadyToComplete
+			log.WithFields(log.Fields{
+				"task": log.Fields{
+					"ID": task.ID,
+					"ValidationID": task.ValidationID,
+				},
+			}).Debug("Task is now ready for final signature commitment")
 
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case li.tasks <- *item:
+			case li.tasks <- *task:
 			}
 		}
 	}

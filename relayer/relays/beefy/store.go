@@ -123,7 +123,6 @@ func (d *Database) writeLoop(ctx context.Context) error {
 			mutex.Lock()
 			switch cmd.Type {
 			case Create:
-				log.Info("Creating item in database...")
 				tx := d.DB.Begin()
 				if err := tx.Error; err != nil {
 					return err
@@ -143,12 +142,10 @@ func (d *Database) writeLoop(ctx context.Context) error {
 					return err
 				}
 			case Update:
-				log.Info("Updating item in database...")
 				if err := d.DB.Model(&cmd.Task).Updates(cmd.Instructions).Error; err != nil {
 					return err
 				}
 			case Delete:
-				log.Info("Deleting item from database...")
 				if err := d.DB.Delete(&cmd.Task).Error; err != nil {
 					return err
 				}

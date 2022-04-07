@@ -180,6 +180,9 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 	}
 
 	blockNumber := uint64(signedCommitment.Commitment.BlockNumber)
+	if blockNumber == 1 {
+		return nil
+	}
 
 	validators, err := li.getBeefyAuthorities(blockNumber)
 	if err != nil {
@@ -193,15 +196,23 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 		return err
 	}
 
-	response, err := li.relaychainConn.GenerateProofForBlock(blockNumber-1, blockHash, li.config.Source.BeefyActivationBlock)
+	// we can use any block except the latest beefy block
+	blockToProve := blockNumber-1
+	response, err := li.relaychainConn.GenerateProofForBlock(blockToProve, blockHash, li.config.Source.BeefyActivationBlock)
 	if err != nil {
-		log.WithError(err).Error("Failed to generate proof for block")
+		log.WithFields(log.Fields{
+			"blockNumber": blockToProve,
+			"latestBeefyBlock": blockHash,
+			"beefyActivationBlock": li.config.Source.BeefyActivationBlock}).WithError(err).Error("Failed to generate proof for block")
 		return err
 	}
 
 	proof, err := merkle.ConvertToSimplifiedMMRProof(response.BlockHash, uint64(response.Proof.LeafIndex),
 		response.Leaf, uint64(response.Proof.LeafCount), response.Proof.Items)
-	log.WithField("proof", proof).Info("Generated simplified proof")
+	if err != nil {
+		log.WithError(err).Error("Failed conversion to simplified proof")
+		return err
+	}
 
 	task := Task{
 		TaskRecord: TaskRecord{Status: CommitmentWitnessed},

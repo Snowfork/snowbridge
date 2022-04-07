@@ -3,61 +3,59 @@ package beefy
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 )
 
-type BeefyLightClientCommitmentLog struct {
-	BlockNumber    uint32                     `json:"blockNumber"`
-	ValidatorSetId uint64                     `json:"validatorSetId"` // revive:disable-line
-	Payload        BeefyLightClientPayloadLog `json:"payload"`
+type CommitmentLog struct {
+	BlockNumber    uint32     `json:"blockNumber"`
+	ValidatorSetID uint64     `json:"validatorSetId"`
+	Payload        PayloadLog `json:"payload"`
 }
 
-type BeefyLightClientPayloadLog struct {
+type PayloadLog struct {
 	MmrRootHash string `json:"mmrRootHash"`
 	Prefix      string `json:"prefix"`
 	Suffix      string `json:"suffix"`
 }
 
-type BeefyLightClientValidatorProofLog struct {
+type ValidatorProofLog struct {
 	Signatures            []string         `json:"signatures"`
 	Positions             []*big.Int       `json:"positions"`
 	PublicKeys            []common.Address `json:"publicKeys"`
 	PublicKeyMerkleProofs [][]string       `json:"publicKeyMerkleProofs"`
 }
 
-type BeefyLightClientBeefyMMRLeafLog struct {
+type MMRLeafLog struct {
 	Version              uint8  `json:"version"`
 	ParentNumber         uint32 `json:"parentNumber"`
 	ParentHash           string `json:"parentHash"`
-	NextAuthoritySetId   uint64 `json:"nextAuthoritySetId"` // revive:disable-line
+	NextAuthoritySetID   uint64 `json:"nextAuthoritySetId"`
 	NextAuthoritySetLen  uint32 `json:"nextAuthoritySetLen"`
 	NextAuthoritySetRoot string `json:"nextAuthoritySetRoot"`
 	ParachainHeadsRoot   string `json:"parachainHeadsRoot"`
 }
 
-type SimplifiedMMRProofLog struct {
-	BeefyMMRRestOfThePeaks  []string `json:"RestOfThePeaks"`
-	BeefyMMRRightBaggedPeak string   `json:"RightBaggedPeak"`
-	MerkleProofItems        []string `json:"MerkleProofItems"`
-	MerkleProofOrder        uint64   `json:"MerkleProofOrder"`
+type MMRProofLog struct {
+	MerkleProofItems []string `json:"merkleProofItems"`
+	MerkleProofOrder uint64   `json:"merkleProofOrder"`
 }
 
-type CompleteSignatureCommitmentTxInput struct {
-	Id                 *big.Int                          `json:"id"` //  revive:disable-line
-	Commitment         BeefyLightClientCommitmentLog     `json:"commitment"`
-	ValidatorProof     BeefyLightClientValidatorProofLog `json:"validatorProof"`
-	LatestMMRLeaf      BeefyLightClientBeefyMMRLeafLog   `json:"latestMMRLeaf"`
-	SimplifiedMMRProof SimplifiedMMRProofLog             `json:"simplifiedMMRProof"`
+type FinalSignatureCommitmentLog struct {
+	ID                 *big.Int          `json:"id"`
+	CommitmentHash     string            `json:"commitmentHash"`
+	Commitment         CommitmentLog     `json:"commitment"`
+	ValidatorProof     ValidatorProofLog `json:"validatorProof"`
+	LatestMMRLeaf      MMRLeafLog        `json:"latestMMRLeaf"`
+	SimplifiedMMRProof MMRProofLog        `json:"simplifiedMMRProof"`
 }
 
 func Hex(b []byte) string {
@@ -65,13 +63,16 @@ func Hex(b []byte) string {
 }
 
 func (wr *EthereumWriter) LogBeefyFixtureDataAll(
+	task *Task,
 	msg *FinalSignatureCommitment,
 ) error {
-	var hasher Keccak256
 
-	bytesEncodedMMRLeaf, _ := gsrpcTypes.EncodeToBytes(msg.LatestMMRLeaf)
-	hexEncodedLeaf, _ := gsrpcTypes.EncodeToHexString(bytesEncodedMMRLeaf)
-	hashedLeaf := Hex(hasher.Hash(bytesEncodedMMRLeaf))
+	encodedLeaf, err := gsrpcTypes.EncodeToBytes(msg.LatestMMRLeaf)
+	if err != nil {
+		return err
+	}
+
+	leafHash := Hex((&keccak.Keccak256{}).Hash(encodedLeaf))
 
 	var beefyMMRMerkleProofItems []string
 	for _, item := range msg.SimplifiedProof.MerkleProofItems {
@@ -87,70 +88,57 @@ func (wr *EthereumWriter) LogBeefyFixtureDataAll(
 	for _, pubkeyProof := range msg.ValidatorPublicKeyMerkleProofs {
 		var pubkeyProofS []string
 		for _, item := range pubkeyProof {
-			hex := Hex(item[:])
-			pubkeyProofS = append(pubkeyProofS, hex)
+			pubkeyProofS = append(pubkeyProofS, Hex(item[:]))
 		}
 		pubKeyMerkleProofs = append(pubKeyMerkleProofs, pubkeyProofS)
 	}
 
-	input := &CompleteSignatureCommitmentTxInput{
-		Id: msg.ID,
-		Commitment: BeefyLightClientCommitmentLog{
-			Payload: BeefyLightClientPayloadLog{
-				MmrRootHash: Hex(msg.Commitment.Payload.MmrRootHash[:]),
-				Prefix:      Hex(msg.Commitment.Payload.Prefix),
-				Suffix:      Hex(msg.Commitment.Payload.Suffix),
-			},
-			BlockNumber:    msg.Commitment.BlockNumber,
-			ValidatorSetId: msg.Commitment.ValidatorSetId,
-		},
-		ValidatorProof: BeefyLightClientValidatorProofLog{
-			Signatures:            signatures,
-			Positions:             msg.ValidatorPositions,
-			PublicKeys:            msg.ValidatorPublicKeys,
-			PublicKeyMerkleProofs: pubKeyMerkleProofs,
-		},
-		LatestMMRLeaf: BeefyLightClientBeefyMMRLeafLog{
-			Version:              msg.LatestMMRLeaf.Version,
-			ParentNumber:         msg.LatestMMRLeaf.ParentNumber,
-			ParentHash:           Hex(msg.LatestMMRLeaf.ParentHash[:]),
-			ParachainHeadsRoot:   Hex(msg.LatestMMRLeaf.ParachainHeadsRoot[:]),
-			NextAuthoritySetId:   msg.LatestMMRLeaf.NextAuthoritySetId,
-			NextAuthoritySetLen:  msg.LatestMMRLeaf.NextAuthoritySetLen,
-			NextAuthoritySetRoot: Hex(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
-		},
-		SimplifiedMMRProof: SimplifiedMMRProofLog{
-			MerkleProofItems: beefyMMRMerkleProofItems,
-			MerkleProofOrder: msg.SimplifiedProof.MerkleProofOrderBitField,
-		},
-	}
-
-	b, err := json.Marshal(input)
+	encodedCommitment, err := gsrpcTypes.EncodeToBytes(task.SignedCommitment.Commitment)
 	if err != nil {
 		return err
 	}
+	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
 
-	log.WithFields(logrus.Fields{
-		"json":           string(b),
-		"hexEncodedLeaf": hexEncodedLeaf,
-		"hashedLeaf":     hashedLeaf,
-	}).Info("Complete Signature Commitment transaction submitted")
+	state := log.Fields{
+		"finalSignatureCommitment": log.Fields{
+			"id": msg.ID,
+			"commitment": log.Fields{
+				"blockNumber": msg.Commitment.BlockNumber,
+				"validatorSetId": msg.Commitment.ValidatorSetId,
+				"payload": log.Fields{
+					"mmrRootHash": Hex(msg.Commitment.Payload.MmrRootHash[:]),
+					"prefix": Hex(msg.Commitment.Payload.Prefix),
+					"suffix": Hex(msg.Commitment.Payload.Suffix),
+				},
+			},
+			"validatorProof": log.Fields{
+				"signatures": signatures,
+				"positions": msg.ValidatorPositions,
+				"publicKeys": msg.ValidatorPublicKeys,
+				"publicKeyMerkleProofs": pubKeyMerkleProofs,
+			},
+			"leaf": log.Fields{
+				"version": msg.LatestMMRLeaf.Version,
+				"parentNumber": msg.LatestMMRLeaf.ParentNumber,
+				"parentHash": Hex(msg.LatestMMRLeaf.ParentHash[:]),
+				"nextAuthoritySetId": msg.LatestMMRLeaf.NextAuthoritySetId,
+				"nextAuthoritySetLen": msg.LatestMMRLeaf.NextAuthoritySetLen,
+				"nextAuthoritySetRoot": Hex(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
+				"parachainHeadsRoot": Hex(msg.LatestMMRLeaf.ParachainHeadsRoot[:]),
+			},
+			"proof": log.Fields{
+				"merkleProofItems": beefyMMRMerkleProofItems,
+				"merkleProofOrderBitField": msg.SimplifiedProof.MerkleProofOrderBitField,
+			},
+		},
+		"commitmentHash": commitmentHash,
+		"encodedLeaf": Hex(encodedLeaf),
+		"leafHash": leafHash,
+	}
+
+	log.WithFields(state).Debug("State for final signature commitment")
 
 	return nil
-}
-
-// Keccak256 is the Keccak256 hashing method
-type Keccak256 struct{}
-
-// New creates a new Keccak256 hashing method
-func New() *Keccak256 {
-	return &Keccak256{}
-}
-
-// Hash generates a Keccak256 hash from a byte array
-func (h *Keccak256) Hash(data []byte) []byte {
-	hash := crypto.Keccak256(data)
-	return hash[:]
 }
 
 func (wr *EthereumWriter) GetFailingMessage(client ethclient.Client, hash common.Hash) (string, error) {

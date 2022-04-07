@@ -82,15 +82,15 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			}
 			switch task.Status {
 			case CommitmentWitnessed:
-				err := wr.WriteNewSignatureCommitment(ctx, &task)
+				err := wr.WriteInitialSignatureCommitment(ctx, &task)
 				if err != nil {
-					log.WithError(err).Error("Failed to write new signature commitment")
+					log.WithError(err).Error("Failed to send initial signature commitment")
 					return err
 				}
 			case ReadyToComplete:
 				err := wr.WriteFinalSignatureCommitment(ctx, &task)
 				if err != nil {
-					log.WithError(err).Error("Failed to write complete signature commitment")
+					log.WithError(err).Error("Failed to send complete signature commitment")
 					return err
 				}
 			}
@@ -135,7 +135,7 @@ func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 	return &options
 }
 
-func (wr *EthereumWriter) WriteNewSignatureCommitment(ctx context.Context, task *Task) error {
+func (wr *EthereumWriter) WriteInitialSignatureCommitment(ctx context.Context, task *Task) error {
 	contract := wr.beefyLightClient
 	if contract == nil {
 		return fmt.Errorf("unknown contract")
@@ -169,7 +169,7 @@ func (wr *EthereumWriter) WriteNewSignatureCommitment(ctx context.Context, task 
 		msg.ValidatorClaimsBitfield, msg.ValidatorSignatureCommitment,
 		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
-		log.WithError(err).Error("Failed to submit transaction")
+		log.WithError(err).Error("Failed to submit transaction for initial signature commitment")
 		return err
 	}
 
@@ -179,15 +179,14 @@ func (wr *EthereumWriter) WriteNewSignatureCommitment(ctx context.Context, task 
 	}
 
 	log.WithFields(logrus.Fields{
-		"txHash":                            tx.Hash().Hex(),
-		"msg.CommitmentHash":                "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
-		"msg.ValidatorSignatureCommitment":  "0x" + hex.EncodeToString(msg.ValidatorSignatureCommitment),
-		"msg.ValidatorPublicKey":            msg.ValidatorPublicKey.Hex(),
-		"msg.ValidatorPublicKeyMerkleProof": pkProofHex,
-		"BlockNumber":                       task.SignedCommitment.Commitment.BlockNumber,
-	}).Info("New Signature Commitment transaction submitted")
+		"txHash":                        tx.Hash().Hex(),
+		"CommitmentHash":                "0x" + hex.EncodeToString(msg.CommitmentHash[:]),
+		"ValidatorSignatureCommitment":  "0x" + hex.EncodeToString(msg.ValidatorSignatureCommitment),
+		"ValidatorPublicKey":            msg.ValidatorPublicKey.Hex(),
+		"ValidatorPublicKeyMerkleProof": pkProofHex,
+		"BlockNumber":                   task.SignedCommitment.Commitment.BlockNumber,
+	}).Info("Transaction submitted for initial signature commitment")
 
-	log.Info("1: Creating item in Database with status 'InitialVerificationTxSent'")
 	task.Status = InitialVerificationTxSent
 	task.InitialVerificationTx = tx.Hash()
 
@@ -248,9 +247,8 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 		PublicKeyMerkleProofs: msg.ValidatorPublicKeyMerkleProofs,
 	}
 
-	err = wr.LogBeefyFixtureDataAll(msg)
+	err = wr.LogBeefyFixtureDataAll(task, msg)
 	if err != nil {
-		log.WithError(err).Error("Failed to log complete tx input")
 		return err
 	}
 
@@ -265,18 +263,17 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 		})
 
 	if err != nil {
-		log.WithError(err).Error("Failed to submit transaction")
+		log.WithError(err).Error("Failed to submit transaction for final signature commitment")
 		return err
 	}
 
 	log.WithFields(logrus.Fields{
 		"txHash": tx.Hash().Hex(),
-	}).Info("Complete Signature Commitment transaction submitted")
+	}).Info("Transaction submitted for final signature commitment")
 
 	// Update item's status in database
-	log.Info("5: Updating item status from 'ReadyToComplete' to 'CompleteVerificationTxSent'")
 	instructions := map[string]interface{}{
-		"status":                   CompleteVerificationTxSent,
+		"status":                CompleteVerificationTxSent,
 		"final_verification_tx": tx.Hash(),
 	}
 

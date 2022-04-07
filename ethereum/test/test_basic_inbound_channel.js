@@ -13,7 +13,10 @@ const { createBeefyValidatorFixture, runBeefyLightClientFlow } = require("./beef
 const {
   deployBeefyLightClient
 } = require("./helpers");
-const fixture = require('./fixtures/full-flow-basic.json');
+
+
+const fixture = require('./fixtures/beefy-relay-basic.json')
+const submitInput = require('./fixtures/parachain-relay-basic.json')
 
 describe("BasicInboundChannel", function () {
   const interface = new ethers.utils.Interface(BasicInboundChannel.abi)
@@ -43,7 +46,10 @@ describe("BasicInboundChannel", function () {
       const nonceBeforeSubmit = BigNumber(await this.channel.nonce());
 
       const { receipt } = await this.channel.submit(
-        ...Object.values(fixture.basicSubmitInput),
+        submitInput.submit.messages,
+        submitInput.submit.paraVerifyInput,
+        submitInput.submit.leafPartial,
+        submitInput.submit.proof
       ).should.be.fulfilled
 
       const nonceAfterSubmit = BigNumber(await this.channel.nonce());
@@ -55,18 +61,23 @@ describe("BasicInboundChannel", function () {
         receipt.rawLogs[0].topics
       );
       event.nonce.eq(ethers.BigNumber.from(1)).should.be.true;
-      event.result.should.be.true;
     });
 
     it("should refuse to replay commitments", async function () {
       // Submit messages
       await this.channel.submit(
-        ...Object.values(fixture.basicSubmitInput)
+        submitInput.submit.messages,
+        submitInput.submit.paraVerifyInput,
+        submitInput.submit.leafPartial,
+        submitInput.submit.proof
       ).should.be.fulfilled;
 
       // Submit messages again - should revert
       await this.channel.submit(
-        ...Object.values(fixture.basicSubmitInput),
+        submitInput.submit.messages,
+        submitInput.submit.paraVerifyInput,
+        submitInput.submit.leafPartial,
+        submitInput.submit.proof
       ).should.not.be.fulfilled;
     });
   });
