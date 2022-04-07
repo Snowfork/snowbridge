@@ -32,8 +32,8 @@ pub use frame_support::{
 	dispatch::DispatchResult,
 	match_type, parameter_types,
 	traits::{
-		tokens::fungible::ItemOf, Contains, EnsureOneOf, Everything, IsInVec, KeyOwnerProofSystem,
-		Nothing, Randomness,
+		tokens::fungible::ItemOf, Contains, EnsureOneOf, EqualPrivilegeOnly, Everything, IsInVec,
+		KeyOwnerProofSystem, Nothing, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -445,7 +445,9 @@ type EnsureRootOrHalfLocalCouncil = EnsureOneOf<
 parameter_types! {
 	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
 		BlockWeights::get().max_block;
-	pub const MaxScheduledPerBlock: u32 = 50;
+	pub const MaxScheduledPerBlock: u32 = 10;
+	// Retry a scheduled item every 25 blocks (5 minute) until the preimage exists.
+	pub const NoPreimagePostponement: Option<u32> = Some(5 * MINUTES);
 }
 
 impl pallet_scheduler::Config for Runtime {
@@ -456,7 +458,27 @@ impl pallet_scheduler::Config for Runtime {
 	type MaximumWeight = MaximumSchedulerWeight;
 	type ScheduleOrigin = EnsureRootOrHalfLocalCouncil;
 	type MaxScheduledPerBlock = MaxScheduledPerBlock;
-	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Self>;
+	type WeightInfo = ();
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
+	type PreimageProvider = Preimage;
+	type NoPreimagePostponement = NoPreimagePostponement;
+}
+
+parameter_types! {
+	/// Max size 4MB allowed for a preimage.
+	pub const PreimageMaxSize: u32 = 4096 * 1024;
+	pub PreimageBaseDeposit: Balance = 1_000_000;
+	pub PreimageByteDeposit: Balance = 1_000;
+}
+
+impl pallet_preimage::Config for Runtime {
+	type WeightInfo = ();
+	type Event = Event;
+	type Currency = Balances;
+	type ManagerOrigin = EnsureRoot<AccountId>;
+	type MaxSize = PreimageMaxSize;
+	type BaseDeposit = PreimageBaseDeposit;
+	type ByteDeposit = PreimageByteDeposit;
 }
 
 parameter_types! {
@@ -767,6 +789,7 @@ construct_runtime!(
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 28,
 
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 29,
+		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 30,
 
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating
