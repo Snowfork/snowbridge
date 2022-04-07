@@ -1,0 +1,56 @@
+{
+    "@timestamp": "2022-04-06T16:18:23.949226076Z",
+    "level": "debug",
+    "message": "State for final signature commitment",
+    "commitmentHash": "0xe6151744519a9c8c2a97d80f7893a956c925cec3bb330693fbc217840fb10307",
+    "encodedLeaf": "0x003b0000008ee1bb874485304323e1019c4466fddd724f75675bfc6b7f7b77e0cfd2c95f0b05000000000000000300000042b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad03659420f09847d9d2eff1535fd6c7ba045a1d1ba57de51da1eaeb5148367a934dca",
+    "finalSignatureCommitment": {
+        "commitment": {
+            "blockNumber": 61,
+            "payload": {
+                "mmrRootHash": "0x70067e9761da0cc4d32175a1cd96a1e051a67acbf1c899da9374bc6ef68c8a22",
+                "prefix": "0x046d6880",
+                "suffix": "0x"
+            },
+            "validatorSetId": 4
+        },
+        "id": 9,
+        "leaf": {
+            "nextAuthoritySetId": 5,
+            "nextAuthoritySetLen": 3,
+            "nextAuthoritySetRoot": "0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365",
+            "parachainHeadsRoot": "0x9420f09847d9d2eff1535fd6c7ba045a1d1ba57de51da1eaeb5148367a934dca",
+            "parentHash": "0x8ee1bb874485304323e1019c4466fddd724f75675bfc6b7f7b77e0cfd2c95f0b",
+            "parentNumber": 59,
+            "version": 0
+        },
+        "proof": {
+            "merkleProofItems": [
+                "0xb3b531fedde621c70255e4e2d7e8429d39dae5760e32836d9af470f7a8f09081",
+                "0xb8eee44a698d6566d97bc527044c342a447bf5f0399810ffe8f12e04962d2df1",
+                "0x70b5a6fd64ed4265617f5e99c1bc430e1a84704ba11a0d8587aa655b97e57781",
+                "0xd440c834483ef9dae3f29cdb3cdd2968658d7300ccc2ec7e19bb3d95745ff248",
+                "0xad782b6308237ca744e46b8f160a6d33a24c51751d0be018eae245ef1882cda3",
+                "0x0c1387a4bb204e423d8f46855547c5c27e9ffa76d984ab3b26d89f0c699e382f"
+            ],
+            "merkleProofOrderBitField": 7
+        },
+        "validatorProof": {
+            "positions": [
+                2
+            ],
+            "publicKeyMerkleProofs": [
+                [
+                    "0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402"
+                ]
+            ],
+            "publicKeys": [
+                "0x5630a480727cd7799073b36472d9b1a6031f840b"
+            ],
+            "signatures": [
+                "0x76f00065e412cc7327e6b29111d17e5c8eee4ae164f8e19a40a50abeadafe04a30ec455f18dd0c98a0d27311f57ebc4e496e8208d9e7bc51dfa389fe0f44bdf71b"
+            ]
+        }
+    },
+    "leafHash": "0x94be25fe273ea27f0820ee6ab5635466b2658f3db017794195761f233cf52b1f"
+}
