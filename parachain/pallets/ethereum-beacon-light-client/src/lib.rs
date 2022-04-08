@@ -89,7 +89,7 @@ pub struct LightClientInitialSync {
 	pub header: BeaconBlockHeader,
 	pub current_sync_committee: SyncCommittee,
 	pub current_sync_committee_branch: ProofBranch,
-	pub genesis: Genesis,
+	pub validators_root: Root,
 }
 
 #[derive(
@@ -121,6 +121,7 @@ pub struct LightClientSyncCommitteePeriodUpdate {
 	TypeInfo,
 )]
 pub struct LightClientFinalizedHeaderUpdate {
+	pub attested_header: BeaconBlockHeader,
 	pub finalized_header: BeaconBlockHeader,
 	pub finality_branch: ProofBranch,
 	pub sync_aggregate: SyncAggregate,
@@ -167,8 +168,6 @@ pub struct SigningData {
 )]
 pub struct Genesis {
 	pub validators_root: Root,
-	pub time: u64,
-	pub fork_version: ForkVersion,
 }
 
 pub use pallet::*;
@@ -176,7 +175,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 
-	use super::*;
+use super::*;
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
@@ -318,7 +317,9 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 
 			Self::store_header(initial_sync.header);
 
-			Self::store_genesis(initial_sync.genesis);
+			Self::store_genesis(Genesis{
+				validators_root: initial_sync.validators_root
+			});
 			
 			Ok(())
 		}
@@ -359,33 +360,39 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 		fn process_finalized_header(
 			update: LightClientFinalizedHeaderUpdate,
 		) -> DispatchResult {		
-			// TODO merkle proof
-
-			let sync_committee = <CurrentSyncCommittee<T>>::get();
-
-			let genesis = <ChainGenesis<T>>::get();
-
-			Self::verify_signed_header(
-				update.sync_aggregate.sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
-				sync_committee.pubkeys,
-				update.fork_version,
-				update.finalized_header,
-				genesis.validators_root,
+			Self::verify_header(
+				update.finalized_header.clone(), 
+				update.finality_branch, 
+				update.attested_header.state_root,
+				FINALIZED_ROOT_DEPTH,
+				FINALIZED_ROOT_INDEX
 			)
+
+			//let sync_committee = <CurrentSyncCommittee<T>>::get();
+//
+			//let genesis = <ChainGenesis<T>>::get();
+//
+			//Self::verify_signed_header(
+			//	update.sync_aggregate.sync_committee_bits,
+			//	update.sync_aggregate.sync_committee_signature,
+			//	sync_committee.pubkeys,
+			//	update.fork_version,
+			//	update.finalized_header,
+			//	genesis.validators_root,
+			//)
 		}
 
 		pub(super) fn verify_signed_header(sync_committee_bits_hex: Vec<u8>, sync_committee_signature: Vec<u8>, sync_committee_pubkeys: Vec<Vec<u8>>, fork_version: ForkVersion, header: BeaconBlockHeader, validators_root: H256) -> DispatchResult {
-			let sync_commitee_bits = Self::convert_to_binary(sync_committee_bits_hex);
+			let sync_committee_bits = Self::convert_to_binary(sync_committee_bits_hex);
 
-			ensure!(Self::get_sync_committee_sum(sync_commitee_bits.clone()) >= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
+			ensure!(Self::get_sync_committee_sum(sync_committee_bits.clone()) >= MIN_SYNC_COMMITTEE_PARTICIPANTS as u64,
 				Error::<T>::InsufficientSyncCommitteeParticipants
 			);
 
 			let mut participant_pubkeys: Vec<Vec<u8>> = Vec::new();
 
 			// Gathers all the pubkeys of the sync committee members that participated in siging the header.
-			for (bit, pubkey) in sync_commitee_bits
+			for (bit, pubkey) in sync_committee_bits
 				.iter()
 				.zip(sync_committee_pubkeys.iter())
 			{
@@ -607,10 +614,17 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 
 				let mut remaining = *input_decimal;
 
-				while remaining != 0 {
+				while remaining > 0 {
 					let remainder = remaining % 2;
 					tmp.push(remainder);
 					remaining = remaining / 2;
+				}
+
+				// pad binary with 0s if length is less than 7
+				if tmp.len() < 8 {
+					for i in tmp.len()..8 {
+						tmp.push(0)
+					}
 				}
 				
 				tmp.reverse();

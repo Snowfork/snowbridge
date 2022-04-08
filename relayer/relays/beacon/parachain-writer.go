@@ -11,6 +11,11 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 )
 
+type BeaconHeader struct {
+	HeaderData interface{}
+	ProofData  interface{}
+}
+
 type ParachainPayload struct {
 	Header   *chain.Header
 	Messages []*chain.EthereumOutboundMessage
@@ -35,22 +40,7 @@ func NewParachainWriter(
 }
 
 func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainPayload) error {
-	var calls []types.Call
 	call, err := wr.makeInitialSyncCall(payload.Header)
-	if err != nil {
-		return err
-	}
-	calls = append(calls, call)
-
-	for _, msg := range payload.Messages {
-		call, err := wr.makeMessageSubmitCall(msg)
-		if err != nil {
-			return err
-		}
-		calls = append(calls, call)
-	}
-
-	call, err = types.NewCall(wr.conn.Metadata(), "Utility.batch_all", calls)
 	if err != nil {
 		return err
 	}
@@ -125,14 +115,6 @@ func (wr *ParachainWriter) write(
 	wr.nonce = wr.nonce + 1
 
 	return nil
-}
-
-func (wr *ParachainWriter) makeMessageSubmitCall(msg *chain.EthereumOutboundMessage) (types.Call, error) {
-	if msg == (*chain.EthereumOutboundMessage)(nil) {
-		return types.Call{}, fmt.Errorf("Message is nil")
-	}
-
-	return types.NewCall(wr.conn.Metadata(), msg.Call, msg.Args...)
 }
 
 func (wr *ParachainWriter) makeInitialSyncCall(header *chain.Header) (types.Call, error) {
