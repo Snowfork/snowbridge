@@ -21,7 +21,8 @@ class SubClient {
 
   async queryAssetsAccountBalance(assetId, accountId) {
     let account = await this.api.query.assets.account(assetId, accountId);
-    return BigNumber(account.balance.toBigInt())
+    if(account.isNone) return BigNumber(0);
+    return BigNumber(account.value.balance.toBigInt())
   }
 
   async subscribeAssetsAccountBalances(assetId, accountId, length) {
@@ -31,6 +32,12 @@ class SubClient {
     let count = 0;
     const unsubscribe = await this.api.query.assets.account(assetId, accountId, (account) => {
       resolvers[count](BigNumber(account.balance.toBigInt()));
+      if(account.isNone) {
+        resolvers[count](BigNumber(0));
+      } 
+      else {
+        resolvers[count](BigNumber(account.value.balance.toBigInt()));
+      }
       count++;
       if (count === length) {
         unsubscribe();
