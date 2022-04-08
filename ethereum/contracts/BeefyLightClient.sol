@@ -140,10 +140,9 @@ contract BeefyLightClient {
 
     // We must ensure at least one block is processed every session,
     // so these constants are checked to enforce a maximum gap between commitments.
-    uint64 public constant NUMBER_OF_BLOCKS_PER_SESSION = 2400;
-    uint64 public constant ERROR_AND_SAFETY_BUFFER = 10;
-    uint64 public constant MAXIMUM_BLOCK_GAP =
-        NUMBER_OF_BLOCKS_PER_SESSION - ERROR_AND_SAFETY_BUFFER;
+    // TODO: verify SAFETY_BUFFER
+    uint64 public numberOfBlocksPerSession;
+    uint64 public constant SAFETY_BUFFER = 1;
 
     /**
      * @notice Deploys the BeefyLightClient contract
@@ -153,15 +152,22 @@ contract BeefyLightClient {
     constructor(
         ValidatorRegistry _validatorRegistry,
         SimplifiedMMRVerification _mmrVerification,
-        uint64 _startingBeefyBlock
+        uint64 _startingBeefyBlock,
+        uint64 _numberOfBlocksPerSession
     ) {
         validatorRegistry = _validatorRegistry;
         mmrVerification = _mmrVerification;
         currentId = 0;
         latestBeefyBlock = _startingBeefyBlock;
+        numberOfBlocksPerSession = _numberOfBlocksPerSession;
     }
 
     /* Public Functions */
+
+    // maximum block gap between commitments
+    function maximumCommitmentGap() internal view returns (uint64) {
+        return numberOfBlocksPerSession + SAFETY_BUFFER;
+    }
 
     /**
      * @notice Executed by the incoming channel in order to verify commitment
@@ -287,24 +293,16 @@ contract BeefyLightClient {
         uint256 id,
         Commitment calldata commitment,
         ValidatorProof calldata validatorProof,
-        BeefyMMRLeaf calldata latestMMRLeaf,
-        SimplifiedMMRProof calldata proof
+        BeefyMMRLeaf calldata leaf,
+        SimplifiedMMRProof calldata leafProof
     ) public {
         verifyCommitment(id, commitment, validatorProof);
-        verifyNewestMMRLeaf(
-            latestMMRLeaf,
+        updateMMRRoot(commitment);
+        updateValidatorSet(
             commitment.payload.mmrRootHash,
-            proof
+            leaf,
+            leafProof
         );
-
-        processPayload(commitment.payload.mmrRootHash, commitment.blockNumber);
-
-        applyValidatorSetChanges(
-            latestMMRLeaf.nextAuthoritySetId,
-            latestMMRLeaf.nextAuthoritySetLen,
-            latestMMRLeaf.nextAuthoritySetRoot
-        );
-
         emit FinalVerificationSuccessful(msg.sender, id);
 
         /**
@@ -338,42 +336,29 @@ contract BeefyLightClient {
         return uint256(randomSeedBlockHash);
     }
 
-    function verifyNewestMMRLeaf(
-        BeefyMMRLeaf calldata leaf,
-        bytes32 root,
-        SimplifiedMMRProof calldata proof
-    ) public view {
-        bytes memory encodedLeaf = encodeMMRLeaf(leaf);
-        bytes32 hashedLeaf = keccak256(encodedLeaf);
-
-        require(
-            mmrVerification.verifyInclusionProof(root, hashedLeaf, proof),
-            "Invalid proof"
-        );
-    }
-
     /**
      * @notice Perform some operation[s] using the payload
      * @param payload The payload variable passed in via the initial function
      */
-    function processPayload(bytes32 payload, uint64 blockNumber) private {
+    function updateMMRRoot(Commitment calldata commitment) private {
         // Check that payload.leaf.block_number is > last_known_block_number;
         require(
-            blockNumber > latestBeefyBlock,
-            "Payload blocknumber is too old"
+            commitment.blockNumber > latestBeefyBlock,
+            "Commitment blocknumber is too old"
         );
 
         // Check that payload is within the current or next session
         // to ensure we get at least one payload each session
         require(
-            blockNumber < latestBeefyBlock + MAXIMUM_BLOCK_GAP,
-            "Payload blocknumber is too new"
+            commitment.blockNumber < latestBeefyBlock + maximumCommitmentGap(),
+            "Commitment blocknumber is too new"
         );
 
-        latestMMRRoot = payload;
-        latestBeefyBlock = blockNumber;
-        emit NewMMRRoot(latestMMRRoot, blockNumber);
+        latestMMRRoot = commitment.payload.mmrRootHash;
+        latestBeefyBlock = commitment.blockNumber;
+        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
     }
+
 
     /**
      * @notice Check if the payload includes a new validator set,
@@ -383,18 +368,30 @@ contract BeefyLightClient {
      * @param nextAuthoritySetLen The number of validators in the next authority set
      * @param nextAuthoritySetRoot The merkle root of the merkle tree of the next validators
      */
-    function applyValidatorSetChanges(
-        uint64 nextAuthoritySetId,
-        uint32 nextAuthoritySetLen,
-        bytes32 nextAuthoritySetRoot
+    function updateValidatorSet(
+        bytes32 root,
+        BeefyMMRLeaf calldata leaf,
+        SimplifiedMMRProof calldata proof
     ) internal {
-        if (nextAuthoritySetId != validatorRegistry.id()) {
-            validatorRegistry.update(
-                nextAuthoritySetRoot,
-                nextAuthoritySetLen,
-                nextAuthoritySetId
-            );
+
+        // Don't process older leafs
+        if (leaf.nextAuthoritySetId <= validatorRegistry.id()) {
+            return;
         }
+
+        // Verify that the leaf suppied by the relayer is part of the MMR
+        bytes32 leafHash = keccak256(encodeMMRLeaf(leaf));
+        require(
+            mmrVerification.verifyInclusionProof(root, leafHash, proof),
+            "Invalid leaf proof"
+        );
+
+        validatorRegistry.update(
+            leaf.nextAuthoritySetRoot,
+            leaf.nextAuthoritySetLen,
+            leaf.nextAuthoritySetId
+        );
+
     }
 
     function requiredNumberOfSignatures() public view returns (uint256) {
