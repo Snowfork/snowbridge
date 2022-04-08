@@ -31,7 +31,6 @@ class SubClient {
     // Setup our balance subscription and resolve each promise one by one
     let count = 0;
     const unsubscribe = await this.api.query.assets.account(assetId, accountId, (account) => {
-      resolvers[count](BigNumber(account.balance.toBigInt()));
       if(account.isNone) {
         resolvers[count](BigNumber(0));
       } 
