@@ -102,7 +102,7 @@ contract BeefyLightClient {
     }
 
     /**
-     * The BeefyMMRLeaf is the structure of each leaf in each MMR that each commitment's payload commits to.
+     * The MMRLeaf is the structure of each leaf in each MMR that each commitment's payload commits to.
      * @param version version of the leaf type
      * @param parentNumber parent number of the block this leaf describes
      * @param parentHash parent hash of the block this leaf describes
@@ -111,7 +111,7 @@ contract BeefyLightClient {
      * @param nextAuthoritySetLen length of that validator set
      * @param nextAuthoritySetRoot merkle root of all public keys in that validator set
      */
-    struct BeefyMMRLeaf {
+    struct MMRLeaf {
         uint8 version;
         uint32 parentNumber;
         bytes32 parentHash;
@@ -174,14 +174,14 @@ contract BeefyLightClient {
      * @param beefyMMRLeaf contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
      */
-    function verifyBeefyMerkleLeaf(
-        bytes32 beefyMMRLeaf,
-        SimplifiedMMRProof memory proof
+    function verifyMMRLeaf(
+        bytes32 leaf,
+        MMRProof memory proof
     ) external view returns (bool) {
         return
             mmrVerification.verifyInclusionProof(
                 latestMMRRoot,
-                beefyMMRLeaf,
+                leaf,
                 proof
             );
     }
@@ -293,9 +293,9 @@ contract BeefyLightClient {
         uint256 id,
         Commitment calldata commitment,
         ValidatorProof calldata validatorProof,
-        BeefyMMRLeaf calldata leaf,
-        SimplifiedMMRProof calldata leafProof
-    ) public {
+        MMRLeaf calldata leaf,
+        MMRProof calldata leafProof
+    ) external {
         verifyCommitment(id, commitment, validatorProof);
         updateMMRRoot(commitment);
         updateValidatorSet(
@@ -370,8 +370,8 @@ contract BeefyLightClient {
      */
     function updateValidatorSet(
         bytes32 root,
-        BeefyMMRLeaf calldata leaf,
-        SimplifiedMMRProof calldata proof
+        MMRLeaf calldata leaf,
+        MMRProof calldata proof
     ) internal {
 
         // Don't process older leafs
@@ -562,7 +562,7 @@ contract BeefyLightClient {
         );
     }
 
-    function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
+    function encodeMMRLeaf(MMRLeaf calldata leaf)
         internal
         pure
         returns (bytes memory)

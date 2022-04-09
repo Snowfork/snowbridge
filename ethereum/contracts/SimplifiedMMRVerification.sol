@@ -6,7 +6,7 @@ struct SimplifiedMMRProof {
     uint64 merkleProofOrderBitField;
 }
 
-contract  SimplifiedMMRVerification {
+contract SimplifiedMMRVerification {
     function verifyInclusionProof(
         bytes32 root,
         bytes32 leafNodeHash,
