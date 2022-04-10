@@ -14,9 +14,14 @@ contract BasicInboundChannel {
 
     BeefyLightClient public beefyLightClient;
 
-    struct Message {
-        address target;
+    struct MessageBundle {
         uint64 nonce;
+        Message[] messages;
+    }
+
+    struct Message {
+        uint64 id;
+        address target;
         bytes payload;
     }
 
@@ -28,7 +33,7 @@ contract BasicInboundChannel {
     }
 
     function submit(
-        Message[] calldata _messages,
+        MessageBundle calldata bundle,
         ParachainLightClient.ParachainVerifyInput
             calldata _parachainVerifyInput,
         ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
@@ -36,7 +41,7 @@ contract BasicInboundChannel {
     ) public {
         // Proof
         // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
-        bytes32 commitment = keccak256(abi.encode(_messages));
+        bytes32 commitment = keccak256(abi.encode(bundle));
 
         ParachainLightClient.verifyCommitmentInParachain(
             commitment,
@@ -55,24 +60,21 @@ contract BasicInboundChannel {
         processMessages(_messages);
     }
 
-    function processMessages(Message[] calldata _messages) internal {
-        // Caching nonce for gas optimization
-        uint64 cachedNonce = nonce;
+    function processMessages(MessageBundle calldata bundle) internal {
+        require(bundle.nonce == nonce + 1, "invalid nonce");
 
-        for (uint256 i = 0; i < _messages.length; i++) {
-            // Check message nonce is correct and increment nonce for replay protection
-            require(_messages[i].nonce ==  cachedNonce + 1, "invalid nonce");
-
-            cachedNonce = cachedNonce + 1;
+        for (uint256 i = 0; i < bundle.length; i++) {
+            Message memory message = bundle.messages[i];
 
             // Deliver the message to the target
-            (bool success, ) = _messages[i].target.call{
+            (bool success, ) = message.target.call{
                 value: 0,
                 gas: MAX_GAS_PER_MESSAGE
-            }(_messages[i].payload);
+            }(message.payload);
 
-            emit MessageDispatched(_messages[i].nonce, success);
+            emit MessageDispatched(_messages[i].id, success);
         }
-        nonce = cachedNonce;
+
+        nonce++;
     }
 }
