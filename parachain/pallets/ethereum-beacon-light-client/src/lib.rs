@@ -366,20 +366,20 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 				update.attested_header.state_root,
 				FINALIZED_ROOT_DEPTH,
 				FINALIZED_ROOT_INDEX
-			)
+			)?;
 
-			//let sync_committee = <CurrentSyncCommittee<T>>::get();
-//
-			//let genesis = <ChainGenesis<T>>::get();
-//
-			//Self::verify_signed_header(
-			//	update.sync_aggregate.sync_committee_bits,
-			//	update.sync_aggregate.sync_committee_signature,
-			//	sync_committee.pubkeys,
-			//	update.fork_version,
-			//	update.finalized_header,
-			//	genesis.validators_root,
-			//)
+			let sync_committee = <CurrentSyncCommittee<T>>::get();
+
+			let genesis = <ChainGenesis<T>>::get();
+
+			Self::verify_signed_header(
+				update.sync_aggregate.sync_committee_bits,
+				update.sync_aggregate.sync_committee_signature,
+				sync_committee.pubkeys,
+				update.fork_version,
+				update.attested_header,
+				genesis.validators_root,
+			)
 		}
 
 		pub(super) fn verify_signed_header(sync_committee_bits_hex: Vec<u8>, sync_committee_signature: Vec<u8>, sync_committee_pubkeys: Vec<Vec<u8>>, fork_version: ForkVersion, header: BeaconBlockHeader, validators_root: H256) -> DispatchResult {
@@ -627,7 +627,7 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 					}
 				}
 				
-				tmp.reverse();
+				//tmp.reverse();
 
 				result.append(&mut tmp);
 			}
