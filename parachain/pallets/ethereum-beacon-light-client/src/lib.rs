@@ -27,6 +27,10 @@ type ValidatorIndex = u64;
 type ProofBranch  = Vec<Vec<u8>>;
 type ForkVersion = [u8; 4];
 
+const SLOTS_PER_EPOCH: u64 = 32;
+
+const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 256;
+
 const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;
 
@@ -197,6 +201,7 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 	pub enum Error<T> {
 		AncientHeader,
 		SkippedSyncCommitteePeriod,
+		SyncCommitteeMissing,
 		Unknown,
 		InsufficientSyncCommitteeParticipants,
 		InvalidSyncCommiteeSignature,
@@ -221,11 +226,7 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 
 	/// Current sync committee corresponding to the active header
 	#[pallet::storage]
-	pub(super) type CurrentSyncCommittee<T: Config> = StorageValue<_, SyncCommittee, ValueQuery>;
-
-	/// Next sync committee corresponding to the active header
-	#[pallet::storage]
-	pub(super) type NextSyncCommittee<T: Config> = StorageValue<_, SyncCommittee, ValueQuery>;
+	pub(super) type SyncCommittees<T: Config> = StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type ChainGenesis<T: Config> = StorageValue<_, Genesis, ValueQuery>;
@@ -308,12 +309,16 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			initial_sync: LightClientInitialSync,
 		) -> DispatchResult {
 			Self::verify_sync_committee(
-				initial_sync.current_sync_committee, 
+				initial_sync.current_sync_committee.clone(), 
 				initial_sync.current_sync_committee_branch, 
 				initial_sync.header.state_root,
 				CURRENT_SYNC_COMMITTEE_DEPTH,
 				CURRENT_SYNC_COMMITTEE_INDEX
 			)?;
+
+			let period = Self::compute_current_sync_period(initial_sync.header.slot);
+
+			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 
 			Self::store_header(initial_sync.header);
 
@@ -328,7 +333,7 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			update: LightClientSyncCommitteePeriodUpdate,
 		) -> DispatchResult {		
 			Self::verify_sync_committee(
-				update.next_sync_committee, 
+				update.next_sync_committee.clone(), 
 				update.next_sync_committee_branch, 
 				update.finalized_header.state_root,
 				NEXT_SYNC_COMMITTEE_DEPTH,
@@ -343,7 +348,12 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 				FINALIZED_ROOT_INDEX
 			)?;
 
-			let sync_committee = <CurrentSyncCommittee<T>>::get();
+			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+
+			Self::store_sync_committee(current_period+1, update.next_sync_committee);
+
+			// TODO Check if attested header could be in different sync period than finalized header, in the same update
+			let sync_committee = <SyncCommittees<T>>::get(current_period);
 
 			let genesis = <ChainGenesis<T>>::get();
 
@@ -372,7 +382,13 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 				FINALIZED_ROOT_INDEX
 			)?;
 
-			let sync_committee = <CurrentSyncCommittee<T>>::get();
+			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+
+			let sync_committee = <SyncCommittees<T>>::get(current_period);
+
+			if (SyncCommittee{ pubkeys: vec![], aggregate_pubkey: vec![] }) == sync_committee  {
+				return Err(Error::<T>::SyncCommitteeMissing.into());
+			}
 
 			let genesis = <ChainGenesis<T>>::get();
 
@@ -533,6 +549,10 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			Ok(())
 		}
 
+		fn store_sync_committee(period: u64, sync_committee: SyncCommittee) {
+			<SyncCommittees<T>>::insert(period, sync_committee);
+		}
+
 		fn store_header(header: BeaconBlockHeader) {
 			<FinalizedHeaders<T>>::insert(header.body_root.clone(), header.clone());
 
@@ -553,6 +573,10 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			sync_committee_bits.iter().fold(0, |acc: u64, x| acc + *x as u64)
 		}
 
+		pub(super) fn compute_current_sync_period(slot: u64) -> u64 {
+			slot / SLOTS_PER_EPOCH / EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+		}
+
 		/// Return the domain for the domain_type and fork_version.
 		pub(super) fn compute_domain(
 			domain_type: Vec<u8>,
@@ -565,9 +589,6 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			} else {
 				unwrapped_fork_version = fork_version.unwrap();
 			}
-			// TODO this may not be needed because we pass genesis_validators_root from relayer.
-			//if genesis_validators_root is None:
-			//	genesis_validators_root = Root()  # all bytes zero by default
 
 			let fork_data_root =
 				Self::compute_fork_data_root(unwrapped_fork_version, genesis_validators_root)?;
@@ -634,8 +655,6 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 						tmp.push(0)
 					}
 				}
-				
-				//tmp.reverse();
 
 				result.append(&mut tmp);
 			}

@@ -1,6 +1,5 @@
-use crate::{mock::*, CurrentSyncCommittee};
-use crate::{BeaconBlockHeader, FinalizedHeaders, FinalizedHeadersBySlot, ChainGenesis, Genesis};
-use frame_support::assert_ok;
+use crate::{mock::*, SyncCommittees, Error, BeaconBlockHeader, FinalizedHeaders, FinalizedHeadersBySlot, ChainGenesis, Genesis};
+use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
 
 #[test]
@@ -24,8 +23,10 @@ fn it_updates_a_committee_period_sync_update() {
 
 	let current_sync_committee = get_current_sync_committee_for_current_committee_update();
 
+	let current_period = EthereumBeaconLightClient::compute_current_sync_period(update.attested_header.slot);
+
 	new_tester().execute_with(|| {
-		CurrentSyncCommittee::<Test>::set(current_sync_committee);
+		SyncCommittees::<Test>::insert(current_period, current_sync_committee);
 		ChainGenesis::<Test>::set(Genesis{
 			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
 		});
@@ -43,13 +44,32 @@ fn it_processes_a_finalized_header_update() {
 
 	let current_sync_committee = get_current_sync_committee_for_finalized_header_update();
 
+	let current_period = EthereumBeaconLightClient::compute_current_sync_period(update.attested_header.slot);
+
 	new_tester().execute_with(|| {
-		CurrentSyncCommittee::<Test>::set(current_sync_committee);
+		SyncCommittees::<Test>::insert(current_period, current_sync_committee);
 		ChainGenesis::<Test>::set(Genesis{
 			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
 		});
 
 		assert_ok!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), update,));
+	});
+}
+
+#[test]
+fn it_processes_a_finalized_header_update_with_no_sync_commitee_for_period() {
+	let update = get_finalized_header_update();
+
+	let current_sync_committee = get_current_sync_committee_for_finalized_header_update();
+
+	let current_period = EthereumBeaconLightClient::compute_current_sync_period(update.attested_header.slot);
+
+	new_tester().execute_with(|| {
+		ChainGenesis::<Test>::set(Genesis{
+			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
+		});
+
+		assert_err!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), update), Error::<Test>::SyncCommitteeMissing);
 	});
 }
 
@@ -248,6 +268,54 @@ pub fn test_bls_fast_aggregate_verify_minimal() {
 			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
 			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
 		));
+	});
+}
+
+#[test]
+pub fn test_bls_fast_aggregate_verify_invalid_point() {
+	new_tester().execute_with(|| {
+		assert_err!(EthereumBeaconLightClient::bls_fast_aggregate_verify(
+			vec![
+				hex!("973eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
+			],
+			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
+			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
+		), Error::<Test>::InvalidSignaturePoint);
+	});
+}
+
+#[test]
+pub fn test_bls_fast_aggregate_verify_invalid_message() {
+	new_tester().execute_with(|| {
+		assert_err!(EthereumBeaconLightClient::bls_fast_aggregate_verify(
+			vec![
+				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
+			],
+			hex!("99241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
+			hex!("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
+		), Error::<Test>::SignatureVerificationFailed);
+	});
+}
+
+#[test]
+pub fn test_bls_fast_aggregate_verify_invalid_signature() {
+	new_tester().execute_with(|| {
+		assert_err!(EthereumBeaconLightClient::bls_fast_aggregate_verify(
+			vec![
+				hex!("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086").into(),
+				hex!("b29043a7273d0a2dbc2b747dcf6a5eccbd7ccb44b2d72e985537b117929bc3fd3a99001481327788ad040b4077c47c0d").into(),
+				hex!("b928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb7").into(),
+				hex!("9446407bcd8e5efe9f2ac0efbfa9e07d136e68b03c5ebc5bde43db3b94773de8605c30419eb2596513707e4e7448bb50").into(),
+			],
+			hex!("69241e7146cdcc5a5ddc9a60bab8f378c0271e548065a38bcc60624e1dbed97f").into(),
+			hex!("c204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e").to_vec(),
+		), Error::<Test>::InvalidSignature);
 	});
 }
 
