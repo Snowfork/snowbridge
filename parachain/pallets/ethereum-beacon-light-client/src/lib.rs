@@ -354,7 +354,11 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 				update.fork_version,
 				update.attested_header,
 				genesis.validators_root,
-			)
+			)?;
+
+			Self::store_header(update.finalized_header);
+
+			Ok(())
 		}
 
 		fn process_finalized_header(
@@ -379,7 +383,11 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 				update.fork_version,
 				update.attested_header,
 				genesis.validators_root,
-			)
+			)?;
+
+			Self::store_header(update.finalized_header);
+
+			Ok(())
 		}
 
 		pub(super) fn verify_signed_header(sync_committee_bits_hex: Vec<u8>, sync_committee_signature: Vec<u8>, sync_committee_pubkeys: Vec<Vec<u8>>, fork_version: ForkVersion, header: BeaconBlockHeader, validators_root: H256) -> DispatchResult {

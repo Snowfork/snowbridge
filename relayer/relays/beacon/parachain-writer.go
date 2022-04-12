@@ -4,20 +4,22 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain"
-	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 )
 
-type BeaconHeader struct {
-	HeaderData interface{}
-	ProofData  interface{}
+type InitialSync struct {
+	Header                     Header
+	CurrentSyncCommittee       CurrentSyncCommittee
+	CurrentSyncCommitteeBranch []string
+	Genesis                    Genesis
 }
 
 type ParachainPayload struct {
-	Header   *chain.Header
+	InitialSync   *InitialSync
 	Messages []*chain.EthereumOutboundMessage
 }
 
@@ -40,21 +42,20 @@ func NewParachainWriter(
 }
 
 func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainPayload) error {
-	call, err := wr.makeInitialSyncCall(payload.Header)
+	call, err := wr.makeInitialSyncCall(payload.InitialSync)
 	if err != nil {
 		return err
 	}
 
 	onFinalized := func(_ types.Hash) error {
 		// Confirm that the header import was successful
-		header := payload.Header.HeaderData.(ethereum.Header)
-		hash := header.ID().Hash
-		imported, err := wr.queryImportedHeaderExists(hash)
+		headerHash := payload.InitialSync.Header.BodyRoot
+		imported, err := wr.queryImportedHeaderExists(headerHash)
 		if err != nil {
 			return err
 		}
 		if !imported {
-			return fmt.Errorf("Header import failed for header %s", hash.Hex())
+			return fmt.Errorf("Header import failed for header %s", headerHash.Hex())
 		}
 		return nil
 	}
@@ -117,16 +118,16 @@ func (wr *ParachainWriter) write(
 	return nil
 }
 
-func (wr *ParachainWriter) makeInitialSyncCall(header *chain.Header) (types.Call, error) {
-	if header == (*chain.Header)(nil) {
-		return types.Call{}, fmt.Errorf("Header is nil")
+func (wr *ParachainWriter) makeInitialSyncCall(initialSync *InitialSync) (types.Call, error) {
+	if initialSync == (*InitialSync)(nil) {
+		return types.Call{}, fmt.Errorf("Initial sync is nil")
 	}
 
-	return types.NewCall(wr.conn.Metadata(), "EthereumLightClient.import_header", header.HeaderData, header.ProofData)
+	return types.NewCall(wr.conn.Metadata(), "EthereumLightClient.intial_sync", initialSync.Header, initialSync.CurrentSyncCommittee, initialSync.CurrentSyncCommitteeBranch, initialSync.Genesis)
 }
 
-func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumLightClient", "FinalizedHeaders", hash[:], nil)
+func (wr *ParachainWriter) queryImportedHeaderExists(hash common.Hash) (bool, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconLightClient", "FinalizedHeaders", hash[:], nil)
 	if err != nil {
 		return false, err
 	}

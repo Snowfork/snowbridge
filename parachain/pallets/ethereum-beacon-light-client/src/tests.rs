@@ -41,7 +41,7 @@ fn it_updates_a_committee_period_sync_update() {
 fn it_processes_a_finalized_header_update() {
 	let update = get_finalized_header_update();
 
-	let current_sync_committee = get_current_sync_committee_for_current_committee_update();
+	let current_sync_committee = get_current_sync_committee_for_finalized_header_update();
 
 	new_tester().execute_with(|| {
 		CurrentSyncCommittee::<Test>::set(current_sync_committee);
@@ -49,7 +49,7 @@ fn it_processes_a_finalized_header_update() {
 			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
 		});
 
-		//assert_ok!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), update,));
+		assert_ok!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), update,));
 	});
 }
 
