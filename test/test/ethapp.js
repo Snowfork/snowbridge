@@ -94,5 +94,49 @@ describe('Bridge', function () {
       // conservation of value
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
     });
+
+    it('should not transfer ETH from Ethereum to Parachain 1001 without fee', async function () {
+      const amount = BigNumber(Web3.utils.toWei('1', "ether"));
+      const ethAccount = ethClient.accounts[1];
+
+      const subBalances = await subClient.subscribeAssetsAccountBalances(
+        this.testParaEthAssetId, polkadotRecipientSS58, 2
+      );
+
+      const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
+      const beforeSubBalance = await subBalances[0];
+
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 1001, 0);
+
+      const afterEthBalance = await ethClient.getEthBalance(ethAccount);
+      const afterSubBalance = await subBalances[1];
+
+      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
+      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
+      // conservation of value
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
+    });
+
+    it('should not transfer ETH from Ethereum to non-existent Parachain 2001', async function () {
+      const amount = BigNumber(Web3.utils.toWei('1', "ether"));
+      const ethAccount = ethClient.accounts[1];
+
+      const subBalances = await subClient.subscribeAssetsAccountBalances(
+        this.testParaEthAssetId, polkadotRecipientSS58, 2
+      );
+
+      const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
+      const beforeSubBalance = await subBalances[0];
+
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 2001, 4_000_000);
+
+      const afterEthBalance = await ethClient.getEthBalance(ethAccount);
+      const afterSubBalance = await subBalances[1];
+
+      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
+      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
+      // conservation of value
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
+    });
   });
 });

@@ -60,9 +60,15 @@ contract BeefyLightClient {
      * @param validatorSetId validator set id that signed the given commitment
      */
     struct Commitment {
-        bytes32 payload;
         uint32 blockNumber;
         uint64 validatorSetId;
+        Payload payload;
+    }
+
+    struct Payload {
+        bytes32 mmrRootHash;
+        bytes prefix;
+        bytes suffix;
     }
 
     /**
@@ -287,11 +293,11 @@ contract BeefyLightClient {
         verifyCommitment(id, commitment, validatorProof);
         verifyNewestMMRLeaf(
             latestMMRLeaf,
-            commitment.payload,
+            commitment.payload.mmrRootHash,
             proof
         );
 
-        processPayload(commitment.payload, commitment.blockNumber);
+        processPayload(commitment.payload.mmrRootHash, commitment.blockNumber);
 
         applyValidatorSetChanges(
             latestMMRLeaf.nextAuthoritySetId,
@@ -308,6 +314,7 @@ contract BeefyLightClient {
     }
 
     /* Private Functions */
+
 
     /**
      * @notice Deterministically generates a seed from the block hash at the block number of creation of the validation
@@ -484,7 +491,8 @@ contract BeefyLightClient {
         Commitment calldata commitment
     ) internal view {
         // Encode and hash the commitment
-        bytes32 commitmentHash = createCommitmentHash(commitment);
+        bytes memory encodedCommitment = encodeCommitment(commitment);
+        bytes32 commitmentHash = keccak256(encodedCommitment);
 
         /**
          *  @dev For each randomSignature, do:
@@ -543,23 +551,22 @@ contract BeefyLightClient {
         );
     }
 
-    function createCommitmentHash(Commitment calldata commitment)
-        public
+    function encodeCommitment(Commitment calldata commitment)
+        internal
         pure
-        returns (bytes32)
+        returns (bytes memory)
     {
-        return
-            keccak256(
-                abi.encodePacked(
-                    commitment.payload,
-                    commitment.blockNumber.encode32(),
-                    commitment.validatorSetId.encode64()
-                )
-            );
+        return bytes.concat(
+            commitment.payload.prefix,
+            commitment.payload.mmrRootHash,
+            commitment.payload.suffix,
+            commitment.blockNumber.encode32(),
+            commitment.validatorSetId.encode64()
+        );
     }
 
     function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
-        public
+        internal
         pure
         returns (bytes memory)
     {
