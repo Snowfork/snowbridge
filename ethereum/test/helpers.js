@@ -79,7 +79,10 @@ const deployBeefyLightClient = async (validatorSetId, validatorSetRoot, validato
     simplifiedMMRVerification.address,
   );
 
-  await beefyLightClient.initialize(0, validatorSetId, validatorSetRoot, validatorSetLength);
+  await beefyLightClient.initialize(0,
+    { id: validatorSetId, root: validatorSetRoot, length: validatorSetLength },
+    { id: validatorSetId + 1, root: validatorSetRoot, length: validatorSetLength }
+  );
 
   return beefyLightClient;
 }
