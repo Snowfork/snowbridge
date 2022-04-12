@@ -27,8 +27,7 @@ describe("BasicInboundChannel", function () {
     await BasicInboundChannel.link(merkleProof);
     await BasicInboundChannel.link(scaleCodec);
 
-
-    const numberOfSignatures = 0;
+    const numberOfSignatures = 8;
     const numberOfValidators = 24;
     const validatorFixture = await createValidatorFixture(fixture.finalSignatureCommitment.commitment.validatorSetId, numberOfValidators)
     this.beefyLightClient = await deployBeefyLightClient(

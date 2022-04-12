@@ -27,15 +27,16 @@ describe("IncentivizedInboundChannel", function () {
     await IncentivizedInboundChannel.link(merkleProof);
     await IncentivizedInboundChannel.link(scaleCodec);
 
-    const totalNumberOfValidatorSigs = 100;
-    const beefyFixture = await createValidatorFixture(
-      totalNumberOfValidatorSigs
-    )
+    const numberOfSignatures = 8;
+    const numberOfValidators = 24;
+    const validatorFixture = await createValidatorFixture(fixture.finalSignatureCommitment.commitment.validatorSetId, numberOfValidators)
+    this.beefyLightClient = await deployBeefyLightClient(
+      validatorFixture.validatorSetId,
+      validatorFixture.validatorSetRoot,
+      validatorFixture.validatorSetLength,
+    );
 
-    this.beefyLightClient = await deployBeefyLightClient(beefyFixture.root,
-      totalNumberOfValidatorSigs);
-
-    await runBeefyLightClientFlow(fixture, this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
+    await runBeefyLightClientFlow(fixture, this.beefyLightClient, validatorFixture, numberOfSignatures, numberOfValidators)
   });
 
   describe("submit", function () {

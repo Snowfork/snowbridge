@@ -1,6 +1,7 @@
 const BigNumber = web3.BigNumber;
 const Bitfield = artifacts.require("Bitfield");
 const ScaleCodec = artifacts.require("ScaleCodec");
+const MerkleProof = artifacts.require("MerkleProof");
 const ExposedBeefyLightClient = artifacts.require("ExposedBeefyLightClient");
 
 
@@ -18,8 +19,10 @@ describe("Beefy Light Client", function () {
   before(async function () {
     const bitfield = await Bitfield.new();
     const scaleCodec = await ScaleCodec.new();
+    const merkleProof = await MerkleProof.new();
     await ExposedBeefyLightClient.link(bitfield);
     await ExposedBeefyLightClient.link(scaleCodec);
+    await ExposedBeefyLightClient.link(merkleProof);
     this.beefyLightClient = await ExposedBeefyLightClient.new();
   });
 

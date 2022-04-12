@@ -20,18 +20,12 @@ describe("Beefy Light Client", function () {
   before(async function () {
     this.timeout(10 * 1000)
 
-    this.beefyLightClient = await deployBeefyLightClient();
-  });
-
-  it("encodes, hashes and verifies beefy mmr leaves correctly", async function () {
-    await this.beefyLightClient.verifyNewestMMRLeaf(
-      fixture.finalSignatureCommitment.leaf,
-      fixture.finalSignatureCommitment.commitment.payload.mmrRootHash,
-      {
-        merkleProofItems: fixture.finalSignatureCommitment.proof.merkleProofItems,
-        merkleProofOrderBitField: fixture.finalSignatureCommitment.proof.merkleProofOrderBitField
-      }
-    ).should.be.fulfilled
+    this.beefyLightClient = await deployBeefyLightClient(
+      fixture.finalSignatureCommitment.commitment.validatorSetId,
+      // TODO: improve fixture data for validator root/len. This is a hack.
+      fixture.finalSignatureCommitment.leaf.nextAuthoritySetRoot,
+      fixture.finalSignatureCommitment.leaf.nextAuthoritySetLen,
+    );
   });
 
   it("runs new signature commitment and complete signature commitment correctly", async function () {
@@ -53,7 +47,7 @@ describe("Beefy Light Client", function () {
 
     await tx.should.be.fulfilled
 
-    const lastId = (await this.beefyLightClient.currentId()).sub(new web3.utils.BN(1));
+    const lastId = (await this.beefyLightClient.nextID()).sub(new web3.utils.BN(1));
 
     await mine(3);
 

@@ -5,7 +5,6 @@ const MerkleTree = require("merkletreejs").MerkleTree;
 const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
 const ScaleCodec = artifacts.require("ScaleCodec");
-const ValidatorRegistry = artifacts.require("ValidatorRegistry");
 const SimplifiedMMRVerification = artifacts.require("SimplifiedMMRVerification");
 const BeefyLightClient = artifacts.require("BeefyLightClient");
 
@@ -20,24 +19,10 @@ const lazyLinkLibraries = async _ => {
   const bitfield = await Bitfield.new();
   const scaleCodec = await ScaleCodec.new();
 
-  await ValidatorRegistry.link(merkleProof); // 860624903cbc2e721b1f7f70307ce6b5fe
+  await BeefyLightClient.link(merkleProof); // 860624903cbc2e721b1f7f70307ce6b5fe
   await BeefyLightClient.link(bitfield); // ce679fb3689ba2b0521c393162ea0c3c96$
   await BeefyLightClient.link(scaleCodec); // 7cdc5241ea8d29c91205423c213999ecf3
   lazyLinked = true;
-}
-
-const initValidatorRegistry = async (validatorSetID, validatorSetRoot, validatorSetLength) => {
-  await lazyLinkLibraries()
-
-  validatorRegistry = await ValidatorRegistry.new();
-
-  await validatorRegistry.update(
-    validatorSetID,
-    validatorSetRoot,
-    validatorSetLength
-  );
-
-  return validatorRegistry;
 }
 
 const makeBasicCommitment = (messages) => {
@@ -86,20 +71,15 @@ const deployBeefyLightClient = async (validatorSetId, validatorSetRoot, validato
     validatorSetLength = fixture.finalSignatureCommitment.leaf.nextAuthoritySetLen
   }
 
-  const validatorRegistry = await initValidatorRegistry(
-    validatorSetId,
-    validatorSetRoot,
-    validatorSetLength
-  );
   const simplifiedMMRVerification = await SimplifiedMMRVerification.new();
 
+  await lazyLinkLibraries()
+
   const beefyLightClient = await BeefyLightClient.new(
-    validatorRegistry.address,
     simplifiedMMRVerification.address,
-    0
   );
 
-  await validatorRegistry.transferOwnership(beefyLightClient.address)
+  await beefyLightClient.initialize(0, validatorSetId, validatorSetRoot, validatorSetLength);
 
   return beefyLightClient;
 }

@@ -3,15 +3,17 @@ pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
 import "./SimplifiedMMRVerification.sol";
 import "./ScaleCodec.sol";
+import "./utils/MerkleProof.sol";
 
 /**
  * @title A entry contract for the Ethereum light client
  */
-contract BeefyLightClient {
+contract BeefyLightClient is AccessControl {
     using Bits for uint256;
     using Bitfield for uint256[];
     using ScaleCodec for uint256;
@@ -153,18 +155,30 @@ contract BeefyLightClient {
      * @param _mmrVerification The contract to be used for MMR verification
      */
     constructor(
-        SimplifiedMMRVerification _mmrVerification,
+        SimplifiedMMRVerification _mmrVerification
+    ) {
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        mmrVerification = _mmrVerification;
+        nextID = 0;
+    }
+
+    // Once-off post-construction call to set initial configuration.
+    function initialize(
         uint64 _startingBeefyBlock,
         uint256 _validatorSetID,
         bytes32 _validatorSetRoot,
         uint256 _validatorSetLength
-    ) {
-        mmrVerification = _mmrVerification;
-        nextID = 0;
+    )
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         latestBeefyBlock = _startingBeefyBlock;
         validatorSetID = _validatorSetID;
         validatorSetRoot = _validatorSetRoot;
         validatorSetLength = _validatorSetLength;
+
+        // drop admin privileges
+        renounceRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /* Public Functions */
@@ -205,7 +219,7 @@ contract BeefyLightClient {
         address validatorPublicKey,
         bytes32[] calldata validatorPublicKeyMerkleProof
     ) public payable {
-        // Check if validatorPublicKeyMerkleProof is valid based on ValidatorRegistry merkle root
+        // Check if validatorPublicKeyMerkleProof is valid based on validatorSetRoot
         require(
             isValidatorInSet(
                 validatorPublicKey,
@@ -273,7 +287,7 @@ contract BeefyLightClient {
     }
 
     /**
-     * @notice Performs the final step in the validation process, and then applies the commitment and optional authority update
+     * @notice Performs the final step in the validation, and then applies the commitment and optional authority update
      * @param id an identifying value generated in the previous transaction
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param validatorProof a struct containing the data needed to verify all validator signatures

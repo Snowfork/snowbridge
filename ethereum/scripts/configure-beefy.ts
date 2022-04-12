@@ -8,12 +8,9 @@ async function configureBeefy() {
   const signer = await hre.ethers.getSigner()
 
   const beefyDeployment = await hre.deployments.get("BeefyLightClient");
-
-  const validatorRegistryDeployment = await hre.deployments.get("ValidatorRegistry");
-  const validatorRegistryContract = await new hre.ethers.Contract(validatorRegistryDeployment.address,
-    validatorRegistryDeployment.abi);
-
-  const validatorRegistry = await validatorRegistryContract.connect(signer)
+  const beefyLightClientContract = await new hre.ethers.Contract(beefyDeployment.address,
+    beefyDeployment.abi);
+  const beefyLightClient = await beefyLightClientContract.connect(signer)
 
   const relayChainProvider = new WsProvider(relaychainEndpoint);
   const relaychainAPI = await ApiPromise.create({
@@ -25,19 +22,12 @@ async function configureBeefy() {
   const root = authorities.root.toString();
   const numValidators = authorities.len.toString();
 
-  console.log("Configuring ValidatorRegistry with updated validators")
+  console.log("Configuring BeefyLightClient with initial BEEFY state")
   console.log({
     root, numValidators, id
   });
 
-  await validatorRegistry.update(id, root, numValidators)
-
-  console.log("Transferring ownership of ValidatorRegistry to BeefyLightClient")
-  console.log({
-    beefyAddress: beefyDeployment.address,
-  });
-
-  await validatorRegistry.transferOwnership(beefyDeployment.address)
+  await beefyLightClient.initialize(0, id, root, numValidators)
 
   return;
 }
