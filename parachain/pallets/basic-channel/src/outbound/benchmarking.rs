@@ -66,7 +66,7 @@ benchmarks! {
 		let alice = T::Lookup::unlookup(account("alice", 0, SEED));
 	}: _(authorized_origin, alice)
 	verify {
-		assert_eq!(<Principal<T>>::get(), account("alice", 0, SEED));
+		assert_eq!(<Principal<T>>::get(), Some(account("alice", 0, SEED)));
 	}
 }
 

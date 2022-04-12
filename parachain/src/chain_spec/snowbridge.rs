@@ -10,6 +10,9 @@ use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
+/// The default XCM version to set in genesis config.
+const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
+
 pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 	let mut props = Properties::new();
 	props.insert("tokenSymbol".into(), "DOT".into());
@@ -53,6 +56,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		vec![],
 		None,
 		None,
+		None,
 		Some(props),
 		Extensions { relay_chain: "rococo-local".into(), para_id: para_id.into() },
 	)
@@ -68,7 +72,6 @@ fn testnet_genesis(
 		system: snowbridge_runtime::SystemConfig {
 			// Add Wasm runtime to storage.
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
-			changes_trie_config: Default::default(),
 		},
 		balances: snowbridge_runtime::BalancesConfig {
 			// Configure endowed accounts with initial balance of 1 << 60.
@@ -147,5 +150,8 @@ fn testnet_genesis(
 		aura: Default::default(),
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
+		polkadot_xcm: parachain_template_runtime::PolkadotXcmConfig {
+			safe_xcm_version: Some(SAFE_XCM_VERSION),
+		},
 	}
 }

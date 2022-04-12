@@ -47,13 +47,13 @@ yarn install
 ### Polkadot
 
 * Clone the polkadot repository somewhere on your machine
-* Checkout commit `release-v0.9.12`.
+* Checkout commit `96d736ce75e8467862cd63037faa6d6e56122532`.
 
 Example:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
-git checkout release-v0.9.12
+git checkout 96d736ce75e8467862cd63037faa6d6e56122532
 cargo build --release
 ```
 

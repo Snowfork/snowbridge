@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -62,7 +61,7 @@ func subBeefyJustifications(ctx context.Context, paraID uint32) error {
 		select {
 		case msg := <-ch:
 
-			signedCommitment := &store.SignedCommitment{}
+			signedCommitment := &types.SignedCommitment{}
 			err := types.DecodeFromHexString(msg.(string), signedCommitment)
 			if err != nil {
 				log.WithError(err).Error("Failed to decode BEEFY commitment messages")

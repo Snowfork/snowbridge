@@ -114,17 +114,23 @@ func (co *Connection) GenerateProofForBlock(
 	}
 
 	log.WithFields(log.Fields{
-		"BlockHash":                       proofResponse.BlockHash.Hex(),
-		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
-		"Leaf.Hash":                       proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
-		"Leaf.ParachainHeads":             proofResponse.Leaf.ParachainHeads.Hex(),
-		"Leaf.BeefyNextAuthoritySet.ID":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
-		"Leaf.BeefyNextAuthoritySet.Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
-		"Leaf.BeefyNextAuthoritySet.Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
-		"Proof.LeafIndex":                 proofResponse.Proof.LeafIndex,
-		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
-		"Proof.Items":                     proofItemsHex,
-	}).Info("Generated MMR Proof")
+		"BlockHash": proofResponse.BlockHash.Hex(),
+		"Leaf": log.Fields{
+			"ParentNumber":   proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
+			"ParentHash":     proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
+			"ParachainHeads": proofResponse.Leaf.ParachainHeads.Hex(),
+			"NextAuthoritySet": log.Fields{
+				"Id":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
+				"Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
+				"Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
+			},
+		},
+		"Proof": log.Fields{
+			"LeafIndex": proofResponse.Proof.LeafIndex,
+			"LeafCount": proofResponse.Proof.LeafCount,
+			"Items":     proofItemsHex,
+		},
+	}).Info("Generated MMR proof")
 
 	return proofResponse, nil
 }

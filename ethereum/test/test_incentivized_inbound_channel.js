@@ -14,7 +14,9 @@ const MockRewardSource = artifacts.require("MockRewardSource");
 const {
   deployBeefyLightClient, printTxPromiseGas
 } = require("./helpers");
-const fixture = require('./fixtures/full-flow-incentivized.json');
+
+const fixture = require('./fixtures/beefy-relay-incentivized.json')
+const submitInput = require('./fixtures/parachain-relay-incentivized.json')
 
 describe("IncentivizedInboundChannel", function () {
   const interface = new ethers.utils.Interface(IncentivizedInboundChannel.abi)
@@ -51,7 +53,10 @@ describe("IncentivizedInboundChannel", function () {
 
       // Send commitment
       const tx = this.channel.submit(
-        ...Object.values(fixture.incentivizedSubmitInput),
+        submitInput.submit.messages,
+        submitInput.submit.paraVerifyInput,
+        submitInput.submit.leafPartial,
+        submitInput.submit.proof
       ).should.be.fulfilled
       printTxPromiseGas(tx)
       const { receipt } = await tx;
@@ -67,18 +72,23 @@ describe("IncentivizedInboundChannel", function () {
         receipt.rawLogs[0].topics
       );
       event.nonce.eq(ethers.BigNumber.from(1)).should.be.true;
-      event.result.should.be.true;
     });
 
     it("should refuse to replay commitments", async function () {
       // Submit messages
       await this.channel.submit(
-        ...Object.values(fixture.incentivizedSubmitInput),
+        submitInput.submit.messages,
+        submitInput.submit.paraVerifyInput,
+        submitInput.submit.leafPartial,
+        submitInput.submit.proof
       ).should.be.fulfilled;
 
       // Submit messages again - should revert
       await this.channel.submit(
-        ...Object.values(fixture.incentivizedSubmitInput),
+        submitInput.submit.messages,
+        submitInput.submit.paraVerifyInput,
+        submitInput.submit.leafPartial,
+        submitInput.submit.proof
       ).should.not.be.fulfilled;
     });
 

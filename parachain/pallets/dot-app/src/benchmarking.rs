@@ -34,7 +34,7 @@ benchmarks! {
 		let recipient = H160::zero();
 
 		// set principal for basic channel
-		Principal::<T>::set(caller.clone());
+		Principal::<T>::set(Some(caller.clone()));
 
 		let balance = existential_deposit * 10u32.into();
 		// The amount is chosen such that balance - amount < existential_deposit
