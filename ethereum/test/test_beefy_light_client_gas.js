@@ -3,7 +3,7 @@ const {
   mine, printTxPromiseGas
 } = require("./helpers");
 
-const { createBeefyValidatorFixture, createRandomPositions,
+const { createValidatorFixture, createRandomPositions,
   createAllValidatorProofs, createCompleteValidatorProofs } = require("./beefy-helpers");
 
 const realWorldFixture = require('./fixtures/beefy-relay-basic.json')
@@ -14,7 +14,7 @@ require("chai")
 
 const { expect } = require("chai");
 
-describe("Beefy Light Client Gas Usage", function () {
+describe.skip("Beefy Light Client Gas Usage", function () {
 
   const testCases = [
     {
@@ -63,7 +63,7 @@ describe("Beefy Light Client Gas Usage", function () {
   const runFlow = async function (totalNumberOfValidators, totalNumberOfSignatures, fail) {
     console.log(`Running flow with ${totalNumberOfValidators} validators and ${totalNumberOfSignatures} signatures with the complete transaction ${fail ? 'failing' : 'succeeding'}: `)
 
-    const fixture = await createBeefyValidatorFixture(
+    const fixture = await createValidatorFixture(
       totalNumberOfValidators
     )
     const beefyLightClient = await deployBeefyLightClient(fixture.root,

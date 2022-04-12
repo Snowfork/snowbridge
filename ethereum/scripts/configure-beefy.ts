@@ -21,17 +21,16 @@ async function configureBeefy() {
   })
 
   const authorities = await relaychainAPI.query.mmrLeaf.beefyNextAuthorities()
+  const id = authorities.id.toString();
   const root = authorities.root.toString();
   const numValidators = authorities.len.toString();
-  const id = authorities.id.toString();
-
 
   console.log("Configuring ValidatorRegistry with updated validators")
   console.log({
     root, numValidators, id
   });
 
-  await validatorRegistry.update(root, numValidators, id)
+  await validatorRegistry.update(id, root, numValidators)
 
   console.log("Transferring ownership of ValidatorRegistry to BeefyLightClient")
   console.log({

@@ -5,7 +5,6 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
-import "./ValidatorRegistry.sol";
 import "./SimplifiedMMRVerification.sol";
 import "./ScaleCodec.sol";
 
@@ -47,6 +46,12 @@ contract BeefyLightClient {
     event FinalVerificationSuccessful(address prover, uint256 id);
 
     event NewMMRRoot(bytes32 mmrRoot, uint64 blockNumber);
+
+    event NewSession(
+        uint256 validatorSetID,
+        bytes32 validatorSetRoot,
+        uint256 validatorSetLength
+    );
 
     /* Types */
 
@@ -102,7 +107,7 @@ contract BeefyLightClient {
     }
 
     /**
-     * The BeefyMMRLeaf is the structure of each leaf in each MMR that each commitment's payload commits to.
+     * The MMRLeaf is the structure of each leaf in each MMR that each commitment's payload commits to.
      * @param version version of the leaf type
      * @param parentNumber parent number of the block this leaf describes
      * @param parentHash parent hash of the block this leaf describes
@@ -111,7 +116,7 @@ contract BeefyLightClient {
      * @param nextAuthoritySetLen length of that validator set
      * @param nextAuthoritySetRoot merkle root of all public keys in that validator set
      */
-    struct BeefyMMRLeaf {
+    struct MMRLeaf {
         uint8 version;
         uint32 parentNumber;
         bytes32 parentHash;
@@ -123,51 +128,46 @@ contract BeefyLightClient {
 
     /* State */
 
-    ValidatorRegistry public validatorRegistry;
-    SimplifiedMMRVerification public mmrVerification;
-    uint256 public currentId;
     bytes32 public latestMMRRoot;
     uint64 public latestBeefyBlock;
+
+    uint256 public validatorSetID;
+    bytes32 public validatorSetRoot;
+    uint256 public validatorSetLength;
+
+    uint256 public nextID;
     mapping(uint256 => ValidationData) public validationData;
+
+    SimplifiedMMRVerification public mmrVerification;
 
     /* Constants */
 
-    // THRESHOLD_NUMERATOR - numerator for percent of validator signatures required
-    // THRESHOLD_DENOMINATOR - denominator for percent of validator signatures required
+    // Used for calculating minimum number of required signatures
     uint256 public constant THRESHOLD_NUMERATOR = 3;
     uint256 public constant THRESHOLD_DENOMINATOR = 250;
-    uint64 public constant BLOCK_WAIT_PERIOD = 3;
 
-    // We must ensure at least one block is processed every session,
-    // so these constants are checked to enforce a maximum gap between commitments.
-    // TODO: verify SAFETY_BUFFER
-    uint64 public numberOfBlocksPerSession;
-    uint64 public constant SAFETY_BUFFER = 1;
+    uint64 public constant BLOCK_WAIT_PERIOD = 3;
 
     /**
      * @notice Deploys the BeefyLightClient contract
-     * @param _validatorRegistry The contract to be used as the validator registry
      * @param _mmrVerification The contract to be used for MMR verification
      */
     constructor(
-        ValidatorRegistry _validatorRegistry,
         SimplifiedMMRVerification _mmrVerification,
         uint64 _startingBeefyBlock,
-        uint64 _numberOfBlocksPerSession
+        uint256 _validatorSetID,
+        bytes32 _validatorSetRoot,
+        uint256 _validatorSetLength
     ) {
-        validatorRegistry = _validatorRegistry;
         mmrVerification = _mmrVerification;
-        currentId = 0;
+        nextID = 0;
         latestBeefyBlock = _startingBeefyBlock;
-        numberOfBlocksPerSession = _numberOfBlocksPerSession;
+        validatorSetID = _validatorSetID;
+        validatorSetRoot = _validatorSetRoot;
+        validatorSetLength = _validatorSetLength;
     }
 
     /* Public Functions */
-
-    // maximum block gap between commitments
-    function maximumCommitmentGap() internal view returns (uint64) {
-        return numberOfBlocksPerSession + SAFETY_BUFFER;
-    }
 
     /**
      * @notice Executed by the incoming channel in order to verify commitment
@@ -205,48 +205,41 @@ contract BeefyLightClient {
         address validatorPublicKey,
         bytes32[] calldata validatorPublicKeyMerkleProof
     ) public payable {
-        /**
-         * @dev Check if validatorPublicKeyMerkleProof is valid based on ValidatorRegistry merkle root
-         */
+        // Check if validatorPublicKeyMerkleProof is valid based on ValidatorRegistry merkle root
         require(
-            validatorRegistry.checkValidatorInSet(
+            isValidatorInSet(
                 validatorPublicKey,
                 validatorPosition,
                 validatorPublicKeyMerkleProof
             ),
-            "Error: Sender must be in validator set at correct position"
+            "Sender must be in validator set at correct position"
         );
 
-        /**
-         * @dev Check if validatorSignature is correct, ie. check if it matches
-         * the signature of senderPublicKey on the commitmentHash
-         */
+        // Check if validatorSignature is correct, ie. check if it matches
+        // the signature of senderPublicKey on the commitmentHash
         require(
             ECDSA.recover(commitmentHash, validatorSignature) ==
                 validatorPublicKey,
-            "Error: Invalid Signature"
+            "Invalid Signature"
         );
 
-        /**
-         * @dev Check that the bitfield actually contains enough claims to be succesful, ie, >= 2/3
-         */
+        // Check that the bitfield actually contains enough claims to be successful, ie, >= 2/3
         require(
-            validatorClaimsBitfield.countSetBits() >=
-                requiredNumberOfSignatures(),
-            "Error: Bitfield not enough validators"
+            validatorClaimsBitfield.countSetBits() >= requiredNumberOfSignatures(),
+            "Not enough claims in bitfield"
         );
 
         // Accept and save the commitment
-        validationData[currentId] = ValidationData(
+        validationData[nextID] = ValidationData(
             msg.sender,
             commitmentHash,
             validatorClaimsBitfield,
             block.number
         );
 
-        emit InitialVerificationSuccessful(msg.sender, block.number, currentId);
+        emit InitialVerificationSuccessful(msg.sender, block.number, nextID);
 
-        currentId = currentId + 1;
+        nextID = nextID + 1;
     }
 
     function createRandomBitfield(uint256 id)
@@ -256,22 +249,18 @@ contract BeefyLightClient {
     {
         ValidationData storage data = validationData[id];
 
-        /**
-         * @dev verify that block wait period has passed
-         */
+        // verify that block wait period has passed
         require(
             block.number >= data.blockNumber + BLOCK_WAIT_PERIOD,
-            "Error: Block wait period not over"
+            "Block wait period not over"
         );
-
-        uint256 numberOfValidators = validatorRegistry.numOfValidators();
 
         return
             Bitfield.randomNBitsWithPriorCheck(
                 getSeed(data),
                 data.validatorClaimsBitfield,
-                requiredNumberOfSignatures(numberOfValidators),
-                numberOfValidators
+                requiredNumberOfSignatures(),
+                validatorSetLength
             );
     }
 
@@ -284,7 +273,7 @@ contract BeefyLightClient {
     }
 
     /**
-     * @notice Performs the second step in the validation logic
+     * @notice Performs the final step in the validation process, and then applies the commitment and optional authority update
      * @param id an identifying value generated in the previous transaction
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param validatorProof a struct containing the data needed to verify all validator signatures
@@ -293,26 +282,38 @@ contract BeefyLightClient {
         uint256 id,
         Commitment calldata commitment,
         ValidatorProof calldata validatorProof,
-        BeefyMMRLeaf calldata leaf,
+        MMRLeaf calldata leaf,
         SimplifiedMMRProof calldata leafProof
     ) public {
         verifyCommitment(id, commitment, validatorProof);
-        updateMMRRoot(commitment);
-        updateValidatorSet(
-            commitment.payload.mmrRootHash,
-            leaf,
-            leafProof
-        );
-        emit FinalVerificationSuccessful(msg.sender, id);
 
-        /**
-         * @dev We no longer need the data held in state, so delete it for a gas refund
-         */
+        latestMMRRoot = commitment.payload.mmrRootHash;
+        latestBeefyBlock = commitment.blockNumber;
+        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
+
+        // If the supplied leaf is valid and signals a change in authorities, apply the authority update
+        if (leaf.nextAuthoritySetId == validatorSetID + 1) {
+            // Verify that the leaf suppied by the relayer is part of the MMR
+            bytes32 leafHash = keccak256(encodeMMRLeaf(leaf));
+            require(
+                mmrVerification.verifyInclusionProof(commitment.payload.mmrRootHash, leafHash, leafProof),
+                "Invalid leaf proof"
+            );
+
+            validatorSetID = leaf.nextAuthoritySetId;
+            validatorSetRoot = leaf.nextAuthoritySetRoot;
+            validatorSetLength = leaf.nextAuthoritySetLen;
+
+            emit NewSession(leaf.nextAuthoritySetId, leaf.nextAuthoritySetRoot, leaf.nextAuthoritySetLen);
+        }
+
+        // Obtain a gas refund
         delete validationData[id];
+
+        emit FinalVerificationSuccessful(msg.sender, id);
     }
 
     /* Private Functions */
-
 
     /**
      * @notice Deterministically generates a seed from the block hash at the block number of creation of the validation
@@ -336,80 +337,12 @@ contract BeefyLightClient {
         return uint256(randomSeedBlockHash);
     }
 
-    /**
-     * @notice Perform some operation[s] using the payload
-     * @param payload The payload variable passed in via the initial function
-     */
-    function updateMMRRoot(Commitment calldata commitment) private {
-        // Check that payload.leaf.block_number is > last_known_block_number;
-        require(
-            commitment.blockNumber > latestBeefyBlock,
-            "Commitment blocknumber is too old"
-        );
-
-        // Check that payload is within the current or next session
-        // to ensure we get at least one payload each session
-        require(
-            commitment.blockNumber < latestBeefyBlock + maximumCommitmentGap(),
-            "Commitment blocknumber is too new"
-        );
-
-        latestMMRRoot = commitment.payload.mmrRootHash;
-        latestBeefyBlock = commitment.blockNumber;
-        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
-    }
-
-
-    /**
-     * @notice Check if the payload includes a new validator set,
-     * and if it does then update the new validator set
-     * @dev This function should call out to the validator registry contract
-     * @param nextAuthoritySetId The id of the next authority set
-     * @param nextAuthoritySetLen The number of validators in the next authority set
-     * @param nextAuthoritySetRoot The merkle root of the merkle tree of the next validators
-     */
-    function updateValidatorSet(
-        bytes32 root,
-        BeefyMMRLeaf calldata leaf,
-        SimplifiedMMRProof calldata proof
-    ) internal {
-
-        // Don't process older leafs
-        if (leaf.nextAuthoritySetId <= validatorRegistry.id()) {
-            return;
-        }
-
-        // Verify that the leaf suppied by the relayer is part of the MMR
-        bytes32 leafHash = keccak256(encodeMMRLeaf(leaf));
-        require(
-            mmrVerification.verifyInclusionProof(root, leafHash, proof),
-            "Invalid leaf proof"
-        );
-
-        validatorRegistry.update(
-            leaf.nextAuthoritySetRoot,
-            leaf.nextAuthoritySetLen,
-            leaf.nextAuthoritySetId
-        );
-
-    }
-
-    function requiredNumberOfSignatures() public view returns (uint256) {
-        return
-            (validatorRegistry.numOfValidators() *
-                THRESHOLD_NUMERATOR +
-                THRESHOLD_DENOMINATOR -
-                1) / THRESHOLD_DENOMINATOR;
-    }
-
-    function requiredNumberOfSignatures(uint256 numValidators)
-        public
-        pure
+    function requiredNumberOfSignatures()
+        internal
+        view
         returns (uint256)
     {
-        return
-            (numValidators * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) /
-            THRESHOLD_DENOMINATOR;
+        return (validatorSetLength * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) / THRESHOLD_DENOMINATOR;
     }
 
     function verifyCommitment(
@@ -422,78 +355,48 @@ contract BeefyLightClient {
         // Verify that sender is the same as in `newSignatureCommitment`
         require(
             msg.sender == data.senderAddress,
-            "Error: Sender address does not match original validation data"
+            "Sender address does not match original validation data"
         );
 
-        uint256 numberOfValidators = validatorRegistry.numOfValidators();
-        uint256 requiredNumOfSignatures = requiredNumberOfSignatures(
-            numberOfValidators
-        );
-
-        /**
-         * @dev verify that block wait period has passed
-         */
+        // Verify that block wait period has passed
         require(
             block.number >= data.blockNumber + BLOCK_WAIT_PERIOD,
-            "Error: Block wait period not over"
+            "Block wait period not over"
+        );
+
+        // Verify that commitment was produced in the currently tracked validator session.
+        // Validator set ids increment on each new session.
+        require(
+            commitment.validatorSetId == validatorSetID,
+            "Commitment validator set id is invalid"
+        );
+
+        // Check that payload.leaf.block_number is > last_known_block_number;
+        require(
+            commitment.blockNumber > latestBeefyBlock,
+            "Commitment blocknumber is too old"
+        );
+
+        uint256 requiredNumOfSignatures = requiredNumberOfSignatures();
+
+        require(
+            proof.signatures.length == requiredNumOfSignatures &&
+            proof.positions.length == requiredNumOfSignatures &&
+            proof.publicKeys.length == requiredNumOfSignatures &&
+            proof.publicKeyMerkleProofs.length == requiredNumOfSignatures,
+            "Number of signatures does not match required"
         );
 
         uint256[] memory randomBitfield = Bitfield.randomNBitsWithPriorCheck(
             getSeed(data),
             data.validatorClaimsBitfield,
             requiredNumOfSignatures,
-            numberOfValidators
+            validatorSetLength
         );
 
-        verifyValidatorProofLengths(requiredNumOfSignatures, proof);
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
 
-        verifyValidatorProofSignatures(
-            randomBitfield,
-            proof,
-            requiredNumOfSignatures,
-            commitment
-        );
-    }
-
-    function verifyValidatorProofLengths(
-        uint256 requiredNumOfSignatures,
-        ValidatorProof calldata proof
-    ) internal pure {
-        /**
-         * @dev verify that required number of signatures, positions, public keys and merkle proofs are
-         * submitted
-         */
-        require(
-            proof.signatures.length == requiredNumOfSignatures,
-            "Error: Number of signatures does not match required"
-        );
-        require(
-            proof.positions.length == requiredNumOfSignatures,
-            "Error: Number of validator positions does not match required"
-        );
-        require(
-            proof.publicKeys.length == requiredNumOfSignatures,
-            "Error: Number of validator public keys does not match required"
-        );
-        require(
-            proof.publicKeyMerkleProofs.length == requiredNumOfSignatures,
-            "Error: Number of validator public keys does not match required"
-        );
-    }
-
-    function verifyValidatorProofSignatures(
-        uint256[] memory randomBitfield,
-        ValidatorProof calldata proof,
-        uint256 requiredNumOfSignatures,
-        Commitment calldata commitment
-    ) internal view {
-        // Encode and hash the commitment
-        bytes memory encodedCommitment = encodeCommitment(commitment);
-        bytes32 commitmentHash = keccak256(encodedCommitment);
-
-        /**
-         *  @dev For each randomSignature, do:
-         */
+        // Validate signatures
         for (uint256 i = 0; i < requiredNumOfSignatures; i++) {
             verifyValidatorSignature(
                 randomBitfield,
@@ -514,37 +417,29 @@ contract BeefyLightClient {
         bytes32[] calldata publicKeyMerkleProof,
         bytes32 commitmentHash
     ) internal view {
-        /**
-         * @dev Check if validator in randomBitfield
-         */
+        // Check if validator in randomBitfield
         require(
             randomBitfield.isSet(position),
-            "Error: Validator must be once in bitfield"
+            "Validator must be once in bitfield"
         );
 
-        /**
-         * @dev Remove validator from randomBitfield such that no validator can appear twice in signatures
-         */
+        // Remove validator from randomBitfield such that no validator can appear twice in signatures
         randomBitfield.clear(position);
 
-        /**
-         * @dev Check if merkle proof is valid
-         */
+        // Check if merkle proof is valid
         require(
-            validatorRegistry.checkValidatorInSet(
+            isValidatorInSet(
                 publicKey,
                 position,
                 publicKeyMerkleProof
             ),
-            "Error: Validator must be in validator set at correct position"
+            "Validator must be in validator set at correct position"
         );
 
-        /**
-         * @dev Check if signature is correct
-         */
+        // Check if signature is correct
         require(
             ECDSA.recover(commitmentHash, signature) == publicKey,
-            "Error: Invalid Signature"
+            "Invalid Signature"
         );
     }
 
@@ -562,7 +457,7 @@ contract BeefyLightClient {
         );
     }
 
-    function encodeMMRLeaf(BeefyMMRLeaf calldata leaf)
+    function encodeMMRLeaf(MMRLeaf calldata leaf)
         internal
         pure
         returns (bytes memory)
@@ -576,5 +471,28 @@ contract BeefyLightClient {
             leaf.nextAuthoritySetRoot,
             leaf.parachainHeadsRoot
         );
+    }
+
+    /**
+     * @notice Checks if a validators address is a member of the merkle tree
+     * @param addr The address of the validator to check
+     * @param pos The position of the validator to check, index starting at 0
+     * @param proof Merkle proof required for validation of the address
+     * @return true if the validator is in the set
+     */
+    function isValidatorInSet(
+        address addr,
+        uint256 pos,
+        bytes32[] memory proof
+    ) public view returns (bool) {
+        bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
+        return
+            MerkleProof.verifyMerkleLeafAtPosition(
+                validatorSetRoot,
+                hashedLeaf,
+                pos,
+                validatorSetLength,
+                proof
+            );
     }
 }

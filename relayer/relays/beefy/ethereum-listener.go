@@ -50,6 +50,13 @@ func NewEthereumListener(
 	}
 }
 
+func max(a, b uint64) uint64 {
+    if a > b {
+        return a
+    }
+    return b
+}
+
 func (li *EthereumListener) Start(ctx context.Context, eg *errgroup.Group) (uint64, error) {
 	// Set up light client bridge contract
 	address := common.HexToAddress(li.config.Contracts.BeefyLightClient)
@@ -112,28 +119,24 @@ func (li *EthereumListener) pollEventsAndHeaders(ctx context.Context, descendant
 			if !ok {
 				return nil
 			}
-			blockNumber := header.Number.Uint64()
+
+			finalizedBlockNumber := max(0, header.Number.Uint64() - descendantsUntilFinal)
 
 			log.WithFields(log.Fields{
-				"blockNumber": blockNumber,
-			}).Debug("Processing new ethereum header")
+				"blockNumber": finalizedBlockNumber,
+			}).Debug("Processing finalized ethereum header")
 
-			err := li.forwardWitnessedBeefyJustifications(ctx)
+			err = li.processInitialVerificationSuccessfulEvents(ctx, finalizedBlockNumber)
 			if err != nil {
 				return err
 			}
 
-			err = li.processInitialVerificationSuccessfulEvents(ctx, blockNumber)
+			err = li.forwardReadyToCompleteItems(ctx, finalizedBlockNumber)
 			if err != nil {
 				return err
 			}
 
-			err = li.forwardReadyToCompleteItems(ctx, blockNumber, descendantsUntilFinal)
-			if err != nil {
-				return err
-			}
-
-			err = li.processFinalVerificationSuccessfulEvents(ctx, blockNumber, blockNumber)
+			err = li.processFinalVerificationSuccessfulEvents(ctx, finalizedBlockNumber, finalizedBlockNumber)
 			if err != nil {
 				return err
 			}
@@ -315,27 +318,9 @@ func (li *EthereumListener) processFinalVerificationSuccessfulEvents(
 	return nil
 }
 
-// forwardWitnessedBeefyJustifications forwards witnessed BEEFY commitments to the Ethereum writer
-func (li *EthereumListener) forwardWitnessedBeefyJustifications(ctx context.Context) error {
-	witnessedItems, err := li.store.GetTasksByStatus(CommitmentWitnessed)
-	if err != nil {
-		log.WithError(err).Error("Failure querying beefy DB for items by CommitmentWitnessed status")
-		return err
-	}
-	for _, item := range witnessedItems {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case li.tasks <- *item:
-		}
-	}
-
-	return nil
-}
-
 // forwardReadyToCompleteItems updates the status of items in the database to ReadyToComplete if the
 // current block number has passed their CompleteOnBlock number
-func (li *EthereumListener) forwardReadyToCompleteItems(ctx context.Context, blockNumber, descendantsUntilFinal uint64) error {
+func (li *EthereumListener) forwardReadyToCompleteItems(ctx context.Context, blockNumber uint64) error {
 	// Mark items ReadyToComplete if the current block number has passed their CompleteOnBlock number
 	tasks, err := li.store.GetTasksByStatus(InitialVerificationTxConfirmed)
 	if err != nil {
@@ -344,7 +329,7 @@ func (li *EthereumListener) forwardReadyToCompleteItems(ctx context.Context, blo
 	}
 
 	for _, task := range tasks {
-		if task.CompleteOnBlock+descendantsUntilFinal <= blockNumber {
+		if task.CompleteOnBlock <= blockNumber {
 			task.Status = ReadyToComplete
 			log.WithFields(log.Fields{
 				"task": log.Fields{
@@ -353,11 +338,21 @@ func (li *EthereumListener) forwardReadyToCompleteItems(ctx context.Context, blo
 				},
 			}).Debug("Task is now ready for final signature commitment")
 
+			// update database
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case li.dbMessages <- NewDatabaseCmd(task, Update, map[string]interface{}{"status": ReadyToComplete}):
+			}
+
+			// send final commitment
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case li.tasks <- *task:
 			}
+
+
 		}
 	}
 

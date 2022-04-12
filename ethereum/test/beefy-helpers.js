@@ -8,10 +8,10 @@ const {
 
 const { keccakFromHexString } = require("ethereumjs-util");
 
-async function createBeefyValidatorFixture(numberOfValidators) {
+async function createValidatorFixture(validatorSetId, validatorSetLength) {
 
   let wallets = [];
-  for (let i = 0; i < numberOfValidators; i++) {
+  for (let i = 0; i < validatorSetLength; i++) {
     const wallet = ethers.Wallet.createRandom();
     wallets.push(wallet);
   }
@@ -31,14 +31,21 @@ async function createBeefyValidatorFixture(numberOfValidators) {
     return '0x' + keccakFromHexString(address).toString('hex')
   })
 
-  const validatorsMerkleTree = createMerkleTree(validatorAddresses);
+  const validatorMerkleTree = createMerkleTree(validatorAddresses);
   const validatorAddressProofs = validatorAddresses.map((address, index) => {
-    return validatorsMerkleTree.getHexProof(address, index)
+    return validatorMerkleTree.getHexProof(address, index)
   })
-  const root = validatorsMerkleTree.getHexRoot()
 
   return {
-    wallets, walletsByLeaf, validatorAddresses, validatorAddressesHashed, root, validatorAddressProofs, validatorsMerkleTree
+    wallets,
+    walletsByLeaf,
+    validatorAddresses,
+    validatorAddressesHashed,
+    validatorSetId,
+    validatorSetRoot: validatorMerkleTree.getHexRoot(),
+    validatorSetLength,
+    validatorAddressProofs,
+    validatorMerkleTree
   }
 }
 
@@ -55,34 +62,34 @@ async function createRandomPositions(numberOfPositions, numberOfValidators) {
 }
 
 
-const runBeefyLightClientFlow = async (fixture, beefyLightClient, beefyFixture, totalNumberOfSignatures, totalNumberOfValidators) => {
+const runBeefyLightClientFlow = async (fixture, beefyLightClient, validatorFixture, totalNumberOfSignatures, totalNumberOfValidators) => {
   const initialBitfieldPositions = await createRandomPositions(totalNumberOfSignatures, totalNumberOfValidators)
 
   const initialBitfield = await beefyLightClient.createInitialBitfield(
     initialBitfieldPositions, totalNumberOfValidators
   );
 
-  const allValidatorProofs = await createAllValidatorProofs(fixture.commitmentHash, beefyFixture);
+  const proofs = await createInitialValidatorProofs(fixture.commitmentHash, validatorFixture);
 
   await beefyLightClient.newSignatureCommitment(
     fixture.commitmentHash,
     initialBitfield,
-    allValidatorProofs[0].signature,
-    allValidatorProofs[0].position,
-    allValidatorProofs[0].address,
-    allValidatorProofs[0].proof,
+    proofs[0].signature,
+    proofs[0].position,
+    proofs[0].address,
+    proofs[0].proof,
   )
 
-  const lastId = (await beefyLightClient.currentId()).sub(new web3.utils.BN(1));
+  const lastId = (await beefyLightClient.nextID()).sub(new web3.utils.BN(1));
 
   await mine(45);
 
-  const completeValidatorProofs = await createCompleteValidatorProofs(lastId, beefyLightClient, allValidatorProofs);
+  const completeProofs = await createFinalValidatorProofs(lastId, beefyLightClient, proofs);
 
   await beefyLightClient.completeSignatureCommitment(
     lastId,
     fixture.finalSignatureCommitment.commitment,
-    completeValidatorProofs,
+    completeProofs,
     fixture.finalSignatureCommitment.leaf,
     {
         merkleProofItems: fixture.finalSignatureCommitment.proof.merkleProofItems,
@@ -92,13 +99,13 @@ const runBeefyLightClientFlow = async (fixture, beefyLightClient, beefyFixture, 
 
 }
 
-async function createAllValidatorProofs(commitmentHash, beefyFixture) {
+async function createInitialValidatorProofs(commitmentHash, validatorFixture) {
   let commitmentHashBytes = ethers.utils.arrayify(commitmentHash)
-  const tree = beefyFixture.validatorsMerkleTree;
+  const tree = validatorFixture.validatorMerkleTree;
   const leaves = tree.getHexLeaves()
 
   return leaves.map((leaf, position) => {
-    const wallet = beefyFixture.walletsByLeaf[leaf]
+    const wallet = validatorFixture.walletsByLeaf[leaf]
     const address = wallet.address
     const proof = tree.getHexProof(leaf, position)
     const privateKey = ethers.utils.arrayify(wallet.privateKey)
@@ -111,11 +118,11 @@ async function createAllValidatorProofs(commitmentHash, beefyFixture) {
   });
 }
 
-async function createCompleteValidatorProofs(id, beefyLightClient, allValidatorProofs) {
+async function createFinalValidatorProofs(id, beefyLightClient, initialProofs) {
   const bitfieldInts = await beefyLightClient.createRandomBitfield(id);
   const bitfieldString = printBitfield(bitfieldInts);
 
-  const completeValidatorProofs = {
+  const proofs = {
     signatures: [],
     positions: [],
     publicKeys: [],
@@ -126,20 +133,20 @@ async function createCompleteValidatorProofs(id, beefyLightClient, allValidatorP
   for (let position = 0; position < ascendingBitfield.length; position++) {
     const bit = ascendingBitfield[position]
     if (bit === '1') {
-      completeValidatorProofs.signatures.push(allValidatorProofs[position].signature)
-      completeValidatorProofs.positions.push(allValidatorProofs[position].position)
-      completeValidatorProofs.publicKeys.push(allValidatorProofs[position].address)
-      completeValidatorProofs.publicKeyMerkleProofs.push(allValidatorProofs[position].proof)
+      proofs.signatures.push(initialProofs[position].signature)
+      proofs.positions.push(initialProofs[position].position)
+      proofs.publicKeys.push(initialProofs[position].address)
+      proofs.publicKeyMerkleProofs.push(initialProofs[position].proof)
     }
   }
 
-  return completeValidatorProofs
+  return proofs
 }
 
 module.exports = {
-  createBeefyValidatorFixture,
+  createValidatorFixture,
   createRandomPositions,
-  createAllValidatorProofs,
+  createInitialValidatorProofs,
   runBeefyLightClientFlow,
-  createCompleteValidatorProofs,
+  createFinalValidatorProofs,
 }

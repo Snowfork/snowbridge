@@ -14,23 +14,24 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/snowfork/snowbridge/relayer/substrate"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
 type PolkadotListener struct {
-	config         *Config
-	relaychainConn *relaychain.Connection
+	config *Config
+	conn   *relaychain.Connection
 	tasks  chan<- Task
 }
 
 func NewPolkadotListener(
 	config *Config,
-	relaychainConn *relaychain.Connection,
+	conn *relaychain.Connection,
 	tasks chan<- Task,
 ) *PolkadotListener {
 	return &PolkadotListener{
-		config:         config,
-		relaychainConn: relaychainConn,
+		config: config,
+		conn:   conn,
 		tasks:  tasks,
 	}
 }
@@ -39,7 +40,7 @@ func (li *PolkadotListener) Start(ctx context.Context, eg *errgroup.Group, start
 	eg.Go(func() error {
 		defer close(li.tasks)
 
-		err := li.syncBeefyJustifications(ctx, startingBeefyBlock)
+		err := li.scanHistoricalBeefyJustifications(ctx, startingBeefyBlock)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil
@@ -47,7 +48,7 @@ func (li *PolkadotListener) Start(ctx context.Context, eg *errgroup.Group, start
 			return err
 		}
 
-		err = li.subBeefyJustifications(ctx)
+		err = li.subscribeBeefyJustifications(ctx)
 		log.WithField("reason", err).Info("Shutting down polkadot listener")
 		if err != nil && !errors.Is(err, context.Canceled) {
 			return err
@@ -57,50 +58,76 @@ func (li *PolkadotListener) Start(ctx context.Context, eg *errgroup.Group, start
 	return nil
 }
 
-func (li *PolkadotListener) syncBeefyJustifications(ctx context.Context, latestBeefyBlock uint64) error {
-	beefySkipPeriod := li.config.Source.BeefySkipPeriod
-
+func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Context, latestBeefyBlock uint64) error {
 	log.WithFields(
 		log.Fields{
 			"latestBeefyBlock": latestBeefyBlock,
-			"beefSkipPeriod":   beefySkipPeriod,
 		}).Info("Synchronizing beefy relaychain listener")
+
+	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Session", "CurrentIndex", nil, nil)
+	if err != nil {
+		return err
+	}
+
+	blockHash, err := li.conn.API().RPC.Chain.GetBlockHash(latestBeefyBlock)
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch block hash")
+		return err
+	}
+
+	var lastSessionIndex uint32
+
+	_, err = li.conn.API().RPC.State.GetStorage(storageKey, &lastSessionIndex, blockHash)
+	if err != nil {
+		return err
+	}
 
 	current := latestBeefyBlock
 	for {
-		finalizedHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
+		log.WithField("block", current).Info("Probing block for new session")
+
+		finalizedHash, err := li.conn.API().RPC.Chain.GetFinalizedHead()
 		if err != nil {
-			log.WithError(err).Error("Failed to fetch finalized head.")
-			return err
-		}
-		finalizedHeader, err := li.relaychainConn.API().RPC.Chain.GetHeader(finalizedHash)
-		if err != nil {
-			log.WithError(err).WithField("finalizedBlockHash", finalizedHash.Hex()).Error("Failed to fetch header for finalised head.")
+			log.WithError(err).Error("Failed to fetch finalized head")
 			return err
 		}
 
-		logFields := log.Fields{
-			"blockNumber":          current,
-			"finalizedBlockNumber": finalizedHeader.Number}
+		finalizedHeader, err := li.conn.API().RPC.Chain.GetHeader(finalizedHash)
+		if err != nil {
+			log.WithError(err).WithField("finalizedBlockHash", finalizedHash.Hex()).Error("Failed to fetch header for finalised head")
+			return err
+		}
 
 		finalizedBlockNumber := uint64(finalizedHeader.Number)
 		if current > finalizedBlockNumber {
-			log.WithFields(logFields).Info("Beefy relaychain listener synchronizing complete.")
+			log.Info("Synchronization complete")
 			return nil
 		}
 
-		log.WithFields(logFields).Info("Probing block.")
-
-		hash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(current)
+		blockHash, err := li.conn.API().RPC.Chain.GetBlockHash(current)
 		if err != nil {
-			log.WithError(err).WithFields(logFields).Error("Failed to fetch block hash.")
+			log.WithError(err).Error("Failed to fetch block hash")
 			return err
 		}
-		logFields["blockHash"] = hash.Hex()
 
-		block, err := li.relaychainConn.API().RPC.Chain.GetBlock(hash)
+		var sessionIndex uint32
+
+		_, err = li.conn.API().RPC.State.GetStorage(storageKey, &sessionIndex, blockHash)
 		if err != nil {
-			log.WithError(err).WithFields(logFields).Error("Failed to fetch block hash.")
+			return err
+		}
+
+		if sessionIndex == lastSessionIndex {
+			current++
+			continue
+		}
+
+		// This block starts a new session and always contains a BEEFY justification
+		log.WithField("block", current).Info("New session detected")
+
+		block, err := li.conn.API().RPC.Chain.GetBlock(blockHash)
+		if err != nil {
+			log.WithError(err).Error("failed to fetch block hash")
 			return err
 		}
 
@@ -110,7 +137,7 @@ func (li *PolkadotListener) syncBeefyJustifications(ctx context.Context, latestB
 			if block.Justifications[j].EngineID() == "BEEF" {
 				err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
 				if err != nil {
-					log.WithFields(logFields).WithError(err).Error("Failed to decode BEEFY commitment messages")
+					log.WithError(err).Error("Failed to decode BEEFY signed commitment")
 					return err
 				}
 				ok, value := sc.Unwrap()
@@ -121,31 +148,19 @@ func (li *PolkadotListener) syncBeefyJustifications(ctx context.Context, latestB
 		}
 
 		for c := range commitments {
-			log.WithFields(logFields).WithFields(log.Fields{
-				"Commitment.BlockNumber":    commitments[c].Commitment.BlockNumber,
-				"Commitment.ValidatorSetID": commitments[c].Commitment.ValidatorSetID,
-			}).Info("Synchronizing a BEEFY commitment")
-
 			err = li.processBeefyJustifications(ctx, &commitments[c])
 			if err != nil {
 				return err
 			}
 		}
 
-		if len(commitments) > 0 {
-			log.WithFields(logFields).Info("Justifications found.")
-			// The beefy relayer can skip a certain amount of blocks provided it does not skip a whole
-			// validator sessions worth of blocks.
-			current += beefySkipPeriod
-		} else {
-			log.WithFields(logFields).Info("Justifications not found.")
-			current++
-		}
+		lastSessionIndex = sessionIndex
+		current++
 	}
 }
 
-func (li *PolkadotListener) subBeefyJustifications(ctx context.Context) error {
-	sub, err := li.relaychainConn.API().RPC.Beefy.SubscribeJustifications()
+func (li *PolkadotListener) subscribeBeefyJustifications(ctx context.Context) error {
+	sub, err := li.conn.API().RPC.Beefy.SubscribeJustifications()
 	if err != nil {
 		return err
 	}
@@ -159,12 +174,6 @@ func (li *PolkadotListener) subBeefyJustifications(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-
-			log.WithFields(log.Fields{
-				"Commitment.BlockNumber":    sc.Commitment.BlockNumber,
-				"Commitment.ValidatorSetID": sc.Commitment.ValidatorSetID,
-			}).Info("Witnessed a new BEEFY commitment")
-
 			err = li.processBeefyJustifications(ctx, &sc)
 			if err != nil {
 				return err
@@ -174,6 +183,13 @@ func (li *PolkadotListener) subBeefyJustifications(ctx context.Context) error {
 }
 
 func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, signedCommitment *types.SignedCommitment) error {
+	log.WithFields(log.Fields{
+		"commitment": logrus.Fields{
+			"BlockNumber":    signedCommitment.Commitment.BlockNumber,
+			"ValidatorSetID": signedCommitment.Commitment.ValidatorSetID,
+		},
+	}).Info("Witnessed a BEEFY commitment")
+
 	if len(signedCommitment.Signatures) == 0 {
 		log.Info("BEEFY commitment has no signatures, skipping...")
 		return nil
@@ -190,19 +206,19 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 		return err
 	}
 
-	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber)
+	blockHash, err := li.conn.API().RPC.Chain.GetBlockHash(blockNumber)
 	if err != nil {
 		log.WithError(err).Error("Failed to get block hash")
 		return err
 	}
 
 	// we can use any block except the latest beefy block
-	blockToProve := blockNumber-1
-	response, err := li.relaychainConn.GenerateProofForBlock(blockToProve, blockHash, li.config.Source.BeefyActivationBlock)
+	blockToProve := blockNumber - 1
+	response, err := li.conn.GenerateProofForBlock(blockToProve, blockHash, li.config.Source.BeefyActivationBlock)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"blockNumber": blockToProve,
-			"latestBeefyBlock": blockHash,
+			"blockNumber":          blockToProve,
+			"latestBeefyBlock":     blockHash,
 			"beefyActivationBlock": li.config.Source.BeefyActivationBlock}).WithError(err).Error("Failed to generate proof for block")
 		return err
 	}
@@ -215,7 +231,7 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 	}
 
 	task := Task{
-		TaskRecord: TaskRecord{Status: CommitmentWitnessed},
+		TaskRecord:       TaskRecord{Status: CommitmentWitnessed},
 		Validators:       validators,
 		SignedCommitment: *signedCommitment,
 		Proof:            proof,
@@ -230,19 +246,19 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 }
 
 func (li *PolkadotListener) getBeefyAuthorities(blockNumber uint64) ([]common.Address, error) {
-	blockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockNumber)
+	blockHash, err := li.conn.API().RPC.Chain.GetBlockHash(blockNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	storageKey, err := types.CreateStorageKey(li.relaychainConn.Metadata(), "Beefy", "Authorities", nil, nil)
+	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Beefy", "Authorities", nil, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var authorities substrate.Authorities
 
-	ok, err := li.relaychainConn.API().RPC.State.GetStorage(storageKey, &authorities, blockHash)
+	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &authorities, blockHash)
 	if err != nil {
 		return nil, err
 	}

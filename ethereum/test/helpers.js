@@ -26,14 +26,15 @@ const lazyLinkLibraries = async _ => {
   lazyLinked = true;
 }
 
-const initValidatorRegistry = async (validatorRoot, numOfValidators, validatorSetID) => {
+const initValidatorRegistry = async (validatorSetID, validatorSetRoot, validatorSetLength) => {
   await lazyLinkLibraries()
 
   validatorRegistry = await ValidatorRegistry.new();
 
-  await validatorRegistry.update(validatorRoot,
-    numOfValidators,
-    validatorSetID
+  await validatorRegistry.update(
+    validatorSetID,
+    validatorSetRoot,
+    validatorSetLength
   );
 
   return validatorRegistry;
@@ -74,16 +75,22 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployBeefyLightClient = async (root, numberOfValidators) => {
-  if (!root) {
-    root = fixture.finalSignatureCommitment.leaf.nextAuthoritySetRoot
+const deployBeefyLightClient = async (validatorSetId, validatorSetRoot, validatorSetLength) => {
+  if (!validatorSetId) {
+    validatorSetId = fixture.finalSignatureCommitment.leaf.nextAuthoritySetId
   }
-  if (!numberOfValidators) {
-    numberOfValidators = fixture.finalSignatureCommitment.leaf.nextAuthoritySetLen
+  if (!validatorSetRoot) {
+    validatorSetRoot = fixture.finalSignatureCommitment.leaf.nextAuthoritySetRoot
+  }
+  if (!validatorSetLength) {
+    validatorSetLength = fixture.finalSignatureCommitment.leaf.nextAuthoritySetLen
   }
 
-  const validatorRegistry = await initValidatorRegistry(root,
-    numberOfValidators, 0);
+  const validatorRegistry = await initValidatorRegistry(
+    validatorSetId,
+    validatorSetRoot,
+    validatorSetLength
+  );
   const simplifiedMMRVerification = await SimplifiedMMRVerification.new();
 
   const beefyLightClient = await BeefyLightClient.new(

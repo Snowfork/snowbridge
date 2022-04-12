@@ -8,7 +8,7 @@ require("chai")
 const BasicInboundChannel = artifacts.require("BasicInboundChannel");
 const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
-const { createBeefyValidatorFixture, runBeefyLightClientFlow } = require("./beefy-helpers");
+const { createValidatorFixture, runBeefyLightClientFlow } = require("./beefy-helpers");
 
 const {
   deployBeefyLightClient
@@ -27,14 +27,17 @@ describe("BasicInboundChannel", function () {
     await BasicInboundChannel.link(merkleProof);
     await BasicInboundChannel.link(scaleCodec);
 
-    const totalNumberOfValidatorSigs = 100;
-    const beefyFixture = await createBeefyValidatorFixture(
-      totalNumberOfValidatorSigs
-    )
-    this.beefyLightClient = await deployBeefyLightClient(beefyFixture.root,
-      totalNumberOfValidatorSigs);
 
-    await runBeefyLightClientFlow(fixture, this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
+    const numberOfSignatures = 0;
+    const numberOfValidators = 24;
+    const validatorFixture = await createValidatorFixture(fixture.finalSignatureCommitment.commitment.validatorSetId, numberOfValidators)
+    this.beefyLightClient = await deployBeefyLightClient(
+      validatorFixture.validatorSetId,
+      validatorFixture.validatorSetRoot,
+      validatorFixture.validatorSetLength,
+    );
+
+    await runBeefyLightClientFlow(fixture, this.beefyLightClient, validatorFixture, numberOfSignatures, numberOfValidators)
   });
 
   describe("submit", function () {

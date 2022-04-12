@@ -8,7 +8,7 @@ require("chai")
 const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
 const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
-const { createBeefyValidatorFixture, runBeefyLightClientFlow } = require("./beefy-helpers");
+const { createValidatorFixture, runBeefyLightClientFlow } = require("./beefy-helpers");
 
 const MockRewardSource = artifacts.require("MockRewardSource");
 const {
@@ -28,7 +28,7 @@ describe("IncentivizedInboundChannel", function () {
     await IncentivizedInboundChannel.link(scaleCodec);
 
     const totalNumberOfValidatorSigs = 100;
-    const beefyFixture = await createBeefyValidatorFixture(
+    const beefyFixture = await createValidatorFixture(
       totalNumberOfValidatorSigs
     )
 

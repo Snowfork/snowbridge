@@ -28,7 +28,7 @@ type FinalSignatureCommitment struct {
 	ValidatorPositions             []*big.Int
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
-	LatestMMRLeaf                  beefylightclient.BeefyLightClientBeefyMMRLeaf
+	LatestMMRLeaf                  beefylightclient.BeefyLightClientMMRLeaf
 	SimplifiedProof                beefylightclient.SimplifiedMMRProof
 }
 
@@ -135,7 +135,7 @@ func (t *Task) MakeFinalSignatureCommitment(bitfield string) (*FinalSignatureCom
 		ValidatorSetId: t.SignedCommitment.Commitment.ValidatorSetID,
 	}
 
-	latestMMRLeaf := beefylightclient.BeefyLightClientBeefyMMRLeaf{
+	latestMMRLeaf := beefylightclient.BeefyLightClientMMRLeaf{
 		Version:              uint8(t.Proof.Leaf.Version),
 		ParentNumber:         uint32(t.Proof.Leaf.ParentNumberAndHash.ParentNumber),
 		ParentHash:           t.Proof.Leaf.ParentNumberAndHash.Hash,
