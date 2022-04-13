@@ -28,7 +28,7 @@ func TestComputeEpochAtSlot(t *testing.T) {
 	}
 
 	for _, tt := range values {
-		total := ComputeEpochAtSlot(tt.slot)
+		total := computeEpochAtSlot(tt.slot)
 		if total != tt.expected {
 			t.Errorf("ComputeEpochAtSlot of slot (%d) was incorrect, got: %d, want: %d.", tt.slot, total, tt.expected)
 		}
@@ -59,7 +59,7 @@ func TestComputeEpochForNextPeriod(t *testing.T) {
 	}
 
 	for _, tt := range values {
-		total := ComputeEpochForNextPeriod(tt.epoch)
+		total := computeEpochForNextPeriod(tt.epoch)
 		if total != tt.expected {
 			t.Errorf("TestComputeEpochForNextPeriod of epoch (%d) was incorrect, got: %d, want: %d.", tt.epoch, total, tt.expected)
 		}
@@ -90,7 +90,7 @@ func TestHexToBinaryString(t *testing.T) {
 	}
 
 	for _, tt := range values {
-		result := HexToBinaryString(tt.hex)
+		result := hexToBinaryString(tt.hex)
 		if result != tt.expected {
 			t.Errorf("HexToBinaryString was incorrect, got: %s, want: %s", result, tt.expected)
 		}

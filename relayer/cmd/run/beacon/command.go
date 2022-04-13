@@ -2,12 +2,16 @@ package beacon
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
+	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -15,7 +19,9 @@ import (
 )
 
 var (
-	configFile string
+	configFile     string
+	privateKey     string
+	privateKeyFile string
 )
 
 func Command() *cobra.Command {
@@ -28,6 +34,9 @@ func Command() *cobra.Command {
 
 	cmd.Flags().StringVar(&configFile, "config", "", "Path to configuration file")
 	cmd.MarkFlagRequired("config")
+
+	cmd.Flags().StringVar(&privateKey, "substrate.private-key", "", "Private key URI for Substrate")
+	cmd.Flags().StringVar(&privateKeyFile, "substrate.private-key-file", "", "The file from which to read the private key URI")
 
 	return cmd
 }
@@ -49,7 +58,12 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	relay := beacon.NewRelay(&config)
+	keypair, err := resolvePrivateKey(privateKey, privateKeyFile)
+	if err != nil {
+		return err
+	}
+
+	relay := beacon.NewRelay(&config, keypair)
 	if err != nil {
 		return err
 	}
@@ -89,4 +103,28 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+func resolvePrivateKey(privateKey, privateKeyFile string) (*sr25519.Keypair, error) {
+	var cleanedKeyURI string
+
+	if privateKey == "" {
+		if privateKeyFile == "" {
+			return nil, fmt.Errorf("Private key URI not supplied")
+		}
+		content, err := ioutil.ReadFile(privateKeyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cleanedKeyURI = strings.TrimSpace(string(content))
+	} else {
+		cleanedKeyURI = privateKey
+	}
+
+	keypair, err := sr25519.NewKeypairFromSeed(cleanedKeyURI, 42)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to parse private key URI: %w", err)
+	}
+
+	return keypair, nil
 }

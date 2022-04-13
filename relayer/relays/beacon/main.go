@@ -2,86 +2,57 @@ package beacon
 
 import (
 	"context"
-	"strconv"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-
-	//"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer"
 	"golang.org/x/sync/errgroup"
 )
 
-const SYNC_COMMITTEE_INCREMENT = 5
-
 type Relay struct {
-	config *Config
-	syncer *syncer.Syncer
-	//keypair  *sr25519.Keypair
+	config   *Config
+	syncer   *syncer.Syncer
+	keypair  *sr25519.Keypair
 	paraconn *parachain.Connection
 }
 
 func NewRelay(
 	config *Config,
+	keypair *sr25519.Keypair,
 ) *Relay {
 	return &Relay{
-		config: config,
+		config:  config,
+		keypair: keypair,
 	}
-}
-
-type Header struct {
-	Slot          uint64
-	ProposerIndex uint64
-	ParentRoot    common.Hash
-	StateRoot     common.Hash
-	BodyRoot      common.Hash
-}
-
-type CurrentSyncCommittee struct {
-	Pubkeys          []string
-	AggregatePubkeys string
-}
-
-type SyncAggregate struct {
-	SyncCommitteeBits      string
-	SyncCommitteeSignature string
-}
-
-type Genesis struct {
-	ValidatorsRoot string
-	Time           string
-	ForkVersion    string
-}
-
-type LightClientSnapshot struct {
-	Header                     Header
-	CurrentSyncCommittee       CurrentSyncCommittee
-	CurrentSyncCommitteeBranch []string
-	Genesis                    Genesis
-}
-
-type FinalizedBlockUpdate struct {
-	FinalizedHeader Header
-	FinalityBranch  []string
-	SyncAggregate   SyncAggregate
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint)
-	//r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
+	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 
 	// Get an initial snapshot of the chain from a verified block
-	lightClientSnapshot, err := r.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
+	lightClientSnapshot, err := r.syncer.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
 	if err != nil {
 		logrus.WithError(err).Error("unable to do intial beacon chain sync")
 
 		return err
 	}
 
-	// TODO make intial_sync dispatchable call
+	writer := NewParachainWriter(
+		r.paraconn,
+	)
 
-	err = r.SyncCommitteePeriodUpdates(lightClientSnapshot.Header.Slot)
+	writer.WritePayload(ctx, &ParachainPayload{
+		InitialSync: &InitialSync{
+			Header:                     lightClientSnapshot.Header,
+			CurrentSyncCommittee:       lightClientSnapshot.CurrentSyncCommittee,
+			CurrentSyncCommitteeBranch: lightClientSnapshot.CurrentSyncCommitteeBranch,
+			Genesis:                    lightClientSnapshot.Genesis,
+		},
+	})
+
+	err = r.syncer.SyncCommitteePeriodUpdates(lightClientSnapshot.Header.Slot)
 	if err != nil {
 		logrus.WithError(err).Error("unable to sync committee updates")
 
@@ -89,7 +60,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
-	err = r.buildFinalizedBlockUpdate()
+	err = r.syncer.FinalizedBlockUpdate()
 	if err != nil {
 		logrus.WithError(err).Error("unable to sync finalized header")
 
@@ -97,170 +68,4 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 
 	return nil
-}
-
-func (r *Relay) InitialSync(blockId string) (LightClientSnapshot, error) {
-	genesis, err := r.syncer.Client.GetGenesis()
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch snapshot")
-
-		return LightClientSnapshot{}, err
-	}
-
-	snapshot, err := r.syncer.Client.GetTrustedLightClientSnapshot()
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch snapshot")
-
-		return LightClientSnapshot{}, err
-	}
-
-	slot, err := strconv.ParseUint(snapshot.Data.Header.Slot, 10, 64)
-	if err != nil {
-		logrus.WithError(err).Error("unable parse slot as int")
-
-		return LightClientSnapshot{}, err
-	}
-
-	proposerIndex, err := strconv.ParseUint(snapshot.Data.Header.ProposerIndex, 10, 64)
-	if err != nil {
-		logrus.WithError(err).Error("unable parse slot as int")
-
-		return LightClientSnapshot{}, err
-	}
-
-	lightClientSnapshot := LightClientSnapshot{
-		Header: Header{
-			Slot:          slot,
-			ProposerIndex: proposerIndex,
-			ParentRoot:    common.HexToHash(snapshot.Data.Header.ParentRoot),
-			StateRoot:     common.HexToHash(snapshot.Data.Header.StateRoot),
-			BodyRoot:      common.HexToHash(snapshot.Data.Header.BodyRoot),
-		},
-		CurrentSyncCommittee: CurrentSyncCommittee{
-			Pubkeys:          snapshot.Data.CurrentSyncCommittee.Pubkeys,
-			AggregatePubkeys: snapshot.Data.CurrentSyncCommittee.AggregatePubkey,
-		},
-		CurrentSyncCommitteeBranch: snapshot.Data.CurrentSyncCommitteeBranch,
-		Genesis: Genesis{
-			ValidatorsRoot: genesis.Data.ValidatorsRoot,
-			Time:           genesis.Data.Time,
-			ForkVersion:    genesis.Data.ForkVersion,
-		},
-	}
-
-	logrus.WithFields(logrus.Fields{
-		"lightClientSnapshot": lightClientSnapshot,
-	}).Info("compiled light client snapshot, sending for intial sync")
-
-	// TODO make intial_sync dispatchable call
-
-	return lightClientSnapshot, nil
-}
-
-func (r *Relay) SyncCommitteePeriodUpdates(checkpointSlot uint64) error {
-	head, err := r.syncer.Client.GetHeadHeader()
-	if err != nil {
-		logrus.WithError(err).Error("unable to get header at head")
-
-		return err
-	}
-
-	currentEpoch := syncer.ComputeEpochAtSlot(head.Slot)
-	checkpointEpoch := syncer.ComputeEpochAtSlot(checkpointSlot)
-
-	currentSyncPeriod := syncer.ComputeSyncPeriodAtEpoch(currentEpoch)
-	checkpointSyncPeriod := syncer.ComputeSyncPeriodAtEpoch(checkpointEpoch)
-
-	syncPeriodMarker := checkpointSyncPeriod
-
-	logrus.WithFields(logrus.Fields{
-		"currentEpoch":         currentEpoch,
-		"checkpointEpoch":      checkpointEpoch,
-		"currentSyncPeriod":    currentSyncPeriod,
-		"checkpointSyncPeriod": checkpointSyncPeriod,
-	}).Info("computed epochs")
-
-	var toPeriod uint64
-	// Incrementally move the chain forward by fetching an update per sync period and sending that to the parachain
-	for syncPeriodMarker < currentSyncPeriod {
-		logrus.WithFields(logrus.Fields{
-			"syncPeriodMarker":  syncPeriodMarker,
-			"currentSyncPeriod": currentSyncPeriod,
-		}).Info("checking...")
-
-		toPeriod := syncPeriodMarker + SYNC_COMMITTEE_INCREMENT
-
-		if toPeriod > currentSyncPeriod {
-			toPeriod = currentSyncPeriod
-		}
-
-		err = r.syncCommitteeForPeriod(syncPeriodMarker, toPeriod)
-
-		syncPeriodMarker = toPeriod + 1
-		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{
-				"from": syncPeriodMarker,
-				"to":   toPeriod,
-			}).Error("unable to get sync committeee update for period")
-
-			return err
-		}
-	}
-
-	// Check corner case where the sync period may have progressed while processing sync committee updates.
-	head, err = r.syncer.Client.GetHeadHeader()
-	if err != nil {
-		logrus.WithError(err).Error("unable to get header at head")
-
-		return err
-	}
-
-	currentUpdatedEpoch := syncer.ComputeEpochAtSlot(head.Slot)
-	currentUpdatedSyncPeriod := syncer.ComputeSyncPeriodAtEpoch(currentUpdatedEpoch)
-
-	if currentUpdatedSyncPeriod != toPeriod {
-		err = r.syncCommitteeForPeriod(currentUpdatedSyncPeriod, currentUpdatedSyncPeriod)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *Relay) syncCommitteeForPeriod(from, to uint64) error {
-	committeeUpdates, err := r.syncer.Client.GetSyncCommitteePeriodUpdate(from, to)
-	if err != nil {
-		logrus.WithError(err).Error("unable to build sync committee period update")
-
-		return err
-	}
-
-	logrus.WithFields(logrus.Fields{
-		"from":                from,
-		"to":                  to,
-		"syncCommitteeUpdate": committeeUpdates,
-	}).Info("fetched sync committee for period")
-
-	// TODO make sync_committee_period_update dispatchable call
-
-	return nil
-}
-
-func (r *Relay) buildFinalizedBlockUpdate() error {
-	finalizedUpdate, err := r.syncer.Client.GetLatestFinalizedUpdate()
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
-
-		return err
-	}
-
-	logrus.WithFields(logrus.Fields{
-		"finalizedBlockUpdate": finalizedUpdate,
-	}).Info("compiled finalized block")
-
-	// TODO make import_finalized_header dispatchable call
-
-	return nil
-
 }

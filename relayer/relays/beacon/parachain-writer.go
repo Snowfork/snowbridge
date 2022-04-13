@@ -9,23 +9,23 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer"
 )
 
 type InitialSync struct {
-	Header                     Header
-	CurrentSyncCommittee       CurrentSyncCommittee
+	Header                     syncer.Header
+	CurrentSyncCommittee       syncer.CurrentSyncCommittee
 	CurrentSyncCommitteeBranch []string
-	Genesis                    Genesis
+	Genesis                    syncer.Genesis
 }
 
 type ParachainPayload struct {
-	InitialSync   *InitialSync
-	Messages []*chain.EthereumOutboundMessage
+	InitialSync *InitialSync
+	Messages    []*chain.EthereumOutboundMessage
 }
 
 type ParachainWriter struct {
 	conn        *parachain.Connection
-	payloads    <-chan ParachainPayload
 	nonce       uint32
 	pool        *parachain.ExtrinsicPool
 	genesisHash types.Hash
@@ -33,11 +33,9 @@ type ParachainWriter struct {
 
 func NewParachainWriter(
 	conn *parachain.Connection,
-	payloads <-chan ParachainPayload,
 ) *ParachainWriter {
 	return &ParachainWriter{
-		conn:     conn,
-		payloads: payloads,
+		conn: conn,
 	}
 }
 
