@@ -224,7 +224,8 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 	#[pallet::storage]
 	pub(super) type FinalizedHeadersBySlot<T: Config> = StorageMap<_, Identity, u64, H256, OptionQuery>;
 
-	/// Current sync committee corresponding to the active header
+	/// Current sync committee corresponding to the active header.
+	/// TODO  prune older sync committees than xxx
 	#[pallet::storage]
 	pub(super) type SyncCommittees<T: Config> = StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
 

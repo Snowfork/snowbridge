@@ -1,7 +1,6 @@
 package syncer
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -96,15 +95,4 @@ func TestHexToBinaryString(t *testing.T) {
 			t.Errorf("HexToBinaryString was incorrect, got: %s, want: %s", result, tt.expected)
 		}
 	}
-}
-
-func TestProofs(t *testing.T) {
-	syncer := New("http://localhost:9596")
-
-	mew, err := syncer.GetFinalizedCheckpointProofs("0xe1c879117085b9dfe94243b22fa1944e2ddedc22cbb7b166affb8c2576b8fc30")
-	if err != nil {
-		t.Errorf("unable to get proofs")
-	}
-
-	fmt.Printf("%v", mew)
 }

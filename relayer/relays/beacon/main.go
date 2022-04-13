@@ -17,7 +17,7 @@ const SYNC_COMMITTEE_INCREMENT = 5
 
 type Relay struct {
 	config *Config
-	syncer syncer.Syncer
+	syncer *syncer.Syncer
 	//keypair  *sr25519.Keypair
 	paraconn *parachain.Connection
 }
@@ -79,6 +79,8 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
+	// TODO make intial_sync dispatchable call
+
 	err = r.SyncCommitteePeriodUpdates(lightClientSnapshot.Header.Slot)
 	if err != nil {
 		logrus.WithError(err).Error("unable to sync committee updates")
@@ -98,14 +100,14 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (r *Relay) InitialSync(blockId string) (LightClientSnapshot, error) {
-	genesis, err := r.syncer.GetGenesis()
+	genesis, err := r.syncer.Client.GetGenesis()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch snapshot")
 
 		return LightClientSnapshot{}, err
 	}
 
-	snapshot, err := r.syncer.GetTrustedLightClientSnapshot()
+	snapshot, err := r.syncer.Client.GetTrustedLightClientSnapshot()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch snapshot")
 
@@ -156,7 +158,7 @@ func (r *Relay) InitialSync(blockId string) (LightClientSnapshot, error) {
 }
 
 func (r *Relay) SyncCommitteePeriodUpdates(checkpointSlot uint64) error {
-	head, err := r.syncer.GetHeadHeader()
+	head, err := r.syncer.Client.GetHeadHeader()
 	if err != nil {
 		logrus.WithError(err).Error("unable to get header at head")
 
@@ -206,7 +208,7 @@ func (r *Relay) SyncCommitteePeriodUpdates(checkpointSlot uint64) error {
 	}
 
 	// Check corner case where the sync period may have progressed while processing sync committee updates.
-	head, err = r.syncer.GetHeadHeader()
+	head, err = r.syncer.Client.GetHeadHeader()
 	if err != nil {
 		logrus.WithError(err).Error("unable to get header at head")
 
@@ -227,7 +229,7 @@ func (r *Relay) SyncCommitteePeriodUpdates(checkpointSlot uint64) error {
 }
 
 func (r *Relay) syncCommitteeForPeriod(from, to uint64) error {
-	committeeUpdates, err := r.syncer.GetSyncCommitteePeriodUpdate(from, to)
+	committeeUpdates, err := r.syncer.Client.GetSyncCommitteePeriodUpdate(from, to)
 	if err != nil {
 		logrus.WithError(err).Error("unable to build sync committee period update")
 
@@ -246,57 +248,15 @@ func (r *Relay) syncCommitteeForPeriod(from, to uint64) error {
 }
 
 func (r *Relay) buildFinalizedBlockUpdate() error {
-	checkpoint, err := r.syncer.GetHeadCheckpoint()
+	finalizedUpdate, err := r.syncer.Client.GetLatestFinalizedUpdate()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
 
 		return err
 	}
 
-	header, err := r.syncer.GetHeader(checkpoint.Data.Finalized.Root)
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch header")
-
-		return err
-	}
-
-	block, err := r.syncer.GetBeaconBlock(header.Slot)
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch header")
-
-		return err
-	}
-
-	/*
-		proofs, err := s.GetFinalizedCheckpointProofs(header.StateRoot.String())
-		if err != nil {
-			logrus.WithError(err).Error("unable to fetch proofs")
-
-			return FinalizedBlockUpdate{}, err
-		}
-
-		logrus.WithFields(logrus.Fields{
-			"proofs": proofs,
-		}).Info("fetched proofs")*/
-
-	update := FinalizedBlockUpdate{
-		FinalizedHeader: Header{
-			Slot:          header.Slot,
-			ProposerIndex: header.ProposerIndex,
-			ParentRoot:    header.ParentRoot,
-			StateRoot:     header.StateRoot,
-			BodyRoot:      header.BodyRoot,
-		},
-		FinalityBranch: []string{},
-		SyncAggregate: SyncAggregate{
-			SyncCommitteeBits:      block.Data.Message.Body.SyncAggregate.SyncCommitteeBits,
-			SyncCommitteeSignature: block.Data.Message.Body.SyncAggregate.SyncCommitteeSignature,
-		},
-		// TODO add Pubfork version
-	}
-
 	logrus.WithFields(logrus.Fields{
-		"finalizedBlockUpdate": update,
+		"finalizedBlockUpdate": finalizedUpdate,
 	}).Info("compiled finalized block")
 
 	// TODO make import_finalized_header dispatchable call
