@@ -755,41 +755,41 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
 		Utility: pallet_utility::{Pallet, Call, Storage, Event} = 5,
-
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>} = 7,
-
-		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 8,
-		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 9,
-
-		// Bridge Infrastructure
-		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 10,
-		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 11,
-		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 13,
-		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
-		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 15,
-		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
-		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 17,
-		NFT: nft::{Pallet, Call, Config<T>, Storage} = 18,
-
-		// XCM
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 19,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 20,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 21,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 22,
-
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 23,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 24,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 25,
-		Aura: pallet_aura::{Pallet, Config<T>} = 26,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 27,
 
 		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 28,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 7,
 
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 29,
-		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 30,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 8,
+		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 9,
+
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>} = 10,
+
+		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 11,
+		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 12,
+
+		// Bridge Infrastructure
+		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 13,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 14,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 15,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
+		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 17,
+		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 18,
+		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
+		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 20,
+		NFT: nft::{Pallet, Call, Config<T>, Storage} = 21,
+
+		// XCM
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 22,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 23,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 24,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 25,
+
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 26,
+		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 27,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 28,
+		Aura: pallet_aura::{Pallet, Config<T>} = 29,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 30,
 
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating

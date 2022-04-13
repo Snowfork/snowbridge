@@ -730,15 +730,16 @@ construct_runtime!(
 	{
 		// System support stuff.
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-		ParachainSystem: cumulus_pallet_parachain_system::{
-			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-		} = 1,
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 3,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 2,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 4,
+		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 5,
+		ParachainSystem: cumulus_pallet_parachain_system::{ Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned } = 6,
 
 		// Monetary stuff.
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 9,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 10,
 
 		// Collator support. The order of these 4 are important and shall not change.
 		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
@@ -746,10 +747,6 @@ construct_runtime!(
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
-
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 28,
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 29,
-		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 30,
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 31,
@@ -759,7 +756,6 @@ construct_runtime!(
 
 		// Template
 		TemplatePallet: test_pallet::{Pallet, Call, Storage, Event<T>}  = 40,
-
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>} = 41,
 	}
 );
