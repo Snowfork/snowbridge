@@ -3,10 +3,12 @@ const {
   mine, printTxPromiseGas
 } = require("./helpers");
 
-const { createValidatorFixture, createRandomPositions,
-  createAllValidatorProofs, createCompleteValidatorProofs } = require("./beefy-helpers");
+const {
+  createValidatorFixture, createRandomPositions,
+  createInitialValidatorProofs, createFinalValidatorProofs
+} = require("./beefy-helpers");
 
-const realWorldFixture = require('./fixtures/beefy-relay-basic.json')
+const fixture = require('./fixtures/beefy-relay-basic.json')
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -14,7 +16,7 @@ require("chai")
 
 const { expect } = require("chai");
 
-describe.skip("Beefy Light Client Gas Usage", function () {
+describe("Beefy Light Client Gas Usage", function () {
 
   const testCases = [
     {
@@ -63,11 +65,15 @@ describe.skip("Beefy Light Client Gas Usage", function () {
   const runFlow = async function (totalNumberOfValidators, totalNumberOfSignatures, fail) {
     console.log(`Running flow with ${totalNumberOfValidators} validators and ${totalNumberOfSignatures} signatures with the complete transaction ${fail ? 'failing' : 'succeeding'}: `)
 
-    const fixture = await createValidatorFixture(
+    const validatorFixture = await createValidatorFixture(
+      fixture.finalSignatureCommitment.commitment.validatorSetId,
       totalNumberOfValidators
     )
-    const beefyLightClient = await deployBeefyLightClient(fixture.root,
-      totalNumberOfValidators);
+    const beefyLightClient = await deployBeefyLightClient(
+      validatorFixture.validatorSetId,
+      validatorFixture.validatorSetRoot,
+      validatorFixture.validatorSetLength,
+    );
 
     const initialBitfieldPositions = await createRandomPositions(totalNumberOfSignatures, totalNumberOfValidators)
 
@@ -77,35 +83,35 @@ describe.skip("Beefy Light Client Gas Usage", function () {
       initialBitfieldPositions, totalNumberOfValidators
     );
 
-    const commitmentHash = realWorldFixture.commitmentHash
+    const commitmentHash = fixture.commitmentHash
 
-    const allValidatorProofs = await createAllValidatorProofs(commitmentHash, fixture);
+    const initialValidatorProofs = await createInitialValidatorProofs(commitmentHash, validatorFixture);
 
     const newSigTxPromise = beefyLightClient.newSignatureCommitment(
       commitmentHash,
       initialBitfield,
-      allValidatorProofs[firstPosition].signature,
+      initialValidatorProofs[firstPosition].signature,
       firstPosition,
-      allValidatorProofs[firstPosition].address,
-      allValidatorProofs[firstPosition].proof,
+      initialValidatorProofs[firstPosition].address,
+      initialValidatorProofs[firstPosition].proof,
     )
     printTxPromiseGas(newSigTxPromise)
     await newSigTxPromise.should.be.fulfilled
 
-    const lastId = (await beefyLightClient.currentId()).sub(new web3.utils.BN(1));
+    const lastId = (await beefyLightClient.nextID()).sub(new web3.utils.BN(1));
 
     await mine(45);
 
-    const completeValidatorProofs = await createCompleteValidatorProofs(lastId, beefyLightClient, allValidatorProofs);
+    const completeValidatorProofs = await createFinalValidatorProofs(lastId, beefyLightClient, initialValidatorProofs);
 
     const completeSigTxPromise = beefyLightClient.completeSignatureCommitment(
       fail ? 99 : lastId,
-      realWorldFixture.finalSignatureCommitment.commitment,
+      fixture.finalSignatureCommitment.commitment,
       completeValidatorProofs,
-      realWorldFixture.finalSignatureCommitment.leaf,
+      fixture.finalSignatureCommitment.leaf,
        {
-          merkleProofItems: realWorldFixture.finalSignatureCommitment.proof.merkleProofItems,
-          merkleProofOrderBitField: realWorldFixture.finalSignatureCommitment.proof.merkleProofOrderBitField
+          merkleProofItems: fixture.finalSignatureCommitment.proof.merkleProofItems,
+          merkleProofOrderBitField: fixture.finalSignatureCommitment.proof.merkleProofOrderBitField
        }
     )
     printTxPromiseGas(completeSigTxPromise)
@@ -114,7 +120,7 @@ describe.skip("Beefy Light Client Gas Usage", function () {
     } else {
       await completeSigTxPromise.should.be.fulfilled
       latestMMRRoot = await beefyLightClient.latestMMRRoot()
-      expect(latestMMRRoot).to.eq(realWorldFixture.finalSignatureCommitment.commitment.payload.mmrRootHash)
+      expect(latestMMRRoot).to.eq(fixture.finalSignatureCommitment.commitment.payload.mmrRootHash)
     }
   }
 

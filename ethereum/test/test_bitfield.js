@@ -13,8 +13,7 @@ const { expect } = require("chai");
 describe("Bitfield", function () {
 
   beforeEach(async function () {
-    this.beefyLightClient = await deployBeefyLightClient(null,
-      1);
+    this.beefyLightClient = await deployBeefyLightClient();
   });
 
   it("creates initial bitfield correctly in simple case", async function () {

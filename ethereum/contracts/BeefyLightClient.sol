@@ -318,8 +318,8 @@ contract BeefyLightClient is AccessControl {
                 "Invalid leaf proof"
             );
 
+            // Handover to the next authority set
             currentValidatorSet = nextValidatorSet;
-
             emit NewSession(nextValidatorSet.id, nextValidatorSet.root, nextValidatorSet.length);
 
             nextValidatorSet.id  = leaf.nextAuthoritySetId;

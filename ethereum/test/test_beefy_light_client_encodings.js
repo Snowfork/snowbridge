@@ -40,6 +40,4 @@ describe("Beefy Light Client", function () {
     let encoded = await this.beefyLightClient.encodeCommitmentExposed(commitment).should.be.fulfilled
     expect(encoded).to.eq("0x0861620c0001026d68803ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c050000000700000000000000");
   });
-
-
 });
