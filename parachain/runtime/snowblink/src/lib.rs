@@ -589,10 +589,6 @@ impl ethereum_light_client::Config for Runtime {
 	type WeightInfo = ethereum_light_client::weights::SnowbridgeWeight<Self>;
 }
 
-impl ethereum_beacon_light_client::Config for Runtime {
-	type Event = Event;
-}
-
 parameter_types! {
 	pub const EtherAssetId: u128 = 0;
 	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
@@ -734,25 +730,24 @@ construct_runtime!(
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 13,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
 		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 15,
-		EthereumBeaconLightClient: ethereum_beacon_light_client::{Pallet, Call, Config, Storage, Event<T>} = 16,
-		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 17,
-		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 18,
-		NFT: nft::{Pallet, Call, Config<T>, Storage} = 19,
+		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
+		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 17,
+		NFT: nft::{Pallet, Call, Config<T>, Storage} = 18,
 
 		// XCM
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 20,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 21,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 22,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 23,
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 19,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 20,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 21,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 22,
 
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 24,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 25,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 26,
-		Aura: pallet_aura::{Pallet, Config<T>} = 27,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 28,
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 23,
+		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 24,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 25,
+		Aura: pallet_aura::{Pallet, Config<T>} = 26,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 27,
 
 		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 29,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 28,
 
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating
