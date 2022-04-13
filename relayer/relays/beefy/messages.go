@@ -14,6 +14,7 @@ import (
 
 type InitialSignatureCommitment struct {
 	CommitmentHash                [32]byte
+	ValidatorSetID                uint64
 	ValidatorClaimsBitfield       []*big.Int
 	ValidatorSignatureCommitment  []byte
 	ValidatorPosition             *big.Int
@@ -55,7 +56,8 @@ func (t *Task) MakeInitialSignatureCommitment(valAddrIndex int64, initialBitfiel
 
 	msg := InitialSignatureCommitment{
 		CommitmentHash:                commitmentHash32,
-		ValidatorClaimsBitfield:       initialBitfield,
+		ValidatorSetID:                t.SignedCommitment.Commitment.ValidatorSetID,
+		ValidatorClaimsBitfield:        initialBitfield,
 		ValidatorSignatureCommitment:  cleanSignature(beefySig),
 		ValidatorPublicKey:            t.Validators[valAddrIndex],
 		ValidatorPosition:             big.NewInt(valAddrIndex),

@@ -1,35 +1,75 @@
-let { ApiPromise, WsProvider } = require('@polkadot/api');
+import { ApiPromise, WsProvider } from '@polkadot/api';
 
-const relaychainEndpoint = process.env.RELAYCHAIN_ENDPOINT;
+import { MerkleTree } from 'merkletreejs';
+
+import createKeccakHash from 'keccak';
+
+import { publicKeyConvert } from "secp256k1";
+
+import type { ValidatorSetId, BeefyNextAuthoritySet } from "@polkadot/types/interfaces/beefy/types";
+
+let endpoint = process.env.RELAYCHAIN_ENDPOINT;
 
 async function configureBeefy() {
-  const hre = require("hardhat");
+  let hre = require("hardhat");
 
-  const signer = await hre.ethers.getSigner()
+  let signer = await hre.ethers.getSigner()
 
-  const beefyDeployment = await hre.deployments.get("BeefyLightClient");
-  const beefyLightClientContract = await new hre.ethers.Contract(beefyDeployment.address,
+  let beefyDeployment = await hre.deployments.get("BeefyLightClient");
+  let beefyLightClientContract = await new hre.ethers.Contract(beefyDeployment.address,
     beefyDeployment.abi);
-  const beefyLightClient = await beefyLightClientContract.connect(signer)
+  let beefyLightClient = await beefyLightClientContract.connect(signer)
 
-  const relayChainProvider = new WsProvider(relaychainEndpoint);
-  const relaychainAPI = await ApiPromise.create({
-    provider: relayChainProvider,
+  let api = await ApiPromise.create({
+    provider: new WsProvider(endpoint),
   })
 
-  const authorities = await relaychainAPI.query.mmrLeaf.beefyNextAuthorities()
-  const id = authorities.id.toString();
-  const root = authorities.root.toString();
-  const numValidators = authorities.len.toString();
+  let validatorSetId = await api.query.beefy.validatorSetId<ValidatorSetId>();
+  let authorities: any = await api.query.beefy.authorities();
 
-  console.log("Configuring BeefyLightClient with initial BEEFY state")
-  console.log({
-    root, numValidators, id
-  });
+  let addrs = []
+  for (let i = 0; i < authorities.length; i++) {
+    let publicKey = publicKeyConvert(authorities[i], false).slice(1);
+    let publicKeyHashed = createKeccakHash('keccak256').update(Buffer.from(publicKey)).digest()
+    addrs.push(publicKeyHashed.slice(12));
+  }
 
-  await beefyLightClient.initialize(0, id, root, numValidators)
+  let tree = createMerkleTree(addrs)
+
+  let nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<BeefyNextAuthoritySet>();
+
+  let validatorSets = {
+    current: {
+      id: validatorSetId.toNumber(),
+      root: tree.getHexRoot(),
+      length: addrs.length
+    },
+    next: {
+      id: nextAuthorities.id.toNumber(),
+      root: nextAuthorities.root.toHex(),
+      length: nextAuthorities.len.toNumber()
+    }
+  }
+
+  console.log("Configuring BeefyLightClient with initial BEEFY state");
+  console.log("Validator sets: ", validatorSets)
+
+  await beefyLightClient.initialize(0, validatorSets.current, validatorSets.next);
 
   return;
+}
+
+function hasher(data: Buffer): Buffer {
+  return createKeccakHash('keccak256').update(data).digest()
+}
+
+function createMerkleTree(leaves: Buffer[]) {
+  const leafHashes = leaves.map(value => hasher(value));
+  const tree = new MerkleTree(leafHashes, hasher, {
+    sortLeaves: false,
+    sortPairs: false
+  });
+  return tree;
 }
 
 // We recommend this pattern to be able to use async/await everywhere
