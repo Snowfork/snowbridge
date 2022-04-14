@@ -91,7 +91,7 @@ checksum = "fbf688625d06217d5b1bb0ea9d9c44a1635fd0ee3534466388d18203174f4d11"
 [[package]]
 name = "amcl"
 version = "0.3.0"
-source = "git+https://github.com/sigp/milagro_bls?tag=v1.4.2#16655aa033175a90c10ef02aa144e2835de23aec"
+source = "git+https://github.com/Snowfork/milagro_bls#4ca52df54fb0bc6fba7711d4ea36a0eacf6282ef"
 
 [[package]]
 name = "ansi_term"
@@ -4556,13 +4556,13 @@ dependencies = [
 
 [[package]]
 name = "milagro_bls"
-version = "1.4.2"
-source = "git+https://github.com/sigp/milagro_bls?tag=v1.4.2#16655aa033175a90c10ef02aa144e2835de23aec"
+version = "1.5.0"
+source = "git+https://github.com/Snowfork/milagro_bls#4ca52df54fb0bc6fba7711d4ea36a0eacf6282ef"
 dependencies = [
  "amcl",
  "hex",
  "lazy_static",
- "rand 0.7.3",
+ "rand 0.8.5",
  "zeroize",
 ]
 
