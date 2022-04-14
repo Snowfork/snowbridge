@@ -53,6 +53,7 @@ impl frame_system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = SS58Prefix;
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 impl ethereum_beacon_light_client::Config for Test {

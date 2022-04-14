@@ -184,9 +184,9 @@ use super::*;
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, AggregatePublicKey};
-
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
