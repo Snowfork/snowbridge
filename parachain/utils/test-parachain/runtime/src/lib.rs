@@ -731,10 +731,10 @@ construct_runtime!(
 		// System support stuff.
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 2,
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 4,
-		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 5,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 2,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
+		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 4,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 5,
 		ParachainSystem: cumulus_pallet_parachain_system::{ Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned } = 6,
 
 		// Monetary stuff.
