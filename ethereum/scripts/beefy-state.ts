@@ -14,6 +14,9 @@ async function beefyState() {
 
   let cur: any = await beefyLightClient.currentValidatorSet();
   let next: any = await beefyLightClient.nextValidatorSet();
+  let latestMMRRoot: any = await beefyLightClient.latestMMRRoot();
+  let latestBeefyBlock: any = await beefyLightClient.latestBeefyBlock();
+
 
   console.log({
     current: {
@@ -22,6 +25,8 @@ async function beefyState() {
     next: {
       id: next.id.toString(),
     },
+    latestMMRRoot,
+    latestBeefyBlock: latestBeefyBlock.toString(),
   });
 
   return;

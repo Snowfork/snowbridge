@@ -231,7 +231,6 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 	}
 
 	task := Task{
-		TaskRecord:       TaskRecord{Status: CommitmentWitnessed},
 		Validators:       validators,
 		SignedCommitment: *signedCommitment,
 		Proof:            proof,

@@ -1,6 +1,8 @@
 // "SPDX-License-Identifier: UNLICENSED"
 pragma solidity ^0.8.5;
 
+import "hardhat/console.sol";
+
 /**
  * @dev MMRVerification library for MMR inclusion proofs generated
  *      by https://github.com/nervosnetwork/merkle-mountain-range.
@@ -101,6 +103,8 @@ contract MMRVerification {
         for (uint256 i = numLeftPeaks; i > 0; i--) {
             bagger = keccak256(abi.encodePacked(bagger, proofItems[i - 1]));
         }
+
+        console.logBytes32(bagger);
 
         return bagger == root;
     }

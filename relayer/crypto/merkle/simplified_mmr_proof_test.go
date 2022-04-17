@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,28 +49,6 @@ func sanitizeIncomingTestData(testData []SimplifiedProofTestData) {
 			testData[i].SimplifiedMerkleProofItems = nil
 		}
 	}
-}
-
-// used to verify correctness of generated proofs
-func calculateMerkleRoot(proof *SimplifiedMMRProof, leafHash types.H256) types.H256 {
-	currentHash := leafHash[:]
-
-	for i := 0; i < int(len(proof.MerkleProofItems)); i++ {
-		isSiblingLeft := (proof.MerkleProofOrder >> i) & 1 == 1
-		sibling := proof.MerkleProofItems[i]
-
-		var buf []byte
-		if isSiblingLeft {
-			buf = append(buf, sibling[:]...)
-			buf = append(buf, currentHash...)
-		} else {
-			buf = append(buf, currentHash...)
-			buf = append(buf, sibling[:]...)
-		}
-		currentHash = (&keccak.Keccak256{}).Hash(buf)
-	}
-
-	return types.NewH256(currentHash)
 }
 
 func Test_SimplifiedMMRProof(t *testing.T) {

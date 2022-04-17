@@ -23,29 +23,19 @@ contract BeefyLightClient is AccessControl {
 
     /* Events */
 
-    /**
-     * @notice Notifies an observer that the prover's attempt at initital
-     * verification was successful.
-     * @dev Note that the prover must wait until `n` blocks have been mined
-     * subsequent to the generation of this event before the 2nd tx can be sent
-     * @param prover The address of the calling prover
-     * @param blockNumber The blocknumber in which the initial validation
-     * succeeded
-     * @param id An identifier to provide disambiguation
-     */
-    event InitialVerificationSuccessful(
-        address prover,
-        uint256 blockNumber,
-        uint256 id
-    );
+    enum Phase {Initial, Final}
 
     /**
-     * @notice Notifies an observer that the complete verification process has
-     *  finished successfuly and the new commitmentHash will be accepted
+     * @notice Verification event
+     * @param id the identifier for the verification task
      * @param prover The address of the successful prover
-     * @param id the identifier used
      */
-    event FinalVerificationSuccessful(address prover, uint256 id);
+    event CommitmentVerified(
+        uint256 id,
+        Phase   phase,
+        bytes32 commitmentHash,
+        address prover
+    );
 
     event NewMMRRoot(bytes32 mmrRoot, uint64 blockNumber);
 
@@ -262,7 +252,7 @@ contract BeefyLightClient is AccessControl {
             block.number
         );
 
-        emit InitialVerificationSuccessful(msg.sender, block.number, nextID);
+        emit CommitmentVerified(nextID, Phase.Initial, commitmentHash, msg.sender);
 
         nextID = nextID + 1;
     }
@@ -312,7 +302,9 @@ contract BeefyLightClient is AccessControl {
         MMRLeaf calldata leaf,
         SimplifiedMMRProof calldata leafProof
     ) public {
-        verifyCommitment(id, commitment, validatorProof);
+        ValidationData storage data = validationData[id];
+
+        bytes32 commitmentHash = verifyCommitment(data, commitment, validatorProof);
 
         latestMMRRoot = commitment.payload.mmrRootHash;
         latestBeefyBlock = commitment.blockNumber;
@@ -342,7 +334,7 @@ contract BeefyLightClient is AccessControl {
         // Obtain a gas refund
         delete validationData[id];
 
-        emit FinalVerificationSuccessful(msg.sender, id);
+        emit CommitmentVerified(id, Phase.Final, commitmentHash, msg.sender);
     }
 
     /* Private Functions */
@@ -389,12 +381,10 @@ contract BeefyLightClient is AccessControl {
     }
 
     function verifyCommitment(
-        uint256 id,
+        ValidationData storage data,
         Commitment calldata commitment,
         ValidatorProof calldata proof
-    ) internal view {
-        ValidationData storage data = validationData[id];
-
+    ) internal view returns (bytes32) {
         // Verify that sender is the same as in `newSignatureCommitment`
         require(
             msg.sender == data.senderAddress,
@@ -446,6 +436,8 @@ contract BeefyLightClient is AccessControl {
                 commitmentHash
             );
         }
+
+        return commitmentHash;
     }
 
     function verifyValidatorSignature(

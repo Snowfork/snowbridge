@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
 type CommitmentLog struct {
@@ -99,6 +100,11 @@ func (wr *EthereumWriter) LogBeefyFixtureDataAll(
 	}
 	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
 
+	var leafHash2 gsrpcTypes.H256
+	copy(leafHash2[:], (&keccak.Keccak256{}).Hash(encodedLeaf))
+
+	root := merkle.CalculateMerkleRoot(&task.Proof, leafHash2)
+
 	state := log.Fields{
 		"finalSignatureCommitment": log.Fields{
 			"id": msg.ID,
@@ -134,6 +140,7 @@ func (wr *EthereumWriter) LogBeefyFixtureDataAll(
 		"commitmentHash": commitmentHash,
 		"encodedLeaf": Hex(encodedLeaf),
 		"leafHash": leafHash,
+		"expectedProofOutput": root.Hex(),
 	}
 
 	log.WithFields(state).Debug("State for final signature commitment")

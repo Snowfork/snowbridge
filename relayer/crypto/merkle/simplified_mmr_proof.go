@@ -5,6 +5,7 @@ import (
 	"math/bits"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 )
 
 type SimplifiedMMRProof struct {
@@ -228,4 +229,26 @@ func ConvertToSimplifiedMMRProof(blockhash types.H256, leafIndex uint64, leaf ty
 		Leaf:             leaf,
 		Blockhash:        blockhash,
 	}, nil
+}
+
+// used to verify correctness of generated proofs
+func CalculateMerkleRoot(proof *SimplifiedMMRProof, leafHash types.H256) types.H256 {
+	currentHash := leafHash[:]
+
+	for i := 0; i < int(len(proof.MerkleProofItems)); i++ {
+		isSiblingLeft := (proof.MerkleProofOrder >> i) & 1 == 1
+		sibling := proof.MerkleProofItems[i]
+
+		var buf []byte
+		if isSiblingLeft {
+			buf = append(buf, sibling[:]...)
+			buf = append(buf, currentHash...)
+		} else {
+			buf = append(buf, currentHash...)
+			buf = append(buf, sibling[:]...)
+		}
+		currentHash = (&keccak.Keccak256{}).Hash(buf)
+	}
+
+	return types.NewH256(currentHash)
 }

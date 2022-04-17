@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.5;
 
+import "hardhat/console.sol";
+
 struct SimplifiedMMRProof {
     bytes32[] merkleProofItems;
     uint64 merkleProofOrderBitField;
 }
 
-contract  SimplifiedMMRVerification {
+contract SimplifiedMMRVerification {
     function verifyInclusionProof(
         bytes32 root,
         bytes32 leafNodeHash,
         SimplifiedMMRProof memory proof
-    ) public pure returns (bool) {
+    ) public view returns (bool) {
         require(proof.merkleProofItems.length < 64);
 
         return root == calculateMerkleRoot(leafNodeHash, proof.merkleProofItems, proof.merkleProofOrderBitField);
@@ -31,7 +33,7 @@ contract  SimplifiedMMRVerification {
         bytes32 leafNodeHash,
         bytes32[] memory merkleProofItems,
         uint64 merkleProofOrderBitField
-    ) internal pure returns (bytes32) {
+    ) internal view returns (bytes32) {
         bytes32 currentHash = leafNodeHash;
 
         for (uint currentPosition = 0; currentPosition < merkleProofItems.length; currentPosition++) {
@@ -48,6 +50,8 @@ contract  SimplifiedMMRVerification {
                 );
             }
         }
+
+        console.logBytes32(currentHash);
 
         return currentHash;
     }

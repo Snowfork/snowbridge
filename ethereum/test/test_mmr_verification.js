@@ -443,4 +443,30 @@ describe("MMRVerification Contract", function () {
             });
         });
     });
+
+    describe("foo", function () {
+        let mmrVerification;
+        beforeEach(async function () {
+            mmrVerification = await MMRVerification.new();
+        })
+
+
+        it(`foggas`, async () => {
+            expect(await mmrVerification.verifyInclusionProof.call(
+                "0x4172f9eee09024a2002617d2c49f02747f1936ca5d953a561a91ab3e61c72fae",
+                "0xf107355276f363ffb71384a57315ac8b62077ead1f807a2d68623b101a78978d",
+                457,
+                461,
+                [
+                    "0xc06c77e05586ee31f52adea0ffc4e473bdc8a1b3e85ec1e5850fa2bd020c8594",
+                    "0x87e640a6935602495b2329c9379c60fdcd53e961e6bd4f41647ee3ab47ffb4c8",
+                    "0xfcf54f17196c2e7f57e096b9c3270a44a8a02935d7044769d4f1a22d4ee0356c",
+                    "0x9838fe4a07b880e0a71a95d6349ae7411dce6e0bee5c6c823b5f685e759861e9",
+                    "0xdba9f82074947ab29470beb04898963588ea6b066c890c11ff58670a49d98b3b",
+                    "0xf7623d5b5882972b619c55833566dcf943ac6641a7417ecc78dfe8619d7ac7a5",
+                    "0x961265e4f829b417e83d1d5497c48d365d17b16baa3e1c90d384261e929cc28a"
+                ]
+            )).to.be.true;
+        });
+    });
 });

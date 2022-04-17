@@ -166,6 +166,7 @@ func (t *Task) MakeFinalSignatureCommitment(bitfield string) (*FinalSignatureCom
 			MerkleProofOrderBitField: t.Proof.MerkleProofOrder,
 		},
 	}
+
 	return &msg, nil
 }
 

@@ -11,9 +11,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	goEthereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
@@ -24,37 +26,47 @@ import (
 
 type EthereumWriter struct {
 	config           *SinkConfig
-	ethereumConn     *ethereum.Connection
-	store            *Database
+	conn             *ethereum.Connection
 	beefyLightClient *beefylightclient.Contract
-	databaseMessages chan<- DatabaseCmd
 	tasks            <-chan Task
+	blockWaitPeriod  uint64
 }
 
 func NewEthereumWriter(
 	config *SinkConfig,
-	ethereumConn *ethereum.Connection,
-	store *Database,
-	databaseMessages chan<- DatabaseCmd,
+	conn *ethereum.Connection,
 	tasks <-chan Task,
 ) *EthereumWriter {
 	return &EthereumWriter{
-		config:           config,
-		ethereumConn:     ethereumConn,
-		store:            store,
-		databaseMessages: databaseMessages,
-		tasks:            tasks,
+		config: config,
+		conn:   conn,
+		tasks:  tasks,
 	}
 }
 
-func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
+func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) (uint64, error) {
 
 	address := common.HexToAddress(wr.config.Contracts.BeefyLightClient)
-	beefyLightClientContract, err := beefylightclient.NewContract(address, wr.ethereumConn.GetClient())
+	beefyLightClientContract, err := beefylightclient.NewContract(address, wr.conn.GetClient())
 	if err != nil {
-		return err
+		return 0, err
 	}
 	wr.beefyLightClient = beefyLightClientContract
+
+	latestBeefyBlock, err := wr.beefyLightClient.ContractCaller.LatestBeefyBlock(&bind.CallOpts{
+		Pending: false,
+		Context: ctx,
+	})
+	if err != nil {
+		return latestBeefyBlock, err
+	}
+
+	// Fetch BLOCK_WAIT_PERIOD from light client bridge contract
+	blockWaitPeriod, err := wr.beefyLightClient.ContractCaller.BLOCKWAITPERIOD(nil)
+	if err != nil {
+		return 0, err
+	}
+	wr.blockWaitPeriod = blockWaitPeriod
 
 	eg.Go(func() error {
 		err := wr.writeMessagesLoop(ctx)
@@ -68,7 +80,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 		return nil
 	})
 
-	return nil
+	return latestBeefyBlock, nil
 }
 
 func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
@@ -80,19 +92,9 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			switch task.Status {
-			case CommitmentWitnessed:
-				err := wr.WriteInitialSignatureCommitment(ctx, &task)
-				if err != nil {
-					log.WithError(err).Error("Failed to send initial signature commitment")
-					return err
-				}
-			case ReadyToComplete:
-				err := wr.WriteFinalSignatureCommitment(ctx, &task)
-				if err != nil {
-					log.WithError(err).Error("Failed to send complete signature commitment")
-					return err
-				}
+			err := wr.processMessage(ctx, task)
+			if err != nil {
+				return err
 			}
 			// Rate-limit transaction sending to reduce the chance of transactions using the same pending nonce.
 			select {
@@ -104,9 +106,127 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 	}
 }
 
+func (wr *EthereumWriter) waitForTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
+	for {
+		receipt, err := wr.pollTransaction(ctx, tx, confirmations)
+		if err != nil {
+			return nil, err
+		}
+
+		if receipt != nil {
+			return receipt, nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+}
+
+func (wr *EthereumWriter) pollTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
+	receipt, err := wr.conn.GetClient().TransactionReceipt(ctx, tx.Hash())
+	if err != nil {
+		if errors.Is(err, goEthereum.NotFound) {
+			return nil, nil
+		}
+	}
+
+	latestHeader, err := wr.conn.GetClient().HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if latestHeader.Number.Uint64() - receipt.BlockNumber.Uint64() >= confirmations {
+		return receipt, nil
+	}
+
+	return nil, nil
+}
+
+func (wr *EthereumWriter) getContractCommitmentVerified(receipt *types.Receipt) (*beefylightclient.ContractCommitmentVerified) {
+	for _, eventLog := range receipt.Logs {
+		log.Debug("scanning event log")
+		event, err := wr.beefyLightClient.ParseCommitmentVerified(*eventLog)
+		if err != nil {
+			continue
+		}
+		return event
+	}
+	return nil
+}
+
+func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
+	tx, err := wr.WriteInitialSignatureCommitment(ctx, &task)
+	if err != nil {
+		log.WithError(err).Error("Failed to send initial signature commitment")
+		return err
+	}
+
+	receipt, err := wr.waitForTransaction(ctx, tx, wr.blockWaitPeriod)
+	if receipt.Status != 1 {
+		return fmt.Errorf("Transaction failed")
+	}
+
+	event := wr.getContractCommitmentVerified(receipt)
+	if event == nil {
+		return fmt.Errorf("Could not find event CommitmentVerified event")
+	}
+	if event.Phase != 0 {
+		return fmt.Errorf("Could not find event CommitmentVerified event with phase 0")
+	}
+
+	log.WithFields(log.Fields{
+		"event": log.Fields{
+			"ID": event.Id.Uint64(),
+			"Phase": event.Phase,
+			"CommitmentHash": "0x" + hex.EncodeToString(event.CommitmentHash[:]),
+			"Prover": event.Prover.Hex(),
+		},
+	}).Info("Initial Verification Successful")
+
+	task.ValidationID = int64(event.Id.Uint64())
+
+	tx, err = wr.WriteFinalSignatureCommitment(ctx, &task)
+	if err != nil {
+		log.WithError(err).Error("Failed to send final signature commitment")
+		return err
+	}
+
+	go func() error {
+		receipt, err = wr.waitForTransaction(ctx, tx, wr.blockWaitPeriod)
+		if receipt.Status != 1 {
+			log.WithField("tx", tx.Hash().Hex()).Error("transaction failed")
+			return fmt.Errorf("Transaction failed")
+		}
+
+		event = wr.getContractCommitmentVerified(receipt)
+		if event == nil {
+			return fmt.Errorf("Could not find event CommitmentVerified event")
+		}
+		if event.Phase != 1 {
+			return fmt.Errorf("Could not find event CommitmentVerified event with phase 1")
+		}
+
+		log.WithFields(log.Fields{
+			"event": log.Fields{
+				"ID": event.Id.Uint64(),
+				"Phase": event.Phase,
+				"CommitmentHash": "0x" + hex.EncodeToString(event.CommitmentHash[:]),
+				"Prover": event.Prover.Hex(),
+			},
+		}).Info("Final Verification Successful")
+
+		return nil
+	}()
+
+	return nil
+}
+
 func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
-	chainID := wr.ethereumConn.ChainID()
-	keypair := wr.ethereumConn.GetKP()
+	chainID := wr.conn.ChainID()
+	keypair := wr.conn.GetKP()
 
 	options := bind.TransactOpts{
 		From: keypair.CommonAddress(),
@@ -135,10 +255,10 @@ func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 	return &options
 }
 
-func (wr *EthereumWriter) WriteInitialSignatureCommitment(ctx context.Context, task *Task) error {
+func (wr *EthereumWriter) WriteInitialSignatureCommitment(ctx context.Context, task *Task) (*types.Transaction, error) {
 	contract := wr.beefyLightClient
 	if contract == nil {
-		return fmt.Errorf("unknown contract")
+		return nil, fmt.Errorf("unknown contract")
 	}
 
 	signedValidators := []*big.Int{}
@@ -153,14 +273,14 @@ func (wr *EthereumWriter) WriteInitialSignatureCommitment(ctx context.Context, t
 	)
 	if err != nil {
 		log.WithError(err).Error("Failed to create initial validator bitfield")
-		return err
+		return nil, err
 	}
 
 	valIndex := signedValidators[0].Int64()
 
 	msg, err := task.MakeInitialSignatureCommitment(valIndex, initialBitfield)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	options := wr.makeTxOpts(ctx)
@@ -170,7 +290,7 @@ func (wr *EthereumWriter) WriteInitialSignatureCommitment(ctx context.Context, t
 		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
 		log.WithError(err).Error("Failed to submit transaction for initial signature commitment")
-		return err
+		return nil, err
 	}
 
 	var pkProofHex []string
@@ -187,16 +307,7 @@ func (wr *EthereumWriter) WriteInitialSignatureCommitment(ctx context.Context, t
 		"BlockNumber":                   task.SignedCommitment.Commitment.BlockNumber,
 	}).Info("Transaction submitted for initial signature commitment")
 
-	task.Status = InitialVerificationTxSent
-	task.InitialVerificationTx = tx.Hash()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case wr.databaseMessages <- NewDatabaseCmd(task, Create, nil):
-	}
-
-	return nil
+	return tx, nil
 }
 
 func BitfieldToString(bitfield []*big.Int) string {
@@ -216,10 +327,10 @@ func BitfieldToString(bitfield []*big.Int) string {
 }
 
 // WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the BeefyLightClient contract
-func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, task *Task) error {
+func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, task *Task) (*types.Transaction, error) {
 	contract := wr.beefyLightClient
 	if contract == nil {
-		return fmt.Errorf("unknown contract")
+		return nil, fmt.Errorf("unknown contract")
 	}
 
 	randomBitfield, err := contract.CreateRandomBitfield(
@@ -228,14 +339,14 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 	)
 	if err != nil {
 		log.WithError(err).Error("Failed to get random validator bitfield")
-		return err
+		return nil, err
 	}
 
 	bitfield := BitfieldToString(randomBitfield)
 
 	msg, err := task.MakeFinalSignatureCommitment(bitfield)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	options := wr.makeTxOpts(ctx)
@@ -249,7 +360,7 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 
 	err = wr.LogBeefyFixtureDataAll(task, msg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tx, err := contract.CompleteSignatureCommitment(options,
@@ -264,24 +375,12 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 
 	if err != nil {
 		log.WithError(err).Error("Failed to submit transaction for final signature commitment")
-		return err
+		return nil, err
 	}
 
 	log.WithFields(logrus.Fields{
 		"txHash": tx.Hash().Hex(),
 	}).Info("Transaction submitted for final signature commitment")
 
-	// Update item's status in database
-	instructions := map[string]interface{}{
-		"status":                CompleteVerificationTxSent,
-		"final_verification_tx": tx.Hash(),
-	}
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case wr.databaseMessages <- NewDatabaseCmd(task, Update, instructions):
-	}
-
-	return nil
+	return tx, nil
 }
