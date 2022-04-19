@@ -1,5 +1,6 @@
 name: ethereum 
 
+on: [push]
 #on:
 #  push:
 #    paths:
