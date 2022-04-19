@@ -32,8 +32,8 @@ pub use frame_support::{
 	dispatch::DispatchResult,
 	match_type, parameter_types,
 	traits::{
-		tokens::fungible::ItemOf, Contains, EnsureOneOf, Everything, IsInVec, KeyOwnerProofSystem,
-		Nothing, Randomness,
+		tokens::fungible::ItemOf, Contains, EnsureOneOf, EqualPrivilegeOnly, Everything, IsInVec,
+		KeyOwnerProofSystem, Nothing, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -442,6 +442,45 @@ type EnsureRootOrHalfLocalCouncil = EnsureOneOf<
 	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, LocalCouncilInstance>,
 >;
 
+impl pallet_scheduler::Config for Runtime {
+	type Event = Event;
+	type Origin = Origin;
+	type PalletsOrigin = OriginCaller;
+	type Call = Call;
+	type MaximumWeight = MaximumSchedulerWeight;
+	type ScheduleOrigin = EnsureRootOrHalfLocalCouncil;
+	type MaxScheduledPerBlock = MaxScheduledPerBlock;
+	type WeightInfo = ();
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
+	type PreimageProvider = Preimage;
+	type NoPreimagePostponement = NoPreimagePostponement;
+}
+
+parameter_types! {
+	/// Max size 4MB allowed for a preimage.
+	pub const PreimageMaxSize: u32 = 4096 * 1024;
+	pub PreimageBaseDeposit: Balance = 1_000_000;
+	pub PreimageByteDeposit: Balance = 1_000;
+}
+
+impl pallet_preimage::Config for Runtime {
+	type WeightInfo = ();
+	type Event = Event;
+	type Currency = Balances;
+	type ManagerOrigin = EnsureRoot<AccountId>;
+	type MaxSize = PreimageMaxSize;
+	type BaseDeposit = PreimageBaseDeposit;
+	type ByteDeposit = PreimageByteDeposit;
+}
+
+parameter_types! {
+	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
+		BlockWeights::get().max_block;
+	pub const MaxScheduledPerBlock: u32 = 10;
+	// Retry a scheduled item every 25 blocks (5 minute) until the preimage exists.
+	pub const NoPreimagePostponement: Option<u32> = Some(5 * MINUTES);
+}
+
 parameter_types! {
 	pub const LocalCouncilMotionDuration: BlockNumber = 7 * DAYS;
 	pub const LocalCouncilMaxProposals: u32 = 100;
@@ -716,38 +755,40 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
 		Utility: pallet_utility::{Pallet, Call, Storage, Event} = 5,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 6,
+		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 7,
 
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>} = 7,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 8,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>} = 9,
 
-		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 8,
-		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 9,
+		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 10,
+		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
 
 		// Bridge Infrastructure
-		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 10,
-		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 11,
-		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 13,
-		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
-		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 15,
-		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
-		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 17,
-		NFT: nft::{Pallet, Call, Config<T>, Storage} = 18,
+		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 13,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 14,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
+		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 16,
+		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 17,
+		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 18,
+		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 19,
+		NFT: nft::{Pallet, Call, Config<T>, Storage} = 20,
 
 		// XCM
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 19,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 20,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 21,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 22,
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 21,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 22,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 23,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 24,
 
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 23,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 24,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 25,
-		Aura: pallet_aura::{Pallet, Config<T>} = 26,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 27,
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 25,
+		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 26,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 27,
+		Aura: pallet_aura::{Pallet, Config<T>} = 28,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 29,
 
 		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 28,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 30,
 
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating
@@ -912,6 +953,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_collective, LocalCouncil);
 			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
 			list_benchmark!(list, extra, pallet_utility, Utility);
+			list_benchmark!(list, extra, pallet_scheduler, Scheduler);
 			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
 			list_benchmark!(list, extra, assets, Assets);
 			list_benchmark!(list, extra, basic_channel::outbound, BasicOutboundChannel);
@@ -964,6 +1006,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_collective, LocalCouncil);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, pallet_utility, Utility);
+			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
 			add_benchmark!(params, batches, ethereum_light_client, EthereumLightClient);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);

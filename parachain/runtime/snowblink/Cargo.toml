@@ -33,6 +33,8 @@ pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/parityt
 pallet-session = { git = "https://github.com/paritytech/substrate.git", default-features = false , branch = "polkadot-v0.9.17" }
 pallet-collective = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
 pallet-membership = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
+pallet-scheduler = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
+pallet-preimage = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
 sp-api = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
@@ -112,6 +114,8 @@ std = [
     "pallet-transaction-payment-rpc-runtime-api/std",
     "pallet-collective/std",
     "pallet-membership/std",
+    "pallet-scheduler/std",
+    "pallet-preimage/std",
     "sp-api/std",
     "sp-block-builder/std",
     "sp-core/std",
@@ -165,6 +169,7 @@ runtime-benchmarks = [
     "pallet-collective/runtime-benchmarks",
     "pallet-utility/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
+    "pallet-scheduler/runtime-benchmarks",
     # Snowbridge pallets & support
     "snowbridge-core/runtime-benchmarks",
     "basic-channel/runtime-benchmarks",
