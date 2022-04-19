@@ -6,7 +6,6 @@ const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge/contracts.json', '
 
 const ETHApp = contracts.contracts.ETHApp;
 const ERC20App = contracts.contracts.ERC20App;
-const ERC721App = contracts.contracts.ERC721App;
 const TestToken = contracts.contracts.TestToken;
 const TestToken721 = contracts.contracts.TestToken721;
 const DOTApp = contracts.contracts.DOTApp;
@@ -27,7 +26,6 @@ class EthClient {
     this.networkID = networkID;
     this.TestTokenAddress = TestToken.address;
     this.TestToken721Address = TestToken721.address;
-    this.ERC721AppAddress = ERC721App.address;
 
     this.loadApplicationContracts(networkID);
   }
@@ -38,9 +36,6 @@ class EthClient {
 
     const appERC20 = new this.web3.eth.Contract(ERC20App.abi, ERC20App.address);
     this.appERC20 = appERC20;
-
-    const appERC721 = new this.web3.eth.Contract(ERC721App.abi, ERC721App.address);
-    this.appERC721 = appERC721;
 
     const appDOT = new this.web3.eth.Contract(DOTApp.abi, DOTApp.address);
     this.appDOT = appDOT;
@@ -66,10 +61,6 @@ class EthClient {
     return new this.web3.eth.Contract(TestToken.abi, this.TestTokenAddress);
   }
 
-  loadERC721Contract() {
-    return new this.web3.eth.Contract(TestToken721.abi, this.TestToken721Address);
-  }
-
   async initialize() {
     this.accounts = await this.web3.eth.getAccounts();
     this.web3.eth.defaultAccount = this.accounts[1];
@@ -90,11 +81,6 @@ class EthClient {
   async getErc20Balance(account) {
     const instance = this.loadERC20Contract();
     return BigNumber(await instance.methods.balanceOf(account).call());
-  }
-
-  async getErc721OwnerOf(tokenId) {
-    const instance = this.loadERC721Contract();
-    return await instance.methods.ownerOf(tokenId).call();
   }
 
   async getDotBalance(account) {
@@ -121,15 +107,6 @@ class EthClient {
     return { receipt, tx, gasCost }
   }
 
-  async mintERC721(tokenId, to, owner) {
-    const erc721Instance = this.loadERC721Contract();
-    // return erc721Instance.methods.mintWithTokenURI(to, tokenId, "http://testuri.com/nft.json")
-    return erc721Instance.methods.mint(to, tokenId)
-      .send({
-        from: owner
-      });
-  }
-
   async mintERC20(amount, to, owner) {
     const erc20Instance = this.loadERC20Contract();
     return erc20Instance.methods.mint(to, amount)
@@ -146,14 +123,6 @@ class EthClient {
       });
   }
 
-  async approveERC721(tokenId, from) {
-    const erc721Instance = this.loadERC721Contract();
-    return erc721Instance.methods.approve(this.appERC721._address, tokenId)
-      .send({
-        from
-      });
-  }
-
   async lockERC20(from, amount, polkadotRecipient, channelId, paraId, fee) {
     const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
 
@@ -164,21 +133,6 @@ class EthClient {
       channelId,
       paraId,
       fee
-    ).send({
-      from,
-      gas: 500000,
-      value: 0
-    });
-  }
-
-  async lockERC721(tokenId, from, polkadotRecipient, channelId) {
-    const recipientBytes = Buffer.from(polkadotRecipient.replace(/^0x/, ""), 'hex');
-
-    return await this.appERC721.methods.lock(
-      this.TestToken721Address,
-      tokenId.toString(),
-      recipientBytes,
-      channelId
     ).send({
       from,
       gas: 500000,

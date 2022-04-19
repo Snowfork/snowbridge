@@ -76,28 +76,6 @@ class SubClient {
     return promises;
   }
 
-
-  async queryNFTTokenIdByERC721Id(ethTokenContract, ethTokenId) {
-    let subTokenId = await this.api.query.erc721App.tokensByERC721Id([ethTokenContract, ethTokenId]);
-    return subTokenId
-  }
-
-  async subscribeNFTTokenIdByERC721Id(ethTokenContract, ethTokenId, length) {
-    const [promises, resolvers] = createPromiseResolverMap(length)
-
-    // Setup our subscription and resolve each promise one by one
-    let count = 0;
-    const unsubscribe = await this.api.query.erc721App.tokensByERC721Id([ethTokenContract, ethTokenId], newSubTokenId => {
-      resolvers[count](newSubTokenId);
-      count++;
-      if (count === length) {
-        unsubscribe();
-      }
-    });
-
-    return promises;
-  }
-
   async queryNFT(subTokenId) {
     let token = await this.api.query.nft.tokens(subTokenId);
     return token
@@ -149,10 +127,6 @@ class SubClient {
 
   async burnERC20(account, assetId, recipient, amount, channelId) {
     return await this.api.tx.erc20App.burn(channelId, assetId, recipient, amount).signAndSend(account);
-  }
-
-  async burnERC721(account, subTokenId, recipient, channelId) {
-    return await this.api.tx.erc721App.burn(channelId, subTokenId, recipient).signAndSend(account);
   }
 
   async lockDOT(account, recipient, amount, channelId) {
