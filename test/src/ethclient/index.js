@@ -7,7 +7,6 @@ const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge/contracts.json', '
 const ETHApp = contracts.contracts.ETHApp;
 const ERC20App = contracts.contracts.ERC20App;
 const TestToken = contracts.contracts.TestToken;
-const TestToken721 = contracts.contracts.TestToken721;
 const DOTApp = contracts.contracts.DOTApp;
 const BasicOutboundChannel = contracts.contracts.BasicOutboundChannel;
 const IncentivizedOutboundChannel = contracts.contracts.IncentivizedOutboundChannel;
@@ -25,7 +24,6 @@ class EthClient {
     this.web3 = web3;
     this.networkID = networkID;
     this.TestTokenAddress = TestToken.address;
-    this.TestToken721Address = TestToken721.address;
 
     this.loadApplicationContracts(networkID);
   }
