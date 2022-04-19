@@ -1,18 +1,18 @@
 name: ethereum 
 
-on:
-  push:
-    paths:
-      - 'ethereum/**'
-      - '!ethereum/README.md'
-      - '!ethereum/LICENSE'
-    branches:
-      - main
-  pull_request:
-    paths:
-      - 'ethereum/**'
-      - '!ethereum/README.md'
-      - '!ethereum/LICENSE'
+#on:
+#  push:
+#    paths:
+#      - 'ethereum/**'
+#      - '!ethereum/README.md'
+#      - '!ethereum/LICENSE'
+#    branches:
+#      - main
+#  pull_request:
+#    paths:
+#      - 'ethereum/**'
+#      - '!ethereum/README.md'
+#      - '!ethereum/LICENSE'
 
 jobs:
   test:
