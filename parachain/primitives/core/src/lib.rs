@@ -18,8 +18,6 @@ pub mod types;
 
 pub use types::{ChannelId, Message, MessageId, MessageNonce, Proof};
 
-pub use nft::{ERC721TokenData, TokenInfo};
-
 /// A trait for verifying messages.
 ///
 /// This trait should be implemented by runtime modules that wish to provide message verification
