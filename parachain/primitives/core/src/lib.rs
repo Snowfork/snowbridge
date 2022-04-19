@@ -13,7 +13,6 @@ use sp_core::H160;
 use sp_std::prelude::*;
 
 pub mod assets;
-pub mod nft;
 pub mod types;
 
 pub use types::{ChannelId, Message, MessageId, MessageNonce, Proof};
