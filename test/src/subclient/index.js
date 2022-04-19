@@ -76,27 +76,6 @@ class SubClient {
     return promises;
   }
 
-  async queryNFT(subTokenId) {
-    let token = await this.api.query.nft.tokens(subTokenId);
-    return token
-  }
-
-  async subscribeNFT(subTokenId, length) {
-    const [promises, resolvers] = createPromiseResolverMap(length)
-
-    // Setup our subscription and resolve each promise one by one
-    let count = 0;
-    const unsubscribe = await this.api.query.nft.tokens(subTokenId, newToken => {
-      resolvers[count](newToken);
-      count++;
-      if (count === length) {
-        unsubscribe();
-      }
-    });
-
-    return promises;
-  }
-
   async waitForNextEvent({ eventSection, eventMethod, eventDataType }) {
     let foundData = new Promise(async (resolve, reject) => {
       const unsubscribe = await this.api.query.system.events((events) => {
