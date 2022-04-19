@@ -1,0 +1,29 @@
+name: ethereum 
+
+on:
+  push:
+    paths:
+      - 'ethereum/**'
+      - '!ethereum/README.md'
+      - '!ethereum/LICENSE'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'ethereum/**'
+      - '!ethereum/README.md'
+      - '!ethereum/LICENSE'
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/cache@v2
+        with:
+          path: 'ethereum/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('ethereum/yarn.lock') }}
+      - name: Install packages
+        run: yarn install
+      - name: Run Tests
+        run: yarn test
