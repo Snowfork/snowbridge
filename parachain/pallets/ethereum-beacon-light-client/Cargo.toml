@@ -15,8 +15,8 @@ serde = { version = "1.0.130", optional = true }
 codec = { version = "2.2.0", package = "parity-scale-codec", default-features = false, features = ["derive"] }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 milagro_bls = { git = "https://github.com/Snowfork/milagro_bls", default-features = false }
-ssz_rs = { git = "https://github.com/Snowfork/ssz_rs" }
-ssz_rs_derive = { git = "https://github.com/Snowfork/ssz_rs" }
+ssz_rs = { git = "https://github.com/Snowfork/ssz_rs", default-features = false }
+ssz_rs_derive = { git = "https://github.com/Snowfork/ssz_rs", default-features = false }
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", default-features = false }
@@ -49,7 +49,8 @@ std = [
     "sp-std/std",
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
-    "milagro_bls/std"
+    "milagro_bls/std",
+    "ssz_rs/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking",

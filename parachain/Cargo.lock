@@ -11083,7 +11083,7 @@ dependencies = [
 [[package]]
 name = "ssz_rs"
 version = "0.7.0"
-source = "git+https://github.com/Snowfork/ssz_rs#6d6729294fb8764cacfc72b2b76cb3a6ceacf415"
+source = "git+https://github.com/Snowfork/ssz_rs#8aadcd11cb2646958724d9c33d4c9a80802eb565"
 dependencies = [
  "bitvec",
  "funty",
@@ -11095,7 +11095,7 @@ dependencies = [
 [[package]]
 name = "ssz_rs_derive"
 version = "0.7.0"
-source = "git+https://github.com/Snowfork/ssz_rs#6d6729294fb8764cacfc72b2b76cb3a6ceacf415"
+source = "git+https://github.com/Snowfork/ssz_rs#8aadcd11cb2646958724d9c33d4c9a80802eb565"
 dependencies = [
  "proc-macro2",
  "quote",
