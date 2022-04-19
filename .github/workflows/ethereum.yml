@@ -26,5 +26,7 @@ jobs:
           key: ${{ runner.os }}-modules-${{ hashFiles('ethereum/yarn.lock') }}
       - name: Install packages
         run: yarn install
+        working-directory: ethereum
       - name: Run Tests
         run: yarn test
+        working-directory: ethereum
