@@ -66,9 +66,9 @@ pub struct BeaconBlockHeader {
 
 /// Sync committee as it is stored in the runtime storage.
 #[derive(
-	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, Serialize, Deserialize
+	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo,
 )]
-pub struct SyncCommittee {
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 	pub pubkeys: Vec<Vec<u8>>,
 	pub aggregate_pubkey: Vec<u8>,
 }
