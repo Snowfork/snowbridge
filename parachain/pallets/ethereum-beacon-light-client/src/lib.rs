@@ -19,7 +19,7 @@ use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use sp_core::hashing::sha2_256;
+use sp_io::hashing::sha2_256;
 
 type Root = H256;
 type Domain = H256;
