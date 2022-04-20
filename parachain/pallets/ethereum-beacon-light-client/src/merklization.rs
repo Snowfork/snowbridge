@@ -5,6 +5,7 @@ use ssz_rs::{Deserialize, Sized, SimpleSerialize as SimpleSerializeTrait};
 use ssz_rs::prelude::Vector;
 use sp_std::convert::{TryFrom, TryInto};
 use sp_std::iter::FromIterator;
+use sp_std::prelude::*;
 
 #[derive(Default, SimpleSerialize)]
 pub struct SSZBeaconBlockHeader {

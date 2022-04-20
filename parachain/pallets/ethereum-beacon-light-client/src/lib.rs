@@ -69,6 +69,7 @@ pub struct BeaconBlockHeader {
 	Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo,
 )]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+pub struct SyncCommittee {
 	pub pubkeys: Vec<Vec<u8>>,
 	pub aggregate_pubkey: Vec<u8>,
 }
