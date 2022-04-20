@@ -28,7 +28,7 @@ type PayloadLog struct {
 	Suffix      string `json:"suffix"`
 }
 
-type ValidatorProofLog struct {
+type ProofLog struct {
 	Signatures            []string         `json:"signatures"`
 	Positions             []*big.Int       `json:"positions"`
 	PublicKeys            []common.Address `json:"publicKeys"`
@@ -51,35 +51,25 @@ type MMRProofLog struct {
 }
 
 type FinalSignatureCommitmentLog struct {
-	ID                 *big.Int          `json:"id"`
-	CommitmentHash     string            `json:"commitmentHash"`
-	Commitment         CommitmentLog     `json:"commitment"`
-	ValidatorProof     ValidatorProofLog `json:"validatorProof"`
-	LatestMMRLeaf      MMRLeafLog        `json:"latestMMRLeaf"`
-	SimplifiedMMRProof MMRProofLog        `json:"simplifiedMMRProof"`
+	ID             *big.Int      `json:"id"`
+	CommitmentHash string        `json:"commitmentHash"`
+	Commitment     CommitmentLog `json:"commitment"`
+	Proof          ProofLog      `json:"proof"`
+}
+
+type LeafUpdateLog struct {
+	Leaf  MMRLeafLog  `json:"leaf"`
+	Proof MMRProofLog `json:"proof"`
 }
 
 func Hex(b []byte) string {
 	return gsrpcTypes.HexEncodeToString(b)
 }
 
-func (wr *EthereumWriter) LogBeefyFixtureDataAll(
+func (wr *EthereumWriter) LogFinal(
 	task *Task,
 	msg *FinalSignatureCommitment,
 ) error {
-
-	encodedLeaf, err := gsrpcTypes.EncodeToBytes(msg.LatestMMRLeaf)
-	if err != nil {
-		return err
-	}
-
-	leafHash := Hex((&keccak.Keccak256{}).Hash(encodedLeaf))
-
-	var beefyMMRMerkleProofItems []string
-	for _, item := range msg.SimplifiedProof.MerkleProofItems {
-		beefyMMRMerkleProofItems = append(beefyMMRMerkleProofItems, Hex(item[:]))
-	}
-
 	var signatures []string
 	for _, item := range msg.Signatures {
 		signatures = append(signatures, Hex(item))
@@ -100,47 +90,26 @@ func (wr *EthereumWriter) LogBeefyFixtureDataAll(
 	}
 	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
 
-	var leafHash2 gsrpcTypes.H256
-	copy(leafHash2[:], (&keccak.Keccak256{}).Hash(encodedLeaf))
-
-	root := merkle.CalculateMerkleRoot(&task.Proof, leafHash2)
-
 	state := log.Fields{
 		"finalSignatureCommitment": log.Fields{
 			"id": msg.ID,
 			"commitment": log.Fields{
-				"blockNumber": msg.Commitment.BlockNumber,
+				"blockNumber":    msg.Commitment.BlockNumber,
 				"validatorSetId": msg.Commitment.ValidatorSetId,
 				"payload": log.Fields{
 					"mmrRootHash": Hex(msg.Commitment.Payload.MmrRootHash[:]),
-					"prefix": Hex(msg.Commitment.Payload.Prefix),
-					"suffix": Hex(msg.Commitment.Payload.Suffix),
+					"prefix":      Hex(msg.Commitment.Payload.Prefix),
+					"suffix":      Hex(msg.Commitment.Payload.Suffix),
 				},
 			},
-			"validatorProof": log.Fields{
-				"signatures": signatures,
-				"positions": msg.ValidatorPositions,
-				"publicKeys": msg.ValidatorPublicKeys,
-				"publicKeyMerkleProofs": pubKeyMerkleProofs,
-			},
-			"leaf": log.Fields{
-				"version": msg.LatestMMRLeaf.Version,
-				"parentNumber": msg.LatestMMRLeaf.ParentNumber,
-				"parentHash": Hex(msg.LatestMMRLeaf.ParentHash[:]),
-				"nextAuthoritySetId": msg.LatestMMRLeaf.NextAuthoritySetId,
-				"nextAuthoritySetLen": msg.LatestMMRLeaf.NextAuthoritySetLen,
-				"nextAuthoritySetRoot": Hex(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
-				"parachainHeadsRoot": Hex(msg.LatestMMRLeaf.ParachainHeadsRoot[:]),
-			},
 			"proof": log.Fields{
-				"merkleProofItems": beefyMMRMerkleProofItems,
-				"merkleProofOrderBitField": msg.SimplifiedProof.MerkleProofOrderBitField,
+				"signatures":            signatures,
+				"positions":             msg.ValidatorPositions,
+				"publicKeys":            msg.ValidatorPublicKeys,
+				"publicKeyMerkleProofs": pubKeyMerkleProofs,
 			},
 		},
 		"commitmentHash": commitmentHash,
-		"encodedLeaf": Hex(encodedLeaf),
-		"leafHash": leafHash,
-		"expectedProofOutput": root.Hex(),
 	}
 
 	log.WithFields(state).Debug("State for final signature commitment")
@@ -186,4 +155,52 @@ func (wr *EthereumWriter) GetFailingMessage(client ethclient.Client, hash common
 	}
 
 	return string(res), nil
+}
+
+func (wr *EthereumWriter) LogLeafUpdate(
+	task Task,
+	msg *LeafUpdate,
+) error {
+
+	encodedLeaf, err := gsrpcTypes.EncodeToBytes(msg.Leaf)
+	if err != nil {
+		return err
+	}
+
+	leafHash := Hex((&keccak.Keccak256{}).Hash(encodedLeaf))
+
+	var proofItems []string
+	for _, item := range msg.Proof.MerkleProofItems {
+		proofItems = append(proofItems, Hex(item[:]))
+	}
+
+	var leafHash2 gsrpcTypes.H256
+	copy(leafHash2[:], (&keccak.Keccak256{}).Hash(encodedLeaf))
+
+	root := merkle.CalculateMerkleRoot(&task.Proof, leafHash2)
+
+	state := log.Fields{
+		"updateLeaf": log.Fields{
+			"leaf": log.Fields{
+				"version":              msg.Leaf.Version,
+				"parentNumber":         msg.Leaf.ParentNumber,
+				"parentHash":           Hex(msg.Leaf.ParentHash[:]),
+				"nextAuthoritySetId":   msg.Leaf.NextAuthoritySetId,
+				"nextAuthoritySetLen":  msg.Leaf.NextAuthoritySetLen,
+				"nextAuthoritySetRoot": Hex(msg.Leaf.NextAuthoritySetRoot[:]),
+				"parachainHeadsRoot":   Hex(msg.Leaf.ParachainHeadsRoot[:]),
+			},
+			"proof": log.Fields{
+				"merkleProofItems":         proofItems,
+				"merkleProofOrderBitField": msg.Proof.MerkleProofOrderBitField,
+			},
+		},
+		"encodedLeaf":     Hex(encodedLeaf),
+		"leafHash":        leafHash,
+		"expectedMMRRoot": root.Hex(),
+	}
+
+	log.WithFields(state).Debug("State for update validator set")
+
+	return nil
 }

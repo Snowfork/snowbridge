@@ -29,7 +29,7 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, ethereumKeypair)
 
-	tasks := make(chan Task, 1)
+	tasks := make(chan Task)
 	ethHeaders := make(chan chain.Header)
 
 	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn, tasks)

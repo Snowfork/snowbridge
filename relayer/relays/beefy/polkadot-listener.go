@@ -219,7 +219,8 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 		log.WithFields(log.Fields{
 			"blockNumber":          blockToProve,
 			"latestBeefyBlock":     blockHash,
-			"beefyActivationBlock": li.config.Source.BeefyActivationBlock}).WithError(err).Error("Failed to generate proof for block")
+			"beefyActivationBlock": li.config.Source.BeefyActivationBlock},
+		).WithError(err).Error("Failed to generate proof for block")
 		return err
 	}
 

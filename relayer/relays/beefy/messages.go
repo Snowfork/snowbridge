@@ -29,8 +29,11 @@ type FinalSignatureCommitment struct {
 	ValidatorPositions             []*big.Int
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
-	LatestMMRLeaf                  beefylightclient.BeefyLightClientMMRLeaf
-	SimplifiedProof                beefylightclient.SimplifiedMMRProof
+}
+
+type LeafUpdate struct {
+	Leaf  beefylightclient.BeefyLightClientMMRLeaf
+	Proof beefylightclient.SimplifiedMMRProof
 }
 
 func (t *Task) MakeInitialSignatureCommitment(valAddrIndex int64, initialBitfield []*big.Int) (*InitialSignatureCommitment, error) {
@@ -57,7 +60,7 @@ func (t *Task) MakeInitialSignatureCommitment(valAddrIndex int64, initialBitfiel
 	msg := InitialSignatureCommitment{
 		CommitmentHash:                commitmentHash32,
 		ValidatorSetID:                t.SignedCommitment.Commitment.ValidatorSetID,
-		ValidatorClaimsBitfield:        initialBitfield,
+		ValidatorClaimsBitfield:       initialBitfield,
 		ValidatorSignatureCommitment:  cleanSignature(beefySig),
 		ValidatorPublicKey:            t.Validators[valAddrIndex],
 		ValidatorPosition:             big.NewInt(valAddrIndex),
@@ -137,21 +140,6 @@ func (t *Task) MakeFinalSignatureCommitment(bitfield string) (*FinalSignatureCom
 		ValidatorSetId: t.SignedCommitment.Commitment.ValidatorSetID,
 	}
 
-	latestMMRLeaf := beefylightclient.BeefyLightClientMMRLeaf{
-		Version:              uint8(t.Proof.Leaf.Version),
-		ParentNumber:         uint32(t.Proof.Leaf.ParentNumberAndHash.ParentNumber),
-		ParentHash:           t.Proof.Leaf.ParentNumberAndHash.Hash,
-		ParachainHeadsRoot:   t.Proof.Leaf.ParachainHeads,
-		NextAuthoritySetId:   uint64(t.Proof.Leaf.BeefyNextAuthoritySet.ID),
-		NextAuthoritySetLen:  uint32(t.Proof.Leaf.BeefyNextAuthoritySet.Len),
-		NextAuthoritySetRoot: t.Proof.Leaf.BeefyNextAuthoritySet.Root,
-	}
-
-	merkleProofItems := [][32]byte{}
-	for _, mmrProofItem := range t.Proof.MerkleProofItems {
-		merkleProofItems = append(merkleProofItems, mmrProofItem)
-	}
-
 	msg := FinalSignatureCommitment{
 		ID:                             validationDataID,
 		Commitment:                     commitment,
@@ -159,12 +147,6 @@ func (t *Task) MakeFinalSignatureCommitment(bitfield string) (*FinalSignatureCom
 		ValidatorPositions:             validatorPositions,
 		ValidatorPublicKeys:            validatorPublicKeys,
 		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
-		LatestMMRLeaf:                  latestMMRLeaf,
-
-		SimplifiedProof: beefylightclient.SimplifiedMMRProof{
-			MerkleProofItems:         merkleProofItems,
-			MerkleProofOrderBitField: t.Proof.MerkleProofOrder,
-		},
 	}
 
 	return &msg, nil
@@ -211,4 +193,31 @@ func buildPayload(items []types.PayloadItem) (*beefylightclient.BeefyLightClient
 		Prefix:      slices[0],
 		Suffix:      slices[1],
 	}, nil
+}
+
+func (t *Task) MakeLeafUpdate() (*LeafUpdate, error) {
+	leaf := beefylightclient.BeefyLightClientMMRLeaf{
+		Version:              uint8(t.Proof.Leaf.Version),
+		ParentNumber:         uint32(t.Proof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           t.Proof.Leaf.ParentNumberAndHash.Hash,
+		ParachainHeadsRoot:   t.Proof.Leaf.ParachainHeads,
+		NextAuthoritySetId:   uint64(t.Proof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(t.Proof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: t.Proof.Leaf.BeefyNextAuthoritySet.Root,
+	}
+
+	merkleProofItems := [][32]byte{}
+	for _, mmrProofItem := range t.Proof.MerkleProofItems {
+		merkleProofItems = append(merkleProofItems, mmrProofItem)
+	}
+
+	msg := LeafUpdate{
+		Leaf: leaf,
+		Proof: beefylightclient.SimplifiedMMRProof{
+			MerkleProofItems:         merkleProofItems,
+			MerkleProofOrderBitField: t.Proof.MerkleProofOrder,
+		},
+	}
+
+	return &msg, nil
 }

@@ -23,7 +23,10 @@ contract BeefyLightClient is AccessControl {
 
     /* Events */
 
-    enum Phase {Initial, Final}
+    enum Phase {
+        Initial,
+        Final
+    }
 
     /**
      * @notice Verification event
@@ -32,7 +35,7 @@ contract BeefyLightClient is AccessControl {
      */
     event CommitmentVerified(
         uint256 id,
-        Phase   phase,
+        Phase phase,
         bytes32 commitmentHash,
         address prover
     );
@@ -133,7 +136,6 @@ contract BeefyLightClient is AccessControl {
     ValidatorSet public currentValidatorSet;
     ValidatorSet public nextValidatorSet;
 
-
     uint256 public nextID;
     mapping(uint256 => ValidationData) public validationData;
 
@@ -151,9 +153,7 @@ contract BeefyLightClient is AccessControl {
      * @notice Deploys the BeefyLightClient contract
      * @param _mmrVerification The contract to be used for MMR verification
      */
-    constructor(
-        SimplifiedMMRVerification _mmrVerification
-    ) {
+    constructor(SimplifiedMMRVerification _mmrVerification) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         mmrVerification = _mmrVerification;
         nextID = 0;
@@ -164,10 +164,7 @@ contract BeefyLightClient is AccessControl {
         uint64 _startingBeefyBlock,
         ValidatorSet calldata _initialValidatorSet,
         ValidatorSet calldata _nextValidatorSet
-    )
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         latestBeefyBlock = _startingBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
         nextValidatorSet = _nextValidatorSet;
@@ -215,7 +212,6 @@ contract BeefyLightClient is AccessControl {
         address validatorPublicKey,
         bytes32[] calldata validatorPublicKeyMerkleProof
     ) public payable {
-
         ValidatorSet memory vset = getValidatorSet(validatorSetID);
 
         // Check if validatorPublicKeyMerkleProof is valid based on validatorSetRoot
@@ -239,7 +235,8 @@ contract BeefyLightClient is AccessControl {
 
         // Check that the bitfield actually contains enough claims to be successful, ie, >= 2/3
         require(
-            validatorClaimsBitfield.countSetBits() >= requiredNumberOfSignatures(vset),
+            validatorClaimsBitfield.countSetBits() >=
+                requiredNumberOfSignatures(vset),
             "Not enough claims in bitfield"
         );
 
@@ -252,7 +249,12 @@ contract BeefyLightClient is AccessControl {
             block.number
         );
 
-        emit CommitmentVerified(nextID, Phase.Initial, commitmentHash, msg.sender);
+        emit CommitmentVerified(
+            nextID,
+            Phase.Initial,
+            commitmentHash,
+            msg.sender
+        );
 
         nextID = nextID + 1;
     }
@@ -293,18 +295,16 @@ contract BeefyLightClient is AccessControl {
      * @notice Performs the final step in the validation, and then applies the commitment and optional authority update
      * @param id an identifying value generated in the previous transaction
      * @param commitment contains the full commitment that was used for the commitmentHash
-     * @param validatorProof a struct containing the data needed to verify all validator signatures
+     * @param proof a struct containing the data needed to verify all validator signatures
      */
     function completeSignatureCommitment(
         uint256 id,
         Commitment calldata commitment,
-        ValidatorProof calldata validatorProof,
-        MMRLeaf calldata leaf,
-        SimplifiedMMRProof calldata leafProof
+        ValidatorProof calldata proof
     ) public {
         ValidationData storage data = validationData[id];
 
-        bytes32 commitmentHash = verifyCommitment(data, commitment, validatorProof);
+        bytes32 commitmentHash = verifyCommitment(data, commitment, proof);
 
         latestMMRRoot = commitment.payload.mmrRootHash;
         latestBeefyBlock = commitment.blockNumber;
@@ -312,23 +312,13 @@ contract BeefyLightClient is AccessControl {
 
         // Check if commitment signals an authority handover (new validator session)
         if (commitment.validatorSetId == currentValidatorSet.id + 1) {
-
             // Handover to the next authority set
             currentValidatorSet = nextValidatorSet;
-            emit NewSession(nextValidatorSet.id, nextValidatorSet.root, nextValidatorSet.length);
-
-            if (leaf.nextAuthoritySetId == nextValidatorSet.id + 1) {
-                // Verify that the leaf suppied by the relayer is part of the MMR
-                bytes32 leafHash = keccak256(encodeMMRLeaf(leaf));
-                require(
-                    mmrVerification.verifyInclusionProof(commitment.payload.mmrRootHash, leafHash, leafProof),
-                    "Invalid leaf proof"
-                );
-
-                nextValidatorSet.id  = leaf.nextAuthoritySetId;
-                nextValidatorSet.root  = leaf.nextAuthoritySetRoot;
-                nextValidatorSet.length = leaf.nextAuthoritySetLen;
-            }
+            emit NewSession(
+                nextValidatorSet.id,
+                nextValidatorSet.root,
+                nextValidatorSet.length
+            );
         }
 
         // Obtain a gas refund
@@ -337,9 +327,38 @@ contract BeefyLightClient is AccessControl {
         emit CommitmentVerified(id, Phase.Final, commitmentHash, msg.sender);
     }
 
+    function updateValidatorSet(
+        MMRLeaf calldata leaf,
+        SimplifiedMMRProof calldata proof
+    ) public {
+        require(
+            leaf.nextAuthoritySetId == nextValidatorSet.id + 1,
+            "Leaf is invalid"
+        );
+
+        // Verify that the leaf suppied by the relayer is part of the MMR
+        bytes32 leafHash = keccak256(encodeMMRLeaf(leaf));
+        require(
+            mmrVerification.verifyInclusionProof(
+                latestMMRRoot,
+                leafHash,
+                proof
+            ),
+            "Invalid leaf proof"
+        );
+
+        nextValidatorSet.id = leaf.nextAuthoritySetId;
+        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+        nextValidatorSet.length = leaf.nextAuthoritySetLen;
+    }
+
     /* Private Functions */
 
-    function getValidatorSet(uint256 id) internal view returns (ValidatorSet memory) {
+    function getValidatorSet(uint256 id)
+        internal
+        view
+        returns (ValidatorSet memory)
+    {
         if (id == currentValidatorSet.id) {
             return currentValidatorSet;
         } else if (id == nextValidatorSet.id) {
@@ -348,7 +367,6 @@ contract BeefyLightClient is AccessControl {
             revert("unknown validator set");
         }
     }
-
 
     /**
      * @notice Deterministically generates a seed from the block hash at the block number of creation of the validation
@@ -377,7 +395,9 @@ contract BeefyLightClient is AccessControl {
         view
         returns (uint256)
     {
-        return (vset.length * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) / THRESHOLD_DENOMINATOR;
+        return
+            (vset.length * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) /
+            THRESHOLD_DENOMINATOR;
     }
 
     function verifyCommitment(
@@ -409,9 +429,9 @@ contract BeefyLightClient is AccessControl {
 
         require(
             proof.signatures.length == requiredNumOfSignatures &&
-            proof.positions.length == requiredNumOfSignatures &&
-            proof.publicKeys.length == requiredNumOfSignatures &&
-            proof.publicKeyMerkleProofs.length == requiredNumOfSignatures,
+                proof.positions.length == requiredNumOfSignatures &&
+                proof.publicKeys.length == requiredNumOfSignatures &&
+                proof.publicKeyMerkleProofs.length == requiredNumOfSignatures,
             "Number of signatures does not match required"
         );
 
@@ -460,12 +480,7 @@ contract BeefyLightClient is AccessControl {
 
         // Check if merkle proof is valid
         require(
-            isValidatorInSet(
-                vset,
-                publicKey,
-                position,
-                publicKeyMerkleProof
-            ),
+            isValidatorInSet(vset, publicKey, position, publicKeyMerkleProof),
             "Validator must be in validator set at correct position"
         );
 
@@ -481,13 +496,14 @@ contract BeefyLightClient is AccessControl {
         pure
         returns (bytes memory)
     {
-        return bytes.concat(
-            commitment.payload.prefix,
-            commitment.payload.mmrRootHash,
-            commitment.payload.suffix,
-            commitment.blockNumber.encode32(),
-            commitment.validatorSetId.encode64()
-        );
+        return
+            bytes.concat(
+                commitment.payload.prefix,
+                commitment.payload.mmrRootHash,
+                commitment.payload.suffix,
+                commitment.blockNumber.encode32(),
+                commitment.validatorSetId.encode64()
+            );
     }
 
     function encodeMMRLeaf(MMRLeaf calldata leaf)
@@ -495,15 +511,16 @@ contract BeefyLightClient is AccessControl {
         pure
         returns (bytes memory)
     {
-        return bytes.concat(
-            ScaleCodec.encode8(leaf.version),
-            ScaleCodec.encode32(leaf.parentNumber),
-            leaf.parentHash,
-            ScaleCodec.encode64(leaf.nextAuthoritySetId),
-            ScaleCodec.encode32(leaf.nextAuthoritySetLen),
-            leaf.nextAuthoritySetRoot,
-            leaf.parachainHeadsRoot
-        );
+        return
+            bytes.concat(
+                ScaleCodec.encode8(leaf.version),
+                ScaleCodec.encode32(leaf.parentNumber),
+                leaf.parentHash,
+                ScaleCodec.encode64(leaf.nextAuthoritySetId),
+                ScaleCodec.encode32(leaf.nextAuthoritySetLen),
+                leaf.nextAuthoritySetRoot,
+                leaf.parachainHeadsRoot
+            );
     }
 
     /**
@@ -518,7 +535,7 @@ contract BeefyLightClient is AccessControl {
         address addr,
         uint256 pos,
         bytes32[] memory proof
-    ) public view returns (bool) {
+    ) internal view returns (bool) {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
         return
             MerkleProof.verifyMerkleLeafAtPosition(
