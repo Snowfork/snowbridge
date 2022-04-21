@@ -86,7 +86,7 @@ func Test_SimplifiedMMRProof(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, testData[i].SimplifiedMerkleProofOrder, simplifiedProof.MerkleProofOrder)
 		assert.Equal(t, testData[i].SimplifiedMerkleProofItems, simplifiedProof.MerkleProofItems)
-		assert.Equal(t, testData[i].ReferenceMMRRoot, calculateMerkleRoot(&simplifiedProof, testData[i].LeafHash))
+		assert.Equal(t, testData[i].ReferenceMMRRoot, CalculateMerkleRoot(&simplifiedProof, testData[i].LeafHash))
 
 		fmt.Printf("\nRoot: %#x\n", testData[i].ReferenceMMRRoot)
 		fmt.Printf("Leaf Node hash: %#x\n", testData[i].LeafHash)

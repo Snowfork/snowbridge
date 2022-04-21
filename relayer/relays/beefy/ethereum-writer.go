@@ -22,7 +22,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/semaphore"
 )
 
 type EthereumWriter struct {
@@ -30,8 +29,10 @@ type EthereumWriter struct {
 	conn             *ethereum.Connection
 	beefyLightClient *beefylightclient.Contract
 	tasks            <-chan Task
-	blockWaitPeriod  uint64
-	nextValidatorSetID uint64
+	someTasks        chan Task
+
+	blockWaitPeriod uint64
+	validatorSetID  uint64
 }
 
 func NewEthereumWriter(
@@ -43,6 +44,7 @@ func NewEthereumWriter(
 		config: config,
 		conn:   conn,
 		tasks:  tasks,
+		someTasks: make(chan Task),
 	}
 }
 
@@ -70,15 +72,23 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) (uint64
 	}
 	wr.blockWaitPeriod = blockWaitPeriod
 
-	nextValidatorSet, err := wr.beefyLightClient.NextValidatorSet(&bind.CallOpts{Pending: true},)
-	if err != nil {
-		return 0, err
-	}
-
-	wr.nextValidatorSetID = nextValidatorSet.Id.Uint64()
-
+	// launch task filterer
 	eg.Go(func() error {
-		err := wr.writeMessagesLoop(ctx, eg)
+		defer close(wr.someTasks)
+		err := wr.filterTasks(ctx)
+		log.WithField("reason", err).Info("Shutting down task filter")
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
+		}
+		return nil
+	})
+
+	// launch task processor
+	eg.Go(func() error {
+		err := wr.processAllMessages(ctx)
 		log.WithField("reason", err).Info("Shutting down ethereum writer")
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
@@ -86,15 +96,31 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) (uint64
 			}
 			return err
 		}
-
 		return nil
 	})
 
 	return latestBeefyBlock, nil
 }
 
-func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context, eg *errgroup.Group) error {
-	sem := semaphore.NewWeighted(3)
+func (wr *EthereumWriter) processAllMessages(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case task, ok := <-wr.someTasks:
+			if !ok {
+				return nil
+			}
+
+			err := wr.processMessage(ctx, task)
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (wr *EthereumWriter) filterTasks(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -104,14 +130,27 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context, eg *errgroup.Gr
 				return nil
 			}
 
-			if err := sem.Acquire(ctx, 1); err != nil {
-				return err
-			}
+			log.WithFields(
+				log.Fields{
+					"ValidatorSetID": task.SignedCommitment.Commitment.ValidatorSetID,
+					"NextValidatorSetID": task.Proof.Leaf.BeefyNextAuthoritySet.ID,
+				},
+			).Info("Processing commitment")
 
-			eg.Go(func() error {
-				defer sem.Release(1);
-				return wr.processMessage(ctx, task)
-			})
+			// if task.SignedCommitment.Commitment.ValidatorSetID == wr.validatorSetID {
+			// 	select {
+			// 	case wr.someTasks <- task:
+			// 	default:
+			// 		// drop task if it can't be processed right now
+			// 		log.WithField("validatorSetId", task.SignedCommitment.Commitment.ValidatorSetID).Info("Discarded commitment")
+			// 	}
+			// } else {
+			// 	select {
+			// 	case <-ctx.Done():
+			// 		return ctx.Err()
+			// 	case wr.someTasks <- task:
+			// 	}
+			// }
 		}
 	}
 }
@@ -148,14 +187,14 @@ func (wr *EthereumWriter) pollTransaction(ctx context.Context, tx *types.Transac
 		return nil, err
 	}
 
-	if latestHeader.Number.Uint64() - receipt.BlockNumber.Uint64() >= confirmations {
+	if latestHeader.Number.Uint64()-receipt.BlockNumber.Uint64() >= confirmations {
 		return receipt, nil
 	}
 
 	return nil, nil
 }
 
-func (wr *EthereumWriter) getContractCommitmentVerified(receipt *types.Receipt) (*beefylightclient.ContractCommitmentVerified) {
+func (wr *EthereumWriter) getContractCommitmentVerified(receipt *types.Receipt) *beefylightclient.ContractCommitmentVerified {
 	for _, eventLog := range receipt.Logs {
 		event, err := wr.beefyLightClient.ParseCommitmentVerified(*eventLog)
 		if err != nil {
@@ -177,9 +216,6 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 	if err != nil {
 		return err
 	}
-
-	log.WithField("receipt", receipt).Info("receipt got")
-
 	if receipt.Status != 1 {
 		return fmt.Errorf("initial commitment transaction failed")
 	}
@@ -194,10 +230,10 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 
 	log.WithFields(log.Fields{
 		"event": log.Fields{
-			"ID": event.Id.Uint64(),
-			"Phase": event.Phase,
+			"ID":             event.Id.Uint64(),
+			"Phase":          event.Phase,
 			"CommitmentHash": "0x" + hex.EncodeToString(event.CommitmentHash[:]),
-			"Prover": event.Prover.Hex(),
+			"Prover":         event.Prover.Hex(),
 		},
 	}).Info("Initial Verification Successful")
 
@@ -211,7 +247,12 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 
 	var leafUpdateTx *types.Transaction
 
-	if uint64(task.Proof.Leaf.BeefyNextAuthoritySet.ID) == wr.nextValidatorSetID + 1 {
+	nextValidatorSet, err := wr.beefyLightClient.NextValidatorSet(&bind.CallOpts{Pending: true})
+	if err != nil {
+		return err
+	}
+
+	if uint64(task.Proof.Leaf.BeefyNextAuthoritySet.ID) == nextValidatorSet.Id.Uint64()+1 {
 		msg, err := task.MakeLeafUpdate()
 		if err != nil {
 			return err
@@ -224,8 +265,6 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 		if err != nil {
 			return err
 		}
-
-		wr.nextValidatorSetID++
 	}
 
 	receipt, err = wr.waitForTransaction(ctx, tx, wr.config.DescendantsUntilFinal)
@@ -248,10 +287,10 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 
 	log.WithFields(log.Fields{
 		"event": log.Fields{
-			"ID": event.Id.Uint64(),
-			"Phase": event.Phase,
+			"ID":             event.Id.Uint64(),
+			"Phase":          event.Phase,
 			"CommitmentHash": "0x" + hex.EncodeToString(event.CommitmentHash[:]),
-			"Prover": event.Prover.Hex(),
+			"Prover":         event.Prover.Hex(),
 		},
 	}).Info("Final Verification Successful")
 
