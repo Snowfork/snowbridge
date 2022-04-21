@@ -234,16 +234,12 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 	pub(super) type ChainGenesis<T: Config> = StorageValue<_, Genesis, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {
-		current_sync_committee: SyncCommittee
-	}
+	pub struct GenesisConfig {}
 
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self {
-				current_sync_committee: Default::default(),
-			}
+			Self {}
 		}
 	}
 
@@ -311,8 +307,8 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			initial_sync: LightClientInitialSync,
 		) -> DispatchResult {
 			Self::verify_sync_committee(
-				initial_sync.current_sync_committee.clone(), 
-				initial_sync.current_sync_committee_branch, 
+				initial_sync.current_sync_committee.clone(),
+				initial_sync.current_sync_committee_branch,
 				initial_sync.header.state_root,
 				CURRENT_SYNC_COMMITTEE_DEPTH,
 				CURRENT_SYNC_COMMITTEE_INDEX
@@ -327,24 +323,24 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			Self::store_genesis(Genesis{
 				validators_root: initial_sync.validators_root
 			});
-			
+
 			Ok(())
 		}
 
 		fn process_sync_committee_period_update(
 			update: LightClientSyncCommitteePeriodUpdate,
-		) -> DispatchResult {		
+		) -> DispatchResult {
 			Self::verify_sync_committee(
-				update.next_sync_committee.clone(), 
-				update.next_sync_committee_branch, 
+				update.next_sync_committee.clone(),
+				update.next_sync_committee_branch,
 				update.finalized_header.state_root,
 				NEXT_SYNC_COMMITTEE_DEPTH,
 				NEXT_SYNC_COMMITTEE_INDEX
 			)?;
 
 			Self::verify_header(
-				update.finalized_header.clone(), 
-				update.finality_branch, 
+				update.finalized_header.clone(),
+				update.finality_branch,
 				update.attested_header.state_root,
 				FINALIZED_ROOT_DEPTH,
 				FINALIZED_ROOT_INDEX
@@ -375,10 +371,10 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 
 		fn process_finalized_header(
 			update: LightClientFinalizedHeaderUpdate,
-		) -> DispatchResult {		
+		) -> DispatchResult {
 			Self::verify_header(
-				update.finalized_header.clone(), 
-				update.finality_branch, 
+				update.finalized_header.clone(),
+				update.finality_branch,
 				update.attested_header.state_root,
 				FINALIZED_ROOT_DEPTH,
 				FINALIZED_ROOT_INDEX
@@ -566,9 +562,9 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 		}
 
 		/// Sums the bit vector of sync committee particpation.
-		/// 
+		///
 		/// # Examples
-		/// 
+		///
 		/// let sync_committee_bits = vec![0, 1, 0, 1, 1, 1];
 		/// ensure!(get_sync_committee_sum(sync_committee_bits), 4);
 		pub(super) fn get_sync_committee_sum(sync_committee_bits: Vec<u8>) -> u64 {
@@ -603,7 +599,7 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			Ok(domain.into())
 		}
 
-		fn compute_fork_data_root(current_version: ForkVersion, genesis_validators_root: Root) -> Result<Root, DispatchError> {		
+		fn compute_fork_data_root(current_version: ForkVersion, genesis_validators_root: Root) -> Result<Root, DispatchError> {
 			let hash_root = merklization::hash_tree_root_fork_data(ForkData {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
@@ -660,7 +656,7 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 
 				result.append(&mut tmp);
 			}
-			 
+
 			result
 		}
 	}
