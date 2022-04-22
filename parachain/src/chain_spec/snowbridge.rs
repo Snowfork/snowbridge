@@ -112,7 +112,6 @@ fn testnet_genesis(
 			accounts: vec![],
 		},
 		asset_registry: snowbridge_runtime::AssetRegistryConfig { next_asset_id: 1 },
-		nft: snowbridge_runtime::NFTConfig { tokens: vec![] },
 		ethereum_light_client: snowbridge_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
@@ -125,9 +124,6 @@ fn testnet_genesis(
 		},
 		erc_20_app: snowbridge_runtime::Erc20AppConfig {
 			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into(),
-		},
-		erc_721_app: snowbridge_runtime::Erc721AppConfig {
-			address: hex!["F67EFf5250cD974E6e86c9B53dc5290905Bd8916"].into(),
 		},
 		parachain_info: snowbridge_runtime::ParachainInfoConfig { parachain_id: para_id },
 		collator_selection: snowbridge_runtime::CollatorSelectionConfig {
