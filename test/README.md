@@ -53,7 +53,7 @@ Example:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
-git checkout 96d736ce75e8467862cd63037faa6d6e56122532
+git checkout release-v0.9.19
 cargo build --release
 ```
 

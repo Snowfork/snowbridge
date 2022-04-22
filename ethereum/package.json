@@ -1,5 +1,8 @@
 {
+  "name": "@snowfork/snowbridge-contracts",
+  "description": "Snowbridge smart contracts.",
   "license": "Apache-2.0",
+  "version": "1.0.0",
   "scripts": {
     "test": "hardhat test",
     "coverage": "hardhat coverage",
