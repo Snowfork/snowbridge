@@ -8,11 +8,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
-use sp_core::{
-	crypto::KeyTypeId,
-	u32_trait::{_1, _2},
-	OpaqueMetadata, U256,
-};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata, U256};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, Keccak256},
@@ -30,14 +26,14 @@ use sp_version::RuntimeVersion;
 pub use frame_support::{
 	construct_runtime,
 	dispatch::DispatchResult,
-	match_type, parameter_types,
+	match_types, parameter_types,
 	traits::{
 		tokens::fungible::ItemOf, Contains, EnsureOneOf, EqualPrivilegeOnly, Everything, IsInVec,
 		KeyOwnerProofSystem, Nothing, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
-		IdentityFee, Weight,
+		ConstantMultiplier, IdentityFee, Weight,
 	},
 	PalletId, StorageValue,
 };
@@ -234,7 +230,7 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
-	type TransactionByteFee = TransactionByteFee;
+	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type WeightToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate = ();
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
@@ -245,8 +241,8 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 // Cumulus and XCMP
 
 parameter_types! {
-	  pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
-	  pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
@@ -343,7 +339,7 @@ parameter_types! {
 	pub const MaxInstructions: u32 = 100;
 }
 
-match_type! {
+match_types! {
 	pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
 		MultiLocation { parents: 1, interior: Here } |
 		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
@@ -422,6 +418,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type WeightInfo = ();
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -439,7 +436,7 @@ impl pallet_sudo::Config for Runtime {
 
 type EnsureRootOrHalfLocalCouncil = EnsureOneOf<
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, LocalCouncilInstance>,
+	pallet_collective::EnsureProportionMoreThan<AccountId, LocalCouncilInstance, 1, 2>,
 >;
 
 parameter_types! {

@@ -1,7 +1,5 @@
-use crate::chain_spec::Extensions;
-
+use crate::chain_spec;
 use clap::Parser;
-use sc_cli;
 use std::path::PathBuf;
 
 /// Sub-commands supported by the collator.
@@ -36,8 +34,9 @@ pub enum Subcommand {
 	/// Revert the chain to a previous state.
 	Revert(sc_cli::RevertCmd),
 
-	/// The custom benchmark subcommmand benchmarking runtime pallets.
-	#[clap(name = "benchmark", about = "Benchmark runtime pallets")]
+	/// Sub-commands concerned with benchmarking.
+	/// The pallet benchmarking moved to the `pallet` sub-command.
+	#[clap(subcommand)]
 	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 }
 
@@ -47,10 +46,6 @@ pub struct ExportGenesisStateCommand {
 	/// Output file name or stdout if unspecified.
 	#[clap(parse(from_os_str))]
 	pub output: Option<PathBuf>,
-
-	/// Id of the parachain this state is for.
-	#[clap(long, default_value = "100")]
-	pub parachain_id: u32,
 
 	/// Write output in binary. Default is to write in hex.
 	#[clap(short, long)]
@@ -78,24 +73,6 @@ pub struct ExportGenesisWasmCommand {
 }
 
 #[derive(Debug, Parser)]
-pub struct RunCmd {
-	#[clap(flatten)]
-	pub base: sc_cli::RunCmd,
-
-	/// Id of the parachain this collator collates for.
-	#[clap(long)]
-	pub parachain_id: Option<u32>,
-}
-
-impl std::ops::Deref for RunCmd {
-	type Target = sc_cli::RunCmd;
-
-	fn deref(&self) -> &Self::Target {
-		&self.base
-	}
-}
-
-#[derive(Debug, Parser)]
 #[clap(
 	propagate_version = true,
 	args_conflicts_with_subcommands = true,
@@ -106,17 +83,10 @@ pub struct Cli {
 	pub subcommand: Option<Subcommand>,
 
 	#[clap(flatten)]
-	pub run: RunCmd,
+	pub run: cumulus_client_cli::RunCmd,
 
-	/// Run node as collator.
-	///
-	/// Note that this is the same as running with `--validator`.
-	#[clap(long, conflicts_with = "validator")]
-	pub collator: bool,
-
-	/// Relaychain arguments
 	#[clap(raw = true)]
-	pub relaychain_args: Vec<String>,
+	pub relay_chain_args: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -137,7 +107,7 @@ impl RelayChainCli {
 		para_config: &sc_service::Configuration,
 		relay_chain_args: impl Iterator<Item = &'a String>,
 	) -> Self {
-		let extension = Extensions::try_get(&*para_config.chain_spec);
+		let extension = chain_spec::Extensions::try_get(&*para_config.chain_spec);
 		let chain_id = extension.map(|e| e.relay_chain.clone());
 		let base_path = para_config.base_path.as_ref().map(|x| x.path().join("polkadot"));
 		Self { base_path, chain_id, base: polkadot_cli::RunCmd::parse_from(relay_chain_args) }
