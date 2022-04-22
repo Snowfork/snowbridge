@@ -9933,11 +9933,9 @@ dependencies = [
  "snowbridge-dispatch",
  "snowbridge-dot-app",
  "snowbridge-erc20-app",
- "snowbridge-erc721-app",
  "snowbridge-eth-app",
  "snowbridge-ethereum-light-client",
  "snowbridge-incentivized-channel",
- "snowbridge-nft",
  "snowbridge-runtime-common",
  "snowbridge-runtime-primitives",
  "snowbridge-xcm-support",
@@ -10006,11 +10004,9 @@ dependencies = [
  "snowbridge-dispatch",
  "snowbridge-dot-app",
  "snowbridge-erc20-app",
- "snowbridge-erc721-app",
  "snowbridge-eth-app",
  "snowbridge-ethereum-light-client",
  "snowbridge-incentivized-channel",
- "snowbridge-nft",
  "snowbridge-runtime-common",
  "snowbridge-runtime-primitives",
  "snowbridge-xcm-support",
@@ -10244,30 +10240,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-erc721-app"
-version = "0.0.1"
-dependencies = [
- "ethabi-decode",
- "frame-support",
- "frame-system",
- "hex-literal",
- "parity-scale-codec",
- "rlp",
- "rustc-hex",
- "scale-info",
- "serde",
- "snowbridge-core",
- "snowbridge-dispatch",
- "snowbridge-ethereum",
- "snowbridge-nft",
- "sp-core",
- "sp-io",
- "sp-keyring",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "snowbridge-eth-app"
 version = "0.1.1"
 dependencies = [
@@ -10370,25 +10342,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-nft"
-version = "0.0.1"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "rustc-hex",
- "scale-info",
- "serde",
- "snowbridge-core",
- "sp-core",
- "sp-io",
- "sp-keyring",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "snowbridge-runtime"
 version = "0.1.1"
 dependencies = [
@@ -10435,11 +10388,9 @@ dependencies = [
  "snowbridge-dispatch",
  "snowbridge-dot-app",
  "snowbridge-erc20-app",
- "snowbridge-erc721-app",
  "snowbridge-eth-app",
  "snowbridge-ethereum-light-client",
  "snowbridge-incentivized-channel",
- "snowbridge-nft",
  "snowbridge-runtime-common",
  "snowbridge-runtime-primitives",
  "snowbridge-xcm-support",

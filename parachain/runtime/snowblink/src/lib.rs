@@ -46,7 +46,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
 
 use dispatch::EnsureEthereumAccount;
-pub use snowbridge_core::{ChannelId, ERC721TokenData, MessageId};
+pub use snowbridge_core::{ChannelId, MessageId};
 
 pub use ethereum_light_client::{EthereumDifficultyConfig, EthereumHeader};
 
@@ -668,20 +668,6 @@ impl dot_app::Config for Runtime {
 	type WeightInfo = dot_app::weights::SnowbridgeWeight<Self>;
 }
 
-impl nft::Config for Runtime {
-	type TokenId = u128;
-	type TokenData = ERC721TokenData;
-}
-
-impl erc721_app::Config for Runtime {
-	type Event = Event;
-	type OutboundRouter = OutboundRouter<Runtime>;
-	type CallOrigin = EnsureEthereumAccount;
-	type TokenId = <Runtime as nft::Config>::TokenId;
-	type Nft = nft::Pallet<Runtime>;
-	type WeightInfo = ();
-}
-
 parameter_types! {
 	pub const Period: u32 = 6 * HOURS;
 	pub const Offset: u32 = 0;
@@ -769,7 +755,6 @@ construct_runtime!(
 		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 17,
 		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 18,
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 19,
-		NFT: nft::{Pallet, Call, Config<T>, Storage} = 20,
 
 		// XCM
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 21,
@@ -792,7 +777,7 @@ construct_runtime!(
 		DotApp: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 64,
 		EthApp: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
 		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
-		Erc721App: erc721_app::{Pallet, Call, Config, Storage, Event<T>} = 67,
+		// NOTE: 67 is reserved for use with NFTs.
 	}
 );
 

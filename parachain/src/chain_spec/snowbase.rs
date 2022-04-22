@@ -112,7 +112,6 @@ fn testnet_genesis(
 			accounts: vec![],
 		},
 		asset_registry: snowbase_runtime::AssetRegistryConfig { next_asset_id: 1 },
-		nft: snowbase_runtime::NFTConfig { tokens: vec![] },
 		ethereum_light_client: snowbase_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
@@ -125,9 +124,6 @@ fn testnet_genesis(
 		},
 		erc_20_app: snowbase_runtime::Erc20AppConfig {
 			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into(),
-		},
-		erc_721_app: snowbase_runtime::Erc721AppConfig {
-			address: hex!["54D6643762E46036b3448659791adAf554225541"].into(),
 		},
 		parachain_info: snowbase_runtime::ParachainInfoConfig { parachain_id: para_id },
 		collator_selection: snowbase_runtime::CollatorSelectionConfig {

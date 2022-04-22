@@ -76,11 +76,9 @@ basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-ba
 incentivized-channel = { path = "../../pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }
 dispatch = { path = "../../pallets/dispatch", package = "snowbridge-dispatch", default-features = false }
 ethereum-light-client = { path = "../../pallets/ethereum-light-client", package = "snowbridge-ethereum-light-client", default-features = false }
-nft = { path = "../../pallets/nft", package = "snowbridge-nft", default-features = false }
 dot-app = { path = "../../pallets/dot-app", package = "snowbridge-dot-app", default-features = false }
 eth-app = { path = "../../pallets/eth-app", package = "snowbridge-eth-app", default-features = false }
 erc20-app = { path = "../../pallets/erc20-app", package = "snowbridge-erc20-app", default-features = false }
-erc721-app = { path = "../../pallets/erc721-app", package = "snowbridge-erc721-app", default-features = false }
 runtime-common = { path = "../common", package = "snowbridge-runtime-common", default-features = false }
 
 # Used for runtime benchmarking
@@ -143,12 +141,10 @@ std = [
     "basic-channel/std",
     "incentivized-channel/std",
     "ethereum-light-client/std",
-    "nft/std",
     "dispatch/std",
     "dot-app/std",
     "eth-app/std",
     "erc20-app/std",
-    "erc721-app/std",
     "snowbridge-core/std",
     "runtime-primitives/std",
     "snowbridge-xcm-support/std",
