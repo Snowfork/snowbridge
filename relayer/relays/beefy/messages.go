@@ -194,30 +194,3 @@ func buildPayload(items []types.PayloadItem) (*beefylightclient.BeefyLightClient
 		Suffix:      slices[1],
 	}, nil
 }
-
-func (t *Task) MakeLeafUpdate() (*LeafUpdate, error) {
-	leaf := beefylightclient.BeefyLightClientMMRLeaf{
-		Version:              uint8(t.Proof.Leaf.Version),
-		ParentNumber:         uint32(t.Proof.Leaf.ParentNumberAndHash.ParentNumber),
-		ParentHash:           t.Proof.Leaf.ParentNumberAndHash.Hash,
-		ParachainHeadsRoot:   t.Proof.Leaf.ParachainHeads,
-		NextAuthoritySetId:   uint64(t.Proof.Leaf.BeefyNextAuthoritySet.ID),
-		NextAuthoritySetLen:  uint32(t.Proof.Leaf.BeefyNextAuthoritySet.Len),
-		NextAuthoritySetRoot: t.Proof.Leaf.BeefyNextAuthoritySet.Root,
-	}
-
-	merkleProofItems := [][32]byte{}
-	for _, mmrProofItem := range t.Proof.MerkleProofItems {
-		merkleProofItems = append(merkleProofItems, mmrProofItem)
-	}
-
-	msg := LeafUpdate{
-		Leaf: leaf,
-		Proof: beefylightclient.SimplifiedMMRProof{
-			MerkleProofItems:         merkleProofItems,
-			MerkleProofOrderBitField: t.Proof.MerkleProofOrder,
-		},
-	}
-
-	return &msg, nil
-}

@@ -43,6 +43,7 @@ contract BeefyLightClient is AccessControl {
     event NewMMRRoot(bytes32 mmrRoot, uint64 blockNumber);
 
     event NewSession(
+        uint64  blockNumber,
         uint256 validatorSetID,
         bytes32 validatorSetRoot,
         uint256 validatorSetLength
@@ -315,6 +316,7 @@ contract BeefyLightClient is AccessControl {
             // Handover to the next authority set
             currentValidatorSet = nextValidatorSet;
             emit NewSession(
+                commitment.blockNumber,
                 nextValidatorSet.id,
                 nextValidatorSet.root,
                 nextValidatorSet.length
