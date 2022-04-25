@@ -311,7 +311,7 @@ contract BeefyLightClient is AccessControl {
         emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
 
         // Check if commitment signals an authority handover (new validator session)
-        if (commitment.validatorSetId == currentValidatorSet.id + 1) {
+        if (commitment.validatorSetId == nextValidatorSet.id) {
             // Handover to the next authority set
             currentValidatorSet = nextValidatorSet;
             emit NewSession(

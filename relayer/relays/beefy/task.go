@@ -6,20 +6,21 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
-type Status int
-
-const (
-	CommitmentWitnessed            Status = iota // 0
-	InitialVerificationTxSent      Status = iota // 1
-	InitialVerificationTxConfirmed Status = iota // 2
-	ReadyToComplete                Status = iota // 3
-	CompleteVerificationTxSent     Status = iota // 4
-)
-
 type Task struct {
-	Validators            []common.Address
-	SignedCommitment      types.SignedCommitment
-	Proof                 merkle.SimplifiedMMRProof
-	ValidationID          int64
-	CompleteOnBlock       uint64
+	Validators       []common.Address
+	SignedCommitment types.SignedCommitment
+	Proof            merkle.SimplifiedMMRProof
+	ValidationID     int64
+	SubmitCommitment bool
+	SubmitLeaf       bool
+}
+
+type SubmitCommitmentTask struct {
+	ValidationID     int64
+	Validators       []common.Address
+	SignedCommitment types.SignedCommitment
+}
+
+type SubmitLeafTask struct {
+	merkle.SimplifiedMMRProof
 }

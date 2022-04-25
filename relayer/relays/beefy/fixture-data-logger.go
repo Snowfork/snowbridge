@@ -157,14 +157,13 @@ func (wr *EthereumWriter) GetFailingMessage(client ethclient.Client, hash common
 	return string(res), nil
 }
 
-func (wr *EthereumWriter) LogLeafUpdate(
+func (wr *EthereumWriter) LogFieldsForUpdateValidatorSet(
 	task Task,
 	msg *LeafUpdate,
-) error {
-
+) (log.Fields, error) {
 	encodedLeaf, err := gsrpcTypes.EncodeToBytes(msg.Leaf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	leafHash := Hex((&keccak.Keccak256{}).Hash(encodedLeaf))
@@ -179,7 +178,7 @@ func (wr *EthereumWriter) LogLeafUpdate(
 
 	root := merkle.CalculateMerkleRoot(&task.Proof, leafHash2)
 
-	state := log.Fields{
+	fields := log.Fields{
 		"updateLeaf": log.Fields{
 			"leaf": log.Fields{
 				"version":              msg.Leaf.Version,
@@ -200,7 +199,5 @@ func (wr *EthereumWriter) LogLeafUpdate(
 		"expectedMMRRoot": root.Hex(),
 	}
 
-	log.WithFields(state).Debug("State for update validator set")
-
-	return nil
+	return fields, nil
 }
