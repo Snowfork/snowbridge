@@ -1,6 +1,6 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use sc_service::{ChainType, Properties};
+use sc_service::ChainType;
 use snowbase_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
 use sp_core::sr25519;
 use sp_runtime::{traits::AccountIdConversion, Perbill};
@@ -13,10 +13,10 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
-pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
-	let mut props = Properties::new();
+pub fn get_chain_spec() -> ChainSpec {
+	let mut props = sc_chain_spec::Properties::new();
 	props.insert("tokenSymbol".into(), "DEV".into());
-	props.insert("tokenDecimals".into(), 12.into());
+	props.insert("tokenDecimals".into(), 12u8.into());
 
 	ChainSpec::from_genesis(
 		"Snowbase Testnet",
@@ -50,7 +50,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				para_id,
+				1000.into(),
 			)
 		},
 		vec![],
@@ -58,7 +58,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		None,
 		None,
 		Some(props),
-		Extensions { relay_chain: "rococo-local".into(), para_id: para_id.into() },
+		Extensions { relay_chain: "rococo-local".into(), para_id: 1000 },
 	)
 }
 
@@ -112,7 +112,6 @@ fn testnet_genesis(
 			accounts: vec![],
 		},
 		asset_registry: snowbase_runtime::AssetRegistryConfig { next_asset_id: 1 },
-		nft: snowbase_runtime::NFTConfig { tokens: vec![] },
 		ethereum_light_client: snowbase_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
@@ -126,9 +125,6 @@ fn testnet_genesis(
 		},
 		erc_20_app: snowbase_runtime::Erc20AppConfig {
 			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into(),
-		},
-		erc_721_app: snowbase_runtime::Erc721AppConfig {
-			address: hex!["54D6643762E46036b3448659791adAf554225541"].into(),
 		},
 		parachain_info: snowbase_runtime::ParachainInfoConfig { parachain_id: para_id },
 		collator_selection: snowbase_runtime::CollatorSelectionConfig {
