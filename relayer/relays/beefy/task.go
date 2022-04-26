@@ -11,16 +11,4 @@ type Task struct {
 	SignedCommitment types.SignedCommitment
 	Proof            merkle.SimplifiedMMRProof
 	ValidationID     int64
-	SubmitCommitment bool
-	SubmitLeaf       bool
-}
-
-type SubmitCommitmentTask struct {
-	ValidationID     int64
-	Validators       []common.Address
-	SignedCommitment types.SignedCommitment
-}
-
-type SubmitLeafTask struct {
-	merkle.SimplifiedMMRProof
 }

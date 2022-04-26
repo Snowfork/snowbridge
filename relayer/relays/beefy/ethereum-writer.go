@@ -74,18 +74,6 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) (uint64
 	}
 	wr.blockWaitPeriod = blockWaitPeriod
 
-	validatorSet, err := wr.beefyLightClient.ContractCaller.CurrentValidatorSet(&callOpts)
-	if err != nil {
-		return 0, err
-	}
-	wr.validatorSetID = validatorSet.Id.Uint64()
-
-	nextValidatorSet, err := wr.beefyLightClient.ContractCaller.NextValidatorSet(&callOpts)
-	if err != nil {
-		return 0, err
-	}
-	wr.nextValidatorSetID = nextValidatorSet.Id.Uint64()
-
 	// launch task filterer
 	eg.Go(func() error {
 		defer close(wr.someTasks)
@@ -102,7 +90,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) (uint64
 
 	// launch task processor
 	eg.Go(func() error {
-		err := wr.processAllMessages(ctx, eg)
+		err := wr.processAllMessages(ctx)
 		log.WithField("reason", err).Info("Shutting down ethereum writer")
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
@@ -116,7 +104,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) (uint64
 	return latestBeefyBlock, nil
 }
 
-func (wr *EthereumWriter) processAllMessages(ctx context.Context, eg *errgroup.Group) error {
+func (wr *EthereumWriter) processAllMessages(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -126,7 +114,7 @@ func (wr *EthereumWriter) processAllMessages(ctx context.Context, eg *errgroup.G
 				return nil
 			}
 
-			err := wr.processMessage(ctx, eg, task)
+			err := wr.processMessage(ctx, task)
 			if err != nil {
 				return err
 			}
@@ -144,18 +132,8 @@ func (wr *EthereumWriter) filterTasks(ctx context.Context) error {
 				return nil
 			}
 
-			if task.SignedCommitment.Commitment.ValidatorSetID == wr.validatorSetID+1 {
+			if wr.validatorSetID == 0 || task.SignedCommitment.Commitment.ValidatorSetID == wr.validatorSetID+1 {
 				wr.validatorSetID = task.SignedCommitment.Commitment.ValidatorSetID
-				task.SubmitCommitment = true
-				task.SubmitLeaf = true
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case wr.someTasks <- task:
-				}
-			} else if uint64(task.Proof.Leaf.BeefyNextAuthoritySet.ID) == wr.nextValidatorSetID+1 {
-				task.SubmitCommitment = false
-				task.SubmitLeaf = true
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
@@ -225,7 +203,31 @@ func (wr *EthereumWriter) getContractCommitmentVerified(receipt *types.Receipt) 
 	return nil
 }
 
-func (wr *EthereumWriter) processMessage(ctx context.Context, eg *errgroup.Group, task Task) error {
+func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
+
+	callOpts := bind.CallOpts{
+		Context: ctx,
+	}
+
+	for {
+		nextValidatorSet, err := wr.beefyLightClient.ContractCaller.NextValidatorSet(&callOpts)
+		if err != nil {
+			return err
+		}
+
+		if task.SignedCommitment.Commitment.ValidatorSetID <= nextValidatorSet.Id.Uint64() {
+			break
+		}
+
+		log.WithField("ValidatorSetID", task.SignedCommitment.Commitment.ValidatorSetID).Info("Waiting for Next Session Update")
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(6 * time.Second):
+		}
+	}
+
 	tx, err := wr.WriteInitialSignatureCommitment(ctx, &task)
 	if err != nil {
 		log.WithError(err).Error("Failed to send initial signature commitment")
@@ -265,80 +267,22 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, eg *errgroup.Group
 		return err
 	}
 
-	eg.Go(func() error {
-		success, err := wr.watchTransaction(ctx, tx)
-		if err != nil {
-			return fmt.Errorf("monitoring failed for transaction updateValidatorSet (%v): %w", tx.Hash().Hex(), err)
-		}
-		if !success {
-			return fmt.Errorf("transaction updateValidatorSet failed (%v)", tx.Hash().Hex())
-		}
-
-		log.WithField("tx", tx.Hash().Hex()).Debug("Transaction updateValidatorSet succeeded")
-
-		return nil
-	})
-
-	wr.conn.GetClient().NonceAt()
-
-	event = wr.getContractCommitmentVerified(receipt)
-	if event == nil {
-		return fmt.Errorf("Could not find event CommitmentVerified event")
+	success, err := wr.watchTransaction(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("monitoring failed for transaction CompleteSignatureCommitment (%v): %w", tx.Hash().Hex(), err)
 	}
-	if event.Phase != 1 {
-		return fmt.Errorf("Could not find event CommitmentVerified event with phase FINAL")
+	if !success {
+		return fmt.Errorf("transaction CompleteSignatureCommitment failed (%v)", tx.Hash().Hex())
 	}
 
-	log.WithFields(log.Fields{
-		"event": log.Fields{
-			"ID":             event.Id.Uint64(),
-			"Phase":          event.Phase,
-			"CommitmentHash": "0x" + hex.EncodeToString(event.CommitmentHash[:]),
-			"Prover":         event.Prover.Hex(),
-		},
-	}).Info("Final Verification Successful")
-
-	if task.Naka {
-		msg, err := task.MakeLeafUpdate()
-		if err != nil {
-			return err
-		}
-
-		options := wr.makeTxOpts(ctx)
-
-		fields, err := wr.LogFieldsForUpdateValidatorSet(task, msg)
-		if err != nil {
-			return fmt.Errorf("failed to format log fields: %w", err)
-		}
-
-		tx, err = wr.beefyLightClient.UpdateValidatorSet(options, msg.Leaf, msg.Proof)
-		if err != nil {
-			return fmt.Errorf("failed to submit transaction updateValidatorSet: %w", err)
-		}
-
-		log.WithFields(fields).WithField("tx", tx.Hash().Hex()).Debug("Submitted transaction updateValidatorSet")
-
-		eg.Go(func() error {
-			success, err := wr.watchTransaction(ctx, tx)
-			if err != nil {
-				return fmt.Errorf("monitoring failed for transaction updateValidatorSet (%v): %w", tx.Hash().Hex(), err)
-			}
-			if !success {
-				return fmt.Errorf("transaction updateValidatorSet failed (%v)", tx.Hash().Hex())
-			}
-
-			log.WithField("tx", tx.Hash().Hex()).Debug("Transaction updateValidatorSet succeeded")
-
-			return nil
-		})
-	}
+	log.WithField("tx", tx.Hash().Hex()).Debug("Transaction CompleteSignatureCommitment succeeded")
 
 	return nil
 
 }
 
 func (wr *EthereumWriter) watchTransaction(ctx context.Context, tx *types.Transaction) (bool, error) {
-	receipt, err := wr.waitForTransaction(ctx, tx, wr.config.DescendantsUntilFinal)
+	receipt, err := wr.waitForTransaction(ctx, tx, 0)
 	if err != nil {
 		return false, err
 	}
