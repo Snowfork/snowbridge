@@ -264,7 +264,21 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 				initial_sync
 			);
 
-			Self::process_initial_sync(initial_sync)
+			if let Err(err) = Self::process_initial_sync(initial_sync) {
+				log::error!(
+					target: "ethereum-beacon-light-client",
+					"Initial sync failed with error {:?}", 
+					err
+				);
+				return Err(err)
+			}
+
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"Initial sync succeeded.",
+			);
+
+			Ok(())
 		}
 
 		#[pallet::weight(1_000_000)]
@@ -616,7 +630,13 @@ use milagro_bls::{Signature, AggregateSignature, PublicKey, AmclError, Aggregate
 			root: Root,
 		) -> bool {
 			let mut value = leaf;
+			if leaf.as_bytes().len() < 32 as usize {
+				return false;
+			}
 			for i in 0..depth {
+				if branch[i as usize].as_bytes().len() < 32 as usize {
+					return false;
+				}
 				if (index / (2u32.pow(i as u32) as u64) % 2) == 0 {
 					// left node
 					let mut data = [0u8; 64];

@@ -24,14 +24,16 @@ type BeaconClientTracker interface {
 }
 
 type BeaconClient struct {
-	httpClient http.Client
-	endpoint   string
+	httpClient              http.Client
+	endpoint                string
+	finalizedUpdateEndpoint string
 }
 
-func NewBeaconClient(endpoint string) *BeaconClient {
+func NewBeaconClient(endpoint, finalizedUpdateEndpoint string) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
+		finalizedUpdateEndpoint,
 	}
 }
 
@@ -583,16 +585,16 @@ func (b *BeaconClient) GetGenesis() (GenesisResponse, error) {
 
 type LatestFinalisedUpdateResponse struct {
 	Data []struct {
-		AttestedHeader          HeaderResponse        `json:"attested_header"`
-		FinalizedHeader         HeaderResponse        `json:"finalized_header"`
-		FinalityBranch          HeaderResponse        `json:"finality_branch"`
-		SyncAggregate           SyncAggregateResponse `json:"sync_committee_aggregate"`
-		ForkVersion             string                `json:"fork_version"`
+		AttestedHeader  HeaderResponse        `json:"attested_header"`
+		FinalizedHeader HeaderResponse        `json:"finalized_header"`
+		FinalityBranch  HeaderResponse        `json:"finality_branch"`
+		SyncAggregate   SyncAggregateResponse `json:"sync_committee_aggregate"`
+		ForkVersion     string                `json:"fork_version"`
 	} `json:"data"`
 }
 
 func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/latest_finalized_head_update/", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/latest_finalized_head_update/", b.finalizedUpdateEndpoint), nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct latest finalized header update request")
 

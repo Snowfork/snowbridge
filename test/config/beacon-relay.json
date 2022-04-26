@@ -1,0 +1,13 @@
+{
+  "source": {
+    "beacon": {
+      "endpoint": "https://lodestar-kiln.chainsafe.io",
+      "finalizedUpdateEndpoint": "http://localhost:9596"
+    }
+  },
+  "sink": {
+    "parachain": {
+      "endpoint": "ws://localhost:11144"
+    }
+  }
+}

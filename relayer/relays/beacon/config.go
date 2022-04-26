@@ -12,7 +12,8 @@ type SourceConfig struct {
 }
 
 type BeaconConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+	Endpoint                string `mapstructure:"endpoint"`
+	FinalizedUpdateEndpoint string `mapstructure:"finalizedUpdateEndpoint"`
 }
 
 type SinkConfig struct {

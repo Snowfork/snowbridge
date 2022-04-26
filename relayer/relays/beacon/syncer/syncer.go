@@ -20,9 +20,9 @@ type Syncer struct {
 	Cache  BeaconCache
 }
 
-func New(endpoint string) *Syncer {
+func New(endpoint, finalizedUpdateEndpoint string) *Syncer {
 	return &Syncer{
-		Client: *NewBeaconClient(endpoint),
+		Client: *NewBeaconClient(endpoint, finalizedUpdateEndpoint),
 		Cache:  *NewBeaconCache(),
 	}
 }

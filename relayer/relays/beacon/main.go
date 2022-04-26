@@ -28,7 +28,7 @@ func NewRelay(
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint)
+	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.FinalizedUpdateEndpoint)
 	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 
 	// Get an initial snapshot of the chain from a verified block
@@ -39,11 +39,16 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
+	err = r.paraconn.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
 	writer := NewParachainWriter(
 		r.paraconn,
 	)
 
-	writer.WritePayload(ctx, &ParachainPayload{
+	err = writer.WritePayload(ctx, &ParachainPayload{
 		InitialSync: &InitialSync{
 			Header:                     lightClientSnapshot.Header,
 			CurrentSyncCommittee:       lightClientSnapshot.CurrentSyncCommittee,
@@ -51,6 +56,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			Genesis:                    lightClientSnapshot.Genesis,
 		},
 	})
+	if err != nil {
+		logrus.WithError(err).Error("unable to write to parachain")
+
+		return err
+	}
+
+	logrus.Info("wrote payload to parachain")
 
 	err = r.syncer.SyncCommitteePeriodUpdates(lightClientSnapshot.Header.Slot)
 	if err != nil {

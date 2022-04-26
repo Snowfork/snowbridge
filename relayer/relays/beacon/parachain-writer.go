@@ -121,7 +121,7 @@ func (wr *ParachainWriter) makeInitialSyncCall(initialSync *InitialSync) (types.
 		return types.Call{}, fmt.Errorf("Initial sync is nil")
 	}
 
-	return types.NewCall(wr.conn.Metadata(), "EthereumLightClient.intial_sync", initialSync.Header, initialSync.CurrentSyncCommittee, initialSync.CurrentSyncCommitteeBranch, initialSync.Genesis)
+	return types.NewCall(wr.conn.Metadata(), "EthereumBeaconLightClient.initial_sync", initialSync.Header, initialSync.CurrentSyncCommittee, initialSync.CurrentSyncCommitteeBranch, initialSync.Genesis)
 }
 
 func (wr *ParachainWriter) queryImportedHeaderExists(hash common.Hash) (bool, error) {
