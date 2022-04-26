@@ -10,6 +10,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer"
+	"golang.org/x/sync/errgroup"
 )
 
 type InitialSync struct {
@@ -39,11 +40,13 @@ func NewParachainWriter(
 	}
 }
 
-func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainPayload) error {
+func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainPayload, eg *errgroup.Group) error {
 	call, err := wr.makeInitialSyncCall(payload.InitialSync)
 	if err != nil {
 		return err
 	}
+
+	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn)
 
 	onFinalized := func(_ types.Hash) error {
 		// Confirm that the header import was successful

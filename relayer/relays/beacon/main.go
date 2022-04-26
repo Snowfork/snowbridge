@@ -55,7 +55,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			CurrentSyncCommitteeBranch: lightClientSnapshot.CurrentSyncCommitteeBranch,
 			Genesis:                    lightClientSnapshot.Genesis,
 		},
-	})
+	}, eg)
 	if err != nil {
 		logrus.WithError(err).Error("unable to write to parachain")
 
