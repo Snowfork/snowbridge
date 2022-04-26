@@ -3,7 +3,6 @@ package beefy
 import (
 	"context"
 	"encoding/hex"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -13,54 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
-	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
-
-type CommitmentLog struct {
-	BlockNumber    uint32     `json:"blockNumber"`
-	ValidatorSetID uint64     `json:"validatorSetId"`
-	Payload        PayloadLog `json:"payload"`
-}
-
-type PayloadLog struct {
-	MmrRootHash string `json:"mmrRootHash"`
-	Prefix      string `json:"prefix"`
-	Suffix      string `json:"suffix"`
-}
-
-type ProofLog struct {
-	Signatures            []string         `json:"signatures"`
-	Positions             []*big.Int       `json:"positions"`
-	PublicKeys            []common.Address `json:"publicKeys"`
-	PublicKeyMerkleProofs [][]string       `json:"publicKeyMerkleProofs"`
-}
-
-type MMRLeafLog struct {
-	Version              uint8  `json:"version"`
-	ParentNumber         uint32 `json:"parentNumber"`
-	ParentHash           string `json:"parentHash"`
-	NextAuthoritySetID   uint64 `json:"nextAuthoritySetId"`
-	NextAuthoritySetLen  uint32 `json:"nextAuthoritySetLen"`
-	NextAuthoritySetRoot string `json:"nextAuthoritySetRoot"`
-	ParachainHeadsRoot   string `json:"parachainHeadsRoot"`
-}
-
-type MMRProofLog struct {
-	MerkleProofItems []string `json:"merkleProofItems"`
-	MerkleProofOrder uint64   `json:"merkleProofOrder"`
-}
-
-type FinalSignatureCommitmentLog struct {
-	ID             *big.Int      `json:"id"`
-	CommitmentHash string        `json:"commitmentHash"`
-	Commitment     CommitmentLog `json:"commitment"`
-	Proof          ProofLog      `json:"proof"`
-}
-
-type LeafUpdateLog struct {
-	Leaf  MMRLeafLog  `json:"leaf"`
-	Proof MMRProofLog `json:"proof"`
-}
 
 func Hex(b []byte) string {
 	return gsrpcTypes.HexEncodeToString(b)
@@ -155,49 +107,4 @@ func (wr *EthereumWriter) GetFailingMessage(client ethclient.Client, hash common
 	}
 
 	return string(res), nil
-}
-
-func (wr *EthereumWriter) LogFieldsForUpdateValidatorSet(
-	task Task,
-	msg *LeafUpdate,
-) (log.Fields, error) {
-	encodedLeaf, err := gsrpcTypes.EncodeToBytes(msg.Leaf)
-	if err != nil {
-		return nil, err
-	}
-
-	leafHash := Hex((&keccak.Keccak256{}).Hash(encodedLeaf))
-
-	var proofItems []string
-	for _, item := range msg.Proof.MerkleProofItems {
-		proofItems = append(proofItems, Hex(item[:]))
-	}
-
-	var leafHash2 gsrpcTypes.H256
-	copy(leafHash2[:], (&keccak.Keccak256{}).Hash(encodedLeaf))
-
-	root := merkle.CalculateMerkleRoot(&task.Proof, leafHash2)
-
-	fields := log.Fields{
-		"updateLeaf": log.Fields{
-			"leaf": log.Fields{
-				"version":              msg.Leaf.Version,
-				"parentNumber":         msg.Leaf.ParentNumber,
-				"parentHash":           Hex(msg.Leaf.ParentHash[:]),
-				"nextAuthoritySetId":   msg.Leaf.NextAuthoritySetId,
-				"nextAuthoritySetLen":  msg.Leaf.NextAuthoritySetLen,
-				"nextAuthoritySetRoot": Hex(msg.Leaf.NextAuthoritySetRoot[:]),
-				"parachainHeadsRoot":   Hex(msg.Leaf.ParachainHeadsRoot[:]),
-			},
-			"proof": log.Fields{
-				"merkleProofItems":         proofItems,
-				"merkleProofOrderBitField": msg.Proof.MerkleProofOrderBitField,
-			},
-		},
-		"encodedLeaf":     Hex(encodedLeaf),
-		"leafHash":        leafHash,
-		"expectedMMRRoot": root.Hex(),
-	}
-
-	return fields, nil
 }

@@ -11,9 +11,11 @@ import (
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"golang.org/x/sync/errgroup"
 )
@@ -45,7 +47,11 @@ func (n *Naka) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	n.beefyLightClient = contract
 
-	beefyBlock, err := n.beefyLightClient.LatestBeefyBlock(nil)
+	opts := bind.CallOpts{
+		Context: ctx,
+	}
+
+	beefyBlock, err := n.beefyLightClient.LatestBeefyBlock(&opts)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyLightClient.latestBeefyBlock: %w", err)
 	}
@@ -55,7 +61,7 @@ func (n *Naka) Start(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("fetch hash for block %v: %w", beefyBlockHash.Hex(), err)
 	}
 
-	nextValidatorSet, err := n.beefyLightClient.NextValidatorSet(nil)
+	nextValidatorSet, err := n.beefyLightClient.NextValidatorSet(&opts)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyLightClient.nextValidatorSet: %w", err)
 	}
@@ -173,7 +179,16 @@ func (n *Naka) updateNextValidatorSet(ctx context.Context, proof types.GenerateM
 		return fmt.Errorf("send transaction UpdateValidatorSet: %w", err)
 	}
 
-	log.WithField("txHash", tx.Hash().Hex()).Info("Sent UpdateValidatorSet transaction")
+	fields1 := n.LogFieldsForTransaction(inputLeaf, inputProof)
+	fields2, err := n.LogExtraFieldsForTransaction(p)
+	if err != nil {
+		return fmt.Errorf("log transaction: %w", err)
+	}
+
+	log.WithField("txHash", tx.Hash().Hex()).
+		WithFields(fields1).
+		WithFields(fields2).
+		Info("Sent UpdateValidatorSet transaction")
 
 	return nil
 }
@@ -207,4 +222,58 @@ func (n *Naka) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 	}
 
 	return &options
+}
+
+func (n *Naka) LogFieldsForTransaction(
+	leaf beefylightclient.BeefyLightClientMMRLeaf,
+	proof beefylightclient.SimplifiedMMRProof,
+) log.Fields {
+	var proofItems []string
+	for _, item := range proof.MerkleProofItems {
+		proofItems = append(proofItems, Hex(item[:]))
+	}
+
+	fields := log.Fields{
+		"updateLeaf": log.Fields{
+			"leaf": log.Fields{
+				"version":              leaf.Version,
+				"parentNumber":         leaf.ParentNumber,
+				"parentHash":           Hex(leaf.ParentHash[:]),
+				"nextAuthoritySetId":   leaf.NextAuthoritySetId,
+				"nextAuthoritySetLen":  leaf.NextAuthoritySetLen,
+				"nextAuthoritySetRoot": Hex(leaf.NextAuthoritySetRoot[:]),
+				"parachainHeadsRoot":   Hex(leaf.ParachainHeadsRoot[:]),
+			},
+			"proof": log.Fields{
+				"merkleProofItems":         proofItems,
+				"merkleProofOrderBitField": proof.MerkleProofOrderBitField,
+			},
+		},
+	}
+
+	return fields
+}
+
+func (n *Naka) LogExtraFieldsForTransaction(
+	proof merkle.SimplifiedMMRProof,
+) (log.Fields, error) {
+	encodedLeaf, err := gsrpcTypes.EncodeToBytes(proof.Leaf)
+	if err != nil {
+		return nil, err
+	}
+
+	leafHash := (&keccak.Keccak256{}).Hash(encodedLeaf)
+
+	var leafHashFixed gsrpcTypes.H256
+	copy(leafHashFixed[:], leafHash)
+
+	root := merkle.CalculateMerkleRoot(&proof, leafHashFixed)
+
+	fields := log.Fields{
+		"encodedLeaf":     Hex(encodedLeaf),
+		"leafHash":        Hex(leafHash),
+		"expectedMMRRoot": root.Hex(),
+	}
+
+	return fields, nil
 }

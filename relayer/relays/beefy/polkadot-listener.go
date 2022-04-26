@@ -11,7 +11,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/snowfork/snowbridge/relayer/substrate"
 
 	"github.com/sirupsen/logrus"
@@ -59,10 +58,10 @@ func (li *PolkadotListener) Start(ctx context.Context, eg *errgroup.Group, start
 }
 
 func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Context, latestBeefyBlock uint64) error {
-	log.WithFields(
-		log.Fields{
-			"latestBeefyBlock": latestBeefyBlock,
-		}).Info("Synchronizing beefy relaychain listener")
+	log.WithFields(log.Fields{
+		"latestBeefyBlock": latestBeefyBlock,
+	}).
+		Info("Synchronizing beefy relaychain listener")
 
 	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Session", "CurrentIndex", nil, nil)
 	if err != nil {
@@ -71,8 +70,7 @@ func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Contex
 
 	blockHash, err := li.conn.API().RPC.Chain.GetBlockHash(latestBeefyBlock)
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch block hash")
-		return err
+		return fmt.Errorf("fetch block hash: %w", err)
 	}
 
 	var lastSessionIndex uint32
@@ -88,14 +86,12 @@ func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Contex
 
 		finalizedHash, err := li.conn.API().RPC.Chain.GetFinalizedHead()
 		if err != nil {
-			log.WithError(err).Error("Failed to fetch finalized head")
-			return err
+			return fmt.Errorf("fetch finalized head: %w", err)
 		}
 
 		finalizedHeader, err := li.conn.API().RPC.Chain.GetHeader(finalizedHash)
 		if err != nil {
-			log.WithError(err).WithField("finalizedBlockHash", finalizedHash.Hex()).Error("Failed to fetch header for finalised head")
-			return err
+			return fmt.Errorf("fetch header for finalised head %v: %w", finalizedHash.Hex(), err)
 		}
 
 		finalizedBlockNumber := uint64(finalizedHeader.Number)
@@ -106,8 +102,7 @@ func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Contex
 
 		blockHash, err := li.conn.API().RPC.Chain.GetBlockHash(current)
 		if err != nil {
-			log.WithError(err).Error("Failed to fetch block hash")
-			return err
+			return fmt.Errorf("fetch block hash: %w", err)
 		}
 
 		var sessionIndex uint32
@@ -127,8 +122,7 @@ func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Contex
 
 		block, err := li.conn.API().RPC.Chain.GetBlock(blockHash)
 		if err != nil {
-			log.WithError(err).Error("failed to fetch block hash")
-			return err
+			return fmt.Errorf("fetch block: %w", err)
 		}
 
 		commitments := []types.SignedCommitment{}
@@ -137,8 +131,7 @@ func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Contex
 			if block.Justifications[j].EngineID() == "BEEF" {
 				err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
 				if err != nil {
-					log.WithError(err).Error("Failed to decode BEEFY signed commitment")
-					return err
+					return fmt.Errorf("decode BEEFY signed commitment: %w", err)
 				}
 				ok, value := sc.Unwrap()
 				if ok {
@@ -202,39 +195,12 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 
 	validators, err := li.getBeefyAuthorities(blockNumber)
 	if err != nil {
-		log.WithError(err).Error("Failed to get Beefy authorities from on-chain storage")
-		return err
-	}
-
-	blockHash, err := li.conn.API().RPC.Chain.GetBlockHash(blockNumber)
-	if err != nil {
-		log.WithError(err).Error("Failed to get block hash")
-		return err
-	}
-
-	// we can use any block except the latest beefy block
-	blockToProve := blockNumber - 1
-	response, err := li.conn.GenerateProofForBlock(blockToProve, blockHash, li.config.Source.BeefyActivationBlock)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"blockNumber":          blockToProve,
-			"latestBeefyBlock":     blockHash,
-			"beefyActivationBlock": li.config.Source.BeefyActivationBlock},
-		).WithError(err).Error("Failed to generate proof for block")
-		return err
-	}
-
-	proof, err := merkle.ConvertToSimplifiedMMRProof(response.BlockHash, uint64(response.Proof.LeafIndex),
-		response.Leaf, uint64(response.Proof.LeafCount), response.Proof.Items)
-	if err != nil {
-		log.WithError(err).Error("Failed conversion to simplified proof")
-		return err
+		return fmt.Errorf("fetch beefy authorities: %w", err)
 	}
 
 	task := Task{
 		Validators:       validators,
 		SignedCommitment: *signedCommitment,
-		Proof:            proof,
 	}
 
 	select {
@@ -264,7 +230,7 @@ func (li *PolkadotListener) getBeefyAuthorities(blockNumber uint64) ([]common.Ad
 	}
 
 	if !ok {
-		return nil, fmt.Errorf("Beefy authorities not found")
+		return nil, fmt.Errorf("beefy authorities not found")
 	}
 
 	// Convert from beefy authorities to ethereum addresses

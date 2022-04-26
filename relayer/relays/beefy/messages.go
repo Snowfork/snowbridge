@@ -31,11 +31,6 @@ type FinalSignatureCommitment struct {
 	ValidatorPublicKeyMerkleProofs [][][32]byte
 }
 
-type LeafUpdate struct {
-	Leaf  beefylightclient.BeefyLightClientMMRLeaf
-	Proof beefylightclient.SimplifiedMMRProof
-}
-
 func (t *Task) MakeInitialSignatureCommitment(valAddrIndex int64, initialBitfield []*big.Int) (*InitialSignatureCommitment, error) {
 	commitmentBytes, err := types.EncodeToBytes(t.SignedCommitment.Commitment)
 	if err != nil {
@@ -164,17 +159,17 @@ func buildPayload(items []types.PayloadItem) (*beefylightclient.BeefyLightClient
 	}
 
 	if index < 0 {
-		return nil, fmt.Errorf("Did not find mmr root hash in commitment")
+		return nil, fmt.Errorf("did not find mmr root hash in commitment")
 	}
 
 	mmrRootHash := [32]byte{}
 
 	if len(items[index].Data) != 32 {
-		return nil, fmt.Errorf("Mmr root hash is invalid")
+		return nil, fmt.Errorf("mmr root hash is invalid")
 	}
 
 	if copy(mmrRootHash[:], items[index].Data) != 32 {
-		return nil, fmt.Errorf("Mmr root hash is invalid")
+		return nil, fmt.Errorf("mmr root hash is invalid")
 	}
 
 	payloadBytes, err := types.EncodeToBytes(items)
@@ -185,7 +180,7 @@ func buildPayload(items []types.PayloadItem) (*beefylightclient.BeefyLightClient
 	slices := bytes.Split(payloadBytes, mmrRootHash[:])
 	if len(slices) != 2 {
 		// Its theoretically possible that the payload items may contain mmrRootHash more than once, causing an invalid split
-		return nil, fmt.Errorf("Expected 2 slices")
+		return nil, fmt.Errorf("expected 2 slices")
 	}
 
 	return &beefylightclient.BeefyLightClientPayload{
