@@ -6,52 +6,56 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 )
 
-type BasicOutboundChannelMessages []BasicOutboundChannelMessage
-
-func (ms BasicOutboundChannelMessages) IntoInboundMessages() []basic.BasicInboundChannelMessage {
-	var output []basic.BasicInboundChannelMessage
-	for _, m := range ms {
-		output = append(output, m.IntoInboundMessage())
+func (b BasicOutboundChannelMessageBundle) IntoInboundMessageBundle() basic.BasicInboundChannelMessageBundle {
+	var messages []basic.BasicInboundChannelMessage
+	for _, m := range b.Messages {
+		messages = append(messages, basic.BasicInboundChannelMessage{
+			Id:      m.ID,
+			Target:  m.Target,
+			Payload: m.Payload,
+		})
 	}
-	return output
+	return basic.BasicInboundChannelMessageBundle{
+		Nonce:    b.Nonce,
+		Messages: messages,
+	}
+}
+
+type BasicOutboundChannelMessageBundle struct {
+	Nonce    uint64
+	Messages []BasicOutboundChannelMessage
 }
 
 type BasicOutboundChannelMessage struct {
+	ID      uint64
 	Target  [20]byte
-	Nonce   uint64
 	Payload []byte
 }
 
-func (m *BasicOutboundChannelMessage) IntoInboundMessage() basic.BasicInboundChannelMessage {
-	return basic.BasicInboundChannelMessage{
-		Target:  m.Target,
-		Nonce:   m.Nonce,
-		Payload: m.Payload,
+func (b IncentivizedOutboundChannelMessageBundle) IntoInboundMessageBundle() incentivized.IncentivizedInboundChannelMessageBundle {
+	var messages []incentivized.IncentivizedInboundChannelMessage
+	for _, m := range b.Messages {
+		messages = append(messages, incentivized.IncentivizedInboundChannelMessage{
+			Id:      m.ID,
+			Target:  m.Target,
+			Fee:     m.Fee.Int,
+			Payload: m.Payload,
+		})
+	}
+	return incentivized.IncentivizedInboundChannelMessageBundle{
+		Nonce:    b.Nonce,
+		Messages: messages,
 	}
 }
 
-type IncentivizedOutboundChannelMessages []IncentivizedOutboundChannelMessage
-
-func (ms IncentivizedOutboundChannelMessages) IntoInboundMessages() []incentivized.IncentivizedInboundChannelMessage {
-	var output []incentivized.IncentivizedInboundChannelMessage
-	for _, m := range ms {
-		output = append(output, m.IntoInboundMessage())
-	}
-	return output
+type IncentivizedOutboundChannelMessageBundle struct {
+	Nonce    uint64
+	Messages []IncentivizedOutboundChannelMessage
 }
 
 type IncentivizedOutboundChannelMessage struct {
+	ID      uint64
 	Target  [20]byte
-	Nonce   uint64
 	Fee     types.U128
 	Payload []byte
-}
-
-func (m *IncentivizedOutboundChannelMessage) IntoInboundMessage() incentivized.IncentivizedInboundChannelMessage {
-	return incentivized.IncentivizedInboundChannelMessage{
-		Target:  m.Target,
-		Nonce:   m.Nonce,
-		Fee:     m.Fee.Int,
-		Payload: m.Payload,
-	}
 }

@@ -30,9 +30,15 @@ var (
 
 // BasicInboundChannelMessage is an auto generated low-level Go binding around an user-defined struct.
 type BasicInboundChannelMessage struct {
+	Id      uint64
 	Target  common.Address
-	Nonce   uint64
 	Payload []byte
+}
+
+// BasicInboundChannelMessageBundle is an auto generated low-level Go binding around an user-defined struct.
+type BasicInboundChannelMessageBundle struct {
+	Nonce    uint64
+	Messages []BasicInboundChannelMessage
 }
 
 // MMRProof is an auto generated low-level Go binding around an user-defined struct.
@@ -69,7 +75,7 @@ type ParachainClientProof struct {
 
 // BasicInboundChannelMetaData contains all meta data concerning the BasicInboundChannel contract.
 var BasicInboundChannelMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"client\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message[]\",\"name\":\"_messages\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"headPrefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"headSuffix\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structParachainClient.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structParachainClient.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"items\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"order\",\"type\":\"uint64\"}],\"internalType\":\"structMMRProof\",\"name\":\"leafProof\",\"type\":\"tuple\"}],\"internalType\":\"structParachainClient.Proof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"client\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"id\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"id\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message[]\",\"name\":\"messages\",\"type\":\"tuple[]\"}],\"internalType\":\"structBasicInboundChannel.MessageBundle\",\"name\":\"bundle\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"headPrefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"headSuffix\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structParachainClient.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structParachainClient.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"items\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"order\",\"type\":\"uint64\"}],\"internalType\":\"structMMRProof\",\"name\":\"leafProof\",\"type\":\"tuple\"}],\"internalType\":\"structParachainClient.Proof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // BasicInboundChannelABI is the input ABI used to generate the binding from.
@@ -342,25 +348,25 @@ func (_BasicInboundChannel *BasicInboundChannelCallerSession) ParachainClient() 
 	return _BasicInboundChannel.Contract.ParachainClient(&_BasicInboundChannel.CallOpts)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x35e2a455.
+// Submit is a paid mutator transaction binding the contract method 0xd423cb4e.
 //
-// Solidity: function submit((address,uint64,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
-func (_BasicInboundChannel *BasicInboundChannelTransactor) Submit(opts *bind.TransactOpts, _messages []BasicInboundChannelMessage, proof ParachainClientProof) (*types.Transaction, error) {
-	return _BasicInboundChannel.contract.Transact(opts, "submit", _messages, proof)
+// Solidity: function submit((uint64,(uint64,address,bytes)[]) bundle, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
+func (_BasicInboundChannel *BasicInboundChannelTransactor) Submit(opts *bind.TransactOpts, bundle BasicInboundChannelMessageBundle, proof ParachainClientProof) (*types.Transaction, error) {
+	return _BasicInboundChannel.contract.Transact(opts, "submit", bundle, proof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x35e2a455.
+// Submit is a paid mutator transaction binding the contract method 0xd423cb4e.
 //
-// Solidity: function submit((address,uint64,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
-func (_BasicInboundChannel *BasicInboundChannelSession) Submit(_messages []BasicInboundChannelMessage, proof ParachainClientProof) (*types.Transaction, error) {
-	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, _messages, proof)
+// Solidity: function submit((uint64,(uint64,address,bytes)[]) bundle, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
+func (_BasicInboundChannel *BasicInboundChannelSession) Submit(bundle BasicInboundChannelMessageBundle, proof ParachainClientProof) (*types.Transaction, error) {
+	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, bundle, proof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x35e2a455.
+// Submit is a paid mutator transaction binding the contract method 0xd423cb4e.
 //
-// Solidity: function submit((address,uint64,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
-func (_BasicInboundChannel *BasicInboundChannelTransactorSession) Submit(_messages []BasicInboundChannelMessage, proof ParachainClientProof) (*types.Transaction, error) {
-	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, _messages, proof)
+// Solidity: function submit((uint64,(uint64,address,bytes)[]) bundle, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
+func (_BasicInboundChannel *BasicInboundChannelTransactorSession) Submit(bundle BasicInboundChannelMessageBundle, proof ParachainClientProof) (*types.Transaction, error) {
+	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, bundle, proof)
 }
 
 // BasicInboundChannelMessageDispatchedIterator is returned from FilterMessageDispatched and is used to iterate over the raw logs and unpacked data for MessageDispatched events raised by the BasicInboundChannel contract.
@@ -432,14 +438,14 @@ func (it *BasicInboundChannelMessageDispatchedIterator) Close() error {
 
 // BasicInboundChannelMessageDispatched represents a MessageDispatched event raised by the BasicInboundChannel contract.
 type BasicInboundChannelMessageDispatched struct {
-	Nonce  uint64
+	Id     uint64
 	Result bool
 	Raw    types.Log // Blockchain specific contextual infos
 }
 
 // FilterMessageDispatched is a free log retrieval operation binding the contract event 0x504b093d860dc827c72a879d052fd8ac6b4c2af80c5f3a634654f172690bf10a.
 //
-// Solidity: event MessageDispatched(uint64 nonce, bool result)
+// Solidity: event MessageDispatched(uint64 id, bool result)
 func (_BasicInboundChannel *BasicInboundChannelFilterer) FilterMessageDispatched(opts *bind.FilterOpts) (*BasicInboundChannelMessageDispatchedIterator, error) {
 
 	logs, sub, err := _BasicInboundChannel.contract.FilterLogs(opts, "MessageDispatched")
@@ -451,7 +457,7 @@ func (_BasicInboundChannel *BasicInboundChannelFilterer) FilterMessageDispatched
 
 // WatchMessageDispatched is a free log subscription operation binding the contract event 0x504b093d860dc827c72a879d052fd8ac6b4c2af80c5f3a634654f172690bf10a.
 //
-// Solidity: event MessageDispatched(uint64 nonce, bool result)
+// Solidity: event MessageDispatched(uint64 id, bool result)
 func (_BasicInboundChannel *BasicInboundChannelFilterer) WatchMessageDispatched(opts *bind.WatchOpts, sink chan<- *BasicInboundChannelMessageDispatched) (event.Subscription, error) {
 
 	logs, sub, err := _BasicInboundChannel.contract.WatchLogs(opts, "MessageDispatched")
@@ -488,7 +494,7 @@ func (_BasicInboundChannel *BasicInboundChannelFilterer) WatchMessageDispatched(
 
 // ParseMessageDispatched is a log parse operation binding the contract event 0x504b093d860dc827c72a879d052fd8ac6b4c2af80c5f3a634654f172690bf10a.
 //
-// Solidity: event MessageDispatched(uint64 nonce, bool result)
+// Solidity: event MessageDispatched(uint64 id, bool result)
 func (_BasicInboundChannel *BasicInboundChannelFilterer) ParseMessageDispatched(log types.Log) (*BasicInboundChannelMessageDispatched, error) {
 	event := new(BasicInboundChannelMessageDispatched)
 	if err := _BasicInboundChannel.contract.UnpackLog(event, "MessageDispatched", log); err != nil {

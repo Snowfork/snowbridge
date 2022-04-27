@@ -592,52 +592,52 @@ func (li *BeefyListener) scanForCommitments(
 			}
 			channelID := digestItem.AsCommitment.ChannelID
 			if channelID.IsBasic && !scanBasicChannelDone {
-				messages, err := li.parachainConnection.ReadBasicOutboundMessages(digestItem)
+				bundle, err := li.parachainConnection.ReadBasicOutboundMessageBundle(digestItem)
 				if err != nil {
 					return nil, err
 				}
 
-				if len(messages) == 0 {
+				if len(bundle.Messages) == 0 {
 					return nil, fmt.Errorf("Assert len(messages) > 0")
 				}
 
 				// This case will be hit if basicNonceToFind has not yet
 				// been committed yet. Channels emit commitments every N
 				// blocks.
-				if messages[0].Nonce < basicNonceToFind {
+				if bundle.Nonce < basicNonceToFind {
 					scanBasicChannelDone = true
 					log.Debug("Halting scan. Messages not committed yet on basic channel")
 					// Collect these commitments
-				} else if messages[0].Nonce > basicNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
+				} else if bundle.Nonce > basicNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
 					// collect this commitment and terminate scan
-				} else if messages[0].Nonce == basicNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
+				} else if bundle.Nonce == basicNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
 					scanBasicChannelDone = true
 				}
 			}
 			if channelID.IsIncentivized && !scanIncentivizedChannelDone {
-				messages, err := li.parachainConnection.ReadIncentivizedOutboundMessages(digestItem)
+				bundle, err := li.parachainConnection.ReadIncentivizedOutboundMessageBundle(digestItem)
 				if err != nil {
 					return nil, err
 				}
 
-				if len(messages) == 0 {
+				if len(bundle.Messages) == 0 {
 					return nil, fmt.Errorf("Assert len(messages) > 0")
 				}
 
 				// This case will be hit if basicNonceToFind has not yet
 				// been committed yet. Channels emit commitments every N
 				// blocks
-				if messages[0].Nonce < incentivizedNonceToFind {
+				if bundle.Nonce < incentivizedNonceToFind {
 					scanIncentivizedChannelDone = true
 					continue
 					// Collect these commitments
-				} else if messages[0].Nonce > incentivizedNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
+				} else if bundle.Nonce > incentivizedNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
 					// collect this commitment and terminate scan
-				} else if messages[0].Nonce == incentivizedNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
+				} else if bundle.Nonce == incentivizedNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
 					scanIncentivizedChannelDone = true
 				}
 			}

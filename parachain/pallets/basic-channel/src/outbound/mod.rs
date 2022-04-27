@@ -20,17 +20,23 @@ use sp_runtime::traits::{Hash, StaticLookup, Zero};
 
 use sp_std::prelude::*;
 
-use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId, MessageNonce};
+use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 
 pub use weights::WeightInfo;
 
 /// Wire-format for committed messages
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct MessageBundle {
+	nonce: u64,
+	messages: Vec<Message>,
+}
+
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Message {
+	/// Unique message ID
+	id: u64,
 	/// Target application on the Ethereum side.
 	target: H160,
-	/// A nonce for replay protection and ordering.
-	nonce: u64,
 	/// Payload for target application.
 	payload: Vec<u8>,
 }
@@ -75,8 +81,8 @@ pub mod pallet {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T> {
-		MessageAccepted(MessageNonce),
+	pub enum Event<T: Config> {
+		MessageAccepted(u64),
 	}
 
 	#[pallet::error]
@@ -107,6 +113,9 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+	#[pallet::storage]
+	pub type NextId<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -165,8 +174,8 @@ pub mod pallet {
 			ensure!(principal.is_some(), Error::<T>::NotAuthorized,);
 			ensure!(*who == principal.unwrap(), Error::<T>::NotAuthorized,);
 			ensure!(
-				<MessageQueue<T>>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerCommit::get() as usize,
+				<MessageQueue<T>>::decode_len().unwrap_or(0)
+					< T::MaxMessagesPerCommit::get() as usize,
 				Error::<T>::QueueSizeLimitReached,
 			);
 			ensure!(
@@ -174,54 +183,63 @@ pub mod pallet {
 				Error::<T>::PayloadTooLarge,
 			);
 
-			<Nonce<T>>::try_mutate(|nonce| -> DispatchResult {
-				if let Some(v) = nonce.checked_add(1) {
-					*nonce = v;
-				} else {
-					return Err(Error::<T>::Overflow.into())
-				}
+			let next_id = <NextId<T>>::get();
+			if next_id.checked_add(1).is_none() {
+				return Err(Error::<T>::Overflow.into());
+			}
 
-				<MessageQueue<T>>::append(Message {
-					target,
-					nonce: *nonce,
-					payload: payload.to_vec(),
-				});
-				Self::deposit_event(Event::MessageAccepted(*nonce));
-				Ok(())
-			})
+			<MessageQueue<T>>::append(Message { id: next_id, target, payload: payload.to_vec() });
+			Self::deposit_event(Event::MessageAccepted(next_id));
+
+			<NextId<T>>::put(next_id + 1);
+
+			Ok(())
 		}
 
 		fn commit() -> Weight {
 			let messages: Vec<Message> = <MessageQueue<T>>::take();
 			if messages.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages()
+				return T::WeightInfo::on_initialize_no_messages();
 			}
 
-			let commitment_hash = Self::make_commitment_hash(&messages);
-			let average_payload_size = Self::average_payload_size(&messages);
+			let nonce = <Nonce<T>>::get();
+			let next_nonce = nonce.saturating_add(1);
+			<Nonce<T>>::put(next_nonce);
+
+			let bundle = MessageBundle {
+				nonce: next_nonce,
+				messages: messages.clone(),
+			};
+
+			let commitment_hash = Self::make_commitment_hash(&bundle);
+			let average_payload_size = Self::average_payload_size(&bundle.messages);
 
 			let digest_item =
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
 			let key = Self::make_offchain_key(commitment_hash);
-			offchain_index::set(&*key, &messages.encode());
+			offchain_index::set(&*key, &bundle.encode());
 
 			T::WeightInfo::on_initialize(messages.len() as u32, average_payload_size as u32)
 		}
 
-		fn make_commitment_hash(messages: &[Message]) -> H256 {
-			let messages: Vec<Token> = messages
+		fn make_commitment_hash(bundle: &MessageBundle) -> H256 {
+			let messages: Vec<Token> = bundle.messages
 				.iter()
 				.map(|message| {
 					Token::Tuple(vec![
+						Token::Uint(message.id.into()),
 						Token::Address(message.target),
-						Token::Uint(message.nonce.into()),
 						Token::Bytes(message.payload.clone()),
 					])
 				})
 				.collect();
-			let input = ethabi::encode(&vec![Token::Array(messages)]);
+			let input = ethabi::encode(&vec![
+				Token::Tuple(vec![
+					Token::Uint(bundle.nonce.into()),
+					Token::Array(messages)
+				])]);
 			<T as Config>::Hashing::hash(&input)
 		}
 

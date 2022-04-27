@@ -13,57 +13,52 @@ contract BasicInboundChannel {
 
     ParachainClient public parachainClient;
 
-    struct Message {
-        address target;
+    struct MessageBundle {
         uint64 nonce;
+        Message[] messages;
+    }
+
+    struct Message {
+        uint64 id;
+        address target;
         bytes payload;
     }
 
-    event MessageDispatched(uint64 nonce, bool result);
+    event MessageDispatched(uint64 id, bool result);
 
     constructor(ParachainClient client) {
         nonce = 0;
         parachainClient = client;
     }
 
-    function submit(
-        Message[] calldata _messages,
-        ParachainClient.Proof calldata proof
-    ) external {
-        bytes32 commitment = keccak256(abi.encode(_messages));
+    function submit(MessageBundle calldata bundle, ParachainClient.Proof calldata proof) external {
+        bytes32 commitment = keccak256(abi.encode(bundle));
 
-        require(
-            parachainClient.verifyCommitment(commitment, proof),
-            "Invalid proof"
-        );
+        require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
 
         // Require there is enough gas to play all messages
         require(
-            gasleft() >= (_messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
+            gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
 
-        processMessages(_messages);
+        processMessages(bundle);
     }
 
-    function processMessages(Message[] calldata _messages) internal {
-        // Caching nonce for gas optimization
-        uint64 cachedNonce = nonce;
+    function processMessages(MessageBundle calldata bundle) internal {
+        require(bundle.nonce == nonce + 1, "invalid nonce");
 
-        for (uint256 i = 0; i < _messages.length; i++) {
-            // Check message nonce is correct and increment nonce for replay protection
-            require(_messages[i].nonce == cachedNonce + 1, "invalid nonce");
-
-            cachedNonce = cachedNonce + 1;
+        for (uint256 i = 0; i < bundle.messages.length; i++) {
+            Message calldata message = bundle.messages[i];
 
             // Deliver the message to the target
-            (bool success, ) = _messages[i].target.call{
-                value: 0,
-                gas: MAX_GAS_PER_MESSAGE
-            }(_messages[i].payload);
+            (bool success, ) = message.target.call{ value: 0, gas: MAX_GAS_PER_MESSAGE }(
+                message.payload
+            );
 
-            emit MessageDispatched(_messages[i].nonce, success);
+            emit MessageDispatched(message.id, success);
         }
-        nonce = cachedNonce;
+
+        nonce++;
     }
 }

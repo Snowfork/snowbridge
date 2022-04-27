@@ -12,14 +12,14 @@ func Hex(b []byte) string {
 }
 
 func (wr *EthereumWriter) logFieldsForBasicSubmission(
-	messages []basic.BasicInboundChannelMessage,
+	bundle basic.BasicInboundChannelMessageBundle,
 	proof basic.ParachainClientProof,
 ) log.Fields {
 	var messagesLog []log.Fields
-	for _, item := range messages {
+	for _, item := range bundle.Messages {
 		messagesLog = append(messagesLog, log.Fields{
+			"id":      item.Id,
 			"target":  item.Target,
-			"nonce":   item.Nonce,
 			"payload": Hex(item.Payload),
 		})
 	}
@@ -62,14 +62,14 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 }
 
 func (wr *EthereumWriter) logFieldsForIncentivizedSubmission(
-	messages []incentivized.IncentivizedInboundChannelMessage,
+	bundle incentivized.IncentivizedInboundChannelMessageBundle,
 	proof incentivized.ParachainClientProof,
 ) log.Fields {
 	var messagesLog []log.Fields
-	for _, item := range messages {
+	for _, item := range bundle.Messages {
 		messagesLog = append(messagesLog, log.Fields{
+			"id":      item.Id,
 			"target":  item.Target,
-			"nonce":   item.Nonce,
 			"fee":     item.Fee,
 			"payload": Hex(item.Payload),
 		})

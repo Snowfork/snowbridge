@@ -10,14 +10,19 @@ import "./utils/MMRProofVerification.sol";
 contract IncentivizedInboundChannel is AccessControl {
     uint64 public nonce;
 
-    struct Message {
-        address target;
+    struct MessageBundle {
         uint64 nonce;
+        Message[] messages;
+    }
+
+    struct Message {
+        uint64 id;
+        address target;
         uint128 fee;
         bytes payload;
     }
 
-    event MessageDispatched(uint64 nonce, bool result);
+    event MessageDispatched(uint64 id, bool result);
 
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
     uint256 public constant GAS_BUFFER = 60000;
@@ -50,56 +55,51 @@ contract IncentivizedInboundChannel is AccessControl {
     }
 
     function submit(
-        Message[] calldata _messages,
+        MessageBundle calldata bundle,
         ParachainClient.Proof calldata proof
     ) external {
         // Proof
         // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
-        bytes32 commitment = keccak256(abi.encode(_messages));
+        bytes32 commitment = keccak256(abi.encode(bundle));
 
         require(
-            parachainClient.verifyCommitment(
-                commitment,
-                proof
-            ),
+            parachainClient.verifyCommitment(commitment, proof),
             "Invalid proof"
         );
 
         // Require there is enough gas to play all messages
         require(
-            gasleft() >= (_messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
+            gasleft() >=
+                (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
 
-        processMessages(payable(msg.sender), _messages);
+        processMessages(payable(msg.sender), bundle);
     }
 
     function processMessages(
         address payable _relayer,
-        Message[] calldata _messages
+        MessageBundle calldata bundle
     ) internal {
-        uint128 _rewardAmount = 0;
-        // Caching nonce for gas optimization
-        uint64 cachedNonce = nonce;
+        require(bundle.nonce == nonce + 1, "invalid nonce");
 
-        for (uint256 i = 0; i < _messages.length; i++) {
-            // Check message nonce is correct and increment nonce for replay protection
-            require(_messages[i].nonce == cachedNonce + 1, "invalid nonce");
-            cachedNonce = cachedNonce + 1;
+        uint128 _rewardAmount = 0;
+        for (uint256 i = 0; i < bundle.messages.length; i++) {
+            Message calldata message = bundle.messages[i];
 
             // Deliver the message to the target
             // Delivery will have fixed maximum gas allowed for the target app
-            (bool success, ) = _messages[i].target.call{
+            (bool success, ) = message.target.call{
                 value: 0,
                 gas: MAX_GAS_PER_MESSAGE
-            }(_messages[i].payload);
+            }(message.payload);
 
-            _rewardAmount = _rewardAmount + _messages[i].fee;
-            emit MessageDispatched(_messages[i].nonce, success);
+            _rewardAmount = _rewardAmount + message.fee;
+            emit MessageDispatched(message.id, success);
         }
 
         // reward the relayer
         rewardSource.reward(_relayer, _rewardAmount);
-        nonce = cachedNonce;
+        nonce++;
     }
 }

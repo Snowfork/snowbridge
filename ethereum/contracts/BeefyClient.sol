@@ -33,17 +33,12 @@ contract BeefyClient is AccessControl {
      * @param id the identifier for the verification task
      * @param prover The address of the successful prover
      */
-    event CommitmentVerified(
-        uint256 id,
-        Phase phase,
-        bytes32 commitmentHash,
-        address prover
-    );
+    event CommitmentVerified(uint256 id, Phase phase, bytes32 commitmentHash, address prover);
 
     event NewMMRRoot(bytes32 mmrRoot, uint64 blockNumber);
 
     event NewSession(
-        uint64  blockNumber,
+        uint64 blockNumber,
         uint256 validatorSetID,
         bytes32 validatorSetRoot,
         uint256 validatorSetLength
@@ -177,16 +172,12 @@ contract BeefyClient is AccessControl {
      * @param leafHash contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
      */
-    function verifyMMRLeafProof(
-        bytes32 leafHash,
-        MMRProof memory proof
-    ) external view returns (bool) {
-        return
-            MMRProofVerification.verifyLeafProof(
-                latestMMRRoot,
-                leafHash,
-                proof
-            );
+    function verifyMMRLeafProof(bytes32 leafHash, MMRProof memory proof)
+        external
+        view
+        returns (bool)
+    {
+        return MMRProofVerification.verifyLeafProof(latestMMRRoot, leafHash, proof);
     }
 
     /**
@@ -225,15 +216,13 @@ contract BeefyClient is AccessControl {
         // Check if validatorSignature is correct, ie. check if it matches
         // the signature of senderPublicKey on the commitmentHash
         require(
-            ECDSA.recover(commitmentHash, validatorSignature) ==
-                validatorPublicKey,
+            ECDSA.recover(commitmentHash, validatorSignature) == validatorPublicKey,
             "Invalid Signature"
         );
 
         // Check that the bitfield actually contains enough claims to be successful, ie, >= 2/3
         require(
-            validatorClaimsBitfield.countSetBits() >=
-                requiredNumberOfSignatures(vset),
+            validatorClaimsBitfield.countSetBits() >= requiredNumberOfSignatures(vset),
             "Not enough claims in bitfield"
         );
 
@@ -246,30 +235,18 @@ contract BeefyClient is AccessControl {
             block.number
         );
 
-        emit CommitmentVerified(
-            nextID,
-            Phase.Initial,
-            commitmentHash,
-            msg.sender
-        );
+        emit CommitmentVerified(nextID, Phase.Initial, commitmentHash, msg.sender);
 
         nextID = nextID + 1;
     }
 
-    function createRandomBitfield(uint256 id)
-        public
-        view
-        returns (uint256[] memory)
-    {
+    function createRandomBitfield(uint256 id) public view returns (uint256[] memory) {
         ValidationData storage data = validationData[id];
 
         ValidatorSet memory vset = getValidatorSet(data.validatorSetID);
 
         // verify that block wait period has passed
-        require(
-            block.number >= data.blockNumber + BLOCK_WAIT_PERIOD,
-            "Block wait period not over"
-        );
+        require(block.number >= data.blockNumber + BLOCK_WAIT_PERIOD, "Block wait period not over");
 
         return
             Bitfield.randomNBitsWithPriorCheck(
@@ -308,8 +285,7 @@ contract BeefyClient is AccessControl {
         emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
 
         // Check if commitment signals an authority handover (new validator session)
-        if (commitment.validatorSetId == nextValidatorSet.id) {
-            // Handover to the next authority set
+        if (commitment.validatorSetId == currentValidatorSet.id + 1) {
             currentValidatorSet = nextValidatorSet;
             emit NewSession(
                 commitment.blockNumber,
@@ -325,23 +301,13 @@ contract BeefyClient is AccessControl {
         emit CommitmentVerified(id, Phase.Final, commitmentHash, msg.sender);
     }
 
-    function updateValidatorSet(
-        MMRLeaf calldata leaf,
-        MMRProof calldata proof
-    ) public {
-        require(
-            leaf.nextAuthoritySetId == nextValidatorSet.id + 1,
-            "Leaf is invalid"
-        );
+    function updateValidatorSet(MMRLeaf calldata leaf, MMRProof calldata proof) public {
+        require(leaf.nextAuthoritySetId == nextValidatorSet.id + 1, "Leaf is invalid");
 
         // Verify that the leaf suppied by the relayer is part of the MMR
         bytes32 leafHash = keccak256(encodeMMRLeaf(leaf));
         require(
-            MMRProofVerification.verifyLeafProof(
-                latestMMRRoot,
-                leafHash,
-                proof
-            ),
+            MMRProofVerification.verifyLeafProof(latestMMRRoot, leafHash, proof),
             "Invalid leaf proof"
         );
 
@@ -352,11 +318,7 @@ contract BeefyClient is AccessControl {
 
     /* Private Functions */
 
-    function getValidatorSet(uint256 id)
-        internal
-        view
-        returns (ValidatorSet memory)
-    {
+    function getValidatorSet(uint256 id) internal view returns (ValidatorSet memory) {
         if (id == currentValidatorSet.id) {
             return currentValidatorSet;
         } else if (id == nextValidatorSet.id) {
@@ -375,11 +337,7 @@ contract BeefyClient is AccessControl {
      * @param data a storage reference to the validationData struct
      * @return onChainRandNums an array storing the random numbers generated inside this function
      */
-    function getSeed(ValidationData storage data)
-        private
-        view
-        returns (uint256)
-    {
+    function getSeed(ValidationData storage data) private view returns (uint256) {
         // @note Get payload.blocknumber, add BLOCK_WAIT_PERIOD
         uint256 randomSeedBlockNum = data.blockNumber + BLOCK_WAIT_PERIOD;
         // @note Create a hash seed from the block number
@@ -388,14 +346,9 @@ contract BeefyClient is AccessControl {
         return uint256(randomSeedBlockHash);
     }
 
-    function requiredNumberOfSignatures(ValidatorSet memory vset)
-        internal
-        pure
-        returns (uint256)
-    {
+    function requiredNumberOfSignatures(ValidatorSet memory vset) internal pure returns (uint256) {
         return
-            (vset.length * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) /
-            THRESHOLD_DENOMINATOR;
+            (vset.length * THRESHOLD_NUMERATOR + THRESHOLD_DENOMINATOR - 1) / THRESHOLD_DENOMINATOR;
     }
 
     function verifyCommitment(
@@ -410,16 +363,10 @@ contract BeefyClient is AccessControl {
         );
 
         // Verify that block wait period has passed
-        require(
-            block.number >= data.blockNumber + BLOCK_WAIT_PERIOD,
-            "Block wait period not over"
-        );
+        require(block.number >= data.blockNumber + BLOCK_WAIT_PERIOD, "Block wait period not over");
 
         // Check that payload.leaf.block_number is > last_known_block_number;
-        require(
-            commitment.blockNumber > latestBeefyBlock,
-            "Commitment blocknumber is too old"
-        );
+        require(commitment.blockNumber > latestBeefyBlock, "Commitment blocknumber is too old");
 
         ValidatorSet memory vset = getValidatorSet(commitment.validatorSetId);
 
@@ -468,10 +415,7 @@ contract BeefyClient is AccessControl {
         bytes32 commitmentHash
     ) internal pure {
         // Check if validator in randomBitfield
-        require(
-            randomBitfield.isSet(position),
-            "Validator must be once in bitfield"
-        );
+        require(randomBitfield.isSet(position), "Validator must be once in bitfield");
 
         // Remove validator from randomBitfield such that no validator can appear twice in signatures
         randomBitfield.clear(position);
@@ -483,17 +427,10 @@ contract BeefyClient is AccessControl {
         );
 
         // Check if signature is correct
-        require(
-            ECDSA.recover(commitmentHash, signature) == publicKey,
-            "Invalid Signature"
-        );
+        require(ECDSA.recover(commitmentHash, signature) == publicKey, "Invalid Signature");
     }
 
-    function encodeCommitment(Commitment calldata commitment)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function encodeCommitment(Commitment calldata commitment) internal pure returns (bytes memory) {
         return
             bytes.concat(
                 commitment.payload.prefix,
@@ -504,11 +441,7 @@ contract BeefyClient is AccessControl {
             );
     }
 
-    function encodeMMRLeaf(MMRLeaf calldata leaf)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function encodeMMRLeaf(MMRLeaf calldata leaf) internal pure returns (bytes memory) {
         return
             bytes.concat(
                 ScaleCodec.encode8(leaf.version),
@@ -536,12 +469,6 @@ contract BeefyClient is AccessControl {
     ) internal pure returns (bool) {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
         return
-            MerkleProof.verifyMerkleLeafAtPosition(
-                vset.root,
-                hashedLeaf,
-                pos,
-                vset.length,
-                proof
-            );
+            MerkleProof.verifyMerkleLeafAtPosition(vset.root, hashedLeaf, pos, vset.length, proof);
     }
 }

@@ -133,14 +133,14 @@ func (wr *EthereumWriter) WriteChannel(
 ) error {
 	for channelID, commitment := range task.Commitments {
 		if channelID.IsBasic {
-			messages, ok := commitment.Data.(parachain.BasicOutboundChannelMessages)
+			bundle, ok := commitment.Data.(parachain.BasicOutboundChannelMessageBundle)
 			if !ok {
 				return fmt.Errorf("invalid commitment data")
 			}
 			err := wr.WriteBasicChannel(
 				options,
 				commitment.Hash,
-				messages,
+				bundle,
 				task.ParaID,
 				task.ProofOutput,
 			)
@@ -149,16 +149,15 @@ func (wr *EthereumWriter) WriteChannel(
 			}
 		}
 		if channelID.IsIncentivized {
-			messages, ok := commitment.Data.(parachain.IncentivizedOutboundChannelMessages)
+			bundle, ok := commitment.Data.(parachain.IncentivizedOutboundChannelMessageBundle)
 			if !ok {
 				return fmt.Errorf("invalid commitment data")
 			}
 			err := wr.WriteIncentivizedChannel(
 				options,
 				commitment.Hash,
-				messages,
+				bundle,
 				task.ParaID,
-				task.Header,
 				task.ProofOutput,
 			)
 			if err != nil {
@@ -173,11 +172,11 @@ func (wr *EthereumWriter) WriteChannel(
 func (wr *EthereumWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
 	commitmentHash gsrpcTypes.H256,
-	commitment parachain.BasicOutboundChannelMessages,
+	commitment parachain.BasicOutboundChannelMessageBundle,
 	paraID uint32,
 	proof *ProofOutput,
 ) error {
-	messages := commitment.IntoInboundMessages()
+	bundle := commitment.IntoInboundMessageBundle()
 
 	paraHeadProof := basic.ParachainClientHeadProof{
 		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
@@ -230,7 +229,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 	}
 
 	tx, err := wr.basicInboundChannel.Submit(
-		options, messages, finalProof,
+		options, bundle, finalProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction BasicInboundChannel.submit: %w", err)
@@ -243,7 +242,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("transactionParams", wr.logFieldsForBasicSubmission(messages, finalProof)).
+		WithField("transactionParams", wr.logFieldsForBasicSubmission(bundle, finalProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),
@@ -260,12 +259,11 @@ func (wr *EthereumWriter) WriteBasicChannel(
 func (wr *EthereumWriter) WriteIncentivizedChannel(
 	options *bind.TransactOpts,
 	commitmentHash gsrpcTypes.H256,
-	commitment parachain.IncentivizedOutboundChannelMessages,
+	commitment parachain.IncentivizedOutboundChannelMessageBundle,
 	paraID uint32,
-	paraHead *gsrpcTypes.Header,
 	proof *ProofOutput,
 ) error {
-	messages := commitment.IntoInboundMessages()
+	bundle := commitment.IntoInboundMessageBundle()
 
 	paraHeadProof := incentivized.ParachainClientHeadProof{
 		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
@@ -318,7 +316,7 @@ func (wr *EthereumWriter) WriteIncentivizedChannel(
 	}
 
 	tx, err := wr.incentivizedInboundChannel.Submit(
-		options, messages, finalProof,
+		options, bundle, finalProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction IncentivizedInboundChannel.submit: %w", err)
@@ -331,7 +329,7 @@ func (wr *EthereumWriter) WriteIncentivizedChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("transactionParams", wr.logFieldsForIncentivizedSubmission(messages, finalProof)).
+		WithField("transactionParams", wr.logFieldsForIncentivizedSubmission(bundle, finalProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),
