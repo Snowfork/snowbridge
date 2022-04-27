@@ -190,6 +190,9 @@ fn testnet_genesis(
 		balances: test_runtime::BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
 		},
+		sudo: test_runtime::SudoConfig {
+			key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+		},
 		assets: test_runtime::AssetsConfig {
 			assets: vec![
 				(0, get_account_id_from_seed::<sr25519::Public>("Eve"), true, 1),
