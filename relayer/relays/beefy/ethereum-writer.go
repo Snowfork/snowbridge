@@ -404,8 +404,7 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 		big.NewInt(task.ValidationID),
 	)
 	if err != nil {
-		log.WithError(err).Error("Failed to get random validator bitfield")
-		return nil, err
+		return nil, fmt.Errorf("create validator bitfield: %w", err)
 	}
 
 	bitfield := BitfieldToString(randomBitfield)
@@ -435,8 +434,7 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 		validatorProof)
 
 	if err != nil {
-		log.WithError(err).Error("Failed to submit transaction for final signature commitment")
-		return nil, err
+		return nil, fmt.Errorf("submit final signature commitment: %w", err)
 	}
 
 	log.WithFields(logrus.Fields{
