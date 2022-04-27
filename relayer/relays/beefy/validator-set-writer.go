@@ -20,7 +20,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type Naka struct {
+type ValidatorSetWriter struct {
 	sinkConfig       SinkConfig
 	sourceConfig     SourceConfig
 	ethConn          *ethereum.Connection
@@ -28,40 +28,40 @@ type Naka struct {
 	beefyLightClient *beefylightclient.Contract
 }
 
-func NewNaka(
+func NewValidatorSetWriter(
 	sinkConfig SinkConfig,
 	sourceConfig SourceConfig,
 	ethConn *ethereum.Connection,
 	subConn *relaychain.Connection,
-) *Naka {
-	return &Naka{
+) *ValidatorSetWriter {
+	return &ValidatorSetWriter{
 		sinkConfig: sinkConfig, sourceConfig: sourceConfig, ethConn: ethConn, subConn: subConn,
 	}
 }
 
-func (n *Naka) Start(ctx context.Context, eg *errgroup.Group) error {
-	address := common.HexToAddress(n.sinkConfig.Contracts.BeefyLightClient)
-	contract, err := beefylightclient.NewContract(address, n.ethConn.GetClient())
+func (v *ValidatorSetWriter) Start(ctx context.Context, eg *errgroup.Group) error {
+	address := common.HexToAddress(v.sinkConfig.Contracts.BeefyLightClient)
+	contract, err := beefylightclient.NewContract(address, v.ethConn.GetClient())
 	if err != nil {
 		return err
 	}
-	n.beefyLightClient = contract
+	v.beefyLightClient = contract
 
 	opts := bind.CallOpts{
 		Context: ctx,
 	}
 
-	beefyBlock, err := n.beefyLightClient.LatestBeefyBlock(&opts)
+	beefyBlock, err := v.beefyLightClient.LatestBeefyBlock(&opts)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyLightClient.latestBeefyBlock: %w", err)
 	}
 
-	beefyBlockHash, err := n.subConn.API().RPC.Chain.GetBlockHash(beefyBlock)
+	beefyBlockHash, err := v.subConn.API().RPC.Chain.GetBlockHash(beefyBlock)
 	if err != nil {
 		return fmt.Errorf("fetch hash for block %v: %w", beefyBlockHash.Hex(), err)
 	}
 
-	nextValidatorSet, err := n.beefyLightClient.NextValidatorSet(&opts)
+	nextValidatorSet, err := v.beefyLightClient.NextValidatorSet(&opts)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyLightClient.nextValidatorSet: %w", err)
 	}
@@ -70,20 +70,20 @@ func (n *Naka) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	if beefyBlock > 0 {
 		blockToProve := beefyBlock - 1
-		proof, err := n.subConn.GenerateProofForBlock(blockToProve, beefyBlockHash, n.sourceConfig.BeefyActivationBlock)
+		proof, err := v.subConn.GenerateProofForBlock(blockToProve, beefyBlockHash, v.sourceConfig.BeefyActivationBlock)
 		if err != nil {
 			return fmt.Errorf("proof generation for %v: %w", blockToProve, err)
 		}
 
 		if uint64(proof.Leaf.BeefyNextAuthoritySet.ID) == nextValidatorSet.Id.Uint64()+1 {
-			if err := n.updateNextValidatorSet(ctx, proof); err != nil {
+			if err := v.updateNextValidatorSet(ctx, proof); err != nil {
 				return err
 			}
 		}
 	}
 
 	eg.Go(func() error {
-		err := n.watchNewSessionEvents(ctx)
+		err := v.watchNewSessionEvents(ctx)
 		log.Debug("Shutting down NewSession event watcher")
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
@@ -97,13 +97,13 @@ func (n *Naka) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (n *Naka) watchNewSessionEvents(ctx context.Context) error {
+func (v *ValidatorSetWriter) watchNewSessionEvents(ctx context.Context) error {
 	opts := bind.WatchOpts{
 		Context: ctx,
 	}
 
 	events := make(chan *beefylightclient.ContractNewSession)
-	sub, err := n.beefyLightClient.WatchNewSession(&opts, events)
+	sub, err := v.beefyLightClient.WatchNewSession(&opts, events)
 	if err != nil {
 		return err
 	}
@@ -120,26 +120,26 @@ func (n *Naka) watchNewSessionEvents(ctx context.Context) error {
 				return nil
 			}
 
-			beefyBlockHash, err := n.subConn.API().RPC.Chain.GetBlockHash(ev.BlockNumber)
+			beefyBlockHash, err := v.subConn.API().RPC.Chain.GetBlockHash(ev.BlockNumber)
 			if err != nil {
 				return fmt.Errorf("fetch hash for block %v: %w", beefyBlockHash.Hex(), err)
 			}
 
 			// we can use any block except the latest beefy block
 			blockToProve := ev.BlockNumber - 1
-			proof, err := n.subConn.GenerateProofForBlock(blockToProve, beefyBlockHash, n.sourceConfig.BeefyActivationBlock)
+			proof, err := v.subConn.GenerateProofForBlock(blockToProve, beefyBlockHash, v.sourceConfig.BeefyActivationBlock)
 			if err != nil {
 				return fmt.Errorf("proof generation for %v: %w", blockToProve, err)
 			}
 
-			if err := n.updateNextValidatorSet(ctx, proof); err != nil {
+			if err := v.updateNextValidatorSet(ctx, proof); err != nil {
 				return err
 			}
 		}
 	}
 }
 
-func (n *Naka) updateNextValidatorSet(ctx context.Context, proof types.GenerateMMRProofResponse) error {
+func (v *ValidatorSetWriter) updateNextValidatorSet(ctx context.Context, proof types.GenerateMMRProofResponse) error {
 
 	p, err := merkle.ConvertToSimplifiedMMRProof(
 		proof.BlockHash,
@@ -172,15 +172,15 @@ func (n *Naka) updateNextValidatorSet(ctx context.Context, proof types.GenerateM
 		MerkleProofOrderBitField: p.MerkleProofOrder,
 	}
 
-	opts := n.makeTxOpts(ctx)
+	opts := v.makeTxOpts(ctx)
 
-	tx, err := n.beefyLightClient.UpdateValidatorSet(opts, inputLeaf, inputProof)
+	tx, err := v.beefyLightClient.UpdateValidatorSet(opts, inputLeaf, inputProof)
 	if err != nil {
 		return fmt.Errorf("send transaction UpdateValidatorSet: %w", err)
 	}
 
-	fields1 := n.LogFieldsForTransaction(inputLeaf, inputProof)
-	fields2, err := n.LogExtraFieldsForTransaction(p)
+	fields1 := v.LogFieldsForTransaction(inputLeaf, inputProof)
+	fields2, err := v.LogExtraFieldsForTransaction(p)
 	if err != nil {
 		return fmt.Errorf("log transaction: %w", err)
 	}
@@ -193,9 +193,9 @@ func (n *Naka) updateNextValidatorSet(ctx context.Context, proof types.GenerateM
 	return nil
 }
 
-func (n *Naka) makeTxOpts(ctx context.Context) *bind.TransactOpts {
-	chainID := n.ethConn.ChainID()
-	keypair := n.ethConn.GetKP()
+func (v *ValidatorSetWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
+	chainID := v.ethConn.ChainID()
+	keypair := v.ethConn.GetKP()
 
 	options := bind.TransactOpts{
 		From: keypair.CommonAddress(),
@@ -205,26 +205,26 @@ func (n *Naka) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 		Context: ctx,
 	}
 
-	if n.sinkConfig.Ethereum.GasFeeCap > 0 {
+	if v.sinkConfig.Ethereum.GasFeeCap > 0 {
 		fee := big.NewInt(0)
-		fee.SetUint64(n.sinkConfig.Ethereum.GasFeeCap)
+		fee.SetUint64(v.sinkConfig.Ethereum.GasFeeCap)
 		options.GasFeeCap = fee
 	}
 
-	if n.sinkConfig.Ethereum.GasTipCap > 0 {
+	if v.sinkConfig.Ethereum.GasTipCap > 0 {
 		tip := big.NewInt(0)
-		tip.SetUint64(n.sinkConfig.Ethereum.GasTipCap)
+		tip.SetUint64(v.sinkConfig.Ethereum.GasTipCap)
 		options.GasTipCap = tip
 	}
 
-	if n.sinkConfig.Ethereum.GasLimit > 0 {
-		options.GasLimit = n.sinkConfig.Ethereum.GasLimit
+	if v.sinkConfig.Ethereum.GasLimit > 0 {
+		options.GasLimit = v.sinkConfig.Ethereum.GasLimit
 	}
 
 	return &options
 }
 
-func (n *Naka) LogFieldsForTransaction(
+func (v *ValidatorSetWriter) LogFieldsForTransaction(
 	leaf beefylightclient.BeefyLightClientMMRLeaf,
 	proof beefylightclient.SimplifiedMMRProof,
 ) log.Fields {
@@ -254,7 +254,7 @@ func (n *Naka) LogFieldsForTransaction(
 	return fields
 }
 
-func (n *Naka) LogExtraFieldsForTransaction(
+func (v *ValidatorSetWriter) LogExtraFieldsForTransaction(
 	proof merkle.SimplifiedMMRProof,
 ) (log.Fields, error) {
 	encodedLeaf, err := gsrpcTypes.EncodeToBytes(proof.Leaf)

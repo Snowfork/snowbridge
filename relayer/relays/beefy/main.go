@@ -21,7 +21,7 @@ type Relay struct {
 	ethereumWriter   *EthereumWriter
 	tasks            chan Task
 	ethHeaders       chan chain.Header
-	naka             *Naka
+	naka             *ValidatorSetWriter
 }
 
 func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
@@ -35,7 +35,7 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 
 	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn, tasks)
 
-	naka := NewNaka(config.Sink, config.Source, ethereumConn, relaychainConn)
+	naka := NewValidatorSetWriter(config.Sink, config.Source, ethereumConn, relaychainConn)
 
 	polkadotListener := NewPolkadotListener(
 		config,
