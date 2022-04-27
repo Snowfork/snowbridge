@@ -33,10 +33,7 @@ contract BasicInboundChannel {
         bytes32 commitment = keccak256(abi.encode(_messages));
 
         require(
-            parachainClient.verifyCommitment(
-                commitment,
-                proof
-            ),
+            parachainClient.verifyCommitment(commitment, proof),
             "Invalid proof"
         );
 
@@ -55,7 +52,7 @@ contract BasicInboundChannel {
 
         for (uint256 i = 0; i < _messages.length; i++) {
             // Check message nonce is correct and increment nonce for replay protection
-            require(_messages[i].nonce ==  cachedNonce + 1, "invalid nonce");
+            require(_messages[i].nonce == cachedNonce + 1, "invalid nonce");
 
             cachedNonce = cachedNonce + 1;
 
