@@ -12,7 +12,7 @@ contract BasicInboundChannel {
 
     uint64 public nonce;
 
-    BeefyLightClient public beefyLightClient;
+    ParachainLightClient public client;
 
     struct Message {
         address target;
@@ -22,28 +22,20 @@ contract BasicInboundChannel {
 
     event MessageDispatched(uint64 nonce, bool result);
 
-    constructor(BeefyLightClient _beefyLightClient) {
+    constructor(ParachainLightClient _client) {
         nonce = 0;
-        beefyLightClient = _beefyLightClient;
+        client = _client;
     }
 
     function submit(
         Message[] calldata _messages,
-        ParachainLightClient.ParachainVerifyInput
-            calldata _parachainVerifyInput,
-        ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
-        SimplifiedMMRProof calldata proof
-    ) public {
-        // Proof
-        // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
+        ParachainLightClient.Proof calldata proof
+    ) external {
         bytes32 commitment = keccak256(abi.encode(_messages));
 
-        ParachainLightClient.verifyCommitmentInParachain(
+        client.verifyCommitment(
             commitment,
-            _parachainVerifyInput,
-            _beefyMMRLeafPartial,
-            proof,
-            beefyLightClient
+            proof
         );
 
         // Require there is enough gas to play all messages

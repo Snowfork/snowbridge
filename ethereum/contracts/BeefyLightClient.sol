@@ -181,14 +181,14 @@ contract BeefyLightClient is AccessControl {
      * @param beefyMMRLeaf contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
      */
-    function verifyBeefyMerkleLeaf(
-        bytes32 beefyMMRLeaf,
-        SimplifiedMMRProof memory proof
+    function verifyMMRLeaf(
+        bytes32 leaf,
+        MMRProof memory proof
     ) external view returns (bool) {
         return
             mmrVerification.verifyInclusionProof(
                 latestMMRRoot,
-                beefyMMRLeaf,
+                leaf,
                 proof
             );
     }

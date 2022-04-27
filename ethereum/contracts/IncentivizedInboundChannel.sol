@@ -28,11 +28,11 @@ contract IncentivizedInboundChannel is AccessControl {
 
     RewardSource private rewardSource;
 
-    BeefyLightClient public beefyLightClient;
+    ParachainLightClient public client;
 
-    constructor(BeefyLightClient _beefyLightClient) {
+    constructor(ParachainLightClient _client) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        beefyLightClient = _beefyLightClient;
+        client = _client;
         nonce = 0;
     }
 
@@ -51,21 +51,15 @@ contract IncentivizedInboundChannel is AccessControl {
 
     function submit(
         Message[] calldata _messages,
-        ParachainLightClient.ParachainVerifyInput
-            calldata _parachainVerifyInput,
-        ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
-        SimplifiedMMRProof calldata proof
-    ) public {
+        ParachainLightClient.Proof calldata proof
+    ) external {
         // Proof
         // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
         bytes32 commitment = keccak256(abi.encode(_messages));
 
-        ParachainLightClient.verifyCommitmentInParachain(
+        client.verifyCommitment(
             commitment,
-            _parachainVerifyInput,
-            _beefyMMRLeafPartial,
-            proof,
-            beefyLightClient
+            proof
         );
 
         // Require there is enough gas to play all messages
