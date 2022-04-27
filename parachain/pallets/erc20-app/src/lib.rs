@@ -175,7 +175,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into())
+				return Err(DispatchError::BadOrigin.into());
 			}
 
 			let asset_id =
@@ -186,7 +186,7 @@ pub mod pallet {
 			Self::deposit_event(Event::Minted(token, sender, recipient.clone(), amount));
 
 			if let Some(destination) = destination {
-				with_transaction(|| {
+				let _ = with_transaction(|| {
 					let result = T::XcmReserveTransfer::reserve_transfer(
 						asset_id,
 						&recipient,
@@ -199,9 +199,9 @@ pub mod pallet {
 							destination.para_id,
 							err
 						);
-						return TransactionOutcome::Rollback(());
+						return TransactionOutcome::Rollback(DispatchError::Other("foo").into());
 					}
-					TransactionOutcome::Commit(())
+					TransactionOutcome::Commit(Ok(()))
 				});
 			}
 			Ok(())
@@ -212,7 +212,7 @@ pub mod pallet {
 		pub fn create(origin: OriginFor<T>, token: H160) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into())
+				return Err(DispatchError::BadOrigin.into());
 			}
 
 			let asset_id = T::NextAssetId::next()?;

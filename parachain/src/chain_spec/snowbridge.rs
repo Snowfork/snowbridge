@@ -1,6 +1,6 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use sc_service::{ChainType, Properties};
+use sc_service::ChainType;
 use snowbridge_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
 use sp_core::sr25519;
 use sp_runtime::{traits::AccountIdConversion, Perbill};
@@ -13,10 +13,10 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
-pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
-	let mut props = Properties::new();
-	props.insert("tokenSymbol".into(), "DOT".into());
-	props.insert("tokenDecimals".into(), 12.into());
+pub fn get_chain_spec() -> ChainSpec {
+	let mut props = sc_chain_spec::Properties::new();
+	props.insert("tokenSymbol".into(), "DEV".into());
+	props.insert("tokenDecimals".into(), 12u8.into());
 
 	ChainSpec::from_genesis(
 		"Snowbridge Testnet",
@@ -50,7 +50,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				para_id,
+				1000.into(),
 			)
 		},
 		vec![],
@@ -58,7 +58,7 @@ pub fn get_chain_spec(para_id: ParaId) -> ChainSpec {
 		None,
 		None,
 		Some(props),
-		Extensions { relay_chain: "rococo-local".into(), para_id: para_id.into() },
+		Extensions { relay_chain: "rococo-local".into(), para_id: 1000 },
 	)
 }
 
@@ -112,7 +112,6 @@ fn testnet_genesis(
 			accounts: vec![],
 		},
 		asset_registry: snowbridge_runtime::AssetRegistryConfig { next_asset_id: 1 },
-		nft: snowbridge_runtime::NFTConfig { tokens: vec![] },
 		ethereum_light_client: snowbridge_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
@@ -125,9 +124,6 @@ fn testnet_genesis(
 		},
 		erc_20_app: snowbridge_runtime::Erc20AppConfig {
 			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into(),
-		},
-		erc_721_app: snowbridge_runtime::Erc721AppConfig {
-			address: hex!["F67EFf5250cD974E6e86c9B53dc5290905Bd8916"].into(),
 		},
 		parachain_info: snowbridge_runtime::ParachainInfoConfig { parachain_id: para_id },
 		collator_selection: snowbridge_runtime::CollatorSelectionConfig {
