@@ -14,18 +14,18 @@ import (
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
+	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"golang.org/x/sync/errgroup"
 )
 
 type ValidatorSetWriter struct {
-	sinkConfig       SinkConfig
-	sourceConfig     SourceConfig
-	ethConn          *ethereum.Connection
-	subConn          *relaychain.Connection
-	beefyLightClient *beefylightclient.Contract
+	sinkConfig          SinkConfig
+	sourceConfig        SourceConfig
+	ethConn             *ethereum.Connection
+	subConn             *relaychain.Connection
+	beefyClientContract *beefyclient.BeefyClient
 }
 
 func NewValidatorSetWriter(
@@ -40,18 +40,18 @@ func NewValidatorSetWriter(
 }
 
 func (v *ValidatorSetWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	address := common.HexToAddress(v.sinkConfig.Contracts.BeefyLightClient)
-	contract, err := beefylightclient.NewContract(address, v.ethConn.GetClient())
+	address := common.HexToAddress(v.sinkConfig.Contracts.BeefyClient)
+	contract, err := beefyclient.NewBeefyClient(address, v.ethConn.GetClient())
 	if err != nil {
 		return err
 	}
-	v.beefyLightClient = contract
+	v.beefyClientContract = contract
 
 	opts := bind.CallOpts{
 		Context: ctx,
 	}
 
-	beefyBlock, err := v.beefyLightClient.LatestBeefyBlock(&opts)
+	beefyBlock, err := v.beefyClientContract.LatestBeefyBlock(&opts)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyLightClient.latestBeefyBlock: %w", err)
 	}
@@ -61,7 +61,7 @@ func (v *ValidatorSetWriter) Start(ctx context.Context, eg *errgroup.Group) erro
 		return fmt.Errorf("fetch hash for block %v: %w", beefyBlockHash.Hex(), err)
 	}
 
-	nextValidatorSet, err := v.beefyLightClient.NextValidatorSet(&opts)
+	nextValidatorSet, err := v.beefyClientContract.NextValidatorSet(&opts)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyLightClient.nextValidatorSet: %w", err)
 	}
@@ -102,8 +102,8 @@ func (v *ValidatorSetWriter) watchNewSessionEvents(ctx context.Context) error {
 		Context: ctx,
 	}
 
-	events := make(chan *beefylightclient.ContractNewSession)
-	sub, err := v.beefyLightClient.WatchNewSession(&opts, events)
+	events := make(chan *beefyclient.BeefyClientNewSession)
+	sub, err := v.beefyClientContract.WatchNewSession(&opts, events)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (v *ValidatorSetWriter) updateNextValidatorSet(ctx context.Context, proof t
 		return fmt.Errorf("simplified proof conversion for block %v: %w", proof.BlockHash.Hex(), err)
 	}
 
-	inputLeaf := beefylightclient.BeefyLightClientMMRLeaf{
+	inputLeaf := beefyclient.BeefyClientMMRLeaf{
 		Version:              uint8(p.Leaf.Version),
 		ParentNumber:         uint32(p.Leaf.ParentNumberAndHash.ParentNumber),
 		ParentHash:           p.Leaf.ParentNumberAndHash.Hash,
@@ -167,14 +167,14 @@ func (v *ValidatorSetWriter) updateNextValidatorSet(ctx context.Context, proof t
 		merkleProofItems = append(merkleProofItems, mmrProofItem)
 	}
 
-	inputProof := beefylightclient.SimplifiedMMRProof{
-		MerkleProofItems:         merkleProofItems,
-		MerkleProofOrderBitField: p.MerkleProofOrder,
+	inputProof := beefyclient.MMRProof{
+		Items: merkleProofItems,
+		Order: p.MerkleProofOrder,
 	}
 
 	opts := v.makeTxOpts(ctx)
 
-	tx, err := v.beefyLightClient.UpdateValidatorSet(opts, inputLeaf, inputProof)
+	tx, err := v.beefyClientContract.UpdateValidatorSet(opts, inputLeaf, inputProof)
 	if err != nil {
 		return fmt.Errorf("send transaction UpdateValidatorSet: %w", err)
 	}
@@ -225,11 +225,11 @@ func (v *ValidatorSetWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts 
 }
 
 func (v *ValidatorSetWriter) LogFieldsForTransaction(
-	leaf beefylightclient.BeefyLightClientMMRLeaf,
-	proof beefylightclient.SimplifiedMMRProof,
+	leaf beefyclient.BeefyClientMMRLeaf,
+	proof beefyclient.MMRProof,
 ) log.Fields {
 	var proofItems []string
-	for _, item := range proof.MerkleProofItems {
+	for _, item := range proof.Items {
 		proofItems = append(proofItems, Hex(item[:]))
 	}
 
@@ -245,8 +245,8 @@ func (v *ValidatorSetWriter) LogFieldsForTransaction(
 				"parachainHeadsRoot":   Hex(leaf.ParachainHeadsRoot[:]),
 			},
 			"proof": log.Fields{
-				"merkleProofItems":         proofItems,
-				"merkleProofOrderBitField": proof.MerkleProofOrderBitField,
+				"Items": proofItems,
+				"Order": proof.Order,
 			},
 		},
 	}

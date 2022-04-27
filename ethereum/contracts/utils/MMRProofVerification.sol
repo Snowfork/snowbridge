@@ -4,19 +4,19 @@ pragma solidity ^0.8.5;
 import "hardhat/console.sol";
 
 struct MMRProof {
-    bytes32[] merkleProofItems;
-    uint64 merkleProofOrderBitField;
+    bytes32[] items;
+    uint64 order;
 }
 
 library MMRProofVerification {
-    function verifyInclusionProof(
+    function verifyLeafProof(
         bytes32 root,
         bytes32 leafNodeHash,
         MMRProof memory proof
     ) public view returns (bool) {
-        require(proof.merkleProofItems.length < 64);
+        require(proof.items.length < 64);
 
-        return root == calculateMerkleRoot(leafNodeHash, proof.merkleProofItems, proof.merkleProofOrderBitField);
+        return root == calculateMerkleRoot(leafNodeHash, proof.items, proof.order);
     }
 
     // Get the value of the bit at the given 'index' in 'self'.
@@ -31,14 +31,14 @@ library MMRProofVerification {
 
     function calculateMerkleRoot(
         bytes32 leafNodeHash,
-        bytes32[] memory merkleProofItems,
-        uint64 merkleProofOrderBitField
+        bytes32[] memory items,
+        uint64 order
     ) internal view returns (bytes32) {
         bytes32 currentHash = leafNodeHash;
 
-        for (uint currentPosition = 0; currentPosition < merkleProofItems.length; currentPosition++) {
-            bool isSiblingLeft = bit(merkleProofOrderBitField, currentPosition);
-            bytes32 sibling = merkleProofItems[currentPosition];
+        for (uint currentPosition = 0; currentPosition < items.length; currentPosition++) {
+            bool isSiblingLeft = bit(order, currentPosition);
+            bytes32 sibling = items[currentPosition];
 
             if (isSiblingLeft) {
                 currentHash = keccak256(

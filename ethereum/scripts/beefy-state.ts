@@ -1,5 +1,3 @@
-let endpoint = process.env.RELAYCHAIN_ENDPOINT;
-
 async function beefyState() {
   let hre = require("hardhat");
 
@@ -12,11 +10,14 @@ async function beefyState() {
   );
   let beefyLightClient = await beefyLightClientContract.connect(signer);
 
-  let cur: any = await beefyLightClient.currentValidatorSet();
-  let next: any = await beefyLightClient.nextValidatorSet();
-  let latestMMRRoot: any = await beefyLightClient.latestMMRRoot();
-  let latestBeefyBlock: any = await beefyLightClient.latestBeefyBlock();
-
+  let [cur, next, latestMMRRoot, latestBeefyBlock] = await Promise.all(
+    [
+      beefyLightClient.currentValidatorSet(),
+      beefyLightClient.nextValidatorSet(),
+      beefyLightClient.latestMMRRoot(),
+      beefyLightClient.latestBeefyBlock()
+    ]
+  )
 
   console.log({
     current: {

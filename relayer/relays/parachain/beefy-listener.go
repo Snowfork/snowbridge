@@ -15,7 +15,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
-	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
+	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 
@@ -25,7 +25,7 @@ import (
 type BeefyListener struct {
 	config              *SourceConfig
 	ethereumConn        *ethereum.Connection
-	beefyLightClient    *beefylightclient.Contract
+	beefyClientContract *beefyclient.BeefyClient
 	relaychainConn      *relaychain.Connection
 	parachainConnection *parachain.Connection
 	paraID              uint32
@@ -51,12 +51,12 @@ func NewBeefyListener(
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	// Set up light client bridge contract
-	address := common.HexToAddress(li.config.Contracts.BeefyLightClient)
-	beefyLightClientContract, err := beefylightclient.NewContract(address, li.ethereumConn.GetClient())
+	address := common.HexToAddress(li.config.Contracts.BeefyClient)
+	beefyClientContract, err := beefyclient.NewBeefyClient(address, li.ethereumConn.GetClient())
 	if err != nil {
 		return err
 	}
-	li.beefyLightClient = beefyLightClientContract
+	li.beefyClientContract = beefyClientContract
 
 	// Fetch ParaId
 	storageKeyForParaID, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "ParachainInfo", "ParachainId", nil, nil)
@@ -176,7 +176,7 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 			if len(contractEvents) > 0 {
 				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewMMRRoot events in block %d", len(contractEvents), blockNumber))
 				// Only process the last emitted event in the block (details in SNO-212)
-				err = li.processBeefyLightClientEvent(ctx, contractEvents[len(contractEvents) - 1])
+				err = li.processBeefyLightClientEvent(ctx, contractEvents[len(contractEvents)-1])
 				if err != nil {
 					return err
 				}
@@ -186,7 +186,7 @@ func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 }
 
 // processLightClientEvents matches events to BEEFY commitment info by transaction hash
-func (li *BeefyListener) processBeefyLightClientEvent(ctx context.Context, event *beefylightclient.ContractNewMMRRoot) error {
+func (li *BeefyListener) processBeefyLightClientEvent(ctx context.Context, event *beefyclient.BeefyClientNewMMRRoot) error {
 	beefyBlockNumber := event.BlockNumber
 
 	log.WithFields(log.Fields{
@@ -243,11 +243,11 @@ func (li *BeefyListener) processBeefyLightClientEvent(ctx context.Context, event
 func (li *BeefyListener) queryBeefyLightClientEvents(
 	ctx context.Context, start uint64,
 	end *uint64,
-) ([]*beefylightclient.ContractNewMMRRoot, error) {
-	var events []*beefylightclient.ContractNewMMRRoot
+) ([]*beefyclient.BeefyClientNewMMRRoot, error) {
+	var events []*beefyclient.BeefyClientNewMMRRoot
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-	iter, err := li.beefyLightClient.FilterNewMMRRoot(&filterOps)
+	iter, err := li.beefyClientContract.FilterNewMMRRoot(&filterOps)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +270,7 @@ func (li *BeefyListener) queryBeefyLightClientEvents(
 
 // Fetch the latest verified beefy block number and hash from Ethereum
 func (li *BeefyListener) fetchLatestBeefyBlock(ctx context.Context) (uint64, types.Hash, error) {
-	number, err := li.beefyLightClient.LatestBeefyBlock(&bind.CallOpts{
+	number, err := li.beefyClientContract.LatestBeefyBlock(&bind.CallOpts{
 		Pending: false,
 		Context: ctx,
 	})

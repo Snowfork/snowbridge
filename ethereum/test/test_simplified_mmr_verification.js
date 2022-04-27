@@ -29,10 +29,10 @@ describe("Simple MMR Verification", function () {
 
        fixture7leaves.proofs.forEach((proof, i) => {
            it(`should verify valid proof for leaf index ${i}`, async () => {
-               expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
+               expect(await simplifiedMMRVerification.verifyLeafProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
                    {
-                       merkleProofItems: fixture7leaves.proofs[i].merkleProofItems,
-                       merkleProofOrderBitField: fixture7leaves.proofs[i].merkleProofOrderBitField
+                       items: fixture7leaves.proofs[i].items,
+                       order: fixture7leaves.proofs[i].order
                    })).to.be.true;
            });
 
@@ -41,10 +41,10 @@ describe("Simple MMR Verification", function () {
                if (j >= fixture7leaves.proofs.length) {
                    j = 0;
                }
-               expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
+               expect(await simplifiedMMRVerification.verifyLeafProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
                    {
-                       merkleProofItems: fixture7leaves.proofs[j].merkleProofItems,
-                       merkleProofOrderBitField: fixture7leaves.proofs[j].merkleProofOrderBitField
+                       items: fixture7leaves.proofs[j].items,
+                       order: fixture7leaves.proofs[j].order
                    })).to.be.false;
            });
        });
@@ -69,10 +69,10 @@ describe("Simple MMR Verification", function () {
 
         fixture15leaves.proofs.forEach((proof, i) => {
             it(`should verify valid proof for leaf index ${i}`, async () => {
-                expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
+                expect(await simplifiedMMRVerification.verifyLeafProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
                     {
-                        merkleProofItems: fixture15leaves.proofs[i].merkleProofItems,
-                        merkleProofOrderBitField: fixture15leaves.proofs[i].merkleProofOrderBitField
+                        items: fixture15leaves.proofs[i].items,
+                        order: fixture15leaves.proofs[i].order
                     })).to.be.true;
             });
 
@@ -81,10 +81,10 @@ describe("Simple MMR Verification", function () {
                 if (j >= fixture15leaves.proofs.length) {
                     j = 0;
                 }
-                expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
+                expect(await simplifiedMMRVerification.verifyLeafProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
                     {
-                        merkleProofItems: fixture15leaves.proofs[j].merkleProofItems,
-                        merkleProofOrderBitField: fixture15leaves.proofs[j].merkleProofOrderBitField
+                        items: fixture15leaves.proofs[j].items,
+                        order: fixture15leaves.proofs[j].order
                     })).to.be.false;
             });
         });
@@ -98,11 +98,11 @@ describe("Simple MMR Verification", function () {
         })
 
         it("foo", async () => {
-            expect(await simplifiedMMRVerification.verifyInclusionProof.call(
+            expect(await simplifiedMMRVerification.verifyLeafProof.call(
                 "0x4172f9eee09024a2002617d2c49f02747f1936ca5d953a561a91ab3e61c72fae",
                 "0xf107355276f363ffb71384a57315ac8b62077ead1f807a2d68623b101a78978d",
                 {
-                    merkleProofItems: [
+                    items: [
                         "0xdba9f82074947ab29470beb04898963588ea6b066c890c11ff58670a49d98b3b",
                         "0xf7623d5b5882972b619c55833566dcf943ac6641a7417ecc78dfe8619d7ac7a5",
                         "0x961265e4f829b417e83d1d5497c48d365d17b16baa3e1c90d384261e929cc28a",
@@ -111,7 +111,7 @@ describe("Simple MMR Verification", function () {
                         "0x87e640a6935602495b2329c9379c60fdcd53e961e6bd4f41647ee3ab47ffb4c8",
                         "0xc06c77e05586ee31f52adea0ffc4e473bdc8a1b3e85ec1e5850fa2bd020c8594"
                     ],
-                    merkleProofOrderBitField: 5
+                    order: 5
                 })).to.be.true;
         });
 

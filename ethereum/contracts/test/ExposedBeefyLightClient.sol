@@ -7,7 +7,7 @@ import "../utils/MMRProofVerification.sol";
 
 contract ExposedBeefyLightClient is BeefyClient {
 
-    constructor() BeefyClient(SimplifiedMMRVerification(address(0))) {}
+    constructor() BeefyClient() {}
 
     function encodeCommitmentExposed(Commitment calldata commitment)
         external

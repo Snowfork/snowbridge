@@ -58,7 +58,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 1 (node 2)', async () => {
@@ -74,7 +74,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 2 (node 4)', async () => {
@@ -90,7 +90,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 3 (node 5)', async () => {
@@ -106,7 +106,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 4 (node 8)', async () => {
@@ -121,7 +121,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 5 (node 9)', async () => {
@@ -136,7 +136,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 6 (node 11)', async () => {
@@ -150,7 +150,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should not verify invalid proofs', async () => {
@@ -166,7 +166,7 @@ describe("MMRVerification Contract", function () {
             }
 
             // Stored value is not 0x000123
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.false
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.false
         });
     })
 
@@ -239,7 +239,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 8 (node 16)', async () => {
@@ -258,7 +258,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 9 (node 17)', async () => {
@@ -277,7 +277,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 10 (node 19)', async () => {
@@ -296,7 +296,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 11 (node 20)', async () => {
@@ -315,7 +315,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 12 (node 23)', async () => {
@@ -331,7 +331,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should verify valid proof for leaf index 13 (node 24)', async () => {
@@ -347,7 +347,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
 
         it('should NOT verify an invalid proof missing a left root proof item for leaf index 13 (node 24)', async () => {
@@ -362,7 +362,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.false
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.false
         });
 
         it('should verify valid proof for leaf index 14 (node 26)', async () => {
@@ -377,7 +377,7 @@ describe("MMRVerification Contract", function () {
                 ]
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
     })
 
@@ -412,7 +412,7 @@ describe("MMRVerification Contract", function () {
                 items: []
             }
 
-            expect(await mmrVerification.verifyInclusionProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
+            expect(await mmrVerification.verifyLeafProof.call(root, leafNodeHash, proof.leaf_index, proof.leaf_count, proof.items)).to.be.true
         });
     })
 
@@ -424,7 +424,7 @@ describe("MMRVerification Contract", function () {
 
         fixture7leaves.proofs.forEach((proof, i) => {
             it(`should verify valid proof for leaf index ${i}`, async () => {
-                expect(await mmrVerification.verifyInclusionProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
+                expect(await mmrVerification.verifyLeafProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
                     proof.leafIndex, proof.leafCount, proof.items)).to.be.true;
             });
         });
@@ -438,7 +438,7 @@ describe("MMRVerification Contract", function () {
 
         fixture15leaves.proofs.forEach((proof, i) => {
             it(`should verify valid proof for leaf index ${i}`, async () => {
-                expect(await mmrVerification.verifyInclusionProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
+                expect(await mmrVerification.verifyLeafProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
                     proof.leafIndex, proof.leafCount, proof.items)).to.be.true;
             });
         });
@@ -452,7 +452,7 @@ describe("MMRVerification Contract", function () {
 
 
         it(`foggas`, async () => {
-            expect(await mmrVerification.verifyInclusionProof.call(
+            expect(await mmrVerification.verifyLeafProof.call(
                 "0x4172f9eee09024a2002617d2c49f02747f1936ca5d953a561a91ab3e61c72fae",
                 "0xf107355276f363ffb71384a57315ac8b62077ead1f807a2d68623b101a78978d",
                 457,

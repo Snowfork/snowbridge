@@ -62,7 +62,7 @@
             }
         },
         "proof": {
-            "merkleProofItems": [
+            "items": [
                 "0x7c2c86690c09656632175fd8d5a22f8d93c3986e2a7ddbd443fb4b80fe9db603",
                 "0x7193645b749498dd06e74e0dcbf54cd34326990986218bdbb1cb0f563b6e893e",
                 "0x8e1fda7f934e0d4e2f1d10757e1f115105319b2bb7c3f18c4529262dbf6ae92d",
@@ -70,7 +70,7 @@
                 "0xad782b6308237ca744e46b8f160a6d33a24c51751d0be018eae245ef1882cda3",
                 "0x0c1387a4bb204e423d8f46855547c5c27e9ffa76d984ab3b26d89f0c699e382f"
             ],
-            "merkleProofOrderBitField": 10
+            "order": 10
         }
     }
 }

@@ -140,8 +140,6 @@ contract BeefyClient is AccessControl {
     uint256 public nextID;
     mapping(uint256 => ValidationData) public validationData;
 
-    SimplifiedMMRVerification public mmrVerification;
-
     /* Constants */
 
     // Used for calculating minimum number of required signatures
@@ -152,11 +150,9 @@ contract BeefyClient is AccessControl {
 
     /**
      * @notice Deploys the BeefyClient contract
-     * @param _mmrVerification The contract to be used for MMR verification
      */
-    constructor(SimplifiedMMRVerification _mmrVerification) {
+    constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        mmrVerification = _mmrVerification;
         nextID = 0;
     }
 
@@ -186,9 +182,9 @@ contract BeefyClient is AccessControl {
         MMRProof memory proof
     ) external view returns (bool) {
         return
-            mmrVerification.verifyInclusionProof(
+            MMRProofVerification.verifyLeafProof(
                 latestMMRRoot,
-                leaf,
+                leafHash,
                 proof
             );
     }
@@ -341,7 +337,7 @@ contract BeefyClient is AccessControl {
         // Verify that the leaf suppied by the relayer is part of the MMR
         bytes32 leafHash = keccak256(encodeMMRLeaf(leaf));
         require(
-            mmrVerification.verifyInclusionProof(
+            MMRProofVerification.verifyLeafProof(
                 latestMMRRoot,
                 leafHash,
                 proof
@@ -394,7 +390,7 @@ contract BeefyClient is AccessControl {
 
     function requiredNumberOfSignatures(ValidatorSet memory vset)
         internal
-        view
+        pure
         returns (uint256)
     {
         return
@@ -470,7 +466,7 @@ contract BeefyClient is AccessControl {
         address publicKey,
         bytes32[] calldata publicKeyMerkleProof,
         bytes32 commitmentHash
-    ) internal view {
+    ) internal pure {
         // Check if validator in randomBitfield
         require(
             randomBitfield.isSet(position),
@@ -537,7 +533,7 @@ contract BeefyClient is AccessControl {
         address addr,
         uint256 pos,
         bytes32[] memory proof
-    ) internal view returns (bool) {
+    ) internal pure returns (bool) {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(addr));
         return
             MerkleProof.verifyMerkleLeafAtPosition(

@@ -28,11 +28,11 @@ contract IncentivizedInboundChannel is AccessControl {
 
     RewardSource private rewardSource;
 
-    ParachainClient public client;
+    ParachainClient public parachainClient;
 
-    constructor(ParachainClient _client) {
+    constructor(ParachainClient client) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        client = _client;
+        parachainClient = client;
         nonce = 0;
     }
 
@@ -57,9 +57,12 @@ contract IncentivizedInboundChannel is AccessControl {
         // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
         bytes32 commitment = keccak256(abi.encode(_messages));
 
-        client.verifyCommitment(
-            commitment,
-            proof
+        require(
+            parachainClient.verifyCommitment(
+                commitment,
+                proof
+            ),
+            "Invalid proof"
         );
 
         // Require there is enough gas to play all messages

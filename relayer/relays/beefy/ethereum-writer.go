@@ -19,18 +19,18 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
+	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type EthereumWriter struct {
-	config           *SinkConfig
-	conn             *ethereum.Connection
-	beefyLightClient *beefylightclient.Contract
-	tasks            <-chan Task
-	someTasks        chan Task
-	someFoo          chan Task
+	config              *SinkConfig
+	conn                *ethereum.Connection
+	beefyClientContract *beefyclient.BeefyClient
+	tasks               <-chan Task
+	someTasks           chan Task
+	someFoo             chan Task
 
 	blockWaitPeriod    uint64
 	validatorSetID     uint64
@@ -52,23 +52,23 @@ func NewEthereumWriter(
 
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) (uint64, error) {
 
-	address := common.HexToAddress(wr.config.Contracts.BeefyLightClient)
-	beefyLightClientContract, err := beefylightclient.NewContract(address, wr.conn.GetClient())
+	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
+	beefyClientContract, err := beefyclient.NewBeefyClient(address, wr.conn.GetClient())
 	if err != nil {
 		return 0, err
 	}
-	wr.beefyLightClient = beefyLightClientContract
+	wr.beefyClientContract = beefyClientContract
 
 	callOpts := bind.CallOpts{
 		Context: ctx,
 	}
 
-	latestBeefyBlock, err := wr.beefyLightClient.ContractCaller.LatestBeefyBlock(&callOpts)
+	latestBeefyBlock, err := wr.beefyClientContract.BeefyClientCaller.LatestBeefyBlock(&callOpts)
 	if err != nil {
 		return latestBeefyBlock, err
 	}
 
-	blockWaitPeriod, err := wr.beefyLightClient.ContractCaller.BLOCKWAITPERIOD(&callOpts)
+	blockWaitPeriod, err := wr.beefyClientContract.BeefyClientCaller.BLOCKWAITPERIOD(&callOpts)
 	if err != nil {
 		return 0, err
 	}
@@ -192,9 +192,9 @@ func (wr *EthereumWriter) pollTransaction(ctx context.Context, tx *types.Transac
 	return nil, nil
 }
 
-func (wr *EthereumWriter) getContractCommitmentVerified(receipt *types.Receipt) *beefylightclient.ContractCommitmentVerified {
+func (wr *EthereumWriter) getContractCommitmentVerified(receipt *types.Receipt) *beefyclient.BeefyClientCommitmentVerified {
 	for _, eventLog := range receipt.Logs {
-		event, err := wr.beefyLightClient.ParseCommitmentVerified(*eventLog)
+		event, err := wr.beefyClientContract.ParseCommitmentVerified(*eventLog)
 		if err != nil {
 			continue
 		}
@@ -210,7 +210,7 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 	}
 
 	for {
-		nextValidatorSet, err := wr.beefyLightClient.ContractCaller.NextValidatorSet(&callOpts)
+		nextValidatorSet, err := wr.beefyClientContract.BeefyClientCaller.NextValidatorSet(&callOpts)
 		if err != nil {
 			return err
 		}
@@ -321,7 +321,7 @@ func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 }
 
 func (wr *EthereumWriter) WriteInitialSignatureCommitment(ctx context.Context, task *Task) (*types.Transaction, error) {
-	contract := wr.beefyLightClient
+	contract := wr.beefyClientContract
 	if contract == nil {
 		return nil, fmt.Errorf("unknown contract")
 	}
@@ -394,7 +394,7 @@ func BitfieldToString(bitfield []*big.Int) string {
 
 // WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the BeefyLightClient contract
 func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, task *Task) (*types.Transaction, error) {
-	contract := wr.beefyLightClient
+	contract := wr.beefyClientContract
 	if contract == nil {
 		return nil, fmt.Errorf("unknown contract")
 	}
@@ -416,7 +416,7 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 
 	options := wr.makeTxOpts(ctx)
 
-	validatorProof := beefylightclient.BeefyLightClientValidatorProof{
+	validatorProof := beefyclient.BeefyClientValidatorProof{
 		Signatures:            msg.Signatures,
 		Positions:             msg.ValidatorPositions,
 		PublicKeys:            msg.ValidatorPublicKeys,

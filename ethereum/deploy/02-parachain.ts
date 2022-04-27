@@ -7,17 +7,21 @@ module.exports = async ({
 }: HardhatRuntimeEnvironment) => {
   let [deployer] = await getUnnamedAccounts();
 
-  let scaleCodecLibrary = await deployments.get("ScaleCodec")
-  let bitFieldLibrary = await deployments.get("Bitfield")
-  let merkleProofLibrary = await deployments.get("MerkleProof")
-  let mmrProofVerificationLibrary = await deployments.get("MMRProofVerification")
+  if (!("PARACHAIN_ID" in process.env)) {
+    throw "Missing PARACHAIN_ID in environment config"
+  }
+  const paraID = process.env.PARACHAIN_ID
 
-  await deployments.deploy("BeefyClient", {
+  let merkleProofLibrary = await deployments.get("MerkleProof")
+  let scaleCodecLibrary = await deployments.get("ScaleCodec")
+
+  let beefyClient = await deployments.get("BeefyClient")
+
+  await deployments.deploy("ParachainClient", {
     from: deployer,
+    args: [beefyClient.address, paraID],
     libraries: {
       MerkleProof: merkleProofLibrary.address,
-      MMRProofVerification: mmrProofVerificationLibrary.address,
-      Bitfield: bitFieldLibrary.address,
       ScaleCodec: scaleCodecLibrary.address,
     },
     log: true,

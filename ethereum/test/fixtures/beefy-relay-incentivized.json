@@ -23,7 +23,7 @@
             "version": 0
         },
         "proof": {
-            "merkleProofItems": [
+            "items": [
                 "0x402db08a1f62b422e0a2ebec7eeeb1649af915f181120cabfb201d5e86c6e749",
                 "0xa239cfd0aff9e89aa2729d737adff21f77e7b1eee4c17200e7eb6e65108ff88c",
                 "0xde738e13d79d8740c87e8b67fb6bc633b65f5143a9425bc57edf71f9220e30a2",
@@ -33,7 +33,7 @@
                 "0x8494cf2ddffcf8a1403b01fee2b73a0271e7b988175312f6a3848a75ccc9e917",
                 "0x385d6495b98f4b7b4bad7dcd34eb37ea31364766e963271e1285287f1601e49e"
             ],
-            "merkleProofOrderBitField": 255
+            "order": 255
         },
         "validatorProof": {
             "positions": [

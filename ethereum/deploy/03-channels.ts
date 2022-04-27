@@ -7,18 +7,14 @@ module.exports = async ({
 }: HardhatRuntimeEnvironment) => {
   let [deployer] = await getUnnamedAccounts();
 
+  let parachainClient = await deployments.get("ParachainClient")
   let scaleCodecLibrary = await deployments.get("ScaleCodec")
-  let merkleProofLibrary = await deployments.get("MerkleProof")
-  let paraLibrary = await deployments.get("ParachainClient")
-  let beefy = await deployments.get("BeefyClient")
 
   await deployments.deploy("BasicInboundChannel", {
     from: deployer,
-    args: [beefy.address],
+    args: [parachainClient.address],
     libraries: {
-        MerkleProof: merkleProofLibrary.address,
         ScaleCodec: scaleCodecLibrary.address,
-        ParachainClient: paraLibrary.address
     },
     log: true,
     autoMine: true,
@@ -26,11 +22,9 @@ module.exports = async ({
 
   await deployments.deploy("IncentivizedInboundChannel", {
     from: deployer,
-    args:[beefy.address],
+    args:[parachainClient.address],
     libraries: {
-        MerkleProof: merkleProofLibrary.address,
         ScaleCodec: scaleCodecLibrary.address,
-        ParachainClient: paraLibrary.address
     },
     log: true,
     autoMine: true,

@@ -17,7 +17,7 @@ type SourceConfig struct {
 }
 
 type SourceContractsConfig struct {
-	BeefyLightClient           string `mapstructure:"BeefyLightClient"`
+	BeefyClient                string `mapstructure:"BeefyClient"`
 	BasicInboundChannel        string `mapstructure:"BasicInboundChannel"`
 	IncentivizedInboundChannel string `mapstructure:"IncentivizedInboundChannel"`
 }

@@ -7,19 +7,11 @@ import "./ScaleCodec.sol";
 import "./utils/MMRProofVerification.sol";
 
 contract ParachainClient {
-
     using ScaleCodec for uint32;
 
     BeefyClient public immutable beefyClient;
+    uint32 public immutable parachainID;
     bytes4 public immutable encodedParachainID;
-
-    struct Head {
-        bytes32 parentHash;
-        uint32 number;
-        bytes32 stateRoot;
-        bytes32 extrinsicsRoot;
-        bytes32 commitment;
-    }
 
     struct HeadProof {
         uint256 pos;
@@ -44,15 +36,16 @@ contract ParachainClient {
         MMRProof leafProof;
     }
 
-    constructor(BeefyClient _client, uint32 parachainID) {
-        client = _client;
-        encodedParachainID = ScaleCodec.encode32(parachainID);
+    constructor(BeefyClient _client, uint32 _parachainID) {
+        beefyClient = _client;
+        parachainID = _parachainID;
+        encodedParachainID = ScaleCodec.encode32(_parachainID);
     }
 
     function verifyCommitment(
         bytes32 commitment,
         Proof calldata proof
-    ) external view {
+    ) external view returns (bool) {
         // Compute the merkle leaf hash of our parachain
         bytes32 parachainHeadHash = createParachainMerkleLeaf(
             commitment,
@@ -69,14 +62,9 @@ contract ParachainClient {
         );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
-
-        // Verify inclusion of the leaf in the MMR
-        require(
-            client.verifyMMRLeaf(
-                leafHash,
-                proof.leafProof
-            ),
-            "Invalid proof"
+        return beefyClient.verifyMMRLeafProof(
+            leafHash,
+            proof.leafProof
         );
     }
 
@@ -86,7 +74,7 @@ contract ParachainClient {
         bytes calldata headSuffix
     )
         internal
-        pure
+        view
         returns (bytes32)
     {
         bytes memory encodedHead = bytes.concat(

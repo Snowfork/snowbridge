@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
+	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
@@ -24,7 +24,7 @@ type InitialSignatureCommitment struct {
 
 type FinalSignatureCommitment struct {
 	ID                             *big.Int
-	Commitment                     beefylightclient.BeefyLightClientCommitment
+	Commitment                     beefyclient.BeefyClientCommitment
 	Signatures                     [][]byte
 	ValidatorPositions             []*big.Int
 	ValidatorPublicKeys            []common.Address
@@ -129,7 +129,7 @@ func (t *Task) MakeFinalSignatureCommitment(bitfield string) (*FinalSignatureCom
 		return nil, err
 	}
 
-	commitment := beefylightclient.BeefyLightClientCommitment{
+	commitment := beefyclient.BeefyClientCommitment{
 		Payload:        *payload,
 		BlockNumber:    t.SignedCommitment.Commitment.BlockNumber,
 		ValidatorSetId: t.SignedCommitment.Commitment.ValidatorSetID,
@@ -149,7 +149,7 @@ func (t *Task) MakeFinalSignatureCommitment(bitfield string) (*FinalSignatureCom
 
 // Builds a payload which is partially SCALE-encoded. This is more efficient for the light client to verify
 // as it does not have to implement a fully fledged SCALE-encoder.
-func buildPayload(items []types.PayloadItem) (*beefylightclient.BeefyLightClientPayload, error) {
+func buildPayload(items []types.PayloadItem) (*beefyclient.BeefyClientPayload, error) {
 	index := -1
 
 	for i, payloadItem := range items {
@@ -183,7 +183,7 @@ func buildPayload(items []types.PayloadItem) (*beefylightclient.BeefyLightClient
 		return nil, fmt.Errorf("expected 2 slices")
 	}
 
-	return &beefylightclient.BeefyLightClientPayload{
+	return &beefyclient.BeefyClientPayload{
 		MmrRootHash: mmrRootHash,
 		Prefix:      slices[0],
 		Suffix:      slices[1],

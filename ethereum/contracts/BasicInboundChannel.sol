@@ -3,7 +3,6 @@ pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
 import "./ParachainClient.sol";
-import "./BeefyClient.sol";
 import "./utils/MMRProofVerification.sol";
 
 contract BasicInboundChannel {
@@ -12,7 +11,7 @@ contract BasicInboundChannel {
 
     uint64 public nonce;
 
-    ParachainClient public client;
+    ParachainClient public parachainClient;
 
     struct Message {
         address target;
@@ -22,9 +21,9 @@ contract BasicInboundChannel {
 
     event MessageDispatched(uint64 nonce, bool result);
 
-    constructor(ParachainClient _client) {
+    constructor(ParachainClient client) {
         nonce = 0;
-        client = _client;
+        parachainClient = client;
     }
 
     function submit(
@@ -33,9 +32,12 @@ contract BasicInboundChannel {
     ) external {
         bytes32 commitment = keccak256(abi.encode(_messages));
 
-        client.verifyCommitment(
-            commitment,
-            proof
+        require(
+            parachainClient.verifyCommitment(
+                commitment,
+                proof
+            ),
+            "Invalid proof"
         );
 
         // Require there is enough gas to play all messages

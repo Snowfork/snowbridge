@@ -36,8 +36,21 @@ type IncentivizedInboundChannelMessage struct {
 	Payload []byte
 }
 
-// ParachainLightClientBeefyMMRLeafPartial is an auto generated low-level Go binding around an user-defined struct.
-type ParachainLightClientBeefyMMRLeafPartial struct {
+// MMRProof is an auto generated low-level Go binding around an user-defined struct.
+type MMRProof struct {
+	Items [][32]byte
+	Order uint64
+}
+
+// ParachainClientHeadProof is an auto generated low-level Go binding around an user-defined struct.
+type ParachainClientHeadProof struct {
+	Pos   *big.Int
+	Width *big.Int
+	Proof [][32]byte
+}
+
+// ParachainClientMMRLeafPartial is an auto generated low-level Go binding around an user-defined struct.
+type ParachainClientMMRLeafPartial struct {
 	Version              uint8
 	ParentNumber         uint32
 	ParentHash           [32]byte
@@ -46,29 +59,18 @@ type ParachainLightClientBeefyMMRLeafPartial struct {
 	NextAuthoritySetRoot [32]byte
 }
 
-// ParachainLightClientParachainHeadProof is an auto generated low-level Go binding around an user-defined struct.
-type ParachainLightClientParachainHeadProof struct {
-	Pos   *big.Int
-	Width *big.Int
-	Proof [][32]byte
-}
-
-// ParachainLightClientParachainVerifyInput is an auto generated low-level Go binding around an user-defined struct.
-type ParachainLightClientParachainVerifyInput struct {
-	OwnParachainHeadPrefixBytes []byte
-	OwnParachainHeadSuffixBytes []byte
-	ParachainHeadProof          ParachainLightClientParachainHeadProof
-}
-
-// SimplifiedMMRProof is an auto generated low-level Go binding around an user-defined struct.
-type SimplifiedMMRProof struct {
-	MerkleProofItems         [][32]byte
-	MerkleProofOrderBitField uint64
+// ParachainClientProof is an auto generated low-level Go binding around an user-defined struct.
+type ParachainClientProof struct {
+	HeadPrefix  []byte
+	HeadSuffix  []byte
+	HeadProof   ParachainClientHeadProof
+	LeafPartial ParachainClientMMRLeafPartial
+	LeafProof   MMRProof
 }
 
 // IncentivizedInboundChannelMetaData contains all meta data concerning the IncentivizedInboundChannel contract.
 var IncentivizedInboundChannelMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractBeefyLightClient\",\"name\":\"_beefyLightClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"CONFIG_UPDATE_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"beefyLightClient\",\"outputs\":[{\"internalType\":\"contractBeefyLightClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_configUpdater\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_rewardSource\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"fee\",\"type\":\"uint128\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structIncentivizedInboundChannel.Message[]\",\"name\":\"_messages\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"ownParachainHeadPrefixBytes\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"ownParachainHeadSuffixBytes\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structParachainLightClient.ParachainHeadProof\",\"name\":\"parachainHeadProof\",\"type\":\"tuple\"}],\"internalType\":\"structParachainLightClient.ParachainVerifyInput\",\"name\":\"_parachainVerifyInput\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structParachainLightClient.BeefyMMRLeafPartial\",\"name\":\"_beefyMMRLeafPartial\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"merkleProofItems\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"merkleProofOrderBitField\",\"type\":\"uint64\"}],\"internalType\":\"structSimplifiedMMRProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"client\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"CONFIG_UPDATE_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_configUpdater\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_rewardSource\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"fee\",\"type\":\"uint128\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structIncentivizedInboundChannel.Message[]\",\"name\":\"_messages\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"headPrefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"headSuffix\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structParachainClient.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetId\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structParachainClient.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"items\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"order\",\"type\":\"uint64\"}],\"internalType\":\"structMMRProof\",\"name\":\"leafProof\",\"type\":\"tuple\"}],\"internalType\":\"structParachainClient.Proof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // IncentivizedInboundChannelABI is the input ABI used to generate the binding from.
@@ -341,37 +343,6 @@ func (_IncentivizedInboundChannel *IncentivizedInboundChannelCallerSession) MAXG
 	return _IncentivizedInboundChannel.Contract.MAXGASPERMESSAGE(&_IncentivizedInboundChannel.CallOpts)
 }
 
-// BeefyLightClient is a free data retrieval call binding the contract method 0xaf41c33e.
-//
-// Solidity: function beefyLightClient() view returns(address)
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelCaller) BeefyLightClient(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _IncentivizedInboundChannel.contract.Call(opts, &out, "beefyLightClient")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// BeefyLightClient is a free data retrieval call binding the contract method 0xaf41c33e.
-//
-// Solidity: function beefyLightClient() view returns(address)
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelSession) BeefyLightClient() (common.Address, error) {
-	return _IncentivizedInboundChannel.Contract.BeefyLightClient(&_IncentivizedInboundChannel.CallOpts)
-}
-
-// BeefyLightClient is a free data retrieval call binding the contract method 0xaf41c33e.
-//
-// Solidity: function beefyLightClient() view returns(address)
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelCallerSession) BeefyLightClient() (common.Address, error) {
-	return _IncentivizedInboundChannel.Contract.BeefyLightClient(&_IncentivizedInboundChannel.CallOpts)
-}
-
 // GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
 //
 // Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
@@ -463,6 +434,37 @@ func (_IncentivizedInboundChannel *IncentivizedInboundChannelSession) Nonce() (u
 // Solidity: function nonce() view returns(uint64)
 func (_IncentivizedInboundChannel *IncentivizedInboundChannelCallerSession) Nonce() (uint64, error) {
 	return _IncentivizedInboundChannel.Contract.Nonce(&_IncentivizedInboundChannel.CallOpts)
+}
+
+// ParachainClient is a free data retrieval call binding the contract method 0x1674f9b7.
+//
+// Solidity: function parachainClient() view returns(address)
+func (_IncentivizedInboundChannel *IncentivizedInboundChannelCaller) ParachainClient(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _IncentivizedInboundChannel.contract.Call(opts, &out, "parachainClient")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// ParachainClient is a free data retrieval call binding the contract method 0x1674f9b7.
+//
+// Solidity: function parachainClient() view returns(address)
+func (_IncentivizedInboundChannel *IncentivizedInboundChannelSession) ParachainClient() (common.Address, error) {
+	return _IncentivizedInboundChannel.Contract.ParachainClient(&_IncentivizedInboundChannel.CallOpts)
+}
+
+// ParachainClient is a free data retrieval call binding the contract method 0x1674f9b7.
+//
+// Solidity: function parachainClient() view returns(address)
+func (_IncentivizedInboundChannel *IncentivizedInboundChannelCallerSession) ParachainClient() (common.Address, error) {
+	return _IncentivizedInboundChannel.Contract.ParachainClient(&_IncentivizedInboundChannel.CallOpts)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -580,25 +582,25 @@ func (_IncentivizedInboundChannel *IncentivizedInboundChannelTransactorSession) 
 	return _IncentivizedInboundChannel.Contract.RevokeRole(&_IncentivizedInboundChannel.TransactOpts, role, account)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xf148bf10.
+// Submit is a paid mutator transaction binding the contract method 0x10e6bce5.
 //
-// Solidity: function submit((address,uint64,uint128,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[])) _parachainVerifyInput, (uint8,uint32,bytes32,uint64,uint32,bytes32) _beefyMMRLeafPartial, (bytes32[],uint64) proof) returns()
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelTransactor) Submit(opts *bind.TransactOpts, _messages []IncentivizedInboundChannelMessage, _parachainVerifyInput ParachainLightClientParachainVerifyInput, _beefyMMRLeafPartial ParachainLightClientBeefyMMRLeafPartial, proof SimplifiedMMRProof) (*types.Transaction, error) {
-	return _IncentivizedInboundChannel.contract.Transact(opts, "submit", _messages, _parachainVerifyInput, _beefyMMRLeafPartial, proof)
+// Solidity: function submit((address,uint64,uint128,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
+func (_IncentivizedInboundChannel *IncentivizedInboundChannelTransactor) Submit(opts *bind.TransactOpts, _messages []IncentivizedInboundChannelMessage, proof ParachainClientProof) (*types.Transaction, error) {
+	return _IncentivizedInboundChannel.contract.Transact(opts, "submit", _messages, proof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xf148bf10.
+// Submit is a paid mutator transaction binding the contract method 0x10e6bce5.
 //
-// Solidity: function submit((address,uint64,uint128,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[])) _parachainVerifyInput, (uint8,uint32,bytes32,uint64,uint32,bytes32) _beefyMMRLeafPartial, (bytes32[],uint64) proof) returns()
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelSession) Submit(_messages []IncentivizedInboundChannelMessage, _parachainVerifyInput ParachainLightClientParachainVerifyInput, _beefyMMRLeafPartial ParachainLightClientBeefyMMRLeafPartial, proof SimplifiedMMRProof) (*types.Transaction, error) {
-	return _IncentivizedInboundChannel.Contract.Submit(&_IncentivizedInboundChannel.TransactOpts, _messages, _parachainVerifyInput, _beefyMMRLeafPartial, proof)
+// Solidity: function submit((address,uint64,uint128,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
+func (_IncentivizedInboundChannel *IncentivizedInboundChannelSession) Submit(_messages []IncentivizedInboundChannelMessage, proof ParachainClientProof) (*types.Transaction, error) {
+	return _IncentivizedInboundChannel.Contract.Submit(&_IncentivizedInboundChannel.TransactOpts, _messages, proof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xf148bf10.
+// Submit is a paid mutator transaction binding the contract method 0x10e6bce5.
 //
-// Solidity: function submit((address,uint64,uint128,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[])) _parachainVerifyInput, (uint8,uint32,bytes32,uint64,uint32,bytes32) _beefyMMRLeafPartial, (bytes32[],uint64) proof) returns()
-func (_IncentivizedInboundChannel *IncentivizedInboundChannelTransactorSession) Submit(_messages []IncentivizedInboundChannelMessage, _parachainVerifyInput ParachainLightClientParachainVerifyInput, _beefyMMRLeafPartial ParachainLightClientBeefyMMRLeafPartial, proof SimplifiedMMRProof) (*types.Transaction, error) {
-	return _IncentivizedInboundChannel.Contract.Submit(&_IncentivizedInboundChannel.TransactOpts, _messages, _parachainVerifyInput, _beefyMMRLeafPartial, proof)
+// Solidity: function submit((address,uint64,uint128,bytes)[] _messages, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
+func (_IncentivizedInboundChannel *IncentivizedInboundChannelTransactorSession) Submit(_messages []IncentivizedInboundChannelMessage, proof ParachainClientProof) (*types.Transaction, error) {
+	return _IncentivizedInboundChannel.Contract.Submit(&_IncentivizedInboundChannel.TransactOpts, _messages, proof)
 }
 
 // IncentivizedInboundChannelMessageDispatchedIterator is returned from FilterMessageDispatched and is used to iterate over the raw logs and unpacked data for MessageDispatched events raised by the IncentivizedInboundChannel contract.

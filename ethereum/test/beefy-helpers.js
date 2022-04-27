@@ -92,8 +92,8 @@ const runBeefyLightClientFlow = async (fixture, beefyLightClient, validatorFixtu
     completeProofs,
     fixture.finalSignatureCommitment.leaf,
     {
-        merkleProofItems: fixture.finalSignatureCommitment.proof.merkleProofItems,
-        merkleProofOrderBitField: fixture.finalSignatureCommitment.proof.merkleProofOrderBitField
+        items: fixture.finalSignatureCommitment.proof.items,
+        order: fixture.finalSignatureCommitment.proof.order
     }
   )
 

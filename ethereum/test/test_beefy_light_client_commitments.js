@@ -57,8 +57,8 @@ describe("Beefy Light Client", function () {
       fixture.finalSignatureCommitment.validatorProof,
       fixture.finalSignatureCommitment.leaf,
         {
-          merkleProofItems: fixture.finalSignatureCommitment.proof.merkleProofItems,
-          merkleProofOrderBitField: fixture.finalSignatureCommitment.proof.merkleProofOrderBitField
+          items: fixture.finalSignatureCommitment.proof.items,
+          order: fixture.finalSignatureCommitment.proof.order
         }
     ).should.be.fulfilled
 

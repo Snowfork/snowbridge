@@ -23,11 +23,11 @@ describe("SimpleMMRVerification Contract", function () {
 
       fixture15leavesSimplified.proofs.forEach((proof, i) => {
         it(`should verify valid proof for leaf index ${i}`, async () => {
-          const gas = await simplifiedMMRVerification.verifyInclusionProof.estimateGas(
+          const gas = await simplifiedMMRVerification.verifyLeafProof.estimateGas(
             fixture15leavesSimplified.rootHash, fixture15leavesSimplified.leaves[i],
             {
-              merkleProofItems: fixture15leavesSimplified.proofs[i].merkleProofItems,
-              merkleProofOrderBitField: fixture15leavesSimplified.proofs[i].merkleProofOrderBitField
+              items: fixture15leavesSimplified.proofs[i].items,
+              order: fixture15leavesSimplified.proofs[i].order
             })
           console.log(`Gas used: ${gas}`);
         });
@@ -48,7 +48,7 @@ describe("MMRVerification Contract", function () {
 
       fixture15leaves.proofs.forEach((proof, i) => {
         it(`should verify valid proof for leaf index ${i}`, async () => {
-          const gas = await mmrVerification.verifyInclusionProof.estimateGas(
+          const gas = await mmrVerification.verifyLeafProof.estimateGas(
             fixture15leaves.rootHash, fixture15leaves.leaves[i],
             proof.leafIndex, proof.leafCount, proof.items);
           console.log(`Gas used: ${gas}`);

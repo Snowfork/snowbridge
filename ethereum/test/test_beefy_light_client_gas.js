@@ -110,8 +110,8 @@ describe("Beefy Light Client Gas Usage", function () {
       completeValidatorProofs,
       fixture.finalSignatureCommitment.leaf,
        {
-          merkleProofItems: fixture.finalSignatureCommitment.proof.merkleProofItems,
-          merkleProofOrderBitField: fixture.finalSignatureCommitment.proof.merkleProofOrderBitField
+          items: fixture.finalSignatureCommitment.proof.items,
+          order: fixture.finalSignatureCommitment.proof.order
        }
     )
     printTxPromiseGas(completeSigTxPromise)

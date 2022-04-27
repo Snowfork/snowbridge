@@ -22,5 +22,5 @@ type SinkConfig struct {
 }
 
 type ContractsConfig struct {
-	BeefyLightClient string `mapstructure:"BeefyLightClient"`
+	BeefyClient string `mapstructure:"BeefyClient"`
 }
