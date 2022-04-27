@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.5;
 
-import "./BeefyLightClient.sol";
+import "./BeefyClient.sol";
 import "./utils/MerkleProof.sol";
 import "./ScaleCodec.sol";
 import "./utils/MMRProofVerification.sol";
@@ -10,7 +10,7 @@ contract ParachainClient {
 
     using ScaleCodec for uint32;
 
-    BeefyLightClient public immutable beefyClient;
+    BeefyClient public immutable beefyClient;
     bytes4 public immutable encodedParachainID;
 
     struct Head {
@@ -44,7 +44,7 @@ contract ParachainClient {
         MMRProof leafProof;
     }
 
-    constructor(BeefyLightClient _client, uint32 parachainID) {
+    constructor(BeefyClient _client, uint32 parachainID) {
         client = _client;
         encodedParachainID = ScaleCodec.encode32(parachainID);
     }

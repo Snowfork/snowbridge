@@ -5,7 +5,7 @@ async function beefyState() {
 
   let signer = await hre.ethers.getSigner();
 
-  let beefyDeployment = await hre.deployments.get("BeefyLightClient");
+  let beefyDeployment = await hre.deployments.get("BeefyClient");
   let beefyLightClientContract = await new hre.ethers.Contract(
     beefyDeployment.address,
     beefyDeployment.abi

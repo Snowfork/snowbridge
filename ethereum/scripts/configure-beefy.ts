@@ -15,7 +15,7 @@ async function configureBeefy() {
 
   let signer = await hre.ethers.getSigner()
 
-  let beefyDeployment = await hre.deployments.get("BeefyLightClient");
+  let beefyDeployment = await hre.deployments.get("BeefyClient");
   let beefyLightClientContract = await new hre.ethers.Contract(beefyDeployment.address,
     beefyDeployment.abi);
   let beefyLightClient = await beefyLightClientContract.connect(signer)
@@ -51,7 +51,7 @@ async function configureBeefy() {
     }
   }
 
-  console.log("Configuring BeefyLightClient with initial BEEFY state");
+  console.log("Configuring BeefyClient with initial BEEFY state");
   console.log("Validator sets: ", validatorSets)
 
   await beefyLightClient.initialize(0, validatorSets.current, validatorSets.next);

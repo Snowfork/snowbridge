@@ -10,7 +10,7 @@ module.exports = async ({
   let scaleCodecLibrary = await deployments.get("ScaleCodec")
   let merkleProofLibrary = await deployments.get("MerkleProof")
   let paraLibrary = await deployments.get("ParachainClient")
-  let beefy = await deployments.get("BeefyLightClient")
+  let beefy = await deployments.get("BeefyClient")
 
   await deployments.deploy("BasicInboundChannel", {
     from: deployer,

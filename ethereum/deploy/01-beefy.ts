@@ -17,7 +17,7 @@ module.exports = async ({
     autoMine: true,
   });
 
-  await deployments.deploy("BeefyLightClient", {
+  await deployments.deploy("BeefyClient", {
     from: deployer,
     args: [mmr.address],
     libraries: {

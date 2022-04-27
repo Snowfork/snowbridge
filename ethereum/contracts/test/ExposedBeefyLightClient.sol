@@ -2,12 +2,12 @@
 pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
-import "../BeefyLightClient.sol";
+import "../BeefyClient.sol";
 import "../utils/MMRProofVerification.sol";
 
-contract ExposedBeefyLightClient is BeefyLightClient {
+contract ExposedBeefyLightClient is BeefyClient {
 
-    constructor() BeefyLightClient(SimplifiedMMRVerification(address(0))) {}
+    constructor() BeefyClient(SimplifiedMMRVerification(address(0))) {}
 
     function encodeCommitmentExposed(Commitment calldata commitment)
         external

@@ -11,9 +11,9 @@ import "./ScaleCodec.sol";
 import "./utils/MerkleProof.sol";
 
 /**
- * @title A entry contract for the Ethereum light client
+ * @title A entry contract for the BEEFY light client
  */
-contract BeefyLightClient is AccessControl {
+contract BeefyClient is AccessControl {
     using Bits for uint256;
     using Bitfield for uint256[];
     using ScaleCodec for uint256;
@@ -151,7 +151,7 @@ contract BeefyLightClient is AccessControl {
     uint64 public constant BLOCK_WAIT_PERIOD = 3;
 
     /**
-     * @notice Deploys the BeefyLightClient contract
+     * @notice Deploys the BeefyClient contract
      * @param _mmrVerification The contract to be used for MMR verification
      */
     constructor(SimplifiedMMRVerification _mmrVerification) {

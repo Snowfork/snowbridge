@@ -6,7 +6,7 @@ const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const SimplifiedMMRVerification = artifacts.require("SimplifiedMMRVerification");
-const BeefyLightClient = artifacts.require("BeefyLightClient");
+const BeefyClient = artifacts.require("BeefyClient");
 
 const fixture = require('./fixtures/beefy-relay-basic.json');
 
@@ -19,9 +19,9 @@ const lazyLinkLibraries = async _ => {
   const bitfield = await Bitfield.new();
   const scaleCodec = await ScaleCodec.new();
 
-  await BeefyLightClient.link(merkleProof); // 860624903cbc2e721b1f7f70307ce6b5fe
-  await BeefyLightClient.link(bitfield); // ce679fb3689ba2b0521c393162ea0c3c96$
-  await BeefyLightClient.link(scaleCodec); // 7cdc5241ea8d29c91205423c213999ecf3
+  await BeefyClient.link(merkleProof); // 860624903cbc2e721b1f7f70307ce6b5fe
+  await BeefyClient.link(bitfield); // ce679fb3689ba2b0521c393162ea0c3c96$
+  await BeefyClient.link(scaleCodec); // 7cdc5241ea8d29c91205423c213999ecf3
   lazyLinked = true;
 }
 
@@ -75,7 +75,7 @@ const deployBeefyLightClient = async (validatorSetId, validatorSetRoot, validato
 
   await lazyLinkLibraries()
 
-  const beefyLightClient = await BeefyLightClient.new(
+  const beefyLightClient = await BeefyClient.new(
     simplifiedMMRVerification.address,
   );
 
