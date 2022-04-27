@@ -9,7 +9,7 @@ module.exports = async ({
 
   let scaleCodecLibrary = await deployments.get("ScaleCodec")
   let merkleProofLibrary = await deployments.get("MerkleProof")
-  let paraLibrary = await deployments.get("ParachainLightClient")
+  let paraLibrary = await deployments.get("ParachainClient")
   let beefy = await deployments.get("BeefyLightClient")
 
   await deployments.deploy("BasicInboundChannel", {
@@ -18,7 +18,7 @@ module.exports = async ({
     libraries: {
         MerkleProof: merkleProofLibrary.address,
         ScaleCodec: scaleCodecLibrary.address,
-        ParachainLightClient: paraLibrary.address
+        ParachainClient: paraLibrary.address
     },
     log: true,
     autoMine: true,
@@ -30,7 +30,7 @@ module.exports = async ({
     libraries: {
         MerkleProof: merkleProofLibrary.address,
         ScaleCodec: scaleCodecLibrary.address,
-        ParachainLightClient: paraLibrary.address
+        ParachainClient: paraLibrary.address
     },
     log: true,
     autoMine: true,

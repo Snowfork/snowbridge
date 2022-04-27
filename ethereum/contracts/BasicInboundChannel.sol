@@ -2,9 +2,9 @@
 pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
-import "./ParachainLightClient.sol";
+import "./ParachainClient.sol";
 import "./BeefyLightClient.sol";
-import "./SimplifiedMMRVerification.sol";
+import "./utils/MMRProofVerification.sol";
 
 contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
@@ -12,7 +12,7 @@ contract BasicInboundChannel {
 
     uint64 public nonce;
 
-    ParachainLightClient public client;
+    ParachainClient public client;
 
     struct Message {
         address target;
@@ -22,14 +22,14 @@ contract BasicInboundChannel {
 
     event MessageDispatched(uint64 nonce, bool result);
 
-    constructor(ParachainLightClient _client) {
+    constructor(ParachainClient _client) {
         nonce = 0;
         client = _client;
     }
 
     function submit(
         Message[] calldata _messages,
-        ParachainLightClient.Proof calldata proof
+        ParachainClient.Proof calldata proof
     ) external {
         bytes32 commitment = keccak256(abi.encode(_messages));
 

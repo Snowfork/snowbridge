@@ -21,7 +21,7 @@ module.exports = async ({deployments, getUnnamedAccounts}: HardhatRuntimeEnviron
     autoMine: true,
   });
 
-  await deployments.deploy('ParachainLightClient', {
+  await deployments.deploy('ParachainClient', {
     from: deployer,
     libraries: {
       ScaleCodec: codec.address

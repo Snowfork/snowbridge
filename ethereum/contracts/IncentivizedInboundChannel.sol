@@ -3,9 +3,9 @@ pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./ParachainLightClient.sol";
+import "./ParachainClient.sol";
 import "./RewardSource.sol";
-import "./SimplifiedMMRVerification.sol";
+import "./utils/MMRProofVerification.sol";
 
 contract IncentivizedInboundChannel is AccessControl {
     uint64 public nonce;
@@ -28,9 +28,9 @@ contract IncentivizedInboundChannel is AccessControl {
 
     RewardSource private rewardSource;
 
-    ParachainLightClient public client;
+    ParachainClient public client;
 
-    constructor(ParachainLightClient _client) {
+    constructor(ParachainClient _client) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         client = _client;
         nonce = 0;
@@ -51,7 +51,7 @@ contract IncentivizedInboundChannel is AccessControl {
 
     function submit(
         Message[] calldata _messages,
-        ParachainLightClient.Proof calldata proof
+        ParachainClient.Proof calldata proof
     ) external {
         // Proof
         // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`

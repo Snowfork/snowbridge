@@ -70,6 +70,7 @@ contract ParachainClient {
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
 
+        // Verify inclusion of the leaf in the MMR
         require(
             client.verifyMMRLeaf(
                 leafHash,

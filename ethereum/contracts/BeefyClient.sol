@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./utils/Bits.sol";
 import "./utils/Bitfield.sol";
-import "./SimplifiedMMRVerification.sol";
+import "./utils/MMRProofVerification.sol";
 import "./ScaleCodec.sol";
 import "./utils/MerkleProof.sol";
 
@@ -178,11 +178,11 @@ contract BeefyLightClient is AccessControl {
 
     /**
      * @notice Executed by the incoming channel in order to verify commitment
-     * @param beefyMMRLeaf contains the merkle leaf to be verified
+     * @param leafHash contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
      */
-    function verifyMMRLeaf(
-        bytes32 leaf,
+    function verifyMMRLeafProof(
+        bytes32 leafHash,
         MMRProof memory proof
     ) external view returns (bool) {
         return
@@ -331,7 +331,7 @@ contract BeefyLightClient is AccessControl {
 
     function updateValidatorSet(
         MMRLeaf calldata leaf,
-        SimplifiedMMRProof calldata proof
+        MMRProof calldata proof
     ) public {
         require(
             leaf.nextAuthoritySetId == nextValidatorSet.id + 1,

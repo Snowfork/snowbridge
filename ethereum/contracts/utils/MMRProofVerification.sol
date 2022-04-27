@@ -3,16 +3,16 @@ pragma solidity ^0.8.5;
 
 import "hardhat/console.sol";
 
-struct SimplifiedMMRProof {
+struct MMRProof {
     bytes32[] merkleProofItems;
     uint64 merkleProofOrderBitField;
 }
 
-contract SimplifiedMMRVerification {
+library MMRProofVerification {
     function verifyInclusionProof(
         bytes32 root,
         bytes32 leafNodeHash,
-        SimplifiedMMRProof memory proof
+        MMRProof memory proof
     ) public view returns (bool) {
         require(proof.merkleProofItems.length < 64);
 
