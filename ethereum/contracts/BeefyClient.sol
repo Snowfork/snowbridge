@@ -172,7 +172,7 @@ contract BeefyClient is AccessControl {
      * @param leafHash contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
      */
-    function verifyMMRLeafProof(bytes32 leafHash, MMRProof memory proof)
+    function verifyMMRLeafProof(bytes32 leafHash, MMRProof calldata proof)
         external
         view
         returns (bool)

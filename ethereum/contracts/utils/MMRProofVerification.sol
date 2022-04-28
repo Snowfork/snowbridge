@@ -9,12 +9,11 @@ struct MMRProof {
 library MMRProofVerification {
     function verifyLeafProof(
         bytes32 root,
-        bytes32 leafNodeHash,
-        MMRProof memory proof
-    ) public pure returns (bool) {
+        bytes32 leafHash,
+        MMRProof calldata proof
+    ) external pure returns (bool) {
         require(proof.items.length < 64);
-
-        return root == calculateMerkleRoot(leafNodeHash, proof.items, proof.order);
+        return root == calculateMerkleRoot(leafHash, proof.items, proof.order);
     }
 
     // Get the value of the bit at the given 'index' in 'self'.
@@ -28,20 +27,20 @@ library MMRProofVerification {
     }
 
     function calculateMerkleRoot(
-        bytes32 leafNodeHash,
-        bytes32[] memory items,
+        bytes32 leafHash,
+        bytes32[] calldata items,
         uint64 order
     ) internal pure returns (bytes32) {
-        bytes32 currentHash = leafNodeHash;
+        bytes32 currentHash = leafHash;
 
         for (uint256 currentPosition = 0; currentPosition < items.length; currentPosition++) {
             bool isSiblingLeft = bit(order, currentPosition);
             bytes32 sibling = items[currentPosition];
 
             if (isSiblingLeft) {
-                currentHash = keccak256(abi.encodePacked(sibling, currentHash));
+                currentHash = keccak256(bytes.concat(sibling, currentHash));
             } else {
-                currentHash = keccak256(abi.encodePacked(currentHash, sibling));
+                currentHash = keccak256(bytes.concat(currentHash, sibling));
             }
         }
         return currentHash;

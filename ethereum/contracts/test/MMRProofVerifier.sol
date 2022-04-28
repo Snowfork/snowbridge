@@ -8,8 +8,8 @@ contract MMRProofVerifier {
     function verifyLeafProof(
         bytes32 root,
         bytes32 leafNodeHash,
-        MMRProof memory proof
-    ) public pure returns (bool) {
+        MMRProof calldata proof
+    ) external pure returns (bool) {
         return MMRProofVerification.verifyLeafProof(root, leafNodeHash, proof);
     }
 }
