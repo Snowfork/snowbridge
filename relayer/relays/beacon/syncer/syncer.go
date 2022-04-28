@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	SLOTS_IN_EPOCH uint64 = 32
+	SLOTS_IN_EPOCH                   uint64 = 32
 	EPOCHS_PER_SYNC_COMMITTEE_PERIOD uint64 = 256
-	SYNC_COMMITTEE_INCREMENT = 5
-) 
+	SYNC_COMMITTEE_INCREMENT                = 5
+)
 
 type Syncer struct {
 	Client BeaconClient
@@ -55,7 +55,7 @@ type LightClientSnapshot struct {
 	Header                     Header
 	CurrentSyncCommittee       CurrentSyncCommittee
 	CurrentSyncCommitteeBranch []string
-	Genesis                    Genesis
+	ValidatorsRoot             string
 }
 
 type FinalizedBlockUpdate struct {
@@ -106,11 +106,7 @@ func (s *Syncer) InitialSync(blockId string) (LightClientSnapshot, error) {
 			AggregatePubkeys: snapshot.Data.CurrentSyncCommittee.AggregatePubkey,
 		},
 		CurrentSyncCommitteeBranch: snapshot.Data.CurrentSyncCommitteeBranch,
-		Genesis: Genesis{
-			ValidatorsRoot: genesis.Data.ValidatorsRoot,
-			Time:           genesis.Data.Time,
-			ForkVersion:    genesis.Data.ForkVersion,
-		},
+		ValidatorsRoot:             genesis.Data.ValidatorsRoot,
 	}
 
 	logrus.WithFields(logrus.Fields{

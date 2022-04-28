@@ -9,15 +9,14 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer"
 	"golang.org/x/sync/errgroup"
 )
 
 type InitialSync struct {
-	Header                     syncer.Header
-	CurrentSyncCommittee       syncer.CurrentSyncCommittee
-	CurrentSyncCommitteeBranch []string
-	Genesis                    syncer.Genesis
+	Header                     interface{}
+	CurrentSyncCommittee       interface{}
+	CurrentSyncCommitteeBranch interface{}
+	ValidatorsRoot             interface{}
 }
 
 type ParachainPayload struct {
@@ -50,14 +49,14 @@ func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainP
 
 	onFinalized := func(_ types.Hash) error {
 		// Confirm that the header import was successful
-		headerHash := payload.InitialSync.Header.BodyRoot
+		/*headerHash := payload.InitialSync.Header.BodyRoot
 		imported, err := wr.queryImportedHeaderExists(headerHash)
 		if err != nil {
 			return err
 		}
 		if !imported {
 			return fmt.Errorf("Header import failed for header %s", headerHash.Hex())
-		}
+		}*/
 		return nil
 	}
 
@@ -124,7 +123,8 @@ func (wr *ParachainWriter) makeInitialSyncCall(initialSync *InitialSync) (types.
 		return types.Call{}, fmt.Errorf("Initial sync is nil")
 	}
 
-	return types.NewCall(wr.conn.Metadata(), "EthereumBeaconLightClient.initial_sync", initialSync.Header, initialSync.CurrentSyncCommittee, initialSync.CurrentSyncCommitteeBranch, initialSync.Genesis)
+	//return types.NewCall(wr.conn.Metadata(), "EthereumBeaconLightClient.initial_sync", initialSync.Header, initialSync.CurrentSyncCommittee, initialSync.CurrentSyncCommitteeBranch, initialSync.Genesis)
+	return types.NewCall(wr.conn.Metadata(), "EthereumBeaconLightClient.simple_test")
 }
 
 func (wr *ParachainWriter) queryImportedHeaderExists(hash common.Hash) (bool, error) {

@@ -206,6 +206,26 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(1_000_000)]
 		#[transactional]
+		pub fn simple_test(
+			origin: OriginFor<T>
+		) -> DispatchResult {
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"reaches simple_test",
+			);
+
+			let sender = ensure_signed(origin)?;
+
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"simple_test is signed",
+			);
+
+			Ok(())
+		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
 		pub fn initial_sync(
 			origin: OriginFor<T>,
 			initial_sync: LightClientInitialSync,

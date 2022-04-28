@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer"
@@ -27,6 +28,14 @@ func NewRelay(
 	}
 }
 
+type BeaconHeaderScale struct {
+	Slot          types.U64
+	ProposerIndex types.U64
+	ParentRoot    types.H256
+	StateRoot     types.H256
+	BodyRoot      types.H256
+}
+
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.FinalizedUpdateEndpoint)
 	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
@@ -48,12 +57,20 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		r.paraconn,
 	)
 
+	header := BeaconHeaderScale{
+		Slot:          types.NewU64(lightClientSnapshot.Header.Slot),
+		ProposerIndex: types.NewU64(lightClientSnapshot.Header.Slot),
+		ParentRoot:    types.NewH256(lightClientSnapshot.Header.ParentRoot.Bytes()),
+		StateRoot:     types.NewH256(lightClientSnapshot.Header.ParentRoot.Bytes()),
+		BodyRoot:      types.NewH256(lightClientSnapshot.Header.ParentRoot.Bytes()),
+	}
+
 	err = writer.WritePayload(ctx, &ParachainPayload{
 		InitialSync: &InitialSync{
-			Header:                     lightClientSnapshot.Header,
-			CurrentSyncCommittee:       lightClientSnapshot.CurrentSyncCommittee,
-			CurrentSyncCommitteeBranch: lightClientSnapshot.CurrentSyncCommitteeBranch,
-			Genesis:                    lightClientSnapshot.Genesis,
+			Header:                     header,
+			CurrentSyncCommittee:       []byte{},
+			CurrentSyncCommitteeBranch: []byte{},
+			ValidatorsRoot:             types.NewH256([]byte(lightClientSnapshot.ValidatorsRoot)),
 		},
 	}, eg)
 	if err != nil {
