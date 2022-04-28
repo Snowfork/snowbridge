@@ -3,7 +3,6 @@ pragma solidity ^0.8.5;
 pragma experimental ABIEncoderV2;
 
 import "./ParachainClient.sol";
-import "./utils/MMRProofVerification.sol";
 
 contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;

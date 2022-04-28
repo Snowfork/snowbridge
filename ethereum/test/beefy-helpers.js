@@ -50,7 +50,6 @@ async function createValidatorFixture(validatorSetId, validatorSetLength) {
 }
 
 async function createRandomPositions(numberOfPositions, numberOfValidators) {
-
   const positions = [];
   for (i = 0; i < numberOfValidators; i++) {
     positions.push(i);
@@ -62,17 +61,18 @@ async function createRandomPositions(numberOfPositions, numberOfValidators) {
 }
 
 
-const runBeefyLightClientFlow = async (fixture, beefyLightClient, validatorFixture, totalNumberOfSignatures, totalNumberOfValidators) => {
+const runBeefyClientFlow = async (fixture, beefyClient, validatorFixture, totalNumberOfSignatures, totalNumberOfValidators) => {
   const initialBitfieldPositions = await createRandomPositions(totalNumberOfSignatures, totalNumberOfValidators)
 
-  const initialBitfield = await beefyLightClient.createInitialBitfield(
+  const initialBitfield = await beefyClient.createInitialBitfield(
     initialBitfieldPositions, totalNumberOfValidators
   );
 
   const proofs = await createInitialValidatorProofs(fixture.commitmentHash, validatorFixture);
 
-  await beefyLightClient.newSignatureCommitment(
+  await beefyClient.newSignatureCommitment(
     fixture.commitmentHash,
+    fixture.transactionParams.commitment.validatorSetId,
     initialBitfield,
     proofs[0].signature,
     proofs[0].position,
@@ -80,21 +80,16 @@ const runBeefyLightClientFlow = async (fixture, beefyLightClient, validatorFixtu
     proofs[0].proof,
   )
 
-  const lastId = (await beefyLightClient.nextID()).sub(new web3.utils.BN(1));
+  const lastId = (await beefyClient.nextID()).sub(new web3.utils.BN(1));
 
   await mine(45);
 
-  const completeProofs = await createFinalValidatorProofs(lastId, beefyLightClient, proofs);
+  const completeProofs = await createFinalValidatorProofs(lastId, beefyClient, proofs);
 
-  await beefyLightClient.completeSignatureCommitment(
+  await beefyClient.completeSignatureCommitment(
     lastId,
-    fixture.finalSignatureCommitment.commitment,
+    fixture.transactionParams.commitment,
     completeProofs,
-    fixture.finalSignatureCommitment.leaf,
-    {
-        items: fixture.finalSignatureCommitment.proof.items,
-        order: fixture.finalSignatureCommitment.proof.order
-    }
   )
 
 }
@@ -118,8 +113,8 @@ async function createInitialValidatorProofs(commitmentHash, validatorFixture) {
   });
 }
 
-async function createFinalValidatorProofs(id, beefyLightClient, initialProofs) {
-  const bitfieldInts = await beefyLightClient.createRandomBitfield(id);
+async function createFinalValidatorProofs(id, beefyClient, initialProofs) {
+  const bitfieldInts = await beefyClient.createRandomBitfield(id);
   const bitfieldString = printBitfield(bitfieldInts);
 
   const proofs = {
@@ -147,6 +142,6 @@ module.exports = {
   createValidatorFixture,
   createRandomPositions,
   createInitialValidatorProofs,
-  runBeefyLightClientFlow,
+  runBeefyClientFlow,
   createFinalValidatorProofs,
 }

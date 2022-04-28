@@ -23,7 +23,7 @@ contract ParachainClient {
         uint8 version;
         uint32 parentNumber;
         bytes32 parentHash;
-        uint64 nextAuthoritySetId;
+        uint64 nextAuthoritySetID;
         uint32 nextAuthoritySetLen;
         bytes32 nextAuthoritySetRoot;
     }
@@ -42,10 +42,11 @@ contract ParachainClient {
         encodedParachainID = ScaleCodec.encode32(_parachainID);
     }
 
-    function verifyCommitment(
-        bytes32 commitment,
-        Proof calldata proof
-    ) external view returns (bool) {
+    function verifyCommitment(bytes32 commitment, Proof calldata proof)
+        external
+        view
+        returns (bool)
+    {
         // Compute the merkle leaf hash of our parachain
         bytes32 parachainHeadHash = createParachainMerkleLeaf(
             commitment,
@@ -62,21 +63,14 @@ contract ParachainClient {
         );
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
-        return beefyClient.verifyMMRLeafProof(
-            leafHash,
-            proof.leafProof
-        );
+        return beefyClient.verifyMMRLeafProof(leafHash, proof.leafProof);
     }
 
     function createParachainMerkleLeaf(
         bytes32 commitment,
         bytes calldata headPrefix,
         bytes calldata headSuffix
-    )
-        internal
-        view
-        returns (bytes32)
-    {
+    ) internal view returns (bytes32) {
         bytes memory encodedHead = bytes.concat(
             encodedParachainID,
             headPrefix,
@@ -86,10 +80,7 @@ contract ParachainClient {
         return keccak256(encodedHead);
     }
 
-    function createMMRLeaf(
-        MMRLeafPartial calldata leaf,
-        bytes32 parachainHeadsRoot
-    )
+    function createMMRLeaf(MMRLeafPartial calldata leaf, bytes32 parachainHeadsRoot)
         internal
         pure
         returns (bytes32)
@@ -98,7 +89,7 @@ contract ParachainClient {
             ScaleCodec.encode8(leaf.version),
             ScaleCodec.encode32(leaf.parentNumber),
             leaf.parentHash,
-            ScaleCodec.encode64(leaf.nextAuthoritySetId),
+            ScaleCodec.encode64(leaf.nextAuthoritySetID),
             ScaleCodec.encode32(leaf.nextAuthoritySetLen),
             leaf.nextAuthoritySetRoot,
             parachainHeadsRoot

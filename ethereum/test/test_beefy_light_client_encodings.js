@@ -2,7 +2,9 @@ const BigNumber = web3.BigNumber;
 const Bitfield = artifacts.require("Bitfield");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const MerkleProof = artifacts.require("MerkleProof");
-const ExposedBeefyLightClient = artifacts.require("ExposedBeefyLightClient");
+const MMRProofVerification = artifacts.require("MMRProofVerification");
+const ExposedBeefyClient = artifacts.require("ExposedBeefyClient");
+
 
 
 require("chai")
@@ -12,18 +14,20 @@ require("chai")
 
 const { expect } = require("chai");
 
-describe("Beefy Light Client", function () {
+describe("BeefyClient", function () {
 
-  const iface = new ethers.utils.Interface(ExposedBeefyLightClient.abi);
+  const iface = new ethers.utils.Interface(ExposedBeefyClient.abi);
 
   before(async function () {
     const bitfield = await Bitfield.new();
     const scaleCodec = await ScaleCodec.new();
     const merkleProof = await MerkleProof.new();
-    await ExposedBeefyLightClient.link(bitfield);
-    await ExposedBeefyLightClient.link(scaleCodec);
-    await ExposedBeefyLightClient.link(merkleProof);
-    this.beefyLightClient = await ExposedBeefyLightClient.new();
+    const mmrProofVerification = await MMRProofVerification.new()
+    await ExposedBeefyClient.link(bitfield);
+    await ExposedBeefyClient.link(scaleCodec);
+    await ExposedBeefyClient.link(merkleProof);
+    await ExposedBeefyClient.link(mmrProofVerification);
+    this.beefyClient = await ExposedBeefyClient.new();
   });
 
   it("encodes beefy commitment to SCALE-format", async function () {
@@ -37,7 +41,7 @@ describe("Beefy Light Client", function () {
       },
     }
 
-    let encoded = await this.beefyLightClient.encodeCommitmentExposed(commitment).should.be.fulfilled
+    let encoded = await this.beefyClient.encodeCommitmentExposed(commitment).should.be.fulfilled
     expect(encoded).to.eq("0x0861620c0001026d68803ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c050000000700000000000000");
   });
 });

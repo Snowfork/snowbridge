@@ -43,7 +43,7 @@ func (wr *EthereumWriter) LogFinal(
 	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
 
 	state := log.Fields{
-		"finalSignatureCommitment": log.Fields{
+		"transactionParams": log.Fields{
 			"id": msg.ID,
 			"commitment": log.Fields{
 				"blockNumber":    msg.Commitment.BlockNumber,

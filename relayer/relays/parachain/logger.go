@@ -34,7 +34,10 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 	}
 
 	params := log.Fields{
-		"messages": messagesLog,
+		"bundle": log.Fields{
+			"nonce":    bundle.Nonce,
+			"messages": messagesLog,
+		},
 		"proof": log.Fields{
 			"headPrefix": Hex(proof.HeadPrefix),
 			"headSuffix": Hex(proof.HeadSuffix),
@@ -47,7 +50,7 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 				"version":              proof.LeafPartial.Version,
 				"parentNumber":         proof.LeafPartial.ParentNumber,
 				"parentHash":           Hex(proof.LeafPartial.ParentHash[:]),
-				"nextAuthoritySetID":   proof.LeafPartial.NextAuthoritySetId,
+				"nextAuthoritySetID":   proof.LeafPartial.NextAuthoritySetID,
 				"nextAuthoritySetLen":  proof.LeafPartial.NextAuthoritySetLen,
 				"nextAuthoritySetRoot": Hex(proof.LeafPartial.NextAuthoritySetRoot[:]),
 			},
@@ -85,7 +88,10 @@ func (wr *EthereumWriter) logFieldsForIncentivizedSubmission(
 	}
 
 	params := log.Fields{
-		"messages": messagesLog,
+		"bundle": log.Fields{
+			"nonce":    bundle.Nonce,
+			"messages": messagesLog,
+		},
 		"proof": log.Fields{
 			"headPrefix": Hex(proof.HeadPrefix),
 			"headSuffix": Hex(proof.HeadSuffix),
@@ -98,7 +104,7 @@ func (wr *EthereumWriter) logFieldsForIncentivizedSubmission(
 				"version":              proof.LeafPartial.Version,
 				"parentNumber":         proof.LeafPartial.ParentNumber,
 				"parentHash":           Hex(proof.LeafPartial.ParentHash[:]),
-				"nextAuthoritySetID":   proof.LeafPartial.NextAuthoritySetId,
+				"nextAuthoritySetID":   proof.LeafPartial.NextAuthoritySetID,
 				"nextAuthoritySetLen":  proof.LeafPartial.NextAuthoritySetLen,
 				"nextAuthoritySetRoot": Hex(proof.LeafPartial.NextAuthoritySetRoot[:]),
 			},

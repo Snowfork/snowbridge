@@ -5,7 +5,6 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./ParachainClient.sol";
 import "./RewardSource.sol";
-import "./utils/MMRProofVerification.sol";
 
 contract IncentivizedInboundChannel is AccessControl {
     uint64 public nonce;
@@ -28,8 +27,7 @@ contract IncentivizedInboundChannel is AccessControl {
     uint256 public constant GAS_BUFFER = 60000;
 
     // Governance contracts will administer using this role.
-    bytes32 public constant CONFIG_UPDATE_ROLE =
-        keccak256("CONFIG_UPDATE_ROLE");
+    bytes32 public constant CONFIG_UPDATE_ROLE = keccak256("CONFIG_UPDATE_ROLE");
 
     RewardSource private rewardSource;
 
@@ -54,33 +52,23 @@ contract IncentivizedInboundChannel is AccessControl {
         renounceRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function submit(
-        MessageBundle calldata bundle,
-        ParachainClient.Proof calldata proof
-    ) external {
+    function submit(MessageBundle calldata bundle, ParachainClient.Proof calldata proof) external {
         // Proof
         // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
         bytes32 commitment = keccak256(abi.encode(bundle));
 
-        require(
-            parachainClient.verifyCommitment(commitment, proof),
-            "Invalid proof"
-        );
+        require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
 
         // Require there is enough gas to play all messages
         require(
-            gasleft() >=
-                (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
+            gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
 
         processMessages(payable(msg.sender), bundle);
     }
 
-    function processMessages(
-        address payable _relayer,
-        MessageBundle calldata bundle
-    ) internal {
+    function processMessages(address payable _relayer, MessageBundle calldata bundle) internal {
         require(bundle.nonce == nonce + 1, "invalid nonce");
 
         uint128 _rewardAmount = 0;
@@ -89,10 +77,9 @@ contract IncentivizedInboundChannel is AccessControl {
 
             // Deliver the message to the target
             // Delivery will have fixed maximum gas allowed for the target app
-            (bool success, ) = message.target.call{
-                value: 0,
-                gas: MAX_GAS_PER_MESSAGE
-            }(message.payload);
+            (bool success, ) = message.target.call{ value: 0, gas: MAX_GAS_PER_MESSAGE }(
+                message.payload
+            );
 
             _rewardAmount = _rewardAmount + message.fee;
             emit MessageDispatched(message.id, success);

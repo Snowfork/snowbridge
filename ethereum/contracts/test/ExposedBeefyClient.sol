@@ -5,8 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../BeefyClient.sol";
 import "../utils/MMRProofVerification.sol";
 
-contract ExposedBeefyLightClient is BeefyClient {
-
+contract ExposedBeefyClient is BeefyClient {
     constructor() BeefyClient() {}
 
     function encodeCommitmentExposed(Commitment calldata commitment)

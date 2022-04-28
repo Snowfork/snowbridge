@@ -1,5 +1,5 @@
 const {
-  deployBeefyLightClient,
+  deployBeefyClient,
   mine, printTxPromiseGas
 } = require("./helpers");
 
@@ -16,7 +16,7 @@ require("chai")
 
 const { expect } = require("chai");
 
-describe("Beefy Light Client Gas Usage", function () {
+describe("Beefy Client Gas Usage", function () {
 
   const testCases = [
     {
@@ -65,11 +65,9 @@ describe("Beefy Light Client Gas Usage", function () {
   const runFlow = async function (totalNumberOfValidators, totalNumberOfSignatures, fail) {
     console.log(`Running flow with ${totalNumberOfValidators} validators and ${totalNumberOfSignatures} signatures with the complete transaction ${fail ? 'failing' : 'succeeding'}: `)
 
-    const validatorFixture = await createValidatorFixture(
-      fixture.finalSignatureCommitment.commitment.validatorSetId,
-      totalNumberOfValidators
-    )
-    const beefyLightClient = await deployBeefyLightClient(
+    const validatorFixture = await createValidatorFixture(fixture.transactionParams.commitment.validatorSetId, totalNumberOfValidators)
+
+    const beefyClient = await deployBeefyClient(
       validatorFixture.validatorSetId,
       validatorFixture.validatorSetRoot,
       validatorFixture.validatorSetLength,
@@ -79,7 +77,7 @@ describe("Beefy Light Client Gas Usage", function () {
 
     const firstPosition = initialBitfieldPositions[0]
 
-    const initialBitfield = await beefyLightClient.createInitialBitfield(
+    const initialBitfield = await beefyClient.createInitialBitfield(
       initialBitfieldPositions, totalNumberOfValidators
     );
 
@@ -87,8 +85,9 @@ describe("Beefy Light Client Gas Usage", function () {
 
     const initialValidatorProofs = await createInitialValidatorProofs(commitmentHash, validatorFixture);
 
-    const newSigTxPromise = beefyLightClient.newSignatureCommitment(
+    const newSigTxPromise = beefyClient.newSignatureCommitment(
       commitmentHash,
+      fixture.transactionParams.commitment.validatorSetId,
       initialBitfield,
       initialValidatorProofs[firstPosition].signature,
       firstPosition,
@@ -98,29 +97,24 @@ describe("Beefy Light Client Gas Usage", function () {
     printTxPromiseGas(newSigTxPromise)
     await newSigTxPromise.should.be.fulfilled
 
-    const lastId = (await beefyLightClient.nextID()).sub(new web3.utils.BN(1));
+    const lastId = (await beefyClient.nextID()).sub(new web3.utils.BN(1));
 
     await mine(45);
 
-    const completeValidatorProofs = await createFinalValidatorProofs(lastId, beefyLightClient, initialValidatorProofs);
+    const completeValidatorProofs = await createFinalValidatorProofs(lastId, beefyClient, initialValidatorProofs);
 
-    const completeSigTxPromise = beefyLightClient.completeSignatureCommitment(
+    const completeSigTxPromise = beefyClient.completeSignatureCommitment(
       fail ? 99 : lastId,
-      fixture.finalSignatureCommitment.commitment,
+      fixture.transactionParams.commitment,
       completeValidatorProofs,
-      fixture.finalSignatureCommitment.leaf,
-       {
-          items: fixture.finalSignatureCommitment.proof.items,
-          order: fixture.finalSignatureCommitment.proof.order
-       }
     )
     printTxPromiseGas(completeSigTxPromise)
     if (fail) {
       await completeSigTxPromise.should.be.rejected
     } else {
       await completeSigTxPromise.should.be.fulfilled
-      latestMMRRoot = await beefyLightClient.latestMMRRoot()
-      expect(latestMMRRoot).to.eq(fixture.finalSignatureCommitment.commitment.payload.mmrRootHash)
+      latestMMRRoot = await beefyClient.latestMMRRoot()
+      expect(latestMMRRoot).to.eq(fixture.transactionParams.commitment.payload.mmrRootHash)
     }
   }
 

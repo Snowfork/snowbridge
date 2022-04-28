@@ -5,23 +5,27 @@ const MerkleTree = require("merkletreejs").MerkleTree;
 const MerkleProof = artifacts.require("MerkleProof");
 const Bitfield = artifacts.require("Bitfield");
 const ScaleCodec = artifacts.require("ScaleCodec");
-const SimplifiedMMRVerification = artifacts.require("SimplifiedMMRVerification");
+const MMRProofVerification = artifacts.require("MMRProofVerification");
 const BeefyClient = artifacts.require("BeefyClient");
 
-const fixture = require('./fixtures/beefy-relay-basic.json');
+const leafFixture = require('./fixtures/beefy-relay-validators-basic.json');
 
 let lazyLinked = false;
 const lazyLinkLibraries = async _ => {
   if (lazyLinked) {
     return;
   }
+
+  const mmrProofVerification = await MMRProofVerification.new();
   const merkleProof = await MerkleProof.new();
   const bitfield = await Bitfield.new();
   const scaleCodec = await ScaleCodec.new();
 
-  await BeefyClient.link(merkleProof); // 860624903cbc2e721b1f7f70307ce6b5fe
-  await BeefyClient.link(bitfield); // ce679fb3689ba2b0521c393162ea0c3c96$
-  await BeefyClient.link(scaleCodec); // 7cdc5241ea8d29c91205423c213999ecf3
+  await BeefyClient.link(merkleProof);
+  await BeefyClient.link(bitfield);
+  await BeefyClient.link(scaleCodec);
+  await BeefyClient.link(mmrProofVerification);
+
   lazyLinked = true;
 }
 
@@ -60,24 +64,20 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployBeefyLightClient = async (validatorSetId, validatorSetRoot, validatorSetLength) => {
+const deployBeefyClient = async (validatorSetId, validatorSetRoot, validatorSetLength) => {
   if (!validatorSetId) {
-    validatorSetId = fixture.finalSignatureCommitment.leaf.nextAuthoritySetId
+    validatorSetId = leafFixture.updateLeaf.leaf.nextAuthoritySetId
   }
   if (!validatorSetRoot) {
-    validatorSetRoot = fixture.finalSignatureCommitment.leaf.nextAuthoritySetRoot
+    validatorSetRoot = leafFixture.updateLeaf.leaf.nextAuthoritySetRoot
   }
   if (!validatorSetLength) {
-    validatorSetLength = fixture.finalSignatureCommitment.leaf.nextAuthoritySetLen
+    validatorSetLength = leafFixture.updateLeaf.leaf.nextAuthoritySetLen
   }
-
-  const simplifiedMMRVerification = await SimplifiedMMRVerification.new();
 
   await lazyLinkLibraries()
 
-  const beefyLightClient = await BeefyClient.new(
-    simplifiedMMRVerification.address,
-  );
+  const beefyLightClient = await BeefyClient.new();
 
   await beefyLightClient.initialize(0,
     { id: validatorSetId, root: validatorSetRoot, length: validatorSetLength },
@@ -173,7 +173,7 @@ function printBitfield(bitfield) {
 
 module.exports = {
   deployAppWithMockChannels,
-  deployBeefyLightClient,
+  deployBeefyClient,
   createMerkleTree,
   signatureSubstrateToEthereum,
   mine,
