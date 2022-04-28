@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer"
@@ -56,6 +56,11 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	writer := NewParachainWriter(
 		r.paraconn,
 	)
+
+	err = writer.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
 
 	header := BeaconHeaderScale{
 		Slot:          types.NewU64(lightClientSnapshot.Header.Slot),

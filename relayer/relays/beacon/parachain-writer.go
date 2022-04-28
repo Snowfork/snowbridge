@@ -39,36 +39,58 @@ func NewParachainWriter(
 	}
 }
 
+func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error {
+	nonce, err := wr.queryAccountNonce()
+	if err != nil {
+		return err
+	}
+	wr.nonce = nonce
+
+	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return err
+	}
+	wr.genesisHash = genesisHash
+
+	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn)
+
+	return nil
+}
+
+func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "System", "Account", wr.conn.Keypair().PublicKey, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	var accountInfo types.AccountInfo
+	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &accountInfo)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		return 0, fmt.Errorf("no account info found for %s", wr.conn.Keypair().URI)
+	}
+
+	return uint32(accountInfo.Nonce), nil
+}
+
 func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainPayload, eg *errgroup.Group) error {
-	call, err := wr.makeInitialSyncCall(payload.InitialSync)
+	return wr.write(ctx)
+}
+
+// Write submits a transaction to the chain
+func (wr *ParachainWriter) write(ctx context.Context) error {
+	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
 		return err
 	}
 
-	wr.pool = parachain.NewExtrinsicPool(eg, wr.conn)
-
-	onFinalized := func(_ types.Hash) error {
-		// Confirm that the header import was successful
-		/*headerHash := payload.InitialSync.Header.BodyRoot
-		imported, err := wr.queryImportedHeaderExists(headerHash)
-		if err != nil {
-			return err
-		}
-		if !imported {
-			return fmt.Errorf("Header import failed for header %s", headerHash.Hex())
-		}*/
-		return nil
+	c, err := types.NewCall(meta, "EthereumBeaconLightClient.simple_test")
+	if err != nil {
+		return err
 	}
 
-	return wr.write(ctx, call, onFinalized)
-}
-
-// Write submits a transaction to the chain
-func (wr *ParachainWriter) write(
-	ctx context.Context,
-	c types.Call,
-	onFinalized parachain.OnFinalized,
-) error {
 	ext := types.NewExtrinsic(c)
 
 	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
@@ -76,23 +98,41 @@ func (wr *ParachainWriter) write(
 		return err
 	}
 
-	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
+	_, err = wr.conn.API().RPC.Chain.GetBlock(latestHash)
 	if err != nil {
 		return err
 	}
 
-	era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
+	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return err
+	}
 
 	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
 		return err
 	}
 
+	era := types.ExtrinsicEra{IsImmortalEra: false}
+
+	key, err := types.CreateStorageKey(meta, "System", "Account", wr.conn.Keypair().PublicKey)
+	if err != nil {
+		return err
+	}
+
+	var accountInfo types.AccountInfo
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &accountInfo)
+	if err != nil {
+		return err
+	}
+
+	nonce := uint32(accountInfo.Nonce)
+
 	o := types.SignatureOptions{
-		BlockHash:          latestHash,
+		BlockHash:          genesisHash,
 		Era:                era,
-		GenesisHash:        wr.genesisHash,
-		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
+		GenesisHash:        genesisHash,
+		Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
 		SpecVersion:        rv.SpecVersion,
 		Tip:                types.NewUCompactFromUInt(0),
 		TransactionVersion: rv.TransactionVersion,
@@ -105,9 +145,23 @@ func (wr *ParachainWriter) write(
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"nonce": wr.nonce,
+		"nonce": nonce,
 	}).Info("Submitting transaction")
-	err = wr.pool.WaitForSubmitAndWatch(ctx, &extI, onFinalized)
+
+	logrus.WithFields(logrus.Fields{
+		"signature_options": o,
+	}).Info("Signature options")
+
+	logrus.WithFields(logrus.Fields{
+		"signature_options": o.Nonce.Int64(),
+	}).Info("Nonce")
+
+	logrus.WithFields(logrus.Fields{
+		"signature_options": o.Tip.Int64(),
+	}).Info("Tip")
+
+	_, err = wr.conn.API().RPC.Author.SubmitExtrinsic(ext)
+	//err = wr.pool.WaitForSubmitAndWatch(ctx, &extI, onFinalized)
 	if err != nil {
 		logrus.WithError(err).WithField("nonce", wr.nonce).Debug("Failed to submit extrinsic")
 		return err
