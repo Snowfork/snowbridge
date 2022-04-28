@@ -121,7 +121,7 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			}
 			err := wr.WriteChannel(options, task)
 			if err != nil {
-				return fmt.Errorf("write message: %w")
+				return fmt.Errorf("write message: %w", err)
 			}
 		}
 	}
