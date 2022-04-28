@@ -5,7 +5,7 @@ require("chai")
     .use(require("chai-bignumber")(BigNumber))
     .should();
 
-const SimpleMMRVerification = artifacts.require("SimplifiedMMRVerification");
+const MMRProofVerification = artifacts.require("MMRProofVerification");
 const fixture7leaves = require('./fixtures/simplified-mmr-fixture-data-7-leaves.json');
 const fixture15leaves = require('./fixtures/simplified-mmr-fixture-data-15-leaves.json');
 
@@ -22,14 +22,14 @@ describe("Simple MMR Verification", function () {
            console.log('Leaf indexes | 0  1   2  3   4  5     6');
        })
 
-       let simplifiedMMRVerification;
+       let verifier;
        beforeEach(async function () {
-           simplifiedMMRVerification = await SimpleMMRVerification.new();
+           verifier = await MMRProofVerification.new();
        })
 
        fixture7leaves.proofs.forEach((proof, i) => {
            it(`should verify valid proof for leaf index ${i}`, async () => {
-               expect(await simplifiedMMRVerification.verifyLeafProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
+               expect(await verifier.verifyLeafProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
                    {
                        items: fixture7leaves.proofs[i].items,
                        order: fixture7leaves.proofs[i].order
@@ -41,7 +41,7 @@ describe("Simple MMR Verification", function () {
                if (j >= fixture7leaves.proofs.length) {
                    j = 0;
                }
-               expect(await simplifiedMMRVerification.verifyLeafProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
+               expect(await verifier.verifyLeafProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
                    {
                        items: fixture7leaves.proofs[j].items,
                        order: fixture7leaves.proofs[j].order
@@ -62,14 +62,14 @@ describe("Simple MMR Verification", function () {
             console.log('Leaf indexes | 0  1   2  3   4  5     6   7   8   9   10   11   12  13  14  ');
         })
 
-        let simplifiedMMRVerification;
+        let verifier;
         beforeEach(async function () {
-            simplifiedMMRVerification = await SimpleMMRVerification.new();
+            verifier = await MMRProofVerification.new();
         })
 
         fixture15leaves.proofs.forEach((proof, i) => {
             it(`should verify valid proof for leaf index ${i}`, async () => {
-                expect(await simplifiedMMRVerification.verifyLeafProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
+                expect(await verifier.verifyLeafProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
                     {
                         items: fixture15leaves.proofs[i].items,
                         order: fixture15leaves.proofs[i].order
@@ -81,7 +81,7 @@ describe("Simple MMR Verification", function () {
                 if (j >= fixture15leaves.proofs.length) {
                     j = 0;
                 }
-                expect(await simplifiedMMRVerification.verifyLeafProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
+                expect(await verifier.verifyLeafProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
                     {
                         items: fixture15leaves.proofs[j].items,
                         order: fixture15leaves.proofs[j].order
@@ -92,13 +92,13 @@ describe("Simple MMR Verification", function () {
 
     describe("fooble", function () {
 
-        let simplifiedMMRVerification;
+        let verifier;
         beforeEach(async function () {
-            simplifiedMMRVerification = await SimpleMMRVerification.new();
+            verifier = await MMRProofVerification.new();
         })
 
         it("foo", async () => {
-            expect(await simplifiedMMRVerification.verifyLeafProof.call(
+            expect(await verifier.verifyLeafProof.call(
                 "0x4172f9eee09024a2002617d2c49f02747f1936ca5d953a561a91ab3e61c72fae",
                 "0xf107355276f363ffb71384a57315ac8b62077ead1f807a2d68623b101a78978d",
                 {
