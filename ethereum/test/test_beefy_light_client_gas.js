@@ -16,7 +16,7 @@ require("chai")
 
 const { expect } = require("chai");
 
-describe("Beefy Client Gas Usage", function () {
+describe.skip("Beefy Client Gas Usage", function () {
 
   const testCases = [
     {

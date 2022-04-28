@@ -1,5 +1,5 @@
 const {
-  deployBeefyLightClient, printBitfield, printTxPromiseGas
+  deployBeefyClient, printBitfield, printTxPromiseGas
 } = require("./helpers");
 
 const { createRandomPositions } = require("./beefy-helpers");
@@ -13,7 +13,7 @@ const { expect } = require("chai");
 describe("Bitfield", function () {
 
   beforeEach(async function () {
-    this.beefyLightClient = await deployBeefyLightClient();
+    this.beefyLightClient = await deployBeefyClient();
   });
 
   it("creates initial bitfield correctly in simple case", async function () {
