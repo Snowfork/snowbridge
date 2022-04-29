@@ -8,14 +8,28 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer"
 	"golang.org/x/sync/errgroup"
 )
 
+type BeaconHeaderScale struct {
+	Slot          types.U64
+	ProposerIndex types.U64
+	ParentRoot    types.H256
+	StateRoot     types.H256
+	BodyRoot      types.H256
+}
+
+type CurrentSyncCommitteeScale struct {
+	Pubkeys         [][48]byte
+	AggregatePubkey [48]byte
+}
+
 type InitialSync struct {
-	Header                     interface{}
-	CurrentSyncCommittee       interface{}
-	CurrentSyncCommitteeBranch interface{}
-	ValidatorsRoot             interface{}
+	Header                     BeaconHeaderScale
+	CurrentSyncCommittee       CurrentSyncCommitteeScale
+	CurrentSyncCommitteeBranch []types.H256
+	ValidatorsRoot             types.H256
 }
 
 type ParachainPayload struct {
@@ -74,28 +88,53 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 	return uint32(accountInfo.Nonce), nil
 }
 
-func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainPayload, eg *errgroup.Group) error {
-	return wr.write(ctx)
+func (wr *ParachainWriter) WritePayload(ctx context.Context, initialSync syncer.LightClientSnapshot, eg *errgroup.Group) error {
+	return wr.write(ctx, initialSync)
 }
 
 // Write submits a transaction to the chain
-func (wr *ParachainWriter) write(ctx context.Context) error {
+func (wr *ParachainWriter) write(ctx context.Context, snapshot syncer.LightClientSnapshot) error {
 	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
 		return err
 	}
 
-	type SigningData struct {
-		ObjectRoot types.H256
-		Domain     types.H256
+	is := InitialSync{
+		Header: BeaconHeaderScale{
+			Slot:          types.NewU64(snapshot.Header.Slot),
+			ProposerIndex: types.NewU64(snapshot.Header.ProposerIndex),
+			ParentRoot:    types.NewH256(snapshot.Header.ParentRoot.Bytes()),
+			StateRoot:     types.NewH256(snapshot.Header.StateRoot.Bytes()),
+			BodyRoot:      types.NewH256(snapshot.Header.BodyRoot.Bytes()),
+		},
+		ValidatorsRoot: types.NewH256([]byte(snapshot.ValidatorsRoot)),
 	}
 
-	sd := SigningData{
-		ObjectRoot: types.NewH256([]byte("0x9eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4704f26a48")),
-		Domain:     types.NewH256([]byte("0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4704f26a40")),
+	var syncCommitteePubkeysScale = make([][48]byte, 512)
+
+	for _, pubkey := range snapshot.CurrentSyncCommittee.Pubkeys {
+		var pubkeyBytes [48]byte
+		copy(pubkeyBytes[:], pubkey)
+		syncCommitteePubkeysScale = append(syncCommitteePubkeysScale, pubkeyBytes)
 	}
 
-	c, err := types.NewCall(meta, "EthereumBeaconLightClient.simple_test_with_struct", sd)
+	var aggPubkey [48]byte
+	copy(aggPubkey[:], snapshot.CurrentSyncCommittee.AggregatePubkeys)
+
+	is.CurrentSyncCommittee = CurrentSyncCommitteeScale{
+		Pubkeys:         syncCommitteePubkeysScale,
+		AggregatePubkey: aggPubkey,
+	}
+
+	syncCommitteeBranch := []types.H256{}
+
+	for _, branch := range snapshot.CurrentSyncCommitteeBranch {
+		syncCommitteeBranch = append(syncCommitteeBranch, types.NewH256([]byte(branch)))
+	}
+
+	is.CurrentSyncCommitteeBranch = syncCommitteeBranch
+
+	c, err := types.NewCall(meta, "EthereumBeaconLightClient.initial_sync", is)
 	if err != nil {
 		return err
 	}

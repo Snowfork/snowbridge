@@ -83,8 +83,8 @@ pub struct SyncAggregate {
 pub struct LightClientInitialSync {
 	pub header: BeaconBlockHeader,
 	pub current_sync_committee: SyncCommittee,
-	pub current_sync_committee_branch: ProofBranch,
-	pub validators_root: Root,
+	//pub current_sync_committee_branch: ProofBranch,
+	//pub validators_root: Root,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -336,21 +336,21 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		fn process_initial_sync(initial_sync: LightClientInitialSync) -> DispatchResult {
-			Self::verify_sync_committee(
-				initial_sync.current_sync_committee.clone(),
-				initial_sync.current_sync_committee_branch,
-				initial_sync.header.state_root,
-				CURRENT_SYNC_COMMITTEE_DEPTH,
-				CURRENT_SYNC_COMMITTEE_INDEX,
-			)?;
-
-			let period = Self::compute_current_sync_period(initial_sync.header.slot);
-
-			Self::store_sync_committee(period, initial_sync.current_sync_committee);
-
-			Self::store_header(initial_sync.header);
-
-			Self::store_genesis(Genesis { validators_root: initial_sync.validators_root });
+			//Self::verify_sync_committee(
+			//	initial_sync.current_sync_committee.clone(),
+			//	initial_sync.current_sync_committee_branch,
+			//	initial_sync.header.state_root,
+			//	CURRENT_SYNC_COMMITTEE_DEPTH,
+			//	CURRENT_SYNC_COMMITTEE_INDEX,
+			//)?;
+//
+			//let period = Self::compute_current_sync_period(initial_sync.header.slot);
+//
+			//Self::store_sync_committee(period, initial_sync.current_sync_committee);
+//
+			//Self::store_header(initial_sync.header);
+//
+			//Self::store_genesis(Genesis { validators_root: initial_sync.validators_root });
 
 			Ok(())
 		}
