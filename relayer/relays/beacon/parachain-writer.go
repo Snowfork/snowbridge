@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -86,22 +85,33 @@ func (wr *ParachainWriter) write(ctx context.Context) error {
 		return err
 	}
 
-	c, err := types.NewCall(meta, "EthereumBeaconLightClient.simple_test")
+	type SigningData struct {
+		ObjectRoot types.H256
+		Domain     types.H256
+	}
+
+	sd := SigningData{
+		ObjectRoot: types.NewH256([]byte("0x9eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4704f26a48")),
+		Domain:     types.NewH256([]byte("0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4704f26a40")),
+	}
+
+	c, err := types.NewCall(meta, "EthereumBeaconLightClient.simple_test_with_struct", sd)
 	if err != nil {
 		return err
 	}
-
-	ext := types.NewExtrinsic(c)
 
 	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
 	if err != nil {
 		return err
 	}
 
-	_, err = wr.conn.API().RPC.Chain.GetBlock(latestHash)
+	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
 	if err != nil {
 		return err
 	}
+
+	ext := types.NewExtrinsic(c)
+	era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
 	if err != nil {
@@ -112,8 +122,6 @@ func (wr *ParachainWriter) write(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	era := types.ExtrinsicEra{IsImmortalEra: false}
 
 	key, err := types.CreateStorageKey(meta, "System", "Account", wr.conn.Keypair().PublicKey)
 	if err != nil {
@@ -129,7 +137,7 @@ func (wr *ParachainWriter) write(ctx context.Context) error {
 	nonce := uint32(accountInfo.Nonce)
 
 	o := types.SignatureOptions{
-		BlockHash:          genesisHash,
+		BlockHash:          latestHash,
 		Era:                era,
 		GenesisHash:        genesisHash,
 		Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
@@ -139,35 +147,16 @@ func (wr *ParachainWriter) write(ctx context.Context) error {
 	}
 
 	extI := ext
+
 	err = extI.Sign(*wr.conn.Keypair(), o)
 	if err != nil {
 		return err
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"nonce": nonce,
-	}).Info("Submitting transaction")
-
-	logrus.WithFields(logrus.Fields{
-		"signature_options": o,
-	}).Info("Signature options")
-
-	logrus.WithFields(logrus.Fields{
-		"signature_options": o.Nonce.Int64(),
-	}).Info("Nonce")
-
-	logrus.WithFields(logrus.Fields{
-		"signature_options": o.Tip.Int64(),
-	}).Info("Tip")
-
-	_, err = wr.conn.API().RPC.Author.SubmitExtrinsic(ext)
-	//err = wr.pool.WaitForSubmitAndWatch(ctx, &extI, onFinalized)
+	_, err = wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(extI)
 	if err != nil {
-		logrus.WithError(err).WithField("nonce", wr.nonce).Debug("Failed to submit extrinsic")
 		return err
 	}
-
-	wr.nonce = wr.nonce + 1
 
 	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/config"
 	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -196,11 +197,6 @@ func TestChain_SubmitExtrinsic_SimpleTest_With_Param(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-type SigningData struct {
-	ObjectRoot types.H256
-	Domain     types.H256
-}
-
 func TestChain_SubmitExtrinsic_SimpleTest_With_Struct(t *testing.T) {
 	from, ok := signature.LoadKeyringPairFromEnv()
 	if !ok {
@@ -212,6 +208,11 @@ func TestChain_SubmitExtrinsic_SimpleTest_With_Struct(t *testing.T) {
 
 	meta, err := api.RPC.State.GetMetadataLatest()
 	assert.NoError(t, err)
+
+	type SigningData struct {
+		ObjectRoot types.H256
+		Domain     types.H256
+	}	
 
 	sd := SigningData{
 		ObjectRoot: types.NewH256([]byte("0x9eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4704f26a48")),
@@ -284,22 +285,19 @@ func TestChain_SubmitExtrinsic_SimpleTest_With_Struct_With_ERA(t *testing.T) {
 	c, err := types.NewCall(meta, "EthereumBeaconLightClient.simple_test_with_struct", sd)
 	require.NoError(t, err)
 
+	latestHash, err := api.RPC.Chain.GetFinalizedHead()
+	assert.NoError(t, err)
+
+	latestBlock, err := api.RPC.Chain.GetBlock(latestHash)
+	assert.NoError(t, err)
+
 	ext := types.NewExtrinsic(c)
-	era := types.ExtrinsicEra{
-		IsMortalEra: true,
-		AsMortalEra: types.MortalEra{
-			First:  229,
-			Second: 2,
-		},
-	}
+	era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
 
 	genesisHash, err := api.RPC.Chain.GetBlockHash(0)
 	assert.NoError(t, err)
 
 	rv, err := api.RPC.State.GetRuntimeVersionLatest()
-	assert.NoError(t, err)
-
-	latestHash, err := api.RPC.Chain.GetFinalizedHead()
 	assert.NoError(t, err)
 
 	key, err := types.CreateStorageKey(meta, "System", "Account", from.PublicKey)
