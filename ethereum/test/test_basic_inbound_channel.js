@@ -9,10 +9,9 @@ const BasicInboundChannel = artifacts.require("BasicInboundChannel");
 const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ParachainClient = artifacts.require("ParachainClient");
-const { createValidatorFixture, runBeefyClientFlow } = require("./beefy-helpers");
 
 const {
-  deployBeefyClient
+  deployBeefyClient, createValidatorFixture, runBeefyClientFlow
 } = require("./helpers");
 
 const fixture = require('./fixtures/beefy-relay-basic.json')

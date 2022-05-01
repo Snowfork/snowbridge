@@ -20,9 +20,25 @@ async function configureBeefy() {
     beefyDeployment.abi);
   let beefyLightClient = await beefyLightClientContract.connect(signer)
 
-  let api = await ApiPromise.create({
+  let api1 = await ApiPromise.create({
     provider: new WsProvider(endpoint),
   })
+
+  console.log("waiting for header 29...")
+
+  await new Promise<void>(async (resolve) => {
+    const unsub = await api1.rpc.chain.subscribeFinalizedHeads((header) => {
+      console.log(`Header #${header.number}`);
+      if (header.number.toNumber() > 29) {
+        unsub();
+        resolve();
+      }
+    })
+  })
+
+  let blockHash = await api1.rpc.chain.getBlockHash(29)
+
+  let api = await api1.at(blockHash);
 
   let validatorSetId = await api.query.beefy.validatorSetId<ValidatorSetId>();
   let authorities: any = await api.query.beefy.authorities();
@@ -54,7 +70,9 @@ async function configureBeefy() {
   console.log("Configuring BeefyClient with initial BEEFY state");
   console.log("Validator sets: ", validatorSets)
 
-  await beefyLightClient.initialize(0, validatorSets.current, validatorSets.next);
+  let tx = await beefyLightClient.initialize(29, validatorSets.current, validatorSets.next);
+
+  await tx.wait()
 
   return;
 }

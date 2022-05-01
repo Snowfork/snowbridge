@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func subBeefyCmd() *cobra.Command {
@@ -28,74 +28,56 @@ func subBeefyCmd() *cobra.Command {
 		1000,
 		"Parachain ID",
 	)
-	cmd.MarkFlagRequired("para-id")
 
-	viper.BindPFlags(cmd.Flags())
 	return cmd
 }
 
 func SubBeefyFn(cmd *cobra.Command, _ []string) error {
-	paraID := viper.GetUint32("para-id")
-	subBeefyJustifications(cmd.Context(), paraID)
+	subBeefyJustifications(cmd.Context(), cmd)
 	return nil
 }
 
-func subBeefyJustifications(ctx context.Context, paraID uint32) error {
-	relaychainConn := relaychain.NewConnection(viper.GetString("url"))
-	err := relaychainConn.Connect(ctx)
+func subBeefyJustifications(ctx context.Context, cmd *cobra.Command) error {
+	url, _ := cmd.Flags().GetString("url")
+
+	conn := relaychain.NewConnection(url)
+	err := conn.Connect(ctx)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
-	ch := make(chan interface{})
-
-	log.Info("Subscribing to beefy justifications")
-	sub, err := relaychainConn.API().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
+	sub, err := conn.API().RPC.Beefy.SubscribeJustifications()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer sub.Unsubscribe()
 
 	for {
 		select {
-		case msg := <-ch:
+		case commitment := <-sub.Chan():
 
-			signedCommitment := &types.SignedCommitment{}
-			err := types.DecodeFromHexString(msg.(string), signedCommitment)
-			if err != nil {
-				log.WithError(err).Error("Failed to decode BEEFY commitment messages")
-			}
+			blockNumber := commitment.Commitment.BlockNumber
 
-			blockNumber := signedCommitment.Commitment.BlockNumber
-
-			log.WithField("commitmentBlockNumber", blockNumber).Info("Witnessed a new BEEFY commitment: \n")
-			if len(signedCommitment.Signatures) == 0 {
+			if len(commitment.Signatures) == 0 {
 				log.Info("BEEFY commitment has no signatures, skipping...")
 				continue
 			}
-			log.WithField("blockNumber", blockNumber+1).Info("Getting hash for next block")
-			nextBlockHash, err := relaychainConn.API().RPC.Chain.GetBlockHash(uint64(blockNumber + 1))
-			if err != nil {
-				log.WithError(err).Error("Failed to get block hash")
-			}
-			log.WithField("blockHash", nextBlockHash.Hex()).Info("Got blockhash")
-			GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash, relaychainConn)
-			heads, err := fetchParaHeads(relaychainConn, nextBlockHash)
 
-			var ourParahead types.Header
-			if err := types.DecodeFromBytes(heads[paraID], &ourParahead); err != nil {
-				log.WithError(err).Error("Failed to decode Header")
+			blockHash, err := conn.API().RPC.Chain.GetBlockHash(uint64(blockNumber))
+			if err != nil {
 				return err
 			}
 
-			log.WithFields(logrus.Fields{
-				"allParaheads": heads,
-				"ourParahead":  ourParahead,
-			}).Info("Got all para heads")
+			proof, err := conn.API().RPC.MMR.GenerateProof(uint64(blockNumber-1), blockHash)
+			if err != nil {
+				return err
+			}
 
-			// TODO6 - Update all above code to make sure to check all new parachain blocks that have been added to the MMR
-			// when there is a new beefy justification, not just the newest parachain block in the MMR
+			fmt.Printf("Commitment { BlockNumber: %v ValidatorSetID: %v}; Leaf { ParentNumber: %v, NextValidatorSetID: %v }\n",
+				blockNumber, commitment.Commitment.ValidatorSetID, proof.Leaf.ParentNumberAndHash.ParentNumber, proof.Leaf.BeefyNextAuthoritySet.ID,
+			)
+
 		}
 	}
 }
@@ -147,12 +129,12 @@ func fetchParaHeads(co *relaychain.Connection, blockHash types.Hash) (map[uint32
 	return heads, nil
 }
 
-func GetMMRLeafForBlock(blockNumber uint64, blockHash types.Hash, relaychainConn *relaychain.Connection) {
+func GetMMRLeafForBlock(blockNumber uint64, blockHash types.Hash, conn *relaychain.Connection) {
 	log.WithFields(logrus.Fields{
 		"blockNumber": blockNumber,
 		"blockHash":   blockHash.Hex(),
 	}).Info("Getting MMR Leaf for block...")
-	proofResponse, err := relaychainConn.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
+	proofResponse, err := conn.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate mmr proof")
 	}

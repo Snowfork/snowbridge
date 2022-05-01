@@ -73,18 +73,16 @@ func (co *Connection) GenerateProofForBlock(
 	latestBeefyBlockHash types.Hash,
 	beefyActivationBlock uint64,
 ) (types.GenerateMMRProofResponse, error) {
-	log.WithFields(log.Fields{
-		"blockNumber": blockNumber,
-		"blockHash":   latestBeefyBlockHash.Hex(),
-	}).Info("Getting MMR Leaf for block...")
+	// log.WithFields(log.Fields{
+	// 	"blockNumber": blockNumber,
+	// 	"blockHash":   latestBeefyBlockHash.Hex(),
+	// }).Info("Getting MMR Leaf for block...")
 
-	// We expect 1 mmr leaf for each block. MMR leaf indexes start from 0, but block numbers start from 1,
-	// so the mmr leaf index should be 1 less than the block number.
-	// However, some chains only started using beefy late in their existence, so there are no leafs for
-	// blocks produced before beefy was activated. We subtract the block in which beefy was activated on the
-	// chain to account for this.
+	// We expect 1 mmr leaf for each block. However, some chains only started using beefy late
+	// in their existence, so there are no leafs for blocks produced before beefy was activated.
+	// We subtract the block in which beefy was activated on the chain to account for this.
 	//
-	// LeafIndex(currentBlock, activationBlock) := currentBlock - Max(activationBlock, 1)
+	// LeafIndex(currentBlock, activationBlock) := currentBlock - activationBlock
 	//
 	// Example: LeafIndex(5, 3) = 2
 	//
@@ -98,7 +96,7 @@ func (co *Connection) GenerateProofForBlock(
 	//
 	var leafIndex uint64
 	if beefyActivationBlock == 0 {
-		leafIndex = blockNumber - 1
+		leafIndex = blockNumber
 	} else {
 		leafIndex = blockNumber - beefyActivationBlock
 	}
@@ -113,24 +111,24 @@ func (co *Connection) GenerateProofForBlock(
 		proofItemsHex = append(proofItemsHex, item.Hex())
 	}
 
-	log.WithFields(log.Fields{
-		"BlockHash": proofResponse.BlockHash.Hex(),
-		"Leaf": log.Fields{
-			"ParentNumber":   proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
-			"ParentHash":     proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
-			"ParachainHeads": proofResponse.Leaf.ParachainHeads.Hex(),
-			"NextAuthoritySet": log.Fields{
-				"Id":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
-				"Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
-				"Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
-			},
-		},
-		"Proof": log.Fields{
-			"LeafIndex": proofResponse.Proof.LeafIndex,
-			"LeafCount": proofResponse.Proof.LeafCount,
-			"Items":     proofItemsHex,
-		},
-	}).Info("Generated MMR proof")
+	// log.WithFields(log.Fields{
+	// 	"BlockHash": proofResponse.BlockHash.Hex(),
+	// 	"Leaf": log.Fields{
+	// 		"ParentNumber":   proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
+	// 		"ParentHash":     proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
+	// 		"ParachainHeads": proofResponse.Leaf.ParachainHeads.Hex(),
+	// 		"NextAuthoritySet": log.Fields{
+	// 			"Id":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
+	// 			"Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
+	// 			"Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
+	// 		},
+	// 	},
+	// 	"Proof": log.Fields{
+	// 		"LeafIndex": proofResponse.Proof.LeafIndex,
+	// 		"LeafCount": proofResponse.Proof.LeafCount,
+	// 		"Items":     proofItemsHex,
+	// 	},
+	// }).Info("Generated MMR proof")
 
 	return proofResponse, nil
 }

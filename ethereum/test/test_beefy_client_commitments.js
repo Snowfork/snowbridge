@@ -1,7 +1,6 @@
 const BigNumber = web3.BigNumber;
 const {
-  deployBeefyClient,
-  mine, catchRevert, printBitfield
+  deployBeefyClient, mine
 } = require("./helpers");
 
 const fixture = require('./fixtures/beefy-relay-basic.json')

@@ -21,7 +21,6 @@ type Relay struct {
 	ethereumWriter   *EthereumWriter
 	tasks            chan Task
 	ethHeaders       chan chain.Header
-	naka             *ValidatorSetWriter
 }
 
 func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
@@ -34,8 +33,6 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 	ethHeaders := make(chan chain.Header)
 
 	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn, tasks)
-
-	naka := NewValidatorSetWriter(config.Sink, config.Source, ethereumConn, relaychainConn)
 
 	polkadotListener := NewPolkadotListener(
 		config,
@@ -51,7 +48,6 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 		polkadotListener: polkadotListener,
 		tasks:            tasks,
 		ethHeaders:       ethHeaders,
-		naka:             naka,
 	}, nil
 }
 
@@ -67,11 +63,6 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 
 	latestBeefyBlock, err := relay.ethereumWriter.Start(ctx, eg)
-	if err != nil {
-		return err
-	}
-
-	err = relay.naka.Start(ctx, eg)
 	if err != nil {
 		return err
 	}

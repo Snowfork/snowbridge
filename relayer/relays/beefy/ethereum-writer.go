@@ -32,9 +32,7 @@ type EthereumWriter struct {
 	someTasks           chan Task
 	someFoo             chan Task
 
-	blockWaitPeriod    uint64
-	validatorSetID     uint64
-	nextValidatorSetID uint64
+	blockWaitPeriod uint64
 }
 
 func NewEthereumWriter(
@@ -63,12 +61,14 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) (uint64
 		Context: ctx,
 	}
 
-	latestBeefyBlock, err := wr.beefyClientContract.BeefyClientCaller.LatestBeefyBlock(&callOpts)
+	latestBeefyBlock, err := wr.beefyClientContract.LatestBeefyBlock(&callOpts)
 	if err != nil {
-		return latestBeefyBlock, err
+		return 0, err
 	}
 
-	blockWaitPeriod, err := wr.beefyClientContract.BeefyClientCaller.BLOCKWAITPERIOD(&callOpts)
+	log.WithField("latestBeefyBlock", latestBeefyBlock).Info("Retrieved latest beefy block")
+
+	blockWaitPeriod, err := wr.beefyClientContract.BLOCKWAITPERIOD(&callOpts)
 	if err != nil {
 		return 0, err
 	}
@@ -132,22 +132,19 @@ func (wr *EthereumWriter) filterTasks(ctx context.Context) error {
 				return nil
 			}
 
-			if wr.validatorSetID == 0 || task.SignedCommitment.Commitment.ValidatorSetID == wr.validatorSetID+1 {
-				wr.validatorSetID = task.SignedCommitment.Commitment.ValidatorSetID
+			if task.SignedCommitment.Commitment.ValidatorSetID+2 == uint64(task.Proof.Leaf.BeefyNextAuthoritySet.ID) {
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
 				case wr.someTasks <- task:
 				}
-			} else if task.SignedCommitment.Commitment.ValidatorSetID == wr.validatorSetID {
+			} else {
 				// drop task if it can't be processed immediately
 				select {
 				case wr.someTasks <- task:
 				default:
 					log.WithField("validatorSetId", task.SignedCommitment.Commitment.ValidatorSetID).Info("Discarded commitment")
 				}
-			} else {
-				return fmt.Errorf("Should not reach here")
 			}
 		}
 	}
@@ -205,29 +202,6 @@ func (wr *EthereumWriter) getContractCommitmentVerified(receipt *types.Receipt) 
 
 func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 
-	callOpts := bind.CallOpts{
-		Context: ctx,
-	}
-
-	for {
-		nextValidatorSet, err := wr.beefyClientContract.BeefyClientCaller.NextValidatorSet(&callOpts)
-		if err != nil {
-			return err
-		}
-
-		if task.SignedCommitment.Commitment.ValidatorSetID <= nextValidatorSet.Id.Uint64() {
-			break
-		}
-
-		log.WithField("ValidatorSetID", task.SignedCommitment.Commitment.ValidatorSetID).Info("Waiting for Next Session Update")
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(6 * time.Second):
-		}
-	}
-
 	tx, err := wr.WriteInitialSignatureCommitment(ctx, &task)
 	if err != nil {
 		log.WithError(err).Error("Failed to send initial signature commitment")
@@ -267,7 +241,7 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 		return err
 	}
 
-	success, err := wr.watchTransaction(ctx, tx)
+	success, err := wr.watchTransaction(ctx, tx, 3)
 	if err != nil {
 		return fmt.Errorf("monitoring failed for transaction CompleteSignatureCommitment (%v): %w", tx.Hash().Hex(), err)
 	}
@@ -281,8 +255,8 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 
 }
 
-func (wr *EthereumWriter) watchTransaction(ctx context.Context, tx *types.Transaction) (bool, error) {
-	receipt, err := wr.waitForTransaction(ctx, tx, 0)
+func (wr *EthereumWriter) watchTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (bool, error) {
+	receipt, err := wr.waitForTransaction(ctx, tx, confirmations)
 	if err != nil {
 		return false, err
 	}
@@ -350,7 +324,7 @@ func (wr *EthereumWriter) WriteInitialSignatureCommitment(ctx context.Context, t
 
 	options := wr.makeTxOpts(ctx)
 
-	tx, err := contract.NewSignatureCommitment(options, msg.CommitmentHash, msg.ValidatorSetID,
+	tx, err := contract.NewSignatureCommitment(options, msg.CommitmentHash,
 		msg.ValidatorClaimsBitfield, msg.ValidatorSignatureCommitment,
 		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
@@ -428,11 +402,15 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 		return nil, err
 	}
 
-	tx, err := contract.CompleteSignatureCommitment(options,
+	var tx *types.Transaction
+
+	tx, err = contract.CompleteCommitment(options,
 		msg.ID,
 		msg.Commitment,
-		validatorProof)
-
+		validatorProof,
+		msg.Leaf,
+		msg.LeafProof,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("submit final signature commitment: %w", err)
 	}

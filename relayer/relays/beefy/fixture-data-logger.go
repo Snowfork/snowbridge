@@ -42,7 +42,14 @@ func (wr *EthereumWriter) LogFinal(
 	}
 	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
 
-	state := log.Fields{
+	var state log.Fields
+
+	var proofItems []string
+	for _, item := range msg.LeafProof.Items {
+		proofItems = append(proofItems, Hex(item[:]))
+	}
+
+	state = log.Fields{
 		"transactionParams": log.Fields{
 			"id": msg.ID,
 			"commitment": log.Fields{
@@ -59,6 +66,19 @@ func (wr *EthereumWriter) LogFinal(
 				"positions":             msg.ValidatorPositions,
 				"publicKeys":            msg.ValidatorPublicKeys,
 				"publicKeyMerkleProofs": pubKeyMerkleProofs,
+			},
+			"leaf": log.Fields{
+				"version":              msg.Leaf.Version,
+				"parentNumber":         msg.Leaf.ParentNumber,
+				"parentHash":           Hex(msg.Leaf.ParentHash[:]),
+				"nextAuthoritySetID":   msg.Leaf.NextAuthoritySetID,
+				"nextAuthoritySetLen":  msg.Leaf.NextAuthoritySetLen,
+				"nextAuthoritySetRoot": Hex(msg.Leaf.NextAuthoritySetRoot[:]),
+				"parachainHeadsRoot":   Hex(msg.Leaf.ParachainHeadsRoot[:]),
+			},
+			"leafProof": log.Fields{
+				"Items": proofItems,
+				"Order": msg.LeafProof.Order,
 			},
 		},
 		"commitmentHash": commitmentHash,

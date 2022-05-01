@@ -5,8 +5,6 @@ const MerkleProof = artifacts.require("MerkleProof");
 const MMRProofVerification = artifacts.require("MMRProofVerification");
 const ExposedBeefyClient = artifacts.require("ExposedBeefyClient");
 
-
-
 require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
@@ -15,9 +13,6 @@ require("chai")
 const { expect } = require("chai");
 
 describe("BeefyClient", function () {
-
-  const iface = new ethers.utils.Interface(ExposedBeefyClient.abi);
-
   before(async function () {
     const bitfield = await Bitfield.new();
     const scaleCodec = await ScaleCodec.new();

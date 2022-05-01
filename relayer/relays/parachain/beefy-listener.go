@@ -459,16 +459,15 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 
 	// The mmr_generateProof(leafIndex, AtBlock) rpc will fail if
 	// the following is true. So we'll need to self-terminate and try again.
-	if input.PolkadotBlockNumber+1 >= latestBeefyBlockNumber {
+	if input.PolkadotBlockNumber >= latestBeefyBlockNumber {
 		return nil, fmt.Errorf("Not able to create a valid proof this round")
 	}
 
 	log.WithField("BeefyBlock", latestBeefyBlockNumber).Info("Beefy BlockNumber")
 
-	// Parachain merkle roots are created 1 block later than the actual parachain headers,
-	// so we increment input.PolkadotBlockNumber by 1
+	// Parachain merkle roots are created 1 block later than the actual parachain headers (maybe ??)
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
-		input.PolkadotBlockNumber+1,
+		input.PolkadotBlockNumber,
 		latestBeefyBlockHash,
 		li.config.BeefyActivationBlock,
 	)

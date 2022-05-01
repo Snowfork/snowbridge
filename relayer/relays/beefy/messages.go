@@ -29,6 +29,8 @@ type FinalSignatureCommitment struct {
 	ValidatorPositions             []*big.Int
 	ValidatorPublicKeys            []common.Address
 	ValidatorPublicKeyMerkleProofs [][][32]byte
+	Leaf                           beefyclient.BeefyClientMMRLeaf
+	LeafProof                      beefyclient.MMRProof
 }
 
 func (t *Task) MakeInitialSignatureCommitment(valAddrIndex int64, initialBitfield []*big.Int) (*InitialSignatureCommitment, error) {
@@ -135,6 +137,26 @@ func (t *Task) MakeFinalSignatureCommitment(bitfield string) (*FinalSignatureCom
 		ValidatorSetId: t.SignedCommitment.Commitment.ValidatorSetID,
 	}
 
+	inputLeaf := beefyclient.BeefyClientMMRLeaf{
+		Version:              uint8(t.Proof.Leaf.Version),
+		ParentNumber:         uint32(t.Proof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           t.Proof.Leaf.ParentNumberAndHash.Hash,
+		ParachainHeadsRoot:   t.Proof.Leaf.ParachainHeads,
+		NextAuthoritySetID:   uint64(t.Proof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(t.Proof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: t.Proof.Leaf.BeefyNextAuthoritySet.Root,
+	}
+
+	merkleProofItems := [][32]byte{}
+	for _, mmrProofItem := range t.Proof.MerkleProofItems {
+		merkleProofItems = append(merkleProofItems, mmrProofItem)
+	}
+
+	inputProof := beefyclient.MMRProof{
+		Items: merkleProofItems,
+		Order: t.Proof.MerkleProofOrder,
+	}
+
 	msg := FinalSignatureCommitment{
 		ID:                             validationDataID,
 		Commitment:                     commitment,
@@ -142,6 +164,8 @@ func (t *Task) MakeFinalSignatureCommitment(bitfield string) (*FinalSignatureCom
 		ValidatorPositions:             validatorPositions,
 		ValidatorPublicKeys:            validatorPublicKeys,
 		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
+		Leaf:                           inputLeaf,
+		LeafProof:                      inputProof,
 	}
 
 	return &msg, nil

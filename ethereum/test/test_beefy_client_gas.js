@@ -1,12 +1,9 @@
 const {
   deployBeefyClient,
-  mine, printTxPromiseGas
-} = require("./helpers");
-
-const {
+  mine, printTxPromiseGas,
   createValidatorFixture, createRandomPositions,
   createInitialValidatorProofs, createFinalValidatorProofs
-} = require("./beefy-helpers");
+} = require("./helpers");
 
 const fixture = require('./fixtures/beefy-relay-basic.json')
 
