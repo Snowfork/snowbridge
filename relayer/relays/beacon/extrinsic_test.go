@@ -368,7 +368,7 @@ func TestChain_SubmitExtrinsic_InitialSync(t *testing.T) {
 		},
 	}
 
-	var syncCommitteePubkeysScale = make([][48]byte, 512)
+	syncCommitteePubkeysScale := [][48]byte{}
 
 	for _, pubkey := range snapshot.CurrentSyncCommittee.Pubkeys {
 		var pubkeyBytes [48]byte

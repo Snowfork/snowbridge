@@ -24,7 +24,7 @@ use sp_std::prelude::*;
 type Root = H256;
 type Domain = H256;
 type ValidatorIndex = u64;
-type ProofBranch = Vec<Vec<u8>>;
+type ProofBranch = Vec<H256>;
 type ForkVersion = [u8; 4];
 
 const SLOTS_PER_EPOCH: u64 = 32;
@@ -49,6 +49,15 @@ const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
 const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [7, 0, 0, 0];
 
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct PublicKey([u8; 48]);
+
+impl Default for PublicKey {
+	fn default() -> Self {
+		PublicKey([0u8; 48])
+	}
+}
+
 /// Beacon block header as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct BeaconBlockHeader {
@@ -66,10 +75,9 @@ pub struct BeaconBlockHeader {
 
 /// Sync committee as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct SyncCommittee {
-	pub pubkeys: Vec<Vec<u8>>,
-	pub aggregate_pubkey: Vec<u8>,
+	pub pubkeys: Vec<PublicKey>,
+	pub aggregate_pubkey: PublicKey,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -83,8 +91,8 @@ pub struct SyncAggregate {
 pub struct LightClientInitialSync {
 	pub header: BeaconBlockHeader,
 	pub current_sync_committee: SyncCommittee,
-	//pub current_sync_committee_branch: ProofBranch,
-	//pub validators_root: Root,
+	pub current_sync_committee_branch: ProofBranch,
+	pub validators_root: Root,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -135,7 +143,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
-	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, PublicKey, Signature};
+	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
@@ -336,21 +344,21 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		fn process_initial_sync(initial_sync: LightClientInitialSync) -> DispatchResult {
-			//Self::verify_sync_committee(
-			//	initial_sync.current_sync_committee.clone(),
-			//	initial_sync.current_sync_committee_branch,
-			//	initial_sync.header.state_root,
-			//	CURRENT_SYNC_COMMITTEE_DEPTH,
-			//	CURRENT_SYNC_COMMITTEE_INDEX,
-			//)?;
-//
-			//let period = Self::compute_current_sync_period(initial_sync.header.slot);
-//
-			//Self::store_sync_committee(period, initial_sync.current_sync_committee);
-//
-			//Self::store_header(initial_sync.header);
-//
-			//Self::store_genesis(Genesis { validators_root: initial_sync.validators_root });
+			Self::verify_sync_committee(
+				initial_sync.current_sync_committee.clone(),
+				initial_sync.current_sync_committee_branch,
+				initial_sync.header.state_root,
+				CURRENT_SYNC_COMMITTEE_DEPTH,
+				CURRENT_SYNC_COMMITTEE_INDEX,
+			)?;
+
+			let period = Self::compute_current_sync_period(initial_sync.header.slot);
+
+			Self::store_sync_committee(period, initial_sync.current_sync_committee);
+
+			Self::store_header(initial_sync.header);
+
+			Self::store_genesis(Genesis { validators_root: initial_sync.validators_root });
 
 			Ok(())
 		}
@@ -410,7 +418,7 @@ pub mod pallet {
 
 			let sync_committee = <SyncCommittees<T>>::get(current_period);
 
-			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: vec![] }) == sync_committee {
+			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: PublicKey([0; 48]) }) == sync_committee {
 				return Err(Error::<T>::SyncCommitteeMissing.into());
 			}
 
@@ -433,7 +441,7 @@ pub mod pallet {
 		pub(super) fn verify_signed_header(
 			sync_committee_bits_hex: Vec<u8>,
 			sync_committee_signature: Vec<u8>,
-			sync_committee_pubkeys: Vec<Vec<u8>>,
+			sync_committee_pubkeys: Vec<PublicKey>,
 			fork_version: ForkVersion,
 			header: BeaconBlockHeader,
 			validators_root: H256,
@@ -446,13 +454,13 @@ pub mod pallet {
 				Error::<T>::InsufficientSyncCommitteeParticipants
 			);
 
-			let mut participant_pubkeys: Vec<Vec<u8>> = Vec::new();
+			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
 
 			// Gathers all the pubkeys of the sync committee members that participated in siging the header.
 			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
 				if *bit == 1 as u8 {
 					let pubk = pubkey.clone();
-					participant_pubkeys.push(pubk.to_vec());
+					participant_pubkeys.push(pubk);
 				}
 			}
 
@@ -479,7 +487,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn bls_fast_aggregate_verify(
-			pubkeys: Vec<Vec<u8>>,
+			pubkeys: Vec<PublicKey>,
 			message: H256,
 			signature: Vec<u8>,
 		) -> DispatchResult {
@@ -491,8 +499,8 @@ pub mod pallet {
 
 			let agg_sig = AggregateSignature::from_signature(&sig.unwrap());
 
-			let public_keys_res: Result<Vec<PublicKey>, _> =
-				pubkeys.iter().map(|bytes| PublicKey::from_bytes(&bytes)).collect();
+			let public_keys_res: Result<Vec<milagro_bls::PublicKey>, _> =
+				pubkeys.iter().map(|bytes| milagro_bls::PublicKey::from_bytes(&bytes.0)).collect();
 
 			if let Err(e) = public_keys_res {
 				match e {
@@ -545,16 +553,10 @@ pub mod pallet {
 				merklization::hash_tree_root_sync_committee(sync_committee)
 					.map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
 
-			let mut branch = Vec::<H256>::new();
-
-			for vec_branch in sync_committee_branch.iter() {
-				branch.push(H256::from_slice(vec_branch.as_slice()));
-			}
-
 			ensure!(
 				Self::is_valid_merkle_branch(
 					sync_committee_root.into(),
-					branch,
+					sync_committee_branch,
 					depth,
 					index,
 					header_state_root
@@ -575,16 +577,10 @@ pub mod pallet {
 			let leaf = merklization::hash_tree_root_beacon_header(header)
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?;
 
-			let mut branch = Vec::<H256>::new();
-
-			for vec_branch in proof_branch.iter() {
-				branch.push(H256::from_slice(vec_branch.as_slice()));
-			}
-
 			ensure!(
 				Self::is_valid_merkle_branch(
 					leaf.into(),
-					branch,
+					proof_branch,
 					depth,
 					index,
 					attested_header_state_root

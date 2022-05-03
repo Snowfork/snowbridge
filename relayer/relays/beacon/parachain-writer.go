@@ -110,7 +110,7 @@ func (wr *ParachainWriter) write(ctx context.Context, snapshot syncer.LightClien
 		ValidatorsRoot: types.NewH256([]byte(snapshot.ValidatorsRoot)),
 	}
 
-	var syncCommitteePubkeysScale = make([][48]byte, 512)
+	var syncCommitteePubkeysScale [][48]byte
 
 	for _, pubkey := range snapshot.CurrentSyncCommittee.Pubkeys {
 		var pubkeyBytes [48]byte

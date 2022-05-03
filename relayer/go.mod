@@ -6,6 +6,7 @@ require (
 	github.com/ChainSafe/go-schnorrkel v0.0.0-20210527232834-58622d036665 // indirect
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/centrifuge/go-substrate-rpc-client v2.0.0+incompatible // indirect
+	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.0
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/go-delve/delve v1.8.2 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
