@@ -324,7 +324,7 @@ func (wr *EthereumWriter) WriteInitialSignatureCommitment(ctx context.Context, t
 
 	options := wr.makeTxOpts(ctx)
 
-	tx, err := contract.NewSignatureCommitment(options, msg.CommitmentHash,
+	tx, err := contract.NewSignatureCommitment(options, msg.CommitmentHash, msg.ValidatorSetID,
 		msg.ValidatorClaimsBitfield, msg.ValidatorSignatureCommitment,
 		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {

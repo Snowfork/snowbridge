@@ -54,7 +54,7 @@ func (wr *EthereumWriter) LogFinal(
 			"id": msg.ID,
 			"commitment": log.Fields{
 				"blockNumber":    msg.Commitment.BlockNumber,
-				"validatorSetId": msg.Commitment.ValidatorSetId,
+				"validatorSetId": msg.Commitment.ValidatorSetID,
 				"payload": log.Fields{
 					"mmrRootHash": Hex(msg.Commitment.Payload.MmrRootHash[:]),
 					"prefix":      Hex(msg.Commitment.Payload.Prefix),

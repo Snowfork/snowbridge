@@ -134,7 +134,7 @@ func (t *Task) MakeFinalSignatureCommitment(bitfield string) (*FinalSignatureCom
 	commitment := beefyclient.BeefyClientCommitment{
 		Payload:        *payload,
 		BlockNumber:    t.SignedCommitment.Commitment.BlockNumber,
-		ValidatorSetId: t.SignedCommitment.Commitment.ValidatorSetID,
+		ValidatorSetID: t.SignedCommitment.Commitment.ValidatorSetID,
 	}
 
 	inputLeaf := beefyclient.BeefyClientMMRLeaf{
