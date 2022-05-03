@@ -1,12 +1,14 @@
 package syncer
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/types"
 )
 
 const (
@@ -41,81 +43,127 @@ type CurrentSyncCommittee struct {
 }
 
 type SyncAggregate struct {
-	SyncCommitteeBits      string
-	SyncCommitteeSignature string
+	SyncCommitteeBits      []byte
+	SyncCommitteeSignature []byte
 }
 
 type Genesis struct {
-	ValidatorsRoot string
+	ValidatorsRoot common.Hash
 	Time           string
-	ForkVersion    string
+	ForkVersion    []byte
 }
 
 type LightClientSnapshot struct {
 	Header                     Header
 	CurrentSyncCommittee       CurrentSyncCommittee
-	CurrentSyncCommitteeBranch []string
-	ValidatorsRoot             string
+	CurrentSyncCommitteeBranch []common.Hash
+	ValidatorsRoot             common.Hash
 }
 
 type FinalizedBlockUpdate struct {
 	FinalizedHeader Header
-	FinalityBranch  []string
+	FinalityBranch  []common.Hash
 	SyncAggregate   SyncAggregate
 }
 
-func (s *Syncer) InitialSync(blockId string) (LightClientSnapshot, error) {
+type BeaconHeaderScale struct {
+	Slot          types.U64
+	ProposerIndex types.U64
+	ParentRoot    types.H256
+	StateRoot     types.H256
+	BodyRoot      types.H256
+}
+
+type CurrentSyncCommitteeScale struct {
+	Pubkeys         [][48]byte
+	AggregatePubkey [48]byte
+}
+
+type InitialSync struct {
+	Header                     BeaconHeaderScale
+	CurrentSyncCommittee       CurrentSyncCommitteeScale
+	CurrentSyncCommitteeBranch []types.H256
+	ValidatorsRoot             types.H256
+}
+
+func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
 	genesis, err := s.Client.GetGenesis()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch snapshot")
 
-		return LightClientSnapshot{}, err
+		return InitialSync{}, err
 	}
 
 	snapshot, err := s.Client.GetTrustedLightClientSnapshot()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch snapshot")
 
-		return LightClientSnapshot{}, err
+		return InitialSync{}, err
 	}
 
 	slot, err := strconv.ParseUint(snapshot.Data.Header.Slot, 10, 64)
 	if err != nil {
 		logrus.WithError(err).Error("unable parse slot as int")
 
-		return LightClientSnapshot{}, err
+		return InitialSync{}, err
 	}
 
 	proposerIndex, err := strconv.ParseUint(snapshot.Data.Header.ProposerIndex, 10, 64)
 	if err != nil {
 		logrus.WithError(err).Error("unable parse slot as int")
 
-		return LightClientSnapshot{}, err
+		return InitialSync{}, err
 	}
 
-	lightClientSnapshot := LightClientSnapshot{
-		Header: Header{
-			Slot:          slot,
-			ProposerIndex: proposerIndex,
-			ParentRoot:    common.HexToHash(snapshot.Data.Header.ParentRoot),
-			StateRoot:     common.HexToHash(snapshot.Data.Header.StateRoot),
-			BodyRoot:      common.HexToHash(snapshot.Data.Header.BodyRoot),
+	initialSync := InitialSync{
+		Header: BeaconHeaderScale{
+			Slot:          types.NewU64(slot),
+			ProposerIndex: types.NewU64(proposerIndex),
+			ParentRoot:    types.NewH256(common.HexToHash(snapshot.Data.Header.ParentRoot).Bytes()),
+			StateRoot:     types.NewH256(common.HexToHash(snapshot.Data.Header.StateRoot).Bytes()),
+			BodyRoot:      types.NewH256(common.HexToHash(snapshot.Data.Header.BodyRoot).Bytes()),
 		},
-		CurrentSyncCommittee: CurrentSyncCommittee{
-			Pubkeys:          snapshot.Data.CurrentSyncCommittee.Pubkeys,
-			AggregatePubkeys: snapshot.Data.CurrentSyncCommittee.AggregatePubkey,
-		},
-		CurrentSyncCommitteeBranch: snapshot.Data.CurrentSyncCommitteeBranch,
-		ValidatorsRoot:             genesis.Data.ValidatorsRoot,
+		ValidatorsRoot: types.NewH256(common.HexToHash(genesis.Data.ValidatorsRoot).Bytes()),
 	}
+
+	var syncCommitteePubkeys [][48]byte
+
+	for _, pubkey := range snapshot.Data.CurrentSyncCommittee.Pubkeys {
+		publicKey, err := hexStringToPublicKey(pubkey)
+		if err != nil {
+			logrus.WithError(err).Error("unable convert sync committee pubkey to byte array")
+
+			return InitialSync{}, err
+		}
+
+		syncCommitteePubkeys = append(syncCommitteePubkeys, publicKey)
+	}
+
+	syncCommitteeAggPubkey, err := hexStringToPublicKey(snapshot.Data.CurrentSyncCommittee.AggregatePubkey)
+	if err != nil {
+		logrus.WithError(err).Error("unable convert sync committee pubkey to byte array")
+
+		return InitialSync{}, err
+	}
+
+	initialSync.CurrentSyncCommittee = CurrentSyncCommitteeScale{
+		Pubkeys:         syncCommitteePubkeys,
+		AggregatePubkey: syncCommitteeAggPubkey,
+	}
+
+	syncCommitteeBranch := []types.H256{}
+
+	for _, proof := range snapshot.Data.CurrentSyncCommitteeBranch {
+		syncCommitteeBranch = append(syncCommitteeBranch, types.NewH256(proof.Bytes()))
+	}
+
+	initialSync.CurrentSyncCommitteeBranch = syncCommitteeBranch
 
 	logrus.WithFields(logrus.Fields{
-		"lightClientSnapshot": lightClientSnapshot,
-	}).Info("compiled light client snapshot, sending for intial sync")
+		"blockId": blockId,
+	}).Info("received initial sync for trusted block, sending for intial sync")
 
-	// TODO make intial_sync dispatchable call
-
-	return lightClientSnapshot, nil
+	return initialSync, nil
 }
 
 func (s *Syncer) SyncCommitteePeriodUpdates(checkpointSlot uint64) error {
@@ -274,4 +322,16 @@ func hexToBinaryString(rawHex string) string {
 	}
 
 	return binaryStr
+}
+
+func hexStringToPublicKey(hexString string) ([48]byte, error) {
+	var pubkeyBytes [48]byte
+	key, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
+	if err != nil {
+		return [48]byte{}, err
+	}
+
+	copy(pubkeyBytes[:], key)
+
+	return pubkeyBytes, nil
 }

@@ -32,7 +32,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 
 	// Get an initial snapshot of the chain from a verified block
-	lightClientSnapshot, err := r.syncer.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
+	initialSync, err := r.syncer.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
 	if err != nil {
 		logrus.WithError(err).Error("unable to do intial beacon chain sync")
 
@@ -53,7 +53,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	err = writer.WritePayload(ctx, lightClientSnapshot, eg)
+	err = writer.WritePayload(ctx, initialSync, eg)
 	if err != nil {
 		logrus.WithError(err).Error("unable to write to parachain")
 
@@ -62,7 +62,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	logrus.Info("wrote payload to parachain")
 
-	err = r.syncer.SyncCommitteePeriodUpdates(lightClientSnapshot.Header.Slot)
+	err = r.syncer.SyncCommitteePeriodUpdates(uint64(initialSync.Header.Slot))
 	if err != nil {
 		logrus.WithError(err).Error("unable to sync committee updates")
 

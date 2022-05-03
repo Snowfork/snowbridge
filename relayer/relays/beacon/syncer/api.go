@@ -476,7 +476,7 @@ func (b *BeaconClient) GetCheckpoint(state string) (FinalizedCheckpointResponse,
 type LightClientSnapshotData struct {
 	Header                     HeaderResponse        `json:"header"`
 	CurrentSyncCommittee       SyncCommitteeResponse `json:"current_sync_committee"`
-	CurrentSyncCommitteeBranch []string              `json:"current_sync_committee_branch"`
+	CurrentSyncCommitteeBranch []common.Hash         `json:"current_sync_committee_branch"`
 }
 
 type LightClientSnapshotResponse struct {
@@ -1165,12 +1165,12 @@ func (b *BeaconClient) GetTrustedLightClientSnapshot() (LightClientSnapshotRespo
 				},
 				AggregatePubkey: "0xae2d00fd0b192ec2e792080a01b6a101b5d293d02e7643c22ca7353837c6c704a145f05e95577817151d9bb4b1b55ae7",
 			},
-			CurrentSyncCommitteeBranch: []string{
-				"0x0b68206adf70650dba3c1d71e5e81fd473f72b601b3f2fdc83d086e7d504eed2",
-				"0x5ee1b6bcdfe5680ed9d593cfb637d43177d9424de2ce9208313d4571630c7ac8",
-				"0xefa3d52536d23cff74451ffbd3735e00351ad3800392f513b89783d7b671a6de",
-				"0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c",
-				"0x2c287827800c33e2f309a5b10237eaf839b42a1d982338b933e44e3d593752a8",
+			CurrentSyncCommitteeBranch: []common.Hash{
+				common.HexToHash("0x0b68206adf70650dba3c1d71e5e81fd473f72b601b3f2fdc83d086e7d504eed2"),
+				common.HexToHash("0x5ee1b6bcdfe5680ed9d593cfb637d43177d9424de2ce9208313d4571630c7ac8"),
+				common.HexToHash("0xefa3d52536d23cff74451ffbd3735e00351ad3800392f513b89783d7b671a6de"),
+				common.HexToHash("0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c"),
+				common.HexToHash("0x2c287827800c33e2f309a5b10237eaf839b42a1d982338b933e44e3d593752a8"),
 			},
 		},
 	}, nil

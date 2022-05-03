@@ -12,28 +12,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type BeaconHeaderScale struct {
-	Slot          types.U64
-	ProposerIndex types.U64
-	ParentRoot    types.H256
-	StateRoot     types.H256
-	BodyRoot      types.H256
-}
-
-type CurrentSyncCommitteeScale struct {
-	Pubkeys         [][48]byte
-	AggregatePubkey [48]byte
-}
-
-type InitialSync struct {
-	Header                     BeaconHeaderScale
-	CurrentSyncCommittee       CurrentSyncCommitteeScale
-	CurrentSyncCommitteeBranch []types.H256
-	ValidatorsRoot             types.H256
-}
-
 type ParachainPayload struct {
-	InitialSync *InitialSync
+	InitialSync *syncer.InitialSync
 	Messages    []*chain.EthereumOutboundMessage
 }
 
@@ -88,53 +68,18 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 	return uint32(accountInfo.Nonce), nil
 }
 
-func (wr *ParachainWriter) WritePayload(ctx context.Context, initialSync syncer.LightClientSnapshot, eg *errgroup.Group) error {
+func (wr *ParachainWriter) WritePayload(ctx context.Context, initialSync syncer.InitialSync, eg *errgroup.Group) error {
 	return wr.write(ctx, initialSync)
 }
 
 // Write submits a transaction to the chain
-func (wr *ParachainWriter) write(ctx context.Context, snapshot syncer.LightClientSnapshot) error {
+func (wr *ParachainWriter) write(ctx context.Context, initialSync syncer.InitialSync) error {
 	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
 		return err
 	}
 
-	is := InitialSync{
-		Header: BeaconHeaderScale{
-			Slot:          types.NewU64(snapshot.Header.Slot),
-			ProposerIndex: types.NewU64(snapshot.Header.ProposerIndex),
-			ParentRoot:    types.NewH256(snapshot.Header.ParentRoot.Bytes()),
-			StateRoot:     types.NewH256(snapshot.Header.StateRoot.Bytes()),
-			BodyRoot:      types.NewH256(snapshot.Header.BodyRoot.Bytes()),
-		},
-		ValidatorsRoot: types.NewH256([]byte(snapshot.ValidatorsRoot)),
-	}
-
-	var syncCommitteePubkeysScale [][48]byte
-
-	for _, pubkey := range snapshot.CurrentSyncCommittee.Pubkeys {
-		var pubkeyBytes [48]byte
-		copy(pubkeyBytes[:], pubkey)
-		syncCommitteePubkeysScale = append(syncCommitteePubkeysScale, pubkeyBytes)
-	}
-
-	var aggPubkey [48]byte
-	copy(aggPubkey[:], snapshot.CurrentSyncCommittee.AggregatePubkeys)
-
-	is.CurrentSyncCommittee = CurrentSyncCommitteeScale{
-		Pubkeys:         syncCommitteePubkeysScale,
-		AggregatePubkey: aggPubkey,
-	}
-
-	syncCommitteeBranch := []types.H256{}
-
-	for _, branch := range snapshot.CurrentSyncCommitteeBranch {
-		syncCommitteeBranch = append(syncCommitteeBranch, types.NewH256([]byte(branch)))
-	}
-
-	is.CurrentSyncCommitteeBranch = syncCommitteeBranch
-
-	c, err := types.NewCall(meta, "EthereumBeaconLightClient.initial_sync", is)
+	c, err := types.NewCall(meta, "EthereumBeaconLightClient.initial_sync", initialSync)
 	if err != nil {
 		return err
 	}
@@ -200,8 +145,8 @@ func (wr *ParachainWriter) write(ctx context.Context, snapshot syncer.LightClien
 	return nil
 }
 
-func (wr *ParachainWriter) makeInitialSyncCall(initialSync *InitialSync) (types.Call, error) {
-	if initialSync == (*InitialSync)(nil) {
+func (wr *ParachainWriter) makeInitialSyncCall(initialSync *syncer.InitialSync) (types.Call, error) {
+	if initialSync == (*syncer.InitialSync)(nil) {
 		return types.Call{}, fmt.Errorf("Initial sync is nil")
 	}
 

@@ -214,70 +214,6 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(1_000_000)]
 		#[transactional]
-		pub fn simple_test(
-			origin: OriginFor<T>
-		) -> DispatchResult {
-			log::trace!(
-				target: "ethereum-beacon-light-client",
-				"reaches simple_test",
-			);
-
-			let sender = ensure_signed(origin)?;
-
-			log::trace!(
-				target: "ethereum-beacon-light-client",
-				"simple_test is signed",
-			);
-
-			Ok(())
-		}
-
-		#[pallet::weight(1_000_000)]
-		#[transactional]
-		pub fn simple_test_with_param(
-			origin: OriginFor<T>,
-			my_param: H256
-		) -> DispatchResult {
-			log::trace!(
-				target: "ethereum-beacon-light-client",
-				"reaches simple_test_with_param",
-			);
-
-			let sender = ensure_signed(origin)?;
-
-			log::trace!(
-				target: "ethereum-beacon-light-client",
-				"simple_test_with_param is signed: {}",
-				my_param
-			);
-
-			Ok(())
-		}
-
-		#[pallet::weight(1_000_000)]
-		#[transactional]
-		pub fn simple_test_with_struct(
-			origin: OriginFor<T>,
-			signing_data: SigningData
-		) -> DispatchResult {
-			log::trace!(
-				target: "ethereum-beacon-light-client",
-				"reaches simple_test_with_struct",
-			);
-
-			let sender = ensure_signed(origin)?;
-
-			log::trace!(
-				target: "ethereum-beacon-light-client",
-				"simple_test_with_struct is signed: {:?}",
-				signing_data
-			);
-
-			Ok(())
-		}
-
-		#[pallet::weight(1_000_000)]
-		#[transactional]
 		pub fn initial_sync(
 			origin: OriginFor<T>,
 			initial_sync: LightClientInitialSync,
@@ -286,7 +222,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-light-client",
-				"Received update {:?}. Starting initial_sync",
+				"💫  Received update {:?}. Starting initial_sync",
 				initial_sync
 			);
 
@@ -301,7 +237,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-light-client",
-				"Initial sync succeeded.",
+				"💫  Initial sync succeeded.",
 			);
 
 			Ok(())
@@ -317,7 +253,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-light-client",
-				"Received update {:?}. Applying sync committee period update",
+				"💫  Received update {:?}. Applying sync committee period update",
 				sync_committee_period_update
 			);
 
@@ -334,7 +270,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-light-client",
-				"Received update {:?}. Importing finalized header",
+				"💫  Received update {:?}. Importing finalized header",
 				finalized_header_update
 			);
 
