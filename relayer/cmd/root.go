@@ -24,6 +24,8 @@ func init() {
 	rootCmd.AddCommand(getBlockCmd())
 	rootCmd.AddCommand(fetchMessagesCmd())
 	rootCmd.AddCommand(subBeefyCmd())
+	rootCmd.AddCommand(leafCmd())
+
 }
 
 func Execute() {

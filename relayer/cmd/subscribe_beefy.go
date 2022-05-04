@@ -3,11 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/spf13/cobra"
 )
 
@@ -33,8 +34,7 @@ func subBeefyCmd() *cobra.Command {
 }
 
 func SubBeefyFn(cmd *cobra.Command, _ []string) error {
-	//subBeefyJustifications(cmd.Context(), cmd)
-	scanHistoricalBeefyJustifications(cmd.Context(), cmd)
+	subBeefyJustifications(cmd.Context(), cmd)
 	return nil
 }
 
@@ -78,79 +78,69 @@ func subBeefyJustifications(ctx context.Context, cmd *cobra.Command) error {
 				return err
 			}
 
-			fmt.Printf("Commitment { BlockNumber: %v, ValidatorSetID: %v}; Leaf { ParentNumber: %v, NextValidatorSetID: %v }\n",
-				blockNumber, commitment.Commitment.ValidatorSetID, proof.Leaf.ParentNumberAndHash.ParentNumber, proof.Leaf.BeefyNextAuthoritySet.ID,
+			simpleProof, err := merkle.ConvertToSimplifiedMMRProof(
+				proof.BlockHash,
+				uint64(proof.Proof.LeafIndex),
+				proof.Leaf,
+				uint64(proof.Proof.LeafCount),
+				proof.Proof.Items,
 			)
-		}
-	}
-}
 
-func scanHistoricalBeefyJustifications(ctx context.Context, cmd *cobra.Command) error {
-	url, _ := cmd.Flags().GetString("url")
-
-	conn := relaychain.NewConnection(url)
-	err := conn.Connect(ctx)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	current := uint64(0)
-	for {
-		finalizedHash, err := conn.API().RPC.Beefy.GetFinalizedHead()
-		if err != nil {
-			return fmt.Errorf("fetch finalized head: %w", err)
-		}
-
-		finalizedHeader, err := conn.API().RPC.Chain.GetHeader(finalizedHash)
-		if err != nil {
-			return fmt.Errorf("fetch header for finalised head %v: %w", finalizedHash.Hex(), err)
-		}
-
-		finalizedBlockNumber := uint64(finalizedHeader.Number)
-		if current > finalizedBlockNumber {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(2 * time.Second):
-			}
-			continue
-		}
-
-		blockHash, err := conn.API().RPC.Chain.GetBlockHash(current)
-		if err != nil {
-			return fmt.Errorf("fetch block hash: %w", err)
-		}
-
-		block, err := conn.API().RPC.Chain.GetBlock(blockHash)
-		if err != nil {
-			return fmt.Errorf("fetch block: %w", err)
-		}
-
-		commitments := []types.SignedCommitment{}
-		for j := range block.Justifications {
-			sc := types.OptionalSignedCommitment{}
-			if block.Justifications[j].EngineID() == "BEEF" {
-				err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
-				if err != nil {
-					return fmt.Errorf("decode BEEFY signed commitment: %w", err)
-				}
-				ok, value := sc.Unwrap()
-				if ok {
-					commitments = append(commitments, value)
-				}
-			}
-		}
-
-		for _, c := range commitments {
-			printCommitment(&c, conn)
-
+			leafEncoded, err := types.EncodeToBytes(simpleProof.Leaf)
 			if err != nil {
 				return err
 			}
-		}
+			leafHashBytes := (&keccak.Keccak256{}).Hash(leafEncoded)
 
-		current++
+			var leafHash types.H256
+			copy(leafHash[:], leafHashBytes[0:32])
+
+			root := merkle.CalculateMerkleRoot(&simpleProof, leafHash)
+			if err != nil {
+				return err
+			}
+
+			var actualMmrRoot types.H256
+
+			mmrRootKey, err := types.CreateStorageKey(conn.Metadata(), "Mmr", "RootHash", nil, nil)
+			if err != nil {
+				return err
+			}
+
+			_, err = conn.API().RPC.State.GetStorage(mmrRootKey, &actualMmrRoot, blockHash)
+			if err != nil {
+				return err
+			}
+
+			actualParentHash, err := conn.API().RPC.Chain.GetBlockHash(uint64(proof.Leaf.ParentNumberAndHash.ParentNumber))
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Commitment { BlockNumber: %v, ValidatorSetID: %v}\n",
+				blockNumber,
+				commitment.Commitment.ValidatorSetID,
+			)
+
+			fmt.Printf("Leaf { ParentNumber: %v, ParentHash: %v, NextValidatorSetID: %v}\n",
+				proof.Leaf.ParentNumberAndHash.ParentNumber,
+				proof.Leaf.ParentNumberAndHash.Hash.Hex(),
+				proof.Leaf.BeefyNextAuthoritySet.ID,
+			)
+
+			fmt.Printf("Actual ParentHash: %v %v\n", actualParentHash.Hex(), actualParentHash == proof.Leaf.ParentNumberAndHash.Hash)
+
+			fmt.Printf("MMR Root: computed=%v actual=%v %v\n",
+				root.Hex(), actualMmrRoot.Hex(), root == actualMmrRoot,
+			)
+
+			fmt.Printf("\n")
+
+			if root != actualMmrRoot {
+				return nil
+			}
+
+		}
 	}
 }
 

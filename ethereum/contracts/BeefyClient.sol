@@ -257,6 +257,25 @@ contract BeefyClient is AccessControl {
         return Bitfield.createBitfield(bitsToSet, length);
     }
 
+    function completeCommitment(
+        uint256 id,
+        Commitment calldata commitment,
+        ValidatorProof calldata proof
+    ) public {
+        ValidationData storage data = validationData[id];
+
+        require(commitment.validatorSetID == currentValidatorSet.id);
+
+        bytes32 commitmentHash = verifyCommitment(currentValidatorSet, data, commitment, proof);
+
+        latestMMRRoot = commitment.payload.mmrRootHash;
+        latestBeefyBlock = commitment.blockNumber;
+
+        emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
+        emit CommitmentVerified(id, Phase.Final, commitmentHash, msg.sender);
+        delete validationData[id];
+    }
+
     /**
      * @notice Performs the final step in the validation, and then applies the commitment and optional authority update
      * @param id an identifying value generated in the previous transaction
@@ -271,25 +290,25 @@ contract BeefyClient is AccessControl {
         MMRProof calldata leafProof
     ) public {
         ValidationData storage data = validationData[id];
-        ValidatorSet memory vset = getValidatorSet(commitment.validatorSetID);
 
-        bytes32 commitmentHash = verifyCommitment(vset, data, commitment, proof);
+        require(commitment.validatorSetID == nextValidatorSet.id);
+        require(leaf.nextAuthoritySetID == nextValidatorSet.id + 1);
 
-        if (leaf.nextAuthoritySetID == nextValidatorSet.id + 1) {
-            require(
-                MMRProofVerification.verifyLeafProof(
-                    commitment.payload.mmrRootHash,
-                    keccak256(encodeMMRLeaf(leaf)),
-                    leafProof
-                ),
-                "Invalid leaf proof"
-            );
+        bytes32 commitmentHash = verifyCommitment(nextValidatorSet, data, commitment, proof);
 
-            currentValidatorSet = nextValidatorSet;
-            nextValidatorSet.id = leaf.nextAuthoritySetID;
-            nextValidatorSet.root = leaf.nextAuthoritySetRoot;
-            nextValidatorSet.length = leaf.nextAuthoritySetLen;
-        }
+        require(
+            MMRProofVerification.verifyLeafProof(
+                commitment.payload.mmrRootHash,
+                keccak256(encodeMMRLeaf(leaf)),
+                leafProof
+            ),
+            "Invalid leaf proof"
+        );
+
+        currentValidatorSet = nextValidatorSet;
+        nextValidatorSet.id = leaf.nextAuthoritySetID;
+        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+        nextValidatorSet.length = leaf.nextAuthoritySetLen;
 
         latestMMRRoot = commitment.payload.mmrRootHash;
         latestBeefyBlock = commitment.blockNumber;

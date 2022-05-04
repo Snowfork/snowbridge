@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/snowfork/snowbridge/relayer/substrate"
 
@@ -124,30 +125,34 @@ func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Contex
 	}
 }
 
-func (li *PolkadotListener) isNewSession(blockNumber uint64, blockHash types.Hash) (bool, error) {
-	var sessionIndex, prevSessionIndex uint32
+func (li *PolkadotListener) verifyProof(proof merkle.SimplifiedMMRProof) (bool, error) {
+	leafEncoded, err := types.EncodeToBytes(proof.Leaf)
+	if err != nil {
+		return false, err
+	}
+	leafHashBytes := (&keccak.Keccak256{}).Hash(leafEncoded)
 
-	sessionIndexKey, err := types.CreateStorageKey(li.conn.Metadata(), "Session", "CurrentIndex", nil, nil)
+	var leafHash types.H256
+	copy(leafHash[:], leafHashBytes[0:32])
+
+	actualRoot := merkle.CalculateMerkleRoot(&proof, leafHash)
 	if err != nil {
 		return false, err
 	}
 
-	_, err = li.conn.API().RPC.State.GetStorage(sessionIndexKey, &sessionIndex, blockHash)
+	var expectedRoot types.H256
+
+	mmrRootKey, err := types.CreateStorageKey(li.conn.Metadata(), "Mmr", "RootHash", nil, nil)
 	if err != nil {
 		return false, err
 	}
 
-	prevBlockHash, err := li.conn.API().RPC.Chain.GetBlockHash(blockNumber - 1)
+	_, err = li.conn.API().RPC.State.GetStorage(mmrRootKey, &expectedRoot, types.Hash(proof.Blockhash))
 	if err != nil {
 		return false, err
 	}
 
-	_, err = li.conn.API().RPC.State.GetStorage(sessionIndexKey, &prevSessionIndex, prevBlockHash)
-	if err != nil {
-		return false, err
-	}
-
-	return sessionIndex > prevSessionIndex, nil
+	return actualRoot == expectedRoot, nil
 }
 
 func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, signedCommitment *types.SignedCommitment) error {
@@ -191,16 +196,16 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 		return fmt.Errorf("simplified proof conversion for block %v: %w", proof.BlockHash.Hex(), err)
 	}
 
-	isNewSession, err := li.isNewSession(blockNumber, blockHash)
+	proofIsValid, err := li.verifyProof(p)
 	if err != nil {
-		return fmt.Errorf("determine session for block %v: %w", blockNumber, err)
+		return err
 	}
 
 	task := Task{
 		Validators:       validators,
 		SignedCommitment: *signedCommitment,
 		Proof:            p,
-		IsNewSession:     isNewSession,
+		ProofIsValid:     proofIsValid,
 	}
 
 	select {

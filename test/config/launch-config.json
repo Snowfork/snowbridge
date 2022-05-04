@@ -30,7 +30,12 @@
           "--enable-offchain-indexing=true"
         ]
       }
-    ]
+    ],
+    "genesis": {
+      "runtime": {
+        "session_length_in_blocks": 10
+      }
+    }
   },
   "parachains": [
     {

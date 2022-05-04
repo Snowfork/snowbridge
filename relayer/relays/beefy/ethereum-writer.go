@@ -132,20 +132,13 @@ func (wr *EthereumWriter) filterTasks(ctx context.Context) error {
 				return nil
 			}
 
-			if task.IsNewSession {
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case wr.someTasks <- task:
-				}
-			} else {
-				// drop task if it can't be processed immediately
-				select {
-				case wr.someTasks <- task:
-				default:
-					log.WithField("validatorSetId", task.SignedCommitment.Commitment.ValidatorSetID).Info("Discarded commitment")
-				}
+			// drop task if it can't be processed immediately
+			select {
+			case wr.someTasks <- task:
+			default:
+				log.WithField("validatorSetId", task.SignedCommitment.Commitment.ValidatorSetID).Info("Discarded commitment")
 			}
+
 		}
 	}
 }
@@ -201,6 +194,35 @@ func (wr *EthereumWriter) getContractCommitmentVerified(receipt *types.Receipt) 
 }
 
 func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
+	callOpts := bind.CallOpts{
+		Context: ctx,
+	}
+
+	currentValidatorSet, err := wr.beefyClientContract.CurrentValidatorSet(&callOpts)
+	if err != nil {
+		return err
+	}
+
+	nextValidatorSet, err := wr.beefyClientContract.NextValidatorSet(&callOpts)
+	if err != nil {
+		return err
+	}
+
+	var isHandover bool
+
+	switch {
+	case task.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet.Id.Uint64():
+		isHandover = false
+	case task.SignedCommitment.Commitment.ValidatorSetID == nextValidatorSet.Id.Uint64():
+		isHandover = true
+	default:
+		return fmt.Errorf("commitment validatorset incorrect")
+	}
+
+	if isHandover && !task.ProofIsValid {
+		log.Info("Skipping commitment as it has corrupted proof")
+		return nil
+	}
 
 	tx, err := wr.WriteInitialSignatureCommitment(ctx, &task)
 	if err != nil {
@@ -235,13 +257,13 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 
 	task.ValidationID = int64(event.Id.Uint64())
 
-	tx, err = wr.WriteFinalSignatureCommitment(ctx, &task)
+	tx, err = wr.WriteFinalSignatureCommitment(ctx, &task, isHandover)
 	if err != nil {
 		log.WithError(err).Error("Failed to send final signature commitment")
 		return err
 	}
 
-	success, err := wr.watchTransaction(ctx, tx, 3)
+	success, err := wr.watchTransaction(ctx, tx, 0)
 	if err != nil {
 		return fmt.Errorf("monitoring failed for transaction CompleteSignatureCommitment (%v): %w", tx.Hash().Hex(), err)
 	}
@@ -367,7 +389,7 @@ func BitfieldToString(bitfield []*big.Int) string {
 }
 
 // WriteCompleteSignatureCommitment sends a CompleteSignatureCommitment tx to the BeefyLightClient contract
-func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, task *Task) (*types.Transaction, error) {
+func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, task *Task, isHandover bool) (*types.Transaction, error) {
 	contract := wr.beefyClientContract
 	if contract == nil {
 		return nil, fmt.Errorf("unknown contract")
@@ -404,15 +426,26 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 
 	var tx *types.Transaction
 
-	tx, err = contract.CompleteCommitment(options,
-		msg.ID,
-		msg.Commitment,
-		validatorProof,
-		msg.Leaf,
-		msg.LeafProof,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("submit final signature commitment: %w", err)
+	if isHandover {
+		tx, err = contract.CompleteCommitment0(options,
+			msg.ID,
+			msg.Commitment,
+			validatorProof,
+			msg.Leaf,
+			msg.LeafProof,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("submit final signature commitment: %w", err)
+		}
+	} else {
+		tx, err = contract.CompleteCommitment(options,
+			msg.ID,
+			msg.Commitment,
+			validatorProof,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("submit final signature commitment: %w", err)
+		}
 	}
 
 	log.WithFields(logrus.Fields{

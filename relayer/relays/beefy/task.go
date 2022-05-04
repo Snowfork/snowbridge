@@ -11,5 +11,5 @@ type Task struct {
 	SignedCommitment types.SignedCommitment
 	ValidationID     int64
 	Proof            merkle.SimplifiedMMRProof
-	IsNewSession     bool
+	ProofIsValid     bool
 }
