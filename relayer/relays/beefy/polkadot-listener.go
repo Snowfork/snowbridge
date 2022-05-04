@@ -124,29 +124,31 @@ func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Contex
 	}
 }
 
-// func (li *PolkadotListener) subscribeBeefyJustifications(ctx context.Context) error {
-// 	sub, err := li.conn.API().RPC.Beefy.SubscribeJustifications()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer sub.Unsubscribe()
+func (li *PolkadotListener) isNewSession(blockNumber uint64, blockHash types.Hash) (bool, error) {
+	var sessionIndex, prevSessionIndex uint32
 
-// 	for {
-// 		select {
-// 		case <-ctx.Done():
-// 			return ctx.Err()
-// 		case sc, ok := <-sub.Chan():
-// 			if !ok {
-// 				return nil
-// 			}
+	sessionIndexKey, err := types.CreateStorageKey(li.conn.Metadata(), "Session", "CurrentIndex", nil, nil)
+	if err != nil {
+		return false, err
+	}
 
-// 			err = li.processBeefyJustifications(ctx, &sc)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
-// 	}
-// }
+	_, err = li.conn.API().RPC.State.GetStorage(sessionIndexKey, &sessionIndex, blockHash)
+	if err != nil {
+		return false, err
+	}
+
+	prevBlockHash, err := li.conn.API().RPC.Chain.GetBlockHash(blockNumber - 1)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = li.conn.API().RPC.State.GetStorage(sessionIndexKey, &prevSessionIndex, prevBlockHash)
+	if err != nil {
+		return false, err
+	}
+
+	return sessionIndex > prevSessionIndex, nil
+}
 
 func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, signedCommitment *types.SignedCommitment) error {
 	log.WithFields(log.Fields{
@@ -189,12 +191,16 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 		return fmt.Errorf("simplified proof conversion for block %v: %w", proof.BlockHash.Hex(), err)
 	}
 
-	log.WithField("nextValidatorSetID", p.Leaf.BeefyNextAuthoritySet.ID).Info("leaf next validator")
+	isNewSession, err := li.isNewSession(blockNumber, blockHash)
+	if err != nil {
+		return fmt.Errorf("determine session for block %v: %w", blockNumber, err)
+	}
 
 	task := Task{
 		Validators:       validators,
 		SignedCommitment: *signedCommitment,
 		Proof:            p,
+		IsNewSession:     isNewSession,
 	}
 
 	select {

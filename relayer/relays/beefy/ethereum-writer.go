@@ -132,7 +132,7 @@ func (wr *EthereumWriter) filterTasks(ctx context.Context) error {
 				return nil
 			}
 
-			if task.SignedCommitment.Commitment.ValidatorSetID+2 == uint64(task.Proof.Leaf.BeefyNextAuthoritySet.ID) {
+			if task.IsNewSession {
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
