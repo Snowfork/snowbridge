@@ -263,7 +263,7 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 		return err
 	}
 
-	success, err := wr.watchTransaction(ctx, tx, 0)
+	success, err := wr.watchTransaction(ctx, tx, 1)
 	if err != nil {
 		return fmt.Errorf("monitoring failed for transaction CompleteSignatureCommitment (%v): %w", tx.Hash().Hex(), err)
 	}
