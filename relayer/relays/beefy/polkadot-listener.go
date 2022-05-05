@@ -59,7 +59,127 @@ func (li *PolkadotListener) Start(ctx context.Context, eg *errgroup.Group, start
 	return nil
 }
 
+var ErrFoo = errors.New("Leaf has invalid proof")
+
 func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Context, latestBeefyBlock uint64) error {
+	log.WithFields(log.Fields{
+		"latestBeefyBlock": latestBeefyBlock,
+	}).
+		Info("Synchronizing beefy relaychain listener")
+
+	sessionIndexKey, err := types.CreateStorageKey(li.conn.Metadata(), "Session", "CurrentIndex", nil, nil)
+	if err != nil {
+		return err
+	}
+
+	blockHash, err := li.conn.API().RPC.Chain.GetBlockHash(latestBeefyBlock)
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch block hash")
+		return err
+	}
+
+	var lastSessionIndex uint32
+
+	_, err = li.conn.API().RPC.State.GetStorage(sessionIndexKey, &lastSessionIndex, blockHash)
+	if err != nil {
+		return err
+	}
+
+	current := latestBeefyBlock + 1
+	for {
+		finalizedHash, err := li.conn.API().RPC.Beefy.GetFinalizedHead()
+		if err != nil {
+			return fmt.Errorf("fetch finalized head: %w", err)
+		}
+
+		finalizedHeader, err := li.conn.API().RPC.Chain.GetHeader(finalizedHash)
+		if err != nil {
+			return fmt.Errorf("fetch header for finalised head %v: %w", finalizedHash.Hex(), err)
+		}
+
+		finalizedBlockNumber := uint64(finalizedHeader.Number)
+		if current > finalizedBlockNumber {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(2 * time.Second):
+			}
+			continue
+		}
+
+		log.WithField("block", current).Info("Probing block")
+
+		blockHash, err := li.conn.API().RPC.Chain.GetBlockHash(current)
+		if err != nil {
+			return fmt.Errorf("fetch block hash: %w", err)
+		}
+
+		var sessionIndex uint32
+
+		_, err = li.conn.API().RPC.State.GetStorage(sessionIndexKey, &sessionIndex, blockHash)
+		if err != nil {
+			return err
+		}
+
+		if sessionIndex == lastSessionIndex {
+			current++
+			continue
+		}
+
+		// This block starts a new session and always contains a BEEFY justification
+		log.WithField("block", current).Info("New session detected")
+
+		block, err := li.conn.API().RPC.Chain.GetBlock(blockHash)
+		if err != nil {
+			return fmt.Errorf("fetch block: %w", err)
+		}
+
+		var commitment *types.SignedCommitment
+
+		for j := range block.Justifications {
+			sc := types.OptionalSignedCommitment{}
+			if block.Justifications[j].EngineID() == "BEEF" {
+				err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
+				if err != nil {
+					return fmt.Errorf("decode BEEFY signed commitment: %w", err)
+				}
+				ok, value := sc.Unwrap()
+				if ok {
+					commitment = &value
+				}
+			}
+		}
+
+		if commitment == nil {
+			current++
+			continue
+		}
+
+		var task *Task
+
+		task, err = li.processBeefyJustifications(ctx, commitment)
+		if err != nil {
+			if errors.Is(err, ErrFoo) {
+				task, err = li.scanNextValidInSession(ctx, sessionIndex, current + 1)
+				if err != nil {
+					return fmt.Errorf("scan next valid in session: %w", err)
+				}
+			} else {
+				return err
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case li.tasks <- *task:
+		}
+
+		current++
+	}
+}
+
+func (li *PolkadotListener) scanBeefyJustifications(ctx context.Context, latestBeefyBlock uint64) error {
 	log.WithFields(log.Fields{
 		"latestBeefyBlock": latestBeefyBlock,
 	}).
@@ -125,6 +245,7 @@ func (li *PolkadotListener) scanHistoricalBeefyJustifications(ctx context.Contex
 	}
 }
 
+
 func (li *PolkadotListener) verifyProof(proof merkle.SimplifiedMMRProof) (bool, error) {
 	leafEncoded, err := types.EncodeToBytes(proof.Leaf)
 	if err != nil {
@@ -155,7 +276,7 @@ func (li *PolkadotListener) verifyProof(proof merkle.SimplifiedMMRProof) (bool, 
 	return actualRoot == expectedRoot, nil
 }
 
-func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, signedCommitment *types.SignedCommitment) error {
+func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, signedCommitment *types.SignedCommitment) (*Task, error) {
 	log.WithFields(log.Fields{
 		"commitment": log.Fields{
 			"BlockNumber":    signedCommitment.Commitment.BlockNumber,
@@ -165,24 +286,24 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 
 	blockNumber := uint64(signedCommitment.Commitment.BlockNumber)
 	if blockNumber == 1 {
-		return nil
+		return nil, nil
 	}
 
 	blockHash, err := li.conn.API().RPC.Chain.GetBlockHash(blockNumber)
 	if err != nil {
-		return fmt.Errorf("fetch hash for block %v: %w", blockNumber, err)
+		return nil, fmt.Errorf("fetch hash for block %v: %w", blockNumber, err)
 	}
 
 	validators, err := li.getBeefyAuthorities(blockNumber)
 	if err != nil {
-		return fmt.Errorf("fetch beefy authorities: %w", err)
+		return nil, fmt.Errorf("fetch beefy authorities: %w", err)
 	}
 
 	// we can use any block except the latest beefy block
 	blockToProve := blockNumber - 1
 	proof, err := li.conn.GenerateProofForBlock(blockToProve, blockHash, li.config.Source.BeefyActivationBlock)
 	if err != nil {
-		return fmt.Errorf("proof generation for %v: %w", blockToProve, err)
+		return nil, fmt.Errorf("proof generation for %v: %w", blockToProve, err)
 	}
 
 	p, err := merkle.ConvertToSimplifiedMMRProof(
@@ -193,12 +314,17 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 		proof.Proof.Items,
 	)
 	if err != nil {
-		return fmt.Errorf("simplified proof conversion for block %v: %w", proof.BlockHash.Hex(), err)
+		return nil, fmt.Errorf("simplified proof conversion for block %v: %w", proof.BlockHash.Hex(), err)
 	}
 
 	proofIsValid, err := li.verifyProof(p)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	if !proofIsValid {
+		return nil, ErrFoo
+
 	}
 
 	task := Task{
@@ -208,12 +334,33 @@ func (li *PolkadotListener) processBeefyJustifications(ctx context.Context, sign
 		ProofIsValid:     proofIsValid,
 	}
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case li.tasks <- task:
-		return nil
+	return &task, nil
+}
+
+func (li *PolkadotListener) isNewSession(blockNumber uint64, blockHash types.Hash) (bool, error) {
+	var sessionIndex, prevSessionIndex uint32
+
+	sessionIndexKey, err := types.CreateStorageKey(li.conn.Metadata(), "Session", "CurrentIndex", nil, nil)
+	if err != nil {
+		return false, err
 	}
+
+	_, err = li.conn.API().RPC.State.GetStorage(sessionIndexKey, &sessionIndex, blockHash)
+	if err != nil {
+		return false, err
+	}
+
+	prevBlockHash, err := li.conn.API().RPC.Chain.GetBlockHash(blockNumber - 1)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = li.conn.API().RPC.State.GetStorage(sessionIndexKey, &prevSessionIndex, prevBlockHash)
+	if err != nil {
+		return false, err
+	}
+
+	return sessionIndex > prevSessionIndex, nil
 }
 
 func (li *PolkadotListener) getBeefyAuthorities(blockNumber uint64) ([]common.Address, error) {
