@@ -1717,6 +1717,31 @@ pub fn get_finalized_header_update() -> ethereum_beacon_light_client::LightClien
 	}
 }
 
+pub fn get_unverified_finalized_header() -> ethereum_beacon_light_client::LightClientUnverifiedHeader  {
+	LightClientUnverifiedHeader{
+		attested_header: BeaconBlockHeader{
+			slot: 29122,
+			proposer_index: 6943,
+			parent_root: hex!("d82627712a10d4be558c82e9638a5fdf4ee9390fdb654168315290366db1d303").into(),
+			state_root: hex!("f935badfc539904d4c46f4fda5f258d5893b63a30295d65c34eba892ac1034d4").into(),
+			body_root: hex!("f459d61290714f581969967c9839042da6a01c71d2e6e714c805c0f7421cfa96").into(),	
+		},
+		finalized_header: BeaconBlockHeader{
+			slot: 29056,
+			proposer_index: 69405,
+			parent_root: hex!("6d0f66f1a5a243100571591d87b6c2a44d90933f30f93a6b657daed2692bbf3b").into(),
+			state_root: hex!("09638783556b51e185205dae0c9c5a003bc58d51039b9183f6addbdf6bc1ed37").into(),
+			body_root: hex!("2ffaaff1ea586a9b33b684147fb355b65d0991b5852a5073aeb0d03ec5529b9f").into(),	
+		},	
+		sync_aggregate: SyncAggregate{
+			sync_committee_bits: hex!("febfefffdfdd7ffffdffdfeffffff7fefffdffefffefffffebffffff7bffffdffbffbfbff1ffbdffffffffff6ffdffdfffffffffffffbb7fbfff6ffffeffffff").into(),
+			sync_committee_signature: hex!("b3045bd3edfd709fe2d1c094db47def286ca53e67de0535cef14b6a96324c24c1f204d2d315498fade49bef6ddfd58c8063adce1c6dacf2145f75ef8aa79d70abab6f85e20a483e5c7f1f2691ddc3ff7deb0f5adb0118711d8a9b17f778d5ae9").into()
+		},
+		fork_version: hex!("70000071").into(),
+		period: 113
+	}
+}
+
 pub fn get_current_sync_committee_for_finalized_header_update() -> SyncCommittee {
 	SyncCommittee{
 		pubkeys: vec![

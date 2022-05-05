@@ -539,21 +539,13 @@ pub mod pallet {
 			message: H256,
 			signature: Vec<u8>,
 		) -> DispatchResult {
-			log::trace!(target: "ethereum-beacon-light-client", "⌛ Creating signature");
-
 			let sig = Signature::from_bytes(&signature[..]);
 
 			if let Err(e) = sig {
 				return Err(Error::<T>::InvalidSignature.into());
 			}
 
-			log::trace!(target: "ethereum-beacon-light-client", "⌛ Done creating signature");
-			log::trace!(target: "ethereum-beacon-light-client", "⌛ Creating aggregate signature");
-
 			let agg_sig = AggregateSignature::from_signature(&sig.unwrap());
-
-			log::trace!(target: "ethereum-beacon-light-client", "⌛ Done creating aggregate signature");
-			log::trace!(target: "ethereum-beacon-light-client", "⌛ Creating pubkey");
 
 			let public_keys_res: Result<Vec<milagro_bls::PublicKey>, _> =
 				pubkeys.iter().map(|bytes| milagro_bls::PublicKey::from_bytes_unchecked(&bytes.0)).collect();
@@ -565,17 +557,11 @@ pub mod pallet {
 				};
 			}
 
-			log::trace!(target: "ethereum-beacon-light-client", "⌛ Done creating pubkey");
-			log::trace!(target: "ethereum-beacon-light-client", "⌛ Creating aggregate public key");
-
 			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
 
 			if let Err(e) = agg_pub_key_res {
 				return Err(Error::<T>::InvalidAggregatePublicKeys.into());
 			}
-
-			log::trace!(target: "ethereum-beacon-light-client", "⌛ Done aggregate public key");
-			log::trace!(target: "ethereum-beacon-light-client", "⌛ Doing fast_aggregate_verify_pre_aggregated");
 
 			ensure!(
 				agg_sig.fast_aggregate_verify_pre_aggregated(
@@ -584,8 +570,6 @@ pub mod pallet {
 				),
 				Error::<T>::SignatureVerificationFailed
 			);
-
-			log::trace!(target: "ethereum-beacon-light-client", "⌛ Done doing fast_aggregate_verify_pre_aggregated");
 
 			Ok(())
 		}

@@ -61,19 +61,50 @@ fn it_processes_a_finalized_header_update() {
 }
 
 #[test]
-fn it_processes_a_finalized_header_update_with_no_sync_commitee_for_period() {
-	let update = get_finalized_header_update();
+fn it_errors_when_importing_a_header_with_no_sync_commitee_for_period() {
+	let unverified_header = get_unverified_finalized_header();
 
-	let current_sync_committee = get_current_sync_committee_for_finalized_header_update();
+	let slot = unverified_header.finalized_header.slot;
 
-	let current_period = EthereumBeaconLightClient::compute_current_sync_period(update.attested_header.slot);
+	new_tester().execute_with(|| {
+		UnverifiedHeaders::<Test>::insert(slot, unverified_header);
+		ChainGenesis::<Test>::set(Genesis{
+			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
+		});
 
+		assert_err!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), slot), Error::<Test>::SyncCommitteeMissing);
+	});
+}
+
+#[test]
+fn it_errors_when_no_unverified_header_stored() {
 	new_tester().execute_with(|| {
 		ChainGenesis::<Test>::set(Genesis{
 			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
 		});
 
-		assert_err!(EthereumBeaconLightClient::finalized_header_update(Origin::signed(1), update), Error::<Test>::SyncCommitteeMissing);
+		assert_err!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), 56), Error::<Test>::UnverifiedHeaderNotFound);
+	});
+}
+
+#[test]
+fn it_imports_and_verifies_a_finalized_header() {
+	let unverified_header = get_unverified_finalized_header();
+
+	let current_sync_committee = get_current_sync_committee_for_finalized_header_update();
+
+	let slot = unverified_header.finalized_header.slot;
+
+	let current_period = EthereumBeaconLightClient::compute_current_sync_period(unverified_header.attested_header.slot);
+
+	new_tester().execute_with(|| {
+		SyncCommittees::<Test>::insert(current_period, current_sync_committee);
+		UnverifiedHeaders::<Test>::insert(slot, unverified_header);
+		ChainGenesis::<Test>::set(Genesis{
+			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
+		});
+
+		assert_err!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), slot), Error::<Test>::SyncCommitteeMissing);
 	});
 }
 
