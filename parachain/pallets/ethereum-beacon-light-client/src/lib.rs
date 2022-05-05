@@ -104,6 +104,16 @@ pub struct LightClientSyncCommitteePeriodUpdate {
 	pub finality_branch: ProofBranch,
 	pub sync_aggregate: SyncAggregate,
 	pub fork_version: ForkVersion,
+	pub sync_committee_period: u64,
+}
+
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct LightClientUnverifiedHeader {
+	pub attested_header: BeaconBlockHeader,
+	pub finalized_header: BeaconBlockHeader,
+	pub sync_aggregate: SyncAggregate,
+	pub fork_version: ForkVersion,
+	pub period: u64,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -173,6 +183,7 @@ pub mod pallet {
 		InvalidHash,
 		SignatureVerificationFailed,
 		NoBranchExpected,
+		UnverifiedHeaderNotFound,
 	}
 
 	#[pallet::hooks]
@@ -185,6 +196,10 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type FinalizedHeadersBySlot<T: Config> =
 		StorageMap<_, Identity, u64, H256, OptionQuery>;
+
+	#[pallet::storage]
+	pub(super) type UnverifiedHeaders<T: Config> =
+	StorageMap<_, Identity, u64, LightClientUnverifiedHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
@@ -222,8 +237,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-light-client",
-				"💫  Received update {:?}. Starting initial_sync",
-				initial_sync
+				"💫 Received initial sync, starting processing.",
 			);
 
 			if let Err(err) = Self::process_initial_sync(initial_sync) {
@@ -237,7 +251,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-light-client",
-				"💫  Initial sync succeeded.",
+				"💫 Initial sync processing succeeded.",
 			);
 
 			Ok(())
@@ -251,30 +265,95 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
+			let sync_committee_period = sync_committee_period_update.sync_committee_period;
 			log::trace!(
 				target: "ethereum-beacon-light-client",
-				"💫  Received update {:?}. Applying sync committee period update",
-				sync_committee_period_update
+				"💫 Received sync committee update for period {}. Applying update",
+				sync_committee_period
 			);
 
-			Self::process_sync_committee_period_update(sync_committee_period_update)
+			if let Err(err) = Self::process_sync_committee_period_update(sync_committee_period_update) {
+				log::error!(
+					target: "ethereum-beacon-light-client",
+					"Sync committee period update failed with error {:?}",
+					err
+				);
+				return Err(err);
+			}
+		
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"💫 Sync committee period update for period {} succeeded.",
+				sync_committee_period
+			);
+
+			Ok(())
 		}
 
 		#[pallet::weight(1_000_000)]
 		#[transactional]
-		pub fn import_finalized_header(
+		pub fn finalized_header_update(
 			origin: OriginFor<T>,
 			finalized_header_update: LightClientFinalizedHeaderUpdate,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
+			let slot = finalized_header_update.finalized_header.slot;
+
 			log::trace!(
 				target: "ethereum-beacon-light-client",
-				"💫  Received update {:?}. Importing finalized header",
-				finalized_header_update
+				"💫 Received finalized header update for slot {}, processing finalized header.",
+				slot
 			);
 
-			Self::process_finalized_header(finalized_header_update)
+			if let Err(err) = Self::process_finalized_header(finalized_header_update) {
+				log::error!(
+					target: "ethereum-beacon-light-client",
+					"Finalized header update failed with error {:?}",
+					err
+				);
+				return Err(err);
+			}
+
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"💫 Finalized header processing at slot {} succeeded.",
+				slot
+			);
+
+			Ok(())
+		}
+
+	#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn import_finalized_header(
+			origin: OriginFor<T>,
+			slot: u64,
+		) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"💫 Verifying finalized header signature for slot {}",
+				slot
+			);
+
+			if let Err(err) = Self::verify_and_store_finalized_header(slot) {
+				log::error!(
+					target: "ethereum-beacon-light-client",
+					"Header signature could not be verified and stored {:?}",
+					err
+				);
+				return Err(err);
+			}
+
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"💫 Importing finalized header for slot {} succeeded.",
+				slot
+			);
+
+			Ok(())
 		}
 	}
 
@@ -323,20 +402,17 @@ pub mod pallet {
 			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
 
 			// TODO Check if attested header could be in different sync period than finalized header, in the same update
-			let sync_committee = <SyncCommittees<T>>::get(current_period);
+			let slot = update.finalized_header.slot;
 
-			let genesis = <ChainGenesis<T>>::get();
+			let unverified_header = LightClientUnverifiedHeader{
+				attested_header: update.attested_header,
+				finalized_header: update.finalized_header,
+				sync_aggregate: update.sync_aggregate,
+				fork_version: update.fork_version,
+				period: current_period,
+			};
 
-			Self::verify_signed_header(
-				update.sync_aggregate.sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
-				sync_committee.pubkeys,
-				update.fork_version,
-				update.attested_header,
-				genesis.validators_root,
-			)?;
-
-			Self::store_header(update.finalized_header);
+			Self::store_unverified_signed_header(slot, unverified_header);
 
 			Ok(())
 		}
@@ -352,7 +428,36 @@ pub mod pallet {
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
 
-			let sync_committee = <SyncCommittees<T>>::get(current_period);
+			let slot = update.finalized_header.slot;
+
+			let unverified_header = LightClientUnverifiedHeader{
+				attested_header: update.attested_header,
+				finalized_header: update.finalized_header,
+				sync_aggregate: update.sync_aggregate,
+				fork_version: update.fork_version,
+				period: current_period,
+			};
+			
+			Self::store_unverified_signed_header(slot, unverified_header);
+
+			Ok(())
+		}
+
+		fn verify_and_store_finalized_header(slot: u64) -> DispatchResult {
+			let unverified_header_result = <UnverifiedHeaders<T>>::get(slot);
+
+			if unverified_header_result.is_none() {
+				log::error!(
+					target: "ethereum-beacon-light-client",
+					"Unverified header at slot {} not found.",
+					slot
+				);
+				return Err(Error::<T>::UnverifiedHeaderNotFound.into());
+			}
+
+			let unverified_header = unverified_header_result.unwrap();
+
+			let sync_committee = <SyncCommittees<T>>::get(unverified_header.period);
 
 			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: PublicKey([0; 48]) }) == sync_committee {
 				return Err(Error::<T>::SyncCommitteeMissing.into());
@@ -361,15 +466,22 @@ pub mod pallet {
 			let genesis = <ChainGenesis<T>>::get();
 
 			Self::verify_signed_header(
-				update.sync_aggregate.sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
+				unverified_header.sync_aggregate.sync_committee_bits,
+				unverified_header.sync_aggregate.sync_committee_signature,
 				sync_committee.pubkeys,
-				update.fork_version,
-				update.attested_header,
+				unverified_header.fork_version,
+				unverified_header.attested_header,
 				genesis.validators_root,
 			)?;
 
-			Self::store_header(update.finalized_header);
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"👍 Storing finalized, verified header 👍"
+			);
+
+			Self::store_header(unverified_header.finalized_header);
+
+			<UnverifiedHeaders<T>>::remove(slot);
 
 			Ok(())
 		}
@@ -382,7 +494,7 @@ pub mod pallet {
 			header: BeaconBlockHeader,
 			validators_root: H256,
 		) -> DispatchResult {
-			let sync_committee_bits = Self::convert_to_binary(sync_committee_bits_hex);
+			let sync_committee_bits = Self::convert_to_binary(sync_committee_bits_hex.clone());
 
 			ensure!(
 				Self::get_sync_committee_sum(sync_committee_bits.clone())
@@ -427,16 +539,24 @@ pub mod pallet {
 			message: H256,
 			signature: Vec<u8>,
 		) -> DispatchResult {
+			log::trace!(target: "ethereum-beacon-light-client", "⌛ Creating signature");
+
 			let sig = Signature::from_bytes(&signature[..]);
 
 			if let Err(e) = sig {
 				return Err(Error::<T>::InvalidSignature.into());
 			}
 
+			log::trace!(target: "ethereum-beacon-light-client", "⌛ Done creating signature");
+			log::trace!(target: "ethereum-beacon-light-client", "⌛ Creating aggregate signature");
+
 			let agg_sig = AggregateSignature::from_signature(&sig.unwrap());
 
+			log::trace!(target: "ethereum-beacon-light-client", "⌛ Done creating aggregate signature");
+			log::trace!(target: "ethereum-beacon-light-client", "⌛ Creating pubkey");
+
 			let public_keys_res: Result<Vec<milagro_bls::PublicKey>, _> =
-				pubkeys.iter().map(|bytes| milagro_bls::PublicKey::from_bytes(&bytes.0)).collect();
+				pubkeys.iter().map(|bytes| milagro_bls::PublicKey::from_bytes_unchecked(&bytes.0)).collect();
 
 			if let Err(e) = public_keys_res {
 				match e {
@@ -445,11 +565,17 @@ pub mod pallet {
 				};
 			}
 
+			log::trace!(target: "ethereum-beacon-light-client", "⌛ Done creating pubkey");
+			log::trace!(target: "ethereum-beacon-light-client", "⌛ Creating aggregate public key");
+
 			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
 
 			if let Err(e) = agg_pub_key_res {
 				return Err(Error::<T>::InvalidAggregatePublicKeys.into());
 			}
+
+			log::trace!(target: "ethereum-beacon-light-client", "⌛ Done aggregate public key");
+			log::trace!(target: "ethereum-beacon-light-client", "⌛ Doing fast_aggregate_verify_pre_aggregated");
 
 			ensure!(
 				agg_sig.fast_aggregate_verify_pre_aggregated(
@@ -458,6 +584,8 @@ pub mod pallet {
 				),
 				Error::<T>::SignatureVerificationFailed
 			);
+
+			log::trace!(target: "ethereum-beacon-light-client", "⌛ Done doing fast_aggregate_verify_pre_aggregated");
 
 			Ok(())
 		}
@@ -539,6 +667,10 @@ pub mod pallet {
 
 		fn store_genesis(genesis: Genesis) {
 			<ChainGenesis<T>>::put(genesis);
+		}
+
+		fn store_unverified_signed_header(slot: u64, unverified_header: LightClientUnverifiedHeader) {
+			<UnverifiedHeaders<T>>::insert(slot, unverified_header);
 		}
 
 		/// Sums the bit vector of sync committee particpation.

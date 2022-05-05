@@ -13,7 +13,7 @@ import (
 )
 
 func TestChain_SubmitExtrinsic_InitialSync(t *testing.T) {
-	syncer := syncer.New("https://lodestar-kiln.chainsafe.io", "https://lodestar-kiln.chainsafe.io")
+	syncer := syncer.New("https://lodestar-kiln.chainsafe.io")
 
 	initialSync, err := syncer.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
 	require.NoError(t, err)

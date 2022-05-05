@@ -2,6 +2,8 @@ package syncer
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestComputeEpochAtSlot(t *testing.T) {
@@ -94,5 +96,23 @@ func TestHexToBinaryString(t *testing.T) {
 		if result != tt.expected {
 			t.Errorf("HexToBinaryString was incorrect, got: %s, want: %s", result, tt.expected)
 		}
+	}
+}
+
+func TestHexToBytes(t *testing.T) {
+	values := []struct {
+		name string
+		hex  string
+	}{
+		{
+			name: "committee bits hex",
+			hex:  "0xedfdbdffbffbffffffffdffffffff7ff7feffff7fffffffffbff7dfafdefffffdffbffaffffffeffffffeefbf6dffffffffffffffffffeffdfff7ffffff7fdff",
+		},
+	}
+
+	for _, tt := range values {
+		result, err := hexStringToByteArray(tt.hex)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, result)
 	}
 }

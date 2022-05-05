@@ -1,4 +1,4 @@
-use crate::{mock::*, SyncCommittees, Error, BeaconBlockHeader, FinalizedHeaders, FinalizedHeadersBySlot, ChainGenesis, Genesis, PublicKey};
+use crate::{mock::*, SyncCommittees, Error, BeaconBlockHeader, FinalizedHeaders, FinalizedHeadersBySlot, ChainGenesis, Genesis, PublicKey, UnverifiedHeaders};
 use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
 
@@ -52,7 +52,11 @@ fn it_processes_a_finalized_header_update() {
 			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
 		});
 
-		assert_ok!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), update,));
+		let slot = update.finalized_header.slot;
+
+		assert_ok!(EthereumBeaconLightClient::finalized_header_update(Origin::signed(1), update));
+
+		assert!(<UnverifiedHeaders<Test>>::contains_key(slot));
 	});
 }
 
@@ -69,7 +73,7 @@ fn it_processes_a_finalized_header_update_with_no_sync_commitee_for_period() {
 			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
 		});
 
-		assert_err!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), update), Error::<Test>::SyncCommitteeMissing);
+		assert_err!(EthereumBeaconLightClient::finalized_header_update(Origin::signed(1), update), Error::<Test>::SyncCommitteeMissing);
 	});
 }
 

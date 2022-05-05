@@ -1158,7 +1158,8 @@ pub fn get_committee_sync_period_update() -> ethereum_beacon_light_client::Light
 			sync_committee_bits: hex!("ffffe7ffffffdffffdff7ff7fffffefbfcfffffffdffffefffffff6fffff7fb7be7ffdfffffffffeff97ffef3ffffffbff5ffffdffffbf77ffdfffffdfbffdff").into(),
 			sync_committee_signature: hex!("8488a1879136133f11c0cfcc402f16a2ce5d7d6ef164cf9d681133ff4ca5181bf9728c876e9efcbbf81bd95d6a4cc6cd0d06a480f02c3e4b012fe9351eec4b14491929f60fcd5b72da5be4a988d7db7e4e4b7d5ece00a0d32fa1ad4aeaeaed3d").into()
 		},
-		fork_version: hex!("70000071").into()
+		fork_version: hex!("70000071").into(),
+		sync_committee_period: 34
 	};
 	
 	update

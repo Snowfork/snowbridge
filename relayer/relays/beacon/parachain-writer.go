@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -68,18 +67,13 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 	return uint32(accountInfo.Nonce), nil
 }
 
-func (wr *ParachainWriter) WritePayload(ctx context.Context, initialSync syncer.InitialSync, eg *errgroup.Group) error {
-	return wr.write(ctx, initialSync)
-}
-
-// Write submits a transaction to the chain
-func (wr *ParachainWriter) write(ctx context.Context, initialSync syncer.InitialSync) error {
+func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName string, payload interface{}) error {
 	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
 		return err
 	}
 
-	c, err := types.NewCall(meta, "EthereumBeaconLightClient.initial_sync", initialSync)
+	c, err := types.NewCall(meta, "EthereumBeaconLightClient."+extrinsicName, payload)
 	if err != nil {
 		return err
 	}
@@ -107,24 +101,11 @@ func (wr *ParachainWriter) write(ctx context.Context, initialSync syncer.Initial
 		return err
 	}
 
-	key, err := types.CreateStorageKey(meta, "System", "Account", wr.conn.Keypair().PublicKey)
-	if err != nil {
-		return err
-	}
-
-	var accountInfo types.AccountInfo
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &accountInfo)
-	if err != nil {
-		return err
-	}
-
-	nonce := uint32(accountInfo.Nonce)
-
 	o := types.SignatureOptions{
 		BlockHash:          latestHash,
 		Era:                era,
 		GenesisHash:        genesisHash,
-		Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
+		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
 		SpecVersion:        rv.SpecVersion,
 		Tip:                types.NewUCompactFromUInt(0),
 		TransactionVersion: rv.TransactionVersion,
@@ -142,32 +123,7 @@ func (wr *ParachainWriter) write(ctx context.Context, initialSync syncer.Initial
 		return err
 	}
 
+	wr.nonce = wr.nonce + 1
+
 	return nil
-}
-
-func (wr *ParachainWriter) makeInitialSyncCall(initialSync *syncer.InitialSync) (types.Call, error) {
-	if initialSync == (*syncer.InitialSync)(nil) {
-		return types.Call{}, fmt.Errorf("Initial sync is nil")
-	}
-
-	//return types.NewCall(wr.conn.Metadata(), "EthereumBeaconLightClient.initial_sync", initialSync.Header, initialSync.CurrentSyncCommittee, initialSync.CurrentSyncCommitteeBranch, initialSync.Genesis)
-	return types.NewCall(wr.conn.Metadata(), "EthereumBeaconLightClient.simple_test")
-}
-
-func (wr *ParachainWriter) queryImportedHeaderExists(hash common.Hash) (bool, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconLightClient", "FinalizedHeaders", hash[:], nil)
-	if err != nil {
-		return false, err
-	}
-
-	var headerOption types.OptionBytes
-	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &headerOption)
-	if err != nil {
-		return false, err
-	}
-	if !ok {
-		return false, fmt.Errorf("Storage query did not find header for hash %s", hash.Hex())
-	}
-
-	return headerOption.IsSome(), nil
 }
