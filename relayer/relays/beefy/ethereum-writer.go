@@ -335,7 +335,7 @@ func (wr *EthereumWriter) WriteInitialSignatureCommitment(ctx context.Context, t
 
 	options := wr.makeTxOpts(ctx)
 
-	tx, err := contract.NewSignatureCommitment(options, msg.CommitmentHash, msg.ValidatorSetID,
+	tx, err := contract.Presubmit(options, msg.CommitmentHash, msg.ValidatorSetID,
 		msg.ValidatorClaimsBitfield, msg.ValidatorSignatureCommitment,
 		msg.ValidatorPosition, msg.ValidatorPublicKey, msg.ValidatorPublicKeyMerkleProof)
 	if err != nil {
@@ -416,7 +416,7 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 	var tx *types.Transaction
 
 	if isHandover {
-		tx, err = contract.CompleteCommitment0(options,
+		tx, err = contract.Submit0(options,
 			msg.ID,
 			msg.Commitment,
 			validatorProof,
@@ -427,7 +427,7 @@ func (wr *EthereumWriter) WriteFinalSignatureCommitment(ctx context.Context, tas
 			return nil, fmt.Errorf("submit final signature commitment: %w", err)
 		}
 	} else {
-		tx, err = contract.CompleteCommitment(options,
+		tx, err = contract.Submit(options,
 			msg.ID,
 			msg.Commitment,
 			validatorProof,
