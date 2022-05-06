@@ -323,7 +323,10 @@ pub mod pallet {
 
 			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 
-			Self::store_header(initial_sync.header);
+			let block_root: H256 = merklization::hash_tree_root_beacon_header(initial_sync.header.clone())
+				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+
+			Self::store_header(block_root, initial_sync.header);
 
 			Self::store_genesis(Genesis { validators_root: initial_sync.validators_root });
 
@@ -345,8 +348,11 @@ pub mod pallet {
 				NEXT_SYNC_COMMITTEE_INDEX,
 			)?;
 
+			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone())
+				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+
 			Self::verify_header(
-				update.finalized_header.clone(),
+				block_root,
 				update.finality_branch,
 				update.attested_header.state_root,
 				FINALIZED_ROOT_DEPTH,
@@ -372,7 +378,7 @@ pub mod pallet {
 				genesis.validators_root,
 			)?;
 
-			Self::store_header(update.finalized_header);
+			Self::store_header(block_root, update.finalized_header);
 
 			Ok(())
 		}
@@ -382,8 +388,11 @@ pub mod pallet {
 
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
+			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone())
+				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+
 			Self::verify_header(
-				update.finalized_header.clone(),
+				block_root,
 				update.finality_branch,
 				update.attested_header.state_root,
 				FINALIZED_ROOT_DEPTH,
@@ -409,7 +418,7 @@ pub mod pallet {
 				genesis.validators_root,
 			)?;
 
-			Self::store_header(update.finalized_header);
+			Self::store_header(block_root, update.finalized_header);
 
 			Ok(())
 		}
@@ -536,18 +545,15 @@ pub mod pallet {
 		}
 
 		fn verify_header(
-			header: BeaconBlockHeader,
+			block_root: H256,
 			proof_branch: ProofBranch,
 			attested_header_state_root: H256,
 			depth: u64,
 			index: u64,
 		) -> DispatchResult {
-			let leaf = merklization::hash_tree_root_beacon_header(header)
-				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?;
-
 			ensure!(
 				Self::is_valid_merkle_branch(
-					leaf.into(),
+					block_root,
 					proof_branch,
 					depth,
 					index,
@@ -563,10 +569,10 @@ pub mod pallet {
 			<SyncCommittees<T>>::insert(period, sync_committee);
 		}
 
-		fn store_header(header: BeaconBlockHeader) {
-			<FinalizedHeaders<T>>::insert(header.body_root.clone(), header.clone());
+		fn store_header(block_root: H256, header: BeaconBlockHeader) {
+			<FinalizedHeaders<T>>::insert(block_root, header.clone());
 
-			<FinalizedHeadersBySlot<T>>::insert(header.slot, header.body_root);
+			<FinalizedHeadersBySlot<T>>::insert(header.slot, block_root);
 		}
 
 		fn store_genesis(genesis: Genesis) {

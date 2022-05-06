@@ -1,6 +1,7 @@
-use crate::{mock::*, SyncCommittees, Error, BeaconBlockHeader, FinalizedHeaders, FinalizedHeadersBySlot, ChainGenesis, Genesis, PublicKey};
+use crate::{mock::*, SyncCommittees, Error, BeaconBlockHeader, FinalizedHeaders, FinalizedHeadersBySlot, ChainGenesis, Genesis, PublicKey, merklization};
 use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
+use sp_core::H256;
 
 #[test]
 fn it_syncs_from_an_initial_checkpoint() {
@@ -12,8 +13,11 @@ fn it_syncs_from_an_initial_checkpoint() {
 			initial_sync.clone(),
 		));
 
-		assert!(<FinalizedHeaders<Test>>::contains_key(initial_sync.header.body_root));
+		let block_root: H256 = merklization::hash_tree_root_beacon_header(initial_sync.header.clone()).unwrap().into();
+
+		assert!(<FinalizedHeaders<Test>>::contains_key(block_root));
 		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(initial_sync.header.slot));
+		assert_eq!(<FinalizedHeadersBySlot<Test>>::get(initial_sync.header.slot).unwrap(), block_root);
 	});
 }
 
@@ -33,8 +37,14 @@ fn it_updates_a_committee_period_sync_update() {
 
 		assert_ok!(EthereumBeaconLightClient::sync_committee_period_update(
 			Origin::signed(1),
-			update,
+			update.clone(),
 		));
+
+		let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
+
+		assert!(<FinalizedHeaders<Test>>::contains_key(block_root));
+		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(update.finalized_header.slot));
+		assert_eq!(<FinalizedHeadersBySlot<Test>>::get(update.finalized_header.slot).unwrap(), block_root);
 	});
 }
 
@@ -56,11 +66,13 @@ fn it_processes_a_finalized_header_update() {
 
 		let body_root = update.finalized_header.body_root;
 
-		assert_ok!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), update));
+		assert_ok!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), update.clone()));
 
-		assert!(<FinalizedHeaders<Test>>::contains_key(body_root));
+		let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
 
-		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(slot));
+		assert!(<FinalizedHeaders<Test>>::contains_key(block_root));
+		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(update.finalized_header.slot));
+		assert_eq!(<FinalizedHeadersBySlot<Test>>::get(update.finalized_header.slot).unwrap(), block_root);
 	});
 }
 

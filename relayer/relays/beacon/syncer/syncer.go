@@ -319,11 +319,11 @@ func computeSyncPeriodAtEpoch(epoch uint64) uint64 {
 
 func SyncPeriodRolledOver(periods []uint64, currentPeriod uint64) bool {
 	for _, period := range periods {
-        if period == currentPeriod {
-            return true
-        }
-    }
-    return false
+		if period == currentPeriod {
+			return true
+		}
+	}
+	return false
 }
 
 func hexToBinaryString(rawHex string) string {

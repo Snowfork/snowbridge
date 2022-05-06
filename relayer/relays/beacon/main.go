@@ -33,15 +33,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint)
 	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 
-	// Get an initial snapshot of the chain from a verified block
-	initialSync, err := r.syncer.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
-	if err != nil {
-		logrus.WithError(err).Error("unable to do intial beacon chain sync")
-
-		return err
-	}
-
-	err = r.paraconn.Connect(ctx)
+	err := r.paraconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -52,6 +44,14 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	err = writer.Start(ctx, eg)
 	if err != nil {
+		return err
+	}
+
+	// Get an initial snapshot of the chain from a verified block
+	initialSync, err := r.syncer.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
+	if err != nil {
+		logrus.WithError(err).Error("unable to do intial beacon chain sync")
+
 		return err
 	}
 
@@ -95,8 +95,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 	}
-
-	// TODO check if period rolled over while updating
 
 	logrus.Info("Done with sync committee updates")
 
