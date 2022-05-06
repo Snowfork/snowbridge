@@ -1,4 +1,4 @@
-use crate::{mock::*, SyncCommittees, Error, BeaconBlockHeader, FinalizedHeaders, FinalizedHeadersBySlot, ChainGenesis, Genesis, PublicKey, UnverifiedHeaders};
+use crate::{mock::*, SyncCommittees, Error, BeaconBlockHeader, FinalizedHeaders, FinalizedHeadersBySlot, ChainGenesis, Genesis, PublicKey};
 use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
 
@@ -54,57 +54,26 @@ fn it_processes_a_finalized_header_update() {
 
 		let slot = update.finalized_header.slot;
 
-		assert_ok!(EthereumBeaconLightClient::finalized_header_update(Origin::signed(1), update));
+		let body_root = update.finalized_header.body_root;
 
-		assert!(<UnverifiedHeaders<Test>>::contains_key(slot));
+		assert_ok!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), update));
+
+		assert!(<FinalizedHeaders<Test>>::contains_key(body_root));
+
+		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(slot));
 	});
 }
 
 #[test]
 fn it_errors_when_importing_a_header_with_no_sync_commitee_for_period() {
-	let unverified_header = get_unverified_finalized_header();
+	let update = get_finalized_header_update();
 
-	let slot = unverified_header.finalized_header.slot;
-
-	new_tester().execute_with(|| {
-		UnverifiedHeaders::<Test>::insert(slot, unverified_header);
-		ChainGenesis::<Test>::set(Genesis{
-			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-		});
-
-		assert_err!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), slot), Error::<Test>::SyncCommitteeMissing);
-	});
-}
-
-#[test]
-fn it_errors_when_no_unverified_header_stored() {
 	new_tester().execute_with(|| {
 		ChainGenesis::<Test>::set(Genesis{
 			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
 		});
 
-		assert_err!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), 56), Error::<Test>::UnverifiedHeaderNotFound);
-	});
-}
-
-#[test]
-fn it_imports_and_verifies_a_finalized_header() {
-	let unverified_header = get_unverified_finalized_header();
-
-	let current_sync_committee = get_current_sync_committee_for_finalized_header_update();
-
-	let slot = unverified_header.finalized_header.slot;
-
-	let current_period = EthereumBeaconLightClient::compute_current_sync_period(unverified_header.attested_header.slot);
-
-	new_tester().execute_with(|| {
-		SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-		UnverifiedHeaders::<Test>::insert(slot, unverified_header);
-		ChainGenesis::<Test>::set(Genesis{
-			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-		});
-
-		assert_err!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), slot), Error::<Test>::SyncCommitteeMissing);
+		assert_err!(EthereumBeaconLightClient::import_finalized_header(Origin::signed(1), update), Error::<Test>::SyncCommitteeMissing);
 	});
 }
 
@@ -357,8 +326,10 @@ pub fn test_bls_fast_aggregate_verify_invalid_signature() {
 #[test]
 pub fn test_bls_fast_aggregate_verify_kiln_head_update() {
 	new_tester().execute_with(|| {
+		let sync_committee_bits = EthereumBeaconLightClient::convert_to_binary(hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b").into());
+
 		assert_ok!(EthereumBeaconLightClient::verify_signed_header(
-			hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b").into(),
+			sync_committee_bits,
 			hex!("a8a5ed4270ed6ab5a1341c12c26a7f6ecb2a1174956874b1daa038bfd5d3c61b0d4a9577579e6088a2834fba2c5666ef1870fb2c31cdfe6ac6f596680055ac69c72a5a164622b716a059b4119236524b130bd1f7510f55843b6114d8bc14d61f").into(),
 			vec![
 				PublicKey(hex!("a7b96861916795c6a4a8fa4e1faae26eebf4567485aefb562c545559cc1cfd4aa293839ecf87267ab4a9942083ba8d3e").into()),
@@ -884,5 +855,25 @@ pub fn test_bls_fast_aggregate_verify_kiln_head_update() {
 			},
 			hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into()
 		));
+	});
+}
+
+#[test]
+pub fn test_sync_committee_participation_is_supermajority() {
+	new_tester().execute_with(|| {
+		let sync_committee_bits = EthereumBeaconLightClient::convert_to_binary(hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b").into());
+
+		assert_ok!(EthereumBeaconLightClient::sync_committee_participation_is_supermajority(sync_committee_bits));
+	});
+}
+
+#[test]
+pub fn test_sync_committee_participation_is_supermajority_errors_when_not_supermajority() {
+	new_tester().execute_with(|| {
+		let sync_committee_bits = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0];
+
+		let sums = EthereumBeaconLightClient::get_sync_committee_sum(sync_committee_bits.clone());
+
+		assert_err!(EthereumBeaconLightClient::sync_committee_participation_is_supermajority(sync_committee_bits), Error::<Test>::SyncCommitteeParticipantsNotSupermajority);
 	});
 }

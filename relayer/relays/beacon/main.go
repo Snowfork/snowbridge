@@ -94,13 +94,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 			return err
 		}
-
-		err = writer.WriteToParachain(ctx, "import_finalized_header", syncCommitteeUpdate.FinalizedHeader.Slot)
-		if err != nil {
-			logrus.WithError(err).Error("unable to write to parachain")
-
-			return err
-		}
 	}
 
 	// TODO check if period rolled over while updating
@@ -122,14 +115,33 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			return err
 		}
 
-		err = writer.WriteToParachain(ctx, "finalized_header_update", finalizedHeaderUpdate)
-		if err != nil {
-			logrus.WithError(err).Error("unable to write to parachain")
+		logrus.Info("Checking if sync period rolled")
 
-			return err
+		currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
+		
+		if syncer.SyncPeriodRolledOver(periods, currentSyncPeriod) {
+			logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
+
+			syncCommitteeUpdate, err := r.syncer.GetSyncCommitteePeriodUpdate(currentSyncPeriod, currentSyncPeriod)
+			if err != nil {
+				logrus.WithError(err).Error("unable check sync committee periods to be fetched")
+
+				return err
+			}
+
+			syncCommitteeUpdate.SyncCommitteePeriod = types.NewU64(currentSyncPeriod)
+
+			err = writer.WriteToParachain(ctx, "sync_committee_period_update", syncCommitteeUpdate)
+			if err != nil {
+				logrus.WithError(err).Error("unable to write to parachain")
+
+				return err
+			}
+
+			periods = append(periods, currentSyncPeriod)
 		}
 
-		err = writer.WriteToParachain(ctx, "import_finalized_header", finalizedHeaderUpdate.FinalizedHeader.Slot)
+		err = writer.WriteToParachain(ctx, "import_finalized_header", finalizedHeaderUpdate)
 		if err != nil {
 			logrus.WithError(err).Error("unable to write to parachain")
 

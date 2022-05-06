@@ -309,12 +309,21 @@ func computeEpochForNextPeriod(epoch uint64) uint64 {
 	return epoch + (EPOCHS_PER_SYNC_COMMITTEE_PERIOD - (epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD))
 }
 
-func computeSyncPeriodAtSlot(slot uint64) uint64 {
+func ComputeSyncPeriodAtSlot(slot uint64) uint64 {
 	return slot / SLOTS_IN_EPOCH
 }
 
 func computeSyncPeriodAtEpoch(epoch uint64) uint64 {
 	return epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+}
+
+func SyncPeriodRolledOver(periods []uint64, currentPeriod uint64) bool {
+	for _, period := range periods {
+        if period == currentPeriod {
+            return true
+        }
+    }
+    return false
 }
 
 func hexToBinaryString(rawHex string) string {
