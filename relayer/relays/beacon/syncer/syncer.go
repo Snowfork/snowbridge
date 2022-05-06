@@ -2,6 +2,7 @@ package syncer
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,6 +12,8 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 )
 
+var ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("not found")
+
 const (
 	SLOTS_IN_EPOCH                   uint64 = 32
 	EPOCHS_PER_SYNC_COMMITTEE_PERIOD uint64 = 256
@@ -19,13 +22,11 @@ const (
 
 type Syncer struct {
 	Client BeaconClient
-	Cache  BeaconCache
 }
 
 func New(endpoint string) *Syncer {
 	return &Syncer{
 		Client: *NewBeaconClient(endpoint),
-		Cache:  *NewBeaconCache(),
 	}
 }
 
@@ -154,22 +155,24 @@ func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
 }
 
 func (s *Syncer) GetSyncPeriodsToFetch(checkpointSlot uint64) ([]uint64, error) {
-	head, err := s.Client.GetHeadHeader()
+	finalizedHeader, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
 		logrus.WithError(err).Error("unable to get header at head")
 
 		return []uint64{}, err
 	}
 
-	currentEpoch := computeEpochAtSlot(head.Slot)
-	checkpointEpoch := computeEpochAtSlot(checkpointSlot)
+	slot, err := strconv.ParseUint(finalizedHeader.Data.AttestedHeader.Slot, 10, 64)
+	if err != nil {
+		logrus.WithError(err).Error("unable parse slot as int")
 
-	currentSyncPeriod := computeSyncPeriodAtEpoch(currentEpoch)
-	checkpointSyncPeriod := computeSyncPeriodAtEpoch(checkpointEpoch)
+		return []uint64{}, err
+	}
+
+	currentSyncPeriod := ComputeSyncPeriodAtSlot(slot)
+	checkpointSyncPeriod := ComputeSyncPeriodAtSlot(checkpointSlot)
 
 	logrus.WithFields(logrus.Fields{
-		"currentEpoch":         currentEpoch,
-		"checkpointEpoch":      checkpointEpoch,
 		"currentSyncPeriod":    currentSyncPeriod,
 		"checkpointSyncPeriod": checkpointSyncPeriod,
 	}).Info("computed epochs")
@@ -244,6 +247,12 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePer
 		ForkVersion:             forkVersion,
 	}
 
+	finalizedHeaderSlot := ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
+
+	if finalizedHeaderSlot != from {
+		return SyncCommitteePeriodUpdate{}, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
+	}
+
 	return syncCommitteePeriodUpdate, err
 }
 
@@ -310,11 +319,7 @@ func computeEpochForNextPeriod(epoch uint64) uint64 {
 }
 
 func ComputeSyncPeriodAtSlot(slot uint64) uint64 {
-	return slot / SLOTS_IN_EPOCH
-}
-
-func computeSyncPeriodAtEpoch(epoch uint64) uint64 {
-	return epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+	return slot / (SLOTS_IN_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
 }
 
 func SyncPeriodRolledOver(periods []uint64, currentPeriod uint64) bool {

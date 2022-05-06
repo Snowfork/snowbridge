@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -13,10 +14,12 @@ import (
 )
 
 type Relay struct {
-	config   *Config
-	syncer   *syncer.Syncer
-	keypair  *sr25519.Keypair
-	paraconn *parachain.Connection
+	config      *Config
+	syncer      *syncer.Syncer
+	keypair     *sr25519.Keypair
+	paraconn    *parachain.Connection
+	writer      *ParachainWriter
+	syncPeriods []uint64
 }
 
 func NewRelay(
@@ -30,41 +33,33 @@ func NewRelay(
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint)
 	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
+	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint)
 
 	err := r.paraconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	writer := NewParachainWriter(
+	r.writer = NewParachainWriter(
 		r.paraconn,
 	)
 
-	err = writer.Start(ctx, eg)
+	err = r.writer.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	// Get an initial snapshot of the chain from a verified block
-	initialSync, err := r.syncer.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
-	if err != nil {
-		logrus.WithError(err).Error("unable to do intial beacon chain sync")
+	return r.Sync(ctx)
+}
 
+func (r *Relay) Sync(ctx context.Context) error {
+	initialSync, err := r.InitialSync(ctx)
+	if err != nil {
 		return err
 	}
 
-	err = writer.WriteToParachain(ctx, "initial_sync", initialSync)
-	if err != nil {
-		logrus.WithError(err).Error("unable to write to parachain")
-
-		return err
-	}
-
-	logrus.Info("intial sync written to parachain")
-
-	periods, err := r.syncer.GetSyncPeriodsToFetch(uint64(initialSync.Header.Slot))
+	r.syncPeriods, err = r.syncer.GetSyncPeriodsToFetch(uint64(initialSync.Header.Slot))
 	if err != nil {
 		logrus.WithError(err).Error("unable check sync committee periods to be fetched")
 
@@ -72,82 +67,108 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"periods": periods,
+		"periods": r.syncPeriods,
 	}).Info("Sync committee periods that needs fetching")
 
-	for _, period := range periods {
+	for _, period := range r.syncPeriods {
 		logrus.WithFields(logrus.Fields{
 			"period": period,
 		}).Info("Fetch sync committee period update")
-		syncCommitteeUpdate, err := r.syncer.GetSyncCommitteePeriodUpdate(period, period)
-		if err != nil {
-			logrus.WithError(err).Error("unable check sync committee periods to be fetched")
 
-			return err
-		}
-
-		syncCommitteeUpdate.SyncCommitteePeriod = types.NewU64(period)
-
-		err = writer.WriteToParachain(ctx, "sync_committee_period_update", syncCommitteeUpdate)
-		if err != nil {
-			logrus.WithError(err).Error("unable to write to parachain")
-
-			return err
-		}
+		r.SyncCommitteePeriodUpdate(ctx, period)
 	}
 
 	logrus.Info("Done with sync committee updates")
 
 	logrus.Info("Starting to sync finalized headers")
 
+	r.SyncFinalizedHeader(ctx)
+
 	ticker := time.NewTicker(time.Minute * 5)
+	done := make(chan bool)
 
-	for range ticker.C {
-		logrus.Info("Syncing finalized header")
-
-		// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
-		finalizedHeaderUpdate, err := r.syncer.GetFinalizedBlockUpdate()
-		if err != nil {
-			logrus.WithError(err).Error("unable to sync finalized header")
-
-			return err
-		}
-
-		logrus.Info("Checking if sync period rolled")
-
-		currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
-		
-		if syncer.SyncPeriodRolledOver(periods, currentSyncPeriod) {
-			logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
-
-			syncCommitteeUpdate, err := r.syncer.GetSyncCommitteePeriodUpdate(currentSyncPeriod, currentSyncPeriod)
-			if err != nil {
-				logrus.WithError(err).Error("unable check sync committee periods to be fetched")
-
-				return err
+	go func() error {
+		for {
+			select {
+			case <-done:
+				return nil
+			case <-ticker.C:
+				r.SyncFinalizedHeader(ctx)
 			}
-
-			syncCommitteeUpdate.SyncCommitteePeriod = types.NewU64(currentSyncPeriod)
-
-			err = writer.WriteToParachain(ctx, "sync_committee_period_update", syncCommitteeUpdate)
-			if err != nil {
-				logrus.WithError(err).Error("unable to write to parachain")
-
-				return err
-			}
-
-			periods = append(periods, currentSyncPeriod)
 		}
+	}()
 
-		err = writer.WriteToParachain(ctx, "import_finalized_header", finalizedHeaderUpdate)
-		if err != nil {
-			logrus.WithError(err).Error("unable to write to parachain")
+	return nil
+}
+
+func (r *Relay) InitialSync(ctx context.Context) (syncer.InitialSync, error) {
+	initialSync, err := r.syncer.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
+	if err != nil {
+		logrus.WithError(err).Error("unable to do intial beacon chain sync")
+
+		return syncer.InitialSync{}, err
+	}
+
+	err = r.writer.WriteToParachain(ctx, "initial_sync", initialSync)
+	if err != nil {
+		logrus.WithError(err).Error("unable to write to parachain")
+
+		return syncer.InitialSync{}, err
+	}
+
+	logrus.Info("intial sync written to parachain")
+
+	return initialSync, nil
+}
+
+func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) error {
+	syncCommitteeUpdate, err := r.syncer.GetSyncCommitteePeriodUpdate(period, period)
+
+	switch {
+	case errors.Is(err, syncer.ErrCommitteeUpdateHeaderInDifferentSyncPeriod):
+		logrus.WithField("period", period).Info("committee update and header in different sync periods, skipping")
+	case err != nil:
+		{
+			logrus.WithError(err).Error("unable check sync committee periods to be fetched")
 
 			return err
 		}
 	}
 
-	logrus.Info("Shutting down")
+	syncCommitteeUpdate.SyncCommitteePeriod = types.NewU64(period)
 
-	return nil
+	return r.writer.WriteToParachain(ctx, "sync_committee_period_update", syncCommitteeUpdate)
+}
+
+func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
+	logrus.Info("Syncing finalized header")
+
+	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
+	finalizedHeaderUpdate, err := r.syncer.GetFinalizedBlockUpdate()
+	if err != nil {
+		logrus.WithError(err).Error("unable to sync finalized header")
+
+		return err
+	}
+
+	logrus.Info("Checking if sync period rolled")
+
+	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
+
+	if syncer.SyncPeriodRolledOver(r.syncPeriods, currentSyncPeriod) {
+		logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
+
+		r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
+
+		r.syncPeriods = append(r.syncPeriods, currentSyncPeriod)
+	}
+
+	err = r.writer.WriteToParachain(ctx, "import_finalized_header", finalizedHeaderUpdate)
+	if err != nil {
+		logrus.WithError(err).Error("unable to write to parachain")
+
+		return err
+	}
+
+	return err
 }

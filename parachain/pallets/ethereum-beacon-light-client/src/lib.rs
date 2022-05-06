@@ -363,8 +363,6 @@ pub mod pallet {
 
 			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
 
-			// TODO Check if attested header could be in different sync period than finalized header, in the same update
-
 			let sync_committee = <SyncCommittees<T>>::get(current_period);
 
 			let genesis = <ChainGenesis<T>>::get();

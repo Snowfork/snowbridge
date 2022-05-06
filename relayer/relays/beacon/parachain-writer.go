@@ -5,16 +5,9 @@ import (
 	"fmt"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer"
 	"golang.org/x/sync/errgroup"
 )
-
-type ParachainPayload struct {
-	InitialSync *syncer.InitialSync
-	Messages    []*chain.EthereumOutboundMessage
-}
 
 type ParachainWriter struct {
 	conn        *parachain.Connection
