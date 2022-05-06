@@ -77,18 +77,19 @@ contract BeefyClient is AccessControl {
     }
 
     /**
-     * The ValidationData is the set of data used to link each pair of initial and complete verification transactions.
+     * The Request is the set of data used to link each pair of initial and complete verification transactions.
      * @param senderAddress the sender of the initial transaction
      * @param commitmentHash the hash of the commitment they are claiming has been signed
      * @param validatorClaimsBitfield a bitfield signalling which validators they claim have signed
      * @param blockNumber the block number for this commitment
      */
-    struct ValidationData {
+    struct Request {
         address senderAddress;
         uint64 validatorSetID;
         bytes32 commitmentHash;
         uint256[] validatorClaimsBitfield;
         uint256 blockNumber;
+        ValidatorSet vset;
     }
 
     /**
@@ -126,7 +127,7 @@ contract BeefyClient is AccessControl {
     ValidatorSet public nextValidatorSet;
 
     uint256 public nextID;
-    mapping(uint256 => ValidationData) public validationData;
+    mapping(uint256 => Request) public requests;
 
     /* Constants */
 
@@ -184,7 +185,7 @@ contract BeefyClient is AccessControl {
      * @param validatorPublicKey the public key of the validator
      * @param validatorPublicKeyMerkleProof proof required for validation of the public key in the validator merkle tree
      */
-    function newSignatureCommitment(
+    function presubmit(
         bytes32 commitmentHash,
         uint64 validatorSetID,
         uint256[] calldata validatorClaimsBitfield,
@@ -193,7 +194,16 @@ contract BeefyClient is AccessControl {
         address validatorPublicKey,
         bytes32[] calldata validatorPublicKeyMerkleProof
     ) external payable {
-        ValidatorSet memory vset = getValidatorSet(validatorSetID);
+
+        // for pre-submission, we accept commitments from either the current or next validator set
+        ValidatorSet memory vset;
+        if (validatorSetID == currentValidatorSet.id) {
+            vset = currentValidatorSet;
+        } else if (validatorSetID == nextValidatorSet.id) {
+            vset = nextValidatorSet;
+        } else {
+            revert("Unknown validator set");
+        }
 
         // Check if validatorPublicKeyMerkleProof is valid based on validatorSetRoot
         require(
@@ -203,7 +213,7 @@ contract BeefyClient is AccessControl {
                 validatorPosition,
                 validatorPublicKeyMerkleProof
             ),
-            "Sender must be in validator set at correct position"
+            "Sender not in validator set"
         );
 
         // Check if validatorSignature is correct, ie. check if it matches
@@ -216,16 +226,17 @@ contract BeefyClient is AccessControl {
         // Check that the bitfield actually contains enough claims to be successful, ie, >= 2/3
         require(
             validatorClaimsBitfield.countSetBits() >= requiredNumberOfSignatures(vset),
-            "Not enough claims in bitfield"
+            "Not enough claims"
         );
 
         // Accept and save the commitment
-        validationData[nextID] = ValidationData(
+        requests[nextID] = Request(
             msg.sender,
             validatorSetID,
             commitmentHash,
             validatorClaimsBitfield,
-            block.number
+            block.number,
+            vset
         );
 
         emit CommitmentVerified(nextID, Phase.Initial, commitmentHash, msg.sender);
@@ -234,18 +245,17 @@ contract BeefyClient is AccessControl {
     }
 
     function createRandomBitfield(uint256 id) public view returns (uint256[] memory) {
-        ValidationData storage data = validationData[id];
-        ValidatorSet memory vset = getValidatorSet(data.validatorSetID);
+        Request storage request = requests[id];
 
         // verify that block wait period has passed
-        require(block.number >= data.blockNumber + BLOCK_WAIT_PERIOD, "Block wait period not over");
+        require(block.number >= request.blockNumber + BLOCK_WAIT_PERIOD, "Block wait period not over");
 
         return
             Bitfield.randomNBitsWithPriorCheck(
-                getSeed(data),
-                data.validatorClaimsBitfield,
-                requiredNumberOfSignatures(vset),
-                vset.length
+                getSeed(request),
+                request.validatorClaimsBitfield,
+                requiredNumberOfSignatures(request.vset),
+                request.vset.length
             );
     }
 
@@ -257,23 +267,23 @@ contract BeefyClient is AccessControl {
         return Bitfield.createBitfield(bitsToSet, length);
     }
 
-    function completeCommitment(
+    function submit(
         uint256 id,
         Commitment calldata commitment,
         ValidatorProof calldata proof
     ) public {
-        ValidationData storage data = validationData[id];
+        Request storage request = requests[id];
 
         require(commitment.validatorSetID == currentValidatorSet.id);
 
-        bytes32 commitmentHash = verifyCommitment(currentValidatorSet, data, commitment, proof);
+        bytes32 commitmentHash = verifyCommitment(currentValidatorSet, request, commitment, proof);
 
         latestMMRRoot = commitment.payload.mmrRootHash;
         latestBeefyBlock = commitment.blockNumber;
 
         emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
         emit CommitmentVerified(id, Phase.Final, commitmentHash, msg.sender);
-        delete validationData[id];
+        delete requests[id];
     }
 
     /**
@@ -282,19 +292,19 @@ contract BeefyClient is AccessControl {
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param proof a struct containing the data needed to verify all validator signatures
      */
-    function completeCommitment(
+    function submit(
         uint256 id,
         Commitment calldata commitment,
         ValidatorProof calldata proof,
         MMRLeaf calldata leaf,
         MMRProof calldata leafProof
     ) public {
-        ValidationData storage data = validationData[id];
+        Request storage request = requests[id];
 
         require(commitment.validatorSetID == nextValidatorSet.id);
         require(leaf.nextAuthoritySetID == nextValidatorSet.id + 1);
 
-        bytes32 commitmentHash = verifyCommitment(nextValidatorSet, data, commitment, proof);
+        bytes32 commitmentHash = verifyCommitment(nextValidatorSet, request, commitment, proof);
 
         require(
             MMRProofVerification.verifyLeafProof(
@@ -315,33 +325,23 @@ contract BeefyClient is AccessControl {
 
         emit NewMMRRoot(commitment.payload.mmrRootHash, commitment.blockNumber);
         emit CommitmentVerified(id, Phase.Final, commitmentHash, msg.sender);
-        delete validationData[id];
+        delete requests[id];
     }
 
     /* Private Functions */
 
-    function getValidatorSet(uint64 id) internal view returns (ValidatorSet memory) {
-        if (id == currentValidatorSet.id) {
-            return currentValidatorSet;
-        } else if (id == nextValidatorSet.id) {
-            return nextValidatorSet;
-        } else {
-            revert("unknown-validator-set");
-        }
-    }
-
     /**
      * @notice Deterministically generates a seed from the block hash at the block number of creation of the validation
-     * data plus MAXIMUM_NUM_SIGNERS
+     * request plus MAXIMUM_NUM_SIGNERS
      * @dev Note that `blockhash(blockNum)` will only work for the 256 most recent blocks. If
      * `completeSignatureCommitment` is called too late, a new call to `newSignatureCommitment` is necessary to reset
-     * validation data's block number
-     * @param data a storage reference to the validationData struct
+     * validation request's block number
+     * @param request a storage reference to the requests struct
      * @return onChainRandNums an array storing the random numbers generated inside this function
      */
-    function getSeed(ValidationData storage data) private view returns (uint256) {
+    function getSeed(Request storage request) private view returns (uint256) {
         // @note Get payload.blocknumber, add BLOCK_WAIT_PERIOD
-        uint256 randomSeedBlockNum = data.blockNumber + BLOCK_WAIT_PERIOD;
+        uint256 randomSeedBlockNum = request.blockNumber + BLOCK_WAIT_PERIOD;
         // @note Create a hash seed from the block number
         bytes32 randomSeedBlockHash = blockhash(randomSeedBlockNum);
 
@@ -355,18 +355,18 @@ contract BeefyClient is AccessControl {
 
     function verifyCommitment(
         ValidatorSet memory vset,
-        ValidationData storage data,
+        Request storage request,
         Commitment calldata commitment,
         ValidatorProof calldata proof
     ) internal view returns (bytes32) {
         // Verify that sender is the same as in `newSignatureCommitment`
         require(
-            msg.sender == data.senderAddress,
-            "Sender address does not match original validation data"
+            msg.sender == request.senderAddress,
+            "Sender address does not match original validation request"
         );
 
         // Verify that block wait period has passed
-        require(block.number >= data.blockNumber + BLOCK_WAIT_PERIOD, "Block wait period not over");
+        require(block.number >= request.blockNumber + BLOCK_WAIT_PERIOD, "Block wait period not over");
 
         // Check that payload.leaf.block_number is > last_known_block_number;
         require(commitment.blockNumber > latestBeefyBlock, "Commitment blocknumber is too old");
@@ -382,8 +382,8 @@ contract BeefyClient is AccessControl {
         );
 
         uint256[] memory randomBitfield = Bitfield.randomNBitsWithPriorCheck(
-            getSeed(data),
-            data.validatorClaimsBitfield,
+            getSeed(request),
+            request.validatorClaimsBitfield,
             requiredNumOfSignatures,
             vset.length
         );

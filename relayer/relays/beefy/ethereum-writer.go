@@ -29,8 +29,9 @@ type EthereumWriter struct {
 	conn                *ethereum.Connection
 	beefyClientContract *beefyclient.BeefyClient
 	tasks               <-chan Task
-	someTasks           chan Task
-	someFoo             chan Task
+	filteredTasks           chan Task
+
+	currentValidatorSetID uint64
 
 	blockWaitPeriod uint64
 }
@@ -44,7 +45,7 @@ func NewEthereumWriter(
 		config:    config,
 		conn:      conn,
 		tasks:     tasks,
-		someTasks: make(chan Task),
+		filteredTasks: make(chan Task),
 	}
 }
 
@@ -66,6 +67,12 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) (uint64
 		return 0, err
 	}
 
+	currentValidatorSet, err := wr.beefyClientContract.CurrentValidatorSet(&callOpts)
+	if err != nil {
+		return 0, err
+	}
+	wr.currentValidatorSetID = currentValidatorSet.Id.Uint64()
+
 	log.WithField("latestBeefyBlock", latestBeefyBlock).Info("Retrieved latest beefy block")
 
 	blockWaitPeriod, err := wr.beefyClientContract.BLOCKWAITPERIOD(&callOpts)
@@ -76,7 +83,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) (uint64
 
 	// launch task filterer
 	eg.Go(func() error {
-		defer close(wr.someTasks)
+		defer close(wr.filteredTasks)
 		err := wr.filterTasks(ctx)
 		log.WithField("reason", err).Info("Shutting down task filter")
 		if err != nil {
@@ -109,7 +116,7 @@ func (wr *EthereumWriter) processAllMessages(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case task, ok := <-wr.someTasks:
+		case task, ok := <-wr.filteredTasks:
 			if !ok {
 				return nil
 			}
@@ -132,13 +139,25 @@ func (wr *EthereumWriter) filterTasks(ctx context.Context) error {
 				return nil
 			}
 
-			// drop task if it can't be processed immediately
-			select {
-			case wr.someTasks <- task:
-			default:
-				log.WithField("validatorSetId", task.SignedCommitment.Commitment.ValidatorSetID).Info("Discarded commitment")
+			if task.SignedCommitment.Commitment.ValidatorSetID == wr.currentValidatorSetID + 1 {
+				wr.currentValidatorSetID++
+				task.IsHandover = true
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case wr.filteredTasks <- task:
+				}
+			} else if task.SignedCommitment.Commitment.ValidatorSetID == wr.currentValidatorSetID {
+				task.IsHandover = false
+				// drop task if it can't be processed immediately
+				select {
+				case wr.filteredTasks <- task:
+				default:
+					log.WithField("validatorSetId", task.SignedCommitment.Commitment.ValidatorSetID).Info("Discarded commitment")
+				}
+			} else {
+				return fmt.Errorf("commitment validator set has unexpected id")
 			}
-
 		}
 	}
 }
@@ -194,36 +213,6 @@ func (wr *EthereumWriter) getContractCommitmentVerified(receipt *types.Receipt) 
 }
 
 func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
-	callOpts := bind.CallOpts{
-		Context: ctx,
-	}
-
-	currentValidatorSet, err := wr.beefyClientContract.CurrentValidatorSet(&callOpts)
-	if err != nil {
-		return err
-	}
-
-	nextValidatorSet, err := wr.beefyClientContract.NextValidatorSet(&callOpts)
-	if err != nil {
-		return err
-	}
-
-	var isHandover bool
-
-	switch {
-	case task.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet.Id.Uint64():
-		isHandover = false
-	case task.SignedCommitment.Commitment.ValidatorSetID == nextValidatorSet.Id.Uint64():
-		isHandover = true
-	default:
-		return fmt.Errorf("commitment validatorset incorrect")
-	}
-
-	if isHandover && !task.ProofIsValid {
-		log.Info("Skipping commitment as it has corrupted proof")
-		return nil
-	}
-
 	tx, err := wr.WriteInitialSignatureCommitment(ctx, &task)
 	if err != nil {
 		log.WithError(err).Error("Failed to send initial signature commitment")
@@ -257,13 +246,13 @@ func (wr *EthereumWriter) processMessage(ctx context.Context, task Task) error {
 
 	task.ValidationID = int64(event.Id.Uint64())
 
-	tx, err = wr.WriteFinalSignatureCommitment(ctx, &task, isHandover)
+	tx, err = wr.WriteFinalSignatureCommitment(ctx, &task, task.IsHandover)
 	if err != nil {
 		log.WithError(err).Error("Failed to send final signature commitment")
 		return err
 	}
 
-	success, err := wr.watchTransaction(ctx, tx, 1)
+	success, err := wr.watchTransaction(ctx, tx, wr.config.DescendantsUntilFinal)
 	if err != nil {
 		return fmt.Errorf("monitoring failed for transaction CompleteSignatureCommitment (%v): %w", tx.Hash().Hex(), err)
 	}
