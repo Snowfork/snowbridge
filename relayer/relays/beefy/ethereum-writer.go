@@ -300,7 +300,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 		return nil, fmt.Errorf("unknown contract")
 	}
 
-	randomBitfield, err := contract.CreateRandomBitfield(
+	randomBitfield, err := contract.CreateFinalBitfield(
 		&bind.CallOpts{Pending: true},
 		big.NewInt(validationID),
 	)
