@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -14,6 +15,7 @@ import (
 type ScanBlocksResult struct {
 	BlockNumber uint64
 	BlockHash   types.Hash
+	Depth       uint64
 	Error       error
 }
 
@@ -53,7 +55,7 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(6 * time.Second):
+			case <-time.After(3 * time.Second):
 			}
 			continue
 		}
@@ -67,7 +69,7 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 		select {
 		case <-ctx.Done():
 			return
-		case out <- ScanBlocksResult{BlockNumber: current, BlockHash: blockHash}:
+		case out <- ScanBlocksResult{BlockNumber: current, BlockHash: blockHash, Depth: finalizedBlockNumber - current}:
 		}
 
 		current++
@@ -78,6 +80,7 @@ type ScanCommitmentsResult struct {
 	SignedCommitment types.SignedCommitment
 	BlockNumber      uint64
 	BlockHash        types.Hash
+	Depth            uint64
 	Error            error
 }
 
@@ -149,7 +152,7 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 			select {
 			case <-ctx.Done():
 				return
-			case out <- ScanCommitmentsResult{BlockNumber: result.BlockNumber, BlockHash: result.BlockHash, SignedCommitment: *commitment}:
+			case out <- ScanCommitmentsResult{BlockNumber: result.BlockNumber, BlockHash: result.BlockHash, SignedCommitment: *commitment, Depth: result.Depth}:
 			}
 		}
 	}
@@ -159,6 +162,7 @@ type ScanSafeCommitmentsResult struct {
 	SignedCommitment types.SignedCommitment
 	MMRProof         merkle.SimplifiedMMRProof
 	BlockHash        types.Hash
+	Depth            uint64
 	Error            error
 }
 
@@ -213,13 +217,15 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 			}
 
 			if !proofIsValid {
+				log.WithField("blockNumber", blockNumber).WithField("validatorSetID", result.SignedCommitment.Commitment.ValidatorSetID).Info("INVALID")
+
 				continue
 			}
 
 			select {
 			case <-ctx.Done():
 				return
-			case out <- ScanSafeCommitmentsResult{result.SignedCommitment, proof, blockHash, nil}:
+			case out <- ScanSafeCommitmentsResult{result.SignedCommitment, proof, blockHash, result.Depth, nil}:
 			}
 
 		}

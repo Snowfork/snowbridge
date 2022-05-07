@@ -53,12 +53,20 @@ type BeefyClientPayload struct {
 	Suffix      []byte
 }
 
+// BeefyClientValidatorMultiProof is an auto generated low-level Go binding around an user-defined struct.
+type BeefyClientValidatorMultiProof struct {
+	Signatures   [][]byte
+	Indices      []*big.Int
+	Addrs        []common.Address
+	MerkleProofs [][][32]byte
+}
+
 // BeefyClientValidatorProof is an auto generated low-level Go binding around an user-defined struct.
 type BeefyClientValidatorProof struct {
-	Signatures            [][]byte
-	Positions             []*big.Int
-	PublicKeys            []common.Address
-	PublicKeyMerkleProofs [][][32]byte
+	Signature   []byte
+	Index       *big.Int
+	Addr        common.Address
+	MerkleProof [][32]byte
 }
 
 // BeefyClientValidatorSet is an auto generated low-level Go binding around an user-defined struct.
@@ -76,7 +84,7 @@ type MMRProof struct {
 
 // BeefyClientMetaData contains all meta data concerning the BeefyClient contract.
 var BeefyClientMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"enumBeefyClient.Phase\",\"name\":\"phase\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prover\",\"type\":\"address\"}],\"name\":\"CommitmentVerified\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"mmrRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"}],\"name\":\"NewMMRRoot\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"BLOCK_WAIT_PERIOD\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_DENOMINATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_NUMERATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"bitsToSet\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"createInitialBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"createRandomBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentValidatorSet\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"_startingBeefyBlock\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"internalType\":\"structBeefyClient.ValidatorSet\",\"name\":\"_initialValidatorSet\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"internalType\":\"structBeefyClient.ValidatorSet\",\"name\":\"_nextValidatorSet\",\"type\":\"tuple\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestBeefyBlock\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestMMRRoot\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextValidatorSet\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorClaimsBitfield\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"validatorSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"validatorPosition\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"validatorPublicKey\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"validatorPublicKeyMerkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"presubmit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"requests\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"senderAddress\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"internalType\":\"structBeefyClient.ValidatorSet\",\"name\":\"vset\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint32\",\"name\":\"blockNumber\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"mmrRootHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"prefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"suffix\",\"type\":\"bytes\"}],\"internalType\":\"structBeefyClient.Payload\",\"name\":\"payload\",\"type\":\"tuple\"}],\"internalType\":\"structBeefyClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"},{\"internalType\":\"uint256[]\",\"name\":\"positions\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"publicKeys\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"publicKeyMerkleProofs\",\"type\":\"bytes32[][]\"}],\"internalType\":\"structBeefyClient.ValidatorProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint32\",\"name\":\"blockNumber\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"mmrRootHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"prefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"suffix\",\"type\":\"bytes\"}],\"internalType\":\"structBeefyClient.Payload\",\"name\":\"payload\",\"type\":\"tuple\"}],\"internalType\":\"structBeefyClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"},{\"internalType\":\"uint256[]\",\"name\":\"positions\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"publicKeys\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"publicKeyMerkleProofs\",\"type\":\"bytes32[][]\"}],\"internalType\":\"structBeefyClient.ValidatorProof\",\"name\":\"proof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyClient.MMRLeaf\",\"name\":\"leaf\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"items\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"order\",\"type\":\"uint64\"}],\"internalType\":\"structMMRProof\",\"name\":\"leafProof\",\"type\":\"tuple\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"leafHash\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"items\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"order\",\"type\":\"uint64\"}],\"internalType\":\"structMMRProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"verifyMMRLeafProof\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"mmrRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"blockNumber\",\"type\":\"uint64\"}],\"name\":\"NewMMRRoot\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"NewRequest\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"BLOCK_WAIT_PERIOD\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_DENOMINATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_NUMERATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"bitsToSet\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"createInitialBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"createRandomBitfield\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentValidatorSet\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"_initialBeefyBlock\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"internalType\":\"structBeefyClient.ValidatorSet\",\"name\":\"_initialValidatorSet\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"internalType\":\"structBeefyClient.ValidatorSet\",\"name\":\"_nextValidatorSet\",\"type\":\"tuple\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestBeefyBlock\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestMMRRoot\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextRequestID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextValidatorSet\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"requests\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"internalType\":\"structBeefyClient.ValidatorSet\",\"name\":\"vset\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint32\",\"name\":\"blockNumber\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"mmrRootHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"prefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"suffix\",\"type\":\"bytes\"}],\"internalType\":\"structBeefyClient.Payload\",\"name\":\"payload\",\"type\":\"tuple\"}],\"internalType\":\"structBeefyClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"},{\"internalType\":\"uint256[]\",\"name\":\"indices\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"addrs\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"merkleProofs\",\"type\":\"bytes32[][]\"}],\"internalType\":\"structBeefyClient.ValidatorMultiProof\",\"name\":\"proof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structBeefyClient.MMRLeaf\",\"name\":\"leaf\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"items\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"order\",\"type\":\"uint64\"}],\"internalType\":\"structMMRProof\",\"name\":\"leafProof\",\"type\":\"tuple\"}],\"name\":\"submitFinal\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint32\",\"name\":\"blockNumber\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"mmrRootHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"prefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"suffix\",\"type\":\"bytes\"}],\"internalType\":\"structBeefyClient.Payload\",\"name\":\"payload\",\"type\":\"tuple\"}],\"internalType\":\"structBeefyClient.Commitment\",\"name\":\"commitment\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"},{\"internalType\":\"uint256[]\",\"name\":\"indices\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"addrs\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"merkleProofs\",\"type\":\"bytes32[][]\"}],\"internalType\":\"structBeefyClient.ValidatorMultiProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submitFinal\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commitmentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"validatorSetID\",\"type\":\"uint64\"},{\"internalType\":\"uint256[]\",\"name\":\"validatorClaimsBitfield\",\"type\":\"uint256[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"merkleProof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structBeefyClient.ValidatorProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submitInitial\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"leafHash\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"items\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"order\",\"type\":\"uint64\"}],\"internalType\":\"structMMRProof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"verifyMMRLeafProof\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // BeefyClientABI is the input ABI used to generate the binding from.
@@ -256,37 +264,6 @@ func (_BeefyClient *BeefyClientCallerSession) BLOCKWAITPERIOD() (uint64, error) 
 	return _BeefyClient.Contract.BLOCKWAITPERIOD(&_BeefyClient.CallOpts)
 }
 
-// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
-//
-// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
-func (_BeefyClient *BeefyClientCaller) DEFAULTADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
-	var out []interface{}
-	err := _BeefyClient.contract.Call(opts, &out, "DEFAULT_ADMIN_ROLE")
-
-	if err != nil {
-		return *new([32]byte), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
-
-	return out0, err
-
-}
-
-// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
-//
-// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
-func (_BeefyClient *BeefyClientSession) DEFAULTADMINROLE() ([32]byte, error) {
-	return _BeefyClient.Contract.DEFAULTADMINROLE(&_BeefyClient.CallOpts)
-}
-
-// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
-//
-// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
-func (_BeefyClient *BeefyClientCallerSession) DEFAULTADMINROLE() ([32]byte, error) {
-	return _BeefyClient.Contract.DEFAULTADMINROLE(&_BeefyClient.CallOpts)
-}
-
 // THRESHOLDDENOMINATOR is a free data retrieval call binding the contract method 0xef024458.
 //
 // Solidity: function THRESHOLD_DENOMINATOR() view returns(uint256)
@@ -461,68 +438,6 @@ func (_BeefyClient *BeefyClientCallerSession) CurrentValidatorSet() (struct {
 	return _BeefyClient.Contract.CurrentValidatorSet(&_BeefyClient.CallOpts)
 }
 
-// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
-//
-// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
-func (_BeefyClient *BeefyClientCaller) GetRoleAdmin(opts *bind.CallOpts, role [32]byte) ([32]byte, error) {
-	var out []interface{}
-	err := _BeefyClient.contract.Call(opts, &out, "getRoleAdmin", role)
-
-	if err != nil {
-		return *new([32]byte), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
-
-	return out0, err
-
-}
-
-// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
-//
-// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
-func (_BeefyClient *BeefyClientSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
-	return _BeefyClient.Contract.GetRoleAdmin(&_BeefyClient.CallOpts, role)
-}
-
-// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
-//
-// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
-func (_BeefyClient *BeefyClientCallerSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
-	return _BeefyClient.Contract.GetRoleAdmin(&_BeefyClient.CallOpts, role)
-}
-
-// HasRole is a free data retrieval call binding the contract method 0x91d14854.
-//
-// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
-func (_BeefyClient *BeefyClientCaller) HasRole(opts *bind.CallOpts, role [32]byte, account common.Address) (bool, error) {
-	var out []interface{}
-	err := _BeefyClient.contract.Call(opts, &out, "hasRole", role, account)
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// HasRole is a free data retrieval call binding the contract method 0x91d14854.
-//
-// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
-func (_BeefyClient *BeefyClientSession) HasRole(role [32]byte, account common.Address) (bool, error) {
-	return _BeefyClient.Contract.HasRole(&_BeefyClient.CallOpts, role, account)
-}
-
-// HasRole is a free data retrieval call binding the contract method 0x91d14854.
-//
-// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
-func (_BeefyClient *BeefyClientCallerSession) HasRole(role [32]byte, account common.Address) (bool, error) {
-	return _BeefyClient.Contract.HasRole(&_BeefyClient.CallOpts, role, account)
-}
-
 // LatestBeefyBlock is a free data retrieval call binding the contract method 0x66ae69a0.
 //
 // Solidity: function latestBeefyBlock() view returns(uint64)
@@ -585,12 +500,12 @@ func (_BeefyClient *BeefyClientCallerSession) LatestMMRRoot() ([32]byte, error) 
 	return _BeefyClient.Contract.LatestMMRRoot(&_BeefyClient.CallOpts)
 }
 
-// NextID is a free data retrieval call binding the contract method 0x1e96917d.
+// NextRequestID is a free data retrieval call binding the contract method 0x12b7d960.
 //
-// Solidity: function nextID() view returns(uint256)
-func (_BeefyClient *BeefyClientCaller) NextID(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function nextRequestID() view returns(uint256)
+func (_BeefyClient *BeefyClientCaller) NextRequestID(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _BeefyClient.contract.Call(opts, &out, "nextID")
+	err := _BeefyClient.contract.Call(opts, &out, "nextRequestID")
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -602,18 +517,18 @@ func (_BeefyClient *BeefyClientCaller) NextID(opts *bind.CallOpts) (*big.Int, er
 
 }
 
-// NextID is a free data retrieval call binding the contract method 0x1e96917d.
+// NextRequestID is a free data retrieval call binding the contract method 0x12b7d960.
 //
-// Solidity: function nextID() view returns(uint256)
-func (_BeefyClient *BeefyClientSession) NextID() (*big.Int, error) {
-	return _BeefyClient.Contract.NextID(&_BeefyClient.CallOpts)
+// Solidity: function nextRequestID() view returns(uint256)
+func (_BeefyClient *BeefyClientSession) NextRequestID() (*big.Int, error) {
+	return _BeefyClient.Contract.NextRequestID(&_BeefyClient.CallOpts)
 }
 
-// NextID is a free data retrieval call binding the contract method 0x1e96917d.
+// NextRequestID is a free data retrieval call binding the contract method 0x12b7d960.
 //
-// Solidity: function nextID() view returns(uint256)
-func (_BeefyClient *BeefyClientCallerSession) NextID() (*big.Int, error) {
-	return _BeefyClient.Contract.NextID(&_BeefyClient.CallOpts)
+// Solidity: function nextRequestID() view returns(uint256)
+func (_BeefyClient *BeefyClientCallerSession) NextRequestID() (*big.Int, error) {
+	return _BeefyClient.Contract.NextRequestID(&_BeefyClient.CallOpts)
 }
 
 // NextValidatorSet is a free data retrieval call binding the contract method 0x36667513.
@@ -666,11 +581,42 @@ func (_BeefyClient *BeefyClientCallerSession) NextValidatorSet() (struct {
 	return _BeefyClient.Contract.NextValidatorSet(&_BeefyClient.CallOpts)
 }
 
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_BeefyClient *BeefyClientCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _BeefyClient.contract.Call(opts, &out, "owner")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_BeefyClient *BeefyClientSession) Owner() (common.Address, error) {
+	return _BeefyClient.Contract.Owner(&_BeefyClient.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_BeefyClient *BeefyClientCallerSession) Owner() (common.Address, error) {
+	return _BeefyClient.Contract.Owner(&_BeefyClient.CallOpts)
+}
+
 // Requests is a free data retrieval call binding the contract method 0x81d12c58.
 //
-// Solidity: function requests(uint256 ) view returns(address senderAddress, uint64 validatorSetID, bytes32 commitmentHash, uint256 blockNumber, (uint256,bytes32,uint256) vset)
+// Solidity: function requests(uint256 ) view returns(address sender, uint64 validatorSetID, bytes32 commitmentHash, uint256 blockNumber, (uint256,bytes32,uint256) vset)
 func (_BeefyClient *BeefyClientCaller) Requests(opts *bind.CallOpts, arg0 *big.Int) (struct {
-	SenderAddress  common.Address
+	Sender         common.Address
 	ValidatorSetID uint64
 	CommitmentHash [32]byte
 	BlockNumber    *big.Int
@@ -680,7 +626,7 @@ func (_BeefyClient *BeefyClientCaller) Requests(opts *bind.CallOpts, arg0 *big.I
 	err := _BeefyClient.contract.Call(opts, &out, "requests", arg0)
 
 	outstruct := new(struct {
-		SenderAddress  common.Address
+		Sender         common.Address
 		ValidatorSetID uint64
 		CommitmentHash [32]byte
 		BlockNumber    *big.Int
@@ -690,7 +636,7 @@ func (_BeefyClient *BeefyClientCaller) Requests(opts *bind.CallOpts, arg0 *big.I
 		return *outstruct, err
 	}
 
-	outstruct.SenderAddress = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Sender = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 	outstruct.ValidatorSetID = *abi.ConvertType(out[1], new(uint64)).(*uint64)
 	outstruct.CommitmentHash = *abi.ConvertType(out[2], new([32]byte)).(*[32]byte)
 	outstruct.BlockNumber = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
@@ -702,9 +648,9 @@ func (_BeefyClient *BeefyClientCaller) Requests(opts *bind.CallOpts, arg0 *big.I
 
 // Requests is a free data retrieval call binding the contract method 0x81d12c58.
 //
-// Solidity: function requests(uint256 ) view returns(address senderAddress, uint64 validatorSetID, bytes32 commitmentHash, uint256 blockNumber, (uint256,bytes32,uint256) vset)
+// Solidity: function requests(uint256 ) view returns(address sender, uint64 validatorSetID, bytes32 commitmentHash, uint256 blockNumber, (uint256,bytes32,uint256) vset)
 func (_BeefyClient *BeefyClientSession) Requests(arg0 *big.Int) (struct {
-	SenderAddress  common.Address
+	Sender         common.Address
 	ValidatorSetID uint64
 	CommitmentHash [32]byte
 	BlockNumber    *big.Int
@@ -715,46 +661,15 @@ func (_BeefyClient *BeefyClientSession) Requests(arg0 *big.Int) (struct {
 
 // Requests is a free data retrieval call binding the contract method 0x81d12c58.
 //
-// Solidity: function requests(uint256 ) view returns(address senderAddress, uint64 validatorSetID, bytes32 commitmentHash, uint256 blockNumber, (uint256,bytes32,uint256) vset)
+// Solidity: function requests(uint256 ) view returns(address sender, uint64 validatorSetID, bytes32 commitmentHash, uint256 blockNumber, (uint256,bytes32,uint256) vset)
 func (_BeefyClient *BeefyClientCallerSession) Requests(arg0 *big.Int) (struct {
-	SenderAddress  common.Address
+	Sender         common.Address
 	ValidatorSetID uint64
 	CommitmentHash [32]byte
 	BlockNumber    *big.Int
 	Vset           BeefyClientValidatorSet
 }, error) {
 	return _BeefyClient.Contract.Requests(&_BeefyClient.CallOpts, arg0)
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_BeefyClient *BeefyClientCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var out []interface{}
-	err := _BeefyClient.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_BeefyClient *BeefyClientSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
-	return _BeefyClient.Contract.SupportsInterface(&_BeefyClient.CallOpts, interfaceId)
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_BeefyClient *BeefyClientCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
-	return _BeefyClient.Contract.SupportsInterface(&_BeefyClient.CallOpts, interfaceId)
 }
 
 // VerifyMMRLeafProof is a free data retrieval call binding the contract method 0x8cdeab50.
@@ -788,288 +703,130 @@ func (_BeefyClient *BeefyClientCallerSession) VerifyMMRLeafProof(leafHash [32]by
 	return _BeefyClient.Contract.VerifyMMRLeafProof(&_BeefyClient.CallOpts, leafHash, proof)
 }
 
-// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+// Initialize is a paid mutator transaction binding the contract method 0x3795ea5f.
 //
-// Solidity: function grantRole(bytes32 role, address account) returns()
-func (_BeefyClient *BeefyClientTransactor) GrantRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _BeefyClient.contract.Transact(opts, "grantRole", role, account)
-}
-
-// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
-//
-// Solidity: function grantRole(bytes32 role, address account) returns()
-func (_BeefyClient *BeefyClientSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _BeefyClient.Contract.GrantRole(&_BeefyClient.TransactOpts, role, account)
-}
-
-// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
-//
-// Solidity: function grantRole(bytes32 role, address account) returns()
-func (_BeefyClient *BeefyClientTransactorSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _BeefyClient.Contract.GrantRole(&_BeefyClient.TransactOpts, role, account)
+// Solidity: function initialize(uint64 _initialBeefyBlock, (uint256,bytes32,uint256) _initialValidatorSet, (uint256,bytes32,uint256) _nextValidatorSet) returns()
+func (_BeefyClient *BeefyClientTransactor) Initialize(opts *bind.TransactOpts, _initialBeefyBlock uint64, _initialValidatorSet BeefyClientValidatorSet, _nextValidatorSet BeefyClientValidatorSet) (*types.Transaction, error) {
+	return _BeefyClient.contract.Transact(opts, "initialize", _initialBeefyBlock, _initialValidatorSet, _nextValidatorSet)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0x3795ea5f.
 //
-// Solidity: function initialize(uint64 _startingBeefyBlock, (uint256,bytes32,uint256) _initialValidatorSet, (uint256,bytes32,uint256) _nextValidatorSet) returns()
-func (_BeefyClient *BeefyClientTransactor) Initialize(opts *bind.TransactOpts, _startingBeefyBlock uint64, _initialValidatorSet BeefyClientValidatorSet, _nextValidatorSet BeefyClientValidatorSet) (*types.Transaction, error) {
-	return _BeefyClient.contract.Transact(opts, "initialize", _startingBeefyBlock, _initialValidatorSet, _nextValidatorSet)
+// Solidity: function initialize(uint64 _initialBeefyBlock, (uint256,bytes32,uint256) _initialValidatorSet, (uint256,bytes32,uint256) _nextValidatorSet) returns()
+func (_BeefyClient *BeefyClientSession) Initialize(_initialBeefyBlock uint64, _initialValidatorSet BeefyClientValidatorSet, _nextValidatorSet BeefyClientValidatorSet) (*types.Transaction, error) {
+	return _BeefyClient.Contract.Initialize(&_BeefyClient.TransactOpts, _initialBeefyBlock, _initialValidatorSet, _nextValidatorSet)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0x3795ea5f.
 //
-// Solidity: function initialize(uint64 _startingBeefyBlock, (uint256,bytes32,uint256) _initialValidatorSet, (uint256,bytes32,uint256) _nextValidatorSet) returns()
-func (_BeefyClient *BeefyClientSession) Initialize(_startingBeefyBlock uint64, _initialValidatorSet BeefyClientValidatorSet, _nextValidatorSet BeefyClientValidatorSet) (*types.Transaction, error) {
-	return _BeefyClient.Contract.Initialize(&_BeefyClient.TransactOpts, _startingBeefyBlock, _initialValidatorSet, _nextValidatorSet)
+// Solidity: function initialize(uint64 _initialBeefyBlock, (uint256,bytes32,uint256) _initialValidatorSet, (uint256,bytes32,uint256) _nextValidatorSet) returns()
+func (_BeefyClient *BeefyClientTransactorSession) Initialize(_initialBeefyBlock uint64, _initialValidatorSet BeefyClientValidatorSet, _nextValidatorSet BeefyClientValidatorSet) (*types.Transaction, error) {
+	return _BeefyClient.Contract.Initialize(&_BeefyClient.TransactOpts, _initialBeefyBlock, _initialValidatorSet, _nextValidatorSet)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x3795ea5f.
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
 //
-// Solidity: function initialize(uint64 _startingBeefyBlock, (uint256,bytes32,uint256) _initialValidatorSet, (uint256,bytes32,uint256) _nextValidatorSet) returns()
-func (_BeefyClient *BeefyClientTransactorSession) Initialize(_startingBeefyBlock uint64, _initialValidatorSet BeefyClientValidatorSet, _nextValidatorSet BeefyClientValidatorSet) (*types.Transaction, error) {
-	return _BeefyClient.Contract.Initialize(&_BeefyClient.TransactOpts, _startingBeefyBlock, _initialValidatorSet, _nextValidatorSet)
+// Solidity: function renounceOwnership() returns()
+func (_BeefyClient *BeefyClientTransactor) RenounceOwnership(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _BeefyClient.contract.Transact(opts, "renounceOwnership")
 }
 
-// Presubmit is a paid mutator transaction binding the contract method 0x6a0d003f.
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
 //
-// Solidity: function presubmit(bytes32 commitmentHash, uint64 validatorSetID, uint256[] validatorClaimsBitfield, bytes validatorSignature, uint256 validatorPosition, address validatorPublicKey, bytes32[] validatorPublicKeyMerkleProof) payable returns()
-func (_BeefyClient *BeefyClientTransactor) Presubmit(opts *bind.TransactOpts, commitmentHash [32]byte, validatorSetID uint64, validatorClaimsBitfield []*big.Int, validatorSignature []byte, validatorPosition *big.Int, validatorPublicKey common.Address, validatorPublicKeyMerkleProof [][32]byte) (*types.Transaction, error) {
-	return _BeefyClient.contract.Transact(opts, "presubmit", commitmentHash, validatorSetID, validatorClaimsBitfield, validatorSignature, validatorPosition, validatorPublicKey, validatorPublicKeyMerkleProof)
+// Solidity: function renounceOwnership() returns()
+func (_BeefyClient *BeefyClientSession) RenounceOwnership() (*types.Transaction, error) {
+	return _BeefyClient.Contract.RenounceOwnership(&_BeefyClient.TransactOpts)
 }
 
-// Presubmit is a paid mutator transaction binding the contract method 0x6a0d003f.
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
 //
-// Solidity: function presubmit(bytes32 commitmentHash, uint64 validatorSetID, uint256[] validatorClaimsBitfield, bytes validatorSignature, uint256 validatorPosition, address validatorPublicKey, bytes32[] validatorPublicKeyMerkleProof) payable returns()
-func (_BeefyClient *BeefyClientSession) Presubmit(commitmentHash [32]byte, validatorSetID uint64, validatorClaimsBitfield []*big.Int, validatorSignature []byte, validatorPosition *big.Int, validatorPublicKey common.Address, validatorPublicKeyMerkleProof [][32]byte) (*types.Transaction, error) {
-	return _BeefyClient.Contract.Presubmit(&_BeefyClient.TransactOpts, commitmentHash, validatorSetID, validatorClaimsBitfield, validatorSignature, validatorPosition, validatorPublicKey, validatorPublicKeyMerkleProof)
+// Solidity: function renounceOwnership() returns()
+func (_BeefyClient *BeefyClientTransactorSession) RenounceOwnership() (*types.Transaction, error) {
+	return _BeefyClient.Contract.RenounceOwnership(&_BeefyClient.TransactOpts)
 }
 
-// Presubmit is a paid mutator transaction binding the contract method 0x6a0d003f.
+// SubmitFinal is a paid mutator transaction binding the contract method 0x495c2344.
 //
-// Solidity: function presubmit(bytes32 commitmentHash, uint64 validatorSetID, uint256[] validatorClaimsBitfield, bytes validatorSignature, uint256 validatorPosition, address validatorPublicKey, bytes32[] validatorPublicKeyMerkleProof) payable returns()
-func (_BeefyClient *BeefyClientTransactorSession) Presubmit(commitmentHash [32]byte, validatorSetID uint64, validatorClaimsBitfield []*big.Int, validatorSignature []byte, validatorPosition *big.Int, validatorPublicKey common.Address, validatorPublicKeyMerkleProof [][32]byte) (*types.Transaction, error) {
-	return _BeefyClient.Contract.Presubmit(&_BeefyClient.TransactOpts, commitmentHash, validatorSetID, validatorClaimsBitfield, validatorSignature, validatorPosition, validatorPublicKey, validatorPublicKeyMerkleProof)
+// Solidity: function submitFinal(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, (bytes32[],uint64) leafProof) returns()
+func (_BeefyClient *BeefyClientTransactor) SubmitFinal(opts *bind.TransactOpts, id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorMultiProof, leaf BeefyClientMMRLeaf, leafProof MMRProof) (*types.Transaction, error) {
+	return _BeefyClient.contract.Transact(opts, "submitFinal", id, commitment, proof, leaf, leafProof)
 }
 
-// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+// SubmitFinal is a paid mutator transaction binding the contract method 0x495c2344.
 //
-// Solidity: function renounceRole(bytes32 role, address account) returns()
-func (_BeefyClient *BeefyClientTransactor) RenounceRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _BeefyClient.contract.Transact(opts, "renounceRole", role, account)
+// Solidity: function submitFinal(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, (bytes32[],uint64) leafProof) returns()
+func (_BeefyClient *BeefyClientSession) SubmitFinal(id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorMultiProof, leaf BeefyClientMMRLeaf, leafProof MMRProof) (*types.Transaction, error) {
+	return _BeefyClient.Contract.SubmitFinal(&_BeefyClient.TransactOpts, id, commitment, proof, leaf, leafProof)
 }
 
-// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+// SubmitFinal is a paid mutator transaction binding the contract method 0x495c2344.
 //
-// Solidity: function renounceRole(bytes32 role, address account) returns()
-func (_BeefyClient *BeefyClientSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _BeefyClient.Contract.RenounceRole(&_BeefyClient.TransactOpts, role, account)
+// Solidity: function submitFinal(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, (bytes32[],uint64) leafProof) returns()
+func (_BeefyClient *BeefyClientTransactorSession) SubmitFinal(id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorMultiProof, leaf BeefyClientMMRLeaf, leafProof MMRProof) (*types.Transaction, error) {
+	return _BeefyClient.Contract.SubmitFinal(&_BeefyClient.TransactOpts, id, commitment, proof, leaf, leafProof)
 }
 
-// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+// SubmitFinal0 is a paid mutator transaction binding the contract method 0x664561c9.
 //
-// Solidity: function renounceRole(bytes32 role, address account) returns()
-func (_BeefyClient *BeefyClientTransactorSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _BeefyClient.Contract.RenounceRole(&_BeefyClient.TransactOpts, role, account)
+// Solidity: function submitFinal(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof) returns()
+func (_BeefyClient *BeefyClientTransactor) SubmitFinal0(opts *bind.TransactOpts, id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorMultiProof) (*types.Transaction, error) {
+	return _BeefyClient.contract.Transact(opts, "submitFinal0", id, commitment, proof)
 }
 
-// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+// SubmitFinal0 is a paid mutator transaction binding the contract method 0x664561c9.
 //
-// Solidity: function revokeRole(bytes32 role, address account) returns()
-func (_BeefyClient *BeefyClientTransactor) RevokeRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _BeefyClient.contract.Transact(opts, "revokeRole", role, account)
+// Solidity: function submitFinal(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof) returns()
+func (_BeefyClient *BeefyClientSession) SubmitFinal0(id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorMultiProof) (*types.Transaction, error) {
+	return _BeefyClient.Contract.SubmitFinal0(&_BeefyClient.TransactOpts, id, commitment, proof)
 }
 
-// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+// SubmitFinal0 is a paid mutator transaction binding the contract method 0x664561c9.
 //
-// Solidity: function revokeRole(bytes32 role, address account) returns()
-func (_BeefyClient *BeefyClientSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _BeefyClient.Contract.RevokeRole(&_BeefyClient.TransactOpts, role, account)
+// Solidity: function submitFinal(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof) returns()
+func (_BeefyClient *BeefyClientTransactorSession) SubmitFinal0(id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorMultiProof) (*types.Transaction, error) {
+	return _BeefyClient.Contract.SubmitFinal0(&_BeefyClient.TransactOpts, id, commitment, proof)
 }
 
-// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+// SubmitInitial is a paid mutator transaction binding the contract method 0xdb080ba4.
 //
-// Solidity: function revokeRole(bytes32 role, address account) returns()
-func (_BeefyClient *BeefyClientTransactorSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
-	return _BeefyClient.Contract.RevokeRole(&_BeefyClient.TransactOpts, role, account)
+// Solidity: function submitInitial(bytes32 commitmentHash, uint64 validatorSetID, uint256[] validatorClaimsBitfield, (bytes,uint256,address,bytes32[]) proof) payable returns()
+func (_BeefyClient *BeefyClientTransactor) SubmitInitial(opts *bind.TransactOpts, commitmentHash [32]byte, validatorSetID uint64, validatorClaimsBitfield []*big.Int, proof BeefyClientValidatorProof) (*types.Transaction, error) {
+	return _BeefyClient.contract.Transact(opts, "submitInitial", commitmentHash, validatorSetID, validatorClaimsBitfield, proof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x35ab99fa.
+// SubmitInitial is a paid mutator transaction binding the contract method 0xdb080ba4.
 //
-// Solidity: function submit(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof) returns()
-func (_BeefyClient *BeefyClientTransactor) Submit(opts *bind.TransactOpts, id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorProof) (*types.Transaction, error) {
-	return _BeefyClient.contract.Transact(opts, "submit", id, commitment, proof)
+// Solidity: function submitInitial(bytes32 commitmentHash, uint64 validatorSetID, uint256[] validatorClaimsBitfield, (bytes,uint256,address,bytes32[]) proof) payable returns()
+func (_BeefyClient *BeefyClientSession) SubmitInitial(commitmentHash [32]byte, validatorSetID uint64, validatorClaimsBitfield []*big.Int, proof BeefyClientValidatorProof) (*types.Transaction, error) {
+	return _BeefyClient.Contract.SubmitInitial(&_BeefyClient.TransactOpts, commitmentHash, validatorSetID, validatorClaimsBitfield, proof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x35ab99fa.
+// SubmitInitial is a paid mutator transaction binding the contract method 0xdb080ba4.
 //
-// Solidity: function submit(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof) returns()
-func (_BeefyClient *BeefyClientSession) Submit(id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorProof) (*types.Transaction, error) {
-	return _BeefyClient.Contract.Submit(&_BeefyClient.TransactOpts, id, commitment, proof)
+// Solidity: function submitInitial(bytes32 commitmentHash, uint64 validatorSetID, uint256[] validatorClaimsBitfield, (bytes,uint256,address,bytes32[]) proof) payable returns()
+func (_BeefyClient *BeefyClientTransactorSession) SubmitInitial(commitmentHash [32]byte, validatorSetID uint64, validatorClaimsBitfield []*big.Int, proof BeefyClientValidatorProof) (*types.Transaction, error) {
+	return _BeefyClient.Contract.SubmitInitial(&_BeefyClient.TransactOpts, commitmentHash, validatorSetID, validatorClaimsBitfield, proof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0x35ab99fa.
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
-// Solidity: function submit(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof) returns()
-func (_BeefyClient *BeefyClientTransactorSession) Submit(id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorProof) (*types.Transaction, error) {
-	return _BeefyClient.Contract.Submit(&_BeefyClient.TransactOpts, id, commitment, proof)
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_BeefyClient *BeefyClientTransactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
+	return _BeefyClient.contract.Transact(opts, "transferOwnership", newOwner)
 }
 
-// Submit0 is a paid mutator transaction binding the contract method 0x5cc7be84.
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
-// Solidity: function submit(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, (bytes32[],uint64) leafProof) returns()
-func (_BeefyClient *BeefyClientTransactor) Submit0(opts *bind.TransactOpts, id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorProof, leaf BeefyClientMMRLeaf, leafProof MMRProof) (*types.Transaction, error) {
-	return _BeefyClient.contract.Transact(opts, "submit0", id, commitment, proof, leaf, leafProof)
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_BeefyClient *BeefyClientSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
+	return _BeefyClient.Contract.TransferOwnership(&_BeefyClient.TransactOpts, newOwner)
 }
 
-// Submit0 is a paid mutator transaction binding the contract method 0x5cc7be84.
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
-// Solidity: function submit(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, (bytes32[],uint64) leafProof) returns()
-func (_BeefyClient *BeefyClientSession) Submit0(id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorProof, leaf BeefyClientMMRLeaf, leafProof MMRProof) (*types.Transaction, error) {
-	return _BeefyClient.Contract.Submit0(&_BeefyClient.TransactOpts, id, commitment, proof, leaf, leafProof)
-}
-
-// Submit0 is a paid mutator transaction binding the contract method 0x5cc7be84.
-//
-// Solidity: function submit(uint256 id, (uint32,uint64,(bytes32,bytes,bytes)) commitment, (bytes[],uint256[],address[],bytes32[][]) proof, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, (bytes32[],uint64) leafProof) returns()
-func (_BeefyClient *BeefyClientTransactorSession) Submit0(id *big.Int, commitment BeefyClientCommitment, proof BeefyClientValidatorProof, leaf BeefyClientMMRLeaf, leafProof MMRProof) (*types.Transaction, error) {
-	return _BeefyClient.Contract.Submit0(&_BeefyClient.TransactOpts, id, commitment, proof, leaf, leafProof)
-}
-
-// BeefyClientCommitmentVerifiedIterator is returned from FilterCommitmentVerified and is used to iterate over the raw logs and unpacked data for CommitmentVerified events raised by the BeefyClient contract.
-type BeefyClientCommitmentVerifiedIterator struct {
-	Event *BeefyClientCommitmentVerified // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *BeefyClientCommitmentVerifiedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(BeefyClientCommitmentVerified)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(BeefyClientCommitmentVerified)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *BeefyClientCommitmentVerifiedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *BeefyClientCommitmentVerifiedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// BeefyClientCommitmentVerified represents a CommitmentVerified event raised by the BeefyClient contract.
-type BeefyClientCommitmentVerified struct {
-	Id             *big.Int
-	Phase          uint8
-	CommitmentHash [32]byte
-	Prover         common.Address
-	Raw            types.Log // Blockchain specific contextual infos
-}
-
-// FilterCommitmentVerified is a free log retrieval operation binding the contract event 0x370ee36e1f982f6dd70d3bb1298a6c6d38b78990000b7f39caab64a0e9c74ade.
-//
-// Solidity: event CommitmentVerified(uint256 id, uint8 phase, bytes32 commitmentHash, address prover)
-func (_BeefyClient *BeefyClientFilterer) FilterCommitmentVerified(opts *bind.FilterOpts) (*BeefyClientCommitmentVerifiedIterator, error) {
-
-	logs, sub, err := _BeefyClient.contract.FilterLogs(opts, "CommitmentVerified")
-	if err != nil {
-		return nil, err
-	}
-	return &BeefyClientCommitmentVerifiedIterator{contract: _BeefyClient.contract, event: "CommitmentVerified", logs: logs, sub: sub}, nil
-}
-
-// WatchCommitmentVerified is a free log subscription operation binding the contract event 0x370ee36e1f982f6dd70d3bb1298a6c6d38b78990000b7f39caab64a0e9c74ade.
-//
-// Solidity: event CommitmentVerified(uint256 id, uint8 phase, bytes32 commitmentHash, address prover)
-func (_BeefyClient *BeefyClientFilterer) WatchCommitmentVerified(opts *bind.WatchOpts, sink chan<- *BeefyClientCommitmentVerified) (event.Subscription, error) {
-
-	logs, sub, err := _BeefyClient.contract.WatchLogs(opts, "CommitmentVerified")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(BeefyClientCommitmentVerified)
-				if err := _BeefyClient.contract.UnpackLog(event, "CommitmentVerified", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseCommitmentVerified is a log parse operation binding the contract event 0x370ee36e1f982f6dd70d3bb1298a6c6d38b78990000b7f39caab64a0e9c74ade.
-//
-// Solidity: event CommitmentVerified(uint256 id, uint8 phase, bytes32 commitmentHash, address prover)
-func (_BeefyClient *BeefyClientFilterer) ParseCommitmentVerified(log types.Log) (*BeefyClientCommitmentVerified, error) {
-	event := new(BeefyClientCommitmentVerified)
-	if err := _BeefyClient.contract.UnpackLog(event, "CommitmentVerified", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_BeefyClient *BeefyClientTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
+	return _BeefyClient.Contract.TransferOwnership(&_BeefyClient.TransactOpts, newOwner)
 }
 
 // BeefyClientNewMMRRootIterator is returned from FilterNewMMRRoot and is used to iterate over the raw logs and unpacked data for NewMMRRoot events raised by the BeefyClient contract.
@@ -1207,9 +964,9 @@ func (_BeefyClient *BeefyClientFilterer) ParseNewMMRRoot(log types.Log) (*BeefyC
 	return event, nil
 }
 
-// BeefyClientRoleAdminChangedIterator is returned from FilterRoleAdminChanged and is used to iterate over the raw logs and unpacked data for RoleAdminChanged events raised by the BeefyClient contract.
-type BeefyClientRoleAdminChangedIterator struct {
-	Event *BeefyClientRoleAdminChanged // Event containing the contract specifics and raw log
+// BeefyClientNewRequestIterator is returned from FilterNewRequest and is used to iterate over the raw logs and unpacked data for NewRequest events raised by the BeefyClient contract.
+type BeefyClientNewRequestIterator struct {
+	Event *BeefyClientNewRequest // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1223,7 +980,7 @@ type BeefyClientRoleAdminChangedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *BeefyClientRoleAdminChangedIterator) Next() bool {
+func (it *BeefyClientNewRequestIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1232,7 +989,7 @@ func (it *BeefyClientRoleAdminChangedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(BeefyClientRoleAdminChanged)
+			it.Event = new(BeefyClientNewRequest)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1247,7 +1004,7 @@ func (it *BeefyClientRoleAdminChangedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(BeefyClientRoleAdminChanged)
+		it.Event = new(BeefyClientNewRequest)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1263,69 +1020,42 @@ func (it *BeefyClientRoleAdminChangedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *BeefyClientRoleAdminChangedIterator) Error() error {
+func (it *BeefyClientNewRequestIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *BeefyClientRoleAdminChangedIterator) Close() error {
+func (it *BeefyClientNewRequestIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// BeefyClientRoleAdminChanged represents a RoleAdminChanged event raised by the BeefyClient contract.
-type BeefyClientRoleAdminChanged struct {
-	Role              [32]byte
-	PreviousAdminRole [32]byte
-	NewAdminRole      [32]byte
-	Raw               types.Log // Blockchain specific contextual infos
+// BeefyClientNewRequest represents a NewRequest event raised by the BeefyClient contract.
+type BeefyClientNewRequest struct {
+	Id     *big.Int
+	Sender common.Address
+	Raw    types.Log // Blockchain specific contextual infos
 }
 
-// FilterRoleAdminChanged is a free log retrieval operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+// FilterNewRequest is a free log retrieval operation binding the contract event 0xef87e24294defbf647d4ce97e9905a82d73c6e9e03417521acc5ba4aeaf1d618.
 //
-// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
-func (_BeefyClient *BeefyClientFilterer) FilterRoleAdminChanged(opts *bind.FilterOpts, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (*BeefyClientRoleAdminChangedIterator, error) {
+// Solidity: event NewRequest(uint256 id, address sender)
+func (_BeefyClient *BeefyClientFilterer) FilterNewRequest(opts *bind.FilterOpts) (*BeefyClientNewRequestIterator, error) {
 
-	var roleRule []interface{}
-	for _, roleItem := range role {
-		roleRule = append(roleRule, roleItem)
-	}
-	var previousAdminRoleRule []interface{}
-	for _, previousAdminRoleItem := range previousAdminRole {
-		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
-	}
-	var newAdminRoleRule []interface{}
-	for _, newAdminRoleItem := range newAdminRole {
-		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
-	}
-
-	logs, sub, err := _BeefyClient.contract.FilterLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	logs, sub, err := _BeefyClient.contract.FilterLogs(opts, "NewRequest")
 	if err != nil {
 		return nil, err
 	}
-	return &BeefyClientRoleAdminChangedIterator{contract: _BeefyClient.contract, event: "RoleAdminChanged", logs: logs, sub: sub}, nil
+	return &BeefyClientNewRequestIterator{contract: _BeefyClient.contract, event: "NewRequest", logs: logs, sub: sub}, nil
 }
 
-// WatchRoleAdminChanged is a free log subscription operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+// WatchNewRequest is a free log subscription operation binding the contract event 0xef87e24294defbf647d4ce97e9905a82d73c6e9e03417521acc5ba4aeaf1d618.
 //
-// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
-func (_BeefyClient *BeefyClientFilterer) WatchRoleAdminChanged(opts *bind.WatchOpts, sink chan<- *BeefyClientRoleAdminChanged, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (event.Subscription, error) {
+// Solidity: event NewRequest(uint256 id, address sender)
+func (_BeefyClient *BeefyClientFilterer) WatchNewRequest(opts *bind.WatchOpts, sink chan<- *BeefyClientNewRequest) (event.Subscription, error) {
 
-	var roleRule []interface{}
-	for _, roleItem := range role {
-		roleRule = append(roleRule, roleItem)
-	}
-	var previousAdminRoleRule []interface{}
-	for _, previousAdminRoleItem := range previousAdminRole {
-		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
-	}
-	var newAdminRoleRule []interface{}
-	for _, newAdminRoleItem := range newAdminRole {
-		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
-	}
-
-	logs, sub, err := _BeefyClient.contract.WatchLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	logs, sub, err := _BeefyClient.contract.WatchLogs(opts, "NewRequest")
 	if err != nil {
 		return nil, err
 	}
@@ -1335,8 +1065,8 @@ func (_BeefyClient *BeefyClientFilterer) WatchRoleAdminChanged(opts *bind.WatchO
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(BeefyClientRoleAdminChanged)
-				if err := _BeefyClient.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+				event := new(BeefyClientNewRequest)
+				if err := _BeefyClient.contract.UnpackLog(event, "NewRequest", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1357,21 +1087,21 @@ func (_BeefyClient *BeefyClientFilterer) WatchRoleAdminChanged(opts *bind.WatchO
 	}), nil
 }
 
-// ParseRoleAdminChanged is a log parse operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+// ParseNewRequest is a log parse operation binding the contract event 0xef87e24294defbf647d4ce97e9905a82d73c6e9e03417521acc5ba4aeaf1d618.
 //
-// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
-func (_BeefyClient *BeefyClientFilterer) ParseRoleAdminChanged(log types.Log) (*BeefyClientRoleAdminChanged, error) {
-	event := new(BeefyClientRoleAdminChanged)
-	if err := _BeefyClient.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+// Solidity: event NewRequest(uint256 id, address sender)
+func (_BeefyClient *BeefyClientFilterer) ParseNewRequest(log types.Log) (*BeefyClientNewRequest, error) {
+	event := new(BeefyClientNewRequest)
+	if err := _BeefyClient.contract.UnpackLog(event, "NewRequest", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// BeefyClientRoleGrantedIterator is returned from FilterRoleGranted and is used to iterate over the raw logs and unpacked data for RoleGranted events raised by the BeefyClient contract.
-type BeefyClientRoleGrantedIterator struct {
-	Event *BeefyClientRoleGranted // Event containing the contract specifics and raw log
+// BeefyClientOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the BeefyClient contract.
+type BeefyClientOwnershipTransferredIterator struct {
+	Event *BeefyClientOwnershipTransferred // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1385,7 +1115,7 @@ type BeefyClientRoleGrantedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *BeefyClientRoleGrantedIterator) Next() bool {
+func (it *BeefyClientOwnershipTransferredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1394,7 +1124,7 @@ func (it *BeefyClientRoleGrantedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(BeefyClientRoleGranted)
+			it.Event = new(BeefyClientOwnershipTransferred)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1409,7 +1139,7 @@ func (it *BeefyClientRoleGrantedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(BeefyClientRoleGranted)
+		it.Event = new(BeefyClientOwnershipTransferred)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1425,69 +1155,60 @@ func (it *BeefyClientRoleGrantedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *BeefyClientRoleGrantedIterator) Error() error {
+func (it *BeefyClientOwnershipTransferredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *BeefyClientRoleGrantedIterator) Close() error {
+func (it *BeefyClientOwnershipTransferredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// BeefyClientRoleGranted represents a RoleGranted event raised by the BeefyClient contract.
-type BeefyClientRoleGranted struct {
-	Role    [32]byte
-	Account common.Address
-	Sender  common.Address
-	Raw     types.Log // Blockchain specific contextual infos
+// BeefyClientOwnershipTransferred represents a OwnershipTransferred event raised by the BeefyClient contract.
+type BeefyClientOwnershipTransferred struct {
+	PreviousOwner common.Address
+	NewOwner      common.Address
+	Raw           types.Log // Blockchain specific contextual infos
 }
 
-// FilterRoleGranted is a free log retrieval operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+// FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
 //
-// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
-func (_BeefyClient *BeefyClientFilterer) FilterRoleGranted(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*BeefyClientRoleGrantedIterator, error) {
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_BeefyClient *BeefyClientFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BeefyClientOwnershipTransferredIterator, error) {
 
-	var roleRule []interface{}
-	for _, roleItem := range role {
-		roleRule = append(roleRule, roleItem)
+	var previousOwnerRule []interface{}
+	for _, previousOwnerItem := range previousOwner {
+		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
 	}
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-	var senderRule []interface{}
-	for _, senderItem := range sender {
-		senderRule = append(senderRule, senderItem)
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
 	}
 
-	logs, sub, err := _BeefyClient.contract.FilterLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	logs, sub, err := _BeefyClient.contract.FilterLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
 	if err != nil {
 		return nil, err
 	}
-	return &BeefyClientRoleGrantedIterator{contract: _BeefyClient.contract, event: "RoleGranted", logs: logs, sub: sub}, nil
+	return &BeefyClientOwnershipTransferredIterator{contract: _BeefyClient.contract, event: "OwnershipTransferred", logs: logs, sub: sub}, nil
 }
 
-// WatchRoleGranted is a free log subscription operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+// WatchOwnershipTransferred is a free log subscription operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
 //
-// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
-func (_BeefyClient *BeefyClientFilterer) WatchRoleGranted(opts *bind.WatchOpts, sink chan<- *BeefyClientRoleGranted, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_BeefyClient *BeefyClientFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BeefyClientOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
 
-	var roleRule []interface{}
-	for _, roleItem := range role {
-		roleRule = append(roleRule, roleItem)
+	var previousOwnerRule []interface{}
+	for _, previousOwnerItem := range previousOwner {
+		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
 	}
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-	var senderRule []interface{}
-	for _, senderItem := range sender {
-		senderRule = append(senderRule, senderItem)
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
 	}
 
-	logs, sub, err := _BeefyClient.contract.WatchLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	logs, sub, err := _BeefyClient.contract.WatchLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1497,8 +1218,8 @@ func (_BeefyClient *BeefyClientFilterer) WatchRoleGranted(opts *bind.WatchOpts, 
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(BeefyClientRoleGranted)
-				if err := _BeefyClient.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+				event := new(BeefyClientOwnershipTransferred)
+				if err := _BeefyClient.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1519,174 +1240,12 @@ func (_BeefyClient *BeefyClientFilterer) WatchRoleGranted(opts *bind.WatchOpts, 
 	}), nil
 }
 
-// ParseRoleGranted is a log parse operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+// ParseOwnershipTransferred is a log parse operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
 //
-// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
-func (_BeefyClient *BeefyClientFilterer) ParseRoleGranted(log types.Log) (*BeefyClientRoleGranted, error) {
-	event := new(BeefyClientRoleGranted)
-	if err := _BeefyClient.contract.UnpackLog(event, "RoleGranted", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// BeefyClientRoleRevokedIterator is returned from FilterRoleRevoked and is used to iterate over the raw logs and unpacked data for RoleRevoked events raised by the BeefyClient contract.
-type BeefyClientRoleRevokedIterator struct {
-	Event *BeefyClientRoleRevoked // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *BeefyClientRoleRevokedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(BeefyClientRoleRevoked)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(BeefyClientRoleRevoked)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *BeefyClientRoleRevokedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *BeefyClientRoleRevokedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// BeefyClientRoleRevoked represents a RoleRevoked event raised by the BeefyClient contract.
-type BeefyClientRoleRevoked struct {
-	Role    [32]byte
-	Account common.Address
-	Sender  common.Address
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterRoleRevoked is a free log retrieval operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
-//
-// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
-func (_BeefyClient *BeefyClientFilterer) FilterRoleRevoked(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*BeefyClientRoleRevokedIterator, error) {
-
-	var roleRule []interface{}
-	for _, roleItem := range role {
-		roleRule = append(roleRule, roleItem)
-	}
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-	var senderRule []interface{}
-	for _, senderItem := range sender {
-		senderRule = append(senderRule, senderItem)
-	}
-
-	logs, sub, err := _BeefyClient.contract.FilterLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
-	if err != nil {
-		return nil, err
-	}
-	return &BeefyClientRoleRevokedIterator{contract: _BeefyClient.contract, event: "RoleRevoked", logs: logs, sub: sub}, nil
-}
-
-// WatchRoleRevoked is a free log subscription operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
-//
-// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
-func (_BeefyClient *BeefyClientFilterer) WatchRoleRevoked(opts *bind.WatchOpts, sink chan<- *BeefyClientRoleRevoked, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
-
-	var roleRule []interface{}
-	for _, roleItem := range role {
-		roleRule = append(roleRule, roleItem)
-	}
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-	var senderRule []interface{}
-	for _, senderItem := range sender {
-		senderRule = append(senderRule, senderItem)
-	}
-
-	logs, sub, err := _BeefyClient.contract.WatchLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(BeefyClientRoleRevoked)
-				if err := _BeefyClient.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseRoleRevoked is a log parse operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
-//
-// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
-func (_BeefyClient *BeefyClientFilterer) ParseRoleRevoked(log types.Log) (*BeefyClientRoleRevoked, error) {
-	event := new(BeefyClientRoleRevoked)
-	if err := _BeefyClient.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_BeefyClient *BeefyClientFilterer) ParseOwnershipTransferred(log types.Log) (*BeefyClientOwnershipTransferred, error) {
+	event := new(BeefyClientOwnershipTransferred)
+	if err := _BeefyClient.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

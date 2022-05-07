@@ -2,11 +2,8 @@ package beefy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"golang.org/x/sync/errgroup"
 
@@ -19,53 +16,60 @@ import (
 type PolkadotListener struct {
 	config *Config
 	conn   *relaychain.Connection
-	tasks  chan<- Task
+	beefyAuthoritiesKey types.StorageKey
 }
 
 func NewPolkadotListener(
 	config *Config,
 	conn *relaychain.Connection,
-	tasks chan<- Task,
 ) *PolkadotListener {
 	return &PolkadotListener{
 		config: config,
 		conn:   conn,
-		tasks:  tasks,
 	}
 }
 
-func (li *PolkadotListener) Start(ctx context.Context, eg *errgroup.Group, startingBeefyBlock uint64) error {
-	eg.Go(func() error {
-		defer close(li.tasks)
+func (li *PolkadotListener) Start(
+	ctx context.Context,
+	eg *errgroup.Group,
+	currentBeefyBlock uint64,
+	currentValidatorSetID uint64,
+) (<-chan Request, error) {
+	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Beefy", "Authorities", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	li.beefyAuthoritiesKey = storageKey
 
-		err := li.scanCommitments(ctx, startingBeefyBlock)
+	requests := make(chan Request)
+
+	eg.Go(func() error {
+		defer close(requests)
+		err := li.scanCommitments(ctx, currentBeefyBlock, currentValidatorSetID, requests)
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return nil
-			}
 			return err
 		}
-
 		return nil
 	})
 
-	return nil
+	return requests, nil
 }
 
-func (li *PolkadotListener) scanCommitments(ctx context.Context, latestBeefyBlock uint64) error {
-	log.WithFields(log.Fields{
-		"latestBeefyBlock": latestBeefyBlock,
-	}).Info("Synchronizing beefy relaychain listener")
-
-	in, err := ScanSafeCommitments(ctx, li.conn.Metadata(), li.conn.API(), latestBeefyBlock+1)
+func (li *PolkadotListener) scanCommitments(
+	ctx context.Context,
+	currentBeefyBlock uint64,
+	currentValidatorSet uint64,
+	requests chan<- Request,
+) error {
+	in, err := ScanSafeCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1)
 	if err != nil {
-		return fmt.Errorf("scan safe commitments: %w", err)
+		return fmt.Errorf("scan commitments: %w", err)
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil
 		case result, ok := <-in:
 			if !ok {
 				return nil
@@ -75,62 +79,75 @@ func (li *PolkadotListener) scanCommitments(ctx context.Context, latestBeefyBloc
 				return fmt.Errorf("scan safe commitments: %w", result.Error)
 			}
 
-			validators, err := li.getBeefyAuthorities(result.BlockHash)
-			if err != nil {
-				return fmt.Errorf("fetch beefy authorities: %w", err)
-			}
+			if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet+1 {
+				currentValidatorSet++
 
-			task := Task{
-				Validators:       validators,
-				SignedCommitment: result.SignedCommitment,
-				Proof:            result.MMRProof,
-			}
+				validators, err := li.queryBeefyAuthorities(result.BlockHash)
+				if err != nil {
+					return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
+				}
 
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case li.tasks <- task:
-			}
+				task := Request{
+					Validators:       validators,
+					SignedCommitment: result.SignedCommitment,
+					Proof:            result.MMRProof,
+					IsHandover:       true,
+				}
 
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case requests <- task:
+				}
+			} else if result.SignedCommitment.Commitment.ValidatorSetID == currentValidatorSet {
+				if result.Depth > li.config.Source.FastForwardDepth {
+					log.WithFields(log.Fields{
+						"commitment": log.Fields{
+							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
+							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
+						},
+					}).Info("Discarded commitment")
+					continue
+				}
+
+				validators, err := li.queryBeefyAuthorities(result.BlockHash)
+				if err != nil {
+					return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
+				}
+
+				task := Request{
+					Validators:       validators,
+					SignedCommitment: result.SignedCommitment,
+					Proof:            result.MMRProof,
+					IsHandover:       false,
+				}
+
+				// drop task if it can't be processed immediately
+				select {
+				case requests <- task:
+				default:
+					log.WithFields(log.Fields{
+						"commitment": log.Fields{
+							"blockNumber":    result.SignedCommitment.Commitment.BlockNumber,
+							"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
+						},
+					}).Info("Discarded commitment")
+				}
+			} else {
+				return fmt.Errorf("commitment has unexpected validatorSetID: blockNumber=%v validatorSetID=%v expectedValidatorSetID=%v",
+					result.SignedCommitment.Commitment.BlockNumber,
+					result.SignedCommitment.Commitment.ValidatorSetID,
+					currentValidatorSet,
+				)
+			}
 		}
 	}
 }
 
-func (li *PolkadotListener) isNewSession(blockNumber uint64, blockHash types.Hash) (bool, error) {
-	var sessionIndex, prevSessionIndex uint32
+func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]substrate.Authority, error) {
+	var authorities []substrate.Authority
 
-	sessionIndexKey, err := types.CreateStorageKey(li.conn.Metadata(), "Session", "CurrentIndex", nil, nil)
-	if err != nil {
-		return false, err
-	}
-
-	_, err = li.conn.API().RPC.State.GetStorage(sessionIndexKey, &sessionIndex, blockHash)
-	if err != nil {
-		return false, err
-	}
-
-	prevBlockHash, err := li.conn.API().RPC.Chain.GetBlockHash(blockNumber - 1)
-	if err != nil {
-		return false, err
-	}
-
-	_, err = li.conn.API().RPC.State.GetStorage(sessionIndexKey, &prevSessionIndex, prevBlockHash)
-	if err != nil {
-		return false, err
-	}
-
-	return sessionIndex > prevSessionIndex, nil
-}
-
-func (li *PolkadotListener) getBeefyAuthorities(blockHash types.Hash) ([]common.Address, error) {
-	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Beefy", "Authorities", nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var authorities substrate.Authorities
-
-	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &authorities, blockHash)
+	ok, err := li.conn.API().RPC.State.GetStorage(li.beefyAuthoritiesKey, &authorities, blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -139,19 +156,5 @@ func (li *PolkadotListener) getBeefyAuthorities(blockHash types.Hash) ([]common.
 		return nil, fmt.Errorf("beefy authorities not found")
 	}
 
-	// Convert from beefy authorities to ethereum addresses
-	var authorityEthereumAddresses []common.Address
-	for _, authority := range authorities {
-		pub, err := crypto.DecompressPubkey(authority[:])
-		if err != nil {
-			return nil, err
-		}
-		ethereumAddress := crypto.PubkeyToAddress(*pub)
-		if err != nil {
-			return nil, err
-		}
-		authorityEthereumAddresses = append(authorityEthereumAddresses, ethereumAddress)
-	}
-
-	return authorityEthereumAddresses, nil
+	return authorities, nil
 }

@@ -2,12 +2,15 @@ package beefy
 
 import (
 	"context"
+	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/snowbridge/relayer/chain"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 
 	log "github.com/sirupsen/logrus"
@@ -19,8 +22,7 @@ type Relay struct {
 	ethereumConn     *ethereum.Connection
 	polkadotListener *PolkadotListener
 	ethereumWriter   *EthereumWriter
-	tasks            chan Task
-	ethHeaders       chan chain.Header
+	tasks            chan Request
 }
 
 func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error) {
@@ -29,15 +31,11 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 	ethereumConn := ethereum.NewConnection(config.Sink.Ethereum.Endpoint, ethereumKeypair)
 
-	tasks := make(chan Task)
-	ethHeaders := make(chan chain.Header)
-
-	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn, tasks)
+	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn)
 
 	polkadotListener := NewPolkadotListener(
 		config,
 		relaychainConn,
-		tasks,
 	)
 
 	return &Relay{
@@ -46,8 +44,6 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 		ethereumConn:     ethereumConn,
 		ethereumWriter:   ethereumWriter,
 		polkadotListener: polkadotListener,
-		tasks:            tasks,
-		ethHeaders:       ethHeaders,
 	}, nil
 }
 
@@ -62,15 +58,49 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	latestBeefyBlock, err := relay.ethereumWriter.Start(ctx, eg)
+	initialBeefyBlock, initialValidatorSetID, err := relay.getInitialState(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("fetch BeefyClient current state: %w", err)
 	}
 
-	err = relay.polkadotListener.Start(ctx, eg, latestBeefyBlock)
+	log.WithFields(log.Fields{
+		"beefyBlock": initialBeefyBlock,
+		"validatorSetID": initialValidatorSetID,
+	}).Info("Retrieved current BeefyClient state")
+
+	requests, err := relay.polkadotListener.Start(ctx, eg, initialBeefyBlock, initialValidatorSetID)
 	if err != nil {
-		return err
+		return fmt.Errorf("initialize polkadot listener: %w", err)
+	}
+
+	err = relay.ethereumWriter.Start(ctx, eg, requests)
+	if err != nil {
+		return fmt.Errorf("initialize ethereum writer: %w", err)
 	}
 
 	return nil
+}
+
+func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error) {
+	address := common.HexToAddress(relay.config.Sink.Contracts.BeefyClient)
+	contract, err := beefyclient.NewBeefyClient(address, relay.ethereumConn.GetClient())
+	if err != nil {
+		return 0, 0, err
+	}
+
+	callOpts := bind.CallOpts{
+		Context: ctx,
+	}
+
+	initialBeefyBlock, err := contract.LatestBeefyBlock(&callOpts)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	initialValidatorSetID, err := contract.CurrentValidatorSet(&callOpts)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return initialBeefyBlock, initialValidatorSetID.Id.Uint64(), nil
 }

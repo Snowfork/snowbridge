@@ -12,29 +12,23 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
-type InitialSignatureCommitment struct {
-	CommitmentHash                [32]byte
-	ValidatorSetID                uint64
-	ValidatorClaimsBitfield       []*big.Int
-	ValidatorSignatureCommitment  []byte
-	ValidatorPosition             *big.Int
-	ValidatorPublicKey            common.Address
-	ValidatorPublicKeyMerkleProof [][32]byte
+type InitialRequestParams struct {
+	CommitmentHash          [32]byte
+	ValidatorSetID          uint64
+	ValidatorClaimsBitfield []*big.Int
+	Proof                   beefyclient.BeefyClientValidatorProof
 }
 
-type FinalSignatureCommitment struct {
-	ID                             *big.Int
-	Commitment                     beefyclient.BeefyClientCommitment
-	Signatures                     [][]byte
-	ValidatorPositions             []*big.Int
-	ValidatorPublicKeys            []common.Address
-	ValidatorPublicKeyMerkleProofs [][][32]byte
-	Leaf                           beefyclient.BeefyClientMMRLeaf
-	LeafProof                      beefyclient.MMRProof
+type FinalRequestParams struct {
+	ID         *big.Int
+	Commitment beefyclient.BeefyClientCommitment
+	Proof      beefyclient.BeefyClientValidatorMultiProof
+	Leaf       beefyclient.BeefyClientMMRLeaf
+	LeafProof  beefyclient.MMRProof
 }
 
-func (t *Task) MakeInitialSignatureCommitment(valAddrIndex int64, initialBitfield []*big.Int) (*InitialSignatureCommitment, error) {
-	commitmentBytes, err := types.EncodeToBytes(t.SignedCommitment.Commitment)
+func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []*big.Int) (*InitialRequestParams, error) {
+	commitmentBytes, err := types.EncodeToBytes(r.SignedCommitment.Commitment)
 	if err != nil {
 		return nil, err
 	}
@@ -44,24 +38,31 @@ func (t *Task) MakeInitialSignatureCommitment(valAddrIndex int64, initialBitfiel
 	var commitmentHash32 [32]byte
 	copy(commitmentHash32[:], commitmentHash[0:32])
 
-	proof, err := t.GenerateValidatorAddressProof(valAddrIndex)
+	proof, err := r.generateValidatorAddressProof(valAddrIndex)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generate validator proof: %w", err)
 	}
 
-	ok, beefySig := t.SignedCommitment.Signatures[valAddrIndex].Unwrap()
+	ok, validatorSignature := r.SignedCommitment.Signatures[valAddrIndex].Unwrap()
 	if !ok {
 		return nil, fmt.Errorf("signature is empty")
 	}
 
-	msg := InitialSignatureCommitment{
-		CommitmentHash:                commitmentHash32,
-		ValidatorSetID:                t.SignedCommitment.Commitment.ValidatorSetID,
-		ValidatorClaimsBitfield:       initialBitfield,
-		ValidatorSignatureCommitment:  cleanSignature(beefySig),
-		ValidatorPublicKey:            t.Validators[valAddrIndex],
-		ValidatorPosition:             big.NewInt(valAddrIndex),
-		ValidatorPublicKeyMerkleProof: proof,
+	validatorAddress, err := r.Validators[valAddrIndex].IntoEthereumAddress()
+	if err != nil {
+		return nil, fmt.Errorf("convert to ethereum address: %w", err)
+	}
+
+	msg := InitialRequestParams{
+		CommitmentHash:          commitmentHash32,
+		ValidatorSetID:          r.SignedCommitment.Commitment.ValidatorSetID,
+		ValidatorClaimsBitfield: initialBitfield,
+		Proof: beefyclient.BeefyClientValidatorProof{
+			Signature:   cleanSignature(validatorSignature),
+			Index:       big.NewInt(valAddrIndex),
+			Addr:        validatorAddress,
+			MerkleProof: proof,
+		},
 	}
 
 	return &msg, nil
@@ -75,14 +76,17 @@ func cleanSignature(input types.BeefySignature) []byte {
 	return append(rs, byte(uint8(v)+27))
 }
 
-func (t *Task) GenerateValidatorAddressProof(valAddrIndex int64) ([][32]byte, error) {
-	// Hash validator addresses for leaf input data
-	beefyTreeData := make([][]byte, len(t.Validators))
-	for i, valAddr := range t.Validators {
-		beefyTreeData[i] = valAddr.Bytes()
+func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byte, error) {
+	leaves := make([][]byte, len(r.Validators))
+	for i, rawAddress := range r.Validators {
+		address, err := rawAddress.IntoEthereumAddress()
+		if err != nil {
+			return nil, fmt.Errorf("convert to ethereum address: %w", err)
+		}
+		leaves[i] = address.Bytes()
 	}
 
-	_, _, proof, err := merkle.GenerateMerkleProof(beefyTreeData, valAddrIndex)
+	_, _, proof, err := merkle.GenerateMerkleProof(leaves, validatorIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -90,82 +94,90 @@ func (t *Task) GenerateValidatorAddressProof(valAddrIndex int64) ([][32]byte, er
 	return proof, nil
 }
 
-func (t *Task) MakeFinalSignatureCommitment(bitfield string) (*FinalSignatureCommitment, error) {
-	validationDataID := big.NewInt(t.ValidationID)
+func (r *Request) MakeSubmitFinalParams(validationID int64, bitfield string) (*FinalRequestParams, error) {
+	validationDataID := big.NewInt(validationID)
 
-	validatorPositions := []*big.Int{}
+	validatorIndices := []*big.Int{}
 
 	// bitfield is right to left order, so loop backwards
 	for i := len(bitfield) - 1; i >= 0; i-- {
 		bit := bitfield[i : i+1]
 		if bit == "1" {
 			position := len(bitfield) - 1 - i // positions start from 0 and increase to len(bitfield) - 1
-			validatorPositions = append(validatorPositions, big.NewInt(int64(position)))
+			validatorIndices = append(validatorIndices, big.NewInt(int64(position)))
 		}
 	}
 
 	signatures := [][]byte{}
-	validatorPublicKeys := []common.Address{}
-	validatorPublicKeyMerkleProofs := [][][32]byte{}
-	for _, validatorPosition := range validatorPositions {
+	validatorAddresses := []common.Address{}
+	validatorAddressProofs := [][][32]byte{}
+	for _, validatorIndex := range validatorIndices {
 
-		ok, beefySig := t.SignedCommitment.Signatures[validatorPosition.Int64()].Unwrap()
+		ok, beefySig := r.SignedCommitment.Signatures[validatorIndex.Int64()].Unwrap()
 		if !ok {
 			return nil, fmt.Errorf("signature is empty")
 		}
 
 		signatures = append(signatures, cleanSignature(beefySig))
-		pubKey := t.Validators[validatorPosition.Int64()]
-		validatorPublicKeys = append(validatorPublicKeys, pubKey)
+		pubKey := r.Validators[validatorIndex.Int64()]
 
-		merkleProof, err := t.GenerateValidatorAddressProof(validatorPosition.Int64())
+		address, err := pubKey.IntoEthereumAddress()
+		if err != nil {
+			return nil, fmt.Errorf("convert to ethereum address: %w", err)
+		}
+
+		validatorAddresses = append(validatorAddresses, address)
+
+		merkleProof, err := r.generateValidatorAddressProof(validatorIndex.Int64())
 		if err != nil {
 			return nil, err
 		}
 
-		validatorPublicKeyMerkleProofs = append(validatorPublicKeyMerkleProofs, merkleProof)
+		validatorAddressProofs = append(validatorAddressProofs, merkleProof)
 	}
 
-	payload, err := buildPayload(t.SignedCommitment.Commitment.Payload)
+	payload, err := buildPayload(r.SignedCommitment.Commitment.Payload)
 	if err != nil {
 		return nil, err
 	}
 
 	commitment := beefyclient.BeefyClientCommitment{
 		Payload:        *payload,
-		BlockNumber:    t.SignedCommitment.Commitment.BlockNumber,
-		ValidatorSetID: t.SignedCommitment.Commitment.ValidatorSetID,
+		BlockNumber:    r.SignedCommitment.Commitment.BlockNumber,
+		ValidatorSetID: r.SignedCommitment.Commitment.ValidatorSetID,
 	}
 
 	inputLeaf := beefyclient.BeefyClientMMRLeaf{
-		Version:              uint8(t.Proof.Leaf.Version),
-		ParentNumber:         uint32(t.Proof.Leaf.ParentNumberAndHash.ParentNumber),
-		ParentHash:           t.Proof.Leaf.ParentNumberAndHash.Hash,
-		ParachainHeadsRoot:   t.Proof.Leaf.ParachainHeads,
-		NextAuthoritySetID:   uint64(t.Proof.Leaf.BeefyNextAuthoritySet.ID),
-		NextAuthoritySetLen:  uint32(t.Proof.Leaf.BeefyNextAuthoritySet.Len),
-		NextAuthoritySetRoot: t.Proof.Leaf.BeefyNextAuthoritySet.Root,
+		Version:              uint8(r.Proof.Leaf.Version),
+		ParentNumber:         uint32(r.Proof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           r.Proof.Leaf.ParentNumberAndHash.Hash,
+		ParachainHeadsRoot:   r.Proof.Leaf.ParachainHeads,
+		NextAuthoritySetID:   uint64(r.Proof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(r.Proof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: r.Proof.Leaf.BeefyNextAuthoritySet.Root,
 	}
 
 	merkleProofItems := [][32]byte{}
-	for _, mmrProofItem := range t.Proof.MerkleProofItems {
+	for _, mmrProofItem := range r.Proof.MerkleProofItems {
 		merkleProofItems = append(merkleProofItems, mmrProofItem)
 	}
 
 	inputProof := beefyclient.MMRProof{
 		Items: merkleProofItems,
-		Order: t.Proof.MerkleProofOrder,
+		Order: r.Proof.MerkleProofOrder,
 	}
 
-	msg := FinalSignatureCommitment{
-		ID:                             validationDataID,
-		Commitment:                     commitment,
-		Signatures:                     signatures,
-		ValidatorPositions:             validatorPositions,
-		ValidatorPublicKeys:            validatorPublicKeys,
-		ValidatorPublicKeyMerkleProofs: validatorPublicKeyMerkleProofs,
-		Leaf:                           inputLeaf,
-		LeafProof:                      inputProof,
+	msg := FinalRequestParams{
+		ID:         validationDataID,
+		Commitment: commitment,
+		Proof: beefyclient.BeefyClientValidatorMultiProof{
+			Signatures:   signatures,
+			Indices:      validatorIndices,
+			Addrs:        validatorAddresses,
+			MerkleProofs: validatorAddressProofs,
+		},
+		Leaf:      inputLeaf,
+		LeafProof: inputProof,
 	}
 
 	return &msg, nil

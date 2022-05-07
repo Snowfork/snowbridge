@@ -13,6 +13,7 @@ type SourceConfig struct {
 	Polkadot config.PolkadotConfig `mapstructure:"polkadot"`
 	// Block number when Beefy was activated
 	BeefyActivationBlock uint64 `mapstructure:"beefy-activation-block"`
+	FastForwardDepth     uint64 `mapstructure:"fast-forward-depth"`
 }
 
 type SinkConfig struct {

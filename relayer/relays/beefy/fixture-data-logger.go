@@ -19,16 +19,16 @@ func Hex(b []byte) string {
 }
 
 func (wr *EthereumWriter) LogFinal(
-	task *Task,
-	msg *FinalSignatureCommitment,
+	task *Request,
+	params *FinalRequestParams,
 ) error {
 	var signatures []string
-	for _, item := range msg.Signatures {
+	for _, item := range params.Proof.Signatures {
 		signatures = append(signatures, Hex(item))
 	}
 
 	var pubKeyMerkleProofs [][]string
-	for _, pubkeyProof := range msg.ValidatorPublicKeyMerkleProofs {
+	for _, pubkeyProof := range params.Proof.MerkleProofs {
 		var pubkeyProofS []string
 		for _, item := range pubkeyProof {
 			pubkeyProofS = append(pubkeyProofS, Hex(item[:]))
@@ -45,40 +45,40 @@ func (wr *EthereumWriter) LogFinal(
 	var state log.Fields
 
 	var proofItems []string
-	for _, item := range msg.LeafProof.Items {
+	for _, item := range params.LeafProof.Items {
 		proofItems = append(proofItems, Hex(item[:]))
 	}
 
 	state = log.Fields{
 		"transactionParams": log.Fields{
-			"id": msg.ID,
+			"id": params.ID,
 			"commitment": log.Fields{
-				"blockNumber":    msg.Commitment.BlockNumber,
-				"validatorSetId": msg.Commitment.ValidatorSetID,
+				"blockNumber":    params.Commitment.BlockNumber,
+				"validatorSetId": params.Commitment.ValidatorSetID,
 				"payload": log.Fields{
-					"mmrRootHash": Hex(msg.Commitment.Payload.MmrRootHash[:]),
-					"prefix":      Hex(msg.Commitment.Payload.Prefix),
-					"suffix":      Hex(msg.Commitment.Payload.Suffix),
+					"mmrRootHash": Hex(params.Commitment.Payload.MmrRootHash[:]),
+					"prefix":      Hex(params.Commitment.Payload.Prefix),
+					"suffix":      Hex(params.Commitment.Payload.Suffix),
 				},
 			},
 			"proof": log.Fields{
 				"signatures":            signatures,
-				"positions":             msg.ValidatorPositions,
-				"publicKeys":            msg.ValidatorPublicKeys,
-				"publicKeyMerkleProofs": pubKeyMerkleProofs,
+				"indices":             params.Proof.Indices,
+				"addrs":            params.Proof.Addrs,
+				"merkleProofs": pubKeyMerkleProofs,
 			},
 			"leaf": log.Fields{
-				"version":              msg.Leaf.Version,
-				"parentNumber":         msg.Leaf.ParentNumber,
-				"parentHash":           Hex(msg.Leaf.ParentHash[:]),
-				"nextAuthoritySetID":   msg.Leaf.NextAuthoritySetID,
-				"nextAuthoritySetLen":  msg.Leaf.NextAuthoritySetLen,
-				"nextAuthoritySetRoot": Hex(msg.Leaf.NextAuthoritySetRoot[:]),
-				"parachainHeadsRoot":   Hex(msg.Leaf.ParachainHeadsRoot[:]),
+				"version":              params.Leaf.Version,
+				"parentNumber":         params.Leaf.ParentNumber,
+				"parentHash":           Hex(params.Leaf.ParentHash[:]),
+				"nextAuthoritySetID":   params.Leaf.NextAuthoritySetID,
+				"nextAuthoritySetLen":  params.Leaf.NextAuthoritySetLen,
+				"nextAuthoritySetRoot": Hex(params.Leaf.NextAuthoritySetRoot[:]),
+				"parachainHeadsRoot":   Hex(params.Leaf.ParachainHeadsRoot[:]),
 			},
 			"leafProof": log.Fields{
 				"Items": proofItems,
-				"Order": msg.LeafProof.Order,
+				"Order": params.LeafProof.Order,
 			},
 		},
 		"commitmentHash": commitmentHash,
@@ -100,7 +100,7 @@ func (wr *EthereumWriter) GetFailingMessage(client ethclient.Client, hash common
 		return "", err
 	}
 
-	msg := ethereum.CallMsg{
+	params := ethereum.CallMsg{
 		From:     from,
 		To:       tx.To(),
 		Gas:      tx.Gas(),
@@ -121,7 +121,7 @@ func (wr *EthereumWriter) GetFailingMessage(client ethclient.Client, hash common
 	// The logger does a test call to the actual contract to check for any revert message and log it, as well
 	// as logging the call info. This is because the golang client can sometimes supress the log message and so
 	// it can be helpful to use the call info to do the same call in Truffle/Web3js to get better logs.
-	res, err := client.CallContract(context.Background(), msg, nil)
+	res, err := client.CallContract(context.Background(), params, nil)
 	if err != nil {
 		return "", err
 	}
