@@ -44,7 +44,7 @@ func NewEthereumWriter(
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, requests <-chan Request) error {
 
 	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
-	contract, err := beefyclient.NewBeefyClient(address, wr.conn.GetClient())
+	contract, err := beefyclient.NewBeefyClient(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}
@@ -102,14 +102,14 @@ func (wr *EthereumWriter) waitForTransaction(ctx context.Context, tx *types.Tran
 }
 
 func (wr *EthereumWriter) pollTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
-	receipt, err := wr.conn.GetClient().TransactionReceipt(ctx, tx.Hash())
+	receipt, err := wr.conn.Client().TransactionReceipt(ctx, tx.Hash())
 	if err != nil {
 		if errors.Is(err, goEthereum.NotFound) {
 			return nil, nil
 		}
 	}
 
-	latestHeader, err := wr.conn.GetClient().HeaderByNumber(ctx, nil)
+	latestHeader, err := wr.conn.Client().HeaderByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func (wr *EthereumWriter) watchTransaction(ctx context.Context, tx *types.Transa
 
 func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 	chainID := wr.conn.ChainID()
-	keypair := wr.conn.GetKP()
+	keypair := wr.conn.Keypair()
 
 	options := bind.TransactOpts{
 		From: keypair.CommonAddress(),

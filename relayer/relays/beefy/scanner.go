@@ -166,13 +166,13 @@ type ScanSafeCommitmentsResult struct {
 	Error            error
 }
 
-func ScanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanSafeCommitmentsResult, error) {
+func ScanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, beefyActivationBlock uint64) (<-chan ScanSafeCommitmentsResult, error) {
 	out := make(chan ScanSafeCommitmentsResult)
-	go scanSafeCommitments(ctx, meta, api, startBlock, out)
+	go scanSafeCommitments(ctx, meta, api, startBlock, beefyActivationBlock, out)
 	return out, nil
 }
 
-func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, out chan<- ScanSafeCommitmentsResult) {
+func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, beefyActivationBlock uint64, out chan<- ScanSafeCommitmentsResult) {
 	defer close(out)
 
 	sendError := func(err error) {
@@ -210,7 +210,7 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 				return
 			}
 
-			proofIsValid, proof, err := makeProof(meta, api, blockNumber-1, blockHash)
+			proofIsValid, proof, err := makeProof(meta, api, blockNumber-1, blockHash, beefyActivationBlock)
 			if err != nil {
 				sendError(err)
 				return
@@ -232,8 +232,9 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 	}
 }
 
-func makeProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, blockNumber uint64, blockHash types.Hash) (bool, merkle.SimplifiedMMRProof, error) {
-	proof1, err := api.RPC.MMR.GenerateProof(blockNumber, blockHash)
+func makeProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, blockNumber uint64, blockHash types.Hash, beefyActivationBlock uint64) (bool, merkle.SimplifiedMMRProof, error) {
+
+	proof1, err := api.RPC.MMR.GenerateProof(blockNumber-beefyActivationBlock, blockHash)
 	if err != nil {
 		return false, merkle.SimplifiedMMRProof{}, fmt.Errorf("proof generation for %v: %w", blockNumber, err)
 	}
@@ -285,25 +286,4 @@ func verifyProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, proof merkle.Sim
 	}
 
 	return actualRoot == expectedRoot, nil
-}
-
-func getSessionIndex(blockNumber uint64, meta *types.Metadata, api *gsrpc.SubstrateAPI) (uint32, error) {
-	var sessionIndex uint32
-
-	sessionIndexKey, err := types.CreateStorageKey(meta, "Session", "CurrentIndex", nil, nil)
-	if err != nil {
-		return 0, err
-	}
-
-	blockHash, err := api.RPC.Chain.GetBlockHash(blockNumber)
-	if err != nil {
-		return 0, err
-	}
-
-	_, err = api.RPC.State.GetStorage(sessionIndexKey, &sessionIndex, blockHash)
-	if err != nil {
-		return 0, err
-	}
-
-	return sessionIndex, nil
 }

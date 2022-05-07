@@ -83,7 +83,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error) {
 	address := common.HexToAddress(relay.config.Sink.Contracts.BeefyClient)
-	contract, err := beefyclient.NewBeefyClient(address, relay.ethereumConn.GetClient())
+	contract, err := beefyclient.NewBeefyClient(address, relay.ethereumConn.Client())
 	if err != nil {
 		return 0, 0, err
 	}

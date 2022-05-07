@@ -53,7 +53,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	// Set up light client bridge contract
 	address := common.HexToAddress(li.config.Contracts.BeefyClient)
-	beefyClientContract, err := beefyclient.NewBeefyClient(address, li.ethereumConn.GetClient())
+	beefyClientContract, err := beefyclient.NewBeefyClient(address, li.ethereumConn.Client())
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 	headers := make(chan *gethTypes.Header, 5)
 
-	sub, err := li.ethereumConn.GetClient().SubscribeNewHead(ctx, headers)
+	sub, err := li.ethereumConn.Client().SubscribeNewHead(ctx, headers)
 	if err != nil {
 		return fmt.Errorf("creating ethereum header subscription: %w", err)
 	}
@@ -217,6 +217,15 @@ func (li *BeefyListener) processBeefyLightClientEvent(ctx context.Context, event
 	}
 
 	for _, task := range tasks {
+
+		if task.ProofInput.PolkadotBlockNumber >= beefyBlockNumber {
+			log.WithFields(log.Fields{
+				"proof.PolkadotBlockNumber": task.ProofInput.PolkadotBlockNumber,
+				"beefyBlockNumber": beefyBlockNumber,
+			}).Info("Skipping task which is not bounded by latest beefyBlock")
+			return nil
+		}
+
 		task.ProofOutput, err = li.generateProof(ctx, task.ProofInput)
 		if err != nil {
 			return err
@@ -289,7 +298,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 ) ([]*Task, error) {
 	basicContract, err := basic.NewBasicInboundChannel(common.HexToAddress(
 		li.config.Contracts.BasicInboundChannel),
-		li.ethereumConn.GetClient(),
+		li.ethereumConn.Client(),
 	)
 	if err != nil {
 		return nil, err
@@ -297,7 +306,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 
 	incentivizedContract, err := incentivized.NewIncentivizedInboundChannel(common.HexToAddress(
 		li.config.Contracts.IncentivizedInboundChannel),
-		li.ethereumConn.GetClient(),
+		li.ethereumConn.Client(),
 	)
 	if err != nil {
 		return nil, err
@@ -457,15 +466,11 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 		return nil, fmt.Errorf("fetch latest beefy block: %w", err)
 	}
 
-	// The mmr_generateProof(leafIndex, AtBlock) rpc will fail if
-	// the following is true. So we'll need to self-terminate and try again.
-	if input.PolkadotBlockNumber >= latestBeefyBlockNumber {
-		return nil, fmt.Errorf("Not able to create a valid proof this round")
-	}
+	log.WithFields(log.Fields{
+		"beefyBlock": latestBeefyBlockNumber,
+		"leafIndex": input.PolkadotBlockNumber,
+	}).Info("Generating MMR proof")
 
-	log.WithField("BeefyBlock", latestBeefyBlockNumber).Info("Beefy BlockNumber")
-
-	// Parachain merkle roots are created 1 block later than the actual parachain headers (maybe ??)
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
 		input.PolkadotBlockNumber,
 		latestBeefyBlockHash,

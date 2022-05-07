@@ -51,14 +51,14 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	var address common.Address
 
 	address = common.HexToAddress(wr.config.Contracts.BasicInboundChannel)
-	basic, err := basic.NewBasicInboundChannel(address, wr.conn.GetClient())
+	basic, err := basic.NewBasicInboundChannel(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}
 	wr.basicInboundChannel = basic
 
 	address = common.HexToAddress(wr.config.Contracts.IncentivizedInboundChannel)
-	incentivized, err := incentivized.NewIncentivizedInboundChannel(address, wr.conn.GetClient())
+	incentivized, err := incentivized.NewIncentivizedInboundChannel(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 
 func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 	chainID := wr.conn.ChainID()
-	keypair := wr.conn.GetKP()
+	keypair := wr.conn.Keypair()
 
 	options := bind.TransactOpts{
 		From: keypair.CommonAddress(),

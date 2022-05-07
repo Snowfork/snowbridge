@@ -61,7 +61,7 @@ func (li *PolkadotListener) scanCommitments(
 	currentValidatorSet uint64,
 	requests chan<- Request,
 ) error {
-	in, err := ScanSafeCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1)
+	in, err := ScanSafeCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1, li.config.Source.BeefyActivationBlock)
 	if err != nil {
 		return fmt.Errorf("scan commitments: %w", err)
 	}
@@ -74,7 +74,6 @@ func (li *PolkadotListener) scanCommitments(
 			if !ok {
 				return nil
 			}
-
 			if result.Error != nil {
 				return fmt.Errorf("scan safe commitments: %w", result.Error)
 			}
@@ -146,12 +145,10 @@ func (li *PolkadotListener) scanCommitments(
 
 func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]substrate.Authority, error) {
 	var authorities []substrate.Authority
-
 	ok, err := li.conn.API().RPC.State.GetStorage(li.beefyAuthoritiesKey, &authorities, blockHash)
 	if err != nil {
 		return nil, err
 	}
-
 	if !ok {
 		return nil, fmt.Errorf("beefy authorities not found")
 	}

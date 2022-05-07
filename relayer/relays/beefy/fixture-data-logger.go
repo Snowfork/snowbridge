@@ -1,14 +1,6 @@
 package beefy
 
 import (
-	"context"
-	"encoding/hex"
-
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -87,44 +79,4 @@ func (wr *EthereumWriter) LogFinal(
 	log.WithFields(state).Debug("State for final signature commitment")
 
 	return nil
-}
-
-func (wr *EthereumWriter) GetFailingMessage(client ethclient.Client, hash common.Hash) (string, error) {
-	tx, _, err := client.TransactionByHash(context.Background(), hash)
-	if err != nil {
-		return "", err
-	}
-
-	from, err := types.Sender(types.NewEIP155Signer(tx.ChainId()), tx)
-	if err != nil {
-		return "", err
-	}
-
-	params := ethereum.CallMsg{
-		From:     from,
-		To:       tx.To(),
-		Gas:      tx.Gas(),
-		GasPrice: tx.GasPrice(),
-		Value:    tx.Value(),
-		Data:     tx.Data(),
-	}
-
-	log.WithFields(logrus.Fields{
-		"From":     from,
-		"To":       tx.To(),
-		"Gas":      tx.Gas(),
-		"GasPrice": tx.GasPrice(),
-		"Value":    tx.Value(),
-		"Data":     hex.EncodeToString(tx.Data()),
-	}).Info("Call info")
-
-	// The logger does a test call to the actual contract to check for any revert message and log it, as well
-	// as logging the call info. This is because the golang client can sometimes supress the log message and so
-	// it can be helpful to use the call info to do the same call in Truffle/Web3js to get better logs.
-	res, err := client.CallContract(context.Background(), params, nil)
-	if err != nil {
-		return "", err
-	}
-
-	return string(res), nil
 }
