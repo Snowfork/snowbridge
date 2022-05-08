@@ -10,39 +10,32 @@ func Hex(b []byte) string {
 	return gsrpcTypes.HexEncodeToString(b)
 }
 
-func (wr *EthereumWriter) LogFinal(
+func (wr *EthereumWriter) makeSubmitFinalLogFields(
 	task *Request,
 	params *FinalRequestParams,
-) error {
+) (log.Fields, error) {
 	var signatures []string
 	for _, item := range params.Proof.Signatures {
 		signatures = append(signatures, Hex(item))
 	}
 
-	var pubKeyMerkleProofs [][]string
-	for _, pubkeyProof := range params.Proof.MerkleProofs {
-		var pubkeyProofS []string
-		for _, item := range pubkeyProof {
-			pubkeyProofS = append(pubkeyProofS, Hex(item[:]))
+	var merkleProofs [][]string
+	for _, merkleProof := range params.Proof.MerkleProofs {
+		var acc []string
+		for _, item := range merkleProof {
+			acc = append(acc, Hex(item[:]))
 		}
-		pubKeyMerkleProofs = append(pubKeyMerkleProofs, pubkeyProofS)
+		merkleProofs = append(merkleProofs, acc)
 	}
 
 	encodedCommitment, err := gsrpcTypes.EncodeToBytes(task.SignedCommitment.Commitment)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
 
-	var state log.Fields
-
-	var proofItems []string
-	for _, item := range params.LeafProof.Items {
-		proofItems = append(proofItems, Hex(item[:]))
-	}
-
-	state = log.Fields{
-		"transactionParams": log.Fields{
+	fields := log.Fields{
+		"params": log.Fields{
 			"id": params.ID,
 			"commitment": log.Fields{
 				"blockNumber":    params.Commitment.BlockNumber,
@@ -54,10 +47,64 @@ func (wr *EthereumWriter) LogFinal(
 				},
 			},
 			"proof": log.Fields{
-				"signatures":            signatures,
-				"indices":             params.Proof.Indices,
-				"addrs":            params.Proof.Addrs,
-				"merkleProofs": pubKeyMerkleProofs,
+				"signatures":   signatures,
+				"indices":      params.Proof.Indices,
+				"addrs":        params.Proof.Addrs,
+				"merkleProofs": merkleProofs,
+			},
+		},
+		"commitmentHash": commitmentHash,
+	}
+
+	return fields, nil
+}
+
+func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
+	task *Request,
+	params *FinalRequestParams,
+) (log.Fields, error) {
+	var signatures []string
+	for _, item := range params.Proof.Signatures {
+		signatures = append(signatures, Hex(item))
+	}
+
+	var merkleProofs [][]string
+	for _, merkleProof := range params.Proof.MerkleProofs {
+		var acc []string
+		for _, item := range merkleProof {
+			acc = append(acc, Hex(item[:]))
+		}
+		merkleProofs = append(merkleProofs, acc)
+	}
+
+	encodedCommitment, err := gsrpcTypes.EncodeToBytes(task.SignedCommitment.Commitment)
+	if err != nil {
+		return nil, err
+	}
+	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
+
+	var proofItems []string
+	for _, item := range params.LeafProof.Items {
+		proofItems = append(proofItems, Hex(item[:]))
+	}
+
+	fields := log.Fields{
+		"params": log.Fields{
+			"id": params.ID,
+			"commitment": log.Fields{
+				"blockNumber":    params.Commitment.BlockNumber,
+				"validatorSetId": params.Commitment.ValidatorSetID,
+				"payload": log.Fields{
+					"mmrRootHash": Hex(params.Commitment.Payload.MmrRootHash[:]),
+					"prefix":      Hex(params.Commitment.Payload.Prefix),
+					"suffix":      Hex(params.Commitment.Payload.Suffix),
+				},
+			},
+			"proof": log.Fields{
+				"signatures":   signatures,
+				"indices":      params.Proof.Indices,
+				"addrs":        params.Proof.Addrs,
+				"merkleProofs": merkleProofs,
 			},
 			"leaf": log.Fields{
 				"version":              params.Leaf.Version,
@@ -69,14 +116,12 @@ func (wr *EthereumWriter) LogFinal(
 				"parachainHeadsRoot":   Hex(params.Leaf.ParachainHeadsRoot[:]),
 			},
 			"leafProof": log.Fields{
-				"Items": proofItems,
-				"Order": params.LeafProof.Order,
+				"items": proofItems,
+				"order": params.LeafProof.Order,
 			},
 		},
 		"commitmentHash": commitmentHash,
 	}
 
-	log.WithFields(state).Debug("State for final signature commitment")
-
-	return nil
+	return fields, nil
 }

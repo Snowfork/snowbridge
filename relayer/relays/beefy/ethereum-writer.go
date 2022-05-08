@@ -161,7 +161,6 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		},
 	}).Info("Initial submission successful")
 
-
 	tx, err = wr.doSubmitFinal(ctx, validationID, &task)
 	if err != nil {
 		log.WithError(err).Error("Failed to send final signature commitment")
@@ -222,11 +221,6 @@ func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 }
 
 func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*types.Transaction, error) {
-	contract := wr.contract
-	if contract == nil {
-		return nil, fmt.Errorf("unknown contract")
-	}
-
 	signedValidators := []*big.Int{}
 	for i, signature := range task.SignedCommitment.Signatures {
 		if signature.IsSome() {
@@ -234,12 +228,11 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		}
 	}
 	numberOfValidators := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
-	initialBitfield, err := contract.CreateInitialBitfield(
+	initialBitfield, err := wr.contract.CreateInitialBitfield(
 		&bind.CallOpts{Pending: true}, signedValidators, numberOfValidators,
 	)
 	if err != nil {
-		log.WithError(err).Error("Failed to create initial validator bitfield")
-		return nil, err
+		return nil, fmt.Errorf("create initial bitfield: %w", err)
 	}
 
 	valIndex := signedValidators[0].Int64()
@@ -249,10 +242,8 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		return nil, err
 	}
 
-	options := wr.makeTxOpts(ctx)
-
-	tx, err := contract.SubmitInitial(
-		options,
+	tx, err := wr.contract.SubmitInitial(
+		wr.makeTxOpts(ctx),
 		msg.CommitmentHash,
 		msg.ValidatorSetID,
 		msg.ValidatorClaimsBitfield,
@@ -277,7 +268,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	return tx, nil
 }
 
-func BitfieldToString(bitfield []*big.Int) string {
+func bitfieldToString(bitfield []*big.Int) string {
 	bitfieldString := ""
 	for _, bitfieldInt := range bitfield {
 		bits := strconv.FormatInt(bitfieldInt.Int64(), 2)
@@ -295,12 +286,7 @@ func BitfieldToString(bitfield []*big.Int) string {
 
 // doFinalSubmit sends a SubmitFinal tx to the BeefyClient contract
 func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64, task *Request) (*types.Transaction, error) {
-	contract := wr.contract
-	if contract == nil {
-		return nil, fmt.Errorf("unknown contract")
-	}
-
-	randomBitfield, err := contract.CreateFinalBitfield(
+	randomBitfield, err := wr.contract.CreateFinalBitfield(
 		&bind.CallOpts{Pending: true},
 		big.NewInt(validationID),
 	)
@@ -308,24 +294,21 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 		return nil, fmt.Errorf("create validator bitfield: %w", err)
 	}
 
-	bitfield := BitfieldToString(randomBitfield)
+	bitfield := bitfieldToString(randomBitfield)
 
 	params, err := task.MakeSubmitFinalParams(validationID, bitfield)
 	if err != nil {
 		return nil, err
 	}
 
-	options := wr.makeTxOpts(ctx)
-
-	err = wr.LogFinal(task, params)
-	if err != nil {
-		return nil, err
-	}
-
-	var tx *types.Transaction
-
 	if task.IsHandover {
-		tx, err = contract.SubmitFinal(options,
+		logFields, err := wr.makeSubmitFinalHandoverLogFields(task, params)
+		if err != nil {
+			return nil, fmt.Errorf("logging params: %w", err)
+		}
+
+		tx, err := wr.contract.SubmitFinal(
+			wr.makeTxOpts(ctx),
 			params.ID,
 			params.Commitment,
 			params.Proof,
@@ -335,8 +318,20 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 		if err != nil {
 			return nil, fmt.Errorf("final submission: %w", err)
 		}
-	} else {
-		tx, err = contract.SubmitFinal0(options,
+
+		log.WithField("txHash", tx.Hash().Hex()).
+			WithFields(logFields).
+			Info("Sent SubmitFinal transaction")
+
+		return tx, nil
+	} else { // revive:disable-line
+		logFields, err := wr.makeSubmitFinalLogFields(task, params)
+		if err != nil {
+			return nil, fmt.Errorf("logging params: %w", err)
+		}
+
+		tx, err := wr.contract.SubmitFinal0(
+			wr.makeTxOpts(ctx),
 			params.ID,
 			params.Commitment,
 			params.Proof,
@@ -344,11 +339,11 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 		if err != nil {
 			return nil, fmt.Errorf("final submission: %w", err)
 		}
+
+		log.WithField("txHash", tx.Hash().Hex()).
+			WithFields(logFields).
+			Info("Sent SubmitFinal transaction")
+
+		return tx, nil
 	}
-
-	log.WithFields(logrus.Fields{
-		"txHash": tx.Hash().Hex(),
-	}).Info("Transaction submitted final verification")
-
-	return tx, nil
 }

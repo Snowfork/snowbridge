@@ -210,15 +210,20 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 				return
 			}
 
-			proofIsValid, proof, err := makeProof(meta, api, blockNumber-1, blockHash, beefyActivationBlock)
+			leafIndex := blockNumber - beefyActivationBlock - 1
+			proofIsValid, proof, err := makeProof(meta, api, leafIndex, blockHash)
 			if err != nil {
 				sendError(err)
 				return
 			}
 
 			if !proofIsValid {
-				log.WithField("blockNumber", blockNumber).WithField("validatorSetID", result.SignedCommitment.Commitment.ValidatorSetID).Info("INVALID")
-
+				log.WithFields(log.Fields{
+					"parentNumber": blockNumber,
+					"leafIndex": leafIndex,
+					"beefyBlockHash": blockHash,
+					"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
+				}).Info("Proof for leaf is invalid")
 				continue
 			}
 
@@ -232,11 +237,11 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 	}
 }
 
-func makeProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, blockNumber uint64, blockHash types.Hash, beefyActivationBlock uint64) (bool, merkle.SimplifiedMMRProof, error) {
+func makeProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, leafIndex uint64, blockHash types.Hash) (bool, merkle.SimplifiedMMRProof, error) {
 
-	proof1, err := api.RPC.MMR.GenerateProof(blockNumber-beefyActivationBlock, blockHash)
+	proof1, err := api.RPC.MMR.GenerateProof(leafIndex, blockHash)
 	if err != nil {
-		return false, merkle.SimplifiedMMRProof{}, fmt.Errorf("proof generation for %v: %w", blockNumber, err)
+		return false, merkle.SimplifiedMMRProof{}, fmt.Errorf("proof generation for leaf %v: %w", leafIndex, err)
 	}
 
 	proof2, err := merkle.ConvertToSimplifiedMMRProof(
