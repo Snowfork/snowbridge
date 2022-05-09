@@ -1,11 +1,13 @@
 package syncer
 
 type BeaconCache struct {
-	SyncCommitteePeriodsSynced map[uint64][]bool
+	SyncCommitteePeriodsSynced []uint64
+	FinalizedHeaders           []uint64
 }
 
 func NewBeaconCache() *BeaconCache {
 	return &BeaconCache{
-		SyncCommitteePeriodsSynced: make(map[uint64][]bool), 
+		SyncCommitteePeriodsSynced: []uint64{},
+		FinalizedHeaders:           []uint64{},
 	}
 }

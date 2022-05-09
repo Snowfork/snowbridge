@@ -22,11 +22,13 @@ const (
 
 type Syncer struct {
 	Client BeaconClient
+	Cache  BeaconCache
 }
 
 func New(endpoint string) *Syncer {
 	return &Syncer{
 		Client: *NewBeaconClient(endpoint),
+		Cache:  *NewBeaconCache(),
 	}
 }
 
@@ -322,9 +324,9 @@ func ComputeSyncPeriodAtSlot(slot uint64) uint64 {
 	return slot / (SLOTS_IN_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
 }
 
-func SyncPeriodRolledOver(periods []uint64, currentPeriod uint64) bool {
-	for _, period := range periods {
-		if period == currentPeriod {
+func IsInArray(values []uint64, toCheck uint64) bool {
+	for _, value := range values {
+		if value == toCheck {
 			return true
 		}
 	}

@@ -272,6 +272,27 @@ pub fn test_is_valid_merkle_proof() {
 }
 
 #[test]
+pub fn test_merkle_proof_fails_if_depth_and_branch_dont_match() {
+	new_tester().execute_with(|| {
+		assert_eq!(
+			EthereumBeaconLightClient::is_valid_merkle_branch(
+				hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+				vec![
+					hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+					hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").into(),
+					hex!("e7125ff9ab5a840c44bedb4731f440a405b44e15f2d1a89e27341b432fabe13d").into(),
+				],
+				6,
+				41,
+				hex!("e46559327592741956f6beaa0f52e49625eb85dce037a0bd2eff333c743b287f").into()
+			),
+			false
+		);
+	});
+}
+
+
+#[test]
 pub fn test_bls_fast_aggregate_verify_minimal() {
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconLightClient::bls_fast_aggregate_verify(

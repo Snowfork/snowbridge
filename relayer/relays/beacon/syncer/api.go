@@ -259,6 +259,8 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommit
 
 	bodyBytes, err := io.ReadAll(res.Body)
 
+	//logrus.WithFields(logrus.Fields{"body": string(bodyBytes), "period": from}).Info("snapshot")
+
 	if err != nil {
 		logrus.Error("unable to get response body")
 

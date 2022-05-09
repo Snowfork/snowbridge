@@ -635,12 +635,21 @@ pub mod pallet {
 			index: u64,
 			root: Root,
 		) -> bool {
+			if branch.len() != depth as usize {
+				log::error!(target: "ethereum-beacon-light-client", "Merkle proof branch length doesn't match depth.");
+
+				return false;
+			}
 			let mut value = leaf;
 			if leaf.as_bytes().len() < 32 as usize {
+				log::error!(target: "ethereum-beacon-light-client", "Merkle proof leaf not 32 bytes.");
+
 				return false;
 			}
 			for i in 0..depth {
 				if branch[i as usize].as_bytes().len() < 32 as usize {
+					log::error!(target: "ethereum-beacon-light-client", "Merkle proof branch not 32 bytes.");
+
 					return false;
 				}
 				if (index / (2u32.pow(i as u32) as u64) % 2) == 0 {
@@ -656,6 +665,7 @@ pub mod pallet {
 					value = sha2_256(&data).into();
 				}
 			}
+			
 			return value == root;
 		}
 

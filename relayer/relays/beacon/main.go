@@ -14,12 +14,11 @@ import (
 )
 
 type Relay struct {
-	config      *Config
-	syncer      *syncer.Syncer
-	keypair     *sr25519.Keypair
-	paraconn    *parachain.Connection
-	writer      *ParachainWriter
-	syncPeriods []uint64
+	config   *Config
+	syncer   *syncer.Syncer
+	keypair  *sr25519.Keypair
+	paraconn *parachain.Connection
+	writer   *ParachainWriter
 }
 
 func NewRelay(
@@ -59,7 +58,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 		return err
 	}
 
-	r.syncPeriods, err = r.syncer.GetSyncPeriodsToFetch(uint64(initialSync.Header.Slot))
+	r.syncer.Cache.SyncCommitteePeriodsSynced, err = r.syncer.GetSyncPeriodsToFetch(uint64(initialSync.Header.Slot))
 	if err != nil {
 		logrus.WithError(err).Error("unable check sync committee periods to be fetched")
 
@@ -67,10 +66,10 @@ func (r *Relay) Sync(ctx context.Context) error {
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"periods": r.syncPeriods,
+		"periods": r.syncer.Cache.SyncCommitteePeriodsSynced,
 	}).Info("Sync committee periods that needs fetching")
 
-	for _, period := range r.syncPeriods {
+	for _, period := range r.syncer.Cache.SyncCommitteePeriodsSynced {
 		logrus.WithFields(logrus.Fields{
 			"period": period,
 		}).Info("Fetch sync committee period update")
@@ -126,7 +125,11 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 
 	switch {
 	case errors.Is(err, syncer.ErrCommitteeUpdateHeaderInDifferentSyncPeriod):
-		logrus.WithField("period", period).Info("committee update and header in different sync periods, skipping")
+		{
+			logrus.WithField("period", period).Info("committee update and header in different sync periods, skipping")
+
+			return err
+		}
 	case err != nil:
 		{
 			logrus.WithError(err).Error("unable check sync committee periods to be fetched")
@@ -151,16 +154,22 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 		return err
 	}
 
+	if syncer.IsInArray(r.syncer.Cache.FinalizedHeaders, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot)) {
+		logrus.Info("Finalized header has been synced already, skipped")
+
+		return nil
+	}
+
 	logrus.Info("Checking if sync period rolled")
 
 	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
 
-	if syncer.SyncPeriodRolledOver(r.syncPeriods, currentSyncPeriod) {
+	if syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
 		logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
 
 		r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
 
-		r.syncPeriods = append(r.syncPeriods, currentSyncPeriod)
+		r.syncer.Cache.SyncCommitteePeriodsSynced = append(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod)
 	}
 
 	err = r.writer.WriteToParachain(ctx, "import_finalized_header", finalizedHeaderUpdate)
@@ -169,6 +178,8 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 
 		return err
 	}
+
+	r.syncer.Cache.FinalizedHeaders = append(r.syncer.Cache.FinalizedHeaders, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot))
 
 	return err
 }
