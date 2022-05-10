@@ -74,7 +74,7 @@ pub mod pallet {
 
 		/// Max number of messages per commitment
 		#[pallet::constant]
-		type MaxMessagesPerCommit: Get<u64>;
+		type MaxMessagesPerCommit: Get<u32>;
 
 		type SetPrincipalOrigin: EnsureOrigin<Self::Origin>;
 
