@@ -192,13 +192,20 @@ pub mod pallet {
 					return Err(Error::<T>::Overflow.into())
 				}
 
-				<MessageQueue<T>>::append(Message {
+				match <MessageQueue<T>>::try_append(Message {
 					target,
 					nonce: *nonce,
 					payload: payload.to_vec(),
-				});
-				Self::deposit_event(Event::MessageAccepted(*nonce));
-				Ok(())
+				}) {
+					Ok(()) => {
+						Self::deposit_event(Event::MessageAccepted(*nonce));
+						Ok(())
+					}
+
+					Err(()) => {
+						Err(DispatchError::Other("Outbound message channel full."))
+					}
+				}
 			})
 		}
 
