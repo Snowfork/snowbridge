@@ -181,8 +181,8 @@ pub mod pallet {
 					nonce: *nonce,
 					payload: payload.to_vec(),
 				})
-				.map_err(|_unit| Error::<T>::QueueSizeLimitReached.into())
-				.map(|_unit| {
+				.map_err(|_| Error::<T>::QueueSizeLimitReached.into())
+				.map(|_| {
 					Self::deposit_event(Event::MessageAccepted(*nonce))
 				})
 			})
