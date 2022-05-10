@@ -7,11 +7,13 @@ mod benchmarking;
 mod test;
 
 use codec::{Decode, Encode};
+// use codec::{Decode, Encode, Input, Compact};
 use ethabi::{self, Token};
 use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	traits::{EnsureOrigin, Get},
+	storage::bounded_vec::BoundedVec,
 };
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256};
@@ -34,6 +36,14 @@ pub struct Message {
 	/// Payload for target application.
 	payload: Vec<u8>,
 }
+
+// impl<T: Decode> Decode for BoundedVec<T, u64> {
+// 	fn decode<I: Input>(input: &mut I) -> Result<Self, Error> {
+// 		<Compact<u32>>::decode(input).and_then(move |Compact(len)| {
+// 			decode_vec_with_len(input, len as usize)
+// 		})
+// 	}
+// }
 
 pub use pallet::*;
 
@@ -98,7 +108,7 @@ pub mod pallet {
 
 	/// Messages waiting to be committed.
 	#[pallet::storage]
-	pub(super) type MessageQueue<T: Config> = StorageValue<_, Vec<Message>, ValueQuery>;
+	pub(super) type MessageQueue<T: Config> = StorageValue<_, BoundedVec<Message, T::MaxMessagesPerCommit>, ValueQuery>;
 
 	/// Fee for accepting a message
 	#[pallet::storage]
@@ -164,11 +174,13 @@ pub mod pallet {
 			let principal = Self::principal();
 			ensure!(principal.is_some(), Error::<T>::NotAuthorized,);
 			ensure!(*who == principal.unwrap(), Error::<T>::NotAuthorized,);
-			ensure!(
-				<MessageQueue<T>>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerCommit::get() as usize,
-				Error::<T>::QueueSizeLimitReached,
-			);
+			// No need to check the message length, as this constraint is encoded in
+			// BoundedVec.
+			// ensure!(
+			// 	<MessageQueue<T>>::decode_len().unwrap_or(0) <
+			// 		T::MaxMessagesPerCommit::get() as usize,
+			// 	Error::<T>::QueueSizeLimitReached,
+			// );
 			ensure!(
 				payload.len() <= T::MaxMessagePayloadSize::get() as usize,
 				Error::<T>::PayloadTooLarge,
@@ -192,7 +204,7 @@ pub mod pallet {
 		}
 
 		fn commit() -> Weight {
-			let messages: Vec<Message> = <MessageQueue<T>>::take();
+			let messages: BoundedVec<Message, T::MaxMessagesPerCommit> = <MessageQueue<T>>::take();
 			if messages.is_empty() {
 				return T::WeightInfo::on_initialize_no_messages()
 			}
