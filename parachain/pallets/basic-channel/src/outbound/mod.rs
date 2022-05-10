@@ -176,20 +176,15 @@ pub mod pallet {
 					return Err(Error::<T>::Overflow.into())
 				}
 
-				match <MessageQueue<T>>::try_append(Message {
+				<MessageQueue<T>>::try_append(Message {
 					target,
 					nonce: *nonce,
 					payload: payload.to_vec(),
-				}) {
-					Ok(()) => {
-						Self::deposit_event(Event::MessageAccepted(*nonce));
-						Ok(())
-					}
-
-					Err(()) => {
-						Err(Error::<T>::QueueSizeLimitReached)
-					}
-				}
+				})
+				.map_err(|_unit| Err(Error::<T>::QueueSizeLimitReached))
+				.map(|_unit| {
+					Self::deposit_event(Event::MessageAccepted(*nonce))
+				})
 			})
 		}
 
