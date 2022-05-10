@@ -7,7 +7,6 @@ mod benchmarking;
 mod test;
 
 use codec::{Decode, Encode};
-// use codec::{Decode, Encode, Input, Compact};
 use ethabi::{self, Token};
 use frame_support::{
 	dispatch::DispatchResult,
@@ -35,14 +34,6 @@ pub struct Message {
 	/// Payload for target application.
 	payload: Vec<u8>,
 }
-
-// impl<T: Decode> Decode for BoundedVec<T, u64> {
-// 	fn decode<I: Input>(input: &mut I) -> Result<Self, Error> {
-// 		<Compact<u32>>::decode(input).and_then(move |Compact(len)| {
-// 			decode_vec_with_len(input, len as usize)
-// 		})
-// 	}
-// }
 
 pub use pallet::*;
 
