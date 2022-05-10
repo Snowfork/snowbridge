@@ -47,7 +47,7 @@ yarn install
 ### Polkadot
 
 * Clone the polkadot repository somewhere on your machine
-* Checkout commit `96d736ce75e8467862cd63037faa6d6e56122532`.
+* Checkout commit `f00a2772497aadddf75b8b4b475843ea0d910c48`.
 
 Example:
 ```bash
