@@ -203,7 +203,7 @@ pub mod pallet {
 					}
 
 					Err(()) => {
-						Err(DispatchError::Other("Outbound message channel full."))
+						Err(Error::<T>::QueueSizeLimitReached)
 					}
 				}
 			})
