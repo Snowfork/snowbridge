@@ -13,7 +13,6 @@ use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	traits::{EnsureOrigin, Get},
-	storage::bounded_vec::BoundedVec,
 };
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256};
