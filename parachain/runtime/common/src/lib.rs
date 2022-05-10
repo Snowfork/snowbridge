@@ -30,7 +30,7 @@ where
 
 parameter_types! {
 	pub const MaxMessagePayloadSize: u64 = 256;
-	pub const MaxMessagesPerCommit: u64 = 20;
+	pub const MaxMessagesPerCommit: u32 = 20;
 }
 
 parameter_types! {
