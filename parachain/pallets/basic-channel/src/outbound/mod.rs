@@ -173,13 +173,6 @@ pub mod pallet {
 			let principal = Self::principal();
 			ensure!(principal.is_some(), Error::<T>::NotAuthorized,);
 			ensure!(*who == principal.unwrap(), Error::<T>::NotAuthorized,);
-			// No need to check the message length, as this constraint is encoded in
-			// BoundedVec.
-			// ensure!(
-			// 	<MessageQueue<T>>::decode_len().unwrap_or(0) <
-			// 		T::MaxMessagesPerCommit::get() as usize,
-			// 	Error::<T>::QueueSizeLimitReached,
-			// );
 			ensure!(
 				payload.len() <= T::MaxMessagePayloadSize::get() as usize,
 				Error::<T>::PayloadTooLarge,
