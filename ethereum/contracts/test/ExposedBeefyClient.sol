@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.5;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
 import "../BeefyClient.sol";
 import "../utils/MMRProofVerification.sol";
