@@ -98,7 +98,8 @@ pub mod pallet {
 
 	/// Messages waiting to be committed.
 	#[pallet::storage]
-	pub(super) type MessageQueue<T: Config> = StorageValue<_, BoundedVec<Message, T::MaxMessagesPerCommit>, ValueQuery>;
+	pub(super) type MessageQueue<T: Config> =
+		StorageValue<_, BoundedVec<Message, T::MaxMessagesPerCommit>, ValueQuery>;
 
 	/// Fee for accepting a message
 	#[pallet::storage]
