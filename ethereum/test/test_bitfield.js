@@ -2,8 +2,6 @@ const {
   deployBeefyClient, printBitfield, createRandomPositions
 } = require("./helpers");
 
-const { createRandomPositions } = require("./beefy-helpers");
-
 require("chai")
   .use(require("chai-as-promised"))
   .should();

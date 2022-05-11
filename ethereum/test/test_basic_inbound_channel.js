@@ -23,9 +23,9 @@ describe("BasicInboundChannel", function () {
   before(async function () {
     const numberOfSignatures = 8;
     const numberOfValidators = 24;
-    const validatorFixture = await createValidatorFixture(fixture.transactionParams.commitment.validatorSetId, numberOfValidators)
+    const validatorFixture = await createValidatorFixture(fixture.params.commitment.validatorSetID-1, numberOfValidators)
     this.beefyClient = await deployBeefyClient(
-      validatorFixture.validatorSetId,
+      validatorFixture.validatorSetID,
       validatorFixture.validatorSetRoot,
       validatorFixture.validatorSetLength,
     );
@@ -48,8 +48,8 @@ describe("BasicInboundChannel", function () {
       const nonceBeforeSubmit = BigNumber(await this.channel.nonce());
 
       const { receipt } = await this.channel.submit(
-        submitInput.transactionParams.bundle,
-        submitInput.transactionParams.proof,
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.be.fulfilled
 
       const nonceAfterSubmit = BigNumber(await this.channel.nonce());
@@ -66,14 +66,14 @@ describe("BasicInboundChannel", function () {
     it("should refuse to replay commitments", async function () {
       // Submit messages
       await this.channel.submit(
-        submitInput.transactionParams.bundle,
-        submitInput.transactionParams.proof,
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.be.fulfilled;
 
       // Submit messages again - should revert
       await this.channel.submit(
-        submitInput.transactionParams.bundle,
-        submitInput.transactionParams.proof,
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.not.be.fulfilled;
     });
   });

@@ -11,7 +11,7 @@ const ScaleCodec = artifacts.require("ScaleCodec");
 const MMRProofVerification = artifacts.require("MMRProofVerification");
 const BeefyClient = artifacts.require("BeefyClient");
 
-const leafFixture = require('./fixtures/beefy-relay-validators-basic.json');
+const fixture = require('./fixtures/beefy-relay-basic.json');
 
 let lazyLinked = false;
 const lazyLinkLibraries = async _ => {
@@ -67,15 +67,15 @@ const deployAppWithMockChannels = async (deployer, channels, appContract, ...app
   return app;
 }
 
-const deployBeefyClient = async (validatorSetId, validatorSetRoot, validatorSetLength) => {
-  if (!validatorSetId) {
-    validatorSetId = leafFixture.updateLeaf.leaf.nextAuthoritySetId
+const deployBeefyClient = async (validatorSetID, validatorSetRoot, validatorSetLength) => {
+  if (!validatorSetID) {
+    validatorSetID = fixture.params.leaf.nextAuthoritySetID
   }
   if (!validatorSetRoot) {
-    validatorSetRoot = leafFixture.updateLeaf.leaf.nextAuthoritySetRoot
+    validatorSetRoot = fixture.params.leaf.nextAuthoritySetRoot
   }
   if (!validatorSetLength) {
-    validatorSetLength = leafFixture.updateLeaf.leaf.nextAuthoritySetLen
+    validatorSetLength = fixture.params.leaf.nextAuthoritySetLen
   }
 
   await lazyLinkLibraries()
@@ -83,8 +83,8 @@ const deployBeefyClient = async (validatorSetId, validatorSetRoot, validatorSetL
   const beefyLightClient = await BeefyClient.new();
 
   await beefyLightClient.initialize(0,
-    { id: validatorSetId, root: validatorSetRoot, length: validatorSetLength },
-    { id: validatorSetId + 1, root: validatorSetRoot, length: validatorSetLength }
+    { id: validatorSetID, root: validatorSetRoot, length: validatorSetLength },
+    { id: validatorSetID + 1, root: validatorSetRoot, length: validatorSetLength }
   );
 
   return beefyLightClient;
@@ -173,7 +173,7 @@ function printBitfield(bitfield) {
   }).reverse().join('').replace(/^0*/g, '')
 }
 
-async function createValidatorFixture(validatorSetId, validatorSetLength) {
+async function createValidatorFixture(validatorSetID, validatorSetLength) {
 
   let wallets = [];
   for (let i = 0; i < validatorSetLength; i++) {
@@ -206,7 +206,7 @@ async function createValidatorFixture(validatorSetId, validatorSetLength) {
     walletsByLeaf,
     validatorAddresses,
     validatorAddressesHashed,
-    validatorSetId,
+    validatorSetID,
     validatorSetRoot: validatorMerkleTree.getHexRoot(),
     validatorSetLength,
     validatorAddressProofs,
@@ -235,27 +235,41 @@ const runBeefyClientFlow = async (fixture, beefyClient, validatorFixture, totalN
 
   const proofs = await createInitialValidatorProofs(fixture.commitmentHash, validatorFixture);
 
-  await beefyClient.newSignatureCommitment(
+  await beefyClient.submitInitial(
     fixture.commitmentHash,
-    fixture.transactionParams.commitment.validatorSetId,
+    fixture.params.commitment.validatorSetID,
     initialBitfield,
-    proofs[0].signature,
-    proofs[0].position,
-    proofs[0].address,
-    proofs[0].proof,
+    {
+      signature: proofs[0].signature,
+      index: proofs[0].position,
+      addr: proofs[0].address,
+      merkleProof: proofs[0].proof
+    }
   )
 
-  const lastId = (await beefyClient.nextID()).sub(new web3.utils.BN(1));
+  const lastId = (await beefyClient.nextRequestID()).sub(new web3.utils.BN(1));
 
   await mine(45);
 
   const completeProofs = await createFinalValidatorProofs(lastId, beefyClient, proofs);
 
-  await beefyClient.completeSignatureCommitment(
-    lastId,
-    fixture.transactionParams.commitment,
-    completeProofs,
-  )
+  if (fixture.params.leaf) {
+    await beefyClient.submitFinal(
+      lastId,
+      fixture.params.commitment,
+      completeProofs,
+      fixture.params.leaf,
+      fixture.params.leafProof,
+    )
+  } else {
+    await beefyClient.submitFinal(
+      lastId,
+      fixture.params.commitment,
+      completeProofs
+    )
+  }
+
+
 
 }
 
@@ -279,14 +293,14 @@ async function createInitialValidatorProofs(commitmentHash, validatorFixture) {
 }
 
 async function createFinalValidatorProofs(id, beefyClient, initialProofs) {
-  const bitfieldInts = await beefyClient.createRandomBitfield(id);
+  const bitfieldInts = await beefyClient.createFinalBitfield(id);
   const bitfieldString = printBitfield(bitfieldInts);
 
   const proofs = {
     signatures: [],
-    positions: [],
-    publicKeys: [],
-    publicKeyMerkleProofs: [],
+    indices: [],
+    addrs: [],
+    merkleProofs: [],
   }
 
   const ascendingBitfield = bitfieldString.split('').reverse().join('');
@@ -294,9 +308,9 @@ async function createFinalValidatorProofs(id, beefyClient, initialProofs) {
     const bit = ascendingBitfield[position]
     if (bit === '1') {
       proofs.signatures.push(initialProofs[position].signature)
-      proofs.positions.push(initialProofs[position].position)
-      proofs.publicKeys.push(initialProofs[position].address)
-      proofs.publicKeyMerkleProofs.push(initialProofs[position].proof)
+      proofs.indices.push(initialProofs[position].position)
+      proofs.addrs.push(initialProofs[position].address)
+      proofs.merkleProofs.push(initialProofs[position].proof)
     }
   }
 

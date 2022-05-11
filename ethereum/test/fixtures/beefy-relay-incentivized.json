@@ -1,35 +1,36 @@
 {
-    "@timestamp": "2022-04-28T18:06:44.5905731+02:00",
-    "commitmentHash": "0x48e3e95b12be3efbd66eaf866f6b542ff4398abd1a3a857ff73d53fe3a9b2b48",
-    "level": "debug",
-    "message": "State for final signature commitment",
-    "transactionParams": {
+    "@timestamp": "2022-05-11T21:44:13.817215021+02:00",
+    "commitmentHash": "0x23b3da85830cfa317810cc825b96e11d287ae1fb676245d333ca461d027cbe12",
+    "level": "info",
+    "message": "Sent SubmitFinal transaction",
+    "params": {
         "commitment": {
-            "blockNumber": 89,
+            "blockNumber": 189,
             "payload": {
-                "mmrRootHash": "0x5eca17ce116b4373d29da15a4cedb802718182768d01024e08ec49ae0b784c42",
+                "mmrRootHash": "0xeb9aefc60a0dd0cef21b2d04de9bd50d8fce25299fff26bbb19c14f20f847073",
                 "prefix": "0x046d6880",
                 "suffix": "0x"
             },
-            "validatorSetId": 7
+            "validatorSetID": 18
         },
-        "id": 8,
+        "id": 22,
         "proof": {
-            "positions": [
+            "addrs": [
+                "0xe04cc55ebee1cbce552f250e85c57b70b2e2625b"
+            ],
+            "indices": [
                 0
             ],
-            "publicKeyMerkleProofs": [
+            "merkleProofs": [
                 [
                     "0xf68aec7304bf37f340dae2ea20fb5271ee28a3128812b84a615da4789e458bde",
                     "0x3eb799651607280e854bd2e42c1df1c8e4a6167772dfb3c64a813e40f6e87136"
                 ]
             ],
-            "publicKeys": [
-                "0xe04cc55ebee1cbce552f250e85c57b70b2e2625b"
-            ],
             "signatures": [
-                "0xfd6fbc0ea1f95044d3a9c9f84be2642a1d695babf3d48b06059daa4030763b53722ce04098695c5ac47502819dbe1340b936a1bf7a73f0d70d25ff0d0508db481c"
+                "0xc283d3e6e315b27ae5ddc35df4eb8300abb465b289b4a162360ab97a7035e90a3686efb73a7af1da9ae8d4b139fe11700ec3614cea9dda3188d1b588c05199971b"
             ]
         }
-    }
+    },
+    "txHash": "0xc12fafa259ac787b4830f977bfec7a355cd40ef0661b21eab3fde36b29837b28"
 }

@@ -126,6 +126,9 @@ parameter_types! {
 	pub const EtherAssetId: u128 = 0;
 	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
 	pub const MaxMessagePayloadSize: u64 = 256;
+	// TODO: SNO-223 replace these with MaxMessagesPerCommit: u32 here when the incentivized channel
+	// is updated to use a BoundedVec
+	pub const MaxMessagesPerCommitBasicChannel: u32 = 3;
 	pub const MaxMessagesPerCommit: u64 = 3;
 }
 
@@ -136,7 +139,7 @@ impl snowbridge_basic_channel::outbound::Config for Test {
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
-	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type MaxMessagesPerCommit = MaxMessagesPerCommitBasicChannel;
 	type SetPrincipalOrigin = frame_system::EnsureRoot<AccountId>;
 	type WeightInfo = ();
 }

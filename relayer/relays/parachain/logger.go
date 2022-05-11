@@ -73,7 +73,7 @@ func (wr *EthereumWriter) logFieldsForIncentivizedSubmission(
 		messagesLog = append(messagesLog, log.Fields{
 			"id":      item.Id,
 			"target":  item.Target,
-			"fee":     item.Fee,
+			"fee":     item.Fee.String(),
 			"payload": Hex(item.Payload),
 		})
 	}

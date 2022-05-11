@@ -58,3 +58,7 @@ Now edit the spec and configure the following:
 4. Fee and reward parameters for the incentivized channel
 
 For an example configuration, consult the [setup script](https://github.com/Snowfork/snowbridge/blob/main/test/scripts/start-services.sh) for our local development stack. Specifically the `start_polkadot_launch` bash function.
+
+## Tests
+
+To run the parachain tests locally, use `cargo test --release`. For the full suite of tests, use `cargo test --release --features runtime-benchmarks`.

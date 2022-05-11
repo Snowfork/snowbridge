@@ -45,7 +45,7 @@ contract BeefyClient is Ownable {
      * @param payload the payload of the new commitment in beefy justifications (in
      * our case, this is a new MMR root for all past polkadot blocks)
      * @param blockNumber block number for the given commitment
-     * @param validatorSetId validator set id that signed the given commitment
+     * @param validatorSetID validator set id that signed the given commitment
      */
     struct Commitment {
         uint32 blockNumber;

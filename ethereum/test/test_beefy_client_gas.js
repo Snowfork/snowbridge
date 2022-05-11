@@ -62,10 +62,10 @@ describe.skip("Beefy Client Gas Usage", function () {
   const runFlow = async function (totalNumberOfValidators, totalNumberOfSignatures, fail) {
     console.log(`Running flow with ${totalNumberOfValidators} validators and ${totalNumberOfSignatures} signatures with the complete transaction ${fail ? 'failing' : 'succeeding'}: `)
 
-    const validatorFixture = await createValidatorFixture(fixture.transactionParams.commitment.validatorSetId, totalNumberOfValidators)
+    const validatorFixture = await createValidatorFixture(fixture.transactionParams.commitment.validatorSetID-1, totalNumberOfValidators)
 
     const beefyClient = await deployBeefyClient(
-      validatorFixture.validatorSetId,
+      validatorFixture.validatorSetID,
       validatorFixture.validatorSetRoot,
       validatorFixture.validatorSetLength,
     );
@@ -82,28 +82,32 @@ describe.skip("Beefy Client Gas Usage", function () {
 
     const initialValidatorProofs = await createInitialValidatorProofs(commitmentHash, validatorFixture);
 
-    const newSigTxPromise = beefyClient.newSignatureCommitment(
+    const newSigTxPromise = beefyClient.submitInitial(
       commitmentHash,
       fixture.transactionParams.commitment.validatorSetId,
       initialBitfield,
-      initialValidatorProofs[firstPosition].signature,
-      firstPosition,
-      initialValidatorProofs[firstPosition].address,
-      initialValidatorProofs[firstPosition].proof,
+      {
+        signature: initialValidatorProofs[firstPosition].signature,
+        index: firstPosition,
+        addr: initialValidatorProofs[firstPosition].address,
+        merkleProof: initialValidatorProofs[firstPosition].proof
+      }
     )
     printTxPromiseGas(newSigTxPromise)
     await newSigTxPromise.should.be.fulfilled
 
-    const lastId = (await beefyClient.nextID()).sub(new web3.utils.BN(1));
+    const lastId = (await beefyClient.nextRequestID()).sub(new web3.utils.BN(1));
 
     await mine(45);
 
     const completeValidatorProofs = await createFinalValidatorProofs(lastId, beefyClient, initialValidatorProofs);
 
-    const completeSigTxPromise = beefyClient.completeSignatureCommitment(
+    const completeSigTxPromise = beefyClient.submitFinal(
       fail ? 99 : lastId,
-      fixture.transactionParams.commitment,
+      fixture.params.commitment,
       completeValidatorProofs,
+      fixture.params.leaf,
+      fixture.params.leafProof
     )
     printTxPromiseGas(completeSigTxPromise)
     if (fail) {
@@ -111,7 +115,7 @@ describe.skip("Beefy Client Gas Usage", function () {
     } else {
       await completeSigTxPromise.should.be.fulfilled
       latestMMRRoot = await beefyClient.latestMMRRoot()
-      expect(latestMMRRoot).to.eq(fixture.transactionParams.commitment.payload.mmrRootHash)
+      expect(latestMMRRoot).to.eq(fixture.params.commitment.payload.mmrRootHash)
     }
   }
 

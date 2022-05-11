@@ -28,7 +28,7 @@ describe("BeefyClient", function () {
   it("encodes beefy commitment to SCALE-format", async function () {
     let commitment = {
       blockNumber: 5,
-      validatorSetId: 7,
+      validatorSetID: 7,
       payload: {
         mmrRootHash: "0x3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c",
         prefix: "0x0861620c0001026d6880",

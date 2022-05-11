@@ -9,11 +9,10 @@ const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel
 const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ParachainClient = artifacts.require("ParachainClient");
-const { createValidatorFixture, runBeefyClientFlow } = require("./beefy-helpers");
 
 const MockRewardSource = artifacts.require("MockRewardSource");
 const {
-  deployBeefyClient, printTxPromiseGas
+  deployBeefyClient, printTxPromiseGas, createValidatorFixture, runBeefyClientFlow,
 } = require("./helpers");
 
 const fixture = require('./fixtures/beefy-relay-incentivized.json')
@@ -25,9 +24,9 @@ describe("IncentivizedInboundChannel", function () {
   before(async function () {
     const numberOfSignatures = 8;
     const numberOfValidators = 24;
-    const validatorFixture = await createValidatorFixture(fixture.transactionParams.commitment.validatorSetId, numberOfValidators)
+    const validatorFixture = await createValidatorFixture(fixture.params.commitment.validatorSetID, numberOfValidators)
     this.beefyClient = await deployBeefyClient(
-      validatorFixture.validatorSetId,
+      validatorFixture.validatorSetID,
       validatorFixture.validatorSetRoot,
       validatorFixture.validatorSetLength,
     );
@@ -56,10 +55,9 @@ describe("IncentivizedInboundChannel", function () {
 
       // Send commitment
       const tx = this.channel.submit(
-        submitInput.transactionParams.bundle,
-        submitInput.transactionParams.proof,
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.be.fulfilled
-      printTxPromiseGas(tx)
       const { receipt } = await tx;
 
       const nonceAfterSubmit = BigNumber(await this.channel.nonce());
@@ -78,14 +76,14 @@ describe("IncentivizedInboundChannel", function () {
     it("should refuse to replay commitments", async function () {
       // Submit messages
       await this.channel.submit(
-        submitInput.transactionParams.bundle,
-        submitInput.transactionParams.proof,
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.be.fulfilled;
 
       // Submit messages again - should revert
       await this.channel.submit(
-        submitInput.transactionParams.bundle,
-        submitInput.transactionParams.proof,
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.not.be.fulfilled;
     });
 

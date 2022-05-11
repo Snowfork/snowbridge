@@ -39,7 +39,7 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 			"id": params.ID,
 			"commitment": log.Fields{
 				"blockNumber":    params.Commitment.BlockNumber,
-				"validatorSetId": params.Commitment.ValidatorSetID,
+				"validatorSetID": params.Commitment.ValidatorSetID,
 				"payload": log.Fields{
 					"mmrRootHash": Hex(params.Commitment.Payload.MmrRootHash[:]),
 					"prefix":      Hex(params.Commitment.Payload.Prefix),
