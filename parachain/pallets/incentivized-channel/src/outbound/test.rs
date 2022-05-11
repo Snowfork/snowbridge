@@ -117,7 +117,7 @@ impl pallet_assets::Config for Test {
 
 parameter_types! {
 	pub const MaxMessagePayloadSize: u64 = 128;
-	pub const MaxMessagesPerCommit: u64 = 5;
+	pub const MaxMessagesPerCommit: u32 = 5;
 }
 
 parameter_types! {

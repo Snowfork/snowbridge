@@ -16,12 +16,12 @@ benchmarks! {
 
 		for _ in 0 .. m {
 			let payload: Vec<u8> = (0..).take(p as usize).collect();
-			<MessageQueue<T>>::append(Message {
+			<MessageQueue<T>>::try_append(Message {
 				target: H160::zero(),
 				nonce: 0u64,
 				fee: 0,
 				payload,
-			});
+			}).unwrap();
 		}
 
 		let block_number = Interval::<T>::get();
@@ -34,12 +34,12 @@ benchmarks! {
 	// Benchmark 'on_initialize` for the best case, i.e. nothing is done
 	// because it's not a commitment interval.
 	on_initialize_non_interval {
-		<MessageQueue<T>>::append(Message {
+		<MessageQueue<T>>::try_append(Message {
 			target: H160::zero(),
 			nonce: 0u64,
 			fee: 0,
 			payload: vec![1u8; T::MaxMessagePayloadSize::get() as usize],
-		});
+		}).unwrap();
 
 		Interval::<T>::put::<T::BlockNumber>(10u32.into());
 		let block_number: T::BlockNumber = 11u32.into();
