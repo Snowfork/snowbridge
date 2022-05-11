@@ -65,7 +65,7 @@ pub mod pallet {
 
 		/// Max number of messages per commitment
 		#[pallet::constant]
-		type MaxMessagesPerCommit: Get<u64>;
+		type MaxMessagesPerCommit: Get<u32>;
 
 		type SetPrincipalOrigin: EnsureOrigin<Self::Origin>;
 
@@ -98,7 +98,7 @@ pub mod pallet {
 
 	/// Messages waiting to be committed.
 	#[pallet::storage]
-	pub(super) type MessageQueue<T: Config> = StorageValue<_, Vec<Message>, ValueQuery>;
+	pub(super) type MessageQueue<T: Config> = StorageValue<_, BoundedVec<Message, T::MaxMessagesPerCommit>, ValueQuery>;
 
 	/// Fee for accepting a message
 	#[pallet::storage]
@@ -165,11 +165,6 @@ pub mod pallet {
 			ensure!(principal.is_some(), Error::<T>::NotAuthorized,);
 			ensure!(*who == principal.unwrap(), Error::<T>::NotAuthorized,);
 			ensure!(
-				<MessageQueue<T>>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerCommit::get() as usize,
-				Error::<T>::QueueSizeLimitReached,
-			);
-			ensure!(
 				payload.len() <= T::MaxMessagePayloadSize::get() as usize,
 				Error::<T>::PayloadTooLarge,
 			);
@@ -181,18 +176,20 @@ pub mod pallet {
 					return Err(Error::<T>::Overflow.into())
 				}
 
-				<MessageQueue<T>>::append(Message {
+				<MessageQueue<T>>::try_append(Message {
 					target,
 					nonce: *nonce,
 					payload: payload.to_vec(),
-				});
-				Self::deposit_event(Event::MessageAccepted(*nonce));
-				Ok(())
+				})
+				.map_err(|_| Error::<T>::QueueSizeLimitReached.into())
+				.map(|_| {
+					Self::deposit_event(Event::MessageAccepted(*nonce))
+				})
 			})
 		}
 
 		fn commit() -> Weight {
-			let messages: Vec<Message> = <MessageQueue<T>>::take();
+			let messages: BoundedVec<Message, T::MaxMessagesPerCommit> = <MessageQueue<T>>::take();
 			if messages.is_empty() {
 				return T::WeightInfo::on_initialize_no_messages()
 			}
