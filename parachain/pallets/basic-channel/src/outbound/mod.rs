@@ -183,7 +183,7 @@ pub mod pallet {
 				})
 				.map_err(|_| Error::<T>::QueueSizeLimitReached.into())
 				.map(|_| {
-					Self::deposit_event(Event::MessageAccepted(*nonce))
+					Self::deposit_event(Event::MessageAccepted(*nonce));
 				})
 			})
 		}
