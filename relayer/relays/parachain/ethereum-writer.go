@@ -242,7 +242,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("transactionParams", wr.logFieldsForBasicSubmission(bundle, finalProof)).
+		WithField("params", wr.logFieldsForBasicSubmission(bundle, finalProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),
@@ -329,7 +329,7 @@ func (wr *EthereumWriter) WriteIncentivizedChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("transactionParams", wr.logFieldsForIncentivizedSubmission(bundle, finalProof)).
+		WithField("params", wr.logFieldsForIncentivizedSubmission(bundle, finalProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),
