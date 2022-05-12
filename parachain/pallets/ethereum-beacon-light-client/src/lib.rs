@@ -2,14 +2,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod merklization;
-
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
 
 use codec::{Decode, Encode};
-use frame_support::{dispatch::DispatchResult, log, transactional};
+use frame_support::{dispatch::DispatchResult, log, transactional, pallet_prelude::MaxEncodedLen};
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
 use sp_core::H256;
@@ -36,6 +35,8 @@ const NEXT_SYNC_COMMITTEE_INDEX: u64 = 23;
 const FINALIZED_ROOT_DEPTH: u64 = 6;
 const FINALIZED_ROOT_INDEX: u64 = 41;
 
+const MAX_SYNC_COMMITTEE_PARTICIPANTS: u32 = 512;
+
 /// GENESIS_FORK_VERSION('0x00000000')
 const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
 
@@ -43,7 +44,7 @@ const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
 const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [7, 0, 0, 0];
 
-#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct PublicKey([u8; 48]);
 
 impl Default for PublicKey {
@@ -54,7 +55,7 @@ impl Default for PublicKey {
 
 /// Beacon block header as it is stored in the runtime storage. The block root is the
 /// Merklization of a BeaconHeader.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct BeaconBlockHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
 	pub slot: u64,
@@ -69,7 +70,7 @@ pub struct BeaconBlockHeader {
 }
 
 /// Sync committee as it is stored in the runtime storage.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct SyncCommittee {
 	pub pubkeys: Vec<PublicKey>,
 	pub aggregate_pubkey: PublicKey,
@@ -124,7 +125,7 @@ pub struct SigningData {
 	pub domain: Domain,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct Genesis {
 	pub validators_root: Root,
 }
@@ -142,7 +143,6 @@ pub mod pallet {
 	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
