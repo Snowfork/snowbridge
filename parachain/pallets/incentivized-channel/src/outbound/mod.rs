@@ -165,6 +165,11 @@ pub mod pallet {
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 			ensure!(
+				<MessageQueue<T>>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerCommit::get() as usize,
+				Error::<T>::QueueSizeLimitReached,
+			);
+			ensure!(
 				payload.len() <= T::MaxMessagePayloadSize::get() as usize,
 				Error::<T>::PayloadTooLarge,
 			);

@@ -166,6 +166,11 @@ pub mod pallet {
 			ensure!(principal.is_some(), Error::<T>::NotAuthorized,);
 			ensure!(*who == principal.unwrap(), Error::<T>::NotAuthorized,);
 			ensure!(
+				<MessageQueue<T>>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerCommit::get() as usize,
+				Error::<T>::QueueSizeLimitReached,
+			);
+			ensure!(
 				payload.len() <= T::MaxMessagePayloadSize::get() as usize,
 				Error::<T>::PayloadTooLarge,
 			);
