@@ -98,7 +98,8 @@ pub mod pallet {
 
 	/// Messages waiting to be committed.
 	#[pallet::storage]
-	pub(super) type MessageQueue<T: Config> = StorageValue<_, BoundedVec<Message, T::MaxMessagesPerCommit>, ValueQuery>;
+	pub(super) type MessageQueue<T: Config> =
+		StorageValue<_, BoundedVec<Message, T::MaxMessagesPerCommit>, ValueQuery>;
 
 	/// Fee for accepting a message
 	#[pallet::storage]
@@ -165,6 +166,11 @@ pub mod pallet {
 			ensure!(principal.is_some(), Error::<T>::NotAuthorized,);
 			ensure!(*who == principal.unwrap(), Error::<T>::NotAuthorized,);
 			ensure!(
+				<MessageQueue<T>>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerCommit::get() as usize,
+				Error::<T>::QueueSizeLimitReached,
+			);
+			ensure!(
 				payload.len() <= T::MaxMessagePayloadSize::get() as usize,
 				Error::<T>::PayloadTooLarge,
 			);
@@ -183,7 +189,7 @@ pub mod pallet {
 				})
 				.map_err(|_| Error::<T>::QueueSizeLimitReached.into())
 				.map(|_| {
-					Self::deposit_event(Event::MessageAccepted(*nonce))
+					Self::deposit_event(Event::MessageAccepted(*nonce));
 				})
 			})
 		}
