@@ -307,6 +307,21 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn verify_eth1_receipt_inclusion(
+			origin: OriginFor<T>,
+		) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"💫 Received transaction to be validated.",
+			);
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -359,6 +374,14 @@ pub mod pallet {
 				FINALIZED_ROOT_INDEX,
 			)?;
 
+			/*
+			block_root: H256,
+			proof_branch: ProofBranch,
+			attested_header_state_root: H256,
+			depth: u64,
+			index: u64,
+			 */
+
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
 
 			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
@@ -366,7 +389,7 @@ pub mod pallet {
 			let sync_committee = <SyncCommittees<T>>::get(current_period);
 
 			let genesis = <ChainGenesis<T>>::get();
-
+			
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
