@@ -1,4 +1,4 @@
-//! # Ethereum 2 Light Client
+//! # Ethereum Beacon Client
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod merklization;
@@ -8,7 +8,7 @@ mod mock;
 mod tests;
 
 use codec::{Decode, Encode};
-use frame_support::{dispatch::DispatchResult, log, transactional, pallet_prelude::MaxEncodedLen};
+use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
 use sp_core::H256;
@@ -35,8 +35,6 @@ const NEXT_SYNC_COMMITTEE_INDEX: u64 = 23;
 const FINALIZED_ROOT_DEPTH: u64 = 6;
 const FINALIZED_ROOT_INDEX: u64 = 41;
 
-const MAX_SYNC_COMMITTEE_PARTICIPANTS: u32 = 512;
-
 /// GENESIS_FORK_VERSION('0x00000000')
 const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
 
@@ -44,7 +42,7 @@ const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
 const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [7, 0, 0, 0];
 
-#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct PublicKey([u8; 48]);
 
 impl Default for PublicKey {
@@ -55,7 +53,7 @@ impl Default for PublicKey {
 
 /// Beacon block header as it is stored in the runtime storage. The block root is the
 /// Merklization of a BeaconHeader.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct BeaconBlockHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
 	pub slot: u64,
@@ -70,7 +68,7 @@ pub struct BeaconBlockHeader {
 }
 
 /// Sync committee as it is stored in the runtime storage.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncCommittee {
 	pub pubkeys: Vec<PublicKey>,
 	pub aggregate_pubkey: PublicKey,
@@ -125,7 +123,7 @@ pub struct SigningData {
 	pub domain: Domain,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Genesis {
 	pub validators_root: Root,
 }
@@ -143,6 +141,7 @@ pub mod pallet {
 	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -214,16 +213,16 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			initial_sync: InitialSync,
 		) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
+			let _sender = ensure_signed(origin)?;
 
 			log::trace!(
-				target: "ethereum-beacon-light-client",
+				target: "ethereum-beacon-client",
 				"💫 Received initial sync, starting processing.",
 			);
 
 			if let Err(err) = Self::process_initial_sync(initial_sync) {
 				log::error!(
-					target: "ethereum-beacon-light-client",
+					target: "ethereum-beacon-client",
 					"Initial sync failed with error {:?}",
 					err
 				);
@@ -231,7 +230,7 @@ pub mod pallet {
 			}
 
 			log::trace!(
-				target: "ethereum-beacon-light-client",
+				target: "ethereum-beacon-client",
 				"💫 Initial sync processing succeeded.",
 			);
 
@@ -244,18 +243,18 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			sync_committee_period_update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
+			let _sender = ensure_signed(origin)?;
 
 			let sync_committee_period = sync_committee_period_update.sync_committee_period;
 			log::trace!(
-				target: "ethereum-beacon-light-client",
+				target: "ethereum-beacon-client",
 				"💫 Received sync committee update for period {}. Applying update",
 				sync_committee_period
 			);
 
 			if let Err(err) = Self::process_sync_committee_period_update(sync_committee_period_update) {
 				log::error!(
-					target: "ethereum-beacon-light-client",
+					target: "ethereum-beacon-client",
 					"Sync committee period update failed with error {:?}",
 					err
 				);
@@ -263,7 +262,7 @@ pub mod pallet {
 			}
 
 			log::trace!(
-				target: "ethereum-beacon-light-client",
+				target: "ethereum-beacon-client",
 				"💫 Sync committee period update for period {} succeeded.",
 				sync_committee_period
 			);
@@ -277,19 +276,19 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			finalized_header_update: FinalizedHeaderUpdate,
 		) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
+			let _sender = ensure_signed(origin)?;
 
 			let slot = finalized_header_update.finalized_header.slot;
 
 			log::trace!(
-				target: "ethereum-beacon-light-client",
+				target: "ethereum-beacon-client",
 				"💫 Received finalized header update for slot {}, processing and importing finalized header.",
 				slot
 			);
 
 			if let Err(err) = Self::process_finalized_header(finalized_header_update) {
 				log::error!(
-					target: "ethereum-beacon-light-client",
+					target: "ethereum-beacon-client",
 					"Finalized header update failed with error {:?}",
 					err
 				);
@@ -297,7 +296,7 @@ pub mod pallet {
 			}
 
 			log::trace!(
-				target: "ethereum-beacon-light-client",
+				target: "ethereum-beacon-client",
 				"💫 Finalized header processing and importing at slot {} succeeded.",
 				slot
 			);
@@ -317,12 +316,10 @@ pub mod pallet {
 			)?;
 
 			let period = Self::compute_current_sync_period(initial_sync.header.slot);
-
 			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 
 			let block_root: H256 = merklization::hash_tree_root_beacon_header(initial_sync.header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
-
 			Self::store_header(block_root, initial_sync.header);
 
 			Self::store_genesis(Genesis { validators_root: initial_sync.validators_root });
@@ -334,9 +331,7 @@ pub mod pallet {
 			update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
 			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
-
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
-
 			Self::verify_sync_committee(
 				update.next_sync_committee.clone(),
 				update.next_sync_committee_branch,
@@ -347,7 +342,6 @@ pub mod pallet {
 
 			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
-
 			Self::verify_header(
 				block_root,
 				update.finality_branch,
@@ -357,17 +351,14 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
-
 			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
 
-			let sync_committee = <SyncCommittees<T>>::get(current_period);
-
+			let current_sync_committee = <SyncCommittees<T>>::get(current_period);
 			let genesis = <ChainGenesis<T>>::get();
-
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
-				sync_committee.pubkeys,
+				current_sync_committee.pubkeys,
 				update.fork_version,
 				update.attested_header,
 				genesis.validators_root,
@@ -380,12 +371,10 @@ pub mod pallet {
 
 		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
 			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
-
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
 			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
-
 			Self::verify_header(
 				block_root,
 				update.finality_branch,
@@ -395,15 +384,11 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
-
 			let sync_committee = <SyncCommittees<T>>::get(current_period);
-
 			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: PublicKey([0; 48]) }) == sync_committee {
 				return Err(Error::<T>::SyncCommitteeMissing.into());
 			}
-
 			let genesis = <ChainGenesis<T>>::get();
-
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
@@ -427,7 +412,6 @@ pub mod pallet {
 			validators_root: H256,
 		) -> DispatchResult {
 			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
-
 			// Gathers all the pubkeys of the sync committee members that participated in siging the header.
 			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
 				if *bit == 1 as u8 {
@@ -437,16 +421,10 @@ pub mod pallet {
 			}
 
 			let domain_type = DOMAIN_SYNC_COMMITTEE.to_vec();
-
 			// Domains are used for for seeds, for signatures, and for selecting aggregators.
 			let domain = Self::compute_domain(domain_type, Some(fork_version), validators_root)?;
-
-			let domain_bytes = domain.as_bytes();
-
 			// Hash tree root of SigningData - object root + domain
 			let signing_root = Self::compute_signing_root(header, domain)?;
-
-			let signing_root_bytes = signing_root.as_bytes();
 
 			// Verify sync committee aggregate signature.
 			Self::bls_fast_aggregate_verify(
@@ -464,16 +442,14 @@ pub mod pallet {
 			signature: Vec<u8>,
 		) -> DispatchResult {
 			let sig = Signature::from_bytes(&signature[..]);
-
-			if let Err(e) = sig {
+			if let Err(_e) = sig {
 				return Err(Error::<T>::InvalidSignature.into());
 			}
-
+			
 			let agg_sig = AggregateSignature::from_signature(&sig.unwrap());
 
 			let public_keys_res: Result<Vec<milagro_bls::PublicKey>, _> =
 				pubkeys.iter().map(|bytes| milagro_bls::PublicKey::from_bytes_unchecked(&bytes.0)).collect();
-
 			if let Err(e) = public_keys_res {
 				match e {
 					AmclError::InvalidPoint => return Err(Error::<T>::InvalidSignaturePoint.into()),
@@ -482,8 +458,7 @@ pub mod pallet {
 			}
 
 			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
-
-			if let Err(e) = agg_pub_key_res {
+			if let Err(_e) = agg_pub_key_res {
 				return Err(Error::<T>::InvalidAggregatePublicKeys.into());
 			}
 
@@ -605,7 +580,6 @@ pub mod pallet {
 				Self::compute_fork_data_root(unwrapped_fork_version, genesis_validators_root)?;
 
 			let mut domain = [0u8; 32];
-
 			domain[0..4].copy_from_slice(&(domain_type));
 			domain[4..32].copy_from_slice(&(fork_data_root.0[..28]));
 
@@ -633,19 +607,19 @@ pub mod pallet {
 			root: Root,
 		) -> bool {
 			if branch.len() != depth as usize {
-				log::error!(target: "ethereum-beacon-light-client", "Merkle proof branch length doesn't match depth.");
+				log::error!(target: "ethereum-beacon-client", "Merkle proof branch length doesn't match depth.");
 
 				return false;
 			}
 			let mut value = leaf;
 			if leaf.as_bytes().len() < 32 as usize {
-				log::error!(target: "ethereum-beacon-light-client", "Merkle proof leaf not 32 bytes.");
+				log::error!(target: "ethereum-beacon-client", "Merkle proof leaf not 32 bytes.");
 
 				return false;
 			}
 			for i in 0..depth {
 				if branch[i as usize].as_bytes().len() < 32 as usize {
-					log::error!(target: "ethereum-beacon-light-client", "Merkle proof branch not 32 bytes.");
+					log::error!(target: "ethereum-beacon-client", "Merkle proof branch not 32 bytes.");
 
 					return false;
 				}
@@ -671,7 +645,6 @@ pub mod pallet {
 
 			for input_decimal in input.iter() {
 				let mut tmp = Vec::new();
-
 				let mut remaining = *input_decimal;
 
 				while remaining > 0 {
@@ -682,7 +655,7 @@ pub mod pallet {
 
 				// pad binary with 0s if length is less than 7
 				if tmp.len() < 8 {
-					for i in tmp.len()..8 {
+					for _i in tmp.len()..8 {
 						tmp.push(0)
 					}
 				}
@@ -695,7 +668,6 @@ pub mod pallet {
 
 		pub(super) fn sync_committee_participation_is_supermajority(sync_committee_bits: Vec<u8>) -> DispatchResult {
 			let sync_committee_sum = Self::get_sync_committee_sum(sync_committee_bits.clone());
-
 			ensure!(
 				(sync_committee_sum * 3 >= sync_committee_bits.clone().len() as u64 * 2),
 				Error::<T>::SyncCommitteeParticipantsNotSupermajority

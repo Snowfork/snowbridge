@@ -123,7 +123,7 @@ members = [
     "pallets/incentivized-channel",
     "pallets/dispatch",
     "pallets/ethereum-light-client",
-    "pallets/ethereum-beacon-light-client",
+    "pallets/ethereum-beacon-client",
     "pallets/eth-app",
     "pallets/erc20-app",
     "pallets/dot-app",
