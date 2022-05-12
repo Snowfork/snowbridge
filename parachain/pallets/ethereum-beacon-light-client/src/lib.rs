@@ -1,14 +1,10 @@
-//! # Ethereum 2 Light Client Verifier
-//!
-//! This module implements the `Verifier` interface. Other modules should reference
-//! this module using the `Verifier` type and perform verification using `Verifier::verify`.
-#![allow(unused_variables)]
+//! # Ethereum 2 Light Client
 #![cfg_attr(not(feature = "std"), no_std)]
+
+mod merklization;
 
 #[cfg(test)]
 mod mock;
-
-mod merklization;
 #[cfg(test)]
 mod tests;
 
@@ -56,7 +52,8 @@ impl Default for PublicKey {
 	}
 }
 
-/// Beacon block header as it is stored in the runtime storage.
+/// Beacon block header as it is stored in the runtime storage. The block root is the
+/// Merklization of a BeaconHeader.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct BeaconBlockHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
@@ -67,7 +64,7 @@ pub struct BeaconBlockHeader {
 	pub parent_root: Root,
 	// The hash root of the post state of running the state transition through this block.
 	pub state_root: Root,
-	// The hash root of the Eth1 block
+	// The hash root of the beacon block body
 	pub body_root: Root,
 }
 
@@ -86,7 +83,7 @@ pub struct SyncAggregate {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct LightClientInitialSync {
+pub struct InitialSync {
 	pub header: BeaconBlockHeader,
 	pub current_sync_committee: SyncCommittee,
 	pub current_sync_committee_branch: ProofBranch,
@@ -94,7 +91,7 @@ pub struct LightClientInitialSync {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct LightClientSyncCommitteePeriodUpdate {
+pub struct SyncCommitteePeriodUpdate {
 	pub attested_header: BeaconBlockHeader,
 	pub next_sync_committee: SyncCommittee,
 	pub next_sync_committee_branch: ProofBranch,
@@ -106,7 +103,7 @@ pub struct LightClientSyncCommitteePeriodUpdate {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct LightClientFinalizedHeaderUpdate {
+pub struct FinalizedHeaderUpdate {
 	pub attested_header: BeaconBlockHeader,
 	pub finalized_header: BeaconBlockHeader,
 	pub finality_branch: ProofBranch,
@@ -215,7 +212,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn initial_sync(
 			origin: OriginFor<T>,
-			initial_sync: LightClientInitialSync,
+			initial_sync: InitialSync,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -245,7 +242,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn sync_committee_period_update(
 			origin: OriginFor<T>,
-			sync_committee_period_update: LightClientSyncCommitteePeriodUpdate,
+			sync_committee_period_update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -264,7 +261,7 @@ pub mod pallet {
 				);
 				return Err(err);
 			}
-		
+
 			log::trace!(
 				target: "ethereum-beacon-light-client",
 				"💫 Sync committee period update for period {} succeeded.",
@@ -278,7 +275,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn import_finalized_header(
 			origin: OriginFor<T>,
-			finalized_header_update: LightClientFinalizedHeaderUpdate,
+			finalized_header_update: FinalizedHeaderUpdate,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -310,7 +307,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn process_initial_sync(initial_sync: LightClientInitialSync) -> DispatchResult {
+		fn process_initial_sync(initial_sync: InitialSync) -> DispatchResult {
 			Self::verify_sync_committee(
 				initial_sync.current_sync_committee.clone(),
 				initial_sync.current_sync_committee_branch,
@@ -334,7 +331,7 @@ pub mod pallet {
 		}
 
 		fn process_sync_committee_period_update(
-			update: LightClientSyncCommitteePeriodUpdate,
+			update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
 			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
 
@@ -381,7 +378,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_finalized_header(update: LightClientFinalizedHeaderUpdate) -> DispatchResult {
+		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
 			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
 
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
@@ -665,7 +662,7 @@ pub mod pallet {
 					value = sha2_256(&data).into();
 				}
 			}
-			
+
 			return value == root;
 		}
 
