@@ -625,7 +625,7 @@ impl ethereum_light_client::Config for Runtime {
 	type WeightInfo = ethereum_light_client::weights::SnowbridgeWeight<Self>;
 }
 
-impl ethereum_beacon_light_client::Config for Runtime {
+impl ethereum_beacon_client::Config for Runtime {
 	type Event = Event;
 }
 
@@ -758,7 +758,7 @@ construct_runtime!(
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 16,
 		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 17,
-		EthereumBeaconLightClient: ethereum_beacon_light_client::{Pallet, Call, Config, Storage, Event<T>} = 18,
+		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config, Storage, Event<T>} = 18,
 		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 20,
 

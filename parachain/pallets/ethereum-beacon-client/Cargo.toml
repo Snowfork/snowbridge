@@ -1,6 +1,6 @@
 [package]
-name = "snowbridge-ethereum-beacon-light-client"
-description = "Snowbridge Beacon Light Client Pallet"
+name = "snowbridge-ethereum-beacon-client"
+description = "Snowbridge Beacon Client Pallet"
 version = "0.0.1"
 edition = "2021"
 authors = ["Snowfork <contact@snowfork.com>"]
