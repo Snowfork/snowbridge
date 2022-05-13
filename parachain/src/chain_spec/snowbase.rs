@@ -116,6 +116,7 @@ fn testnet_genesis(
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
 		},
+		ethereum_beacon_client: snowbase_runtime::EthereumBeaconClientConfig {},
 		dot_app: snowbase_runtime::DotAppConfig {
 			address: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
 		},
