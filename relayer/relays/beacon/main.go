@@ -164,7 +164,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 
 	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
 
-	if syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
+	if !syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
 		logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
 
 		r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
