@@ -130,7 +130,7 @@ mod tests {
     #[test]
     pub fn test_hash_tree_root_beacon_header_2() {
         let hash_root = merklization::hash_tree_root_beacon_header(
-            ethereum_beacon_lclient::BeaconBlockHeader {
+            ethereum_beacon_client::BeaconBlockHeader {
                 slot: 3476424,
                 proposer_index: 314905,
                 parent_root: hex!(
