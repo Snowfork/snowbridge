@@ -22,6 +22,8 @@ type BeaconClientTracker interface {
 	GetBeaconBlock(slot uint64) (BeaconBlockResponse, error)
 	GetGenesis() (GenesisResponse, error)
 	GetCurrentForkVersion(slot uint64) (string, error)
+	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
+	GetLatestHeadUpdate() (LatestFinalisedUpdateResponse, error)
 }
 
 type BeaconClient struct {
@@ -156,11 +158,9 @@ type BeaconBlockResponse struct {
 			ParentRoot    string `json:"parent_root"`
 			StateRoot     string `json:"state_root"`
 			Body          struct {
-				Eth1Data struct {
-					DepositRoot  string `json:"deposit_root"`
-					DepositCount string `json:"deposit_count"`
-					BlockHash    string `json:"block_hash"`
-				} `json:"eth1_data"`
+				ExecutionPayload struct {
+					BlockHash string `json:"block_hash"`
+				} `json:"execution_payload"`
 				SyncAggregate SyncAggregateResponse `json:"sync_aggregate"`
 			} `json:"body"`
 		} `json:"message"`
@@ -176,7 +176,6 @@ type BeaconBlock struct {
 }
 
 func (b *BeaconClient) GetBeaconBlock(slot uint64) (BeaconBlockResponse, error) {
-	//req, err := http.NewRequest(http.MethodGet, s.endpoint+"/eth/v1/beacon/blocks/finalized", nil)
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%d", b.endpoint, slot), nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct beacon block request")
@@ -632,6 +631,58 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 		logrus.WithError(err).Error("unable to unmarshal genesis json response")
 
 		return LatestFinalisedUpdateResponse{}, nil
+	}
+
+	return response, nil
+}
+
+type LatestHeaderUpdateResponse struct {
+	Data struct {
+		AttestedHeader HeaderResponse        `json:"attested_header"`
+		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
+	} `json:"data"`
+}
+
+func (b *BeaconClient) GetLatestHeadUpdate() (LatestHeaderUpdateResponse, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/latest_head_update/", b.endpoint), nil)
+	if err != nil {
+		logrus.WithError(err).Error("unable to construct latest head update request")
+
+		return LatestHeaderUpdateResponse{}, nil
+	}
+
+	req.Header.Set("accept", "application/json")
+	res, err := b.httpClient.Do(req)
+	if err != nil {
+		logrus.WithError(err).Error("failed to do http request")
+
+		return LatestHeaderUpdateResponse{}, nil
+	}
+
+	if res.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(res.Body)
+
+		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
+
+		return LatestHeaderUpdateResponse{}, nil
+	}
+
+	bodyBytes, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		logrus.Error("unable to get response body")
+
+		return LatestHeaderUpdateResponse{}, nil
+	}
+
+	var response LatestHeaderUpdateResponse
+
+	err = json.Unmarshal(bodyBytes, &response)
+
+	if err != nil {
+		logrus.WithError(err).Error("unable to unmarshal genesis json response")
+
+		return LatestHeaderUpdateResponse{}, nil
 	}
 
 	return response, nil

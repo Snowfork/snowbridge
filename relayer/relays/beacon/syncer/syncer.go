@@ -113,6 +113,13 @@ type FinalizedHeaderUpdate struct {
 	ForkVersion     [4]byte
 }
 
+type HeaderUpdate struct {
+	AttestedHeader  BeaconHeaderScale
+	ExecutionHeader types.H256
+	SyncAggregate   SyncAggregateScale
+	ForkVersion     [4]byte
+}
+
 func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
 	genesis, err := s.Client.GetGenesis()
 	if err != nil {
@@ -312,6 +319,59 @@ func (s *Syncer) GetFinalizedBlockUpdate() (FinalizedHeaderUpdate, error) {
 	}
 
 	return finalizedHeaderUpdate, nil
+}
+
+func (s *Syncer) GetHeaderUpdate() (HeaderUpdate, error) {
+	latestHeader, err := s.Client.GetLatestHeadUpdate()
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch latest header checkpoint")
+
+		return HeaderUpdate{}, err
+	}
+
+	attestedHeader, err := beaconHeaderToScale(latestHeader.Data.AttestedHeader)
+	if err != nil {
+		logrus.WithError(err).Error("unable to parse beacon header in response")
+
+		return HeaderUpdate{}, err
+	}
+
+	latestBlock, err := s.Client.GetBeaconBlock(uint64(attestedHeader.Slot))
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch latest header checkpoint")
+
+		return HeaderUpdate{}, err
+	}
+
+	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(attestedHeader.Slot))
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
+
+		return HeaderUpdate{}, err
+	}
+
+	forkVersion, err := hexStringToForkVersion(currentForkVersion)
+	if err != nil {
+		logrus.WithError(err).Error("unable convert fork version to scale format")
+
+		return HeaderUpdate{}, err
+	}
+
+	syncAggregate, err := latestHeader.Data.SyncAggregate.ToScale()
+	if err != nil {
+		logrus.WithError(err).Error("unable to parse sync aggregate in response")
+
+		return HeaderUpdate{}, err
+	}
+
+	headerUpdate := HeaderUpdate{
+		AttestedHeader:  attestedHeader,
+		ExecutionHeader: types.NewH256(common.HexToHash(latestBlock.Data.Message.Body.ExecutionPayload.BlockHash).Bytes()),
+		SyncAggregate:   syncAggregate,
+		ForkVersion:     forkVersion,
+	}
+
+	return headerUpdate, nil
 }
 
 func computeEpochAtSlot(slot uint64) uint64 {

@@ -11,10 +11,11 @@ use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
-use sp_core::H256;
+use sp_core::{H160, H256, U256};
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
+use snowbridge_ethereum::Header as ExecutionHeader;
 
 type Root = H256;
 type Domain = H256;
@@ -49,6 +50,35 @@ impl Default for PublicKey {
 	fn default() -> Self {
 		PublicKey([0u8; 48])
 	}
+}
+
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct Header {
+	/// Parent block hash.
+	pub parent_hash: H256,
+	pub fee_recipient: H160,
+	/// State root.
+	pub state_root: H256,
+	/// Block receipts root.
+	pub receipts_root: H256,
+	/// Block bloom.
+	pub logs_bloom: Vec<u8>,
+	pub prev_randao: H256,
+	pub block_number: u64,
+	/// Gas used for contracts execution.
+	pub gas_used: U256,
+	/// Block gas limit.
+	pub gas_limit: U256,
+	/// Block timestamp.
+	pub timestamp: u64,
+	/// Block extra data.
+	pub extra_data: Vec<u8>,
+	// Base fee per gas (EIP-1559), only in headers from the London hardfork onwards.
+	pub base_fee_per_gas: Option<U256>,
+	/// Block hash.
+	pub block_hash: H256,
+	/// Transactions root.
+	pub transactions: Vec<u8>,
 }
 
 /// Beacon block header as it is stored in the runtime storage. The block root is the
@@ -106,6 +136,14 @@ pub struct FinalizedHeaderUpdate {
 	pub attested_header: BeaconBlockHeader,
 	pub finalized_header: BeaconBlockHeader,
 	pub finality_branch: ProofBranch,
+	pub sync_aggregate: SyncAggregate,
+	pub fork_version: ForkVersion,
+}
+
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct HeaderUpdate {
+	pub attested_header: BeaconBlockHeader,
+	pub execution_header: ExecutionHeader,
 	pub sync_aggregate: SyncAggregate,
 	pub fork_version: ForkVersion,
 }
@@ -178,8 +216,24 @@ pub mod pallet {
 		StorageMap<_, Identity, H256, BeaconBlockHeader, OptionQuery>;
 
 	#[pallet::storage]
+	pub(super) type Headers<T: Config> =
+		StorageMap<_, Identity, H256, BeaconBlockHeader, OptionQuery>;
+
+	#[pallet::storage]
 	pub(super) type FinalizedHeadersBySlot<T: Config> =
 		StorageMap<_, Identity, u64, H256, OptionQuery>;
+
+	#[pallet::storage]
+	pub(super) type FinalizedHeadersSlots<T: Config> =
+		StorageValue<_, Identity, sp_std::prelude::Vec<u64>>;
+
+	#[pallet::storage]
+	pub(super) type ExecutionToBeaconHeader<T: Config> =
+		StorageMap<_, Identity, H256, H256, OptionQuery>;
+
+	#[pallet::storage]
+	pub(super) type ExecutionHeaders<T: Config> =
+		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
@@ -306,10 +360,44 @@ pub mod pallet {
 
 		#[pallet::weight(1_000_000)]
 		#[transactional]
+		pub fn import_header(
+			origin: OriginFor<T>,
+			header_update: HeaderUpdate,
+		) -> DispatchResult {
+			let _sender = ensure_signed(origin)?;
+
+			let slot = header_update.attested_header.slot;
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Received header update for slot {}, processing and importing header.",
+				slot
+			);
+
+			if let Err(err) = Self::process_header(header_update) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"Header update failed with error {:?}",
+					err
+				);
+				return Err(err);
+			}
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Header processing and importing at slot {} succeeded.",
+				slot
+			);
+
+			Ok(())
+		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
 		pub fn verify_eth1_receipt_inclusion(
 			origin: OriginFor<T>,
 		) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
+			let _sender = ensure_signed(origin)?;
 
 			log::trace!(
 				target: "ethereum-beacon-light-client",
@@ -335,7 +423,7 @@ pub mod pallet {
 
 			let block_root: H256 = merklization::hash_tree_root_beacon_header(initial_sync.header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
-			Self::store_header(block_root, initial_sync.header);
+			Self::store_finalized_header(block_root, initial_sync.header);
 
 			Self::store_genesis(Genesis { validators_root: initial_sync.validators_root });
 
@@ -380,7 +468,7 @@ pub mod pallet {
 				genesis.validators_root,
 			)?;
 
-			Self::store_header(block_root, update.finalized_header);
+			Self::store_finalized_header(block_root, update.finalized_header);
 
 			Ok(())
 		}
@@ -414,7 +502,34 @@ pub mod pallet {
 				genesis.validators_root,
 			)?;
 
-			Self::store_header(block_root, update.finalized_header);
+			Self::store_finalized_header(block_root, update.finalized_header);
+
+			Ok(())
+		}
+
+		fn process_header(update: HeaderUpdate) -> DispatchResult {
+			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
+			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
+
+			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+			let sync_committee = <SyncCommittees<T>>::get(current_period);
+			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: PublicKey([0; 48]) }) == sync_committee {
+				return Err(Error::<T>::SyncCommitteeMissing.into());
+			}
+			let genesis = <ChainGenesis<T>>::get();
+			Self::verify_signed_header(
+				sync_committee_bits,
+				update.sync_aggregate.sync_committee_signature,
+				sync_committee.pubkeys,
+				update.fork_version,
+				update.attested_header,
+				genesis.validators_root,
+			)?;
+
+			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.attested_header)
+				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+
+			Self::store_header(block_root, update.attested_header, update.execution_header);
 
 			Ok(())
 		}
@@ -555,10 +670,24 @@ pub mod pallet {
 			<SyncCommittees<T>>::insert(period, sync_committee);
 		}
 
-		fn store_header(block_root: H256, header: BeaconBlockHeader) {
+		fn store_finalized_header(block_root: H256, header: BeaconBlockHeader) {
 			<FinalizedHeaders<T>>::insert(block_root, header.clone());
 
 			<FinalizedHeadersBySlot<T>>::insert(header.slot, block_root);
+
+			let headersBySlot = <FinalizedHeadersSlots<T>>::get();
+
+			headersBySlot.push(headersBySlot);
+
+			<FinalizedHeadersSlots<T>>::set(headersBySlot);
+		}
+
+		fn store_header(block_root: H256, attested_header: BeaconBlockHeader, execution_header: ExecutionHeader) {
+			<Headers<T>>::insert(block_root, attested_header.clone());
+
+			<ExecutionToBeaconHeader<T>>::insert(execution_header.block_hash, block_root);
+
+			<ExecutionHeaders<T>>::insert(execution_header.block_hash, execution_header);
 		}
 
 		fn store_genesis(genesis: Genesis) {
