@@ -74,7 +74,7 @@ pub mod pallet {
 
 		/// Max number of messages per commitment
 		#[pallet::constant]
-		type MaxMessagesPerCommit: Get<u64>;
+		type MaxMessagesPerCommit: Get<u32>;
 
 		type FeeCurrency: Mutate<<Self as frame_system::Config>::AccountId, Balance = u128>;
 
@@ -110,7 +110,8 @@ pub mod pallet {
 
 	/// Messages waiting to be committed.
 	#[pallet::storage]
-	pub(super) type MessageQueue<T: Config> = StorageValue<_, Vec<Message>, ValueQuery>;
+	pub(super) type MessageQueue<T: Config> =
+		StorageValue<_, BoundedVec<Message, T::MaxMessagesPerCommit>, ValueQuery>;
 
 	/// Fee for accepting a message
 	#[pallet::storage]
@@ -173,8 +174,8 @@ pub mod pallet {
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 			ensure!(
-				<MessageQueue<T>>::decode_len().unwrap_or(0) <
-					T::MaxMessagesPerCommit::get() as usize,
+				<MessageQueue<T>>::decode_len().unwrap_or(0)
+					< T::MaxMessagesPerCommit::get() as usize,
 				Error::<T>::QueueSizeLimitReached,
 			);
 			ensure!(
@@ -191,7 +192,13 @@ pub mod pallet {
 			let fee = Self::fee();
 			T::FeeCurrency::burn_from(who, fee).map_err(|_| Error::<T>::NoFunds)?;
 
-			<MessageQueue<T>>::append(Message { id: next_id, target, fee, payload: payload.to_vec() });
+			<MessageQueue<T>>::try_append(Message {
+				id: next_id,
+				target,
+				fee,
+				payload: payload.to_vec(),
+			})
+			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
 			Self::deposit_event(Event::MessageAccepted(next_id));
 
 			<NextId<T>>::put(next_id + 1);
@@ -200,19 +207,17 @@ pub mod pallet {
 		}
 
 		fn commit() -> Weight {
-			let messages: Vec<Message> = <MessageQueue<T>>::take();
+			let messages: BoundedVec<Message, T::MaxMessagesPerCommit> = <MessageQueue<T>>::take();
 			if messages.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages()
+				return T::WeightInfo::on_initialize_no_messages();
 			}
 
 			let nonce = <Nonce<T>>::get();
 			let next_nonce = nonce.saturating_add(1);
 			<Nonce<T>>::put(next_nonce);
 
-			let bundle = MessageBundle {
-				nonce: next_nonce,
-				messages: messages.clone(),
-			};
+			let bundle =
+				MessageBundle { nonce: next_nonce, messages: messages.clone().into_inner() };
 
 			let commitment_hash = Self::make_commitment_hash(&bundle);
 			let average_payload_size = Self::average_payload_size(&messages);
@@ -229,7 +234,8 @@ pub mod pallet {
 		}
 
 		fn make_commitment_hash(bundle: &MessageBundle) -> H256 {
-			let messages: Vec<Token> = bundle.messages
+			let messages: Vec<Token> = bundle
+				.messages
 				.iter()
 				.map(|message| {
 					Token::Tuple(vec![
@@ -240,11 +246,10 @@ pub mod pallet {
 					])
 				})
 				.collect();
-			let input = ethabi::encode(&vec![
-				Token::Tuple(vec![
-					Token::Uint(bundle.nonce.into()),
-					Token::Array(messages)
-				])]);
+			let input = ethabi::encode(&vec![Token::Tuple(vec![
+				Token::Uint(bundle.nonce.into()),
+				Token::Array(messages),
+			])]);
 			<T as Config>::Hashing::hash(&input)
 		}
 

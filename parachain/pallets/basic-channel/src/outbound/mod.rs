@@ -104,7 +104,8 @@ pub mod pallet {
 
 	/// Messages waiting to be committed.
 	#[pallet::storage]
-	pub(super) type MessageQueue<T: Config> = StorageValue<_, BoundedVec<Message, T::MaxMessagesPerCommit>, ValueQuery>;
+	pub(super) type MessageQueue<T: Config> =
+		StorageValue<_, BoundedVec<Message, T::MaxMessagesPerCommit>, ValueQuery>;
 
 	/// Fee for accepting a message
 	#[pallet::storage]
@@ -174,6 +175,11 @@ pub mod pallet {
 			ensure!(principal.is_some(), Error::<T>::NotAuthorized,);
 			ensure!(*who == principal.unwrap(), Error::<T>::NotAuthorized,);
 			ensure!(
+				<MessageQueue<T>>::decode_len().unwrap_or(0)
+					< T::MaxMessagesPerCommit::get() as usize,
+				Error::<T>::QueueSizeLimitReached,
+			);
+			ensure!(
 				payload.len() <= T::MaxMessagePayloadSize::get() as usize,
 				Error::<T>::PayloadTooLarge,
 			);
@@ -183,8 +189,12 @@ pub mod pallet {
 				return Err(Error::<T>::Overflow.into());
 			}
 
-			<MessageQueue<T>>::try_append(Message { id: next_id, target, payload: payload.to_vec() })
-				.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
+			<MessageQueue<T>>::try_append(Message {
+				id: next_id,
+				target,
+				payload: payload.to_vec(),
+			})
+			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
 			Self::deposit_event(Event::MessageAccepted(next_id));
 
 			<NextId<T>>::put(next_id + 1);
@@ -202,10 +212,8 @@ pub mod pallet {
 			let next_nonce = nonce.saturating_add(1);
 			<Nonce<T>>::put(next_nonce);
 
-			let bundle = MessageBundle {
-				nonce: next_nonce,
-				messages: messages.clone().into_inner(),
-			};
+			let bundle =
+				MessageBundle { nonce: next_nonce, messages: messages.clone().into_inner() };
 
 			let commitment_hash = Self::make_commitment_hash(&bundle);
 			let average_payload_size = Self::average_payload_size(&bundle.messages);
@@ -221,7 +229,8 @@ pub mod pallet {
 		}
 
 		fn make_commitment_hash(bundle: &MessageBundle) -> H256 {
-			let messages: Vec<Token> = bundle.messages
+			let messages: Vec<Token> = bundle
+				.messages
 				.iter()
 				.map(|message| {
 					Token::Tuple(vec![
@@ -231,11 +240,10 @@ pub mod pallet {
 					])
 				})
 				.collect();
-			let input = ethabi::encode(&vec![
-				Token::Tuple(vec![
-					Token::Uint(bundle.nonce.into()),
-					Token::Array(messages)
-				])]);
+			let input = ethabi::encode(&vec![Token::Tuple(vec![
+				Token::Uint(bundle.nonce.into()),
+				Token::Array(messages),
+			])]);
 			<T as Config>::Hashing::hash(&input)
 		}
 
