@@ -96,7 +96,6 @@ contract BeefyClient is Ownable {
      */
     struct Request {
         address sender;
-        uint64 validatorSetID;
         bytes32 commitmentHash;
         uint256[] bitfield;
         uint256 blockNumber;
@@ -217,7 +216,6 @@ contract BeefyClient is Ownable {
         // Accept and save the commitment
         requests[nextRequestID] = Request(
             msg.sender,
-            validatorSetID,
             commitmentHash,
             bitfield,
             block.number,
