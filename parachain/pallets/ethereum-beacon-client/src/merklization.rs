@@ -1,4 +1,4 @@
-use crate::{BeaconBlockHeader, SyncCommittee, ForkData, SigningData};
+use crate::{BeaconHeader, SyncCommittee, ForkData, SigningData};
 
 use ssz_rs_derive::SimpleSerialize;
 use ssz_rs::{Deserialize, Sized, SimpleSerialize as SimpleSerializeTrait};
@@ -41,7 +41,7 @@ pub enum MerkleizationError {
     InvalidLength
 }
 
-pub fn hash_tree_root_beacon_header(beacon_header: BeaconBlockHeader) -> Result<[u8; 32], MerkleizationError> {
+pub fn hash_tree_root_beacon_header(beacon_header: BeaconHeader) -> Result<[u8; 32], MerkleizationError> {
     hash_tree_root(SSZBeaconBlockHeader{
         slot: beacon_header.slot,
         proposer_index: beacon_header.proposer_index,
@@ -102,7 +102,7 @@ mod tests {
     #[test]
     pub fn test_hash_tree_root_beacon_header() {
         let hash_root = merklization::hash_tree_root_beacon_header(
-            ethereum_beacon_client::BeaconBlockHeader {
+            ethereum_beacon_client::BeaconHeader {
                 slot: 3,
                 proposer_index: 2,
                 parent_root: hex!(
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     pub fn test_hash_tree_root_beacon_header_2() {
         let hash_root = merklization::hash_tree_root_beacon_header(
-            ethereum_beacon_client::BeaconBlockHeader {
+            ethereum_beacon_client::BeaconHeader {
                 slot: 3476424,
                 proposer_index: 314905,
                 parent_root: hex!(

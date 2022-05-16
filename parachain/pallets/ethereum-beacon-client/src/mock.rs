@@ -66,7 +66,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 }
 
 pub fn get_initial_sync() -> ethereum_beacon_client::InitialSync {
-	let header: ethereum_beacon_client::BeaconBlockHeader = BeaconBlockHeader{
+	let header: ethereum_beacon_client::BeaconHeader = BeaconHeader{
 		slot: 3476320,
 		proposer_index: 168760,
 		parent_root: hex!("244aca04180a684f0af2f18e47e86c55f72e28ec8c1962d538b1b2490af0fbb0").into(),
@@ -608,7 +608,7 @@ pub fn get_initial_sync() -> ethereum_beacon_client::InitialSync {
 
 pub fn get_committee_sync_period_update() -> ethereum_beacon_client::SyncCommitteePeriodUpdate {
 	let update: ethereum_beacon_client::SyncCommitteePeriodUpdate = SyncCommitteePeriodUpdate{
-		attested_header: BeaconBlockHeader{
+		attested_header: BeaconHeader{
 			slot: 200326,
 			proposer_index: 99434,
 			parent_root: hex!("0206842dc6243ffb36158acaa34c4921d42a891152c727ccd0be96d69bf0fb5c").into(),
@@ -1139,7 +1139,7 @@ pub fn get_committee_sync_period_update() -> ethereum_beacon_client::SyncCommitt
 			hex!("9cf3a6e77d85cfbcffe36aedfd9b9fab061c613675f6a1063bb660c89036a8e4").into(),
 			hex!("6fa71846070803281b4ff1032b3497eb245efce974d857c58b8d1c196af3f784").into(),
 		],
-		finalized_header: BeaconBlockHeader{
+		finalized_header: BeaconHeader{
 			slot: 200256,
 			proposer_index: 11784,
 			parent_root: hex!("6eb9432959cb48b147d577823acce25a07423f4564f3f0214b7dbb492bf51eee").into(),
@@ -1687,14 +1687,14 @@ pub fn get_current_sync_committee_for_current_committee_update() -> SyncCommitte
 
 pub fn get_finalized_header_update() -> ethereum_beacon_client::FinalizedHeaderUpdate  {
 	FinalizedHeaderUpdate{
-		attested_header: BeaconBlockHeader{
+		attested_header: BeaconHeader{
 			slot: 29122,
 			proposer_index: 6943,
 			parent_root: hex!("d82627712a10d4be558c82e9638a5fdf4ee9390fdb654168315290366db1d303").into(),
 			state_root: hex!("f935badfc539904d4c46f4fda5f258d5893b63a30295d65c34eba892ac1034d4").into(),
 			body_root: hex!("f459d61290714f581969967c9839042da6a01c71d2e6e714c805c0f7421cfa96").into(),	
 		},
-		finalized_header: BeaconBlockHeader{
+		finalized_header: BeaconHeader{
 			slot: 29056,
 			proposer_index: 69405,
 			parent_root: hex!("6d0f66f1a5a243100571591d87b6c2a44d90933f30f93a6b657daed2692bbf3b").into(),

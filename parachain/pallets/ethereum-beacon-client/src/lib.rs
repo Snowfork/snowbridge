@@ -2,6 +2,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod merklization;
+mod block;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -11,10 +12,11 @@ use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
-use sp_core::H256;
+use sp_core::{H160, H256, U256};
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
+use snowbridge_ethereum::Header as ExecutionHeader;
 
 type Root = H256;
 type Domain = H256;
@@ -51,10 +53,39 @@ impl Default for PublicKey {
 	}
 }
 
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct Header {
+	/// Parent block hash.
+	pub parent_hash: H256,
+	pub fee_recipient: H160,
+	/// State root.
+	pub state_root: H256,
+	/// Block receipts root.
+	pub receipts_root: H256,
+	/// Block bloom.
+	pub logs_bloom: Vec<u8>,
+	pub prev_randao: H256,
+	pub block_number: u64,
+	/// Gas used for contracts execution.
+	pub gas_used: U256,
+	/// Block gas limit.
+	pub gas_limit: U256,
+	/// Block timestamp.
+	pub timestamp: u64,
+	/// Block extra data.
+	pub extra_data: Vec<u8>,
+	// Base fee per gas (EIP-1559), only in headers from the London hardfork onwards.
+	pub base_fee_per_gas: Option<U256>,
+	/// Block hash.
+	pub block_hash: H256,
+	/// Transactions root.
+	pub transactions: Vec<u8>,
+}
+
 /// Beacon block header as it is stored in the runtime storage. The block root is the
 /// Merklization of a BeaconHeader.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct BeaconBlockHeader {
+pub struct BeaconHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
 	pub slot: u64,
 	// The index of the validator that proposed the block.
@@ -83,7 +114,7 @@ pub struct SyncAggregate {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct InitialSync {
-	pub header: BeaconBlockHeader,
+	pub header: BeaconHeader,
 	pub current_sync_committee: SyncCommittee,
 	pub current_sync_committee_branch: ProofBranch,
 	pub validators_root: Root,
@@ -91,10 +122,10 @@ pub struct InitialSync {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncCommitteePeriodUpdate {
-	pub attested_header: BeaconBlockHeader,
+	pub attested_header: BeaconHeader,
 	pub next_sync_committee: SyncCommittee,
 	pub next_sync_committee_branch: ProofBranch,
-	pub finalized_header: BeaconBlockHeader,
+	pub finalized_header: BeaconHeader,
 	pub finality_branch: ProofBranch,
 	pub sync_aggregate: SyncAggregate,
 	pub fork_version: ForkVersion,
@@ -103,9 +134,17 @@ pub struct SyncCommitteePeriodUpdate {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct FinalizedHeaderUpdate {
-	pub attested_header: BeaconBlockHeader,
-	pub finalized_header: BeaconBlockHeader,
+	pub attested_header: BeaconHeader,
+	pub finalized_header: BeaconHeader,
 	pub finality_branch: ProofBranch,
+	pub sync_aggregate: SyncAggregate,
+	pub fork_version: ForkVersion,
+}
+
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct HeaderUpdate {
+	pub attested_header: BeaconHeader,
+	pub execution_header: ExecutionHeader,
 	pub sync_aggregate: SyncAggregate,
 	pub fork_version: ForkVersion,
 }
@@ -174,12 +213,16 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::storage]
-	pub(super) type FinalizedHeaders<T: Config> =
-		StorageMap<_, Identity, H256, BeaconBlockHeader, OptionQuery>;
+	pub(super) type FinalizedBeaconHeaders<T: Config> =
+		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
 
 	#[pallet::storage]
-	pub(super) type FinalizedHeadersBySlot<T: Config> =
-		StorageMap<_, Identity, u64, H256, OptionQuery>;
+	pub(super) type BeaconHeaders<T: Config> =
+		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
+
+	#[pallet::storage]
+	pub(super) type ExecutionHeaders<T: Config> =
+		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
@@ -303,6 +346,55 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn import_header(
+			origin: OriginFor<T>,
+			header_update: HeaderUpdate,
+		) -> DispatchResult {
+			let _sender = ensure_signed(origin)?;
+
+			let slot = header_update.attested_header.slot;
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Received header update for slot {}, processing and importing header.",
+				slot
+			);
+
+			if let Err(err) = Self::process_header(header_update) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"Header update failed with error {:?}",
+					err
+				);
+				return Err(err);
+			}
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Header processing and importing at slot {} succeeded.",
+				slot
+			);
+
+			Ok(())
+		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn verify_eth1_receipt_inclusion(
+			origin: OriginFor<T>,
+		) -> DispatchResult {
+			let _sender = ensure_signed(origin)?;
+
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"💫 Received transaction to be validated.",
+			);
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -320,7 +412,7 @@ pub mod pallet {
 
 			let block_root: H256 = merklization::hash_tree_root_beacon_header(initial_sync.header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
-			Self::store_header(block_root, initial_sync.header);
+			Self::store_finalized_header(block_root, initial_sync.header);
 
 			Self::store_genesis(Genesis { validators_root: initial_sync.validators_root });
 
@@ -355,6 +447,7 @@ pub mod pallet {
 
 			let current_sync_committee = <SyncCommittees<T>>::get(current_period);
 			let genesis = <ChainGenesis<T>>::get();
+
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
@@ -364,7 +457,7 @@ pub mod pallet {
 				genesis.validators_root,
 			)?;
 
-			Self::store_header(block_root, update.finalized_header);
+			Self::store_finalized_header(block_root, update.finalized_header);
 
 			Ok(())
 		}
@@ -398,7 +491,34 @@ pub mod pallet {
 				genesis.validators_root,
 			)?;
 
-			Self::store_header(block_root, update.finalized_header);
+			Self::store_finalized_header(block_root, update.finalized_header);
+
+			Ok(())
+		}
+
+		fn process_header(update: HeaderUpdate) -> DispatchResult {
+			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
+			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
+
+			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
+			let sync_committee = <SyncCommittees<T>>::get(current_period);
+			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: PublicKey([0; 48]) }) == sync_committee {
+				return Err(Error::<T>::SyncCommitteeMissing.into());
+			}
+			let genesis = <ChainGenesis<T>>::get();
+			Self::verify_signed_header(
+				sync_committee_bits,
+				update.sync_aggregate.sync_committee_signature,
+				sync_committee.pubkeys,
+				update.fork_version,
+				update.attested_header.clone(),
+				genesis.validators_root,
+			)?;
+
+			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.attested_header.clone())
+				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
+
+			Self::store_header(block_root, update.attested_header);
 
 			Ok(())
 		}
@@ -408,7 +528,7 @@ pub mod pallet {
 			sync_committee_signature: Vec<u8>,
 			sync_committee_pubkeys: Vec<PublicKey>,
 			fork_version: ForkVersion,
-			header: BeaconBlockHeader,
+			header: BeaconHeader,
 			validators_root: H256,
 		) -> DispatchResult {
 			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
@@ -445,7 +565,7 @@ pub mod pallet {
 			if let Err(_e) = sig {
 				return Err(Error::<T>::InvalidSignature.into());
 			}
-			
+
 			let agg_sig = AggregateSignature::from_signature(&sig.unwrap());
 
 			let public_keys_res: Result<Vec<milagro_bls::PublicKey>, _> =
@@ -474,7 +594,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn compute_signing_root(
-			beacon_header: BeaconBlockHeader,
+			beacon_header: BeaconHeader,
 			domain: Domain,
 		) -> Result<Root, DispatchError> {
 			let beacon_header_root = merklization::hash_tree_root_beacon_header(beacon_header)
@@ -539,10 +659,12 @@ pub mod pallet {
 			<SyncCommittees<T>>::insert(period, sync_committee);
 		}
 
-		fn store_header(block_root: H256, header: BeaconBlockHeader) {
-			<FinalizedHeaders<T>>::insert(block_root, header.clone());
+		fn store_finalized_header(block_root: H256, header: BeaconHeader) {
+			<FinalizedBeaconHeaders<T>>::insert(block_root, header.clone());
+		}
 
-			<FinalizedHeadersBySlot<T>>::insert(header.slot, block_root);
+		fn store_header(block_root: H256, attested_header: BeaconHeader) {
+			<FinalizedBeaconHeaders<T>>::insert(block_root, attested_header.clone());
 		}
 
 		fn store_genesis(genesis: Genesis) {

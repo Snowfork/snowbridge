@@ -83,16 +83,30 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	r.SyncFinalizedHeader(ctx)
 
-	ticker := time.NewTicker(time.Minute * 5)
-	done := make(chan bool)
+	finalizedHeaderTicker := time.NewTicker(time.Minute * 5)
+	doneFinalizedHeader := make(chan bool)
 
 	go func() error {
 		for {
 			select {
-			case <-done:
+			case <-doneFinalizedHeader:
 				return nil
-			case <-ticker.C:
+			case <-finalizedHeaderTicker.C:
 				r.SyncFinalizedHeader(ctx)
+			}
+		}
+	}()
+
+	headUpdateTicker := time.NewTicker(time.Minute * 5)
+	doneHeadUpdate := make(chan bool)
+
+	go func() error {
+		for {
+			select {
+			case <-doneHeadUpdate:
+				return nil
+			case <-headUpdateTicker.C:
+				r.SyncHeader(ctx)
 			}
 		}
 	}()
@@ -160,8 +174,6 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 		return nil
 	}
 
-	logrus.Info("Checking if sync period rolled")
-
 	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
 
 	if !syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
@@ -169,7 +181,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 
 		r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
 
-		r.syncer.Cache.SyncCommitteePeriodsSynced = append(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod)
+		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
 	}
 
 	err = r.writer.WriteToParachain(ctx, "import_finalized_header", finalizedHeaderUpdate)
@@ -180,6 +192,44 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 	}
 
 	r.syncer.Cache.FinalizedHeaders = append(r.syncer.Cache.FinalizedHeaders, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot))
+
+	return err
+}
+
+func (r *Relay) SyncHeader(ctx context.Context) error {
+	logrus.Info("Syncing head update")
+
+	headerUpdate, err := r.syncer.GetHeaderUpdate()
+	if err != nil {
+		logrus.WithError(err).Error("unable to sync latest header")
+
+		return err
+	}
+
+	if syncer.IsInArray(r.syncer.Cache.Headers, uint64(headerUpdate.AttestedHeader.Slot)) {
+		logrus.Info("latest header has been synced already, skipped")
+
+		return nil
+	}
+
+	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(headerUpdate.AttestedHeader.Slot))
+
+	if !syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
+		logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
+
+		r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
+
+		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
+	}
+
+	err = r.writer.WriteToParachain(ctx, "import_header", headerUpdate)
+	if err != nil {
+		logrus.WithError(err).Error("unable to write to parachain")
+
+		return err
+	}
+
+	r.syncer.Cache.Headers = append(r.syncer.Cache.Headers, uint64(headerUpdate.AttestedHeader.Slot))
 
 	return err
 }
