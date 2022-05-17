@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "target": "es2019",
+        "module": "CommonJS",
+        "baseUrl": ".",
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "paths": {
+            "@snowbridge-network/types": [
+                "packages/types/src"
+            ],
+            "@snowbridge-network/types/*": [
+                "packages/types/src/*"
+            ],
+        }
+    }
+}

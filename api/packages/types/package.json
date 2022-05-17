@@ -1,0 +1,12 @@
+{
+  "name": "@snowbridge-network/types",
+  "main": "index.js",
+  "version": "1.0.0",
+  "devDependencies": {
+    "@polkadot/typegen": "^8.3.2",
+    "@polkadot/types": "^8.3.2"
+  },
+  "peerDependencies": {
+    "@polkadot/api": ">8.3.2"
+  }
+}
