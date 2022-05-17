@@ -1,4 +1,4 @@
-use crate::{BeaconHeader, SyncCommittee, ForkData, SigningData};
+use crate::{BeaconHeader, SyncCommittee, ForkData, SigningData, block::BeaconBlock};
 
 use ssz_rs_derive::SimpleSerialize;
 use ssz_rs::{Deserialize, Sized, SimpleSerialize as SimpleSerializeTrait};
@@ -6,6 +6,63 @@ use ssz_rs::prelude::Vector;
 use sp_std::convert::TryInto;
 use sp_std::iter::FromIterator;
 use sp_std::prelude::*;
+
+
+const MAX_PROPOSER_SLASHINGS: usize = 16;
+
+const MAX_ATTESTER_SLASHINGS: usize =  2;
+
+const MAX_ATTESTATIONS: usize =  128;
+
+const MAX_DEPOSITS: usize =  16;
+
+const MAX_VOLUNTARY_EXITS: usize =  16;
+
+
+#[derive(Default, SimpleSerialize, Clone)]
+pub struct SSZMessage {
+	pub slot: u64,
+	pub proposer_index: u64,
+	pub parent_root: [u8; 32],
+	pub state_root: [u8; 32],
+	pub body_root: [u8; 32],
+}
+
+#[derive(Default, SimpleSerialize, Clone)]
+pub struct SSZSignedHeader {
+	pub message: SSZMessage,
+    pub signature: Vector<u8, 96>,
+}
+
+#[derive(Default, SimpleSerialize, Clone)]
+pub struct SSZProposerSlashing {
+	pub signed_header_1: SSZSignedHeader,
+	pub signed_header_2: SSZSignedHeader,
+}
+
+#[derive(Default, SimpleSerialize)]
+pub struct SSZEth1Data {
+	pub deposit_root: [u8; 32],
+	pub deposit_count: u64,
+	pub block_hash: [u8; 32],
+}
+
+#[derive(Default, SimpleSerialize)]
+pub struct SSZBeaconBlockBody {
+	pub randao_reveal: Vector<u8, 96>,
+    pub eth1_data: SSZEth1Data,
+    pub graffiti: [u8; 32],
+    pub proposer_slashings: Vector<SSZProposerSlashing, MAX_PROPOSER_SLASHINGS>
+}
+
+#[derive(Default, SimpleSerialize)]
+pub struct SSZBeaconBlock {
+	pub slot: u64,
+	pub proposer_index: u64,
+	pub parent_root: [u8; 32],
+	pub state_root: [u8; 32],
+	pub body: SSZBeaconBlockBody,
+}
 
 #[derive(Default, SimpleSerialize)]
 pub struct SSZBeaconBlockHeader {
@@ -39,6 +96,63 @@ pub enum MerkleizationError {
     HashTreeRootError,
     HashTreeRootInvalidBytes,
     InvalidLength
+}
+
+pub fn hash_tree_root_beacon_block(beacon_block: BeaconBlock) -> Result<[u8; 32], MerkleizationError> {
+    let conv_randao_reveal = Vector::<u8, 96>::from_iter(beacon_block.body.randao_reveal);
+
+    let mut proposer_slashings = Vec::new();
+
+    for proposer_slashing in beacon_block.body.proposer_slashings.iter() {
+        let signature1 = Vector::<u8, 96>::from_iter(proposer_slashing.signed_header_1.signature.clone());
+        let signature2 = Vector::<u8, 96>::from_iter(proposer_slashing.signed_header_2.signature.clone());
+
+        let conv_proposer_slashing = SSZProposerSlashing{
+            signed_header_1: SSZSignedHeader{
+                message: SSZMessage{
+                    slot: proposer_slashing.signed_header_1.message.slot,
+                    proposer_index: proposer_slashing.signed_header_1.message.proposer_index,
+                    parent_root: proposer_slashing.signed_header_1.message.parent_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+                    state_root: proposer_slashing.signed_header_1.message.state_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+                    body_root: proposer_slashing.signed_header_1.message.body_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+                },
+                signature: signature1,
+            },
+            signed_header_2: SSZSignedHeader{
+                message: SSZMessage{
+                    slot: proposer_slashing.signed_header_2.message.slot,
+                    proposer_index: proposer_slashing.signed_header_2.message.proposer_index,
+                    parent_root: proposer_slashing.signed_header_2.message.parent_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+                    state_root: proposer_slashing.signed_header_2.message.state_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+                    body_root: proposer_slashing.signed_header_2.message.body_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+                },
+                signature: signature2,
+            },
+        };
+
+        proposer_slashings.push(conv_proposer_slashing);
+    }
+
+    let proposer_slashings_conv = Vector::<SSZProposerSlashing, MAX_PROPOSER_SLASHINGS>::from_iter(proposer_slashings);
+
+    let ssz_block = SSZBeaconBlock{
+        slot: beacon_block.slot,
+        proposer_index: beacon_block.proposer_index,
+        parent_root: beacon_block.parent_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+        state_root: beacon_block.state_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+        body: SSZBeaconBlockBody{
+            randao_reveal: conv_randao_reveal,
+            eth1_data: SSZEth1Data{
+                deposit_root: beacon_block.body.eth1_data.deposit_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+	            deposit_count: beacon_block.body.eth1_data.deposit_count,
+                block_hash: beacon_block.body.eth1_data.block_hash.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+            },
+            graffiti: beacon_block.body.graffiti.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+            proposer_slashings: proposer_slashings_conv,
+        },
+    };
+
+    hash_tree_root(ssz_block)
 }
 
 pub fn hash_tree_root_beacon_header(beacon_header: BeaconHeader) -> Result<[u8; 32], MerkleizationError> {

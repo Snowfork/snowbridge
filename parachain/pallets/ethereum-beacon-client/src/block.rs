@@ -5,7 +5,6 @@ use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
-
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct DepositData {
 	pub pubkey: Vec<u8>,
@@ -58,7 +57,7 @@ pub struct SignedHeader {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct PropserSlashing {
+pub struct ProposerSlashing {
 	pub signed_header_1: SignedHeader,
 	pub signed_header_2: SignedHeader,
 }
@@ -118,7 +117,7 @@ pub struct Body {
 	pub randao_reveal: Vec<u8>,
 	pub eth1_data: Eth1Data,
     pub graffiti: H256,
-    pub proposer_slashings: Vec<PropserSlashing>,
+    pub proposer_slashings: Vec<ProposerSlashing>,
     pub attester_slashings: Vec<AttesterSlashing>,
     pub attestations: Vec<Attestation>,
     pub deposits: Deposit,
@@ -133,5 +132,5 @@ pub struct BeaconBlock {
 	pub proposer_index: u64,
 	pub parent_root: H256,
 	pub state_root: H256,
-	pub body: H256,
+	pub body: Body,
 }
