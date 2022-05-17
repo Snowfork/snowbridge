@@ -8,12 +8,11 @@ require("chai")
 const BasicInboundChannel = artifacts.require("BasicInboundChannel");
 const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
-const { createBeefyValidatorFixture, runBeefyLightClientFlow } = require("./beefy-helpers");
+const ParachainClient = artifacts.require("ParachainClient");
 
 const {
-  deployBeefyLightClient
+  deployBeefyClient, createValidatorFixture, runBeefyClientFlow
 } = require("./helpers");
-
 
 const fixture = require('./fixtures/beefy-relay-basic.json')
 const submitInput = require('./fixtures/parachain-relay-basic.json')
@@ -22,34 +21,35 @@ describe("BasicInboundChannel", function () {
   const interface = new ethers.utils.Interface(BasicInboundChannel.abi)
 
   before(async function () {
+    const numberOfSignatures = 8;
+    const numberOfValidators = 24;
+    const validatorFixture = await createValidatorFixture(fixture.params.commitment.validatorSetID-1, numberOfValidators)
+    this.beefyClient = await deployBeefyClient(
+      validatorFixture.validatorSetID,
+      validatorFixture.validatorSetRoot,
+      validatorFixture.validatorSetLength,
+    );
+
     const merkleProof = await MerkleProof.new();
     const scaleCodec = await ScaleCodec.new();
-    await BasicInboundChannel.link(merkleProof);
-    await BasicInboundChannel.link(scaleCodec);
+    await ParachainClient.link(merkleProof);
+    await ParachainClient.link(scaleCodec);
+    this.parachainClient = await ParachainClient.new(this.beefyClient.address, 1000);
 
-    const totalNumberOfValidatorSigs = 100;
-    const beefyFixture = await createBeefyValidatorFixture(
-      totalNumberOfValidatorSigs
-    )
-    this.beefyLightClient = await deployBeefyLightClient(beefyFixture.root,
-      totalNumberOfValidatorSigs);
-
-    await runBeefyLightClientFlow(fixture, this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
+    await runBeefyClientFlow(fixture, this.beefyClient, validatorFixture, numberOfSignatures, numberOfValidators)
   });
 
   describe("submit", function () {
     beforeEach(async function () {
-      this.channel = await BasicInboundChannel.new(this.beefyLightClient.address);
+      this.channel = await BasicInboundChannel.new(this.parachainClient.address);
     });
 
     it("should accept a valid commitment and dispatch messages", async function () {
       const nonceBeforeSubmit = BigNumber(await this.channel.nonce());
 
       const { receipt } = await this.channel.submit(
-        submitInput.submit.messages,
-        submitInput.submit.paraVerifyInput,
-        submitInput.submit.leafPartial,
-        submitInput.submit.proof
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.be.fulfilled
 
       const nonceAfterSubmit = BigNumber(await this.channel.nonce());
@@ -60,24 +60,20 @@ describe("BasicInboundChannel", function () {
         receipt.rawLogs[0].data,
         receipt.rawLogs[0].topics
       );
-      event.nonce.eq(ethers.BigNumber.from(1)).should.be.true;
+      event.id.eq(ethers.BigNumber.from(0)).should.be.true;
     });
 
     it("should refuse to replay commitments", async function () {
       // Submit messages
       await this.channel.submit(
-        submitInput.submit.messages,
-        submitInput.submit.paraVerifyInput,
-        submitInput.submit.leafPartial,
-        submitInput.submit.proof
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.be.fulfilled;
 
       // Submit messages again - should revert
       await this.channel.submit(
-        submitInput.submit.messages,
-        submitInput.submit.paraVerifyInput,
-        submitInput.submit.leafPartial,
-        submitInput.submit.proof
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.not.be.fulfilled;
     });
   });

@@ -17,8 +17,8 @@ benchmarks! {
 		for _ in 0 .. m {
 			let payload: Vec<u8> = (0..).take(p as usize).collect();
 			<MessageQueue<T>>::try_append(Message {
+				id: 0u64,
 				target: H160::zero(),
-				nonce: 0u64,
 				fee: 0,
 				payload,
 			}).unwrap();
@@ -35,8 +35,8 @@ benchmarks! {
 	// because it's not a commitment interval.
 	on_initialize_non_interval {
 		<MessageQueue<T>>::try_append(Message {
+			id: 0u64,
 			target: H160::zero(),
-			nonce: 0u64,
 			fee: 0,
 			payload: vec![1u8; T::MaxMessagePayloadSize::get() as usize],
 		}).unwrap();

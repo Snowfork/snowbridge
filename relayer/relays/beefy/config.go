@@ -13,8 +13,7 @@ type SourceConfig struct {
 	Polkadot config.PolkadotConfig `mapstructure:"polkadot"`
 	// Block number when Beefy was activated
 	BeefyActivationBlock uint64 `mapstructure:"beefy-activation-block"`
-	// Number of blocks to skip between reading justifications
-	BeefySkipPeriod uint64 `mapstructure:"beefy-skip-period"`
+	FastForwardDepth     uint64 `mapstructure:"fast-forward-depth"`
 }
 
 type SinkConfig struct {
@@ -24,5 +23,5 @@ type SinkConfig struct {
 }
 
 type ContractsConfig struct {
-	BeefyLightClient string `mapstructure:"BeefyLightClient"`
+	BeefyClient string `mapstructure:"BeefyClient"`
 }

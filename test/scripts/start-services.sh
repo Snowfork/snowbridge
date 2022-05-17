@@ -83,7 +83,7 @@ start_polkadot_launch()
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
         | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
 
-    cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" | sponge "$output_dir/spec.json"
+    cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" "$output_dir/contracts.json" | sponge "$output_dir/spec.json"
 
     # TODO: add back
     # if [[ -n "${TEST_MALICIOUS_APP+x}" ]]; then
@@ -141,9 +141,9 @@ start_relayer()
 
     # Configure beefy relay
     jq \
-        --arg k1 "$(address_for BeefyLightClient)" \
+        --arg k1 "$(address_for BeefyClient)" \
     '
-      .sink.contracts.BeefyLightClient = $k1
+      .sink.contracts.BeefyClient = $k1
     ' \
     config/beefy-relay.json > $output_dir/beefy-relay.json
 
@@ -151,11 +151,11 @@ start_relayer()
     jq \
         --arg k1 "$(address_for BasicInboundChannel)" \
         --arg k2 "$(address_for IncentivizedInboundChannel)" \
-        --arg k3 "$(address_for BeefyLightClient)" \
+        --arg k3 "$(address_for BeefyClient)" \
     '
       .source.contracts.BasicInboundChannel = $k1
     | .source.contracts.IncentivizedInboundChannel = $k2
-    | .source.contracts.BeefyLightClient = $k3
+    | .source.contracts.BeefyClient = $k3
     | .sink.contracts.BasicInboundChannel = $k1
     | .sink.contracts.IncentivizedInboundChannel = $k2
     ' \

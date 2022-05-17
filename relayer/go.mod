@@ -7,12 +7,9 @@ require (
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/go-ole/go-ole v1.2.5 // indirect
-	github.com/jinzhu/gorm v1.9.16
-	github.com/jinzhu/now v1.1.2 // indirect
 	github.com/magefile/mage v1.11.0
 	github.com/magiconair/properties v1.8.4 // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/mattn/go-sqlite3 v1.14.5
+	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/mimoo/StrobeGo v0.0.0-20210601165009-122bf33a46e0 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect

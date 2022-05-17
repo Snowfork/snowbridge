@@ -91,14 +91,14 @@ fn testnet_genesis(
 			phantom: Default::default(),
 		},
 		basic_inbound_channel: snowbridge_runtime::BasicInboundChannelConfig {
-			source_channel: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
+			source_channel: Default::default(),
 		},
 		basic_outbound_channel: snowbridge_runtime::BasicOutboundChannelConfig {
 			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
 			interval: 1,
 		},
 		incentivized_inbound_channel: snowbridge_runtime::IncentivizedInboundChannelConfig {
-			source_channel: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
+			source_channel: Default::default(),
 			reward_fraction: Perbill::from_percent(80),
 		},
 		incentivized_outbound_channel: snowbridge_runtime::IncentivizedOutboundChannelConfig {
@@ -117,13 +117,13 @@ fn testnet_genesis(
 			initial_difficulty: Default::default(),
 		},
 		dot_app: snowbridge_runtime::DotAppConfig {
-			address: hex!["3f839E70117C64744930De8567Ae7A5363487cA3"].into(),
+			address: Default::default(),
 		},
 		eth_app: snowbridge_runtime::EthAppConfig {
-			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into(),
+			address: Default::default(),
 		},
 		erc_20_app: snowbridge_runtime::Erc20AppConfig {
-			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into(),
+			address: Default::default(),
 		},
 		parachain_info: snowbridge_runtime::ParachainInfoConfig { parachain_id: para_id },
 		collator_selection: snowbridge_runtime::CollatorSelectionConfig {

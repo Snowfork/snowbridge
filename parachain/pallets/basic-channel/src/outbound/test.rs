@@ -4,7 +4,7 @@ use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::DispatchError,
 	parameter_types,
-	traits::{Everything, GenesisBuild},
+	traits::{Everything, GenesisBuild, OnInitialize},
 };
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
@@ -96,6 +96,13 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	ext
 }
 
+fn run_to_block(n: u64) {
+	while System::block_number() < n {
+			System::set_block_number(System::block_number() + 1);
+			BasicOutboundChannel::on_initialize(System::block_number());
+	}
+}
+
 #[test]
 fn test_submit() {
 	new_tester().execute_with(|| {
@@ -103,10 +110,11 @@ fn test_submit() {
 		let who: AccountId = Keyring::Bob.into();
 
 		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-		assert_eq!(<Nonce<Test>>::get(), 1);
+		assert_eq!(<NextId<Test>>::get(), 1);
+		assert_eq!(<Nonce<Test>>::get(), 0);
 
-		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-		assert_eq!(<Nonce<Test>>::get(), 2);
+		run_to_block(2);
+		assert_eq!(<Nonce<Test>>::get(), 1);
 	});
 }
 
@@ -141,20 +149,6 @@ fn test_submit_exceeds_payload_limit() {
 			Error::<Test>::PayloadTooLarge,
 		);
 	})
-}
-
-#[test]
-fn test_submit_fails_on_nonce_overflow() {
-	new_tester().execute_with(|| {
-		let target = H160::zero();
-		let who: AccountId = Keyring::Bob.into();
-
-		<Nonce<Test>>::set(u64::MAX);
-		assert_noop!(
-			BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
-			Error::<Test>::Overflow,
-		);
-	});
 }
 
 #[test]

@@ -1,182 +1,127 @@
 package beefy
 
 import (
-	"context"
-	"encoding/hex"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 )
 
-type CommitmentLog struct {
-	BlockNumber    uint32     `json:"blockNumber"`
-	ValidatorSetID uint64     `json:"validatorSetId"`
-	Payload        PayloadLog `json:"payload"`
-}
-
-type PayloadLog struct {
-	MmrRootHash string `json:"mmrRootHash"`
-	Prefix      string `json:"prefix"`
-	Suffix      string `json:"suffix"`
-}
-
-type ValidatorProofLog struct {
-	Signatures            []string         `json:"signatures"`
-	Positions             []*big.Int       `json:"positions"`
-	PublicKeys            []common.Address `json:"publicKeys"`
-	PublicKeyMerkleProofs [][]string       `json:"publicKeyMerkleProofs"`
-}
-
-type MMRLeafLog struct {
-	Version              uint8  `json:"version"`
-	ParentNumber         uint32 `json:"parentNumber"`
-	ParentHash           string `json:"parentHash"`
-	NextAuthoritySetID   uint64 `json:"nextAuthoritySetId"`
-	NextAuthoritySetLen  uint32 `json:"nextAuthoritySetLen"`
-	NextAuthoritySetRoot string `json:"nextAuthoritySetRoot"`
-	ParachainHeadsRoot   string `json:"parachainHeadsRoot"`
-}
-
-type MMRProofLog struct {
-	MerkleProofItems []string `json:"merkleProofItems"`
-	MerkleProofOrder uint64   `json:"merkleProofOrder"`
-}
-
-type FinalSignatureCommitmentLog struct {
-	ID                 *big.Int          `json:"id"`
-	CommitmentHash     string            `json:"commitmentHash"`
-	Commitment         CommitmentLog     `json:"commitment"`
-	ValidatorProof     ValidatorProofLog `json:"validatorProof"`
-	LatestMMRLeaf      MMRLeafLog        `json:"latestMMRLeaf"`
-	SimplifiedMMRProof MMRProofLog        `json:"simplifiedMMRProof"`
-}
-
 func Hex(b []byte) string {
 	return gsrpcTypes.HexEncodeToString(b)
 }
 
-func (wr *EthereumWriter) LogBeefyFixtureDataAll(
-	task *Task,
-	msg *FinalSignatureCommitment,
-) error {
-
-	encodedLeaf, err := gsrpcTypes.EncodeToBytes(msg.LatestMMRLeaf)
-	if err != nil {
-		return err
-	}
-
-	leafHash := Hex((&keccak.Keccak256{}).Hash(encodedLeaf))
-
-	var beefyMMRMerkleProofItems []string
-	for _, item := range msg.SimplifiedProof.MerkleProofItems {
-		beefyMMRMerkleProofItems = append(beefyMMRMerkleProofItems, Hex(item[:]))
-	}
-
+func (wr *EthereumWriter) makeSubmitFinalLogFields(
+	task *Request,
+	params *FinalRequestParams,
+) (log.Fields, error) {
 	var signatures []string
-	for _, item := range msg.Signatures {
+	for _, item := range params.Proof.Signatures {
 		signatures = append(signatures, Hex(item))
 	}
 
-	var pubKeyMerkleProofs [][]string
-	for _, pubkeyProof := range msg.ValidatorPublicKeyMerkleProofs {
-		var pubkeyProofS []string
-		for _, item := range pubkeyProof {
-			pubkeyProofS = append(pubkeyProofS, Hex(item[:]))
+	var merkleProofs [][]string
+	for _, merkleProof := range params.Proof.MerkleProofs {
+		var acc []string
+		for _, item := range merkleProof {
+			acc = append(acc, Hex(item[:]))
 		}
-		pubKeyMerkleProofs = append(pubKeyMerkleProofs, pubkeyProofS)
+		merkleProofs = append(merkleProofs, acc)
 	}
 
 	encodedCommitment, err := gsrpcTypes.EncodeToBytes(task.SignedCommitment.Commitment)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
 
-	state := log.Fields{
-		"finalSignatureCommitment": log.Fields{
-			"id": msg.ID,
+	fields := log.Fields{
+		"params": log.Fields{
+			"id": params.ID,
 			"commitment": log.Fields{
-				"blockNumber": msg.Commitment.BlockNumber,
-				"validatorSetId": msg.Commitment.ValidatorSetId,
+				"blockNumber":    params.Commitment.BlockNumber,
+				"validatorSetID": params.Commitment.ValidatorSetID,
 				"payload": log.Fields{
-					"mmrRootHash": Hex(msg.Commitment.Payload.MmrRootHash[:]),
-					"prefix": Hex(msg.Commitment.Payload.Prefix),
-					"suffix": Hex(msg.Commitment.Payload.Suffix),
+					"mmrRootHash": Hex(params.Commitment.Payload.MmrRootHash[:]),
+					"prefix":      Hex(params.Commitment.Payload.Prefix),
+					"suffix":      Hex(params.Commitment.Payload.Suffix),
 				},
 			},
-			"validatorProof": log.Fields{
-				"signatures": signatures,
-				"positions": msg.ValidatorPositions,
-				"publicKeys": msg.ValidatorPublicKeys,
-				"publicKeyMerkleProofs": pubKeyMerkleProofs,
-			},
-			"leaf": log.Fields{
-				"version": msg.LatestMMRLeaf.Version,
-				"parentNumber": msg.LatestMMRLeaf.ParentNumber,
-				"parentHash": Hex(msg.LatestMMRLeaf.ParentHash[:]),
-				"nextAuthoritySetId": msg.LatestMMRLeaf.NextAuthoritySetId,
-				"nextAuthoritySetLen": msg.LatestMMRLeaf.NextAuthoritySetLen,
-				"nextAuthoritySetRoot": Hex(msg.LatestMMRLeaf.NextAuthoritySetRoot[:]),
-				"parachainHeadsRoot": Hex(msg.LatestMMRLeaf.ParachainHeadsRoot[:]),
-			},
 			"proof": log.Fields{
-				"merkleProofItems": beefyMMRMerkleProofItems,
-				"merkleProofOrderBitField": msg.SimplifiedProof.MerkleProofOrderBitField,
+				"signatures":   signatures,
+				"indices":      params.Proof.Indices,
+				"addrs":        params.Proof.Addrs,
+				"merkleProofs": merkleProofs,
 			},
 		},
 		"commitmentHash": commitmentHash,
-		"encodedLeaf": Hex(encodedLeaf),
-		"leafHash": leafHash,
 	}
 
-	log.WithFields(state).Debug("State for final signature commitment")
-
-	return nil
+	return fields, nil
 }
 
-func (wr *EthereumWriter) GetFailingMessage(client ethclient.Client, hash common.Hash) (string, error) {
-	tx, _, err := client.TransactionByHash(context.Background(), hash)
+func (wr *EthereumWriter) makeSubmitFinalHandoverLogFields(
+	task *Request,
+	params *FinalRequestParams,
+) (log.Fields, error) {
+	var signatures []string
+	for _, item := range params.Proof.Signatures {
+		signatures = append(signatures, Hex(item))
+	}
+
+	var merkleProofs [][]string
+	for _, merkleProof := range params.Proof.MerkleProofs {
+		var acc []string
+		for _, item := range merkleProof {
+			acc = append(acc, Hex(item[:]))
+		}
+		merkleProofs = append(merkleProofs, acc)
+	}
+
+	encodedCommitment, err := gsrpcTypes.EncodeToBytes(task.SignedCommitment.Commitment)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	commitmentHash := Hex((&keccak.Keccak256{}).Hash(encodedCommitment))
+
+	var proofItems []string
+	for _, item := range params.LeafProof.Items {
+		proofItems = append(proofItems, Hex(item[:]))
 	}
 
-	from, err := types.Sender(types.NewEIP155Signer(tx.ChainId()), tx)
-	if err != nil {
-		return "", err
+	fields := log.Fields{
+		"params": log.Fields{
+			"id": params.ID,
+			"commitment": log.Fields{
+				"blockNumber":    params.Commitment.BlockNumber,
+				"validatorSetId": params.Commitment.ValidatorSetID,
+				"payload": log.Fields{
+					"mmrRootHash": Hex(params.Commitment.Payload.MmrRootHash[:]),
+					"prefix":      Hex(params.Commitment.Payload.Prefix),
+					"suffix":      Hex(params.Commitment.Payload.Suffix),
+				},
+			},
+			"proof": log.Fields{
+				"signatures":   signatures,
+				"indices":      params.Proof.Indices,
+				"addrs":        params.Proof.Addrs,
+				"merkleProofs": merkleProofs,
+			},
+			"leaf": log.Fields{
+				"version":              params.Leaf.Version,
+				"parentNumber":         params.Leaf.ParentNumber,
+				"parentHash":           Hex(params.Leaf.ParentHash[:]),
+				"nextAuthoritySetID":   params.Leaf.NextAuthoritySetID,
+				"nextAuthoritySetLen":  params.Leaf.NextAuthoritySetLen,
+				"nextAuthoritySetRoot": Hex(params.Leaf.NextAuthoritySetRoot[:]),
+				"parachainHeadsRoot":   Hex(params.Leaf.ParachainHeadsRoot[:]),
+			},
+			"leafProof": log.Fields{
+				"items": proofItems,
+				"order": params.LeafProof.Order,
+			},
+		},
+		"commitmentHash": commitmentHash,
 	}
 
-	msg := ethereum.CallMsg{
-		From:     from,
-		To:       tx.To(),
-		Gas:      tx.Gas(),
-		GasPrice: tx.GasPrice(),
-		Value:    tx.Value(),
-		Data:     tx.Data(),
-	}
-
-	log.WithFields(logrus.Fields{
-		"From":     from,
-		"To":       tx.To(),
-		"Gas":      tx.Gas(),
-		"GasPrice": tx.GasPrice(),
-		"Value":    tx.Value(),
-		"Data":     hex.EncodeToString(tx.Data()),
-	}).Info("Call info")
-
-	// The logger does a test call to the actual contract to check for any revert message and log it, as well
-	// as logging the call info. This is because the golang client can sometimes supress the log message and so
-	// it can be helpful to use the call info to do the same call in Truffle/Web3js to get better logs.
-	res, err := client.CallContract(context.Background(), msg, nil)
-	if err != nil {
-		return "", err
-	}
-
-	return string(res), nil
+	return fields, nil
 }
