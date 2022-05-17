@@ -2,23 +2,23 @@
 name = "snowbridge-runtime-common"
 description = "Snowbridge Runtime Common"
 version = "0.1.0"
-authors = ["Snowfork <contact@snowfork.com>"]
-edition = "2018"
+authors = [ "Snowfork <contact@snowfork.com>" ]
+edition = "2021"
 repository = "https://github.com/Snowfork/snowbridge"
 
 [dependencies]
-frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.12", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", package = "snowbridge-core", default-features = false }
 basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-basic-channel", default-features = false }
 incentivized-channel = { path = "../../pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }
 
 [features]
-default = ["std"]
+default = [ "std" ]
 std = [
     "frame-support/std",
     "frame-system/std",
@@ -27,5 +27,5 @@ std = [
     "sp-runtime/std",
     "snowbridge-core/std",
     "basic-channel/std",
-    "incentivized-channel/std",
+    "incentivized-channel/std"
 ]

@@ -8,18 +8,12 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
-use sp_core::{
-	crypto::KeyTypeId,
-	u32_trait::{_1, _2},
-	OpaqueMetadata, U256,
-};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata, U256};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{
-		AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, IdentifyAccount, Keccak256, Verify,
-	},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, Keccak256},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, MultiSignature,
+	ApplyExtrinsicResult,
 };
 
 use sp_std::prelude::*;
@@ -32,18 +26,19 @@ use sp_version::RuntimeVersion;
 pub use frame_support::{
 	construct_runtime,
 	dispatch::DispatchResult,
-	match_type, parameter_types,
+	match_types, parameter_types,
 	traits::{
-		tokens::fungible::ItemOf, Contains, Everything, IsInVec, KeyOwnerProofSystem, Nothing,
-		Randomness,
+		tokens::fungible::ItemOf, Contains, EnsureOneOf, EqualPrivilegeOnly, Everything, IsInVec,
+		KeyOwnerProofSystem, Nothing, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		IdentityFee, Weight,
+		ConstantMultiplier,
 	},
 	PalletId, StorageValue,
 };
-use frame_system::{EnsureOneOf, EnsureRoot};
+use frame_system::EnsureRoot;
 use pallet_transaction_payment::FeeDetails;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -52,7 +47,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
 
 use dispatch::EnsureEthereumAccount;
-pub use snowbridge_core::{ChannelId, ERC721TokenData, MessageId};
+pub use snowbridge_core::{ChannelId, MessageId};
 
 pub use ethereum_light_client::{EthereumDifficultyConfig, EthereumHeader};
 
@@ -64,7 +59,7 @@ use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
 	AsPrefixedGeneralIndex, ConvertedConcreteAssetId, CurrencyAdapter, EnsureXcmOrigin,
 	FixedWeightBounds, FungiblesAdapter, IsConcrete, LocationInverter, NativeAsset,
-	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
 	SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
@@ -77,48 +72,7 @@ use runtime_common::{
 	INDEXING_PREFIX,
 };
 
-/// An index to a block.
-pub type BlockNumber = u32;
-
-/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
-pub type Signature = MultiSignature;
-
-/// Some way of identifying an account on the chain. We intentionally make it equivalent
-/// to the public key of our transaction signing scheme.
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-/// The type for looking up accounts. We don't expect more than 4 billion of them, but you
-/// never know...
-pub type AccountIndex = u32;
-
-/// Balance of an account.
-pub type Balance = u128;
-
-/// Index of a transaction in the chain.
-pub type Index = u32;
-
-/// A hash of some data used by the chain.
-pub type Hash = sp_core::H256;
-
-/// Digest item type.
-pub type DigestItem = generic::DigestItem<Hash>;
-
-/// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
-/// the specifics of the runtime. They can then be made to be agnostic over specific formats
-/// of data like extrinsics, allowing for them to continue syncing the network through upgrades
-/// to even the core data structures.
-pub mod opaque {
-	use super::*;
-
-	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
-
-	/// Opaque block header type.
-	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	/// Opaque block type.
-	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-	/// Opaque block identifier type.
-	pub type BlockId = generic::BlockId<Block>;
-}
+pub use runtime_primitives::{AccountId, Address, Balance, BlockNumber, Hash, Index, Signature};
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -135,6 +89,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
+	state_version: 1,
 };
 
 pub const MILLISECS_PER_BLOCK: u64 = 12000;
@@ -216,6 +171,7 @@ impl frame_system::Config for Runtime {
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -245,6 +201,7 @@ impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type WeightInfo = pallet_utility::weights::SubstrateWeight<Self>;
+	type PalletsOrigin = OriginCaller;
 }
 
 parameter_types! {
@@ -274,7 +231,7 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
-	type TransactionByteFee = TransactionByteFee;
+	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type WeightToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate = ();
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
@@ -291,7 +248,7 @@ parameter_types! {
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
-	type OnValidationData = ();
+	type OnSystemEvent = ();
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
@@ -310,6 +267,7 @@ parameter_types! {
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
 	pub const Local: MultiLocation = Here.into();
+	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -317,7 +275,7 @@ parameter_types! {
 /// `Transact` in order to determine the dispatch Origin.
 pub type LocationToAccountId = (
 	// The parent (Relay-chain) origin converts to the default `AccountId`.
-	ParentIsDefault<AccountId>,
+	ParentIsPreset<AccountId>,
 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
@@ -335,8 +293,7 @@ pub type FungiblesTransactor = FungiblesAdapter<
 	AccountId,
 	// We dont allow teleports.
 	Nothing,
-	// We dont track any teleports
-	(),
+	CheckingAccount,
 >;
 
 type LocalAssetTransactor = CurrencyAdapter<
@@ -383,17 +340,17 @@ parameter_types! {
 	pub const MaxInstructions: u32 = 100;
 }
 
-match_type! {
-	pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
+match_types! {
+	pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
 		MultiLocation { parents: 1, interior: Here } |
-		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Unit, .. }) }
+		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
 	};
 }
 
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<Everything>,
-	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
+	AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
 );
 
 pub struct XcmConfig;
@@ -459,6 +416,10 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type ChannelInfo = ParachainSystem;
 	type VersionWrapper = ();
+	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+	type ControllerOrigin = EnsureRoot<AccountId>;
+	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type WeightInfo = ();
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -475,10 +436,48 @@ impl pallet_sudo::Config for Runtime {
 }
 
 type EnsureRootOrHalfLocalCouncil = EnsureOneOf<
-	AccountId,
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, LocalCouncilInstance>,
+	pallet_collective::EnsureProportionMoreThan<AccountId, LocalCouncilInstance, 1, 2>,
 >;
+
+impl pallet_scheduler::Config for Runtime {
+	type Event = Event;
+	type Origin = Origin;
+	type PalletsOrigin = OriginCaller;
+	type Call = Call;
+	type MaximumWeight = MaximumSchedulerWeight;
+	type ScheduleOrigin = EnsureRootOrHalfLocalCouncil;
+	type MaxScheduledPerBlock = MaxScheduledPerBlock;
+	type WeightInfo = ();
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
+	type PreimageProvider = Preimage;
+	type NoPreimagePostponement = NoPreimagePostponement;
+}
+
+parameter_types! {
+	/// Max size 4MB allowed for a preimage.
+	pub const PreimageMaxSize: u32 = 4096 * 1024;
+	pub PreimageBaseDeposit: Balance = 1_000_000;
+	pub PreimageByteDeposit: Balance = 1_000;
+}
+
+impl pallet_preimage::Config for Runtime {
+	type WeightInfo = ();
+	type Event = Event;
+	type Currency = Balances;
+	type ManagerOrigin = EnsureRoot<AccountId>;
+	type MaxSize = PreimageMaxSize;
+	type BaseDeposit = PreimageBaseDeposit;
+	type ByteDeposit = PreimageByteDeposit;
+}
+
+parameter_types! {
+	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
+		BlockWeights::get().max_block;
+	pub const MaxScheduledPerBlock: u32 = 10;
+	// Retry a scheduled item every 25 blocks (5 minute) until the preimage exists.
+	pub const NoPreimagePostponement: Option<u32> = Some(5 * MINUTES);
+}
 
 parameter_types! {
 	pub const LocalCouncilMotionDuration: BlockNumber = 7 * DAYS;
@@ -520,10 +519,10 @@ parameter_types! {
 	pub const AssetsStringLimit: u32 = 50;
 	pub const MetadataDepositBase: Balance = 0;
 	pub const MetadataDepositPerByte: Balance = 0;
+	pub const AssetAccountDeposit: Balance = 0;
 }
 
-pub type AssetsForceOrigin =
-	EnsureOneOf<AccountId, EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
+pub type AssetsForceOrigin = EnsureOneOf<EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
 
 impl pallet_assets::Config for Runtime {
 	type Event = Event;
@@ -532,6 +531,7 @@ impl pallet_assets::Config for Runtime {
 	type Currency = Balances;
 	type ForceOrigin = AssetsForceOrigin;
 	type AssetDeposit = AssetDeposit;
+	type AssetAccountDeposit = AssetAccountDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type ApprovalDeposit = ApprovalDeposit;
@@ -670,20 +670,6 @@ impl dot_app::Config for Runtime {
 	type WeightInfo = dot_app::weights::SnowbridgeWeight<Self>;
 }
 
-impl nft::Config for Runtime {
-	type TokenId = u128;
-	type TokenData = ERC721TokenData;
-}
-
-impl erc721_app::Config for Runtime {
-	type Event = Event;
-	type OutboundRouter = OutboundRouter<Runtime>;
-	type CallOrigin = EnsureEthereumAccount;
-	type TokenId = <Runtime as nft::Config>::TokenId;
-	type Nft = nft::Pallet<Runtime>;
-	type WeightInfo = ();
-}
-
 parameter_types! {
 	pub const Period: u32 = 6 * HOURS;
 	pub const Offset: u32 = 0;
@@ -744,7 +730,7 @@ impl pallet_collator_selection::Config for Runtime {
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
-		NodeBlock = opaque::Block,
+		NodeBlock = runtime_primitives::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
@@ -753,38 +739,39 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
 		Utility: pallet_utility::{Pallet, Call, Storage, Event} = 5,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 6,
+		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 7,
 
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>} = 7,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 8,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>} = 9,
 
-		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 8,
-		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 9,
+		LocalCouncil: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 10,
+		LocalCouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
 
 		// Bridge Infrastructure
-		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 10,
-		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 11,
-		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 13,
-		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 14,
-		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 15,
-		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 16,
-		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 17,
-		NFT: nft::{Pallet, Call, Config<T>, Storage} = 18,
+		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 12,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 13,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 14,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
+		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 16,
+		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 17,
+		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 18,
+		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 19,
 
 		// XCM
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 19,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 20,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 21,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 22,
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 21,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 22,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 23,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 24,
 
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 23,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 24,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 25,
-		Aura: pallet_aura::{Pallet, Config<T>} = 26,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 27,
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 25,
+		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 26,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 27,
+		Aura: pallet_aura::{Pallet, Config<T>} = 28,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 29,
 
 		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 28,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 30,
 
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating
@@ -792,12 +779,10 @@ construct_runtime!(
 		DotApp: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 64,
 		EthApp: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
 		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
-		Erc721App: erc721_app::{Pallet, Call, Config, Storage, Event<T>} = 67,
+		// NOTE: 67 is reserved for use with NFTs.
 	}
 );
 
-/// The address format for describing accounts.
-pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 /// Block type as expected by this runtime.
@@ -808,6 +793,7 @@ pub type SignedBlock = generic::SignedBlock<Block>;
 pub type BlockId = generic::BlockId<Block>;
 /// The SignedExtension to the basic transaction logic.
 pub type SignedExtra = (
+	frame_system::CheckNonZeroSender<Runtime>,
 	frame_system::CheckSpecVersion<Runtime>,
 	frame_system::CheckTxVersion<Runtime>,
 	frame_system::CheckGenesis<Runtime>,
@@ -826,7 +812,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllPallets,
+	AllPalletsWithSystem,
 >;
 
 impl_runtime_apis! {
@@ -910,8 +896,8 @@ impl_runtime_apis! {
 	}
 
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
-		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
-			ParachainSystem::collect_collation_info()
+		fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info(header)
 		}
 	}
 
@@ -950,6 +936,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_collective, LocalCouncil);
 			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
 			list_benchmark!(list, extra, pallet_utility, Utility);
+			list_benchmark!(list, extra, pallet_scheduler, Scheduler);
 			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
 			list_benchmark!(list, extra, assets, Assets);
 			list_benchmark!(list, extra, basic_channel::outbound, BasicOutboundChannel);
@@ -1002,6 +989,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_collective, LocalCouncil);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, pallet_utility, Utility);
+			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
 			add_benchmark!(params, batches, ethereum_light_client, EthereumLightClient);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);

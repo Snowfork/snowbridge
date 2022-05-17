@@ -34,6 +34,8 @@ The E2E tests run against local deployments of the parachain, relayer and ethere
   yarn global add polkadot-launch@2.1.0
   ```
 
+* direnv - https://direnv.net/
+
 ## Setup
 
 ### Install NPM dependencies
@@ -45,23 +47,30 @@ yarn install
 ### Polkadot
 
 * Clone the polkadot repository somewhere on your machine
-* Checkout commit `release-v0.9.12`.
+* Checkout tag `v0.9.22-rc4`.
 
 Example:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
-git checkout release-v0.9.12
+git fetch --tags
+git checkout v0.9.22-rc4
 cargo build --release
 ```
 
 ### Configure testnet
 
-Create an `.env` file, and set the `POLKADOT_BIN` variable to the location of the polkadot binary built in the previous step.
+Create an `.envrc` file in which to hold environment config, using [.envrc-example](.envrc-example) as a template. make sure to override the `POLKADOT_BIN` variable to the location of the polkadot binary built in the previous step.
 
 Example:
 ```
-POLKADOT_BIN=/path/to/polkadot/target/release/polkadot
+POLKADOT_BIN=/home/sally/code/polkadot/target/release/polkadot
+```
+
+Once the `.envrc` has been created, let `direnv` load it automatically:
+
+```bash
+direnv allow
 ```
 
 ## Launch the testnet

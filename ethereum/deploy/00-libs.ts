@@ -3,13 +3,7 @@ import {HardhatRuntimeEnvironment} from 'hardhat/types';
 module.exports = async ({deployments, getUnnamedAccounts}: HardhatRuntimeEnvironment) => {
   let [deployer] = await getUnnamedAccounts();
 
-  let codec = await deployments.deploy('ScaleCodec', {
-    from: deployer,
-    log: true,
-    autoMine: true,
-  });
-
-  await deployments.deploy('MerkleProof', {
+  await deployments.deploy('ScaleCodec', {
     from: deployer,
     log: true,
     autoMine: true,
@@ -21,13 +15,15 @@ module.exports = async ({deployments, getUnnamedAccounts}: HardhatRuntimeEnviron
     autoMine: true,
   });
 
-  await deployments.deploy('ParachainLightClient', {
+  await deployments.deploy('MerkleProof', {
     from: deployer,
-    libraries: {
-      ScaleCodec: codec.address
-    },
     log: true,
     autoMine: true,
   });
 
+  await deployments.deploy('MMRProofVerification', {
+    from: deployer,
+    log: true,
+    autoMine: true,
+  });
 };

@@ -1,46 +1,93 @@
-let { ApiPromise, WsProvider } = require('@polkadot/api');
+import { ApiPromise, WsProvider } from '@polkadot/api';
 
-const relaychainEndpoint = process.env.RELAYCHAIN_ENDPOINT;
+import { MerkleTree } from 'merkletreejs';
+
+import createKeccakHash from 'keccak';
+
+import { publicKeyConvert } from "secp256k1";
+
+import type { ValidatorSetId, BeefyNextAuthoritySet } from "@polkadot/types/interfaces/beefy/types";
+
+let endpoint = process.env.RELAYCHAIN_ENDPOINT;
 
 async function configureBeefy() {
-  const hre = require("hardhat");
+  let hre = require("hardhat");
 
-  const signer = await hre.ethers.getSigner()
+  let signer = await hre.ethers.getSigner()
 
-  const beefyDeployment = await hre.deployments.get("BeefyLightClient");
+  let beefyDeployment = await hre.deployments.get("BeefyClient");
+  let beefyLightClientContract = await new hre.ethers.Contract(beefyDeployment.address,
+    beefyDeployment.abi);
+  let beefyLightClient = await beefyLightClientContract.connect(signer)
 
-  const validatorRegistryDeployment = await hre.deployments.get("ValidatorRegistry");
-  const validatorRegistryContract = await new hre.ethers.Contract(validatorRegistryDeployment.address,
-    validatorRegistryDeployment.abi);
-
-  const validatorRegistry = await validatorRegistryContract.connect(signer)
-
-  const relayChainProvider = new WsProvider(relaychainEndpoint);
-  const relaychainAPI = await ApiPromise.create({
-    provider: relayChainProvider,
+  let api1 = await ApiPromise.create({
+    provider: new WsProvider(endpoint),
   })
 
-  const authorities = await relaychainAPI.query.mmrLeaf.beefyNextAuthorities()
-  const root = authorities.root.toString();
-  const numValidators = authorities.len.toString();
-  const id = authorities.id.toString();
+  console.log("waiting for header 29...")
 
+  await new Promise<void>(async (resolve) => {
+    const unsub = await api1.rpc.chain.subscribeFinalizedHeads((header) => {
+      console.log(`Header #${header.number}`);
+      if (header.number.toNumber() > 29) {
+        unsub();
+        resolve();
+      }
+    })
+  })
 
-  console.log("Configuring ValidatorRegistry with updated validators")
-  console.log({
-    root, numValidators, id
-  });
+  let blockHash = await api1.rpc.chain.getBlockHash(29)
 
-  await validatorRegistry.update(root, numValidators, id)
+  let api = await api1.at(blockHash);
 
-  console.log("Transferring ownership of ValidatorRegistry to BeefyLightClient")
-  console.log({
-    beefyAddress: beefyDeployment.address,
-  });
+  let validatorSetId = await api.query.beefy.validatorSetId<ValidatorSetId>();
+  let authorities: any = await api.query.beefy.authorities();
 
-  await validatorRegistry.transferOwnership(beefyDeployment.address)
+  let addrs = []
+  for (let i = 0; i < authorities.length; i++) {
+    let publicKey = publicKeyConvert(authorities[i], false).slice(1);
+    let publicKeyHashed = createKeccakHash('keccak256').update(Buffer.from(publicKey)).digest()
+    addrs.push(publicKeyHashed.slice(12));
+  }
+
+  let tree = createMerkleTree(addrs)
+
+  let nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<BeefyNextAuthoritySet>();
+
+  let validatorSets = {
+    current: {
+      id: validatorSetId.toNumber(),
+      root: tree.getHexRoot(),
+      length: addrs.length
+    },
+    next: {
+      id: nextAuthorities.id.toNumber(),
+      root: nextAuthorities.root.toHex(),
+      length: nextAuthorities.len.toNumber()
+    }
+  }
+
+  console.log("Configuring BeefyClient with initial BEEFY state");
+  console.log("Validator sets: ", validatorSets)
+
+  let tx = await beefyLightClient.initialize(29, validatorSets.current, validatorSets.next);
+
+  await tx.wait()
 
   return;
+}
+
+function hasher(data: Buffer): Buffer {
+  return createKeccakHash('keccak256').update(data).digest()
+}
+
+function createMerkleTree(leaves: Buffer[]) {
+  const leafHashes = leaves.map(value => hasher(value));
+  const tree = new MerkleTree(leafHashes, hasher, {
+    sortLeaves: false,
+    sortPairs: false
+  });
+  return tree;
 }
 
 // We recommend this pattern to be able to use async/await everywhere

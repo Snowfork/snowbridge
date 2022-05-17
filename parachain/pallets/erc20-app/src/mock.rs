@@ -11,11 +11,16 @@ use frame_system as system;
 use sp_core::{H160, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
-	MultiSignature,
+	traits::{
+		AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify,
+	},
+	DispatchError, MultiSignature,
 };
 
-use snowbridge_core::{assets::XcmReserveTransfer, ChannelId};
+use snowbridge_core::{
+	assets::{RemoteParachain, XcmReserveTransfer},
+	ChannelId,
+};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -69,6 +74,7 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 	type OnSetCode = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 impl pallet_randomness_collective_flip::Config for Test {}
@@ -95,6 +101,7 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: u64 = 1;
 	pub const MetadataDepositPerByte: u64 = 1;
+	pub const AssetAccountDeposit: u64 = 1;
 }
 
 impl pallet_assets::Config for Test {
@@ -104,6 +111,7 @@ impl pallet_assets::Config for Test {
 	type Currency = Balances;
 	type ForceOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type AssetDeposit = AssetDeposit;
+	type AssetAccountDeposit = AssetAccountDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type ApprovalDeposit = ApprovalDeposit;
@@ -113,8 +121,7 @@ impl pallet_assets::Config for Test {
 	type Extra = ();
 }
 
-impl snowbridge_asset_registry::Config for Test {
-}
+impl snowbridge_asset_registry::Config for Test {}
 
 impl snowbridge_dispatch::Config for Test {
 	type Origin = Origin;
@@ -151,7 +158,7 @@ parameter_types! {
 	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
 	pub const Erc20AppPalletId: PalletId = PalletId(*b"erc20app");
 	pub const MaxMessagePayloadSize: u64 = 256;
-	pub const MaxMessagesPerCommit: u64 = 3;
+	pub const MaxMessagesPerCommit: u32 = 3;
 }
 
 pub type Ether = ItemOf<Assets, EtherAssetId, AccountId>;
@@ -179,13 +186,16 @@ impl snowbridge_incentivized_channel::outbound::Config for Test {
 pub struct XcmAssetTransfererMock<T>(PhantomData<T>);
 impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 	fn reserve_transfer(
-		_origin: Origin,
 		_asset_id: u128,
-		_para_id: u32,
-		_dest: &AccountId,
+		_recipient: &AccountId,
 		_amount: u128,
+		destination: RemoteParachain,
 	) -> DispatchResult {
-		todo!()
+		match destination.para_id {
+			1001 => Ok(()),
+			2001 => Err(DispatchError::Other("Parachain 2001 not found.")),
+			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator."),
+		}
 	}
 }
 
@@ -216,9 +226,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	};
 	GenesisBuild::<Test>::assimilate_storage(&assets_config, &mut storage).unwrap();
 
-	let asset_registry_config = snowbridge_asset_registry::GenesisConfig {
-		next_asset_id: 1,
-	};
+	let asset_registry_config = snowbridge_asset_registry::GenesisConfig { next_asset_id: 1 };
 	GenesisBuild::<Test>::assimilate_storage(&asset_registry_config, &mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();

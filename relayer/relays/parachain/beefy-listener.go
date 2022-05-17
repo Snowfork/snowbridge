@@ -2,6 +2,7 @@ package parachain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
-	"github.com/snowfork/snowbridge/relayer/contracts/beefylightclient"
+	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 
@@ -25,7 +26,7 @@ import (
 type BeefyListener struct {
 	config              *SourceConfig
 	ethereumConn        *ethereum.Connection
-	beefyLightClient    *beefylightclient.Contract
+	beefyClientContract *beefyclient.BeefyClient
 	relaychainConn      *relaychain.Connection
 	parachainConnection *parachain.Connection
 	paraID              uint32
@@ -51,12 +52,12 @@ func NewBeefyListener(
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	// Set up light client bridge contract
-	address := common.HexToAddress(li.config.Contracts.BeefyLightClient)
-	beefyLightClientContract, err := beefylightclient.NewContract(address, li.ethereumConn.GetClient())
+	address := common.HexToAddress(li.config.Contracts.BeefyClient)
+	beefyClientContract, err := beefyclient.NewBeefyClient(address, li.ethereumConn.Client())
 	if err != nil {
 		return err
 	}
-	li.beefyLightClient = beefyLightClientContract
+	li.beefyClientContract = beefyClientContract
 
 	// Fetch ParaId
 	storageKeyForParaID, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "ParachainInfo", "ParachainId", nil, nil)
@@ -83,7 +84,6 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 		beefyBlockNumber, beefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
 		if err != nil {
-			log.WithError(err).Error("Failed to get latest relay chain block number and hash")
 			return err
 		}
 
@@ -94,8 +94,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(beefyBlockHash, paraID)
 		if err != nil {
-			log.WithError(err).Error("Parachain not registered")
-			return err
+			return fmt.Errorf("parachain %v not registered: %w", paraID, err)
 		}
 
 		log.WithFields(log.Fields{
@@ -111,8 +110,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 		paraBlockHash, err := li.parachainConnection.API().RPC.Chain.GetBlockHash(paraBlockNumber)
 		if err != nil {
-			log.WithError(err).Error("Failed to get latest finalized para block hash")
-			return err
+			return fmt.Errorf("fetch parachain block hash for block %v: %w", paraBlockNumber, err)
 		}
 
 		tasks, err := li.discoverCatchupTasks(
@@ -123,8 +121,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			paraBlockHash,
 		)
 		if err != nil {
-			log.WithError(err).Error("Failed to discover catchup tasks")
-			return err
+			return fmt.Errorf("discover catchup tasks: %w", err)
 		}
 
 		for _, task := range tasks {
@@ -141,7 +138,14 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 		}
 
 		err = li.subBeefyJustifications(ctx)
-		return err
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return err
+		}
+
+		return nil
 	})
 
 	return nil
@@ -150,98 +154,90 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 func (li *BeefyListener) subBeefyJustifications(ctx context.Context) error {
 	headers := make(chan *gethTypes.Header, 5)
 
-	sub, err := li.ethereumConn.GetClient().SubscribeNewHead(ctx, headers)
+	sub, err := li.ethereumConn.Client().SubscribeNewHead(ctx, headers)
 	if err != nil {
-		log.WithError(err).Error("Error creating ethereum header subscription")
-		return err
+		return fmt.Errorf("creating ethereum header subscription: %w", err)
 	}
 	defer sub.Unsubscribe()
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.WithField("reason", ctx.Err()).Info("Shutting down beefy listener")
-			return nil
+			return ctx.Err()
 		case err := <-sub.Err():
-			log.WithError(err).Error("Error with ethereum header subscription")
-			return err
+			return fmt.Errorf("header subscription: %w", err)
 		case gethheader := <-headers:
-			// Query LightClientBridge contract's ContractNewMMRRoot events
 			blockNumber := gethheader.Number.Uint64()
-			var beefyLightClientEvents []*beefylightclient.ContractNewMMRRoot
-
 			contractEvents, err := li.queryBeefyLightClientEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
-				log.WithError(err).Error("Failure fetching event logs")
-				return err
-			}
-			beefyLightClientEvents = append(beefyLightClientEvents, contractEvents...)
-
-			if len(beefyLightClientEvents) > 0 {
-				log.Info(fmt.Sprintf("Found %d BeefyLightClient ContractNewMMRRoot events on block %d", len(beefyLightClientEvents), blockNumber))
+				return fmt.Errorf("query NewMMRRoot event logs in block %v: %w", blockNumber, err)
 			}
 
-			err = li.processBeefyLightClientEvents(ctx, beefyLightClientEvents)
-			if err != nil {
-				return err
+			if len(contractEvents) > 0 {
+				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewMMRRoot events in block %d", len(contractEvents), blockNumber))
+				// Only process the last emitted event in the block (details in SNO-212)
+				err = li.processBeefyLightClientEvent(ctx, contractEvents[len(contractEvents)-1])
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 }
 
 // processLightClientEvents matches events to BEEFY commitment info by transaction hash
-func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, events []*beefylightclient.ContractNewMMRRoot) error {
-	for _, event := range events {
+func (li *BeefyListener) processBeefyLightClientEvent(ctx context.Context, event *beefyclient.BeefyClientNewMMRRoot) error {
+	beefyBlockNumber := event.BlockNumber
 
-		beefyBlockNumber := event.BlockNumber
+	log.WithFields(log.Fields{
+		"beefyBlockNumber":    beefyBlockNumber,
+		"ethereumBlockNumber": event.Raw.BlockNumber,
+		"ethereumTxHash":      event.Raw.TxHash.Hex(),
+	}).Info("Witnessed a new MMRRoot event")
 
-		log.WithFields(log.Fields{
-			"beefyBlockNumber":    beefyBlockNumber,
-			"ethereumBlockNumber": event.Raw.BlockNumber,
-			"ethereumTxHash":      event.Raw.TxHash.Hex(),
-		}).Info("Witnessed a new MMRRoot event")
+	beefyBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
+	if err != nil {
+		return fmt.Errorf("fetch block hash for block %v: %w", beefyBlockNumber, err)
+	}
 
-		log.WithField("beefyBlockNumber", beefyBlockNumber).Info("Getting hash for relay chain block")
-		beefyBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber))
+	paraHead, err := li.relaychainConn.FetchFinalizedParaHead(beefyBlockHash, li.paraID)
+	if err != nil {
+		return fmt.Errorf("parachain %v not registered: %w", li.paraID, err)
+	}
+
+	paraBlockNumber := uint64(paraHead.Number)
+	paraBlockHash, err := li.parachainConnection.API().RPC.Chain.GetBlockHash(paraBlockNumber)
+	if err != nil {
+		return fmt.Errorf("fetch parachain block hash for block %v: %w", paraBlockNumber, err)
+	}
+
+	tasks, err := li.discoverCatchupTasks(ctx, beefyBlockNumber, beefyBlockHash, paraBlockNumber, paraBlockHash)
+	if err != nil {
+		return err
+	}
+
+	for _, task := range tasks {
+
+		if task.ProofInput.PolkadotBlockNumber >= beefyBlockNumber {
+			log.WithFields(log.Fields{
+				"proof.PolkadotBlockNumber": task.ProofInput.PolkadotBlockNumber,
+				"beefyBlockNumber": beefyBlockNumber,
+			}).Info("Skipping task which is not bounded by latest beefyBlock")
+			return nil
+		}
+
+		task.ProofOutput, err = li.generateProof(ctx, task.ProofInput)
 		if err != nil {
-			log.WithError(err).Error("Failed to get block hash")
 			return err
 		}
-		log.WithField("beefyBlockHash", beefyBlockHash.Hex()).Info("Got relay chain blockhash")
-
-		paraHead, err := li.relaychainConn.FetchFinalizedParaHead(beefyBlockHash, li.paraID)
-		if err != nil {
-			log.WithError(err).Error("Failed to get finalized para head from relay chain")
-			return err
-		}
-
-		paraBlockNumber := uint64(paraHead.Number)
-
-		paraBlockHash, err := li.parachainConnection.API().RPC.Chain.GetBlockHash(paraBlockNumber)
-		if err != nil {
-			log.WithError(err).Error("Failed to get latest finalized para block hash")
-			return err
-		}
-
-		tasks, err := li.discoverCatchupTasks(ctx, beefyBlockNumber, beefyBlockHash, paraBlockNumber, paraBlockHash)
-		if err != nil {
-			log.WithError(err).Error("Failed to discover catchup tasks")
-			return err
-		}
-
-		for _, task := range tasks {
-			task.ProofOutput, err = li.generateProof(ctx, task.ProofInput)
-			if err != nil {
-				return err
-			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case li.tasks <- task:
-				log.Info("Beefy Listener emitted new task")
-			}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case li.tasks <- task:
+			log.Info("Beefy Listener emitted new task")
 		}
 	}
+
 	return nil
 }
 
@@ -249,11 +245,11 @@ func (li *BeefyListener) processBeefyLightClientEvents(ctx context.Context, even
 func (li *BeefyListener) queryBeefyLightClientEvents(
 	ctx context.Context, start uint64,
 	end *uint64,
-) ([]*beefylightclient.ContractNewMMRRoot, error) {
-	var events []*beefylightclient.ContractNewMMRRoot
+) ([]*beefyclient.BeefyClientNewMMRRoot, error) {
+	var events []*beefyclient.BeefyClientNewMMRRoot
 	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
 
-	iter, err := li.beefyLightClient.FilterNewMMRRoot(&filterOps)
+	iter, err := li.beefyClientContract.FilterNewMMRRoot(&filterOps)
 	if err != nil {
 		return nil, err
 	}
@@ -276,19 +272,17 @@ func (li *BeefyListener) queryBeefyLightClientEvents(
 
 // Fetch the latest verified beefy block number and hash from Ethereum
 func (li *BeefyListener) fetchLatestBeefyBlock(ctx context.Context) (uint64, types.Hash, error) {
-	number, err := li.beefyLightClient.LatestBeefyBlock(&bind.CallOpts{
+	number, err := li.beefyClientContract.LatestBeefyBlock(&bind.CallOpts{
 		Pending: false,
 		Context: ctx,
 	})
 	if err != nil {
-		log.WithError(err).Error("Failed to get latest verified beefy block number from ethereum")
-		return 0, types.Hash{}, err
+		return 0, types.Hash{}, fmt.Errorf("fetch latest beefy block from light client: %w", err)
 	}
 
 	hash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(number)
 	if err != nil {
-		log.WithError(err).Error("Failed to get latest relay chain block hash from relay chain")
-		return 0, types.Hash{}, err
+		return 0, types.Hash{}, fmt.Errorf("fetch block hash from relay chain: %w", err)
 	}
 
 	return number, hash, nil
@@ -304,7 +298,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 ) ([]*Task, error) {
 	basicContract, err := basic.NewBasicInboundChannel(common.HexToAddress(
 		li.config.Contracts.BasicInboundChannel),
-		li.ethereumConn.GetClient(),
+		li.ethereumConn.Client(),
 	)
 	if err != nil {
 		return nil, err
@@ -312,7 +306,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 
 	incentivizedContract, err := incentivized.NewIncentivizedInboundChannel(common.HexToAddress(
 		li.config.Contracts.IncentivizedInboundChannel),
-		li.ethereumConn.GetClient(),
+		li.ethereumConn.Client(),
 	)
 	if err != nil {
 		return nil, err
@@ -341,7 +335,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 
 	paraBasicNonceKey, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "BasicOutboundChannel", "Nonce", nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create storage key: %w", err)
 	}
 	var paraBasicNonce types.U64
 	ok, err := li.parachainConnection.API().RPC.State.GetStorage(paraBasicNonceKey, &paraBasicNonce, paraHash)
@@ -358,8 +352,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 
 	paraIncentivizedNonceKey, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "IncentivizedOutboundChannel", "Nonce", nil, nil)
 	if err != nil {
-		log.Error(err)
-		return nil, err
+		return nil, fmt.Errorf("create storage key: %w", err)
 	}
 	var paraIncentivizedNonce types.U64
 	ok, err = li.parachainConnection.API().RPC.State.GetStorage(paraIncentivizedNonceKey, &paraIncentivizedNonce, paraHash)
@@ -440,8 +433,7 @@ func (li *BeefyListener) gatherProofInputs(
 
 		var snowbridgeHeader types.Header
 		if err := types.DecodeFromBytes(paraHeads[li.paraID].Data, &snowbridgeHeader); err != nil {
-			log.WithError(err).Error("Failed to decode Header")
-			return err
+			return fmt.Errorf("decode parachain header: %w", err)
 		}
 
 		snowbridgeBlockNumber := uint64(snowbridgeHeader.Number)
@@ -471,28 +463,21 @@ func (li *BeefyListener) gatherProofInputs(
 func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (*ProofOutput, error) {
 	latestBeefyBlockNumber, latestBeefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
 	if err != nil {
-		log.WithError(err).Error("Failed to get latest relay chain block number and hash")
-		return nil, err
+		return nil, fmt.Errorf("fetch latest beefy block: %w", err)
 	}
 
-	// The mmr_generateProof(leafIndex, AtBlock) rpc will fail if
-	// the following is true. So we'll need to self-terminate and try again.
-	if input.PolkadotBlockNumber+1 >= latestBeefyBlockNumber {
-		return nil, fmt.Errorf("Not able to create a valid proof this round")
-	}
+	log.WithFields(log.Fields{
+		"beefyBlock": latestBeefyBlockNumber,
+		"leafIndex": input.PolkadotBlockNumber,
+	}).Info("Generating MMR proof")
 
-	log.WithField("BeefyBlock", latestBeefyBlockNumber).Info("Beefy BlockNumber")
-
-	// Parachain merkle roots are created 1 block later than the actual parachain headers,
-	// so we increment input.PolkadotBlockNumber by 1
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
-		input.PolkadotBlockNumber+1,
+		input.PolkadotBlockNumber,
 		latestBeefyBlockHash,
 		li.config.BeefyActivationBlock,
 	)
 	if err != nil {
-		log.WithError(err).Error("Failed to generate mmr proof")
-		return nil, err
+		return nil, fmt.Errorf("generate MMR leaf proof: %w", err)
 	}
 
 	simplifiedProof, err := merkle.ConvertToSimplifiedMMRProof(
@@ -503,14 +488,12 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 		mmrProof.Proof.Items,
 	)
 	if err != nil {
-		log.WithError(err).Error("Failed to simplify mmr proof")
-		return nil, err
+		return nil, fmt.Errorf("simplify MMR leaf proof: %w", err)
 	}
 
 	mmrRootHashKey, err := types.CreateStorageKey(li.relaychainConn.Metadata(), "Mmr", "RootHash", nil, nil)
 	if err != nil {
-		log.Error(err)
-		return nil, err
+		return nil, fmt.Errorf("create storage key: %w", err)
 	}
 	var mmrRootHash types.Hash
 	ok, err := li.relaychainConn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, latestBeefyBlockHash)
@@ -524,14 +507,14 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 
 	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, li.paraID)
 	if err != nil {
-		log.WithError(err).Error("Failed to create parachain header proof")
-		return nil, err
+		return nil, fmt.Errorf("create parachain header proof: %w", err)
 	}
 
 	if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
-		err = fmt.Errorf("MMR parachain merkle root does not match calculated parachain merkle root - calculated: %s, mmr: %s", merkleProofData.Root.String(), mmrProof.Leaf.ParachainHeads.Hex())
-		log.WithError(err).Error("Failed to create parachain merkle root")
-		return nil, err
+		return nil, fmt.Errorf("MMR parachain merkle root does not match calculated parachain merkle root (mmr: %s, computed: %s)",
+			mmrProof.Leaf.ParachainHeads.Hex(),
+			merkleProofData.Root.String(),
+		)
 	}
 
 	log.Debug("Created all parachain merkle proof data")
@@ -569,20 +552,16 @@ func (li *BeefyListener) scanForCommitments(
 	for (!scanBasicChannelDone || !scanIncentivizedChannelDone) && currentBlockNumber > 0 {
 		log.WithFields(log.Fields{
 			"blockNumber": currentBlockNumber,
-		}).Debug("Checking header...")
+		}).Debug("Checking header")
 
 		blockHash, err := li.parachainConnection.API().RPC.Chain.GetBlockHash(currentBlockNumber)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"blockNumber": currentBlockNumber,
-			}).WithError(err).Error("Failed to fetch blockhash")
-			return nil, err
+			return nil, fmt.Errorf("fetch blockhash for block %v: %w", currentBlockNumber, err)
 		}
 
 		header, err := li.parachainConnection.API().RPC.Chain.GetHeader(blockHash)
 		if err != nil {
-			log.WithError(err).Error("Failed to fetch header")
-			return nil, err
+			return nil, fmt.Errorf("fetch header for %v: %w", blockHash.Hex(), err)
 		}
 
 		digestItems, err := parachain.ExtractAuxiliaryDigestItems(header.Digest)
@@ -598,52 +577,52 @@ func (li *BeefyListener) scanForCommitments(
 			}
 			channelID := digestItem.AsCommitment.ChannelID
 			if channelID.IsBasic && !scanBasicChannelDone {
-				messages, err := li.parachainConnection.ReadBasicOutboundMessages(digestItem)
+				bundle, err := li.parachainConnection.ReadBasicOutboundMessageBundle(digestItem)
 				if err != nil {
 					return nil, err
 				}
 
-				if len(messages) == 0 {
-					return nil, fmt.Errorf("Assert len(messages) > 0")
+				if len(bundle.Messages) == 0 {
+					return nil, fmt.Errorf("bundle has no messages")
 				}
 
 				// This case will be hit if basicNonceToFind has not yet
 				// been committed yet. Channels emit commitments every N
 				// blocks.
-				if messages[0].Nonce < basicNonceToFind {
+				if bundle.Nonce < basicNonceToFind {
 					scanBasicChannelDone = true
 					log.Debug("Halting scan. Messages not committed yet on basic channel")
 					// Collect these commitments
-				} else if messages[0].Nonce > basicNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
+				} else if bundle.Nonce > basicNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
 					// collect this commitment and terminate scan
-				} else if messages[0].Nonce == basicNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
+				} else if bundle.Nonce == basicNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
 					scanBasicChannelDone = true
 				}
 			}
 			if channelID.IsIncentivized && !scanIncentivizedChannelDone {
-				messages, err := li.parachainConnection.ReadIncentivizedOutboundMessages(digestItem)
+				bundle, err := li.parachainConnection.ReadIncentivizedOutboundMessageBundle(digestItem)
 				if err != nil {
 					return nil, err
 				}
 
-				if len(messages) == 0 {
-					return nil, fmt.Errorf("Assert len(messages) > 0")
+				if len(bundle.Messages) == 0 {
+					return nil, fmt.Errorf("bundle has no messages")
 				}
 
 				// This case will be hit if basicNonceToFind has not yet
 				// been committed yet. Channels emit commitments every N
 				// blocks
-				if messages[0].Nonce < incentivizedNonceToFind {
+				if bundle.Nonce < incentivizedNonceToFind {
 					scanIncentivizedChannelDone = true
 					continue
 					// Collect these commitments
-				} else if messages[0].Nonce > incentivizedNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
+				} else if bundle.Nonce > incentivizedNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
 					// collect this commitment and terminate scan
-				} else if messages[0].Nonce == incentivizedNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, messages)
+				} else if bundle.Nonce == incentivizedNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
 					scanIncentivizedChannelDone = true
 				}
 			}

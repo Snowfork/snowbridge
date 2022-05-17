@@ -5,6 +5,7 @@ package parachain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 
@@ -112,8 +113,7 @@ func (co *Connection) GetDataForDigestItem(digestItem *AuxiliaryDigestItem) (typ
 
 	data, err := co.API().RPC.Offchain.LocalStorageGet(offchain.Persistent, storageKey)
 	if err != nil {
-		log.WithError(err).Error("Failed to read commitment from offchain storage")
-		return nil, err
+		return nil, fmt.Errorf("read commitment from offchain storage: %w", err)
 	}
 
 	if data != nil {
@@ -121,45 +121,42 @@ func (co *Connection) GetDataForDigestItem(digestItem *AuxiliaryDigestItem) (typ
 			"commitmentSizeBytes": len(*data),
 		}).Debug("Retrieved commitment from offchain storage")
 	} else {
-		log.WithError(err).Error("Commitment not found in offchain storage")
-		return nil, err
+		return nil, fmt.Errorf("commitment not found")
 	}
 
 	return *data, nil
 }
 
-func (co *Connection) ReadBasicOutboundMessages(digestItem AuxiliaryDigestItem) (
-	BasicOutboundChannelMessages, error) {
+func (co *Connection) ReadBasicOutboundMessageBundle(digestItem AuxiliaryDigestItem) (
+	BasicOutboundChannelMessageBundle, error) {
 	data, err := co.GetDataForDigestItem(&digestItem)
 	if err != nil {
-		return nil, err
+		return BasicOutboundChannelMessageBundle{}, fmt.Errorf("read message bundle: %w", err)
 	}
 
-	var messages []BasicOutboundChannelMessage
+	var bundle BasicOutboundChannelMessageBundle
 
-	err = types.DecodeFromBytes(data, &messages)
+	err = types.DecodeFromBytes(data, &bundle)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, err
+		return BasicOutboundChannelMessageBundle{}, fmt.Errorf("decode message bundle: %w", err)
 	}
 
-	return messages, nil
+	return bundle, nil
 }
 
-func (co *Connection) ReadIncentivizedOutboundMessages(digestItem AuxiliaryDigestItem) (
-	IncentivizedOutboundChannelMessages, error) {
+func (co *Connection) ReadIncentivizedOutboundMessageBundle(digestItem AuxiliaryDigestItem) (
+	IncentivizedOutboundChannelMessageBundle, error) {
 	data, err := co.GetDataForDigestItem(&digestItem)
 	if err != nil {
-		return nil, err
+		return IncentivizedOutboundChannelMessageBundle{}, fmt.Errorf("read message bundle: %w", err)
 	}
 
-	var messages []IncentivizedOutboundChannelMessage
+	var bundle IncentivizedOutboundChannelMessageBundle
 
-	err = types.DecodeFromBytes(data, &messages)
+	err = types.DecodeFromBytes(data, &bundle)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, err
+		return IncentivizedOutboundChannelMessageBundle{}, fmt.Errorf("decode message bundle: %w", err)
 	}
 
-	return messages, nil
+	return bundle, nil
 }

@@ -8,6 +8,7 @@
         "wsPort": 9944,
         "port": 30444,
         "flags": [
+          "--beefy",
           "--enable-offchain-indexing=true"
         ]
       },
@@ -16,6 +17,7 @@
         "wsPort": 9955,
         "port": 30555,
         "flags": [
+          "--beefy",
           "--enable-offchain-indexing=true"
         ]
       },
@@ -24,10 +26,16 @@
         "wsPort": 9966,
         "port": 30666,
         "flags": [
+          "--beefy",
           "--enable-offchain-indexing=true"
         ]
       }
-    ]
+    ],
+    "genesis": {
+      "runtime": {
+        "session_length_in_blocks": 10
+      }
+    }
   },
   "parachains": [
     {
@@ -111,6 +119,19 @@
     }
   ],
   "simpleParachains": [],
-  "hrmpChannels": [],
+  "hrmpChannels": [
+    {
+      "sender": 1000,
+      "recipient": 1001,
+      "maxCapacity": 8,
+      "maxMessageSize": 512
+    },
+    {
+      "sender": 1001,
+      "recipient": 1000,
+      "maxCapacity": 8,
+      "maxMessageSize": 512
+    }
+  ],
   "types": {}
 }

@@ -11,10 +11,10 @@ use frame_support::traits::fungible::Mutate;
 use crate::{Address, Call, Config as EtherAppConfig, Pallet as EtherApp};
 use snowbridge_core::ChannelId;
 
+use frame_support::traits::fungible::Inspect;
 use pallet_assets::Config as AssetsConfig;
 use snowbridge_basic_channel::outbound::{Config as BasicOutboundChannelConfig, Principal};
 use snowbridge_incentivized_channel::outbound::{Config as IncentivizedOutboundChannelConfig, Fee};
-use frame_support::traits::fungible::Inspect;
 
 pub struct Pallet<T: Config>(EtherApp<T>);
 
@@ -30,7 +30,7 @@ benchmarks! {
 		let amount = 500;
 
 		// set principal for basic channel
-		Principal::<T>::set(caller.clone());
+		Principal::<T>::set(Some(caller.clone()));
 
 		T::Asset::mint_into(&caller, amount)?;
 	}: burn(RawOrigin::Signed(caller.clone()), ChannelId::Basic, recipient, amount)
@@ -70,7 +70,7 @@ benchmarks! {
 		let sender = H160::zero();
 		let amount = 500;
 
-		let call = Call::<T>::mint { sender: sender, recipient: recipient_lookup, amount: amount, para_id: None };
+		let call = Call::<T>::mint { sender: sender, recipient: recipient_lookup, amount: amount, destination: None  };
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {
 		assert_eq!(T::Asset::balance(&recipient), amount);

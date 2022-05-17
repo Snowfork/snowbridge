@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 import {HardhatRuntimeEnvironment} from "hardhat/types";
 
 module.exports = async ({
@@ -33,7 +31,6 @@ module.exports = async ({
   let dotApp = await deployments.get("DOTApp");
   let ethApp = await deployments.get("ETHApp");
   let erc20App = await deployments.get("ERC20App");
-  let erc721App = await deployments.get("ERC721App");
 
   console.log("Configuring BasicOutboundChannel")
   await deployments.execute(
@@ -45,7 +42,7 @@ module.exports = async ({
     "initialize",
     deployer,
     principal,
-    [dotApp.address, ethApp.address, erc20App.address, erc721App.address],
+    [dotApp.address, ethApp.address, erc20App.address],
   );
 
   console.log("Configuring IncentivizedOutboundChannel")
@@ -58,7 +55,7 @@ module.exports = async ({
     "initialize",
     deployer,
     dotApp.address,
-    [dotApp.address, ethApp.address, erc20App.address, erc721App.address]
+    [dotApp.address, ethApp.address, erc20App.address]
   );
   await deployments.execute(
     "IncentivizedOutboundChannel",

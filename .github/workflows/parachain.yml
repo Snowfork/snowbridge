@@ -35,13 +35,13 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2021-07-01
+          toolchain: stable-2022-01-20
           target: wasm32-unknown-unknown
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
-          toolchain: nightly-2021-07-01
+          toolchain: stable-2022-01-20
           args: >-
             --manifest-path parachain/Cargo.toml
             --workspace
@@ -71,7 +71,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2021-07-01
+          toolchain: stable-2022-01-20
           target: wasm32-unknown-unknown
       - uses: actions-rs/install@v0.1.2
         with:
@@ -93,4 +93,4 @@ jobs:
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
-          toolchain: nightly-2021-07-01
+          toolchain: stable-2022-01-20

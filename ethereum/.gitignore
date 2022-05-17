@@ -1,4 +1,4 @@
-.env
+.envrc
 build/
 node_modules/
 ganache.log

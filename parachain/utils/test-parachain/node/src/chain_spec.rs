@@ -9,6 +9,9 @@ use test_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<test_runtime::GenesisConfig, Extensions>;
 
+/// The default XCM version to set in genesis config.
+const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
+
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
 	TPublic::Pair::from_string(&format!("//{}", seed), None)
@@ -104,9 +107,10 @@ pub fn development_config() -> ChainSpec {
 		None,
 		None,
 		None,
+		None,
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
+			para_id: 1001,
 		},
 	)
 }
@@ -151,7 +155,7 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				1000.into(),
+				1001.into(),
 			)
 		},
 		// Bootnodes
@@ -160,12 +164,14 @@ pub fn local_testnet_config() -> ChainSpec {
 		None,
 		// Protocol ID
 		Some("template-local"),
+		// Fork Id
+		None,
 		// Properties
 		Some(properties),
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
+			para_id: 1001,
 		},
 	)
 }
@@ -180,10 +186,20 @@ fn testnet_genesis(
 			code: test_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
-			changes_trie_config: Default::default(),
 		},
 		balances: test_runtime::BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
+		},
+		sudo: test_runtime::SudoConfig {
+			key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+		},
+		assets: test_runtime::AssetsConfig {
+			assets: vec![
+				(0, get_account_id_from_seed::<sr25519::Public>("Eve"), true, 1),
+				(1, get_account_id_from_seed::<sr25519::Public>("Eve"), true, 1),
+			],
+			metadata: vec![(0, "SnowETH".into(), vec![], 18), (1, "TestToken".into(), vec![], 18)],
+			accounts: vec![],
 		},
 		parachain_info: test_runtime::ParachainInfoConfig { parachain_id: id },
 		collator_selection: test_runtime::CollatorSelectionConfig {
@@ -208,5 +224,6 @@ fn testnet_genesis(
 		aura: Default::default(),
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
+		polkadot_xcm: test_runtime::PolkadotXcmConfig { safe_xcm_version: Some(SAFE_XCM_VERSION) },
 	}
 }

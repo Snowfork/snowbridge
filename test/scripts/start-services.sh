@@ -61,17 +61,20 @@ start_polkadot_launch()
     fi
 
     local parachain_bin="$parachain_dir/target/release/snowbridge"
-    local test_collator_bin="$parachain_dir/target/release/snowbridge-test-collator"
+    local test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-collator"
 
-    echo "Building parachain node"
-    cargo build --workspace \
+    echo "Building snowbridge parachain"
+    cargo build \
         --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
-        --features with-local-runtime
+        --features snowbase-native,rococo-native
+
+    echo "Building test parachain"
+    cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release
 
     echo "Generating chain specification"
-    "$parachain_bin" build-spec --disable-default-bootnode > "$output_dir/spec.json"
+    "$parachain_bin" build-spec --chain snowbase --disable-default-bootnode > "$output_dir/spec.json"
 
     echo "Updating chain specification"
     curl http://localhost:8545 \
@@ -80,7 +83,7 @@ start_polkadot_launch()
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
         | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
 
-    cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" | sponge "$output_dir/spec.json"
+    cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" "$output_dir/contracts.json" | sponge "$output_dir/spec.json"
 
     # TODO: add back
     # if [[ -n "${TEST_MALICIOUS_APP+x}" ]]; then
@@ -138,9 +141,9 @@ start_relayer()
 
     # Configure beefy relay
     jq \
-        --arg k1 "$(address_for BeefyLightClient)" \
+        --arg k1 "$(address_for BeefyClient)" \
     '
-      .sink.contracts.BeefyLightClient = $k1
+      .sink.contracts.BeefyClient = $k1
     ' \
     config/beefy-relay.json > $output_dir/beefy-relay.json
 
@@ -148,11 +151,11 @@ start_relayer()
     jq \
         --arg k1 "$(address_for BasicInboundChannel)" \
         --arg k2 "$(address_for IncentivizedInboundChannel)" \
-        --arg k3 "$(address_for BeefyLightClient)" \
+        --arg k3 "$(address_for BeefyClient)" \
     '
       .source.contracts.BasicInboundChannel = $k1
     | .source.contracts.IncentivizedInboundChannel = $k2
-    | .source.contracts.BeefyLightClient = $k3
+    | .source.contracts.BeefyClient = $k3
     | .sink.contracts.BasicInboundChannel = $k1
     | .sink.contracts.IncentivizedInboundChannel = $k2
     ' \
@@ -220,10 +223,6 @@ cleanup() {
 }
 
 trap cleanup SIGINT SIGTERM EXIT
-
-if [[ -f ".env" ]]; then
-    export $(<.env)
-fi
 
 rm -rf "$output_dir"
 mkdir "$output_dir"

@@ -1,8 +1,6 @@
 const {
-  deployBeefyLightClient, printBitfield, printTxPromiseGas
+  deployBeefyClient, printBitfield, createRandomPositions
 } = require("./helpers");
-
-const { createRandomPositions } = require("./beefy-helpers");
 
 require("chai")
   .use(require("chai-as-promised"))
@@ -13,15 +11,14 @@ const { expect } = require("chai");
 describe("Bitfield", function () {
 
   beforeEach(async function () {
-    this.beefyLightClient = await deployBeefyLightClient(null,
-      1);
+    this.beefyClient = await deployBeefyClient();
   });
 
   it("creates initial bitfield correctly in simple case", async function () {
     const positions = [0, 5, 8]
     const expected = '100100001'
     const n = 9
-    const bitfield = await this.beefyLightClient.createInitialBitfield(positions, n)
+    const bitfield = await this.beefyClient.createInitialBitfield(positions, n)
 
     expect(printBitfield(bitfield)).to.equal(expected)
 
@@ -30,7 +27,7 @@ describe("Bitfield", function () {
   it("creates initial bitfield correctly with bigger example", async function () {
     const positions = await createRandomPositions(140, 200)
 
-    const bitfield = await this.beefyLightClient.createInitialBitfield(
+    const bitfield = await this.beefyClient.createInitialBitfield(
       positions, 200
     );
 

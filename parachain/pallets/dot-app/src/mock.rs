@@ -73,6 +73,7 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 	type OnSetCode = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -101,6 +102,7 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: u64 = 1;
 	pub const MetadataDepositPerByte: u64 = 1;
+	pub const AssetAccountDeposit: u64 = 1;
 }
 
 impl pallet_assets::Config for Test {
@@ -110,6 +112,7 @@ impl pallet_assets::Config for Test {
 	type Currency = Balances;
 	type ForceOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type AssetDeposit = AssetDeposit;
+	type AssetAccountDeposit = AssetAccountDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type ApprovalDeposit = ApprovalDeposit;
@@ -123,7 +126,7 @@ parameter_types! {
 	pub const EtherAssetId: u128 = 0;
 	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
 	pub const MaxMessagePayloadSize: u64 = 256;
-	pub const MaxMessagesPerCommit: u64 = 3;
+	pub const MaxMessagesPerCommit: u32 = 3;
 }
 
 pub type Ether = ItemOf<Assets, EtherAssetId, AccountId>;
@@ -178,7 +181,6 @@ where
 		}
 	}
 }
-
 
 parameter_types! {
 	pub const DotPalletId: PalletId = PalletId(*b"s/dotapp");

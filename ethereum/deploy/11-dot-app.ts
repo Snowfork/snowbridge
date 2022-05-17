@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 import { singletons } from "@openzeppelin/test-helpers";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";

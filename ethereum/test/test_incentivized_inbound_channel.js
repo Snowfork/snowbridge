@@ -8,13 +8,15 @@ require("chai")
 const IncentivizedInboundChannel = artifacts.require("IncentivizedInboundChannel");
 const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
-const { createBeefyValidatorFixture, runBeefyLightClientFlow } = require("./beefy-helpers");
+const ParachainClient = artifacts.require("ParachainClient");
 
 const MockRewardSource = artifacts.require("MockRewardSource");
 const {
-  deployBeefyLightClient, printTxPromiseGas
+  deployBeefyClient, printTxPromiseGas, createValidatorFixture, runBeefyClientFlow,
 } = require("./helpers");
-const fixture = require('./fixtures/full-flow-incentivized.json');
+
+const fixture = require('./fixtures/beefy-relay-incentivized.json')
+const submitInput = require('./fixtures/parachain-relay-incentivized.json')
 
 describe("IncentivizedInboundChannel", function () {
   let owner, userOne;
@@ -22,27 +24,29 @@ describe("IncentivizedInboundChannel", function () {
 
   before(async function () {
     [owner, userOne] = await web3.eth.getAccounts();
+    const numberOfSignatures = 8;
+    const numberOfValidators = 24;
+    const validatorFixture = await createValidatorFixture(fixture.params.commitment.validatorSetID, numberOfValidators)
+    this.beefyClient = await deployBeefyClient(
+      validatorFixture.validatorSetID,
+      validatorFixture.validatorSetRoot,
+      validatorFixture.validatorSetLength,
+    );
+
     const merkleProof = await MerkleProof.new();
     const scaleCodec = await ScaleCodec.new();
-    await IncentivizedInboundChannel.link(merkleProof);
-    await IncentivizedInboundChannel.link(scaleCodec);
+    await ParachainClient.link(merkleProof);
+    await ParachainClient.link(scaleCodec);
+    this.parachainClient = await ParachainClient.new(this.beefyClient.address, 1000);
 
-    const totalNumberOfValidatorSigs = 100;
-    const beefyFixture = await createBeefyValidatorFixture(
-      totalNumberOfValidatorSigs
-    )
-
-    this.beefyLightClient = await deployBeefyLightClient(beefyFixture.root,
-      totalNumberOfValidatorSigs);
-
-    await runBeefyLightClientFlow(fixture, this.beefyLightClient, beefyFixture, totalNumberOfValidatorSigs, totalNumberOfValidatorSigs)
+    await runBeefyClientFlow(fixture, this.beefyClient, validatorFixture, numberOfSignatures, numberOfValidators)
   });
 
   describe("submit", function () {
     beforeEach(async function () {
       const accounts = await web3.eth.getAccounts();
       const rewardSource = await MockRewardSource.new();
-      this.channel = await IncentivizedInboundChannel.new(this.beefyLightClient.address,
+      this.channel = await IncentivizedInboundChannel.new(this.parachainClient.address,
         { from: accounts[0] }
       );
       await this.channel.initialize(accounts[0], rewardSource.address);
@@ -53,9 +57,9 @@ describe("IncentivizedInboundChannel", function () {
 
       // Send commitment
       const tx = this.channel.submit(
-        ...Object.values(fixture.incentivizedSubmitInput),
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.be.fulfilled
-      printTxPromiseGas(tx)
       const { receipt } = await tx;
 
       const nonceAfterSubmit = BigNumber(await this.channel.nonce());
@@ -68,19 +72,20 @@ describe("IncentivizedInboundChannel", function () {
         receipt.rawLogs[0].data,
         receipt.rawLogs[0].topics
       );
-      event.nonce.eq(ethers.BigNumber.from(1)).should.be.true;
-      event.result.should.be.true;
+      event.id.eq(ethers.BigNumber.from(0)).should.be.true;
     });
 
     it("should refuse to replay commitments", async function () {
       // Submit messages
       await this.channel.submit(
-        ...Object.values(fixture.incentivizedSubmitInput),
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.be.fulfilled;
 
       // Submit messages again - should revert
       await this.channel.submit(
-        ...Object.values(fixture.incentivizedSubmitInput),
+        submitInput.params.bundle,
+        submitInput.params.proof,
       ).should.not.be.fulfilled;
     });
 
@@ -90,7 +95,7 @@ describe("IncentivizedInboundChannel", function () {
     beforeEach(async function () {
       const rewardSource = await MockRewardSource.new();
       this.channel = await IncentivizedInboundChannel.new(
-        this.beefyLightClient.address,
+        this.parachainClient.address,
         { from: owner }
       );
       await this.channel.initialize(owner, rewardSource.address);
@@ -98,13 +103,13 @@ describe("IncentivizedInboundChannel", function () {
       this.newBeefy = ethers.Wallet.createRandom().address;
       this.iface = new ethers.utils.Interface(abi);
     });
-    
+
     it("should revert when called by non-admin", async function () {
       await this.channel.upgrade(
         this.newBeefy,
         {from: userOne}).should.be.rejectedWith(/AccessControl/);
     });
-    
+
     it("should revert once BEEFY_UPGRADE_ROLE has been renounced", async function () {
       await this.channel.renounceRole(web3.utils.soliditySha3("BEEFY_UPGRADE_ROLE"), owner, {from: owner});
       await this.channel.upgrade(
@@ -114,12 +119,12 @@ describe("IncentivizedInboundChannel", function () {
     })
 
     it("should succeed when called by BEEFY_UPGRADE_ROLE", async function () {
-      const oldBeefy = await this.channel.beefyLightClient();
+      const oldBeefy = await this.channel.parachainClient();
       await this.channel.upgrade(
         this.newBeefy,
         {from: owner}
       );
-      const newBeefy = await this.channel.beefyLightClient();
+      const newBeefy = await this.channel.parachainClient();
       expect(newBeefy !== oldBeefy).to.be.true;
       expect(newBeefy === this.newBeefy).to.be.true;
     });

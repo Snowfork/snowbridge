@@ -4,7 +4,7 @@ use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::DispatchError,
 	parameter_types,
-	traits::{Everything, GenesisBuild},
+	traits::{Everything, GenesisBuild, OnInitialize},
 };
 use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring as Keyring;
@@ -62,11 +62,12 @@ impl frame_system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 	type OnSetCode = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
 	pub const MaxMessagePayloadSize: u64 = 128;
-	pub const MaxMessagesPerCommit: u64 = 5;
+	pub const MaxMessagesPerCommit: u32 = 5;
 }
 
 impl basic_outbound_channel::Config for Test {
@@ -83,13 +84,23 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	let config: basic_outbound_channel::GenesisConfig<Test> =
-		basic_outbound_channel::GenesisConfig { principal: Keyring::Bob.into(), interval: 1u64 };
+		basic_outbound_channel::GenesisConfig {
+			principal: Some(Keyring::Bob.into()),
+			interval: 1u64,
+		};
 	config.assimilate_storage(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
 
 	ext.execute_with(|| System::set_block_number(1));
 	ext
+}
+
+fn run_to_block(n: u64) {
+	while System::block_number() < n {
+			System::set_block_number(System::block_number() + 1);
+			BasicOutboundChannel::on_initialize(System::block_number());
+	}
 }
 
 #[test]
@@ -99,10 +110,11 @@ fn test_submit() {
 		let who: AccountId = Keyring::Bob.into();
 
 		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-		assert_eq!(<Nonce<Test>>::get(), 1);
+		assert_eq!(<NextId<Test>>::get(), 1);
+		assert_eq!(<Nonce<Test>>::get(), 0);
 
-		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-		assert_eq!(<Nonce<Test>>::get(), 2);
+		run_to_block(2);
+		assert_eq!(<Nonce<Test>>::get(), 1);
 	});
 }
 
@@ -140,20 +152,6 @@ fn test_submit_exceeds_payload_limit() {
 }
 
 #[test]
-fn test_submit_fails_on_nonce_overflow() {
-	new_tester().execute_with(|| {
-		let target = H160::zero();
-		let who: AccountId = Keyring::Bob.into();
-
-		<Nonce<Test>>::set(u64::MAX);
-		assert_noop!(
-			BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
-			Error::<Test>::Overflow,
-		);
-	});
-}
-
-#[test]
 fn test_submit_fails_not_authorized() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
@@ -184,6 +182,6 @@ fn test_set_principal() {
 		let alice: AccountId = Keyring::Alice.into();
 
 		assert_ok!(BasicOutboundChannel::set_principal(Origin::root(), alice.clone()));
-		assert_eq!(<Principal<Test>>::get(), alice);
+		assert_eq!(<Principal<Test>>::get(), Some(alice));
 	});
 }

@@ -3,7 +3,7 @@
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::traits::{EnsureOrigin, UnfilteredDispatchable};
 use frame_system::RawOrigin;
-use sp_core::{H160};
+use sp_core::H160;
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
@@ -14,8 +14,10 @@ use pallet_assets::Config as AssetsConfig;
 use snowbridge_basic_channel::outbound::{Config as BasicOutboundChannelConfig, Principal};
 use snowbridge_incentivized_channel::outbound::{Config as IncentivizedOutboundChannelConfig, Fee};
 
-use frame_support::traits::fungibles::{Inspect, Mutate};
-use frame_support::traits::fungible::Mutate as FungibleMutate;
+use frame_support::traits::{
+	fungible::Mutate as FungibleMutate,
+	fungibles::{Inspect, Mutate},
+};
 
 pub struct Pallet<T: Config>(Erc20App<T>);
 
@@ -32,7 +34,7 @@ benchmarks! {
 		let amount: u128 = 500;
 
 		// set principal for basic channel
-		Principal::<T>::set(caller.clone());
+		Principal::<T>::set(Some(caller.clone()));
 
 		// create wrapped token
 		let origin = T::CallOrigin::successful_origin();
@@ -110,7 +112,7 @@ benchmarks! {
 
 		let asset_id = <AssetId<T>>::get(token).unwrap();
 
-		let call = Call::<T>::mint { token: token, sender: sender, recipient: recipient_lookup, amount : amount, para_id: None};
+		let call = Call::<T>::mint { token: token, sender: sender, recipient: recipient_lookup, amount : amount, destination: None };
 
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {

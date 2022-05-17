@@ -6,7 +6,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::fungible::{Inspect, ItemOf, Mutate},
-		Everything, GenesisBuild,
+		Everything, GenesisBuild, OnInitialize
 	},
 	PalletId,
 };
@@ -70,6 +70,7 @@ impl frame_system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 	type OnSetCode = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -94,6 +95,7 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: u64 = 1;
 	pub const MetadataDepositPerByte: u64 = 1;
+	pub const AssetAccountDeposit: u64 = 1;
 }
 
 impl pallet_assets::Config for Test {
@@ -103,6 +105,7 @@ impl pallet_assets::Config for Test {
 	type Currency = Balances;
 	type ForceOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type AssetDeposit = AssetDeposit;
+	type AssetAccountDeposit = AssetAccountDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type ApprovalDeposit = ApprovalDeposit;
@@ -114,7 +117,7 @@ impl pallet_assets::Config for Test {
 
 parameter_types! {
 	pub const MaxMessagePayloadSize: u64 = 128;
-	pub const MaxMessagesPerCommit: u64 = 5;
+	pub const MaxMessagesPerCommit: u32 = 5;
 }
 
 parameter_types! {
@@ -155,6 +158,13 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	ext
 }
 
+fn run_to_block(n: u64) {
+	while System::block_number() < n {
+			System::set_block_number(System::block_number() + 1);
+			IncentivizedOutboundChannel::on_initialize(System::block_number());
+	}
+}
+
 #[test]
 fn test_submit() {
 	new_tester().execute_with(|| {
@@ -165,10 +175,11 @@ fn test_submit() {
 		Ether::mint_into(&who, 300).unwrap();
 
 		assert_ok!(IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-		assert_eq!(<Nonce<Test>>::get(), 1);
+		assert_eq!(<NextId<Test>>::get(), 1);
+		assert_eq!(<Nonce<Test>>::get(), 0);
 
-		assert_ok!(IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
-		assert_eq!(<Nonce<Test>>::get(), 2);
+		run_to_block(2);
+		assert_eq!(<Nonce<Test>>::get(), 1);
 	});
 }
 
@@ -248,18 +259,4 @@ fn test_submit_exceeds_payload_limit() {
 			Error::<Test>::PayloadTooLarge,
 		);
 	})
-}
-
-#[test]
-fn test_submit_fails_on_nonce_overflow() {
-	new_tester().execute_with(|| {
-		let target = H160::zero();
-		let who: AccountId = Keyring::Bob.into();
-
-		<Nonce<Test>>::set(u64::MAX);
-		assert_noop!(
-			IncentivizedOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
-			Error::<Test>::Overflow,
-		);
-	});
 }

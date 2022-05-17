@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
@@ -150,7 +150,7 @@ contract ERC20 is Context, IERC20 {
 
 contract TestToken20 is ERC20 {
     constructor(){}
-    
+
     function mint(address to, uint256 _amount) public {
         _mint(to, _amount);
     }

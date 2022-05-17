@@ -47,7 +47,7 @@ sudo apt install jq
 Install [abigen](https://geth.ethereum.org/docs/dapp/native-bindings):
 
 ```
-go install github.com/ethereum/go-ethereum/cmd/abigen@v1.10.6
+go install github.com/ethereum/go-ethereum/cmd/abigen@v1.10.17
 ```
 
 Compile the contracts in the [ethereum](../ethereum) directory:
