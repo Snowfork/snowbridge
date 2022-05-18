@@ -1,4 +1,4 @@
-use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedHeaders, FinalizedHeadersBySlot, ChainGenesis, Genesis, PublicKey, merklization};
+use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, ChainGenesis, Genesis, PublicKey, merklization};
 use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
 use sp_core::H256;
@@ -15,9 +15,7 @@ fn it_syncs_from_an_initial_checkpoint() {
 
 		let block_root: H256 = merklization::hash_tree_root_beacon_header(initial_sync.header.clone()).unwrap().into();
 
-		assert!(<FinalizedHeaders<Test>>::contains_key(block_root));
-		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(initial_sync.header.slot));
-		assert_eq!(<FinalizedHeadersBySlot<Test>>::get(initial_sync.header.slot).unwrap(), block_root);
+		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
 	});
 }
 
@@ -42,9 +40,7 @@ fn it_updates_a_committee_period_sync_update() {
 
 		let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
 
-		assert!(<FinalizedHeaders<Test>>::contains_key(block_root));
-		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(update.finalized_header.slot));
-		assert_eq!(<FinalizedHeadersBySlot<Test>>::get(update.finalized_header.slot).unwrap(), block_root);
+		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
 	});
 }
 
@@ -66,9 +62,7 @@ fn it_processes_a_finalized_header_update() {
 
 		let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
 
-		assert!(<FinalizedHeaders<Test>>::contains_key(block_root));
-		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(update.finalized_header.slot));
-		assert_eq!(<FinalizedHeadersBySlot<Test>>::get(update.finalized_header.slot).unwrap(), block_root);
+		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
 	});
 }
 

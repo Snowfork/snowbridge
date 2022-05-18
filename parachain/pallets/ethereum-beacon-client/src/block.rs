@@ -69,14 +69,14 @@ pub struct AttesterSlashing {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Attestation {
+pub struct Attestation { 
 	pub aggregation_bits: Vec<u8>,
 	pub data: Vote,
     pub signature: Vec<u8>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct VoluntaryExist {
+pub struct VoluntaryExit {
 	pub epoch: u64,
 	pub validator_index: u64,
 }
@@ -109,7 +109,7 @@ pub struct ExecutionPayload {
 	pub extra_data: H256,
 	pub base_fee_per_gas: u64,
 	pub block_hash: H256,
-	pub transactions: Vec<Vec<u8>>,
+	pub transactions_root: H256,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -120,8 +120,8 @@ pub struct Body {
     pub proposer_slashings: Vec<ProposerSlashing>,
     pub attester_slashings: Vec<AttesterSlashing>,
     pub attestations: Vec<Attestation>,
-    pub deposits: Deposit,
-    pub voluntary_exists: VoluntaryExist, // TODO
+    pub deposits: Vec<Deposit>,
+    pub voluntary_exits: Vec<VoluntaryExit>, 
     pub sync_aggregate: SyncAggregate,
     pub execution_payload: ExecutionPayload, 
 }
