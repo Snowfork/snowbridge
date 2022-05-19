@@ -54,7 +54,7 @@ Example:
 git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
 git fetch --tags
-git checkout v0.9.22-rc4
+git checkout v0.9.22
 cargo build --release
 ```
 
