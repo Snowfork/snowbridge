@@ -9,7 +9,8 @@
         "port": 30444,
         "flags": [
           "--beefy",
-          "--enable-offchain-indexing=true"
+          "--enable-offchain-indexing=true",
+          "--pruning", "archive"
         ]
       },
       {
@@ -18,7 +19,8 @@
         "port": 30555,
         "flags": [
           "--beefy",
-          "--enable-offchain-indexing=true"
+          "--enable-offchain-indexing=true",
+          "--pruning", "archive"
         ]
       },
       {
@@ -27,7 +29,8 @@
         "port": 30666,
         "flags": [
           "--beefy",
-          "--enable-offchain-indexing=true"
+          "--enable-offchain-indexing=true",
+          "--pruning", "archive"
         ]
       }
     ],
