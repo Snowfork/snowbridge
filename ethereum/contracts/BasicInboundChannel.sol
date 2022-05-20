@@ -29,7 +29,7 @@ contract BasicInboundChannel {
         parachainClient = client;
     }
 
-    function submit(MessageBundle calldata bundle, ParachainClient.Proof calldata proof) external {
+    function submit(MessageBundle calldata bundle,  bytes calldata proof) external {
         bytes32 commitment = keccak256(abi.encode(bundle));
 
         require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");

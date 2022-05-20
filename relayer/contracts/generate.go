@@ -1,3 +1,4 @@
+//go:generate bash -c "jq .abi ../../ethereum/artifacts/contracts/ParachainClient.sol/ParachainClient.json | abigen --abi - --type ParachainClient --pkg paraclient --out paraclient/contract.go"
 //go:generate bash -c "jq .abi ../../ethereum/artifacts/contracts/BeefyClient.sol/BeefyClient.json | abigen --abi - --type BeefyClient --pkg beefyclient --out beefyclient/contract.go"
 //go:generate bash -c "jq .abi ../../ethereum/artifacts/contracts/BasicInboundChannel.sol/BasicInboundChannel.json | abigen --abi - --type BasicInboundChannel --pkg basic --out basic/inbound.go"
 //go:generate bash -c "jq .abi ../../ethereum/artifacts/contracts/BasicOutboundChannel.sol/BasicOutboundChannel.json | abigen --abi - --type BasicOutboundChannel --pkg basic --out basic/outbound.go"

@@ -51,7 +51,7 @@ contract IncentivizedInboundChannel is AccessControl {
         renounceRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function submit(MessageBundle calldata bundle, ParachainClient.Proof calldata proof) external {
+    function submit(MessageBundle calldata bundle, bytes calldata proof) external {
         // Proof
         // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
         bytes32 commitment = keccak256(abi.encode(bundle));

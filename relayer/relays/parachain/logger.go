@@ -5,6 +5,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
+	"github.com/snowfork/snowbridge/relayer/contracts/paraclient"
 )
 
 func Hex(b []byte) string {
@@ -13,7 +14,7 @@ func Hex(b []byte) string {
 
 func (wr *EthereumWriter) logFieldsForBasicSubmission(
 	bundle basic.BasicInboundChannelMessageBundle,
-	proof basic.ParachainClientProof,
+	proof paraclient.ParachainClientProof,
 ) log.Fields {
 	var messagesLog []log.Fields
 	for _, item := range bundle.Messages {
@@ -66,7 +67,7 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 
 func (wr *EthereumWriter) logFieldsForIncentivizedSubmission(
 	bundle incentivized.IncentivizedInboundChannelMessageBundle,
-	proof incentivized.ParachainClientProof,
+	proof paraclient.ParachainClientProof,
 ) log.Fields {
 	var messagesLog []log.Fields
 	for _, item := range bundle.Messages {
