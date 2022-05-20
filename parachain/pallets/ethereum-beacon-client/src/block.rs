@@ -35,7 +35,7 @@ pub struct Message {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Vote {
+pub struct AttestationData {
 	pub slot: u64,
 	pub index: u64,
 	pub beacon_block_root: H256,
@@ -46,7 +46,7 @@ pub struct Vote {
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct AttestationSlashing {
     pub attesting_indices: Vec<u64>,
-    pub data: Vote,
+    pub data: AttestationData,
     pub signature: Vec<u8>,
 }
 
@@ -71,7 +71,7 @@ pub struct AttesterSlashing {
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Attestation { 
 	pub aggregation_bits: Vec<u8>,
-	pub data: Vote,
+	pub data: AttestationData,
     pub signature: Vec<u8>,
 }
 
@@ -106,10 +106,10 @@ pub struct ExecutionPayload {
 	pub gas_limit: u64,
 	pub gas_used: u64,
 	pub timestamp: u64,
-	pub extra_data: H256,
+	pub extra_data: Vec<u8>,
 	pub base_fee_per_gas: u64,
 	pub block_hash: H256,
-	pub transactions_root: H256,
+	pub transactions: Vec<Vec<u8>>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
