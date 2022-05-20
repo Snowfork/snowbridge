@@ -213,7 +213,7 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 			leafIndex := blockNumber - beefyActivationBlock - 1
 			proofIsValid, proof, err := makeProof(meta, api, leafIndex, blockHash)
 			if err != nil {
-				sendError(err)
+				sendError(fmt.Errorf("proof generation for leaf %v at block %v: %w", leafIndex, blockHash.Hex(), err))
 				return
 			}
 
@@ -238,10 +238,9 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 }
 
 func makeProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, leafIndex uint64, blockHash types.Hash) (bool, merkle.SimplifiedMMRProof, error) {
-
 	proof1, err := api.RPC.MMR.GenerateProof(leafIndex, blockHash)
 	if err != nil {
-		return false, merkle.SimplifiedMMRProof{}, fmt.Errorf("proof generation for leaf %v: %w", leafIndex, err)
+		return false, merkle.SimplifiedMMRProof{}, fmt.Errorf("mmr_generateProof(%v, %v): %w", leafIndex, blockHash.Hex(), err)
 	}
 
 	proof2, err := merkle.ConvertToSimplifiedMMRProof(
