@@ -157,7 +157,7 @@ parameter_types! {
 	pub const EtherAssetId: u128 = 0;
 	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
 	pub const Erc20AppPalletId: PalletId = PalletId(*b"erc20app");
-	pub const MaxMessagePayloadSize: u64 = 256;
+	pub const MaxMessagePayloadSize: u32 = 256;
 	pub const MaxMessagesPerCommit: u32 = 3;
 }
 

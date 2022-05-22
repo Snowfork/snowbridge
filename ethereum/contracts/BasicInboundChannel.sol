@@ -33,30 +33,23 @@ contract BasicInboundChannel {
         bytes32 commitment = keccak256(abi.encode(bundle));
 
         require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
-
-        // Require there is enough gas to play all messages
+        require(bundle.nonce == nonce + 1, "Invalid nonce");
         require(
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
 
-        processMessages(bundle);
+        dispatch(bundle);
+        nonce++;
     }
 
-    function processMessages(MessageBundle calldata bundle) internal {
-        require(bundle.nonce == nonce + 1, "invalid nonce");
-
+    function dispatch(MessageBundle calldata bundle) internal {
         for (uint256 i = 0; i < bundle.messages.length; i++) {
             Message calldata message = bundle.messages[i];
-
-            // Deliver the message to the target
             (bool success, ) = message.target.call{ value: 0, gas: MAX_GAS_PER_MESSAGE }(
                 message.payload
             );
-
             emit MessageDispatched(message.id, success);
         }
-
-        nonce++;
     }
 }

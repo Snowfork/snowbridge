@@ -125,7 +125,7 @@ impl pallet_assets::Config for Test {
 parameter_types! {
 	pub const EtherAssetId: u128 = 0;
 	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
-	pub const MaxMessagePayloadSize: u64 = 256;
+	pub const MaxMessagePayloadSize: u32 = 256;
 	pub const MaxMessagesPerCommit: u32 = 3;
 }
 

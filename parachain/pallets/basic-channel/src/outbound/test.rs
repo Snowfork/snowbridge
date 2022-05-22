@@ -66,7 +66,7 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMessagePayloadSize: u64 = 128;
+	pub const MaxMessagePayloadSize: u32 = 128;
 	pub const MaxMessagesPerCommit: u32 = 5;
 }
 

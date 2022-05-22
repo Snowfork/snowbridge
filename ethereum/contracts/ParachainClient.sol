@@ -7,8 +7,6 @@ import "./ScaleCodec.sol";
 import "./utils/MMRProofVerification.sol";
 
 contract ParachainClient {
-    using ScaleCodec for uint32;
-
     BeefyClient public immutable beefyClient;
     uint32 public immutable parachainID;
     bytes4 public immutable encodedParachainID;
@@ -48,14 +46,7 @@ contract ParachainClient {
         returns (bool)
     {
         (Proof memory proof) = abi.decode(opaqueProof, (Proof));
-        return verifyCommitment(commitment, proof);
-    }
 
-    function verifyCommitment(bytes32 commitment, Proof memory proof)
-        public
-        view
-        returns (bool)
-    {
         // Compute the merkle leaf hash of our parachain
         bytes32 parachainHeadHash = createParachainMerkleLeaf(
             commitment,

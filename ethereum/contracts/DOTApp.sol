@@ -5,11 +5,11 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WrappedToken.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
-import "./FeeSource.sol";
+import "./FeeController.sol";
 
 enum ChannelId {Basic, Incentivized}
 
-contract DOTApp is FeeSource, AccessControl {
+contract DOTApp is FeeController, AccessControl {
     using ScaleCodec for uint256;
 
     mapping(ChannelId => Channel) public channels;
@@ -90,7 +90,7 @@ contract DOTApp is FeeSource, AccessControl {
     }
 
     // Incentivized channel calls this to charge (burn) fees
-    function burnFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
+    function handleFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
         token.burn(feePayer, _amount, "");
     }
 
