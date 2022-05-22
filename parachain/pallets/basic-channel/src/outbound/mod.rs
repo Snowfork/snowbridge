@@ -13,6 +13,7 @@ use frame_support::{
 	ensure,
 	traits::{EnsureOrigin, Get},
 	BoundedVec,
+	RuntimeDebugNoBound, PartialEqNoBound, CloneNoBound,
 };
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256};
@@ -26,7 +27,7 @@ use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 pub use weights::WeightInfo;
 
 /// Wire-format for committed messages
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo)]
 #[scale_info(skip_type_params(M, N))]
 #[codec(mel_bound())]
 pub struct MessageBundle<M: Get<u32>, N: Get<u32>> {
@@ -35,7 +36,7 @@ pub struct MessageBundle<M: Get<u32>, N: Get<u32>> {
 	messages: BoundedVec<Message<M>, N>,
 }
 
-#[derive(Encode, Decode, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo)]
 #[scale_info(skip_type_params(M))]
 #[codec(mel_bound())]
 pub struct Message<M: Get<u32>> {
@@ -47,18 +48,14 @@ pub struct Message<M: Get<u32>> {
 	payload: BoundedVec<u8, M>,
 }
 
-impl<M: Get<u32>> Clone for Message<M> {
-	fn clone(&self) -> Self {
-		return Message {
-			id: self.id,
-			target: self.target,
-			payload: self.payload.clone()
-		}
-	}
-}
-
 pub type MessageBundleOf<T> = MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit>;
 pub type MessageOf<T> = Message<<T as Config>::MaxMessagePayloadSize>;
+
+#[derive(Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct OffchainStorageValue {
+	nonce: u64,
+	commitment: Vec<u8>
+}
 
 pub use pallet::*;
 
@@ -101,6 +98,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		MessageAccepted(u64),
+		Committed { hash: H256, data: MessageBundleOf<T> }
 	}
 
 	#[pallet::error]
@@ -233,20 +231,27 @@ pub mod pallet {
 			let bundle =
 				MessageBundle { nonce: next_nonce, messages: messages.clone() };
 
-			let commitment_hash = Self::make_commitment_hash(&bundle);
-			let average_payload_size = Self::average_payload_size(&bundle.messages);
+			let commitment = Self::make_commitment(&bundle);
+			let commitment_hash = <T as Config>::Hashing::hash(&commitment);
 
 			let digest_item =
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
-			let key = Self::make_offchain_key(commitment_hash);
-			offchain_index::set(&*key, &bundle.encode());
+			// Note: Offchain access to committed message bundle is slated for deprecation
+			let offchain_key = Self::make_offchain_key(commitment_hash);
+			let offchain_value = OffchainStorageValue {
+				nonce: next_nonce,
+				commitment: commitment.clone(),
+			};
+			offchain_index::set(&*offchain_key, &offchain_value.encode());
 
-			T::WeightInfo::on_initialize(messages.len() as u32, average_payload_size as u32)
+			Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
+
+			T::WeightInfo::on_initialize(messages.len() as u32, Self::average_payload_size(&messages))
 		}
 
-		fn make_commitment_hash(bundle: &MessageBundleOf<T>) -> H256 {
+		fn make_commitment(bundle: &MessageBundleOf<T>) -> Vec<u8> {
 			let messages: Vec<Token> = bundle
 				.messages
 				.iter()
@@ -258,18 +263,17 @@ pub mod pallet {
 					])
 				})
 				.collect();
-			let input = ethabi::encode(&vec![Token::Tuple(vec![
+			ethabi::encode(&vec![Token::Tuple(vec![
 				Token::Uint(bundle.nonce.into()),
 				Token::Array(messages),
-			])]);
-			<T as Config>::Hashing::hash(&input)
+			])])
 		}
 
-		fn average_payload_size(messages: &[MessageOf<T>]) -> usize {
+		fn average_payload_size(messages: &[MessageOf<T>]) -> u32 {
 			let sum: usize = messages.iter().fold(0, |acc, x| acc + x.payload.len());
 			// We overestimate message payload size rather than underestimate.
 			// So add 1 here to account for integer division truncation.
-			(sum / messages.len()).saturating_add(1)
+			(sum / messages.len()).saturating_add(1) as u32
 		}
 
 		fn make_offchain_key(hash: H256) -> Vec<u8> {

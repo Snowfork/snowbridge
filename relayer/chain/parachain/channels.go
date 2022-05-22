@@ -6,11 +6,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 )
 
-type OffchainStorageValue struct {
-	Nonce      uint64
-	Commitment []byte
-}
-
 func (b BasicOutboundChannelMessageBundle) IntoInboundMessageBundle() basic.BasicInboundChannelMessageBundle {
 	var messages []basic.BasicInboundChannelMessage
 	for _, m := range b.Messages {
@@ -43,18 +38,19 @@ func (b IncentivizedOutboundChannelMessageBundle) IntoInboundMessageBundle() inc
 		messages = append(messages, incentivized.IncentivizedInboundChannelMessage{
 			Id:      m.ID,
 			Target:  m.Target,
-			Fee:     m.Fee.Int,
 			Payload: m.Payload,
 		})
 	}
 	return incentivized.IncentivizedInboundChannelMessageBundle{
 		Nonce:    b.Nonce,
+		Fee:      b.Fee.Int,
 		Messages: messages,
 	}
 }
 
 type IncentivizedOutboundChannelMessageBundle struct {
 	Nonce    uint64
+	Fee      types.U128
 	Messages []IncentivizedOutboundChannelMessage
 }
 

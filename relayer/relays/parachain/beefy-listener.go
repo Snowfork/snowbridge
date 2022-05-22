@@ -11,6 +11,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -564,12 +565,12 @@ func (li *BeefyListener) scanForCommitments(
 			return nil, fmt.Errorf("fetch header for %v: %w", blockHash.Hex(), err)
 		}
 
-		digestItems, err := parachain.ExtractAuxiliaryDigestItems(header.Digest)
+		digestItems, err := ExtractAuxiliaryDigestItems(header.Digest)
 		if err != nil {
 			return nil, err
 		}
 
-		commitments := make(map[parachain.ChannelID]Commitment)
+		commitments := make(map[ChannelID]Commitment)
 
 		for _, digestItem := range digestItems {
 			if !digestItem.IsCommitment {
@@ -577,52 +578,44 @@ func (li *BeefyListener) scanForCommitments(
 			}
 			channelID := digestItem.AsCommitment.ChannelID
 			if channelID.IsBasic && !scanBasicChannelDone {
-				bundle, err := li.parachainConnection.ReadBasicOutboundMessageBundle(digestItem)
+				offchainData, err := li.fetchOffchainData(digestItem)
 				if err != nil {
-					return nil, err
-				}
-
-				if len(bundle.Messages) == 0 {
-					return nil, fmt.Errorf("bundle has no messages")
+					return nil, fmt.Errorf("fetch offchain: %w", err)
 				}
 
 				// This case will be hit if basicNonceToFind has not yet
 				// been committed yet. Channels emit commitments every N
 				// blocks.
-				if bundle.Nonce < basicNonceToFind {
+				if offchainData.Nonce < basicNonceToFind {
 					scanBasicChannelDone = true
 					log.Debug("Halting scan. Messages not committed yet on basic channel")
 					// Collect these commitments
-				} else if bundle.Nonce > basicNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
+				} else if offchainData.Nonce > basicNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, offchainData.Commitment)
 					// collect this commitment and terminate scan
-				} else if bundle.Nonce == basicNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
+				} else if offchainData.Nonce == basicNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, offchainData.Commitment)
 					scanBasicChannelDone = true
 				}
 			}
 			if channelID.IsIncentivized && !scanIncentivizedChannelDone {
-				bundle, err := li.parachainConnection.ReadIncentivizedOutboundMessageBundle(digestItem)
+				offchainData, err := li.fetchOffchainData(digestItem)
 				if err != nil {
-					return nil, err
-				}
-
-				if len(bundle.Messages) == 0 {
-					return nil, fmt.Errorf("bundle has no messages")
+					return nil, fmt.Errorf("fetch offchain: %w", err)
 				}
 
 				// This case will be hit if basicNonceToFind has not yet
 				// been committed yet. Channels emit commitments every N
 				// blocks
-				if bundle.Nonce < incentivizedNonceToFind {
+				if offchainData.Nonce < incentivizedNonceToFind {
 					scanIncentivizedChannelDone = true
 					continue
 					// Collect these commitments
-				} else if bundle.Nonce > incentivizedNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
+				} else if offchainData.Nonce > incentivizedNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, offchainData.Commitment)
 					// collect this commitment and terminate scan
-				} else if bundle.Nonce == incentivizedNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
+				} else if offchainData.Nonce == incentivizedNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, offchainData.Commitment)
 					scanIncentivizedChannelDone = true
 				}
 			}
@@ -649,4 +642,34 @@ func (li *BeefyListener) scanForCommitments(
 	})
 
 	return tasks, nil
+}
+
+
+type OffchainStorageValue struct {
+	Nonce      uint64
+	Commitment []byte
+}
+
+
+func (li *BeefyListener) fetchOffchainData(digestItem AuxiliaryDigestItem) (*OffchainStorageValue, error) {
+	storageKey, err := makeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := li.parachainConnection.API().RPC.Offchain.LocalStorageGet(offchain.Persistent, storageKey)
+	if err != nil {
+		return nil, fmt.Errorf("read commitment from offchain storage: %w", err)
+	}
+	if data == nil {
+		return nil, fmt.Errorf("offchain storage item not found")
+	}
+
+	var offchainStorageValue OffchainStorageValue
+	err = types.DecodeFromBytes(*data, &offchainStorageValue)
+	if err != nil {
+		return nil, fmt.Errorf("decode offchain storage value: %w", err)
+	}
+
+	return &offchainStorageValue, nil
 }

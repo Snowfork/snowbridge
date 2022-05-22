@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -16,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
 	"github.com/snowfork/snowbridge/relayer/contracts/opaqueproof"
@@ -34,6 +34,8 @@ type EthereumWriter struct {
 	incentivizedInboundChannel *incentivized.IncentivizedInboundChannel
 	tasks                      <-chan *Task
 	abiPacker                  abi.Arguments
+	abiBasicUnpacker           abi.Arguments
+	abiIncentivizedUnpacker    abi.Arguments
 }
 
 func NewEthereumWriter(
@@ -54,24 +56,36 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	var address common.Address
 
 	address = common.HexToAddress(wr.config.Contracts.BasicInboundChannel)
-	basic, err := basic.NewBasicInboundChannel(address, wr.conn.Client())
+	basicChannel, err := basic.NewBasicInboundChannel(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}
-	wr.basicInboundChannel = basic
+	wr.basicInboundChannel = basicChannel
 
 	address = common.HexToAddress(wr.config.Contracts.IncentivizedInboundChannel)
-	incentivized, err := incentivized.NewIncentivizedInboundChannel(address, wr.conn.Client())
+	incentivizedChannel, err := incentivized.NewIncentivizedInboundChannel(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}
-	wr.incentivizedInboundChannel = incentivized
+	wr.incentivizedInboundChannel = incentivizedChannel
 
 	opaqueProofABI, err := abi.JSON(strings.NewReader(opaqueproof.OpaqueProofABI))
 	if err != nil {
 		return err
 	}
 	wr.abiPacker = opaqueProofABI.Methods["dummy"].Inputs
+
+	basicInboundChannelABI, err := abi.JSON(strings.NewReader(basic.BasicInboundChannelABI))
+	if err != nil {
+		return err
+	}
+	wr.abiBasicUnpacker = abi.Arguments{basicInboundChannelABI.Methods["submit"].Inputs[0]}
+
+	incentivizedInboundChannelABI, err := abi.JSON(strings.NewReader(incentivized.IncentivizedInboundChannelABI))
+	if err != nil {
+		return err
+	}
+	wr.abiIncentivizedUnpacker = abi.Arguments{incentivizedInboundChannelABI.Methods["submit"].Inputs[0]}
 
 	eg.Go(func() error {
 		err := wr.writeMessagesLoop(ctx)
@@ -142,14 +156,10 @@ func (wr *EthereumWriter) WriteChannel(
 ) error {
 	for channelID, commitment := range task.Commitments {
 		if channelID.IsBasic {
-			bundle, ok := commitment.Data.(parachain.BasicOutboundChannelMessageBundle)
-			if !ok {
-				return fmt.Errorf("invalid commitment data")
-			}
 			err := wr.WriteBasicChannel(
 				options,
 				commitment.Hash,
-				bundle,
+				commitment.Data,
 				task.ParaID,
 				task.ProofOutput,
 			)
@@ -158,14 +168,10 @@ func (wr *EthereumWriter) WriteChannel(
 			}
 		}
 		if channelID.IsIncentivized {
-			bundle, ok := commitment.Data.(parachain.IncentivizedOutboundChannelMessageBundle)
-			if !ok {
-				return fmt.Errorf("invalid commitment data")
-			}
 			err := wr.WriteIncentivizedChannel(
 				options,
 				commitment.Hash,
-				bundle,
+				commitment.Data,
 				task.ParaID,
 				task.ProofOutput,
 			)
@@ -177,15 +183,48 @@ func (wr *EthereumWriter) WriteChannel(
 	return nil
 }
 
+func (wr *EthereumWriter) unpackBasic(data []byte) (basic.BasicInboundChannelMessageBundle, error) {
+	marshalledData, err := wr.abiBasicUnpacker.Unpack(data)
+	if err != nil {
+		return basic.BasicInboundChannelMessageBundle{}, fmt.Errorf("unpack commitment data: %w", err)
+	}
+
+	bundleValue := reflect.ValueOf(marshalledData[0])
+	messagesField := bundleValue.FieldByName("Messages")
+	bundleMessages := []basic.BasicInboundChannelMessage{}
+	for i := 0; i < messagesField.Len(); i++ {
+		item := messagesField.Index(i)
+
+		target, ok := item.FieldByName("Target").Interface().(common.Address)
+		if !ok {
+			return basic.BasicInboundChannelMessageBundle{}, fmt.Errorf("unpack target address")
+		}
+
+		bundleMessages = append(bundleMessages, basic.BasicInboundChannelMessage{
+			Id: item.FieldByName("Id").Uint(),
+			Target: target,
+			Payload: item.FieldByName("Payload").Bytes(),
+		})
+	}
+
+	return basic.BasicInboundChannelMessageBundle{
+		Nonce: bundleValue.FieldByName("Nonce").Uint(),
+		Messages: bundleMessages,
+	}, nil
+}
+
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
 func (wr *EthereumWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
 	commitmentHash gsrpcTypes.H256,
-	commitment parachain.BasicOutboundChannelMessageBundle,
+	commitment []byte,
 	paraID uint32,
 	proof *ProofOutput,
 ) error {
-	bundle := commitment.IntoInboundMessageBundle()
+	bundle, err := wr.unpackBasic(commitment)
+	if err != nil {
+		return fmt.Errorf("unpack commitment: %w", err)
+	}
 
 	paraHeadProof := opaqueproof.ParachainClientHeadProof{
 		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
@@ -270,14 +309,53 @@ func (wr *EthereumWriter) WriteBasicChannel(
 	return nil
 }
 
+func (wr *EthereumWriter) unpackIncentivized(data []byte) (incentivized.IncentivizedInboundChannelMessageBundle, error) {
+	marshalledData, err := wr.abiIncentivizedUnpacker.Unpack(data)
+	if err != nil {
+		return incentivized.IncentivizedInboundChannelMessageBundle{}, fmt.Errorf("unpack commitment data: %w", err)
+	}
+
+	bundleValue := reflect.ValueOf(marshalledData[0])
+	messagesField := bundleValue.FieldByName("Messages")
+	bundleMessages := []incentivized.IncentivizedInboundChannelMessage{}
+	for i := 0; i < messagesField.Len(); i++ {
+		item := messagesField.Index(i)
+
+		target, ok := item.FieldByName("Target").Interface().(common.Address)
+		if !ok {
+			return incentivized.IncentivizedInboundChannelMessageBundle{}, fmt.Errorf("unpack target address")
+		}
+
+		bundleMessages = append(bundleMessages, incentivized.IncentivizedInboundChannelMessage{
+			Id: item.FieldByName("Id").Uint(),
+			Target: target,
+			Payload: item.FieldByName("Payload").Bytes(),
+		})
+	}
+
+	fee, ok := bundleValue.FieldByName("Fee").Interface().(*big.Int)
+	if !ok {
+		return incentivized.IncentivizedInboundChannelMessageBundle{}, fmt.Errorf("unpack fee")
+	}
+
+	return incentivized.IncentivizedInboundChannelMessageBundle{
+		Nonce: bundleValue.FieldByName("Nonce").Uint(),
+		Fee: fee,
+		Messages: bundleMessages,
+	}, nil
+}
+
 func (wr *EthereumWriter) WriteIncentivizedChannel(
 	options *bind.TransactOpts,
 	commitmentHash gsrpcTypes.H256,
-	commitment parachain.IncentivizedOutboundChannelMessageBundle,
+	commitment []byte,
 	paraID uint32,
 	proof *ProofOutput,
 ) error {
-	bundle := commitment.IntoInboundMessageBundle()
+	bundle, err := wr.unpackIncentivized(commitment)
+	if err != nil {
+		return fmt.Errorf("unpack commitment: %w", err)
+	}
 
 	paraHeadProof := opaqueproof.ParachainClientHeadProof{
 		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),

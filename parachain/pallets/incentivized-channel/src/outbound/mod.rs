@@ -12,7 +12,7 @@ use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	traits::{fungible::Mutate, EnsureOrigin, Get},
-	BoundedVec,
+	BoundedVec, RuntimeDebugNoBound, PartialEqNoBound, CloneNoBound,
 };
 
 use scale_info::TypeInfo;
@@ -27,7 +27,7 @@ use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 pub use weights::WeightInfo;
 
 /// Wire-format for committed messages
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo)]
 #[scale_info(skip_type_params(M, N))]
 #[codec(mel_bound())]
 pub struct MessageBundle<M: Get<u32>, N: Get<u32>> {
@@ -37,7 +37,7 @@ pub struct MessageBundle<M: Get<u32>, N: Get<u32>> {
 	messages: BoundedVec<Message<M>, N>,
 }
 
-#[derive(Encode, Decode, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo)]
 #[scale_info(skip_type_params(M))]
 #[codec(mel_bound())]
 pub struct Message<M: Get<u32>> {
@@ -47,16 +47,6 @@ pub struct Message<M: Get<u32>> {
 	target: H160,
 	/// Payload for target application.
 	payload: BoundedVec<u8, M>,
-}
-
-impl<M: Get<u32>> Clone for Message<M> {
-	fn clone(&self) -> Self {
-		return Message {
-			id: self.id,
-			target: self.target,
-			payload: self.payload.clone()
-		}
-	}
 }
 
 pub type MessageBundleOf<T> = MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit>;
@@ -110,8 +100,9 @@ pub mod pallet {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T> {
+	pub enum Event<T: Config> {
 		MessageAccepted(u64),
+		Committed { hash: H256, data: MessageBundleOf<T> }
 	}
 
 	#[pallet::error]
@@ -222,7 +213,6 @@ pub mod pallet {
 
 			Self::deposit_event(Event::MessageAccepted(next_id));
 
-
 			Ok(())
 		}
 
@@ -250,13 +240,15 @@ pub mod pallet {
 					.into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
+			// Note: Offchain access to committed message bundle is slated for deprecation
 			let offchain_key = Self::make_offchain_key(commitment_hash);
 			let offchain_value = OffchainStorageValue {
 				nonce: next_nonce,
 				commitment,
 			};
-
 			offchain_index::set(&*offchain_key, &offchain_value.encode());
+
+			Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
 
 			T::WeightInfo::on_initialize(messages.len() as u32, Self::average_payload_size(&messages))
 		}
@@ -275,6 +267,7 @@ pub mod pallet {
 				.collect();
 			ethabi::encode(&vec![Token::Tuple(vec![
 				Token::Uint(bundle.nonce.into()),
+				Token::Uint(bundle.fee.into()),
 				Token::Array(messages),
 			])])
 		}
