@@ -565,10 +565,41 @@ pub fn convert_to_binary_bool(input: Vec<u8>) -> Vec<bool> {
     result
 }
 
+pub fn convert_to_binary_bool_2(input: Vec<u8>) -> Vec<bool> {
+    let mut result = Vec::new();
+
+    for input_decimal in input.iter() {
+        let mut tmp = Vec::new();
+        let mut remaining = *input_decimal;
+
+        while remaining > 0 {
+            let remainder = remaining % 2;
+            if remainder == 1 {
+                tmp.push(true);
+            } else {
+                tmp.push(false);
+            }
+            
+            remaining = remaining / 2;
+        }
+
+        // pad binary with 0s if length is less than 7
+        if tmp.len() < 8 {
+            for _i in tmp.len()..8 {
+                tmp.push(false);
+            }
+        }
+
+        result.append(&mut tmp);
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use crate::block::{AttestationData, Checkpoint, AttestationSlashing, AttesterSlashing, Body, BeaconBlock, Eth1Data, Attestation, ExecutionPayload, SyncAggregate};
-    use crate::merklization::{self, MerkleizationError, SSZCheckpoint};
+    use crate::merklization::{self, SSZCheckpoint};
     use crate as ethereum_beacon_client;
     use frame_support::{assert_ok};
     use sp_core::H256;
@@ -576,6 +607,8 @@ mod tests {
     use ssz_rs::prelude::Vector;
     use crate::merklization::SSZAttestationTest;
     use crate::merklization::SSZAttestationData;
+    use ssz_rs::Deserialize;
+    use ssz_rs::{List, Bitlist};
 
     use hex_literal::hex;
 
@@ -2829,7 +2862,6 @@ mod tests {
                         block_hash: hex!("9bdec690b39f69acdd81e764b42efc4232de0c26ae4fb531e7e2b99f44f10bf1").into(),
                         transactions: vec![ 
                             hex!("02f895831469ca8301573c8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d6300000000000000000000000022007a12f6494eb73165bdc5a475771ef2255325c080a088cc0bea0de7f99bba0dbf1dcbbde7be4aaafdcd7f55b3aedf0a73ad5c9d8d44a0219df1909da683994e6c209aaef1c187d1c016112ff5d1da975bf3fc44bf33ae").to_vec(),
-                            /* 
                             hex!("02f895831469ca8301573d8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000f1c26981dd8fd214fe9264a897d9e6cda96db648c001a072e224e49c25de6ca25f4844cb8419f2ff3109209e2a1bffbaa375f888fccdd3a00de6e29daff38a077dd311f807e63c0304bceca80ceb0d7d967f26ecca8e6682").to_vec(),
                             hex!("02f895831469ca8301573e8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d630000000000000000000000004d170baa29a81df2877aa0a3fd798d4cbb92f1e8c080a0c31170b3ac41fe3c93968363cd0462e2e7886c9270407ca439d66914e72dbb41a0092c401b5334b5c4abcec700e8d5c5f31915e0da3927442a743410665fdc3cc7").to_vec(),
                             hex!("02f895831469ca8301573f8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000be7269d183e23e093bf295546a63bf958db8f65fc080a0ebb003745552875567fb0ece1d2eaf8e7455de9a7389d54056c8f36d77edfbb8a00d3d597a0dab9e91ae0963bebdadc5e10a7d892522b589c26ccb43bb6cb657bd").to_vec(),
@@ -2912,7 +2944,7 @@ mod tests {
                             hex!("02f878831469ca821c1a84054c12c48452be174282520894411a1b1909deee4b60a5bc16d6c2dc35bf0b77a589022b1c8c1227a0000080c001a00dcbe8fa6b73e98875d345a6e4fc7d90bf91d3333c4339ea0347767d17f178dfa072e6eb8af05084d4d09d39d4fa2c4d0fd5ac5d56f3120f332acd380815430e39").to_vec(),
                             hex!("02f878831469ca821c1b84054c12c48452be174282520894f8da77605dabf5e0682e8eed9020fa1d90ddd91689022b1c8c1227a0000080c080a082e8ee47eb1f5e41b372341681fd05aef326f8309d98f855ec96b5e108c1cc67a033079cd65164450a85da755525d6395434cd4d96a27ffcac68fd1b6d7bc49262").to_vec(),
                             hex!("02f878831469ca821c1c84054c12c48452be174282520894adb12988cae14f9170b6f38819736636a1fd129089022b1c8c1227a0000080c001a042ec31c90dc676bb0c01dd0082ca931ff3db486e2e9ce31b5da915a47a46e326a03f766a9e78805d3d4731f2fde3dfbefb74b49373f8150b731427931a083f9312").to_vec(),
-                            hex!("02f878831469ca821c1d84054c12c484490fd6b282520894b731c7d4947c5cc24984f87814878cf0e131117c89022b1c8c1227a0000080c001a01fed2cba97abd44b8236c786d94f273b50c672e5ff77ff397df708283ed90e26a0370872b3f3ad0694053dc8af16a4fa3e39bf482c0ff4937366023c8a9a3d2969").to_vec(),*/
+                            hex!("02f878831469ca821c1d84054c12c484490fd6b282520894b731c7d4947c5cc24984f87814878cf0e131117c89022b1c8c1227a0000080c001a01fed2cba97abd44b8236c786d94f273b50c672e5ff77ff397df708283ed90e26a0370872b3f3ad0694053dc8af16a4fa3e39bf482c0ff4937366023c8a9a3d2969").to_vec(),
                         ], 
                     },
                 },
@@ -3615,8 +3647,6 @@ mod tests {
 
         let signature = Vector::<u8, 96>::from_iter(attestation.signature.clone());
 
-        let agg_bits = merklization::convert_to_binary_bool(attestation.aggregation_bits);
-
         let agg_hex: H256 = hex!("ac4175b816fda9a6bc2a59c905a9df02383763176b58c3cd2823a53c107ff3cf").into();
 
         let conv_attestor_attestation = SSZAttestationTest{
@@ -3646,6 +3676,25 @@ mod tests {
         assert_eq!(
             val,
             hex!("a60acb46465c9eda6047e2cc18b3d509b7610efcbc7a02d28aea3ffa67e89f5a").into()
+        );
+    }
+
+
+    #[test]
+    pub fn test_aggregation_bits_hex() {
+        let aggregation_bits = hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec();
+
+        let bits = Bitlist::<2048>::deserialize(&aggregation_bits).unwrap();
+
+        let hash_root = merklization::hash_tree_root(bits);
+
+        assert_ok!(&hash_root);
+
+        let val: H256 = hash_root.unwrap().into();
+
+        assert_eq!(
+            val,
+            hex!("ac4175b816fda9a6bc2a59c905a9df02383763176b58c3cd2823a53c107ff3cf").into()
         );
     }
 }
