@@ -26,15 +26,6 @@ pub struct Checkpoint {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Message {
-	pub slot: u64,
-	pub proposer_index: u64,
-	pub parent_root: H256,
-	pub state_root: H256,
-	pub body_root: H256,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct AttestationData {
 	pub slot: u64,
 	pub index: u64,
@@ -52,7 +43,7 @@ pub struct AttestationSlashing {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SignedHeader {
-	pub message: Message,
+	pub message: crate::BeaconHeader,
     pub signature: Vec<u8>,
 }
 
