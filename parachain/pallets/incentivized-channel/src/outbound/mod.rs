@@ -32,7 +32,9 @@ pub use weights::WeightInfo;
 #[codec(mel_bound())]
 pub struct MessageBundle<M: Get<u32>, N: Get<u32>> {
 	/// Unique nonce for to prevent replaying bundles
+	#[codec(compact)]
 	nonce: u64,
+	#[codec(compact)]
 	fee: u128,
 	messages: BoundedVec<Message<M>, N>,
 }
@@ -42,6 +44,7 @@ pub struct MessageBundle<M: Get<u32>, N: Get<u32>> {
 #[codec(mel_bound())]
 pub struct Message<M: Get<u32>> {
 	/// Unique message ID
+	#[codec(compact)]
 	id: u64,
 	/// Target application on the Ethereum side.
 	target: H160,

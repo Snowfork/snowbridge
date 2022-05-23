@@ -1,0 +1,24 @@
+{
+  "name": "snowbridge-event-reader",
+  "version": "1.0.0",
+  "description": "Read commitment events from parachain",
+  "main": "dist/query-events.js",
+  "repository": "https://github.com/Snowfork/snowbridge",
+  "license": "MIT",
+  "dependencies": {
+    "@polkadot/api": "^8.5.1",
+    "yargs": "^17.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "*",
+    "ts-node": "^10.8.0",
+    "typescript": "^4.6.4"
+  },
+  "scripts": {
+    "prepack": "tsc",
+    "build": "tsc"
+  },
+  "bin": {
+    "snowbridge-query-events": "dist/query-events.js"
+  }
+}
