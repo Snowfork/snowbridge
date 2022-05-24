@@ -1,127 +1,290 @@
+use ssz_rs_derive::SimpleSerialize;
+use ssz_rs::prelude::Vector;
+use ssz_rs::{List, Bitlist};
+use ssz_rs::U256;
+use ssz_rs::Deserialize;
+use ssz_rs::Sized;
 
-use sp_core::H256;
-use scale_info::TypeInfo;
-use codec::{Decode, Encode};
-use sp_runtime::RuntimeDebug;
-use sp_std::prelude::*;
+const MAX_PROPOSER_SLASHINGS: usize = 16;
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct DepositData {
-	pub pubkey: Vec<u8>,
-	pub withdrawal_credentials: H256,
-	pub amount: u64,
-	pub signature: Vec<u8>,
+const MAX_ATTESTER_SLASHINGS: usize =  2;
+
+const MAX_ATTESTATIONS: usize =  128;
+
+const MAX_DEPOSITS: usize =  16;
+
+const MAX_VOLUNTARY_EXITS: usize =  16;
+
+const MAX_VALIDATORS_PER_COMMITTEE: usize = 2048;
+
+const DEPOSIT_CONTRACT_TREE_DEPTH: usize = 32;
+
+const MAX_BYTES_PER_TRANSACTION: usize = 1073741824;
+
+const MAX_TRANSACTIONS_PER_PAYLOAD: usize = 1048576;
+
+const MAX_EXTRA_DATA_BYTES: usize = 32;
+
+const BYTES_PER_LOGS_BLOOM: usize = 256;
+
+pub type BLSSignature = Vector<u8, 96>;
+
+pub type BLSPubkey = Vector<u8, 48>;
+
+pub type Bytes32 = Vector<u8, 32>;
+
+#[derive(Default, SimpleSerialize)]
+pub struct BeaconBlockBody {
+    pub randao_reveal: BLSSignature,
+    pub eth1_data: Eth1Data,
+    pub graffiti: Bytes32,
+    pub proposer_slashings: List<ProposerSlashing, MAX_PROPOSER_SLASHINGS>,
+    pub attester_slashings:
+        List<AttesterSlashing, MAX_ATTESTER_SLASHINGS>,
+    pub attestations: List<Attestation, MAX_ATTESTATIONS>,
+    pub deposits: List<Deposit, MAX_DEPOSITS>,
+    pub voluntary_exits: List<SignedVoluntaryExit, MAX_VOLUNTARY_EXITS>,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Deposit {
-	pub proof: Vec<H256>,
-	pub data: DepositData,
-}
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Checkpoint {
-	pub epoch: u64,
-	pub root: H256,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct AttestationData {
-	pub slot: u64,
-	pub index: u64,
-	pub beacon_block_root: H256,
-	pub source: Checkpoint,
-	pub target: Checkpoint,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct AttestationSlashing {
-    pub attesting_indices: Vec<u64>,
-    pub data: AttestationData,
-    pub signature: Vec<u8>,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SignedHeader {
-	pub message: crate::BeaconHeader,
-    pub signature: Vec<u8>,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct ProposerSlashing {
-	pub signed_header_1: SignedHeader,
-	pub signed_header_2: SignedHeader,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct AttesterSlashing {
-	pub attestation_1: AttestationSlashing,
-	pub attestation_2: AttestationSlashing,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Attestation { 
-	pub aggregation_bits: Vec<u8>,
-	pub data: AttestationData,
-    pub signature: Vec<u8>,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct VoluntaryExit {
-	pub epoch: u64,
-	pub validator_index: u64,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Default, SimpleSerialize)]
 pub struct Eth1Data {
-	pub deposit_root: H256,
-	pub deposit_count: u64,
-	pub block_hash: H256,
+    pub deposit_root: Bytes32,
+    pub deposit_count: u64,
+    pub block_hash: Bytes32,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SyncAggregate {
-	pub sync_committee_bits: Vec<u8>,
-	pub sync_committee_signature: Vec<u8>,
+#[derive(Default, SimpleSerialize)]
+pub struct ProposerSlashing {
+    pub signed_header_1: SignedBeaconBlockHeader,
+    pub signed_header_2: SignedBeaconBlockHeader,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Default, SimpleSerialize, Clone)]
+pub struct SignedBeaconBlockHeader {
+    pub message: BeaconBlockHeader,
+    pub signature: BLSSignature,
+}
+
+#[derive(Default, SimpleSerialize, Clone)]
+pub struct BeaconBlockHeader {
+    pub slot: u64,
+    pub proposer_index: u64,
+    pub parent_root: Bytes32,
+    pub state_root: Bytes32,
+    pub body_root: Bytes32,
+}
+
+#[derive(Default, SimpleSerialize)]
+pub struct AttesterSlashing {
+    pub attestation_1: IndexedAttestation,
+    pub attestation_2: IndexedAttestation,
+}
+
+#[derive(Default, SimpleSerialize)]
+pub struct IndexedAttestation {
+    pub attesting_indices: List<u64, MAX_VALIDATORS_PER_COMMITTEE>,
+    pub data: AttestationData,
+    pub signature: BLSSignature,
+}
+
+#[derive(Default, SimpleSerialize)]
+pub struct AttestationData {
+    pub slot: u64,
+    pub index: u64,
+    pub beacon_block_root: Bytes32,
+    pub source: Checkpoint,
+    pub target: Checkpoint,
+}
+#[derive(Default, SimpleSerialize)]
+pub struct Checkpoint {
+    pub epoch: u64,
+    pub root: Bytes32,
+}
+
+#[derive(Default,  SimpleSerialize)]
+pub struct Attestation {
+    pub aggregation_bits: Bitlist<MAX_VALIDATORS_PER_COMMITTEE>,
+    pub data: AttestationData,
+    pub signature: BLSSignature,
+}
+
+#[derive(Default, SimpleSerialize)]
+pub struct Deposit {
+    pub proof: Vector<Bytes32, {DEPOSIT_CONTRACT_TREE_DEPTH+1}>,
+    pub data: DepositData,
+}
+
+#[derive(Clone, Default, SimpleSerialize)]
+pub struct DepositData {
+    pub pubkey: BLSPubkey,
+    pub withdrawal_credentials: Bytes32,
+    pub amount: u64,
+    pub signature: BLSSignature,
+}
+
+#[derive(Default, SimpleSerialize)]
+pub struct SignedVoluntaryExit {
+    pub message: VoluntaryExit,
+    pub signature: BLSSignature,
+}
+
+#[derive(Default, SimpleSerialize)]
+pub struct VoluntaryExit {
+    pub epoch: u64,
+    pub validator_index: u64,
+}
+
+#[derive(Default, SimpleSerialize)]
 pub struct ExecutionPayload {
-	pub parent_hash: H256,
-	pub fee_recipient: Vec<u8>,
-	pub state_root: H256,
-	pub receipts_root: H256,
-	pub logs_bloom: Vec<u8>,
-	pub prev_randao: H256,
-	pub block_number: u64,
-	pub gas_limit: u64,
-	pub gas_used: u64,
-	pub timestamp: u64,
-	pub extra_data: Vec<u8>,
-	pub base_fee_per_gas: u64,
-	pub block_hash: H256,
-	pub transactions: Vec<Vec<u8>>,
+    pub parent_hash: Bytes32,
+    pub fee_recipient: Vector<u8, 20>,
+    pub state_root: Bytes32,
+    pub receipts_root: Bytes32,
+    pub logs_bloom: Vector<u8, BYTES_PER_LOGS_BLOOM>,
+    pub prev_randao: Bytes32,
+    pub block_number: u64,
+    pub gas_limit: u64,
+    pub gas_used: u64,
+    pub timestamp: u64,
+    pub extra_data: List<u8, MAX_EXTRA_DATA_BYTES>,
+    pub base_fee_per_gas: U256,
+    pub block_hash: Bytes32,
+    pub transactions: List<List<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Body {
-	pub randao_reveal: Vec<u8>,
-	pub eth1_data: Eth1Data,
-    pub graffiti: H256,
-    pub proposer_slashings: Vec<ProposerSlashing>,
-    pub attester_slashings: Vec<AttesterSlashing>,
-    pub attestations: Vec<Attestation>,
-    pub deposits: Vec<Deposit>,
-    pub voluntary_exits: Vec<VoluntaryExit>, 
-    pub sync_aggregate: SyncAggregate,
-    pub execution_payload: ExecutionPayload, 
+#[derive(Default, SimpleSerialize)]
+pub struct BeaconBlock{
+    pub slot: u64,
+    pub proposer_index: u64,
+    pub parent_root: Bytes32,
+    pub state_root: Bytes32,
+    pub body: BeaconBlockBody,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct BeaconBlock {
-	pub slot: u64,
-	pub proposer_index: u64,
-	pub parent_root: H256,
-	pub state_root: H256,
-	pub body: Body,
+#[cfg(test)]
+mod tests {
+    use frame_support::{assert_ok};
+    use hex_literal::hex;
+    use crate::block::BeaconBlock;
+    use ssz_rs::Merkleized;
+    use ssz_rs::deserialize;
+
+    #[test]
+    pub fn test_hash_tree_beacon_block() {
+        let payload = hex!("186307000000000090cd0000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5cad5f72126b7e026f7
+        99465886a9dda0fb50b1baff4c6f733e2a16c500e4a2a75400000082c58d251044ab938b84747524e9b5ecbf6f71f6f1ac10a834806d033bbc49ecd2391072f9bbb4758a960342f
+        8ee03930dc8195f15649c654a56767632230fe3d196f6499d94cd239ba964fe21d7e4715127a385ee018d405719428178172188d70a234731285c6804c2a4f56711ddb8c82c9974
+        0f207854891028af34e27e5e00000000000000000000000000000000000000000000000000000000000000000000000000000000707279736d2d676574680000000000000000000
+        0000000000000000000000000800100008001000080010000ca1a0000ca1a0000cefffffefffffff767fffbedffffeffffeeffdffffdebffffff7f7dbdf7fffdffffbffcfffdff7
+        9dfffbbfefff2ffffff7ddeff7ffffc98ff7fbfffffffffff78af1a8577bba419fe054ee49b16ed28e081dda6d3ba41651634685e890992a0b675e20f8d9f2ec137fe9eb50e838a
+        a6117f9f5410e2e1024c4b4f0e098e55144843ce90b7acde52fe7b94f2a1037342c951dc59f501c92acf7ed944cb6d2b5f7ca1a0000680000005d01000052020000470300003c04
+        000031050000260600001b0700001008000005090000fa090000ef0a0000e40b0000d90c0000ce0d0000c30e0000b80f0000ad100000a2110000971200008c13000081140000761
+        500006b1600006017000055180000e4000000176307000000000000000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000
+        000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c
+        385c7f7af8e57aadf092443bd6675927ca84875419233fb7a5eb3ae626621d3339fe738b00af4a0edcc55efbe1198a815600784074388d366c4add789aa6126bb1ec5ed63ad8d8f
+        22b5f158ae4c25d46b08d46d1188f7ed7e8f99d96ff6c3c69a240c18ffcffeff7ffffffffefbf7ffffffdff73ee4000000176307000000000019000000000000002e93202be9ab7
+        90aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b00000000
+        00003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7b8b4efa0b212bc0e98a70837a0f2e2a548ed2bdc493ff9ce83d8ce9290d6aec93ad93ea01ea
+        5f7946c8cb8a5ac01981d197a8028cf5a58656fdeb3c3572368dba695b4686aff04a4e72db88c666871defc43c61b89dab3e5b675db131839f172edbfedffbfffff7dffaefdbf77
+        d3ff7e37e4000000176307000000000018000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4d
+        b9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7b3c8813cc0bb32
+        bda17914e32d1c76dc2ff4a304ac07b35a6636d9b77d4f10062c83aa41ee5f6d5622934512e655deeb02d3830c44b6267a5e0dfabff3eeffe9d02229edcac2a345546c3cecd62e9
+        7013e1c54996be344191727b70bcb9541ebeffffff7bfdffffffffffbfffeffffdf1fe4000000176307000000000015000000000000002e93202be9ab790aea3d84ae1313a6daaf
+        115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228
+        169181f19757c774ca93d81047a6c121a0e88b2c385c7f7ac7c7eaaab73e4566bf8d826079efc846c40a309aba7db8e6de52173c57eb4c2c2bcf79c7ea223d3ce230afa837b0fa1
+        09c36448737664c908817d27538a863a3ca652103d6fe6d99213214697a4c987d17cb283d7413acd7f711b914878c6b3ffededfffffffffb7fff9fdfffffffbd3fe400000017630
+        7000000000014000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c100633
+        47bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7a574395a9208a5b543775ded57b8ed012ff
+        a0e61c4380879de166aff1eac506f661df540140384da08e751099426569e00306059aa6ca04a5e5b89c63c78464cc4a6edd38e74d19ab73f52cbb6718a0aec81ee7d1e16ed9ebf
+        3495b0f0956ef0ffffff7e7efffdfdffeffffffffdfdfd1fe400000017630700000000000b000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715
+        be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d
+        81047a6c121a0e88b2c385c7f7a9eff122acd4991b82ed1a60676b373423be7d0780f0905aca5ef72de8e02ed473888c26db52d6f74ac0d60d9d652dd812f1b33fdc867137640bc
+        9927a481ab89a3ce165d54fa9f574fd862fcf5d35d4515082ca990f66e4bbef0bb4414cb12dffffffefddefffebfffdffffdfffbfef3de400000017630700000000000f00000000
+        0000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9ab
+        ca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7978d294b649bd0f71f25ab1192158f866d5af0b14dffdd262c4616df
+        7be5fb608d996ecfe2d525db754c681e6f10125c0cb2d25b1d49269b1389e59ea79760342f6d2690b85f00c1513e2674c5da10cd10e59fdf0c3da444ad26d7c654c44d3bdfdbfff
+        bf7fffff7fffe6ffffdffbdff1fe4000000176307000000000017000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b00000000
+        0000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c38
+        5c7f7a39f32ed3e02424ededb0174f170b29690eb23160f4d42f4e154185728cc1d2705c487b6c9be6687ab70a690530d8d9816c6c0f1bfd15a60f518a569bb8a95dd2cb57cdcda
+        7039a7f297e13010388159f74f6138236d51b0aaeefd93a189bf42ffffaefffbffffefffffffd63fbff7ff3ee4000000176307000000000002000000000000002e93202be9ab790
+        aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000
+        003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7822ec536c4994e864a29234a6cd6721b65c16bf54df8c3bb7a1a9a7e5cdae58d3a035521c533f
+        80811c67b0e98ae66671396c246aa3f7011db2588a09a61c782126ba2d03ffa38aea5b4682395af54ce7dff91ae03fcbe77da6edd13843e2c10ffeffffffefffdddfffff77fffff
+        deb23fe4000000176307000000000007000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9
+        112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f79488ddbfeee168d5
+        4c6693d895aea392af26005a9cb108f7f4697f031f8f0a68b50d394031869ef5c14d850022afa0660eec6238c71051a12c9b1d19934dd7f75e178f684e8eb72cd7f8403a2820063
+        0d96e84be679b93ba5c912ffc0614b0f9cfffdffffd7fdffff7ff9ffffbfdffb53fe4000000176307000000000006000000000000002e93202be9ab790aea3d84ae1313a6daaf11
+        5c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c7835222816
+        9181f19757c774ca93d81047a6c121a0e88b2c385c7f7881710de911d66e0b1525b7b78afff36615a61c110d9fd3417bd6379823599cd6d3db3f46c2c6d89cb8672a80c9975bc0a
+        18a2d2c54f1b3d9f1b078d541bec80f615a00b1a5676a4750caa0a6d37300e11b3dc0f912a20575eeff302af8bf4dceffcfffffdff7bcffffffff7fbfddfef1fe40000001763070
+        00000000010000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347
+        bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7a9db8a4fb7236700ba563dd798244397d8a95
+        a4bda209291a57e99c45c95c38471a7c24106cf8b9eb9a22da4ef0556f51270c305ce4008d623f2fa5614ed329d86ad54c562ca1338561f20474aef251d9d870ba44f93aadffb6f
+        497ba46b61f1feddfdddf7f7ffffffd7fffffbf3fffd3fe400000017630700000000000d000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be
+        67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81
+        047a6c121a0e88b2c385c7f7b7922f4f45c3cc1b92823f5d693f2cda800b2b3a068766aa96d871a7b2a3449c9e9f3ad7ec3651ac09c6fd705f889cd40f976d9d0fb1dc3b87f072d
+        a7dcd8a7e78e7ff23ff21582e93b59ff82c513dfa829e88ec535b1507c5eb4a778e8d2243ffffffdfebfff7dfefdfffadbfffbfcf1fe40000001763070000000000130000000000
+        00002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca
+        28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7a6ac3658da203ef274617be2beef05dc615e3321fbe2a3aa563daec370
+        35400eea8b09536561632809cf92a19a99d7580f9fe22499f3ebfaf1ac1099db4f8a45b7cf1a4bf381a6056f389d48556a387e0fd9188a8ecc29f329e6a9cff966982afb7b5ffff
+        6f6edbeffffefffffffffff1fe400000017630700000000000e000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b0000000000
+        00e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c
+        7f793f13bcbff3a3dadde7191ba614beb0a3c4d186ea4a13df4aca2b537393ffebd265fbd3ce72ec3f143e03bfbdf8d8b6412accff9b127befca13b7b521434e1e2823fa9013476
+        7a2d8bee7f2af6bd5b5c7aa5ac24596ecebda19561affa29f81dffde6fffffffeffffdffe7dfc7e5ffff3fe4000000176307000000000008000000000000002e93202be9ab790ae
+        a3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b000000000000
+        3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7b3f53b7e1e81bd4be2ac612e79113e4e72dcf426d36a7554a04e06626e8a46c2a7108f94c4af818
+        e82e4d47a4e04d7bb107250964d725aec488dc914c47e3a22312ee6194bfde8b5d6d87b59acafab4eca8e8b8b10be764321fe2618a75a1384fdfffffbfff7fddfddffdffbbfffbf
+        fa1ee4000000176307000000000009000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db911
+        2b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f784f2b0c785c136813a
+        08992652f28578e1724e8ed1d6ed4cd35056077b8c536f9c5e413c046e8f332104c08f6a4cf1a703922d02f8533bc7d6a118faba44c219229437cf0dde08ea13c9ff2540d5c6bcc
+        3aceb4402b94745c0ad26d1931e6f1fcffeeaffeffeffffb7fffffe3f7fefff2fe4000000176307000000000001000000000000002e93202be9ab790aea3d84ae1313a6daaf115c
+        7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c783522281691
+        81f19757c774ca93d81047a6c121a0e88b2c385c7f796182aae3439804af5779f3267121233102fb99fc69aa3d78e22c397ccf6ed86408ff21c69197f132d61caea74c7c3d6091d
+        ebaae929c15c5277bb02301e6c02f5aef55796e678bb3175205707da4d98c335e71d2127c5e029e0f62d74e5ad2dbebff7ffd7f3effffaffffbffeffff7f17e4000000176307000
+        000000003000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bf
+        af1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7aeeaab0745087b0a95bbeeefe011393acff1330
+        5cc799f459cd5895294a45e3008377a3cd2582f253986e7db0521100618a99acfa7201897f579f6b15c9c6c8f266421aa033e26e4bafeb6d6bcb2395fa7c349752f2a26f3d29737
+        2b8e42fe1abfffffafd57fdfff77ff3fffffd7ffdf1fe4000000176307000000000004000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67
+        b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d8104
+        7a6c121a0e88b2c385c7f7a5053b79aacb223f0bc51189d96e39d7fa9a08fb42b8dcedc8747141ddd2bb7325367f43c41fe633175b208042a6a6800a27c6ae0a8e1e1ac898a9578
+        bc209a8b816f6e95d9914742ce3f53f42a90df48fc5f226d09e1222f560d6c11dc42427ffffd77fd7bfdf5adfffffbff7fff7ff2fe4000000176307000000000011000000000000
+        002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28
+        b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f791c9d68fd5859a42bb620aa2c9499c78f79c2e3c7d0d61cdf1efb47d3c94
+        22d60f700d5c3f546cd431eeb08b933b98680603c1e300d4f7dccd8d58dd12fb9dd48664f4cafb1b3c7b943ce87fca4921832f015932123c1dc1641e96af78d11d636ebffffefff
+        feffbfffdfef47f7ff7fe1fe4000000176307000000000012000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000
+        e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f
+        788b6ff5bd0d3b06931b484de72da01ab3670e6a2c65be2112ea83ac868a791c401dd92494aa504fcb1838c7b63b5f79c06a8274f9d357e451d34f32ec1edc79bb38ef3b96527ea
+        d0f7c50b4e0adb062ec887d1633656254706fb285d846cb00aff7ffeef76faeff7ffffdfdbfdffffec3fe4000000176307000000000016000000000000002e93202be9ab790aea3
+        d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a
+        667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7916083657bcc9f5f9fdfd009e9c65461f214570c9829495e03cd568cd40e1341598ea4ad53147a8ec
+        6a39cbf8858381e09070371bc3fc0373053a14409db6a340f19e5c5528f470c974d3dadba251b7a2e6225670b4f0241b157dd2ce7325a157ffbfffffdccfff7ffeeddffebfffff6
+        1ee4000000176307000000000005000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b
+        5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7a259e1026193735d542e
+        c4670f1250474ac6072f6100d02ecefb063227ebfbe4f7f8ff8ffafaf50774cccf4c5a84a3be06b06c579953a2a95cce9b1d43fecfadc0a2a0bd0815375dcb69f9017a1124073cd
+        06cae5ebb1f36c68fadc25ce13f7cffffdfbfdffdcff7feebfffbeaffff2f1fe400000017630700000000000c000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7d
+        e54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75183b0000000000003a667c20c78352228169181
+        f19757c774ca93d81047a6c121a0e88b2c385c7f79133cd7e63fa2d7df3f7d99754201c3a44a51ff76bfbdf521640611be6ad68d720db7c6173ec599cb3503da45ca8a25304f866
+        c7e4bf5b24725536a50244dda108c3ae75dc7a18d1c486c3cef23a5fd05dfb357c5f7deb94ec553c4c69a30648fbff9ffdff3ddfffbfbfb7ffafd7dff61fe400000017630700000
+        000000a000000000000002e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5173b000000000000e665df84b5f1b4db9112b5c3876f5c10063347bfaf
+        1025732137cf9abca28b75183b0000000000003a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f787b3d569284d0ddc400f57bcfba4a6ae48456a314
+        70b8f43fd0008e3d4cd8dc4e9acfccc5ef569cddc8282d7d1890700091382632ab1c45e85c55a661e1bcb1b905ff6f6fad2e4ee3c4aa27fa371d40a0799a3df717eabf79ef17c13
+        3ce9d040feff9afdd7bfdaf7dffffbfbfedfbfff19eadee5ab098dde64e9fd02ae5858064bad67064070679625b09f8d82dec183f7f97e180c050e5ab072211ad2c213eb5aee4df
+        134564fa064c2a324c2b5978d7fdfc5d4224d4f421a45388af1ed405a399c845dff56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421000000000000
+        00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        000000000000000000000000000000000000000000000000000000000000000000000006bf538bdfbdf1c96ff528726a40658a91d0bda0f1351448c4c4f3604db2a0ccffa480700
+        000000002d6f7c000000000000000000000000002cfc836200000000fc0100000700000000000000000000000000000000000000000000000000000000000000cd8df91b4503adb
+        8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968fc010000").to_vec();
+
+        let mut header: BeaconBlock = deserialize(&payload).expect("can deserialize");
+        let result = header.hash_tree_root();
+        println!("{:?}", result);
+
+        let result_slice = result.unwrap().as_bytes().to_vec();
+
+        assert_eq!(result_slice, hex!("9ba20481439d691af9739f1435d3e80152b455628b368c95f311126cd2ec54ad").to_vec());
+        
+    }
 }
