@@ -1,7 +1,6 @@
-use crate::{BeaconHeader, SyncCommittee, ForkData, SigningData, block::BeaconBlock, block::ExecutionPayload, block::Attestation, block::AttestationData, block::Checkpoint};
-
+use crate::{BeaconHeader, SyncCommittee, ForkData, SigningData, block::BeaconBlock, block::ExecutionPayload, block::Attestation, block::AttestationData, block::Checkpoint, block::SyncAggregate, block::Eth1Data, block::Body};
 use ssz_rs_derive::SimpleSerialize;
-use ssz_rs::{Deserialize, Sized, SimpleSerialize as SimpleSerializeTrait, Bitlist};
+use ssz_rs::{Deserialize, Sized, SimpleSerialize as SimpleSerializeTrait, Bitlist, Bitvector};
 use ssz_rs::prelude::{Vector, List};
 use sp_std::convert::TryInto;
 use sp_std::iter::FromIterator;
@@ -27,13 +26,15 @@ const MAX_TRANSACTIONS_PER_PAYLOAD: usize = 1048576;
 
 const MAX_EXTRA_DATA_BYTES: usize = 32;
 
-#[derive(Default, SimpleSerialize, Clone)]
+const SYNC_COMMITTEE_SIZE: usize = 512;
+
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZVoluntaryExit {
 	pub epoch: u64,
 	pub validator_index: u64,
 }
 
-#[derive(Default, SimpleSerialize, Clone)]
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZDepositData {
 	pub pubkey: Vector<u8, 48>,
 	pub withdrawal_credentials: [u8; 32],
@@ -41,7 +42,7 @@ pub struct SSZDepositData {
 	pub signature: Vector<u8, 96>,
 }
 
-#[derive(Default, SimpleSerialize, Clone)]
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZDeposit {
 	pub proof: Vector<[u8; 32], {DEPOSIT_CONTRACT_TREE_DEPTH + 1}>,
 	pub data: SSZDepositData,
@@ -62,32 +63,32 @@ pub struct SSZAttestationData {
 	pub target: SSZCheckpoint,
 }
 
-#[derive(Default, SimpleSerialize, Clone)]
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SignedBeaconBlockHeader {
 	pub message: SSZBeaconBlockHeader,
     pub signature: Vector<u8, 96>,
 }
 
-#[derive(Default, SimpleSerialize, Clone)]
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZIndexedAttestation {
     pub attesting_indices: Vector<u64, MAX_VALIDATORS_PER_COMMITTEE>,
     pub data: SSZAttestationData,
     pub signature: Vector<u8, 96>,
 }
 
-#[derive(Default, SimpleSerialize, Clone)]
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZProposerSlashing {
 	pub signed_header_1: SignedBeaconBlockHeader,
 	pub signed_header_2: SignedBeaconBlockHeader,
 }
 
-#[derive(Default, SimpleSerialize, Clone)]
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZAttesterSlashing {
 	pub attestation_1: SSZIndexedAttestation,
 	pub attestation_2: SSZIndexedAttestation,
 }
 
-#[derive(Default, SimpleSerialize, Clone)]
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZEth1Data {
 	pub deposit_root: [u8; 32],
 	pub deposit_count: u64,
@@ -125,9 +126,9 @@ pub struct SSZSyncCommittee {
 	pub aggregate_pubkey: Vector<u8, 48>,
 }
 
-#[derive(Default, SimpleSerialize, Clone)]
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZSyncAggregate {
-	pub sync_committee_bits: Vector<u8, 64>,
+	pub sync_committee_bits: Bitvector<SYNC_COMMITTEE_SIZE>,
 	pub sync_committee_signature: Vector<u8, 96>,
 }
 
@@ -168,36 +169,50 @@ pub enum MerkleizationError {
     InvalidLength
 }
 
-#[derive(Default, SimpleSerialize, Clone)]
+#[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZBeaconBlockBody {
 	pub randao_reveal: Vector<u8, 96>,
     pub eth1_data: SSZEth1Data,
     pub graffiti: [u8; 32],
-    pub proposer_slashings: Vector<SSZProposerSlashing, MAX_PROPOSER_SLASHINGS>,
-    pub attester_slashings: Vector<SSZAttesterSlashing, MAX_ATTESTER_SLASHINGS>,
-    pub attestations: Vector<SSZAttestation, MAX_ATTESTATIONS>,
-    pub deposit: Vector<SSZDeposit, MAX_DEPOSITS>,
-    pub voluntary_exits: Vector<SSZVoluntaryExit, MAX_VOLUNTARY_EXITS>, 
+    pub proposer_slashings: List<SSZProposerSlashing, MAX_PROPOSER_SLASHINGS>,
+    pub attester_slashings: List<SSZAttesterSlashing, MAX_ATTESTER_SLASHINGS>,
+    pub attestations: List<SSZAttestation, MAX_ATTESTATIONS>,
+    pub deposit: List<SSZDeposit, MAX_DEPOSITS>,
+    pub voluntary_exits: List<SSZVoluntaryExit, MAX_VOLUNTARY_EXITS>, 
     pub sync_aggregate: SSZSyncAggregate,
     pub execution_payload: SSZExecutionPayload, 
 }
 
 pub fn hash_tree_root_beacon_block(beacon_block: BeaconBlock) -> Result<[u8; 32], MerkleizationError> {
-    let conv_randao_reveal = Vector::<u8, 96>::from_iter(beacon_block.body.randao_reveal);
+    let body = get_ssz_beacon_block_body(beacon_block.body)?;
+
+    let block = SSZBeaconBlock{
+        slot: beacon_block.slot,
+        proposer_index: beacon_block.proposer_index,
+        parent_root: beacon_block.parent_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+        state_root: beacon_block.state_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+        body: body,
+    };
+
+    hash_tree_root(block)
+}
+
+pub fn get_ssz_beacon_block_body(body: Body) -> Result<SSZBeaconBlockBody, MerkleizationError> {
+    let conv_randao_reveal = Vector::<u8, 96>::from_iter(body.randao_reveal);
 
     let mut proposer_slashings = Vec::new();
 
-    for proposer_slashing in beacon_block.body.proposer_slashings.iter() {
+    for proposer_slashing in body.proposer_slashings.iter() {
         let signature1 = Vector::<u8, 96>::from_iter(proposer_slashing.signed_header_1.signature.clone());
         let signature2 = Vector::<u8, 96>::from_iter(proposer_slashing.signed_header_2.signature.clone());
 
         let conv_proposer_slashing = SSZProposerSlashing{
             signed_header_1: SignedBeaconBlockHeader{
-                message: get_beacon_header(proposer_slashing.signed_header_1.message.clone())?,
+                message: get_ssz_beacon_header(proposer_slashing.signed_header_1.message.clone())?,
                 signature: signature1,
             },
             signed_header_2: SignedBeaconBlockHeader{
-                message: get_beacon_header(proposer_slashing.signed_header_2.message.clone())?,
+                message: get_ssz_beacon_header(proposer_slashing.signed_header_2.message.clone())?,
                 signature: signature2,
             },
         };
@@ -205,11 +220,11 @@ pub fn hash_tree_root_beacon_block(beacon_block: BeaconBlock) -> Result<[u8; 32]
         proposer_slashings.push(conv_proposer_slashing);
     }
 
-    let proposer_slashings_conv = Vector::<SSZProposerSlashing, MAX_PROPOSER_SLASHINGS>::from_iter(proposer_slashings);
+    let proposer_slashings_conv = List::<SSZProposerSlashing, MAX_PROPOSER_SLASHINGS>::from_iter(proposer_slashings);
 
     let mut attester_slashings = Vec::new();
 
-    for attester_slashing in beacon_block.body.attester_slashings.iter() {
+    for attester_slashing in body.attester_slashings.iter() {
         let signature1 = Vector::<u8, 96>::from_iter(attester_slashing.attestation_1.signature.clone());
         let signature2 = Vector::<u8, 96>::from_iter(attester_slashing.attestation_2.signature.clone());
 
@@ -232,30 +247,30 @@ pub fn hash_tree_root_beacon_block(beacon_block: BeaconBlock) -> Result<[u8; 32]
         attester_slashings.push(conv_attestor_slashing);
     }
 
-    let attester_slashings_conv = Vector::<SSZAttesterSlashing, MAX_ATTESTER_SLASHINGS>::from_iter(attester_slashings);
+    let attester_slashings_conv = List::<SSZAttesterSlashing, MAX_ATTESTER_SLASHINGS>::from_iter(attester_slashings);
 
     let mut attestations = Vec::new();
 
-    for attestation in beacon_block.body.attestations.iter() {
+    for attestation in body.attestations.iter() {
         attestations.push(get_ssz_attestation((*attestation).clone())?);
     }
 
-    let attestations_conv = Vector::<SSZAttestation, MAX_ATTESTATIONS>::from_iter(attestations);
+    let attestations_conv = List::<SSZAttestation, MAX_ATTESTATIONS>::from_iter(attestations);
 
     let mut voluntary_exits = Vec::new();
 
-    for voluntary_exit in beacon_block.body.voluntary_exits.iter() {
+    for voluntary_exit in body.voluntary_exits.iter() {
         voluntary_exits.push(SSZVoluntaryExit{
             epoch: voluntary_exit.epoch,
             validator_index: voluntary_exit.validator_index,
         });
     }
 
-    let voluntary_exits_conv = Vector::<SSZVoluntaryExit, MAX_VOLUNTARY_EXITS>::from_iter(voluntary_exits);
+    let voluntary_exits_conv = List::<SSZVoluntaryExit, MAX_VOLUNTARY_EXITS>::from_iter(voluntary_exits);
 
     let mut deposits = Vec::new();
 
-    for deposit in beacon_block.body.deposits.iter() {
+    for deposit in body.deposits.iter() {
         let mut proofs = Vec::new();
 
         for proof in deposit.proof.iter() {
@@ -275,37 +290,22 @@ pub fn hash_tree_root_beacon_block(beacon_block: BeaconBlock) -> Result<[u8; 32]
         });
     }
 
-    let deposit_data_conv = Vector::<SSZDeposit, MAX_DEPOSITS>::from_iter(deposits);
+    let deposit_data_conv = List::<SSZDeposit, MAX_DEPOSITS>::from_iter(deposits);
 
-    let ssz_execution_payload = get_ssz_execution_payload(beacon_block.body.execution_payload)?;
+    let ssz_execution_payload = get_ssz_execution_payload(body.execution_payload)?;
 
-    let ssz_block = SSZBeaconBlock{
-        slot: beacon_block.slot,
-        proposer_index: beacon_block.proposer_index,
-        parent_root: beacon_block.parent_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
-        state_root: beacon_block.state_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
-        body: SSZBeaconBlockBody{
-            randao_reveal: conv_randao_reveal,
-            eth1_data: SSZEth1Data{
-                deposit_root: beacon_block.body.eth1_data.deposit_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
-	            deposit_count: beacon_block.body.eth1_data.deposit_count,
-                block_hash: beacon_block.body.eth1_data.block_hash.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
-            },
-            graffiti: beacon_block.body.graffiti.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
-            proposer_slashings: proposer_slashings_conv,
-            attester_slashings: attester_slashings_conv,
-            attestations: attestations_conv,
-            deposit: deposit_data_conv,
-            voluntary_exits: voluntary_exits_conv,
-            sync_aggregate: SSZSyncAggregate{
-                sync_committee_bits: Vector::<u8, 64>::from_iter(beacon_block.body.sync_aggregate.sync_committee_bits),
-                sync_committee_signature: Vector::<u8, 96>::from_iter(beacon_block.body.sync_aggregate.sync_committee_signature),
-            },
-            execution_payload: ssz_execution_payload,
-        },
-    };
-
-    hash_tree_root(ssz_block)
+    Ok(SSZBeaconBlockBody{
+        randao_reveal: conv_randao_reveal,
+        eth1_data: get_ssz_eth1_data(body.eth1_data)?,
+        graffiti: body.graffiti.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+        proposer_slashings: proposer_slashings_conv,
+        attester_slashings: attester_slashings_conv,
+        attestations: attestations_conv,
+        deposit: deposit_data_conv,
+        voluntary_exits: voluntary_exits_conv,
+        sync_aggregate: get_ssz_sync_aggregate(body.sync_aggregate)?,
+        execution_payload: ssz_execution_payload,
+    })
 }
 
 pub fn get_ssz_execution_payload(execution_payload: ExecutionPayload) -> Result<SSZExecutionPayload, MerkleizationError> {
@@ -368,7 +368,7 @@ pub fn get_ssz_checkpoint(checkpoint: Checkpoint) -> Result<SSZCheckpoint, Merkl
     })
 }
 
-pub fn get_beacon_header(beacon_header: BeaconHeader) -> Result<SSZBeaconBlockHeader, MerkleizationError> {
+pub fn get_ssz_beacon_header(beacon_header: BeaconHeader) -> Result<SSZBeaconBlockHeader, MerkleizationError> {
     Ok(SSZBeaconBlockHeader{
         slot: beacon_header.slot,
         proposer_index: beacon_header.proposer_index,
@@ -378,8 +378,23 @@ pub fn get_beacon_header(beacon_header: BeaconHeader) -> Result<SSZBeaconBlockHe
     })
 }
 
+pub fn get_ssz_sync_aggregate(sync_aggregate: SyncAggregate) -> Result<SSZSyncAggregate, MerkleizationError> {
+    Ok(SSZSyncAggregate{ 
+        sync_committee_bits: Bitvector::<SYNC_COMMITTEE_SIZE>::deserialize(&sync_aggregate.sync_committee_bits).map_err(|_| MerkleizationError::InvalidLength)?,
+        sync_committee_signature: Vector::<u8, 96>::from_iter(sync_aggregate.sync_committee_signature),
+    })
+}
+
+pub fn get_ssz_eth1_data(eth1_data: Eth1Data) -> Result<SSZEth1Data, MerkleizationError> {
+    Ok(SSZEth1Data{
+        deposit_root: eth1_data.deposit_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+        deposit_count: eth1_data.deposit_count,
+        block_hash: eth1_data.block_hash.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
+    })
+}
+
 pub fn hash_tree_root_beacon_header(beacon_header: BeaconHeader) -> Result<[u8; 32], MerkleizationError> {
-    hash_tree_root(get_beacon_header(beacon_header)?)
+    hash_tree_root(get_ssz_beacon_header(beacon_header)?)
 }
 
 pub fn hash_tree_root_sync_committee(sync_committee: SyncCommittee) -> Result<[u8; 32], MerkleizationError> {
@@ -431,6 +446,7 @@ mod tests {
     use sp_core::H256;
 
     use hex_literal::hex;
+    use ssz_rs::prelude::Vector;
 
 
     #[test]
@@ -2813,7 +2829,7 @@ mod tests {
                                 }
                             },
                             signature: hex!("af8e57aadf092443bd6675927ca84875419233fb7a5eb3ae626621d3339fe738b00af4a0edcc55efbe1198a815600784074388d366c4add789aa6126bb1ec5ed63ad8d8f22b5f158ae4c25d46b08d46d1188f7ed7e8f99d96ff6c3c69a240c18").to_vec(),
-                    },
+                        },
                         Attestation{ 
                             aggregation_bits: hex!("edbfedffbfffff7dffaefdbf77d3ff7e37").to_vec(), 
                             data: AttestationData{
@@ -2830,7 +2846,7 @@ mod tests {
                                 }
                             },
                             signature: hex!("b8b4efa0b212bc0e98a70837a0f2e2a548ed2bdc493ff9ce83d8ce9290d6aec93ad93ea01ea5f7946c8cb8a5ac01981d197a8028cf5a58656fdeb3c3572368dba695b4686aff04a4e72db88c666871defc43c61b89dab3e5b675db131839f172").to_vec(),
-                    },
+                        },
                         Attestation{ 
                             aggregation_bits: hex!("effffff7bfdffffffffffbfffeffffdf1f").to_vec(), 
                             data: AttestationData{
@@ -2847,7 +2863,7 @@ mod tests {
                                 }
                             },
                             signature: hex!("b3c8813cc0bb32bda17914e32d1c76dc2ff4a304ac07b35a6636d9b77d4f10062c83aa41ee5f6d5622934512e655deeb02d3830c44b6267a5e0dfabff3eeffe9d02229edcac2a345546c3cecd62e97013e1c54996be344191727b70bcb9541eb").to_vec(),
-                    },
+                        },
                         Attestation{ 
                             aggregation_bits: hex!("ffededfffffffffb7fff9fdfffffffbd3f").to_vec(), 
                             data: AttestationData{
@@ -3273,7 +3289,546 @@ mod tests {
 
         assert_eq!(
             hash_tree_hex,
-            hex!("f7c410dbb50104bd95a66ad2b564cc18bbcce06391e572b61968a2d78c3ee4cc").into()
+            hex!("9ba20481439d691af9739f1435d3e80152b455628b368c95f311126cd2ec54ad").into()
+        );
+    }
+
+    #[test]
+    pub fn test_hash_block_body() {
+        let payload = merklization::get_ssz_beacon_block_body(
+            Body{
+                randao_reveal: hex!("82c58d251044ab938b84747524e9b5ecbf6f71f6f1ac10a834806d033bbc49ecd2391072f9bbb4758a960342f8ee03930dc8195f15649c654a56767632230fe3d196f6499d94cd239ba964fe21d7e4715127a385ee018d405719428178172188").to_vec(),
+                eth1_data: Eth1Data{
+                    deposit_root: hex!("d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e").into(),
+                    deposit_count: 0,
+                    block_hash: hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+                },
+                graffiti: hex!("707279736d2d6765746800000000000000000000000000000000000000000000").into(),
+                proposer_slashings: vec![],
+                attester_slashings: vec![],
+                attestations: vec![
+                    Attestation{ 
+                        aggregation_bits: hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 0,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("af8e57aadf092443bd6675927ca84875419233fb7a5eb3ae626621d3339fe738b00af4a0edcc55efbe1198a815600784074388d366c4add789aa6126bb1ec5ed63ad8d8f22b5f158ae4c25d46b08d46d1188f7ed7e8f99d96ff6c3c69a240c18").to_vec(),
+                    },
+                    Attestation{ 
+                        aggregation_bits: hex!("edbfedffbfffff7dffaefdbf77d3ff7e37").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 25,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("b8b4efa0b212bc0e98a70837a0f2e2a548ed2bdc493ff9ce83d8ce9290d6aec93ad93ea01ea5f7946c8cb8a5ac01981d197a8028cf5a58656fdeb3c3572368dba695b4686aff04a4e72db88c666871defc43c61b89dab3e5b675db131839f172").to_vec(),
+                    },
+                    Attestation{ 
+                        aggregation_bits: hex!("effffff7bfdffffffffffbfffeffffdf1f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 24,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("b3c8813cc0bb32bda17914e32d1c76dc2ff4a304ac07b35a6636d9b77d4f10062c83aa41ee5f6d5622934512e655deeb02d3830c44b6267a5e0dfabff3eeffe9d02229edcac2a345546c3cecd62e97013e1c54996be344191727b70bcb9541eb").to_vec(),
+                    },
+                    Attestation{ 
+                        aggregation_bits: hex!("ffededfffffffffb7fff9fdfffffffbd3f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 21,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("ac7c7eaaab73e4566bf8d826079efc846c40a309aba7db8e6de52173c57eb4c2c2bcf79c7ea223d3ce230afa837b0fa109c36448737664c908817d27538a863a3ca652103d6fe6d99213214697a4c987d17cb283d7413acd7f711b914878c6b3").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("ffffff7e7efffdfdffeffffffffdfdfd1f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 20,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("a574395a9208a5b543775ded57b8ed012ffa0e61c4380879de166aff1eac506f661df540140384da08e751099426569e00306059aa6ca04a5e5b89c63c78464cc4a6edd38e74d19ab73f52cbb6718a0aec81ee7d1e16ed9ebf3495b0f0956ef0").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("ffffffefddefffebfffdffffdfffbfef3d").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 11,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("a9eff122acd4991b82ed1a60676b373423be7d0780f0905aca5ef72de8e02ed473888c26db52d6f74ac0d60d9d652dd812f1b33fdc867137640bc9927a481ab89a3ce165d54fa9f574fd862fcf5d35d4515082ca990f66e4bbef0bb4414cb12d").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("dfdbfffbf7fffff7fffe6ffffdffbdff1f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 15,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("978d294b649bd0f71f25ab1192158f866d5af0b14dffdd262c4616df7be5fb608d996ecfe2d525db754c681e6f10125c0cb2d25b1d49269b1389e59ea79760342f6d2690b85f00c1513e2674c5da10cd10e59fdf0c3da444ad26d7c654c44d3b").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("ffffaefffbffffefffffffd63fbff7ff3e").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 23,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("a39f32ed3e02424ededb0174f170b29690eb23160f4d42f4e154185728cc1d2705c487b6c9be6687ab70a690530d8d9816c6c0f1bfd15a60f518a569bb8a95dd2cb57cdcda7039a7f297e13010388159f74f6138236d51b0aaeefd93a189bf42").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("ffeffffffefffdddfffff77fffffdeb23f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 2,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("822ec536c4994e864a29234a6cd6721b65c16bf54df8c3bb7a1a9a7e5cdae58d3a035521c533f80811c67b0e98ae66671396c246aa3f7011db2588a09a61c782126ba2d03ffa38aea5b4682395af54ce7dff91ae03fcbe77da6edd13843e2c10").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("cfffdffffd7fdffff7ff9ffffbfdffb53f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 7,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("9488ddbfeee168d54c6693d895aea392af26005a9cb108f7f4697f031f8f0a68b50d394031869ef5c14d850022afa0660eec6238c71051a12c9b1d19934dd7f75e178f684e8eb72cd7f8403a28200630d96e84be679b93ba5c912ffc0614b0f9").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("effcfffffdff7bcffffffff7fbfddfef1f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 6,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("881710de911d66e0b1525b7b78afff36615a61c110d9fd3417bd6379823599cd6d3db3f46c2c6d89cb8672a80c9975bc0a18a2d2c54f1b3d9f1b078d541bec80f615a00b1a5676a4750caa0a6d37300e11b3dc0f912a20575eeff302af8bf4dc").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("feddfdddf7f7ffffffd7fffffbf3fffd3f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 16,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("a9db8a4fb7236700ba563dd798244397d8a95a4bda209291a57e99c45c95c38471a7c24106cf8b9eb9a22da4ef0556f51270c305ce4008d623f2fa5614ed329d86ad54c562ca1338561f20474aef251d9d870ba44f93aadffb6f497ba46b61f1").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("ffffffdfebfff7dfefdfffadbfffbfcf1f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 13,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("b7922f4f45c3cc1b92823f5d693f2cda800b2b3a068766aa96d871a7b2a3449c9e9f3ad7ec3651ac09c6fd705f889cd40f976d9d0fb1dc3b87f072da7dcd8a7e78e7ff23ff21582e93b59ff82c513dfa829e88ec535b1507c5eb4a778e8d2243").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("fb7b5ffff6f6edbeffffefffffffffff1f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 19,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("a6ac3658da203ef274617be2beef05dc615e3321fbe2a3aa563daec37035400eea8b09536561632809cf92a19a99d7580f9fe22499f3ebfaf1ac1099db4f8a45b7cf1a4bf381a6056f389d48556a387e0fd9188a8ecc29f329e6a9cff966982a").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("ffde6fffffffeffffdffe7dfc7e5ffff3f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 14,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("93f13bcbff3a3dadde7191ba614beb0a3c4d186ea4a13df4aca2b537393ffebd265fbd3ce72ec3f143e03bfbdf8d8b6412accff9b127befca13b7b521434e1e2823fa90134767a2d8bee7f2af6bd5b5c7aa5ac24596ecebda19561affa29f81d").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("fdfffffbfff7fddfddffdffbbfffbffa1e").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 8,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("b3f53b7e1e81bd4be2ac612e79113e4e72dcf426d36a7554a04e06626e8a46c2a7108f94c4af818e82e4d47a4e04d7bb107250964d725aec488dc914c47e3a22312ee6194bfde8b5d6d87b59acafab4eca8e8b8b10be764321fe2618a75a1384").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("cffeeaffeffeffffb7fffffe3f7fefff2f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 9,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("84f2b0c785c136813a08992652f28578e1724e8ed1d6ed4cd35056077b8c536f9c5e413c046e8f332104c08f6a4cf1a703922d02f8533bc7d6a118faba44c219229437cf0dde08ea13c9ff2540d5c6bcc3aceb4402b94745c0ad26d1931e6f1f").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("bebff7ffd7f3effffaffffbffeffff7f17").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 1,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("96182aae3439804af5779f3267121233102fb99fc69aa3d78e22c397ccf6ed86408ff21c69197f132d61caea74c7c3d6091debaae929c15c5277bb02301e6c02f5aef55796e678bb3175205707da4d98c335e71d2127c5e029e0f62d74e5ad2d").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("bfffffafd57fdfff77ff3fffffd7ffdf1f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 3,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("aeeaab0745087b0a95bbeeefe011393acff13305cc799f459cd5895294a45e3008377a3cd2582f253986e7db0521100618a99acfa7201897f579f6b15c9c6c8f266421aa033e26e4bafeb6d6bcb2395fa7c349752f2a26f3d297372b8e42fe1a").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("ffffd77fd7bfdf5adfffffbff7fff7ff2f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 4,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("a5053b79aacb223f0bc51189d96e39d7fa9a08fb42b8dcedc8747141ddd2bb7325367f43c41fe633175b208042a6a6800a27c6ae0a8e1e1ac898a9578bc209a8b816f6e95d9914742ce3f53f42a90df48fc5f226d09e1222f560d6c11dc42427").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("6ebffffeffffeffbfffdfef47f7ff7fe1f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 17,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("91c9d68fd5859a42bb620aa2c9499c78f79c2e3c7d0d61cdf1efb47d3c9422d60f700d5c3f546cd431eeb08b933b98680603c1e300d4f7dccd8d58dd12fb9dd48664f4cafb1b3c7b943ce87fca4921832f015932123c1dc1641e96af78d11d63").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("ff7ffeef76faeff7ffffdfdbfdffffec3f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 18,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("88b6ff5bd0d3b06931b484de72da01ab3670e6a2c65be2112ea83ac868a791c401dd92494aa504fcb1838c7b63b5f79c06a8274f9d357e451d34f32ec1edc79bb38ef3b96527ead0f7c50b4e0adb062ec887d1633656254706fb285d846cb00a").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("7ffbfffffdccfff7ffeeddffebfffff61e").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 22,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("916083657bcc9f5f9fdfd009e9c65461f214570c9829495e03cd568cd40e1341598ea4ad53147a8ec6a39cbf8858381e09070371bc3fc0373053a14409db6a340f19e5c5528f470c974d3dadba251b7a2e6225670b4f0241b157dd2ce7325a15").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("ffffdfbfdffdcff7feebfffbeaffff2f1f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 5,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("a259e1026193735d542ec4670f1250474ac6072f6100d02ecefb063227ebfbe4f7f8ff8ffafaf50774cccf4c5a84a3be06b06c579953a2a95cce9b1d43fecfadc0a2a0bd0815375dcb69f9017a1124073cd06cae5ebb1f36c68fadc25ce13f7c").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("fbff9ffdff3ddfffbfbfb7ffafd7dff61f").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 12,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("9133cd7e63fa2d7df3f7d99754201c3a44a51ff76bfbdf521640611be6ad68d720db7c6173ec599cb3503da45ca8a25304f866c7e4bf5b24725536a50244dda108c3ae75dc7a18d1c486c3cef23a5fd05dfb357c5f7deb94ec553c4c69a30648").to_vec(),
+                },
+                    Attestation{ 
+                        aggregation_bits: hex!("feff9afdd7bfdaf7dffffbfbfedfbfff19").to_vec(), 
+                        data: AttestationData{
+                            slot: 484119,
+                            index: 10,
+                            beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
+                            source: Checkpoint{
+                                epoch: 15127,
+                                root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
+                            },
+                            target: Checkpoint{
+                                epoch: 15128,
+                                root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
+                            }
+                        },
+                        signature: hex!("87b3d569284d0ddc400f57bcfba4a6ae48456a31470b8f43fd0008e3d4cd8dc4e9acfccc5ef569cddc8282d7d1890700091382632ab1c45e85c55a661e1bcb1b905ff6f6fad2e4ee3c4aa27fa371d40a0799a3df717eabf79ef17c133ce9d040").to_vec()
+                }
+                ],
+                deposits: vec![],
+                voluntary_exits:  vec![],
+                sync_aggregate: SyncAggregate{
+                    sync_committee_bits: hex!("cefffffefffffff767fffbedffffeffffeeffdffffdebffffff7f7dbdf7fffdffffbffcfffdff79dfffbbfefff2ffffff7ddeff7ffffc98ff7fbfffffffffff7").to_vec(),
+                    sync_committee_signature: hex!("8af1a8577bba419fe054ee49b16ed28e081dda6d3ba41651634685e890992a0b675e20f8d9f2ec137fe9eb50e838aa6117f9f5410e2e1024c4b4f0e098e55144843ce90b7acde52fe7b94f2a1037342c951dc59f501c92acf7ed944cb6d2b5f7").to_vec(),
+                },
+                execution_payload: ExecutionPayload{
+                    parent_hash: hex!("eadee5ab098dde64e9fd02ae5858064bad67064070679625b09f8d82dec183f7").into(),
+                    fee_recipient: hex!("f97e180c050e5ab072211ad2c213eb5aee4df134").to_vec(),
+                    state_root: hex!("564fa064c2a324c2b5978d7fdfc5d4224d4f421a45388af1ed405a399c845dff").into(),
+                    receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
+                    logs_bloom: hex!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").to_vec(),
+                    prev_randao: hex!("6bf538bdfbdf1c96ff528726a40658a91d0bda0f1351448c4c4f3604db2a0ccf").into(),
+                    block_number: 477434,
+                    gas_limit: 8154925,
+                    gas_used: 0,
+                    timestamp: 1652816940,
+                    extra_data: vec![], 
+                    base_fee_per_gas: 7,
+                    block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
+                    transactions: vec![ ], 
+                },
+            },
+        ).into();
+
+        assert_ok!(&payload);
+
+        let hash_root = merklization::hash_tree_root(payload.unwrap());
+
+        assert_eq!(
+            hash_root.unwrap(),
+            hex!("f7c410dbb50104bd95a66ad2b564cc18bbcce06391e572b61968a2d78c3ee4cc")
+        );
+    }
+
+    #[test]
+    pub fn test_hash_eth1_data() {
+        let payload = merklization::get_ssz_eth1_data(Eth1Data{
+            deposit_root: hex!("d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e").into(),
+            deposit_count: 0,
+            block_hash: hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
+        });
+
+        assert_ok!(&payload);
+
+        let hash_root = merklization::hash_tree_root(payload.unwrap());
+
+        assert_eq!(
+            hash_root.unwrap(),
+            hex!("aa247f2dfbb6e5d77b7e9f637f9bb70842cbec34cb4238d5bcb491f4e4b3fa5e")
+        );
+    }
+
+    #[test]
+    pub fn test_hash_sync_aggregrate() {
+        let payload = merklization::get_ssz_sync_aggregate(SyncAggregate{
+            sync_committee_bits: hex!("cefffffefffffff767fffbedffffeffffeeffdffffdebffffff7f7dbdf7fffdffffbffcfffdff79dfffbbfefff2ffffff7ddeff7ffffc98ff7fbfffffffffff7").to_vec(),
+            sync_committee_signature: hex!("8af1a8577bba419fe054ee49b16ed28e081dda6d3ba41651634685e890992a0b675e20f8d9f2ec137fe9eb50e838aa6117f9f5410e2e1024c4b4f0e098e55144843ce90b7acde52fe7b94f2a1037342c951dc59f501c92acf7ed944cb6d2b5f7").to_vec(),
+        });
+
+        assert_ok!(&payload);
+
+        let hash_root = merklization::hash_tree_root(payload.unwrap());
+
+        assert_eq!(
+            hash_root.unwrap(),
+            hex!("e6dcad4f60ce9ff8a587b110facbaf94721f06cd810b6d8bf6cffa641272808d")
+        );
+    }
+
+    #[test]
+    pub fn test_hash_sync_signature() {
+        let payload = Vector::<u8, 96>::from_iter(hex!("82c58d251044ab938b84747524e9b5ecbf6f71f6f1ac10a834806d033bbc49ecd2391072f9bbb4758a960342f8ee03930dc8195f15649c654a56767632230fe3d196f6499d94cd239ba964fe21d7e4715127a385ee018d405719428178172188").to_vec());
+
+        let hash_root = merklization::hash_tree_root(payload);
+
+        assert_eq!(
+            hash_root.unwrap(),
+            hex!("2068ede33715fd1eee4a940cea6ebc7d353ea791c18ed0cdc65ab6f4bd367af1")
         );
     }
 
