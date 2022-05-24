@@ -1,5 +1,5 @@
 
-use sp_core::H256;
+use sp_core::{H256, U256};
 use scale_info::TypeInfo;
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
@@ -35,7 +35,7 @@ pub struct AttestationData {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct AttestationSlashing {
+pub struct IndexedAttestation {
     pub attesting_indices: Vec<u64>,
     pub data: AttestationData,
     pub signature: Vec<u8>,
@@ -55,8 +55,8 @@ pub struct ProposerSlashing {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct AttesterSlashing {
-	pub attestation_1: AttestationSlashing,
-	pub attestation_2: AttestationSlashing,
+	pub attestation_1: IndexedAttestation,
+	pub attestation_2: IndexedAttestation,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -98,7 +98,7 @@ pub struct ExecutionPayload {
 	pub gas_used: u64,
 	pub timestamp: u64,
 	pub extra_data: Vec<u8>,
-	pub base_fee_per_gas: u64,
+	pub base_fee_per_gas: U256,
 	pub block_hash: H256,
 	pub transactions: Vec<Vec<u8>>,
 }

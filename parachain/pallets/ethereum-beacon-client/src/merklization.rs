@@ -1,3 +1,4 @@
+use crate::block::AttesterSlashing;
 use crate::{BeaconHeader, SyncCommittee, ForkData, SigningData, block::BeaconBlock, block::ExecutionPayload, block::Attestation, block::AttestationData, block::Checkpoint, block::SyncAggregate, block::Eth1Data, block::Body};
 use ssz_rs_derive::SimpleSerialize;
 use ssz_rs::{Deserialize, Sized, SimpleSerialize as SimpleSerializeTrait, Bitlist, Bitvector};
@@ -5,6 +6,9 @@ use ssz_rs::prelude::{Vector, List};
 use sp_std::convert::TryInto;
 use sp_std::iter::FromIterator;
 use sp_std::prelude::*;
+use ssz_rs::U256;
+use sp_core::U256 as U256_Core;
+use byte_slice_cast::AsByteSlice;
 
 const MAX_PROPOSER_SLASHINGS: usize = 16;
 
@@ -71,7 +75,7 @@ pub struct SignedBeaconBlockHeader {
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZIndexedAttestation {
-    pub attesting_indices: Vector<u64, MAX_VALIDATORS_PER_COMMITTEE>,
+    pub attesting_indices: List<u64, MAX_VALIDATORS_PER_COMMITTEE>,
     pub data: SSZAttestationData,
     pub signature: Vector<u8, 96>,
 }
@@ -157,7 +161,7 @@ pub struct SSZExecutionPayload {
 	pub gas_used: u64,
 	pub timestamp: u64,
 	pub extra_data: List<u8, MAX_EXTRA_DATA_BYTES>,
-	pub base_fee_per_gas: u64,
+	pub base_fee_per_gas: U256,
 	pub block_hash: [u8; 32],
 	pub transactions: List<List<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>,
 }
@@ -184,14 +188,12 @@ pub struct SSZBeaconBlockBody {
 }
 
 pub fn hash_tree_root_beacon_block(beacon_block: BeaconBlock) -> Result<[u8; 32], MerkleizationError> {
-    let body = get_ssz_beacon_block_body(beacon_block.body)?;
-
     let block = SSZBeaconBlock{
         slot: beacon_block.slot,
         proposer_index: beacon_block.proposer_index,
         parent_root: beacon_block.parent_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
         state_root: beacon_block.state_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
-        body: body,
+        body: get_ssz_beacon_block_body(beacon_block.body)?,
     };
 
     hash_tree_root(block)
@@ -221,33 +223,6 @@ pub fn get_ssz_beacon_block_body(body: Body) -> Result<SSZBeaconBlockBody, Merkl
     }
 
     let proposer_slashings_conv = List::<SSZProposerSlashing, MAX_PROPOSER_SLASHINGS>::from_iter(proposer_slashings);
-
-    let mut attester_slashings = Vec::new();
-
-    for attester_slashing in body.attester_slashings.iter() {
-        let signature1 = Vector::<u8, 96>::from_iter(attester_slashing.attestation_1.signature.clone());
-        let signature2 = Vector::<u8, 96>::from_iter(attester_slashing.attestation_2.signature.clone());
-
-        let attesting_indices1 = Vector::<u64, MAX_VALIDATORS_PER_COMMITTEE>::from_iter(attester_slashing.attestation_1.attesting_indices.clone());
-        let attesting_indices2 = Vector::<u64, MAX_VALIDATORS_PER_COMMITTEE>::from_iter(attester_slashing.attestation_2.attesting_indices.clone());
-
-        let conv_attestor_slashing = SSZAttesterSlashing{
-            attestation_1: SSZIndexedAttestation{
-                attesting_indices: attesting_indices1,
-                data: get_ssz_attestation_data(attester_slashing.attestation_1.data.clone())?,
-                signature: signature1,
-            },
-            attestation_2: SSZIndexedAttestation{
-                attesting_indices: attesting_indices2,
-                data: get_ssz_attestation_data(attester_slashing.attestation_2.data.clone())?,
-                signature: signature2,
-            },
-        };
-
-        attester_slashings.push(conv_attestor_slashing);
-    }
-
-    let attester_slashings_conv = List::<SSZAttesterSlashing, MAX_ATTESTER_SLASHINGS>::from_iter(attester_slashings);
 
     let mut attestations = Vec::new();
 
@@ -299,7 +274,7 @@ pub fn get_ssz_beacon_block_body(body: Body) -> Result<SSZBeaconBlockBody, Merkl
         eth1_data: get_ssz_eth1_data(body.eth1_data)?,
         graffiti: body.graffiti.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
         proposer_slashings: proposer_slashings_conv,
-        attester_slashings: attester_slashings_conv,
+        attester_slashings: get_ssz_attester_slashings(body.attester_slashings)?,
         attestations: attestations_conv,
         deposit: deposit_data_conv,
         voluntary_exits: voluntary_exits_conv,
@@ -309,14 +284,6 @@ pub fn get_ssz_beacon_block_body(body: Body) -> Result<SSZBeaconBlockBody, Merkl
 }
 
 pub fn get_ssz_execution_payload(execution_payload: ExecutionPayload) -> Result<SSZExecutionPayload, MerkleizationError> {
-    let mut transactions = Vec::new();
-
-    for transaction in execution_payload.transactions.iter() {
-        transactions.push(List::<u8, MAX_BYTES_PER_TRANSACTION>::from_iter((*transaction).clone()));
-    }
-
-    let transactions_conv = List::<List::<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>::try_from(transactions).map_err(|_| MerkleizationError::InvalidLength)?;
-
     let ssz_execution_payload = SSZExecutionPayload{
         parent_hash: execution_payload.parent_hash.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
         fee_recipient: Vector::<u8, 20>::from_iter(execution_payload.fee_recipient),
@@ -329,12 +296,24 @@ pub fn get_ssz_execution_payload(execution_payload: ExecutionPayload) -> Result<
         gas_used: execution_payload.gas_used,
         timestamp: execution_payload.timestamp,
         extra_data: List::<u8, MAX_EXTRA_DATA_BYTES>::try_from(execution_payload.extra_data).map_err(|_| MerkleizationError::InvalidLength)?,
-        base_fee_per_gas: execution_payload.base_fee_per_gas,
+        base_fee_per_gas: U256::try_from_bytes_le(&(execution_payload.base_fee_per_gas.as_byte_slice())).map_err(|_| MerkleizationError::InvalidLength)?,
         block_hash: execution_payload.block_hash.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
-        transactions: transactions_conv,
+        transactions: get_ssz_transactions(execution_payload.transactions)?,
     };
 
     Ok(ssz_execution_payload)
+}
+
+pub fn get_ssz_transactions(transactions: Vec<Vec<u8>>) -> Result<List<List<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>, MerkleizationError> {
+    let mut transactions_vec = Vec::new();
+
+    for transaction in transactions.iter() {
+        transactions_vec.push(List::<u8, MAX_BYTES_PER_TRANSACTION>::from_iter((*transaction).clone()));
+    }
+
+    let transactions_conv = List::<List::<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>::try_from(transactions_vec).map_err(|_| MerkleizationError::InvalidLength)?;
+
+    Ok(transactions_conv)
 }
 
 pub fn get_ssz_attestation(attestation: Attestation) -> Result<SSZAttestation, MerkleizationError> {
@@ -359,6 +338,39 @@ pub fn get_ssz_attestation_data(attestation_data: AttestationData) -> Result<SSZ
     };
 
     Ok(conv_attestation_data)
+}
+
+pub fn get_ssz_attester_slashings(attester_slashings: Vec<AttesterSlashing>) -> Result<List<SSZAttesterSlashing, MAX_ATTESTER_SLASHINGS>, MerkleizationError> {
+    let mut attester_slashings_vec = Vec::new();
+
+    for attester_slashing in attester_slashings.iter() {
+        attester_slashings_vec.push(get_ssz_attester_slashing((*attester_slashing).clone())?);
+    }
+
+    Ok(List::<SSZAttesterSlashing, MAX_ATTESTER_SLASHINGS>::from_iter(attester_slashings_vec))
+}
+
+pub fn get_ssz_attester_slashing(attester_slashing: AttesterSlashing) -> Result<SSZAttesterSlashing, MerkleizationError> {
+    let signature1 = Vector::<u8, 96>::from_iter(attester_slashing.attestation_1.signature.clone());
+    let signature2 = Vector::<u8, 96>::from_iter(attester_slashing.attestation_2.signature.clone());
+
+    let attesting_indices1 = List::<u64, MAX_VALIDATORS_PER_COMMITTEE>::from_iter(attester_slashing.attestation_1.attesting_indices.clone());
+    let attesting_indices2 = List::<u64, MAX_VALIDATORS_PER_COMMITTEE>::from_iter(attester_slashing.attestation_2.attesting_indices.clone());
+
+    let conv_attestor_slashing = SSZAttesterSlashing{
+        attestation_1: SSZIndexedAttestation{
+            attesting_indices: attesting_indices1,
+            data: get_ssz_attestation_data(attester_slashing.attestation_1.data.clone())?,
+            signature: signature1,
+        },
+        attestation_2: SSZIndexedAttestation{
+            attesting_indices: attesting_indices2,
+            data: get_ssz_attestation_data(attester_slashing.attestation_2.data.clone())?,
+            signature: signature2,
+        },
+    };
+
+    Ok(conv_attestor_slashing)
 }
 
 pub fn get_ssz_checkpoint(checkpoint: Checkpoint) -> Result<SSZCheckpoint, MerkleizationError> {
@@ -439,7 +451,7 @@ pub fn hash_tree_root<T: SimpleSerializeTrait>(mut object: T) -> Result<[u8; 32]
 
 #[cfg(test)]
 mod tests {
-    use crate::block::{AttestationData, Checkpoint, AttestationSlashing, AttesterSlashing, Body, BeaconBlock, Eth1Data, Attestation, ExecutionPayload, SyncAggregate};
+    use crate::block::{AttestationData, Checkpoint, IndexedAttestation, AttesterSlashing, Body, BeaconBlock, Eth1Data, Attestation, ExecutionPayload, SyncAggregate};
     use crate::merklization;
     use crate as ethereum_beacon_client;
     use frame_support::{assert_ok};
@@ -447,7 +459,7 @@ mod tests {
 
     use hex_literal::hex;
     use ssz_rs::prelude::Vector;
-
+    use crate::merklization::U256_Core;
 
     #[test]
     pub fn test_hash_tree_root_beacon_header() {
@@ -1079,13 +1091,13 @@ mod tests {
                     eth1_data: Eth1Data{
                         deposit_root: hex!("a7013ac864a2d1a98436566218963bb0e1063f484419e11ce05f2ae899721064").into(),
                         deposit_count: 2455,
-                        block_hash: hex!("a7013ac864a2d1a98436566218963bb0e1063f484419e11ce05f2ae899721064").into(),
+                        block_hash: hex!("c9d6001586acf9253079b8f373bd73ca3bc55d7a9a927231b2280494997863a3").into(),
                     },
                     graffiti: hex!("5421204c69676874686f7573652d4765746820f09f8cbbf09f909de291a10000").into(),
                     proposer_slashings: vec![],
                     attester_slashings: vec![
                         AttesterSlashing{
-                            attestation_1: AttestationSlashing{
+                            attestation_1: IndexedAttestation{
                                 attesting_indices: vec![
                                     106042
                                 ],
@@ -1104,7 +1116,7 @@ mod tests {
                                 },
                                 signature: hex!("979b66bb70fa8cea7ee829fc70dc13492c6db9ea9f97112696ea803b46b6348e8a3926122e3a4ff3d4ea153896e54a9f190db7d3a58f58edb69589025c18733917d4f1b21610eef8fb3160875d279a7ba37affdc8f5c6e21923ad97eadc7f308").into(),
                             },
-                            attestation_2: AttestationSlashing{
+                            attestation_2: IndexedAttestation{
                                 attesting_indices: vec![
                                 1427,
                                 1592,
@@ -1241,7 +1253,7 @@ mod tests {
                             },
                         },
                         AttesterSlashing{
-                            attestation_1: AttestationSlashing{
+                            attestation_1: IndexedAttestation{
                                 attesting_indices: vec![
                                     105470,
                                     105825,
@@ -1262,7 +1274,7 @@ mod tests {
                                 },
                                 signature: hex!("825d696249fbda2a53cfc95833ee68f42805791b6586760584faaa7ffd3f18d62fba159f99febb90a575bf6681c6c80501804c70bf801e1647769c696d619027950f3a90da1bb0c18228c703dc8239f81a061bfe5af6e58a2f866bf387cc6af7").into(),
                             },
-                            attestation_2: AttestationSlashing{
+                            attestation_2: IndexedAttestation{
                                 attesting_indices: vec![
                                     741,
                                     1271,
@@ -2694,7 +2706,7 @@ mod tests {
                         gas_used: 1999728,
                         timestamp: 1647363504,
                         extra_data: vec![],
-                        base_fee_per_gas: 1010580578,
+                        base_fee_per_gas: U256_Core::from(1010580578),
                         block_hash: hex!("9bdec690b39f69acdd81e764b42efc4232de0c26ae4fb531e7e2b99f44f10bf1").into(),
                         transactions: vec![ 
                             hex!("02f895831469ca8301573c8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d6300000000000000000000000022007a12f6494eb73165bdc5a475771ef2255325c080a088cc0bea0de7f99bba0dbf1dcbbde7be4aaafdcd7f55b3aedf0a73ad5c9d8d44a0219df1909da683994e6c209aaef1c187d1c016112ff5d1da975bf3fc44bf33ae").to_vec(),
@@ -2788,508 +2800,9 @@ mod tests {
         );
 
         assert_ok!(&hash_root);
-        // assert_eq!(
-        //    hash_root.unwrap(),
-        //    hex!("b9eb2caf2d691b183c2d57f322afe505c078cd08101324f61c3641714789a54e")
-        //);/ fix
-    }
-
-    #[test]
-    pub fn test_hash_block() {
-        let hash_root = merklization::hash_tree_root_beacon_block(
-            BeaconBlock {
-                slot: 484120,
-                proposer_index: 52624,
-                parent_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                state_root: hex!("cad5f72126b7e026f799465886a9dda0fb50b1baff4c6f733e2a16c500e4a2a7").into(),
-                body: Body{
-                    randao_reveal: hex!("82c58d251044ab938b84747524e9b5ecbf6f71f6f1ac10a834806d033bbc49ecd2391072f9bbb4758a960342f8ee03930dc8195f15649c654a56767632230fe3d196f6499d94cd239ba964fe21d7e4715127a385ee018d405719428178172188").to_vec(),
-                    eth1_data: Eth1Data{
-                        deposit_root: hex!("d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e").into(),
-                        deposit_count: 0,
-                        block_hash: hex!("0000000000000000000000000000000000000000000000000000000000000000").into(),
-                    },
-                    graffiti: hex!("707279736d2d6765746800000000000000000000000000000000000000000000").into(),
-                    proposer_slashings: vec![],
-                    attester_slashings: vec![],
-                    attestations: vec![
-                        Attestation{ 
-                            aggregation_bits: hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 0,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("af8e57aadf092443bd6675927ca84875419233fb7a5eb3ae626621d3339fe738b00af4a0edcc55efbe1198a815600784074388d366c4add789aa6126bb1ec5ed63ad8d8f22b5f158ae4c25d46b08d46d1188f7ed7e8f99d96ff6c3c69a240c18").to_vec(),
-                        },
-                        Attestation{ 
-                            aggregation_bits: hex!("edbfedffbfffff7dffaefdbf77d3ff7e37").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 25,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("b8b4efa0b212bc0e98a70837a0f2e2a548ed2bdc493ff9ce83d8ce9290d6aec93ad93ea01ea5f7946c8cb8a5ac01981d197a8028cf5a58656fdeb3c3572368dba695b4686aff04a4e72db88c666871defc43c61b89dab3e5b675db131839f172").to_vec(),
-                        },
-                        Attestation{ 
-                            aggregation_bits: hex!("effffff7bfdffffffffffbfffeffffdf1f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 24,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("b3c8813cc0bb32bda17914e32d1c76dc2ff4a304ac07b35a6636d9b77d4f10062c83aa41ee5f6d5622934512e655deeb02d3830c44b6267a5e0dfabff3eeffe9d02229edcac2a345546c3cecd62e97013e1c54996be344191727b70bcb9541eb").to_vec(),
-                        },
-                        Attestation{ 
-                            aggregation_bits: hex!("ffededfffffffffb7fff9fdfffffffbd3f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 21,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("ac7c7eaaab73e4566bf8d826079efc846c40a309aba7db8e6de52173c57eb4c2c2bcf79c7ea223d3ce230afa837b0fa109c36448737664c908817d27538a863a3ca652103d6fe6d99213214697a4c987d17cb283d7413acd7f711b914878c6b3").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("ffffff7e7efffdfdffeffffffffdfdfd1f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 20,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("a574395a9208a5b543775ded57b8ed012ffa0e61c4380879de166aff1eac506f661df540140384da08e751099426569e00306059aa6ca04a5e5b89c63c78464cc4a6edd38e74d19ab73f52cbb6718a0aec81ee7d1e16ed9ebf3495b0f0956ef0").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("ffffffefddefffebfffdffffdfffbfef3d").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 11,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("a9eff122acd4991b82ed1a60676b373423be7d0780f0905aca5ef72de8e02ed473888c26db52d6f74ac0d60d9d652dd812f1b33fdc867137640bc9927a481ab89a3ce165d54fa9f574fd862fcf5d35d4515082ca990f66e4bbef0bb4414cb12d").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("dfdbfffbf7fffff7fffe6ffffdffbdff1f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 15,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("978d294b649bd0f71f25ab1192158f866d5af0b14dffdd262c4616df7be5fb608d996ecfe2d525db754c681e6f10125c0cb2d25b1d49269b1389e59ea79760342f6d2690b85f00c1513e2674c5da10cd10e59fdf0c3da444ad26d7c654c44d3b").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("ffffaefffbffffefffffffd63fbff7ff3e").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 23,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("a39f32ed3e02424ededb0174f170b29690eb23160f4d42f4e154185728cc1d2705c487b6c9be6687ab70a690530d8d9816c6c0f1bfd15a60f518a569bb8a95dd2cb57cdcda7039a7f297e13010388159f74f6138236d51b0aaeefd93a189bf42").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("ffeffffffefffdddfffff77fffffdeb23f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 2,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("822ec536c4994e864a29234a6cd6721b65c16bf54df8c3bb7a1a9a7e5cdae58d3a035521c533f80811c67b0e98ae66671396c246aa3f7011db2588a09a61c782126ba2d03ffa38aea5b4682395af54ce7dff91ae03fcbe77da6edd13843e2c10").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("cfffdffffd7fdffff7ff9ffffbfdffb53f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 7,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("9488ddbfeee168d54c6693d895aea392af26005a9cb108f7f4697f031f8f0a68b50d394031869ef5c14d850022afa0660eec6238c71051a12c9b1d19934dd7f75e178f684e8eb72cd7f8403a28200630d96e84be679b93ba5c912ffc0614b0f9").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("effcfffffdff7bcffffffff7fbfddfef1f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 6,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("881710de911d66e0b1525b7b78afff36615a61c110d9fd3417bd6379823599cd6d3db3f46c2c6d89cb8672a80c9975bc0a18a2d2c54f1b3d9f1b078d541bec80f615a00b1a5676a4750caa0a6d37300e11b3dc0f912a20575eeff302af8bf4dc").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("feddfdddf7f7ffffffd7fffffbf3fffd3f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 16,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("a9db8a4fb7236700ba563dd798244397d8a95a4bda209291a57e99c45c95c38471a7c24106cf8b9eb9a22da4ef0556f51270c305ce4008d623f2fa5614ed329d86ad54c562ca1338561f20474aef251d9d870ba44f93aadffb6f497ba46b61f1").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("ffffffdfebfff7dfefdfffadbfffbfcf1f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 13,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("b7922f4f45c3cc1b92823f5d693f2cda800b2b3a068766aa96d871a7b2a3449c9e9f3ad7ec3651ac09c6fd705f889cd40f976d9d0fb1dc3b87f072da7dcd8a7e78e7ff23ff21582e93b59ff82c513dfa829e88ec535b1507c5eb4a778e8d2243").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("fb7b5ffff6f6edbeffffefffffffffff1f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 19,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("a6ac3658da203ef274617be2beef05dc615e3321fbe2a3aa563daec37035400eea8b09536561632809cf92a19a99d7580f9fe22499f3ebfaf1ac1099db4f8a45b7cf1a4bf381a6056f389d48556a387e0fd9188a8ecc29f329e6a9cff966982a").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("ffde6fffffffeffffdffe7dfc7e5ffff3f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 14,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("93f13bcbff3a3dadde7191ba614beb0a3c4d186ea4a13df4aca2b537393ffebd265fbd3ce72ec3f143e03bfbdf8d8b6412accff9b127befca13b7b521434e1e2823fa90134767a2d8bee7f2af6bd5b5c7aa5ac24596ecebda19561affa29f81d").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("fdfffffbfff7fddfddffdffbbfffbffa1e").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 8,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("b3f53b7e1e81bd4be2ac612e79113e4e72dcf426d36a7554a04e06626e8a46c2a7108f94c4af818e82e4d47a4e04d7bb107250964d725aec488dc914c47e3a22312ee6194bfde8b5d6d87b59acafab4eca8e8b8b10be764321fe2618a75a1384").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("cffeeaffeffeffffb7fffffe3f7fefff2f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 9,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("84f2b0c785c136813a08992652f28578e1724e8ed1d6ed4cd35056077b8c536f9c5e413c046e8f332104c08f6a4cf1a703922d02f8533bc7d6a118faba44c219229437cf0dde08ea13c9ff2540d5c6bcc3aceb4402b94745c0ad26d1931e6f1f").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("bebff7ffd7f3effffaffffbffeffff7f17").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 1,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("96182aae3439804af5779f3267121233102fb99fc69aa3d78e22c397ccf6ed86408ff21c69197f132d61caea74c7c3d6091debaae929c15c5277bb02301e6c02f5aef55796e678bb3175205707da4d98c335e71d2127c5e029e0f62d74e5ad2d").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("bfffffafd57fdfff77ff3fffffd7ffdf1f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 3,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("aeeaab0745087b0a95bbeeefe011393acff13305cc799f459cd5895294a45e3008377a3cd2582f253986e7db0521100618a99acfa7201897f579f6b15c9c6c8f266421aa033e26e4bafeb6d6bcb2395fa7c349752f2a26f3d297372b8e42fe1a").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("ffffd77fd7bfdf5adfffffbff7fff7ff2f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 4,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("a5053b79aacb223f0bc51189d96e39d7fa9a08fb42b8dcedc8747141ddd2bb7325367f43c41fe633175b208042a6a6800a27c6ae0a8e1e1ac898a9578bc209a8b816f6e95d9914742ce3f53f42a90df48fc5f226d09e1222f560d6c11dc42427").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("6ebffffeffffeffbfffdfef47f7ff7fe1f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 17,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("91c9d68fd5859a42bb620aa2c9499c78f79c2e3c7d0d61cdf1efb47d3c9422d60f700d5c3f546cd431eeb08b933b98680603c1e300d4f7dccd8d58dd12fb9dd48664f4cafb1b3c7b943ce87fca4921832f015932123c1dc1641e96af78d11d63").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("ff7ffeef76faeff7ffffdfdbfdffffec3f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 18,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("88b6ff5bd0d3b06931b484de72da01ab3670e6a2c65be2112ea83ac868a791c401dd92494aa504fcb1838c7b63b5f79c06a8274f9d357e451d34f32ec1edc79bb38ef3b96527ead0f7c50b4e0adb062ec887d1633656254706fb285d846cb00a").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("7ffbfffffdccfff7ffeeddffebfffff61e").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 22,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("916083657bcc9f5f9fdfd009e9c65461f214570c9829495e03cd568cd40e1341598ea4ad53147a8ec6a39cbf8858381e09070371bc3fc0373053a14409db6a340f19e5c5528f470c974d3dadba251b7a2e6225670b4f0241b157dd2ce7325a15").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("ffffdfbfdffdcff7feebfffbeaffff2f1f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 5,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("a259e1026193735d542ec4670f1250474ac6072f6100d02ecefb063227ebfbe4f7f8ff8ffafaf50774cccf4c5a84a3be06b06c579953a2a95cce9b1d43fecfadc0a2a0bd0815375dcb69f9017a1124073cd06cae5ebb1f36c68fadc25ce13f7c").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("fbff9ffdff3ddfffbfbfb7ffafd7dff61f").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 12,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("9133cd7e63fa2d7df3f7d99754201c3a44a51ff76bfbdf521640611be6ad68d720db7c6173ec599cb3503da45ca8a25304f866c7e4bf5b24725536a50244dda108c3ae75dc7a18d1c486c3cef23a5fd05dfb357c5f7deb94ec553c4c69a30648").to_vec(),
-                    },
-                        Attestation{ 
-                            aggregation_bits: hex!("feff9afdd7bfdaf7dffffbfbfedfbfff19").to_vec(), 
-                            data: AttestationData{
-                                slot: 484119,
-                                index: 10,
-                                beacon_block_root: hex!("2e93202be9ab790aea3d84ae1313a6daaf115c7de54a05038fba715be67b06d5").into(),
-                                source: Checkpoint{
-                                    epoch: 15127,
-                                    root: hex!("e665df84b5f1b4db9112b5c3876f5c10063347bfaf1025732137cf9abca28b75").into(),
-                                },
-                                target: Checkpoint{
-                                    epoch: 15128,
-                                    root: hex!("3a667c20c78352228169181f19757c774ca93d81047a6c121a0e88b2c385c7f7").into(),
-                                }
-                            },
-                            signature: hex!("87b3d569284d0ddc400f57bcfba4a6ae48456a31470b8f43fd0008e3d4cd8dc4e9acfccc5ef569cddc8282d7d1890700091382632ab1c45e85c55a661e1bcb1b905ff6f6fad2e4ee3c4aa27fa371d40a0799a3df717eabf79ef17c133ce9d040").to_vec()
-                    }
-                    ],
-                    deposits: vec![],
-                    voluntary_exits:  vec![],
-                    sync_aggregate: SyncAggregate{
-                        sync_committee_bits: hex!("cefffffefffffff767fffbedffffeffffeeffdffffdebffffff7f7dbdf7fffdffffbffcfffdff79dfffbbfefff2ffffff7ddeff7ffffc98ff7fbfffffffffff7").to_vec(),
-                        sync_committee_signature: hex!("8af1a8577bba419fe054ee49b16ed28e081dda6d3ba41651634685e890992a0b675e20f8d9f2ec137fe9eb50e838aa6117f9f5410e2e1024c4b4f0e098e55144843ce90b7acde52fe7b94f2a1037342c951dc59f501c92acf7ed944cb6d2b5f7").to_vec(),
-                    },
-                    execution_payload: ExecutionPayload{
-                        parent_hash: hex!("eadee5ab098dde64e9fd02ae5858064bad67064070679625b09f8d82dec183f7").into(),
-                        fee_recipient: hex!("f97e180c050e5ab072211ad2c213eb5aee4df134").to_vec(),
-                        state_root: hex!("564fa064c2a324c2b5978d7fdfc5d4224d4f421a45388af1ed405a399c845dff").into(),
-                        receipts_root: hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").into(),
-                        logs_bloom: hex!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").to_vec(),
-                        prev_randao: hex!("6bf538bdfbdf1c96ff528726a40658a91d0bda0f1351448c4c4f3604db2a0ccf").into(),
-                        block_number: 477434,
-                        gas_limit: 8154925,
-                        gas_used: 0,
-                        timestamp: 1652816940,
-                        extra_data: vec![], 
-                        base_fee_per_gas: 7,
-                        block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
-                        transactions: vec![ ], 
-                    },
-                },
-            }
-        ).into();
-
-    
-        assert_ok!(&hash_root);
-
-        let hash_tree_hex: H256 = hash_root.unwrap().into();
-
-        assert_eq!(
-            hash_tree_hex,
-            hex!("9ba20481439d691af9739f1435d3e80152b455628b368c95f311126cd2ec54ad").into()
+         assert_eq!(
+            hash_root.unwrap(),
+            hex!("23607f8bdfdc30eeb30b3db754ad54f820de4a3a68e9eeccb0788f636f0a9581")
         );
     }
 
@@ -3768,7 +3281,7 @@ mod tests {
                     gas_used: 0,
                     timestamp: 1652816940,
                     extra_data: vec![], 
-                    base_fee_per_gas: 7,
+                    base_fee_per_gas: U256_Core::from(7),
                     block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
                     transactions: vec![ ], 
                 },
@@ -3847,7 +3360,7 @@ mod tests {
                 gas_used: 0,
                 timestamp: 1652816940,
                 extra_data: vec![], 
-                base_fee_per_gas: 7,
+                base_fee_per_gas: U256_Core::from(7),
                 block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
                 transactions: vec![], 
             }
@@ -3942,6 +3455,280 @@ mod tests {
         assert_eq!(
             hash_root.unwrap(),
             hex!("c83bfcaa363a349b6869d70dcfe430f6199f8da7b01eb92d05a0860efe19dcec")
+        );
+    }
+
+    #[test]
+    pub fn test_hash_tree_root_attester_slashing() {
+        let payload = merklization::get_ssz_attester_slashing(
+            AttesterSlashing{
+                attestation_1: IndexedAttestation{
+                    attesting_indices: vec![
+                        106042
+                    ],
+                    data: AttestationData{
+                        slot: 29174,
+                        index: 13,
+                        beacon_block_root:  hex!("176310da1eff663d901786ddd4846de168f655e5392e7cadb26bdd05e98377d0").into(),
+                        source: Checkpoint{
+                            epoch: 910,
+                            root: hex!("6d90b287e690fd6f8941f026578274da939097ed91ef58cecb894ae77db834cc").into(),
+                        },
+                        target: Checkpoint{
+                            epoch: 911,
+                            root: hex!("38548940e7fb08579b5ae46be764c9a3db6aba275330658cd27771c55c4c463f").into(),
+                        }
+                    },
+                    signature: hex!("979b66bb70fa8cea7ee829fc70dc13492c6db9ea9f97112696ea803b46b6348e8a3926122e3a4ff3d4ea153896e54a9f190db7d3a58f58edb69589025c18733917d4f1b21610eef8fb3160875d279a7ba37affdc8f5c6e21923ad97eadc7f308").into(),
+                },
+                attestation_2: IndexedAttestation{
+                    attesting_indices: vec![
+                    1427,
+                    1592,
+                    2728,
+                    4061,
+                    4843,
+                    7371,
+                    7755,
+                    9329,
+                    9804,
+                    9923,
+                    12835,
+                    13061,
+                    15896,
+                    16114,
+                    16559,
+                    16834,
+                    18212,
+                    18265,
+                    19420,
+                    19547,
+                    19613,
+                    20349,
+                    20463,
+                    20822,
+                    21103,
+                    21500,
+                    22066,
+                    23008,
+                    25999,
+                    26305,
+                    28185,
+                    28606,
+                    28895,
+                    28896,
+                    29040,
+                    30487,
+                    30780,
+                    33302,
+                    33978,
+                    34552,
+                    35727,
+                    37094,
+                    37571,
+                    38404,
+                    38629,
+                    40143,
+                    40712,
+                    41209,
+                    42948,
+                    43204,
+                    44096,
+                    45730,
+                    46021,
+                    46538,
+                    47177,
+                    48751,
+                    49130,
+                    49911,
+                    51327,
+                    51786,
+                    53818,
+                    54298,
+                    56147,
+                    56379,
+                    57511,
+                    57598,
+                    58171,
+                    58878,
+                    59325,
+                    60241,
+                    60992,
+                    61532,
+                    62324,
+                    62816,
+                    63282,
+                    63455,
+                    63813,
+                    64064,
+                    65111,
+                    65113,
+                    65237,
+                    65348,
+                    66288,
+                    66419,
+                    66784,
+                    66936,
+                    67365,
+                    69650,
+                    69701,
+                    69809,
+                    71607,
+                    78039,
+                    79103,
+                    83588,
+                    83613,
+                    87810,
+                    88410,
+                    88460,
+                    90714,
+                    91202,
+                    92414,
+                    92874,
+                    93013,
+                    93440,
+                    94839,
+                    94872,
+                    96821,
+                    98647,
+                    98990,
+                    101140,
+                    101141,
+                    101979,
+                    103067,
+                    103850,
+                    104018,
+                    104987,
+                    106042
+                    ],
+                    data: AttestationData{
+                        slot: 29174,
+                        index: 13,
+                        beacon_block_root:  hex!("f87c9c8ec942f82d24776c90756aa602cad967777e4367aa98e107c75ebcc8e0").into(),
+                        source: Checkpoint{
+                            epoch: 910,
+                            root: hex!("6d90b287e690fd6f8941f026578274da939097ed91ef58cecb894ae77db834cc").into(),
+                        },
+                        target: Checkpoint{
+                            epoch: 911,
+                            root: hex!("f337ac031629ca832d6880e23ceca9b693abc30448d7c4013d92588b9cdc5614").into(),
+                        }
+                    },
+                    signature: hex!("aabee22c3beecf0e1d3a663eb681728eb9f1d965957499567bb4e9b5600c800cead2e623ca992b2cb557745d591d59d317eb8cb871ebecf20952fc1f22096a12dbbeb7eb94ba618e2b45b4c30ce842e831d55597a4942910dc8afa17c43e71cd").into(),
+                },
+            }
+        );
+
+        assert_ok!(&payload);
+
+        let hash_root = merklization::hash_tree_root(payload.unwrap());
+
+        assert_ok!(&hash_root);
+        assert_eq!(
+            hash_root.unwrap(),
+            hex!("4c647fb5557d5a443eda8eeded902901cf0e0d3bff9be7f8764d613918fcfe0d")
+        );
+    }
+
+    #[test]
+    pub fn test_hash_tree_transactions() {
+        let payload = merklization::get_ssz_transactions(
+            vec![
+                hex!("02f895831469ca8301573c8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d6300000000000000000000000022007a12f6494eb73165bdc5a475771ef2255325c080a088cc0bea0de7f99bba0dbf1dcbbde7be4aaafdcd7f55b3aedf0a73ad5c9d8d44a0219df1909da683994e6c209aaef1c187d1c016112ff5d1da975bf3fc44bf33ae").to_vec(),
+                hex!("02f895831469ca8301573d8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000f1c26981dd8fd214fe9264a897d9e6cda96db648c001a072e224e49c25de6ca25f4844cb8419f2ff3109209e2a1bffbaa375f888fccdd3a00de6e29daff38a077dd311f807e63c0304bceca80ceb0d7d967f26ecca8e6682").to_vec(),
+                hex!("02f895831469ca8301573e8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d630000000000000000000000004d170baa29a81df2877aa0a3fd798d4cbb92f1e8c080a0c31170b3ac41fe3c93968363cd0462e2e7886c9270407ca439d66914e72dbb41a0092c401b5334b5c4abcec700e8d5c5f31915e0da3927442a743410665fdc3cc7").to_vec(),
+                hex!("02f895831469ca8301573f8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000be7269d183e23e093bf295546a63bf958db8f65fc080a0ebb003745552875567fb0ece1d2eaf8e7455de9a7389d54056c8f36d77edfbb8a00d3d597a0dab9e91ae0963bebdadc5e10a7d892522b589c26ccb43bb6cb657bd").to_vec(),
+                hex!("02f895831469ca830157408447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000f9a13d1ea489df1f1a8915436ad3f4930c6d1686c080a05c9554f59f545b40cf7690f72742211ae64a4d756e24f333d016127c851405e2a0370d6de5fd03fbb0d3acf6eb1eee5dea12febf1b584c2572240bcee12b5ab945").to_vec(),
+                hex!("02f895831469ca830157418447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000b00f3c318685b1e6bebecabd06578dc00fa1dd73c080a09da5af704a68e9a4f2046e8b1d98d1a78bac4b1ad0a52e767c0699c8985b5133a044ad453e47fddede101f2fea0717110aa784143516c1ef1d356f68f88c28251e").to_vec(),
+                hex!("02f895831469ca830157428447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000b0e54b7088acadbbf4eb35f0db7e35b08bce340ac080a05f83c113b7111864e495f59f9ba8d1f0cda20e1d8da8abae7846001cda692ad7a0388f16e94959934d9ed3e636ecce25cc804f477204e6043d37488c5aa3740f89").to_vec(),
+                hex!("02f895831469ca830157438447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000501f11a1152bdd74048dd1dfaeb73dff0b1c8936c001a0dd36891b4e17c8670325a70182d03b643553fdd413b868bc148c8c8e61571b5aa0359d2c6fb13956411a7cfedc6479c683d98b430c42b4b483869e41bbeed777cc").to_vec(),
+                hex!("02f895831469ca830157448447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000411a1b1909deee4b60a5bc16d6c2dc35bf0b77a5c001a02fefaf366775a68aa5761468d0b928fc7f9574df2c9e3b86e5e009f5d23b7358a0539a850d3378931791bfb14ed62eee0971db35fc499eb510bc9798589c5333f6").to_vec(),
+                hex!("02f895831469ca830157458447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000f8da77605dabf5e0682e8eed9020fa1d90ddd916c001a0f5021954633e54f921201ec47c759506b606412c6ebe97bf7a434d59fa1fe31ea07c0532227f710a9806d03d46d5b7f6cd213a88e3a5c88845312df1b30d43a096").to_vec(),
+                hex!("02f895831469ca830157468447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000adb12988cae14f9170b6f38819736636a1fd1290c080a0bec0f64d34b8f71fc0411020b4ee3f42bc2708472f32e288a6e943e3ade2d9aaa03b15f70da19007c1d16c818e0eaee1f384aaf3210f9a5beef92fc47cc9682d07").to_vec(),
+                hex!("02f895831469ca830157478447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000b731c7d4947c5cc24984f87814878cf0e131117cc080a079b9500d44b92f9437f7e69dabd236316b2e2d0813a86ef734b3ea14716aa03aa041cd5ec2cecbdfa28ef356ad6f568daf0eccdec5f10b58d2185ec235ab88118c").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc712e4300d828808328d3b8a009af4ec9a9176ea4c608107f1d358b89ac2bfcb2bdec77df4b9064000799a354a0626f45ba9d0bacbc15405f2f2b273ceaa25bb0c2c824ed4d1321a02a85f8cdea").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc712e4300d828808328d3b7a05ce94521cbe0adefc7ed375724c8992f197ca0ea70440d611eb01d5fd18910d3a069e57b6591e7c68c005588430b695b73de609ff8845092e678b6d1a1f4b42912").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c314789037a896325d878d828808328d3b7a0dbe22575c74be7b99ba904f7526512952b5f42ebda5c8a9c13a459a429f7bba7a003cade1a06acf44daa91262439755b6c3efc2fc13e188f468249f379ad3e2edf").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7f36ad88d828808328d3b8a010b810848a6dc60a079fc011689c921ac95a1d50a92e4ac885d5a2b79e5caad1a020b0c9d9bbeb93949d550bdaca6eec1daff334faab631b918cbe8cceeccdb4c9").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc712e4300d828808328d3b8a074142019800a53ee12335d6f9ed43bc43433ec8ca5171579235238aed83468daa007ce4e819ff6cc2e6b99ab68449aa77b095fdef336afaafae5e1021ce013b8ce").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c31478908b2228d3f1810d828808328d3b7a09fee28e48c07b9a44c5463126f6dcbeb0a0e6314494495e782d3f857c945bf69a064a145cb2a417d088262dc8e67b61b083e974679cdab287dc09fdb04225f21ac").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc712e4300d828808328d3b8a02b1967ed69fdaf01c205135e58ef551e815ad354459c2ac37a7bb33b56635590a071146f5c5ab14cd812fe308c397283175bd51635252afb81decfab1c5677b0f9").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7f36ad88d828808328d3b7a04af604b7a480a2d8b50ea929b986d820b28b347efcc229bfa801748784e002d9a04f9c34401f1d45bb449df6cc7a621b64bf5ebbe35efff6d532ad552e241eebd2").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7f36ad88d828808328d3b7a0be934f40e6f94b360f05b54e9078611c6bbf1338668722869be8ad24d1ed0232a00a32dc8e95a46e21abab76532ba38cc0dda558563881988919b087276f4310c9").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc712e4300d828808328d3b8a0b0fc5bc56c9edd02afb2c071ceaf1beaa5a57aad6664b75a5ee204010354cb24a06a2e888895405828d215de41613b34f2ff97174de94cdfaa7480e72608264f30").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c31478908b2228d3f1810d828808328d3b8a02dad810fb25f6cac0c4da34f9876f21078a3841384aaf811968a2f84f5ae83a9a0318527b29049e794a97524e85e9cea4a4db2adf1ead1434f7a34e52a3b589fce").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc712e4300d828808328d3b7a0a79ee7e1d828efdb9c44ae89fe9c969f202d37ebab6ab0b2a0a36ee2dd5b458ca079a4ef52c17d6e561f26df4d5767b22d7583688915df6ea3d69d77964b71a899").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c31478908b2228d3f1810d828808328d3b7a01032720078036793a767c4f6955d74c2d445fae3b086c962d4d297c18f1503cba06db7626363d839fef91a030a2a70d46b680a91086319c60920ee5c6f9502d6ca").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc712e4300d828808328d3b8a098ff2f8c6f8032fb50c06bc7e2f338e4bd3f395f98173d62ebfc325325e4a565a008f365fa9843940a7ae28a316e48f1c670cc420286aba898ff78213588f4af28").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c314789037a896325d878d828808328d3b7a01ed7a805d651e6093033626b3a62b69f54be41ecf3e7f39ba488cd950cac530aa03f111a5ba0631d795f5ba1e9de0a0e0bf54f27dd91ad67a48b32e50e5b4c589e").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c31478908b2228d3f1810d828808328d3b8a006bfb96ac86a4adc65112a5d40ef6fad2bc41811798161485145cade32ac035ba07b3173029397310489025105581e0119674db092b4a532fd237f7ecaad38e3df").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7f36ad88d828808328d3b8a02e985de7efb5da3bc30184d776a0ddfefc0d5c3de47f2211c10dc58a759a3fcaa071f254165a295a701d4f70ee411d47c87af72612762ac052abd6a8067cee7b04").to_vec(),
+                hex!("f86f028485bdfd3482520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7f36ad88d828808328d3b8a0f6f87238a92c29488e9a18ac1e7fd78297346848a0d1e532923d0c49925d64d7a078dfde5758e215b2026b9518920f0df8a66fcb8466153ac8ae58ce782926fd9e").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478908b2228e041603c110808328d3b7a0f72888d93475eb27377b8b761284412a672e18ac71ddb8ed9b96894580f72c46a05516df11f23ff9e4665449b7c7d0e4238cbda664b0dc9559c6d2a203f06deac9").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b8a0c05a3d9eb4f514367f95c64f40e57b072dad7f32db3bc39ab4f6df094379f32fa0414e80b353f2771a27d62ce85b43efa5571c8b8883b00777c301aa4359268266").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b8a0abaefaea1c4a87f79e0f7630660fe528e3a6724e6a8ffe1cf0281623e005733da07ba9491c1efa7d9700a45ca227d6d460bd286ea613d14978f6d269a711f3b92a").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b7a04d28ef4425a1c5d6753bfca4d8361c5a1cab65ab37bf3bb08d29f4c589a88385a03c318c329479bc443e2f502218ca8e420fa94863b4cd5e90b43204a089acd460").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478908b2228e041603c110808328d3b7a0b0c7ae730e44676e3eab4a6ea754d8c1ae3141c9af2de2872681504b3daba14fa019f10a927fceb6f6baf9732a1fd9fd5ac2063b39d793a0dc1c35ffd8d20d54c2").to_vec(),
+                hex!("f86d01848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147872347da015bc110808328d3b8a017c752cb24029dea0f5ac3354ac83f6e57cda4cdb84701be47a78adf4f58c268a042cc51866a5b654e2cf864c1727911c690cfd63a8f3b1d6c21282ff2907b5d63").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b7a0d0962628f6bbb0dbf59863fe6640c28184813b90550a3d80bbb97254e2548316a07eeae9c68c82e246c52363250f907a2e2b685712c74659f3b83511c13d5d6eec").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b8a0391ada7e9f212760f85c2abaf1e1b0c92dd7f5a9592f87bc1356d335c056ed7ca05b0d28a57f8bc3945b4aba8f97d9eff856453df943513f9bbbebea85dfa96be3").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b8a026dbed6f6c65e82c54243b5a6f3b7898efe3bcaea26b647f5686588aebdef22ba0664632964e514260f19bf39e8c72af8b541c9c923d770a7bf25e8e1638e1f642").to_vec(),
+                hex!("f86d01848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147872347da015bc110808328d3b7a00c970e13a41f942a0807e34c019933ba208d74add91dc23874dea5f66e1646d5a05d0f8036c0993d26d221ea2b9dd7d0790cc95056e0d9068cfa69f281faa48233").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478908b2228e041603c110808328d3b7a0c79e0295945db7ffdaecff8328aa1cb1325cc1a4d82361e7d8b6336965205f97a0317e00f115a4db52154728b4eb9e13dc643bcca492cd41f30a2ce328c327b2ed").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b7a05d007180c60a0577c4e3f1896855f3b6d42291b68f80c5542e89251766185e78a07dc49220baedc5b4faa87ef65627cb8ebf0a284788fefe7008e79a80175951ce").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478908b2228e041603c110808328d3b8a0094da0217ebde0c78f2367fec59569387524ae15872a37a396556a813c91cefaa03f3f759e5d2b1c4f431980788a018537b7e7129b5c3aff63665f5bb7c5dd6e91").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b7a03882307e5ac4524f13d3ddb99daba53ae77b17a0cda7fb367e812036fa820225a02ce26ab9b8a3995ed1b03ffcb96ce61e9b4b5c796271c013df45f9058a10e316").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b8a02b995e24517a0faf9efcdc800359c2c22413dfd0b1e7a42f5c374efb56caed3fa05a3165c73185c8ee205675083c9524c13c3faca209260dbb94ece4067e684fe6").to_vec(),
+                hex!("f86d01848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147872347da015bc110808328d3b7a08240c8cf3c1532cc099ca154538e6a97cc8abd633d1d54133c32c9ba81e89b80a04d1b898d661679613301c9e0a95842c6b0d32f260895d757eeba7ea15bb4d73f").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b8a0d7b46c71d30d020f1ac3ffe3a58fdcedaae2a3fbc588fcf0b84b43d7baab05b4a04fa7a0e9139b0a92dd0cbe62708d36c52c6318faeee77122ef87e75b1ebf4c5e").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b8a05ac8fa5d5abcf53e2099389e3c9eeca50ef2e4928ee4f87ad27f67d5e182b171a003bfb52ec175f6dea9ba49cf9f2d58d25f83ab131a458dccc1d207bf13ca0886").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b7a0205ff69e5617e773851b84a638f3d41a046d8b01879db86c33788d16042e0085a011ec4863d9d4e717f11a00923d9287dbd0beeaccc5780f8f09e0e78c0a7163fb").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b7a02799b22ba4bce7ff6331ded7af1f4061f25b353aba628b56c1671accb22d8aa3a02020c5c5cb1bda5e5708e424e63fbe953ef72434c60300707e53ad7160de2160").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b8a061393713a0510724eb2860cc55e19f362860eba6e58a86cb6460f50182a586a2a01a0fa10535f600e0a7354372529e14be5e23b65ab24ccd0d18614bc9434bb2c7").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c314789037a8963ead66bc110808328d3b7a0e4eda568114a689a1f3f05baa47b022853eab6a594f14588f1e359a322968fe0a014b17776d7b25d7dd54be6188b3075ea34f44cad49b8d5b8f9a725b534ebfb92").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b7a0de98d4260df915490a8247dc1b280ed899672b20ab0bb32e71ff90d2fb8f020fa045ecf0dc6eee1fe1774ad6873c988f12950a49efce8621c94d6cafd316fc3ff6").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b7a0282dd5f1a9a5f3dea162b006825115acefe2419dadd8fda961e675d541988f32a02c1c603eff2b46dcae582fea67f4f3c8a46e5d1b27685e68f5b38b4cc6534b8b").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b7a071e5edf624530646cdfe4464350bf5d7533f2b9306e53f284cf9cac09fac073ba04484f7363b3f41cef9c8fda4b010a3f1f25456f40e85f2401753bb79f060251f").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b7a0f1ed8070ea47e0e5ae5bf4ce33d11ecfeffa1216ee92c6e77a34767002a48154a066727a0a6b0d16125d415d4263ee38678f825eb6ed8707a1e0f473d96fe810fc").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b8a0e5b2cba2d85c83c4ce897c8062d2d96be8148f45c76f6b088787ddc62ec47638a07cec9a53df648d05486437c3a7f0fefafa1b0721f256af3fae3f90273116d92e").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b7a037f855a2a228a15e90cb8a6c6dec5946552f7eb97dd826c4c2cd59e6bed076faa01462fef47e8a5a44bdf2be028024b9af224dd38cd716d00885c9688db9c80764").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b8a0f68a0cc57b0b06eda4d0908f9c7433d84940fead0870440b3d711d3304eb4b95a022a0da66f2aadce14e98fd3ef9d8a1d8106ec839029cffee202a7fd200cae0f1").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc71f340f3c110808328d3b7a0330448f06133aace2ff68ff8cd71d29785cf97a2fa69d2ed5b7d26c6e53239f8a076e5b0c5207fd7e40ac2c22a834c51c16cc7dc600f9581eabd864b45ddfb7172").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b8a0aec3c91de2552e686cb9138ababbb6a69b736ec8c39d7736da3d605b179b22dea07823974ceabc803b95dfa53c465d832fd283230560c636ed7a7e2c0bc367553f").to_vec(),
+                hex!("f86f02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b8a036dbe9a906c2abcafabb97fd5f6c095bf4de2102354cbb7ea317385159fad285a05815835ef7d38499900f69639b05c987a826e78c225acaeb69312059f5ed5d23").to_vec(),
+                hex!("f86e02848357395782520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef7ffbab7bc110808328d3b8a06ae4347298db07f30c463b545178d50e8198adbce5be3aec3114d233157bfba19f3f96e6a414c8bc4c99599ea88ad9d838a96fe6a56e13ef45290a8cefa72532").to_vec(),
+                hex!("f86d01848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147872347da015bc110808328d3b8a01d6aaae43c313e3038e808736d58c40ef4805fc31c2ef891cea066e7fe0e4a0ba00e0840baf631bf3ef40d2c0cc8f5df13f2d88be70384958f96d55ef1c54e1aa7").to_vec(),
+                hex!("f86d01848357395782520894f6c52944390a63a2b31ceadbec5b0424026c3147872347da015bc110808328d3b8a0052cac7da42e630627b959d59abefadac93bdac9a1acfa93e01ab979630e44aba0022475e93a2b1062574e54f6af6848bcadd9da2312ce043480a20a54c97bbb96").to_vec(),
+                hex!("f86f02847fc3ad7682520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc7318a05e3218808328d3b7a0985394d2be3375bd017cdf02a9e9d84a67ed30cbcafa08891705972562e9cb5ba07984680b4fc5c71c680e70a91a32dad4c615c82e9f8e84a80a85b8646c977cd3").to_vec(),
+                hex!("f86f02847fc3ad7682520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc7318a05e3218808328d3b8a07a897a7055609f4e144d20b8d669b58c98f251a21b7f0d032bb0fa2d9c53466aa07f4bea3efe02f7b23a89226e1c984f3447f7b93a37ca4a1889939a568bc27f09").to_vec(),
+                hex!("f86f02847fc3ad7682520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc7318a05e3218808328d3b8a09350f6580fa0c3a05a3719be8f9bc573975d3df13d89c31a1b657ed7289b165aa03bedbcb53936cae3ea9d9362d26512a64485ae1aedd66634a74456de483e41fe").to_vec(),
+                hex!("f86f02847fc3ad7682520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef81210ae63218808328d3b8a054e11c42343637ee603417e0512e461ebce97f81c17711c8841f299b74d10581a03c8740ef8906dd13a7cfcf2ce5ad3966eecc3281b24daf3c54115801280df002").to_vec(),
+                hex!("f86f02847fc3ad7682520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc7318a05e3218808328d3b7a0a2611ce79d27804990116c4cfeb590d7562c99793c3f907e30313088d6ce093ea0606d4ba29a63aa1d7dc6e59fa27d4a942f884c1202ca00d53ff8d9cf4ebbc77c").to_vec(),
+                hex!("f86f02847fc3ad7682520894f6c52944390a63a2b31ceadbec5b0424026c3147890537bc7318a05e3218808328d3b8a0fa8cac9f239225022756d427f9842417ca6890acac70aad436603c6c87922649a00ccc34510bf00b894a05894e80216b6c71f25c1dd7ea208b76fe684a4107096f").to_vec(),
+                hex!("f86f02847fc3ad7682520894f6c52944390a63a2b31ceadbec5b0424026c31478906f4ef81210ae63218808328d3b7a051de19858bc59f4dd4962148ed6da068580d308e4367bafbfc5197a520e23329a053df12f742b8e04a93f470491dd8a2a1f0e71be6ea4183113d867bb292f66091").to_vec(),
+                hex!("02f878831469ca821c1884054c12c484500a7ae98252089422007a12f6494eb73165bdc5a475771ef225532589022b1c8c1227a0000080c001a05ff8b522c9978d15dccc4ffe7098fea10155b972b62cdd276aa5ad57f7ff847da04d58c5b6762ccd1bc8686cf7bf8639ae16029b8484308f180666ee5b8d905462").to_vec(),
+                hex!("02f879831469ca8301455a84054c12c48452be174282520894f1c26981dd8fd214fe9264a897d9e6cda96db6488901bd330e086a88000080c080a02e4b11c32c77228914681b831d73b31b185e3adc5726948b4665d612ab11e101a00d673e8ea187682e58a282483ac13409b0ddaebaeb2a1e537a2020773c707b0d").to_vec(),
+                hex!("02f879831469ca8301455b84054c12c48452be1742825208944d170baa29a81df2877aa0a3fd798d4cbb92f1e88901bd330e086a88000080c080a026fe1e593474a51f03ec7ad785060b8d01e3b1e796b449728ba51500f8b6364ea0319ce27699538560d85b677594439af6bac145947e0f146c42d7ec35afa9f889").to_vec(),
+                hex!("02f879831469ca8301455c84054c12c48452be174282520894be7269d183e23e093bf295546a63bf958db8f65f8901bd330e086a88000080c080a07936bb27b9360704e471ce5a024ffe004dae65fa90689b695ed36fccf3edd2c5a0635c9d1ec6e31ac0f5a3c7ef801dacd3ec7d45dc9e3f53ba8b05fa9523b7df88").to_vec(),
+                hex!("02f879831469ca8301455d84054c12c48452be174282520894f9a13d1ea489df1f1a8915436ad3f4930c6d16868901bd330e086a88000080c001a015889fd79b0e0957aa7655d4f5d0006d9c722784f70ab1b182371ab3293283e7a03225f18a36cd771217015bd7d229d22fc6794c2e56a83e82453f977cd6f6ba6e").to_vec(),
+                hex!("02f879831469ca8301455e84054c12c48452be174282520894b00f3c318685b1e6bebecabd06578dc00fa1dd738901bd330e086a88000080c080a04496ea4986bda6bb05fba0bac03fb879355235d4023b209de472598a400a749ba032e8c8a47fefbc9012d3ee22f969a0d2c12895dd26747b7acffda516d6022f76").to_vec(),
+                hex!("02f879831469ca8301455f84054c12c48452be174282520894b0e54b7088acadbbf4eb35f0db7e35b08bce340a8901bd330e086a88000080c080a001c2b54e13eeff72eb1fdf57d8247c7cf2861330ee719b201ab566c756124f16a0739cef53e7f802a37f4d582715271f7f7069185c12cd24f691b4906456797b96").to_vec(),
+                hex!("02f878831469ca821c1984054c12c48452be174282520894501f11a1152bdd74048dd1dfaeb73dff0b1c893689022b1c8c1227a0000080c080a063819ef57846d279d4f993c38cadb26ac6df6333128b9888f1955c7326c9bddfa006293ecc1dca3fdb4b30c44b1a92f7e375665337fbbd08549c18a829f425c9bb").to_vec(),
+                hex!("02f878831469ca821c1a84054c12c48452be174282520894411a1b1909deee4b60a5bc16d6c2dc35bf0b77a589022b1c8c1227a0000080c001a00dcbe8fa6b73e98875d345a6e4fc7d90bf91d3333c4339ea0347767d17f178dfa072e6eb8af05084d4d09d39d4fa2c4d0fd5ac5d56f3120f332acd380815430e39").to_vec(),
+                hex!("02f878831469ca821c1b84054c12c48452be174282520894f8da77605dabf5e0682e8eed9020fa1d90ddd91689022b1c8c1227a0000080c080a082e8ee47eb1f5e41b372341681fd05aef326f8309d98f855ec96b5e108c1cc67a033079cd65164450a85da755525d6395434cd4d96a27ffcac68fd1b6d7bc49262").to_vec(),
+                hex!("02f878831469ca821c1c84054c12c48452be174282520894adb12988cae14f9170b6f38819736636a1fd129089022b1c8c1227a0000080c001a042ec31c90dc676bb0c01dd0082ca931ff3db486e2e9ce31b5da915a47a46e326a03f766a9e78805d3d4731f2fde3dfbefb74b49373f8150b731427931a083f9312").to_vec(),
+                hex!("02f878831469ca821c1d84054c12c484490fd6b282520894b731c7d4947c5cc24984f87814878cf0e131117c89022b1c8c1227a0000080c001a01fed2cba97abd44b8236c786d94f273b50c672e5ff77ff397df708283ed90e26a0370872b3f3ad0694053dc8af16a4fa3e39bf482c0ff4937366023c8a9a3d2969").to_vec(),
+                ]
+        );
+
+        assert_ok!(&payload);
+
+        let hash_root = merklization::hash_tree_root(payload.unwrap());
+
+        assert_ok!(&hash_root);
+        assert_eq!(
+            hash_root.unwrap(),
+            hex!("6a2aafcf76732e6796201ad8a0b22d4bba3a4d5ebc433ec5d5ca66f4da4b4856")
         );
     }
 }

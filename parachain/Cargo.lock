@@ -10297,6 +10297,7 @@ dependencies = [
 name = "snowbridge-ethereum-beacon-client"
 version = "0.0.1"
 dependencies = [
+ "byte-slice-cast",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
