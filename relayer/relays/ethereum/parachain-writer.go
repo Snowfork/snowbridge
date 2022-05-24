@@ -228,16 +228,16 @@ func (wr *ParachainWriter) makeHeaderImportCall(header *chain.Header) (types.Cal
 func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumLightClient", "Headers", hash[:], nil)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to create storeage key for hash %s with error: %s", hash.Hex(), err)
 	}
 
 	var headerOption types.OptionBytes
 	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &headerOption)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("storage query failed for key %s and hash %s with error: %s", key.Hex(), hash.Hex(), err)
 	}
 	if !ok {
-		return false, fmt.Errorf("Storage query did not find header for hash %s", hash.Hex())
+		return false, fmt.Errorf("storage query did not find header for key %s and hash %s", key.Hex(), hash.Hex())
 	}
 
 	return headerOption.IsSome(), nil
