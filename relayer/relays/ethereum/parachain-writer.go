@@ -203,6 +203,12 @@ func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainP
 		if !imported {
 			return fmt.Errorf("Header import failed for header %s", hash.Hex())
 		}
+
+		log.WithFields(logrus.Fields{
+			"hash":   hash.Hex(),
+			"number": header.ID().Number,
+		}).Info("Successfully imported header.")
+
 		return nil
 	}
 
