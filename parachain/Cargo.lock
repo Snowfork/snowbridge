@@ -10315,8 +10315,8 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std",
- "ssz_rs",
- "ssz_rs_derive",
+ "ssz-rs",
+ "ssz-rs-derive",
 ]
 
 [[package]]
@@ -11247,21 +11247,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "ssz_rs"
-version = "0.7.0"
-source = "git+https://github.com/Snowfork/ssz_rs#0c177f5ab9b8f6afca61ec84d52ce4b2e205e49c"
+name = "ssz-rs"
+version = "0.8.0"
+source = "git+https://github.com/Snowfork/ssz_rs#2bf8384e511c0bef5b9506cc9c518df89b8a0f70"
 dependencies = [
  "bitvec",
  "lazy_static",
  "num-bigint 0.4.3",
  "sha2 0.9.9",
- "ssz_rs_derive",
+ "ssz-rs-derive",
 ]
 
 [[package]]
-name = "ssz_rs_derive"
-version = "0.7.0"
-source = "git+https://github.com/Snowfork/ssz_rs#0c177f5ab9b8f6afca61ec84d52ce4b2e205e49c"
+name = "ssz-rs-derive"
+version = "0.8.0"
+source = "git+https://github.com/Snowfork/ssz_rs#2bf8384e511c0bef5b9506cc9c518df89b8a0f70"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11990,7 +11990,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.3",
  "rand 0.8.5",
  "static_assertions",
