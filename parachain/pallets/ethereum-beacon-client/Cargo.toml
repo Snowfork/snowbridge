@@ -17,7 +17,7 @@ scale-info = { version = "2.0.1", default-features = false, features = ["derive"
 milagro_bls = { git = "https://github.com/Snowfork/milagro_bls", default-features = false }
 ssz_rs = { git = "https://github.com/Snowfork/ssz_rs", default-features = false, rev="0c177f5ab9b8f6afca61ec84d52ce4b2e205e49c" }
 ssz_rs_derive = { git = "https://github.com/Snowfork/ssz_rs", default-features = false, rev="0c177f5ab9b8f6afca61ec84d52ce4b2e205e49c" }
-byte-slice-cast = { default-features = false }
+byte-slice-cast = { version = "1.2.1", default-features = false }
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
