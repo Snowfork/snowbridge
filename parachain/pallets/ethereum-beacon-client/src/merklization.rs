@@ -1,5 +1,3 @@
-use crate::block::AttesterSlashing;
-use crate::{BeaconHeader, SyncCommittee, ForkData, SigningData, block::BeaconBlock, block::ExecutionPayload, block::Attestation, block::AttestationData, block::Checkpoint, block::SyncAggregate, block::Eth1Data, block::Body};
 use ssz_rs_derive::SimpleSerialize;
 use ssz_rs::{Deserialize, Sized, SimpleSerialize as SimpleSerializeTrait, Bitlist, Bitvector};
 use ssz_rs::prelude::{Vector, List};
@@ -9,6 +7,7 @@ use sp_std::prelude::*;
 use ssz_rs::U256;
 use sp_core::U256 as U256_Core;
 use byte_slice_cast::AsByteSlice;
+use snowbridge_beacon::{SyncAggregate, Attestation, Checkpoint, Eth1Data, BeaconHeader, AttesterSlashing, ExecutionPayload, Body, SigningData, ForkData, SyncCommittee, AttestationData, BeaconBlock};
 
 const MAX_PROPOSER_SLASHINGS: usize = 16;
 

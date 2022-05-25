@@ -10148,6 +10148,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowbridge-beacon"
+version = "0.0.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "snowbridge-core"
 version = "0.1.1"
 dependencies = [
@@ -10307,6 +10321,7 @@ dependencies = [
  "scale-info",
  "serde",
  "serde_json",
+ "snowbridge-beacon",
  "snowbridge-core",
  "snowbridge-ethereum",
  "snowbridge-testutils",

@@ -2,7 +2,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod merklization;
-mod block;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -12,17 +11,12 @@ use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
-use sp_core::{H160, H256, U256};
+use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use snowbridge_ethereum::Header as ExecutionHeader;
-
-type Root = H256;
-type Domain = H256;
-type ValidatorIndex = u64;
-type ProofBranch = Vec<H256>;
-type ForkVersion = [u8; 4];
+use snowbridge_beacon::{SyncCommittee, BeaconHeader, BeaconBlock, SyncAggregate, ForkData, Root, Checkpoint, Domain, PublicKey, SigningData, Eth1Data};
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
@@ -44,73 +38,8 @@ const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
 const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [7, 0, 0, 0];
 
-#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct PublicKey([u8; 48]);
-
-impl Default for PublicKey {
-	fn default() -> Self {
-		PublicKey([0u8; 48])
-	}
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Header {
-	/// Parent block hash.
-	pub parent_hash: H256,
-	pub fee_recipient: H160,
-	/// State root.
-	pub state_root: H256,
-	/// Block receipts root.
-	pub receipts_root: H256,
-	/// Block bloom.
-	pub logs_bloom: Vec<u8>,
-	pub prev_randao: H256,
-	pub block_number: u64,
-	/// Gas used for contracts execution.
-	pub gas_used: U256,
-	/// Block gas limit.
-	pub gas_limit: U256,
-	/// Block timestamp.
-	pub timestamp: u64,
-	/// Block extra data.
-	pub extra_data: Vec<u8>,
-	// Base fee per gas (EIP-1559), only in headers from the London hardfork onwards.
-	pub base_fee_per_gas: Option<U256>,
-	/// Block hash.
-	pub block_hash: H256,
-	/// Transactions root.
-	pub transactions: Vec<u8>,
-}
-
-/// Beacon block header as it is stored in the runtime storage. The block root is the
-/// Merklization of a BeaconHeader.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct BeaconHeader {
-	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
-	pub slot: u64,
-	// The index of the validator that proposed the block.
-	pub proposer_index: ValidatorIndex,
-	// The block root of the parent block, forming a block chain.
-	pub parent_root: Root,
-	// The hash root of the post state of running the state transition through this block.
-	pub state_root: Root,
-	// The hash root of the beacon block body
-	pub body_root: Root,
-}
-
-/// Sync committee as it is stored in the runtime storage.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SyncCommittee {
-	pub pubkeys: Vec<PublicKey>,
-	pub aggregate_pubkey: PublicKey,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SyncAggregate {
-	// 1 or 0 bit, indicates whether a sync committee participated in a vote
-	pub sync_committee_bits: Vec<u8>,
-	pub sync_committee_signature: Vec<u8>,
-}
+type ProofBranch = Vec<H256>;
+type ForkVersion = [u8; 4];
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct InitialSync {
@@ -149,18 +78,6 @@ pub struct HeaderUpdate {
 	pub fork_version: ForkVersion,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct ForkData {
-	// 1 or 0 bit, indicates whether a sync committee participated in a vote
-	pub current_version: [u8; 4],
-	pub genesis_validators_root: [u8; 32],
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SigningData {
-	pub object_root: Root,
-	pub domain: Domain,
-}
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Genesis {

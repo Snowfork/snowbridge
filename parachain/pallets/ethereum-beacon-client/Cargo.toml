@@ -29,6 +29,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
+snowbridge-beacon = { path = "../../primitives/beacon", default-features = false }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
@@ -50,6 +51,7 @@ std = [
     "sp-std/std",
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
+    "snowbridge-beacon/std",
     "milagro_bls/std",
     "ssz-rs/std",
 ]
