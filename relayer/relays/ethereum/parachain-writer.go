@@ -231,14 +231,20 @@ func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, err
 		return false, fmt.Errorf("create storeage key for hash %s: %w", hash.Hex(), err)
 	}
 
-	var headerOption types.OptionBytes
-	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &headerOption)
+	keys := []types.StorageKey{key}
+	changeSets, err := wr.conn.API().RPC.State.QueryStorageAtLatest(keys)
 	if err != nil {
 		return false, fmt.Errorf("storage query for key %s and hash %s: %w", key.Hex(), hash.Hex(), err)
 	}
-	if !ok {
-		return false, fmt.Errorf("could not find header for key %s and hash %s", key.Hex(), hash.Hex())
+
+	// find first change for this hash
+	for _, changeSet := range changeSets {
+		for _, change := range changeSet.Changes {
+			if change.StorageData.IsSome() {
+				return true, nil
+			}
+		}
 	}
 
-	return headerOption.IsSome(), nil
+	return false, nil
 }
