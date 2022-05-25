@@ -11249,7 +11249,7 @@ dependencies = [
 [[package]]
 name = "ssz-rs"
 version = "0.8.0"
-source = "git+https://github.com/Snowfork/ssz_rs#2bf8384e511c0bef5b9506cc9c518df89b8a0f70"
+source = "git+https://github.com/Snowfork/ssz_rs#a26c5786da5a8889678f84e98c52f15f00386949"
 dependencies = [
  "bitvec",
  "lazy_static",
