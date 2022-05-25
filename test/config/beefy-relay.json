@@ -4,7 +4,7 @@
       "endpoint": "ws://localhost:9944"
     },
     "beefy-activation-block": 0,
-    "beefy-skip-period": 50
+    "fast-forward-depth": 20
   },
   "sink": {
     "ethereum": {
@@ -14,7 +14,7 @@
     "start-block": 0,
     "descendants-until-final": 3,
     "contracts": {
-      "BeefyLightClient": null
+      "BeefyClient": null
     }
   }
 }

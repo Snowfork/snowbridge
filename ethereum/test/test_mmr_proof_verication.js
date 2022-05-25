@@ -5,12 +5,20 @@ require("chai")
     .use(require("chai-bignumber")(BigNumber))
     .should();
 
-const SimpleMMRVerification = artifacts.require("SimplifiedMMRVerification");
-const fixture7leaves = require('./fixtures/simplified-mmr-fixture-data-7-leaves.json');
-const fixture15leaves = require('./fixtures/simplified-mmr-fixture-data-15-leaves.json');
+const MMRProofVerification = artifacts.require("MMRProofVerification");
+const MMRProofVerifier = artifacts.require("MMRProofVerifier");
+
+const fixture7leaves = require('./fixtures/mmr-fixture-data-7-leaves.json');
+const fixture15leaves = require('./fixtures/mmr-fixture-data-15-leaves.json');
 
 
 describe("Simple MMR Verification", function () {
+
+    before(async function () {
+        const verificationLib = await MMRProofVerification.new();
+        await MMRProofVerifier.link(verificationLib);
+   })
+
    describe("7-leaf, 11-node MMR", function () {
        before(function () {
            console.log('                 7-leaf MMR:           ');
@@ -22,17 +30,17 @@ describe("Simple MMR Verification", function () {
            console.log('Leaf indexes | 0  1   2  3   4  5     6');
        })
 
-       let simplifiedMMRVerification;
+       let verifier;
        beforeEach(async function () {
-           simplifiedMMRVerification = await SimpleMMRVerification.new();
+           verifier = await MMRProofVerifier.new();
        })
 
        fixture7leaves.proofs.forEach((proof, i) => {
            it(`should verify valid proof for leaf index ${i}`, async () => {
-               expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
+               expect(await verifier.verifyLeafProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
                    {
-                       merkleProofItems: fixture7leaves.proofs[i].merkleProofItems,
-                       merkleProofOrderBitField: fixture7leaves.proofs[i].merkleProofOrderBitField
+                       items: fixture7leaves.proofs[i].items,
+                       order: fixture7leaves.proofs[i].order
                    })).to.be.true;
            });
 
@@ -41,10 +49,10 @@ describe("Simple MMR Verification", function () {
                if (j >= fixture7leaves.proofs.length) {
                    j = 0;
                }
-               expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
+               expect(await verifier.verifyLeafProof.call(fixture7leaves.rootHash, fixture7leaves.leaves[i],
                    {
-                       merkleProofItems: fixture7leaves.proofs[j].merkleProofItems,
-                       merkleProofOrderBitField: fixture7leaves.proofs[j].merkleProofOrderBitField
+                       items: fixture7leaves.proofs[j].items,
+                       order: fixture7leaves.proofs[j].order
                    })).to.be.false;
            });
        });
@@ -62,17 +70,17 @@ describe("Simple MMR Verification", function () {
             console.log('Leaf indexes | 0  1   2  3   4  5     6   7   8   9   10   11   12  13  14  ');
         })
 
-        let simplifiedMMRVerification;
+        let verifier;
         beforeEach(async function () {
-            simplifiedMMRVerification = await SimpleMMRVerification.new();
+            verifier = await MMRProofVerifier.new();
         })
 
         fixture15leaves.proofs.forEach((proof, i) => {
             it(`should verify valid proof for leaf index ${i}`, async () => {
-                expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
+                expect(await verifier.verifyLeafProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
                     {
-                        merkleProofItems: fixture15leaves.proofs[i].merkleProofItems,
-                        merkleProofOrderBitField: fixture15leaves.proofs[i].merkleProofOrderBitField
+                        items: fixture15leaves.proofs[i].items,
+                        order: fixture15leaves.proofs[i].order
                     })).to.be.true;
             });
 
@@ -81,10 +89,10 @@ describe("Simple MMR Verification", function () {
                 if (j >= fixture15leaves.proofs.length) {
                     j = 0;
                 }
-                expect(await simplifiedMMRVerification.verifyInclusionProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
+                expect(await verifier.verifyLeafProof.call(fixture15leaves.rootHash, fixture15leaves.leaves[i],
                     {
-                        merkleProofItems: fixture15leaves.proofs[j].merkleProofItems,
-                        merkleProofOrderBitField: fixture15leaves.proofs[j].merkleProofOrderBitField
+                        items: fixture15leaves.proofs[j].items,
+                        order: fixture15leaves.proofs[j].order
                     })).to.be.false;
             });
         });

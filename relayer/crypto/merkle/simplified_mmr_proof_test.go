@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,28 +51,6 @@ func sanitizeIncomingTestData(testData []SimplifiedProofTestData) {
 	}
 }
 
-// used to verify correctness of generated proofs
-func calculateMerkleRoot(proof *SimplifiedMMRProof, leafHash types.H256) types.H256 {
-	currentHash := leafHash[:]
-
-	for i := 0; i < int(len(proof.MerkleProofItems)); i++ {
-		isSiblingLeft := (proof.MerkleProofOrder >> i) & 1 == 1
-		sibling := proof.MerkleProofItems[i]
-
-		var buf []byte
-		if isSiblingLeft {
-			buf = append(buf, sibling[:]...)
-			buf = append(buf, currentHash...)
-		} else {
-			buf = append(buf, currentHash...)
-			buf = append(buf, sibling[:]...)
-		}
-		currentHash = (&keccak.Keccak256{}).Hash(buf)
-	}
-
-	return types.NewH256(currentHash)
-}
-
 func Test_SimplifiedMMRProof(t *testing.T) {
 	var mmrProofs []types.H256
 	mmrProofItems := []string{
@@ -109,7 +86,7 @@ func Test_SimplifiedMMRProof(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, testData[i].SimplifiedMerkleProofOrder, simplifiedProof.MerkleProofOrder)
 		assert.Equal(t, testData[i].SimplifiedMerkleProofItems, simplifiedProof.MerkleProofItems)
-		assert.Equal(t, testData[i].ReferenceMMRRoot, calculateMerkleRoot(&simplifiedProof, testData[i].LeafHash))
+		assert.Equal(t, testData[i].ReferenceMMRRoot, CalculateMerkleRoot(&simplifiedProof, testData[i].LeafHash))
 
 		fmt.Printf("\nRoot: %#x\n", testData[i].ReferenceMMRRoot)
 		fmt.Printf("Leaf Node hash: %#x\n", testData[i].LeafHash)

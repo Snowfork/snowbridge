@@ -10,7 +10,7 @@
             "endpoint": "ws://localhost:11144"
         },
         "contracts": {
-            "BeefyLightClient": null,
+            "BeefyClient": null,
             "BasicInboundChannel": null,
             "IncentivizedInboundChannel": null
         },
