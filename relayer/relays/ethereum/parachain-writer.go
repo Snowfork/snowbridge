@@ -234,7 +234,7 @@ func (wr *ParachainWriter) makeHeaderImportCall(header *chain.Header) (types.Cal
 func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumLightClient", "Headers", hash[:], nil)
 	if err != nil {
-		return false, fmt.Errorf("create storeage key for hash %s: %w", hash.Hex(), err)
+		return false, fmt.Errorf("create storage key for hash %s: %w", hash.Hex(), err)
 	}
 
 	keys := []types.StorageKey{key}
