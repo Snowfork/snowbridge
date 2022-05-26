@@ -268,40 +268,6 @@ pub mod pallet {
 
 		#[pallet::weight(1_000_000)]
 		#[transactional]
-		pub fn import_header(
-			origin: OriginFor<T>,
-			header_update: HeaderUpdate,
-		) -> DispatchResult {
-			let _sender = ensure_signed(origin)?;
-
-			let slot = header_update.attested_header.slot;
-
-			log::trace!(
-				target: "ethereum-beacon-client",
-				"💫 Received header update for slot {}, processing and importing header.",
-				slot
-			);
-
-			if let Err(err) = Self::process_header(header_update) {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"Header update failed with error {:?}",
-					err
-				);
-				return Err(err);
-			}
-
-			log::trace!(
-				target: "ethereum-beacon-client",
-				"💫 Header processing and importing at slot {} succeeded.",
-				slot
-			);
-
-			Ok(())
-		}
-
-		#[pallet::weight(1_000_000)]
-		#[transactional]
 		pub fn verify_eth1_receipt_inclusion(
 			origin: OriginFor<T>,
 		) -> DispatchResult {
@@ -411,33 +377,6 @@ pub mod pallet {
 			)?;
 
 			Self::store_finalized_header(block_root, update.finalized_header);
-
-			Ok(())
-		}
-
-		fn process_header(update: HeaderUpdate) -> DispatchResult {
-			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
-			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
-
-			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
-			let sync_committee = <SyncCommittees<T>>::get(current_period);
-			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: PublicKey([0; 48]) }) == sync_committee {
-				return Err(Error::<T>::SyncCommitteeMissing.into());
-			}
-			let genesis = <ChainGenesis<T>>::get();
-			Self::verify_signed_header(
-				sync_committee_bits,
-				update.sync_aggregate.sync_committee_signature,
-				sync_committee.pubkeys,
-				update.fork_version,
-				update.attested_header.clone(),
-				genesis.validators_root,
-			)?;
-
-			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.attested_header.clone())
-				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
-
-			Self::store_header(block_root, update.attested_header);
 
 			Ok(())
 		}

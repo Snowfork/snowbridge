@@ -83,30 +83,16 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	r.SyncFinalizedHeader(ctx)
 
-	finalizedHeaderTicker := time.NewTicker(time.Minute * 5)
-	doneFinalizedHeader := make(chan bool)
+	ticker := time.NewTicker(time.Minute * 5)
+	done := make(chan bool)
 
 	go func() error {
 		for {
 			select {
-			case <-doneFinalizedHeader:
+			case <-done:
 				return nil
-			case <-finalizedHeaderTicker.C:
+			case <-ticker.C:
 				r.SyncFinalizedHeader(ctx)
-			}
-		}
-	}()
-
-	headUpdateTicker := time.NewTicker(time.Minute * 5)
-	doneHeadUpdate := make(chan bool)
-
-	go func() error {
-		for {
-			select {
-			case <-doneHeadUpdate:
-				return nil
-			case <-headUpdateTicker.C:
-				r.SyncHeader(ctx)
 			}
 		}
 	}()
@@ -192,44 +178,6 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 	}
 
 	r.syncer.Cache.FinalizedHeaders = append(r.syncer.Cache.FinalizedHeaders, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot))
-
-	return err
-}
-
-func (r *Relay) SyncHeader(ctx context.Context) error {
-	logrus.Info("Syncing head update")
-
-	headerUpdate, err := r.syncer.GetHeaderUpdate()
-	if err != nil {
-		logrus.WithError(err).Error("unable to sync latest header")
-
-		return err
-	}
-
-	if syncer.IsInArray(r.syncer.Cache.Headers, uint64(headerUpdate.AttestedHeader.Slot)) {
-		logrus.Info("latest header has been synced already, skipped")
-
-		return nil
-	}
-
-	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(headerUpdate.AttestedHeader.Slot))
-
-	if !syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
-		logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
-
-		r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
-
-		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
-	}
-
-	err = r.writer.WriteToParachain(ctx, "import_header", headerUpdate)
-	if err != nil {
-		logrus.WithError(err).Error("unable to write to parachain")
-
-		return err
-	}
-
-	r.syncer.Cache.Headers = append(r.syncer.Cache.Headers, uint64(headerUpdate.AttestedHeader.Slot))
 
 	return err
 }

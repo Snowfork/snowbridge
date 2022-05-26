@@ -19,7 +19,6 @@ impl Default for PublicKey {
 	}
 }
 
-
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct ForkData {
 	// 1 or 0 bit, indicates whether a sync committee participated in a vote

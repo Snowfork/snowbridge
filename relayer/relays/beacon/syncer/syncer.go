@@ -129,8 +129,6 @@ func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
 	}
 
 	snapshot, err := s.Client.GetLightClientSnapshot("0x492ab1ad6046dfba5aae0d41bf0a349a3c3609c7c7e39ad9e68fc4e6259b7e88") // 52
-	//snapshot, err := s.Client.GetLightClientSnapshot("0xc0f0da2d7200ddc4bcb5a0056f65ec76260a265f9e31e38472734107b25d3319")// 51
-	//snapshot, err := s.Client.GetLightClientSnapshot("0x41309e3e9f4249391d929b1821c7e2730b37cddb89a63d5a08207d79b65c00fd") //46
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch snapshot")
 
@@ -139,7 +137,6 @@ func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
 
 	header, err := beaconHeaderToScale(snapshot.Data.Header)
 	if err != nil {
-		logrus.WithError(err).Error("unable to parse beacon header in response")
 
 		return InitialSync{}, err
 	}
