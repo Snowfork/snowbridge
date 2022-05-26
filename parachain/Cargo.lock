@@ -11264,11 +11264,13 @@ dependencies = [
 [[package]]
 name = "ssz-rs"
 version = "0.8.0"
-source = "git+https://github.com/Snowfork/ssz_rs#a26c5786da5a8889678f84e98c52f15f00386949"
+source = "git+https://github.com/Snowfork/ssz_rs?rev=8d497a949c320577aa1f741eb9f2958191df905b#8d497a949c320577aa1f741eb9f2958191df905b"
 dependencies = [
  "bitvec",
+ "hex",
  "lazy_static",
  "num-bigint 0.4.3",
+ "serde",
  "sha2 0.9.9",
  "ssz-rs-derive",
 ]
@@ -11276,7 +11278,7 @@ dependencies = [
 [[package]]
 name = "ssz-rs-derive"
 version = "0.8.0"
-source = "git+https://github.com/Snowfork/ssz_rs#a26c5786da5a8889678f84e98c52f15f00386949"
+source = "git+https://github.com/Snowfork/ssz_rs?rev=8d497a949c320577aa1f741eb9f2958191df905b#8d497a949c320577aa1f741eb9f2958191df905b"
 dependencies = [
  "proc-macro2",
  "quote",

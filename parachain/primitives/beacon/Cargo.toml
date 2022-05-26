@@ -22,6 +22,7 @@ std = [
     "codec/std",
     "scale-info/std",
     "frame-support/std",
+    "frame-system/std",
     "sp-std/std",
     "sp-core/std",
     "sp-runtime/std",

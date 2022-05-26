@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use scale_info::TypeInfo;
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
@@ -127,7 +129,7 @@ pub struct AttesterSlashing {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Attestation { 
+pub struct Attestation {
 	pub aggregation_bits: Vec<u8>,
 	pub data: AttestationData,
     pub signature: Vec<u8>,
@@ -179,9 +181,9 @@ pub struct Body {
     pub attester_slashings: Vec<AttesterSlashing>,
     pub attestations: Vec<Attestation>,
     pub deposits: Vec<Deposit>,
-    pub voluntary_exits: Vec<VoluntaryExit>, 
+    pub voluntary_exits: Vec<VoluntaryExit>,
     pub sync_aggregate: SyncAggregate,
-    pub execution_payload: ExecutionPayload, 
+    pub execution_payload: ExecutionPayload,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
