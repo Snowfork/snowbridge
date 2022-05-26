@@ -47,8 +47,8 @@ func NewQueryClient() QueryClient {
 	}
 }
 
-func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash string) (*Events, error) {
-	name, args := q.NameArgs(api, blockHash)
+func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash types.Hash) (*Events, error) {
+	name, args := q.NameArgs(api, blockHash.Hex())
 	cmd := exec.CommandContext(ctx, name, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out

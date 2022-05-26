@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/parachain"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,7 +42,8 @@ func TestQueryEvents(t *testing.T) {
 		return "cat", []string{tmpFile.Name()}
 	}
 
-	events, err := client.QueryEvents(context.Background(), "", "")
+	foo, _ := types.NewHashFromHexString("0x6456d3a2f0c7526d63ad50e79dc8a462931a58ffd57270c3c8aabbcdbd78e76b")
+	events, err := client.QueryEvents(context.Background(), "", foo)
 	if err != nil {
 		t.Fatal(err)
 	}

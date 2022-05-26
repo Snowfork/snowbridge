@@ -6,6 +6,7 @@ type PolkadotConfig struct {
 
 type ParachainConfig struct {
 	Endpoint string `mapstructure:"endpoint"`
+	HTTPEndpoint string `mapstructure:"http-endpoint"`
 }
 
 type EthereumConfig struct {

@@ -21,10 +21,10 @@ type Task struct {
 // is genuine.
 type Commitment struct {
 	Hash types.H256
-	Data []byte
+	Data interface{}
 }
 
-func NewCommitment(hash types.H256, data []byte) Commitment {
+func NewCommitment(hash types.H256, data interface{}) Commitment {
 	return Commitment{
 		Hash: hash,
 		Data: data,

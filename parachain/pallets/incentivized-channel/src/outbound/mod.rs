@@ -17,7 +17,6 @@ use frame_support::{
 
 use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H160, H256};
-use sp_io::offchain_index;
 use sp_runtime::traits::{Hash, Zero};
 
 use sp_std::prelude::*;
@@ -243,14 +242,6 @@ pub mod pallet {
 					.into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
-			// Note: Offchain access to committed message bundle is slated for deprecation
-			let offchain_key = Self::make_offchain_key(commitment_hash);
-			let offchain_value = OffchainStorageValue {
-				nonce: next_nonce,
-				commitment,
-			};
-			offchain_index::set(&*offchain_key, &offchain_value.encode());
-
 			Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
 
 			T::WeightInfo::on_initialize(messages.len() as u32, Self::average_payload_size(&messages))
@@ -280,10 +271,6 @@ pub mod pallet {
 			// We overestimate message payload size rather than underestimate.
 			// So add 1 here to account for integer division truncation.
 			(sum / messages.len()).saturating_add(1) as u32
-		}
-
-		fn make_offchain_key(hash: H256) -> Vec<u8> {
-			(T::INDEXING_PREFIX, ChannelId::Incentivized, hash).encode()
 		}
 	}
 }
