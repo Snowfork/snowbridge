@@ -236,6 +236,14 @@ pub fn hash_tree_root_beacon_header(beacon_header: BeaconHeader) -> Result<[u8; 
     hash_tree_root(get_ssz_beacon_header(beacon_header)?)
 }
 
+pub fn hash_tree_root_beacon_body(body: Body) -> Result<[u8; 32], MerkleizationError> {
+    hash_tree_root(get_ssz_beacon_block_body(body)?)
+}
+
+pub fn hash_tree_root_transactions(transactions: Vec<Vec<u8>>) -> Result<[u8; 32], MerkleizationError> {
+    hash_tree_root(get_ssz_transactions(transactions)?)
+}
+
 pub fn hash_tree_root_sync_committee(sync_committee: SyncCommittee) -> Result<[u8; 32], MerkleizationError> {
     let mut pubkeys_vec = Vec::new();
 

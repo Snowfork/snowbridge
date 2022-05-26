@@ -1,4 +1,4 @@
-use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, ChainGenesis, Genesis, PublicKey, merkleization};
+use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, PublicKey, merkleization, ValidatorsRoot};
 use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
 use sp_core::H256;
@@ -29,9 +29,7 @@ fn it_updates_a_committee_period_sync_update() {
 
 	new_tester().execute_with(|| {
 		SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-		ChainGenesis::<Test>::set(Genesis{
-			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-		});
+		ValidatorsRoot::<Test>::set(hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into());
 
 		assert_ok!(EthereumBeaconClient::sync_committee_period_update(
 			Origin::signed(1),
@@ -54,9 +52,7 @@ fn it_processes_a_finalized_header_update() {
 
 	new_tester().execute_with(|| {
 		SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-		ChainGenesis::<Test>::set(Genesis{
-			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-		});
+		ValidatorsRoot::<Test>::set(hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into());
 
 		assert_ok!(EthereumBeaconClient::import_finalized_header(Origin::signed(1), update.clone()));
 
@@ -71,9 +67,7 @@ fn it_errors_when_importing_a_header_with_no_sync_commitee_for_period() {
 	let update = get_finalized_header_update();
 
 	new_tester().execute_with(|| {
-		ChainGenesis::<Test>::set(Genesis{
-			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-		});
+		ValidatorsRoot::<Test>::set(hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into());
 
 		assert_err!(EthereumBeaconClient::import_finalized_header(Origin::signed(1), update), Error::<Test>::SyncCommitteeMissing);
 	});
