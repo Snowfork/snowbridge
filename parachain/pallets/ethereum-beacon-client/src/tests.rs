@@ -1,4 +1,4 @@
-use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, ChainGenesis, Genesis, PublicKey, merklization};
+use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, ChainGenesis, Genesis, PublicKey, merkleization};
 use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
 use sp_core::H256;
@@ -13,7 +13,7 @@ fn it_syncs_from_an_initial_checkpoint() {
 			initial_sync.clone(),
 		));
 
-		let block_root: H256 = merklization::hash_tree_root_beacon_header(initial_sync.header.clone()).unwrap().into();
+		let block_root: H256 = merkleization::hash_tree_root_beacon_header(initial_sync.header.clone()).unwrap().into();
 
 		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
 	});
@@ -38,7 +38,7 @@ fn it_updates_a_committee_period_sync_update() {
 			update.clone(),
 		));
 
-		let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
+		let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
 
 		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
 	});
@@ -60,7 +60,7 @@ fn it_processes_a_finalized_header_update() {
 
 		assert_ok!(EthereumBeaconClient::import_finalized_header(Origin::signed(1), update.clone()));
 
-		let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
+		let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
 
 		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
 	});

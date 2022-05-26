@@ -1,11 +1,13 @@
 //! # Ethereum Beacon Client
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod merklization;
+mod merkleization;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+mod ssz;
+mod config;
 
 use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
@@ -16,7 +18,7 @@ use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use snowbridge_ethereum::Header as ExecutionHeader;
-use snowbridge_beacon::{SyncCommittee, BeaconHeader, BeaconBlock, SyncAggregate, ForkData, Root, Checkpoint, Domain, PublicKey, SigningData, Eth1Data};
+use snowbridge_beacon::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData};
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
@@ -327,7 +329,7 @@ pub mod pallet {
 			let period = Self::compute_current_sync_period(initial_sync.header.slot);
 			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 
-			let block_root: H256 = merklization::hash_tree_root_beacon_header(initial_sync.header.clone())
+			let block_root: H256 = merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
 			Self::store_finalized_header(block_root, initial_sync.header);
 
@@ -349,7 +351,7 @@ pub mod pallet {
 				NEXT_SYNC_COMMITTEE_INDEX,
 			)?;
 
-			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone())
+			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
 			Self::verify_header(
 				block_root,
@@ -383,7 +385,7 @@ pub mod pallet {
 			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
-			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone())
+			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
 			Self::verify_header(
 				block_root,
@@ -432,7 +434,7 @@ pub mod pallet {
 				genesis.validators_root,
 			)?;
 
-			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.attested_header.clone())
+			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.attested_header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
 
 			Self::store_header(block_root, update.attested_header);
@@ -514,10 +516,10 @@ pub mod pallet {
 			beacon_header: BeaconHeader,
 			domain: Domain,
 		) -> Result<Root, DispatchError> {
-			let beacon_header_root = merklization::hash_tree_root_beacon_header(beacon_header)
+			let beacon_header_root = merkleization::hash_tree_root_beacon_header(beacon_header)
 				.map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?;
 
-			let hash_root = merklization::hash_tree_root_signing_data(SigningData {
+			let hash_root = merkleization::hash_tree_root_signing_data(SigningData {
 				object_root: beacon_header_root.into(),
 				domain,
 			})
@@ -534,7 +536,7 @@ pub mod pallet {
 			index: u64,
 		) -> DispatchResult {
 			let sync_committee_root =
-				merklization::hash_tree_root_sync_committee(sync_committee)
+				merkleization::hash_tree_root_sync_committee(sync_committee)
 					.map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
 
 			ensure!(
@@ -629,7 +631,7 @@ pub mod pallet {
 			current_version: ForkVersion,
 			genesis_validators_root: Root,
 		) -> Result<Root, DispatchError> {
-			let hash_root = merklization::hash_tree_root_fork_data(ForkData {
+			let hash_root = merkleization::hash_tree_root_fork_data(ForkData {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
 			})
