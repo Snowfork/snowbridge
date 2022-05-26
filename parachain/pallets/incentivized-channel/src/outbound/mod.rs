@@ -16,7 +16,7 @@ use frame_support::{
 };
 
 use scale_info::TypeInfo;
-use sp_core::{RuntimeDebug, H160, H256};
+use sp_core::{H160, H256};
 use sp_runtime::traits::{Hash, Zero};
 
 use sp_std::prelude::*;
@@ -53,12 +53,6 @@ pub struct Message<M: Get<u32>> {
 
 pub type MessageBundleOf<T> = MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit>;
 pub type MessageOf<T> = Message<<T as Config>::MaxMessagePayloadSize>;
-
-#[derive(Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct OffchainStorageValue {
-	nonce: u64,
-	commitment: Vec<u8>
-}
 
 pub use pallet::*;
 

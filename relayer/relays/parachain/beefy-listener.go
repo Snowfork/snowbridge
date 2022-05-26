@@ -583,7 +583,7 @@ func (li *BeefyListener) scanForCommitments(
 
 		commitments := make(map[ChannelID]Commitment)
 
-		events, err := li.eventQueryClient.QueryEvents(ctx, li.config.Parachain.HTTPEndpoint, blockHash)
+		events, err := li.eventQueryClient.QueryEvents(ctx, li.config.Parachain.Endpoint, blockHash)
 		if err != nil {
 			return nil, fmt.Errorf("query events: %w", err);
 		}

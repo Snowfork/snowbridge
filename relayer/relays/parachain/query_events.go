@@ -10,12 +10,12 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 )
 
-type Result struct {
-	Items []Record `json:"items"`
+type inputItems struct {
+	Items []inputItem `json:"items"`
 }
 
-type Record struct {
-	ChannelID uint64 `json:"id"`
+type inputItem struct {
+	ID uint64 `json:"id"`
 	Hash string `json:"hash"`
 	Data string `json:"data"`
 }
@@ -42,7 +42,7 @@ type QueryClient struct {
 func NewQueryClient() QueryClient {
 	return QueryClient{
 		NameArgs: func(api string, blockHash string) (string, []string) {
-			return "snowbridge-event-query", []string{"--api", api, "--block", blockHash}
+			return "snowbridge-query-events", []string{"--api", api, "--block", blockHash}
 		},
 	}
 }
@@ -57,25 +57,25 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 		return nil, err
 	}
 
-	var result Result
-	err = json.Unmarshal(out.Bytes(), &result)
+	var items inputItems
+	err = json.Unmarshal(out.Bytes(), &items)
 	if err != nil {
 		return nil, err
 	}
 
 	var events Events
 
-	for _, record := range result.Items {
+	for _, item := range items.Items {
 
 		var hash types.H256
-		err = types.DecodeFromHexString(record.Hash, &hash)
+		err = types.DecodeFromHexString(item.Hash, &hash)
 		if err != nil {
 			return nil, err
 		}
 
-		if record.ChannelID == 0 {
+		if item.ID == 0 {
 			var bundle BasicOutboundChannelMessageBundle
-			err = types.DecodeFromHexString(record.Data, &bundle)
+			err = types.DecodeFromHexString(item.Data, &bundle)
 			if err != nil {
 				return nil, err
 			}
@@ -83,9 +83,9 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 				Hash: hash,
 				Bundle: bundle,
 			}
-		} else if record.ChannelID == 1 {
+		} else if item.ID == 1 {
 			var bundle IncentivizedOutboundChannelMessageBundle
-			err = types.DecodeFromHexString(record.Data, &bundle)
+			err = types.DecodeFromHexString(item.Data, &bundle)
 			if err != nil {
 				return nil, err
 			}

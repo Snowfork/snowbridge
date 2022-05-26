@@ -1,36 +1,35 @@
 {
-    "@timestamp": "2022-05-11T21:44:13.817215021+02:00",
-    "commitmentHash": "0x23b3da85830cfa317810cc825b96e11d287ae1fb676245d333ca461d027cbe12",
+    "@timestamp": "2022-05-26T20:17:56.707617077+02:00",
+    "commitmentHash": "0xfd6de4fd9c21d1adec03e24f7dbb0db34fef807a74a7c2c0f4626a4e4e77fdab",
     "level": "info",
     "message": "Sent SubmitFinal transaction",
     "params": {
         "commitment": {
-            "blockNumber": 189,
+            "blockNumber": 109,
             "payload": {
-                "mmrRootHash": "0xeb9aefc60a0dd0cef21b2d04de9bd50d8fce25299fff26bbb19c14f20f847073",
+                "mmrRootHash": "0xd77031b5bc1cabd7e8ee580ef808414ba21546bc15a6e1471c07205706c2366a",
                 "prefix": "0x046d6880",
                 "suffix": "0x"
             },
-            "validatorSetID": 18
+            "validatorSetID": 10
         },
-        "id": 22,
+        "id": 11,
         "proof": {
             "addrs": [
-                "0xe04cc55ebee1cbce552f250e85c57b70b2e2625b"
+                "0x5630a480727cd7799073b36472d9b1a6031f840b"
             ],
             "indices": [
-                0
+                2
             ],
             "merkleProofs": [
                 [
-                    "0xf68aec7304bf37f340dae2ea20fb5271ee28a3128812b84a615da4789e458bde",
-                    "0x3eb799651607280e854bd2e42c1df1c8e4a6167772dfb3c64a813e40f6e87136"
+                    "0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402"
                 ]
             ],
             "signatures": [
-                "0xc283d3e6e315b27ae5ddc35df4eb8300abb465b289b4a162360ab97a7035e90a3686efb73a7af1da9ae8d4b139fe11700ec3614cea9dda3188d1b588c05199971b"
+                "0x50dfb260cf827758a113b9ca2c05f6ef1fbcf0431092fa4237dd525460945b833a0b90e37292e515db00872fbd11dfaa802af227994115922a2d84a69fa2c8a91b"
             ]
         }
     },
-    "txHash": "0xc12fafa259ac787b4830f977bfec7a355cd40ef0661b21eab3fde36b29837b28"
+    "txHash": "0x2ebdc2bcabbdefbcf021f4b2169037286aa76f6808799d23323a871abeec1cbe"
 }

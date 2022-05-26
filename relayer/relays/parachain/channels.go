@@ -45,20 +45,19 @@ func (b IncentivizedOutboundChannelMessageBundle) IntoInboundMessageBundle() inc
 	}
 	return incentivized.IncentivizedInboundChannelMessageBundle{
 		Nonce:    (*big.Int)(&b.Nonce).Uint64(),
-		Fee:      b.Fee.Int,
+		Fee:      (*big.Int)(&b.Fee),
 		Messages: messages,
 	}
 }
 
 type IncentivizedOutboundChannelMessageBundle struct {
 	Nonce    types.UCompact
-	Fee      types.U128
+	Fee      types.UCompact
 	Messages []IncentivizedOutboundChannelMessage
 }
 
 type IncentivizedOutboundChannelMessage struct {
 	ID      types.UCompact
 	Target  [20]byte
-	Fee     types.UCompact
 	Payload []byte
 }

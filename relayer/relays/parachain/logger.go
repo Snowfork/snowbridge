@@ -51,6 +51,7 @@ func (wr *EthereumWriter) logFieldsForIncentivizedSubmission(
 	params := log.Fields{
 		"bundle": log.Fields{
 			"nonce":    bundle.Nonce,
+			"fee": bundle.Fee.String(),
 			"messages": messagesLog,
 		},
 		"proof": Hex(proof),

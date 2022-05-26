@@ -10,7 +10,7 @@ const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ParachainClient = artifacts.require("ParachainClient");
 
-const MockRewardSource = artifacts.require("MockRewardSource");
+const MockRewardSource = artifacts.require("MockRewardController");
 const {
   deployBeefyClient, printTxPromiseGas, createValidatorFixture, runBeefyClientFlow,
 } = require("./helpers");
