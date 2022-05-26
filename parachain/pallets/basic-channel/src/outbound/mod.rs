@@ -12,8 +12,7 @@ use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	traits::{EnsureOrigin, Get},
-	BoundedVec,
-	RuntimeDebugNoBound, PartialEqNoBound, CloneNoBound,
+	BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 use scale_info::TypeInfo;
 use sp_core::{H160, H256};
@@ -26,17 +25,22 @@ use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 pub use weights::WeightInfo;
 
 /// Wire-format for committed messages
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
+)]
 #[scale_info(skip_type_params(M, N))]
 #[codec(mel_bound())]
 pub struct MessageBundle<M: Get<u32>, N: Get<u32>> {
+	source_channel_id: u8,
 	/// Unique nonce for to prevent replaying bundles
 	#[codec(compact)]
 	nonce: u64,
 	messages: BoundedVec<Message<M>, N>,
 }
 
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
+)]
 #[scale_info(skip_type_params(M))]
 #[codec(mel_bound())]
 pub struct Message<M: Get<u32>> {
@@ -49,7 +53,8 @@ pub struct Message<M: Get<u32>> {
 	payload: BoundedVec<u8, M>,
 }
 
-pub type MessageBundleOf<T> = MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit>;
+pub type MessageBundleOf<T> =
+	MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit>;
 pub type MessageOf<T> = Message<<T as Config>::MaxMessagePayloadSize>;
 
 pub use pallet::*;
@@ -93,7 +98,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		MessageAccepted(u64),
-		Committed { hash: H256, data: MessageBundleOf<T> }
+		Committed { hash: H256, data: MessageBundleOf<T> },
 	}
 
 	#[pallet::error]
@@ -223,8 +228,11 @@ pub mod pallet {
 			let next_nonce = nonce.saturating_add(1);
 			<Nonce<T>>::put(next_nonce);
 
-			let bundle =
-				MessageBundle { nonce: next_nonce, messages: messages.clone() };
+			let bundle = MessageBundle {
+				source_channel_id: ChannelId::Basic,
+				nonce: next_nonce,
+				messages: messages.clone(),
+			};
 
 			let commitment = Self::make_commitment(&bundle);
 			let commitment_hash = <T as Config>::Hashing::hash(&commitment);
@@ -235,7 +243,10 @@ pub mod pallet {
 
 			Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
 
-			T::WeightInfo::on_initialize(messages.len() as u32, Self::average_payload_size(&messages))
+			T::WeightInfo::on_initialize(
+				messages.len() as u32,
+				Self::average_payload_size(&messages),
+			)
 		}
 
 		fn make_commitment(bundle: &MessageBundleOf<T>) -> Vec<u8> {
