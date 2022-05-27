@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -519,6 +520,17 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 		return scale.BeaconBlock{}, err
 	}
 
+	proposerSlashings := []scale.ProposerSlashing{}
+
+	for _, proposerSlashing := range body.ProposerSlashings {
+		proposerSlashingScale, err := proposerSlashing.ToScale()
+		if err != nil {
+			return scale.BeaconBlock{}, err
+		}
+
+		proposerSlashings = append(proposerSlashings, proposerSlashingScale)
+	}
+
 	attesterSlashings := []scale.AttesterSlashing{}
 
 	for _, attesterSlashing := range body.AttesterSlashings {
@@ -530,10 +542,52 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 		attesterSlashings = append(attesterSlashings, attesterSlashingScale)
 	}
 
+	attestations := []scale.Attestation{}
+
+	for _, attestation := range body.Attestations {
+		attestationScale, err := attestation.ToScale()
+		if err != nil {
+			return scale.BeaconBlock{}, err
+		}
+
+		attestations = append(attestations, attestationScale)
+	}
+
+	deposits := []scale.Deposit{}
+
+	for _, deposit := range body.Deposits {
+		depositScale, err := deposit.ToScale()
+		if err != nil {
+			return scale.BeaconBlock{}, err
+		}
+
+		deposits = append(deposits, depositScale)
+	}
+
+	voluntaryExits := []scale.VoluntaryExit{}
+
+	for _, voluntaryExit := range body.VoluntaryExits {
+		voluntaryExitScale, err := voluntaryExit.ToScale()
+		if err != nil {
+			return scale.BeaconBlock{}, err
+		}
+
+		voluntaryExits = append(voluntaryExits, voluntaryExitScale)
+	}
+
 	depositCount, err := toUint64(body.Eth1Data.DepositCount)
 	if err != nil {
 		return scale.BeaconBlock{}, err
 	}
+
+	executionPayload := body.ExecutionPayload
+
+	baseFeePerGasUint64, err := toUint64(executionPayload.BaseFeePerGas)
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
+	bigInt := big.NewInt(int64(baseFeePerGasUint64))
 
 	return scale.BeaconBlock{
 		Slot:          types.NewU64(slot),
@@ -548,14 +602,46 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 				BlockHash:    types.NewH256(common.HexToHash(body.Eth1Data.BlockHash).Bytes()),
 			},
 			Graffiti:          types.NewH256(common.HexToHash(body.Graffiti).Bytes()),
-			ProposerSlashings: nil, // TODO
+			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
-			Attestations:      nil, // TODO
-			Deposits:          nil, // TODO
-			VoluntaryExits:    nil, // TODO
+			Attestations:      attestations,
+			Deposits:          deposits,
+			VoluntaryExits:    voluntaryExits,
 			SyncAggregate:     syncAggregate,
-			ExecutionPayload:  scale.ExecutionPayload{}, // TODO
+			ExecutionPayload: scale.ExecutionPayload{
+				ParentHash:    types.NewH256(common.HexToHash(executionPayload.ParentHash).Bytes()),
+				FeeRecipient:  nil, // TODO
+				StateRoot:     types.NewH256(common.HexToHash(executionPayload.StateRoot).Bytes()),
+				ReceiptsRoot:  types.NewH256(common.HexToHash(executionPayload.ReceiptsRoot).Bytes()),
+				LogsBloom:     nil, // TODO
+				PrevRandao:    types.NewH256(common.HexToHash(executionPayload.PrevRandao).Bytes()),
+				BlockNumber:   0,   // TODO
+				GasLimit:      0,   // TODO
+				GasUsed:       0,   // TODO
+				Timestamp:     0,   // TODO
+				ExtraData:     nil, // TODO
+				BaseFeePerGas: types.NewU256(*bigInt),
+				BlockHash:     types.NewH256(common.HexToHash(executionPayload.BlockHash).Bytes()),
+				Transactions:  nil, // TODO
+			},
 		},
+	}, nil
+}
+
+func (p ProposerSlashingResponse) ToScale() (scale.ProposerSlashing, error) {
+	signedHeader1, err := p.SignedHeader1.ToScale()
+	if err != nil {
+		return scale.ProposerSlashing{}, err
+	}
+
+	signedHeader2, err := p.SignedHeader2.ToScale()
+	if err != nil {
+		return scale.ProposerSlashing{}, err
+	}
+
+	return scale.ProposerSlashing{
+		SignedHeader1: signedHeader1,
+		SignedHeader2: signedHeader2,
 	}, nil
 }
 
@@ -573,6 +659,71 @@ func (a AttesterSlashingResponse) ToScale() (scale.AttesterSlashing, error) {
 	return scale.AttesterSlashing{
 		Attestation1: attestation1,
 		Attestation2: attestation2,
+	}, nil
+}
+
+func (a AttestationResponse) ToScale() (scale.Attestation, error) {
+	data, err := a.Data.ToScale()
+	if err != nil {
+		return scale.Attestation{}, err
+	}
+
+	return scale.Attestation{
+		AggregationBits: a.AggregationBits,
+		Data:            data,
+		Signature:       a.Signature,
+	}, nil
+}
+
+func (d VoluntaryExitResponse) ToScale() (scale.VoluntaryExit, error) {
+	epoch, err := toUint64(d.Epoch)
+	if err != nil {
+		return scale.VoluntaryExit{}, err
+	}
+
+	validaterIndex, err := toUint64(d.ValidatorIndex)
+	if err != nil {
+		return scale.VoluntaryExit{}, err
+	}
+
+	return scale.VoluntaryExit{
+		Epoch:          types.NewU64(epoch),
+		ValidaterIndex: types.NewU64(validaterIndex),
+	}, nil
+}
+
+func (d DepositResponse) ToScale() (scale.Deposit, error) {
+	proofs := []types.H256{}
+
+	for _, proofData := range d.Proof {
+		proofs = append(proofs, types.NewH256(common.HexToHash(proofData).Bytes()))
+	}
+
+	amount, err := toUint64(d.Data.Amount)
+	if err != nil {
+		return scale.Deposit{}, err
+	}
+
+	return scale.Deposit{
+		Proof: proofs,
+		Data: scale.DepositData{
+			Pubkey:                d.Data.Pubkey,
+			WithdrawalCredentials: types.NewH256(common.HexToHash(d.Data.WithdrawalCredentials).Bytes()),
+			Amount:                types.NewU64(amount),
+			Signature:             d.Data.Signature,
+		},
+	}, nil
+}
+
+func (s SignedHeaderResponse) ToScale() (scale.SignedHeader, error) {
+	message, err := s.Message.ToScale()
+	if err != nil {
+		return scale.SignedHeader{}, err
+	}
+
+	return scale.SignedHeader{
+		Message:   message,
+		Signature: s.Signature,
 	}, nil
 }
 

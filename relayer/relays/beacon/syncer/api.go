@@ -168,7 +168,7 @@ type DepositDataResponse struct {
 
 type DepositResponse struct {
 	Proof []string            `json:"proof"`
-	Root  DepositDataResponse `json:"root"`
+	Data  DepositDataResponse `json:"data"`
 }
 
 type AttestationDataResponse struct {
@@ -201,7 +201,7 @@ type AttestationResponse struct {
 	Signature       []byte                  `json:"signature"`
 }
 
-type VoluntaryExit struct {
+type VoluntaryExitResponse struct {
 	Epoch          string `json:"epoch"`
 	ValidatorIndex string `json:"validator_index"`
 }
@@ -225,7 +225,7 @@ type BeaconBlockResponse struct {
 				AttesterSlashings []AttesterSlashingResponse `json:"attester_slashings"`
 				Attestations      []AttestationResponse      `json:"attestations"`
 				Deposits          []DepositResponse          `json:"deposits"`
-				VoluntaryExits    []VoluntaryExit            `json:"voluntary_exits"`
+				VoluntaryExits    []VoluntaryExitResponse    `json:"voluntary_exits"`
 				SyncAggregate     SyncAggregateResponse      `json:"sync_aggregate"`
 				ExecutionPayload  struct {
 					ParentHash    string
