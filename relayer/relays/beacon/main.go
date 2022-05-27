@@ -74,14 +74,20 @@ func (r *Relay) Sync(ctx context.Context) error {
 			"period": period,
 		}).Info("Fetch sync committee period update")
 
-		r.SyncCommitteePeriodUpdate(ctx, period)
+		err := r.SyncCommitteePeriodUpdate(ctx, period)
+		if err != nil {
+			return err
+		}
 	}
 
 	logrus.Info("Done with sync committee updates")
 
 	logrus.Info("Starting to sync finalized headers")
 
-	r.SyncFinalizedHeader(ctx)
+	err = r.SyncFinalizedHeader(ctx)
+	if err != nil {
+		return err
+	}
 
 	ticker := time.NewTicker(time.Minute * 5)
 	done := make(chan bool)
@@ -92,7 +98,10 @@ func (r *Relay) Sync(ctx context.Context) error {
 			case <-done:
 				return nil
 			case <-ticker.C:
-				r.SyncFinalizedHeader(ctx)
+				err := r.SyncFinalizedHeader(ctx)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}()
@@ -147,7 +156,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 	logrus.Info("Syncing finalized header")
 
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
-	finalizedHeaderUpdate, err := r.syncer.GetFinalizedBlockUpdate()
+	finalizedHeaderUpdate, err := r.syncer.GetFinalizedUpdate()
 	if err != nil {
 		logrus.WithError(err).Error("unable to sync finalized header")
 
@@ -165,7 +174,52 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 	if !syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
 		logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
 
-		r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
+		err := r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
+		if err != nil {
+			return err
+		}
+
+		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
+	}
+
+	err = r.writer.WriteToParachain(ctx, "import_finalized_header", finalizedHeaderUpdate)
+	if err != nil {
+		logrus.WithError(err).Error("unable to write to parachain")
+
+		return err
+	}
+
+	r.syncer.Cache.FinalizedHeaders = append(r.syncer.Cache.FinalizedHeaders, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot))
+
+	return err
+}
+
+func (r *Relay) SyncHeader(ctx context.Context) error {
+	logrus.Info("Syncing header")
+
+	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
+	finalizedHeaderUpdate, err := r.syncer.GetFinalizedUpdate()
+	if err != nil {
+		logrus.WithError(err).Error("unable to sync finalized header")
+
+		return err
+	}
+
+	if syncer.IsInArray(r.syncer.Cache.FinalizedHeaders, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot)) {
+		logrus.Info("Finalized header has been synced already, skipped")
+
+		return nil
+	}
+
+	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
+
+	if !syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
+		logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
+
+		err := r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
+		if err != nil {
+			return err
+		}
 
 		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
 	}

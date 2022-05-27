@@ -23,7 +23,6 @@ type BeaconClientTracker interface {
 	GetGenesis() (GenesisResponse, error)
 	GetCurrentForkVersion(slot uint64) (string, error)
 	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
-	GetLatestHeadUpdate() (LatestFinalisedUpdateResponse, error)
 }
 
 type BeaconClient struct {
@@ -150,6 +149,63 @@ func (b *BeaconClient) GetHeader(id string) (BeaconHeader, error) {
 	}, nil
 }
 
+type SignedHeaderResponse struct {
+	Message   HeaderResponse `json:"message"`
+	Signature []byte         `json:"signature"`
+}
+
+type CheckpointResponse struct {
+	Epoch string `json:"epoch"`
+	Root  string `json:"root"`
+}
+
+type DepositDataResponse struct {
+	Pubkey                []byte `json:"pubkey"`
+	WithdrawalCredentials string `json:"withdrawal_credentials"`
+	Amount                string `json:"amount"`
+	Signature             []byte `json:"signature"`
+}
+
+type DepositResponse struct {
+	Proof []string            `json:"proof"`
+	Root  DepositDataResponse `json:"root"`
+}
+
+type AttestationDataResponse struct {
+	Slot            string             `json:"slot"`
+	Index           string             `json:"index"`
+	BeaconBlockRoot string             `json:"beacon_block_root"`
+	Source          CheckpointResponse `json:"source"`
+	Target          CheckpointResponse `json:"target"`
+}
+
+type IndexedAttestationResponse struct {
+	AttestingIndices []string                `json:"attesting_indices"`
+	Data             AttestationDataResponse `json:"data"`
+	Signature        []byte                  `json:"signature"`
+}
+
+type AttesterSlashingResponse struct {
+	Attestation1 IndexedAttestationResponse `json:"attestation_1"`
+	Attestation2 IndexedAttestationResponse `json:"attestation_2"`
+}
+
+type ProposerSlashingResponse struct {
+	SignedHeader1 SignedHeaderResponse `json:"signed_header_1"`
+	SignedHeader2 SignedHeaderResponse `json:"signed_header_2"`
+}
+
+type AttestationResponse struct {
+	AggregationBits []byte                  `json:"aggregation_bits"`
+	Data            AttestationDataResponse `json:"data"`
+	Signature       []byte                  `json:"signature"`
+}
+
+type VoluntaryExit struct {
+	Epoch          string `json:"epoch"`
+	ValidatorIndex string `json:"validator_index"`
+}
+
 type BeaconBlockResponse struct {
 	Data struct {
 		Message struct {
@@ -158,10 +214,35 @@ type BeaconBlockResponse struct {
 			ParentRoot    string `json:"parent_root"`
 			StateRoot     string `json:"state_root"`
 			Body          struct {
-				ExecutionPayload struct {
-					BlockHash string `json:"block_hash"`
+				RandaoReveal []byte `json:"randao_reveal"`
+				Eth1Data     struct {
+					DepositRoot  string `json:"deposit_root"`
+					DepositCount string `json:"deposit_count"`
+					BlockHash    string `json:"block_hash"`
+				} `json:"eth1_data"`
+				Graffiti          string                     `json:"graffiti"`
+				ProposerSlashings []ProposerSlashingResponse `json:"proposer_slashings"`
+				AttesterSlashings []AttesterSlashingResponse `json:"attester_slashings"`
+				Attestations      []AttestationResponse      `json:"attestations"`
+				Deposits          []DepositResponse          `json:"deposits"`
+				VoluntaryExits    []VoluntaryExit            `json:"voluntary_exits"`
+				SyncAggregate     SyncAggregateResponse      `json:"sync_aggregate"`
+				ExecutionPayload  struct {
+					ParentHash    string
+					FeeRecipient  []byte
+					StateRoot     string
+					ReceiptsRoot  string
+					LogsBloom     []byte
+					PrevRandao    string
+					BlockNumber   string
+					GasLimit      string
+					GasUsed       string
+					Timestamp     string
+					ExtraData     []byte
+					BaseFeePerGas string
+					BlockHash     string
+					Transactions  [][]byte
 				} `json:"execution_payload"`
-				SyncAggregate SyncAggregateResponse `json:"sync_aggregate"`
 			} `json:"body"`
 		} `json:"message"`
 	} `json:"data"`
@@ -175,8 +256,8 @@ type BeaconBlock struct {
 	BodyRoot      common.Hash
 }
 
-func (b *BeaconClient) GetBeaconBlock(slot uint64) (BeaconBlockResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%d", b.endpoint, slot), nil)
+func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct beacon block request")
 
@@ -641,49 +722,4 @@ type LatestHeaderUpdateResponse struct {
 		AttestedHeader HeaderResponse        `json:"attested_header"`
 		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
 	} `json:"data"`
-}
-
-func (b *BeaconClient) GetLatestHeadUpdate() (LatestHeaderUpdateResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/latest_head_update/", b.endpoint), nil)
-	if err != nil {
-		logrus.WithError(err).Error("unable to construct latest head update request")
-
-		return LatestHeaderUpdateResponse{}, nil
-	}
-
-	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
-	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return LatestHeaderUpdateResponse{}, nil
-	}
-
-	if res.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(res.Body)
-
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
-
-		return LatestHeaderUpdateResponse{}, nil
-	}
-
-	bodyBytes, err := io.ReadAll(res.Body)
-
-	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return LatestHeaderUpdateResponse{}, nil
-	}
-
-	var response LatestHeaderUpdateResponse
-
-	err = json.Unmarshal(bodyBytes, &response)
-
-	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal genesis json response")
-
-		return LatestHeaderUpdateResponse{}, nil
-	}
-
-	return response, nil
 }

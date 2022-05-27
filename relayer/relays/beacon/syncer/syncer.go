@@ -10,14 +10,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
 )
 
 var ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("not found")
 
 const (
-	SLOTS_IN_EPOCH                   uint64 = 32
-	EPOCHS_PER_SYNC_COMMITTEE_PERIOD uint64 = 256
-	SYNC_COMMITTEE_INCREMENT                = 5
+	SlotsInEpoch                 uint64 = 32
+	EpochsPerSyncCommitteePeriod uint64 = 256
 )
 
 type Syncer struct {
@@ -69,55 +69,35 @@ type FinalizedBlockUpdate struct {
 	SyncAggregate   SyncAggregate
 }
 
-type BeaconHeaderScale struct {
-	Slot          types.U64
-	ProposerIndex types.U64
-	ParentRoot    types.H256
-	StateRoot     types.H256
-	BodyRoot      types.H256
-}
-
-type CurrentSyncCommitteeScale struct {
-	Pubkeys         [][48]byte
-	AggregatePubkey [48]byte
-}
-
-type SyncAggregateScale struct {
-	SyncCommitteeBits      []byte
-	SyncCommitteeSignature []byte
-}
-
 type InitialSync struct {
-	Header                     BeaconHeaderScale
-	CurrentSyncCommittee       CurrentSyncCommitteeScale
+	Header                     scale.BeaconHeader
+	CurrentSyncCommittee       scale.CurrentSyncCommittee
 	CurrentSyncCommitteeBranch []types.H256
 	ValidatorsRoot             types.H256
 }
 
 type SyncCommitteePeriodUpdate struct {
-	AttestedHeader          BeaconHeaderScale
-	NextSyncCommittee       CurrentSyncCommitteeScale
+	AttestedHeader          scale.BeaconHeader
+	NextSyncCommittee       scale.CurrentSyncCommittee
 	NextSyncCommitteeBranch []types.H256
-	FinalizedHeader         BeaconHeaderScale
+	FinalizedHeader         scale.BeaconHeader
 	FinalityBranch          []types.H256
-	SyncAggregate           SyncAggregateScale
+	SyncAggregate           scale.SyncAggregate
 	ForkVersion             [4]byte
 	SyncCommitteePeriod     types.U64
 }
 
 type FinalizedHeaderUpdate struct {
-	AttestedHeader  BeaconHeaderScale
-	FinalizedHeader BeaconHeaderScale
+	AttestedHeader  scale.BeaconHeader
+	FinalizedHeader scale.BeaconHeader
 	FinalityBranch  []types.H256
-	SyncAggregate   SyncAggregateScale
+	SyncAggregate   scale.SyncAggregate
 	ForkVersion     [4]byte
 }
 
 type HeaderUpdate struct {
-	AttestedHeader  BeaconHeaderScale
-	ExecutionHeader types.H256
-	SyncAggregate   SyncAggregateScale
-	ForkVersion     [4]byte
+	Body        scale.BeaconBlock
+	ForkVersion [4]byte
 }
 
 func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
@@ -135,7 +115,7 @@ func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
 		return InitialSync{}, err
 	}
 
-	header, err := beaconHeaderToScale(snapshot.Data.Header)
+	header, err := snapshot.Data.Header.ToScale()
 	if err != nil {
 
 		return InitialSync{}, err
@@ -210,14 +190,14 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePer
 
 	committeeUpdate := committeeUpdates.Data[0]
 
-	attestedHeader, err := beaconHeaderToScale(committeeUpdate.AttestedHeader)
+	attestedHeader, err := committeeUpdate.AttestedHeader.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable to parse beacon header in response")
 
 		return SyncCommitteePeriodUpdate{}, err
 	}
 
-	finalizedHeader, err := beaconHeaderToScale(committeeUpdate.FinalizedHeader)
+	finalizedHeader, err := committeeUpdate.FinalizedHeader.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable to parse beacon header in response")
 
@@ -264,7 +244,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePer
 	return syncCommitteePeriodUpdate, err
 }
 
-func (s *Syncer) GetFinalizedBlockUpdate() (FinalizedHeaderUpdate, error) {
+func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, error) {
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
@@ -272,14 +252,14 @@ func (s *Syncer) GetFinalizedBlockUpdate() (FinalizedHeaderUpdate, error) {
 		return FinalizedHeaderUpdate{}, err
 	}
 
-	attestedHeader, err := beaconHeaderToScale(finalizedUpdate.Data.AttestedHeader)
+	attestedHeader, err := finalizedUpdate.Data.AttestedHeader.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable to parse beacon header in response")
 
 		return FinalizedHeaderUpdate{}, err
 	}
 
-	finalizedHeader, err := beaconHeaderToScale(finalizedUpdate.Data.FinalizedHeader)
+	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable to parse beacon header in response")
 
@@ -318,29 +298,20 @@ func (s *Syncer) GetFinalizedBlockUpdate() (FinalizedHeaderUpdate, error) {
 	return finalizedHeaderUpdate, nil
 }
 
-func (s *Syncer) GetHeaderUpdate() (HeaderUpdate, error) {
-	latestHeader, err := s.Client.GetLatestHeadUpdate()
+func (s *Syncer) GetHeaderUpdate(blockID common.Hash) (HeaderUpdate, error) {
+	block, err := s.Client.GetBeaconBlock(blockID)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch latest header checkpoint")
 
 		return HeaderUpdate{}, err
 	}
 
-	attestedHeader, err := beaconHeaderToScale(latestHeader.Data.AttestedHeader)
+	slot, err := toUint64(block.Data.Message.Slot)
 	if err != nil {
-		logrus.WithError(err).Error("unable to parse beacon header in response")
-
 		return HeaderUpdate{}, err
 	}
 
-	latestBlock, err := s.Client.GetBeaconBlock(uint64(attestedHeader.Slot))
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch latest header checkpoint")
-
-		return HeaderUpdate{}, err
-	}
-
-	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(attestedHeader.Slot))
+	currentForkVersion, err := s.Client.GetCurrentForkVersion(slot)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
 
@@ -354,33 +325,31 @@ func (s *Syncer) GetHeaderUpdate() (HeaderUpdate, error) {
 		return HeaderUpdate{}, err
 	}
 
-	syncAggregate, err := latestHeader.Data.SyncAggregate.ToScale()
+	blockScale, err := block.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable to parse sync aggregate in response")
+		logrus.WithError(err).Error("unable convert block to scale format")
 
 		return HeaderUpdate{}, err
 	}
 
 	headerUpdate := HeaderUpdate{
-		AttestedHeader:  attestedHeader,
-		ExecutionHeader: types.NewH256(common.HexToHash(latestBlock.Data.Message.Body.ExecutionPayload.BlockHash).Bytes()),
-		SyncAggregate:   syncAggregate,
-		ForkVersion:     forkVersion,
+		Body:        blockScale,
+		ForkVersion: forkVersion,
 	}
 
 	return headerUpdate, nil
 }
 
 func computeEpochAtSlot(slot uint64) uint64 {
-	return slot / SLOTS_IN_EPOCH
+	return slot / SlotsInEpoch
 }
 
 func computeEpochForNextPeriod(epoch uint64) uint64 {
-	return epoch + (EPOCHS_PER_SYNC_COMMITTEE_PERIOD - (epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD))
+	return epoch + (EpochsPerSyncCommitteePeriod - (epoch % EpochsPerSyncCommitteePeriod))
 }
 
 func ComputeSyncPeriodAtSlot(slot uint64) uint64 {
-	return slot / (SLOTS_IN_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+	return slot / (SlotsInEpoch * EpochsPerSyncCommitteePeriod)
 }
 
 func IsInArray(values []uint64, toCheck uint64) bool {
@@ -393,14 +362,14 @@ func IsInArray(values []uint64, toCheck uint64) bool {
 }
 
 func hexToBinaryString(rawHex string) string {
-	hex := strings.Replace(rawHex, "0x", "", -1)
+	hexString := strings.Replace(rawHex, "0x", "", -1)
 
 	// Chunkify strings into array of strings of 8 characters long (to ParseUint safely below)
 	chunkSize := 8
 
 	resultStr := ""
 	chunks := []string{}
-	for i, r := range hex {
+	for i, r := range hexString {
 		resultStr = resultStr + string(r)
 		if i > 0 && (i+1)%chunkSize == 0 {
 			chunks = append(chunks, resultStr)
@@ -460,31 +429,31 @@ func hexStringToForkVersion(hexString string) ([4]byte, error) {
 	return forkVersion4Bytes, nil
 }
 
-func beaconHeaderToScale(header HeaderResponse) (BeaconHeaderScale, error) {
-	slot, err := strconv.ParseUint(header.Slot, 10, 64)
+func (h HeaderResponse) ToScale() (scale.BeaconHeader, error) {
+	slot, err := strconv.ParseUint(h.Slot, 10, 64)
 	if err != nil {
 		logrus.WithError(err).Error("unable parse slot as int")
 
-		return BeaconHeaderScale{}, err
+		return scale.BeaconHeader{}, err
 	}
 
-	proposerIndex, err := strconv.ParseUint(header.ProposerIndex, 10, 64)
+	proposerIndex, err := strconv.ParseUint(h.ProposerIndex, 10, 64)
 	if err != nil {
 		logrus.WithError(err).Error("unable parse slot as int")
 
-		return BeaconHeaderScale{}, err
+		return scale.BeaconHeader{}, err
 	}
 
-	return BeaconHeaderScale{
+	return scale.BeaconHeader{
 		Slot:          types.NewU64(slot),
 		ProposerIndex: types.NewU64(proposerIndex),
-		ParentRoot:    types.NewH256(common.HexToHash(header.ParentRoot).Bytes()),
-		StateRoot:     types.NewH256(common.HexToHash(header.StateRoot).Bytes()),
-		BodyRoot:      types.NewH256(common.HexToHash(header.BodyRoot).Bytes()),
+		ParentRoot:    types.NewH256(common.HexToHash(h.ParentRoot).Bytes()),
+		StateRoot:     types.NewH256(common.HexToHash(h.StateRoot).Bytes()),
+		BodyRoot:      types.NewH256(common.HexToHash(h.BodyRoot).Bytes()),
 	}, nil
 }
 
-func (s SyncCommitteeResponse) ToScale() (CurrentSyncCommitteeScale, error) {
+func (s SyncCommitteeResponse) ToScale() (scale.CurrentSyncCommittee, error) {
 	var syncCommitteePubkeys [][48]byte
 
 	for _, pubkey := range s.Pubkeys {
@@ -492,7 +461,7 @@ func (s SyncCommitteeResponse) ToScale() (CurrentSyncCommitteeScale, error) {
 		if err != nil {
 			logrus.WithError(err).Error("unable convert sync committee pubkey to byte array")
 
-			return CurrentSyncCommitteeScale{}, err
+			return scale.CurrentSyncCommittee{}, err
 		}
 
 		syncCommitteePubkeys = append(syncCommitteePubkeys, publicKey)
@@ -502,30 +471,184 @@ func (s SyncCommitteeResponse) ToScale() (CurrentSyncCommitteeScale, error) {
 	if err != nil {
 		logrus.WithError(err).Error("unable convert sync committee pubkey to byte array")
 
-		return CurrentSyncCommitteeScale{}, err
+		return scale.CurrentSyncCommittee{}, err
 	}
 
-	return CurrentSyncCommitteeScale{
+	return scale.CurrentSyncCommittee{
 		Pubkeys:         syncCommitteePubkeys,
 		AggregatePubkey: syncCommitteeAggPubkey,
 	}, nil
 }
 
-func (s SyncAggregateResponse) ToScale() (SyncAggregateScale, error) {
+func (s SyncAggregateResponse) ToScale() (scale.SyncAggregate, error) {
 	bits, err := hexStringToByteArray(s.SyncCommitteeBits)
 	if err != nil {
-		return SyncAggregateScale{}, err
+		return scale.SyncAggregate{}, err
 	}
 
 	aggregateSignature, err := hexStringToByteArray(s.SyncCommitteeSignature)
 	if err != nil {
-		return SyncAggregateScale{}, err
+		return scale.SyncAggregate{}, err
 	}
 
-	return SyncAggregateScale{
+	return scale.SyncAggregate{
 		SyncCommitteeBits:      bits,
 		SyncCommitteeSignature: aggregateSignature,
 	}, nil
+}
+
+func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
+	dataMessage := b.Data.Message
+
+	slot, err := toUint64(dataMessage.Slot)
+	if err != nil {
+		logrus.WithError(err).Error("unable parse slot as int")
+		return scale.BeaconBlock{}, err
+	}
+
+	proposerIndex, err := toUint64(dataMessage.ProposerIndex)
+	if err != nil {
+		logrus.WithError(err).Error("unable parse slot as int")
+		return scale.BeaconBlock{}, err
+	}
+
+	body := dataMessage.Body
+
+	syncAggregate, err := body.SyncAggregate.ToScale()
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
+	attesterSlashings := []scale.AttesterSlashing{}
+
+	for _, attesterSlashing := range body.AttesterSlashings {
+		attesterSlashingScale, err := attesterSlashing.ToScale()
+		if err != nil {
+			return scale.BeaconBlock{}, err
+		}
+
+		attesterSlashings = append(attesterSlashings, attesterSlashingScale)
+	}
+
+	depositCount, err := toUint64(body.Eth1Data.DepositCount)
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
+	return scale.BeaconBlock{
+		Slot:          types.NewU64(slot),
+		ProposerIndex: types.NewU64(proposerIndex),
+		ParentRoot:    types.NewH256(common.HexToHash(dataMessage.ParentRoot).Bytes()),
+		StateRoot:     types.NewH256(common.HexToHash(dataMessage.StateRoot).Bytes()),
+		Body: scale.Body{
+			RandaoReveal: body.RandaoReveal,
+			Eth1Data: scale.Eth1Data{
+				DepositRoot:  types.NewH256(common.HexToHash(body.Eth1Data.DepositRoot).Bytes()),
+				DepositCount: types.NewU64(depositCount),
+				BlockHash:    types.NewH256(common.HexToHash(body.Eth1Data.BlockHash).Bytes()),
+			},
+			Graffiti:          types.NewH256(common.HexToHash(body.Graffiti).Bytes()),
+			ProposerSlashings: nil, // TODO
+			AttesterSlashings: attesterSlashings,
+			Attestations:      nil, // TODO
+			Deposits:          nil, // TODO
+			VoluntaryExits:    nil, // TODO
+			SyncAggregate:     syncAggregate,
+			ExecutionPayload:  scale.ExecutionPayload{}, // TODO
+		},
+	}, nil
+}
+
+func (a AttesterSlashingResponse) ToScale() (scale.AttesterSlashing, error) {
+	attestation1, err := a.Attestation1.ToScale()
+	if err != nil {
+		return scale.AttesterSlashing{}, err
+	}
+
+	attestation2, err := a.Attestation2.ToScale()
+	if err != nil {
+		return scale.AttesterSlashing{}, err
+	}
+
+	return scale.AttesterSlashing{
+		Attestation1: attestation1,
+		Attestation2: attestation2,
+	}, nil
+}
+
+func (i IndexedAttestationResponse) ToScale() (scale.IndexedAttestation, error) {
+	data, err := i.Data.ToScale()
+	if err != nil {
+		return scale.IndexedAttestation{}, err
+	}
+
+	attestationIndexes := []types.U64{}
+
+	for _, index := range i.AttestingIndices {
+		indexInt, err := toUint64(index)
+		if err != nil {
+			return scale.IndexedAttestation{}, err
+		}
+
+		attestationIndexes = append(attestationIndexes, types.NewU64(indexInt))
+	}
+
+	return scale.IndexedAttestation{
+		AttestingIndices: attestationIndexes,
+		Data:             data,
+		Signature:        i.Signature,
+	}, nil
+}
+
+func (a AttestationDataResponse) ToScale() (scale.AttestationData, error) {
+	slot, err := toUint64(a.Slot)
+	if err != nil {
+		return scale.AttestationData{}, err
+	}
+
+	index, err := toUint64(a.Index)
+	if err != nil {
+		return scale.AttestationData{}, err
+	}
+
+	source, err := a.Source.ToScale()
+	if err != nil {
+		return scale.AttestationData{}, err
+	}
+
+	target, err := a.Target.ToScale()
+	if err != nil {
+		return scale.AttestationData{}, err
+	}
+
+	return scale.AttestationData{
+		Slot:            types.NewU64(slot),
+		Index:           types.NewU64(index),
+		BeaconBlockRoot: types.NewH256(common.HexToHash(a.BeaconBlockRoot).Bytes()),
+		Source:          source,
+		Target:          target,
+	}, nil
+}
+
+func (c CheckpointResponse) ToScale() (scale.Checkpoint, error) {
+	epoch, err := toUint64(c.Epoch)
+	if err != nil {
+		return scale.Checkpoint{}, err
+	}
+
+	return scale.Checkpoint{
+		Epoch: types.NewU64(epoch),
+		Root:  types.NewH256(common.HexToHash(c.Root).Bytes()),
+	}, nil
+}
+
+func toUint64(stringVal string) (uint64, error) {
+	intVal, err := strconv.ParseUint(stringVal, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return intVal, err
 }
 
 func proofBranchToScale(proofs []common.Hash) []types.H256 {

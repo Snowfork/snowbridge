@@ -1,11 +1,16 @@
 package syncer
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/ethereum/go-ethereum/common"
+)
 
 type BeaconCache struct {
 	SyncCommitteePeriodsSynced []uint64
 	FinalizedHeaders           []uint64
 	Headers                    []uint64
+	HeadersMap                 map[common.Hash]bool
 	mu                         sync.Mutex
 }
 
