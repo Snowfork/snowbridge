@@ -43,9 +43,8 @@ contract BasicInboundChannel {
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
-
-        dispatch(bundle);
         nonce++;
+        dispatch(bundle);
     }
 
     function dispatch(MessageBundle calldata bundle) internal {

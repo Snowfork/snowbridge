@@ -24,7 +24,7 @@ describe("IncentivizedInboundChannel", function () {
   before(async function () {
     const numberOfSignatures = 8;
     const numberOfValidators = 24;
-    const validatorFixture = await createValidatorFixture(fixture.params.commitment.validatorSetID, numberOfValidators)
+    const validatorFixture = await createValidatorFixture(fixture.params.commitment.validatorSetID-1, numberOfValidators)
     this.beefyClient = await deployBeefyClient(
       validatorFixture.validatorSetID,
       validatorFixture.validatorSetRoot,

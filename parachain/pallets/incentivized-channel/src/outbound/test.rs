@@ -128,7 +128,6 @@ parameter_types! {
 pub type Ether = ItemOf<Assets, EtherAssetId, AccountId>;
 
 impl incentivized_outbound_channel::Config for Test {
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;

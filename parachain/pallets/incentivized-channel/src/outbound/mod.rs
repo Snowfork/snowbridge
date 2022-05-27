@@ -78,9 +78,6 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Prefix for offchain storage keys.
-		const INDEXING_PREFIX: &'static [u8];
-
 		type Hashing: Hash<Output = H256>;
 
 		/// Max number of messages per commitment

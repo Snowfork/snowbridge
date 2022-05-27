@@ -64,10 +64,9 @@ contract IncentivizedInboundChannel is AccessControl {
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
-
+        nonce++;
         dispatch(bundle);
         rewardController.handleReward(payable(msg.sender), bundle.fee);
-        nonce++;
     }
 
     function dispatch(MessageBundle calldata bundle) internal {

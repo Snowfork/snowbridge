@@ -254,7 +254,8 @@ const runBeefyClientFlow = async (fixture, beefyClient, validatorFixture, totalN
   const completeProofs = await createFinalValidatorProofs(lastId, beefyClient, proofs);
 
   if (fixture.params.leaf) {
-    await beefyClient.submitFinal(
+    let method = 'submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]),(uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32),(bytes32[],uint64))';
+    await beefyClient.methods[method](
       lastId,
       fixture.params.commitment,
       completeProofs,
@@ -262,15 +263,13 @@ const runBeefyClientFlow = async (fixture, beefyClient, validatorFixture, totalN
       fixture.params.leafProof,
     )
   } else {
-    await beefyClient.submitFinal(
+    let method = 'submitFinal(uint256,(uint32,uint64,(bytes32,bytes,bytes)),(bytes[],uint256[],address[],bytes32[][]))';
+    await beefyClient.methods[method](
       lastId,
       fixture.params.commitment,
       completeProofs
     )
   }
-
-
-
 }
 
 async function createInitialValidatorProofs(commitmentHash, validatorFixture) {

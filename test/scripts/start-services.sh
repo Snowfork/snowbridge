@@ -70,6 +70,8 @@ start_polkadot_launch()
         --no-default-features \
         --features snowbase-native,rococo-native
 
+    cp "$parachain_dir/target/release/snowbridge-query-events" "$output_dir/bin"
+
     echo "Building test parachain"
     cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release
 
@@ -226,6 +228,9 @@ trap cleanup SIGINT SIGTERM EXIT
 
 rm -rf "$output_dir"
 mkdir "$output_dir"
+mkdir "$output_dir/bin"
+
+export PATH="$output_dir/bin:$PATH"
 
 start_geth
 deploy_contracts
