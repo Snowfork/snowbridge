@@ -44,7 +44,7 @@ describe("IncentivizedInboundChannel", function () {
     beforeEach(async function () {
       const accounts = await web3.eth.getAccounts();
       const rewardSource = await MockRewardSource.new();
-      this.channel = await IncentivizedInboundChannel.new(this.parachainClient.address,
+      this.channel = await IncentivizedInboundChannel.new(1, this.parachainClient.address,
         { from: accounts[0] }
       );
       await this.channel.initialize(accounts[0], rewardSource.address);

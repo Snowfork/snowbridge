@@ -232,20 +232,17 @@ pub mod pallet {
 			<Nonce<T>>::put(next_nonce);
 
 			let bundle: MessageBundleOf<T> = MessageBundle {
-				source_channel_id: ChannelId::Incentivized,
+				source_channel_id: ChannelId::Incentivized as u8,
 				nonce: next_nonce,
 				fee: (messages.len() as u128).saturating_mul(Self::fee()),
 				messages: messages.clone(),
 			};
 
-			let commitment = Self::make_commitment(&bundle);
-			let commitment_hash = <T as Config>::Hashing::hash(&commitment);
-
+			let commitment_hash = Self::make_commitment_hash(&bundle);
 			let digest_item =
 				AuxiliaryDigestItem::Commitment(ChannelId::Incentivized, commitment_hash.clone())
 					.into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
-
 			Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
 
 			T::WeightInfo::on_initialize(
@@ -254,7 +251,7 @@ pub mod pallet {
 			)
 		}
 
-		fn make_commitment(bundle: &MessageBundleOf<T>) -> Vec<u8> {
+		fn make_commitment_hash(bundle: &MessageBundleOf<T>) -> H256 {
 			let messages: Vec<Token> = bundle
 				.messages
 				.iter()
@@ -266,11 +263,12 @@ pub mod pallet {
 					])
 				})
 				.collect();
-			ethabi::encode(&vec![Token::Tuple(vec![
+			let commitment = ethabi::encode(&vec![Token::Tuple(vec![
 				Token::Uint(bundle.nonce.into()),
 				Token::Uint(bundle.fee.into()),
 				Token::Array(messages),
-			])])
+			])]);
+			<T as Config>::Hashing::hash(&commitment)
 		}
 
 		fn average_payload_size(messages: &[MessageOf<T>]) -> u32 {

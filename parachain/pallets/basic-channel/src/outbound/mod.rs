@@ -229,18 +229,15 @@ pub mod pallet {
 			<Nonce<T>>::put(next_nonce);
 
 			let bundle = MessageBundle {
-				source_channel_id: ChannelId::Basic,
+				source_channel_id: ChannelId::Basic as u8,
 				nonce: next_nonce,
 				messages: messages.clone(),
 			};
 
-			let commitment = Self::make_commitment(&bundle);
-			let commitment_hash = <T as Config>::Hashing::hash(&commitment);
-
+			let commitment_hash = Self::make_commitment_hash(&bundle);
 			let digest_item =
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
-
 			Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
 
 			T::WeightInfo::on_initialize(
@@ -249,7 +246,7 @@ pub mod pallet {
 			)
 		}
 
-		fn make_commitment(bundle: &MessageBundleOf<T>) -> Vec<u8> {
+		fn make_commitment_hash(bundle: &MessageBundleOf<T>) -> H256 {
 			let messages: Vec<Token> = bundle
 				.messages
 				.iter()
@@ -261,10 +258,12 @@ pub mod pallet {
 					])
 				})
 				.collect();
-			ethabi::encode(&vec![Token::Tuple(vec![
+			let commitment = ethabi::encode(&vec![Token::Tuple(vec![
+				Token::Uint(bundle.source_channel_id.into()),
 				Token::Uint(bundle.nonce.into()),
 				Token::Array(messages),
-			])])
+			])]);
+			<T as Config>::Hashing::hash(&commitment)
 		}
 
 		fn average_payload_size(messages: &[MessageOf<T>]) -> u32 {
