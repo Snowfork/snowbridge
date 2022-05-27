@@ -14,7 +14,7 @@ const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 pub fn get_chain_spec() -> ChainSpec {
 	let mut props = sc_chain_spec::Properties::new();
-	props.insert("tokenSymbol".into(), "DEV".into());
+	props.insert("tokenSymbol".into(), "SNO".into());
 	props.insert("tokenDecimals".into(), 12u8.into());
 
 	ChainSpec::from_genesis(
