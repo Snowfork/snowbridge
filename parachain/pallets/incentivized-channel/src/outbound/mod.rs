@@ -264,6 +264,7 @@ pub mod pallet {
 				})
 				.collect();
 			let commitment = ethabi::encode(&vec![Token::Tuple(vec![
+				Token::Uint(bundle.source_channel_id.into()),
 				Token::Uint(bundle.nonce.into()),
 				Token::Uint(bundle.fee.into()),
 				Token::Array(messages),

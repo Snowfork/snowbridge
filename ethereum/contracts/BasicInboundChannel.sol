@@ -14,13 +14,13 @@ contract BasicInboundChannel {
     ParachainClient public parachainClient;
 
     struct MessageBundle {
-        uint16 sourceChannelID;
+        uint8 sourceChannelID;
         uint64 nonce;
         Message[] messages;
     }
 
     struct Message {
-        uint8 id;
+        uint64 id;
         address target;
         bytes payload;
     }

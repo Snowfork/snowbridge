@@ -10,7 +10,7 @@ module.exports = async ({
   if (!("BASIC_CHANNEL_SOURCE_ID" in process.env)) {
     throw "Missing BASIC_CHANNEL_SOURCE_ID in environment config"
   }
-  const basicChannelSourceID = process.env.BASIC_CHANNEL_PEER_ID
+  const basicChannelSourceID = process.env.BASIC_CHANNEL_SOURCE_ID
 
   if (!("INCENTIVIZED_CHANNEL_SOURCE_ID" in process.env)) {
     throw "Missing INCENTIVIZED_CHANNEL_SOURCE_ID in environment config"

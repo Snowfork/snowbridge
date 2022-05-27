@@ -26,6 +26,7 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 
 	params := log.Fields{
 		"bundle": log.Fields{
+			"sourceChannelID": bundle.SourceChannelID,
 			"nonce":    bundle.Nonce,
 			"messages": messagesLog,
 		},
@@ -50,6 +51,7 @@ func (wr *EthereumWriter) logFieldsForIncentivizedSubmission(
 
 	params := log.Fields{
 		"bundle": log.Fields{
+			"sourceChannelID": bundle.SourceChannelID,
 			"nonce":    bundle.Nonce,
 			"fee": bundle.Fee.String(),
 			"messages": messagesLog,
