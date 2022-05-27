@@ -6,9 +6,11 @@ import "./ParachainClient.sol";
 import "./RewardController.sol";
 
 contract IncentivizedInboundChannel is AccessControl {
+    uint8 public immutable sourceChannelID;
     uint64 public nonce;
 
     struct MessageBundle {
+        uint8 sourceChannelID;
         uint64 nonce;
         uint128 fee;
         Message[] messages;
@@ -32,10 +34,11 @@ contract IncentivizedInboundChannel is AccessControl {
 
     ParachainClient public parachainClient;
 
-    constructor(ParachainClient client) {
+    constructor(uint8 _sourceChannelID, ParachainClient _parachainClient) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        parachainClient = client;
         nonce = 0;
+        sourceChannelID = _sourceChannelID;
+        parachainClient = _parachainClient;
     }
 
     // Once-off post-construction call to set initial configuration.
@@ -55,6 +58,7 @@ contract IncentivizedInboundChannel is AccessControl {
         bytes32 commitment = keccak256(abi.encode(bundle));
 
         require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
+        require(bundle.sourceChannelID == sourceChannelID, "Invalid source channel");
         require(bundle.nonce == nonce + 1, "Invalid nonce");
         require(
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,

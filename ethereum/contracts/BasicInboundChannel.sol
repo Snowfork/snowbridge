@@ -7,11 +7,14 @@ contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
     uint256 public constant GAS_BUFFER = 60000;
 
+    uint8 public immutable sourceChannelID;
+
     uint64 public nonce;
 
     ParachainClient public parachainClient;
 
     struct MessageBundle {
+        uint8 sourceChannelID;
         uint64 nonce;
         Message[] messages;
     }
@@ -24,15 +27,17 @@ contract BasicInboundChannel {
 
     event MessageDispatched(uint64 id, bool result);
 
-    constructor(ParachainClient client) {
+    constructor(uint8 _sourceChannelID, ParachainClient _parachainClient) {
         nonce = 0;
-        parachainClient = client;
+        sourceChannelID = _sourceChannelID;
+        parachainClient = _parachainClient;
     }
 
     function submit(MessageBundle calldata bundle,  bytes calldata proof) external {
         bytes32 commitment = keccak256(abi.encode(bundle));
 
         require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
+        require(bundle.sourceChannelID == sourceChannelID, "Invalid source channel");
         require(bundle.nonce == nonce + 1, "Invalid nonce");
         require(
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,

@@ -5,10 +5,12 @@ export ETHERSCAN_API_KEY=
 
 # Basic Channel
 export BASIC_CHANNEL_PRINCIPAL=0x0000000000000000000000000000000000000042
+export BASIC_CHANNEL_SOURCE_ID=0
 
 # Incentivized Channel
 # Default fee is 1 SnowDOT (12 decimal places)
 export INCENTIVIZED_CHANNEL_FEE=1000000000000000000
+export INCENTIVIZED_CHANNEL_SOURCE_ID=1
 
-# ParachainClient needs to be constructed with our parachain ID
+# ParachainClient
 export PARACHAIN_ID=1000
