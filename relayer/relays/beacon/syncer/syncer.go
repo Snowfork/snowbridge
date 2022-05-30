@@ -4,14 +4,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/big"
-	"strconv"
-	"strings"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
+	"math/big"
+	"strconv"
+	"strings"
 )
 
 var ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("not found")
@@ -97,7 +96,8 @@ type FinalizedHeaderUpdate struct {
 }
 
 type HeaderUpdate struct {
-	Body        scale.BeaconBlock
+	Block       scale.BeaconBlock
+	BlockRoot   common.Hash
 	ForkVersion [4]byte
 }
 
@@ -245,47 +245,54 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePer
 	return syncCommitteePeriodUpdate, err
 }
 
-func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, error) {
+func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, common.Hash, error) {
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
 
-		return FinalizedHeaderUpdate{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
 
 	attestedHeader, err := finalizedUpdate.Data.AttestedHeader.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable to parse beacon header in response")
 
-		return FinalizedHeaderUpdate{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
 
 	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable to parse beacon header in response")
 
-		return FinalizedHeaderUpdate{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
 
 	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(finalizedHeader.Slot))
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
+		logrus.WithError(err).Error("unable to fetch current fork version")
 
-		return FinalizedHeaderUpdate{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, err
+	}
+
+	blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(finalizedHeader.Slot)) // TODO can compute this ourselves with SSZ
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch block root")
+
+		return FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
 
 	forkVersion, err := hexStringToForkVersion(currentForkVersion)
 	if err != nil {
 		logrus.WithError(err).Error("unable convert fork version to scale format")
 
-		return FinalizedHeaderUpdate{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
 
 	syncAggregate, err := finalizedUpdate.Data.SyncAggregate.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable to parse sync aggregate in response")
 
-		return FinalizedHeaderUpdate{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
 
 	finalizedHeaderUpdate := FinalizedHeaderUpdate{
@@ -296,32 +303,13 @@ func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, error) {
 		ForkVersion:     forkVersion,
 	}
 
-	return finalizedHeaderUpdate, nil
+	return finalizedHeaderUpdate, blockRoot, nil
 }
 
-func (s *Syncer) GetHeaderUpdate(blockID common.Hash) (HeaderUpdate, error) {
-	block, err := s.Client.GetBeaconBlock(blockID)
+func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
+	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch latest header checkpoint")
-
-		return HeaderUpdate{}, err
-	}
-
-	slot, err := toUint64(block.Data.Message.Slot)
-	if err != nil {
-		return HeaderUpdate{}, err
-	}
-
-	currentForkVersion, err := s.Client.GetCurrentForkVersion(slot)
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
-
-		return HeaderUpdate{}, err
-	}
-
-	forkVersion, err := hexStringToForkVersion(currentForkVersion)
-	if err != nil {
-		logrus.WithError(err).Error("unable convert fork version to scale format")
 
 		return HeaderUpdate{}, err
 	}
@@ -333,8 +321,29 @@ func (s *Syncer) GetHeaderUpdate(blockID common.Hash) (HeaderUpdate, error) {
 		return HeaderUpdate{}, err
 	}
 
+	blockRoot, err = s.Client.GetBeaconBlockRoot(uint64(blockScale.Slot)) // TODO can compute this ourselves with SSZ
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch block root")
+
+		return HeaderUpdate{}, err
+	}
+
+	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(blockScale.Slot))
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
+
+		return HeaderUpdate{}, err
+	}
+
+	forkVersion, err := hexStringToForkVersion(currentForkVersion)
+	if err != nil {
+		logrus.WithError(err).Error("unable convert fork version to scale format")
+
+		return HeaderUpdate{}, err
+	}
+
 	headerUpdate := HeaderUpdate{
-		Body:        blockScale,
+		Block:       blockScale,
 		ForkVersion: forkVersion,
 	}
 
@@ -589,6 +598,26 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 
 	bigInt := big.NewInt(int64(baseFeePerGasUint64))
 
+	blockNumber, err := toUint64(executionPayload.BlockNumber)
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
+	gasLimit, err := toUint64(executionPayload.GasLimit)
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
+	gasUsed, err := toUint64(executionPayload.GasUsed)
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
+	timestamp, err := toUint64(executionPayload.Timestamp)
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
 	return scale.BeaconBlock{
 		Slot:          types.NewU64(slot),
 		ProposerIndex: types.NewU64(proposerIndex),
@@ -610,19 +639,19 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 			SyncAggregate:     syncAggregate,
 			ExecutionPayload: scale.ExecutionPayload{
 				ParentHash:    types.NewH256(common.HexToHash(executionPayload.ParentHash).Bytes()),
-				FeeRecipient:  nil, // TODO
+				FeeRecipient:  executionPayload.FeeRecipient,
 				StateRoot:     types.NewH256(common.HexToHash(executionPayload.StateRoot).Bytes()),
 				ReceiptsRoot:  types.NewH256(common.HexToHash(executionPayload.ReceiptsRoot).Bytes()),
-				LogsBloom:     nil, // TODO
+				LogsBloom:     executionPayload.FeeRecipient,
 				PrevRandao:    types.NewH256(common.HexToHash(executionPayload.PrevRandao).Bytes()),
-				BlockNumber:   0,   // TODO
-				GasLimit:      0,   // TODO
-				GasUsed:       0,   // TODO
-				Timestamp:     0,   // TODO
-				ExtraData:     nil, // TODO
+				BlockNumber:   types.NewU64(blockNumber),
+				GasLimit:      types.NewU64(gasLimit),
+				GasUsed:       types.NewU64(gasUsed),
+				Timestamp:     types.NewU64(timestamp),
+				ExtraData:     executionPayload.ExtraData,
 				BaseFeePerGas: types.NewU256(*bigInt),
 				BlockHash:     types.NewH256(common.HexToHash(executionPayload.BlockHash).Bytes()),
-				Transactions:  nil, // TODO
+				Transactions:  executionPayload.Transactions,
 			},
 		},
 	}, nil
