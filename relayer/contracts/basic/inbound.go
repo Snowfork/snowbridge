@@ -37,45 +37,14 @@ type BasicInboundChannelMessage struct {
 
 // BasicInboundChannelMessageBundle is an auto generated low-level Go binding around an user-defined struct.
 type BasicInboundChannelMessageBundle struct {
-	Nonce    uint64
-	Messages []BasicInboundChannelMessage
-}
-
-// MMRProof is an auto generated low-level Go binding around an user-defined struct.
-type MMRProof struct {
-	Items [][32]byte
-	Order uint64
-}
-
-// ParachainClientHeadProof is an auto generated low-level Go binding around an user-defined struct.
-type ParachainClientHeadProof struct {
-	Pos   *big.Int
-	Width *big.Int
-	Proof [][32]byte
-}
-
-// ParachainClientMMRLeafPartial is an auto generated low-level Go binding around an user-defined struct.
-type ParachainClientMMRLeafPartial struct {
-	Version              uint8
-	ParentNumber         uint32
-	ParentHash           [32]byte
-	NextAuthoritySetID   uint64
-	NextAuthoritySetLen  uint32
-	NextAuthoritySetRoot [32]byte
-}
-
-// ParachainClientProof is an auto generated low-level Go binding around an user-defined struct.
-type ParachainClientProof struct {
-	HeadPrefix  []byte
-	HeadSuffix  []byte
-	HeadProof   ParachainClientHeadProof
-	LeafPartial ParachainClientMMRLeafPartial
-	LeafProof   MMRProof
+	SourceChannelID uint8
+	Nonce           uint64
+	Messages        []BasicInboundChannelMessage
 }
 
 // BasicInboundChannelMetaData contains all meta data concerning the BasicInboundChannel contract.
 var BasicInboundChannelMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"client\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"id\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"id\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message[]\",\"name\":\"messages\",\"type\":\"tuple[]\"}],\"internalType\":\"structBasicInboundChannel.MessageBundle\",\"name\":\"bundle\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"headPrefix\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"headSuffix\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"pos\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"width\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"internalType\":\"structParachainClient.HeadProof\",\"name\":\"headProof\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"},{\"internalType\":\"uint32\",\"name\":\"parentNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\"}],\"internalType\":\"structParachainClient.MMRLeafPartial\",\"name\":\"leafPartial\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32[]\",\"name\":\"items\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64\",\"name\":\"order\",\"type\":\"uint64\"}],\"internalType\":\"structMMRProof\",\"name\":\"leafProof\",\"type\":\"tuple\"}],\"internalType\":\"structParachainClient.Proof\",\"name\":\"proof\",\"type\":\"tuple\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_sourceChannelID\",\"type\":\"uint8\"},{\"internalType\":\"contractParachainClient\",\"name\":\"_parachainClient\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"id\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"result\",\"type\":\"bool\"}],\"name\":\"MessageDispatched\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"GAS_BUFFER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_GAS_PER_MESSAGE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"parachainClient\",\"outputs\":[{\"internalType\":\"contractParachainClient\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sourceChannelID\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint8\",\"name\":\"sourceChannelID\",\"type\":\"uint8\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"id\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"payload\",\"type\":\"bytes\"}],\"internalType\":\"structBasicInboundChannel.Message[]\",\"name\":\"messages\",\"type\":\"tuple[]\"}],\"internalType\":\"structBasicInboundChannel.MessageBundle\",\"name\":\"bundle\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"}],\"name\":\"submit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // BasicInboundChannelABI is the input ABI used to generate the binding from.
@@ -348,24 +317,55 @@ func (_BasicInboundChannel *BasicInboundChannelCallerSession) ParachainClient() 
 	return _BasicInboundChannel.Contract.ParachainClient(&_BasicInboundChannel.CallOpts)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xd423cb4e.
+// SourceChannelID is a free data retrieval call binding the contract method 0x157fb143.
 //
-// Solidity: function submit((uint64,(uint64,address,bytes)[]) bundle, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
-func (_BasicInboundChannel *BasicInboundChannelTransactor) Submit(opts *bind.TransactOpts, bundle BasicInboundChannelMessageBundle, proof ParachainClientProof) (*types.Transaction, error) {
+// Solidity: function sourceChannelID() view returns(uint8)
+func (_BasicInboundChannel *BasicInboundChannelCaller) SourceChannelID(opts *bind.CallOpts) (uint8, error) {
+	var out []interface{}
+	err := _BasicInboundChannel.contract.Call(opts, &out, "sourceChannelID")
+
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+
+}
+
+// SourceChannelID is a free data retrieval call binding the contract method 0x157fb143.
+//
+// Solidity: function sourceChannelID() view returns(uint8)
+func (_BasicInboundChannel *BasicInboundChannelSession) SourceChannelID() (uint8, error) {
+	return _BasicInboundChannel.Contract.SourceChannelID(&_BasicInboundChannel.CallOpts)
+}
+
+// SourceChannelID is a free data retrieval call binding the contract method 0x157fb143.
+//
+// Solidity: function sourceChannelID() view returns(uint8)
+func (_BasicInboundChannel *BasicInboundChannelCallerSession) SourceChannelID() (uint8, error) {
+	return _BasicInboundChannel.Contract.SourceChannelID(&_BasicInboundChannel.CallOpts)
+}
+
+// Submit is a paid mutator transaction binding the contract method 0x18a70472.
+//
+// Solidity: function submit((uint8,uint64,(uint64,address,bytes)[]) bundle, bytes proof) returns()
+func (_BasicInboundChannel *BasicInboundChannelTransactor) Submit(opts *bind.TransactOpts, bundle BasicInboundChannelMessageBundle, proof []byte) (*types.Transaction, error) {
 	return _BasicInboundChannel.contract.Transact(opts, "submit", bundle, proof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xd423cb4e.
+// Submit is a paid mutator transaction binding the contract method 0x18a70472.
 //
-// Solidity: function submit((uint64,(uint64,address,bytes)[]) bundle, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
-func (_BasicInboundChannel *BasicInboundChannelSession) Submit(bundle BasicInboundChannelMessageBundle, proof ParachainClientProof) (*types.Transaction, error) {
+// Solidity: function submit((uint8,uint64,(uint64,address,bytes)[]) bundle, bytes proof) returns()
+func (_BasicInboundChannel *BasicInboundChannelSession) Submit(bundle BasicInboundChannelMessageBundle, proof []byte) (*types.Transaction, error) {
 	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, bundle, proof)
 }
 
-// Submit is a paid mutator transaction binding the contract method 0xd423cb4e.
+// Submit is a paid mutator transaction binding the contract method 0x18a70472.
 //
-// Solidity: function submit((uint64,(uint64,address,bytes)[]) bundle, (bytes,bytes,(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),(bytes32[],uint64)) proof) returns()
-func (_BasicInboundChannel *BasicInboundChannelTransactorSession) Submit(bundle BasicInboundChannelMessageBundle, proof ParachainClientProof) (*types.Transaction, error) {
+// Solidity: function submit((uint8,uint64,(uint64,address,bytes)[]) bundle, bytes proof) returns()
+func (_BasicInboundChannel *BasicInboundChannelTransactorSession) Submit(bundle BasicInboundChannelMessageBundle, proof []byte) (*types.Transaction, error) {
 	return _BasicInboundChannel.Contract.Submit(&_BasicInboundChannel.TransactOpts, bundle, proof)
 }
 

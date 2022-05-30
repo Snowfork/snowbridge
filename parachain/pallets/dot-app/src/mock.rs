@@ -125,14 +125,13 @@ impl pallet_assets::Config for Test {
 parameter_types! {
 	pub const EtherAssetId: u128 = 0;
 	pub const EtherAppPalletId: PalletId = PalletId(*b"etherapp");
-	pub const MaxMessagePayloadSize: u64 = 256;
+	pub const MaxMessagePayloadSize: u32 = 256;
 	pub const MaxMessagesPerCommit: u32 = 3;
 }
 
 pub type Ether = ItemOf<Assets, EtherAssetId, AccountId>;
 
 impl snowbridge_basic_channel::outbound::Config for Test {
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
@@ -142,7 +141,6 @@ impl snowbridge_basic_channel::outbound::Config for Test {
 }
 
 impl snowbridge_incentivized_channel::outbound::Config for Test {
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;

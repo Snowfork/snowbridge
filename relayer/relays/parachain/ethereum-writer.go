@@ -10,14 +10,15 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
+	"github.com/snowfork/snowbridge/relayer/contracts/opaqueproof"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -31,6 +32,9 @@ type EthereumWriter struct {
 	basicInboundChannel        *basic.BasicInboundChannel
 	incentivizedInboundChannel *incentivized.IncentivizedInboundChannel
 	tasks                      <-chan *Task
+	abiPacker                  abi.Arguments
+	abiBasicUnpacker           abi.Arguments
+	abiIncentivizedUnpacker    abi.Arguments
 }
 
 func NewEthereumWriter(
@@ -51,18 +55,36 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	var address common.Address
 
 	address = common.HexToAddress(wr.config.Contracts.BasicInboundChannel)
-	basic, err := basic.NewBasicInboundChannel(address, wr.conn.Client())
+	basicChannel, err := basic.NewBasicInboundChannel(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}
-	wr.basicInboundChannel = basic
+	wr.basicInboundChannel = basicChannel
 
 	address = common.HexToAddress(wr.config.Contracts.IncentivizedInboundChannel)
-	incentivized, err := incentivized.NewIncentivizedInboundChannel(address, wr.conn.Client())
+	incentivizedChannel, err := incentivized.NewIncentivizedInboundChannel(address, wr.conn.Client())
 	if err != nil {
 		return err
 	}
-	wr.incentivizedInboundChannel = incentivized
+	wr.incentivizedInboundChannel = incentivizedChannel
+
+	opaqueProofABI, err := abi.JSON(strings.NewReader(opaqueproof.OpaqueProofABI))
+	if err != nil {
+		return err
+	}
+	wr.abiPacker = opaqueProofABI.Methods["dummy"].Inputs
+
+	basicInboundChannelABI, err := abi.JSON(strings.NewReader(basic.BasicInboundChannelABI))
+	if err != nil {
+		return err
+	}
+	wr.abiBasicUnpacker = abi.Arguments{basicInboundChannelABI.Methods["submit"].Inputs[0]}
+
+	incentivizedInboundChannelABI, err := abi.JSON(strings.NewReader(incentivized.IncentivizedInboundChannelABI))
+	if err != nil {
+		return err
+	}
+	wr.abiIncentivizedUnpacker = abi.Arguments{incentivizedInboundChannelABI.Methods["submit"].Inputs[0]}
 
 	eg.Go(func() error {
 		err := wr.writeMessagesLoop(ctx)
@@ -133,7 +155,7 @@ func (wr *EthereumWriter) WriteChannel(
 ) error {
 	for channelID, commitment := range task.Commitments {
 		if channelID.IsBasic {
-			bundle, ok := commitment.Data.(parachain.BasicOutboundChannelMessageBundle)
+			bundle, ok := commitment.Data.(BasicOutboundChannelMessageBundle)
 			if !ok {
 				return fmt.Errorf("invalid commitment data")
 			}
@@ -149,7 +171,7 @@ func (wr *EthereumWriter) WriteChannel(
 			}
 		}
 		if channelID.IsIncentivized {
-			bundle, ok := commitment.Data.(parachain.IncentivizedOutboundChannelMessageBundle)
+			bundle, ok := commitment.Data.(IncentivizedOutboundChannelMessageBundle)
 			if !ok {
 				return fmt.Errorf("invalid commitment data")
 			}
@@ -172,13 +194,13 @@ func (wr *EthereumWriter) WriteChannel(
 func (wr *EthereumWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
 	commitmentHash gsrpcTypes.H256,
-	commitment parachain.BasicOutboundChannelMessageBundle,
+	commitmentData BasicOutboundChannelMessageBundle,
 	paraID uint32,
 	proof *ProofOutput,
 ) error {
-	bundle := commitment.IntoInboundMessageBundle()
+	bundle := commitmentData.IntoInboundMessageBundle()
 
-	paraHeadProof := basic.ParachainClientHeadProof{
+	paraHeadProof := opaqueproof.ParachainClientHeadProof{
 		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
 		Width: big.NewInt(int64(proof.MerkleProofData.NumberOfLeaves)),
 		Proof: proof.MerkleProofData.Proof,
@@ -210,11 +232,11 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		merkleProofItems = append(merkleProofItems, proofItem)
 	}
 
-	finalProof := basic.ParachainClientProof{
+	finalProof := opaqueproof.ParachainClientProof{
 		HeadPrefix: prefix,
 		HeadSuffix: suffix,
 		HeadProof:  paraHeadProof,
-		LeafPartial: basic.ParachainClientMMRLeafPartial{
+		LeafPartial: opaqueproof.ParachainClientMMRLeafPartial{
 			Version:              uint8(proof.MMRProof.Leaf.Version),
 			ParentNumber:         uint32(proof.MMRProof.Leaf.ParentNumberAndHash.ParentNumber),
 			ParentHash:           proof.MMRProof.Leaf.ParentNumberAndHash.Hash,
@@ -222,14 +244,19 @@ func (wr *EthereumWriter) WriteBasicChannel(
 			NextAuthoritySetLen:  uint32(proof.MMRProof.Leaf.BeefyNextAuthoritySet.Len),
 			NextAuthoritySetRoot: proof.MMRProof.Leaf.BeefyNextAuthoritySet.Root,
 		},
-		LeafProof: basic.MMRProof{
+		LeafProof: opaqueproof.MMRProof{
 			Items: merkleProofItems,
 			Order: proof.MMRProof.MerkleProofOrder,
 		},
 	}
 
+	opaqueProof, err := wr.abiPacker.Pack(finalProof)
+	if err != nil {
+		return fmt.Errorf("pack proof: %w", err)
+	}
+
 	tx, err := wr.basicInboundChannel.Submit(
-		options, bundle, finalProof,
+		options, bundle, opaqueProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction BasicInboundChannel.submit: %w", err)
@@ -242,7 +269,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("params", wr.logFieldsForBasicSubmission(bundle, finalProof)).
+		WithField("params", wr.logFieldsForBasicSubmission(bundle, opaqueProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),
@@ -259,13 +286,13 @@ func (wr *EthereumWriter) WriteBasicChannel(
 func (wr *EthereumWriter) WriteIncentivizedChannel(
 	options *bind.TransactOpts,
 	commitmentHash gsrpcTypes.H256,
-	commitment parachain.IncentivizedOutboundChannelMessageBundle,
+	commitmentData IncentivizedOutboundChannelMessageBundle,
 	paraID uint32,
 	proof *ProofOutput,
 ) error {
-	bundle := commitment.IntoInboundMessageBundle()
+	bundle := commitmentData.IntoInboundMessageBundle()
 
-	paraHeadProof := incentivized.ParachainClientHeadProof{
+	paraHeadProof := opaqueproof.ParachainClientHeadProof{
 		Pos:   big.NewInt(int64(proof.MerkleProofData.ProvenLeafIndex)),
 		Width: big.NewInt(int64(proof.MerkleProofData.NumberOfLeaves)),
 		Proof: proof.MerkleProofData.Proof,
@@ -297,11 +324,11 @@ func (wr *EthereumWriter) WriteIncentivizedChannel(
 		merkleProofItems = append(merkleProofItems, proofItem)
 	}
 
-	finalProof := incentivized.ParachainClientProof{
+	finalProof := opaqueproof.ParachainClientProof{
 		HeadPrefix: prefix,
 		HeadSuffix: suffix,
 		HeadProof:  paraHeadProof,
-		LeafPartial: incentivized.ParachainClientMMRLeafPartial{
+		LeafPartial: opaqueproof.ParachainClientMMRLeafPartial{
 			Version:              uint8(proof.MMRProof.Leaf.Version),
 			ParentNumber:         uint32(proof.MMRProof.Leaf.ParentNumberAndHash.ParentNumber),
 			ParentHash:           proof.MMRProof.Leaf.ParentNumberAndHash.Hash,
@@ -309,14 +336,19 @@ func (wr *EthereumWriter) WriteIncentivizedChannel(
 			NextAuthoritySetLen:  uint32(proof.MMRProof.Leaf.BeefyNextAuthoritySet.Len),
 			NextAuthoritySetRoot: proof.MMRProof.Leaf.BeefyNextAuthoritySet.Root,
 		},
-		LeafProof: incentivized.MMRProof{
+		LeafProof: opaqueproof.MMRProof{
 			Items: merkleProofItems,
 			Order: proof.MMRProof.MerkleProofOrder,
 		},
 	}
 
+	opaqueProof, err := wr.abiPacker.Pack(finalProof)
+	if err != nil {
+		return fmt.Errorf("pack proof: %w", err)
+	}
+
 	tx, err := wr.incentivizedInboundChannel.Submit(
-		options, bundle, finalProof,
+		options, bundle, opaqueProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction IncentivizedInboundChannel.submit: %w", err)
@@ -329,7 +361,7 @@ func (wr *EthereumWriter) WriteIncentivizedChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("params", wr.logFieldsForIncentivizedSubmission(bundle, finalProof)).
+		WithField("params", wr.logFieldsForIncentivizedSubmission(bundle, opaqueProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),

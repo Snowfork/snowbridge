@@ -13,7 +13,7 @@ func Hex(b []byte) string {
 
 func (wr *EthereumWriter) logFieldsForBasicSubmission(
 	bundle basic.BasicInboundChannelMessageBundle,
-	proof basic.ParachainClientProof,
+	proof []byte,
 ) log.Fields {
 	var messagesLog []log.Fields
 	for _, item := range bundle.Messages {
@@ -23,42 +23,14 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 			"payload": Hex(item.Payload),
 		})
 	}
-	var paraHeadProofString []string
-	for _, item := range proof.HeadProof.Proof {
-		paraHeadProofString = append(paraHeadProofString, Hex(item[:]))
-	}
-
-	var mmrLeafProofItems []string
-	for _, item := range proof.LeafProof.Items {
-		mmrLeafProofItems = append(mmrLeafProofItems, Hex(item[:]))
-	}
 
 	params := log.Fields{
 		"bundle": log.Fields{
+			"sourceChannelID": bundle.SourceChannelID,
 			"nonce":    bundle.Nonce,
 			"messages": messagesLog,
 		},
-		"proof": log.Fields{
-			"headPrefix": Hex(proof.HeadPrefix),
-			"headSuffix": Hex(proof.HeadSuffix),
-			"headProof": log.Fields{
-				"pos":   proof.HeadProof.Pos,
-				"width": proof.HeadProof.Width,
-				"proof": paraHeadProofString,
-			},
-			"leafPartial": log.Fields{
-				"version":              proof.LeafPartial.Version,
-				"parentNumber":         proof.LeafPartial.ParentNumber,
-				"parentHash":           Hex(proof.LeafPartial.ParentHash[:]),
-				"nextAuthoritySetID":   proof.LeafPartial.NextAuthoritySetID,
-				"nextAuthoritySetLen":  proof.LeafPartial.NextAuthoritySetLen,
-				"nextAuthoritySetRoot": Hex(proof.LeafPartial.NextAuthoritySetRoot[:]),
-			},
-			"leafProof": log.Fields{
-				"items": mmrLeafProofItems,
-				"order": proof.LeafProof.Order,
-			},
-		},
+		"proof": Hex(proof),
 	}
 
 	return params
@@ -66,53 +38,25 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 
 func (wr *EthereumWriter) logFieldsForIncentivizedSubmission(
 	bundle incentivized.IncentivizedInboundChannelMessageBundle,
-	proof incentivized.ParachainClientProof,
+	proof []byte,
 ) log.Fields {
 	var messagesLog []log.Fields
 	for _, item := range bundle.Messages {
 		messagesLog = append(messagesLog, log.Fields{
 			"id":      item.Id,
 			"target":  item.Target,
-			"fee":     item.Fee.String(),
 			"payload": Hex(item.Payload),
 		})
-	}
-	var paraHeadProofString []string
-	for _, item := range proof.HeadProof.Proof {
-		paraHeadProofString = append(paraHeadProofString, Hex(item[:]))
-	}
-
-	var mmrLeafProofItems []string
-	for _, item := range proof.LeafProof.Items {
-		mmrLeafProofItems = append(mmrLeafProofItems, Hex(item[:]))
 	}
 
 	params := log.Fields{
 		"bundle": log.Fields{
+			"sourceChannelID": bundle.SourceChannelID,
 			"nonce":    bundle.Nonce,
+			"fee": bundle.Fee.String(),
 			"messages": messagesLog,
 		},
-		"proof": log.Fields{
-			"headPrefix": Hex(proof.HeadPrefix),
-			"headSuffix": Hex(proof.HeadSuffix),
-			"headProof": log.Fields{
-				"pos":   proof.HeadProof.Pos,
-				"width": proof.HeadProof.Width,
-				"proof": paraHeadProofString,
-			},
-			"leafPartial": log.Fields{
-				"version":              proof.LeafPartial.Version,
-				"parentNumber":         proof.LeafPartial.ParentNumber,
-				"parentHash":           Hex(proof.LeafPartial.ParentHash[:]),
-				"nextAuthoritySetID":   proof.LeafPartial.NextAuthoritySetID,
-				"nextAuthoritySetLen":  proof.LeafPartial.NextAuthoritySetLen,
-				"nextAuthoritySetRoot": Hex(proof.LeafPartial.NextAuthoritySetRoot[:]),
-			},
-			"leafProof": log.Fields{
-				"items": mmrLeafProofItems,
-				"order": proof.LeafProof.Order,
-			},
-		},
+		"proof": Hex(proof),
 	}
 
 	return params

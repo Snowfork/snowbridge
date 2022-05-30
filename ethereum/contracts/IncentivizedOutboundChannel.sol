@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./OutboundChannel.sol";
 import "./ChannelAccess.sol";
-import "./FeeSource.sol";
+import "./FeeController.sol";
 
 // IncentivizedOutboundChannel is a channel that sends ordered messages with an increasing nonce. It will have
 // incentivization too.
@@ -17,7 +17,7 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     uint64 public nonce;
 
     uint256 public fee;
-    FeeSource public feeSource;
+    FeeController public feeController;
 
     event Message(
         address source,
@@ -38,12 +38,12 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
     // Once-off post-construction call to set initial configuration.
     function initialize(
         address _configUpdater,
-        address _feeSource,
+        address _feeController,
         address[] memory defaultOperators
     )
     external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Set initial configuration
-        feeSource = FeeSource(_feeSource);
+        feeController = FeeController(_feeController);
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
         for (uint i = 0; i < defaultOperators.length; i++) {
             _authorizeDefaultOperator(defaultOperators[i]);
@@ -74,7 +74,7 @@ contract IncentivizedOutboundChannel is OutboundChannel, ChannelAccess, AccessCo
      */
     function submit(address feePayer, bytes calldata payload) external override {
         require(isOperatorFor(msg.sender, feePayer), "Caller is not an operator for fee payer");
-        feeSource.burnFee(feePayer, fee);
+        feeController.handleFee(feePayer, fee);
         nonce = nonce + 1;
         emit Message(msg.sender, nonce, fee, payload);
     }
