@@ -109,6 +109,12 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 					lastFinalizedHeader := r.syncer.Cache.LastFinalizedHeader()
 
+					if lastFinalizedHeader == secondLastFinalizedHeader {
+						logrus.Info("Still at same finalized header")
+
+						continue
+					}
+
 					logrus.WithFields(logrus.Fields{
 						"from": secondLastFinalizedHeader,
 						"to":   lastFinalizedHeader,
