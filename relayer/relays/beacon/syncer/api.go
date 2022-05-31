@@ -524,8 +524,7 @@ type ForkResponse struct {
 }
 
 func (b *BeaconClient) GetCurrentForkVersion(slot uint64) (string, error) {
-	//req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/%d/fork", s.endpoint, slot), nil)
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/finalized/fork", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/%d/fork", b.endpoint, slot), nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct fork version request")
 
