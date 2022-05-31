@@ -121,7 +121,11 @@ func (r *Relay) Sync(ctx context.Context) error {
 					}).Info("Starting to back-fill headers")
 
 					blockRoot := finalizedHeaderBlockRoot
-					for i := lastFinalizedHeader; i < secondLastFinalizedHeader; i-- {
+					for i := lastFinalizedHeader; i > secondLastFinalizedHeader; i-- {
+						logrus.WithFields(logrus.Fields{
+							"i is...": i,
+						}).Info("i is...")
+
 						headerUpdate, err := r.SyncHeader(ctx, i, blockRoot)
 						if err != nil {
 							return err
