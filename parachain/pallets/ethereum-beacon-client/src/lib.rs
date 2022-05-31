@@ -17,7 +17,7 @@ use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use snowbridge_ethereum::Header as ExecutionHeader;
+use snowbridge_beacon::Header as ExecutionHeader;
 use snowbridge_beacon::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData};
 
 const SLOTS_PER_EPOCH: u64 = 32;
@@ -519,10 +519,6 @@ pub mod pallet {
 
 		fn store_finalized_header(block_root: H256, header: BeaconHeader) {
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header.clone());
-		}
-
-		fn store_header(block_root: H256, attested_header: BeaconHeader) {
-			<FinalizedBeaconHeaders<T>>::insert(block_root, attested_header.clone());
 		}
 
 		fn store_genesis(genesis: Genesis) {
