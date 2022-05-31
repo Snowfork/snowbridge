@@ -160,8 +160,6 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 		return nil
 	}
 
-	logrus.Info("Checking if sync period rolled")
-
 	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
 
 	if !syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
@@ -169,7 +167,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) error {
 
 		r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
 
-		r.syncer.Cache.SyncCommitteePeriodsSynced = append(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod)
+		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
 	}
 
 	err = r.writer.WriteToParachain(ctx, "import_finalized_header", finalizedHeaderUpdate)

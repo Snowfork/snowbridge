@@ -1,11 +1,13 @@
 //! # Ethereum Beacon Client
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod merklization;
+mod merkleization;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+mod ssz;
+mod config;
 
 use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
@@ -15,12 +17,8 @@ use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-
-type Root = H256;
-type Domain = H256;
-type ValidatorIndex = u64;
-type ProofBranch = Vec<H256>;
-type ForkVersion = [u8; 4];
+use snowbridge_beacon::Header as ExecutionHeader;
+use snowbridge_beacon::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData};
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
@@ -42,48 +40,12 @@ const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
 /// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
 const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [7, 0, 0, 0];
 
-#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct PublicKey([u8; 48]);
-
-impl Default for PublicKey {
-	fn default() -> Self {
-		PublicKey([0u8; 48])
-	}
-}
-
-/// Beacon block header as it is stored in the runtime storage. The block root is the
-/// Merklization of a BeaconHeader.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct BeaconBlockHeader {
-	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
-	pub slot: u64,
-	// The index of the validator that proposed the block.
-	pub proposer_index: ValidatorIndex,
-	// The block root of the parent block, forming a block chain.
-	pub parent_root: Root,
-	// The hash root of the post state of running the state transition through this block.
-	pub state_root: Root,
-	// The hash root of the beacon block body
-	pub body_root: Root,
-}
-
-/// Sync committee as it is stored in the runtime storage.
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SyncCommittee {
-	pub pubkeys: Vec<PublicKey>,
-	pub aggregate_pubkey: PublicKey,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SyncAggregate {
-	// 1 or 0 bit, indicates whether a sync committee participated in a vote
-	pub sync_committee_bits: Vec<u8>,
-	pub sync_committee_signature: Vec<u8>,
-}
+type ProofBranch = Vec<H256>;
+type ForkVersion = [u8; 4];
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct InitialSync {
-	pub header: BeaconBlockHeader,
+	pub header: BeaconHeader,
 	pub current_sync_committee: SyncCommittee,
 	pub current_sync_committee_branch: ProofBranch,
 	pub validators_root: Root,
@@ -91,10 +53,10 @@ pub struct InitialSync {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SyncCommitteePeriodUpdate {
-	pub attested_header: BeaconBlockHeader,
+	pub attested_header: BeaconHeader,
 	pub next_sync_committee: SyncCommittee,
 	pub next_sync_committee_branch: ProofBranch,
-	pub finalized_header: BeaconBlockHeader,
+	pub finalized_header: BeaconHeader,
 	pub finality_branch: ProofBranch,
 	pub sync_aggregate: SyncAggregate,
 	pub fork_version: ForkVersion,
@@ -103,25 +65,21 @@ pub struct SyncCommitteePeriodUpdate {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct FinalizedHeaderUpdate {
-	pub attested_header: BeaconBlockHeader,
-	pub finalized_header: BeaconBlockHeader,
+	pub attested_header: BeaconHeader,
+	pub finalized_header: BeaconHeader,
 	pub finality_branch: ProofBranch,
 	pub sync_aggregate: SyncAggregate,
 	pub fork_version: ForkVersion,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct ForkData {
-	// 1 or 0 bit, indicates whether a sync committee participated in a vote
-	pub current_version: [u8; 4],
-	pub genesis_validators_root: [u8; 32],
+pub struct HeaderUpdate {
+	pub attested_header: BeaconHeader,
+	pub execution_header: ExecutionHeader,
+	pub sync_aggregate: SyncAggregate,
+	pub fork_version: ForkVersion,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SigningData {
-	pub object_root: Root,
-	pub domain: Domain,
-}
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Genesis {
@@ -174,12 +132,16 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::storage]
-	pub(super) type FinalizedHeaders<T: Config> =
-		StorageMap<_, Identity, H256, BeaconBlockHeader, OptionQuery>;
+	pub(super) type FinalizedBeaconHeaders<T: Config> =
+		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
 
 	#[pallet::storage]
-	pub(super) type FinalizedHeadersBySlot<T: Config> =
-		StorageMap<_, Identity, u64, H256, OptionQuery>;
+	pub(super) type BeaconHeaders<T: Config> =
+		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
+
+	#[pallet::storage]
+	pub(super) type ExecutionHeaders<T: Config> =
+		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
@@ -303,6 +265,21 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn verify_eth1_receipt_inclusion(
+			origin: OriginFor<T>,
+		) -> DispatchResult {
+			let _sender = ensure_signed(origin)?;
+
+			log::trace!(
+				target: "ethereum-beacon-light-client",
+				"💫 Received transaction to be validated.",
+			);
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -318,9 +295,9 @@ pub mod pallet {
 			let period = Self::compute_current_sync_period(initial_sync.header.slot);
 			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 
-			let block_root: H256 = merklization::hash_tree_root_beacon_header(initial_sync.header.clone())
+			let block_root: H256 = merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
-			Self::store_header(block_root, initial_sync.header);
+			Self::store_finalized_header(block_root, initial_sync.header);
 
 			Self::store_genesis(Genesis { validators_root: initial_sync.validators_root });
 
@@ -340,7 +317,7 @@ pub mod pallet {
 				NEXT_SYNC_COMMITTEE_INDEX,
 			)?;
 
-			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone())
+			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
 			Self::verify_header(
 				block_root,
@@ -355,6 +332,7 @@ pub mod pallet {
 
 			let current_sync_committee = <SyncCommittees<T>>::get(current_period);
 			let genesis = <ChainGenesis<T>>::get();
+
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
@@ -364,7 +342,7 @@ pub mod pallet {
 				genesis.validators_root,
 			)?;
 
-			Self::store_header(block_root, update.finalized_header);
+			Self::store_finalized_header(block_root, update.finalized_header);
 
 			Ok(())
 		}
@@ -373,7 +351,7 @@ pub mod pallet {
 			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
-			let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone())
+			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
 			Self::verify_header(
 				block_root,
@@ -398,7 +376,7 @@ pub mod pallet {
 				genesis.validators_root,
 			)?;
 
-			Self::store_header(block_root, update.finalized_header);
+			Self::store_finalized_header(block_root, update.finalized_header);
 
 			Ok(())
 		}
@@ -408,7 +386,7 @@ pub mod pallet {
 			sync_committee_signature: Vec<u8>,
 			sync_committee_pubkeys: Vec<PublicKey>,
 			fork_version: ForkVersion,
-			header: BeaconBlockHeader,
+			header: BeaconHeader,
 			validators_root: H256,
 		) -> DispatchResult {
 			let mut participant_pubkeys: Vec<PublicKey> = Vec::new();
@@ -445,7 +423,7 @@ pub mod pallet {
 			if let Err(_e) = sig {
 				return Err(Error::<T>::InvalidSignature.into());
 			}
-			
+
 			let agg_sig = AggregateSignature::from_signature(&sig.unwrap());
 
 			let public_keys_res: Result<Vec<milagro_bls::PublicKey>, _> =
@@ -474,13 +452,13 @@ pub mod pallet {
 		}
 
 		pub(super) fn compute_signing_root(
-			beacon_header: BeaconBlockHeader,
+			beacon_header: BeaconHeader,
 			domain: Domain,
 		) -> Result<Root, DispatchError> {
-			let beacon_header_root = merklization::hash_tree_root_beacon_header(beacon_header)
+			let beacon_header_root = merkleization::hash_tree_root_beacon_header(beacon_header)
 				.map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?;
 
-			let hash_root = merklization::hash_tree_root_signing_data(SigningData {
+			let hash_root = merkleization::hash_tree_root_signing_data(SigningData {
 				object_root: beacon_header_root.into(),
 				domain,
 			})
@@ -497,7 +475,7 @@ pub mod pallet {
 			index: u64,
 		) -> DispatchResult {
 			let sync_committee_root =
-				merklization::hash_tree_root_sync_committee(sync_committee)
+				merkleization::hash_tree_root_sync_committee(sync_committee)
 					.map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
 
 			ensure!(
@@ -539,10 +517,8 @@ pub mod pallet {
 			<SyncCommittees<T>>::insert(period, sync_committee);
 		}
 
-		fn store_header(block_root: H256, header: BeaconBlockHeader) {
-			<FinalizedHeaders<T>>::insert(block_root, header.clone());
-
-			<FinalizedHeadersBySlot<T>>::insert(header.slot, block_root);
+		fn store_finalized_header(block_root: H256, header: BeaconHeader) {
+			<FinalizedBeaconHeaders<T>>::insert(block_root, header.clone());
 		}
 
 		fn store_genesis(genesis: Genesis) {
@@ -590,7 +566,7 @@ pub mod pallet {
 			current_version: ForkVersion,
 			genesis_validators_root: Root,
 		) -> Result<Root, DispatchError> {
-			let hash_root = merklization::hash_tree_root_fork_data(ForkData {
+			let hash_root = merkleization::hash_tree_root_fork_data(ForkData {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
 			})

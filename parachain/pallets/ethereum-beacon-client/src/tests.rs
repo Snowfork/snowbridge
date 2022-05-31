@@ -1,4 +1,4 @@
-use crate::{mock::*, SyncCommittees, Error, BeaconBlockHeader, FinalizedHeaders, FinalizedHeadersBySlot, ChainGenesis, Genesis, PublicKey, merklization};
+use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, ChainGenesis, Genesis, PublicKey, merkleization};
 use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
 use sp_core::H256;
@@ -13,11 +13,9 @@ fn it_syncs_from_an_initial_checkpoint() {
 			initial_sync.clone(),
 		));
 
-		let block_root: H256 = merklization::hash_tree_root_beacon_header(initial_sync.header.clone()).unwrap().into();
+		let block_root: H256 = merkleization::hash_tree_root_beacon_header(initial_sync.header.clone()).unwrap().into();
 
-		assert!(<FinalizedHeaders<Test>>::contains_key(block_root));
-		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(initial_sync.header.slot));
-		assert_eq!(<FinalizedHeadersBySlot<Test>>::get(initial_sync.header.slot).unwrap(), block_root);
+		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
 	});
 }
 
@@ -40,11 +38,9 @@ fn it_updates_a_committee_period_sync_update() {
 			update.clone(),
 		));
 
-		let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
+		let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
 
-		assert!(<FinalizedHeaders<Test>>::contains_key(block_root));
-		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(update.finalized_header.slot));
-		assert_eq!(<FinalizedHeadersBySlot<Test>>::get(update.finalized_header.slot).unwrap(), block_root);
+		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
 	});
 }
 
@@ -64,11 +60,9 @@ fn it_processes_a_finalized_header_update() {
 
 		assert_ok!(EthereumBeaconClient::import_finalized_header(Origin::signed(1), update.clone()));
 
-		let block_root: H256 = merklization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
+		let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
 
-		assert!(<FinalizedHeaders<Test>>::contains_key(block_root));
-		assert!(<FinalizedHeadersBySlot<Test>>::contains_key(update.finalized_header.slot));
-		assert_eq!(<FinalizedHeadersBySlot<Test>>::get(update.finalized_header.slot).unwrap(), block_root);
+		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
 	});
 }
 
@@ -143,7 +137,7 @@ pub fn test_compute_domain_kiln() {
 pub fn test_compute_signing_root_bls() {
 	new_tester().execute_with(|| {
 		let signing_root = EthereumBeaconClient::compute_signing_root(
-			BeaconBlockHeader {
+			BeaconHeader {
 				slot: 3529537,
 				proposer_index: 192549,
 				parent_root: hex!(
@@ -172,7 +166,7 @@ pub fn test_compute_signing_root_bls() {
 pub fn test_compute_signing_root_kiln() {
 	new_tester().execute_with(|| {
 		let signing_root = EthereumBeaconClient::compute_signing_root(
-			BeaconBlockHeader {
+			BeaconHeader {
 				slot: 221316,
 				proposer_index: 79088,
 				parent_root: hex!(
@@ -201,7 +195,7 @@ pub fn test_compute_signing_root_kiln() {
 pub fn test_compute_signing_root_kiln_head_update() {
 	new_tester().execute_with(|| {
 		let signing_root = EthereumBeaconClient::compute_signing_root(
-			BeaconBlockHeader {
+			BeaconHeader {
 				slot: 222472,
 				proposer_index: 10726,
 				parent_root: hex!(
@@ -875,7 +869,7 @@ pub fn test_bls_fast_aggregate_verify_kiln_head_update() {
 				PublicKey(hex!("97d933c677ab31f4e900543e781e67d357b3535442a35a3fa7f6b3d7c0e42593b75157c7d8c99efbdf1ff0da2bb8f74f").into()),
 			],
 			hex!("70000071").into(),
-			BeaconBlockHeader{
+			BeaconHeader{
 				slot: 222472,
 				proposer_index: 10726,
 				parent_root: hex!("5d481a9721f0ecce9610eab51d400d223683d599b7fcebca7e4c4d10cdef6ebb").into(),
