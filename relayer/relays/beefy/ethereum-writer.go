@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts/beefyclient"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy/bitfield"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -268,25 +268,9 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	return tx, nil
 }
 
-func bitfieldToString(bitfield []*big.Int) string {
-	bitfieldString := ""
-	for _, bitfieldInt := range bitfield {
-		bits := strconv.FormatInt(bitfieldInt.Int64(), 2)
-
-		// add bits from this int at leftmost position
-		bitfieldString = bits + bitfieldString
-
-		// pad to 256 bits to include missing validators
-		for bitsLength := len(bits); bitsLength < 256; bitsLength++ {
-			bitfieldString = "0" + bitfieldString
-		}
-	}
-	return bitfieldString
-}
-
 // doFinalSubmit sends a SubmitFinal tx to the BeefyClient contract
 func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64, task *Request) (*types.Transaction, error) {
-	randomBitfield, err := wr.contract.CreateFinalBitfield(
+	finalBitfield, err := wr.contract.CreateFinalBitfield(
 		&bind.CallOpts{Pending: true},
 		big.NewInt(validationID),
 	)
@@ -294,9 +278,9 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 		return nil, fmt.Errorf("create validator bitfield: %w", err)
 	}
 
-	bitfield := bitfieldToString(randomBitfield)
+	validatorIndices := bitfield.New(finalBitfield).Members()
 
-	params, err := task.MakeSubmitFinalParams(validationID, bitfield)
+	params, err := task.MakeSubmitFinalParams(validationID, validatorIndices)
 	if err != nil {
 		return nil, err
 	}
