@@ -68,7 +68,6 @@ use xcm_executor::{traits::JustTry, Config, XcmExecutor};
 
 use runtime_common::{
 	DotPalletId, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter, TreasuryPalletId,
-	INDEXING_PREFIX,
 };
 
 pub use runtime_primitives::{AccountId, Address, Balance, BlockNumber, Hash, Index, Signature};
@@ -565,7 +564,6 @@ impl basic_channel_inbound::Config for Runtime {
 }
 
 impl basic_channel_outbound::Config for Runtime {
-	const INDEXING_PREFIX: &'static [u8] = INDEXING_PREFIX;
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
@@ -599,7 +597,6 @@ impl incentivized_channel_inbound::Config for Runtime {
 }
 
 impl incentivized_channel_outbound::Config for Runtime {
-	const INDEXING_PREFIX: &'static [u8] = INDEXING_PREFIX;
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;

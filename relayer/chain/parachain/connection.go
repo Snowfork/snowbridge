@@ -5,12 +5,10 @@ package parachain
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/sirupsen/logrus"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
-	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 
@@ -103,60 +101,4 @@ func (co *Connection) GetLatestBlockNumber() (*types.BlockNumber, error) {
 	}
 
 	return &latestBlock.Block.Header.Number, nil
-}
-
-func (co *Connection) GetDataForDigestItem(digestItem *AuxiliaryDigestItem) (types.StorageDataRaw, error) {
-	storageKey, err := MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := co.API().RPC.Offchain.LocalStorageGet(offchain.Persistent, storageKey)
-	if err != nil {
-		return nil, fmt.Errorf("read commitment from offchain storage: %w", err)
-	}
-
-	if data != nil {
-		log.WithFields(logrus.Fields{
-			"commitmentSizeBytes": len(*data),
-		}).Debug("Retrieved commitment from offchain storage")
-	} else {
-		return nil, fmt.Errorf("commitment not found")
-	}
-
-	return *data, nil
-}
-
-func (co *Connection) ReadBasicOutboundMessageBundle(digestItem AuxiliaryDigestItem) (
-	BasicOutboundChannelMessageBundle, error) {
-	data, err := co.GetDataForDigestItem(&digestItem)
-	if err != nil {
-		return BasicOutboundChannelMessageBundle{}, fmt.Errorf("read message bundle: %w", err)
-	}
-
-	var bundle BasicOutboundChannelMessageBundle
-
-	err = types.DecodeFromBytes(data, &bundle)
-	if err != nil {
-		return BasicOutboundChannelMessageBundle{}, fmt.Errorf("decode message bundle: %w", err)
-	}
-
-	return bundle, nil
-}
-
-func (co *Connection) ReadIncentivizedOutboundMessageBundle(digestItem AuxiliaryDigestItem) (
-	IncentivizedOutboundChannelMessageBundle, error) {
-	data, err := co.GetDataForDigestItem(&digestItem)
-	if err != nil {
-		return IncentivizedOutboundChannelMessageBundle{}, fmt.Errorf("read message bundle: %w", err)
-	}
-
-	var bundle IncentivizedOutboundChannelMessageBundle
-
-	err = types.DecodeFromBytes(data, &bundle)
-	if err != nil {
-		return IncentivizedOutboundChannelMessageBundle{}, fmt.Errorf("decode message bundle: %w", err)
-	}
-
-	return bundle, nil
 }

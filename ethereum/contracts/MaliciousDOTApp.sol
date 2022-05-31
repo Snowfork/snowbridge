@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WrappedToken.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
-import "./FeeSource.sol";
+import "./FeeController.sol";
 
 enum ChannelId {
     Basic,
@@ -15,7 +15,7 @@ enum ChannelId {
 // MaliciousDOTApp is similar to DOTApp, but contains an infinite loop in the mint function, which will consume all the
 // gas of the message. MaliciousDOTApp is used in a test which verifies that a message running out of gas will not
 // prevent execution of other messages
-contract MaliciousDOTApp is FeeSource, AccessControl {
+contract MaliciousDOTApp is FeeController, AccessControl {
     using ScaleCodec for uint256;
 
     mapping(ChannelId => Channel) public channels;
@@ -85,7 +85,7 @@ contract MaliciousDOTApp is FeeSource, AccessControl {
     }
 
     // Incentivized channel calls this to charge (burn) fees
-    function burnFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
+    function handleFee(address feePayer, uint256 _amount) external override onlyRole(FEE_BURNER_ROLE) {
         token.burn(feePayer, _amount, "");
     }
 

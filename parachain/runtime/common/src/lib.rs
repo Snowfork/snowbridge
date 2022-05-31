@@ -5,8 +5,6 @@ use sp_core::H160;
 use sp_std::marker::PhantomData;
 
 use snowbridge_core::ChannelId;
-
-pub const INDEXING_PREFIX: &'static [u8] = b"commitment";
 pub struct OutboundRouter<T>(PhantomData<T>);
 
 impl<T> snowbridge_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
@@ -29,7 +27,7 @@ where
 }
 
 parameter_types! {
-	pub const MaxMessagePayloadSize: u64 = 256;
+	pub const MaxMessagePayloadSize: u32 = 256;
 	pub const MaxMessagesPerCommit: u32 = 20;
 }
 

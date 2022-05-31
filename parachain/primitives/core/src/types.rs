@@ -23,8 +23,8 @@ pub type MessageNonce = u64;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug, TypeInfo)]
 pub enum ChannelId {
-	Basic,
-	Incentivized,
+	Basic = 0,
+	Incentivized = 1,
 }
 
 /// A message relayed from Ethereum.

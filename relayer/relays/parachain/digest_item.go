@@ -9,10 +9,10 @@ import (
 
 type AuxiliaryDigestItem struct {
 	IsCommitment bool
-	AsCommitment Commitment
+	AsCommitment AuxiliaryDigestItemCommitment
 }
 
-type Commitment struct {
+type AuxiliaryDigestItemCommitment struct {
 	ChannelID ChannelID
 	Hash      types.H256
 }

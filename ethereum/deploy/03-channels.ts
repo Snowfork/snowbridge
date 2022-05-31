@@ -7,12 +7,22 @@ module.exports = async ({
 }: HardhatRuntimeEnvironment) => {
   let [deployer] = await getUnnamedAccounts();
 
+  if (!("BASIC_CHANNEL_SOURCE_ID" in process.env)) {
+    throw "Missing BASIC_CHANNEL_SOURCE_ID in environment config"
+  }
+  const basicChannelSourceID = process.env.BASIC_CHANNEL_SOURCE_ID
+
+  if (!("INCENTIVIZED_CHANNEL_SOURCE_ID" in process.env)) {
+    throw "Missing INCENTIVIZED_CHANNEL_SOURCE_ID in environment config"
+  }
+  const incentivizedChannelSourceID = process.env.INCENTIVIZED_CHANNEL_SOURCE_ID
+
   let parachainClient = await deployments.get("ParachainClient")
   let scaleCodecLibrary = await deployments.get("ScaleCodec")
 
   await deployments.deploy("BasicInboundChannel", {
     from: deployer,
-    args: [parachainClient.address],
+    args: [basicChannelSourceID, parachainClient.address],
     libraries: {
         ScaleCodec: scaleCodecLibrary.address,
     },
@@ -22,7 +32,7 @@ module.exports = async ({
 
   await deployments.deploy("IncentivizedInboundChannel", {
     from: deployer,
-    args:[parachainClient.address],
+    args:[incentivizedChannelSourceID, parachainClient.address],
     libraries: {
         ScaleCodec: scaleCodecLibrary.address,
     },

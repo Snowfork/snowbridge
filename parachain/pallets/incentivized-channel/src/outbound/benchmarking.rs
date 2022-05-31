@@ -11,16 +11,15 @@ benchmarks! {
 	// Benchmark `on_initialize` under worst case conditions, i.e. messages
 	// in queue are committed.
 	on_initialize {
-		let m in 1 .. T::MaxMessagesPerCommit::get() as u32;
-		let p in 0 .. T::MaxMessagePayloadSize::get() as u32;
+		let m in 1 .. T::MaxMessagesPerCommit::get();
+		let p in 0 .. T::MaxMessagePayloadSize::get();
 
 		for _ in 0 .. m {
 			let payload: Vec<u8> = (0..).take(p as usize).collect();
 			<MessageQueue<T>>::try_append(Message {
 				id: 0u64,
 				target: H160::zero(),
-				fee: 0,
-				payload,
+				payload: payload.try_into().unwrap(),
 			}).unwrap();
 		}
 
@@ -37,8 +36,7 @@ benchmarks! {
 		<MessageQueue<T>>::try_append(Message {
 			id: 0u64,
 			target: H160::zero(),
-			fee: 0,
-			payload: vec![1u8; T::MaxMessagePayloadSize::get() as usize],
+			payload: vec![1u8; T::MaxMessagePayloadSize::get() as usize].try_into().unwrap(),
 		}).unwrap();
 
 		Interval::<T>::put::<T::BlockNumber>(10u32.into());

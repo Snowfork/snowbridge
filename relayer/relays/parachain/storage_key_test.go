@@ -18,7 +18,7 @@ func TestMakeStorageKey(t *testing.T) {
 		IsBasic: true,
 	}
 
-	key, err := MakeStorageKey(channelID, commitmentHash)
+	key, err := makeStorageKey(channelID, commitmentHash)
 	if err != nil {
 		panic(err)
 	}

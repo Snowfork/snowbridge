@@ -130,7 +130,8 @@ members = [
     "pallets/asset-registry",
     "runtime/snowbridge",
     "runtime/snowblink",
-    "runtime/snowbase"
+    "runtime/snowbase",
+    "tools/query-events"
 ]
 # exclude = [
 #     "utils/test-parachain/node",

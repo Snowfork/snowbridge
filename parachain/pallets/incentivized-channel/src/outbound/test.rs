@@ -116,7 +116,7 @@ impl pallet_assets::Config for Test {
 }
 
 parameter_types! {
-	pub const MaxMessagePayloadSize: u64 = 128;
+	pub const MaxMessagePayloadSize: u32 = 128;
 	pub const MaxMessagesPerCommit: u32 = 5;
 }
 
@@ -128,7 +128,6 @@ parameter_types! {
 pub type Ether = ItemOf<Assets, EtherAssetId, AccountId>;
 
 impl incentivized_outbound_channel::Config for Test {
-	const INDEXING_PREFIX: &'static [u8] = b"commitment";
 	type Event = Event;
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;

@@ -41,7 +41,7 @@ describe("BasicInboundChannel", function () {
 
   describe("submit", function () {
     beforeEach(async function () {
-      this.channel = await BasicInboundChannel.new(this.parachainClient.address);
+      this.channel = await BasicInboundChannel.new(0, this.parachainClient.address);
     });
 
     it("should accept a valid commitment and dispatch messages", async function () {

@@ -2,7 +2,6 @@ package parachain
 
 import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
@@ -12,7 +11,7 @@ type Task struct {
 	ParaID      uint32
 	BlockNumber uint64
 	Header      *types.Header
-	Commitments map[parachain.ChannelID]Commitment
+	Commitments map[ChannelID]Commitment
 	ProofInput  *ProofInput
 	ProofOutput *ProofOutput
 }
