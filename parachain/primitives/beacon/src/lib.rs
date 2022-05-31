@@ -33,7 +33,7 @@ pub struct SigningData {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Header {
+pub struct ExecutionHeader {
 	pub parent_hash: H256,
 	pub fee_recipient: H160,
 	pub state_root: H256,
@@ -41,13 +41,13 @@ pub struct Header {
 	pub logs_bloom: Vec<u8>,
 	pub prev_randao: H256,
 	pub block_number: u64,
-	pub gas_used: U256,
-	pub gas_limit: U256,
+	pub gas_limit: u64,
+	pub gas_used: u64,
 	pub timestamp: u64,
 	pub extra_data: Vec<u8>,
-	pub base_fee_per_gas: Option<U256>,
+	pub base_fee_per_gas: U256,
 	pub block_hash: H256,
-	pub transactions: Vec<u8>,
+	pub transactions_root: H256,
 }
 
 /// Sync committee as it is stored in the runtime storage.
@@ -104,15 +104,15 @@ pub struct AttestationData {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct IndexedAttestation {
-    pub attesting_indices: Vec<u64>,
-    pub data: AttestationData,
-    pub signature: Vec<u8>,
+	pub attesting_indices: Vec<u64>,
+	pub data: AttestationData,
+	pub signature: Vec<u8>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SignedHeader {
 	pub message: crate::BeaconHeader,
-    pub signature: Vec<u8>,
+	pub signature: Vec<u8>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -131,7 +131,7 @@ pub struct AttesterSlashing {
 pub struct Attestation {
 	pub aggregation_bits: Vec<u8>,
 	pub data: AttestationData,
-    pub signature: Vec<u8>,
+	pub signature: Vec<u8>,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -175,14 +175,14 @@ pub struct ExecutionPayload {
 pub struct Body {
 	pub randao_reveal: Vec<u8>,
 	pub eth1_data: Eth1Data,
-    pub graffiti: H256,
-    pub proposer_slashings: Vec<ProposerSlashing>,
-    pub attester_slashings: Vec<AttesterSlashing>,
-    pub attestations: Vec<Attestation>,
-    pub deposits: Vec<Deposit>,
-    pub voluntary_exits: Vec<VoluntaryExit>,
-    pub sync_aggregate: SyncAggregate,
-    pub execution_payload: ExecutionPayload,
+	pub graffiti: H256,
+	pub proposer_slashings: Vec<ProposerSlashing>,
+	pub attester_slashings: Vec<AttesterSlashing>,
+	pub attestations: Vec<Attestation>,
+	pub deposits: Vec<Deposit>,
+	pub voluntary_exits: Vec<VoluntaryExit>,
+	pub sync_aggregate: SyncAggregate,
+	pub execution_payload: ExecutionPayload,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]

@@ -1,4 +1,4 @@
-use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, ChainGenesis, Genesis, PublicKey, merkleization};
+use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, PublicKey, merkleization, ValidatorsRoot};
 use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
 use sp_core::H256;
@@ -29,9 +29,7 @@ fn it_updates_a_committee_period_sync_update() {
 
 	new_tester().execute_with(|| {
 		SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-		ChainGenesis::<Test>::set(Genesis{
-			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-		});
+		ValidatorsRoot::<Test>::set(hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into());
 
 		assert_ok!(EthereumBeaconClient::sync_committee_period_update(
 			Origin::signed(1),
@@ -54,9 +52,7 @@ fn it_processes_a_finalized_header_update() {
 
 	new_tester().execute_with(|| {
 		SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-		ChainGenesis::<Test>::set(Genesis{
-			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-		});
+		ValidatorsRoot::<Test>::set(hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into());
 
 		assert_ok!(EthereumBeaconClient::import_finalized_header(Origin::signed(1), update.clone()));
 
@@ -71,9 +67,7 @@ fn it_errors_when_importing_a_header_with_no_sync_commitee_for_period() {
 	let update = get_finalized_header_update();
 
 	new_tester().execute_with(|| {
-		ChainGenesis::<Test>::set(Genesis{
-			validators_root: hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-		});
+		ValidatorsRoot::<Test>::set(hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into());
 
 		assert_err!(EthereumBeaconClient::import_finalized_header(Origin::signed(1), update), Error::<Test>::SyncCommitteeMissing);
 	});
@@ -143,11 +137,11 @@ pub fn test_compute_signing_root_bls() {
 				parent_root: hex!(
 					"1f8dc05ea427f78e84e2e2666e13c3befb7106fd1d40ef8a3f67cf615f3f2a4c"
 				)
-				.into(),
+					.into(),
 				state_root: hex!(
 					"0dfb492a83da711996d2d76b64604f9bca9dc08b6c13cf63b3be91742afe724b"
 				)
-				.into(),
+					.into(),
 				body_root: hex!("66fba38f7c8c2526f7ddfe09c1a54dd12ff93bdd4d0df6a0950e88e802228bfa")
 					.into(),
 			},
@@ -172,11 +166,11 @@ pub fn test_compute_signing_root_kiln() {
 				parent_root: hex!(
 					"b4c15cd79da1a4e645b0104fa66d226cb6dce0fae3522789cc4d0b3ae41d96f7"
 				)
-				.into(),
+					.into(),
 				state_root: hex!(
 					"6f711ef2e36decbc8f7037e73bbdace42c11f2896a43e44ab8a78dcb2ba66122"
 				)
-				.into(),
+					.into(),
 				body_root: hex!("963eaa01341c16dc8f288da47eedad0792978fdaab9f1f97ae0a1103494d1a10")
 					.into(),
 			},
@@ -201,11 +195,11 @@ pub fn test_compute_signing_root_kiln_head_update() {
 				parent_root: hex!(
 					"5d481a9721f0ecce9610eab51d400d223683d599b7fcebca7e4c4d10cdef6ebb"
 				)
-				.into(),
+					.into(),
 				state_root: hex!(
 					"14eb4575895f996a84528b789ff2e4d5148242e2983f03068353b2c37015507a"
 				)
-				.into(),
+					.into(),
 				body_root: hex!("7bb669c75b12e0781d6fa85d7fc2f32d64eafba89f39678815b084c156e46cac")
 					.into(),
 			},

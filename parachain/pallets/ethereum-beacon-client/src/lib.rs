@@ -17,8 +17,7 @@ use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use snowbridge_beacon::Header as ExecutionHeader;
-use snowbridge_beacon::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData};
+use snowbridge_beacon::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
@@ -80,6 +79,11 @@ pub struct HeaderUpdate {
 	pub fork_version: ForkVersion,
 }
 
+#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct BlockUpdate {
+	pub block: BeaconBlock,
+	pub fork_version: ForkVersion,
+}
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Genesis {
@@ -97,6 +101,8 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
+	use sp_core::H160;
+
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
@@ -126,6 +132,7 @@ pub mod pallet {
 		InvalidHash,
 		SignatureVerificationFailed,
 		NoBranchExpected,
+		HeaderNotFinalized,
 	}
 
 	#[pallet::hooks]
@@ -133,24 +140,23 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type FinalizedBeaconHeaders<T: Config> =
-		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
-
-	#[pallet::storage]
-	pub(super) type BeaconHeaders<T: Config> =
-		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
+	StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
 
 	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
-		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
+	StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
 	/// Current sync committee corresponding to the active header.
 	/// TODO  prune older sync committees than xxx
 	#[pallet::storage]
 	pub(super) type SyncCommittees<T: Config> =
-		StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
+	StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type ChainGenesis<T: Config> = StorageValue<_, Genesis, ValueQuery>;
+	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {}
@@ -268,6 +274,42 @@ pub mod pallet {
 
 		#[pallet::weight(1_000_000)]
 		#[transactional]
+		pub fn import_execution_header(
+			origin: OriginFor<T>,
+			update: BlockUpdate,
+		) -> DispatchResult {
+			let _sender = ensure_signed(origin)?;
+
+			let slot = update.block.slot;
+			let block_hash = update.block.body.execution_payload.block_hash;
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Received header update for slot {}, processing and importing execution header.",
+				slot
+			);
+
+			if let Err(err) = Self::process_header(update) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"Header update failed with error {:?}",
+					err
+				);
+				return Err(err);
+			}
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Header processing and importing execution header {} at beacon slot {} succeeded.",
+				block_hash,
+				slot
+			);
+
+			Ok(())
+		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
 		pub fn verify_eth1_receipt_inclusion(
 			origin: OriginFor<T>,
 		) -> DispatchResult {
@@ -299,7 +341,7 @@ pub mod pallet {
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
 			Self::store_finalized_header(block_root, initial_sync.header);
 
-			Self::store_genesis(Genesis { validators_root: initial_sync.validators_root });
+			Self::store_validators_root( initial_sync.validators_root );
 
 			Ok(())
 		}
@@ -331,7 +373,7 @@ pub mod pallet {
 			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
 
 			let current_sync_committee = <SyncCommittees<T>>::get(current_period);
-			let genesis = <ChainGenesis<T>>::get();
+			let validators_root = <ValidatorsRoot<T>>::get();
 
 			Self::verify_signed_header(
 				sync_committee_bits,
@@ -339,7 +381,7 @@ pub mod pallet {
 				current_sync_committee.pubkeys,
 				update.fork_version,
 				update.attested_header,
-				genesis.validators_root,
+				validators_root,
 			)?;
 
 			Self::store_finalized_header(block_root, update.finalized_header);
@@ -362,21 +404,78 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
-			let sync_committee = <SyncCommittees<T>>::get(current_period);
-			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: PublicKey([0; 48]) }) == sync_committee {
-				return Err(Error::<T>::SyncCommitteeMissing.into());
-			}
-			let genesis = <ChainGenesis<T>>::get();
+			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
+
+			let validators_root = <ValidatorsRoot<T>>::get();
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
 				sync_committee.pubkeys,
 				update.fork_version,
 				update.attested_header,
-				genesis.validators_root,
+				validators_root,
 			)?;
 
 			Self::store_finalized_header(block_root, update.finalized_header);
+
+			Ok(())
+		}
+
+		fn process_header(update: BlockUpdate) -> DispatchResult {
+			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
+			let block_slot = update.block.slot;
+			if block_slot > latest_finalized_header_slot {
+				return Err(Error::<T>::HeaderNotFinalized.into());
+			}
+
+			let current_period = Self::compute_current_sync_period(update.block.slot);
+			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
+
+			let body_root = merkleization::hash_tree_root_beacon_body(update.block.body.clone())
+				.map_err(|_| DispatchError::Other("Beacon body hash tree root failed"))?;
+
+			let header = BeaconHeader{
+				slot: update.block.slot,
+				proposer_index: update.block.proposer_index,
+				parent_root: update.block.parent_root,
+				state_root: update.block.state_root,
+				body_root: body_root.into(),
+			};
+
+			let validators_root = <ValidatorsRoot<T>>::get();
+			let sync_committee_bits = Self::convert_to_binary(update.block.body.sync_aggregate.sync_committee_bits.clone());
+			Self::verify_signed_header(
+				sync_committee_bits,
+				update.block.body.sync_aggregate.sync_committee_signature,
+				sync_committee.pubkeys,
+				update.fork_version,
+				header,
+				validators_root,
+			)?;
+
+			let execution_payload = update.block.body.execution_payload;
+			let transaction_root = merkleization::hash_tree_root_transactions(execution_payload.transactions)
+				.map_err(|_| DispatchError::Other("Transactions hash tree root failed"))?;
+
+			let mut fee_recipient = [0u8; 20];
+			fee_recipient[0..20].copy_from_slice(&(execution_payload.fee_recipient.as_slice()));
+
+			Self::store_execution_header(execution_payload.block_hash, ExecutionHeader{
+				parent_hash: execution_payload.parent_hash,
+				fee_recipient: H160::from(fee_recipient),
+				state_root: execution_payload.state_root,
+				receipts_root: execution_payload.receipts_root,
+				logs_bloom: execution_payload.logs_bloom,
+				prev_randao: execution_payload.prev_randao,
+				block_number: execution_payload.block_number,
+				gas_used: execution_payload.gas_used,
+				gas_limit: execution_payload.gas_limit,
+				timestamp: execution_payload.timestamp,
+				extra_data: execution_payload.extra_data,
+				base_fee_per_gas: execution_payload.base_fee_per_gas,
+				block_hash: execution_payload.block_hash,
+				transactions_root: transaction_root.into()
+			});
 
 			Ok(())
 		}
@@ -462,7 +561,7 @@ pub mod pallet {
 				object_root: beacon_header_root.into(),
 				domain,
 			})
-			.map_err(|_| DispatchError::Other("Signing root hash tree root failed"))?;
+				.map_err(|_| DispatchError::Other("Signing root hash tree root failed"))?;
 
 			Ok(hash_root.into())
 		}
@@ -518,11 +617,22 @@ pub mod pallet {
 		}
 
 		fn store_finalized_header(block_root: H256, header: BeaconHeader) {
-			<FinalizedBeaconHeaders<T>>::insert(block_root, header.clone());
+			let slot = header.slot;
+
+			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
+
+			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
+			if latest_finalized_header_slot > slot {
+				<LatestFinalizedHeaderSlot<T>>::set(latest_finalized_header_slot);
+			}
 		}
 
-		fn store_genesis(genesis: Genesis) {
-			<ChainGenesis<T>>::put(genesis);
+		fn store_execution_header(block_root: H256, header: ExecutionHeader) {
+			<ExecutionHeaders<T>>::insert(block_root, header);
+		}
+
+		fn store_validators_root(validators_root: H256) {
+			<ValidatorsRoot<T>>::set(validators_root);
 		}
 
 		/// Sums the bit vector of sync committee particpation.
@@ -570,7 +680,7 @@ pub mod pallet {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
 			})
-			.map_err(|_| DispatchError::Other("Fork data hash tree root failed"))?;
+				.map_err(|_| DispatchError::Other("Fork data hash tree root failed"))?;
 
 			Ok(hash_root.into())
 		}
@@ -650,6 +760,15 @@ pub mod pallet {
 			);
 
 			Ok(())
+		}
+
+		pub(super) fn get_sync_committee_for_period(period: u64) -> Result<SyncCommittee, DispatchError> {
+			let sync_committee = <SyncCommittees<T>>::get(period);
+			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: PublicKey([0; 48]) }) == sync_committee {
+				return Err(Error::<T>::SyncCommitteeMissing.into());
+			}
+
+			Ok(sync_committee)
 		}
 	}
 }

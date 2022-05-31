@@ -147,7 +147,7 @@ pub fn get_ssz_proposer_slashings(proposer_slashings: Vec<ProposerSlashing>) -> 
     let mut proposer_slashings_vec = Vec::new();
 
     for proposer_slashing in proposer_slashings.iter() {
-       proposer_slashings_vec.push(get_ssz_proposer_slashing((*proposer_slashing).clone())?);
+        proposer_slashings_vec.push(get_ssz_proposer_slashing((*proposer_slashing).clone())?);
     }
 
     Ok(List::<SSZProposerSlashing, { config::MAX_PROPOSER_SLASHINGS }>::from_iter(proposer_slashings_vec))
@@ -236,6 +236,14 @@ pub fn hash_tree_root_beacon_header(beacon_header: BeaconHeader) -> Result<[u8; 
     hash_tree_root(get_ssz_beacon_header(beacon_header)?)
 }
 
+pub fn hash_tree_root_beacon_body(body: Body) -> Result<[u8; 32], MerkleizationError> {
+    hash_tree_root(get_ssz_beacon_block_body(body)?)
+}
+
+pub fn hash_tree_root_transactions(transactions: Vec<Vec<u8>>) -> Result<[u8; 32], MerkleizationError> {
+    hash_tree_root(get_ssz_transactions(transactions)?)
+}
+
 pub fn hash_tree_root_sync_committee(sync_committee: SyncCommittee) -> Result<[u8; 32], MerkleizationError> {
     let mut pubkeys_vec = Vec::new();
 
@@ -296,15 +304,15 @@ mod tests {
                 parent_root: hex!(
                     "796ea53efb534eab7777809cc5ee2d84e7f25024b9d0c4d7e5bcaab657e4bdbd"
                 )
-                .into(),
+                    .into(),
                 state_root: hex!(
                     "ba3ff080912be5c9c158b2e962c1b39a91bc0615762ba6fa2ecacafa94e9ae0a"
                 )
-                .into(),
+                    .into(),
                 body_root: hex!(
                     "a18d7fcefbb74a177c959160e0ee89c23546482154e6831237710414465dcae5"
                 )
-                .into(),
+                    .into(),
             }
         );
 
@@ -324,15 +332,15 @@ mod tests {
                 parent_root: hex!(
                     "c069d7b49cffd2b815b0fb8007eb9ca91202ea548df6f3db60000f29b2489f28"
                 )
-                .into(),
+                    .into(),
                 state_root: hex!(
                     "444d293e4533501ee508ad608783a7d677c3c566f001313e8a02ce08adf590a3"
                 )
-                .into(),
+                    .into(),
                 body_root: hex!(
                     "6508a0241047f21ba88f05d05b15534156ab6a6f8e029a9a5423da429834e04a"
                 )
-                .into(),
+                    .into(),
             }
         );
 
@@ -395,7 +403,7 @@ mod tests {
         );
 
         assert_ok!(&hash_root);
-         assert_eq!(
+        assert_eq!(
             hash_root.unwrap(),
             hex!("23607f8bdfdc30eeb30b3db754ad54f820de4a3a68e9eeccb0788f636f0a9581")
         );
@@ -580,7 +588,7 @@ mod tests {
     #[test]
     pub fn test_hash_tree_root_attester_slashing() {
         let payload = merkleization::get_ssz_attester_slashing(
-           get_attester_slashing()
+            get_attester_slashing()
         );
 
         assert_ok!(&payload);
