@@ -427,21 +427,7 @@ pub mod pallet {
 
 		fn process_header(update: BlockUpdate) -> DispatchResult {
 			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Latest finalized block slot is {}.",
-				latest_finalized_header_slot
-			);
-
 			let block_slot = update.block.slot;
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Header update block slot is {}.",
-				block_slot
-			);
-
 			if block_slot > latest_finalized_header_slot {
 				return Err(Error::<T>::HeaderNotFinalized.into());
 			}
@@ -575,8 +561,15 @@ pub mod pallet {
 			let beacon_header_root = merkleization::hash_tree_root_beacon_header(beacon_header)
 				.map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?;
 
+			let header_hash_tree_root: H256 = beacon_header_root.into();
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Header root is {}.",
+				header_hash_tree_root
+			);
+
 			let hash_root = merkleization::hash_tree_root_signing_data(SigningData {
-				object_root: beacon_header_root.into(),
+				object_root: header_hash_tree_root,
 				domain,
 			})
 			.map_err(|_| DispatchError::Other("Signing root hash tree root failed"))?;
@@ -638,6 +631,13 @@ pub mod pallet {
 			let slot = header.slot;
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Saved block root {} at slot {}.",
+				block_root,
+				slot
+			);
 
 			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
 
