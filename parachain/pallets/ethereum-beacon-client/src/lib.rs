@@ -72,14 +72,6 @@ pub struct FinalizedHeaderUpdate {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct HeaderUpdate {
-	pub attested_header: BeaconHeader,
-	pub execution_header: ExecutionHeader,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct BlockUpdate {
 	pub block: BeaconBlock,
 	pub fork_version: ForkVersion,
@@ -447,7 +439,9 @@ pub mod pallet {
 			};
 
 			let validators_root = <ValidatorsRoot<T>>::get();
-			let sync_committee_bits = Self::convert_to_binary(update.block.body.sync_aggregate.sync_committee_bits.clone());
+			//let sync_committee_bits = Self::convert_to_binary(update.block.body.sync_aggregate.sync_committee_bits.clone());
+			let sync_committee_bits = merkleization::get_sync_committee_bits(update.block.body.sync_aggregate.sync_committee_bits.clone())
+				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.block.body.sync_aggregate.sync_committee_signature,

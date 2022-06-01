@@ -1,4 +1,4 @@
-use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, PublicKey, merkleization, ValidatorsRoot};
+use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, PublicKey, merkleization, ValidatorsRoot, LatestFinalizedHeaderSlot};
 use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
 use sp_core::H256;
@@ -57,6 +57,27 @@ fn it_processes_a_finalized_header_update() {
 		assert_ok!(EthereumBeaconClient::import_finalized_header(Origin::signed(1), update.clone()));
 
 		let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone()).unwrap().into();
+
+		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
+	});
+}
+
+#[test]
+fn it_processes_a_header_update() {
+	let update = get_header_update();
+
+	let current_sync_committee = get_current_sync_committee_for_header_update();
+
+	let current_period = EthereumBeaconClient::compute_current_sync_period(update.block.slot);
+
+	new_tester().execute_with(|| {
+		SyncCommittees::<Test>::insert(current_period, current_sync_committee);
+		ValidatorsRoot::<Test>::set(hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into());
+		LatestFinalizedHeaderSlot::<Test>::set(update.block.slot);
+
+		assert_ok!(EthereumBeaconClient::import_execution_header(Origin::signed(1), update.clone()));
+
+		let block_root: H256 = merkleization::hash_tree_root_beacon_block(update.block.clone()).unwrap().into();
 
 		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
 	});
@@ -890,5 +911,20 @@ pub fn test_sync_committee_participation_is_supermajority_errors_when_not_superm
 		let sync_committee_bits = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0];
 
 		assert_err!(EthereumBeaconClient::sync_committee_participation_is_supermajority(sync_committee_bits), Error::<Test>::SyncCommitteeParticipantsNotSupermajority);
+	});
+}
+
+#[test]
+pub fn test_beacon_block_is_merkleized() {
+	new_tester().execute_with(|| {
+		let update = get_header_update();
+
+		let result = merkleization::hash_tree_root_beacon_block(update.block);
+
+		assert_ok!(&result);
+
+		let hash: H256 = result.unwrap().into();
+
+		assert_eq!(hash, hex!("f0070b6d29bc9f2692d7a45726e0ca86c2c870f82ff6eeb0a4101895f12b7be8").into())
 	});
 }
