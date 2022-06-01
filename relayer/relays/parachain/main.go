@@ -18,7 +18,7 @@ type Relay struct {
 	parachainConn         *parachain.Connection
 	relaychainConn        *relaychain.Connection
 	ethereumConn          *ethereum.Connection
-	ethereumChannelWriter *EthereumChannelWriter
+	ethereumChannelWriter *EthereumWriter
 	beefyListener         *BeefyListener
 }
 
@@ -34,7 +34,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	// channel for messages from beefy listener to ethereum writer
 	var tasks = make(chan *Task, 1)
 
-	ethereumChannelWriter, err := NewEthereumChannelWriter(
+	ethereumChannelWriter, err := NewEthereumWriter(
 		&config.Sink,
 		ethereumConn,
 		tasks,
@@ -91,4 +91,3 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	return nil
 }
-

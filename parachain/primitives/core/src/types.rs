@@ -23,8 +23,8 @@ pub type MessageNonce = u64;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, IntoEnumIterator, RuntimeDebug, TypeInfo)]
 pub enum ChannelId {
-	Basic,
-	Incentivized,
+	Basic = 0,
+	Incentivized = 1,
 }
 
 /// A message relayed from Ethereum.
@@ -57,8 +57,8 @@ pub enum AuxiliaryDigestItem {
 	Commitment(ChannelId, H256),
 }
 
-impl<T> Into<DigestItem<T>> for AuxiliaryDigestItem {
-	fn into(self) -> DigestItem<T> {
+impl Into<DigestItem> for AuxiliaryDigestItem {
+	fn into(self) -> DigestItem {
 		DigestItem::Other(self.encode())
 	}
 }

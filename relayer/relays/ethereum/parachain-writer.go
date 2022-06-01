@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -203,6 +203,12 @@ func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainP
 		if !imported {
 			return fmt.Errorf("Header import failed for header %s", hash.Hex())
 		}
+
+		log.WithFields(logrus.Fields{
+			"hash":   hash.Hex(),
+			"number": header.ID().Number,
+		}).Info("Successfully imported header.")
+
 		return nil
 	}
 
@@ -228,17 +234,23 @@ func (wr *ParachainWriter) makeHeaderImportCall(header *chain.Header) (types.Cal
 func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumLightClient", "Headers", hash[:], nil)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("create storage key for hash %s: %w", hash.Hex(), err)
 	}
 
-	var headerOption types.OptionBytes
-	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &headerOption)
+	keys := []types.StorageKey{key}
+	changeSets, err := wr.conn.API().RPC.State.QueryStorageAtLatest(keys)
 	if err != nil {
-		return false, err
-	}
-	if !ok {
-		return false, fmt.Errorf("Storage query did not find header for hash %s", hash.Hex())
+		return false, fmt.Errorf("storage query for key %s and hash %s: %w", key.Hex(), hash.Hex(), err)
 	}
 
-	return headerOption.IsSome(), nil
+	// find first change for this hash
+	for _, changeSet := range changeSets {
+		for _, change := range changeSet.Changes {
+			if change.StorageData.IsSome() {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }

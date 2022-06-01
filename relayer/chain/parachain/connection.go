@@ -8,10 +8,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	gsrpc "github.com/snowfork/go-substrate-rpc-client/v3"
-	"github.com/snowfork/go-substrate-rpc-client/v3/rpc/offchain"
-	"github.com/snowfork/go-substrate-rpc-client/v3/signature"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
+	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -102,64 +101,4 @@ func (co *Connection) GetLatestBlockNumber() (*types.BlockNumber, error) {
 	}
 
 	return &latestBlock.Block.Header.Number, nil
-}
-
-func (co *Connection) GetDataForDigestItem(digestItem *AuxiliaryDigestItem) (types.StorageDataRaw, error) {
-	storageKey, err := MakeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := co.API().RPC.Offchain.LocalStorageGet(offchain.Persistent, storageKey)
-	if err != nil {
-		log.WithError(err).Error("Failed to read commitment from offchain storage")
-		return nil, err
-	}
-
-	if data != nil {
-		log.WithFields(logrus.Fields{
-			"commitmentSizeBytes": len(*data),
-		}).Debug("Retrieved commitment from offchain storage")
-	} else {
-		log.WithError(err).Error("Commitment not found in offchain storage")
-		return nil, err
-	}
-
-	return *data, nil
-}
-
-func (co *Connection) ReadBasicOutboundMessages(digestItem AuxiliaryDigestItem) (
-	BasicOutboundChannelMessages, error) {
-	data, err := co.GetDataForDigestItem(&digestItem)
-	if err != nil {
-		return nil, err
-	}
-
-	var messages []BasicOutboundChannelMessage
-
-	err = types.DecodeFromBytes(data, &messages)
-	if err != nil {
-		log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, err
-	}
-
-	return messages, nil
-}
-
-func (co *Connection) ReadIncentivizedOutboundMessages(digestItem AuxiliaryDigestItem) (
-	IncentivizedOutboundChannelMessages, error) {
-	data, err := co.GetDataForDigestItem(&digestItem)
-	if err != nil {
-		return nil, err
-	}
-
-	var messages []IncentivizedOutboundChannelMessage
-
-	err = types.DecodeFromBytes(data, &messages)
-	if err != nil {
-		log.WithError(err).Error("Failed to decode commitment messages")
-		return nil, err
-	}
-
-	return messages, nil
 }

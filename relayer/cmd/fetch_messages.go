@@ -17,7 +17,7 @@ import (
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
@@ -94,18 +94,17 @@ func getEthContractEventsAndTrie(
 	}
 	defer conn.Close()
 
-
 	var address common.Address
 
 	address = common.HexToAddress(viper.GetString("bo-channel"))
-	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, conn.GetClient())
+	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, conn.Client())
 	if err != nil {
 		return nil, nil, err
 	}
 	mapping[address] = "BasicInboundChannel.submit"
 
 	address = common.HexToAddress(viper.GetString("io-channel"))
-	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, conn.GetClient())
+	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, conn.Client())
 	if err != nil {
 		return nil, nil, err
 	}

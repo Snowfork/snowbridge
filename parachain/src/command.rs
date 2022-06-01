@@ -1,51 +1,159 @@
-use crate::{
-	cli::{Cli, RelayChainCli, Subcommand},
-	service,
-};
+use crate::cli::{Cli, RelayChainCli, Subcommand};
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use log::info;
+use frame_benchmarking_cli::BenchmarkCmd;
+
 
 use crate::chain_spec::Extensions;
 
-#[cfg(feature = "with-snowbridge-runtime")]
-use crate::chain_spec::snowbridge::{get_chain_spec, ChainSpec};
-#[cfg(feature = "with-snowbridge-runtime")]
-use snowbridge_runtime::opaque::Block;
+#[cfg(feature = "snowbridge-native")]
+use crate::chain_spec::snowbridge::{
+	get_chain_spec as get_snowbridge_chain_spec, ChainSpec as SnowbridgeChainSpec,
+};
 
-#[cfg(feature = "with-rococo-runtime")]
-use crate::chain_spec::rococo::{get_chain_spec, ChainSpec};
-#[cfg(feature = "with-rococo-runtime")]
-use rococo_runtime::opaque::Block;
+#[cfg(feature = "snowblink-native")]
+use crate::chain_spec::snowblink::{
+	get_chain_spec as get_snowblink_chain_spec, ChainSpec as SnowblinkChainSpec,
+};
 
-#[cfg(feature = "with-local-runtime")]
-use crate::chain_spec::local::{get_chain_spec, ChainSpec};
-#[cfg(feature = "with-local-runtime")]
-use local_runtime::opaque::Block;
+#[cfg(feature = "snowbase-native")]
+use crate::chain_spec::snowbase::{
+	get_chain_spec as get_snowbase_chain_spec, ChainSpec as SnowbaseChainSpec,
+};
+
+use snowbridge_runtime_primitives::Block;
 
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
-	CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams,
-	Result, RuntimeVersion, SharedParams, SubstrateCli,
+	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
+	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
 };
-use sc_service::{
-	config::{BasePath, PrometheusConfig},
-	PartialComponents,
-};
+use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Block as BlockT;
 use std::{io::Write, net::SocketAddr};
 
-const DEFAULT_PARA_ID: u32 = 1000;
+pub type DummyChainSpec = sc_service::GenericChainSpec<(), Extensions>;
+
+trait IdentifyVariant {
+	fn is_snowbridge(&self) -> bool;
+	fn is_snowblink(&self) -> bool;
+	fn is_snowbase(&self) -> bool;
+}
+
+impl IdentifyVariant for dyn sc_service::ChainSpec {
+	fn is_snowbridge(&self) -> bool {
+		self.id().starts_with("snowbridge")
+	}
+	fn is_snowblink(&self) -> bool {
+		self.id().starts_with("snowblink")
+	}
+	fn is_snowbase(&self) -> bool {
+		self.id().starts_with("snowbase")
+	}
+}
+
+impl<T: sc_service::ChainSpec + 'static> IdentifyVariant for T {
+	fn is_snowbridge(&self) -> bool {
+		<dyn sc_service::ChainSpec>::is_snowbridge(self)
+	}
+	fn is_snowblink(&self) -> bool {
+		<dyn sc_service::ChainSpec>::is_snowblink(self)
+	}
+	fn is_snowbase(&self) -> bool {
+		<dyn sc_service::ChainSpec>::is_snowbase(self)
+	}
+}
+
+macro_rules! construct_async_run {
+	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
+		let runner = $cli.create_runner($cmd)?;
+
+		#[cfg(feature = "snowbridge-native")]
+		if runner.config().chain_spec.is_snowbridge() {
+			return runner.async_run(|$config| {
+				let $components = crate::service::new_partial::<snowbridge_runtime::RuntimeApi, crate::service::SnowbridgeRuntimeExecutor>(
+					&$config,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		}
+
+		#[cfg(feature = "snowblink-native")]
+		if runner.config().chain_spec.is_snowblink() {
+			return runner.async_run(|$config| {
+				let $components = crate::service::new_partial::<snowblink_runtime::RuntimeApi, crate::service::SnowblinkRuntimeExecutor>(
+					&$config,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		}
+
+		#[cfg(feature = "snowbase-native")]
+		if runner.config().chain_spec.is_snowbase() {
+			return runner.async_run(|$config| {
+				let $components = crate::service::new_partial::<snowbase_runtime::RuntimeApi, crate::service::SnowbaseRuntimeExecutor>(
+					&$config,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		}
+
+		Err(format!("Unknown runtime: {}", runner.config().chain_spec.id()).into())
+	}}
+}
 
 fn load_spec(
 	id: &str,
-	para_id: ParaId,
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	match id {
-		"" => Ok(Box::new(get_chain_spec(para_id))),
-		path => Ok(Box::new(ChainSpec::from_json_file(path.into())?)),
+		#[cfg(feature = "snowbase-native")]
+		"snowbase" => Ok(Box::new(get_snowbase_chain_spec())),
+		#[cfg(feature = "snowblink-native")]
+		"snowblink" => Ok(Box::new(get_snowblink_chain_spec())),
+		#[cfg(feature = "snowbridge-native")]
+		"snowbridge" => Ok(Box::new(get_snowbridge_chain_spec())),
+		path => {
+			let path = std::path::PathBuf::from(path);
+
+			let chain_spec = DummyChainSpec::from_json_file(path.clone())?;
+			if chain_spec.is_snowbridge() {
+				#[cfg(feature = "snowbridge-native")]
+				{
+					Ok(Box::new(SnowbridgeChainSpec::from_json_file(path.into())?))
+				}
+				#[cfg(not(feature = "snowbridge-native"))]
+				Err(format!(
+					"`{}` only supported with `snowbridge-native` feature enabled.",
+					chain_spec.id()
+				))
+			} else if chain_spec.is_snowblink() {
+				#[cfg(feature = "snowblink-native")]
+				{
+					Ok(Box::new(SnowblinkChainSpec::from_json_file(path.into())?))
+				}
+				#[cfg(not(feature = "snowblink-native"))]
+				Err(format!(
+					"`{}` only supported with `snowblink-native` feature enabled.",
+					chain_spec.id()
+				))
+			} else {
+				#[cfg(feature = "snowbase-native")]
+				{
+					Ok(Box::new(SnowbaseChainSpec::from_json_file(path.into())?))
+				}
+				#[cfg(not(feature = "snowbase-native"))]
+				Err(format!(
+					"`{}` only supported with `snowbase-native` feature enabled.",
+					chain_spec.id()
+				))
+			}
+		},
 	}
 }
 
@@ -81,22 +189,28 @@ impl SubstrateCli for Cli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		load_spec(id, self.run.parachain_id.unwrap_or(DEFAULT_PARA_ID).into())
+		load_spec(id)
 	}
 
-	#[cfg(feature = "with-snowbridge-runtime")]
-	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
-		&snowbridge_runtime::VERSION
-	}
-
-	#[cfg(feature = "with-rococo-runtime")]
-	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
-		&rococo_runtime::VERSION
-	}
-
-	#[cfg(feature = "with-local-runtime")]
-	fn native_runtime_version(_: &Box<dyn sc_cli::ChainSpec>) -> &'static RuntimeVersion {
-		&local_runtime::VERSION
+	fn native_runtime_version(
+		chain_spec: &Box<dyn sc_service::ChainSpec>,
+	) -> &'static RuntimeVersion {
+		if chain_spec.is_snowbridge() {
+			#[cfg(not(feature = "snowbridge-native"))]
+			panic!("`snowbridge-native` feature is not enabled");
+			#[cfg(feature = "snowbridge-native")]
+			return &snowbridge_runtime::VERSION
+		} else if chain_spec.is_snowblink() {
+			#[cfg(not(feature = "snowblink-native"))]
+			panic!("`snowblink-native` feature is not enabled");
+			#[cfg(feature = "snowblink-native")]
+			return &snowblink_runtime::VERSION
+		} else {
+			#[cfg(not(feature = "snowbase-native"))]
+			panic!("`snowbase-native` feature is not enabled");
+			#[cfg(feature = "snowbase-native")]
+			return &snowbase_runtime::VERSION
+		}
 	}
 }
 
@@ -110,7 +224,7 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn description() -> String {
-		"Cumulus test parachain collator\n\nThe command-line arguments provided first will be \
+		"Parachain collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relaychain node.\n\n\
 		snowbridge-collator [parachain-args] -- [relaychain-args]"
@@ -158,35 +272,23 @@ pub fn run() -> Result<()> {
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
 		},
 		Some(Subcommand::CheckBlock(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, import_queue, .. } =
-					crate::service::new_partial(&config, crate::service::build_import_queue)?;
-				Ok((cmd.run(client, import_queue), task_manager))
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.import_queue))
 			})
 		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, .. } =
-					crate::service::new_partial(&config, crate::service::build_import_queue)?;
-				Ok((cmd.run(client, config.database), task_manager))
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, config.database))
 			})
 		},
 		Some(Subcommand::ExportState(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, .. } =
-					crate::service::new_partial(&config, crate::service::build_import_queue)?;
-				Ok((cmd.run(client, config.chain_spec), task_manager))
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, config.chain_spec))
 			})
 		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, import_queue, .. } =
-					crate::service::new_partial(&config, crate::service::build_import_queue)?;
-				Ok((cmd.run(client, import_queue), task_manager))
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.import_queue))
 			})
 		},
 		Some(Subcommand::PurgeChain(cmd)) => {
@@ -195,9 +297,7 @@ pub fn run() -> Result<()> {
 			runner.sync_run(|config| {
 				let polkadot_cli = RelayChainCli::new(
 					&config,
-					[RelayChainCli::executable_name().to_string()]
-						.iter()
-						.chain(cli.relaychain_args.iter()),
+					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
 				);
 
 				let polkadot_config = SubstrateCli::create_configuration(
@@ -211,11 +311,8 @@ pub fn run() -> Result<()> {
 			})
 		},
 		Some(Subcommand::Revert(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, backend, .. } =
-					crate::service::new_partial(&config, crate::service::build_import_queue)?;
-				Ok((cmd.run(client, backend), task_manager))
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.backend, None))
 			})
 		},
 		Some(Subcommand::ExportGenesisState(params)) => {
@@ -223,10 +320,9 @@ pub fn run() -> Result<()> {
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
 
-			let block: Block = generate_genesis_block(&load_spec(
-				&params.chain.clone().unwrap_or_default(),
-				params.parachain_id.into(),
-			)?)?;
+			let spec = load_spec(&params.chain.clone().unwrap_or_default())?;
+			let state_version = Cli::native_runtime_version(&spec).state_version();
+			let block: Block = generate_genesis_block(&spec, state_version)?;
 			let raw_header = block.header().encode();
 			let output_buf = if params.raw {
 				raw_header
@@ -263,36 +359,130 @@ pub fn run() -> Result<()> {
 
 			Ok(())
 		},
-		Some(Subcommand::Benchmark(cmd)) =>
-			if cfg!(feature = "runtime-benchmarks") {
-				let runner = cli.create_runner(cmd)?;
+		Some(Subcommand::Benchmark(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			// Switch on the concrete benchmark sub-command-
+			match cmd {
+				BenchmarkCmd::Pallet(cmd) =>
+					if cfg!(feature = "runtime-benchmarks") {
+						#[cfg(feature = "snowbridge-native")]
+						if runner.config().chain_spec.is_snowbridge() {
+							return runner.sync_run(|config| {
+								cmd.run::<Block, crate::service::SnowbridgeRuntimeExecutor>(config)
+							})
+						}
 
-				runner.sync_run(|config| cmd.run::<Block, service::ExecutorDispatch>(config))
-			} else {
-				Err("Benchmarking wasn't enabled when building the node. \
-				You can enable it with `--features runtime-benchmarks`."
-					.into())
-			},
+						#[cfg(feature = "snowblink-native")]
+						if runner.config().chain_spec.is_snowblink() {
+							return runner.sync_run(|config| {
+								cmd.run::<Block, crate::service::SnowblinkRuntimeExecutor>(config)
+							})
+						}
+
+						#[cfg(feature = "snowbase-native")]
+						if runner.config().chain_spec.is_snowbase() {
+							return runner.sync_run(|config| {
+								cmd.run::<Block, crate::service::SnowbaseRuntimeExecutor>(config)
+							})
+						}
+
+						Err("Chain runtime doesn't support benchmarking".into())
+					} else {
+						Err("Benchmarking wasn't enabled when building the node. \
+					You can enable it with `--features runtime-benchmarks`."
+							.into())
+					},
+				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
+					#[cfg(feature = "snowbridge-native")]
+					if config.chain_spec.is_snowbridge() {
+						let partials = crate::service::new_partial::<snowbridge_runtime::RuntimeApi, crate::service::SnowbridgeRuntimeExecutor>(
+							&config,
+						)?;
+						return cmd.run(partials.client)
+					}
+
+					#[cfg(feature = "snowblink-native")]
+					if config.chain_spec.is_snowblink() {
+						let partials = crate::service::new_partial::<snowblink_runtime::RuntimeApi, crate::service::SnowblinkRuntimeExecutor>(
+							&config,
+						)?;
+						return cmd.run(partials.client)
+					}
+
+					#[cfg(feature = "snowbase-native")]
+					if config.chain_spec.is_snowbase() {
+						let partials = crate::service::new_partial::<snowbase_runtime::RuntimeApi, crate::service::SnowbaseRuntimeExecutor>(
+							&config,
+						)?;
+						return cmd.run(partials.client)
+					}
+
+					Err("Chain runtime doesn't support benchmarking".into())
+				}),
+				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
+					#[cfg(feature = "snowbridge-native")]
+					if config.chain_spec.is_snowbridge() {
+						let partials = crate::service::new_partial::<snowbridge_runtime::RuntimeApi, crate::service::SnowbridgeRuntimeExecutor>(
+							&config,
+						)?;
+						let db = partials.backend.expose_db();
+						let storage = partials.backend.expose_storage();
+
+						return cmd.run(config, partials.client.clone(), db, storage)
+					}
+
+					#[cfg(feature = "snowblink-native")]
+					if config.chain_spec.is_snowblink() {
+						let partials = crate::service::new_partial::<snowblink_runtime::RuntimeApi, crate::service::SnowblinkRuntimeExecutor>(
+							&config,
+						)?;
+						let db = partials.backend.expose_db();
+						let storage = partials.backend.expose_storage();
+
+						return cmd.run(config, partials.client.clone(), db, storage)
+					}
+
+					#[cfg(feature = "snowbase-native")]
+					if config.chain_spec.is_snowbase() {
+						let partials = crate::service::new_partial::<snowbase_runtime::RuntimeApi, crate::service::SnowbaseRuntimeExecutor>(
+							&config,
+						)?;
+						let db = partials.backend.expose_db();
+						let storage = partials.backend.expose_storage();
+
+						return cmd.run(config, partials.client.clone(), db, storage)
+					}
+
+					Err("Chain runtime doesn't support benchmarking".into())
+				}),
+				BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
+			}
+		},
 		None => {
-			let runner = cli.create_runner(&*cli.run)?;
+			let runner = cli.create_runner(&cli.run.normalize())?;
+			let collator_options = cli.run.collator_options();
 
 			runner.run_node_until_exit(|config| async move {
-				let para_id = Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
+				let para_id = crate::chain_spec::Extensions::try_get(&*config.chain_spec)
+					.map(|e| e.para_id)
+					.ok_or_else(|| "Could not find parachain ID in chain-spec.")?;
 
 				let polkadot_cli = RelayChainCli::new(
 					&config,
 					[RelayChainCli::executable_name().to_string()]
 						.iter()
-						.chain(cli.relaychain_args.iter()),
+						.chain(cli.relay_chain_args.iter()),
 				);
 
-				let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(100));
+				let id = ParaId::from(para_id);
 
 				let parachain_account =
-					AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
+					AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account(&id);
 
-				let block: Block =
-					generate_genesis_block(&config.chain_spec).map_err(|e| format!("{:?}", e))?;
+				let state_version =
+					RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
+				let block: Block = generate_genesis_block(&config.chain_spec, state_version)
+					.map_err(|e| format!("{:?}", e))?;
 				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
 				let tokio_handle = config.tokio_handle.clone();
@@ -305,10 +495,40 @@ pub fn run() -> Result<()> {
 				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
-				crate::service::start_parachain_node(config, polkadot_config, id)
+				#[cfg(feature = "snowbridge-native")]
+				if config.chain_spec.is_snowbridge() {
+					return crate::service::start_parachain_node::<
+						snowbridge_runtime::RuntimeApi,
+						crate::service::SnowbridgeRuntimeExecutor,
+					>(config, polkadot_config, collator_options, id)
 					.await
 					.map(|r| r.0)
 					.map_err(Into::into)
+				}
+
+				#[cfg(feature = "snowblink-native")]
+				if config.chain_spec.is_snowblink() {
+					return crate::service::start_parachain_node::<
+						snowblink_runtime::RuntimeApi,
+						crate::service::SnowblinkRuntimeExecutor,
+					>(config, polkadot_config, collator_options, id)
+					.await
+					.map(|r| r.0)
+					.map_err(Into::into)
+				}
+
+				#[cfg(feature = "snowbase-native")]
+				if config.chain_spec.is_snowbase() {
+					return crate::service::start_parachain_node::<
+						snowbase_runtime::RuntimeApi,
+						crate::service::SnowbaseRuntimeExecutor,
+					>(config, polkadot_config, collator_options, id)
+					.await
+					.map(|r| r.0)
+					.map_err(Into::into)
+				}
+
+				Err("unknown runtime".into())
 			})
 		},
 	}
@@ -368,11 +588,24 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.rpc_ws(default_listen_port)
 	}
 
-	fn prometheus_config(&self, default_listen_port: u16) -> Result<Option<PrometheusConfig>> {
-		self.base.base.prometheus_config(default_listen_port)
+	fn prometheus_config(
+		&self,
+		default_listen_port: u16,
+		chain_spec: &Box<dyn ChainSpec>,
+	) -> Result<Option<PrometheusConfig>> {
+		self.base.base.prometheus_config(default_listen_port, chain_spec)
 	}
 
-	fn init<C: SubstrateCli>(&self) -> Result<()> {
+	fn init<F>(
+		&self,
+		_support_url: &String,
+		_impl_version: &String,
+		_logger_hook: F,
+		_config: &sc_service::Configuration,
+	) -> Result<()>
+	where
+		F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
+	{
 		unreachable!("PolkadotCli is never initialized; qed");
 	}
 
@@ -431,5 +664,9 @@ impl CliConfiguration<Self> for RelayChainCli {
 		chain_spec: &Box<dyn sc_cli::ChainSpec>,
 	) -> Result<Option<sc_telemetry::TelemetryEndpoints>> {
 		self.base.base.telemetry_endpoints(chain_spec)
+	}
+
+	fn node_name(&self) -> Result<String> {
+		self.base.base.node_name()
 	}
 }

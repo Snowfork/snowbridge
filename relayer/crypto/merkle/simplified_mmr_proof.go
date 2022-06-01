@@ -2,13 +2,15 @@ package merkle
 
 import (
 	"fmt"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
 	"math/bits"
+
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 )
 
 type SimplifiedMMRProof struct {
-	MerkleProofItems   []types.H256
-	MerkleProofOrder   uint64
+	MerkleProofItems []types.H256
+	MerkleProofOrder uint64
 	// Below fields are not part of proof directly, but they are included so that
 	// we do not lose any information when converting from RPC response
 	Blockhash types.H256
@@ -130,7 +132,7 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 		var isSiblingLeft bool
 		var siblingElem QueueElem
 		if nextHeight > lastElem.Height {
-			proofOrder = proofOrder | 1 << currentBitFieldPosition
+			proofOrder = proofOrder | 1<<currentBitFieldPosition
 			isSiblingLeft = true
 			siblingElem = QueueElem{
 				Height:   lastElem.Height,
@@ -163,7 +165,6 @@ func calculateMerkleProofOrder(leavePos uint64, proofItems []types.H256) (error,
 
 	return fmt.Errorf("corrupted proof"), proofOrder
 }
-
 
 func ConvertToSimplifiedMMRProof(blockhash types.H256, leafIndex uint64, leaf types.MMRLeaf, leafCount uint64, proofItems []types.H256) (SimplifiedMMRProof, error) {
 	leafPos := leafIndexToPosition(leafIndex)
@@ -214,19 +215,40 @@ func ConvertToSimplifiedMMRProof(blockhash types.H256, leafIndex uint64, leaf ty
 	currentProofOrderIndex := len(merkleProof) - 1
 	if optionalRightBaggedPeak != [32]byte{} {
 		currentProofOrderIndex += 1
-		proofOrder = proofOrder | 1 << currentProofOrderIndex
+		proofOrder = proofOrder | 1<<currentProofOrderIndex
 		merkleProof = append(merkleProof, optionalRightBaggedPeak)
 	}
 	for i := 0; i < len(readyMadePeakHashes); i++ {
 		currentProofOrderIndex += 1
-		merkleProof = append(merkleProof, readyMadePeakHashes[len(readyMadePeakHashes) - i - 1])
+		merkleProof = append(merkleProof, readyMadePeakHashes[len(readyMadePeakHashes)-i-1])
 	}
 
 	return SimplifiedMMRProof{
 		MerkleProofOrder: proofOrder,
 		MerkleProofItems: merkleProof,
-		Leaf: leaf,
-		Blockhash: blockhash,
+		Leaf:             leaf,
+		Blockhash:        blockhash,
 	}, nil
 }
 
+// used to verify correctness of generated proofs
+func CalculateMerkleRoot(proof *SimplifiedMMRProof, leafHash types.H256) types.H256 {
+	currentHash := leafHash[:]
+
+	for i := 0; i < int(len(proof.MerkleProofItems)); i++ {
+		isSiblingLeft := (proof.MerkleProofOrder >> i) & 1 == 1
+		sibling := proof.MerkleProofItems[i]
+
+		var buf []byte
+		if isSiblingLeft {
+			buf = append(buf, sibling[:]...)
+			buf = append(buf, currentHash...)
+		} else {
+			buf = append(buf, currentHash...)
+			buf = append(buf, sibling[:]...)
+		}
+		currentHash = (&keccak.Keccak256{}).Hash(buf)
+	}
+
+	return types.NewH256(currentHash)
+}

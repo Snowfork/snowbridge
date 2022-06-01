@@ -59,13 +59,13 @@ impl DifficultyConfig {
 
 	pub fn bomb_delay(&self, block_number: u64) -> Option<BombDelay> {
 		if block_number >= self.london_fork_block {
-			return Some(BombDelay::London)
+			return Some(BombDelay::London);
 		} else if block_number >= self.muir_glacier_fork_block {
-			return Some(BombDelay::MuirGlacier)
+			return Some(BombDelay::MuirGlacier);
 		} else if block_number >= self.constantinople_fork_block {
-			return Some(BombDelay::Constantinople)
+			return Some(BombDelay::Constantinople);
 		} else if block_number >= self.byzantium_fork_block {
-			return Some(BombDelay::Byzantium)
+			return Some(BombDelay::Byzantium);
 		}
 		None
 	}
@@ -108,7 +108,7 @@ pub fn calc_difficulty(
 
 	// If period_count < 2, exp is fractional and we can skip adding it
 	if period_count >= 2 {
-		return Ok(difficulty_without_exp + U256::from(2).pow((period_count - 2).into()))
+		return Ok(difficulty_without_exp + U256::from(2).pow((period_count - 2).into()));
 	}
 
 	Ok(difficulty_without_exp)
@@ -149,7 +149,7 @@ mod tests {
 					Err(e) => Err(serde::de::Error::custom(e)),
 					Ok(uint) => uint.try_into().map_err(serde::de::Error::custom),
 				}
-			},
+			}
 			StringOrInt::Number(i) => Ok(i),
 		}
 	}

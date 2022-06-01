@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 import {HardhatRuntimeEnvironment} from "hardhat/types";
 
 module.exports = async ({

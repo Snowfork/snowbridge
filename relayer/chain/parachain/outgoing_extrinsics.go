@@ -9,15 +9,16 @@ import (
 	"math/big"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
-const MaxWatchedExtrinsics = 30
+
+const MaxWatchedExtrinsics = 10
 
 type ExtrinsicPool struct {
-	conn     *Connection
-	eg       *errgroup.Group
+	conn *Connection
+	eg   *errgroup.Group
 	sem  *semaphore.Weighted
 }
 
@@ -25,9 +26,9 @@ type OnFinalized func(types.Hash) error
 
 func NewExtrinsicPool(eg *errgroup.Group, conn *Connection) *ExtrinsicPool {
 	ep := ExtrinsicPool{
-		conn:    conn,
-		eg:      eg,
-		sem: semaphore.NewWeighted(MaxWatchedExtrinsics),
+		conn: conn,
+		eg:   eg,
+		sem:  semaphore.NewWeighted(MaxWatchedExtrinsics),
 	}
 	return &ep
 }
@@ -70,13 +71,13 @@ func (ep *ExtrinsicPool) WaitForSubmitAndWatch(
 				} else if status.IsFinalized {
 					sub.Unsubscribe()
 					log.WithFields(log.Fields{
-						"nonce":  nonce(ext),
+						"nonce": nonce(ext),
 					}).Debug("Extrinsic included in finalized block")
 					return onFinalized(status.AsFinalized)
 				} else if status.IsFinalityTimeout {
 					sub.Unsubscribe()
 					log.WithFields(log.Fields{
-						"nonce":  nonce(ext),
+						"nonce": nonce(ext),
 					}).Error("Extrinsic finality timeout")
 					return fmt.Errorf("extrinsic removed from the transaction pool")
 				}
@@ -93,7 +94,7 @@ func nonce(ext *types.Extrinsic) uint64 {
 }
 
 func reason(status *types.ExtrinsicStatus) string {
-	switch  {
+	switch {
 	case status.IsInBlock:
 		return "InBlock"
 	case status.IsDropped:

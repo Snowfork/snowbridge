@@ -19,17 +19,17 @@ import (
 )
 
 var (
-	configFile string
-	privateKey string
+	configFile     string
+	privateKey     string
 	privateKeyFile string
 )
 
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "parachain",
-		Short:   "Start the parachain relay",
-		Args:    cobra.ExactArgs(0),
-		RunE:    run,
+		Use:   "parachain",
+		Short: "Start the parachain relay",
+		Args:  cobra.ExactArgs(0),
+		RunE:  run,
 	}
 
 	cmd.Flags().StringVar(&configFile, "config", "", "Path to configuration file")

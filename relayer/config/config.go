@@ -1,7 +1,7 @@
 package config
 
 type PolkadotConfig struct {
-	Endpoint           string `mapstructure:"endpoint"`
+	Endpoint string `mapstructure:"endpoint"`
 }
 
 type ParachainConfig struct {

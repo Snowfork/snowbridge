@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 var HDWalletProvider = require("@truffle/hdwallet-provider");
 
 module.exports = {
@@ -11,7 +9,7 @@ module.exports = {
       network_id: "*"
     },
     // Integration tests
-    e2e_test: {
+    localhost: {
       host: "127.0.0.1",
       port: 8545,
       network_id: "15"
@@ -31,9 +29,9 @@ module.exports = {
   },
   compilers: {
     solc: {
-      version: "0.8.6",
+      version: "0.8.9",
       optimizer: {
-        enabled: true,
+        enabled: false,
         runs: 200
       }
     }

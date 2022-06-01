@@ -5,75 +5,94 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Decode;
-use sp_core::U256;
-use sp_std::{marker::PhantomData, prelude::*, result};
+use frame_support::{ensure, log};
+use frame_system::pallet_prelude::OriginFor;
+use sp_runtime::DispatchError;
+use sp_std::{marker::PhantomData, prelude::*};
 
 use xcm::latest::prelude::*;
-use xcm_executor::traits::{Convert, TransactAsset};
+use xcm_executor::traits::WeightBounds;
 
-use snowbridge_core::assets::{AssetId as SnowbridgeAssetId, MultiAsset as SnowbridgeMultiAsset};
+use snowbridge_core::assets::{RemoteParachain, XcmReserveTransfer};
 
-pub struct AssetsTransactor<Assets, AccountIdConverter, AccountId>(
-	PhantomData<(Assets, AccountIdConverter, AccountId)>,
-);
+pub struct XcmAssetTransferer<T>(PhantomData<T>);
 
-impl<
-		Assets: SnowbridgeMultiAsset<AccountId>,
-		AccountIdConverter: Convert<MultiLocation, AccountId>,
-		AccountId: Clone,
-	> AssetsTransactor<Assets, AccountIdConverter, AccountId>
+impl<T> XcmReserveTransfer<T::AccountId, OriginFor<T>> for XcmAssetTransferer<T>
+where
+	T: pallet_xcm::Config,
+	T::AccountId: AsRef<[u8; 32]>,
 {
-	fn match_assets(a: &MultiAsset) -> result::Result<(SnowbridgeAssetId, U256), XcmError> {
-		let (id, amount) = if let MultiAsset { id, fun: Fungible(amount) } = a {
-			(id, amount)
-		} else {
-			return Err(XcmError::AssetNotFound)
+	fn reserve_transfer(
+		asset_id: u128,
+		recipient: &T::AccountId,
+		amount: u128,
+		destination: RemoteParachain,
+	) -> frame_support::dispatch::DispatchResult {
+		ensure!(
+			destination.fee > 0u128,
+			DispatchError::Other("Fee must be greater than 0 when parachain id is specified.")
+		);
+
+		let origin_location: MultiLocation = MultiLocation {
+			parents: 0,
+			interior: Junctions::X1(Junction::AccountId32 {
+				network: NetworkId::Any,
+				id: recipient.as_ref().clone(),
+			}),
 		};
 
-		let key = if let Concrete(location) = id {
-			if let Some(GeneralKey(key)) = location.last() {
-				key
-			} else {
-				return Err(XcmError::AssetNotFound)
-			}
-		} else {
-			return Err(XcmError::AssetNotFound)
-		};
+		let mut message = Xcm(vec![
+			WithdrawAsset(
+				vec![
+					MultiAsset {
+						id: Concrete(MultiLocation { parents: 1, interior: Junctions::Here }),
+						fun: Fungible(destination.fee),
+					},
+					MultiAsset {
+						id: AssetId::Concrete(MultiLocation {
+							parents: 0,
+							interior: Junctions::X1(Junction::GeneralIndex(asset_id)),
+						}),
+						fun: Fungibility::Fungible(amount),
+					},
+				]
+				.into(),
+			),
+			DepositReserveAsset {
+				assets: MultiAssetFilter::Wild(All),
+				dest: MultiLocation {
+					parents: 1,
+					interior: Junctions::X1(Junction::Parachain(destination.para_id)),
+				},
+				xcm: Xcm(vec![
+					BuyExecution {
+						fees: MultiAsset {
+							id: Concrete(MultiLocation { parents: 1, interior: Junctions::Here }),
+							fun: Fungible(destination.fee),
+						},
+						weight_limit: Unlimited,
+					},
+					DepositAsset {
+						assets: Wild(All),
+						max_assets: 2,
+						beneficiary: origin_location.clone(),
+					},
+				]),
+				max_assets: 2,
+			},
+		]);
 
-		let asset_id: SnowbridgeAssetId = SnowbridgeAssetId::decode(&mut key.as_ref())
-			.map_err(|_| XcmError::FailedToTransactAsset("AssetIdConversionFailed"))?;
+		let weight = T::Weigher::weight(&mut message)
+			.map_err(|_| DispatchError::Other("Unweighable message."))?;
 
-		let value: U256 = (*amount).into();
+		T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
+			.ensure_complete()
+			.map_err(|err| {
+				let message = "Xcm execution failed.";
+				log::error!("{} Reason: {:?}", message, err);
+				DispatchError::Other(message)
+			})?;
 
-		Ok((asset_id, value))
-	}
-}
-
-impl<
-		Assets: SnowbridgeMultiAsset<AccountId>,
-		AccountIdConverter: Convert<MultiLocation, AccountId>,
-		AccountId: Clone,
-	> TransactAsset for AssetsTransactor<Assets, AccountIdConverter, AccountId>
-{
-	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
-		let (asset_id, amount) = Self::match_assets(asset)?;
-		let who = AccountIdConverter::convert_ref(location)
-			.map_err(|()| XcmError::FailedToTransactAsset("AccountIdConversionFailed"))?;
-		Assets::deposit(asset_id, &who, amount)
-			.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
-		return Ok(())
-	}
-
-	fn withdraw_asset(
-		asset: &MultiAsset,
-		location: &MultiLocation,
-	) -> Result<xcm_executor::Assets, XcmError> {
-		let (asset_id, amount) = Self::match_assets(asset)?;
-		let who = AccountIdConverter::convert_ref(location)
-			.map_err(|()| XcmError::FailedToTransactAsset("AccountIdConversionFailed"))?;
-		Assets::withdraw(asset_id, &who, amount)
-			.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
-		Ok(asset.clone().into())
+		Ok(())
 	}
 }

@@ -1,5 +1,4 @@
 let { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
-let { bundle } = require("@snowfork/snowbridge-types");
 const { default: BigNumber } = require('bignumber.js');
 
 class SubClient {
@@ -14,25 +13,30 @@ class SubClient {
     const provider = new WsProvider(this.endpoint);
     this.api = await ApiPromise.create({
       provider,
-      typesBundle: bundle,
     })
 
     this.keyring = new Keyring({ type: 'sr25519' });
     this.alice = this.keyring.addFromUri('//Alice', { name: 'Alice' });
   }
 
-  async queryAssetBalance(accountId, assetId) {
-    let balance = await this.api.query.assets.balances(assetId, accountId);
-    return BigNumber(balance.toBigInt())
+  async queryAssetsAccountBalance(assetId, accountId) {
+    let account = await this.api.query.assets.account(assetId, accountId);
+    if(account.isNone) return BigNumber(0);
+    return BigNumber(account.value.balance.toBigInt())
   }
 
-  async subscribeAssetBalances(accountId, assetId, length) {
+  async subscribeAssetsAccountBalances(assetId, accountId, length) {
     const [promises, resolvers] = createPromiseResolverMap(length)
 
     // Setup our balance subscription and resolve each promise one by one
     let count = 0;
-    const unsubscribe = await this.api.query.assets.balances(assetId, accountId, newBalance => {
-      resolvers[count](BigNumber(newBalance.toBigInt()));
+    const unsubscribe = await this.api.query.assets.account(assetId, accountId, (account) => {
+      if(account.isNone) {
+        resolvers[count](BigNumber(0));
+      } 
+      else {
+        resolvers[count](BigNumber(account.value.balance.toBigInt()));
+      }
       count++;
       if (count === length) {
         unsubscribe();
@@ -72,49 +76,6 @@ class SubClient {
     return promises;
   }
 
-
-  async queryNFTTokenIdByERC721Id(ethTokenContract, ethTokenId) {
-    let subTokenId = await this.api.query.erc721App.tokensByERC721Id([ethTokenContract, ethTokenId]);
-    return subTokenId
-  }
-
-  async subscribeNFTTokenIdByERC721Id(ethTokenContract, ethTokenId, length) {
-    const [promises, resolvers] = createPromiseResolverMap(length)
-
-    // Setup our subscription and resolve each promise one by one
-    let count = 0;
-    const unsubscribe = await this.api.query.erc721App.tokensByERC721Id([ethTokenContract, ethTokenId], newSubTokenId => {
-      resolvers[count](newSubTokenId);
-      count++;
-      if (count === length) {
-        unsubscribe();
-      }
-    });
-
-    return promises;
-  }
-
-  async queryNFT(subTokenId) {
-    let token = await this.api.query.nft.tokens(subTokenId);
-    return token
-  }
-
-  async subscribeNFT(subTokenId, length) {
-    const [promises, resolvers] = createPromiseResolverMap(length)
-
-    // Setup our subscription and resolve each promise one by one
-    let count = 0;
-    const unsubscribe = await this.api.query.nft.tokens(subTokenId, newToken => {
-      resolvers[count](newToken);
-      count++;
-      if (count === length) {
-        unsubscribe();
-      }
-    });
-
-    return promises;
-  }
-
   async waitForNextEvent({ eventSection, eventMethod, eventDataType }) {
     let foundData = new Promise(async (resolve, reject) => {
       const unsubscribe = await this.api.query.system.events((events) => {
@@ -145,10 +106,6 @@ class SubClient {
 
   async burnERC20(account, assetId, recipient, amount, channelId) {
     return await this.api.tx.erc20App.burn(channelId, assetId, recipient, amount).signAndSend(account);
-  }
-
-  async burnERC721(account, subTokenId, recipient, channelId) {
-    return await this.api.tx.erc721App.burn(channelId, subTokenId, recipient).signAndSend(account);
   }
 
   async lockDOT(account, recipient, amount, channelId) {

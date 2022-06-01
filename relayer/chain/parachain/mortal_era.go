@@ -6,7 +6,7 @@ package parachain
 import (
 	"math"
 
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 )
 
 // Must be a power of two between 4 and 65536 (inclusive)

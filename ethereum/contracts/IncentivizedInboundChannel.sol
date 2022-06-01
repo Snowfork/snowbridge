@@ -1,108 +1,81 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.5;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./ParachainLightClient.sol";
-import "./RewardSource.sol";
-import "./SimplifiedMMRVerification.sol";
+import "./ParachainClient.sol";
+import "./RewardController.sol";
 
 contract IncentivizedInboundChannel is AccessControl {
+    uint8 public immutable sourceChannelID;
     uint64 public nonce;
 
-    struct Message {
-        address target;
+    struct MessageBundle {
+        uint8 sourceChannelID;
         uint64 nonce;
-        uint256 fee;
+        uint128 fee;
+        Message[] messages;
+    }
+
+    struct Message {
+        uint64 id;
+        address target;
         bytes payload;
     }
 
-    event MessageDispatched(uint64 nonce, bool result);
+    event MessageDispatched(uint64 id, bool result);
 
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
     uint256 public constant GAS_BUFFER = 60000;
 
     // Governance contracts will administer using this role.
-    bytes32 public constant CONFIG_UPDATE_ROLE =
-        keccak256("CONFIG_UPDATE_ROLE");
+    bytes32 public constant CONFIG_UPDATE_ROLE = keccak256("CONFIG_UPDATE_ROLE");
 
-    RewardSource private rewardSource;
+    RewardController private rewardController;
 
-    BeefyLightClient public beefyLightClient;
+    ParachainClient public parachainClient;
 
-    constructor(BeefyLightClient _beefyLightClient) {
+    constructor(uint8 _sourceChannelID, ParachainClient _parachainClient) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        beefyLightClient = _beefyLightClient;
         nonce = 0;
+        sourceChannelID = _sourceChannelID;
+        parachainClient = _parachainClient;
     }
 
     // Once-off post-construction call to set initial configuration.
-    function initialize(address _configUpdater, address _rewardSource)
+    function initialize(address _configUpdater, address _rewardController)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         // Set initial configuration
         grantRole(CONFIG_UPDATE_ROLE, _configUpdater);
-        rewardSource = RewardSource(_rewardSource);
+        rewardController = RewardController(_rewardController);
 
         // drop admin privileges
         renounceRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function submit(
-        Message[] calldata _messages,
-        ParachainLightClient.ParachainVerifyInput
-            calldata _parachainVerifyInput,
-        ParachainLightClient.BeefyMMRLeafPartial calldata _beefyMMRLeafPartial,
-        SimplifiedMMRProof calldata proof
-    ) public {
-        // Proof
-        // 1. Compute our parachain's message `commitment` by ABI encoding and hashing the `_messages`
-        bytes32 commitment = keccak256(abi.encode(_messages));
+    function submit(MessageBundle calldata bundle, bytes calldata proof) external {
+        bytes32 commitment = keccak256(abi.encode(bundle));
 
-        ParachainLightClient.verifyCommitmentInParachain(
-            commitment,
-            _parachainVerifyInput,
-            _beefyMMRLeafPartial,
-            proof,
-            beefyLightClient
-        );
-
-        // Require there is enough gas to play all messages
+        require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
+        require(bundle.sourceChannelID == sourceChannelID, "Invalid source channel");
+        require(bundle.nonce == nonce + 1, "Invalid nonce");
         require(
-            gasleft() >= (_messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
+            gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
-
-        processMessages(payable(msg.sender), _messages);
+        nonce++;
+        dispatch(bundle);
+        rewardController.handleReward(payable(msg.sender), bundle.fee);
     }
 
-    function processMessages(
-        address payable _relayer,
-        Message[] calldata _messages
-    ) internal {
-        uint256 _rewardAmount = 0;
-        // Caching nonce for gas optimization
-        uint64 cachedNonce = nonce;
-
-        for (uint256 i = 0; i < _messages.length; i++) {
-            // Check message nonce is correct and increment nonce for replay protection
-            require(_messages[i].nonce == cachedNonce + 1, "invalid nonce");
-            cachedNonce = cachedNonce + 1;
-
-            // Deliver the message to the target
-            // Delivery will have fixed maximum gas allowed for the target app
-            (bool success, ) = _messages[i].target.call{
-                value: 0,
-                gas: MAX_GAS_PER_MESSAGE
-            }(_messages[i].payload);
-
-            _rewardAmount = _rewardAmount + _messages[i].fee;
-            emit MessageDispatched(_messages[i].nonce, success);
+    function dispatch(MessageBundle calldata bundle) internal {
+        for (uint256 i = 0; i < bundle.messages.length; i++) {
+            Message calldata message = bundle.messages[i];
+            (bool success, ) = message.target.call{ value: 0, gas: MAX_GAS_PER_MESSAGE }(
+                message.payload
+            );
+            emit MessageDispatched(message.id, success);
         }
-
-        // reward the relayer
-        rewardSource.reward(_relayer, _rewardAmount);
-        nonce = cachedNonce;
     }
 }

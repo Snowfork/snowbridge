@@ -3,10 +3,10 @@ package parachain
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"sort"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
@@ -91,8 +91,7 @@ func CreateParachainMerkleProof(heads []relaychain.ParaHead, paraID uint32) (Mer
 
 	leaf, root, proof, err := merkle.GenerateMerkleProof(preLeaves, headerIndex)
 	if err != nil {
-		log.WithError(err).Error("Failed to create parachain header proof")
-		return MerkleProofData{}, err
+		return MerkleProofData{}, fmt.Errorf("create parachain merkle proof: %w", err)
 	}
 
 	return MerkleProofData{

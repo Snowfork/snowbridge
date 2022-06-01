@@ -1,0 +1,55 @@
+{
+    "@timestamp": "2022-05-27T17:37:23.948296332+02:00",
+    "commitmentHash": "0xb2fd4ae9d90dc9157f1db4990531a4e7d72ea099ea11ce445b547fb72ea257eb",
+    "level": "info",
+    "message": "Sent SubmitFinal transaction",
+    "params": {
+        "commitment": {
+            "blockNumber": 191,
+            "payload": {
+                "mmrRootHash": "0x7c3891fa41dc873d0811cf92d9dc10df2dde7841644f923b1b105ef04fc2739a",
+                "prefix": "0x046d6880",
+                "suffix": "0x"
+            },
+            "validatorSetID": 19
+        },
+        "id": 23,
+        "leaf": {
+            "nextAuthoritySetID": 20,
+            "nextAuthoritySetLen": 3,
+            "nextAuthoritySetRoot": "0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365",
+            "parachainHeadsRoot": "0xa75e3caee1bca43af9ab34fd112b60fe4888c87838418feb7fb59a60834c62c8",
+            "parentHash": "0xbe4fee01a03f38292ecbd140e6c0c0fa048c5a2cf4f21013154e44909d5e9aba",
+            "parentNumber": 190,
+            "version": 0
+        },
+        "leafProof": {
+            "items": [
+                "0x5fff8ec62e78aced1d381c13696fadb949750dcd2efe23731e6d935e750aed98",
+                "0x9dfad8852244ee9e2d2c76a5bf93e6a843a72049a2785af4158db17662755b83",
+                "0x8f8256410940445ae752acc7568640887c0e19c0ed267bc0eb7d5e74938e2166",
+                "0x7036cc132cfe5131a3ea728195fb0ea4a78f6811f1a2a3df3dc4d2ec1bdcf418",
+                "0xaccd2ce7aac449951790250ce67c39bb66d5078db8e442de637de9ad8d1c8a7d",
+                "0x6ba4f2edba4e9c866d6b3d29e38ba0b7aee2f2d4ecaab3f07e4aaa311110f412"
+            ],
+            "order": 0
+        },
+        "proof": {
+            "addrs": [
+                "0x5630a480727cd7799073b36472d9b1a6031f840b"
+            ],
+            "indices": [
+                2
+            ],
+            "merkleProofs": [
+                [
+                    "0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402"
+                ]
+            ],
+            "signatures": [
+                "0x9d8696815f324152060cf80c58c1b519e8e137f0b3c232eda4497c28d2322911465563c7a3f75a83c48523975f0a48ba75dd0701a316a321dade3b61473cfd4f1b"
+            ]
+        }
+    },
+    "txHash": "0xd19d28de5a83cf3f673d6299b1df1861b35403693b8e4ca6b2b436f97c76cba7"
+}

@@ -96,7 +96,7 @@ func (li *EthereumListener) Start(
 	var address common.Address
 
 	address = common.HexToAddress(li.config.Contracts.BasicOutboundChannel)
-	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.GetClient())
+	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.Client())
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (li *EthereumListener) Start(
 	li.mapping[address] = "BasicInboundChannel.submit"
 
 	address = common.HexToAddress(li.config.Contracts.IncentivizedOutboundChannel)
-	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, li.conn.GetClient())
+	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, li.conn.Client())
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (li *EthereumListener) Start(
 
 	li.headerSyncer = syncer.NewSyncer(
 		li.descendantsUntilFinal,
-		syncer.NewHeaderLoader(li.conn.GetClient()),
+		syncer.NewHeaderLoader(li.conn.Client()),
 	)
 
 	headers, err := li.headerSyncer.StartSync(ctx, eg, li.initBlockHeight-1)

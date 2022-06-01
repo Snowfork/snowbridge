@@ -11,13 +11,14 @@ const { ChannelId } = require("../src/helpers");
 
 describe('Bridge', function () {
 
-  let ethClient, subClient;
+  let ethClient, subClient, testSubClient;
 
   before(async function () {
     const clients = await bootstrap();
     ethClient = clients.ethClient;
     subClient = clients.subClient;
-    this.ethAssetId = subClient.api.createType('AssetId', 'ETH');
+    testSubClient = clients.testSubClient;
+    this.testParaEthAssetId = 0;
   });
 
   describe('ETH App', function () {
@@ -25,14 +26,14 @@ describe('Bridge', function () {
       const amount = BigNumber(Web3.utils.toWei('1', "ether"));
       const ethAccount = ethClient.accounts[1];
 
-      const subBalances = await subClient.subscribeAssetBalances(
-        polkadotRecipientSS58, this.ethAssetId, 2
+      const subBalances = await subClient.subscribeAssetsAccountBalances(
+        this.testParaEthAssetId, polkadotRecipientSS58, 2
       );
 
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
       const beforeSubBalance = await subBalances[0];
 
-      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED);
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 0, 0);
 
       const afterEthBalance = await ethClient.getEthBalance(ethAccount);
       const afterSubBalance = await subBalances[1];
@@ -54,13 +55,13 @@ describe('Bridge', function () {
       const ethAccount = ethClient.accounts[1];
 
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
-      const beforeSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
+      const beforeSubBalance = await subClient.queryAssetsAccountBalance(0, polkadotRecipientSS58);
 
       await subClient.burnETH(subClient.alice, ethAccount, amount.toFixed(), ChannelId.INCENTIVIZED)
       await ethClient.waitForNextEventData({ appName: 'appETH', eventName: 'Unlocked' });
 
       const afterEthBalance = await ethClient.getEthBalance(ethAccount);
-      const afterSubBalance = await subClient.queryAssetBalance(polkadotRecipientSS58, this.ethAssetId);
+      const afterSubBalance = await subClient.queryAssetsAccountBalance(0, polkadotRecipientSS58);
 
       expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amount);
       expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.equal(amount.plus(fee));
@@ -71,4 +72,71 @@ describe('Bridge', function () {
     })
   });
 
+  describe('ETH App XCM', function () {
+    it('should transfer ETH from Ethereum to Parachain 1001 (incentivized channel)', async function () {
+      const amount = BigNumber(Web3.utils.toWei('1', "ether"));
+      const ethAccount = ethClient.accounts[1];
+
+      const testSubBalances = await testSubClient.subscribeAssetsAccountBalances(
+        this.testParaEthAssetId, polkadotRecipientSS58, 2
+      );
+
+      const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
+      const beforeSubBalance = await testSubBalances[0];
+
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 1001, 4_000_000);
+
+      const afterEthBalance = await ethClient.getEthBalance(ethAccount);
+      const afterSubBalance = await testSubBalances[1];
+
+      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
+      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
+      // conservation of value
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
+    });
+
+    it('should not transfer ETH from Ethereum to Parachain 1001 without fee', async function () {
+      const amount = BigNumber(Web3.utils.toWei('1', "ether"));
+      const ethAccount = ethClient.accounts[1];
+
+      const subBalances = await subClient.subscribeAssetsAccountBalances(
+        this.testParaEthAssetId, polkadotRecipientSS58, 2
+      );
+
+      const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
+      const beforeSubBalance = await subBalances[0];
+
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 1001, 0);
+
+      const afterEthBalance = await ethClient.getEthBalance(ethAccount);
+      const afterSubBalance = await subBalances[1];
+
+      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
+      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
+      // conservation of value
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
+    });
+
+    it('should not transfer ETH from Ethereum to non-existent Parachain 2001', async function () {
+      const amount = BigNumber(Web3.utils.toWei('1', "ether"));
+      const ethAccount = ethClient.accounts[1];
+
+      const subBalances = await subClient.subscribeAssetsAccountBalances(
+        this.testParaEthAssetId, polkadotRecipientSS58, 2
+      );
+
+      const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
+      const beforeSubBalance = await subBalances[0];
+
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 2001, 4_000_000);
+
+      const afterEthBalance = await ethClient.getEthBalance(ethAccount);
+      const afterSubBalance = await subBalances[1];
+
+      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
+      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
+      // conservation of value
+      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
+    });
+  });
 });

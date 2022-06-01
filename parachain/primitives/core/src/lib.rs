@@ -13,14 +13,9 @@ use sp_core::H160;
 use sp_std::prelude::*;
 
 pub mod assets;
-pub mod nft;
 pub mod types;
 
 pub use types::{ChannelId, Message, MessageId, MessageNonce, Proof};
-
-pub use assets::{AssetId, MultiAsset, SingleAsset};
-
-pub use nft::{ERC721TokenData, TokenInfo};
 
 /// A trait for verifying messages.
 ///

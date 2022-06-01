@@ -1,50 +1,53 @@
-import { config as dotenv } from "dotenv";
 import { resolve } from "path";
 import "solidity-coverage"
-
-dotenv({ path: resolve(__dirname, ".env") });
 
 import "@nomiclabs/hardhat-truffle5";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-deploy";
-import { HardhatUserConfig } from "hardhat/config";
+import "./tasks/upgrade";
+import "./tasks/renounce";
+import "./tasks/contractAddress";
+import type { HardhatUserConfig } from "hardhat/config";
 
-const getenv = (name: string) => {
-  if (name in process.env) {
-    return process.env[name]
-  } else {
-    throw new Error(`Please set your ${name} in a .env file`);
-  }
-}
 
-const ropstenPrivateKey = getenv("ROPSTEN_PRIVATE_KEY");
-const infuraKey = getenv("INFURA_PROJECT_ID");
-const etherscanKey = getenv("ETHERSCAN_API_KEY");
+let INFURA_KEY = process.env.INFURA_PROJECT_ID
+let ROPSTEN_KEY = process.env.ROPSTEN_PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"
+let ETHERSCAN_KEY = process.env.ETHERSCAN_API_KEY
 
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
-      throwOnTransactionFailures: true,
+      accounts: {
+        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
+        // Need to give huge account balance to test certain constraints in EthApp.sol::lock()
+        accountsBalance: "350000000000000000000000000000000000000"
+      },
+      chainId: 15,
     },
     localhost: {
       url: "http://127.0.0.1:8545",
       accounts: {
-        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove",
+        mnemonic: "stone speak what ritual switch pigeon weird dutch burst shaft nature shove"
       },
       chainId: 15,
     },
     ropsten: {
       chainId: 3,
-      url: `https://ropsten.infura.io/v3/${infuraKey}`,
-      accounts: [ropstenPrivateKey],
+      url: `https://ropsten.infura.io/v3/${INFURA_KEY}`,
+      accounts: [ROPSTEN_KEY],
       gas: 6000000,
-      gasPrice: 5000000000,
     }
   },
   solidity: {
-    version: "0.8.6"
+    version: "0.8.9",
+    settings: {
+      optimizer: {
+        enabled: false,
+        runs: 200,
+      }
+    }
   },
   paths: {
     sources: "contracts",
@@ -57,7 +60,7 @@ const config: HardhatUserConfig = {
     timeout: 60000
   },
   etherscan: {
-    apiKey: etherscanKey
+    apiKey: ETHERSCAN_KEY
   }
 };
 

@@ -2,22 +2,22 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v3/types"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/relays/beefy/store"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func subBeefyCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "sub-beefy",
-		Short:   "Subscribe beefy messages",
-		Args:    cobra.ExactArgs(0),
-		RunE:    SubBeefyFn,
+		Use:   "sub-beefy",
+		Short: "Subscribe beefy messages",
+		Args:  cobra.ExactArgs(0),
+		RunE:  SubBeefyFn,
 	}
 
 	cmd.Flags().StringP("url", "u", "", "Polkadot URL")
@@ -29,145 +29,207 @@ func subBeefyCmd() *cobra.Command {
 		1000,
 		"Parachain ID",
 	)
-	cmd.MarkFlagRequired("para-id")
 
-	viper.BindPFlags(cmd.Flags())
 	return cmd
 }
 
 func SubBeefyFn(cmd *cobra.Command, _ []string) error {
-	paraID := viper.GetUint32("para-id")
-	subBeefyJustifications(cmd.Context(), paraID)
+	subBeefyJustifications(cmd.Context(), cmd)
 	return nil
 }
 
-func subBeefyJustifications(ctx context.Context, paraID uint32) error {
-	relaychainConn := relaychain.NewConnection(viper.GetString("url"))
-	err := relaychainConn.Connect(ctx)
+func subBeefyJustifications(ctx context.Context, cmd *cobra.Command) error {
+	url, _ := cmd.Flags().GetString("url")
+
+	conn := relaychain.NewConnection(url)
+	err := conn.Connect(ctx)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
-	ch := make(chan interface{})
-
-	log.Info("Subscribing to beefy justifications")
-	sub, err := relaychainConn.API().Client.Subscribe(context.Background(), "beefy", "subscribeJustifications", "unsubscribeJustifications", "justifications", ch)
+	sub, err := conn.API().RPC.Beefy.SubscribeJustifications()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer sub.Unsubscribe()
 
 	for {
 		select {
-		case msg := <-ch:
-
-			signedCommitment := &store.SignedCommitment{}
-			err := types.DecodeFromHexString(msg.(string), signedCommitment)
-			if err != nil {
-				log.WithError(err).Error("Failed to decode BEEFY commitment messages")
+		case commitment, ok := <-sub.Chan():
+			if !ok {
+				return nil
 			}
 
-			blockNumber := signedCommitment.Commitment.BlockNumber
+			blockNumber := commitment.Commitment.BlockNumber
 
-			log.WithField("commitmentBlockNumber", blockNumber).Info("Witnessed a new BEEFY commitment: \n")
-			if len(signedCommitment.Signatures) == 0 {
+			if len(commitment.Signatures) == 0 {
 				log.Info("BEEFY commitment has no signatures, skipping...")
 				continue
 			}
-			log.WithField("blockNumber", blockNumber+1).Info("Getting hash for next block")
-			nextBlockHash, err := relaychainConn.API().RPC.Chain.GetBlockHash(uint64(blockNumber + 1))
-			if err != nil {
-				log.WithError(err).Error("Failed to get block hash")
-			}
-			log.WithField("blockHash", nextBlockHash.Hex()).Info("Got blockhash")
-			GetMMRLeafForBlock(uint64(blockNumber), nextBlockHash, relaychainConn)
-			heads, err := fetchParaHeads(relaychainConn, nextBlockHash)
 
-			var ourParahead types.Header
-			if err := types.DecodeFromBytes(heads[paraID], &ourParahead); err != nil {
-				log.WithError(err).Error("Failed to decode Header")
+			blockHash, err := conn.API().RPC.Chain.GetBlockHash(uint64(blockNumber))
+			if err != nil {
 				return err
 			}
 
-			log.WithFields(logrus.Fields{
-				"allParaheads": heads,
-				"ourParahead":  ourParahead,
-			}).Info("Got all para heads")
+			proof, err := conn.API().RPC.MMR.GenerateProof(uint64(blockNumber-1), blockHash)
+			if err != nil {
+				return err
+			}
 
-			// TODO6 - Update all above code to make sure to check all new parachain blocks that have been added to the MMR
-			// when there is a new beefy justification, not just the newest parachain block in the MMR
+			simpleProof, err := merkle.ConvertToSimplifiedMMRProof(
+				proof.BlockHash,
+				uint64(proof.Proof.LeafIndex),
+				proof.Leaf,
+				uint64(proof.Proof.LeafCount),
+				proof.Proof.Items,
+			)
+
+			leafEncoded, err := types.EncodeToBytes(simpleProof.Leaf)
+			if err != nil {
+				return err
+			}
+			leafHashBytes := (&keccak.Keccak256{}).Hash(leafEncoded)
+
+			var leafHash types.H256
+			copy(leafHash[:], leafHashBytes[0:32])
+
+			root := merkle.CalculateMerkleRoot(&simpleProof, leafHash)
+			if err != nil {
+				return err
+			}
+
+			var actualMmrRoot types.H256
+
+			mmrRootKey, err := types.CreateStorageKey(conn.Metadata(), "Mmr", "RootHash", nil, nil)
+			if err != nil {
+				return err
+			}
+
+			_, err = conn.API().RPC.State.GetStorage(mmrRootKey, &actualMmrRoot, blockHash)
+			if err != nil {
+				return err
+			}
+
+			actualParentHash, err := conn.API().RPC.Chain.GetBlockHash(uint64(proof.Leaf.ParentNumberAndHash.ParentNumber))
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Commitment { BlockNumber: %v, ValidatorSetID: %v}\n",
+				blockNumber,
+				commitment.Commitment.ValidatorSetID,
+			)
+
+			fmt.Printf("Leaf { ParentNumber: %v, ParentHash: %v, NextValidatorSetID: %v}\n",
+				proof.Leaf.ParentNumberAndHash.ParentNumber,
+				proof.Leaf.ParentNumberAndHash.Hash.Hex(),
+				proof.Leaf.BeefyNextAuthoritySet.ID,
+			)
+
+			fmt.Printf("Actual ParentHash: %v %v\n", actualParentHash.Hex(), actualParentHash == proof.Leaf.ParentNumberAndHash.Hash)
+
+			fmt.Printf("MMR Root: computed=%v actual=%v %v\n",
+				root.Hex(), actualMmrRoot.Hex(), root == actualMmrRoot,
+			)
+
+			fmt.Printf("\n")
+
+			if root != actualMmrRoot {
+				return nil
+			}
+
 		}
 	}
 }
 
-// Copied over from relaychain.Connection
-func fetchParaHeads(co *relaychain.Connection, blockHash types.Hash) (map[uint32][]byte, error) {
+func printCommitment(commitment *types.SignedCommitment, conn *relaychain.Connection) error {
+	blockNumber := commitment.Commitment.BlockNumber
 
-	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
-
-	keys, err := co.API().RPC.State.GetKeys(keyPrefix, blockHash)
+	blockHash, err := conn.API().RPC.Chain.GetBlockHash(uint64(blockNumber))
 	if err != nil {
-		log.WithError(err).Error("Failed to get all parachain keys")
-		return nil, err
+		return err
 	}
 
-	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
+	proof, err := conn.API().RPC.MMR.GenerateProof(uint64(blockNumber-1), blockHash)
 	if err != nil {
-		log.WithError(err).Error("Failed to get all parachain headers")
-		return nil, err
+		return err
 	}
 
-	heads := make(map[uint32][]byte)
+	fmt.Printf("Commitment { BlockNumber: %v, ValidatorSetID: %v}; Leaf { ParentNumber: %v, NextValidatorSetID: %v }\n",
+		blockNumber, commitment.Commitment.ValidatorSetID, proof.Leaf.ParentNumberAndHash.ParentNumber, proof.Leaf.BeefyNextAuthoritySet.ID,
+	)
 
-	for _, changeSet := range changeSets {
-		for _, change := range changeSet.Changes {
-			if change.StorageData.IsNone() {
-				continue
-			}
-
-			var paraID uint32
-
-			if err := types.DecodeFromBytes(change.StorageKey[40:], &paraID); err != nil {
-				log.WithError(err).Error("Failed to decode parachain ID")
-				return nil, err
-			}
-
-			_, headDataWrapped := change.StorageData.Unwrap()
-
-			var headData types.Bytes
-			if err := types.DecodeFromBytes(headDataWrapped, &headData); err != nil {
-				log.WithError(err).Error("Failed to decode HeadData wrapper")
-				return nil, err
-			}
-
-			heads[paraID] = headData
-		}
-	}
-
-	return heads, nil
+	return nil
 }
 
+// // Copied over from relaychain.Connection
+// func fetchParaHeads(co *relaychain.Connection, blockHash types.Hash) (map[uint32][]byte, error) {
 
-func GetMMRLeafForBlock(blockNumber uint64, blockHash types.Hash, relaychainConn *relaychain.Connection) {
-	log.WithFields(logrus.Fields{
-		"blockNumber": blockNumber,
-		"blockHash":   blockHash.Hex(),
-	}).Info("Getting MMR Leaf for block...")
-	proofResponse, err := relaychainConn.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
-	if err != nil {
-		log.WithError(err).Error("Failed to generate mmr proof")
-	}
+// 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 
-	log.WithFields(logrus.Fields{
-		"BlockHash":                       proofResponse.BlockHash.Hex(),
-		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
-		"Leaf.Hash":                       proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
-		"Leaf.ParachainHeads":             proofResponse.Leaf.ParachainHeads.Hex(),
-		"Leaf.BeefyNextAuthoritySet.ID":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
-		"Leaf.BeefyNextAuthoritySet.Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
-		"Leaf.BeefyNextAuthoritySet.Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
-		"Proof.LeafIndex":                 proofResponse.Proof.LeafIndex,
-		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
-	}).Info("Generated MMR Proof")
-}
+// 	keys, err := co.API().RPC.State.GetKeys(keyPrefix, blockHash)
+// 	if err != nil {
+// 		log.WithError(err).Error("Failed to get all parachain keys")
+// 		return nil, err
+// 	}
+
+// 	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
+// 	if err != nil {
+// 		log.WithError(err).Error("Failed to get all parachain headers")
+// 		return nil, err
+// 	}
+
+// 	heads := make(map[uint32][]byte)
+
+// 	for _, changeSet := range changeSets {
+// 		for _, change := range changeSet.Changes {
+// 			if change.StorageData.IsNone() {
+// 				continue
+// 			}
+
+// 			var paraID uint32
+
+// 			if err := types.DecodeFromBytes(change.StorageKey[40:], &paraID); err != nil {
+// 				log.WithError(err).Error("Failed to decode parachain ID")
+// 				return nil, err
+// 			}
+
+// 			_, headDataWrapped := change.StorageData.Unwrap()
+
+// 			var headData types.Bytes
+// 			if err := types.DecodeFromBytes(headDataWrapped, &headData); err != nil {
+// 				log.WithError(err).Error("Failed to decode HeadData wrapper")
+// 				return nil, err
+// 			}
+
+// 			heads[paraID] = headData
+// 		}
+// 	}
+
+// 	return heads, nil
+// }
+
+// func GetMMRLeafForBlock(blockNumber uint64, blockHash types.Hash, conn *relaychain.Connection) {
+// 	log.WithFields(logrus.Fields{
+// 		"blockNumber": blockNumber,
+// 		"blockHash":   blockHash.Hex(),
+// 	}).Info("Getting MMR Leaf for block...")
+// 	proofResponse, err := conn.API().RPC.MMR.GenerateProof(blockNumber, blockHash)
+// 	if err != nil {
+// 		log.WithError(err).Error("Failed to generate mmr proof")
+// 	}
+
+// 	log.WithFields(logrus.Fields{
+// 		"BlockHash":                       proofResponse.BlockHash.Hex(),
+// 		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
+// 		"Leaf.Hash":                       proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
+// 		"Leaf.ParachainHeads":             proofResponse.Leaf.ParachainHeads.Hex(),
+// 		"Leaf.BeefyNextAuthoritySet.ID":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
+// 		"Leaf.BeefyNextAuthoritySet.Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
+// 		"Leaf.BeefyNextAuthoritySet.Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),
+// 		"Proof.LeafIndex":                 proofResponse.Proof.LeafIndex,
+// 		"Proof.LeafCount":                 proofResponse.Proof.LeafCount,
+// 	}).Info("Generated MMR Proof")
+// }

@@ -39,7 +39,7 @@ where
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> OuterOrigin {
-		OuterOrigin::from(RawOrigin(H160::repeat_byte(2)))
+		OuterOrigin::from(RawOrigin(H160::repeat_byte(1)))
 	}
 }
 
@@ -194,6 +194,7 @@ mod tests {
 		type DbWeight = ();
 		type SS58Prefix = ();
 		type OnSetCode = ();
+		type MaxConsumers = frame_support::traits::ConstU32<16>;
 	}
 
 	pub struct CallFilter;
