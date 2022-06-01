@@ -3,8 +3,9 @@ package beacon
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/common"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -85,12 +86,17 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	logrus.Info("Starting to sync finalized headers")
 
-	_, err = r.SyncFinalizedHeader(ctx)
+	update, blockRoot, err := r.SyncFinalizedHeader(ctx)
 	if err != nil {
 		return err
 	}
 
-	ticker := time.NewTicker(time.Minute * 5)
+	_, err = r.SyncHeader(ctx, uint64(update.FinalizedHeader.Slot), blockRoot)
+	if err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(time.Minute * 1)
 	done := make(chan bool)
 
 	go func() {
@@ -102,7 +108,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 				case <-ticker.C:
 					secondLastFinalizedHeader := r.syncer.Cache.LastFinalizedHeader()
 
-					finalizedHeaderBlockRoot, err := r.SyncFinalizedHeader(ctx)
+					_, finalizedHeaderBlockRoot, err := r.SyncFinalizedHeader(ctx)
 					if err != nil {
 						return err
 					}
@@ -122,10 +128,6 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 					blockRoot := finalizedHeaderBlockRoot
 					for i := lastFinalizedHeader; i > secondLastFinalizedHeader; i-- {
-						logrus.WithFields(logrus.Fields{
-							"i is...": i,
-						}).Info("i is...")
-
 						headerUpdate, err := r.SyncHeader(ctx, i, blockRoot)
 						if err != nil {
 							return err
@@ -188,7 +190,7 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 	return r.writer.WriteToParachain(ctx, "sync_committee_period_update", syncCommitteeUpdate)
 }
 
-func (r *Relay) SyncFinalizedHeader(ctx context.Context) (common.Hash, error) {
+func (r *Relay) SyncFinalizedHeader(ctx context.Context) ( syncer.FinalizedHeaderUpdate, common.Hash, error) {
 	logrus.Info("Syncing finalized header")
 
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
@@ -196,13 +198,13 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (common.Hash, error) {
 	if err != nil {
 		logrus.WithError(err).Error("unable to sync finalized header")
 
-		return common.Hash{}, err
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
 
 	if syncer.IsInArray(r.syncer.Cache.FinalizedHeaders, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot)) {
 		logrus.Info("Finalized header has been synced already, skipping")
 
-		return common.Hash{}, err
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
 
 	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
@@ -212,7 +214,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (common.Hash, error) {
 
 		err := r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
 		if err != nil {
-			return common.Hash{}, err
+			return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
 		}
 
 		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
@@ -222,12 +224,12 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (common.Hash, error) {
 	if err != nil {
 		logrus.WithError(err).Error("unable to write to parachain")
 
-		return common.Hash{}, err
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
 
 	r.syncer.Cache.FinalizedHeaders = append(r.syncer.Cache.FinalizedHeaders, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot))
 
-	return blockRoot, err
+	return finalizedHeaderUpdate, blockRoot, err
 }
 
 func (r *Relay) SyncHeader(ctx context.Context, slot uint64, blockRoot common.Hash) (syncer.HeaderUpdate, error) {
@@ -243,7 +245,9 @@ func (r *Relay) SyncHeader(ctx context.Context, slot uint64, blockRoot common.Ha
 		return syncer.HeaderUpdate{}, err
 	}
 
-	err = r.writer.WriteToParachain(ctx, "import_header", headerUpdate)
+	headerUpdate.Block.Body.ExecutionPayload.Transactions = [][]byte{}
+
+	err = r.writer.WriteToParachain(ctx, "import_execution_header", headerUpdate)
 	if err != nil {
 		logrus.WithError(err).Error("unable to write to parachain")
 

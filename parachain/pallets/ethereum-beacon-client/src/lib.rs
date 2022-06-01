@@ -320,7 +320,7 @@ pub mod pallet {
 			let _sender = ensure_signed(origin)?;
 
 			log::trace!(
-				target: "ethereum-beacon-light-client",
+				target: "ethereum-beacon-client",
 				"💫 Received transaction to be validated.",
 			);
 
@@ -427,7 +427,21 @@ pub mod pallet {
 
 		fn process_header(update: BlockUpdate) -> DispatchResult {
 			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Latest finalized block slot is {}.",
+				latest_finalized_header_slot
+			);
+
 			let block_slot = update.block.slot;
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Header update block slot is {}.",
+				block_slot
+			);
+
 			if block_slot > latest_finalized_header_slot {
 				return Err(Error::<T>::HeaderNotFinalized.into());
 			}
@@ -626,8 +640,14 @@ pub mod pallet {
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
 
 			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
-			if latest_finalized_header_slot > slot {
-				<LatestFinalizedHeaderSlot<T>>::set(latest_finalized_header_slot);
+
+			if slot > latest_finalized_header_slot {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"💫 Updated latest finalized slot to {}.",
+					slot
+				);
+				<LatestFinalizedHeaderSlot<T>>::set(slot);
 			}
 		}
 

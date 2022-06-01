@@ -161,10 +161,10 @@ type CheckpointResponse struct {
 }
 
 type DepositDataResponse struct {
-	Pubkey                []byte `json:"pubkey"`
+	Pubkey                string `json:"pubkey"`
 	WithdrawalCredentials string `json:"withdrawal_credentials"`
 	Amount                string `json:"amount"`
-	Signature             []byte `json:"signature"`
+	Signature             string `json:"signature"`
 }
 
 type DepositResponse struct {
@@ -183,7 +183,7 @@ type AttestationDataResponse struct {
 type IndexedAttestationResponse struct {
 	AttestingIndices []string                `json:"attesting_indices"`
 	Data             AttestationDataResponse `json:"data"`
-	Signature        []byte                  `json:"signature"`
+	Signature        string                  `json:"signature"`
 }
 
 type AttesterSlashingResponse struct {
@@ -197,9 +197,9 @@ type ProposerSlashingResponse struct {
 }
 
 type AttestationResponse struct {
-	AggregationBits []byte                  `json:"aggregation_bits"`
+	AggregationBits string                  `json:"aggregation_bits"`
 	Data            AttestationDataResponse `json:"data"`
-	Signature       []byte                  `json:"signature"`
+	Signature       string                  `json:"signature"`
 }
 
 type VoluntaryExitResponse struct {
@@ -215,7 +215,7 @@ type BeaconBlockResponse struct {
 			ParentRoot    string `json:"parent_root"`
 			StateRoot     string `json:"state_root"`
 			Body          struct {
-				RandaoReveal []byte `json:"randao_reveal"`
+				RandaoReveal string `json:"randao_reveal"`
 				Eth1Data     struct {
 					DepositRoot  string `json:"deposit_root"`
 					DepositCount string `json:"deposit_count"`
@@ -229,20 +229,20 @@ type BeaconBlockResponse struct {
 				VoluntaryExits    []VoluntaryExitResponse    `json:"voluntary_exits"`
 				SyncAggregate     SyncAggregateResponse      `json:"sync_aggregate"`
 				ExecutionPayload  struct {
-					ParentHash    string
-					FeeRecipient  []byte
-					StateRoot     string
-					ReceiptsRoot  string
-					LogsBloom     []byte
-					PrevRandao    string
-					BlockNumber   string
-					GasLimit      string
-					GasUsed       string
-					Timestamp     string
-					ExtraData     []byte
-					BaseFeePerGas string
-					BlockHash     string
-					Transactions  [][]byte
+					ParentHash    string   `json:"parent_hash"`
+					FeeRecipient  string   `json:"fee_recipient"`
+					StateRoot     string   `json:"state_root"`
+					ReceiptsRoot  string   `json:"receipts_root"`
+					LogsBloom     string   `json:"logs_bloom"`
+					PrevRandao    string   `json:"prev_randao"`
+					BlockNumber   string   `json:"block_number"`
+					GasLimit      string   `json:"gas_limit"`
+					GasUsed       string   `json:"gas_used"`
+					Timestamp     string   `json:"timestamp"`
+					ExtraData     string   `json:"extra_data"`
+					BaseFeePerGas string   `json:"base_fee_per_gas"`
+					BlockHash     string   `json:"block_hash"`
+					Transactions  []string `json:"transactions"`
 				} `json:"execution_payload"`
 			} `json:"body"`
 		} `json:"message"`
@@ -525,7 +525,7 @@ type ForkResponse struct {
 
 func (b *BeaconClient) GetCurrentForkVersion(slot uint64) (string, error) {
 	//req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/%d/fork", s.endpoint, slot), nil)
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/finalized/fork", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/head/fork", b.endpoint), nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to construct fork version request")
 
