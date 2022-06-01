@@ -72,14 +72,6 @@ pub struct FinalizedHeaderUpdate {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct HeaderUpdate {
-	pub attested_header: BeaconHeader,
-	pub execution_header: ExecutionHeader,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct BlockUpdate {
 	pub block: BeaconBlock,
 	pub fork_version: ForkVersion,
@@ -316,7 +308,7 @@ pub mod pallet {
 			let _sender = ensure_signed(origin)?;
 
 			log::trace!(
-				target: "ethereum-beacon-light-client",
+				target: "ethereum-beacon-client",
 				"💫 Received transaction to be validated.",
 			);
 
@@ -622,8 +614,14 @@ pub mod pallet {
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
 
 			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
-			if latest_finalized_header_slot > slot {
-				<LatestFinalizedHeaderSlot<T>>::set(latest_finalized_header_slot);
+
+			if slot > latest_finalized_header_slot {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"💫 Updated latest finalized slot to {}.",
+					slot
+				);
+				<LatestFinalizedHeaderSlot<T>>::set(slot);
 			}
 		}
 
