@@ -268,14 +268,6 @@ func (r *Relay) SyncHeader(ctx context.Context, slot uint64, blockRoot common.Ha
 		return syncer.HeaderUpdate{}, err
 	}
 
-	newTransactions := [][]byte{}
-	for i, trans := range headerUpdate.Block.Body.ExecutionPayload.Transactions {
-		if i < 100 {
-			newTransactions = append(newTransactions, trans)
-		}
-	}
-
-	headerUpdate.Block.Body.ExecutionPayload.Transactions = newTransactions
 	//headerUpdate.SyncAggregate = syncAggregate
 
 	err = r.writer.WriteToParachain(ctx, "import_execution_header", headerUpdate)

@@ -7,6 +7,7 @@ require (
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.17
+	github.com/ferranbt/fastssz v0.1.0 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/magefile/mage v1.11.0
 	github.com/magiconair/properties v1.8.4 // indirect

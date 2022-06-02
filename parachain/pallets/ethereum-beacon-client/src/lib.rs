@@ -453,8 +453,6 @@ pub mod pallet {
 			)?;
 
 			let execution_payload = update.block.body.execution_payload;
-			let transaction_root = merkleization::hash_tree_root_transactions(execution_payload.transactions)
-				.map_err(|_| DispatchError::Other("Transactions hash tree root failed"))?;
 
 			let mut fee_recipient = [0u8; 20];
 			fee_recipient[0..20].copy_from_slice(&(execution_payload.fee_recipient.as_slice()));
@@ -473,7 +471,7 @@ pub mod pallet {
 				extra_data: execution_payload.extra_data,
 				base_fee_per_gas: execution_payload.base_fee_per_gas,
 				block_hash: execution_payload.block_hash,
-				transactions_root: transaction_root.into()
+				transactions_root: execution_payload.transactions_root,
 			});
 
 			Ok(())

@@ -92,7 +92,7 @@ type ExecutionPayload struct {
 	ExtraData     []byte
 	BaseFeePerGas types.U256
 	BlockHash     types.H256
-	Transactions  [][]byte
+	Transactions  types.H256
 }
 
 type Body struct {

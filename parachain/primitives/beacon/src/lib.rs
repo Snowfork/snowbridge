@@ -168,7 +168,7 @@ pub struct ExecutionPayload {
 	pub extra_data: Vec<u8>,
 	pub base_fee_per_gas: U256,
 	pub block_hash: H256,
-	pub transactions: Vec<Vec<u8>>,
+	pub transactions_root: H256,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]

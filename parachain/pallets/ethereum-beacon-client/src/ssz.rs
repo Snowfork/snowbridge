@@ -135,7 +135,7 @@ pub struct SSZExecutionPayload {
     pub extra_data: List<u8, { config::MAX_EXTRA_DATA_BYTES }>,
     pub base_fee_per_gas: U256,
     pub block_hash: [u8; 32],
-    pub transactions: List<List<u8, { config::MAX_BYTES_PER_TRANSACTION }>, { config::MAX_TRANSACTIONS_PER_PAYLOAD }>,
+    pub transactions_root: [u8; 32],
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	ssz "github.com/ferranbt/fastssz"
 	"math/big"
 	"strconv"
 	"strings"
@@ -655,9 +656,9 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 		return scale.BeaconBlock{}, err
 	}
 
-	transactions := [][]byte{}
-	for _, transaction := range executionPayload.Transactions {
-		transactions = append(transactions, []byte(transaction))
+	transactions, err := getTransactionsHashTreeRoot(executionPayload.Transactions)
+	if err != nil {
+		return scale.BeaconBlock{}, err
 	}
 
 	return scale.BeaconBlock{
@@ -881,4 +882,51 @@ func proofBranchToScale(proofs []common.Hash) []types.H256 {
 	}
 
 	return syncCommitteeBranch
+}
+
+func getTransactionsHashTreeRoot(transactions []string) (types.H256, error) {
+	resultTransactions := [][]byte{}
+
+	for _, trans := range transactions {
+		decodeString, err := hex.DecodeString(strings.ReplaceAll(trans, "0x", ""))
+		if err != nil {
+			return types.H256{}, err
+		}
+		resultTransactions = append(resultTransactions, decodeString)
+	}
+
+	hh := ssz.DefaultHasherPool.Get()
+
+	indx := hh.Index()
+
+	{
+		subIndx := hh.Index()
+		num := uint64(len(resultTransactions))
+		if num > 1048576 {
+			err := ssz.ErrIncorrectListSize
+			return types.H256{}, err
+		}
+		for _, elem := range resultTransactions {
+			{
+				elemIndx := hh.Index()
+				byteLen := uint64(len(elem))
+				if byteLen > 1073741824 {
+					err := ssz.ErrIncorrectListSize
+					return types.H256{}, err
+				}
+				hh.AppendBytes32(elem)
+				hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
+			}
+		}
+		hh.MerkleizeWithMixin(subIndx, num, 1048576)
+	}
+
+	hh.Merkleize(indx)
+
+	root, err := hh.HashRoot()
+	if err != nil {
+		return types.H256{}, err
+	}
+
+	return types.NewH256(root[:]), nil
 }
