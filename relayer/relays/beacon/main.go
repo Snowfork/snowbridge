@@ -214,8 +214,6 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 }
 
 func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeaderUpdate, common.Hash, error) {
-	logrus.Info("Syncing finalized header")
-
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
 	finalizedHeaderUpdate, blockRoot, err := r.syncer.GetFinalizedUpdate()
 	if err != nil {
@@ -223,6 +221,11 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"slot":      finalizedHeaderUpdate.FinalizedHeader.Slot,
+		"blockRoot": blockRoot,
+	}).Info("Syncing finalized header at slot")
 
 	if syncer.IsInArray(r.syncer.Cache.FinalizedHeaders, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot)) {
 		logrus.Info("Finalized header has been synced already, skipping")
@@ -268,7 +271,7 @@ func (r *Relay) SyncHeader(ctx context.Context, slot uint64, blockRoot common.Ha
 		return syncer.HeaderUpdate{}, err
 	}
 
-	//headerUpdate.SyncAggregate = syncAggregate
+	headerUpdate.SyncAggregate = syncAggregate
 
 	err = r.writer.WriteToParachain(ctx, "import_execution_header", headerUpdate)
 	if err != nil {

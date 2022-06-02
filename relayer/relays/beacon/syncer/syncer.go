@@ -4,10 +4,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	ssz "github.com/ferranbt/fastssz"
 	"math/big"
 	"strconv"
 	"strings"
+
+	ssz "github.com/ferranbt/fastssz"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
@@ -98,9 +99,9 @@ type FinalizedHeaderUpdate struct {
 }
 
 type HeaderUpdate struct {
-	Block scale.BeaconBlock
-	//SyncAggregate scale.SyncAggregate
-	ForkVersion [4]byte
+	Block         scale.BeaconBlock
+	SyncAggregate scale.SyncAggregate
+	ForkVersion   [4]byte
 }
 
 func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
@@ -661,13 +662,33 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 		return scale.BeaconBlock{}, err
 	}
 
+	randaoReveal, err := hexStringToByteArray(body.RandaoReveal)
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
+	feeRecipient, err := hexStringToByteArray(executionPayload.FeeRecipient)
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
+	logsBloom, err := hexStringToByteArray(executionPayload.LogsBloom)
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
+	extraData, err := hexStringToByteArray(executionPayload.ExtraData)
+	if err != nil {
+		return scale.BeaconBlock{}, err
+	}
+
 	return scale.BeaconBlock{
 		Slot:          types.NewU64(slot),
 		ProposerIndex: types.NewU64(proposerIndex),
 		ParentRoot:    types.NewH256(common.HexToHash(dataMessage.ParentRoot).Bytes()),
 		StateRoot:     types.NewH256(common.HexToHash(dataMessage.StateRoot).Bytes()),
 		Body: scale.Body{
-			RandaoReveal: []byte(body.RandaoReveal),
+			RandaoReveal: randaoReveal,
 			Eth1Data: scale.Eth1Data{
 				DepositRoot:  types.NewH256(common.HexToHash(body.Eth1Data.DepositRoot).Bytes()),
 				DepositCount: types.NewU64(depositCount),
@@ -682,16 +703,16 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 			SyncAggregate:     syncAggregate,
 			ExecutionPayload: scale.ExecutionPayload{
 				ParentHash:    types.NewH256(common.HexToHash(executionPayload.ParentHash).Bytes()),
-				FeeRecipient:  []byte(executionPayload.FeeRecipient),
+				FeeRecipient:  feeRecipient,
 				StateRoot:     types.NewH256(common.HexToHash(executionPayload.StateRoot).Bytes()),
 				ReceiptsRoot:  types.NewH256(common.HexToHash(executionPayload.ReceiptsRoot).Bytes()),
-				LogsBloom:     []byte(executionPayload.FeeRecipient),
+				LogsBloom:     logsBloom,
 				PrevRandao:    types.NewH256(common.HexToHash(executionPayload.PrevRandao).Bytes()),
 				BlockNumber:   types.NewU64(blockNumber),
 				GasLimit:      types.NewU64(gasLimit),
 				GasUsed:       types.NewU64(gasUsed),
 				Timestamp:     types.NewU64(timestamp),
-				ExtraData:     []byte(executionPayload.ExtraData),
+				ExtraData:     extraData,
 				BaseFeePerGas: types.NewU256(*bigInt),
 				BlockHash:     types.NewH256(common.HexToHash(executionPayload.BlockHash).Bytes()),
 				Transactions:  transactions,
@@ -740,10 +761,20 @@ func (a AttestationResponse) ToScale() (scale.Attestation, error) {
 		return scale.Attestation{}, err
 	}
 
+	aggregationBits, err := hexStringToByteArray(a.AggregationBits)
+	if err != nil {
+		return scale.Attestation{}, err
+	}
+
+	signature, err := hexStringToByteArray(a.Signature)
+	if err != nil {
+		return scale.Attestation{}, err
+	}
+
 	return scale.Attestation{
-		AggregationBits: []byte(a.AggregationBits),
+		AggregationBits: aggregationBits,
 		Data:            data,
-		Signature:       []byte(a.Signature),
+		Signature:       signature,
 	}, nil
 }
 
@@ -776,13 +807,23 @@ func (d DepositResponse) ToScale() (scale.Deposit, error) {
 		return scale.Deposit{}, err
 	}
 
+	pubkey, err := hexStringToByteArray(d.Data.Pubkey)
+	if err != nil {
+		return scale.Deposit{}, err
+	}
+
+	signature, err := hexStringToByteArray(d.Data.Signature)
+	if err != nil {
+		return scale.Deposit{}, err
+	}
+
 	return scale.Deposit{
 		Proof: proofs,
 		Data: scale.DepositData{
-			Pubkey:                []byte(d.Data.Pubkey),
+			Pubkey:                pubkey,
 			WithdrawalCredentials: types.NewH256(common.HexToHash(d.Data.WithdrawalCredentials).Bytes()),
 			Amount:                types.NewU64(amount),
-			Signature:             []byte(d.Data.Signature),
+			Signature:             signature,
 		},
 	}, nil
 }
@@ -816,10 +857,15 @@ func (i IndexedAttestationResponse) ToScale() (scale.IndexedAttestation, error) 
 		attestationIndexes = append(attestationIndexes, types.NewU64(indexInt))
 	}
 
+	signature, err := hexStringToByteArray(i.Signature)
+	if err != nil {
+		return scale.IndexedAttestation{}, err
+	}
+
 	return scale.IndexedAttestation{
 		AttestingIndices: attestationIndexes,
 		Data:             data,
-		Signature:        []byte(i.Signature),
+		Signature:        signature,
 	}, nil
 }
 

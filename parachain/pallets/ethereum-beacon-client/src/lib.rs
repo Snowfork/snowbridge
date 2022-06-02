@@ -457,6 +457,13 @@ pub mod pallet {
 			let mut fee_recipient = [0u8; 20];
 			fee_recipient[0..20].copy_from_slice(&(execution_payload.fee_recipient.as_slice()));
 
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Saved execution header with block root {} at slot {}.",
+				execution_payload.block_hash.clone(),
+				block_slot
+			);
+
 			Self::store_execution_header(execution_payload.block_hash, ExecutionHeader{
 				parent_hash: execution_payload.parent_hash,
 				fee_recipient: H160::from(fee_recipient),
@@ -627,7 +634,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"💫 Saved block root {} at slot {}.",
+				"💫 Saved finalized block root {} at slot {}.",
 				block_root,
 				slot
 			);
