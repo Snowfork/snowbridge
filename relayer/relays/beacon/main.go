@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"errors"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -86,24 +87,10 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	logrus.Info("Starting to sync finalized headers")
 
-	update, blockRoot, err := r.SyncFinalizedHeader(ctx)
+	_, _, err = r.SyncFinalizedHeader(ctx)
 	if err != nil {
 		return err
 	}
-
-	logrus.WithFields(logrus.Fields{
-		"slot":           update.FinalizedHeader.Slot,
-		"sync aggregate": update.SyncAggregate,
-	}).Info("Finalized header")
-
-	header, err := r.SyncHeader(ctx, uint64(update.FinalizedHeader.Slot), blockRoot)
-	if err != nil {
-		return err
-	}
-
-	logrus.WithFields(logrus.Fields{
-		"sync aggregate": header.Block.Body.SyncAggregate,
-	}).Info("Header")
 
 	ticker := time.NewTicker(time.Minute * 1)
 	done := make(chan bool)
@@ -136,13 +123,22 @@ func (r *Relay) Sync(ctx context.Context) error {
 					}).Info("Starting to back-fill headers")
 
 					blockRoot := finalizedHeaderBlockRoot
+					prevSyncAggregate, err := r.syncer.GetSyncAggregate(blockRoot)
+
+					if lastFinalizedHeader == secondLastFinalizedHeader {
+						logrus.Info("Still at same finalized header")
+
+						continue
+					}
+
 					for i := lastFinalizedHeader; i > secondLastFinalizedHeader; i-- {
-						headerUpdate, err := r.SyncHeader(ctx, i, blockRoot)
+						headerUpdate, err := r.SyncHeader(ctx, i, blockRoot, prevSyncAggregate)
 						if err != nil {
 							return err
 						}
 
 						blockRoot = common.Hash(headerUpdate.Block.ParentRoot)
+						prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 					}
 
 				}
@@ -241,7 +237,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 	return finalizedHeaderUpdate, blockRoot, err
 }
 
-func (r *Relay) SyncHeader(ctx context.Context, slot uint64, blockRoot common.Hash) (syncer.HeaderUpdate, error) {
+func (r *Relay) SyncHeader(ctx context.Context, slot uint64, blockRoot common.Hash, syncAggregate scale.SyncAggregate) (syncer.HeaderUpdate, error) {
 	logrus.WithFields(logrus.Fields{
 		"slot":      slot,
 		"blockRoot": blockRoot,
@@ -254,7 +250,7 @@ func (r *Relay) SyncHeader(ctx context.Context, slot uint64, blockRoot common.Ha
 		return syncer.HeaderUpdate{}, err
 	}
 
-	headerUpdate.Block.Body.ExecutionPayload.Transactions = [][]byte{}
+	headerUpdate.SyncAggregate = syncAggregate
 
 	err = r.writer.WriteToParachain(ctx, "import_execution_header", headerUpdate)
 	if err != nil {
