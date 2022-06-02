@@ -91,10 +91,19 @@ func (r *Relay) Sync(ctx context.Context) error {
 		return err
 	}
 
-	_, err = r.SyncHeader(ctx, uint64(update.FinalizedHeader.Slot), blockRoot)
+	logrus.WithFields(logrus.Fields{
+		"slot":           update.FinalizedHeader.Slot,
+		"sync aggregate": update.SyncAggregate,
+	}).Info("Finalized header")
+
+	header, err := r.SyncHeader(ctx, uint64(update.FinalizedHeader.Slot), blockRoot)
 	if err != nil {
 		return err
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"sync aggregate": header.Block.Body.SyncAggregate,
+	}).Info("Header")
 
 	ticker := time.NewTicker(time.Minute * 1)
 	done := make(chan bool)
@@ -190,7 +199,7 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 	return r.writer.WriteToParachain(ctx, "sync_committee_period_update", syncCommitteeUpdate)
 }
 
-func (r *Relay) SyncFinalizedHeader(ctx context.Context) ( syncer.FinalizedHeaderUpdate, common.Hash, error) {
+func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeaderUpdate, common.Hash, error) {
 	logrus.Info("Syncing finalized header")
 
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain

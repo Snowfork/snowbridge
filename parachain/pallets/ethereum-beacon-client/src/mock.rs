@@ -7057,7 +7057,11 @@ pub fn get_header_update() -> ethereum_beacon_client::BlockUpdate  {
 				}
 			}
 		},
-		fork_version: hex!("70000071").into()
+		sync_aggregate: SyncAggregate{
+			sync_committee_bits: hex!("fbb9f7deffff7efdcefeffffff37f77ffbdfbaf7fffff79fe77fbfffffcdfbfdfffffdfffbff7ffbfffdbf9ffffffffe7fffddefefff7fbdff7fbff37ffbdffd").to_vec(),
+			sync_committee_signature: hex!("aba663e1d0295178d76d78bb41e749b92a8bff85ff7c6a325fb34388e0bee3b95f78867598a0089924144aadca855f860516d7afff701aa315b24a83cb38fa5478a0dccc8081dd769a23f8e883521544556dde6f2c0dff9c5b7b00b55d4da100").to_vec(),
+		},
+		fork_version: hex!("70000071").into(),
 	}
 }
 

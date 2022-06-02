@@ -1,4 +1,4 @@
-use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, PublicKey, merkleization, ValidatorsRoot, LatestFinalizedHeaderSlot};
+use crate::{mock::*, SyncCommittees, Error, BeaconHeader, FinalizedBeaconHeaders, PublicKey, merkleization, ValidatorsRoot, LatestFinalizedHeaderSlot, ExecutionHeaders};
 use frame_support::{assert_ok, assert_err};
 use hex_literal::hex;
 use sp_core::H256;
@@ -77,9 +77,9 @@ fn it_processes_a_header_update() {
 
 		assert_ok!(EthereumBeaconClient::import_execution_header(Origin::signed(1), update.clone()));
 
-		let block_root: H256 = merkleization::hash_tree_root_beacon_block(update.block.clone()).unwrap().into();
+		let execution_block_root: H256 = update.block.body.execution_payload.block_hash.clone().into();
 
-		assert!(<FinalizedBeaconHeaders<Test>>::contains_key(block_root));
+		assert!(<ExecutionHeaders<Test>>::contains_key(execution_block_root));
 	});
 }
 
