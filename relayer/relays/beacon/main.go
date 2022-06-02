@@ -3,8 +3,9 @@ package beacon
 import (
 	"context"
 	"errors"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
 	"time"
+
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -87,7 +88,19 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	logrus.Info("Starting to sync finalized headers")
 
-	_, _, err = r.SyncFinalizedHeader(ctx)
+	finalizedHeader, blockRoot, err := r.SyncFinalizedHeader(ctx)
+	if err != nil {
+		return err
+	}
+
+	prevSyncAggregate, err := r.syncer.GetSyncAggregateForSlot(uint64(finalizedHeader.FinalizedHeader.Slot))
+	if err != nil {
+		logrus.WithError(err).Error("Unable to get sync aggregate")
+
+		return err
+	}
+
+	_, err = r.SyncHeader(ctx, uint64(finalizedHeader.FinalizedHeader.Slot), blockRoot, prevSyncAggregate)
 	if err != nil {
 		return err
 	}
@@ -124,6 +137,11 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 					blockRoot := finalizedHeaderBlockRoot
 					prevSyncAggregate, err := r.syncer.GetSyncAggregate(blockRoot)
+					if err != nil {
+						logrus.WithError(err).Error("Unable to get sync aggregate")
+
+						continue
+					}
 
 					if lastFinalizedHeader == secondLastFinalizedHeader {
 						logrus.Info("Still at same finalized header")
@@ -250,7 +268,15 @@ func (r *Relay) SyncHeader(ctx context.Context, slot uint64, blockRoot common.Ha
 		return syncer.HeaderUpdate{}, err
 	}
 
-	headerUpdate.SyncAggregate = syncAggregate
+	newTransactions := [][]byte{}
+	for i, trans := range headerUpdate.Block.Body.ExecutionPayload.Transactions {
+		if i < 100 {
+			newTransactions = append(newTransactions, trans)
+		}
+	}
+
+	headerUpdate.Block.Body.ExecutionPayload.Transactions = newTransactions
+	//headerUpdate.SyncAggregate = syncAggregate
 
 	err = r.writer.WriteToParachain(ctx, "import_execution_header", headerUpdate)
 	if err != nil {

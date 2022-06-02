@@ -97,9 +97,9 @@ type FinalizedHeaderUpdate struct {
 }
 
 type HeaderUpdate struct {
-	Block         scale.BeaconBlock
-	SyncAggregate scale.SyncAggregate
-	ForkVersion   [4]byte
+	Block scale.BeaconBlock
+	//SyncAggregate scale.SyncAggregate
+	ForkVersion [4]byte
 }
 
 func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
@@ -353,6 +353,24 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 
 func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch block")
+
+		return scale.SyncAggregate{}, err
+	}
+
+	blockScale, err := block.ToScale()
+	if err != nil {
+		logrus.WithError(err).Error("unable convert block to scale format")
+
+		return scale.SyncAggregate{}, err
+	}
+
+	return blockScale.Body.SyncAggregate, nil
+}
+
+func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, error) {
+	block, err := s.Client.GetBeaconBlockBySlot(slot)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch block")
 
