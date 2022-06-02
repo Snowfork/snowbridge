@@ -62,8 +62,8 @@ pub struct Message<M: Get<u32>> {
 }
 
 pub type MessageBundleOf<T> =
-	MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit, <T as Config>::AccountId>;
-pub type EnqueuedMessageOf<T> = EnqueuedMessage<<T as Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
+	MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit, <T as frame_system::Config>::AccountId>;
+pub type EnqueuedMessageOf<T> = EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
 
 pub use pallet::*;
 
