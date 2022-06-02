@@ -30,13 +30,21 @@ pub use weights::WeightInfo;
 )]
 #[scale_info(skip_type_params(M, N))]
 #[codec(mel_bound())]
-pub struct MessageBundle<M: Get<u32>, N: Get<u32>> {
+pub struct MessageBundle<M: Get<u32>, N: Get<u32>, AccountId> {
 	source_channel_id: u8,
+	account: AccountId,
 	/// Unique nonce for to prevent replaying bundles
 	#[codec(compact)]
 	nonce: u64,
-	messages: BoundedVec<Message<M>, N>,
+	messages: BoundedVec<EnqueuedMessage<AccountId, M>, N>,
 }
+
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
+)]
+#[scale_info(skip_type_params(AccountId, M))]
+#[codec(mel_bound())]
+pub struct EnqueuedMessage<AccountId, M: Get<u32>>(AccountId, Message<M>);
 
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
@@ -54,8 +62,8 @@ pub struct Message<M: Get<u32>> {
 }
 
 pub type MessageBundleOf<T> =
-	MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit>;
-pub type MessageOf<T> = Message<<T as Config>::MaxMessagePayloadSize>;
+	MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit, <T as Config>::AccountId>;
+pub type EnqueuedMessageOf<T> = EnqueuedMessage<<T as Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
 
 pub use pallet::*;
 
@@ -118,15 +126,16 @@ pub mod pallet {
 	/// Messages waiting to be committed.
 	#[pallet::storage]
 	pub(super) type MessageQueue<T: Config> =
-		StorageValue<_, BoundedVec<MessageOf<T>, T::MaxMessagesPerCommit>, ValueQuery>;
+		StorageValue<_, BoundedVec<EnqueuedMessageOf<T>, T::MaxMessagesPerCommit>, ValueQuery>;
 
 	/// Fee for accepting a message
 	#[pallet::storage]
 	#[pallet::getter(fn principal)]
 	pub type Principal<T: Config> = StorageValue<_, Option<T::AccountId>, ValueQuery>;
 
+	// Need a nonce for each account (message bundle) now
 	#[pallet::storage]
-	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
+	pub type Nonces<T: Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
 
 	#[pallet::storage]
 	pub type NextId<T: Config> = StorageValue<_, u64, ValueQuery>;
@@ -184,9 +193,12 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
+			// replace this with authorization for the account id
 			let principal = Self::principal();
 			ensure!(principal.is_some(), Error::<T>::NotAuthorized,);
-			ensure!(*who == principal.unwrap(), Error::<T>::NotAuthorized,);
+			let principal = principal.unwrap();
+			ensure!(*who == principal, Error::<T>::NotAuthorized,);
+			//
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0)
 					< T::MaxMessagesPerCommit::get() as usize,
@@ -202,13 +214,13 @@ pub mod pallet {
 				return Err(Error::<T>::Overflow.into());
 			}
 
-			<MessageQueue<T>>::try_append(Message {
-				id: next_id,
-				target,
-				payload: payload.to_vec().try_into().map_err(|_| Error::<T>::PayloadTooLarge)?,
-			})
-			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
-			Self::deposit_event(Event::MessageAccepted(next_id));
+			<MessageQueue<T>>::try_append(EnqueuedMessage(*who, Message {
+					id: next_id,
+					target,
+					payload: payload.to_vec().try_into().map_err(|_| Error::<T>::PayloadTooLarge)?,
+				}))
+				.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
+ 			Self::deposit_event(Event::MessageAccepted(next_id));
 
 			<NextId<T>>::put(next_id + 1);
 
@@ -216,26 +228,36 @@ pub mod pallet {
 		}
 
 		fn commit() -> Weight {
+			let who = Self::principal().unwrap();
+			let w2 = who.clone();
+
+			// for every account id in the message queues map, create an Eth ABI-encoded message bundle
+			// these encoded bundles will be the leaves of a merkle tree
 			let messages = <MessageQueue<T>>::take();
 			if messages.is_empty() {
 				return T::WeightInfo::on_initialize_no_messages();
 			}
 
-			let nonce = <Nonce<T>>::get();
-			let next_nonce = nonce.saturating_add(1);
-			<Nonce<T>>::put(next_nonce);
+			let next_nonce = <Nonces<T>>::mutate(who, |nonce| {nonce.saturating_add(1)});
 
-			let bundle = MessageBundle {
+			let bundle: MessageBundleOf<T> = MessageBundle {
 				source_channel_id: ChannelId::Basic as u8,
+				account: w2,
 				nonce: next_nonce,
 				messages: messages.clone(),
 			};
 
+			// create a merkle tree from these encoded bundles
+			// use the merkle root as the commitment hash
 			let commitment_hash = Self::make_commitment_hash(&bundle);
 			let digest_item =
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
+			// deposit non-ABI-encoded message bundles as events, so that the relayer can read them
 			Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
+
+			// persist ABI-encoded leaves to off-chain storage
+			// see here: https://github.com/JoshOrndorff/recipes/blob/master/text/off-chain-workers/indexing.md#writing-to-off-chain-storage-from-on-chain-context
 
 			T::WeightInfo::on_initialize(
 				messages.len() as u32,
@@ -243,11 +265,14 @@ pub mod pallet {
 			)
 		}
 
+		// add another RPC method to construct leaf proofs
+
 		fn make_commitment_hash(bundle: &MessageBundleOf<T>) -> H256 {
 			let messages: Vec<Token> = bundle
 				.messages
 				.iter()
 				.map(|message| {
+					let message = message.1;
 					Token::Tuple(vec![
 						Token::Uint(message.id.into()),
 						Token::Address(message.target),
@@ -263,8 +288,8 @@ pub mod pallet {
 			<T as Config>::Hashing::hash(&commitment)
 		}
 
-		fn average_payload_size(messages: &[MessageOf<T>]) -> u32 {
-			let sum: usize = messages.iter().fold(0, |acc, x| acc + x.payload.len());
+		fn average_payload_size(messages: &[EnqueuedMessage<T::AccountId, T::MaxMessagePayloadSize>]) -> u32 {
+			let sum: usize = messages.iter().fold(0, |acc, x| acc + (*x).1.payload.len());
 			// We overestimate message payload size rather than underestimate.
 			// So add 1 here to account for integer division truncation.
 			(sum / messages.len()).saturating_add(1) as u32
