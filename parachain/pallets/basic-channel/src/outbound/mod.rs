@@ -6,6 +6,8 @@ mod benchmarking;
 #[cfg(test)]
 mod test;
 
+use core::fmt::Debug;
+
 use codec::{Decode, Encode, MaxEncodedLen};
 use ethabi::{self, Token};
 use frame_support::{
@@ -31,6 +33,9 @@ pub use weights::WeightInfo;
 #[scale_info(skip_type_params(M, N))]
 #[codec(mel_bound())]
 pub struct MessageBundle<AccountId, M: Get<u32>, N: Get<u32>>
+where
+    AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo
+{
 	source_channel_id: u8,
 	account: AccountId,
 	/// Unique nonce for to prevent replaying bundles
