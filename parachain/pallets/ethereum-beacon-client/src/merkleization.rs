@@ -261,15 +261,13 @@ pub fn hash_tree_root<T: SimpleSerializeTrait>(mut object: T) -> Result<[u8; 32]
 pub fn get_sync_committee_bits(bits_hex: Vec<u8>) -> Result<Vec<u8>, MerkleizationError> {
     let bitv = Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(&bits_hex).map_err(|_| MerkleizationError::InvalidLength)?;
 
-    let mut result = Vec::new();
-
-    for bit in bitv.iter() {
+    let result = bitv.iter().map(|bit| {
         if bit == true {
-            result.push(1);
+            1
         } else {
-            result.push(0);
+            0
         }
-    }
+    }).collect::<Vec<_>>();
 
     Ok(result)
 }

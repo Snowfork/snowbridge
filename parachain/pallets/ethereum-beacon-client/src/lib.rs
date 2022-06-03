@@ -346,7 +346,8 @@ pub mod pallet {
 		fn process_sync_committee_period_update(
 			update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
-			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
+			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 			Self::verify_sync_committee(
 				update.next_sync_committee.clone(),
@@ -387,7 +388,8 @@ pub mod pallet {
 		}
 
 		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
-			let sync_committee_bits = Self::convert_to_binary(update.sync_aggregate.sync_committee_bits.clone());
+			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
@@ -440,7 +442,6 @@ pub mod pallet {
 			};
 
 			let validators_root = <ValidatorsRoot<T>>::get();
-			//let sync_committee_bits = Self::convert_to_binary(update.block.body.sync_aggregate.sync_committee_bits.clone());
 			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::verify_signed_header(
@@ -736,32 +737,6 @@ pub mod pallet {
 			}
 
 			return value == root;
-		}
-
-		pub(super) fn convert_to_binary(input: Vec<u8>) -> Vec<u8> {
-			let mut result = Vec::new();
-
-			for input_decimal in input.iter() {
-				let mut tmp = Vec::new();
-				let mut remaining = *input_decimal;
-
-				while remaining > 0 {
-					let remainder = remaining % 2;
-					tmp.push(remainder);
-					remaining = remaining / 2;
-				}
-
-				// pad binary with 0s if length is less than 7
-				if tmp.len() < 8 {
-					for _i in tmp.len()..8 {
-						tmp.push(0)
-					}
-				}
-
-				result.append(&mut tmp);
-			}
-
-			result
 		}
 
 		pub(super) fn sync_committee_participation_is_supermajority(sync_committee_bits: Vec<u8>) -> DispatchResult {
