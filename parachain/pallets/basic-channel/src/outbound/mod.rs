@@ -30,7 +30,7 @@ pub use weights::WeightInfo;
 )]
 #[scale_info(skip_type_params(M, N))]
 #[codec(mel_bound())]
-pub struct MessageBundle<M: Get<u32>, N: Get<u32>, AccountId> {
+pub struct MessageBundle<AccountId, M: Get<u32>, N: Get<u32>>
 	source_channel_id: u8,
 	account: AccountId,
 	/// Unique nonce for to prevent replaying bundles
@@ -62,7 +62,7 @@ pub struct Message<M: Get<u32>> {
 }
 
 pub type MessageBundleOf<T> =
-	MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit, <T as frame_system::Config>::AccountId>;
+	MessageBundle<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit>;
 pub type EnqueuedMessageOf<T> = EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
 
 pub use pallet::*;
