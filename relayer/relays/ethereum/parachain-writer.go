@@ -203,6 +203,12 @@ func (wr *ParachainWriter) WritePayload(ctx context.Context, payload *ParachainP
 		if !imported {
 			return fmt.Errorf("Header import failed for header %s", hash.Hex())
 		}
+
+		log.WithFields(logrus.Fields{
+			"hash":   hash.Hex(),
+			"number": header.ID().Number,
+		}).Info("Successfully imported header.")
+
 		return nil
 	}
 
@@ -228,17 +234,23 @@ func (wr *ParachainWriter) makeHeaderImportCall(header *chain.Header) (types.Cal
 func (wr *ParachainWriter) queryImportedHeaderExists(hash types.H256) (bool, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumLightClient", "Headers", hash[:], nil)
 	if err != nil {
-		return false, fmt.Errorf("failed to create storeage key for hash %s with error: %s", hash.Hex(), err)
+		return false, fmt.Errorf("create storage key for hash %s: %w", hash.Hex(), err)
 	}
 
-	var headerOption types.OptionBytes
-	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &headerOption)
+	keys := []types.StorageKey{key}
+	changeSets, err := wr.conn.API().RPC.State.QueryStorageAtLatest(keys)
 	if err != nil {
-		return false, fmt.Errorf("storage query failed for key %s and hash %s with error: %s", key.Hex(), hash.Hex(), err)
-	}
-	if !ok {
-		return false, fmt.Errorf("storage query did not find header for key %s and hash %s", key.Hex(), hash.Hex())
+		return false, fmt.Errorf("storage query for key %s and hash %s: %w", key.Hex(), hash.Hex(), err)
 	}
 
-	return headerOption.IsSome(), nil
+	// find first change for this hash
+	for _, changeSet := range changeSets {
+		for _, change := range changeSet.Changes {
+			if change.StorageData.IsSome() {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }

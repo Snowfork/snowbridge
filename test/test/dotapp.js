@@ -41,6 +41,25 @@ describe('Bridge', function () {
       expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.greaterThan(amount);
     })
 
+    it('should transfer DOT from Substrate to Ethereum (incentivized channel)', async function () {
+      const amount = BigNumber('100000000000000'); // 100 DOT (12 decimal places in this environment)
+      const amountWrapped = BigNumber(Web3.utils.toWei('100', "ether")); // 100 SnowDOT (18 decimal places)
+      const ethAccount = ethClient.accounts[1];
+
+      const beforeEthBalance = await ethClient.getDotBalance(ethAccount);
+      const beforeSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
+
+      // lock DOT using basic channel
+      await subClient.lockDOT(subClient.alice, ethAccount, amount.toFixed(), ChannelId.INCENTIVIZED)
+      await ethClient.waitForNextEventData({ appName: 'snowDOT', eventName: 'Minted' });
+
+      const afterEthBalance = await ethClient.getDotBalance(ethAccount);
+      const afterSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
+
+      expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(amountWrapped);
+      expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.greaterThan(amount);
+    })
+
     it('should transfer DOT from Ethereum to Substrate (basic channel)', async function () {
       const amount = BigNumber('1000000000000'); // 1 DOT (12 decimal places in this environment)
       const amountWrapped = BigNumber(Web3.utils.toWei('1', "ether")); // 1 SnowDOT (18 decimal places)

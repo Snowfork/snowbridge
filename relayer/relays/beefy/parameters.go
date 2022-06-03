@@ -94,32 +94,21 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 	return proof, nil
 }
 
-func (r *Request) MakeSubmitFinalParams(validationID int64, bitfield string) (*FinalRequestParams, error) {
+func (r *Request) MakeSubmitFinalParams(validationID int64, validatorIndices []uint64) (*FinalRequestParams, error) {
 	validationDataID := big.NewInt(validationID)
-
-	validatorIndices := []*big.Int{}
-
-	// bitfield is right to left order, so loop backwards
-	for i := len(bitfield) - 1; i >= 0; i-- {
-		bit := bitfield[i : i+1]
-		if bit == "1" {
-			position := len(bitfield) - 1 - i // positions start from 0 and increase to len(bitfield) - 1
-			validatorIndices = append(validatorIndices, big.NewInt(int64(position)))
-		}
-	}
 
 	signatures := [][]byte{}
 	validatorAddresses := []common.Address{}
 	validatorAddressProofs := [][][32]byte{}
 	for _, validatorIndex := range validatorIndices {
 
-		ok, beefySig := r.SignedCommitment.Signatures[validatorIndex.Int64()].Unwrap()
+		ok, beefySig := r.SignedCommitment.Signatures[validatorIndex].Unwrap()
 		if !ok {
 			return nil, fmt.Errorf("signature is empty")
 		}
 
 		signatures = append(signatures, cleanSignature(beefySig))
-		pubKey := r.Validators[validatorIndex.Int64()]
+		pubKey := r.Validators[validatorIndex]
 
 		address, err := pubKey.IntoEthereumAddress()
 		if err != nil {
@@ -128,7 +117,7 @@ func (r *Request) MakeSubmitFinalParams(validationID int64, bitfield string) (*F
 
 		validatorAddresses = append(validatorAddresses, address)
 
-		merkleProof, err := r.generateValidatorAddressProof(validatorIndex.Int64())
+		merkleProof, err := r.generateValidatorAddressProof(int64(validatorIndex))
 		if err != nil {
 			return nil, err
 		}
@@ -167,12 +156,17 @@ func (r *Request) MakeSubmitFinalParams(validationID int64, bitfield string) (*F
 		Order: r.Proof.MerkleProofOrder,
 	}
 
+	validatorIndicesBigInt := []*big.Int{}
+	for _, index := range validatorIndices {
+		validatorIndicesBigInt = append(validatorIndicesBigInt, new(big.Int).SetUint64(index))
+	}
+
 	msg := FinalRequestParams{
 		ID:         validationDataID,
 		Commitment: commitment,
 		Proof: beefyclient.BeefyClientValidatorMultiProof{
 			Signatures:   signatures,
-			Indices:      validatorIndices,
+			Indices:      validatorIndicesBigInt,
 			Addrs:        validatorAddresses,
 			MerkleProofs: validatorAddressProofs,
 		},

@@ -7,8 +7,6 @@ import "./ScaleCodec.sol";
 import "./utils/MMRProofVerification.sol";
 
 contract ParachainClient {
-    using ScaleCodec for uint32;
-
     BeefyClient public immutable beefyClient;
     uint32 public immutable parachainID;
     bytes4 public immutable encodedParachainID;
@@ -42,11 +40,13 @@ contract ParachainClient {
         encodedParachainID = ScaleCodec.encode32(_parachainID);
     }
 
-    function verifyCommitment(bytes32 commitment, Proof calldata proof)
+    function verifyCommitment(bytes32 commitment, bytes calldata opaqueProof)
         external
         view
         returns (bool)
     {
+        (Proof memory proof) = abi.decode(opaqueProof, (Proof));
+
         // Compute the merkle leaf hash of our parachain
         bytes32 parachainHeadHash = createParachainMerkleLeaf(
             commitment,
@@ -68,8 +68,8 @@ contract ParachainClient {
 
     function createParachainMerkleLeaf(
         bytes32 commitment,
-        bytes calldata headPrefix,
-        bytes calldata headSuffix
+        bytes memory headPrefix,
+        bytes memory headSuffix
     ) internal view returns (bytes32) {
         bytes memory encodedHead = bytes.concat(
             encodedParachainID,
@@ -80,7 +80,7 @@ contract ParachainClient {
         return keccak256(encodedHead);
     }
 
-    function createMMRLeaf(MMRLeafPartial calldata leaf, bytes32 parachainHeadsRoot)
+    function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot)
         internal
         pure
         returns (bytes32)

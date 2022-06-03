@@ -9,7 +9,7 @@ import (
 
 var IndexingPrefix = []byte("commitment")
 
-func MakeStorageKey(channelID ChannelID, hash types.H256) ([]byte, error) {
+func makeStorageKey(channelID ChannelID, hash types.H256) ([]byte, error) {
 	var buffer = bytes.Buffer{}
 	encoder := scale.NewEncoder(&buffer)
 

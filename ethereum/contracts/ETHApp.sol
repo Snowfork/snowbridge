@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "./RewardSource.sol";
+import "./RewardController.sol";
 import "./ScaleCodec.sol";
 import "./OutboundChannel.sol";
 
@@ -12,7 +12,7 @@ enum ChannelId {
     Incentivized
 }
 
-contract ETHApp is RewardSource, AccessControl {
+contract ETHApp is RewardController, AccessControl {
     using ScaleCodec for uint128;
     using ScaleCodec for uint32;
     using SafeCast for uint256;
@@ -151,13 +151,16 @@ contract ETHApp is RewardSource, AccessControl {
             );
     }
 
-    function reward(address payable _recipient, uint128 _amount)
+    // NOTE: should never revert or the bridge will be broken
+    function handleReward(address payable _relayer, uint128 _amount)
         external
         override
         onlyRole(REWARD_ROLE)
     {
-        (bool success, ) = _recipient.call{value: _amount}("");
-        require(success, "Unable to send Ether");
+        (bool success,) = _relayer.call{value: _amount}("");
+        if (success) {
+            emit Rewarded(_relayer, _amount);
+        }
     }
 
     function upgrade(

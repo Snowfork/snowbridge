@@ -10,7 +10,7 @@ const MerkleProof = artifacts.require("MerkleProof");
 const ScaleCodec = artifacts.require("ScaleCodec");
 const ParachainClient = artifacts.require("ParachainClient");
 
-const MockRewardSource = artifacts.require("MockRewardSource");
+const MockRewardSource = artifacts.require("MockRewardController");
 const {
   deployBeefyClient, printTxPromiseGas, createValidatorFixture, runBeefyClientFlow,
 } = require("./helpers");
@@ -24,7 +24,7 @@ describe("IncentivizedInboundChannel", function () {
   before(async function () {
     const numberOfSignatures = 8;
     const numberOfValidators = 24;
-    const validatorFixture = await createValidatorFixture(fixture.params.commitment.validatorSetID, numberOfValidators)
+    const validatorFixture = await createValidatorFixture(fixture.params.commitment.validatorSetID-1, numberOfValidators)
     this.beefyClient = await deployBeefyClient(
       validatorFixture.validatorSetID,
       validatorFixture.validatorSetRoot,
@@ -44,7 +44,7 @@ describe("IncentivizedInboundChannel", function () {
     beforeEach(async function () {
       const accounts = await web3.eth.getAccounts();
       const rewardSource = await MockRewardSource.new();
-      this.channel = await IncentivizedInboundChannel.new(this.parachainClient.address,
+      this.channel = await IncentivizedInboundChannel.new(1, this.parachainClient.address,
         { from: accounts[0] }
       );
       await this.channel.initialize(accounts[0], rewardSource.address);
