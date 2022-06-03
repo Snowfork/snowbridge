@@ -42,7 +42,7 @@ pub struct MessageBundle<M: Get<u32>, N: Get<u32>, AccountId> {
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
 )]
-#[scale_info(skip_type_params(AccountId, M))]
+#[scale_info(skip_type_params(M))]
 #[codec(mel_bound())]
 pub struct EnqueuedMessage<AccountId, M: Get<u32>>(AccountId, Message<M>);
 
