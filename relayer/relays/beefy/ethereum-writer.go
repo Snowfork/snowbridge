@@ -189,6 +189,29 @@ func (wr *EthereumWriter) watchTransaction(ctx context.Context, tx *types.Transa
 	return receipt.Status == 1, nil
 }
 
+func (wr *EthereumWriter) dynamicTipCap(ctx context.Context) (*big.Int, error) {
+	const maxTipInput = 25_000_000_000 // 25 Gwei
+	const tipMultiplierInput = 2.0
+
+	maxTip := new(big.Int).SetInt64(maxTipInput)
+	tipMultiplier := new(big.Float).SetFloat64(tipMultiplierInput)
+
+	suggestedTip, err := wr.conn.Client().SuggestGasTipCap(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("suggest tip: %w", err)
+	}
+
+	tip, _ := new(big.Float).Mul(new(big.Float).SetInt(suggestedTip), tipMultiplier).Int(nil)
+	if tip.Cmp(maxTip) < 0 {
+		return maxTip, nil
+	}
+	if tip.Cmp(suggestedTip) > 0 {
+		return suggestedTip, nil
+	}
+
+	return tip, nil
+}
+
 func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
 	chainID := wr.conn.ChainID()
 	keypair := wr.conn.Keypair()
@@ -242,8 +265,15 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		return nil, err
 	}
 
+	gasTipCap, err := wr.dynamicTipCap(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := wr.makeTxOpts(ctx)
+	opts.GasTipCap = gasTipCap
 	tx, err := wr.contract.SubmitInitial(
-		wr.makeTxOpts(ctx),
+		opts,
 		msg.CommitmentHash,
 		msg.ValidatorSetID,
 		msg.ValidatorClaimsBitfield,
@@ -291,8 +321,15 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 			return nil, fmt.Errorf("logging params: %w", err)
 		}
 
+		gasTipCap, err := wr.dynamicTipCap(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		opts := wr.makeTxOpts(ctx)
+		opts.GasTipCap = gasTipCap
 		tx, err := wr.contract.SubmitFinal(
-			wr.makeTxOpts(ctx),
+			opts,
 			params.ID,
 			params.Commitment,
 			params.Proof,
@@ -314,8 +351,15 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 			return nil, fmt.Errorf("logging params: %w", err)
 		}
 
+		gasTipCap, err := wr.dynamicTipCap(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		opts := wr.makeTxOpts(ctx)
+		opts.GasTipCap = gasTipCap
 		tx, err := wr.contract.SubmitFinal0(
-			wr.makeTxOpts(ctx),
+			opts,
 			params.ID,
 			params.Commitment,
 			params.Proof,
