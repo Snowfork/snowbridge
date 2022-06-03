@@ -5,7 +5,7 @@ use sp_std::iter::FromIterator;
 use sp_std::prelude::*;
 use ssz_rs::U256;
 use byte_slice_cast::AsByteSlice;
-use snowbridge_beacon::{SyncAggregate, Attestation, Checkpoint, Eth1Data, BeaconHeader, AttesterSlashing, ExecutionPayload, SigningData, ForkData, SyncCommittee, AttestationData, BeaconBlock, Body, ProposerSlashing, Deposit, VoluntaryExit};
+use snowbridge_beacon::{SyncAggregate, Attestation, Checkpoint, Eth1Data, BeaconHeader, AttesterSlashing, ExecutionPayload, SigningData, ForkData, SyncCommittee, AttestationData, Body, ProposerSlashing, Deposit, VoluntaryExit};
 use crate::ssz::*;
 use crate::config;
 
@@ -14,18 +14,6 @@ pub enum MerkleizationError {
     HashTreeRootError,
     HashTreeRootInvalidBytes,
     InvalidLength
-}
-
-pub fn hash_tree_root_beacon_block(beacon_block: BeaconBlock) -> Result<[u8; 32], MerkleizationError> {
-    let block = SSZBeaconBlock{
-        slot: beacon_block.slot,
-        proposer_index: beacon_block.proposer_index,
-        parent_root: beacon_block.parent_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
-        state_root: beacon_block.state_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
-        body: get_ssz_beacon_block_body(beacon_block.body)?,
-    };
-
-    hash_tree_root(block)
 }
 
 pub fn get_ssz_beacon_block_body(body: Body) -> Result<SSZBeaconBlockBody, MerkleizationError> {
@@ -295,7 +283,7 @@ mod tests {
     use hex_literal::hex;
     use ssz_rs::prelude::Vector;
     use sp_core::U256;
-    use crate::mock::{get_attester_slashing, get_block_body, get_block_with_transactions, get_sync_committee, get_transactions};
+    use crate::mock::{get_attester_slashing, get_block_body, get_sync_committee};
 
     #[test]
     pub fn test_hash_tree_root_beacon_header() {
@@ -399,19 +387,6 @@ mod tests {
     }
 
     #[test]
-    pub fn test_hash_block_with_transactions() {
-        let hash_root = merkleization::hash_tree_root_beacon_block(
-            get_block_with_transactions()
-        );
-
-        assert_ok!(&hash_root);
-         assert_eq!(
-            hash_root.unwrap(),
-            hex!("23607f8bdfdc30eeb30b3db754ad54f820de4a3a68e9eeccb0788f636f0a9581")
-        );
-    }
-
-    #[test]
     pub fn test_hash_block_body() {
         let payload = merkleization::get_ssz_beacon_block_body(
             get_block_body()
@@ -491,7 +466,7 @@ mod tests {
                 extra_data: vec![],
                 base_fee_per_gas: U256::from(7 as i16),
                 block_hash: hex!("cd8df91b4503adb8f2f1c7a4f60e07a1f1a2cbdfa2a95bceba581f3ff65c1968").into(),
-                transaction_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
+                transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
             }
         );
 

@@ -913,18 +913,3 @@ pub fn test_sync_committee_participation_is_supermajority_errors_when_not_superm
 		assert_err!(EthereumBeaconClient::sync_committee_participation_is_supermajority(sync_committee_bits), Error::<Test>::SyncCommitteeParticipantsNotSupermajority);
 	});
 }
-
-#[test]
-pub fn test_beacon_block_is_merkleized() {
-	new_tester().execute_with(|| {
-		let update = get_header_update();
-
-		let result = merkleization::hash_tree_root_beacon_block(update.block);
-
-		assert_ok!(&result);
-
-		let hash: H256 = result.unwrap().into();
-
-		assert_eq!(hash, hex!("f0070b6d29bc9f2692d7a45726e0ca86c2c870f82ff6eeb0a4101895f12b7be8").into())
-	});
-}

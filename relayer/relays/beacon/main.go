@@ -93,7 +93,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 		return err
 	}
 
-	prevSyncAggregate, err := r.syncer.GetSyncAggregateForSlot(uint64(finalizedHeader.FinalizedHeader.Slot))
+	prevSyncAggregate, err := r.syncer.GetSyncAggregateForSlot(uint64(finalizedHeader.FinalizedHeader.Slot) + 1)
 	if err != nil {
 		logrus.WithError(err).Error("Unable to get sync aggregate")
 

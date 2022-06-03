@@ -247,7 +247,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"💫 Received finalized header update for slot {}, processing and importing finalized header.",
+				"💫 Received finalized header for slot {}.",
 				slot
 			);
 
@@ -262,7 +262,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"💫 Finalized header processing and importing at slot {} succeeded.",
+				"💫 Stored finalized beacon header at slot {}.",
 				slot
 			);
 
@@ -282,7 +282,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"💫 Received header update for slot {}, processing and importing execution header.",
+				"💫 Received header update for slot {}.",
 				slot
 			);
 
@@ -297,7 +297,7 @@ pub mod pallet {
 
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"💫 Header processing and importing execution header {} at beacon slot {} succeeded.",
+				"💫 Stored execution header {} at beacon slot {}.",
 				block_hash,
 				slot
 			);
@@ -457,13 +457,6 @@ pub mod pallet {
 			let mut fee_recipient = [0u8; 20];
 			fee_recipient[0..20].copy_from_slice(&(execution_payload.fee_recipient.as_slice()));
 
-			log::trace!(
-				target: "ethereum-beacon-client",
-				"💫 Saved execution header with block root {} at slot {}.",
-				execution_payload.block_hash.clone(),
-				block_slot
-			);
-
 			Self::store_execution_header(execution_payload.block_hash, ExecutionHeader{
 				parent_hash: execution_payload.parent_hash,
 				fee_recipient: H160::from(fee_recipient),
@@ -562,11 +555,6 @@ pub mod pallet {
 				.map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?;
 
 			let header_hash_tree_root: H256 = beacon_header_root.into();
-			log::trace!(
-				target: "ethereum-beacon-client",
-				"💫 Header root is {}.",
-				header_hash_tree_root
-			);
 
 			let hash_root = merkleization::hash_tree_root_signing_data(SigningData {
 				object_root: header_hash_tree_root,

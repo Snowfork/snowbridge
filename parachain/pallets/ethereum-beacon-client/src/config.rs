@@ -12,10 +12,6 @@ pub const MAX_VALIDATORS_PER_COMMITTEE: usize = 2048;
 
 pub const DEPOSIT_CONTRACT_TREE_DEPTH: usize = 32;
 
-pub const MAX_BYTES_PER_TRANSACTION: usize = 1073741824;
-
-pub const MAX_TRANSACTIONS_PER_PAYLOAD: usize = 1048576;
-
 pub const MAX_EXTRA_DATA_BYTES: usize = 32;
 
 pub const SYNC_COMMITTEE_SIZE: usize = 512;
