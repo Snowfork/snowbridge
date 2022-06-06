@@ -278,8 +278,10 @@ pub mod pallet {
 			<T as Config>::Hashing::hash(&commitment)
 		}
 
-		fn average_payload_size(messages: &[EnqueuedMessage<T::AccountId, T::MaxMessagePayloadSize>]) -> u32 {
-			let sum: usize = messages.iter().fold(0, |acc, x| acc + (*x).1.payload.len());
+		fn average_payload_size(
+			messages: &[EnqueuedMessage<T::AccountId, T::MaxMessagePayloadSize>],
+		) -> u32 {
+			let sum: usize = messages.iter().fold(0, |acc, x| acc + (*x).message.payload.len());
 			// We overestimate message payload size rather than underestimate.
 			// So add 1 here to account for integer division truncation.
 			(sum / messages.len()).saturating_add(1) as u32
