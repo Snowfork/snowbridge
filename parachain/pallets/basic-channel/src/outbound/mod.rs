@@ -41,7 +41,7 @@ where
 	/// Unique nonce for to prevent replaying bundles
 	#[codec(compact)]
 	nonce: u64,
-	messages: BoundedVec<EnqueuedMessage<AccountId, M>, N>,
+	messages: BoundedVec<Message<M>, N>,
 }
 
 #[derive(
@@ -277,7 +277,7 @@ pub mod pallet {
 				.messages
 				.iter()
 				.map(|message| {
-					let message = message.1;
+					let message = message;
 					Token::Tuple(vec![
 						Token::Uint(message.id.into()),
 						Token::Address(message.target),
