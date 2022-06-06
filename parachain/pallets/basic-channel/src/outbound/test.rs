@@ -110,10 +110,10 @@ fn test_submit() {
 
 		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
 		assert_eq!(<NextId<Test>>::get(), 1);
-		assert_eq!(<Nonce<Test>>::get(), 0);
+		assert_eq!(<Nonces<Test>>::get(who), 0);
 
 		run_to_block(2);
-		assert_eq!(<Nonce<Test>>::get(), 1);
+		assert_eq!(<Nonces<Test>>::get(who), 1);
 	});
 }
 
