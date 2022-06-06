@@ -19,15 +19,15 @@ func (b BasicOutboundChannelMessageBundle) IntoInboundMessageBundle() basic.Basi
 	}
 	return basic.BasicInboundChannelMessageBundle{
 		SourceChannelID: b.SourceChannelID,
-		Nonce:    (*big.Int)(&b.Nonce).Uint64(),
-		Messages: messages,
+		Nonce:           (*big.Int)(&b.Nonce).Uint64(),
+		Messages:        messages,
 	}
 }
 
 type BasicOutboundChannelMessageBundle struct {
 	SourceChannelID uint8
-	Nonce    types.UCompact
-	Messages []BasicOutboundChannelMessage
+	Nonce           types.UCompact
+	Messages        []BasicOutboundChannelMessage
 }
 
 type BasicOutboundChannelMessage struct {
@@ -47,17 +47,17 @@ func (b IncentivizedOutboundChannelMessageBundle) IntoInboundMessageBundle() inc
 	}
 	return incentivized.IncentivizedInboundChannelMessageBundle{
 		SourceChannelID: b.SourceChannelID,
-		Nonce:    (*big.Int)(&b.Nonce).Uint64(),
-		Fee:      (*big.Int)(&b.Fee),
-		Messages: messages,
+		Nonce:           (*big.Int)(&b.Nonce).Uint64(),
+		Fee:             (*big.Int)(&b.Fee),
+		Messages:        messages,
 	}
 }
 
 type IncentivizedOutboundChannelMessageBundle struct {
 	SourceChannelID uint8
-	Nonce    types.UCompact
-	Fee      types.UCompact
-	Messages []IncentivizedOutboundChannelMessage
+	Nonce           types.UCompact
+	Fee             types.UCompact
+	Messages        []IncentivizedOutboundChannelMessage
 }
 
 type IncentivizedOutboundChannelMessage struct {

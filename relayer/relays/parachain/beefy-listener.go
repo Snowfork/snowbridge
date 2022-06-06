@@ -54,7 +54,7 @@ func NewBeefyListener(
 
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
-	li.eventQueryClient = NewQueryClient();
+	li.eventQueryClient = NewQueryClient()
 
 	// Set up light client bridge contract
 	address := common.HexToAddress(li.config.Contracts.BeefyClient)
@@ -226,7 +226,7 @@ func (li *BeefyListener) processBeefyLightClientEvent(ctx context.Context, event
 		if task.ProofInput.PolkadotBlockNumber >= beefyBlockNumber {
 			log.WithFields(log.Fields{
 				"proof.PolkadotBlockNumber": task.ProofInput.PolkadotBlockNumber,
-				"beefyBlockNumber": beefyBlockNumber,
+				"beefyBlockNumber":          beefyBlockNumber,
 			}).Info("Skipping task which is not bounded by latest beefyBlock")
 			return nil
 		}
@@ -474,7 +474,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 
 	log.WithFields(log.Fields{
 		"beefyBlock": latestBeefyBlockNumber,
-		"leafIndex": input.PolkadotBlockNumber,
+		"leafIndex":  input.PolkadotBlockNumber,
 	}).Info("Generating MMR proof")
 
 	mmrProof, err := li.relaychainConn.GenerateProofForBlock(
@@ -585,9 +585,8 @@ func (li *BeefyListener) scanForCommitments(
 
 		events, err := li.eventQueryClient.QueryEvents(ctx, li.config.Parachain.Endpoint, blockHash)
 		if err != nil {
-			return nil, fmt.Errorf("query events: %w", err);
+			return nil, fmt.Errorf("query events: %w", err)
 		}
-
 
 		for _, digestItem := range digestItems {
 			if !digestItem.IsCommitment {
@@ -675,12 +674,10 @@ func (li *BeefyListener) scanForCommitments(
 	return tasks, nil
 }
 
-
 type OffchainStorageValue struct {
 	Nonce      uint64
 	Commitment []byte
 }
-
 
 func (li *BeefyListener) fetchOffchainData(digestItem AuxiliaryDigestItem) (*OffchainStorageValue, error) {
 	storageKey, err := makeStorageKey(digestItem.AsCommitment.ChannelID, digestItem.AsCommitment.Hash)

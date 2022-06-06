@@ -66,7 +66,7 @@ func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName s
 		return err
 	}
 
-	c, err := types.NewCall(meta, "EthereumBeaconLightClient."+extrinsicName, payload)
+	c, err := types.NewCall(meta, "EthereumBeaconClient."+extrinsicName, payload)
 	if err != nil {
 		return err
 	}

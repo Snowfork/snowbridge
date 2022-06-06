@@ -23,19 +23,19 @@ var mock = `{
 `
 
 func TestQueryEvents(t *testing.T) {
-    tmpFile, err := ioutil.TempFile(os.TempDir(), "test-query-events-")
-    if err != nil {
-        t.Fatal(err)
-    }
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "test-query-events-")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.Remove(tmpFile.Name())
 
-    if _, err = tmpFile.Write([]byte(mock)); err != nil {
-        t.Fatal(err)
-    }
+	if _, err = tmpFile.Write([]byte(mock)); err != nil {
+		t.Fatal(err)
+	}
 
-    if err := tmpFile.Close(); err != nil {
-        t.Fatal(err)
-    }
+	if err := tmpFile.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	client := parachain.NewQueryClient()
 	client.NameArgs = func(_ string, _ string) (string, []string) {

@@ -15,28 +15,28 @@ type inputItems struct {
 }
 
 type inputItem struct {
-	ID uint64 `json:"id"`
+	ID   uint64 `json:"id"`
 	Hash string `json:"hash"`
 	Data string `json:"data"`
 }
 
 type Events struct {
-	Basic *BasicChannelEvent
+	Basic        *BasicChannelEvent
 	Incentivized *IncentivizedChannelEvent
 }
 
 type BasicChannelEvent struct {
-	Hash types.H256
+	Hash   types.H256
 	Bundle BasicOutboundChannelMessageBundle
 }
 
 type IncentivizedChannelEvent struct {
-	Hash types.H256
+	Hash   types.H256
 	Bundle IncentivizedOutboundChannelMessageBundle
 }
 
 type QueryClient struct {
-	NameArgs func (api string, blockHash string) (string, []string)
+	NameArgs func(api string, blockHash string) (string, []string)
 }
 
 func NewQueryClient() QueryClient {
@@ -79,8 +79,8 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 			if err != nil {
 				return nil, err
 			}
-			events.Basic = &BasicChannelEvent {
-				Hash: hash,
+			events.Basic = &BasicChannelEvent{
+				Hash:   hash,
 				Bundle: bundle,
 			}
 		} else if item.ID == 1 {
@@ -89,8 +89,8 @@ func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash typ
 			if err != nil {
 				return nil, err
 			}
-			events.Incentivized = &IncentivizedChannelEvent {
-				Hash: hash,
+			events.Incentivized = &IncentivizedChannelEvent{
+				Hash:   hash,
 				Bundle: bundle,
 			}
 		} else {
