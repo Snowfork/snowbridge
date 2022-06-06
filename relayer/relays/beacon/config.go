@@ -8,7 +8,11 @@ type Config struct {
 }
 
 type SourceConfig struct {
-	Beacon BeaconConfig `mapstructure:"beacon"`
+	Beacon                BeaconConfig          `mapstructure:"beacon"`
+	Ethereum              config.EthereumConfig `mapstructure:"ethereum"`
+	DataDir               string                `mapstructure:"data-dir"`
+	DescendantsUntilFinal uint64                `mapstructure:"descendants-until-final"`
+	Contracts             ContractsConfig       `mapstructure:"contracts"`
 }
 
 type BeaconConfig struct {

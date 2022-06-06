@@ -5,15 +5,14 @@ import (
 	"errors"
 	"time"
 
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
-
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -23,6 +22,7 @@ type Relay struct {
 	keypair  *sr25519.Keypair
 	paraconn *parachain.Connection
 	writer   *ParachainWriter
+	ethconn  *ethereum.Connection
 }
 
 func NewRelay(
@@ -38,6 +38,7 @@ func NewRelay(
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint)
+	r.ethconn = ethereum.NewConnection(r.config.Source.Ethereum.Endpoint, nil)
 
 	err := r.paraconn.Connect(ctx)
 	if err != nil {
@@ -53,7 +54,27 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	return r.Sync(ctx)
+	err = r.Sync(ctx)
+	if err != nil {
+		return err
+	}
+
+	listener := NewEthereumListener(
+		&r.config.Source,
+		r.ethconn,
+		60,
+	)
+
+	payloads, err := listener.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"payloads": payloads,
+	}).Info("Payloads")
+
+	return nil
 }
 
 func (r *Relay) Sync(ctx context.Context) error {

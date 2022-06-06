@@ -10423,6 +10423,7 @@ dependencies = [
  "hex-literal",
  "milagro_bls",
  "parity-scale-codec",
+ "rlp",
  "scale-info",
  "serde",
  "serde_json",

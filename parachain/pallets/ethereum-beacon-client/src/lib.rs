@@ -18,6 +18,10 @@ use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use snowbridge_beacon::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
+use snowbridge_core::{Message, Verifier};
+pub use snowbridge_ethereum::{
+	Header as EthereumHeader,
+};
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
@@ -94,7 +98,9 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
-	use sp_core::H160;
+	use sp_core::{H160, U256};
+	use snowbridge_core::Proof;
+	use snowbridge_ethereum::{Header, Log, Receipt};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -126,6 +132,9 @@ pub mod pallet {
 		SignatureVerificationFailed,
 		NoBranchExpected,
 		HeaderNotFinalized,
+		MissingHeader,
+		InvalidProof,
+		DecodeFailed
 	}
 
 	#[pallet::hooks]
@@ -756,6 +765,87 @@ pub mod pallet {
 			}
 
 			Ok(sync_committee)
+		}
+
+		// Verifies that the receipt encoded in proof.data is included
+		// in the block given by proof.block_hash. Inclusion is only
+		// recognized if the block has been finalized.
+		fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
+			let stored_header =
+				<ExecutionHeaders<T>>::get(proof.block_hash).ok_or(Error::<T>::MissingHeader)?;
+
+			let fake_header = Header{
+				parent_hash: Default::default(),
+				timestamp: 0,
+				number: 0,
+				author: Default::default(),
+				transactions_root: Default::default(),
+				ommers_hash: Default::default(),
+				extra_data: vec![],
+				state_root: Default::default(),
+				receipts_root: stored_header.receipts_root,
+				logs_bloom: Default::default(),
+				gas_used: Default::default(),
+				gas_limit: Default::default(),
+				difficulty: Default::default(),
+				seal: vec![],
+				base_fee: None
+			};
+
+			let result = fake_header
+				.check_receipt_proof(&proof.data.1)
+				.ok_or(Error::<T>::InvalidProof)?;
+
+			match result {
+				Ok(receipt) => Ok(receipt),
+				Err(err) => {
+					log::trace!(
+						target: "ethereum-beacon-client",
+						"Failed to decode transaction receipt: {}",
+						err
+					);
+					Err(Error::<T>::InvalidProof.into())
+				},
+			}
+		}
+	}
+
+	impl<T: Config> Verifier for Pallet<T> {
+		/// Verify a message by verifying the existence of the corresponding
+		/// Ethereum log in a block. Returns the log if successful.
+		fn verify(message: &Message) -> Result<Log, DispatchError> {
+			let receipt = Self::verify_receipt_inclusion(&message.proof)?;
+
+			log::trace!(
+				target: "ethereum-light-client",
+				"Verified receipt inclusion for transaction at index {} in block {}",
+				message.proof.tx_index, message.proof.block_hash,
+			);
+
+			let log: Log = rlp::decode(&message.data).map_err(|_| Error::<T>::DecodeFailed)?;
+
+			if !receipt.contains_log(&log) {
+				log::trace!(
+					target: "ethereum-light-client",
+					"Event log not found in receipt for transaction at index {} in block {}",
+					message.proof.tx_index, message.proof.block_hash,
+				);
+				return Err(Error::<T>::InvalidProof.into())
+			}
+
+			Ok(log)
+		}
+
+		/// Import an ordered vec of Ethereum headers without performing
+		/// validation.
+		///
+		/// NOTE: This should only be used to initialize empty storage.
+		fn initialize_storage(
+			headers: Vec<EthereumHeader>,
+			initial_difficulty: U256,
+			descendants_until_final: u8,
+		) -> Result<(), &'static str> {
+			Ok(())
 		}
 	}
 }
