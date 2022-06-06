@@ -228,23 +228,36 @@ pub mod pallet {
 				return T::WeightInfo::on_initialize_no_messages();
 			}
 
-			let next_nonce = <Nonces<T>>::mutate(who, |nonce| {nonce.saturating_add(1)});
+			let message_bundles = BTreeMap::new();
+			for enqueued_message in messages {
+				let (account, message) = (enqueued_message.account, enqueued_message.message);
 
-			let bundle: MessageBundleOf<T> = MessageBundle {
-				source_channel_id: ChannelId::Basic as u8,
-				account: w2,
-				nonce: next_nonce,
-				messages: messages.clone(),
-			};
+				if message_bundles.contains_key(&account) {
+					let bundle: MessageBundleOf<T> = message_bundles[&account];
+					bundle.messages.insert(0, message)
+				} else {
+					let next_nonce = <Nonces<T>>::mutate(account, |nonce| nonce.saturating_add(1));
+					let messages = BoundedVec::default();
+					messages.insert(0, message);
+					let bundle: MessageBundleOf<T> = MessageBundle {
+						source_channel_id: ChannelId::Basic as u8,
+						account,
+						nonce: next_nonce,
+						messages,
+					};
 
-			// create a merkle tree from these encoded bundles
+					message_bundles.insert(account, bundle);
+				}
+			}
+
+			// TODO: create a merkle tree from these encoded bundles
 			// use the merkle root as the commitment hash
-			let commitment_hash = Self::make_commitment_hash(&bundle);
-			let digest_item =
-				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
-			<frame_system::Pallet<T>>::deposit_log(digest_item);
-			// deposit non-ABI-encoded message bundles as events, so that the relayer can read them
-			Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
+			// let commitment_hash = Self::make_commitment_hash(&bundle);
+			// let digest_item =
+			// 	AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
+			// <frame_system::Pallet<T>>::deposit_log(digest_item);
+			// // deposit non-ABI-encoded message bundles as events, so that the relayer can read them
+			// Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
 
 			// persist ABI-encoded leaves to off-chain storage
 			// see here: https://github.com/JoshOrndorff/recipes/blob/master/text/off-chain-workers/indexing.md#writing-to-off-chain-storage-from-on-chain-context
