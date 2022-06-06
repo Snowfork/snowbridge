@@ -35,7 +35,7 @@ pub use weights::WeightInfo;
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct MessageBundle<AccountId, M: Get<u32>, N: Get<u32>>
 where
-    AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo
+	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
 {
 	source_channel_id: u8,
 	account: AccountId,
