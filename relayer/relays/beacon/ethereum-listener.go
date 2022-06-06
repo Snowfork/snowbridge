@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
 	"time"
 
