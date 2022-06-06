@@ -31,7 +31,8 @@ pub use weights::WeightInfo;
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
 )]
 #[scale_info(skip_type_params(M, N))]
-#[codec(mel_bound())]
+// TODO: figure out why this mel_bound call is unnecessary
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct MessageBundle<AccountId, M: Get<u32>, N: Get<u32>>
 where
     AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo
@@ -48,8 +49,10 @@ where
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
 )]
 #[scale_info(skip_type_params(M))]
-#[codec(mel_bound())]
-pub struct EnqueuedMessage<AccountId, M: Get<u32>>(AccountId, Message<M>);
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
+pub struct EnqueuedMessage<AccountId, M: Get<u32>>(AccountId, Message<M>)
+where
+	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo;
 
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
