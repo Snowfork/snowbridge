@@ -136,11 +136,6 @@ pub mod pallet {
 	pub(super) type MessageQueue<T: Config> =
 		StorageValue<_, BoundedVec<EnqueuedMessageOf<T>, T::MaxMessagesPerCommit>, ValueQuery>;
 
-	/// Fee for accepting a message
-	#[pallet::storage]
-	#[pallet::getter(fn principal)]
-	pub type Principal<T: Config> = StorageValue<_, Option<T::AccountId>, ValueQuery>;
-
 	// Need a nonce for each account (message bundle) now
 	#[pallet::storage]
 	pub type Nonces<T: Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
@@ -151,13 +146,12 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub interval: T::BlockNumber,
-		pub principal: Option<T::AccountId>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { interval: Default::default(), principal: Default::default() }
+			Self { interval: Default::default() }
 		}
 	}
 
@@ -165,7 +159,6 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			<Interval<T>>::put(self.interval);
-			<Principal<T>>::put(self.principal.clone());
 		}
 	}
 
@@ -191,9 +184,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			principal: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
-			T::SetPrincipalOrigin::ensure_origin(origin)?;
-			let principal = T::Lookup::lookup(principal)?;
-			<Principal<T>>::put(Some(principal));
+			// TODO: remove this call - might require change to runtime
 			Ok(())
 		}
 	}
@@ -201,12 +192,6 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
-			// replace this with authorization for the account id
-			let principal = Self::principal();
-			ensure!(principal.is_some(), Error::<T>::NotAuthorized,);
-			let principal = principal.unwrap();
-			ensure!(*who == principal, Error::<T>::NotAuthorized,);
-			//
 			ensure!(
 				<MessageQueue<T>>::decode_len().unwrap_or(0)
 					< T::MaxMessagesPerCommit::get() as usize,
@@ -236,9 +221,6 @@ pub mod pallet {
 		}
 
 		fn commit() -> Weight {
-			let who = Self::principal().unwrap();
-			let w2 = who.clone();
-
 			// for every account id in the message queues map, create an Eth ABI-encoded message bundle
 			// these encoded bundles will be the leaves of a merkle tree
 			let messages = <MessageQueue<T>>::take();

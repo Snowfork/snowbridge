@@ -2,7 +2,6 @@ use super::*;
 
 use frame_support::{
 	assert_noop, assert_ok,
-	dispatch::DispatchError,
 	parameter_types,
 	traits::{Everything, GenesisBuild, OnInitialize},
 };
@@ -84,7 +83,6 @@ pub fn new_tester() -> sp_io::TestExternalities {
 
 	let config: basic_outbound_channel::GenesisConfig<Test> =
 		basic_outbound_channel::GenesisConfig {
-			principal: Some(Keyring::Bob.into()),
 			interval: 1u64,
 		};
 	config.assimilate_storage(&mut storage).unwrap();
@@ -160,27 +158,5 @@ fn test_submit_fails_not_authorized() {
 			BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
 			Error::<Test>::NotAuthorized,
 		);
-	});
-}
-
-#[test]
-fn test_set_principal_unauthorized() {
-	new_tester().execute_with(|| {
-		let dave: AccountId = Keyring::Dave.into();
-
-		assert_noop!(
-			BasicOutboundChannel::set_principal(Origin::signed(dave), Keyring::Alice.into()),
-			DispatchError::BadOrigin
-		);
-	});
-}
-
-#[test]
-fn test_set_principal() {
-	new_tester().execute_with(|| {
-		let alice: AccountId = Keyring::Alice.into();
-
-		assert_ok!(BasicOutboundChannel::set_principal(Origin::root(), alice.clone()));
-		assert_eq!(<Principal<Test>>::get(), Some(alice));
 	});
 }
