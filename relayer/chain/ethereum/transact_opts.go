@@ -38,11 +38,11 @@ func scaleFee(multiplier float64, suggested *big.Int, max, defaultMax uint64) *b
 func CalculateFee(config config.EthereumConfig, suggestedBase, suggestedTip *big.Int) FeeInfo {
 	result := FeeInfo{}
 
-	if suggestedTip != nil {
+	if suggestedTip != nil && config.GasTipMultiplier != 0 {
 		result.GasTipCap = scaleFee(config.GasTipMultiplier, suggestedTip, config.GasTipCap, DefaultMaxTip)
 	}
 
-	if suggestedBase != nil {
+	if suggestedBase != nil && config.GasFeeMultiplier != 0 {
 		result.GasFeeCap = scaleFee(config.GasFeeMultiplier, suggestedBase, config.GasFeeCap, DefaultMaxGas)
 	}
 
