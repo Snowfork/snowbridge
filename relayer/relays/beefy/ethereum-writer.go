@@ -189,60 +189,6 @@ func (wr *EthereumWriter) watchTransaction(ctx context.Context, tx *types.Transa
 	return receipt.Status == 1, nil
 }
 
-func (wr *EthereumWriter) dynamicTipCap(ctx context.Context) (*big.Int, error) {
-	const maxTipInput = 25_000_000_000 // 25 Gwei
-	const tipMultiplierInput = 2.0
-
-	maxTip := new(big.Int).SetInt64(maxTipInput)
-	tipMultiplier := new(big.Float).SetFloat64(tipMultiplierInput)
-
-	suggestedTip, err := wr.conn.Client().SuggestGasTipCap(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("suggest tip: %w", err)
-	}
-
-	tip, _ := new(big.Float).Mul(new(big.Float).SetInt(suggestedTip), tipMultiplier).Int(nil)
-	if tip.Cmp(maxTip) < 0 {
-		return maxTip, nil
-	}
-	if tip.Cmp(suggestedTip) > 0 {
-		return suggestedTip, nil
-	}
-
-	return tip, nil
-}
-
-func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
-	chainID := wr.conn.ChainID()
-	keypair := wr.conn.Keypair()
-
-	options := bind.TransactOpts{
-		From: keypair.CommonAddress(),
-		Signer: func(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			return types.SignTx(tx, types.NewLondonSigner(chainID), keypair.PrivateKey())
-		},
-		Context: ctx,
-	}
-
-	if wr.config.Ethereum.GasFeeCap > 0 {
-		fee := big.NewInt(0)
-		fee.SetUint64(wr.config.Ethereum.GasFeeCap)
-		options.GasFeeCap = fee
-	}
-
-	if wr.config.Ethereum.GasTipCap > 0 {
-		tip := big.NewInt(0)
-		tip.SetUint64(wr.config.Ethereum.GasTipCap)
-		options.GasTipCap = tip
-	}
-
-	if wr.config.Ethereum.GasLimit > 0 {
-		options.GasLimit = wr.config.Ethereum.GasLimit
-	}
-
-	return &options
-}
-
 func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*types.Transaction, error) {
 	signedValidators := []*big.Int{}
 	for i, signature := range task.SignedCommitment.Signatures {
@@ -265,15 +211,13 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		return nil, err
 	}
 
-	gasTipCap, err := wr.dynamicTipCap(ctx)
+	options, err := ethereum.MakeTxOpts(wr.conn, wr.config.Ethereum, ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	opts := wr.makeTxOpts(ctx)
-	opts.GasTipCap = gasTipCap
 	tx, err := wr.contract.SubmitInitial(
-		opts,
+		options,
 		msg.CommitmentHash,
 		msg.ValidatorSetID,
 		msg.ValidatorClaimsBitfield,
@@ -321,15 +265,13 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 			return nil, fmt.Errorf("logging params: %w", err)
 		}
 
-		gasTipCap, err := wr.dynamicTipCap(ctx)
+		options, err := ethereum.MakeTxOpts(wr.conn, wr.config.Ethereum, ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		opts := wr.makeTxOpts(ctx)
-		opts.GasTipCap = gasTipCap
 		tx, err := wr.contract.SubmitFinal(
-			opts,
+			options,
 			params.ID,
 			params.Commitment,
 			params.Proof,
@@ -351,15 +293,13 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, validationID int64,
 			return nil, fmt.Errorf("logging params: %w", err)
 		}
 
-		gasTipCap, err := wr.dynamicTipCap(ctx)
+		options, err := ethereum.MakeTxOpts(wr.conn, wr.config.Ethereum, ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		opts := wr.makeTxOpts(ctx)
-		opts.GasTipCap = gasTipCap
 		tx, err := wr.contract.SubmitFinal0(
-			opts,
+			options,
 			params.ID,
 			params.Commitment,
 			params.Proof,

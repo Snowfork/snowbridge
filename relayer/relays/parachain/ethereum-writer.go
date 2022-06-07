@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
@@ -100,39 +99,11 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (wr *EthereumWriter) makeTxOpts(ctx context.Context) *bind.TransactOpts {
-	chainID := wr.conn.ChainID()
-	keypair := wr.conn.Keypair()
-
-	options := bind.TransactOpts{
-		From: keypair.CommonAddress(),
-		Signer: func(_ common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			return types.SignTx(tx, types.NewLondonSigner(chainID), keypair.PrivateKey())
-		},
-		Context: ctx,
-	}
-
-	if wr.config.Ethereum.GasFeeCap > 0 {
-		fee := big.NewInt(0)
-		fee.SetUint64(wr.config.Ethereum.GasFeeCap)
-		options.GasFeeCap = fee
-	}
-
-	if wr.config.Ethereum.GasTipCap > 0 {
-		tip := big.NewInt(0)
-		tip.SetUint64(wr.config.Ethereum.GasTipCap)
-		options.GasTipCap = tip
-	}
-
-	if wr.config.Ethereum.GasLimit > 0 {
-		options.GasLimit = wr.config.Ethereum.GasLimit
-	}
-
-	return &options
-}
-
 func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
-	options := wr.makeTxOpts(ctx)
+	options, err := ethereum.MakeTxOpts(wr.conn, wr.config.Ethereum, ctx)
+	if err != nil {
+		return err
+	}
 	for {
 		select {
 		case <-ctx.Done():
