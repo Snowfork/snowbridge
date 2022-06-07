@@ -45,6 +45,9 @@ func CalculateFee(config config.EthereumConfig, suggestedBase, suggestedTip *big
 
 	if suggestedBase != nil && config.GasFeeMultiplier != 0 {
 		result.GasFeeCap = scaleFee(config.GasFeeMultiplier, suggestedBase, config.GasFeeCap, DefaultMaxGas)
+		if result.GasTipCap != nil {
+			result.GasFeeCap.Add(result.GasFeeCap, result.GasTipCap)
+		}
 	}
 
 	if config.GasTipCap > 0 && result.GasTipCap == nil {

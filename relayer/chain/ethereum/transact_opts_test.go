@@ -73,7 +73,7 @@ func TestCalculateFee_DynamicFees(t *testing.T) {
 
 	fee := ethereum.CalculateFee(config, suggestedFee, suggestedTip)
 
-	assert.Equal(t, fee.GasFeeCap, big.NewInt(35_000))
+	assert.Equal(t, fee.GasFeeCap, big.NewInt(50_000))
 	assert.Equal(t, fee.GasTipCap, big.NewInt(15_000))
 }
 
@@ -158,7 +158,7 @@ func TestCalculateFee_DynamicFeeAppliesMaximum(t *testing.T) {
 
 	fee := ethereum.CalculateFee(config, suggestedFee, suggestedTip)
 
-	assert.Equal(t, fee.GasFeeCap, big.NewInt(ethereum.DefaultMaxGas))
+	assert.Equal(t, fee.GasFeeCap, big.NewInt(ethereum.DefaultMaxGas+ethereum.DefaultMaxTip))
 	assert.Equal(t, fee.GasTipCap, big.NewInt(ethereum.DefaultMaxTip))
 }
 
@@ -175,7 +175,7 @@ func TestCalculateFee_DynamicFeeWithMaximumOverride(t *testing.T) {
 
 	fee := ethereum.CalculateFee(config, suggestedFee, suggestedTip)
 
-	assert.Equal(t, fee.GasFeeCap, big.NewInt(400_000_000_000))
+	assert.Equal(t, fee.GasFeeCap, big.NewInt(500_000_000_000))
 	assert.Equal(t, fee.GasTipCap, big.NewInt(100_000_000_000))
 }
 
@@ -192,7 +192,7 @@ func TestCalculateFee_DynamicFee(t *testing.T) {
 
 	fee := ethereum.CalculateFee(config, suggestedFee, suggestedTip)
 
-	assert.Equal(t, fee.GasFeeCap, big.NewInt(350_000_000_000))
+	assert.Equal(t, fee.GasFeeCap, big.NewInt(435_000_000_000))
 	assert.Equal(t, fee.GasTipCap, big.NewInt(85_000_000_000))
 }
 
@@ -209,7 +209,7 @@ func TestCalculateFee_DynamicFeeDoesNotYieldLessThanSuggested(t *testing.T) {
 
 	fee := ethereum.CalculateFee(config, suggestedFee, suggestedTip)
 
-	assert.Equal(t, fee.GasFeeCap, big.NewInt(4_000_000_000))
+	assert.Equal(t, fee.GasFeeCap, big.NewInt(5_000_000_000))
 	assert.Equal(t, fee.GasTipCap, big.NewInt(1_000_000_000))
 }
 
@@ -226,7 +226,7 @@ func TestCalculateFee_DynamicFeeDoesNotYieldNegative(t *testing.T) {
 
 	fee := ethereum.CalculateFee(config, suggestedFee, suggestedTip)
 
-	assert.Equal(t, fee.GasFeeCap, big.NewInt(4_000_000_000))
+	assert.Equal(t, fee.GasFeeCap, big.NewInt(5_000_000_000))
 	assert.Equal(t, fee.GasTipCap, big.NewInt(1_000_000_000))
 }
 
