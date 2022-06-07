@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/config"
 )
 
@@ -57,6 +58,17 @@ func CalculateFee(config config.EthereumConfig, suggestedBase, suggestedTip *big
 		fee.SetUint64(config.GasFeeCap)
 		result.GasFeeCap = fee
 	}
+
+	log.WithFields(log.Fields{
+		"gasFeeMultiplier": config.GasFeeMultiplier,
+		"gasTipMultiplier": config.GasTipMultiplier,
+		"gasFeeCap":        config.GasFeeCap,
+		"gasTipCap":        config.GasTipCap,
+		"suggestedFee":     suggestedBase,
+		"suggestedCap":     suggestedTip,
+		"chosenFee":        result.GasFeeCap,
+		"chosenTip":        result.GasTipCap,
+	}).Debug("Transaction Fees")
 
 	return result
 }
