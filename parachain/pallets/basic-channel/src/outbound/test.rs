@@ -104,9 +104,9 @@ fn run_to_block(n: u64) {
 fn test_submit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
-		let who: AccountId = Keyring::Bob.into();
+		let who: &AccountId = &Keyring::Bob.into();
 
-		assert_ok!(BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]));
+		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
 		assert_eq!(<NextId<Test>>::get(), 1);
 		assert_eq!(<Nonces<Test>>::get(who), 0);
 
