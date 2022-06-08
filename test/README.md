@@ -1,6 +1,6 @@
 # Local Testnet
 
-The E2E tests run against local deployments of the parachain, relayer and ethereum (geth).
+The E2E tests run against local deployments of the parachain, relayer, the ethereum execution layer (geth) and the ethereum consensus layer (lodestar).
 
 ## Requirements
 
@@ -35,6 +35,8 @@ The E2E tests run against local deployments of the parachain, relayer and ethere
   ```
 
 * direnv - https://direnv.net/
+
+* lodestar - https://chainsafe.github.io/lodestar/installation/
 
 ## Setup
 

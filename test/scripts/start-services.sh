@@ -30,7 +30,7 @@ start_geth() {
     geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key0.prv
     geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key1.prv
     geth --vmdebug --datadir "$data_dir" --networkid 15 \
-        --http --http.api debug,personal,eth,net,web3,txpool --ws --ws.api debug,eth,net,web3 \
+        --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
         --rpc.allow-unprotected-txs --mine --miner.threads=1 \
         --miner.etherbase=0x0000000000000000000000000000000000000000 \
         --allow-insecure-unlock \
@@ -41,6 +41,10 @@ start_geth() {
         --gcmode archive \
         --miner.gasprice=0 \
         > "$output_dir/geth.log" 2>&1 &
+}
+
+start_lodestar() {
+
 }
 
 deploy_contracts()
@@ -236,29 +240,30 @@ mkdir "$output_dir/bin"
 export PATH="$output_dir/bin:$PATH"
 
 start_geth
-deploy_contracts
-start_polkadot_launch
+start_lodestar
+#deploy_contracts
+#start_polkadot_launch
 
-echo "Waiting for consensus between polkadot and parachain"
-sleep 60
-configure_contracts
-start_relayer
-
-echo "Process Tree:"
-pstree -T $$
-
-sleep 3
-until grep "Syncing headers starting..." ethereum-relay.log > /dev/null; do
-    echo "Waiting for ethereum relay to generate the DAG cache. This can take up to 20 minutes."
-    sleep 20
-done
-
-until grep "Done retrieving finalized headers" ethereum-relay.log > /dev/null; do
-    echo "Waiting for ethereum relay to sync headers..."
-    sleep 5
-done
-
-
-echo "Testnet has been initialized"
+#echo "Waiting for consensus between polkadot and parachain"
+#sleep 60
+#configure_contracts
+#start_relayer
+#
+#echo "Process Tree:"
+#pstree -T $$
+#
+#sleep 3
+#until grep "Syncing headers starting..." ethereum-relay.log > /dev/null; do
+#    echo "Waiting for ethereum relay to generate the DAG cache. This can take up to 20 minutes."
+#    sleep 20
+#done
+#
+#until grep "Done retrieving finalized headers" ethereum-relay.log > /dev/null; do
+#    echo "Waiting for ethereum relay to sync headers..."
+#    sleep 5
+#done
+#
+#
+#echo "Testnet has been initialized"
 
 wait
