@@ -24,6 +24,8 @@ use sp_std::prelude::*;
 
 use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 
+use std::collections::BTreeMap;
+
 pub use weights::WeightInfo;
 
 /// Wire-format for committed messages
@@ -50,9 +52,13 @@ where
 )]
 #[scale_info(skip_type_params(M))]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
-pub struct EnqueuedMessage<AccountId, M: Get<u32>>(AccountId, Message<M>)
+pub struct EnqueuedMessage<AccountId, M: Get<u32>>
 where
-	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo;
+	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
+{
+	account: AccountId,
+	message: Message<M>,
+}
 
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
@@ -69,9 +75,13 @@ pub struct Message<M: Get<u32>> {
 	payload: BoundedVec<u8, M>,
 }
 
-pub type MessageBundleOf<T> =
-	MessageBundle<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit>;
-pub type EnqueuedMessageOf<T> = EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
+pub type MessageBundleOf<T> = MessageBundle<
+	<T as frame_system::Config>::AccountId,
+	<T as Config>::MaxMessagePayloadSize,
+	<T as Config>::MaxMessagesPerCommit,
+>;
+pub type EnqueuedMessageOf<T> =
+	EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
 
 pub use pallet::*;
 
@@ -207,13 +217,19 @@ pub mod pallet {
 				return Err(Error::<T>::Overflow.into());
 			}
 
-			<MessageQueue<T>>::try_append(EnqueuedMessage(*who, Message {
+			<MessageQueue<T>>::try_append(EnqueuedMessage {
+				account: who.clone(),
+				message: Message {
 					id: next_id,
 					target,
-					payload: payload.to_vec().try_into().map_err(|_| Error::<T>::PayloadTooLarge)?,
-				}))
-				.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
- 			Self::deposit_event(Event::MessageAccepted(next_id));
+					payload: payload
+						.to_vec()
+						.try_into()
+						.map_err(|_| Error::<T>::PayloadTooLarge)?,
+				},
+			})
+			.map_err(|_| Error::<T>::QueueSizeLimitReached)?;
+			Self::deposit_event(Event::MessageAccepted(next_id));
 
 			<NextId<T>>::put(next_id + 1);
 
@@ -223,32 +239,63 @@ pub mod pallet {
 		fn commit() -> Weight {
 			// for every account id in the message queues map, create an Eth ABI-encoded message bundle
 			// these encoded bundles will be the leaves of a merkle tree
-			let messages = <MessageQueue<T>>::take();
-			if messages.is_empty() {
+			let message_queue = <MessageQueue<T>>::take();
+			if message_queue.is_empty() {
 				return T::WeightInfo::on_initialize_no_messages();
 			}
+			let message_count = message_queue.len();
 
-			let message_bundles = BTreeMap::new();
-			for enqueued_message in messages {
-				let (account, message) = (enqueued_message.account, enqueued_message.message);
+			let average_payload_size = Self::average_payload_size(&message_queue);
 
-				if message_bundles.contains_key(&account) {
-					let bundle: MessageBundleOf<T> = message_bundles[&account];
-					bundle.messages.insert(0, message)
-				} else {
-					let next_nonce = <Nonces<T>>::mutate(account, |nonce| nonce.saturating_add(1));
-					let messages = BoundedVec::default();
-					messages.insert(0, message);
+			let messages_per_account: BTreeMap<T::AccountId, BoundedVec<Message<T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>> =
+				message_queue.into_iter().fold(BTreeMap::new(), |mut messages_for_accounts, enqueued_message|{
+					let (account, message) = (enqueued_message.account, enqueued_message.message);
+
+					if let Some(messages) = messages_for_accounts.get_mut(&account) {
+						// We should be able to safely ignore the result here, since we can't have
+						// more messages for a single account than we have in the message queue
+						messages.try_push(message);
+					} else {
+						let mut messages = BoundedVec::default();
+						// Safe to ignore the result because we just created the empty BoundedVec
+						#[allow(unused_must_use)]
+						messages.try_push(message);
+						messages_for_accounts.insert(account, messages);
+					}
+					messages_for_accounts
+				});
+
+			// Alternate implementation with a for loop, created while fighting the borrow-checker
+			// and before discovering get_mut 🤦
+			// Do we prefer the style of folding or for loops?
+
+			// let mut messages_per_account: BTreeMap<T::AccountId, BoundedVec<Message<T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>> = BTreeMap::new();
+			// for enqueued_message in message_queue {
+			// 	let (account, message) = (enqueued_message.account, enqueued_message.message);
+
+			// 	if let Some(messages) = messages_per_account.get_mut(&account) {
+			// 		messages.try_push(message);
+			// 	} else {
+			// 		let mut messages = BoundedVec::default();
+			// 		messages.try_push(message);
+			// 		messages_per_account.insert(account, messages);
+			// 	}
+			// }
+
+			let message_bundles_for_accounts =
+				messages_per_account.into_iter().map(|(account, messages)| {
+					// TODO: find a better way to handle this. We don't want to ignore all
+					// messages for an account if the conversion above from Vec to BoundedVec
+					// fails
+					let next_nonce = <Nonces<T>>::mutate(account.clone(), |nonce| nonce.saturating_add(1));
 					let bundle: MessageBundleOf<T> = MessageBundle {
 						source_channel_id: ChannelId::Basic as u8,
 						account,
 						nonce: next_nonce,
 						messages,
 					};
-
-					message_bundles.insert(account, bundle);
-				}
-			}
+					bundle
+					});
 
 			// TODO: create a merkle tree from these encoded bundles
 			// use the merkle root as the commitment hash
@@ -259,16 +306,13 @@ pub mod pallet {
 			// // deposit non-ABI-encoded message bundles as events, so that the relayer can read them
 			// Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
 
-			// persist ABI-encoded leaves to off-chain storage
+			// TODO: persist ABI-encoded leaves to off-chain storage
 			// see here: https://github.com/JoshOrndorff/recipes/blob/master/text/off-chain-workers/indexing.md#writing-to-off-chain-storage-from-on-chain-context
 
-			T::WeightInfo::on_initialize(
-				messages.len() as u32,
-				Self::average_payload_size(&messages),
-			)
+			T::WeightInfo::on_initialize(message_count as u32, average_payload_size)
 		}
 
-		// add another RPC method to construct leaf proofs
+		// TODO: add another RPC method to construct leaf proofs
 
 		fn make_commitment_hash(bundle: &MessageBundleOf<T>) -> H256 {
 			let messages: Vec<Token> = bundle
