@@ -32,6 +32,7 @@ start_geth() {
     geth --vmdebug --datadir "$data_dir" --networkid 15 \
         --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
         --rpc.allow-unprotected-txs --mine --miner.threads=1 \
+        --authrpc.jwtsecret=/tmp/jwtsecret
         --miner.etherbase=0x0000000000000000000000000000000000000000 \
         --allow-insecure-unlock \
         --unlock 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD,0x89b4AB1eF20763630df9743ACF155865600daFF2 \
@@ -44,7 +45,17 @@ start_geth() {
 }
 
 start_lodestar() {
+    echo "Starting lodestar"
 
+    echo "Waiting for geth API to be ready"
+    sleep 2
+
+    genesisHash=$(curl http://localhost:8545 \
+        -X POST \
+        -H 'Content-Type: application/json' \
+        -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
+
+    echo "npx ts-node start-beacon-network.ts"
 }
 
 deploy_contracts()

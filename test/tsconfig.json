@@ -8,5 +8,8 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist"
   },
-  "files": ["./scripts/make-xcm-transfer.ts"],
+  "files": [
+    "./scripts/make-xcm-transfer.ts",
+    "./scripts/start-beacon-network.ts"
+  ],
 }
