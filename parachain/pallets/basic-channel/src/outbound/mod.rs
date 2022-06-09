@@ -22,7 +22,7 @@ use sp_runtime::traits::{Hash, StaticLookup, Zero};
 
 use sp_std::prelude::*;
 
-use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
+use snowbridge_core::ChannelId;
 
 use std::collections::BTreeMap;
 
@@ -191,8 +191,8 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::set_principal())]
 		pub fn set_principal(
-			origin: OriginFor<T>,
-			principal: <T::Lookup as StaticLookup>::Source,
+			_origin: OriginFor<T>,
+			_principal: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			// TODO: remove this call - might require change to runtime
 			Ok(())
