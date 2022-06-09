@@ -295,7 +295,7 @@ pub mod pallet {
 						messages,
 					};
 					bundle
-					});
+					}).collect::<Vec<MessageBundleOf<T>>>();
 
 			// TODO: create a merkle tree from these encoded bundles
 			// use the merkle root as the commitment hash
