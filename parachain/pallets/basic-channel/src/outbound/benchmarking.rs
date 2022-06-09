@@ -57,17 +57,6 @@ benchmarks! {
 		let block_number = Interval::<T>::get();
 
 	}: { BasicOutboundChannel::<T>::on_initialize(block_number) }
-
-	set_principal {
-		let authorized_origin = match T::SetPrincipalOrigin::successful_origin().into() {
-			Ok(raw) => raw,
-			Err(_) => return Err(BenchmarkError::Stop("Failed to get raw origin from origin")),
-		};
-		let alice = T::Lookup::unlookup(account("alice", 0, SEED));
-	}: _(authorized_origin, alice)
-	verify {
-		assert_eq!(<Principal<T>>::get(), Some(account("alice", 0, SEED)));
-	}
 }
 
 impl_benchmark_test_suite!(

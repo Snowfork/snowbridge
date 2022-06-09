@@ -26,7 +26,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		BasicOutboundChannel: basic_outbound_channel::{Pallet, Call, Config<T>, Storage, Event<T>},
+		BasicOutboundChannel: basic_outbound_channel::{Pallet, Config<T>, Storage, Event<T>},
 	}
 );
 
@@ -74,7 +74,6 @@ impl basic_outbound_channel::Config for Test {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
-	type SetPrincipalOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type WeightInfo = ();
 }
 
