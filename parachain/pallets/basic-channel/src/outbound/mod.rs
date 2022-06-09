@@ -270,9 +270,6 @@ pub mod pallet {
 
 			let message_bundles_for_accounts =
 				messages_per_account.into_iter().map(|(account, messages)| {
-					// TODO: find a better way to handle this. We don't want to ignore all
-					// messages for an account if the conversion above from Vec to BoundedVec
-					// fails
 					let next_nonce = <Nonces<T>>::mutate(account.clone(), |nonce| nonce.saturating_add(1));
 					let bundle: MessageBundleOf<T> = MessageBundle {
 						source_channel_id: ChannelId::Basic as u8,
