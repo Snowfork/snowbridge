@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "module": "commonjs",
+    "module": "esnext",
     "strict": false,
     "esModuleInterop": true,
     "moduleResolution": "node",
@@ -12,4 +12,7 @@
     "./scripts/make-xcm-transfer.ts",
     "./scripts/start-beacon-network.ts"
   ],
+  "ts-node": {
+    "esm": true
+  }
 }
