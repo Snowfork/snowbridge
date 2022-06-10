@@ -6,6 +6,8 @@ mod benchmarking;
 #[cfg(test)]
 mod test;
 
+mod merkle_proof;
+
 use core::fmt::Debug;
 
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -21,12 +23,13 @@ use sp_core::{H160, H256};
 use sp_runtime::traits::{Hash, StaticLookup, Zero};
 
 use sp_std::prelude::*;
-
-use snowbridge_core::ChannelId;
-
 use sp_std::collections::btree_map::BTreeMap;
 
+use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
+
 pub use weights::WeightInfo;
+
+use merkle_proof::{Keccak256, merkle_root};
 
 /// Wire-format for committed messages
 #[derive(
@@ -45,6 +48,15 @@ where
 	#[codec(compact)]
 	nonce: u64,
 	messages: BoundedVec<Message<M>, N>,
+}
+
+impl<AccountId, M: Get<u32>, N: Get<u32>> AsRef<[u8]> for MessageBundle<AccountId, M, N> 
+where
+	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
+{
+    fn as_ref(&self) -> &[u8] {
+		&[0]
+    }
 }
 
 #[derive(
@@ -256,7 +268,6 @@ pub mod pallet {
 					} else {
 						let mut messages = BoundedVec::default();
 						// Safe to ignore the result because we just created the empty BoundedVec
-						#[allow(unused_must_use)]
 						messages.try_push(message);
 						messages_for_accounts.insert(account, messages);
 					}
@@ -295,10 +306,18 @@ pub mod pallet {
 			// TODO: create a merkle tree from these encoded bundles
 			// use the merkle root as the commitment hash
 			// let commitment_hash = Self::make_commitment_hash(&bundle);
-			// let digest_item =
-			// 	AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
-			// <frame_system::Pallet<T>>::deposit_log(digest_item);
-			// // deposit non-ABI-encoded message bundles as events, so that the relayer can read them
+			let commitment_hash =
+				merkle_root::<Keccak256, Vec<MessageBundleOf<T>>, MessageBundleOf<T>>(message_bundles_for_accounts);
+			// TODO: is this hashing necessary, beyond making the types match? Seems like we're
+			// hashing twice now
+			let commitment_hash = <T as Config>::Hashing::hash(&Vec::from(commitment_hash));
+
+			let digest_item =
+				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
+			<frame_system::Pallet<T>>::deposit_log(digest_item);
+			// TODO: update this. Do we include all bundles in a single event, or emit an event per
+			// bundle?
+			// deposit non-ABI-encoded message bundles as events, so that the relayer can read them
 			// Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
 
 			// TODO: persist ABI-encoded leaves to off-chain storage

@@ -10234,11 +10234,14 @@ dependencies = [
 name = "snowbridge-basic-channel"
 version = "0.1.1"
 dependencies = [
+ "env_logger",
  "ethabi-decode",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "hex",
  "hex-literal",
+ "log",
  "parity-scale-codec",
  "rlp",
  "scale-info",
@@ -10250,6 +10253,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+ "tiny-keccak 2.0.2",
 ]
 
 [[package]]
