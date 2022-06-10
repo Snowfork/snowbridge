@@ -24,7 +24,7 @@ use sp_std::prelude::*;
 
 use snowbridge_core::ChannelId;
 
-use std::collections::BTreeMap;
+use sp_std::collections::btree_map::BTreeMap;
 
 pub use weights::WeightInfo;
 
