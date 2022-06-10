@@ -157,6 +157,7 @@ impl snowbridge_basic_channel::outbound::Config for Test {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type SetPrincipalOrigin = frame_system::EnsureRoot<AccountId>;
 	type WeightInfo = ();
 }
 

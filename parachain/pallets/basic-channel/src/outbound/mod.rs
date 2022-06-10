@@ -111,6 +111,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxMessagesPerCommit: Get<u32>;
 
+		type SetPrincipalOrigin: EnsureOrigin<Self::Origin>;
+
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
 	}
@@ -182,6 +184,18 @@ pub mod pallet {
 			} else {
 				T::WeightInfo::on_initialize_non_interval()
 			}
+		}
+	}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		#[pallet::weight(T::WeightInfo::set_principal())]
+		pub fn set_principal(
+			_origin: OriginFor<T>,
+			_principal: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResult {
+			// TODO: remove this call - might require change to runtime
+			Ok(())
 		}
 	}
 
