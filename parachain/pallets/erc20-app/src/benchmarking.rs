@@ -11,7 +11,7 @@ use crate::{Address, AssetId, Call, Config as Erc20AppConfig, Pallet as Erc20App
 use snowbridge_core::ChannelId;
 
 use pallet_assets::Config as AssetsConfig;
-use snowbridge_basic_channel::outbound::{Config as BasicOutboundChannelConfig, Principal};
+use snowbridge_basic_channel::outbound::Config as BasicOutboundChannelConfig;
 use snowbridge_incentivized_channel::outbound::{Config as IncentivizedOutboundChannelConfig, Fee};
 
 use frame_support::traits::{
@@ -32,9 +32,6 @@ benchmarks! {
 		let token = H160::repeat_byte(1);
 		let recipient = H160::repeat_byte(2);
 		let amount: u128 = 500;
-
-		// set principal for basic channel
-		Principal::<T>::set(Some(caller.clone()));
 
 		// create wrapped token
 		let origin = T::CallOrigin::successful_origin();

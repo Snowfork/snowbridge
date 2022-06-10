@@ -14,7 +14,7 @@ use crate::{primitives::wrap, Address, Call, Config as DotAppConfig, Pallet as D
 use snowbridge_core::ChannelId;
 
 use pallet_assets::Config as AssetsConfig;
-use snowbridge_basic_channel::outbound::{Config as BasicOutboundChannelConfig, Principal};
+use snowbridge_basic_channel::outbound::Config as BasicOutboundChannelConfig;
 use snowbridge_incentivized_channel::outbound::{Config as IncentivizedOutboundChannelConfig, Fee};
 
 use frame_support::traits::fungible::Mutate as FungibleMutate;
@@ -32,9 +32,6 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 		let lock_account = DotApp::<T>::account_id();
 		let recipient = H160::zero();
-
-		// set principal for basic channel
-		Principal::<T>::set(Some(caller.clone()));
 
 		let balance = existential_deposit * 10u32.into();
 		// The amount is chosen such that balance - amount < existential_deposit

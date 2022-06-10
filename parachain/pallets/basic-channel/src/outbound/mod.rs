@@ -13,7 +13,7 @@ use ethabi::{self, Token};
 use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
-	traits::{EnsureOrigin, Get},
+	traits::Get,
 	BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 use scale_info::TypeInfo;
@@ -111,8 +111,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxMessagesPerCommit: Get<u32>;
 
-		type SetPrincipalOrigin: EnsureOrigin<Self::Origin>;
-
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
 	}
@@ -187,6 +185,7 @@ pub mod pallet {
 		}
 	}
 
+	// TODO: replace this call with leaf proof creation
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::set_principal())]
@@ -194,7 +193,6 @@ pub mod pallet {
 			_origin: OriginFor<T>,
 			_principal: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
-			// TODO: remove this call - might require change to runtime
 			Ok(())
 		}
 	}
