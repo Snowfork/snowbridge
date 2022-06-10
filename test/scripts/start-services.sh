@@ -26,13 +26,14 @@ start_geth() {
 
     local data_dir="$output_dir/geth"
 
+        #    --authrpc.jwtsecret=/tmp/jwtsecret \
+
     geth init --datadir "$data_dir" config/genesis.json
     geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key0.prv
     geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key1.prv
     geth --vmdebug --datadir "$data_dir" --networkid 15 \
         --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
         --rpc.allow-unprotected-txs --mine --miner.threads=1 \
-        --authrpc.jwtsecret=/tmp/jwtsecret
         --miner.etherbase=0x0000000000000000000000000000000000000000 \
         --allow-insecure-unlock \
         --unlock 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD,0x89b4AB1eF20763630df9743ACF155865600daFF2 \
@@ -55,6 +56,8 @@ start_lodestar() {
         -H 'Content-Type: application/json' \
         -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
 
+    echo "export ETH_PORT=8545"
+    echo "export ENGINE_PORT=8551"
     echo "npx ts-node start-beacon-network.ts"
 }
 
@@ -251,7 +254,7 @@ mkdir "$output_dir/bin"
 export PATH="$output_dir/bin:$PATH"
 
 start_geth
-start_lodestar
+#start_lodestar
 #deploy_contracts
 #start_polkadot_launch
 
