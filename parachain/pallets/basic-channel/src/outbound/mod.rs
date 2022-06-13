@@ -293,7 +293,7 @@ pub mod pallet {
 
 			let message_bundles_for_accounts =
 				messages_per_account.into_iter().map(|(account, messages)| {
-					let next_nonce = <Nonces<T>>::mutate(account.clone(), |nonce| nonce.saturating_add(1));
+					let next_nonce = <Nonces<T>>::mutate(&account, |nonce| {*nonce = nonce.saturating_add(1); *nonce});
 					let bundle: MessageBundleOf<T> = MessageBundle {
 						source_channel_id: ChannelId::Basic as u8,
 						account,
