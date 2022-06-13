@@ -502,6 +502,7 @@ mod tests {
 		}
 	}
 
+	#[ignore]
 	#[test]
 	fn should_generate_and_verify_proof_large() {
 		// given
@@ -529,6 +530,7 @@ mod tests {
 		}
 	}
 
+	#[ignore]
 	#[test]
 	fn should_generate_and_verify_proof_large_tree() {
 		// given
