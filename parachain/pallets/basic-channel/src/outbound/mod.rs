@@ -29,7 +29,7 @@ use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 
 pub use weights::WeightInfo;
 
-use merkle_proof::{Keccak256, merkle_root};
+use merkle_proof::{keccak256::Keccak256, merkle_root};
 
 /// Wire-format for committed messages
 #[derive(
@@ -50,7 +50,7 @@ where
 	messages: BoundedVec<Message<M>, N>,
 }
 
-impl<AccountId, M: Get<u32>, N: Get<u32>> AsRef<[u8]> for MessageBundle<AccountId, M, N> 
+impl<AccountId, M: Get<u32>, N: Get<u32>> AsRef<[u8]> for MessageBundle<AccountId, M, N>
 where
 	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
 {

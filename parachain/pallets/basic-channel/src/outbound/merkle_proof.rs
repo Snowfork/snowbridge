@@ -52,7 +52,7 @@ pub trait Hasher {
 }
 
 #[cfg(feature = "keccak")]
-mod keccak256 {
+pub mod keccak256 {
 	use tiny_keccak::{Hasher as _, Keccak};
 
 	/// Keccak256 hasher implementation.
