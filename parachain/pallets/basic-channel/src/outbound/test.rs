@@ -146,16 +146,3 @@ fn test_submit_exceeds_payload_limit() {
 		);
 	})
 }
-
-#[test]
-fn test_submit_fails_not_authorized() {
-	new_tester().execute_with(|| {
-		let target = H160::zero();
-		let who: AccountId = Keyring::Charlie.into();
-
-		assert_noop!(
-			BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
-			Error::<Test>::NotAuthorized,
-		);
-	});
-}
