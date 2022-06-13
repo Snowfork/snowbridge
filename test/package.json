@@ -8,7 +8,8 @@
     "test": "mocha --timeout 400000 --exit"
   },
   "devDependencies": {
-    "@chainsafe/lodestar": "0.38.0",
+    "@chainsafe/lodestar": "next",
+    "@chainsafe/lodestar-cli": "next",
     "@polkadot/api": "^8.3.1",
     "@polkadot/util": "^9.1.1",
     "@polkadot/util-crypto": "^9.1.1",
