@@ -10253,7 +10253,6 @@ dependencies = [
  "sp-keyring",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
- "tiny-keccak 2.0.2",
 ]
 
 [[package]]

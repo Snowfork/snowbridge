@@ -36,65 +36,36 @@ extern crate alloc;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
-/// Supported hashing output size.
-///
-/// The size is restricted to 32 bytes to allow for a more optimised implementation.
-pub type Hash = [u8; 32];
-
-/// Generic hasher trait.
-///
-/// Implement the function to support custom way of hashing data.
-/// The implementation must return a [Hash](type@Hash) type, so only 32-byte output hashes are
-/// supported.
-pub trait Hasher {
-	/// Hash given arbitrary-length piece of data.
-	fn hash(data: &[u8]) -> Hash;
-}
-
-#[cfg(feature = "keccak")]
-pub mod keccak256 {
-	use tiny_keccak::{Hasher as _, Keccak};
-
-	/// Keccak256 hasher implementation.
-	pub struct Keccak256;
-	impl super::Hasher for Keccak256 {
-		fn hash(data: &[u8]) -> super::Hash {
-			let mut keccak = Keccak::v256();
-			keccak.update(data);
-			let mut output = [0_u8; 32];
-			keccak.finalize(&mut output);
-			output
-		}
-	}
-}
-#[cfg(feature = "keccak")]
-pub use keccak256::Keccak256;
+use sp_runtime::traits::Hash;
+use sp_core::H256;
 
 /// Construct a root hash of a Binary Merkle Tree created from given leaves.
 ///
 /// See crate-level docs for details about Merkle Tree construction.
 ///
 /// In case an empty list of leaves is passed the function returns a 0-filled hash.
-pub fn merkle_root<H, I, T>(leaves: I) -> Hash
+pub fn merkle_root<H, I, T, O>(leaves: I) -> O
 where
-	H: Hasher,
+	H: Hash<Output = O>,
 	I: IntoIterator<Item = T>,
 	T: AsRef<[u8]>,
+	O: Default + AsRef<[u8]>,
 {
-	let iter = leaves.into_iter().map(|l| H::hash(l.as_ref()));
-	merkelize::<H, _, _>(iter, &mut ())
+	let iter = leaves.into_iter().map(|l| <H as Hash>::hash(l.as_ref()));
+	merkelize::<H, _, _, O>(iter, &mut ())
 }
 
-fn merkelize<H, V, I>(leaves: I, visitor: &mut V) -> Hash
+fn merkelize<H, V, I, O>(leaves: I, visitor: &mut V) -> O
 where
-	H: Hasher,
-	V: Visitor,
-	I: Iterator<Item = Hash>,
+	H: Hash<Output = O>,
+	V: Visitor<O>,
+	I: Iterator<Item = O>,
+	O: Default + AsRef<[u8]>,
 {
 	let upper = Vec::with_capacity(leaves.size_hint().0);
-	let mut next = match merkelize_row::<H, _, _>(leaves, upper, visitor) {
+	let mut next = match merkelize_row::<H, _, _, O>(leaves, upper, visitor) {
 		Ok(root) => return root,
-		Err(next) if next.is_empty() => return Hash::default(),
+		Err(next) if next.is_empty() => return O::default(),
 		Err(next) => next,
 	};
 
@@ -102,7 +73,7 @@ where
 	loop {
 		visitor.move_up();
 
-		match merkelize_row::<H, _, _>(next.drain(..), upper, visitor) {
+		match merkelize_row::<H, _, _, O>(next.drain(..), upper, visitor) {
 			Ok(root) => return root,
 			Err(t) => {
 				// swap collections to avoid allocations
@@ -117,14 +88,14 @@ where
 ///
 /// The structure contains all necessary data to later on verify the proof and the leaf itself.
 #[derive(Debug, PartialEq, Eq)]
-pub struct MerkleProof<T> {
+pub struct MerkleProof<T, O> {
 	/// Root hash of generated merkle tree.
-	pub root: Hash,
+	pub root: O,
 	/// Proof items (does not contain the leaf hash, nor the root obviously).
 	///
 	/// This vec contains all inner node hashes necessary to reconstruct the root hash given the
 	/// leaf hash.
-	pub proof: Vec<Hash>,
+	pub proof: Vec<O>,
 	/// Number of leaves in the original tree.
 	///
 	/// This is needed to detect a case where we have an odd number of leaves that "get promoted"
@@ -140,7 +111,7 @@ pub struct MerkleProof<T> {
 ///
 /// It can be passed to [`merkelize_row`] or [`merkelize`] functions and will be notified
 /// about tree traversal.
-trait Visitor {
+trait Visitor<O> {
 	/// We are moving one level up in the tree.
 	fn move_up(&mut self);
 
@@ -150,13 +121,13 @@ trait Visitor {
 	/// The method will also visit the `root` hash (level 0).
 	///
 	/// The `index` is an index of `left` item.
-	fn visit(&mut self, index: usize, left: &Option<Hash>, right: &Option<Hash>);
+	fn visit(&mut self, index: usize, left: &Option<O>, right: &Option<O>);
 }
 
 /// No-op implementation of the visitor.
-impl Visitor for () {
+impl<O> Visitor<O> for () {
 	fn move_up(&mut self) {}
-	fn visit(&mut self, _index: usize, _left: &Option<Hash>, _right: &Option<Hash>) {}
+	fn visit(&mut self, _index: usize, _left: &Option<O>, _right: &Option<O>) {}
 }
 
 /// Construct a Merkle Proof for leaves given by indices.
@@ -169,16 +140,17 @@ impl Visitor for () {
 /// # Panic
 ///
 /// The function will panic if given `leaf_index` is greater than the number of leaves.
-pub fn merkle_proof<H, I, T>(leaves: I, leaf_index: usize) -> MerkleProof<T>
+pub fn merkle_proof<H, I, T, O>(leaves: I, leaf_index: usize) -> MerkleProof<T, O>
 where
-	H: Hasher,
+	H: Hash<Output = O>,
 	I: IntoIterator<Item = T>,
 	I::IntoIter: ExactSizeIterator,
 	T: AsRef<[u8]>,
+	O: Default + AsRef<[u8]> + Copy,
 {
 	let mut leaf = None;
 	let iter = leaves.into_iter().enumerate().map(|(idx, l)| {
-		let hash = H::hash(l.as_ref());
+		let hash = <H as Hash>::hash(l.as_ref());
 		if idx == leaf_index {
 			leaf = Some(l);
 		}
@@ -186,23 +158,26 @@ where
 	});
 
 	/// The struct collects a proof for single leaf.
-	struct ProofCollection {
-		proof: Vec<Hash>,
+	struct ProofCollection<O> {
+		proof: Vec<O>,
 		position: usize,
 	}
 
-	impl ProofCollection {
+	impl<O> ProofCollection<O> {
 		fn new(position: usize) -> Self {
 			ProofCollection { proof: Default::default(), position }
 		}
 	}
 
-	impl Visitor for ProofCollection {
+	impl<O> Visitor<O> for ProofCollection<O>
+	where
+		O: Copy,
+	{
 		fn move_up(&mut self) {
 			self.position /= 2;
 		}
 
-		fn visit(&mut self, index: usize, left: &Option<Hash>, right: &Option<Hash>) {
+		fn visit(&mut self, index: usize, left: &Option<O>, right: &Option<O>) {
 			// we are at left branch - right goes to the proof.
 			if self.position == index {
 				if let Some(right) = right {
@@ -221,7 +196,7 @@ where
 	let number_of_leaves = iter.len();
 	let mut collect_proof = ProofCollection::new(leaf_index);
 
-	let root = merkelize::<H, _, _>(iter, &mut collect_proof);
+	let root = merkelize::<H, _, _, O>(iter, &mut collect_proof);
 	let leaf = leaf.expect("Requested `leaf_index` is greater than number of leaves.");
 
 	#[cfg(feature = "debug")]
@@ -238,21 +213,21 @@ where
 /// Can be either a value that needs to be hashed first,
 /// or the hash itself.
 #[derive(Debug, PartialEq, Eq)]
-pub enum Leaf<'a> {
+pub enum Leaf<'a, O> {
 	/// Leaf content.
 	Value(&'a [u8]),
 	/// Hash of the leaf content.
-	Hash(Hash),
+	Hash(O),
 }
 
-impl<'a, T: AsRef<[u8]>> From<&'a T> for Leaf<'a> {
+impl<'a, T: AsRef<[u8]>, O> From<&'a T> for Leaf<'a, O> {
 	fn from(v: &'a T) -> Self {
 		Leaf::Value(v.as_ref())
 	}
 }
 
-impl<'a> From<Hash> for Leaf<'a> {
-	fn from(v: Hash) -> Self {
+impl<'a> From<H256> for Leaf<'a, H256> {
+	fn from(v: H256) -> Self {
 		Leaf::Hash(v)
 	}
 }
@@ -264,24 +239,25 @@ impl<'a> From<Hash> for Leaf<'a> {
 /// concatenating and hashing end up with given root hash.
 ///
 /// The proof must not contain the root hash.
-pub fn verify_proof<'a, H, P, L>(
-	root: &'a Hash,
+pub fn verify_proof<'a, H, P, L, O>(
+	root: &'a O,
 	proof: P,
 	number_of_leaves: usize,
 	leaf_index: usize,
 	leaf: L,
 ) -> bool
 where
-	H: Hasher,
-	P: IntoIterator<Item = Hash>,
-	L: Into<Leaf<'a>>,
+	H: Hash<Output = O>,
+	P: IntoIterator<Item = O>,
+	L: Into<Leaf<'a, O>>,
+	O: AsRef<[u8]> + PartialEq + Copy,
 {
 	if leaf_index >= number_of_leaves {
 		return false
 	}
 
 	let leaf_hash = match leaf.into() {
-		Leaf::Value(content) => H::hash(content),
+		Leaf::Value(content) => <H as Hash>::hash(content),
 		Leaf::Hash(hash) => hash,
 	};
 
@@ -290,13 +266,13 @@ where
 	let mut width = number_of_leaves;
 	let computed = proof.into_iter().fold(leaf_hash, |a, b| {
 		if position % 2 == 1 || position + 1 == width {
-			combined[0..32].copy_from_slice(&b);
-			combined[32..64].copy_from_slice(&a);
+			combined[0..32].copy_from_slice(b.as_ref());
+			combined[32..64].copy_from_slice(a.as_ref());
 		} else {
-			combined[0..32].copy_from_slice(&a);
-			combined[32..64].copy_from_slice(&b);
+			combined[0..32].copy_from_slice(a.as_ref());
+			combined[32..64].copy_from_slice(b.as_ref());
 		}
-		let hash = H::hash(&combined);
+		let hash = <H as Hash>::hash(&combined);
 		#[cfg(feature = "debug")]
 		log::debug!(
 			"[verify_proof]: (a, b) {:?}, {:?} => {:?} ({:?}) hash",
@@ -318,15 +294,16 @@ where
 ///
 /// In case only one element is provided it is returned via `Ok` result, in any other case (also an
 /// empty iterator) an `Err` with the inner nodes of upper layer is returned.
-fn merkelize_row<H, V, I>(
+fn merkelize_row<H, V, I, O>(
 	mut iter: I,
-	mut next: Vec<Hash>,
+	mut next: Vec<O>,
 	visitor: &mut V,
-) -> Result<Hash, Vec<Hash>>
+) -> Result<O, Vec<O>>
 where
-	H: Hasher,
-	V: Visitor,
-	I: Iterator<Item = Hash>,
+	H: Hash<Output = O>,
+	V: Visitor<O>,
+	I: Iterator<Item = O>,
+	O: AsRef<[u8]>
 {
 	#[cfg(feature = "debug")]
 	log::debug!("[merkelize_row]");
@@ -345,10 +322,10 @@ where
 		index += 2;
 		match (a, b) {
 			(Some(a), Some(b)) => {
-				combined[0..32].copy_from_slice(&a);
-				combined[32..64].copy_from_slice(&b);
+				combined[0..32].copy_from_slice(a.as_ref());
+				combined[32..64].copy_from_slice(b.as_ref());
 
-				next.push(H::hash(&combined));
+				next.push(<H as Hash>::hash(&combined));
 			},
 			// Odd number of items. Promote the item to the upper layer.
 			(Some(a), None) if !next.is_empty() => {

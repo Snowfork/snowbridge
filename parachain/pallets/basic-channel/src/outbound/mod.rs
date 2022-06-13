@@ -29,7 +29,7 @@ use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 
 pub use weights::WeightInfo;
 
-use merkle_proof::{keccak256::Keccak256, merkle_root};
+use merkle_proof::merkle_root;
 
 /// Wire-format for committed messages
 #[derive(
@@ -307,10 +307,15 @@ pub mod pallet {
 			// use the merkle root as the commitment hash
 			// let commitment_hash = Self::make_commitment_hash(&bundle);
 			let commitment_hash =
-				merkle_root::<Keccak256, Vec<MessageBundleOf<T>>, MessageBundleOf<T>>(message_bundles_for_accounts);
+				merkle_root::<
+                    <T as Config>::Hashing,
+                    Vec<MessageBundleOf<T>>,
+                    MessageBundleOf<T>,
+                    <<T as Config>::Hashing as Hash>::Output
+                >(message_bundles_for_accounts);
 			// TODO: is this hashing necessary, beyond making the types match? Seems like we're
 			// hashing twice now
-			let commitment_hash = <T as Config>::Hashing::hash(&Vec::from(commitment_hash));
+			// let commitment_hash = <T as Config>::Hashing::hash(&Vec::from(commitment_hash));
 
 			let digest_item =
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();

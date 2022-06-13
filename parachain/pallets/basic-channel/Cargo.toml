@@ -17,7 +17,6 @@ hex-literal = { version = "0.3.4", optional = true }
 rlp = { version = "0.5", default-features = false, optional = true }
 hex = { version = "0.4", default-features = false, optional = true }
 log = { version = "0.4", default-features = false, optional = true }
-tiny-keccak = { version = "2.0.2", features = ["keccak"], optional = true }
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
@@ -40,9 +39,8 @@ env_logger = "0.9"
 hex = "0.4"
 
 [features]
-default = [ "debug", "keccak", "std" ]
+default = [ "debug", "std" ]
 debug = ["hex", "hex/std", "log"]
-keccak = ["tiny-keccak"]
 std = [
     "serde",
     "codec/std",
