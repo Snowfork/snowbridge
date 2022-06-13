@@ -276,7 +276,7 @@ pub mod pallet {
 
 			// Alternate implementation with a for loop, created while fighting the borrow-checker
 			// and before discovering get_mut 🤦
-			// Do we prefer the style of folding or for loops?
+			// TODO: Do we prefer the style of folding or for loops?
 
 			// let mut messages_per_account: BTreeMap<T::AccountId, BoundedVec<Message<T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>> = BTreeMap::new();
 			// for enqueued_message in message_queue {
