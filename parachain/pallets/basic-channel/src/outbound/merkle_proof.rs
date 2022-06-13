@@ -36,8 +36,8 @@ extern crate alloc;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
-use sp_runtime::traits::Hash;
 use sp_core::H256;
+use sp_runtime::traits::Hash;
 
 /// Construct a root hash of a Binary Merkle Tree created from given leaves.
 ///
@@ -253,7 +253,7 @@ where
 	O: AsRef<[u8]> + PartialEq + Copy,
 {
 	if leaf_index >= number_of_leaves {
-		return false
+		return false;
 	}
 
 	let leaf_hash = match leaf.into() {
@@ -294,16 +294,12 @@ where
 ///
 /// In case only one element is provided it is returned via `Ok` result, in any other case (also an
 /// empty iterator) an `Err` with the inner nodes of upper layer is returned.
-fn merkelize_row<H, V, I, O>(
-	mut iter: I,
-	mut next: Vec<O>,
-	visitor: &mut V,
-) -> Result<O, Vec<O>>
+fn merkelize_row<H, V, I, O>(mut iter: I, mut next: Vec<O>, visitor: &mut V) -> Result<O, Vec<O>>
 where
 	H: Hash<Output = O>,
 	V: Visitor<O>,
 	I: Iterator<Item = O>,
-	O: AsRef<[u8]>
+	O: AsRef<[u8]>,
 {
 	#[cfg(feature = "debug")]
 	log::debug!("[merkelize_row]");
@@ -340,7 +336,7 @@ where
 					"[merkelize_row] Next: {:?}",
 					next.iter().map(hex::encode).collect::<Vec<_>>()
 				);
-				return Err(next)
+				return Err(next);
 			},
 		}
 	}
