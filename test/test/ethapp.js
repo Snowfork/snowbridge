@@ -22,27 +22,6 @@ describe('Bridge', function () {
   });
 
   describe('ETH App', function () {
-    it('should transfer ETH from Ethereum to Substrate (incentivized channel)', async function () {
-      const amount = BigNumber(Web3.utils.toWei('1', "ether"));
-      const ethAccount = ethClient.accounts[1];
-
-      const subBalances = await subClient.subscribeAssetsAccountBalances(
-        this.testParaEthAssetId, polkadotRecipientSS58, 2
-      );
-
-      const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
-      const beforeSubBalance = await subBalances[0];
-
-      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 0, 0);
-
-      const afterEthBalance = await ethClient.getEthBalance(ethAccount);
-      const afterSubBalance = await subBalances[1];
-
-      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
-      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
-      // conservation of value
-      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
-    });
 
     it('should transfer ETH from Substrate to Ethereum (incentivized channel)', async function () {
       // Wait for new substrate block before tests, as queries may go to old block
