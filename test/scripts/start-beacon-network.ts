@@ -23,7 +23,6 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
-import {createEnr} from "@chainsafe/lodestar-cli/lib/config/enr";
 import {BeaconNode} from "@chainsafe/lodestar/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar";
 import {createPeerId} from "@chainsafe/lodestar/network";
@@ -33,6 +32,7 @@ import {IBeaconNodeOptions} from "@chainsafe/lodestar/node";
 import {defaultOptions} from "@chainsafe/lodestar/node";
 import {BeaconDb} from "@chainsafe/lodestar/db";
 import {InteropStateOpts} from "@chainsafe/lodestar/node/utils/interop/state";
+import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
 
 // simTest.ts
 import {
@@ -786,6 +786,13 @@ export async function shell(
   });
 }
 
+// enj.js
+
+export function createEnr(peerId: PeerId): ENR {
+    const keypair = createKeypairFromPeerId(peerId);
+    return ENR.createV4(keypair.publicKey);
+  }
+
 /**
  * Returns num evenly spaced samples, calculated over the interval [start, stop] inclusive.
  */
@@ -800,3 +807,4 @@ start().catch((error) => {
     process.exit(1);
   });
   
+
