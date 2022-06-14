@@ -256,6 +256,37 @@ pub mod pallet {
 			let message_count = message_queue.len() as u32;
 			let average_payload_size = Self::average_payload_size(&message_queue);
 
+			let message_bundles = Self::make_message_bundles(message_queue);
+
+			// TODO: Should we use Eth-ABI encoding when generating this hash?
+			let commitment_hash = merkle_root::<
+				<T as Config>::Hashing,
+				Vec<MessageBundleOf<T>>,
+				MessageBundleOf<T>,
+				<<T as Config>::Hashing as Hash>::Output,
+			>(message_bundles.clone());
+
+			let digest_item =
+				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
+			<frame_system::Pallet<T>>::deposit_log(digest_item);
+
+			// TODO: Do we include all bundles in a single event, or emit an event per bundle?
+			// Deposit non-Eth-ABI-encoded (SCALE-encoded by default) message bundles as events, so
+			// that the relayer can read them
+			Self::deposit_event(Event::Committed { hash: commitment_hash, data: message_bundles });
+
+			// TODO: Persist ABI-encoded leaves to off-chain storage
+			// See here: https://github.com/JoshOrndorff/recipes/blob/master/text/off-chain-workers/indexing.md#writing-to-off-chain-storage-from-on-chain-context
+
+			T::WeightInfo::on_initialize(message_count, average_payload_size)
+		}
+
+		fn make_message_bundles(
+			message_queue: BoundedVec<
+				EnqueuedMessage<T::AccountId, <T as Config>::MaxMessagePayloadSize>,
+				<T as Config>::MaxMessagesPerCommit,
+			>,
+		) -> Vec<MessageBundleOf<T>> {
 			let account_message_map: BTreeMap<
 				T::AccountId,
 				BoundedVec<Message<T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>,
@@ -312,27 +343,7 @@ pub mod pallet {
 				})
 				.collect::<Vec<MessageBundleOf<T>>>();
 
-			// TODO: Should we use Eth-ABI encoding when generating this hash?
-			let commitment_hash = merkle_root::<
-				<T as Config>::Hashing,
-				Vec<MessageBundleOf<T>>,
-				MessageBundleOf<T>,
-				<<T as Config>::Hashing as Hash>::Output,
-			>(message_bundles.clone());
-
-			let digest_item =
-				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
-			<frame_system::Pallet<T>>::deposit_log(digest_item);
-
-			// TODO: Do we include all bundles in a single event, or emit an event per bundle?
-			// Deposit non-Eth-ABI-encoded (SCALE-encoded by default) message bundles as events, so
-			// that the relayer can read them
-			Self::deposit_event(Event::Committed { hash: commitment_hash, data: message_bundles });
-
-			// TODO: Persist ABI-encoded leaves to off-chain storage
-			// See here: https://github.com/JoshOrndorff/recipes/blob/master/text/off-chain-workers/indexing.md#writing-to-off-chain-storage-from-on-chain-context
-
-			T::WeightInfo::on_initialize(message_count, average_payload_size)
+			message_bundles
 		}
 
 		fn make_commitment_hash(bundle: &MessageBundleOf<T>) -> H256 {
@@ -340,7 +351,6 @@ pub mod pallet {
 				.messages
 				.iter()
 				.map(|message| {
-					let message = message;
 					Token::Tuple(vec![
 						Token::Uint(message.id.into()),
 						Token::Address(message.target),
