@@ -269,9 +269,14 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// For every account id in the enqueued messages, create an Eth ABI-encoded message
+		/// bundle containing the messages for that account. Hash the ethabi encoding of these
+		/// message bundles with a Merkle tree to produce a commitment hash. Then store the
+		/// commitment on the parachain, emit an event with the commitment and SCALE-encoded
+		/// message bundles and persist the ethabi-encoded message bundles to off-chain storage.
 		fn commit() -> Weight {
-			// For every account id in the message queues map, create an Eth ABI-encoded message
-			// bundle these encoded bundles will be the leaves of a merkle tree
+			// TODO: consider using mutate_exists here. If some part of emitting message bundles
+			// fails, we don't want the MessageQueue to be empty.
 			let message_queue = <MessageQueue<T>>::take();
 			if message_queue.is_empty() {
 				return T::WeightInfo::on_initialize_no_messages();
@@ -288,6 +293,9 @@ pub mod pallet {
 				.map(|bundle| ethabi::encode(&vec![bundle.into()]))
 				.collect();
 
+			// TODO: Maybe undo the O type param in merkle_root, since we can convert between H256
+			// and [u8; 32] easily and the merkle_root implementation mentioned that [u8; 32] was
+			// chosen for "a more optimised implementation".
 			let commitment_hash = merkle_root::<
 				<T as Config>::Hashing,
 				Vec<Vec<u8>>,
@@ -299,9 +307,6 @@ pub mod pallet {
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
-			// TODO: Do we include all bundles in a single event, or emit an event per bundle?
-			// Deposit non-Eth-ABI-encoded (SCALE-encoded by default) message bundles as events, so
-			// that the relayer can read them
 			Self::deposit_event(Event::Committed { hash: commitment_hash, data: message_bundles });
 
 			// TODO: Persist ABI-encoded leaves to off-chain storage
