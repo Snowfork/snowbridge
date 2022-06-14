@@ -5,9 +5,9 @@ import {fromHexString} from "@chainsafe/ssz";
 import {isBellatrixStateType, isMergeTransitionComplete} from "@chainsafe/lodestar-beacon-state-transition";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 
-import {RestApiOptions} from "@chainsafe/lodestar/api/index.js";
-import {Eth1Provider} from "@chainsafe/lodestar/index.js";
-import {ZERO_HASH} from "@chainsafe/lodestar/constants/index.js";
+import {RestApiOptions} from "@chainsafe/lodestar/api/index";
+import {Eth1Provider} from "@chainsafe/lodestar";
+import {ZERO_HASH} from "@chainsafe/lodestar/constants";
 
 // logger.ts
 import {WinstonLogger, TransportType, TransportOpts, TimestampFormat} from "@chainsafe/lodestar-utils";
@@ -23,16 +23,16 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
-import {createEnr} from "@chainsafe/lodestar-cli/lib/config/enr.js";
-import {BeaconNode} from "@chainsafe/lodestar/lib/node/index.js";
-import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs/index.js";
-import {createPeerId} from "@chainsafe/lodestar/lib/network/index.js";
-import {defaultNetworkOptions} from "@chainsafe/lodestar/lib/network/options.js";
-import {initDevState} from "@chainsafe/lodestar/lib/node/utils/state.js";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options.js";
-import {defaultOptions} from "@chainsafe/lodestar/lib/node/options.js";
-import {BeaconDb} from "@chainsafe/lodestar/lib/db/index.js";
-import {InteropStateOpts} from "@chainsafe/lodestar/lib/node/utils/interop/state.js";
+import {createEnr} from "@chainsafe/lodestar-cli/lib/config/enr";
+import {BeaconNode} from "@chainsafe/lodestar/node";
+import {createNodeJsLibp2p} from "@chainsafe/lodestar";
+import {createPeerId} from "@chainsafe/lodestar/network";
+import {defaultNetworkOptions} from "@chainsafe/lodestar/network/options";
+import {nodeUtils} from "@chainsafe/lodestar/node";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/node";
+import {defaultOptions} from "@chainsafe/lodestar/node";
+import {BeaconDb} from "@chainsafe/lodestar/db";
+import {InteropStateOpts} from "@chainsafe/lodestar/node/utils/interop/state";
 
 // simTest.ts
 import {
@@ -48,9 +48,9 @@ import {allForks, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {ChainEvent} from "@chainsafe/lodestar/lib/chain/index.js";
-import {linspace} from "@chainsafe/lodestar/lib/util/numpy.js";
-import {RegenCaller} from "@chainsafe/lodestar/lib/chain/regen/index.js";
+import {ChainEvent} from "@chainsafe/lodestar/chain";
+import {linspace} from "@chainsafe/lodestar/util";
+import {RegenCaller} from "@chainsafe/lodestar/chain";
 
 // node/validator.ts
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
@@ -321,14 +321,14 @@ async function runNodeWithEL(
             }
         });
 
-        bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
+        /*bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
             // Resolve only if the finalized checkpoint includes execution payload
             const finalizedBlock = bn.chain.forkChoice.getBlock(checkpoint.root);
             if (finalizedBlock?.executionPayloadBlockHash !== null) {
                 console.log(`\nGot event ${event}, stopping validators and nodes\n`);
                 resolve();
             }
-        });
+        });*/
     });
 
     // Stop chain and un-subscribe events so the execution engine won't update it's head
@@ -509,13 +509,14 @@ export async function getDevBeaconNode(
         {
             discv5: {
                 enabled: false,
-                enr: createEnr(peerId),
+                //enr: createEnr(peerId),
+                enr: "",
                 bindAddr: options.network?.discv5?.bindAddr || "/ip4/127.0.0.1/udp/0",
                 bootEnrs: [],
             },
             localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
-            targetPeers: defaultNetworkOptions.targetPeers,
-            maxPeers: defaultNetworkOptions.maxPeers,
+           // targetPeers: defaultNetworkOptions.targetPeers,
+          //  maxPeers: defaultNetworkOptions.maxPeers,
         },
         {disablePeerDiscovery: true, peerStoreDir}
     );
@@ -541,7 +542,7 @@ export async function getDevBeaconNode(
         }
     );
 
-    const state = opts.anchorState || (await initDevState(config, db, validatorCount, opts));
+    const state = opts.anchorState || (await nodeUtils.initDevState(config, db, validatorCount, opts));
     const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
     return await BeaconNode.init({
         opts: options as IBeaconNodeOptions,
