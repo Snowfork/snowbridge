@@ -1,8 +1,7 @@
 use super::*;
 
 use frame_support::{
-	assert_noop, assert_ok,
-	parameter_types,
+	assert_noop, assert_ok, parameter_types,
 	traits::{Everything, GenesisBuild, OnInitialize},
 };
 use sp_core::{H160, H256};
@@ -81,9 +80,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	let config: basic_outbound_channel::GenesisConfig<Test> =
-		basic_outbound_channel::GenesisConfig {
-			interval: 1u64,
-		};
+		basic_outbound_channel::GenesisConfig { interval: 1u64 };
 	config.assimilate_storage(&mut storage).unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
@@ -94,8 +91,8 @@ pub fn new_tester() -> sp_io::TestExternalities {
 
 fn run_to_block(n: u64) {
 	while System::block_number() < n {
-			System::set_block_number(System::block_number() + 1);
-			BasicOutboundChannel::on_initialize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		BasicOutboundChannel::on_initialize(System::block_number());
 	}
 }
 

@@ -13,17 +13,15 @@ use core::fmt::Debug;
 use codec::{Decode, Encode, MaxEncodedLen};
 use ethabi::{self, Token};
 use frame_support::{
-	dispatch::DispatchResult,
-	ensure,
-	traits::Get,
-	BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+	dispatch::DispatchResult, ensure, traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound,
+	RuntimeDebugNoBound,
 };
 use scale_info::TypeInfo;
 use sp_core::{H160, H256};
 use sp_runtime::traits::{Hash, StaticLookup, Zero};
 
-use sp_std::prelude::*;
 use sp_std::collections::btree_map::BTreeMap;
+use sp_std::prelude::*;
 
 use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 
@@ -54,9 +52,9 @@ impl<AccountId, M: Get<u32>, N: Get<u32>> AsRef<[u8]> for MessageBundle<AccountI
 where
 	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
 {
-    fn as_ref(&self) -> &[u8] {
+	fn as_ref(&self) -> &[u8] {
 		&[0]
-    }
+	}
 }
 
 #[derive(
@@ -257,8 +255,12 @@ pub mod pallet {
 
 			let average_payload_size = Self::average_payload_size(&message_queue);
 
-			let messages_per_account: BTreeMap<T::AccountId, BoundedVec<Message<T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>> =
-				message_queue.into_iter().fold(BTreeMap::new(), |mut messages_for_accounts, enqueued_message|{
+			let messages_per_account: BTreeMap<
+				T::AccountId,
+				BoundedVec<Message<T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>,
+			> = message_queue.into_iter().fold(
+				BTreeMap::new(),
+				|mut messages_for_accounts, enqueued_message| {
 					let (account, message) = (enqueued_message.account, enqueued_message.message);
 
 					if let Some(messages) = messages_for_accounts.get_mut(&account) {
@@ -272,7 +274,8 @@ pub mod pallet {
 						messages_for_accounts.insert(account, messages);
 					}
 					messages_for_accounts
-				});
+				},
+			);
 
 			// Alternate implementation with a for loop, created while fighting the borrow-checker
 			// and before discovering get_mut 🤦
@@ -291,9 +294,13 @@ pub mod pallet {
 			// 	}
 			// }
 
-			let message_bundles_for_accounts =
-				messages_per_account.into_iter().map(|(account, messages)| {
-					let next_nonce = <Nonces<T>>::mutate(&account, |nonce| {*nonce = nonce.saturating_add(1); *nonce});
+			let message_bundles_for_accounts = messages_per_account
+				.into_iter()
+				.map(|(account, messages)| {
+					let next_nonce = <Nonces<T>>::mutate(&account, |nonce| {
+						*nonce = nonce.saturating_add(1);
+						*nonce
+					});
 					let bundle: MessageBundleOf<T> = MessageBundle {
 						source_channel_id: ChannelId::Basic as u8,
 						account,
@@ -301,18 +308,18 @@ pub mod pallet {
 						messages,
 					};
 					bundle
-					}).collect::<Vec<MessageBundleOf<T>>>();
+				})
+				.collect::<Vec<MessageBundleOf<T>>>();
 
 			// TODO: create a merkle tree from these encoded bundles
 			// use the merkle root as the commitment hash
 			// let commitment_hash = Self::make_commitment_hash(&bundle);
-			let commitment_hash =
-				merkle_root::<
-                    <T as Config>::Hashing,
-                    Vec<MessageBundleOf<T>>,
-                    MessageBundleOf<T>,
-                    <<T as Config>::Hashing as Hash>::Output
-                >(message_bundles_for_accounts);
+			let commitment_hash = merkle_root::<
+				<T as Config>::Hashing,
+				Vec<MessageBundleOf<T>>,
+				MessageBundleOf<T>,
+				<<T as Config>::Hashing as Hash>::Output,
+			>(message_bundles_for_accounts);
 			// TODO: is this hashing necessary, beyond making the types match? Seems like we're
 			// hashing twice now
 			// let commitment_hash = <T as Config>::Hashing::hash(&Vec::from(commitment_hash));

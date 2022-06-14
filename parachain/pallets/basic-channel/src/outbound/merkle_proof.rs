@@ -466,7 +466,9 @@ mod tests {
 		assert_eq!(hex::encode(proof2.root), hex::encode(proof1.root));
 
 		assert!(!verify_proof::<Keccak256, _, _, H256>(
-			&H256::from_slice(&hex!("fb3b3be94be9e983ba5e094c9c51a7d96a4fa2e5d8e891df00ca89ba05bb1239")),
+			&H256::from_slice(&hex!(
+				"fb3b3be94be9e983ba5e094c9c51a7d96a4fa2e5d8e891df00ca89ba05bb1239"
+			)),
 			proof0.proof,
 			data.len(),
 			proof0.leaf_index,
@@ -763,10 +765,18 @@ mod tests {
 			MerkleProof {
 				root: H256::from_slice(&root),
 				proof: vec![
-					H256::from_slice(&hex!("340bcb1d49b2d82802ddbcf5b85043edb3427b65d09d7f758fbc76932ad2da2f")),
-					H256::from_slice(&hex!("ba0580e5bd530bc93d61276df7969fb5b4ae8f1864b4a28c280249575198ff1f")),
-					H256::from_slice(&hex!("d02609d2bbdb28aa25f58b85afec937d5a4c85d37925bce6d0cf802f9d76ba79")),
-					H256::from_slice(&hex!("ae3f8991955ed884613b0a5f40295902eea0e0abe5858fc520b72959bc016d4e")),
+					H256::from_slice(&hex!(
+						"340bcb1d49b2d82802ddbcf5b85043edb3427b65d09d7f758fbc76932ad2da2f"
+					)),
+					H256::from_slice(&hex!(
+						"ba0580e5bd530bc93d61276df7969fb5b4ae8f1864b4a28c280249575198ff1f"
+					)),
+					H256::from_slice(&hex!(
+						"d02609d2bbdb28aa25f58b85afec937d5a4c85d37925bce6d0cf802f9d76ba79"
+					)),
+					H256::from_slice(&hex!(
+						"ae3f8991955ed884613b0a5f40295902eea0e0abe5858fc520b72959bc016d4e"
+					)),
 				],
 				number_of_leaves: data.len(),
 				leaf_index: data.len() - 1,
