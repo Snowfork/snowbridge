@@ -49,7 +49,6 @@ import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {ChainEvent} from "@chainsafe/lodestar/chain";
-import {linspace} from "@chainsafe/lodestar/util";
 import {RegenCaller} from "@chainsafe/lodestar/chain";
 
 // node/validator.ts
@@ -67,6 +66,7 @@ export const logFilesDir = "test-logs";
 
 // shell.js
 import childProcess from "node:child_process";
+import { CONTEXT_BYTES_FORK_DIGEST_LENGTH } from "@chainsafe/lodestar/lib/network/reqresp/types";
 const defaultTimeout = 15 * 60 * 1000; // ms
 
 // logger.ts
@@ -103,19 +103,17 @@ const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7
 const fromAccount = "0x89b4AB1eF20763630df9743ACF155865600daFF2"
 const toAccount = "0xbe68fc2d8249eb60bfcf0e71d5a0d2f2e292c4ed"
 
-const jsonRpcUrl = "";
-const engineApiUrl = "";
+let jsonRpcUrl = "";
+let engineApiUrl = "";
 
 let dataPath = "";
 
 async function start() {
-    this.timeout("10min");
-
     dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
 
     /** jsonRpcUrl is used only for eth transactions or to check if EL online/offline */
-    const jsonRpcUrl = `http://localhost:${process.env.ETH_PORT}`;
-    const engineApiUrl = `http://localhost:${process.env.ENGINE_PORT}`;
+    jsonRpcUrl = `http://localhost:${process.env.ETH_PORT}`;
+    engineApiUrl = `http://localhost:${process.env.ENGINE_PORT}`;
 
     runPostMerge();
 }
@@ -153,20 +151,14 @@ function startELProcess(args: { runScriptPath: string; TTD: string; DATA_DIR: st
 // $ ./go-ethereum/build/bin/geth --catalyst --datadir "~/ethereum/taunus" init genesis.json
 // $ ./build/bin/geth --catalyst --http --ws -http.api "engine" --datadir "~/ethereum/taunus" console
 async function runEL(elScript: string, ttd: number): Promise<{ genesisBlockHash: string }> {
-    if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR || !process.env.ENGINE_PORT || !process.env.ETH_PORT) {
+    if (!process.env.ENGINE_PORT || !process.env.ETH_PORT) {
         throw Error(
-            `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}, ENGINE_PORT: ${process.env.ENGINE_PORT}, ETH_PORT: ${process.env.ETH_PORT}`
+            `EL ENV must be provided, ENGINE_PORT: ${process.env.ENGINE_PORT}, ETH_PORT: ${process.env.ETH_PORT}`
         );
     }
 
     await shell(`rm -rf ${dataPath}`);
     fs.mkdirSync(dataPath, {recursive: true});
-
-    startELProcess({
-        runScriptPath: `../../${process.env.EL_SCRIPT_DIR}/${elScript}`,
-        TTD: `${ttd}`,
-        DATA_DIR: dataPath,
-    });
 
     // Wait for Geth to be online
     const controller = new AbortController();
@@ -178,7 +170,7 @@ async function runEL(elScript: string, ttd: number): Promise<{ genesisBlockHash:
 }
 
 async function runPostMerge() {
-    console.log("\n\nPost-merge, run for a few blocks\n\n");
+    console.log("\nPost-merge, run for a few blocks\n");
     const {genesisBlockHash} = await runEL("post-merge.sh", 0);
     await runNodeWithEL.bind(this)({
         genesisBlockHash,
@@ -213,13 +205,6 @@ async function runNodeWithEL(
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     const genesisSlotsDelay = 30;
-
-    const timeout =
-        ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
-        testParams.SECONDS_PER_SLOT *
-        1000;
-
-    this.timeout(timeout + 2 * timeoutSetupMargin);
 
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
@@ -321,14 +306,15 @@ async function runNodeWithEL(
             }
         });
 
-        /*bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
+        bn.chain.emitter.on(ChainEvent.finalized, (checkpoint: Checkpoint) => {
             // Resolve only if the finalized checkpoint includes execution payload
             const finalizedBlock = bn.chain.forkChoice.getBlock(checkpoint.root);
             if (finalizedBlock?.executionPayloadBlockHash !== null) {
-                console.log(`\nGot event ${event}, stopping validators and nodes\n`);
-                resolve();
+                let blockHash = finalizedBlock.blockRoot;
+                console.log(`\nGot event ${event}, Finalized block hash: ${blockHash}\n`);
+                //resolve();
             }
-        });*/
+        });
     });
 
     // Stop chain and un-subscribe events so the execution engine won't update it's head
@@ -509,8 +495,7 @@ export async function getDevBeaconNode(
         {
             discv5: {
                 enabled: false,
-                //enr: createEnr(peerId),
-                enr: "",
+                enr: createEnr(peerId),
                 bindAddr: options.network?.discv5?.bindAddr || "/ip4/127.0.0.1/udp/0",
                 bootEnrs: [],
             },
@@ -800,3 +785,18 @@ export async function shell(
     }
   });
 }
+
+/**
+ * Returns num evenly spaced samples, calculated over the interval [start, stop] inclusive.
+ */
+ export function linspace(start: number, stop: number): number[] {
+    const arr: number[] = [];
+    for (let i = start; i <= stop; i++) arr.push(i);
+    return arr;
+  }
+  
+start().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+  
