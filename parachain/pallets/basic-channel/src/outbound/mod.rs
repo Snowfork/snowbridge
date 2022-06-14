@@ -380,26 +380,6 @@ pub mod pallet {
 			message_bundles
 		}
 
-		fn make_commitment_hash(bundle: &MessageBundleOf<T>) -> H256 {
-			let messages: Vec<Token> = bundle
-				.messages
-				.iter()
-				.map(|message| {
-					Token::Tuple(vec![
-						Token::Uint(message.id.into()),
-						Token::Address(message.target),
-						Token::Bytes(message.payload.to_vec()),
-					])
-				})
-				.collect();
-			let commitment = ethabi::encode(&vec![Token::Tuple(vec![
-				Token::Uint(bundle.source_channel_id.into()),
-				Token::Uint(bundle.nonce.into()),
-				Token::Array(messages),
-			])]);
-			<T as Config>::Hashing::hash(&commitment)
-		}
-
 		fn average_payload_size(
 			messages: &[EnqueuedMessage<T::AccountId, T::MaxMessagePayloadSize>],
 		) -> u32 {
