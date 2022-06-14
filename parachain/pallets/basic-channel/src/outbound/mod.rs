@@ -245,14 +245,15 @@ pub mod pallet {
 		}
 
 		fn commit() -> Weight {
-			// for every account id in the message queues map, create an Eth ABI-encoded message bundle
-			// these encoded bundles will be the leaves of a merkle tree
+			// For every account id in the message queues map, create an Eth ABI-encoded message
+			// bundle these encoded bundles will be the leaves of a merkle tree
 			let message_queue = <MessageQueue<T>>::take();
 			if message_queue.is_empty() {
 				return T::WeightInfo::on_initialize_no_messages();
 			}
-			let message_count = message_queue.len();
 
+			// Store these for the on_initialize call at the end
+			let message_count = message_queue.len() as u32;
 			let average_payload_size = Self::average_payload_size(&message_queue);
 
 			let account_message_map: BTreeMap<
@@ -311,33 +312,28 @@ pub mod pallet {
 				})
 				.collect::<Vec<MessageBundleOf<T>>>();
 
-			// TODO: create a merkle tree from these encoded bundles
-			// use the merkle root as the commitment hash
-			// let commitment_hash = Self::make_commitment_hash(&bundle);
+			// TODO: Should we use Eth-ABI encoding when generating this hash?
 			let commitment_hash = merkle_root::<
 				<T as Config>::Hashing,
 				Vec<MessageBundleOf<T>>,
 				MessageBundleOf<T>,
 				<<T as Config>::Hashing as Hash>::Output,
 			>(message_bundles.clone());
-			// TODO: is this hashing necessary, beyond making the types match? Seems like we're
-			// hashing twice now
-			// let commitment_hash = <T as Config>::Hashing::hash(&Vec::from(commitment_hash));
 
 			let digest_item =
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
+
 			// TODO: Do we include all bundles in a single event, or emit an event per bundle?
-			// deposit non-ABI-encoded message bundles as events, so that the relayer can read them
+			// Deposit non-Eth-ABI-encoded (SCALE-encoded by default) message bundles as events, so
+			// that the relayer can read them
 			Self::deposit_event(Event::Committed { hash: commitment_hash, data: message_bundles });
 
-			// TODO: persist ABI-encoded leaves to off-chain storage
-			// see here: https://github.com/JoshOrndorff/recipes/blob/master/text/off-chain-workers/indexing.md#writing-to-off-chain-storage-from-on-chain-context
+			// TODO: Persist ABI-encoded leaves to off-chain storage
+			// See here: https://github.com/JoshOrndorff/recipes/blob/master/text/off-chain-workers/indexing.md#writing-to-off-chain-storage-from-on-chain-context
 
-			T::WeightInfo::on_initialize(message_count as u32, average_payload_size)
+			T::WeightInfo::on_initialize(message_count, average_payload_size)
 		}
-
-		// TODO: add another RPC method to construct leaf proofs
 
 		fn make_commitment_hash(bundle: &MessageBundleOf<T>) -> H256 {
 			let messages: Vec<Token> = bundle
