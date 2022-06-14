@@ -129,7 +129,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		MessageAccepted(u64),
-		Committed { hash: H256, data: MessageBundleOf<T> },
+		Committed { hash: H256, data: Vec<MessageBundleOf<T>> },
 	}
 
 	#[pallet::error]
@@ -255,7 +255,7 @@ pub mod pallet {
 
 			let average_payload_size = Self::average_payload_size(&message_queue);
 
-			let messages_per_account: BTreeMap<
+			let account_message_map: BTreeMap<
 				T::AccountId,
 				BoundedVec<Message<T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>,
 			> = message_queue.into_iter().fold(
@@ -294,7 +294,7 @@ pub mod pallet {
 			// 	}
 			// }
 
-			let message_bundles_for_accounts = messages_per_account
+			let message_bundles = account_message_map
 				.into_iter()
 				.map(|(account, messages)| {
 					let next_nonce = <Nonces<T>>::mutate(&account, |nonce| {
@@ -319,7 +319,7 @@ pub mod pallet {
 				Vec<MessageBundleOf<T>>,
 				MessageBundleOf<T>,
 				<<T as Config>::Hashing as Hash>::Output,
-			>(message_bundles_for_accounts);
+			>(message_bundles.clone());
 			// TODO: is this hashing necessary, beyond making the types match? Seems like we're
 			// hashing twice now
 			// let commitment_hash = <T as Config>::Hashing::hash(&Vec::from(commitment_hash));
@@ -327,10 +327,9 @@ pub mod pallet {
 			let digest_item =
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
-			// TODO: update this. Do we include all bundles in a single event, or emit an event per
-			// bundle?
+			// TODO: Do we include all bundles in a single event, or emit an event per bundle?
 			// deposit non-ABI-encoded message bundles as events, so that the relayer can read them
-			// Self::deposit_event(Event::Committed { hash: commitment_hash, data: bundle });
+			Self::deposit_event(Event::Committed { hash: commitment_hash, data: message_bundles });
 
 			// TODO: persist ABI-encoded leaves to off-chain storage
 			// see here: https://github.com/JoshOrndorff/recipes/blob/master/text/off-chain-workers/indexing.md#writing-to-off-chain-storage-from-on-chain-context
