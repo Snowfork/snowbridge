@@ -48,6 +48,21 @@ where
 	messages: BoundedVec<Message<M>, N>,
 }
 
+impl<AccountId, M: Get<u32>, N: Get<u32>> Into<Token> for MessageBundle<AccountId, M, N>
+where
+	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
+{
+	fn into(self) -> Token {
+		Token::Tuple(vec![
+			Token::Uint(self.source_channel_id.into()),
+			// TODO: check the AccountId encoding expectation in the Ethereum contract
+			Token::Uint(self.account.encode().as_slice().into()),
+			Token::Uint(self.nonce.into()),
+			Token::Array(self.messages.into_iter().map(|message| message.into()).collect()),
+		])
+	}
+}
+
 impl<AccountId, M: Get<u32>, N: Get<u32>> AsRef<[u8]> for MessageBundle<AccountId, M, N>
 where
 	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
@@ -83,6 +98,16 @@ pub struct Message<M: Get<u32>> {
 	target: H160,
 	/// Payload for target application.
 	payload: BoundedVec<u8, M>,
+}
+
+impl<M: Get<u32>> Into<Token> for Message<M> {
+	fn into(self) -> Token {
+		Token::Tuple(vec![
+			Token::Uint(self.id.into()),
+			Token::Address(self.target),
+			Token::Bytes(self.payload.to_vec()),
+		])
+	}
 }
 
 pub type MessageBundleOf<T> = MessageBundle<
@@ -257,14 +282,18 @@ pub mod pallet {
 			let average_payload_size = Self::average_payload_size(&message_queue);
 
 			let message_bundles = Self::make_message_bundles(message_queue);
+			let eth_message_bundles: Vec<Vec<u8>> = message_bundles
+				.clone()
+				.into_iter()
+				.map(|bundle| ethabi::encode(&vec![bundle.into()]))
+				.collect();
 
-			// TODO: Should we use Eth-ABI encoding when generating this hash?
 			let commitment_hash = merkle_root::<
 				<T as Config>::Hashing,
-				Vec<MessageBundleOf<T>>,
-				MessageBundleOf<T>,
+				Vec<Vec<u8>>,
+				Vec<u8>,
 				<<T as Config>::Hashing as Hash>::Output,
-			>(message_bundles.clone());
+			>(eth_message_bundles.clone());
 
 			let digest_item =
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
