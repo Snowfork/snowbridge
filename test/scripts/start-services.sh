@@ -57,9 +57,55 @@ start_lodestar() {
         -H 'Content-Type: application/json' \
         -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
 
-    echo "export ETH_PORT=8545"
-    echo "export ENGINE_PORT=8551"
-    echo "npx ts-node start-beacon-network.ts"
+    echo "EL genesis hash is $genesisHash"
+
+    timestamp=$(date -d'+1minute' +%s%3N)
+
+    echo "Timestamp is $timestamp"
+    
+    lodestar dev \
+        --genesisValidators 8 \
+        --genesisTime $timestamp \
+        --startValidators "0..7" \
+        --enr.ip "127.0.0.1" \
+        --rootDir "$output_dir/node1-$timestamp" \
+        --reset \
+        --terminal-total-difficulty-override 0 \
+        --genesisEth1Hash $genesisHash \
+        --logFile beacon-1.log \
+        --logLevelFile debug \
+        --params.BELLATRIX_FORK_EPOCH 0 \
+        --jwt-secret config/jwtsecret \
+        > $output_dir/lodestar-1.log 2>&1 &
+
+    echo "Started up beacon node 1"
+    sleep 5
+
+    enr=$(curl http://localhost:9596/eth/v1/node/identity \
+        -X GET \
+        -H 'Content-Type: application/json' | jq -r '.data.enr')
+
+    echo "ENR is $enr"
+
+    lodestar dev \
+        --genesisValidators 8 \
+        --genesisTime $timestamp \
+        --rootDir "$output_dir/node2-$timestamp" \
+        --port 9001 \
+        --api.rest.port 9597 \
+        --terminal-total-difficulty-override 0 \
+        --genesisEth1Hash $genesisHash \
+        --network.connectToDiscv5Bootnodes true \
+        --network.discv5.bootEnrs "$enr" \
+        --reset \
+        --logFile beacon-2.log \
+        --logLevelFile debug \
+        --params.BELLATRIX_FORK_EPOCH 0 \
+        --jwt-secret config/jwtsecret \
+        > "$output_dir/lodestar-2.log" 2>&1 &
+
+    echo "Started up beacon node 2"
+    echo "Local testnet setup done"
 }
 
 deploy_contracts()
@@ -255,7 +301,7 @@ mkdir "$output_dir/bin"
 export PATH="$output_dir/bin:$PATH"
 
 start_geth
-#start_lodestar
+start_lodestar
 #deploy_contracts
 #start_polkadot_launch
 
