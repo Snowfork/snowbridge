@@ -23,6 +23,8 @@ use sp_runtime::traits::{Hash, StaticLookup, Zero};
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
 
+use sp_io::offchain_index::set;
+
 use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 
 pub use weights::WeightInfo;
@@ -307,10 +309,17 @@ pub mod pallet {
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();
 			<frame_system::Pallet<T>>::deposit_log(digest_item);
 
-			Self::deposit_event(Event::Committed { hash: commitment_hash, data: message_bundles });
+			Self::deposit_event(Event::Committed {
+				hash: commitment_hash,
+				data: message_bundles.clone(),
+			});
 
-			// TODO: Persist ABI-encoded leaves to off-chain storage
-			// See here: https://github.com/JoshOrndorff/recipes/blob/master/text/off-chain-workers/indexing.md#writing-to-off-chain-storage-from-on-chain-context
+			// Persist ABI-encoded leaves to off-chain storage
+			let tokens = eth_message_bundles
+				.into_iter()
+				.map(|bundle| Token::Bytes(bundle))
+				.collect::<Vec<Token>>();
+			set(commitment_hash.as_bytes(), &ethabi::encode(&tokens));
 
 			T::WeightInfo::on_initialize(message_count, average_payload_size)
 		}
