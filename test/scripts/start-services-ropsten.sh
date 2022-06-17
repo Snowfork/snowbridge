@@ -5,9 +5,9 @@ root_dir="$(realpath ..)"
 parachain_dir="$root_dir/parachain"
 ethereum_dir="$root_dir/ethereum"
 relay_dir="$root_dir/relayer"
-infura_endpoint="ropsten.infura.io/v3/$INFURA_PROJECT_ID"
-infura_endpoint_http="https://$infura_endpoint"
-infura_endpoint_ws="ws://$infura_endpoint"
+
+infura_endpoint_http="https://ropsten.infura.io/v3/$INFURA_PROJECT_ID"
+infura_endpoint_ws="wss://ropsten.infura.io/ws/v3/$INFURA_PROJECT_ID"
 
 output_dir=/tmp/snowbridge
 
