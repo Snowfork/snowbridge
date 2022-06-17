@@ -41,6 +41,7 @@ replace_relayer_ethereum_paths()
         --arg infura_endpoint_ws $infura_endpoint_ws \
         '
         .source.ethereum.endpoint = $infura_endpoint_ws
+        | .sink.ethereum.endpoint = $infura_endpoint_ws
         ' \
         config/beefy-relay.json > $output_dir/beefy-relay.json
 
