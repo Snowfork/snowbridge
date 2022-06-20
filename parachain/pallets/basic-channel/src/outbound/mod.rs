@@ -363,22 +363,20 @@ pub mod pallet {
 			// 	}
 			// }
 
-			let message_bundles = account_message_map
-				.into_iter()
-				.map(|(account, messages)| {
-					let next_nonce = <Nonces<T>>::mutate(&account, |nonce| {
-						*nonce = nonce.saturating_add(1);
-						*nonce
-					});
-					let bundle: MessageBundleOf<T> = MessageBundle {
-						source_channel_id: ChannelId::Basic as u8,
-						account,
-						nonce: next_nonce,
-						messages,
-					};
-					bundle
-				})
-				.collect::<Vec<MessageBundleOf<T>>>();
+			let mut message_bundles: Vec<MessageBundleOf<T>> = Vec::new();
+			for (account, messages) in account_message_map {
+				let next_nonce = <Nonces<T>>::mutate(&account, |nonce| {
+					*nonce = nonce.saturating_add(1);
+					*nonce
+				});
+				let bundle: MessageBundleOf<T> = MessageBundle {
+					source_channel_id: ChannelId::Basic as u8,
+					account,
+					nonce: next_nonce,
+					messages,
+				};
+				message_bundles.push(bundle);
+			}
 
 			message_bundles
 		}
