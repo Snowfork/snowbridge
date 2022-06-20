@@ -119,6 +119,9 @@ pub type MessageBundleOf<T> = MessageBundle<
 pub type EnqueuedMessageOf<T> =
 	EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
 
+#[derive(Encode, Decode)]
+struct StoredLeaves(Vec<Vec<u8>>);
+
 pub use pallet::*;
 
 #[frame_support::pallet]
@@ -310,7 +313,7 @@ pub mod pallet {
 				data: message_bundles.clone(),
 			});
 
-			set(commitment_hash.as_bytes(), &eth_message_bundles.encode());
+			set(commitment_hash.as_bytes(), &StoredLeaves(eth_message_bundles).encode());
 
 			T::WeightInfo::on_initialize(message_count, average_payload_size)
 		}
