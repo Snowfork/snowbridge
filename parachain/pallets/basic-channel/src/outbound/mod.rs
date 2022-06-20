@@ -57,7 +57,7 @@ where
 		Token::Tuple(vec![
 			Token::Uint(self.source_channel_id.into()),
 			// TODO: check the AccountId encoding expectation in the Ethereum contract
-			Token::Uint(self.account.encode().as_slice().into()),
+			Token::FixedBytes(self.account.encode().as_slice().into()),
 			Token::Uint(self.nonce.into()),
 			Token::Array(self.messages.into_iter().map(|message| message.into()).collect()),
 		])
