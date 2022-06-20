@@ -8,8 +8,6 @@ mod test;
 
 mod merkle_proof;
 
-use core::fmt::Debug;
-
 use codec::{Decode, Encode, MaxEncodedLen};
 use ethabi::{self, Token};
 use frame_support::{
@@ -21,6 +19,7 @@ use sp_core::{H160, H256};
 use sp_runtime::traits::{Hash, StaticLookup, Zero};
 
 use sp_std::collections::btree_map::BTreeMap;
+use sp_std::fmt::Debug;
 use sp_std::prelude::*;
 
 use sp_io::offchain_index::set;
