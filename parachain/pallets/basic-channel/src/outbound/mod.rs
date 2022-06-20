@@ -297,11 +297,9 @@ pub mod pallet {
 			// TODO: Maybe undo the O type param in merkle_root, since we can convert between H256
 			// and [u8; 32] easily and the merkle_root implementation mentioned that [u8; 32] was
 			// chosen for "a more optimised implementation".
-			let commitment_hash = merkle_root::<
-				<T as Config>::Hashing,
-				Vec<Vec<u8>>,
-				Vec<u8>,
-			>(eth_message_bundles.clone());
+			let commitment_hash = merkle_root::<<T as Config>::Hashing, Vec<Vec<u8>>, Vec<u8>>(
+				eth_message_bundles.clone(),
+			);
 
 			let digest_item =
 				AuxiliaryDigestItem::Commitment(ChannelId::Basic, commitment_hash.clone()).into();

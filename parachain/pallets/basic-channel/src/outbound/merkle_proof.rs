@@ -287,7 +287,11 @@ where
 ///
 /// In case only one element is provided it is returned via `Ok` result, in any other case (also an
 /// empty iterator) an `Err` with the inner nodes of upper layer is returned.
-fn merkelize_row<H, V, I>(mut iter: I, mut next: Vec<H256>, visitor: &mut V) -> Result<H256, Vec<H256>>
+fn merkelize_row<H, V, I>(
+	mut iter: I,
+	mut next: Vec<H256>,
+	visitor: &mut V,
+) -> Result<H256, Vec<H256>>
 where
 	H: Hash<Output = H256>,
 	V: Visitor,
