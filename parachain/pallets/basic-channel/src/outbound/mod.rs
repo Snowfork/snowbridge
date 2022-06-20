@@ -314,12 +314,7 @@ pub mod pallet {
 				data: message_bundles.clone(),
 			});
 
-			// Persist ABI-encoded leaves to off-chain storage
-			let tokens = eth_message_bundles
-				.into_iter()
-				.map(|bundle| Token::Bytes(bundle))
-				.collect::<Vec<Token>>();
-			set(commitment_hash.as_bytes(), &ethabi::encode(&tokens));
+			set(commitment_hash.as_bytes(), &eth_message_bundles.encode());
 
 			T::WeightInfo::on_initialize(message_count, average_payload_size)
 		}
