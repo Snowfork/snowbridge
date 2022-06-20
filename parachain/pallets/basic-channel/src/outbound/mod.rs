@@ -346,23 +346,6 @@ pub mod pallet {
 				},
 			);
 
-			// Alternate implementation with a for loop, created while fighting the borrow-checker
-			// and before discovering get_mut 🤦
-			// TODO: Do we prefer the style of folding or for loops?
-
-			// let mut messages_per_account: BTreeMap<T::AccountId, BoundedVec<Message<T::MaxMessagePayloadSize>, T::MaxMessagesPerCommit>> = BTreeMap::new();
-			// for enqueued_message in message_queue {
-			// 	let (account, message) = (enqueued_message.account, enqueued_message.message);
-
-			// 	if let Some(messages) = messages_per_account.get_mut(&account) {
-			// 		messages.try_push(message);
-			// 	} else {
-			// 		let mut messages = BoundedVec::default();
-			// 		messages.try_push(message);
-			// 		messages_per_account.insert(account, messages);
-			// 	}
-			// }
-
 			let mut message_bundles: Vec<MessageBundleOf<T>> = Vec::new();
 			for (account, messages) in account_message_map {
 				let next_nonce = <Nonces<T>>::mutate(&account, |nonce| {
