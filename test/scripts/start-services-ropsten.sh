@@ -27,32 +27,6 @@ deploy_contracts()
     echo "Exported contract artifacts: $output_dir/contracts.json"
 }
 
-replace_relayer_ethereum_paths()
-{
-    jq \
-        --arg infura_endpoint_ws $infura_endpoint_ws \
-        '
-        .source.ethereum.endpoint = $infura_endpoint_ws
-        | .sink.ethereum.endpoint = $infura_endpoint_ws
-        ' \
-        config/parachain-relay.json > $output_dir/parachain-relay.json
-
-    jq \
-        --arg infura_endpoint_ws $infura_endpoint_ws \
-        '
-        .source.ethereum.endpoint = $infura_endpoint_ws
-        | .sink.ethereum.endpoint = $infura_endpoint_ws
-        ' \
-        config/beefy-relay.json > $output_dir/beefy-relay.json
-
-    jq \
-        --arg infura_endpoint_ws $infura_endpoint_ws \
-        '
-        .source.ethereum.endpoint = $infura_endpoint_ws
-        ' \
-        config/ethereum-relay.json > $output_dir/ethereum-relay.json
-}
-
 start_polkadot_launch()
 {
     if [[ -z "${POLKADOT_BIN+x}" ]]; then
@@ -140,8 +114,11 @@ start_relayer()
     # Configure beefy relay
     jq \
         --arg k1 "$(address_for BeefyClient)" \
+        --arg infura_endpoint_ws $infura_endpoint_ws \
     '
       .sink.contracts.BeefyClient = $k1
+    | .source.ethereum.endpoint = $infura_endpoint_ws
+    | .sink.ethereum.endpoint = $infura_endpoint_ws
     ' \
     config/beefy-relay.json > $output_dir/beefy-relay.json
 
@@ -150,12 +127,15 @@ start_relayer()
         --arg k1 "$(address_for BasicInboundChannel)" \
         --arg k2 "$(address_for IncentivizedInboundChannel)" \
         --arg k3 "$(address_for BeefyClient)" \
+        --arg infura_endpoint_ws $infura_endpoint_ws \
     '
       .source.contracts.BasicInboundChannel = $k1
     | .source.contracts.IncentivizedInboundChannel = $k2
     | .source.contracts.BeefyClient = $k3
     | .sink.contracts.BasicInboundChannel = $k1
     | .sink.contracts.IncentivizedInboundChannel = $k2
+    | .source.ethereum.endpoint = $infura_endpoint_ws
+    | .sink.ethereum.endpoint = $infura_endpoint_ws
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
@@ -163,9 +143,11 @@ start_relayer()
     jq \
         --arg k1 "$(address_for BasicOutboundChannel)" \
         --arg k2 "$(address_for IncentivizedOutboundChannel)" \
+        --arg infura_endpoint_ws $infura_endpoint_ws \
     '
       .source.contracts.BasicOutboundChannel = $k1
     | .source.contracts.IncentivizedOutboundChannel = $k2
+    | .source.ethereum.endpoint = $infura_endpoint_ws
     ' \
     config/ethereum-relay.json > $output_dir/ethereum-relay.json
 
@@ -229,7 +211,6 @@ mkdir "$output_dir/bin"
 export PATH="$output_dir/bin:$PATH"
 
 deploy_contracts
-replace_relayer_ethereum_paths
 start_polkadot_launch
 
 echo "Waiting for consensus between polkadot and parachain"
