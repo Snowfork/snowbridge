@@ -301,7 +301,6 @@ pub mod pallet {
 				<T as Config>::Hashing,
 				Vec<Vec<u8>>,
 				Vec<u8>,
-				<<T as Config>::Hashing as Hash>::Output,
 			>(eth_message_bundles.clone());
 
 			let digest_item =
