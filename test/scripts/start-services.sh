@@ -6,6 +6,14 @@ parachain_dir="$root_dir/parachain"
 ethereum_dir="$root_dir/ethereum"
 relay_dir="$root_dir/relayer"
 
+eth_network="${ETH_NETWORK:-localhost}"
+infura_endpoint_http="${ETH_RPC_ENDPOINT:-http://localhost:8545}/${INFURA_PROJECT_ID:-}"
+infura_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:-}"
+
+parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
+beefy_relay_eth_key=${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
+
+
 output_dir=/tmp/snowbridge
 
 address_for()
@@ -48,7 +56,7 @@ deploy_contracts()
     echo "Deploying contracts"
     (
         cd $ethereum_dir
-        npx hardhat deploy --network localhost --reset --export "$output_dir/contracts.json"
+        npx hardhat deploy --network $eth_network --reset --export "$output_dir/contracts.json"
     )
 
     echo "Exported contract artifacts: $output_dir/contracts.json"
@@ -82,7 +90,7 @@ start_polkadot_launch()
     "$parachain_bin" build-spec --chain snowbase --disable-default-bootnode > "$output_dir/spec.json"
 
     echo "Updating chain specification"
-    curl http://localhost:8545 \
+    curl $infura_endpoint_http \
         -X POST \
         -H "Content-Type: application/json" \
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
@@ -132,7 +140,7 @@ configure_contracts()
     echo "Configuring contracts"
     pushd ../ethereum
 
-    RELAYCHAIN_ENDPOINT="ws://localhost:9944" npx hardhat run ./scripts/configure-beefy.ts --network localhost
+    RELAYCHAIN_ENDPOINT="ws://localhost:9944" npx hardhat run ./scripts/configure-beefy.ts --network $eth_network
 
     popd
 }
@@ -147,8 +155,11 @@ start_relayer()
     # Configure beefy relay
     jq \
         --arg k1 "$(address_for BeefyClient)" \
+        --arg infura_endpoint_ws $infura_endpoint_ws \
     '
       .sink.contracts.BeefyClient = $k1
+    | .source.ethereum.endpoint = $infura_endpoint_ws
+    | .sink.ethereum.endpoint = $infura_endpoint_ws
     ' \
     config/beefy-relay.json > $output_dir/beefy-relay.json
 
@@ -157,12 +168,15 @@ start_relayer()
         --arg k1 "$(address_for BasicInboundChannel)" \
         --arg k2 "$(address_for IncentivizedInboundChannel)" \
         --arg k3 "$(address_for BeefyClient)" \
+        --arg infura_endpoint_ws $infura_endpoint_ws \
     '
       .source.contracts.BasicInboundChannel = $k1
     | .source.contracts.IncentivizedInboundChannel = $k2
     | .source.contracts.BeefyClient = $k3
     | .sink.contracts.BasicInboundChannel = $k1
     | .sink.contracts.IncentivizedInboundChannel = $k2
+    | .source.ethereum.endpoint = $infura_endpoint_ws
+    | .sink.ethereum.endpoint = $infura_endpoint_ws
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
@@ -170,9 +184,11 @@ start_relayer()
     jq \
         --arg k1 "$(address_for BasicOutboundChannel)" \
         --arg k2 "$(address_for IncentivizedOutboundChannel)" \
+        --arg infura_endpoint_ws $infura_endpoint_ws \
     '
       .source.contracts.BasicOutboundChannel = $k1
     | .source.contracts.IncentivizedOutboundChannel = $k2
+    | .source.ethereum.endpoint = $infura_endpoint_ws
     ' \
     config/ethereum-relay.json > $output_dir/ethereum-relay.json
 
@@ -186,7 +202,7 @@ start_relayer()
             echo "Starting beefy relay at $(date)"
             "${relay_bin}" run beefy \
                 --config "$output_dir/beefy-relay.json" \
-                --ethereum.private-key "0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109" \
+                --ethereum.private-key $beefy_relay_eth_key \
                 >>beefy-relay.log 2>&1 || true
             sleep 20
         done
@@ -200,7 +216,7 @@ start_relayer()
           echo "Starting parachain relay at $(date)"
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay.json" \
-                --ethereum.private-key "0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a" \
+                --ethereum.private-key $parachain_relay_eth_key \
                 >>parachain-relay.log 2>&1 || true
             sleep 20
         done
@@ -235,7 +251,10 @@ mkdir "$output_dir/bin"
 
 export PATH="$output_dir/bin:$PATH"
 
-start_geth
+if [ "$eth_network" == "localhost" ]; then
+    start_geth
+fi
+
 deploy_contracts
 start_polkadot_launch
 

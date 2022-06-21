@@ -20,8 +20,3 @@ export PARACHAIN_ID=1000
 # For start-services and E2E tests
 export INFURA_PROJECT_ID=
 export ROPSTEN_PRIVATE_KEY=
-export PARACHAIN_RELAY_ETH_KEY=
-export BEEFY_RELAY_ETH_KEY=
-export ETH_ACCOUNT=
-export ETH_ENDPOINT=
-export NETWORK_ID=
