@@ -16,7 +16,3 @@ export INCENTIVIZED_CHANNEL_SOURCE_ID=1
 
 # ParachainClient needs to be constructed with our parachain ID
 export PARACHAIN_ID=1000
-
-# For start-services and E2E tests
-export INFURA_PROJECT_ID=
-export ROPSTEN_PRIVATE_KEY=
