@@ -13,8 +13,8 @@ const polkadotSenderSS58 = polkadotRecipientSS58;
 const treasuryAddressSS58 = "5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS";
 const parachainEndpoint = 'ws://localhost:11144';
 const testParachainEndpoint = 'ws://localhost:13144';
-const ethEndpoint = process.env.ETH_WS_ENDPOINT || 'ws://localhost:8546';
-const testNetworkID = process.env.ETH_NETWORK_ID || '15';
+const ethEndpoint = env.ETH_WS_ENDPOINT || 'ws://localhost:8546';
+const testNetworkID = env.ETH_NETWORK_ID || '15';
 
 const TestTokenAddress = TestToken.address;
 

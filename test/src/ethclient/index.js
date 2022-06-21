@@ -1,6 +1,7 @@
 const Web3 = require('web3');
 const BigNumber = require('bignumber.js');
 const fs = require('fs');
+const { env } = require('process');
 
 const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge/contracts.json', 'utf8'));
 
@@ -61,8 +62,8 @@ class EthClient {
 
   async initialize() {
     this.accounts = await this.web3.eth.getAccounts();
-    if(process.env.ETH_E2E_TEST_ACCOUNT) {
-      this.accounts.splice(1, 0, process.env.ETH_E2E_TEST_ACCOUNT)
+    if(env.ETH_E2E_TEST_ACCOUNT) {
+      this.accounts.splice(1, 0, env.ETH_E2E_TEST_ACCOUNT)
     }
     this.web3.eth.defaultAccount = this.accounts[1];
 
