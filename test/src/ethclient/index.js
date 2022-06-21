@@ -61,6 +61,9 @@ class EthClient {
 
   async initialize() {
     this.accounts = await this.web3.eth.getAccounts();
+    if(process.env.ETH_E2E_TEST_ACCOUNT) {
+      this.accounts.splice(1, 0, process.env.ETH_E2E_TEST_ACCOUNT)
+    }
     this.web3.eth.defaultAccount = this.accounts[1];
 
     const snowDotAddr = await this.appDOT.methods.token().call();
