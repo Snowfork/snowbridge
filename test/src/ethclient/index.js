@@ -61,9 +61,17 @@ class EthClient {
   }
 
   async initialize() {
-    this.accounts = await this.web3.eth.getAccounts();
-    if(env.E2E_TEST_ETH_KEY) {
-      this.accounts.splice(1, 0, env.E2E_TEST_ETH_KEY)
+    if (env.E2E_TEST_ETH_KEY) {
+      let keys = [
+        env.BEEFY_RELAY_ETH_KEY,
+        env.E2E_TEST_ETH_KEY,
+        env.PARACHAIN_RELAY_ETH_KEY,
+      ]
+      this.accounts = keys
+        .map(k => this.web3.eth.accounts.wallet.add(k))
+        .map(account => this.web3.utils.toChecksumAddress(account.address));
+    } else {
+      this.accounts = await this.web3.eth.getAccounts();
     }
     this.web3.eth.defaultAccount = this.accounts[1];
 
