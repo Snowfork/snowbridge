@@ -26,7 +26,7 @@ describe('Bridge', function () {
     it('should transfer DOT from Substrate to Ethereum (basic channel)', async function () {
       const amount = BigNumber('100000000000000'); // 100 DOT (12 decimal places in this environment)
       const amountWrapped = BigNumber(Web3.utils.toWei('100', "ether")); // 100 SnowDOT (18 decimal places)
-      const ethAccount = ethClient.accounts[1];
+      const ethAccount = getAccount();
 
       const beforeEthBalance = await ethClient.getDotBalance(ethAccount);
       const beforeSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
@@ -44,7 +44,7 @@ describe('Bridge', function () {
 
     it('should transfer ETH from Ethereum to Substrate (incentivized channel)', async function () {
       const amount = BigNumber(Web3.utils.toWei('1', "ether"));
-      const ethAccount = ethClient.accounts[1];
+      const ethAccount = getAccount();
 
       const subBalances = await subClient.subscribeAssetsAccountBalances(
         this.testParaEthAssetId, polkadotRecipientSS58, 2
@@ -64,4 +64,13 @@ describe('Bridge', function () {
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
     });
 	});
+
+  function getAccount() {
+    const ethAccount = ethClient.accounts[1];
+    if (ethAccount === undefined) {
+      console.log('Using ETH_ACCOUNT provided');
+      return process.env.ETH_ACCOUNT;
+    }
+    return ethAccount;
+  }
 });
