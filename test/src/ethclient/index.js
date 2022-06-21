@@ -62,8 +62,8 @@ class EthClient {
 
   async initialize() {
     this.accounts = await this.web3.eth.getAccounts();
-    if(env.ETH_E2E_TEST_ACCOUNT) {
-      this.accounts.splice(1, 0, env.ETH_E2E_TEST_ACCOUNT)
+    if(env.E2E_TEST_ETH_KEY) {
+      this.accounts.splice(1, 0, env.E2E_TEST_ETH_KEY)
     }
     this.web3.eth.defaultAccount = this.accounts[1];
 
