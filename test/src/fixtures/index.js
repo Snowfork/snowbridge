@@ -13,6 +13,7 @@ const polkadotSenderSS58 = polkadotRecipientSS58;
 const treasuryAddressSS58 = "5EYCAe5jHEaRUtbinpdbTLuTyGiVt2TJGQPi9fdvVpNLNfSS";
 const parachainEndpoint = 'ws://localhost:11144';
 const testParachainEndpoint = 'ws://localhost:13144';
+const infuraProjectId = env.INFURA_PROJECT_ID || '';
 const ethEndpoint = env.ETH_WS_ENDPOINT || 'ws://localhost:8546';
 const testNetworkID = env.ETH_NETWORK_ID || '15';
 
@@ -22,7 +23,7 @@ const ETH_TO_PARA_WAIT_TIME = 60000;
 const PARA_TO_ETH_WAIT_TIME = 100000;
 
 async function bootstrap() {
-  const ethClient = new EthClient(ethEndpoint, testNetworkID);
+  const ethClient = new EthClient(ethEndpoint + '/' + infuraProjectId, testNetworkID);
   const subClient = new SubClient(parachainEndpoint);
   await subClient.connect();
   const testSubClient = new SubClient(testParachainEndpoint);
