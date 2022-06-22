@@ -63,8 +63,9 @@ class EthClient {
   async initialize() {
     if (env.E2E_TEST_ETH_KEY) {
       let keys = [
-        env.BEEFY_RELAY_ETH_KEY,
+        env.ROPSTEN_PRIVATE_KEY,
         env.E2E_TEST_ETH_KEY,
+        env.BEEFY_RELAY_ETH_KEY,
         env.PARACHAIN_RELAY_ETH_KEY,
       ]
       this.accounts = keys
