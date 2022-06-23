@@ -42,8 +42,8 @@ start_geth() {
         --rpc.gascap 100000000 \
         --trace "$data_dir/trace" \
         --gcmode archive \
-        --miner.gasprice=0 \
-        > "$output_dir/geth.log" 2>&1 &
+        --miner.gasprice=0 
+       # > "$output_dir/geth.log" 2>&1 &
 }
 
 start_lodestar() {
@@ -62,10 +62,16 @@ start_lodestar() {
     timestamp=$(date -d'+1minute' +%s%3N)
 
     echo "Timestamp is $timestamp"
+
+    > lodestar-1.log
+    > lodestar-2.log
     
+    > beacon-1.log
+    > beacon-2.log
+
     lodestar dev \
         --genesisValidators 8 \
-        --genesisTime $timestamp \
+        --genesisTime 1655975758 \
         --startValidators "0..7" \
         --enr.ip "127.0.0.1" \
         --rootDir "$output_dir/node1-$timestamp" \
@@ -76,7 +82,7 @@ start_lodestar() {
         --logLevelFile debug \
         --params.BELLATRIX_FORK_EPOCH 0 \
         --jwt-secret config/jwtsecret \
-        > $output_dir/lodestar-1.log 2>&1 &
+        > lodestar-1.log 2>&1 &
 
     echo "Started up beacon node 1"
     sleep 5
@@ -87,22 +93,26 @@ start_lodestar() {
 
     echo "ENR is $enr"
 
+    sleep 5
+
+    echo "Starting up node 2 with ENR $enr"
+
     lodestar dev \
         --genesisValidators 8 \
-        --genesisTime $timestamp \
+        --genesisTime 1655975758 \
         --rootDir "$output_dir/node2-$timestamp" \
         --port 9001 \
         --api.rest.port 9597 \
         --terminal-total-difficulty-override 0 \
         --genesisEth1Hash $genesisHash \
         --network.connectToDiscv5Bootnodes true \
-        --network.discv5.bootEnrs "$enr" \
+        --network.discv5.bootEnrs $enr \
         --reset \
         --logFile beacon-2.log \
         --logLevelFile debug \
         --params.BELLATRIX_FORK_EPOCH 0 \
         --jwt-secret config/jwtsecret \
-        > "$output_dir/lodestar-2.log" 2>&1 &
+        > lodestar-2.log 2>&1 &
 
     echo "Started up beacon node 2"
     echo "Local testnet setup done"
@@ -301,7 +311,7 @@ mkdir "$output_dir/bin"
 export PATH="$output_dir/bin:$PATH"
 
 start_geth
-start_lodestar
+#start_lodestar
 #deploy_contracts
 #start_polkadot_launch
 
