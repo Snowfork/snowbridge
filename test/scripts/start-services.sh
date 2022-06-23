@@ -45,9 +45,7 @@ start_geth() {
 }
 
 start_lodestar() {
-    echo "Starting lodestar"
-
-    echo "Waiting for geth API to be ready"
+   echo "Waiting for geth API to be ready"
     sleep 2
 
     genesisHash=$(curl http://localhost:8545 \
@@ -55,13 +53,11 @@ start_lodestar() {
         -H 'Content-Type: application/json' \
         -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
 
-    echo "EL genesis hash is $genesisHash"
-
     timestamp=$(date -d'+1minute' +%s%3N)
 
-    echo "Timestamp is $timestamp"
-
     > lodestar-beacon.log
+
+     echo "Starting lodestar"
 
     lodestar dev \
         --genesisValidators 8 \
