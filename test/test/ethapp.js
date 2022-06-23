@@ -30,7 +30,7 @@ describe('Bridge', function () {
       // This fee will be deducted from the source account
       let fee = await subClient.queryIncentivizedOutboundChannelFee()
 
-      const amount = BigNumber(Web3.utils.toWei('0.1', "ether"));
+      const amount = BigNumber(Web3.utils.toWei('0.0001', "ether"));
       const ethAccount = ethClient.accounts[1];
 
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
@@ -53,7 +53,7 @@ describe('Bridge', function () {
 
   describe('ETH App XCM', function () {
     it('should transfer ETH from Ethereum to Parachain 1001 (incentivized channel)', async function () {
-      const amount = BigNumber(Web3.utils.toWei('1', "ether"));
+      const amount = BigNumber(Web3.utils.toWei('0.0001', "ether"));
       const ethAccount = ethClient.accounts[1];
 
       const testSubBalances = await testSubClient.subscribeAssetsAccountBalances(
@@ -75,7 +75,7 @@ describe('Bridge', function () {
     });
 
     it('should not transfer ETH from Ethereum to Parachain 1001 without fee', async function () {
-      const amount = BigNumber(Web3.utils.toWei('1', "ether"));
+      const amount = BigNumber(Web3.utils.toWei('0.0001', "ether"));
       const ethAccount = ethClient.accounts[1];
 
       const subBalances = await subClient.subscribeAssetsAccountBalances(
@@ -97,7 +97,7 @@ describe('Bridge', function () {
     });
 
     it('should not transfer ETH from Ethereum to non-existent Parachain 2001', async function () {
-      const amount = BigNumber(Web3.utils.toWei('1', "ether"));
+      const amount = BigNumber(Web3.utils.toWei('0.0001', "ether"));
       const ethAccount = ethClient.accounts[1];
 
       const subBalances = await subClient.subscribeAssetsAccountBalances(
