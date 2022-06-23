@@ -26,8 +26,6 @@ start_geth() {
 
     local data_dir="$output_dir/geth"
 
-        #    --authrpc.jwtsecret=/tmp/jwtsecret \
-
     geth init --datadir "$data_dir" config/genesis.json
     geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key0.prv
     geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key1.prv
@@ -43,7 +41,7 @@ start_geth() {
         --trace "$data_dir/trace" \
         --gcmode archive \
         --miner.gasprice=0 
-       # > "$output_dir/geth.log" 2>&1 &
+        > "$output_dir/geth.log" 2>&1 &
 }
 
 start_lodestar() {
@@ -63,59 +61,27 @@ start_lodestar() {
 
     echo "Timestamp is $timestamp"
 
-    > lodestar-1.log
-    > lodestar-2.log
-    
-    > beacon-1.log
-    > beacon-2.log
+    > lodestar-beacon.log
 
     lodestar dev \
         --genesisValidators 8 \
-        --genesisTime 1655975758 \
+        --genesisTime $timestamp \
         --startValidators "0..7" \
         --enr.ip "127.0.0.1" \
-        --rootDir "$output_dir/node1-$timestamp" \
+        --rootDir "$output_dir/beacon-node1-$timestamp" \
         --reset \
         --terminal-total-difficulty-override 0 \
         --genesisEth1Hash $genesisHash \
-        --logFile beacon-1.log \
         --logLevelFile debug \
+        --params.ALTAIR_FORK_EPOCH 0
         --params.BELLATRIX_FORK_EPOCH 0 \
+        --eth1.enabled=true
+        --api.rest.api="beacon,config,events,node,validator,lightclient"
         --jwt-secret config/jwtsecret \
-        > lodestar-1.log 2>&1 &
+        > lodestar-beacon.log 2>&1 &
 
-    echo "Started up beacon node 1"
-    sleep 5
 
-    enr=$(curl http://localhost:9596/eth/v1/node/identity \
-        -X GET \
-        -H 'Content-Type: application/json' | jq -r '.data.enr')
-
-    echo "ENR is $enr"
-
-    sleep 5
-
-    echo "Starting up node 2 with ENR $enr"
-
-    lodestar dev \
-        --genesisValidators 8 \
-        --genesisTime 1655975758 \
-        --rootDir "$output_dir/node2-$timestamp" \
-        --port 9001 \
-        --api.rest.port 9597 \
-        --terminal-total-difficulty-override 0 \
-        --genesisEth1Hash $genesisHash \
-        --network.connectToDiscv5Bootnodes true \
-        --network.discv5.bootEnrs $enr \
-        --reset \
-        --logFile beacon-2.log \
-        --logLevelFile debug \
-        --params.BELLATRIX_FORK_EPOCH 0 \
-        --jwt-secret config/jwtsecret \
-        > lodestar-2.log 2>&1 &
-
-    echo "Started up beacon node 2"
-    echo "Local testnet setup done"
+    echo "Started up beacon node"
 }
 
 deploy_contracts()
@@ -311,30 +277,29 @@ mkdir "$output_dir/bin"
 export PATH="$output_dir/bin:$PATH"
 
 start_geth
-#start_lodestar
-#deploy_contracts
-#start_polkadot_launch
+start_lodestar
+deploy_contracts
+start_polkadot_launch
 
-#echo "Waiting for consensus between polkadot and parachain"
-#sleep 60
-#configure_contracts
-#start_relayer
-#
-#echo "Process Tree:"
-#pstree -T $$
-#
-#sleep 3
-#until grep "Syncing headers starting..." ethereum-relay.log > /dev/null; do
-#    echo "Waiting for ethereum relay to generate the DAG cache. This can take up to 20 minutes."
-#    sleep 20
-#done
-#
-#until grep "Done retrieving finalized headers" ethereum-relay.log > /dev/null; do
-#    echo "Waiting for ethereum relay to sync headers..."
-#    sleep 5
-#done
-#
-#
-#echo "Testnet has been initialized"
+echo "Waiting for consensus between polkadot and parachain"
+sleep 60
+configure_contracts
+start_relayer
+
+echo "Process Tree:"
+pstree -T $$
+
+sleep 3
+until grep "Syncing headers starting..." ethereum-relay.log > /dev/null; do
+    echo "Waiting for ethereum relay to generate the DAG cache. This can take up to 20 minutes."
+    sleep 20
+done
+
+until grep "Done retrieving finalized headers" ethereum-relay.log > /dev/null; do
+    echo "Waiting for ethereum relay to sync headers..."
+    sleep 5
+done
+
+echo "Testnet has been initialized"
 
 wait
