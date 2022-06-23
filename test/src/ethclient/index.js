@@ -122,7 +122,8 @@ class EthClient {
     const erc20Instance = this.loadERC20Contract();
     return erc20Instance.methods.mint(to, amount)
       .send({
-        from: owner
+        from: owner,
+        gasLimit: 300000
       });
   }
 
@@ -130,7 +131,8 @@ class EthClient {
     const erc20Instance = this.loadERC20Contract();
     return erc20Instance.methods.approve(this.appERC20._address, this.web3.utils.toBN(amount))
       .send({
-        from
+        from,
+        gasLimit: 300000
       });
   }
 
