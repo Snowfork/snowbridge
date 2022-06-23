@@ -40,7 +40,7 @@ start_geth() {
         --rpc.gascap 100000000 \
         --trace "$data_dir/trace" \
         --gcmode archive \
-        --miner.gasprice=0 
+        --miner.gasprice=0 \
         > "$output_dir/geth.log" 2>&1 &
 }
 
@@ -69,10 +69,10 @@ start_lodestar() {
         --terminal-total-difficulty-override 0 \
         --genesisEth1Hash $genesisHash \
         --logLevelFile debug \
-        --params.ALTAIR_FORK_EPOCH 0
+        --params.ALTAIR_FORK_EPOCH 0 \
         --params.BELLATRIX_FORK_EPOCH 0 \
-        --eth1.enabled=true
-        --api.rest.api="beacon,config,events,node,validator,lightclient"
+        --eth1.enabled=true \
+        --api.rest.api="beacon,config,events,node,validator,lightclient" \
         --jwt-secret config/jwtsecret \
         > lodestar-beacon.log 2>&1 &
 
