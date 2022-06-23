@@ -14,6 +14,7 @@ import (
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/ethashproof"
 	"golang.org/x/sync/errgroup"
+	log "github.com/sirupsen/logrus"
 )
 
 type BlockLoader interface {
@@ -190,8 +191,10 @@ func NewHeaderCache(
 // of the block specified by `hash`. If the trie isn't cached, it will block for
 // multiple seconds to fetch receipts and construct the trie.
 func (s *HeaderCache) GetReceiptTrie(ctx context.Context, hash gethCommon.Hash) (*gethTrie.Trie, error) {
+	log.Info("In GetReceiptTrie")
 	_, receiptTrie, exists := s.blockCache.Get(hash)
 	if exists {
+		log.WithField("receiptTrie_cached", receiptTrie).Info("GetAllReceipts receiptTrie cached")
 		return receiptTrie, nil
 	}
 
@@ -209,12 +212,14 @@ func (s *HeaderCache) GetReceiptTrie(ctx context.Context, hash gethCommon.Hash) 
 	if err != nil {
 		return nil, err
 	}
+	log.WithField("receiptTrie", receiptTrie).Info("GetAllReceipts receiptTrie")
 
 	if receiptTrie.Hash() != block.ReceiptHash() {
 		return nil, fmt.Errorf("receipt trie does not match block receipt hash")
 	}
 
 	s.blockCache.Insert(block, receiptTrie)
+	log.Info("GetReceiptTrie Done")
 	return receiptTrie, nil
 }
 

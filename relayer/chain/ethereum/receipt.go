@@ -9,13 +9,16 @@ import (
 
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/sync/errgroup"
+	log "github.com/sirupsen/logrus"
 )
 
 const receiptFetchBatchSize int = 100
 
 // Fetch all receipts for the given block in batches of `receiptFetchBatchSize`
 func GetAllReceipts(ctx context.Context, conn *Connection, block *etypes.Block) (etypes.Receipts, error) {
+	log.Info("In GetAllReceipts")
 	transactions := block.Body().Transactions
+	log.WithField("transactions", transactions).Info("GetAllReceipts transactions")
 	numTransactions := len(transactions)
 	receiptsByIndex := sync.Map{}
 
@@ -49,5 +52,7 @@ func GetAllReceipts(ctx context.Context, conn *Connection, block *etypes.Block) 
 		receipts[index.(int)] = receipt.(*etypes.Receipt)
 		return true
 	})
+	log.WithField("receipts", transactions).Info("GetAllReceipts receipts")
+	log.Info("GetAllReceipts Done")
 	return receipts, nil
 }
