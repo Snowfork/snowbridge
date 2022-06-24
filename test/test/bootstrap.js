@@ -66,7 +66,7 @@ describe('Bridge', function () {
     });
     */
     it('should transfer ETH from Ethereum to Substrate (basic channel)', async function () {
-      const amount = BigNumber(Web3.utils.toWei('0.1', "ether"));
+      const amount = BigNumber(Web3.utils.toWei('0.001', "ether"));
       const ethAccount = ethClient.accounts[1];
 
       const subBalances = await subClient.subscribeAssetsAccountBalances(
