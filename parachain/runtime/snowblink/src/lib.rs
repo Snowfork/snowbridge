@@ -551,7 +551,7 @@ impl dispatch::Config for Runtime {
 	type CallFilter = Everything;
 }
 
-use basic_channel::{inbound as basic_channel_inbound, outbound as basic_channel_outbound};
+use snowbridge_basic_channel::{inbound as basic_channel_inbound, outbound as basic_channel_outbound};
 use incentivized_channel::{
 	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
 };
@@ -568,7 +568,7 @@ impl basic_channel_outbound::Config for Runtime {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
-	type WeightInfo = basic_channel::outbound::weights::SnowbridgeWeight<Self>;
+	type WeightInfo = basic_channel_outbound::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -811,6 +811,12 @@ pub type Executive = frame_executive::Executive<
 >;
 
 impl_runtime_apis! {
+	impl snowbridge_basic_channel::outbound::BasicChannelOutboundRuntimeApi<Block> for Runtime {
+		fn generate_proof(_leaf_index: u64) ->  Result<u64, ()> {
+			Ok(42)
+		}
+	}
+
 	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
 			VERSION

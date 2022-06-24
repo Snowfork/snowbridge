@@ -551,7 +551,7 @@ impl dispatch::Config for Runtime {
 	type CallFilter = Everything;
 }
 
-use basic_channel::{inbound as basic_channel_inbound, outbound as basic_channel_outbound};
+use snowbridge_basic_channel::{inbound as basic_channel_inbound, outbound as basic_channel_outbound};
 use incentivized_channel::{
 	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
 };
@@ -568,7 +568,7 @@ impl basic_channel_outbound::Config for Runtime {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
-	type WeightInfo = basic_channel::outbound::weights::SnowbridgeWeight<Self>;
+	type WeightInfo = basic_channel_outbound::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -816,6 +816,12 @@ pub type Executive = frame_executive::Executive<
 >;
 
 impl_runtime_apis! {
+	impl snowbridge_basic_channel::outbound::BasicChannelOutboundRuntimeApi<Block> for Runtime {
+		fn generate_proof(_leaf_index: u64) ->  Result<u64, ()> {
+			Ok(42)
+		}
+	}
+
 	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
 			VERSION
@@ -939,7 +945,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_scheduler, Scheduler);
 			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
 			list_benchmark!(list, extra, assets, Assets);
-			list_benchmark!(list, extra, basic_channel::outbound, BasicOutboundChannel);
+			list_benchmark!(list, extra, snowbridge_basic_channel::outbound, BasicOutboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::inbound, IncentivizedInboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::outbound, IncentivizedOutboundChannel);
 			list_benchmark!(list, extra, dot_app, DotAppBench::<Runtime>);
@@ -992,7 +998,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
 			add_benchmark!(params, batches, ethereum_light_client, EthereumLightClient);
 			add_benchmark!(params, batches, assets, Assets);
-			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);
+			add_benchmark!(params, batches, snowbridge_basic_channel::outbound, BasicOutboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
 			add_benchmark!(params, batches, dot_app, DotAppBench::<Runtime>);

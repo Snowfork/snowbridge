@@ -62,6 +62,8 @@ substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate
 
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
+snowbridge-basic-channel = { path = "pallets/basic-channel" }
+snowbridge-basic-channel-rpc = { path = "pallets/basic-channel/rpc" }
 
 cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.19" }
 cumulus-client-collator = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.19" }
