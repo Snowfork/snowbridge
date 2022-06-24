@@ -817,12 +817,6 @@ pub type Executive = frame_executive::Executive<
 >;
 
 impl_runtime_apis! {
-	impl snowbridge_basic_channel::outbound::BasicChannelOutboundRuntimeApi<Block> for Runtime {
-		fn generate_proof(_leaf_index: u64) ->  Result<u64, ()> {
-			Ok(42)
-		}
-	}
-
 	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
 			VERSION
@@ -920,6 +914,12 @@ impl_runtime_apis! {
 		}
 		fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> FeeDetails<Balance> {
 			TransactionPayment::query_fee_details(uxt, len)
+		}
+	}
+
+	impl snowbridge_basic_channel_rpc_runtime_api::BasicOutboundChannelApi<Block> for Runtime {
+		fn generate_proof(_leaf_index: u64) ->  Result<u64, ()> {
+			Ok(42)
 		}
 	}
 
