@@ -13,7 +13,6 @@ infura_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
-
 output_dir=/tmp/snowbridge
 
 address_for()
@@ -49,6 +48,28 @@ start_geth() {
         --gcmode archive \
         --miner.gasprice=0 \
         > "$output_dir/geth.log" 2>&1 &
+}
+
+start_geth_for_beacon_node() {
+    geth --ropsten \
+        --datadir /home/ubuntu/projects/go-ethereum/ropstendata \
+        --authrpc.addr localhost \
+        --authrpc.port 8551 \
+        --http \
+        --authrpc.vhosts localhost \
+        --authrpc.jwtsecret /home/ubuntu/projects/go-ethereum/ropstendata/jwtsecret \
+        --http.api eth,net \
+        --override.terminaltotaldifficulty 50000000000000000 \
+        > "$output_dir/geth_beacon.log" 2>&1 &
+}
+
+start_lodestar() {
+    lodestar beacon \
+        --rootDir="/home/ubuntu/projects/lodestar-beacondata" \
+        --network=ropsten \
+        --api.rest.api="beacon,config,events,node,validator,lightclient" \
+        --jwt-secret /home/ubuntu/projects/go-ethereum/ropstendata/jwtsecret \
+        > "$output_dir/lodestar_beacon.log" 2>&1 &
 }
 
 deploy_contracts()
@@ -180,17 +201,15 @@ start_relayer()
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
-    # Configure ethereum relay
+    # Configure beacon relay
     jq \
         --arg k1 "$(address_for BasicOutboundChannel)" \
-        --arg k2 "$(address_for IncentivizedOutboundChannel)" \
-        --arg infura_endpoint_ws $infura_endpoint_ws \
+        --arg k2 "$(address_for BasicInboundChannel)" \
     '
       .source.contracts.BasicOutboundChannel = $k1
-    | .source.contracts.IncentivizedOutboundChannel = $k2
-    | .source.ethereum.endpoint = $infura_endpoint_ws
+    | .source.contracts.BasicInboundChannel = $k2
     ' \
-    config/ethereum-relay.json > $output_dir/ethereum-relay.json
+    config/beacon-relay.json > $output_dir/beacon-relay.json
 
     local relay_bin="$relay_dir/build/snowbridge-relay"
 
@@ -222,16 +241,16 @@ start_relayer()
         done
     ) &
 
-    # Launch ethereum relay
+    # Launch beacon relay
     (
-        : > ethereum-relay.log
+        : > beacon-relay.log
         while :
         do
-          echo "Starting ethereum relay at $(date)"
-            "${relay_bin}" run ethereum \
-                --config $output_dir/ethereum-relay.json \
+          echo "Starting beacon relay at $(date)"
+            "${relay_bin}" run beacon \
+                --config $output_dir/beacon-relay.json \
                 --substrate.private-key "//Relay" \
-                >>ethereum-relay.log 2>&1 || true
+                >>beacon-relay.log 2>&1 || true
             sleep 20
         done
     ) &
@@ -253,7 +272,11 @@ export PATH="$output_dir/bin:$PATH"
 
 if [ "$eth_network" == "localhost" ]; then
     start_geth
+else
+    start_geth_for_beacon_node
 fi
+
+start_lodestar
 
 deploy_contracts
 start_polkadot_launch
