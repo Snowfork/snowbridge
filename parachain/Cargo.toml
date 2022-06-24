@@ -122,6 +122,8 @@ members = [
     "primitives/asset-registry",
     "primitives/runtime",
     "pallets/basic-channel",
+    "pallets/basic-channel/rpc",
+    "pallets/basic-channel/rpc/runtime-api",
     "pallets/incentivized-channel",
     "pallets/dispatch",
     "pallets/ethereum-light-client",

@@ -8,7 +8,7 @@ use sp_blockchain::HeaderBackend;
 use sp_runtime::traits::Block as BlockT;
 use sp_runtime::generic::BlockId;
 
-pub use basic_channel::outbound::BasicChannelOutboundRuntimeApi as OutboundRuntimeApi;
+pub use snowbridge_basic_channel_rpc_runtime_api::BasicOutboundChannelApi as BasicOutboundChannelRuntimeApi;
 
 #[rpc]
 pub trait BasicChannelApi<BlockHash> {
@@ -36,7 +36,7 @@ impl<C, Block> BasicChannelApi<<Block as BlockT>::Hash> for BasicChannel<C, Bloc
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: OutboundRuntimeApi<Block>
+	C::Api: BasicOutboundChannelRuntimeApi<Block>
 {
 	fn hello_world(&self, at: Option<<Block as BlockT>::Hash>) ->  Result<String> {
 		let api = self.client.runtime_api();
