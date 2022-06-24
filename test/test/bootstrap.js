@@ -44,7 +44,7 @@ describe('Bridge', function () {
     });
 
     it('should transfer ETH from Ethereum to Substrate (incentivized channel)', async function () {
-      const amount = BigNumber(Web3.utils.toWei('1', "ether"));
+      const amount = BigNumber(Web3.utils.toWei('0.001', "ether"));
       const ethAccount = ethClient.accounts[1];
 
       const subBalances = await subClient.subscribeAssetsAccountBalances(
@@ -63,11 +63,12 @@ describe('Bridge', function () {
       expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
       // conservation of value
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
-    });
-    */
+    });*/
+    
     it('should transfer ETH from Ethereum to Substrate (basic channel)', async function () {
-      const amount = BigNumber(Web3.utils.toWei('0.001', "ether"));
+      const amount = BigNumber(Web3.utils.toWei('0.002', "ether"));
       const ethAccount = ethClient.accounts[1];
+      console.log(ethAccount);
 
       const subBalances = await subClient.subscribeAssetsAccountBalances(
         this.testParaEthAssetId, polkadotRecipientSS58, 2

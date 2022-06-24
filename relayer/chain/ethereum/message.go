@@ -47,11 +47,16 @@ func MakeMessageFromEvent(mapping map[common.Address]string, event *etypes.Log, 
 		},
 	}
 
+	log.WithFields(logrus.Fields{
+		"message":      m,
+	}).Debug("Message before encoded")
+
 	value := hex.EncodeToString(m.Data)
 	log.WithFields(logrus.Fields{
-		"payload":    value,
-		"blockHash":  m.Proof.BlockHash.Hex(),
-		"eventIndex": m.Proof.TxIndex,
+		"payload":      value,
+		"blockHash":    m.Proof.BlockHash.Hex(),
+		"eventIndex":   m.Proof.TxIndex,
+		"receiptsTrie": &receiptsTrie,
 	}).Debug("Generated message from Ethereum log")
 
 	var args []interface{}
