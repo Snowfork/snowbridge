@@ -57,6 +57,25 @@ pub type MessageBundleOf<T> =
 	MessageBundle<<T as Config>::MaxMessagePayloadSize, <T as Config>::MaxMessagesPerCommit>;
 pub type MessageOf<T> = Message<<T as Config>::MaxMessagePayloadSize>;
 
+// use frame_support::RuntimeDebug;
+use sp_api;
+
+// #[derive(RuntimeDebug, codec::Encode, codec::Decode, PartialEq, Eq)]
+// pub enum GenerateProofApiError {
+// 	/// Error getting the new root.
+// 	GetRoot,
+// 	/// Error during proof generation.
+// 	GenerateProof,
+// 	/// Leaf not found in the storage.
+// 	LeafNotFound,
+// }
+
+sp_api::decl_runtime_apis! {
+	pub trait BasicChannelOutboundRuntimeApi {
+		fn generate_proof(leaf_index: u64) ->  Result<u64, ()>;
+	}
+}
+
 pub use pallet::*;
 
 #[frame_support::pallet]

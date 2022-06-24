@@ -10180,6 +10180,8 @@ dependencies = [
  "serde",
  "snowbase-runtime",
  "snowblink-runtime",
+ "snowbridge-basic-channel",
+ "snowbridge-basic-channel-rpc",
  "snowbridge-core",
  "snowbridge-runtime",
  "snowbridge-runtime-primitives",
@@ -10245,11 +10247,29 @@ dependencies = [
  "serde",
  "snowbridge-core",
  "snowbridge-ethereum",
+ "sp-api",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-keyring",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+]
+
+[[package]]
+name = "snowbridge-basic-channel-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core 18.0.0",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "snowbridge-basic-channel",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
 ]
 
 [[package]]
