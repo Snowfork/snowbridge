@@ -12,9 +12,9 @@ import (
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/ethashproof"
 	"golang.org/x/sync/errgroup"
-	log "github.com/sirupsen/logrus"
 )
 
 type BlockLoader interface {
@@ -184,6 +184,22 @@ func NewHeaderCache(
 		return state.prepareNextEthashproofCache()
 	})
 
+	return &state, nil
+}
+
+func NewHeaderCacheWithBlockCacheOnly(
+	bl BlockLoader,
+) (*HeaderCache, error) {
+	blockCache := NewBlockCache(5)
+	blockLoader := bl
+	if blockLoader == nil {
+		return nil, fmt.Errorf("BlockLoader param is nil")
+	}
+
+	state := HeaderCache{
+		blockCache:  blockCache,
+		blockLoader: blockLoader,
+	}
 	return &state, nil
 }
 

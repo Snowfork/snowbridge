@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"errors"
-	"os"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -38,13 +37,11 @@ type EthereumListener struct {
 	mapping                     map[common.Address]string
 	payloads                    chan ParachainPayload
 	headerSyncer                *syncer.Syncer
-	initBlockHeight             uint64
 }
 
 func NewEthereumListener(
 	config *SourceConfig,
 	conn *ethereum.Connection,
-	initBlockHeight uint64,
 ) *EthereumListener {
 	return &EthereumListener{
 		ethashDataDir:               filepath.Join(config.DataDir, "ethash-data"),
@@ -55,7 +52,6 @@ func NewEthereumListener(
 		incentivizedOutboundChannel: nil,
 		mapping:                     make(map[common.Address]string),
 		headerSyncer:                nil,
-		initBlockHeight:             initBlockHeight,
 	}
 }
 
@@ -67,25 +63,8 @@ func (li *EthereumListener) Start(
 
 	li.payloads = make(chan ParachainPayload, 1)
 
-	err = os.Mkdir(li.ethashDataDir, 0755)
-	if err != nil && !errors.Is(err, os.ErrExist) {
-		log.WithError(err).Error("Could not create ethash data dir")
-		return nil, err
-	}
-
-	err = os.Mkdir(li.ethashCacheDir, 0755)
-	if err != nil && !errors.Is(err, os.ErrExist) {
-		log.WithError(err).Error("Could not create ethash cache dir")
-		return nil, err
-	}
-
-	headerCache, err := ethereum.NewHeaderCache(
-		li.ethashDataDir,
-		li.ethashCacheDir,
-		eg,
-		li.initBlockHeight,
+	headerCache, err := ethereum.NewHeaderCacheWithBlockCacheOnly(
 		&ethereum.DefaultBlockLoader{Conn: li.conn},
-		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -98,12 +77,13 @@ func (li *EthereumListener) Start(
 	if err != nil {
 		return nil, err
 	}
+
 	li.basicOutboundChannel = basicOutboundChannel
 	li.mapping[address] = "BasicInboundChannel.submit"
 
 	eg.Go(func() error {
 		defer close(li.payloads)
-		err := li.processEventsAndHeaders(ctx, headerCache, 100, 200)
+		err := li.processEvents(ctx, headerCache, 100, 200)
 		log.WithField("reason", err).Info("Shutting down ethereum listener")
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
@@ -117,13 +97,13 @@ func (li *EthereumListener) Start(
 	return li.payloads, nil
 }
 
-func (li *EthereumListener) processEventsAndHeaders(
+func (li *EthereumListener) processEvents(
 	ctx context.Context,
 	headerCache *ethereum.HeaderCache,
 	start uint64,
 	end uint64,
 ) error {
-	log.Info("Syncing headers starting...")
+	log.Info("Syncing events starting...")
 
 	for {
 		var events []*etypes.Log
@@ -179,6 +159,8 @@ func (li *EthereumListener) makeOutgoingMessages(
 ) ([]*chain.EthereumOutboundMessage, error) {
 	messages := make([]*chain.EthereumOutboundMessage, len(events))
 
+	log.Info("In makeOutgoingMessages")
+
 	for i, event := range events {
 		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
 		if err != nil {
@@ -190,6 +172,8 @@ func (li *EthereumListener) makeOutgoingMessages(
 			return nil, err
 		}
 
+		log.Info("Got receiptTrie")
+
 		msg, err := ethereum.MakeMessageFromEvent(li.mapping, event, receiptTrie)
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -200,6 +184,8 @@ func (li *EthereumListener) makeOutgoingMessages(
 			}).WithError(err).Error("Failed to generate message from ethereum event")
 			return nil, err
 		}
+
+		log.WithField("message", msg).Info("Got message")
 
 		messages[i] = msg
 	}

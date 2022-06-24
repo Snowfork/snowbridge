@@ -62,7 +62,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	listener := NewEthereumListener(
 		&r.config.Source,
 		r.ethconn,
-		60,
 	)
 
 	payloads, err := listener.Start(ctx, eg)
