@@ -10031,6 +10031,7 @@ dependencies = [
  "serde",
  "snowbridge-asset-registry",
  "snowbridge-basic-channel",
+ "snowbridge-basic-channel-rpc-runtime-api",
  "snowbridge-core",
  "snowbridge-dispatch",
  "snowbridge-dot-app",
@@ -10268,10 +10269,19 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "serde_json",
- "snowbridge-basic-channel",
+ "snowbridge-basic-channel-rpc-runtime-api",
  "sp-api",
  "sp-blockchain",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+]
+
+[[package]]
+name = "snowbridge-basic-channel-rpc-runtime-api"
+version = "4.0.0-dev"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
 ]
 
