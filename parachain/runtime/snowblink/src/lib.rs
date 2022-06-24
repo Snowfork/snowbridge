@@ -612,7 +612,7 @@ impl incentivized_channel_outbound::Config for Runtime {
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 16;
 	pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::ropsten();
-	pub const VerifyPoW: bool = true;
+	pub const VerifyPoW: bool = false;
 	pub const MaxHeadersForNumber: u32 = 100;
 }
 
