@@ -131,24 +131,4 @@ Test fixtures are taken by running the service in full e2e test. The relayer sho
 
 To run the E2E tests on Ropsten you need to have separate accounts for the relayers, an account for deployment and one for running the E2E test stack. You will also require an [Infura](https://infura.io/) account and project.
 
-Add the following variables to `ethereum/.envrc`:
-```bash
-export ROPSTEN_PRIVATE_KEY=0x…                # Your deployment account private key
-export INFURA_PROJECT_ID=…                    # Your Infura project id
-```
-
-Add the following variables to `test/.envrc`:
-```bash
-export INFURA_PROJECT_ID=…                   # Your Infura project id
-
-export ETH_NETWORK=ropsten
-export ETH_NETWORK_ID=3
-
-export ETH_RPC_ENDPOINT=https://ropsten.infura.io/v3
-export ETH_WS_ENDPOINT=wss://ropsten.infura.io/ws/v3
-
-export ROPSTEN_PRIVATE_KEY=0x…               # Your deployment account private key
-export BEEFY_RELAY_ETH_KEY=0x…               # Your Beefy relayer account private key
-export PARACHAIN_RELAY_ETH_KEY=0x…           # Your Parachain relayer account private key
-export E2E_TEST_ETH_KEY=0x…test.account      # Your E2E test account private key
-```
+Look at `.envrc-example` for the required variables. Add these variables to your `.envrc` and run `start-services.sh`.
