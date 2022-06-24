@@ -65,8 +65,8 @@ describe('Bridge', function () {
       const amount = BigNumber('1000000000000'); // 1 DOT (12 decimal places in this environment)
       const amountWrapped = BigNumber(Web3.utils.toWei('1', "ether")); // 1 SnowDOT (18 decimal places)
       const ethAccount = ethClient.accounts[1];
-      const fee = BigNumber(Web3.utils.toWei('1', "ether")) // 1 SnowDOT
-      const treasuryReward = BigNumber("200000000000") // 0.2 DOT
+      const fee = BigNumber(Web3.utils.toWei('0.001', "ether")) // 0.001 SnowDOT
+      const treasuryReward = BigNumber("200000000") // 0.0002 DOT
       const subBalances = await subClient.subscribeAccountBalances(
         polkadotRecipientSS58, 2
       );
