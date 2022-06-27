@@ -191,7 +191,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 }
 
 func (r *Relay) InitialSync(ctx context.Context) (syncer.InitialSync, error) {
-	initialSync, err := r.syncer.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
+	initialSync, err := r.syncer.InitialSync("0x088241fcf1cf63040b804498c945d3a6ae5484e65692483747fba5b8902c99c9")
 	if err != nil {
 		logrus.WithError(err).Error("unable to do initial beacon chain sync")
 

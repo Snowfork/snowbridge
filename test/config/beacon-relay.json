@@ -1,7 +1,7 @@
 {
   "source": {
     "beacon": {
-      "endpoint": "https://localhost:9596"
+      "endpoint": "http://localhost:9596"
     },
     "contracts": {
       "BasicInboundChannel": null,

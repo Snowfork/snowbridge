@@ -74,6 +74,8 @@ func (li *EthereumListener) Start(
 
 	address = common.HexToAddress(li.config.Contracts.BasicOutboundChannel)
 	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.Client())
+	log.WithField("basicOutboundChannel", basicOutboundChannel).Info("log basic outbound channel")
+	log.WithField("error", err).Info("log basic outbound channel error")
 	if err != nil {
 		return nil, err
 	}
@@ -109,8 +111,9 @@ func (li *EthereumListener) processEvents(
 		var events []*etypes.Log
 
 		filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
-
+		log.WithField("li.basicOutboundChannel", li.basicOutboundChannel).Info("log basic outbound channel")
 		basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
+		log.WithField("basicEvents", basicEvents).Info("log basic events")
 		if err != nil {
 			log.WithError(err).Error("Failure fetching event logs")
 			return err

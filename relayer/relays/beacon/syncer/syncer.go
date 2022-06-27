@@ -112,7 +112,7 @@ func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
 		return InitialSync{}, err
 	}
 
-	snapshot, err := s.Client.GetLightClientSnapshot("0xe6371ca628393d67f4491d02a77b5de81259aa6b9dff6b6bfa6a1782af896319") // 52
+	snapshot, err := s.Client.GetLightClientSnapshot(blockId)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch snapshot")
 
