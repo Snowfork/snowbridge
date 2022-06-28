@@ -317,13 +317,6 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 		return HeaderUpdate{}, err
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"slot":           block.Data.Message.Slot,
-		"block_root":     blockRoot,
-		"parent":         block.Data.Message.ParentRoot,
-		"sync_aggregate": block.Data.Message.Body.SyncAggregate,
-	}).Info("sync aggregrate")
-
 	blockScale, err := block.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable convert block to scale format")
@@ -367,13 +360,6 @@ func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, e
 
 		return scale.SyncAggregate{}, err
 	}
-
-	logrus.WithFields(logrus.Fields{
-		"slot":           block.Data.Message.Slot,
-		"block_root":     blockRoot,
-		"parent":         block.Data.Message.ParentRoot,
-		"sync_aggregate": block.Data.Message.Body.SyncAggregate,
-	}).Info("sync aggregrate")
 
 	blockScale, err := block.ToScale()
 	if err != nil {

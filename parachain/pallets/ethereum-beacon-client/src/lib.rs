@@ -136,10 +136,6 @@ pub mod pallet {
 		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
 
 	#[pallet::storage]
-	pub(super) type BeaconHeaders<T: Config> =
-		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
-
-	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
 		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
@@ -442,8 +438,10 @@ pub mod pallet {
 			};
 
 			let validators_root = <ValidatorsRoot<T>>::get();
+
 			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
+
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
@@ -757,5 +755,31 @@ pub mod pallet {
 
 			Ok(sync_committee)
 		}
+
+		/*pub(super) fn convert_to_binary(input: Vec<u8>) -> Vec<u8> {
+			let mut result = Vec::new();
+
+			for input_decimal in input.iter() {
+				let mut tmp = Vec::new();
+				let mut remaining = *input_decimal;
+
+				while remaining > 0 {
+					let remainder = remaining % 2;
+					tmp.push(remainder);
+					remaining = remaining / 2;
+				}
+
+				// pad binary with 0s if length is less than 7
+				if tmp.len() < 8 {
+					for _i in tmp.len()..8 {
+						tmp.push(0)
+					}
+				}
+
+				result.append(&mut tmp);
+			}
+
+			result
+		}*/
 	}
 }

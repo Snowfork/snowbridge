@@ -8,7 +8,8 @@ import (
 
 type BeaconCache struct {
 	SyncCommitteePeriodsSynced []uint64
-	FinalizedHeaders           []uint64
+	FinalizedHeaderSlots           []uint64
+	FinalizedHeaders 	   []common.Hash
 	HeadersMap                 map[common.Hash]uint64
 	mu                         sync.Mutex
 }
@@ -16,7 +17,8 @@ type BeaconCache struct {
 func NewBeaconCache() *BeaconCache {
 	return &BeaconCache{
 		SyncCommitteePeriodsSynced: []uint64{},
-		FinalizedHeaders:           []uint64{},
+		FinalizedHeaderSlots:           []uint64{},
+		FinalizedHeaders:      []common.Hash{},
 		HeadersMap:                 map[common.Hash]uint64{},
 	}
 }
@@ -27,6 +29,10 @@ func (b *BeaconCache) AddSyncCommitteePeriod(period uint64) {
 	b.SyncCommitteePeriodsSynced = append(b.SyncCommitteePeriodsSynced, period)
 }
 
-func (b *BeaconCache) LastFinalizedHeader() uint64 {
+func (b *BeaconCache) LastFinalizedHeaderSlot() uint64 {
+	return b.FinalizedHeaderSlots[len(b.FinalizedHeaderSlots)-1]
+}
+
+func (b *BeaconCache) LastFinalizedHeader() common.Hash {
 	return b.FinalizedHeaders[len(b.FinalizedHeaders)-1]
 }
