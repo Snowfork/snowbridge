@@ -112,7 +112,7 @@ func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
 		return InitialSync{}, err
 	}
 
-	snapshot, err := s.Client.GetLightClientSnapshot("0xe6371ca628393d67f4491d02a77b5de81259aa6b9dff6b6bfa6a1782af896319") // 52
+	snapshot, err := s.Client.GetLightClientSnapshot(blockId)
 	if err != nil {
 		logrus.WithError(err).Error("unable to fetch snapshot")
 
@@ -317,6 +317,13 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 		return HeaderUpdate{}, err
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"slot":           block.Data.Message.Slot,
+		"block_root":     blockRoot,
+		"parent":         block.Data.Message.ParentRoot,
+		"sync_aggregate": block.Data.Message.Body.SyncAggregate,
+	}).Info("sync aggregrate")
+
 	blockScale, err := block.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable convert block to scale format")
@@ -361,6 +368,13 @@ func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, e
 		return scale.SyncAggregate{}, err
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"slot":           block.Data.Message.Slot,
+		"block_root":     blockRoot,
+		"parent":         block.Data.Message.ParentRoot,
+		"sync_aggregate": block.Data.Message.Body.SyncAggregate,
+	}).Info("sync aggregrate")
+
 	blockScale, err := block.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable convert block to scale format")
@@ -374,9 +388,20 @@ func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, e
 func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, error) {
 	block, err := s.Client.GetBeaconBlockBySlot(slot)
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch block")
+		if errors.Is(err, ErrNotFound) {
+			safeguard := 0
+			for err != nil && safeguard < 20 {
+				logrus.WithField("slot", slot).Info("no block at slot, skipping to next")
+				block, err = s.Client.GetBeaconBlockBySlot(slot + 1)
+				safeguard = safeguard + 1
+			}
+		}
 
-		return scale.SyncAggregate{}, err
+		if err != nil {
+			logrus.WithError(err).Error("unable to fetch block")
+
+			return scale.SyncAggregate{}, err
+		}
 	}
 
 	blockScale, err := block.ToScale()

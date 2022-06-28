@@ -180,7 +180,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received initial sync, starting processing.",
 			);
@@ -194,7 +194,7 @@ pub mod pallet {
 				return Err(err);
 			}
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Initial sync processing succeeded.",
 			);
@@ -211,7 +211,7 @@ pub mod pallet {
 			let _sender = ensure_signed(origin)?;
 
 			let sync_committee_period = sync_committee_period_update.sync_committee_period;
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received sync committee update for period {}. Applying update",
 				sync_committee_period
@@ -226,7 +226,7 @@ pub mod pallet {
 				return Err(err);
 			}
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Sync committee period update for period {} succeeded.",
 				sync_committee_period
@@ -245,7 +245,7 @@ pub mod pallet {
 
 			let slot = finalized_header_update.finalized_header.slot;
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received finalized header for slot {}.",
 				slot
@@ -260,7 +260,7 @@ pub mod pallet {
 				return Err(err);
 			}
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Stored finalized beacon header at slot {}.",
 				slot
@@ -280,7 +280,7 @@ pub mod pallet {
 			let slot = update.block.slot;
 			let block_hash = update.block.body.execution_payload.block_hash;
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received header update for slot {}.",
 				slot
@@ -295,7 +295,7 @@ pub mod pallet {
 				return Err(err);
 			}
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Stored execution header {} at beacon slot {}.",
 				block_hash,

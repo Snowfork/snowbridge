@@ -105,7 +105,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 		return err
 	}
 
-	ticker := time.NewTicker(time.Minute * 1)
+	ticker := time.NewTicker(time.Second * 20)
 	done := make(chan bool)
 
 	go func() {
@@ -117,7 +117,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 				case <-ticker.C:
 					secondLastFinalizedHeader := r.syncer.Cache.LastFinalizedHeader()
 
-					_, finalizedHeaderBlockRoot, err := r.SyncFinalizedHeader(ctx)
+					finalizedHeader, finalizedHeaderBlockRoot, err := r.SyncFinalizedHeader(ctx)
 					if err != nil {
 						return err
 					}
@@ -135,19 +135,32 @@ func (r *Relay) Sync(ctx context.Context) error {
 						"to":   lastFinalizedHeader,
 					}).Info("Starting to back-fill headers")
 
-					blockRoot := finalizedHeaderBlockRoot
-					prevSyncAggregate, err := r.syncer.GetSyncAggregate(blockRoot)
-					if err != nil {
-						logrus.WithError(err).Error("Unable to get sync aggregate")
-
-						continue
-					}
-
 					if lastFinalizedHeader == secondLastFinalizedHeader {
 						logrus.Info("Still at same finalized header")
 
 						continue
 					}
+
+					blockRoot := finalizedHeaderBlockRoot
+
+					prevSyncAggregate, err := r.syncer.GetSyncAggregateForSlot(uint64(finalizedHeader.FinalizedHeader.Slot) + 1)
+					if err != nil {
+						logrus.WithError(err).Error("Unable to get sync aggregate")
+
+						return err
+					}
+
+					logrus.WithFields(logrus.Fields{
+						"prevSyncAggregate.bits":      string(prevSyncAggregate.SyncCommitteeBits),
+						"prevSyncAggregate.signature": string(prevSyncAggregate.SyncCommitteeSignature),
+					}).Info("Finalized sync aggregate")
+
+					//prevSyncAggregate, err := r.syncer.GetSyncAggregate(blockRoot)
+					//if err != nil {
+					//	logrus.WithError(err).Error("Unable to get sync aggregate")
+
+					//	continue
+					//}
 
 					for i := lastFinalizedHeader; i > secondLastFinalizedHeader; i-- {
 						headerUpdate, err := r.SyncHeader(ctx, i, blockRoot, prevSyncAggregate)
@@ -157,6 +170,11 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 						blockRoot = common.Hash(headerUpdate.Block.ParentRoot)
 						prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
+
+						logrus.WithFields(logrus.Fields{
+							"prevSyncAggregate.bits":      (prevSyncAggregate.SyncCommitteeBits),
+							"prevSyncAggregate.signature": (prevSyncAggregate.SyncCommitteeSignature),
+						}).Info("Finalized sync aggregate")
 					}
 
 				}
@@ -171,7 +189,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 }
 
 func (r *Relay) InitialSync(ctx context.Context) (syncer.InitialSync, error) {
-	initialSync, err := r.syncer.InitialSync("0xed94aec726c5158606f33b5c599f8bf14c9a88d1722fe1f3c327ddb882c219fc")
+	initialSync, err := r.syncer.InitialSync("0x73504113348a42e26c7ac8835fc0397524d05c2ac0b11748a28bc47ad54a475c")
 	if err != nil {
 		logrus.WithError(err).Error("unable to do initial beacon chain sync")
 
