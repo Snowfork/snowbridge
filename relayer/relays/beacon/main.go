@@ -253,7 +253,7 @@ func (r *Relay) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggre
 
 	logrus.WithFields(logrus.Fields{
 		"beaconBlockRoot":    blockRoot,
-		"executionBlockRoot": headerUpdate.Block.Body.ExecutionPayload.BlockHash,
+		"executionBlockRoot": headerUpdate.Block.Body.ExecutionPayload.BlockHash.Hex(),
 		"slot":               headerUpdate.Block.Slot,
 	}).Info("Syncing header between last two finalized headers")
 
