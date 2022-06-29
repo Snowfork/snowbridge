@@ -126,3 +126,9 @@ You should see the test pass, checking that message delivery works correctly and
 ## Generating/Updating new test fixtures
 
 Test fixtures are taken by running the service in full e2e test. The relayer should log the fixture data you need (code is in [the relayer here](../relayer/workers/beefyrelayer/fixture-data-logger.go), though may require a bit of manual copy/pasting to get perfectly it in the right format.
+
+## Running E2E tests on Ropsten
+
+To run the E2E tests on Ropsten you need to have separate accounts for the relayers, an account for deployment and one for running the E2E test stack. You will also require an [Infura](https://infura.io/) account and project.
+
+Look at `.envrc-example` for the required variables. Add these variables to your `.envrc` and run `start-services.sh`.
