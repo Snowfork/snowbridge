@@ -101,7 +101,7 @@ fn testnet_genesis(
 			reward_fraction: Perbill::from_percent(80),
 		},
 		incentivized_outbound_channel: snowbase_runtime::IncentivizedOutboundChannelConfig {
-			fee: u128::from_str_radix("10000000000000000", 10).unwrap(), // 0.01 SnowEther
+			fee: u128::from_str_radix("10000000000000", 10).unwrap(), // 0.00001 SnowEther
 			interval: 1,
 		},
 		assets: snowbase_runtime::AssetsConfig {
