@@ -383,20 +383,9 @@ func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, e
 func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, error) {
 	block, err := s.Client.GetBeaconBlockBySlot(slot)
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			safeguard := 0
-			for err != nil && safeguard < 20 {
-				logrus.WithField("slot", slot).Info("no block at slot, skipping to next")
-				block, err = s.Client.GetBeaconBlockBySlot(slot + 1)
-				safeguard = safeguard + 1
-			}
-		}
+		logrus.WithError(err).Error("unable to fetch block")
 
-		if err != nil {
-			logrus.WithError(err).Error("unable to fetch block")
-
-			return scale.SyncAggregate{}, err
-		}
+		return scale.SyncAggregate{}, err
 	}
 
 	blockScale, err := block.ToScale()
@@ -422,6 +411,15 @@ func ComputeSyncPeriodAtSlot(slot uint64) uint64 {
 }
 
 func IsInArray(values []uint64, toCheck uint64) bool {
+	for _, value := range values {
+		if value == toCheck {
+			return true
+		}
+	}
+	return false
+}
+
+func IsInHashArray(values []common.Hash, toCheck common.Hash) bool {
 	for _, value := range values {
 		if value == toCheck {
 			return true

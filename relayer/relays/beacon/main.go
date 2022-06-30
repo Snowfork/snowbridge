@@ -97,54 +97,16 @@ func (r *Relay) Sync(ctx context.Context) error {
 	done := make(chan bool)
 
 	go func() {
-		err := func() error {
-			for {
-				select {
-				case <-done:
-					return nil
-				case <-ticker.C:
-					secondLastFinalizedHeader := r.syncer.Cache.LastFinalizedHeader()
-
-					finalizedHeader, finalizedHeaderBlockRoot, err := r.SyncFinalizedHeader(ctx)
-					if err != nil {
-						return err
-					}
-
-					lastFinalizedHeader := r.syncer.Cache.LastFinalizedHeader()
-
-					if lastFinalizedHeader == secondLastFinalizedHeader {
-						continue
-					}
-
-					logrus.WithFields(logrus.Fields{
-						"secondLastHash": secondLastFinalizedHeader,
-						"lastHash":       lastFinalizedHeader,
-					}).Info("Starting to back-fill headers")
-
-					blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
-
-					prevSyncAggregate, err := r.syncer.GetSyncAggregate(finalizedHeaderBlockRoot)
-					if err != nil {
-						logrus.WithError(err).Error("Unable to get sync aggregate")
-
-						continue
-					}
-
-					for secondLastFinalizedHeader != blockRoot {
-						headerUpdate, err := r.SyncHeader(ctx, blockRoot, prevSyncAggregate)
-						if err != nil {
-							return err
-						}
-
-						blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
-						prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
-					}
-
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				err := r.SyncHeaders(ctx)
+				if err != nil {
+					logrus.WithError(err).Error("Error while syncing headers")
 				}
 			}
-		}()
-		if err != nil {
-			logrus.WithError(err).Error("Error while syncing headers")
 		}
 	}()
 
@@ -203,7 +165,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
 
-	if syncer.IsInArray(r.syncer.Cache.FinalizedHeaderSlots, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot)) {
+	if syncer.IsInHashArray(r.syncer.Cache.FinalizedHeaders, blockRoot) {
 		logrus.WithFields(logrus.Fields{
 			"slot":      finalizedHeaderUpdate.FinalizedHeader.Slot,
 			"blockRoot": blockRoot,
@@ -238,7 +200,6 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 	}
 
 	r.syncer.Cache.FinalizedHeaders = append(r.syncer.Cache.FinalizedHeaders, blockRoot)
-	r.syncer.Cache.FinalizedHeaderSlots = append(r.syncer.Cache.FinalizedHeaderSlots, uint64(finalizedHeaderUpdate.FinalizedHeader.Slot))
 
 	return finalizedHeaderUpdate, blockRoot, err
 }
@@ -269,4 +230,45 @@ func (r *Relay) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggre
 	r.syncer.Cache.HeadersMap[blockRoot] = uint64(headerUpdate.Block.Slot)
 
 	return headerUpdate, nil
+}
+
+func (r *Relay) SyncHeaders(ctx context.Context) error {
+	secondLastFinalizedHeader := r.syncer.Cache.LastFinalizedHeader()
+
+	finalizedHeader, finalizedHeaderBlockRoot, err := r.SyncFinalizedHeader(ctx)
+	if err != nil {
+		return err
+	}
+
+	lastFinalizedHeader := r.syncer.Cache.LastFinalizedHeader()
+
+	if lastFinalizedHeader == secondLastFinalizedHeader {
+		return nil
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"secondLastHash": secondLastFinalizedHeader,
+		"lastHash":       lastFinalizedHeader,
+	}).Info("Starting to back-fill headers")
+
+	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
+
+	prevSyncAggregate, err := r.syncer.GetSyncAggregate(finalizedHeaderBlockRoot)
+	if err != nil {
+		logrus.WithError(err).Error("Unable to get sync aggregate")
+
+		return err
+	}
+
+	for secondLastFinalizedHeader != blockRoot {
+		headerUpdate, err := r.SyncHeader(ctx, blockRoot, prevSyncAggregate)
+		if err != nil {
+			return err
+		}
+
+		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
+		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
+	}
+
+	return nil
 }

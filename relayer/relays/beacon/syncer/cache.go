@@ -8,8 +8,7 @@ import (
 
 type BeaconCache struct {
 	SyncCommitteePeriodsSynced []uint64
-	FinalizedHeaderSlots           []uint64
-	FinalizedHeaders 	   []common.Hash
+	FinalizedHeaders           []common.Hash
 	HeadersMap                 map[common.Hash]uint64
 	mu                         sync.Mutex
 }
@@ -17,8 +16,7 @@ type BeaconCache struct {
 func NewBeaconCache() *BeaconCache {
 	return &BeaconCache{
 		SyncCommitteePeriodsSynced: []uint64{},
-		FinalizedHeaderSlots:           []uint64{},
-		FinalizedHeaders:      []common.Hash{},
+		FinalizedHeaders:           []common.Hash{},
 		HeadersMap:                 map[common.Hash]uint64{},
 	}
 }
@@ -27,10 +25,6 @@ func (b *BeaconCache) AddSyncCommitteePeriod(period uint64) {
 	b.mu.Lock() // mutux lock since both the finalized and latest headers write to this slice in separate Goroutines
 	defer b.mu.Unlock()
 	b.SyncCommitteePeriodsSynced = append(b.SyncCommitteePeriodsSynced, period)
-}
-
-func (b *BeaconCache) LastFinalizedHeaderSlot() uint64 {
-	return b.FinalizedHeaderSlots[len(b.FinalizedHeaderSlots)-1]
 }
 
 func (b *BeaconCache) LastFinalizedHeader() common.Hash {
