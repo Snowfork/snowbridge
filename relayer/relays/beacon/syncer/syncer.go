@@ -477,12 +477,12 @@ func hexStringToPublicKey(hexString string) ([48]byte, error) {
 }
 
 func hexStringToByteArray(hexString string) ([]byte, error) {
-	result, ok := new(big.Int).SetString(hexString[2:], 16)
-	if !ok {
-		return []byte{}, nil
+	bytes, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
+	if err != nil {
+		return []byte{}, err
 	}
 
-	return result.Bytes(), nil
+	return bytes, nil
 }
 
 func hexStringToForkVersion(hexString string) ([4]byte, error) {
