@@ -553,7 +553,8 @@ pub mod pallet {
 			}
 
 			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
-			if let Err(_e) = agg_pub_key_res {
+			if let Err(e) = agg_pub_key_res {
+				log::error!(target: "ethereum-beacon-client", "invalid public keys: {:?}.", e);
 				return Err(Error::<T>::InvalidAggregatePublicKeys.into());
 			}
 
@@ -771,7 +772,9 @@ pub mod pallet {
 
 		pub(super) fn get_sync_committee_for_period(period: u64) -> Result<SyncCommittee, DispatchError> {
 			let sync_committee = <SyncCommittees<T>>::get(period);
-			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: PublicKey([0; 48]) }) == sync_committee {
+
+			if sync_committee.pubkeys.len() == 0 {
+				log::error!(target: "ethereum-beacon-client", "Sync committee for period {} missing", period);
 				return Err(Error::<T>::SyncCommitteeMissing.into());
 			}
 
