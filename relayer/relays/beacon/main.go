@@ -269,6 +269,13 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
 		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 	}
+	
+
+	// Import the execution header for the second last finalized header too.
+	_, err = r.SyncHeader(ctx, blockRoot, prevSyncAggregate)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
