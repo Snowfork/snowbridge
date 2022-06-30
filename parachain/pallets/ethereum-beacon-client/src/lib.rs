@@ -13,11 +13,14 @@ use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
+use snowbridge_beacon::{
+	BeaconBlock, BeaconHeader, Domain, ExecutionHeader, ForkData, PublicKey, Root, SigningData,
+	SyncAggregate, SyncCommittee,
+};
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use snowbridge_beacon::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
@@ -74,6 +77,10 @@ pub struct FinalizedHeaderUpdate {
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct BlockUpdate {
 	pub block: BeaconBlock,
+	//  // Only used for debugging purposes, to compare the hash tree 
+	// root of the block body to the body hash retrieved from the API.
+	// Can be removed later.
+	pub block_body_root: H256,
 	pub sync_aggregate: SyncAggregate,
 	pub fork_version: ForkVersion,
 }
@@ -334,7 +341,7 @@ pub mod pallet {
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
 			Self::store_finalized_header(block_root, initial_sync.header);
 
-			Self::store_validators_root( initial_sync.validators_root );
+			Self::store_validators_root(initial_sync.validators_root);
 
 			Ok(())
 		}
@@ -342,8 +349,8 @@ pub mod pallet {
 		fn process_sync_committee_period_update(
 			update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
-			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
+let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+			.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 			Self::verify_sync_committee(
 				update.next_sync_committee.clone(),
@@ -385,7 +392,7 @@ pub mod pallet {
 
 		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
 			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
+			.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
@@ -428,19 +435,27 @@ pub mod pallet {
 
 			let body_root = merkleization::hash_tree_root_beacon_body(update.block.body.clone())
 				.map_err(|_| DispatchError::Other("Beacon body hash tree root failed"))?;
+			let body_root_hash: H256 = body_root.into();
+			if body_root_hash != update.block_body_root {
+				log::warn!(target: "ethereum-beacon-client", 
+					"body root hash incorrect, expected: {:?}, got {:?}.",
+					update.block_body_root,
+					body_root_hash
+				);
+			}
 
-			let header = BeaconHeader{
+			let header = BeaconHeader {
 				slot: update.block.slot,
 				proposer_index: update.block.proposer_index,
 				parent_root: update.block.parent_root,
 				state_root: update.block.state_root,
-				body_root: body_root.into(),
+				body_root: body_root_hash,
 			};
 
 			let validators_root = <ValidatorsRoot<T>>::get();
 
 			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
+			.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 
 			Self::verify_signed_header(
 				sync_committee_bits,
@@ -454,7 +469,16 @@ pub mod pallet {
 			let execution_payload = update.block.body.execution_payload;
 
 			let mut fee_recipient = [0u8; 20];
-			fee_recipient[0..20].copy_from_slice(&(execution_payload.fee_recipient.as_slice()));
+			let fee_slice = execution_payload.fee_recipient.as_slice();
+			if fee_slice.len() == 20 {
+				fee_recipient[0..20].copy_from_slice(&(fee_slice));
+			} else {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"fee recipient not 20 characteres, len is: {}.",
+					fee_slice.len()
+				);
+			}
 
 			Self::store_execution_header(execution_payload.block_hash, ExecutionHeader{
 				parent_hash: execution_payload.parent_hash,
@@ -573,7 +597,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sync_committee_root =
 				merkleization::hash_tree_root_sync_committee(sync_committee)
-					.map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
+				.map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
 
 			ensure!(
 				Self::is_valid_merkle_branch(
@@ -755,31 +779,5 @@ pub mod pallet {
 
 			Ok(sync_committee)
 		}
-
-		/*pub(super) fn convert_to_binary(input: Vec<u8>) -> Vec<u8> {
-			let mut result = Vec::new();
-
-			for input_decimal in input.iter() {
-				let mut tmp = Vec::new();
-				let mut remaining = *input_decimal;
-
-				while remaining > 0 {
-					let remainder = remaining % 2;
-					tmp.push(remainder);
-					remaining = remaining / 2;
-				}
-
-				// pad binary with 0s if length is less than 7
-				if tmp.len() < 8 {
-					for _i in tmp.len()..8 {
-						tmp.push(0)
-					}
-				}
-
-				result.append(&mut tmp);
-			}
-
-			result
-		}*/
 	}
 }
