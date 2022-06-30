@@ -124,6 +124,7 @@ members = [
     "pallets/basic-channel",
     "pallets/basic-channel/rpc",
     "pallets/basic-channel/rpc/runtime-api",
+    "pallets/basic-channel/merkle-proof",
     "pallets/incentivized-channel",
     "pallets/dispatch",
     "pallets/ethereum-light-client",

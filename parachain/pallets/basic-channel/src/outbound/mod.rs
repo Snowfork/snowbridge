@@ -6,8 +6,6 @@ mod benchmarking;
 #[cfg(test)]
 mod test;
 
-mod merkle_proof;
-
 use codec::{Decode, Encode, MaxEncodedLen};
 use ethabi::{self, Token};
 use frame_support::{
@@ -28,7 +26,7 @@ use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 
 pub use weights::WeightInfo;
 
-use merkle_proof::merkle_root;
+use snowbridge_basic_channel_merkle_proof::merkle_root;
 
 /// Wire-format for committed messages
 #[derive(

@@ -10250,6 +10250,7 @@ dependencies = [
  "rlp",
  "scale-info",
  "serde",
+ "snowbridge-basic-channel-merkle-proof",
  "snowbridge-core",
  "snowbridge-ethereum",
  "sp-api",
@@ -10258,6 +10259,16 @@ dependencies = [
  "sp-keyring",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+]
+
+[[package]]
+name = "snowbridge-basic-channel-merkle-proof"
+version = "0.1.1"
+dependencies = [
+ "parity-scale-codec",
+ "serde",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
 ]
 
 [[package]]
