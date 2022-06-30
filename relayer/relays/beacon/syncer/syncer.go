@@ -100,6 +100,7 @@ type FinalizedHeaderUpdate struct {
 
 type HeaderUpdate struct {
 	Block         scale.BeaconBlock
+	BlockBodyRoot types.H256
 	SyncAggregate scale.SyncAggregate
 	ForkVersion   [4]byte
 }
@@ -317,6 +318,13 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 		return HeaderUpdate{}, err
 	}
 
+	header, err := s.Client.GetHeader(blockRoot.Hex())
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch latest header checkpoint")
+
+		return HeaderUpdate{}, err
+	}
+
 	blockScale, err := block.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable convert block to scale format")
@@ -346,8 +354,9 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	}
 
 	headerUpdate := HeaderUpdate{
-		Block:       blockScale,
-		ForkVersion: forkVersion,
+		Block:         blockScale,
+		BlockBodyRoot: types.NewH256(header.BodyRoot.Bytes()),
+		ForkVersion:   forkVersion,
 	}
 
 	return headerUpdate, nil

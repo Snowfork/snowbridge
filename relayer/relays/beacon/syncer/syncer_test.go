@@ -1,6 +1,7 @@
 package syncer
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -108,10 +109,15 @@ func TestHexToBytes(t *testing.T) {
 			name: "committee bits hex",
 			hex:  "0xedfdbdffbffbffffffffdffffffff7ff7feffff7fffffffffbff7dfafdefffffdffbffaffffffeffffffeefbf6dffffffffffffffffffeffdfff7ffffff7fdff",
 		},
+		{
+			name: "aggregation bits",
+			hex:  "0x0000000000000000000000000000000104",
+		},
 	}
 
 	for _, tt := range values {
 		result, err := hexStringToByteArray(tt.hex)
+		fmt.Println(result)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, result)
 	}
