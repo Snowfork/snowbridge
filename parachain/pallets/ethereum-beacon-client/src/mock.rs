@@ -67,11 +67,10 @@ pub fn new_tester() -> sp_io::TestExternalities {
 }
 
 pub fn get_initial_sync() -> ethereum_beacon_client::InitialSync {
-	let header: ethereum_beacon_client::BeaconHeader = BeaconHeader {
+	let header: ethereum_beacon_client::BeaconHeader = BeaconHeader{
 		slot: 3476320,
 		proposer_index: 168760,
-		parent_root: hex!("244aca04180a684f0af2f18e47e86c55f72e28ec8c1962d538b1b2490af0fbb0")
-			.into(),
+		parent_root: hex!("244aca04180a684f0af2f18e47e86c55f72e28ec8c1962d538b1b2490af0fbb0").into(),
 		state_root: hex!("c1fbb5f95ce267fe2da3ac96d177558b1a31c27bce5b8aa6d07ffb5233f0fd55").into(),
 		body_root: hex!("db5e2bb7ef80f1b7ee7d464ccf364ad0263ca8b30580bad6d2893e655f7dc2af").into(),
 	};

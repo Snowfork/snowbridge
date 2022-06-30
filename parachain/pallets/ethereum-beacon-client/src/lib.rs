@@ -77,7 +77,7 @@ pub struct FinalizedHeaderUpdate {
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct BlockUpdate {
 	pub block: BeaconBlock,
-	//  // Only used for debugging purposes, to compare the hash tree 
+	//  // Only used for debugging purposes, to compare the hash tree
 	// root of the block body to the body hash retrieved from the API.
 	// Can be removed later.
 	pub block_body_root: H256,
@@ -349,8 +349,8 @@ pub mod pallet {
 		fn process_sync_committee_period_update(
 			update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
-let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-			.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
+			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 			Self::verify_sync_committee(
 				update.next_sync_committee.clone(),
@@ -392,7 +392,7 @@ let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_agg
 
 		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
 			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-			.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
+				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
@@ -437,7 +437,7 @@ let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_agg
 				.map_err(|_| DispatchError::Other("Beacon body hash tree root failed"))?;
 			let body_root_hash: H256 = body_root.into();
 			if body_root_hash != update.block_body_root {
-				log::warn!(target: "ethereum-beacon-client", 
+				log::warn!(target: "ethereum-beacon-client",
 					"body root hash incorrect, expected: {:?}, got {:?}.",
 					update.block_body_root,
 					body_root_hash
@@ -453,10 +453,8 @@ let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_agg
 			};
 
 			let validators_root = <ValidatorsRoot<T>>::get();
-
 			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
-			.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
-
+				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::verify_signed_header(
 				sync_committee_bits,
 				update.sync_aggregate.sync_committee_signature,
@@ -597,7 +595,7 @@ let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_agg
 		) -> DispatchResult {
 			let sync_committee_root =
 				merkleization::hash_tree_root_sync_committee(sync_committee)
-				.map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
+					.map_err(|_| DispatchError::Other("Sync committee hash tree root failed"))?;
 
 			ensure!(
 				Self::is_valid_merkle_branch(
