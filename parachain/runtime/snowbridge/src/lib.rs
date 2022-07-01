@@ -913,8 +913,8 @@ impl_runtime_apis! {
 	}
 
 	impl snowbridge_basic_channel_rpc_runtime_api::BasicOutboundChannelApi<Block> for Runtime {
-		fn generate_proof(_leaf_index: u64) ->  Result<u64, ()> {
-			Ok(42)
+		fn generate_proof(leaves: Vec<Vec<u8>>, leaf_index: u64) -> Result<Vec<u8>, ()>;
+			snowbridge_basic_channel_merkle_proof::merkle_proof<<T as Config>::Hashing>(leaves, leaf_index).encode()
 		}
 	}
 

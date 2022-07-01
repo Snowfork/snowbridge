@@ -10031,6 +10031,7 @@ dependencies = [
  "serde",
  "snowbridge-asset-registry",
  "snowbridge-basic-channel",
+ "snowbridge-basic-channel-merkle-proof",
  "snowbridge-basic-channel-rpc-runtime-api",
  "snowbridge-core",
  "snowbridge-dispatch",

@@ -52,7 +52,19 @@ where
 		let oci_mem = StorageValueRef::persistent(&commitment_hash.as_bytes());
 
 		if let Ok(Some(StoredLeaves(leaves))) = oci_mem.get::<StoredLeaves>() {
-			let proof = Vec::new();
+			let api = self.client.runtime_api();
+			let block_hash = at.unwrap_or_else(||
+				// If the block hash is not supplied assume the best block.
+				self.client.info().best_hash);
+
+			// TODO: why the *_with_context call here?
+			let proof = api.generate_proof_with_context(
+				&BlockId::hash(block_hash),
+				sp_core::ExecutionContext::OffchainCall(None),
+				leaves,
+				leaf_index
+			).unwrap().unwrap();
+			// TODO: handle these unwraps
 
 			Ok(proof)
 		} else {
