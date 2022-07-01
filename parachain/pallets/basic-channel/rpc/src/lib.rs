@@ -12,6 +12,7 @@ use sp_runtime::generic::BlockId;
 use sp_runtime::offchain::storage::StorageValueRef;
 
 use snowbridge_basic_channel_primitives::StoredLeaves;
+use snowbridge_basic_channel_merkle_proof::merkle_proof;
 
 #[rpc]
 pub trait BasicChannelApi<BlockHash> {
@@ -49,7 +50,7 @@ where
 
 		if let Ok(Some(StoredLeaves(leaves))) = oci_mem.get::<StoredLeaves>() {
 			let proof =
-				snowbridge_basic_channel_merkle_proof::merkle_proof::<Keccak256, Vec<Vec<u8>>, Vec<u8>>(
+				merkle_proof::<Keccak256, Vec<Vec<u8>>, Vec<u8>>(
 					leaves,
 					leaf_index,
 				)
