@@ -20,7 +20,7 @@ pub trait BasicChannelApi<BlockHash> {
 	fn hello_world(&self, at: Option<BlockHash>) -> Result<String>;
 
 	#[rpc(name = "basicChannel_getMerkleProof")]
-	fn get_merkle_proof(&self, at: Option<BlockHash>, commitment_hash: H256, leaf_index: usize) -> Result<Vec<u8>>;
+	fn get_merkle_proof(&self, at: Option<BlockHash>, commitment_hash: H256, leaf_index: u64) -> Result<Vec<u8>>;
 }
 
 pub struct BasicChannel<C, B> {
@@ -45,7 +45,7 @@ where
 		Ok(format!("hello world! The answer is {}", answer).to_string())
 	}
 
-	fn get_merkle_proof(&self, at: Option<<Block as BlockT>::Hash>, commitment_hash: H256, leaf_index: usize) -> Result<Vec<u8>> {
+	fn get_merkle_proof(&self, at: Option<<Block as BlockT>::Hash>, commitment_hash: H256, leaf_index: u64) -> Result<Vec<u8>> {
 		let oci_mem = StorageValueRef::persistent(&commitment_hash.as_bytes());
 
 		if let Ok(Some(StoredLeaves(leaves))) = oci_mem.get::<StoredLeaves>() {

@@ -35,6 +35,8 @@
 extern crate alloc;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+#[cfg(not(feature = "std"))]
+use alloc::vec;
 
 use sp_core::H256;
 use sp_runtime::traits::Hash;
@@ -100,9 +102,9 @@ pub struct MerkleProof<T> {
 	///
 	/// This is needed to detect a case where we have an odd number of leaves that "get promoted"
 	/// to upper layers.
-	pub number_of_leaves: usize,
+	pub number_of_leaves: u64,
 	/// Index of the leaf the proof is for (0-based).
-	pub leaf_index: usize,
+	pub leaf_index: u64,
 	/// Leaf content.
 	pub leaf: T,
 }
@@ -121,13 +123,13 @@ trait Visitor {
 	/// The method will also visit the `root` hash (level 0).
 	///
 	/// The `index` is an index of `left` item.
-	fn visit(&mut self, index: usize, left: &Option<H256>, right: &Option<H256>);
+	fn visit(&mut self, index: u64, left: &Option<H256>, right: &Option<H256>);
 }
 
 /// No-op implementation of the visitor.
 impl Visitor for () {
 	fn move_up(&mut self) {}
-	fn visit(&mut self, _index: usize, _left: &Option<H256>, _right: &Option<H256>) {}
+	fn visit(&mut self, _index: u64, _left: &Option<H256>, _right: &Option<H256>) {}
 }
 
 /// Construct a Merkle Proof for leaves given by indices.
@@ -140,7 +142,7 @@ impl Visitor for () {
 /// # Panic
 ///
 /// The function will panic if given `leaf_index` is greater than the number of leaves.
-pub fn merkle_proof<H, I, T>(leaves: I, leaf_index: usize) -> MerkleProof<T>
+pub fn merkle_proof<H, I, T>(leaves: I, leaf_index: u64) -> MerkleProof<T>
 where
 	H: Hash<Output = H256>,
 	I: IntoIterator<Item = T>,
@@ -148,22 +150,28 @@ where
 	T: AsRef<[u8]>,
 {
 	let mut leaf = None;
-	let iter = leaves.into_iter().enumerate().map(|(idx, l)| {
+	let mut hashes = vec![];
+	let mut number_of_leaves = 0;
+	for (idx, l) in (0u64..).zip(leaves) {
+		// count the leaves
+		number_of_leaves = idx + 1;
+		// hash all leaves
 		let hash = <H as Hash>::hash(l.as_ref());
+		hashes.push(hash);
+		// find the leaf for the proof
 		if idx == leaf_index {
 			leaf = Some(l);
 		}
-		hash
-	});
+	}
 
 	/// The struct collects a proof for single leaf.
 	struct ProofCollection {
 		proof: Vec<H256>,
-		position: usize,
+		position: u64,
 	}
 
 	impl ProofCollection {
-		fn new(position: usize) -> Self {
+		fn new(position: u64) -> Self {
 			ProofCollection { proof: Default::default(), position }
 		}
 	}
@@ -173,7 +181,7 @@ where
 			self.position /= 2;
 		}
 
-		fn visit(&mut self, index: usize, left: &Option<H256>, right: &Option<H256>) {
+		fn visit(&mut self, index: u64, left: &Option<H256>, right: &Option<H256>) {
 			// we are at left branch - right goes to the proof.
 			if self.position == index {
 				if let Some(right) = right {
@@ -189,10 +197,9 @@ where
 		}
 	}
 
-	let number_of_leaves = iter.len();
 	let mut collect_proof = ProofCollection::new(leaf_index);
 
-	let root = merkelize::<H, _, _>(iter, &mut collect_proof);
+	let root = merkelize::<H, _, _>(hashes.into_iter(), &mut collect_proof);
 	let leaf = leaf.expect("Requested `leaf_index` is greater than number of leaves.");
 
 	#[cfg(feature = "debug")]
