@@ -10251,6 +10251,7 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-basic-channel-merkle-proof",
+ "snowbridge-basic-channel-rpc",
  "snowbridge-core",
  "snowbridge-ethereum",
  "sp-api",

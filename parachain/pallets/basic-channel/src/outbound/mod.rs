@@ -24,6 +24,8 @@ use sp_io::offchain_index::set;
 
 use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 
+use snowbridge_basic_channel_rpc::StoredLeaves;
+
 pub use weights::WeightInfo;
 
 use snowbridge_basic_channel_merkle_proof::merkle_root;
@@ -117,27 +119,7 @@ pub type MessageBundleOf<T> = MessageBundle<
 pub type EnqueuedMessageOf<T> =
 	EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
 
-#[derive(Encode, Decode)]
-struct StoredLeaves(Vec<Vec<u8>>);
-
-// use frame_support::RuntimeDebug;
 use sp_api;
-
-// #[derive(RuntimeDebug, codec::Encode, codec::Decode, PartialEq, Eq)]
-// pub enum GenerateProofApiError {
-// 	/// Error getting the new root.
-// 	GetRoot,
-// 	/// Error during proof generation.
-// 	GenerateProof,
-// 	/// Leaf not found in the storage.
-// 	LeafNotFound,
-// }
-
-sp_api::decl_runtime_apis! {
-	pub trait BasicChannelOutboundRuntimeApi {
-		fn generate_proof(leaf_index: u64) ->  Result<u64, ()>;
-	}
-}
 
 pub use pallet::*;
 
