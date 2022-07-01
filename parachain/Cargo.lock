@@ -10031,7 +10031,6 @@ dependencies = [
  "serde",
  "snowbridge-asset-registry",
  "snowbridge-basic-channel",
- "snowbridge-basic-channel-merkle-proof",
  "snowbridge-core",
  "snowbridge-dispatch",
  "snowbridge-dot-app",
@@ -10250,7 +10249,7 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-basic-channel-merkle-proof",
- "snowbridge-basic-channel-rpc",
+ "snowbridge-basic-channel-primitives",
  "snowbridge-core",
  "snowbridge-ethereum",
  "sp-api",
@@ -10266,9 +10265,15 @@ name = "snowbridge-basic-channel-merkle-proof"
 version = "0.1.1"
 dependencies = [
  "parity-scale-codec",
- "serde",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+]
+
+[[package]]
+name = "snowbridge-basic-channel-primitives"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
 ]
 
 [[package]]
@@ -10282,6 +10287,7 @@ dependencies = [
  "serde",
  "serde_json",
  "snowbridge-basic-channel-merkle-proof",
+ "snowbridge-basic-channel-primitives",
  "sp-api",
  "sp-blockchain",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",

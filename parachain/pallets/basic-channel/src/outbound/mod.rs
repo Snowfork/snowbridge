@@ -24,11 +24,10 @@ use sp_io::offchain_index::set;
 
 use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 
-use snowbridge_basic_channel_rpc::StoredLeaves;
+use snowbridge_basic_channel_merkle_proof::merkle_root;
+use snowbridge_basic_channel_primitives::StoredLeaves;
 
 pub use weights::WeightInfo;
-
-use snowbridge_basic_channel_merkle_proof::merkle_root;
 
 /// Wire-format for committed messages
 #[derive(

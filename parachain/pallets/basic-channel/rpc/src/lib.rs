@@ -11,8 +11,7 @@ use sp_runtime::traits::{Block as BlockT, Keccak256};
 use sp_runtime::generic::BlockId;
 use sp_runtime::offchain::storage::StorageValueRef;
 
-#[derive(Encode, Decode)]
-pub struct StoredLeaves(pub Vec<Vec<u8>>);
+use snowbridge_basic_channel_primitives::StoredLeaves;
 
 #[rpc]
 pub trait BasicChannelApi<BlockHash> {
