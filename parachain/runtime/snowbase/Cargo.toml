@@ -74,7 +74,6 @@ snowbridge-xcm-support = { path = "../../primitives/xcm-support", default-featur
 snowbridge-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 snowbridge-basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-basic-channel", default-features = false }
 snowbridge-basic-channel-merkle-proof = { path = "../../pallets/basic-channel/merkle-proof", default-features = false }
-snowbridge-basic-channel-rpc-runtime-api = { path = "../../pallets/basic-channel/rpc/runtime-api", default-features = false }
 incentivized-channel = { path = "../../pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }
 dispatch = { path = "../../pallets/dispatch", package = "snowbridge-dispatch", default-features = false }
 ethereum-light-client = { path = "../../pallets/ethereum-light-client", package = "snowbridge-ethereum-light-client", default-features = false }

@@ -20,7 +20,5 @@ sp-blockchain = { git = "https://github.com/paritytech/substrate.git", branch = 
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
 
-snowbridge-basic-channel-rpc-runtime-api = { path = "runtime-api" }
-
 [dev-dependencies]
 serde_json = "1.0.79"

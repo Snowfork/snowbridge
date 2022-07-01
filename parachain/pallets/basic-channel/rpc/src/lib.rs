@@ -11,8 +11,6 @@ use sp_runtime::traits::Block as BlockT;
 use sp_runtime::generic::BlockId;
 use sp_runtime::offchain::storage::StorageValueRef;
 
-pub use snowbridge_basic_channel_rpc_runtime_api::BasicOutboundChannelApi as BasicOutboundChannelRuntimeApi;
-
 #[derive(Encode, Decode)]
 pub struct StoredLeaves(pub Vec<Vec<u8>>);
 
@@ -40,7 +38,6 @@ impl<C, Block> BasicChannelApi<<Block as BlockT>::Hash> for BasicChannel<C, Bloc
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: BasicOutboundChannelRuntimeApi<Block>
 {
 	fn hello_world(&self, _at: Option<<Block as BlockT>::Hash>) ->  Result<String> {
 		let answer = 42;
@@ -52,19 +49,7 @@ where
 		let oci_mem = StorageValueRef::persistent(&commitment_hash.as_bytes());
 
 		if let Ok(Some(StoredLeaves(leaves))) = oci_mem.get::<StoredLeaves>() {
-			let api = self.client.runtime_api();
-			let block_hash = at.unwrap_or_else(||
-				// If the block hash is not supplied assume the best block.
-				self.client.info().best_hash);
-
-			// TODO: why the *_with_context call here?
-			let proof = api.generate_proof_with_context(
-				&BlockId::hash(block_hash),
-				sp_core::ExecutionContext::OffchainCall(None),
-				leaves,
-				leaf_index
-			).unwrap().unwrap();
-			// TODO: handle these unwraps
+			let proof = snowbridge_basic_channel_merkle_proof::merkle_proof<<T as Config>::Hashing>(leaves, leaf_index).encode();
 
 			Ok(proof)
 		} else {

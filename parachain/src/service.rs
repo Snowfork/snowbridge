@@ -85,7 +85,6 @@ pub trait RuntimeApiCollection:
 	+ cumulus_primitives_core::CollectCollationInfo<Block>
 	+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
 	+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-	+ snowbridge_basic_channel_rpc::BasicOutboundChannelRuntimeApi<Block>
 where
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
@@ -105,7 +104,6 @@ where
 		+ cumulus_primitives_core::CollectCollationInfo<Block>
 		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
 		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-		+ snowbridge_basic_channel_rpc::BasicOutboundChannelRuntimeApi<Block>,
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
