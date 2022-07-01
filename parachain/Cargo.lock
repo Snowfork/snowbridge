@@ -10281,6 +10281,7 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "serde_json",
+ "snowbridge-basic-channel-merkle-proof",
  "sp-api",
  "sp-blockchain",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
