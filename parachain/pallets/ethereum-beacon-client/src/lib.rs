@@ -13,11 +13,14 @@ use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
+use snowbridge_beacon::{
+	BeaconBlock, BeaconHeader, Domain, ExecutionHeader, ForkData, PublicKey, Root, SigningData,
+	SyncAggregate, SyncCommittee,
+};
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use snowbridge_beacon::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
@@ -74,6 +77,10 @@ pub struct FinalizedHeaderUpdate {
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct BlockUpdate {
 	pub block: BeaconBlock,
+	//  // Only used for debugging purposes, to compare the hash tree
+	// root of the block body to the body hash retrieved from the API.
+	// Can be removed later.
+	pub block_body_root: H256,
 	pub sync_aggregate: SyncAggregate,
 	pub fork_version: ForkVersion,
 }
@@ -136,10 +143,6 @@ pub mod pallet {
 		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
 
 	#[pallet::storage]
-	pub(super) type BeaconHeaders<T: Config> =
-		StorageMap<_, Identity, H256, BeaconHeader, OptionQuery>;
-
-	#[pallet::storage]
 	pub(super) type ExecutionHeaders<T: Config> =
 		StorageMap<_, Identity, H256, ExecutionHeader, OptionQuery>;
 
@@ -180,7 +183,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let _sender = ensure_signed(origin)?;
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received initial sync, starting processing.",
 			);
@@ -194,7 +197,7 @@ pub mod pallet {
 				return Err(err);
 			}
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Initial sync processing succeeded.",
 			);
@@ -211,7 +214,7 @@ pub mod pallet {
 			let _sender = ensure_signed(origin)?;
 
 			let sync_committee_period = sync_committee_period_update.sync_committee_period;
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received sync committee update for period {}. Applying update",
 				sync_committee_period
@@ -226,7 +229,7 @@ pub mod pallet {
 				return Err(err);
 			}
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Sync committee period update for period {} succeeded.",
 				sync_committee_period
@@ -245,7 +248,7 @@ pub mod pallet {
 
 			let slot = finalized_header_update.finalized_header.slot;
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received finalized header for slot {}.",
 				slot
@@ -260,7 +263,7 @@ pub mod pallet {
 				return Err(err);
 			}
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Stored finalized beacon header at slot {}.",
 				slot
@@ -280,7 +283,7 @@ pub mod pallet {
 			let slot = update.block.slot;
 			let block_hash = update.block.body.execution_payload.block_hash;
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Received header update for slot {}.",
 				slot
@@ -295,7 +298,7 @@ pub mod pallet {
 				return Err(err);
 			}
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Stored execution header {} at beacon slot {}.",
 				block_hash,
@@ -338,7 +341,7 @@ pub mod pallet {
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
 			Self::store_finalized_header(block_root, initial_sync.header);
 
-			Self::store_validators_root( initial_sync.validators_root );
+			Self::store_validators_root(initial_sync.validators_root);
 
 			Ok(())
 		}
@@ -432,13 +435,21 @@ pub mod pallet {
 
 			let body_root = merkleization::hash_tree_root_beacon_body(update.block.body.clone())
 				.map_err(|_| DispatchError::Other("Beacon body hash tree root failed"))?;
+			let body_root_hash: H256 = body_root.into();
+			if body_root_hash != update.block_body_root {
+				log::warn!(target: "ethereum-beacon-client",
+					"body root hash incorrect, expected: {:?}, got {:?}.",
+					update.block_body_root,
+					body_root_hash
+				);
+			}
 
-			let header = BeaconHeader{
+			let header = BeaconHeader {
 				slot: update.block.slot,
 				proposer_index: update.block.proposer_index,
 				parent_root: update.block.parent_root,
 				state_root: update.block.state_root,
-				body_root: body_root.into(),
+				body_root: body_root_hash,
 			};
 
 			let validators_root = <ValidatorsRoot<T>>::get();
@@ -456,7 +467,16 @@ pub mod pallet {
 			let execution_payload = update.block.body.execution_payload;
 
 			let mut fee_recipient = [0u8; 20];
-			fee_recipient[0..20].copy_from_slice(&(execution_payload.fee_recipient.as_slice()));
+			let fee_slice = execution_payload.fee_recipient.as_slice();
+			if fee_slice.len() == 20 {
+				fee_recipient[0..20].copy_from_slice(&(fee_slice));
+			} else {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"fee recipient not 20 characteres, len is: {}.",
+					fee_slice.len()
+				);
+			}
 
 			Self::store_execution_header(execution_payload.block_hash, ExecutionHeader{
 				parent_hash: execution_payload.parent_hash,
@@ -533,7 +553,8 @@ pub mod pallet {
 			}
 
 			let agg_pub_key_res = AggregatePublicKey::into_aggregate(&public_keys_res.unwrap());
-			if let Err(_e) = agg_pub_key_res {
+			if let Err(e) = agg_pub_key_res {
+				log::error!(target: "ethereum-beacon-client", "invalid public keys: {:?}.", e);
 				return Err(Error::<T>::InvalidAggregatePublicKeys.into());
 			}
 
@@ -751,7 +772,9 @@ pub mod pallet {
 
 		pub(super) fn get_sync_committee_for_period(period: u64) -> Result<SyncCommittee, DispatchError> {
 			let sync_committee = <SyncCommittees<T>>::get(period);
-			if (SyncCommittee { pubkeys: vec![], aggregate_pubkey: PublicKey([0; 48]) }) == sync_committee {
+
+			if sync_committee.pubkeys.len() == 0 {
+				log::error!(target: "ethereum-beacon-client", "Sync committee for period {} missing", period);
 				return Err(Error::<T>::SyncCommitteeMissing.into());
 			}
 
