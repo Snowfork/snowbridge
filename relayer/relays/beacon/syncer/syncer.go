@@ -100,6 +100,7 @@ type FinalizedHeaderUpdate struct {
 
 type HeaderUpdate struct {
 	Block         scale.BeaconBlock
+	BlockBodyRoot types.H256
 	SyncAggregate scale.SyncAggregate
 	ForkVersion   [4]byte
 }
@@ -317,6 +318,13 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 		return HeaderUpdate{}, err
 	}
 
+	header, err := s.Client.GetHeader(blockRoot.Hex())
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch latest header checkpoint")
+
+		return HeaderUpdate{}, err
+	}
+
 	blockScale, err := block.ToScale()
 	if err != nil {
 		logrus.WithError(err).Error("unable convert block to scale format")
@@ -346,8 +354,9 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	}
 
 	headerUpdate := HeaderUpdate{
-		Block:       blockScale,
-		ForkVersion: forkVersion,
+		Block:         blockScale,
+		BlockBodyRoot: types.NewH256(header.BodyRoot.Bytes()),
+		ForkVersion:   forkVersion,
 	}
 
 	return headerUpdate, nil
@@ -410,6 +419,15 @@ func IsInArray(values []uint64, toCheck uint64) bool {
 	return false
 }
 
+func IsInHashArray(values []common.Hash, toCheck common.Hash) bool {
+	for _, value := range values {
+		if value == toCheck {
+			return true
+		}
+	}
+	return false
+}
+
 func hexToBinaryString(rawHex string) string {
 	hexString := strings.Replace(rawHex, "0x", "", -1)
 
@@ -457,12 +475,12 @@ func hexStringToPublicKey(hexString string) ([48]byte, error) {
 }
 
 func hexStringToByteArray(hexString string) ([]byte, error) {
-	result, ok := new(big.Int).SetString(hexString[2:], 16)
-	if !ok {
-		return []byte{}, nil
+	bytes, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
+	if err != nil {
+		return []byte{}, err
 	}
 
-	return result.Bytes(), nil
+	return bytes, nil
 }
 
 func hexStringToForkVersion(hexString string) ([4]byte, error) {

@@ -10,9 +10,23 @@ export BASIC_CHANNEL_PRINCIPAL=0x0000000000000000000000000000000000000042
 export BASIC_CHANNEL_SOURCE_ID=0
 
 # Incentivized Channel
-# Default fee is 1 SnowDOT (12 decimal places)
-export INCENTIVIZED_CHANNEL_FEE=1000000000000000000
+# Default fee is 0.001 SnowDOT (12 decimal places)
+export INCENTIVIZED_CHANNEL_FEE=1000000000000000
 export INCENTIVIZED_CHANNEL_SOURCE_ID=1
 
 # ParachainClient needs to be constructed with our parachain ID
 export PARACHAIN_ID=1000
+
+## Run E2E on Ropsten
+
+# export INFURA_PROJECT_ID=           # Your Infura project id
+# export ETH_NETWORK=ropsten
+# export ETH_NETWORK_ID=3
+
+# export ETH_RPC_ENDPOINT=https://ropsten.infura.io/v3
+# export ETH_WS_ENDPOINT=wss://ropsten.infura.io/ws/v3
+ 
+# export ROPSTEN_PRIVATE_KEY=         # Your deployment account private key
+# export BEEFY_RELAY_ETH_KEY=         # Your Beefy relayer account private key
+# export PARACHAIN_RELAY_ETH_KEY=     # Your Parachain relayer account private key
+# export E2E_TEST_ETH_KEY=            # Your E2E test account private key
