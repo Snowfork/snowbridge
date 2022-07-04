@@ -2,6 +2,7 @@ package syncer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,6 +26,10 @@ type BeaconClientTracker interface {
 	GetCurrentForkVersion(slot uint64) (string, error)
 	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
 }
+
+var (
+	ErrNotFound = errors.New("not found")
+)
 
 type BeaconClient struct {
 	httpClient http.Client
@@ -274,7 +279,7 @@ func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse,
 	}
 
 	if res.StatusCode != http.StatusOK {
-		logrus.Error("request to beacon node failed")
+		logrus.Error("request to beacon node failed to get beacon block")
 
 		return BeaconBlockResponse{}, err
 	}
@@ -317,7 +322,16 @@ func (b *BeaconClient) GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, e
 	}
 
 	if res.StatusCode != http.StatusOK {
-		logrus.Error("request to beacon node failed")
+		bodyBytes, err := io.ReadAll(res.Body)
+
+		if res.StatusCode == 404 {
+			return BeaconBlockResponse{}, ErrNotFound
+		}
+
+		logrus.WithFields(logrus.Fields{
+			"error":  string(bodyBytes),
+			"status": res.StatusCode,
+		}).Error("request to beacon node failed to get beacon block by slot")
 
 		return BeaconBlockResponse{}, err
 	}
@@ -360,7 +374,7 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		logrus.Error("request to beacon node failed")
+		logrus.Error("request to beacon node failed to get beacon block root")
 
 		return common.Hash{}, err
 	}
@@ -419,7 +433,7 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommit
 	if res.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(res.Body)
 
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
+		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed to get sync committee update")
 
 		return SyncCommitteePeriodUpdateResponse{}, err
 	}
@@ -474,7 +488,7 @@ func (b *BeaconClient) GetSyncCommittee(epoch uint64) (SyncCommitteeIndexes, err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		logrus.Error("request to beacon node failed")
+		logrus.Error("request to beacon node failed to get sync committee")
 
 		return SyncCommitteeIndexes{}, err
 	}
@@ -613,7 +627,7 @@ func (b *BeaconClient) GetCheckpoint(state string) (FinalizedCheckpointResponse,
 	if res.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(res.Body)
 
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
+		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed to get checkpoint")
 
 		return FinalizedCheckpointResponse{}, err
 	}
@@ -668,7 +682,7 @@ func (b *BeaconClient) GetLightClientSnapshot(blockRoot string) (LightClientSnap
 	if res.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(res.Body)
 
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
+		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed to get light client snaphot")
 
 		return LightClientSnapshotResponse{}, err
 	}
@@ -723,7 +737,7 @@ func (b *BeaconClient) GetGenesis() (GenesisResponse, error) {
 	if res.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(res.Body)
 
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
+		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed to get genesis")
 
 		return GenesisResponse{}, err
 	}
@@ -778,7 +792,10 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 	if res.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(res.Body)
 
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
+		logrus.WithFields(logrus.Fields{
+			"error":  string(bodyBytes),
+			"status": res.StatusCode,
+		}).Error("request to beacon node failed for finalized update")
 
 		return LatestFinalisedUpdateResponse{}, err
 	}
