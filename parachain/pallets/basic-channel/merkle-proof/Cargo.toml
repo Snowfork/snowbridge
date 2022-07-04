@@ -15,6 +15,11 @@ codec = { version = "3.0.0", package = "parity-scale-codec", default-features = 
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
 
+[dev-dependencies]
+hex-literal = { version = "0.3.4" }
+env_logger = "0.9"
+hex = "0.4"
+
 [features]
 default = [ "std" ]
 std = [

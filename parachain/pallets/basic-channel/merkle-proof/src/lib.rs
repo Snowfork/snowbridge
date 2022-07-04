@@ -245,8 +245,8 @@ impl<'a> From<H256> for Leaf<'a> {
 pub fn verify_proof<'a, H, P, L>(
 	root: &'a H256,
 	proof: P,
-	number_of_leaves: usize,
-	leaf_index: usize,
+	number_of_leaves: u64,
+	leaf_index: u64,
 	leaf: L,
 ) -> bool
 where
@@ -443,7 +443,7 @@ mod tests {
 		assert!(verify_proof::<Keccak256, _, _>(
 			&proof0.root,
 			proof0.proof.clone(),
-			data.len(),
+			data.len() as u64,
 			proof0.leaf_index,
 			&proof0.leaf,
 		));
@@ -452,7 +452,7 @@ mod tests {
 		assert!(verify_proof::<Keccak256, _, _>(
 			&proof1.root,
 			proof1.proof,
-			data.len(),
+			data.len() as u64,
 			proof1.leaf_index,
 			&proof1.leaf,
 		));
@@ -461,7 +461,7 @@ mod tests {
 		assert!(verify_proof::<Keccak256, _, _>(
 			&proof2.root,
 			proof2.proof,
-			data.len(),
+			data.len() as u64,
 			proof2.leaf_index,
 			&proof2.leaf
 		));
@@ -475,7 +475,7 @@ mod tests {
 				"fb3b3be94be9e983ba5e094c9c51a7d96a4fa2e5d8e891df00ca89ba05bb1239"
 			)),
 			proof0.proof,
-			data.len(),
+			data.len() as u64,
 			proof0.leaf_index,
 			&proof0.leaf
 		));
@@ -483,7 +483,7 @@ mod tests {
 		assert!(!verify_proof::<Keccak256, _, _>(
 			&proof0.root,
 			vec![],
-			data.len(),
+			data.len() as u64,
 			proof0.leaf_index,
 			&proof0.leaf
 		));
@@ -497,12 +497,12 @@ mod tests {
 
 		for l in 0..data.len() {
 			// when
-			let proof = merkle_proof::<Keccak256, _, _>(data.clone(), l);
+			let proof = merkle_proof::<Keccak256, _, _>(data.clone(), l as u64);
 			// then
 			assert!(verify_proof::<Keccak256, _, _>(
 				&proof.root,
 				proof.proof,
-				data.len(),
+				data.len() as u64,
 				proof.leaf_index,
 				&proof.leaf
 			));
@@ -524,12 +524,12 @@ mod tests {
 
 			for l in 0..data.len() {
 				// when
-				let proof = merkle_proof::<Keccak256, _, _>(data.clone(), l);
+				let proof = merkle_proof::<Keccak256, _, _>(data.clone(), l as u64);
 				// then
 				assert!(verify_proof::<Keccak256, _, _>(
 					&proof.root,
 					proof.proof,
-					data.len(),
+					data.len() as u64,
 					proof.leaf_index,
 					&proof.leaf
 				));
@@ -549,12 +549,12 @@ mod tests {
 
 		for l in (0..data.len()).step_by(13) {
 			// when
-			let proof = merkle_proof::<Keccak256, _, _>(data.clone(), l);
+			let proof = merkle_proof::<Keccak256, _, _>(data.clone(), l as u64);
 			// then
 			assert!(verify_proof::<Keccak256, _, _>(
 				&proof.root,
 				proof.proof,
-				data.len(),
+				data.len() as u64,
 				proof.leaf_index,
 				&proof.leaf
 			));
@@ -746,24 +746,24 @@ mod tests {
 			.map(|address| hex::decode(&address[2..]).unwrap())
 			.collect::<Vec<_>>();
 
-		for l in 0..data.len() {
+		for (idx, leaf) in (0u64..).zip(data.clone()) {
 			// when
-			let proof = merkle_proof::<Keccak256, _, _>(data.clone(), l);
+			let proof = merkle_proof::<Keccak256, _, _>(data.clone(), idx);
 			assert_eq!(hex::encode(&proof.root), hex::encode(&root));
-			assert_eq!(proof.leaf_index, l);
-			assert_eq!(&proof.leaf, &data[l]);
+			assert_eq!(proof.leaf_index, idx);
+			assert_eq!(&proof.leaf, &leaf);
 
 			// then
 			assert!(verify_proof::<Keccak256, _, _>(
 				&proof.root,
 				proof.proof,
-				data.len(),
+				data.len() as u64,
 				proof.leaf_index,
 				&proof.leaf
 			));
 		}
 
-		let proof = merkle_proof::<Keccak256, _, _>(data.clone(), data.len() - 1);
+		let proof = merkle_proof::<Keccak256, _, _>(data.clone(), data.len() as u64 - 1);
 
 		assert_eq!(
 			proof,
@@ -783,8 +783,8 @@ mod tests {
 						"ae3f8991955ed884613b0a5f40295902eea0e0abe5858fc520b72959bc016d4e"
 					)),
 				],
-				number_of_leaves: data.len(),
-				leaf_index: data.len() - 1,
+				number_of_leaves: data.len() as u64,
+				leaf_index: data.len() as u64 - 1,
 				leaf: hex!("c26B34D375533fFc4c5276282Fa5D660F3d8cbcB").to_vec(),
 			}
 		);
