@@ -3,8 +3,10 @@
     "beacon": {
       "endpoint": "http://localhost:9596"
     },
+    "ethereum": {
+      "endpoint": "ws://localhost:8546"
+    },
     "contracts": {
-      "BasicInboundChannel": null,
       "BasicOutboundChannel": null
     }
   },

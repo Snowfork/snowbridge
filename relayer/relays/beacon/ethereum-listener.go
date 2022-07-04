@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,11 +18,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/ethereum/syncer"
 	"golang.org/x/sync/errgroup"
 )
-
-type ContractsConfig struct {
-	BasicOutboundChannel        string `mapstructure:"BasicOutboundChannel"`
-	IncentivizedOutboundChannel string `mapstructure:"IncentivizedOutboundChannel"`
-}
 
 type ParachainPayload struct {
 	Messages []*chain.EthereumOutboundMessage
@@ -75,7 +71,6 @@ func (li *EthereumListener) Start(
 	address = common.HexToAddress(li.config.Contracts.BasicOutboundChannel)
 	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.Client())
 	log.WithField("basicOutboundChannel", basicOutboundChannel).Info("log basic outbound channel")
-	log.WithField("error", err).Info("log basic outbound channel error")
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +80,7 @@ func (li *EthereumListener) Start(
 
 	eg.Go(func() error {
 		defer close(li.payloads)
-		err := li.processEvents(ctx, headerCache, 100, 200)
+		err := li.processEvents(ctx, headerCache, 125218500, 125218600)
 		log.WithField("reason", err).Info("Shutting down ethereum listener")
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
@@ -110,7 +105,8 @@ func (li *EthereumListener) processEvents(
 	for {
 		var events []*etypes.Log
 
-		filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
+		filterOptions := bind.FilterOpts{Context: ctx}
+		//filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
 		log.WithField("li.basicOutboundChannel", li.basicOutboundChannel).Info("log basic outbound channel")
 		basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
 		log.WithField("basicEvents", basicEvents).Info("log basic events")
@@ -125,10 +121,12 @@ func (li *EthereumListener) processEvents(
 			return err
 		}
 
+		ticker := time.NewTicker(time.Second * 20)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case li.payloads <- ParachainPayload{Messages: messages}:
+		case <-ticker.C:
+			li.payloads <- ParachainPayload{Messages: messages}
 		}
 	}
 }
@@ -162,8 +160,6 @@ func (li *EthereumListener) makeOutgoingMessages(
 ) ([]*chain.EthereumOutboundMessage, error) {
 	messages := make([]*chain.EthereumOutboundMessage, len(events))
 
-	log.Info("In makeOutgoingMessages")
-
 	for i, event := range events {
 		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
 		if err != nil {
@@ -174,8 +170,6 @@ func (li *EthereumListener) makeOutgoingMessages(
 			}).WithError(err).Error("Failed to get receipt trie for event")
 			return nil, err
 		}
-
-		log.Info("Got receiptTrie")
 
 		msg, err := ethereum.MakeMessageFromEvent(li.mapping, event, receiptTrie)
 		if err != nil {

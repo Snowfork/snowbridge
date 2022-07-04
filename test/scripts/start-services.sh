@@ -204,10 +204,10 @@ start_relayer()
     # Configure beacon relay
     jq \
         --arg k1 "$(address_for BasicOutboundChannel)" \
-        --arg k2 "$(address_for BasicInboundChannel)" \
+        --arg infura_endpoint_ws $infura_endpoint_ws \
     '
       .source.contracts.BasicOutboundChannel = $k1
-    | .source.contracts.BasicInboundChannel = $k2
+    | .source.ethereum.endpoint = $infura_endpoint_ws
     ' \
     config/beacon-relay.json > $output_dir/beacon-relay.json
 

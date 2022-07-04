@@ -45,6 +45,11 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
+	err = r.ethconn.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
 	r.writer = NewParachainWriter(
 		r.paraconn,
 	)
@@ -64,14 +69,27 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		r.ethconn,
 	)
 
-	payloads, err := listener.Start(ctx, eg)
+	payload, err := listener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"payloads": payloads,
-	}).Info("Payloads")
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case payload, ok := <-payload:
+			if !ok {
+				return nil
+			}
+			for _, msg := range payload.Messages {
+				err = r.writer.WriteToParachain(ctx, msg.Call, msg.Args...)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
 
 	return nil
 }
@@ -198,7 +216,7 @@ func (r *Relay) InitialSync(ctx context.Context) (syncer.InitialSync, error) {
 		return syncer.InitialSync{}, err
 	}
 
-	err = r.writer.WriteToParachain(ctx, "initial_sync", initialSync)
+	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.initial_sync", initialSync)
 	if err != nil {
 		logrus.WithError(err).Error("unable to write to parachain")
 
@@ -230,7 +248,7 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 
 	syncCommitteeUpdate.SyncCommitteePeriod = types.NewU64(period)
 
-	return r.writer.WriteToParachain(ctx, "sync_committee_period_update", syncCommitteeUpdate)
+	return r.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
 }
 
 func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeaderUpdate, common.Hash, error) {
@@ -266,7 +284,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
 	}
 
-	err = r.writer.WriteToParachain(ctx, "import_finalized_header", finalizedHeaderUpdate)
+	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_finalized_header", finalizedHeaderUpdate)
 	if err != nil {
 		logrus.WithError(err).Error("unable to write to parachain")
 
@@ -293,7 +311,7 @@ func (r *Relay) SyncHeader(ctx context.Context, slot uint64, blockRoot common.Ha
 
 	headerUpdate.SyncAggregate = syncAggregate
 
-	err = r.writer.WriteToParachain(ctx, "import_execution_header", headerUpdate)
+	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
 	if err != nil {
 		logrus.WithError(err).Error("unable to write to parachain")
 

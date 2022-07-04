@@ -814,19 +814,49 @@ pub mod pallet {
 		/// Verify a message by verifying the existence of the corresponding
 		/// Ethereum log in a block. Returns the log if successful.
 		fn verify(message: &Message) -> Result<Log, DispatchError> {
-			let receipt = Self::verify_receipt_inclusion(&message.proof)?;
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"In message verification with block hash {}",
+				message.proof.block_hash,
+			);
+
+			let receipt_result = Self::verify_receipt_inclusion(&message.proof);
+			if let Err(receipt_result) = &receipt_result {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"Verify receipt inclusion failed for block {}: {:?}",
+					message.proof.block_hash,
+					receipt_result
+				);
+
+				return Err(*receipt_result);
+			}
+			
+			let receipt = receipt_result.unwrap();
 
 			log::trace!(
-				target: "ethereum-light-client",
+				target: "ethereum-beacon-client",
 				"Verified receipt inclusion for transaction at index {} in block {}",
 				message.proof.tx_index, message.proof.block_hash,
 			);
 
-			let log: Log = rlp::decode(&message.data).map_err(|_| Error::<T>::DecodeFailed)?;
+			let log_result = rlp::decode(&message.data);
+			if let Err(log_result) = &log_result {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"RLP log decoded failed {}: {:?}",
+					message.proof.block_hash,
+					log_result
+				);
+
+				return Err(Error::<T>::DecodeFailed.into());
+			}
+
+			let log: Log = log_result.unwrap();
 
 			if !receipt.contains_log(&log) {
 				log::trace!(
-					target: "ethereum-light-client",
+					target: "ethereum-beacon-client",
 					"Event log not found in receipt for transaction at index {} in block {}",
 					message.proof.tx_index, message.proof.block_hash,
 				);

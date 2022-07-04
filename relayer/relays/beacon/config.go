@@ -15,6 +15,10 @@ type SourceConfig struct {
 	Contracts             ContractsConfig       `mapstructure:"contracts"`
 }
 
+type ContractsConfig struct {
+	BasicOutboundChannel        string `mapstructure:"BasicOutboundChannel"`
+}
+
 type BeaconConfig struct {
 	Endpoint                string `mapstructure:"endpoint"`
 	FinalizedUpdateEndpoint string `mapstructure:"finalizedUpdateEndpoint"`
