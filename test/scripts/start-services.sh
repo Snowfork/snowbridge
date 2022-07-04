@@ -22,7 +22,6 @@ address_for()
 }
 
 start_geth() {
-
     if [[ -n "${DIFFICULTY+x}" ]]; then
         jq --arg difficulty "${DIFFICULTY}" \
             '.difficulty = $difficulty' \
@@ -52,13 +51,13 @@ start_geth() {
 }
 
 start_geth_for_beacon_node() {
-    geth --ropsten \
-        --datadir /home/ubuntu/projects/go-ethereum/ropstendata \
+    geth --"$eth_network" \
+        --datadir "/home/ubuntu/projects/go-ethereum/${eth_network}data" \
         --authrpc.addr localhost \
         --authrpc.port 8551 \
         --http \
         --authrpc.vhosts localhost \
-        --authrpc.jwtsecret /home/ubuntu/projects/go-ethereum/ropstendata/jwtsecret \
+        --authrpc.jwtsecret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
         --http.api eth,net \
         --override.terminaltotaldifficulty 50000000000000000 \
         > "$output_dir/geth_beacon.log" 2>&1 &
@@ -67,9 +66,9 @@ start_geth_for_beacon_node() {
 start_lodestar() {
     lodestar beacon \
         --rootDir="/home/ubuntu/projects/lodestar-beacondata" \
-        --network=ropsten \
+        --network=$eth_network \
         --api.rest.api="beacon,config,events,node,validator,lightclient" \
-        --jwt-secret /home/ubuntu/projects/go-ethereum/ropstendata/jwtsecret \
+        --jwt-secret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
         > "$output_dir/lodestar_beacon.log" 2>&1 &
 }
 
@@ -242,19 +241,19 @@ start_relayer()
         done
     ) &
 
-    # Launch beacon relay
-    #(
-    #    : > beacon-relay.log
-    #    while :
-    #    do
-    #      echo "Starting beacon relay at $(date)"
-    #        "${relay_bin}" run beacon \
-    #            --config $output_dir/beacon-relay.json \
-    #            --substrate.private-key "//Relay" \
-    #            >>beacon-relay.log 2>&1 || true
-    #        sleep 20
-    #    done
-    #) &
+     Launch beacon relay
+    (
+        : > beacon-relay.log
+        while :
+        do
+          echo "Starting beacon relay at $(date)"
+            "${relay_bin}" run beacon \
+                --config $output_dir/beacon-relay.json \
+                --substrate.private-key "//Relay" \
+                >>beacon-relay.log 2>&1 || true
+            sleep 20
+        done
+    ) &
 
 }
 
@@ -275,9 +274,8 @@ if [ "$eth_network" == "localhost" ]; then
     start_geth
 else
     start_geth_for_beacon_node
+    start_lodestar
 fi
-
-start_lodestar
 
 deploy_contracts
 start_polkadot_launch

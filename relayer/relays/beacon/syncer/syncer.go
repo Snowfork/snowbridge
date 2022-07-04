@@ -362,6 +362,42 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	return headerUpdate, nil
 }
 
+func (s *Syncer) GetBlockRange(lastBlockHash, secondLastBlockHash common.Hash) (uint64, uint64, error) {
+	lastBlock, err := s.Client.GetBeaconBlock(lastBlockHash)
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch last block using hash")
+
+		return 0, 0, err
+	}
+
+	lastBlockNumberString := lastBlock.Data.Message.Body.ExecutionPayload.BlockNumber
+
+	lastBlockNumber, err := strconv.ParseUint(lastBlockNumberString, 10, 64)
+	if err != nil {
+		logrus.WithError(err).Error("unable to parse block number")
+
+		return 0, 0, err
+	}
+
+	secondLastBlock, err := s.Client.GetBeaconBlock(secondLastBlockHash)
+	if err != nil {
+		logrus.WithError(err).Error("unable to fetch last block using hash")
+
+		return 0, 0, err
+	}
+
+	secondLastBlockNumberString := secondLastBlock.Data.Message.Body.ExecutionPayload.BlockNumber
+
+	secondLastBlockNumber, err := strconv.ParseUint(secondLastBlockNumberString, 10, 64)
+	if err != nil {
+		logrus.WithError(err).Error("unable to parse block number")
+
+		return 0, 0, err
+	}
+
+	return lastBlockNumber, secondLastBlockNumber, nil
+}
+
 func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {

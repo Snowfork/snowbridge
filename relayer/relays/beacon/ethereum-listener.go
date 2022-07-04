@@ -2,9 +2,7 @@ package beacon
 
 import (
 	"context"
-	"errors"
 	"path/filepath"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,6 +31,7 @@ type EthereumListener struct {
 	mapping                     map[common.Address]string
 	payloads                    chan ParachainPayload
 	headerSyncer                *syncer.Syncer
+	headerCache                 *ethereum.HeaderCache
 }
 
 func NewEthereumListener(
@@ -54,16 +53,14 @@ func NewEthereumListener(
 func (li *EthereumListener) Start(
 	ctx context.Context,
 	eg *errgroup.Group,
-) (<-chan ParachainPayload, error) {
+) error {
 	var err error
 
-	li.payloads = make(chan ParachainPayload, 1)
-
-	headerCache, err := ethereum.NewHeaderCacheWithBlockCacheOnly(
+	li.headerCache, err = ethereum.NewHeaderCacheWithBlockCacheOnly(
 		&ethereum.DefaultBlockLoader{Conn: li.conn},
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var address common.Address
@@ -72,63 +69,41 @@ func (li *EthereumListener) Start(
 	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.Client())
 	log.WithField("basicOutboundChannel", basicOutboundChannel).Info("log basic outbound channel")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	li.basicOutboundChannel = basicOutboundChannel
 	li.mapping[address] = "BasicInboundChannel.submit"
 
-	eg.Go(func() error {
-		defer close(li.payloads)
-		err := li.processEvents(ctx, headerCache, 125218500, 125218600)
-		log.WithField("reason", err).Info("Shutting down ethereum listener")
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return nil
-			}
-			return err
-		}
-		return nil
-	})
-
-	return li.payloads, nil
+	return nil
 }
 
-func (li *EthereumListener) processEvents(
+func (li *EthereumListener) ProcessEvents(
 	ctx context.Context,
-	headerCache *ethereum.HeaderCache,
 	start uint64,
 	end uint64,
-) error {
+) (ParachainPayload, error) {
 	log.Info("Syncing events starting...")
 
-	for {
-		var events []*etypes.Log
+	var events []*etypes.Log
 
-		filterOptions := bind.FilterOpts{Context: ctx}
-		//filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
-		log.WithField("li.basicOutboundChannel", li.basicOutboundChannel).Info("log basic outbound channel")
-		basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
-		log.WithField("basicEvents", basicEvents).Info("log basic events")
-		if err != nil {
-			log.WithError(err).Error("Failure fetching event logs")
-			return err
-		}
-		events = append(events, basicEvents...)
-
-		messages, err := li.makeOutgoingMessages(ctx, headerCache, events)
-		if err != nil {
-			return err
-		}
-
-		ticker := time.NewTicker(time.Second * 20)
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-ticker.C:
-			li.payloads <- ParachainPayload{Messages: messages}
-		}
+	//filterOptions := bind.FilterOpts{Context: ctx}
+	filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
+	log.WithField("li.basicOutboundChannel", li.basicOutboundChannel).Info("log basic outbound channel")
+	basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
+	log.WithField("basicEvents", basicEvents).Info("log basic events")
+	if err != nil {
+		log.WithError(err).Error("Failure fetching event logs")
+		return ParachainPayload{}, err
 	}
+	events = append(events, basicEvents...)
+
+	messages, err := li.makeOutgoingMessages(ctx, li.headerCache, events)
+	if err != nil {
+		return ParachainPayload{}, err
+	}
+
+	return ParachainPayload{Messages: messages}, nil
 }
 
 func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {

@@ -22,6 +22,7 @@ type Relay struct {
 	keypair  *sr25519.Keypair
 	paraconn *parachain.Connection
 	writer   *ParachainWriter
+	listener *EthereumListener
 	ethconn  *ethereum.Connection
 }
 
@@ -59,36 +60,19 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	err = r.Sync(ctx)
-	if err != nil {
-		return err
-	}
-
-	listener := NewEthereumListener(
+	r.listener = NewEthereumListener(
 		&r.config.Source,
 		r.ethconn,
 	)
 
-	payload, err := listener.Start(ctx, eg)
+	err = r.listener.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case payload, ok := <-payload:
-			if !ok {
-				return nil
-			}
-			for _, msg := range payload.Messages {
-				err = r.writer.WriteToParachain(ctx, msg.Call, msg.Args...)
-				if err != nil {
-					return err
-				}
-			}
-		}
+	err = r.Sync(ctx)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -308,11 +292,33 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 	}
 
-
 	// Import the execution header for the second last finalized header too.
 	_, err = r.SyncHeader(ctx, blockRoot, prevSyncAggregate)
 	if err != nil {
 		return err
+	}
+
+	lastBlockNumber, secondLastBlockNumber, err := r.syncer.GetBlockRange(lastFinalizedHeader, secondLastFinalizedHeader)
+
+	logrus.WithFields(logrus.Fields{
+		"start": secondLastBlockNumber,
+		"end":   lastBlockNumber - 1,
+	}).Info("Processing events for block numbers")
+
+	payload, err := r.listener.ProcessEvents(ctx, secondLastBlockNumber, lastBlockNumber-1)
+	if err != nil {
+		return err
+	}
+
+	return r.writeMessages(ctx, payload)
+}
+
+func (r *Relay) writeMessages(ctx context.Context, payload ParachainPayload) error {
+	for _, msg := range payload.Messages {
+		err := r.writer.WriteToParachain(ctx, msg.Call, msg.Args...)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

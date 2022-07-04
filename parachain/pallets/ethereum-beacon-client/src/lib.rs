@@ -313,21 +313,6 @@ pub mod pallet {
 
 			Ok(())
 		}
-
-		#[pallet::weight(1_000_000)]
-		#[transactional]
-		pub fn verify_eth1_receipt_inclusion(
-			origin: OriginFor<T>,
-		) -> DispatchResult {
-			let _sender = ensure_signed(origin)?;
-
-			log::trace!(
-				target: "ethereum-beacon-client",
-				"💫 Received transaction to be validated.",
-			);
-
-			Ok(())
-		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -836,7 +821,7 @@ pub mod pallet {
 		fn verify(message: &Message) -> Result<Log, DispatchError> {
 			log::trace!(
 				target: "ethereum-beacon-client",
-				"In message verification with block hash {}",
+				"💫 Verifying message with block hash {}",
 				message.proof.block_hash,
 			);
 
@@ -882,6 +867,12 @@ pub mod pallet {
 				);
 				return Err(Error::<T>::InvalidProof.into())
 			}
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Receipt verification complete for {}",
+				message.proof.block_hash,
+			);
 
 			Ok(log)
 		}
