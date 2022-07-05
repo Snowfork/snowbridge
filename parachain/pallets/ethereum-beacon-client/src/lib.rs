@@ -779,25 +779,7 @@ pub mod pallet {
 			let stored_header =
 				<ExecutionHeaders<T>>::get(proof.block_hash).ok_or(Error::<T>::MissingHeader)?;
 
-			let fake_header = Header{
-				parent_hash: Default::default(),
-				timestamp: 0,
-				number: 0,
-				author: Default::default(),
-				transactions_root: Default::default(),
-				ommers_hash: Default::default(),
-				extra_data: vec![],
-				state_root: Default::default(),
-				receipts_root: stored_header.receipts_root,
-				logs_bloom: Default::default(),
-				gas_used: Default::default(),
-				gas_limit: Default::default(),
-				difficulty: Default::default(),
-				seal: vec![],
-				base_fee: None
-			};
-
-			let result = fake_header
+			let result = stored_header
 				.check_receipt_proof(&proof.data.1)
 				.ok_or(Error::<T>::InvalidProof)?;
 
@@ -819,7 +801,7 @@ pub mod pallet {
 		/// Verify a message by verifying the existence of the corresponding
 		/// Ethereum log in a block. Returns the log if successful.
 		fn verify(message: &Message) -> Result<Log, DispatchError> {
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Verifying message with block hash {}",
 				message.proof.block_hash,
@@ -868,23 +850,21 @@ pub mod pallet {
 				return Err(Error::<T>::InvalidProof.into())
 			}
 
-			log::trace!(
+			log::info!(
 				target: "ethereum-beacon-client",
-				"💫 Receipt verification complete for {}",
+				"💫 Receipt verification successful for {}",
 				message.proof.block_hash,
 			);
 
 			Ok(log)
 		}
 
-		/// Import an ordered vec of Ethereum headers without performing
-		/// validation.
-		///
-		/// NOTE: This should only be used to initialize empty storage.
+		// Empty implementation, not necessary for the beacon client,
+		// but needs to be declared to implement Verifier interface.
 		fn initialize_storage(
-			headers: Vec<EthereumHeader>,
-			initial_difficulty: U256,
-			descendants_until_final: u8,
+			_headers: Vec<EthereumHeader>,
+			_initial_difficulty: U256,
+			_descendants_until_final: u8,
 		) -> Result<(), &'static str> {
 			Ok(())
 		}
