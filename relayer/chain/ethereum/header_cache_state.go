@@ -187,7 +187,9 @@ func NewHeaderCache(
 	return &state, nil
 }
 
-func NewHeaderCacheWithBlockCacheOnly(
+// Instantiates a Header Cache with just a block loader and block cache.
+// Used by beacon relayer.
+func NewHeaderBlockCache(
 	bl BlockLoader,
 ) (*HeaderCache, error) {
 	blockCache := NewBlockCache(5)
@@ -207,7 +209,6 @@ func NewHeaderCacheWithBlockCacheOnly(
 // of the block specified by `hash`. If the trie isn't cached, it will block for
 // multiple seconds to fetch receipts and construct the trie.
 func (s *HeaderCache) GetReceiptTrie(ctx context.Context, hash gethCommon.Hash) (*gethTrie.Trie, error) {
-	log.Info("In GetReceiptTrie")
 	_, receiptTrie, exists := s.blockCache.Get(hash)
 	if exists {
 		log.WithField("receiptTrie_cached", receiptTrie).Info("GetAllReceipts receiptTrie cached")
@@ -228,14 +229,12 @@ func (s *HeaderCache) GetReceiptTrie(ctx context.Context, hash gethCommon.Hash) 
 	if err != nil {
 		return nil, err
 	}
-	log.WithField("receiptTrie", receiptTrie).Info("GetAllReceipts receiptTrie")
 
 	if receiptTrie.Hash() != block.ReceiptHash() {
 		return nil, fmt.Errorf("receipt trie does not match block receipt hash")
 	}
 
 	s.blockCache.Insert(block, receiptTrie)
-	log.Info("GetReceiptTrie Done")
 	return receiptTrie, nil
 }
 

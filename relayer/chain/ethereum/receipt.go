@@ -49,6 +49,5 @@ func GetAllReceipts(ctx context.Context, conn *Connection, block *etypes.Block) 
 		receipts[index.(int)] = receipt.(*etypes.Receipt)
 		return true
 	})
-
 	return receipts, nil
 }

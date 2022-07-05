@@ -13,6 +13,7 @@ infura_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
+start_beacon_sync="${START_BEACON_SYNC:-false}"
 
 output_dir=/tmp/snowbridge
 
@@ -201,12 +202,26 @@ start_relayer()
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
-    # Configure beacon relay
+    # Configure ethereum relay
     jq \
         --arg k1 "$(address_for BasicOutboundChannel)" \
+        --arg k2 "$(address_for IncentivizedOutboundChannel)" \
         --arg infura_endpoint_ws $infura_endpoint_ws \
     '
       .source.contracts.BasicOutboundChannel = $k1
+    | .source.contracts.IncentivizedOutboundChannel = $k2
+    | .source.ethereum.endpoint = $infura_endpoint_ws
+    ' \
+    config/ethereum-relay.json > $output_dir/ethereum-relay.json
+
+    # Configure beacon relay
+    jq \
+        --arg k1 "$(address_for BasicOutboundChannel)" \
+        --arg k2 "$(address_for IncentivizedOutboundChannel)" \
+        --arg infura_endpoint_ws $infura_endpoint_ws \
+    '
+      .source.contracts.BasicOutboundChannel = $k1
+    | .source.contracts.IncentivizedOutboundChannel = $k2
     | .source.ethereum.endpoint = $infura_endpoint_ws
     ' \
     config/beacon-relay.json > $output_dir/beacon-relay.json
@@ -241,20 +256,35 @@ start_relayer()
         done
     ) &
 
-     Launch beacon relay
+    # Launch ethereum relay
     (
-        : > beacon-relay.log
+        : > ethereum-relay.log
         while :
         do
-          echo "Starting beacon relay at $(date)"
-            "${relay_bin}" run beacon \
-                --config $output_dir/beacon-relay.json \
+          echo "Starting ethereum relay at $(date)"
+            "${relay_bin}" run ethereum \
+                --config $output_dir/ethereum-relay.json \
                 --substrate.private-key "//Relay" \
-                >>beacon-relay.log 2>&1 || true
+                >>ethereum-relay.log 2>&1 || true
             sleep 20
         done
     ) &
 
+    if [ "$start_beacon_sync" == "true" ]; then
+        # Launch beacon relay
+        (
+            : > beacon-relay.log
+            while :
+            do
+            echo "Starting beacon relay at $(date)"
+                "${relay_bin}" run beacon \
+                    --config $output_dir/beacon-relay.json \
+                    --substrate.private-key "//Relay" \
+                    >>beacon-relay.log 2>&1 || true
+                sleep 20
+            done
+        ) &
+    fi
 }
 
 cleanup() {
@@ -270,9 +300,16 @@ mkdir "$output_dir/bin"
 
 export PATH="$output_dir/bin:$PATH"
 
+if [ "$eth_network" == "localhost" ] && [ "$start_beacon_sync" == "true" ]; then
+    echo "Beacon sync not supported for localhost yet."
+    exit 1
+fi
+
 if [ "$eth_network" == "localhost" ]; then
     start_geth
-else
+fi
+
+if [ "$start_beacon_sync" == "true" ]; then
     start_geth_for_beacon_node
     start_lodestar
 fi

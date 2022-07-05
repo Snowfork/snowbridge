@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,14 +21,11 @@ type ParachainPayload struct {
 }
 
 type EthereumListener struct {
-	ethashDataDir               string
-	ethashCacheDir              string
 	config                      *SourceConfig
 	conn                        *ethereum.Connection
 	basicOutboundChannel        *basic.BasicOutboundChannel
 	incentivizedOutboundChannel *incentivized.IncentivizedOutboundChannel
 	mapping                     map[common.Address]string
-	payloads                    chan ParachainPayload
 	headerSyncer                *syncer.Syncer
 	headerCache                 *ethereum.HeaderCache
 }
@@ -39,8 +35,6 @@ func NewEthereumListener(
 	conn *ethereum.Connection,
 ) *EthereumListener {
 	return &EthereumListener{
-		ethashDataDir:               filepath.Join(config.DataDir, "ethash-data"),
-		ethashCacheDir:              filepath.Join(config.DataDir, "ethash-cache"),
 		config:                      config,
 		conn:                        conn,
 		basicOutboundChannel:        nil,
@@ -56,7 +50,7 @@ func (li *EthereumListener) Start(
 ) error {
 	var err error
 
-	li.headerCache, err = ethereum.NewHeaderCacheWithBlockCacheOnly(
+	li.headerCache, err = ethereum.NewHeaderBlockCache(
 		&ethereum.DefaultBlockLoader{Conn: li.conn},
 	)
 	if err != nil {
@@ -87,18 +81,14 @@ func (li *EthereumListener) ProcessEvents(
 
 	var events []*etypes.Log
 
-	//filterOptions := bind.FilterOpts{Context: ctx}
 	filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
-	log.WithField("li.basicOutboundChannel", li.basicOutboundChannel).Info("log basic outbound channel")
 	basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
-	log.WithField("basicEvents", basicEvents).Info("log basic events")
 	if err != nil {
-		log.WithError(err).Error("Failure fetching event logs")
 		return ParachainPayload{}, err
 	}
 	events = append(events, basicEvents...)
 
-	messages, err := li.makeOutgoingMessages(ctx, li.headerCache, events)
+	messages, err := li.makeOutgoingMessages(ctx, events)
 	if err != nil {
 		return ParachainPayload{}, err
 	}
@@ -130,13 +120,12 @@ func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChanne
 
 func (li *EthereumListener) makeOutgoingMessages(
 	ctx context.Context,
-	hcs *ethereum.HeaderCache,
 	events []*etypes.Log,
 ) ([]*chain.EthereumOutboundMessage, error) {
 	messages := make([]*chain.EthereumOutboundMessage, len(events))
 
 	for i, event := range events {
-		receiptTrie, err := hcs.GetReceiptTrie(ctx, event.BlockHash)
+		receiptTrie, err := li.headerCache.GetReceiptTrie(ctx, event.BlockHash)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"blockHash":   event.BlockHash.Hex(),
@@ -156,8 +145,6 @@ func (li *EthereumListener) makeOutgoingMessages(
 			}).WithError(err).Error("Failed to generate message from ethereum event")
 			return nil, err
 		}
-
-		log.WithField("message", msg).Info("Got message")
 
 		messages[i] = msg
 	}

@@ -19,9 +19,6 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use snowbridge_beacon::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
 use snowbridge_core::{Message, Verifier};
-pub use snowbridge_ethereum::{
-	Header as EthereumHeader,
-};
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
@@ -104,7 +101,7 @@ pub mod pallet {
 	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
 	use sp_core::{H160, U256};
 	use snowbridge_core::Proof;
-	use snowbridge_ethereum::{Header, Log, Receipt};
+	use snowbridge_ethereum::{Log, Receipt, Header as EthereumHeader};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
