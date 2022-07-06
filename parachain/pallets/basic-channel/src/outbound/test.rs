@@ -92,6 +92,9 @@ pub fn new_tester() -> sp_io::TestExternalities {
 fn run_to_block(n: u64) {
 	while System::block_number() < n {
 		System::set_block_number(System::block_number() + 1);
+		// TODO: is this necessary for the test? It's mentioned in the unit testing docs:
+		// https://docs.substrate.io/main-docs/test/unit-testing/
+		System::on_initialize(System::block_number());
 		BasicOutboundChannel::on_initialize(System::block_number());
 	}
 }
@@ -103,11 +106,10 @@ fn test_submit() {
 		let who: &AccountId = &Keyring::Bob.into();
 
 		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
+
 		assert_eq!(<NextId<Test>>::get(), 1);
 		assert_eq!(<Nonces<Test>>::get(who), 0);
-
-		run_to_block(2);
-		assert_eq!(<Nonces<Test>>::get(who), 1);
+		assert_eq!(<MessageQueue<Test>>::get().len(), 1);
 	});
 }
 
@@ -115,14 +117,14 @@ fn test_submit() {
 fn test_submit_exceeds_queue_limit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
-		let who: AccountId = Keyring::Bob.into();
+		let who: &AccountId = &Keyring::Bob.into();
 
 		let max_messages = MaxMessagesPerCommit::get();
 		(0..max_messages)
-			.for_each(|_| BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]).unwrap());
+			.for_each(|_| BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]).unwrap());
 
 		assert_noop!(
-			BasicOutboundChannel::submit(&who, target, &vec![0, 1, 2]),
+			BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]),
 			Error::<Test>::QueueSizeLimitReached,
 		);
 	})
@@ -132,14 +134,47 @@ fn test_submit_exceeds_queue_limit() {
 fn test_submit_exceeds_payload_limit() {
 	new_tester().execute_with(|| {
 		let target = H160::zero();
-		let who: AccountId = Keyring::Bob.into();
+		let who: &AccountId = &Keyring::Bob.into();
 
 		let max_payload_bytes = MaxMessagePayloadSize::get();
 		let payload: Vec<u8> = (0..).take(max_payload_bytes as usize + 1).collect();
 
 		assert_noop!(
-			BasicOutboundChannel::submit(&who, target, payload.as_slice()),
+			BasicOutboundChannel::submit(who, target, payload.as_slice()),
 			Error::<Test>::PayloadTooLarge,
 		);
+	})
+}
+
+#[test]
+fn test_commit_single_user() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let who: &AccountId = &Keyring::Bob.into();
+
+		assert_ok!(BasicOutboundChannel::submit(who, target, &vec![0, 1, 2]));
+		run_to_block(2);
+
+		assert_eq!(<NextId<Test>>::get(), 1);
+		assert_eq!(<Nonces<Test>>::get(who), 1);
+		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
+	})
+}
+
+#[test]
+fn test_commit_multi_user() {
+	new_tester().execute_with(|| {
+		let target = H160::zero();
+		let alice: &AccountId = &Keyring::Alice.into();
+		let bob: &AccountId = &Keyring::Bob.into();
+
+		assert_ok!(BasicOutboundChannel::submit(alice, target, &vec![0, 1, 2]));
+		assert_ok!(BasicOutboundChannel::submit(bob, target, &vec![0, 1, 2]));
+		run_to_block(2);
+
+		assert_eq!(<NextId<Test>>::get(), 2);
+		assert_eq!(<Nonces<Test>>::get(alice), 1);
+		assert_eq!(<Nonces<Test>>::get(bob), 1);
+		assert_eq!(<MessageQueue<Test>>::get().len(), 0);
 	})
 }

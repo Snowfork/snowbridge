@@ -181,7 +181,6 @@ pub mod pallet {
 	pub(super) type MessageQueue<T: Config> =
 		StorageValue<_, BoundedVec<EnqueuedMessageOf<T>, T::MaxMessagesPerCommit>, ValueQuery>;
 
-	// Need a nonce for each account (message bundle) now
 	#[pallet::storage]
 	pub type Nonces<T: Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
 
@@ -295,9 +294,6 @@ pub mod pallet {
 				.map(|bundle| ethabi::encode(&vec![bundle.into()]))
 				.collect();
 
-			// TODO: Maybe undo the O type param in merkle_root, since we can convert between H256
-			// and [u8; 32] easily and the merkle_root implementation mentioned that [u8; 32] was
-			// chosen for "a more optimised implementation".
 			let commitment_hash = merkle_root::<<T as Config>::Hashing, Vec<Vec<u8>>, Vec<u8>>(
 				eth_message_bundles.clone(),
 			);
@@ -347,6 +343,8 @@ pub mod pallet {
 			let mut message_bundles: Vec<MessageBundleOf<T>> = Vec::new();
 			for (account, messages) in account_message_map {
 				let next_nonce = <Nonces<T>>::mutate(&account, |nonce| {
+					// TODO: is this the right addition to use? u64 is large, but this will make us
+					// reuse nonces when we hit u64::MAX
 					*nonce = nonce.saturating_add(1);
 					*nonce
 				});
