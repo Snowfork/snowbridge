@@ -9,13 +9,11 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{ensure, log};
-	use frame_system::pallet_prelude::OriginFor;
+	use frame_support::{ensure, log, pallet_prelude::*};
+	use frame_system::pallet_prelude::*;
 	use snowbridge_xcm_support_primitives::{RemoteParachain, XcmReserveTransfer};
 	use sp_runtime::DispatchError;
 	use sp_std::prelude::*;
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
 	use xcm::latest::prelude::*;
 	use xcm_executor::traits::WeightBounds;
 
@@ -47,8 +45,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-	}
+	impl<T: Config> Pallet<T> {}
 
 	impl<T> XcmReserveTransfer<T::AccountId, OriginFor<T>> for Pallet<T>
 	where
