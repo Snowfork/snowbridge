@@ -112,6 +112,7 @@ fn testnet_genesis(
 			accounts: vec![],
 		},
 		asset_registry: snowblink_runtime::AssetRegistryConfig { next_asset_id: 1 },
+		xcm_support: snowblink_runtime::XcmSupportConfig {},
 		ethereum_light_client: snowblink_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
