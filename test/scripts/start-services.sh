@@ -279,7 +279,7 @@ start_relayer()
             echo "Starting beacon relay at $(date)"
                 "${relay_bin}" run beacon \
                     --config $output_dir/beacon-relay.json \
-                    --substrate.private-key "//Relay" \
+                    --substrate.private-key "//BeaconRelay" \
                     >>beacon-relay.log 2>&1 || true
                 sleep 20
             done

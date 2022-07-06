@@ -61,13 +61,19 @@ func (li *EthereumListener) Start(
 
 	address = common.HexToAddress(li.config.Contracts.BasicOutboundChannel)
 	basicOutboundChannel, err := basic.NewBasicOutboundChannel(address, li.conn.Client())
-	log.WithField("basicOutboundChannel", basicOutboundChannel).Info("log basic outbound channel")
 	if err != nil {
 		return err
 	}
-
 	li.basicOutboundChannel = basicOutboundChannel
 	li.mapping[address] = "BasicInboundChannel.submit"
+
+	address = common.HexToAddress(li.config.Contracts.IncentivizedOutboundChannel)
+	incentivizedOutboundChannel, err := incentivized.NewIncentivizedOutboundChannel(address, li.conn.Client())
+	if err != nil {
+		return err
+	}
+	li.incentivizedOutboundChannel = incentivizedOutboundChannel
+	li.mapping[address] = "IncentivizedInboundChannel.submit"
 
 	return nil
 }
@@ -77,8 +83,6 @@ func (li *EthereumListener) ProcessEvents(
 	start uint64,
 	end uint64,
 ) (ParachainPayload, error) {
-	log.Info("Syncing events starting...")
-
 	var events []*etypes.Log
 
 	filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
@@ -87,6 +91,12 @@ func (li *EthereumListener) ProcessEvents(
 		return ParachainPayload{}, err
 	}
 	events = append(events, basicEvents...)
+
+	incentivizedEvents, err := li.queryIncentivizedEvents(li.incentivizedOutboundChannel, &filterOptions)
+	if err != nil {
+		return ParachainPayload{}, err
+	}
+	events = append(events, incentivizedEvents...)
 
 	messages, err := li.makeOutgoingMessages(ctx, events)
 	if err != nil {
@@ -97,6 +107,28 @@ func (li *EthereumListener) ProcessEvents(
 }
 
 func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
+	var events []*etypes.Log
+
+	iter, err := contract.FilterMessage(options)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+		events = append(events, &iter.Event.Raw)
+	}
+	return events, nil
+}
+
+func (li *EthereumListener) queryIncentivizedEvents(contract *incentivized.IncentivizedOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
 	var events []*etypes.Log
 
 	iter, err := contract.FilterMessage(options)

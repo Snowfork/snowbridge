@@ -299,6 +299,9 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 	}
 
 	lastBlockNumber, secondLastBlockNumber, err := r.syncer.GetBlockRange(lastFinalizedHeader, secondLastFinalizedHeader)
+	if err != nil {
+		return err
+	}
 
 	logrus.WithFields(logrus.Fields{
 		"start": secondLastBlockNumber,
