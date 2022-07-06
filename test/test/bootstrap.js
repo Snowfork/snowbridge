@@ -23,7 +23,6 @@ describe('Bridge', function () {
   });
 
   describe('Bootstrap', function () {
-    /*
     it('should transfer DOT from Substrate to Ethereum (basic channel)', async function () {
       const amount = BigNumber('100000000000000'); // 100 DOT (12 decimal places in this environment)
       const amountWrapped = BigNumber(Web3.utils.toWei('100', "ether")); // 100 SnowDOT (18 decimal places)
@@ -55,29 +54,6 @@ describe('Bridge', function () {
       const beforeSubBalance = await subBalances[0];
 
       const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 0, 0);
-
-      const afterEthBalance = await ethClient.getEthBalance(ethAccount);
-      const afterSubBalance = await subBalances[1];
-
-      expect(beforeEthBalance.minus(afterEthBalance)).to.be.bignumber.equal(amount.plus(gasCost));
-      expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
-      // conservation of value
-      expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
-    });*/
-    
-    it('should transfer ETH from Ethereum to Substrate (basic channel)', async function () {
-      const amount = BigNumber(Web3.utils.toWei('0.002', "ether"));
-      const ethAccount = ethClient.accounts[1];
-      console.log(ethAccount);
-
-      const subBalances = await subClient.subscribeAssetsAccountBalances(
-        this.testParaEthAssetId, polkadotRecipientSS58, 2
-      );
-
-      const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
-      const beforeSubBalance = await subBalances[0];
-
-      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.BASIC, 0, 0);
 
       const afterEthBalance = await ethClient.getEthBalance(ethAccount);
       const afterSubBalance = await subBalances[1];
