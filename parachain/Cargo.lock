@@ -10423,6 +10423,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-dispatch",
  "snowbridge-incentivized-channel",
+ "snowbridge-xcm-support-primitives",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-keyring",
@@ -10450,6 +10451,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-dispatch",
  "snowbridge-incentivized-channel",
+ "snowbridge-xcm-support-primitives",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-keyring",
@@ -10687,12 +10689,31 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-xcm-support"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "frame-support",
  "frame-system",
  "pallet-xcm",
  "parity-scale-codec",
+ "snowbridge-xcm-support-primitives",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+]
+
+[[package]]
+name = "snowbridge-xcm-support-primitives"
+version = "0.1.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
  "snowbridge-core",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",

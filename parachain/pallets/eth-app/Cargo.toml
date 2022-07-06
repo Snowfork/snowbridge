@@ -26,6 +26,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
+snowbridge-xcm-support-primitives = { path = "../../primitives/xcm-support", default-features = false }
 
 snowbridge-dispatch = { path = "../dispatch", default-features = false, optional = true }
 snowbridge-basic-channel = { path = "../basic-channel", default-features = false, optional = true }
@@ -50,6 +51,7 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "snowbridge-core/std",
+    "snowbridge-xcm-support-primitives/std",
 
     "frame-benchmarking/std",
     "snowbridge-dispatch/std",

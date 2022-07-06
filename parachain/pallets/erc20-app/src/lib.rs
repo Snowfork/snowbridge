@@ -45,10 +45,8 @@ use sp_runtime::{
 use sp_std::prelude::*;
 
 use snowbridge_asset_registry_primitives::NextAssetId;
-use snowbridge_core::{
-	assets::{RemoteParachain, XcmReserveTransfer},
-	ChannelId, OutboundRouter,
-};
+use snowbridge_core::{ChannelId, OutboundRouter};
+use snowbridge_xcm_support_primitives::{RemoteParachain, XcmReserveTransfer};
 
 use payload::OutboundPayload;
 pub use weights::WeightInfo;
@@ -175,7 +173,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into());
+				return Err(DispatchError::BadOrigin.into())
 			}
 
 			let asset_id =
@@ -199,7 +197,7 @@ pub mod pallet {
 							destination.para_id,
 							err
 						);
-						return TransactionOutcome::Rollback(DispatchError::Other("foo").into());
+						return TransactionOutcome::Rollback(DispatchError::Other("foo").into())
 					}
 					TransactionOutcome::Commit(Ok(()))
 				});
@@ -212,7 +210,7 @@ pub mod pallet {
 		pub fn create(origin: OriginFor<T>, token: H160) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into());
+				return Err(DispatchError::BadOrigin.into())
 			}
 
 			let asset_id = T::NextAssetId::next()?;

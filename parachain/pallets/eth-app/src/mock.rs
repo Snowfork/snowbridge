@@ -16,10 +16,8 @@ use sp_runtime::{
 	MultiSignature,
 };
 
-use snowbridge_core::{
-	assets::{RemoteParachain, XcmReserveTransfer},
-	ChannelId,
-};
+use snowbridge_core::ChannelId;
+use snowbridge_xcm_support_primitives::{RemoteParachain, XcmReserveTransfer};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
