@@ -34,13 +34,13 @@
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 #[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-#[cfg(not(feature = "std"))]
 use alloc::vec;
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
 
+use codec::{Decode, Encode};
 use sp_core::H256;
 use sp_runtime::traits::Hash;
-use codec::{Encode, Decode};
 
 /// Construct a root hash of a Binary Merkle Tree created from given leaves.
 ///
@@ -255,7 +255,7 @@ where
 	L: Into<Leaf<'a>>,
 {
 	if leaf_index >= number_of_leaves {
-		return false;
+		return false
 	}
 
 	let leaf_hash = match leaf.into() {
@@ -341,7 +341,7 @@ where
 					"[merkelize_row] Next: {:?}",
 					next.iter().map(hex::encode).collect::<Vec<_>>()
 				);
-				return Err(next);
+				return Err(next)
 			},
 		}
 	}

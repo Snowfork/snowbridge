@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use snowbridge_runtime_primitives::{Block, AccountId, Balance, Index as Nonce};
+use snowbridge_runtime_primitives::{AccountId, Balance, Block, Index as Nonce};
 
 use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
@@ -45,8 +45,8 @@ where
 	P: TransactionPool + Sync + Send + 'static,
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
-	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 	use snowbridge_basic_channel_rpc::{BasicChannel, BasicChannelApi};
+	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 
 	let mut io = jsonrpc_core::IoHandler::default();
 	let FullDeps { client, pool, deny_unsafe } = deps;

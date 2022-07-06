@@ -16,9 +16,7 @@ use scale_info::TypeInfo;
 use sp_core::{H160, H256};
 use sp_runtime::traits::{Hash, StaticLookup, Zero};
 
-use sp_std::collections::btree_map::BTreeMap;
-use sp_std::fmt::Debug;
-use sp_std::prelude::*;
+use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*};
 
 use sp_io::offchain_index::set;
 
@@ -237,8 +235,8 @@ pub mod pallet {
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 			ensure!(
-				<MessageQueue<T>>::decode_len().unwrap_or(0)
-					< T::MaxMessagesPerCommit::get() as usize,
+				<MessageQueue<T>>::decode_len().unwrap_or(0) <
+					T::MaxMessagesPerCommit::get() as usize,
 				Error::<T>::QueueSizeLimitReached,
 			);
 			ensure!(
@@ -248,7 +246,7 @@ pub mod pallet {
 
 			let next_id = <NextId<T>>::get();
 			if next_id.checked_add(1).is_none() {
-				return Err(Error::<T>::Overflow.into());
+				return Err(Error::<T>::Overflow.into())
 			}
 
 			<MessageQueue<T>>::try_append(EnqueuedMessage {
@@ -280,7 +278,7 @@ pub mod pallet {
 			// fails, we don't want the MessageQueue to be empty.
 			let message_queue = <MessageQueue<T>>::take();
 			if message_queue.is_empty() {
-				return T::WeightInfo::on_initialize_no_messages();
+				return T::WeightInfo::on_initialize_no_messages()
 			}
 
 			// Store these for the on_initialize call at the end

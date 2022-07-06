@@ -5,7 +5,7 @@ extern crate alloc;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 
 #[derive(Encode, Decode)]
 pub struct StoredLeaves(pub Vec<Vec<u8>>);

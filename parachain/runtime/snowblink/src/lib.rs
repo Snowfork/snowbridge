@@ -551,9 +551,11 @@ impl dispatch::Config for Runtime {
 	type CallFilter = Everything;
 }
 
-use snowbridge_basic_channel::{inbound as basic_channel_inbound, outbound as basic_channel_outbound};
 use incentivized_channel::{
 	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
+};
+use snowbridge_basic_channel::{
+	inbound as basic_channel_inbound, outbound as basic_channel_outbound,
 };
 
 impl basic_channel_inbound::Config for Runtime {
