@@ -211,7 +211,6 @@ func NewHeaderBlockCache(
 func (s *HeaderCache) GetReceiptTrie(ctx context.Context, hash gethCommon.Hash) (*gethTrie.Trie, error) {
 	_, receiptTrie, exists := s.blockCache.Get(hash)
 	if exists {
-		log.WithField("receiptTrie_cached", receiptTrie).Info("GetAllReceipts receiptTrie cached")
 		return receiptTrie, nil
 	}
 
