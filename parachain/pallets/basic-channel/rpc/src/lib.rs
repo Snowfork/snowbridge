@@ -1,14 +1,9 @@
-use std::sync::Arc;
-
 use jsonrpc_core::{Error, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 
-use codec::{Decode, Encode};
-use sp_api::ProvideRuntimeApi;
-use sp_blockchain::HeaderBackend;
+use codec::Encode;
 use sp_core::H256;
 use sp_runtime::{
-	generic::BlockId,
 	offchain::storage::StorageValueRef,
 	traits::{Block as BlockT, Keccak256},
 };
@@ -18,43 +13,30 @@ use snowbridge_basic_channel_primitives::StoredLeaves;
 
 #[rpc]
 pub trait BasicChannelApi<BlockHash> {
-	#[rpc(name = "basicChannel_helloWorld")]
-	fn hello_world(&self, at: Option<BlockHash>) -> Result<String>;
-
 	#[rpc(name = "basicChannel_getMerkleProof")]
 	fn get_merkle_proof(
 		&self,
-		at: Option<BlockHash>,
 		commitment_hash: H256,
 		leaf_index: u64,
 	) -> Result<Vec<u8>>;
 }
 
-pub struct BasicChannel<C, B> {
-	client: Arc<C>,
+pub struct BasicChannel<B> {
 	_marker: std::marker::PhantomData<B>,
 }
 
-impl<C, B> BasicChannel<C, B> {
-	pub fn new(client: Arc<C>) -> Self {
-		Self { client, _marker: Default::default() }
+impl<B> BasicChannel<B> {
+	pub fn new() -> Self {
+		Self { _marker: Default::default() }
 	}
 }
 
-impl<C, Block> BasicChannelApi<<Block as BlockT>::Hash> for BasicChannel<C, Block>
+impl<Block> BasicChannelApi<<Block as BlockT>::Hash> for BasicChannel<Block>
 where
 	Block: BlockT,
-	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
 {
-	fn hello_world(&self, _at: Option<<Block as BlockT>::Hash>) -> Result<String> {
-		let answer = 42;
-
-		Ok(format!("hello world! The answer is {}", answer).to_string())
-	}
-
 	fn get_merkle_proof(
 		&self,
-		at: Option<<Block as BlockT>::Hash>,
 		commitment_hash: H256,
 		leaf_index: u64,
 	) -> Result<Vec<u8>> {
@@ -66,7 +48,6 @@ where
 
 			Ok(proof)
 		} else {
-			// failed to retrieve leaves for commitment_hash
 			Err(Error {
 				code: ErrorCode::InternalError,
 				message: format!(
