@@ -10319,7 +10319,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-beacon"
+name = "snowbridge-beacon-primitives"
 version = "0.0.1"
 dependencies = [
  "frame-support",
@@ -10496,7 +10496,7 @@ dependencies = [
  "scale-info",
  "serde",
  "serde_json",
- "snowbridge-beacon",
+ "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-ethereum",
  "snowbridge-testutils",

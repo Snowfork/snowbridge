@@ -17,7 +17,7 @@ use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use snowbridge_beacon::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
 use snowbridge_core::{Message, Verifier};
 
 const SLOTS_PER_EPOCH: u64 = 32;
@@ -804,19 +804,18 @@ pub mod pallet {
 				message.proof.block_hash,
 			);
 
-			let receipt_result = Self::verify_receipt_inclusion(&message.proof);
-			if let Err(receipt_result) = &receipt_result {
-				log::trace!(
-					target: "ethereum-beacon-client",
-					"Verify receipt inclusion failed for block {}: {:?}",
-					message.proof.block_hash,
-					receipt_result
-				);
-
-				return Err(*receipt_result);
-			}
-
-			let receipt = receipt_result.unwrap();
+			let receipt = match Self::verify_receipt_inclusion(&message.proof) {
+				Ok(receipt) => receipt,
+				Err(err) => {
+					log::trace!(
+						target: "ethereum-beacon-client",
+						"Verify receipt inclusion failed for block {}: {:?}",
+						message.proof.block_hash,
+						err
+					);
+					return Err(err)
+				}
+			};
 
 			log::trace!(
 				target: "ethereum-beacon-client",
@@ -824,19 +823,18 @@ pub mod pallet {
 				message.proof.tx_index, message.proof.block_hash,
 			);
 
-			let log_result = rlp::decode(&message.data);
-			if let Err(log_result) = &log_result {
-				log::trace!(
-					target: "ethereum-beacon-client",
-					"RLP log decoded failed {}: {:?}",
-					message.proof.block_hash,
-					log_result
-				);
-
-				return Err(Error::<T>::DecodeFailed.into());
-			}
-
-			let log: Log = log_result.unwrap();
+			let log = match rlp::decode(&message.data) {
+				Ok(log) => log,
+				Err(err) => {
+					log::trace!(
+						target: "ethereum-beacon-client",
+						"RLP log decoded failed {}: {:?}",
+						message.proof.block_hash,
+						err
+					);
+					return Err(Error::<T>::DecodeFailed.into());
+				}
+			};
 
 			if !receipt.contains_log(&log) {
 				log::trace!(

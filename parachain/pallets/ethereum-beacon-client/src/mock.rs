@@ -8,7 +8,7 @@ use sp_runtime::{
 };
 use frame_system as system;
 use hex_literal::hex;
-use snowbridge_beacon::{Attestation, AttestationData, AttesterSlashing, BeaconBlock, Body, Checkpoint, Eth1Data, ExecutionPayload, IndexedAttestation};
+use snowbridge_beacon_primitives::{Attestation, AttestationData, AttesterSlashing, BeaconBlock, Body, Checkpoint, Eth1Data, ExecutionPayload, IndexedAttestation};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
