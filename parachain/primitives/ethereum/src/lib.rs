@@ -5,7 +5,7 @@ pub mod ethashdata;
 pub mod ethashproof;
 pub mod header;
 pub mod log;
-mod mpt;
+pub mod mpt;
 pub mod receipt;
 
 pub use ethereum_types::{Address, H160, H256, H64, U256};

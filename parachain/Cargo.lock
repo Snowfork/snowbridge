@@ -10320,15 +10320,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-beacon"
+name = "snowbridge-beacon-primitives"
 version = "0.0.1"
 dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
+ "rlp",
  "scale-info",
  "serde",
+ "snowbridge-ethereum",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
 ]
@@ -10490,10 +10493,11 @@ dependencies = [
  "hex-literal",
  "milagro_bls",
  "parity-scale-codec",
+ "rlp",
  "scale-info",
  "serde",
  "serde_json",
- "snowbridge-beacon",
+ "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-ethereum",
  "snowbridge-testutils",

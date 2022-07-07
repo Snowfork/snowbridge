@@ -13,6 +13,7 @@ infura_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
+start_beacon_sync="${START_BEACON_SYNC:-false}"
 
 output_dir=/tmp/snowbridge
 
@@ -22,7 +23,6 @@ address_for()
 }
 
 start_geth() {
-
     if [[ -n "${DIFFICULTY+x}" ]]; then
         jq --arg difficulty "${DIFFICULTY}" \
             '.difficulty = $difficulty' \
@@ -49,6 +49,28 @@ start_geth() {
         --gcmode archive \
         --miner.gasprice=0 \
         > "$output_dir/geth.log" 2>&1 &
+}
+
+start_geth_for_beacon_node() {
+    geth --"$eth_network" \
+        --datadir "/home/ubuntu/projects/go-ethereum/${eth_network}data" \
+        --authrpc.addr localhost \
+        --authrpc.port 8551 \
+        --http \
+        --authrpc.vhosts localhost \
+        --authrpc.jwtsecret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
+        --http.api eth,net \
+        --override.terminaltotaldifficulty 50000000000000000 \
+        > "$output_dir/geth_beacon.log" 2>&1 &
+}
+
+start_lodestar() {
+    lodestar beacon \
+        --rootDir="/home/ubuntu/projects/lodestar-beacondata" \
+        --network=$eth_network \
+        --api.rest.api="beacon,config,events,node,validator,lightclient" \
+        --jwt-secret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
+        > "$output_dir/lodestar_beacon.log" 2>&1 &
 }
 
 deploy_contracts()
@@ -192,6 +214,18 @@ start_relayer()
     ' \
     config/ethereum-relay.json > $output_dir/ethereum-relay.json
 
+    # Configure beacon relay
+    jq \
+        --arg k1 "$(address_for BasicOutboundChannel)" \
+        --arg k2 "$(address_for IncentivizedOutboundChannel)" \
+        --arg infura_endpoint_ws $infura_endpoint_ws \
+    '
+      .source.contracts.BasicOutboundChannel = $k1
+    | .source.contracts.IncentivizedOutboundChannel = $k2
+    | .source.ethereum.endpoint = $infura_endpoint_ws
+    ' \
+    config/beacon-relay.json > $output_dir/beacon-relay.json
+
     local relay_bin="$relay_dir/build/snowbridge-relay"
 
     # Launch beefy relay
@@ -236,6 +270,21 @@ start_relayer()
         done
     ) &
 
+    if [ "$start_beacon_sync" == "true" ]; then
+        # Launch beacon relay
+        (
+            : > beacon-relay.log
+            while :
+            do
+            echo "Starting beacon relay at $(date)"
+                "${relay_bin}" run beacon \
+                    --config $output_dir/beacon-relay.json \
+                    --substrate.private-key "//BeaconRelay" \
+                    >>beacon-relay.log 2>&1 || true
+                sleep 20
+            done
+        ) &
+    fi
 }
 
 cleanup() {
@@ -251,8 +300,18 @@ mkdir "$output_dir/bin"
 
 export PATH="$output_dir/bin:$PATH"
 
+if [ "$eth_network" == "localhost" ] && [ "$start_beacon_sync" == "true" ]; then
+    echo "Beacon sync not supported for localhost yet."
+    exit 1
+fi
+
 if [ "$eth_network" == "localhost" ]; then
     start_geth
+fi
+
+if [ "$start_beacon_sync" == "true" ]; then
+    start_geth_for_beacon_node
+    start_lodestar
 fi
 
 deploy_contracts

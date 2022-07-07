@@ -5,7 +5,7 @@ use sp_std::iter::FromIterator;
 use sp_std::prelude::*;
 use ssz_rs::U256;
 use byte_slice_cast::AsByteSlice;
-use snowbridge_beacon::{SyncAggregate, Attestation, Checkpoint, Eth1Data, BeaconHeader, AttesterSlashing, ExecutionPayload, SigningData, ForkData, SyncCommittee, AttestationData, Body, ProposerSlashing, Deposit, VoluntaryExit};
+use snowbridge_beacon_primitives::{SyncAggregate, Attestation, Checkpoint, Eth1Data, BeaconHeader, AttesterSlashing, ExecutionPayload, SigningData, ForkData, SyncCommittee, AttestationData, Body, ProposerSlashing, Deposit, VoluntaryExit};
 use crate::ssz::*;
 use crate::config;
 
@@ -274,7 +274,7 @@ pub fn get_sync_committee_bits(bits_hex: Vec<u8>) -> Result<Vec<u8>, Merkleizati
 
 #[cfg(test)]
 mod tests {
-    use snowbridge_beacon::{AttestationData, Checkpoint, Eth1Data, Attestation, ExecutionPayload, SyncAggregate};
+    use snowbridge_beacon_primitives::{AttestationData, Checkpoint, Eth1Data, Attestation, ExecutionPayload, SyncAggregate};
     use crate::merkleization;
     use crate as ethereum_beacon_client;
     use frame_support::{assert_ok};

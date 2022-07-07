@@ -13,14 +13,12 @@ use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
-use snowbridge_beacon::{
-	BeaconBlock, BeaconHeader, Domain, ExecutionHeader, ForkData, PublicKey, Root, SigningData,
-	SyncAggregate, SyncCommittee,
-};
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
+use snowbridge_core::{Message, Verifier};
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
@@ -101,7 +99,9 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	use milagro_bls::{AggregatePublicKey, AggregateSignature, AmclError, Signature};
-	use sp_core::H160;
+	use sp_core::{H160, U256};
+	use snowbridge_core::Proof;
+	use snowbridge_ethereum::{Log, Receipt, Header as EthereumHeader};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -133,6 +133,9 @@ pub mod pallet {
 		SignatureVerificationFailed,
 		NoBranchExpected,
 		HeaderNotFinalized,
+		MissingHeader,
+		InvalidProof,
+		DecodeFailed
 	}
 
 	#[pallet::hooks]
@@ -303,21 +306,6 @@ pub mod pallet {
 				"💫 Stored execution header {} at beacon slot {}.",
 				block_hash,
 				slot
-			);
-
-			Ok(())
-		}
-
-		#[pallet::weight(1_000_000)]
-		#[transactional]
-		pub fn verify_eth1_receipt_inclusion(
-			origin: OriginFor<T>,
-		) -> DispatchResult {
-			let _sender = ensure_signed(origin)?;
-
-			log::trace!(
-				target: "ethereum-beacon-client",
-				"💫 Received transaction to be validated.",
 			);
 
 			Ok(())
@@ -779,6 +767,101 @@ pub mod pallet {
 			}
 
 			Ok(sync_committee)
+		}
+
+		// Verifies that the receipt encoded in proof.data is included
+		// in the block given by proof.block_hash. Inclusion is only
+		// recognized if the block has been finalized.
+		fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
+			let stored_header =
+				<ExecutionHeaders<T>>::get(proof.block_hash).ok_or(Error::<T>::MissingHeader)?;
+
+			let result = stored_header
+				.check_receipt_proof(&proof.data.1)
+				.ok_or(Error::<T>::InvalidProof)?;
+
+			match result {
+				Ok(receipt) => Ok(receipt),
+				Err(err) => {
+					log::trace!(
+						target: "ethereum-beacon-client",
+						"Failed to decode transaction receipt: {}",
+						err
+					);
+					Err(Error::<T>::InvalidProof.into())
+				},
+			}
+		}
+	}
+
+	impl<T: Config> Verifier for Pallet<T> {
+		/// Verify a message by verifying the existence of the corresponding
+		/// Ethereum log in a block. Returns the log if successful.
+		fn verify(message: &Message) -> Result<Log, DispatchError> {
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Verifying message with block hash {}",
+				message.proof.block_hash,
+			);
+
+			let receipt = match Self::verify_receipt_inclusion(&message.proof) {
+				Ok(receipt) => receipt,
+				Err(err) => {
+					log::trace!(
+						target: "ethereum-beacon-client",
+						"Verify receipt inclusion failed for block {}: {:?}",
+						message.proof.block_hash,
+						err
+					);
+					return Err(err)
+				}
+			};
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"Verified receipt inclusion for transaction at index {} in block {}",
+				message.proof.tx_index, message.proof.block_hash,
+			);
+
+			let log = match rlp::decode(&message.data) {
+				Ok(log) => log,
+				Err(err) => {
+					log::trace!(
+						target: "ethereum-beacon-client",
+						"RLP log decoded failed {}: {:?}",
+						message.proof.block_hash,
+						err
+					);
+					return Err(Error::<T>::DecodeFailed.into());
+				}
+			};
+
+			if !receipt.contains_log(&log) {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"Event log not found in receipt for transaction at index {} in block {}",
+					message.proof.tx_index, message.proof.block_hash,
+				);
+				return Err(Error::<T>::InvalidProof.into())
+			}
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Receipt verification successful for {}",
+				message.proof.block_hash,
+			);
+
+			Ok(log)
+		}
+
+		// Empty implementation, not necessary for the beacon client,
+		// but needs to be declared to implement Verifier interface.
+		fn initialize_storage(
+			_headers: Vec<EthereumHeader>,
+			_initial_difficulty: U256,
+			_descendants_until_final: u8,
+		) -> Result<(), &'static str> {
+			Ok(())
 		}
 	}
 }

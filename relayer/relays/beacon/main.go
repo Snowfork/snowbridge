@@ -5,15 +5,14 @@ import (
 	"errors"
 	"time"
 
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
-
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -23,6 +22,8 @@ type Relay struct {
 	keypair  *sr25519.Keypair
 	paraconn *parachain.Connection
 	writer   *ParachainWriter
+	listener *EthereumListener
+	ethconn  *ethereum.Connection
 }
 
 func NewRelay(
@@ -38,8 +39,14 @@ func NewRelay(
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint)
+	r.ethconn = ethereum.NewConnection(r.config.Source.Ethereum.Endpoint, nil)
 
 	err := r.paraconn.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = r.ethconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -53,7 +60,22 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	return r.Sync(ctx)
+	r.listener = NewEthereumListener(
+		&r.config.Source,
+		r.ethconn,
+	)
+
+	err = r.listener.Start(ctx, eg)
+	if err != nil {
+		return err
+	}
+
+	err = r.Sync(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *Relay) Sync(ctx context.Context) error {
@@ -114,14 +136,14 @@ func (r *Relay) Sync(ctx context.Context) error {
 }
 
 func (r *Relay) InitialSync(ctx context.Context) (syncer.InitialSync, error) {
-	initialSync, err := r.syncer.InitialSync("0x73504113348a42e26c7ac8835fc0397524d05c2ac0b11748a28bc47ad54a475c")
+	initialSync, err := r.syncer.InitialSync("0x088241fcf1cf63040b804498c945d3a6ae5484e65692483747fba5b8902c99c9")
 	if err != nil {
 		logrus.WithError(err).Error("unable to do initial beacon chain sync")
 
 		return syncer.InitialSync{}, err
 	}
 
-	err = r.writer.WriteToParachain(ctx, "initial_sync", initialSync)
+	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.initial_sync", initialSync)
 	if err != nil {
 		logrus.WithError(err).Error("unable to write to parachain")
 
@@ -153,7 +175,7 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 
 	syncCommitteeUpdate.SyncCommitteePeriod = types.NewU64(period)
 
-	return r.writer.WriteToParachain(ctx, "sync_committee_period_update", syncCommitteeUpdate)
+	return r.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
 }
 
 func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeaderUpdate, common.Hash, error) {
@@ -192,7 +214,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
 	}
 
-	err = r.writer.WriteToParachain(ctx, "import_finalized_header", finalizedHeaderUpdate)
+	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_finalized_header", finalizedHeaderUpdate)
 	if err != nil {
 		logrus.WithError(err).Error("unable to write to parachain")
 
@@ -220,7 +242,7 @@ func (r *Relay) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggre
 
 	headerUpdate.SyncAggregate = syncAggregate
 
-	err = r.writer.WriteToParachain(ctx, "import_execution_header", headerUpdate)
+	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
 	if err != nil {
 		logrus.WithError(err).Error("unable to write to parachain")
 
@@ -269,12 +291,37 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
 		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 	}
-	
 
 	// Import the execution header for the second last finalized header too.
 	_, err = r.SyncHeader(ctx, blockRoot, prevSyncAggregate)
 	if err != nil {
 		return err
+	}
+
+	lastBlockNumber, secondLastBlockNumber, err := r.syncer.GetBlockRange(lastFinalizedHeader, secondLastFinalizedHeader)
+	if err != nil {
+		return err
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"start": secondLastBlockNumber,
+		"end":   lastBlockNumber - 1,
+	}).Info("Processing events for block numbers")
+
+	payload, err := r.listener.ProcessEvents(ctx, secondLastBlockNumber, lastBlockNumber-1)
+	if err != nil {
+		return err
+	}
+
+	return r.writeMessages(ctx, payload)
+}
+
+func (r *Relay) writeMessages(ctx context.Context, payload ParachainPayload) error {
+	for _, msg := range payload.Messages {
+		err := r.writer.WriteToParachain(ctx, msg.Call, msg.Args...)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
