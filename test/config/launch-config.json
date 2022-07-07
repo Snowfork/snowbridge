@@ -50,7 +50,6 @@
           "port": 31200,
           "name": "alice",
           "flags": [
-            "-lethereum-light-client=trace",
             "--rpc-port=8081",
             "--rpc-cors=all",
             "--ws-external",

@@ -1,5 +1,5 @@
 [package]
-name = "snowbridge-beacon"
+name = "snowbridge-beacon-primitives"
 version = "0.0.1"
 authors = [ "Snowfork <contact@snowfork.com>" ]
 edition = "2021"

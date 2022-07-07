@@ -12,7 +12,6 @@ import (
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/ethashproof"
 	"golang.org/x/sync/errgroup"
 )
