@@ -32,7 +32,6 @@ pub use weights::WeightInfo;
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
 )]
 #[scale_info(skip_type_params(M, N))]
-// TODO: figure out why this mel_bound call is unnecessary
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct MessageBundle<AccountId, M: Get<u32>, N: Get<u32>>
 where
@@ -40,7 +39,7 @@ where
 {
 	source_channel_id: u8,
 	account: AccountId,
-	/// Unique nonce for to prevent replaying bundles
+	/// Unique nonce to prevent replaying bundles
 	#[codec(compact)]
 	nonce: u64,
 	messages: BoundedVec<Message<M>, N>,
@@ -115,8 +114,6 @@ pub type MessageBundleOf<T> = MessageBundle<
 >;
 pub type EnqueuedMessageOf<T> =
 	EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
-
-use sp_api;
 
 pub use pallet::*;
 
