@@ -937,7 +937,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_scheduler, Scheduler);
 			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
 			list_benchmark!(list, extra, assets, Assets);
-			list_benchmark!(list, extra, basic_channel::outbound, BasicOutboundChannel);
+			list_benchmark!(list, extra, basic_channel_outbound, BasicOutboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::inbound, IncentivizedInboundChannel);
 			list_benchmark!(list, extra, incentivized_channel::outbound, IncentivizedOutboundChannel);
 			list_benchmark!(list, extra, dot_app, DotAppBench::<Runtime>);
@@ -990,7 +990,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
 			add_benchmark!(params, batches, ethereum_light_client, EthereumLightClient);
 			add_benchmark!(params, batches, assets, Assets);
-			add_benchmark!(params, batches, basic_channel::outbound, BasicOutboundChannel);
+			add_benchmark!(params, batches, basic_channel_outbound, BasicOutboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
 			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
 			add_benchmark!(params, batches, dot_app, DotAppBench::<Runtime>);
