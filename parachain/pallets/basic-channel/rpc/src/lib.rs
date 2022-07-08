@@ -5,14 +5,14 @@ use codec::Encode;
 use sp_core::H256;
 use sp_runtime::{
 	offchain::storage::StorageValueRef,
-	traits::{Block as BlockT, Keccak256},
+	traits::Keccak256,
 };
 
 use snowbridge_basic_channel_merkle_proof::merkle_proof;
 use snowbridge_basic_channel_primitives::StoredLeaves;
 
 #[rpc]
-pub trait BasicChannelApi<BlockHash> {
+pub trait BasicChannelApi {
 	#[rpc(name = "basicChannel_getMerkleProof")]
 	fn get_merkle_proof(
 		&self,
@@ -21,19 +21,15 @@ pub trait BasicChannelApi<BlockHash> {
 	) -> Result<Vec<u8>>;
 }
 
-pub struct BasicChannel<B> {
-	_marker: std::marker::PhantomData<B>,
-}
+pub struct BasicChannel;
 
-impl<B> BasicChannel<B> {
+impl BasicChannel {
 	pub fn new() -> Self {
-		Self { _marker: Default::default() }
+		Self {}
 	}
 }
 
-impl<Block> BasicChannelApi<<Block as BlockT>::Hash> for BasicChannel<Block>
-where
-	Block: BlockT,
+impl BasicChannelApi for BasicChannel
 {
 	fn get_merkle_proof(
 		&self,

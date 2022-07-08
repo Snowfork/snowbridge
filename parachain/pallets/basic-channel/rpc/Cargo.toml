@@ -13,10 +13,7 @@ codec = { version = "3.0.0", package = "parity-scale-codec", features = [ "deriv
 jsonrpc-core = "18.0.0"
 jsonrpc-core-client = "18.0.0"
 jsonrpc-derive = "18.0.0"
-serde = { version = "1.0.136", features = ["derive"] }
 
-sp-api = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19"}
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
 
