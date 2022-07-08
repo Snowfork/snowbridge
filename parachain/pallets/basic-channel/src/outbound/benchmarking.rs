@@ -10,6 +10,10 @@ use crate::outbound::Pallet as BasicOutboundChannel;
 const SEED: u32 = 0;
 
 benchmarks! {
+	where_clause {
+		where
+			T::AccountId: AsRef<[u8]>,
+	}
 	// Benchmark `on_initialize` under worst case conditions, i.e. messages
 	// in queue are committed.
 	on_initialize {

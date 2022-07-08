@@ -163,6 +163,7 @@ impl<T> snowbridge_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
 where
 	T: snowbridge_basic_channel::outbound::Config
 		+ snowbridge_incentivized_channel::outbound::Config,
+	T::AccountId: AsRef<[u8]>,
 {
 	fn submit(
 		channel_id: ChannelId,

@@ -47,13 +47,13 @@ where
 
 impl<AccountId, M: Get<u32>, N: Get<u32>> Into<Token> for MessageBundle<AccountId, M, N>
 where
-	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
+	AccountId: AsRef<[u8]> + Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
 {
 	fn into(self) -> Token {
 		Token::Tuple(vec![
 			Token::Uint(self.source_channel_id.into()),
 			// TODO: check the AccountId encoding expectation in the Ethereum contract
-			Token::FixedBytes(self.account.encode().as_slice().into()),
+			Token::FixedBytes(self.account.as_ref().into()),
 			Token::Uint(self.nonce.into()),
 			Token::Array(self.messages.into_iter().map(|message| message.into()).collect()),
 		])
@@ -119,9 +119,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-
 	use super::*;
-
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
@@ -202,7 +200,10 @@ pub mod pallet {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
+	where
+		T::AccountId: AsRef<[u8]>,
+	{
 		// Generate a message commitment every [`Interval`] blocks.
 		//
 		// The commitment hash is included in an [`AuxiliaryDigestItem`] in the block header,
@@ -228,7 +229,10 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> Pallet<T> {
+	impl<T: Config> Pallet<T>
+	where
+		T::AccountId: AsRef<[u8]>,
+	{
 		/// Submit message on the outbound channel
 		pub fn submit(who: &T::AccountId, target: H160, payload: &[u8]) -> DispatchResult {
 			ensure!(
