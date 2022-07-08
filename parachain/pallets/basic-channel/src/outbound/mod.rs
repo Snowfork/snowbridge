@@ -60,15 +60,6 @@ where
 	}
 }
 
-impl<AccountId, M: Get<u32>, N: Get<u32>> AsRef<[u8]> for MessageBundle<AccountId, M, N>
-where
-	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
-{
-	fn as_ref(&self) -> &[u8] {
-		&[0]
-	}
-}
-
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
 )]
