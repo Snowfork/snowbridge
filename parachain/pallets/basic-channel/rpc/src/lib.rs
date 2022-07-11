@@ -3,39 +3,26 @@ use jsonrpc_derive::rpc;
 
 use codec::Encode;
 use sp_core::H256;
-use sp_runtime::{
-	offchain::storage::StorageValueRef,
-	traits::Keccak256,
-};
+use sp_runtime::{offchain::storage::StorageValueRef, traits::Keccak256};
 
 use snowbridge_basic_channel_merkle_proof::merkle_proof;
 use snowbridge_basic_channel_primitives::StoredLeaves;
 
-#[rpc]
-pub trait BasicChannelApi {
-	#[rpc(name = "basicChannel_getMerkleProof")]
-	fn get_merkle_proof(
-		&self,
-		commitment_hash: H256,
-		leaf_index: u64,
-	) -> Result<Vec<u8>>;
-}
-
 pub struct BasicChannel;
-
 impl BasicChannel {
 	pub fn new() -> Self {
 		Self {}
 	}
 }
 
-impl BasicChannelApi for BasicChannel
-{
-	fn get_merkle_proof(
-		&self,
-		commitment_hash: H256,
-		leaf_index: u64,
-	) -> Result<Vec<u8>> {
+#[rpc]
+pub trait BasicChannelApi {
+	#[rpc(name = "basicChannel_getMerkleProof")]
+	fn get_merkle_proof(&self, commitment_hash: H256, leaf_index: u64) -> Result<Vec<u8>>;
+}
+
+impl BasicChannelApi for BasicChannel {
+	fn get_merkle_proof(&self, commitment_hash: H256, leaf_index: u64) -> Result<Vec<u8>> {
 		let oci_mem = StorageValueRef::persistent(&commitment_hash.as_bytes());
 
 		if let Ok(Some(StoredLeaves(leaves))) = oci_mem.get::<StoredLeaves>() {
