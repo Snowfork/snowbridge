@@ -42,6 +42,7 @@ pub fn get_chain_spec() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 					get_account_id_from_seed::<sr25519::Public>("Relay"),
+					get_account_id_from_seed::<sr25519::Public>("BeaconRelay"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
@@ -114,6 +115,7 @@ fn testnet_genesis(
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
 		},
+		ethereum_beacon_client: snowblink_runtime::EthereumBeaconClientConfig {},
 		dot_app: snowblink_runtime::DotAppConfig {
 			address: Default::default(),
 		},

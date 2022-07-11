@@ -50,7 +50,7 @@ For a fully operational chain, further configuration of the initial chain spec i
 Build an initial spec for the snowbase runtime:
 
 ```bash
-target/debug/snowbridge build-spec --chain snowbase --disable-default-bootnode > spec.json
+target/release/snowbridge build-spec --chain snowbase --disable-default-bootnode > spec.json
 ```
 
 Now edit the spec and configure the following:

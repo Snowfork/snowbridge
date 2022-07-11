@@ -5,6 +5,8 @@ use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use sp_core::{H160, H256, U256};
+use sp_io::hashing::keccak_256;
+use snowbridge_ethereum::mpt;
 
 pub type Root = H256;
 pub type Domain = H256;
@@ -33,7 +35,7 @@ pub struct SigningData {
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Header {
+pub struct ExecutionHeader {
 	pub parent_hash: H256,
 	pub fee_recipient: H160,
 	pub state_root: H256,
@@ -41,13 +43,13 @@ pub struct Header {
 	pub logs_bloom: Vec<u8>,
 	pub prev_randao: H256,
 	pub block_number: u64,
-	pub gas_used: U256,
-	pub gas_limit: U256,
+	pub gas_limit: u64,
+	pub gas_used: u64,
 	pub timestamp: u64,
 	pub extra_data: Vec<u8>,
-	pub base_fee_per_gas: Option<U256>,
+	pub base_fee_per_gas: U256,
 	pub block_hash: H256,
-	pub transactions: Vec<u8>,
+	pub transactions_root: H256,
 }
 
 /// Sync committee as it is stored in the runtime storage.
@@ -168,7 +170,7 @@ pub struct ExecutionPayload {
 	pub extra_data: Vec<u8>,
 	pub base_fee_per_gas: U256,
 	pub block_hash: H256,
-	pub transactions: Vec<Vec<u8>>,
+	pub transactions_root: H256,
 }
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -192,4 +194,40 @@ pub struct BeaconBlock {
 	pub parent_root: H256,
 	pub state_root: H256,
 	pub body: Body,
+}
+
+impl ExecutionHeader {
+	// Copied from ethereum_snowbridge::header
+	pub fn check_receipt_proof(
+		&self,
+		proof: &[Vec<u8>],
+	) -> Option<Result<snowbridge_ethereum::Receipt, rlp::DecoderError>> {
+		match self.apply_merkle_proof(proof) {
+			Some((root, data)) if root == self.receipts_root => Some(rlp::decode(&data)),
+			Some((_, _)) => None,
+			None => None,
+		}
+	}
+
+	// Copied from ethereum_snowbridge::header
+	pub fn apply_merkle_proof(&self, proof: &[Vec<u8>]) -> Option<(H256, Vec<u8>)> {
+		let mut iter = proof.into_iter().rev();
+		let first_bytes = match iter.next() {
+			Some(b) => b,
+			None => return None,
+		};
+		let item_to_prove: mpt::ShortNode = rlp::decode(first_bytes).ok()?;
+
+		let final_hash: Option<[u8; 32]> =
+			iter.fold(Some(keccak_256(first_bytes)), |maybe_hash, bytes| {
+				let expected_hash = maybe_hash?;
+				let node: Box<dyn mpt::Node> = bytes.as_slice().try_into().ok()?;
+				if (*node).contains_hash(expected_hash.into()) {
+					return Some(keccak_256(bytes));
+				}
+				None
+			});
+
+		final_hash.map(|hash| (hash.into(), item_to_prove.value))
+	}
 }

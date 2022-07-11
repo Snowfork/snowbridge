@@ -1,7 +1,13 @@
 {
   "source": {
     "beacon": {
-      "endpoint": "https://lodestar-kiln.chainsafe.io"
+      "endpoint": "http://localhost:9596"
+    },
+    "ethereum": {
+      "endpoint": "ws://localhost:8546"
+    },
+    "contracts": {
+      "BasicOutboundChannel": null
     }
   },
   "sink": {

@@ -60,13 +60,13 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 	return uint32(accountInfo.Nonce), nil
 }
 
-func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName string, payload interface{}) error {
+func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) error {
 	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
 		return err
 	}
 
-	c, err := types.NewCall(meta, "EthereumBeaconLightClient."+extrinsicName, payload)
+	c, err := types.NewCall(meta, extrinsicName, payload...)
 	if err != nil {
 		return err
 	}

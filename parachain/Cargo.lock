@@ -1874,7 +1874,7 @@ dependencies = [
  "cumulus-primitives-core",
  "derive_more",
  "futures 0.3.21",
- "jsonrpsee-core",
+ "jsonrpsee-core 0.10.1",
  "parity-scale-codec",
  "parking_lot 0.12.0",
  "polkadot-overseer",
@@ -1900,7 +1900,7 @@ dependencies = [
  "cumulus-relay-chain-interface",
  "futures 0.3.21",
  "futures-timer",
- "jsonrpsee",
+ "jsonrpsee 0.10.1",
  "parity-scale-codec",
  "parking_lot 0.12.0",
  "polkadot-service",
@@ -3723,12 +3723,21 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91dc760c341fa81173f9a434931aaf32baad5552b0230cc6c93e8fb7eaad4c19"
 dependencies = [
- "jsonrpsee-client-transport",
- "jsonrpsee-core",
+ "jsonrpsee-core 0.10.1",
  "jsonrpsee-http-client",
  "jsonrpsee-proc-macros",
- "jsonrpsee-types",
+ "jsonrpsee-types 0.10.1",
  "jsonrpsee-ws-client",
+]
+
+[[package]]
+name = "jsonrpsee"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11e017217fcd18da0a25296d3693153dd19c8a6aadab330b3595285d075385d1"
+dependencies = [
+ "jsonrpsee-client-transport 0.14.0",
+ "jsonrpsee-core 0.14.0",
 ]
 
 [[package]]
@@ -3739,8 +3748,29 @@ checksum = "765f7a36d5087f74e3b3b47805c2188fef8eb54afcb587b078d9f8ebfe9c7220"
 dependencies = [
  "futures 0.3.21",
  "http",
- "jsonrpsee-core",
- "jsonrpsee-types",
+ "jsonrpsee-core 0.10.1",
+ "jsonrpsee-types 0.10.1",
+ "pin-project 1.0.10",
+ "rustls-native-certs 0.6.1",
+ "soketto",
+ "thiserror",
+ "tokio",
+ "tokio-rustls 0.23.3",
+ "tokio-util 0.7.1",
+ "tracing",
+ "webpki-roots 0.22.3",
+]
+
+[[package]]
+name = "jsonrpsee-client-transport"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce395539a14d3ad4ec1256fde105abd36a2da25d578a291cabe98f45adfdb111"
+dependencies = [
+ "futures-util",
+ "http",
+ "jsonrpsee-core 0.14.0",
+ "jsonrpsee-types 0.14.0",
  "pin-project 1.0.10",
  "rustls-native-certs 0.6.1",
  "soketto",
@@ -3765,11 +3795,33 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "hyper",
- "jsonrpsee-types",
+ "jsonrpsee-types 0.10.1",
  "rustc-hash",
  "serde",
  "serde_json",
  "soketto",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "jsonrpsee-core"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16efcd4477de857d4a2195a45769b2fe9ebb54f3ef5a4221d3b014a4fe33ec0b"
+dependencies = [
+ "anyhow",
+ "async-lock",
+ "async-trait",
+ "beef",
+ "futures-channel",
+ "futures-timer",
+ "futures-util",
+ "jsonrpsee-types 0.14.0",
+ "rustc-hash",
+ "serde",
+ "serde_json",
  "thiserror",
  "tokio",
  "tracing",
@@ -3784,8 +3836,8 @@ dependencies = [
  "async-trait",
  "hyper",
  "hyper-rustls 0.23.0",
- "jsonrpsee-core",
- "jsonrpsee-types",
+ "jsonrpsee-core 0.10.1",
+ "jsonrpsee-types 0.10.1",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -3821,14 +3873,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsonrpsee-types"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bcf76cd316f5d3ad48138085af1f45e2c58c98e02f0779783dbb034d43f7c86"
+dependencies = [
+ "anyhow",
+ "beef",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
 name = "jsonrpsee-ws-client"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd66d18bab78d956df24dd0d2e41e4c00afbb818fda94a98264bdd12ce8506ac"
 dependencies = [
- "jsonrpsee-client-transport",
- "jsonrpsee-core",
- "jsonrpsee-types",
+ "jsonrpsee-client-transport 0.10.1",
+ "jsonrpsee-core 0.10.1",
+ "jsonrpsee-types 0.10.1",
 ]
 
 [[package]]
@@ -8233,7 +8299,7 @@ version = "0.10.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19#174735ea1bb5fc4513519c45181d8df63d86f613"
 dependencies = [
  "env_logger",
- "jsonrpsee",
+ "jsonrpsee 0.10.1",
  "log",
  "parity-scale-codec",
  "serde",
@@ -10108,6 +10174,7 @@ dependencies = [
  "snowbridge-dot-app",
  "snowbridge-erc20-app",
  "snowbridge-eth-app",
+ "snowbridge-ethereum-beacon-client",
  "snowbridge-ethereum-light-client",
  "snowbridge-incentivized-channel",
  "snowbridge-runtime-common",
@@ -10291,15 +10358,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-beacon"
+name = "snowbridge-beacon-primitives"
 version = "0.0.1"
 dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
+ "rlp",
  "scale-info",
  "serde",
+ "snowbridge-ethereum",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
 ]
@@ -10461,10 +10531,11 @@ dependencies = [
  "hex-literal",
  "milagro_bls",
  "parity-scale-codec",
+ "rlp",
  "scale-info",
  "serde",
  "serde_json",
- "snowbridge-beacon",
+ "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-ethereum",
  "snowbridge-testutils",
@@ -10590,6 +10661,7 @@ dependencies = [
  "snowbridge-dot-app",
  "snowbridge-erc20-app",
  "snowbridge-eth-app",
+ "snowbridge-ethereum-beacon-client",
  "snowbridge-ethereum-light-client",
  "snowbridge-incentivized-channel",
  "snowbridge-runtime-common",
@@ -11955,17 +12027,16 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "subxt"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ab902b8d1bf5ecdc16c78e1f7fdef77665d5ce77004b2be1f6ac4b4f679d987"
+checksum = "e731c0245979a80f9090a89b43635e23f367f13a225695f286f307978db36f11"
 dependencies = [
  "bitvec",
  "derivative",
  "frame-metadata",
  "futures 0.3.21",
  "hex",
- "jsonrpsee",
- "log",
+ "jsonrpsee 0.14.0",
  "parity-scale-codec",
  "parking_lot 0.12.0",
  "scale-info",
@@ -11976,13 +12047,14 @@ dependencies = [
  "subxt-macro",
  "subxt-metadata",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]
 name = "subxt-codegen"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ac3c4e3565338616f009bc40419f45fa7d9472a5717fa8cce129777c709d1a1"
+checksum = "4c9462b52d539cde2e0dbbd1c89d28079459ed790f42218c5bfc9d61c9575e32"
 dependencies = [
  "darling",
  "frame-metadata",
@@ -11998,9 +12070,9 @@ dependencies = [
 
 [[package]]
 name = "subxt-macro"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "078edfe8f06cb00848e2e64e923fe809f345042c3d7ec13edcd7f0e617656a9b"
+checksum = "38521809516f4c244b6f38ed13fc67ef6ada29a846fa26123a4206ff743f3461"
 dependencies = [
  "darling",
  "proc-macro-error",
@@ -12010,9 +12082,9 @@ dependencies = [
 
 [[package]]
 name = "subxt-metadata"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2819a10a1a13bd9645419f59ac9d7cc8deb51052566b9d0c2157354ea44513d5"
+checksum = "37b01bac35f2524ce590fa1438fb6c81a63df1b4c94f686be391afd8d02615b3"
 dependencies = [
  "frame-metadata",
  "parity-scale-codec",
@@ -12510,7 +12582,7 @@ version = "0.10.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19#174735ea1bb5fc4513519c45181d8df63d86f613"
 dependencies = [
  "clap",
- "jsonrpsee",
+ "jsonrpsee 0.10.1",
  "log",
  "parity-scale-codec",
  "remote-externalities",
