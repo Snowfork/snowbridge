@@ -292,10 +292,7 @@ pub mod pallet {
 		}
 
 		fn make_message_bundles(
-			message_queue: BoundedVec<
-				EnqueuedMessage<T::AccountId, <T as Config>::MaxMessagePayloadSize>,
-				<T as Config>::MaxMessagesPerCommit,
-			>,
+			message_queue: BoundedVec<EnqueuedMessageOf<T>, <T as Config>::MaxMessagesPerCommit>,
 		) -> Vec<MessageBundleOf<T>> {
 			let account_message_map: BTreeMap<
 				T::AccountId,
