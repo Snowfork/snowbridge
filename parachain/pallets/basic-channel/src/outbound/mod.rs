@@ -308,13 +308,14 @@ pub mod pallet {
 					if let Some(messages) = messages_for_accounts.get_mut(&account) {
 						// We should be able to safely ignore the result here, since we can't have
 						// more messages for a single account than we have in the message queue
-						messages.try_push(message);
+						messages.try_push(message).unwrap();
 					} else {
 						let mut messages = BoundedVec::default();
 						// Safe to ignore the result because we just created the empty BoundedVec
-						messages.try_push(message);
+						messages.try_push(message).unwrap();
 						messages_for_accounts.insert(account, messages);
 					}
+
 					messages_for_accounts
 				},
 			);
