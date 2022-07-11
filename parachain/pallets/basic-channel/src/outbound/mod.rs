@@ -206,18 +206,6 @@ pub mod pallet {
 		}
 	}
 
-	// TODO: replace this call with leaf proof creation
-	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::set_principal())]
-		pub fn set_principal(
-			_origin: OriginFor<T>,
-			_principal: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResult {
-			Ok(())
-		}
-	}
-
 	impl<T: Config> Pallet<T>
 	where
 		T::AccountId: AsRef<[u8]>,

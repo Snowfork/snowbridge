@@ -35,7 +35,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage},
-		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
+		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Config<T>, Storage, Event<T>},
 		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
 		Erc20App: crate::{Pallet, Call, Config, Storage, Event<T>},

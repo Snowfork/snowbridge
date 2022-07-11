@@ -25,7 +25,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		BasicOutboundChannel: basic_outbound_channel::{Pallet, Call, Config<T>, Storage, Event<T>},
+		BasicOutboundChannel: basic_outbound_channel::{Pallet, Config<T>, Storage, Event<T>},
 	}
 );
 

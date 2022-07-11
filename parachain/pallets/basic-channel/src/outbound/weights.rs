@@ -40,7 +40,6 @@ pub trait WeightInfo {
 	fn on_initialize(m: u32, p: u32, ) -> Weight;
 	fn on_initialize_non_interval() -> Weight;
 	fn on_initialize_no_messages() -> Weight;
-	fn set_principal() -> Weight;
 }
 
 /// Weights for basic_channel::outbound using the Snowbridge node and recommended hardware.
@@ -63,10 +62,6 @@ impl<T: frame_system::Config> WeightInfo for SnowbridgeWeight<T> {
 		(5_228_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 	}
-	fn set_principal() -> Weight {
-		(2_544_000 as Weight)
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
 }
 
 // For backwards compatibility and tests
@@ -87,9 +82,5 @@ impl WeightInfo for () {
 	fn on_initialize_no_messages() -> Weight {
 		(5_228_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-	}
-	fn set_principal() -> Weight {
-		(2_544_000 as Weight)
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
 }
