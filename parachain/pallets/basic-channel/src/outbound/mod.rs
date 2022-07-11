@@ -151,8 +151,6 @@ pub mod pallet {
 		QueueSizeLimitReached,
 		/// Cannot increment nonce
 		Overflow,
-		/// Not authorized to send message
-		NotAuthorized,
 	}
 
 	/// Interval between commitments
