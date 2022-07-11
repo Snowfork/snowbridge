@@ -156,24 +156,33 @@ pub mod pallet {
 		StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
 
 	#[pallet::storage]
+	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {}
+	pub struct GenesisConfig {
+		pub initial_header: BeaconHeader,
+	}
 
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
-		fn default() -> Self {
-			Self {}
-		}
+		fn default() -> Self { Self {
+			initial_header: Default::default()
+		}}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {}
+		fn build(&self) {
+			Pallet::<T>::initial_sync_test(
+				self.initial_header.clone(),
+			).unwrap();
+		}
 	}
 
 	#[pallet::call]
@@ -623,6 +632,17 @@ pub mod pallet {
 
 		fn store_sync_committee(period: u64, sync_committee: SyncCommittee) {
 			<SyncCommittees<T>>::insert(period, sync_committee);
+
+			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
+
+			if period > latest_committee_period {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"💫 Updated latest sync committee period stored to {}.",
+					period
+				);
+				<LatestSyncCommitteePeriod<T>>::set(period);
+			}
 		}
 
 		fn store_finalized_header(block_root: H256, header: BeaconHeader) {
@@ -791,6 +811,12 @@ pub mod pallet {
 					Err(Error::<T>::InvalidProof.into())
 				},
 			}
+		}
+
+		pub fn initial_sync_test(
+			_header: BeaconHeader,
+		) -> Result<(), &'static str> {
+			Ok(())
 		}
 	}
 

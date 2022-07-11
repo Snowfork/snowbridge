@@ -8,6 +8,9 @@ use sp_core::{H160, H256, U256};
 use sp_io::hashing::keccak_256;
 use snowbridge_ethereum::mpt;
 
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 pub type Root = H256;
 pub type Domain = H256;
 pub type ValidatorIndex = u64;
@@ -62,6 +65,7 @@ pub struct SyncCommittee {
 /// Beacon block header as it is stored in the runtime storage. The block root is the
 /// Merklization of a BeaconHeader.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct BeaconHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
 	pub slot: u64,
