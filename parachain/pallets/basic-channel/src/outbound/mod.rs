@@ -246,11 +246,14 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// For every account id in the enqueued messages, create an Eth ABI-encoded message
-		/// bundle containing the messages for that account. Hash the ethabi encoding of these
-		/// message bundles with a Merkle tree to produce a commitment hash. Then store the
-		/// commitment on the parachain, emit an event with the commitment and SCALE-encoded
-		/// message bundles and persist the ethabi-encoded message bundles to off-chain storage.
+		/// Commit messages enqueued on the outbound channel.
+		/// For every account id in the enqueued messages, create a message bundle containing the
+		/// messages for that account. Hash the ethabi encoding of these message bundles in a
+		/// Merkle tree to produce a commitment hash. Then:
+		/// - Store the commitment hash on the parachain for the Ethereum light client to query.
+		/// - Emit an event with the commitment hash and SCALE-encoded message bundles for a
+		/// relayer to read.
+		/// - Persist the ethabi-encoded message bundles to off-chain storage.
 		fn commit() -> Weight {
 			// TODO: consider using mutate_exists here. If some part of emitting message bundles
 			// fails, we don't want the MessageQueue to be empty.
