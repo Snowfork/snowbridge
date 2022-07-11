@@ -551,7 +551,7 @@ impl dispatch::Config for Runtime {
 	type CallFilter = Everything;
 }
 
-use incentivized_channel::{
+use snowbridge_incentivized_channel::{
 	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
 };
 use snowbridge_basic_channel::{
@@ -594,7 +594,7 @@ impl incentivized_channel_inbound::Config for Runtime {
 	type TreasuryAccount = TreasuryAccount;
 	type FeeConverter = FeeConverter;
 	type UpdateOrigin = EnsureRootOrHalfLocalCouncil;
-	type WeightInfo = incentivized_channel::inbound::weights::SnowbridgeWeight<Self>;
+	type WeightInfo = incentivized_channel_inbound::weights::SnowbridgeWeight<Self>;
 }
 
 impl incentivized_channel_outbound::Config for Runtime {
@@ -604,7 +604,7 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
 	type FeeCurrency = ItemOf<Assets, EtherAssetId, AccountId>;
 	type SetFeeOrigin = EnsureRootOrHalfLocalCouncil;
-	type WeightInfo = incentivized_channel::outbound::weights::SnowbridgeWeight<Self>;
+	type WeightInfo = incentivized_channel_outbound::weights::SnowbridgeWeight<Self>;
 }
 
 parameter_types! {
@@ -942,8 +942,8 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
 			list_benchmark!(list, extra, assets, Assets);
 			list_benchmark!(list, extra, basic_channel_outbound, BasicOutboundChannel);
-			list_benchmark!(list, extra, incentivized_channel::inbound, IncentivizedInboundChannel);
-			list_benchmark!(list, extra, incentivized_channel::outbound, IncentivizedOutboundChannel);
+			list_benchmark!(list, extra, incentivized_channel_inbound, IncentivizedInboundChannel);
+			list_benchmark!(list, extra, incentivized_channel_outbound, IncentivizedOutboundChannel);
 			list_benchmark!(list, extra, dot_app, DotAppBench::<Runtime>);
 			list_benchmark!(list, extra, erc20_app, Erc20AppBench::<Runtime>);
 			list_benchmark!(list, extra, eth_app, EthAppBench::<Runtime>);
@@ -995,8 +995,8 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, ethereum_light_client, EthereumLightClient);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel_outbound, BasicOutboundChannel);
-			add_benchmark!(params, batches, incentivized_channel::inbound, IncentivizedInboundChannel);
-			add_benchmark!(params, batches, incentivized_channel::outbound, IncentivizedOutboundChannel);
+			add_benchmark!(params, batches, incentivized_channel_inbound, IncentivizedInboundChannel);
+			add_benchmark!(params, batches, incentivized_channel_outbound, IncentivizedOutboundChannel);
 			add_benchmark!(params, batches, dot_app, DotAppBench::<Runtime>);
 			add_benchmark!(params, batches, erc20_app, Erc20AppBench::<Runtime>);
 			add_benchmark!(params, batches, eth_app, EthAppBench::<Runtime>);
