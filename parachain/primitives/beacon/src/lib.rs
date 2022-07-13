@@ -7,9 +7,18 @@ use sp_std::prelude::*;
 use sp_core::{H160, H256, U256};
 use sp_io::hashing::keccak_256;
 use snowbridge_ethereum::mpt;
+use core::fmt::Formatter;
 
 #[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer, Deserializer};
+#[cfg(feature = "std")]
+use serde::ser::SerializeTupleStruct;
+#[cfg(feature = "std")]
+use serde::de::Visitor;
+#[cfg(feature = "std")]
+use serde::de::Error;
+
+use sp_std::fmt::Result as StdResult;
 
 pub type Root = H256;
 pub type Domain = H256;
@@ -21,6 +30,40 @@ pub struct PublicKey(pub [u8; 48]);
 impl Default for PublicKey {
 	fn default() -> Self {
 		PublicKey([0u8; 48])
+	}
+}
+
+#[cfg(feature = "std")]
+impl Serialize for PublicKey {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+		let mut ts = serializer.serialize_tuple_struct("PublicKey", 1)?;
+		ts.serialize_field(&self.0.as_slice())?;
+		ts.end()
+	}
+}
+
+struct I8Visitor;
+
+#[cfg(feature = "std")]
+impl<'de> Visitor<'de> for I8Visitor {
+	type Value = PublicKey;
+
+	fn expecting(&self, _formatter: &mut Formatter) -> StdResult {
+		todo!()
+	}
+
+	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: Error {
+		let strvalue = v.as_bytes();
+		let mut data = [0u8; 48];
+		data[0..48].copy_from_slice(&(strvalue));
+		Ok(PublicKey(data))
+	}
+}
+
+#[cfg(feature = "std")]
+impl<'de> Deserialize<'de> for PublicKey {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+		deserializer.deserialize_bytes(I8Visitor)
 	}
 }
 
@@ -57,6 +100,7 @@ pub struct ExecutionHeader {
 
 /// Sync committee as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SyncCommittee {
 	pub pubkeys: Vec<PublicKey>,
 	pub aggregate_pubkey: PublicKey,

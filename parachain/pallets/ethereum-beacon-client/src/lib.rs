@@ -17,8 +17,11 @@ use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock, Root};
 use snowbridge_core::{Message, Verifier};
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 const SLOTS_PER_EPOCH: u64 = 32;
 
@@ -44,6 +47,7 @@ type ProofBranch = Vec<H256>;
 type ForkVersion = [u8; 4];
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct InitialSync {
 	pub header: BeaconHeader,
 	pub current_sync_committee: SyncCommittee,
@@ -85,14 +89,13 @@ pub struct BlockUpdate {
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Genesis {
-	pub validators_root: Root,
+	pub validators_root: H256,
 }
 
 pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-
 	use super::*;
 
 	use frame_support::pallet_prelude::*;
@@ -166,13 +169,13 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
-		pub initial_header: BeaconHeader,
+		pub initial_sync: InitialSync,
 	}
 
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
-		fn default() -> Self { Self {
-			initial_header: Default::default()
+		fn default() -> Self { GenesisConfig {
+			initial_sync: Default::default(),
 		}}
 	}
 
@@ -180,7 +183,7 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
 			Pallet::<T>::initial_sync_test(
-				self.initial_header.clone(),
+				self.initial_sync.clone(),
 			).unwrap();
 		}
 	}
@@ -569,7 +572,7 @@ pub mod pallet {
 		pub(super) fn compute_signing_root(
 			beacon_header: BeaconHeader,
 			domain: Domain,
-		) -> Result<Root, DispatchError> {
+		) -> Result<H256, DispatchError> {
 			let beacon_header_root = merkleization::hash_tree_root_beacon_header(beacon_header)
 				.map_err(|_| DispatchError::Other("Beacon header hash tree root failed"))?;
 
@@ -695,7 +698,7 @@ pub mod pallet {
 		pub(super) fn compute_domain(
 			domain_type: Vec<u8>,
 			fork_version: Option<ForkVersion>,
-			genesis_validators_root: Root,
+			genesis_validators_root: H256,
 		) -> Result<Domain, DispatchError> {
 			let unwrapped_fork_version: ForkVersion;
 			if fork_version.is_none() {
@@ -716,8 +719,8 @@ pub mod pallet {
 
 		fn compute_fork_data_root(
 			current_version: ForkVersion,
-			genesis_validators_root: Root,
-		) -> Result<Root, DispatchError> {
+			genesis_validators_root: H256,
+		) -> Result<H256, DispatchError> {
 			let hash_root = merkleization::hash_tree_root_fork_data(ForkData {
 				current_version,
 				genesis_validators_root: genesis_validators_root.into(),
@@ -732,7 +735,7 @@ pub mod pallet {
 			branch: Vec<H256>,
 			depth: u64,
 			index: u64,
-			root: Root,
+			root: H256,
 		) -> bool {
 			if branch.len() != depth as usize {
 				log::error!(target: "ethereum-beacon-client", "Merkle proof branch length doesn't match depth.");
@@ -814,8 +817,27 @@ pub mod pallet {
 		}
 
 		pub fn initial_sync_test(
-			_header: BeaconHeader,
+			initial_sync: InitialSync,
 		) -> Result<(), &'static str> {
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Received initial sync, starting processing.",
+			);
+
+			if let Err(err) = Self::process_initial_sync(initial_sync) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"Initial sync failed with error {:?}",
+					err
+				);
+				return Err(<&str>::from(err));
+			}
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Initial sync processing succeeded.",
+			);
+
 			Ok(())
 		}
 	}
