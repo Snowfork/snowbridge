@@ -14,7 +14,7 @@ use frame_support::{
 };
 use scale_info::TypeInfo;
 use sp_core::{H160, H256};
-use sp_runtime::traits::{Hash, StaticLookup, Zero};
+use sp_runtime::traits::{Hash, Zero};
 
 use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, prelude::*};
 
