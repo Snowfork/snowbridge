@@ -26,39 +26,6 @@ use snowbridge_basic_channel_merkle_proof::merkle_root;
 
 pub use weights::WeightInfo;
 
-/// Wire-format for committed messages
-#[derive(
-	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
-)]
-#[scale_info(skip_type_params(M, N))]
-#[codec(mel_bound(AccountId: MaxEncodedLen))]
-pub struct MessageBundle<AccountId, M: Get<u32>, N: Get<u32>>
-where
-	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
-{
-	source_channel_id: u8,
-	account: AccountId,
-	/// Unique nonce to prevent replaying bundles
-	#[codec(compact)]
-	nonce: u64,
-	messages: BoundedVec<Message<M>, N>,
-}
-
-impl<AccountId, M: Get<u32>, N: Get<u32>> Into<Token> for MessageBundle<AccountId, M, N>
-where
-	AccountId: AsRef<[u8]> + Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
-{
-	fn into(self) -> Token {
-		Token::Tuple(vec![
-			Token::Uint(self.source_channel_id.into()),
-			// TODO: check the AccountId encoding expectation in the Ethereum contract
-			Token::FixedBytes(self.account.as_ref().into()),
-			Token::Uint(self.nonce.into()),
-			Token::Array(self.messages.into_iter().map(|message| message.into()).collect()),
-		])
-	}
-}
-
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
 )]
@@ -97,13 +64,47 @@ impl<M: Get<u32>> Into<Token> for Message<M> {
 	}
 }
 
+pub type EnqueuedMessageOf<T> =
+	EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
+
+/// Wire-format for committed messages
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen, TypeInfo,
+)]
+#[scale_info(skip_type_params(M, N))]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
+pub struct MessageBundle<AccountId, M: Get<u32>, N: Get<u32>>
+where
+	AccountId: Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
+{
+	source_channel_id: u8,
+	account: AccountId,
+	/// Unique nonce to prevent replaying bundles
+	#[codec(compact)]
+	nonce: u64,
+	messages: BoundedVec<Message<M>, N>,
+}
+
+impl<AccountId, M: Get<u32>, N: Get<u32>> Into<Token> for MessageBundle<AccountId, M, N>
+where
+	AccountId: AsRef<[u8]> + Encode + Decode + Clone + PartialEq + Debug + MaxEncodedLen + TypeInfo,
+{
+	fn into(self) -> Token {
+		Token::Tuple(vec![
+			Token::Uint(self.source_channel_id.into()),
+			// TODO: check the AccountId encoding expectation in the Ethereum contract
+			Token::FixedBytes(self.account.as_ref().into()),
+			Token::Uint(self.nonce.into()),
+			Token::Array(self.messages.into_iter().map(|message| message.into()).collect()),
+		])
+	}
+}
+
 pub type MessageBundleOf<T> = MessageBundle<
 	<T as frame_system::Config>::AccountId,
 	<T as Config>::MaxMessagePayloadSize,
 	<T as Config>::MaxMessagesPerCommit,
 >;
-pub type EnqueuedMessageOf<T> =
-	EnqueuedMessage<<T as frame_system::Config>::AccountId, <T as Config>::MaxMessagePayloadSize>;
 
 pub use pallet::*;
 
