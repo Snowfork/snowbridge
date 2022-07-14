@@ -6,7 +6,6 @@ use sp_core::H256;
 use sp_runtime::{offchain::storage::StorageValueRef, traits::Keccak256};
 
 use snowbridge_basic_channel_merkle_proof::merkle_proof;
-use snowbridge_basic_channel_primitives::StoredLeaves;
 
 pub struct BasicChannel;
 impl BasicChannel {
@@ -25,7 +24,7 @@ impl BasicChannelApi for BasicChannel {
 	fn get_merkle_proof(&self, commitment_hash: H256, leaf_index: u64) -> Result<Vec<u8>> {
 		let oci_mem = StorageValueRef::persistent(&commitment_hash.as_bytes());
 
-		if let Ok(Some(StoredLeaves(leaves))) = oci_mem.get::<StoredLeaves>() {
+		if let Ok(Some(leaves)) = oci_mem.get::<Vec<Vec<u8>>>() {
 			let proof =
 				merkle_proof::<Keccak256, Vec<Vec<u8>>, Vec<u8>>(leaves, leaf_index).encode();
 

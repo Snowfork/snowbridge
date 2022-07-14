@@ -23,7 +23,6 @@ use sp_io::offchain_index::set;
 use snowbridge_core::{types::AuxiliaryDigestItem, ChannelId};
 
 use snowbridge_basic_channel_merkle_proof::merkle_root;
-use snowbridge_basic_channel_primitives::StoredLeaves;
 
 pub use weights::WeightInfo;
 
@@ -286,7 +285,7 @@ pub mod pallet {
 				data: message_bundles.clone(),
 			});
 
-			set(commitment_hash.as_bytes(), &StoredLeaves(eth_message_bundles).encode());
+			set(commitment_hash.as_bytes(), &eth_message_bundles.encode());
 
 			T::WeightInfo::on_initialize(message_count, average_payload_size)
 		}

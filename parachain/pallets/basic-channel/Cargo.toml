@@ -27,7 +27,6 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 snowbridge-basic-channel-merkle-proof = { path = "merkle-proof", default-features = false }
-snowbridge-basic-channel-primitives = { path = "primitives", default-features = false }
 ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 
 [dev-dependencies]
@@ -51,7 +50,6 @@ std = [
     "snowbridge-core/std",
     "snowbridge-ethereum/std",
     "snowbridge-basic-channel-merkle-proof/std",
-    "snowbridge-basic-channel-primitives/std",
     "ethabi/std"
 ]
 runtime-benchmarks = [
