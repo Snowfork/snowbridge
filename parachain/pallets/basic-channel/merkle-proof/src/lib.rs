@@ -135,9 +135,9 @@ impl Visitor for () {
 /// Construct a Merkle Proof for leaves given by indices.
 ///
 /// The function constructs a (partial) Merkle Tree first and stores all elements required
-/// to prove requested item (leaf) given the root hash.
+/// to prove the requested item (leaf) given the root hash.
 ///
-/// Both the Proof and the Root Hash is returned.
+/// Both the Proof and the Root Hash are returned.
 ///
 /// # Panic
 ///

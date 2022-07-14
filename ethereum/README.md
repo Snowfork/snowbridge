@@ -34,7 +34,7 @@ npx hardhat test
 
 ### Updating fixture data for unit tests
 
-We use logging artifacts from the relayer in E2E stack as a source of compliant fixture data.
+We use logging artifacts from the relayer in the E2E stack as a source of compliant fixture data.
 
 BEEFY commitment & proofs extracted from `../test/beefy-relay.log`.
 * test/fixtures/beefy-relay-basic.json
@@ -63,7 +63,7 @@ jq -s --argjson blocknumber $BLOCKNUMBER '.[] | select( .message | contains("Sen
 ```
 5: NOTE: if the produced `./test/fixtures/beefy-relay-basic.json` doesn't contain a `params.leaf` field, repeat all the steps again.
 
-Steps for updating the fixture data for the basic channel:
+Steps for updating the fixture data for the incentivized channel:
 1. Grep for `Sent transaction IncentivizedInboundChannel.submit` in `parachain-relay.json`
 2. Copy that log line into `./test/fixtures/parachain-relay-incentivized.json`
 3. In that file, take the `beefyBlock` field (a hash) and use polkadot.js explorer to find the corresponding block number.
@@ -113,7 +113,7 @@ yarn hardhat renounce \
   --network localhost
 ```
 
-### View the address of deployed contract's
+### View the address of deployed contracts
 
 ```sh
 yarn hardhat  contractAddressList \
