@@ -8,6 +8,7 @@ use sp_core::{H160, H256, U256};
 use sp_io::hashing::keccak_256;
 use snowbridge_ethereum::mpt;
 use core::fmt::Formatter;
+use frame_support::log;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize, Serializer, Deserializer};
@@ -36,6 +37,7 @@ impl Default for PublicKey {
 #[cfg(feature = "std")]
 impl Serialize for PublicKey {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+		log::info!(target: "ethereum-beacon-client","💫 In serialize {:?}.", self);
 		let mut ts = serializer.serialize_tuple_struct("PublicKey", 1)?;
 		ts.serialize_field(&self.0.as_slice())?;
 		ts.end()
@@ -48,11 +50,13 @@ struct I8Visitor;
 impl<'de> Visitor<'de> for I8Visitor {
 	type Value = PublicKey;
 
-	fn expecting(&self, _formatter: &mut Formatter) -> StdResult {
-		todo!()
+	fn expecting(&self, formatter: &mut Formatter) -> StdResult {
+		log::info!(target: "ethereum-beacon-client","💫 In expecting.");
+		formatter.write_str("an an array of bytes")
 	}
 
 	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: Error {
+		log::info!(target: "ethereum-beacon-client","💫 In visit string {:?}.", v);
 		let strvalue = v.as_bytes();
 		let mut data = [0u8; 48];
 		data[0..48].copy_from_slice(&(strvalue));
@@ -63,6 +67,7 @@ impl<'de> Visitor<'de> for I8Visitor {
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for PublicKey {
 	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+		log::info!(target: "ethereum-beacon-client","💫 In deserialize bytes");
 		deserializer.deserialize_bytes(I8Visitor)
 	}
 }
