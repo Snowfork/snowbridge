@@ -1,7 +1,7 @@
 const readline = require('readline');
 
 function parseBeaconHeader(input) {
-  let data = JSON.parse(input)['result'];
+  let data = JSON.parse(input);
   if (!data) {
     throw Error("Failed to parse header from input. Expected HTTP response data as input");
   }
@@ -10,6 +10,8 @@ function parseBeaconHeader(input) {
 
 function transformBeaconForParachain(input) {
   let output = input["data"];
+  output["header"]["slot"] = parseInt(output["header"]["slot"]);
+  output["header"]["proposer_index"] = parseInt(output["header"]["proposer_index"]);
   output["validators_root"] = "";
   return output;
 }

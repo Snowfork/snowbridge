@@ -13,11 +13,7 @@ use frame_support::log;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize, Serializer, Deserializer};
 #[cfg(feature = "std")]
-use serde::ser::SerializeTupleStruct;
-#[cfg(feature = "std")]
 use serde::de::Visitor;
-#[cfg(feature = "std")]
-use serde::de::Error;
 
 use sp_std::fmt::Result as StdResult;
 
@@ -38,9 +34,7 @@ impl Default for PublicKey {
 impl Serialize for PublicKey {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
 		log::info!(target: "ethereum-beacon-client","💫 In serialize {:?}.", self);
-		let mut ts = serializer.serialize_tuple_struct("PublicKey", 1)?;
-		ts.serialize_field(&self.0.as_slice())?;
-		ts.end()
+		serializer.serialize_bytes(&self.0)
 	}
 }
 
@@ -52,23 +46,26 @@ impl<'de> Visitor<'de> for I8Visitor {
 
 	fn expecting(&self, formatter: &mut Formatter) -> StdResult {
 		log::info!(target: "ethereum-beacon-client","💫 In expecting.");
-		formatter.write_str("an an array of bytes")
+		formatter.write_str("an array of bytes")
 	}
 
-	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: Error {
-		log::info!(target: "ethereum-beacon-client","💫 In visit string {:?}.", v);
-		let strvalue = v.as_bytes();
+	fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E> {
 		let mut data = [0u8; 48];
-		data[0..48].copy_from_slice(&(strvalue));
+		data[0..48].copy_from_slice(&v);
 		Ok(PublicKey(data))
 	}
+
+	 fn visit_seq<V>(self, seq: V) -> Result<Self::Value, V::Error> {
+		log::info!(target: "ethereum-beacon-client","💫 In visit_seq.");
+	 }
 }
 
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for PublicKey {
+	type Error;
 	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-		log::info!(target: "ethereum-beacon-client","💫 In deserialize bytes");
-		deserializer.deserialize_bytes(I8Visitor)
+		println!("In deserialize");
+		deserializer.deserialize_seq(I8Visitor)
 	}
 }
 
@@ -282,5 +279,42 @@ impl ExecutionHeader {
 			});
 
 		final_hash.map(|hash| (hash.into(), item_to_prove.value))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{PublicKey, SyncCommittee};
+	use hex_literal::hex;
+
+    #[test]
+    pub fn test_deserialize() {
+		//let mut pk_tmp: [u8; 48] = [0; 48];
+
+		//pk_tmp.copy_from_slice(hex!("948bd1599c5ba61106cc3bfb5118f10fd01b8b2dca6dc5a62645ccca120c6cb3252c37c9a081e3acfa6d5e181c7aebb8").to_vec().as_slice());
+
+		//let pk = PublicKey(pk_tmp);
+
+		//let serialized: PublicKey = serde_json::from_slice(hex!("948bd1599c5ba61106cc3bfb5118f10fd01b8b2dca6dc5a62645ccca120c6cb3252c37c9a081e3acfa6d5e181c7aebb8").as_slice()).unwrap();
+
+		//let mut chars = serialized.chars();
+		//chars.next();
+		//chars.next_back();
+		//serialized = chars.as_str().to_string();
+
+		let sync_committee = SyncCommittee{
+			pubkeys: vec![
+ 				PublicKey(hex!("948bd1599c5ba61106cc3bfb5118f10fd01b8b2dca6dc5a62645ccca120c6cb3252c37c9a081e3acfa6d5e181c7aebb8"))
+			],
+			aggregate_pubkey: PublicKey(hex!("898581607ef065e15ba36aeb530eada499531284426e542c3a307df1722d72122e7846fc3d770c8f475d66cd9d5004be"))
+		};
+
+		let value = serde_json::to_value(sync_committee).unwrap();
+
+		let serialized = serde_json::to_string(&value).unwrap();
+		println!("serialized = {:?}", serialized);
+
+    	let deserialized: SyncCommittee = serde_json::from_str(&serialized).unwrap();
+    	println!("deserialized = {:?}", deserialized);
 	}
 }
