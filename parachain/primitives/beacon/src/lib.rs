@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+
 use scale_info::TypeInfo;
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
@@ -7,15 +8,13 @@ use sp_std::prelude::*;
 use sp_core::{H160, H256, U256};
 use sp_io::hashing::keccak_256;
 use snowbridge_ethereum::mpt;
-use core::fmt::Formatter;
-use frame_support::log;
 
 #[cfg(feature = "std")]
-use serde::{Deserialize, Serialize, Serializer, Deserializer};
+use serde::{Deserialize, Serialize, Serializer, Deserializer, de::Visitor, de::Error};
 #[cfg(feature = "std")]
-use serde::de::Visitor;
-
 use sp_std::fmt::Result as StdResult;
+#[cfg(feature = "std")]
+use core::fmt::Formatter;
 
 pub type Root = H256;
 pub type Domain = H256;
@@ -33,39 +32,41 @@ impl Default for PublicKey {
 #[cfg(feature = "std")]
 impl Serialize for PublicKey {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-		log::info!(target: "ethereum-beacon-client","💫 In serialize {:?}.", self);
 		serializer.serialize_bytes(&self.0)
 	}
 }
 
-struct I8Visitor;
+struct PublicKeyVisitor;
 
 #[cfg(feature = "std")]
-impl<'de> Visitor<'de> for I8Visitor {
+impl<'de> Visitor<'de> for PublicKeyVisitor {
 	type Value = PublicKey;
 
 	fn expecting(&self, formatter: &mut Formatter) -> StdResult {
-		log::info!(target: "ethereum-beacon-client","💫 In expecting.");
 		formatter.write_str("an array of bytes")
 	}
 
-	fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E> {
-		let mut data = [0u8; 48];
-		data[0..48].copy_from_slice(&v);
-		Ok(PublicKey(data))
-	}
+	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>where E: Error,  {	
+        let	str_without_0x = match v.strip_prefix("0x") {
+			Some(val) => val,
+			None => v,
+		};
 
-	 fn visit_seq<V>(self, seq: V) -> Result<Self::Value, V::Error> {
-		log::info!(target: "ethereum-beacon-client","💫 In visit_seq.");
-	 }
+		let hex_bytes = match hex::decode(str_without_0x) {
+			Ok(bytes)=> bytes,
+			Err(e)=> return Err(Error::custom(e.to_string()))
+		};
+
+		let mut data = [0u8; 48];
+		data[0..48].copy_from_slice(&hex_bytes);
+		Ok(PublicKey(data))
+    }
 }
 
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for PublicKey {
-	type Error;
 	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-		println!("In deserialize");
-		deserializer.deserialize_seq(I8Visitor)
+		deserializer.deserialize_str(PublicKeyVisitor)
 	}
 }
 
@@ -279,42 +280,5 @@ impl ExecutionHeader {
 			});
 
 		final_hash.map(|hash| (hash.into(), item_to_prove.value))
-	}
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{PublicKey, SyncCommittee};
-	use hex_literal::hex;
-
-    #[test]
-    pub fn test_deserialize() {
-		//let mut pk_tmp: [u8; 48] = [0; 48];
-
-		//pk_tmp.copy_from_slice(hex!("948bd1599c5ba61106cc3bfb5118f10fd01b8b2dca6dc5a62645ccca120c6cb3252c37c9a081e3acfa6d5e181c7aebb8").to_vec().as_slice());
-
-		//let pk = PublicKey(pk_tmp);
-
-		//let serialized: PublicKey = serde_json::from_slice(hex!("948bd1599c5ba61106cc3bfb5118f10fd01b8b2dca6dc5a62645ccca120c6cb3252c37c9a081e3acfa6d5e181c7aebb8").as_slice()).unwrap();
-
-		//let mut chars = serialized.chars();
-		//chars.next();
-		//chars.next_back();
-		//serialized = chars.as_str().to_string();
-
-		let sync_committee = SyncCommittee{
-			pubkeys: vec![
- 				PublicKey(hex!("948bd1599c5ba61106cc3bfb5118f10fd01b8b2dca6dc5a62645ccca120c6cb3252c37c9a081e3acfa6d5e181c7aebb8"))
-			],
-			aggregate_pubkey: PublicKey(hex!("898581607ef065e15ba36aeb530eada499531284426e542c3a307df1722d72122e7846fc3d770c8f475d66cd9d5004be"))
-		};
-
-		let value = serde_json::to_value(sync_committee).unwrap();
-
-		let serialized = serde_json::to_string(&value).unwrap();
-		println!("serialized = {:?}", serialized);
-
-    	let deserialized: SyncCommittee = serde_json::from_str(&serialized).unwrap();
-    	println!("deserialized = {:?}", deserialized);
 	}
 }
