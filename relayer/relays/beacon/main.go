@@ -79,7 +79,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (r *Relay) Sync(ctx context.Context) error {
-	latestSyncedPeriod, err :=  r.writer.getLastSyncedSyncCommitteePeriod()
+	latestSyncedPeriod, err := r.writer.getLastSyncedSyncCommitteePeriod()
 	if err != nil {
 		logrus.WithError(err).Error("unable to get last synced sync committee")
 
@@ -135,26 +135,6 @@ func (r *Relay) Sync(ctx context.Context) error {
 	}()
 
 	return nil
-}
-
-func (r *Relay) InitialSync(ctx context.Context) (syncer.InitialSync, error) {
-	initialSync, err := r.syncer.InitialSync("0x088241fcf1cf63040b804498c945d3a6ae5484e65692483747fba5b8902c99c9")
-	if err != nil {
-		logrus.WithError(err).Error("unable to do initial beacon chain sync")
-
-		return syncer.InitialSync{}, err
-	}
-
-	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.initial_sync", initialSync)
-	if err != nil {
-		logrus.WithError(err).Error("unable to write to parachain")
-
-		return syncer.InitialSync{}, err
-	}
-
-	logrus.Info("intial sync written to parachain")
-
-	return initialSync, nil
 }
 
 func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) error {

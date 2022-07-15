@@ -613,7 +613,7 @@ pub mod pallet {
 			}
 		}
 
-		fn store_finalized_header(block_root: H256, header: BeaconHeader) {
+		fn store_finalized_header(block_root: Root, header: BeaconHeader) {
 			let slot = header.slot;
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
