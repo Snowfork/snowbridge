@@ -120,3 +120,18 @@ func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName s
 
 	return nil
 }
+
+func (wr *ParachainWriter) getLastSyncedSyncCommitteePeriod() (uint64, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestSyncCommitteePeriod", nil, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create storage key for last sync committee: %w", err)
+	}
+
+	var period types.U64
+	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &period)
+	if err != nil || !ok {
+		panic(err)
+	}
+
+	return uint64(period), nil
+}

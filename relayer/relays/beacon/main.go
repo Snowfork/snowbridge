@@ -79,14 +79,16 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (r *Relay) Sync(ctx context.Context) error {
-	initialSync, err := r.InitialSync(ctx)
+	latestSyncedPeriod, err :=  r.writer.getLastSyncedSyncCommitteePeriod()
 	if err != nil {
+		logrus.WithError(err).Error("unable to get last synced sync committee")
+
 		return err
 	}
 
-	r.syncer.Cache.SyncCommitteePeriodsSynced, err = r.syncer.GetSyncPeriodsToFetch(uint64(initialSync.Header.Slot))
+	r.syncer.Cache.SyncCommitteePeriodsSynced, err = r.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod)
 	if err != nil {
-		logrus.WithError(err).Error("unable check sync committee periods to be fetched")
+		logrus.WithError(err).Error("unable to check sync committee periods to be fetched")
 
 		return err
 	}
