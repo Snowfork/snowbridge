@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "./ParachainClient.sol";
+import "./utils/MerkleProof.sol";
 
 contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
@@ -33,8 +34,14 @@ contract BasicInboundChannel {
         parachainClient = _parachainClient;
     }
 
-    function submit(MessageBundle calldata bundle, bytes calldata proof) external {
-        bytes32 commitment = keccak256(abi.encode(bundle));
+    function submit(
+        MessageBundle calldata bundle,
+        bytes32[] calldata leafProof,
+        bool[] calldata hashSides,
+        bytes calldata proof
+    ) external {
+        bytes32 leafHash = keccak256(abi.encode(bundle));
+        bytes32 commitment = MerkleProof.computeRootFromProofAndSide(leafHash, leafProof, hashSides);
 
         require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
         require(bundle.sourceChannelID == sourceChannelID, "Invalid source channel");
