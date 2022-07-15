@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "./ParachainClient.sol";
 import "./utils/MerkleProof.sol";
 
-contract BasicInboundChannel {
+contract BasicInboundChannelV2 {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
     uint256 public constant GAS_BUFFER = 60000;
 
