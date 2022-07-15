@@ -33,17 +33,17 @@ contract BasicInboundChannel {
         parachainClient = _parachainClient;
     }
 
-    function submit(MessageBundle calldata bundle,  bytes calldata proof) external {
+    function submit(MessageBundle calldata bundle, bytes calldata proof) external {
         bytes32 commitment = keccak256(abi.encode(bundle));
 
         require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
         require(bundle.sourceChannelID == sourceChannelID, "Invalid source channel");
-        require(bundle.nonce == nonce + 1, "Invalid nonce");
+        require(bundle.nonce == nonces[bundle.account] + 1, "Invalid nonce");
         require(
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
-        nonce++;
+        nonces[bundle.account]++;
         dispatch(bundle);
     }
 
