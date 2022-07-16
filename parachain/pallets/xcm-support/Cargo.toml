@@ -40,9 +40,9 @@ std = [
 	"frame-system/std",
 	"sp-runtime/std",
 	"sp-std/std",
-        "pallet-xcm/std",
-        "xcm/std",
-        "xcm-executor/std",
-        "xcm-builder/std",
+    "pallet-xcm/std",
+    "xcm/std",
+    "xcm-executor/std",
+    "xcm-builder/std",
 	"snowbridge-xcm-support-primitives/std"
 ]

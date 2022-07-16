@@ -9,7 +9,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{ensure, log, pallet_prelude::*};
+	use frame_support::{ensure, log, pallet_prelude::*, storage::{with_transaction, TransactionOutcome}};
 	use frame_system::pallet_prelude::*;
 	use snowbridge_xcm_support_primitives::{RemoteParachain, XcmReserveTransfer};
 	use sp_runtime::DispatchError;
@@ -118,13 +118,19 @@ pub mod pallet {
 			let weight = T::Weigher::weight(&mut message)
 				.map_err(|_| DispatchError::Other("Unweighable message."))?;
 
-			T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
-				.ensure_complete()
-				.map_err(|err| {
-					let message = "Xcm execution failed.";
-					log::error!("{} Reason: {:?}", message, err);
-					DispatchError::Other(message)
-				})?;
+			let _ = with_transaction(|| { 
+				let outcome = T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
+					.ensure_complete()
+					.map_err(|err| {
+						log::error!("Xcm execution failed. Reason: {:?}", err);
+						DispatchError::Other("Test")
+					});
+
+				match outcome {
+					Ok(()) => TransactionOutcome::Commit(outcome),
+					Err(_) => TransactionOutcome::Rollback(outcome)
+				}
+			});
 
 			Ok(())
 		}

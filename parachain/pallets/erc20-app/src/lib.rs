@@ -29,7 +29,6 @@ mod tests;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
-	log,
 	traits::{
 		tokens::fungibles::{Create, Mutate},
 		EnsureOrigin,
@@ -184,23 +183,13 @@ pub mod pallet {
 			Self::deposit_event(Event::Minted(token, sender, recipient.clone(), amount));
 
 			if let Some(destination) = destination {
-				let _ = with_transaction(|| {
-					let result = T::XcmReserveTransfer::reserve_transfer(
-						asset_id,
-						&recipient,
-						amount,
-						destination,
-					);
-					if let Err(err) = result {
-						log::error!(
-							"Failed to execute xcm transfer to parachain {} - {:?}.",
-							destination.para_id,
-							err
-						);
-						return TransactionOutcome::Rollback(DispatchError::Other("foo").into())
-					}
-					TransactionOutcome::Commit(Ok(()))
-				});
+				// Explicitly ignore result to leave assets on the parachain.
+				let _ = T::XcmReserveTransfer::reserve_transfer(
+					asset_id,
+					&recipient,
+					amount,
+					destination,
+				);
 			}
 			Ok(())
 		}
