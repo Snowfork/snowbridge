@@ -22,7 +22,9 @@ pub mod pallet {
 	use xcm_executor::traits::WeightBounds;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {}
+	pub trait Config: frame_system::Config {
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -49,21 +51,28 @@ pub mod pallet {
 		/// Message was not able to be weighed.
 		UnweighableMessage,
 		/// Xcm execution failed during initiation of request.
-		XcmExecutionFailed,
+		ExecutionFailed,
 	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		Sent,
+		Failed,
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {}
 
-	impl<T> XcmReserveTransfer<T::AccountId, OriginFor<T>> for Pallet<T>
+	impl<T: Config> Pallet<T>
 	where
 		T: pallet_xcm::Config + Config,
 		T::AccountId: AsRef<[u8; 32]>,
 	{
-		fn reserve_transfer(
+		fn reserve_transfer_unsafe(
 			asset_id: u128,
 			recipient: &T::AccountId,
 			amount: u128,
@@ -126,20 +135,43 @@ pub mod pallet {
 			let weight = T::Weigher::weight(&mut message)
 				.map_err(|_| DispatchError::from(Error::<T>::UnweighableMessage))?;
 
-			let _ = with_transaction(|| {
-				let outcome =
-					T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
-						.ensure_complete()
-						.map_err(|err| {
-							log::error!("Xcm execution failed. Reason: {:?}", err);
-							DispatchError::from(Error::<T>::XcmExecutionFailed)
-						});
+			T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
+				.ensure_complete()
+				.map_err(|err| {
+					log::error!("Xcm execution failed. Reason: {:?}", err);
+					DispatchError::from(Error::<T>::ExecutionFailed)
+				})?;
 
+			Ok(())
+		}
+	}
+
+	impl<T> XcmReserveTransfer<T::AccountId, OriginFor<T>> for Pallet<T>
+	where
+		T: pallet_xcm::Config + Config,
+		T::AccountId: AsRef<[u8; 32]>,
+	{
+		fn reserve_transfer(
+			asset_id: u128,
+			recipient: &T::AccountId,
+			amount: u128,
+			destination: RemoteParachain,
+		) -> frame_support::dispatch::DispatchResult {
+			let result = with_transaction(|| {
+				let outcome =
+					Self::reserve_transfer_unsafe(asset_id, recipient, amount, destination);
 				match outcome {
 					Ok(()) => TransactionOutcome::Commit(outcome),
 					Err(_) => TransactionOutcome::Rollback(outcome),
 				}
 			});
+
+			let event = match result {
+				Ok(_) => Event::<T>::Sent,
+				Err(_) => Event::<T>::Failed,
+			};
+
+			Self::deposit_event(event);
 
 			Ok(())
 		}

@@ -542,7 +542,9 @@ impl pallet_assets::Config for Runtime {
 
 impl snowbridge_asset_registry::Config for Runtime {}
 
-impl snowbridge_xcm_support::Config for Runtime {}
+impl snowbridge_xcm_support::Config for Runtime {
+	type Event = Event;
+}
 
 impl dispatch::Config for Runtime {
 	type Origin = Origin;
@@ -759,7 +761,7 @@ construct_runtime!(
 		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config, Storage, Event<T>} = 18,
 		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 20,
-		XcmSupport: snowbridge_xcm_support::{Pallet, Storage, Config} = 21,
+		XcmSupport: snowbridge_xcm_support::{Pallet, Storage, Config, Event<T>} = 21,
 
 		// XCM
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 22,
