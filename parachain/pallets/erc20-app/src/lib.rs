@@ -183,13 +183,7 @@ pub mod pallet {
 			Self::deposit_event(Event::Minted(token, sender, recipient.clone(), amount));
 
 			if let Some(destination) = destination {
-				// Explicitly ignore result to leave assets on the parachain.
-				let _ = T::XcmReserveTransfer::reserve_transfer(
-					asset_id,
-					&recipient,
-					amount,
-					destination,
-				);
+				T::XcmReserveTransfer::reserve_transfer(asset_id, &recipient, amount, destination);
 			}
 			Ok(())
 		}

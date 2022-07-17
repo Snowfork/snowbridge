@@ -7,7 +7,7 @@ use frame_support::{
 	traits::{tokens::fungible::ItemOf, Everything, GenesisBuild},
 	PalletId,
 };
-use sp_runtime::{traits::AccountIdConversion, DispatchError};
+use sp_runtime::traits::AccountIdConversion;
 
 use sp_core::{H160, H256};
 use sp_runtime::{
@@ -175,13 +175,8 @@ impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 		_asset_id: u128,
 		_recipient: &AccountId,
 		_amount: u128,
-		destination: RemoteParachain,
-	) -> DispatchResult {
-		match destination.para_id {
-			1001 => Ok(()),
-			2001 => Err(DispatchError::Other("Parachain 2001 not found.")),
-			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator."),
-		}
+		_destination: RemoteParachain,
+	) {
 	}
 }
 

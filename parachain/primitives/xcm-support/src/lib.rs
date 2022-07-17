@@ -5,8 +5,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::dispatch::DispatchResult;
-
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
@@ -23,12 +21,12 @@ pub struct RemoteParachain {
 	pub fee: u128,
 }
 
-/// Transfers an asset to the destination parachain.
+/// Transfers an asset to the destination parachain. Transfers failures are emitted by events.
 pub trait XcmReserveTransfer<AccountId, Origin> {
 	fn reserve_transfer(
 		asset_id: u128,
 		recipient: &AccountId,
 		amount: u128,
 		destination: RemoteParachain,
-	) -> DispatchResult;
+	);
 }

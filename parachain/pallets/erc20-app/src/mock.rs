@@ -14,7 +14,7 @@ use sp_runtime::{
 	traits::{
 		AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify,
 	},
-	DispatchError, MultiSignature,
+	MultiSignature,
 };
 
 use snowbridge_core::ChannelId;
@@ -185,13 +185,8 @@ impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 		_asset_id: u128,
 		_recipient: &AccountId,
 		_amount: u128,
-		destination: RemoteParachain,
-	) -> DispatchResult {
-		match destination.para_id {
-			1001 => Ok(()),
-			2001 => Err(DispatchError::Other("Parachain 2001 not found.")),
-			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator."),
-		}
+		_destination: RemoteParachain,
+	) {
 	}
 }
 

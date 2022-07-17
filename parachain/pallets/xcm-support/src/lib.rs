@@ -60,8 +60,10 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Sent,
-		Failed,
+		/// The transfer was successfully sent to the destination
+		TransferSent,
+		/// The transfer failed. However assets remain on the parachain.
+		TransferFailed,
 	}
 
 	#[pallet::call]
@@ -156,7 +158,7 @@ pub mod pallet {
 			recipient: &T::AccountId,
 			amount: u128,
 			destination: RemoteParachain,
-		) -> frame_support::dispatch::DispatchResult {
+		) {
 			let result = with_transaction(|| {
 				let outcome =
 					Self::reserve_transfer_unsafe(asset_id, recipient, amount, destination);
@@ -167,13 +169,11 @@ pub mod pallet {
 			});
 
 			let event = match result {
-				Ok(_) => Event::<T>::Sent,
-				Err(_) => Event::<T>::Failed,
+				Ok(_) => Event::<T>::TransferSent,
+				Err(_) => Event::<T>::TransferFailed,
 			};
 
 			Self::deposit_event(event);
-
-			Ok(())
 		}
 	}
 }
