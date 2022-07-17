@@ -39,7 +39,14 @@ pub mod pallet {
 	}
 
 	#[pallet::error]
-	pub enum Error<T> {}
+	pub enum Error<T> {
+		/// Fee must be greater than zero.
+		ZeroFeeSpecified,
+		/// Message was not able to be weighed.
+		UnweighableMessage,
+		/// Xcm execution failed during initiation of request.
+		XcmExecutionFailed
+	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
@@ -49,7 +56,7 @@ pub mod pallet {
 
 	impl<T> XcmReserveTransfer<T::AccountId, OriginFor<T>> for Pallet<T>
 	where
-		T: pallet_xcm::Config,
+		T: pallet_xcm::Config + Config,
 		T::AccountId: AsRef<[u8; 32]>,
 	{
 		fn reserve_transfer(
@@ -60,7 +67,7 @@ pub mod pallet {
 		) -> frame_support::dispatch::DispatchResult {
 			ensure!(
 				destination.fee > 0u128,
-				DispatchError::Other("Fee must be greater than 0 when parachain id is specified.")
+				DispatchError::from(Error::<T>::ZeroFeeSpecified)
 			);
 
 			let origin_location: MultiLocation = MultiLocation {
@@ -116,14 +123,14 @@ pub mod pallet {
 			]);
 
 			let weight = T::Weigher::weight(&mut message)
-				.map_err(|_| DispatchError::Other("Unweighable message."))?;
+				.map_err(|_| DispatchError::from(Error::<T>::UnweighableMessage))?;
 
 			let _ = with_transaction(|| { 
 				let outcome = T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
 					.ensure_complete()
 					.map_err(|err| {
 						log::error!("Xcm execution failed. Reason: {:?}", err);
-						DispatchError::Other("Test")
+						DispatchError::from(Error::<T>::XcmExecutionFailed)
 					});
 
 				match outcome {
