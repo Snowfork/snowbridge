@@ -9,7 +9,11 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{ensure, log, pallet_prelude::*, storage::{with_transaction, TransactionOutcome}};
+	use frame_support::{
+		ensure, log,
+		pallet_prelude::*,
+		storage::{with_transaction, TransactionOutcome},
+	};
 	use frame_system::pallet_prelude::*;
 	use snowbridge_xcm_support_primitives::{RemoteParachain, XcmReserveTransfer};
 	use sp_runtime::DispatchError;
@@ -45,7 +49,7 @@ pub mod pallet {
 		/// Message was not able to be weighed.
 		UnweighableMessage,
 		/// Xcm execution failed during initiation of request.
-		XcmExecutionFailed
+		XcmExecutionFailed,
 	}
 
 	#[pallet::hooks]
@@ -65,10 +69,7 @@ pub mod pallet {
 			amount: u128,
 			destination: RemoteParachain,
 		) -> frame_support::dispatch::DispatchResult {
-			ensure!(
-				destination.fee > 0u128,
-				DispatchError::from(Error::<T>::ZeroFeeSpecified)
-			);
+			ensure!(destination.fee > 0u128, DispatchError::from(Error::<T>::ZeroFeeSpecified));
 
 			let origin_location: MultiLocation = MultiLocation {
 				parents: 0,
@@ -125,17 +126,18 @@ pub mod pallet {
 			let weight = T::Weigher::weight(&mut message)
 				.map_err(|_| DispatchError::from(Error::<T>::UnweighableMessage))?;
 
-			let _ = with_transaction(|| { 
-				let outcome = T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
-					.ensure_complete()
-					.map_err(|err| {
-						log::error!("Xcm execution failed. Reason: {:?}", err);
-						DispatchError::from(Error::<T>::XcmExecutionFailed)
-					});
+			let _ = with_transaction(|| {
+				let outcome =
+					T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
+						.ensure_complete()
+						.map_err(|err| {
+							log::error!("Xcm execution failed. Reason: {:?}", err);
+							DispatchError::from(Error::<T>::XcmExecutionFailed)
+						});
 
 				match outcome {
 					Ok(()) => TransactionOutcome::Commit(outcome),
-					Err(_) => TransactionOutcome::Rollback(outcome)
+					Err(_) => TransactionOutcome::Rollback(outcome),
 				}
 			});
 
