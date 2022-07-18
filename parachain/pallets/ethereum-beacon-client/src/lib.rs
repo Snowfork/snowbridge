@@ -20,9 +20,6 @@ use sp_std::prelude::*;
 use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
 use snowbridge_core::{Message, Verifier};
 
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 const SLOTS_PER_EPOCH: u64 = 32;
 
 const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 256;
@@ -47,7 +44,7 @@ type ProofBranch = Vec<H256>;
 type ForkVersion = [u8; 4];
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct InitialSync {
 	pub header: BeaconHeader,
 	pub current_sync_committee: SyncCommittee,
@@ -194,10 +191,12 @@ pub mod pallet {
 			let _sender = ensure_signed(origin)?;
 
 			let sync_committee_period = sync_committee_period_update.sync_committee_period;
+			let slot = sync_committee_period_update.clone().attested_header.slot;
 			log::info!(
 				target: "ethereum-beacon-client",
-				"💫 Received sync committee update for period {}. Applying update",
-				sync_committee_period
+				"💫 Received sync committee update for period {} slot {}. Applying update",
+				sync_committee_period,
+				slot
 			);
 
 			if let Err(err) = Self::process_sync_committee_period_update(sync_committee_period_update) {
@@ -300,12 +299,12 @@ pub mod pallet {
 			)?;
 
 			let period = Self::compute_current_sync_period(initial_sync.header.slot);
-			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
-			Self::store_finalized_header(block_root, initial_sync.header);
 
+			Self::store_sync_committee(period, initial_sync.current_sync_committee);
+			Self::store_finalized_header(block_root, initial_sync.header);
 			Self::store_validators_root(initial_sync.validators_root);
 
 			Ok(())
@@ -336,7 +335,6 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
-			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
 
 			let current_sync_committee = <SyncCommittees<T>>::get(current_period);
 			let validators_root = <ValidatorsRoot<T>>::get();
@@ -350,8 +348,9 @@ pub mod pallet {
 				validators_root,
 			)?;
 
+			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
 			Self::store_finalized_header(block_root, update.finalized_header);
-
+			
 			Ok(())
 		}
 
@@ -781,7 +780,7 @@ pub mod pallet {
 			}
 		}
 
-		pub fn initial_sync(
+		pub(super) fn initial_sync(
 			initial_sync: InitialSync,
 		) -> Result<(), &'static str> {
 			log::info!(

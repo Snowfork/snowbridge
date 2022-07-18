@@ -113,7 +113,7 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, e
 	}
 
 	syncPeriodsToFetch := []uint64{}
-	for i := checkpointSyncPeriod + 1; i <= currentSyncPeriod; i++ {
+	for i := checkpointSyncPeriod; i <= currentSyncPeriod; i++ {
 		syncPeriodsToFetch = append(syncPeriodsToFetch, i)
 	}
 

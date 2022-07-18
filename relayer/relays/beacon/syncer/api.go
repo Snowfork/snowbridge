@@ -25,11 +25,8 @@ type BeaconClientTracker interface {
 	GetHeader(id string) (BeaconHeader, error)
 	GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePeriodUpdateResponse, error)
 	GetHeadCheckpoint() (FinalizedCheckpointResponse, error)
-	GetLightClientSnapshot(blockRoot string) (LightClientSnapshotResponse, error)
-	GetTrustedLightClientSnapshot() (LightClientSnapshotResponse, error)
 	GetBeaconBlock(slot uint64) (BeaconBlockResponse, error)
 	GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error)
-	GetGenesis() (GenesisResponse, error)
 	GetCurrentForkVersion(slot uint64) (string, error)
 	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
 }
@@ -540,87 +537,6 @@ func (b *BeaconClient) GetCheckpoint(state string) (FinalizedCheckpointResponse,
 
 	return response, nil
 }
-
-type LightClientSnapshotData struct {
-	Header                     HeaderResponse        `json:"header"`
-	CurrentSyncCommittee       SyncCommitteeResponse `json:"current_sync_committee"`
-	CurrentSyncCommitteeBranch []common.Hash         `json:"current_sync_committee_branch"`
-}
-
-type LightClientSnapshotResponse struct {
-	Data LightClientSnapshotData `json:"data"`
-}
-
-func (b *BeaconClient) GetLightClientSnapshot(blockRoot string) (LightClientSnapshotResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/snapshot/%s", b.endpoint, blockRoot), nil)
-	if err != nil {
-		return LightClientSnapshotResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
-	}
-
-	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
-	if err != nil {
-		return LightClientSnapshotResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return LightClientSnapshotResponse{}, fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
-	}
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return LightClientSnapshotResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
-	}
-
-	var response LightClientSnapshotResponse
-
-	err = json.Unmarshal(bodyBytes, &response)
-	if err != nil {
-		return LightClientSnapshotResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
-	}
-
-	return response, nil
-}
-
-type GenesisResponse struct {
-	Data struct {
-		ValidatorsRoot string `json:"genesis_validators_root"`
-		Time           string `json:"genesis_time"`
-		ForkVersion    string `json:"genesis_fork_version"`
-	} `json:"data"`
-}
-
-func (b *BeaconClient) GetGenesis() (GenesisResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/genesis", b.endpoint), nil)
-	if err != nil {
-		return GenesisResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
-	}
-
-	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
-	if err != nil {
-		return GenesisResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return GenesisResponse{}, fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
-	}
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return GenesisResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
-	}
-
-	var response GenesisResponse
-
-	err = json.Unmarshal(bodyBytes, &response)
-	if err != nil {
-		return GenesisResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
-	}
-
-	return response, nil
-}
-
 type LatestFinalisedUpdateResponse struct {
 	Data struct {
 		AttestedHeader  HeaderResponse        `json:"attested_header"`

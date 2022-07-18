@@ -42,11 +42,11 @@ impl<'de> Visitor<'de> for PublicKeyVisitor {
 	type Value = PublicKey;
 
 	fn expecting(&self, formatter: &mut Formatter) -> StdResult {
-		formatter.write_str("an array of bytes")
+		formatter.write_str("a hex string")
 	}
 
-	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>where E: Error,  {	
-        let	str_without_0x = match v.strip_prefix("0x") {
+	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: Error,  {	
+        let str_without_0x = match v.strip_prefix("0x") {
 			Some(val) => val,
 			None => v,
 		};
@@ -55,6 +55,9 @@ impl<'de> Visitor<'de> for PublicKeyVisitor {
 			Ok(bytes)=> bytes,
 			Err(e)=> return Err(Error::custom(e.to_string()))
 		};
+		if hex_bytes.len() != 48 {
+			return Err(Error::custom("publickey expected to be 48 characters"))
+		}
 
 		let mut data = [0u8; 48];
 		data[0..48].copy_from_slice(&hex_bytes);
