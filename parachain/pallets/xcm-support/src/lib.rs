@@ -80,8 +80,8 @@ pub mod pallet {
 			recipient: &T::AccountId,
 			amount: u128,
 			destination: RemoteParachain,
-		) -> frame_support::dispatch::DispatchResult {
-			ensure!(destination.fee > 0u128, DispatchError::from(Error::<T>::ZeroFeeSpecified));
+		) -> Result<(), Error<T>> {
+			ensure!(destination.fee > 0u128, Error::<T>::ZeroFeeSpecified);
 
 			let origin_location: MultiLocation = MultiLocation {
 				parents: 0,
@@ -135,14 +135,14 @@ pub mod pallet {
 				},
 			]);
 
-			let weight = T::Weigher::weight(&mut message)
-				.map_err(|_| DispatchError::from(Error::<T>::UnweighableMessage))?;
+			let weight =
+				T::Weigher::weight(&mut message).map_err(|_| Error::<T>::UnweighableMessage)?;
 
 			T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
 				.ensure_complete()
 				.map_err(|err| {
 					log::error!("Xcm execution failed. Reason: {:?}", err);
-					DispatchError::from(Error::<T>::ExecutionFailed)
+					Error::<T>::ExecutionFailed
 				})?;
 
 			Ok(())
@@ -165,8 +165,8 @@ pub mod pallet {
 				let outcome =
 					Self::reserve_transfer_unsafe(asset_id, recipient, amount, destination);
 				match outcome {
-					Ok(()) => TransactionOutcome::Commit(outcome),
-					Err(_) => TransactionOutcome::Rollback(outcome),
+					Ok(()) => TransactionOutcome::Commit(Ok(())),
+					Err(error) => TransactionOutcome::Rollback(Err(DispatchError::from(error))),
 				}
 			});
 
