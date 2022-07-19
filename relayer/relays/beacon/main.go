@@ -86,6 +86,8 @@ func (r *Relay) Sync(ctx context.Context) error {
 		return err
 	}
 
+	logrus.WithField("period", latestSyncedPeriod).Info("last beacon synced sync committee found")
+
 	r.syncer.Cache.SyncCommitteePeriodsSynced, err = r.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod)
 	if err != nil {
 		logrus.WithError(err).Error("unable to check sync committee periods to be fetched")
@@ -95,22 +97,23 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	logrus.WithFields(logrus.Fields{
 		"periods": r.syncer.Cache.SyncCommitteePeriodsSynced,
-	}).Info("Sync committee periods that needs fetching")
+	}).Info("sync committee periods that needs fetching")
+
+	// It looks like the parachain isn't "ready" at this point. If I remove the sleep
+	// some sync period committee extrinsics doesn't seem to reach the parachain.
+	// e.g. if pereiods 24-43 needs to be synced, the sycing only starts from 25 or so.
+	time.Sleep(2 * time.Second)
 
 	for _, period := range r.syncer.Cache.SyncCommitteePeriodsSynced {
-		logrus.WithFields(logrus.Fields{
-			"period": period,
-		}).Info("Fetch sync committee period update")
-
 		err := r.SyncCommitteePeriodUpdate(ctx, period)
 		if err != nil {
 			return err
 		}
 	}
 
-	logrus.Info("Done with sync committee updates")
+	logrus.Info("done with sync committee updates")
 
-	logrus.Info("Starting to sync finalized headers")
+	logrus.Info("starting to sync finalized headers")
 
 	_, _, err = r.SyncFinalizedHeader(ctx)
 	if err != nil {
@@ -128,7 +131,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 			case <-ticker.C:
 				err := r.SyncHeaders(ctx)
 				if err != nil {
-					logrus.WithError(err).Error("Error while syncing headers")
+					logrus.WithError(err).Error("error while syncing headers")
 				}
 			}
 		}
@@ -157,6 +160,10 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 
 	syncCommitteeUpdate.SyncCommitteePeriod = types.NewU64(period)
 
+	logrus.WithFields(logrus.Fields{
+		"period": period,
+	}).Info("syncing sync committee for period")
+
 	return r.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
 }
 
@@ -173,7 +180,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 		logrus.WithFields(logrus.Fields{
 			"slot":      finalizedHeaderUpdate.FinalizedHeader.Slot,
 			"blockRoot": blockRoot,
-		}).Info("Finalized header has been synced already, skipping.")
+		}).Info("finalized header has been synced already, skipping.")
 
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
@@ -181,12 +188,12 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 	logrus.WithFields(logrus.Fields{
 		"slot":      finalizedHeaderUpdate.FinalizedHeader.Slot,
 		"blockRoot": blockRoot,
-	}).Info("Syncing finalized header at slot")
+	}).Info("syncing finalized header at slot")
 
 	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
 
 	if !syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
-		logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
+		logrus.WithField("period", currentSyncPeriod).Info("sync period rolled over, getting sync committee update")
 
 		err := r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
 		if err != nil {
@@ -253,7 +260,7 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 	logrus.WithFields(logrus.Fields{
 		"secondLastHash": secondLastFinalizedHeader,
 		"lastHash":       lastFinalizedHeader,
-	}).Info("Starting to back-fill headers")
+	}).Info("starting to back-fill headers")
 
 	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
 
@@ -288,7 +295,7 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 	logrus.WithFields(logrus.Fields{
 		"start": secondLastBlockNumber,
 		"end":   lastBlockNumber - 1,
-	}).Info("Processing events for block numbers")
+	}).Info("processing events for block numbers")
 
 	payload, err := r.listener.ProcessEvents(ctx, secondLastBlockNumber, lastBlockNumber-1)
 	if err != nil {

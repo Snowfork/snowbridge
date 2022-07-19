@@ -335,8 +335,7 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
-
-			let current_sync_committee = <SyncCommittees<T>>::get(current_period);
+			let current_sync_committee = Self::get_sync_committee_for_period(current_period)?;
 			let validators_root = <ValidatorsRoot<T>>::get();
 
 			Self::verify_signed_header(
