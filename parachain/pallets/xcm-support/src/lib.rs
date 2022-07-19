@@ -16,6 +16,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use snowbridge_xcm_support_primitives::{RemoteParachain, XcmReserveTransfer};
+	use sp_core::H160;
 	use sp_runtime::DispatchError;
 	use sp_std::prelude::*;
 	use xcm::latest::prelude::*;
@@ -155,6 +156,7 @@ pub mod pallet {
 	{
 		fn reserve_transfer(
 			asset_id: u128,
+			_sender: H160,
 			recipient: &T::AccountId,
 			amount: u128,
 			destination: RemoteParachain,

@@ -157,7 +157,7 @@ pub mod pallet {
 			Self::deposit_event(Event::Minted(sender, recipient.clone(), amount));
 
 			if let Some(destination) = destination {
-				T::XcmReserveTransfer::reserve_transfer(0, &recipient, amount, destination);
+				T::XcmReserveTransfer::reserve_transfer(0, sender, &recipient, amount, destination);
 			}
 			Ok(())
 		}

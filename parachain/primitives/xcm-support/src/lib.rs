@@ -7,7 +7,7 @@
 
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
-use sp_core::RuntimeDebug;
+use sp_core::{RuntimeDebug, H160};
 
 /// Represents a remote parachain by id with a fee that will be used by
 /// `XcmReserveTransfer::reserve_transfer` to send an asset to a remote
@@ -25,6 +25,7 @@ pub struct RemoteParachain {
 pub trait XcmReserveTransfer<AccountId, Origin> {
 	fn reserve_transfer(
 		asset_id: u128,
+		sender: H160,
 		recipient: &AccountId,
 		amount: u128,
 		destination: RemoteParachain,
