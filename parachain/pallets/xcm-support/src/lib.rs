@@ -15,8 +15,8 @@ pub mod pallet {
 		storage::{with_transaction, TransactionOutcome},
 	};
 	use frame_system::pallet_prelude::*;
-	use snowbridge_xcm_support_primitives::{RemoteParachain, XcmReserveTransfer};
-	use sp_core::H160;
+	use snowbridge_xcm_support_primitives::{RemoteParachain, TransferInfo, XcmReserveTransfer};
+	use sp_core::{H160, H256};
 	use sp_runtime::DispatchError;
 	use sp_std::prelude::*;
 	use xcm::latest::prelude::*;
@@ -62,9 +62,9 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// The transfer was successfully sent to the destination
-		TransferSent,
+		TransferSent(TransferInfo),
 		/// The transfer failed. However assets remain on the parachain.
-		TransferFailed,
+		TransferFailed { info: TransferInfo, error: DispatchError },
 	}
 
 	#[pallet::call]
@@ -73,11 +73,10 @@ pub mod pallet {
 	impl<T: Config> Pallet<T>
 	where
 		T: pallet_xcm::Config + Config,
-		T::AccountId: AsRef<[u8; 32]>,
 	{
 		fn reserve_transfer_unsafe(
 			asset_id: u128,
-			recipient: &T::AccountId,
+			recipient: H256,
 			amount: u128,
 			destination: RemoteParachain,
 		) -> Result<(), Error<T>> {
@@ -87,7 +86,7 @@ pub mod pallet {
 				parents: 0,
 				interior: Junctions::X1(Junction::AccountId32 {
 					network: NetworkId::Any,
-					id: recipient.as_ref().clone(),
+					id: recipient.into(),
 				}),
 			};
 
@@ -156,11 +155,13 @@ pub mod pallet {
 	{
 		fn reserve_transfer(
 			asset_id: u128,
-			_sender: H160,
+			sender: H160,
 			recipient: &T::AccountId,
 			amount: u128,
 			destination: RemoteParachain,
 		) {
+			let recipient: H256 = recipient.as_ref().into();
+
 			let result = with_transaction(|| {
 				let outcome =
 					Self::reserve_transfer_unsafe(asset_id, recipient, amount, destination);
@@ -170,11 +171,18 @@ pub mod pallet {
 				}
 			});
 
-			let event = match result {
-				Ok(_) => Event::<T>::TransferSent,
-				Err(_) => Event::<T>::TransferFailed,
+			let info = TransferInfo {
+				asset_id,
+				sender,
+				recipient,
+				amount,
+				para_id: destination.para_id,
+				fee: destination.fee,
 			};
-
+			let event = match result {
+				Ok(()) => Event::<T>::TransferSent(info),
+				Err(error) => Event::<T>::TransferFailed { info, error },
+			};
 			Self::deposit_event(event);
 		}
 	}
