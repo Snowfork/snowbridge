@@ -191,12 +191,10 @@ pub mod pallet {
 			let _sender = ensure_signed(origin)?;
 
 			let sync_committee_period = sync_committee_period_update.sync_committee_period;
-			let slot = sync_committee_period_update.clone().attested_header.slot;
 			log::info!(
 				target: "ethereum-beacon-client",
-				"💫 Received sync committee update for period {} slot {}. Applying update",
-				sync_committee_period,
-				slot
+				"💫 Received sync committee update for period {}. Applying update",
+				sync_committee_period
 			);
 
 			if let Err(err) = Self::process_sync_committee_period_update(sync_committee_period_update) {
@@ -698,7 +696,7 @@ pub mod pallet {
 			branch: Vec<H256>,
 			depth: u64,
 			index: u64,
-			root: H256,
+			root: Root,
 		) -> bool {
 			if branch.len() != depth as usize {
 				log::error!(target: "ethereum-beacon-client", "Merkle proof branch length doesn't match depth.");

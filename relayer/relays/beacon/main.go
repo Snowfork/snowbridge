@@ -99,11 +99,6 @@ func (r *Relay) Sync(ctx context.Context) error {
 		"periods": r.syncer.Cache.SyncCommitteePeriodsSynced,
 	}).Info("sync committee periods that needs fetching")
 
-	// It looks like the parachain isn't "ready" at this point. If I remove the sleep
-	// some sync period committee extrinsics doesn't seem to reach the parachain.
-	// e.g. if pereiods 24-43 needs to be synced, the sycing only starts from 25 or so.
-	time.Sleep(2 * time.Second)
-
 	for _, period := range r.syncer.Cache.SyncCommitteePeriodsSynced {
 		err := r.SyncCommitteePeriodUpdate(ctx, period)
 		if err != nil {
