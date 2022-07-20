@@ -16,7 +16,7 @@ impl BasicChannel {
 
 #[rpc]
 pub trait BasicChannelApi {
-	#[rpc(name = "basicChannel_outbound_getMerkleProof")]
+	#[rpc(name = "basicOutboundChannel_getMerkleProof")]
 	fn get_merkle_proof(&self, commitment_hash: H256, leaf_index: u64) -> Result<Vec<u8>>;
 }
 
