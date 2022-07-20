@@ -332,11 +332,13 @@ where
 		})?;
 
 	let rpc_extensions_builder = {
+		let backend = backend.clone();
 		let client = client.clone();
 		let transaction_pool = transaction_pool.clone();
 
 		Box::new(move |deny_unsafe, _| {
 			let deps = crate::rpc::FullDeps {
+				backend: backend.clone(),
 				client: client.clone(),
 				pool: transaction_pool.clone(),
 				deny_unsafe,
