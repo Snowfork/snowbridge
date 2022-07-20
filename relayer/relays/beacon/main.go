@@ -106,7 +106,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 		}
 	}
 
-	logrus.Info("done with sync committee updates")
+	logrus.Info("done with sync committee updates ")
 
 	logrus.Info("starting to sync finalized headers")
 
