@@ -32,4 +32,3 @@ export PARACHAIN_ID=1000
 # export E2E_TEST_ETH_KEY=            # Your E2E test account private key
 
 # export START_BEACON_SYNC=false       # Start the Beacon chain syncing (in development)
-# export INITIAL_BEACON_BLOCK=0x088241fcf1cf63040b804498c945d3a6ae5484e65692483747fba5b8902c99c9 # Initial block to be synced from (this value is on ropsten)

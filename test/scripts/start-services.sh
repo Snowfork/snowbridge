@@ -15,7 +15,6 @@ beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d9
 
 start_beacon_sync="${START_BEACON_SYNC:-false}"
 lodestar_endpoint_http="http://localhost:9596"
-initial_beacon_block="${INITIAL_BEACON_BLOCK}"
 
 output_dir=/tmp/snowbridge
 
@@ -119,6 +118,9 @@ start_polkadot_launch()
         -H "Content-Type: application/json" \
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
         | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
+
+    initial_beacon_block=$(curl "$lodestar_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
+            | jq -r '.data.finalized.root')
 
     curl "$lodestar_endpoint_http/eth/v1/lightclient/snapshot/$initial_beacon_block" \
         | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
