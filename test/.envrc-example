@@ -25,10 +25,10 @@ export PARACHAIN_ID=1000
 
 # export ETH_RPC_ENDPOINT=https://ropsten.infura.io/v3
 # export ETH_WS_ENDPOINT=wss://ropsten.infura.io/ws/v3
- 
+
 # export ROPSTEN_PRIVATE_KEY=         # Your deployment account private key
 # export BEEFY_RELAY_ETH_KEY=         # Your Beefy relayer account private key
 # export PARACHAIN_RELAY_ETH_KEY=     # Your Parachain relayer account private key
 # export E2E_TEST_ETH_KEY=            # Your E2E test account private key
 
-#export START_BEACON_SYNC=false       # Start the Beacon chain syncing (in development)
+# export START_BEACON_SYNC=false       # Start the Beacon chain syncing (in development)

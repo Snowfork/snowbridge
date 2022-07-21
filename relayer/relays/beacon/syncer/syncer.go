@@ -70,13 +70,6 @@ type FinalizedBlockUpdate struct {
 	SyncAggregate   SyncAggregate
 }
 
-type InitialSync struct {
-	Header                     scale.BeaconHeader
-	CurrentSyncCommittee       scale.CurrentSyncCommittee
-	CurrentSyncCommitteeBranch []types.H256
-	ValidatorsRoot             types.H256
-}
-
 type SyncCommitteePeriodUpdate struct {
 	AttestedHeader          scale.BeaconHeader
 	NextSyncCommittee       scale.CurrentSyncCommittee
@@ -103,38 +96,7 @@ type HeaderUpdate struct {
 	ForkVersion   [4]byte
 }
 
-func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
-	genesis, err := s.Client.GetGenesis()
-	if err != nil {
-		return InitialSync{}, fmt.Errorf("fetch genesis: %w", err)
-	}
-
-	snapshot, err := s.Client.GetLightClientSnapshot(blockId)
-	if err != nil {
-		return InitialSync{}, fmt.Errorf("fetch snapshot: %w", err)
-	}
-
-	header, err := snapshot.Data.Header.ToScale()
-	if err != nil {
-		return InitialSync{}, fmt.Errorf("convert header to scale: %w", err)
-	}
-
-	syncCommittee, err := snapshot.Data.CurrentSyncCommittee.ToScale()
-	if err != nil {
-		return InitialSync{}, fmt.Errorf("convert sync committee to scale: %w", err)
-	}
-
-	initialSync := InitialSync{
-		Header:                     header,
-		CurrentSyncCommittee:       syncCommittee,
-		CurrentSyncCommitteeBranch: proofBranchToScale(snapshot.Data.CurrentSyncCommitteeBranch),
-		ValidatorsRoot:             types.NewH256(common.HexToHash(genesis.Data.ValidatorsRoot).Bytes()),
-	}
-
-	return initialSync, nil
-}
-
-func (s *Syncer) GetSyncPeriodsToFetch(checkpointSlot uint64) ([]uint64, error) {
+func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, error) {
 	finalizedHeader, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
 		return []uint64{}, fmt.Errorf("fetch latest finalized update: %w", err)
@@ -146,10 +108,11 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSlot uint64) ([]uint64, error) 
 	}
 
 	currentSyncPeriod := ComputeSyncPeriodAtSlot(slot)
-	checkpointSyncPeriod := ComputeSyncPeriodAtSlot(checkpointSlot)
+	if checkpointSyncPeriod == currentSyncPeriod {
+		return []uint64{}, nil
+	}
 
 	syncPeriodsToFetch := []uint64{}
-
 	for i := checkpointSyncPeriod; i <= currentSyncPeriod; i++ {
 		syncPeriodsToFetch = append(syncPeriodsToFetch, i)
 	}
