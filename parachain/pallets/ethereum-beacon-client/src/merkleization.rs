@@ -7,7 +7,6 @@ use ssz_rs::U256;
 use byte_slice_cast::AsByteSlice;
 use snowbridge_beacon_primitives::{SyncAggregate, Attestation, Checkpoint, Eth1Data, BeaconHeader, AttesterSlashing, ExecutionPayload, SigningData, ForkData, SyncCommittee, AttestationData, Body, ProposerSlashing, Deposit, VoluntaryExit};
 use crate::ssz::*;
-use crate::config;
 
 #[derive(Debug)]
 pub enum MerkleizationError {
@@ -16,7 +15,7 @@ pub enum MerkleizationError {
     InvalidLength
 }
 
-pub fn get_ssz_beacon_block_body(body: Body) -> Result<SSZBeaconBlockBody, MerkleizationError> {
+pub fn get_ssz_beacon_block_body<const SYNC_COMMITTEE_SIZE: usize>(body: Body) -> Result<SSZBeaconBlockBody<SYNC_COMMITTEE_SIZE>, MerkleizationError> {
     Ok(SSZBeaconBlockBody{
         randao_reveal: Vector::<u8, 96>::from_iter(body.randao_reveal),
         eth1_data: get_ssz_eth1_data(body.eth1_data)?,
@@ -43,7 +42,7 @@ pub fn get_ssz_execution_payload(execution_payload: ExecutionPayload) -> Result<
         gas_limit: execution_payload.gas_limit,
         gas_used: execution_payload.gas_used,
         timestamp: execution_payload.timestamp,
-        extra_data: List::<u8, { config::MAX_EXTRA_DATA_BYTES }>::try_from(execution_payload.extra_data).map_err(|_| MerkleizationError::InvalidLength)?,
+        extra_data: List::<u8, { crate::MAX_EXTRA_DATA_BYTES }>::try_from(execution_payload.extra_data).map_err(|_| MerkleizationError::InvalidLength)?,
         base_fee_per_gas: U256::try_from_bytes_le(&(execution_payload.base_fee_per_gas.as_byte_slice())).map_err(|_| MerkleizationError::InvalidLength)?,
         block_hash: execution_payload.block_hash.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
         transactions_root:  execution_payload.transactions_root.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,
@@ -52,7 +51,7 @@ pub fn get_ssz_execution_payload(execution_payload: ExecutionPayload) -> Result<
     Ok(ssz_execution_payload)
 }
 
-pub fn get_ssz_deposits(deposits: Vec<Deposit>) -> Result<List<SSZDeposit, { config::MAX_DEPOSITS }>, MerkleizationError> {
+pub fn get_ssz_deposits(deposits: Vec<Deposit>) -> Result<List<SSZDeposit, { crate::MAX_DEPOSITS }>, MerkleizationError> {
     let mut deposits_dev = Vec::new();
 
     for deposit in deposits.iter() {
@@ -62,7 +61,7 @@ pub fn get_ssz_deposits(deposits: Vec<Deposit>) -> Result<List<SSZDeposit, { con
             proofs.push(proof.as_bytes().try_into().map_err(|_| MerkleizationError::InvalidLength)?,)
         }
 
-        let proofs_conv = Vector::<[u8; 32], {config::DEPOSIT_CONTRACT_TREE_DEPTH + 1}>::from_iter(proofs);
+        let proofs_conv = Vector::<[u8; 32], {crate::DEPOSIT_CONTRACT_TREE_DEPTH + 1}>::from_iter(proofs);
 
         deposits_dev.push(SSZDeposit{
             proof: proofs_conv,
@@ -75,10 +74,10 @@ pub fn get_ssz_deposits(deposits: Vec<Deposit>) -> Result<List<SSZDeposit, { con
         });
     }
 
-    Ok(List::<SSZDeposit, { config::MAX_DEPOSITS }>::from_iter(deposits_dev))
+    Ok(List::<SSZDeposit, { crate::MAX_DEPOSITS }>::from_iter(deposits_dev))
 }
 
-pub fn get_ssz_voluntary_exits(voluntary_exits: Vec<VoluntaryExit>) -> Result<List<SSZVoluntaryExit, { config::MAX_VOLUNTARY_EXITS }>, MerkleizationError> {
+pub fn get_ssz_voluntary_exits(voluntary_exits: Vec<VoluntaryExit>) -> Result<List<SSZVoluntaryExit, { crate::MAX_VOLUNTARY_EXITS }>, MerkleizationError> {
     let mut voluntary_exits_vec = Vec::new();
 
     for voluntary_exit in voluntary_exits.iter() {
@@ -88,24 +87,24 @@ pub fn get_ssz_voluntary_exits(voluntary_exits: Vec<VoluntaryExit>) -> Result<Li
         });
     }
 
-    Ok(List::<SSZVoluntaryExit, { config::MAX_VOLUNTARY_EXITS }>::from_iter(voluntary_exits_vec))
+    Ok(List::<SSZVoluntaryExit, { crate::MAX_VOLUNTARY_EXITS }>::from_iter(voluntary_exits_vec))
 }
 
-pub fn get_ssz_attestations(attestations: Vec<Attestation>) -> Result<List::<SSZAttestation, { config::MAX_ATTESTATIONS }>, MerkleizationError> {
+pub fn get_ssz_attestations(attestations: Vec<Attestation>) -> Result<List::<SSZAttestation, { crate::MAX_ATTESTATIONS }>, MerkleizationError> {
     let mut attestations_vec = Vec::new();
 
     for attestation in attestations.iter() {
         attestations_vec.push(get_ssz_attestation((*attestation).clone())?);
     }
 
-    Ok(List::<SSZAttestation, { config::MAX_ATTESTATIONS }>::from_iter(attestations_vec))
+    Ok(List::<SSZAttestation, { crate::MAX_ATTESTATIONS }>::from_iter(attestations_vec))
 }
 
 pub fn get_ssz_attestation(attestation: Attestation) -> Result<SSZAttestation, MerkleizationError> {
     let signature = Vector::<u8, 96>::from_iter(attestation.signature.clone());
 
     Ok(SSZAttestation{
-        aggregation_bits: Bitlist::<{ config::MAX_VALIDATORS_PER_COMMITTEE }>::deserialize(&attestation.aggregation_bits).map_err(|_| MerkleizationError::InvalidLength)?,
+        aggregation_bits: Bitlist::<{ crate::MAX_VALIDATORS_PER_COMMITTEE }>::deserialize(&attestation.aggregation_bits).map_err(|_| MerkleizationError::InvalidLength)?,
         data: get_ssz_attestation_data(attestation.data)?,
         signature: signature,
     })
@@ -121,14 +120,14 @@ pub fn get_ssz_attestation_data(attestation_data: AttestationData) -> Result<SSZ
     })
 }
 
-pub fn get_ssz_proposer_slashings(proposer_slashings: Vec<ProposerSlashing>) -> Result<List<SSZProposerSlashing, { config::MAX_PROPOSER_SLASHINGS } >, MerkleizationError> {
+pub fn get_ssz_proposer_slashings(proposer_slashings: Vec<ProposerSlashing>) -> Result<List<SSZProposerSlashing, { crate::MAX_PROPOSER_SLASHINGS } >, MerkleizationError> {
     let mut proposer_slashings_vec = Vec::new();
 
     for proposer_slashing in proposer_slashings.iter() {
        proposer_slashings_vec.push(get_ssz_proposer_slashing((*proposer_slashing).clone())?);
     }
 
-    Ok(List::<SSZProposerSlashing, { config::MAX_PROPOSER_SLASHINGS }>::from_iter(proposer_slashings_vec))
+    Ok(List::<SSZProposerSlashing, { crate::MAX_PROPOSER_SLASHINGS }>::from_iter(proposer_slashings_vec))
 }
 
 pub fn get_ssz_proposer_slashing(proposer_slashing: ProposerSlashing) -> Result<SSZProposerSlashing, MerkleizationError> {
@@ -147,22 +146,22 @@ pub fn get_ssz_proposer_slashing(proposer_slashing: ProposerSlashing) -> Result<
     })
 }
 
-pub fn get_ssz_attester_slashings(attester_slashings: Vec<AttesterSlashing>) -> Result<List<SSZAttesterSlashing, { config::MAX_ATTESTER_SLASHINGS } >, MerkleizationError> {
+pub fn get_ssz_attester_slashings(attester_slashings: Vec<AttesterSlashing>) -> Result<List<SSZAttesterSlashing, { crate::MAX_ATTESTER_SLASHINGS } >, MerkleizationError> {
     let mut attester_slashings_vec = Vec::new();
 
     for attester_slashing in attester_slashings.iter() {
         attester_slashings_vec.push(get_ssz_attester_slashing((*attester_slashing).clone())?);
     }
 
-    Ok(List::<SSZAttesterSlashing, { config::MAX_ATTESTER_SLASHINGS } >::from_iter(attester_slashings_vec))
+    Ok(List::<SSZAttesterSlashing, { crate::MAX_ATTESTER_SLASHINGS } >::from_iter(attester_slashings_vec))
 }
 
 pub fn get_ssz_attester_slashing(attester_slashing: AttesterSlashing) -> Result<SSZAttesterSlashing, MerkleizationError> {
     let signature1 = Vector::<u8, 96>::from_iter(attester_slashing.attestation_1.signature.clone());
     let signature2 = Vector::<u8, 96>::from_iter(attester_slashing.attestation_2.signature.clone());
 
-    let attesting_indices1 = List::<u64, { config::MAX_VALIDATORS_PER_COMMITTEE }>::from_iter(attester_slashing.attestation_1.attesting_indices.clone());
-    let attesting_indices2 = List::<u64, { config::MAX_VALIDATORS_PER_COMMITTEE }>::from_iter(attester_slashing.attestation_2.attesting_indices.clone());
+    let attesting_indices1 = List::<u64, { crate::MAX_VALIDATORS_PER_COMMITTEE }>::from_iter(attester_slashing.attestation_1.attesting_indices.clone());
+    let attesting_indices2 = List::<u64, { crate::MAX_VALIDATORS_PER_COMMITTEE }>::from_iter(attester_slashing.attestation_2.attesting_indices.clone());
 
     Ok(SSZAttesterSlashing{
         attestation_1: SSZIndexedAttestation{
@@ -195,9 +194,9 @@ pub fn get_ssz_beacon_header(beacon_header: BeaconHeader) -> Result<SSZBeaconBlo
     })
 }
 
-pub fn get_ssz_sync_aggregate(sync_aggregate: SyncAggregate) -> Result<SSZSyncAggregate, MerkleizationError> {
+pub fn get_ssz_sync_aggregate<const SYNC_COMMITTEE_SIZE: usize>(sync_aggregate: SyncAggregate) -> Result<SSZSyncAggregate<SYNC_COMMITTEE_SIZE>, MerkleizationError> {
     Ok(SSZSyncAggregate{
-        sync_committee_bits: Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(&sync_aggregate.sync_committee_bits).map_err(|_| MerkleizationError::InvalidLength)?,
+        sync_committee_bits: Bitvector::<SYNC_COMMITTEE_SIZE>::deserialize(&sync_aggregate.sync_committee_bits).map_err(|_| MerkleizationError::InvalidLength)?,
         sync_committee_signature: Vector::<u8, 96>::from_iter(sync_aggregate.sync_committee_signature),
     })
 }
@@ -214,8 +213,8 @@ pub fn hash_tree_root_beacon_header(beacon_header: BeaconHeader) -> Result<[u8; 
     hash_tree_root(get_ssz_beacon_header(beacon_header)?)
 }
 
-pub fn hash_tree_root_beacon_body(body: Body) -> Result<[u8; 32], MerkleizationError> {
-    hash_tree_root(get_ssz_beacon_block_body(body)?)
+pub fn hash_tree_root_beacon_body<const SYNC_COMMITTEE_SIZE: usize>(body: Body) -> Result<[u8; 32], MerkleizationError> {
+    hash_tree_root(get_ssz_beacon_block_body::<SYNC_COMMITTEE_SIZE>(body)?)
 }
 
 pub fn hash_tree_root_sync_committee(sync_committee: SyncCommittee) -> Result<[u8; 32], MerkleizationError> {
@@ -258,8 +257,8 @@ pub fn hash_tree_root<T: SimpleSerializeTrait>(mut object: T) -> Result<[u8; 32]
     }
 }
 
-pub fn get_sync_committee_bits(bits_hex: Vec<u8>) -> Result<Vec<u8>, MerkleizationError> {
-    let bitv = Bitvector::<{ config::SYNC_COMMITTEE_SIZE }>::deserialize(&bits_hex).map_err(|_| MerkleizationError::InvalidLength)?;
+pub fn get_sync_committee_bits<const SYNC_COMMITTEE_SIZE: usize>(bits_hex: Vec<u8>) -> Result<Vec<u8>, MerkleizationError> {
+    let bitv = Bitvector::<SYNC_COMMITTEE_SIZE>::deserialize(&bits_hex).map_err(|_| MerkleizationError::InvalidLength)?;
 
     let result = bitv.iter().map(|bit| {
         if bit == true {

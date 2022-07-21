@@ -59,6 +59,9 @@ impl frame_system::Config for Test {
 
 impl ethereum_beacon_client::Config for Test {
 	type Event = Event;
+	const SLOTS_PER_EPOCH: u64 = 6;
+	const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 8;
+	const SYNC_COMMITTEE_SIZE: usize = 32;
 }
 
 // Build genesis storage according to the mock runtime.

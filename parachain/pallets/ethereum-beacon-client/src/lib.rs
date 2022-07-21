@@ -7,7 +7,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 mod ssz;
-mod config;
 
 use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
@@ -19,8 +18,7 @@ use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
 use snowbridge_core::{Message, Verifier};
-
-const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 256;
+use crate::merkleization::get_sync_committee_bits;
 
 const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;
@@ -30,6 +28,16 @@ const NEXT_SYNC_COMMITTEE_INDEX: u64 = 23;
 
 const FINALIZED_ROOT_DEPTH: u64 = 6;
 const FINALIZED_ROOT_INDEX: u64 = 41;
+
+const MAX_PROPOSER_SLASHINGS: usize = 16;
+const MAX_ATTESTER_SLASHINGS: usize =  2;
+const MAX_ATTESTATIONS: usize =  128;
+const MAX_DEPOSITS: usize =  16;
+const MAX_VOLUNTARY_EXITS: usize =  16;
+const MAX_VALIDATORS_PER_COMMITTEE: usize = 2048;
+const MAX_EXTRA_DATA_BYTES: usize = 32;
+
+const DEPOSIT_CONTRACT_TREE_DEPTH: usize = 32;
 
 /// GENESIS_FORK_VERSION('0x00000000')
 const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
@@ -106,6 +114,8 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		const SLOTS_PER_EPOCH: u64;
+		const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64;
+		const SYNC_COMMITTEE_SIZE: usize;
 	}
 
 	#[pallet::event]
@@ -311,7 +321,7 @@ pub mod pallet {
 		fn process_sync_committee_period_update(
 			update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
-			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+			let sync_committee_bits = get_sync_committee_bits::<T::SYNC_COMMITTEE_SIZE>(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 			Self::verify_sync_committee(
@@ -652,7 +662,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn compute_current_sync_period(slot: u64) -> u64 {
-			slot / SLOTS_PER_EPOCH / EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+			slot / T::SLOTS_PER_EPOCH / T::EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 		}
 
 		/// Return the domain for the domain_type and fork_version.
