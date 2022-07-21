@@ -34,26 +34,25 @@ start_geth() {
 
     local data_dir="$output_dir/geth"
 
-    geth init --datadir "$data_dir" config/genesis.json
-    geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key0.prv
-    geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key1.prv
-    geth --vmdebug --datadir "$data_dir" --networkid 15 \
-        --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
-        --rpc.allow-unprotected-txs --mine --miner.threads=1 \
-        --miner.etherbase=0x0000000000000000000000000000000000000000 \
-        --allow-insecure-unlock \
-        --authrpc.jwtsecret config/jwtsecret \
-        --unlock 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD,0x89b4AB1eF20763630df9743ACF155865600daFF2 \
-        --password /dev/null \
-        --rpc.gascap 100000000 \
-        --trace "$data_dir/trace" \
-        --gcmode archive \
-        --miner.gasprice=0 \
-        > "$output_dir/geth.log" 2>&1 &
-}
-
-start_geth_for_beacon_node() {
-    geth --"$eth_network" \
+    if [ "$eth_network" == "localhost" ]; then
+        geth init --datadir "$data_dir" config/genesis.json
+        geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key0.prv
+        geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key1.prv
+        geth --vmdebug --datadir "$data_dir" --networkid 15 \
+            --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
+            --rpc.allow-unprotected-txs --mine --miner.threads=1 \
+            --miner.etherbase=0x0000000000000000000000000000000000000000 \
+            --allow-insecure-unlock \
+            --authrpc.jwtsecret config/jwtsecret \
+            --unlock 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD,0x89b4AB1eF20763630df9743ACF155865600daFF2 \
+            --password /dev/null \
+            --rpc.gascap 100000000 \
+            --trace "$data_dir/trace" \
+            --gcmode archive \
+            --miner.gasprice=0 \
+            > "$output_dir/geth.log" 2>&1 &
+    else
+        geth --"$eth_network" \
         --datadir "/home/ubuntu/projects/go-ethereum/${eth_network}data" \
         --authrpc.addr localhost \
         --authrpc.port 8551 \
@@ -63,49 +62,49 @@ start_geth_for_beacon_node() {
         --http.api eth,net \
         --override.terminaltotaldifficulty 50000000000000000 \
         > "$output_dir/geth_beacon.log" 2>&1 &
+    fi
 }
 
 start_lodestar() {
-    lodestar beacon \
-        --rootDir="/home/ubuntu/projects/lodestar-beacondata" \
-        --network=$eth_network \
-        --api.rest.api="beacon,config,events,node,validator,lightclient" \
-        --jwt-secret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
-        > "$output_dir/lodestar_beacon.log" 2>&1 &
-}
+    if [ "$eth_network" == "localhost" ]; then
+        echo "Waiting for geth API to be ready"
+        sleep 2
 
-start_lodestar() {
-   echo "Waiting for geth API to be ready"
-    sleep 2
+        genesisHash=$(curl http://localhost:8545 \
+            -X POST \
+            -H 'Content-Type: application/json' \
+            -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
 
-    genesisHash=$(curl http://localhost:8545 \
-        -X POST \
-        -H 'Content-Type: application/json' \
-        -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
+        timestamp=$(date -d'+1minute' +%s%3N)
 
-    timestamp=$(date -d'+1minute' +%s%3N)
+        > lodestar-beacon.log
 
-    > lodestar-beacon.log
+        echo "Starting lodestar"
 
-     echo "Starting lodestar"
-
-    lodestar dev \
-        --genesisValidators 8 \
-        --genesisTime $timestamp \
-        --startValidators "0..7" \
-        --enr.ip "127.0.0.1" \
-        --rootDir "$output_dir/beacon-node1-$timestamp" \
-        --reset \
-        --terminal-total-difficulty-override 0 \
-        --genesisEth1Hash $genesisHash \
-        --logLevelFile debug \
-        --params.ALTAIR_FORK_EPOCH 0 \
-        --params.BELLATRIX_FORK_EPOCH 0 \
-        --eth1.enabled=true \
-        --api.rest.api="beacon,config,events,node,validator,lightclient" \
-        --jwt-secret config/jwtsecret \
-        > lodestar-beacon.log 2>&1 &
-
+        lodestar dev \
+            --genesisValidators 8 \
+            --genesisTime $timestamp \
+            --startValidators "0..7" \
+            --enr.ip "127.0.0.1" \
+            --rootDir "$output_dir/beacon-node1-$timestamp" \
+            --reset \
+            --terminal-total-difficulty-override 0 \
+            --genesisEth1Hash $genesisHash \
+            --logLevelFile debug \
+            --params.ALTAIR_FORK_EPOCH 0 \
+            --params.BELLATRIX_FORK_EPOCH 0 \
+            --eth1.enabled=true \
+            --api.rest.api="beacon,config,events,node,validator,lightclient" \
+            --jwt-secret config/jwtsecret \
+            > lodestar-beacon.log 2>&1 &
+    else
+        lodestar beacon \
+            --rootDir="/home/ubuntu/projects/lodestar-beacondata" \
+            --network=$eth_network \
+            --api.rest.api="beacon,config,events,node,validator,lightclient" \
+            --jwt-secret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
+            > "$output_dir/lodestar_beacon.log" 2>&1 &
+    fi
 
     echo "Started up beacon node"
 }

@@ -20,8 +20,6 @@ use sp_std::prelude::*;
 use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
 use snowbridge_core::{Message, Verifier};
 
-const SLOTS_PER_EPOCH: u64 = 32;
-
 const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 256;
 
 const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
@@ -111,6 +109,8 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		const SLOTS_PER_EPOCH: u64;
 	}
 
 	#[pallet::event]

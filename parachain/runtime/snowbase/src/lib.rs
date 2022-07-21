@@ -624,6 +624,7 @@ impl ethereum_light_client::Config for Runtime {
 
 impl ethereum_beacon_client::Config for Runtime {
 	type Event = Event;
+	const SLOTS_PER_EPOCH: u64 = 6;
 }
 
 parameter_types! {
