@@ -8,10 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	ssz "github.com/ferranbt/fastssz"
-
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/sirupsen/logrus"
+	ssz "github.com/ferranbt/fastssz"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
 )
@@ -100,6 +98,7 @@ type FinalizedHeaderUpdate struct {
 
 type HeaderUpdate struct {
 	Block         scale.BeaconBlock
+	BlockBodyRoot types.H256
 	SyncAggregate scale.SyncAggregate
 	ForkVersion   [4]byte
 }
@@ -107,29 +106,22 @@ type HeaderUpdate struct {
 func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
 	genesis, err := s.Client.GetGenesis()
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch snapshot")
-
-		return InitialSync{}, err
+		return InitialSync{}, fmt.Errorf("fetch genesis: %w", err)
 	}
 
-	snapshot, err := s.Client.GetLightClientSnapshot("0xe6371ca628393d67f4491d02a77b5de81259aa6b9dff6b6bfa6a1782af896319") // 52
+	snapshot, err := s.Client.GetLightClientSnapshot(blockId)
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch snapshot")
-
-		return InitialSync{}, err
+		return InitialSync{}, fmt.Errorf("fetch snapshot: %w", err)
 	}
 
 	header, err := snapshot.Data.Header.ToScale()
 	if err != nil {
-
-		return InitialSync{}, err
+		return InitialSync{}, fmt.Errorf("convert header to scale: %w", err)
 	}
 
 	syncCommittee, err := snapshot.Data.CurrentSyncCommittee.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable convert sync committee to scale format")
-
-		return InitialSync{}, err
+		return InitialSync{}, fmt.Errorf("convert sync committee to scale: %w", err)
 	}
 
 	initialSync := InitialSync{
@@ -139,35 +131,22 @@ func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
 		ValidatorsRoot:             types.NewH256(common.HexToHash(genesis.Data.ValidatorsRoot).Bytes()),
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"blockId": blockId,
-	}).Info("received initial sync for trusted block, sending for intial sync")
-
 	return initialSync, nil
 }
 
 func (s *Syncer) GetSyncPeriodsToFetch(checkpointSlot uint64) ([]uint64, error) {
 	finalizedHeader, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
-		logrus.WithError(err).Error("unable to get header at head")
-
-		return []uint64{}, err
+		return []uint64{}, fmt.Errorf("fetch latest finalized update: %w", err)
 	}
 
 	slot, err := strconv.ParseUint(finalizedHeader.Data.AttestedHeader.Slot, 10, 64)
 	if err != nil {
-		logrus.WithError(err).Error("unable parse slot as int")
-
-		return []uint64{}, err
+		return []uint64{}, fmt.Errorf("parse slot as int: %w", err)
 	}
 
 	currentSyncPeriod := ComputeSyncPeriodAtSlot(slot)
 	checkpointSyncPeriod := ComputeSyncPeriodAtSlot(checkpointSlot)
-
-	logrus.WithFields(logrus.Fields{
-		"currentSyncPeriod":    currentSyncPeriod,
-		"checkpointSyncPeriod": checkpointSyncPeriod,
-	}).Info("computed epochs")
 
 	syncPeriodsToFetch := []uint64{}
 
@@ -181,52 +160,38 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSlot uint64) ([]uint64, error) 
 func (s *Syncer) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePeriodUpdate, error) {
 	committeeUpdates, err := s.Client.GetSyncCommitteePeriodUpdate(from, to)
 	if err != nil {
-		logrus.WithError(err).Error("unable to build sync committee period update")
-
-		return SyncCommitteePeriodUpdate{}, err
+		return SyncCommitteePeriodUpdate{}, fmt.Errorf("fetch sync committee period update: %w", err)
 	}
 
 	if len(committeeUpdates.Data) < 1 {
-		logrus.WithError(err).Error("no sync committee sync update returned")
-
-		return SyncCommitteePeriodUpdate{}, err
+		return SyncCommitteePeriodUpdate{}, fmt.Errorf("no sync committee sync update returned: %w", err)
 	}
 
 	committeeUpdate := committeeUpdates.Data[0]
 
 	attestedHeader, err := committeeUpdate.AttestedHeader.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable to parse beacon header in response")
-
-		return SyncCommitteePeriodUpdate{}, err
+		return SyncCommitteePeriodUpdate{}, fmt.Errorf("convert attested header to scale: %w", err)
 	}
 
 	finalizedHeader, err := committeeUpdate.FinalizedHeader.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable to parse beacon header in response")
-
-		return SyncCommitteePeriodUpdate{}, err
+		return SyncCommitteePeriodUpdate{}, fmt.Errorf("convert finalized header to scale: %w", err)
 	}
 
 	nextSyncCommittee, err := committeeUpdate.NextSyncCommittee.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable convert sync committee to scale format")
-
-		return SyncCommitteePeriodUpdate{}, err
+		return SyncCommitteePeriodUpdate{}, fmt.Errorf("convert sync committee to scale: %w", err)
 	}
 
 	syncAggregate, err := committeeUpdate.SyncAggregate.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable convert sync aggregate to scale format")
-
-		return SyncCommitteePeriodUpdate{}, err
+		return SyncCommitteePeriodUpdate{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
 	}
 
 	forkVersion, err := hexStringToForkVersion(committeeUpdate.ForkVersion)
 	if err != nil {
-		logrus.WithError(err).Error("unable convert fork version to scale format")
-
-		return SyncCommitteePeriodUpdate{}, err
+		return SyncCommitteePeriodUpdate{}, fmt.Errorf("convert fork version: %w", err)
 	}
 
 	syncCommitteePeriodUpdate := SyncCommitteePeriodUpdate{
@@ -251,51 +216,37 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePer
 func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, common.Hash, error) {
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
-
-		return FinalizedHeaderUpdate{}, common.Hash{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch finalized update: %w", err)
 	}
 
 	attestedHeader, err := finalizedUpdate.Data.AttestedHeader.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable to parse beacon header in response")
-
-		return FinalizedHeaderUpdate{}, common.Hash{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert attested header to scale: %w", err)
 	}
 
 	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable to parse beacon header in response")
-
-		return FinalizedHeaderUpdate{}, common.Hash{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert finalized header to scale: %w", err)
 	}
 
 	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(finalizedHeader.Slot))
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch current fork version")
-
-		return FinalizedHeaderUpdate{}, common.Hash{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch fork version: %w", err)
 	}
 
 	blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(finalizedHeader.Slot)) // TODO can compute this ourselves with SSZ
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch block root")
-
-		return FinalizedHeaderUpdate{}, common.Hash{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch block root: %w", err)
 	}
 
 	forkVersion, err := hexStringToForkVersion(currentForkVersion)
 	if err != nil {
-		logrus.WithError(err).Error("unable convert fork version to scale format")
-
-		return FinalizedHeaderUpdate{}, common.Hash{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert fork version: %w", err)
 	}
 
 	syncAggregate, err := finalizedUpdate.Data.SyncAggregate.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable to parse sync aggregate in response")
-
-		return FinalizedHeaderUpdate{}, common.Hash{}, err
+		return FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
 	}
 
 	finalizedHeaderUpdate := FinalizedHeaderUpdate{
@@ -312,60 +263,75 @@ func (s *Syncer) GetFinalizedUpdate() (FinalizedHeaderUpdate, common.Hash, error
 func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch latest header checkpoint")
+		return HeaderUpdate{}, fmt.Errorf("fetch block: %w", err)
+	}
 
-		return HeaderUpdate{}, err
+	header, err := s.Client.GetHeader(blockRoot.Hex())
+	if err != nil {
+		return HeaderUpdate{}, fmt.Errorf("fetch header: %w", err)
 	}
 
 	blockScale, err := block.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable convert block to scale format")
-
-		return HeaderUpdate{}, err
-	}
-
-	blockRoot, err = s.Client.GetBeaconBlockRoot(uint64(blockScale.Slot)) // TODO can compute this ourselves with SSZ
-	if err != nil {
-		logrus.WithError(err).Error("unable to fetch block root")
-
-		return HeaderUpdate{}, err
+		return HeaderUpdate{}, fmt.Errorf("convert block to scale: %w", err)
 	}
 
 	currentForkVersion, err := s.Client.GetCurrentForkVersion(uint64(blockScale.Slot))
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch finalized checkpoint")
-
-		return HeaderUpdate{}, err
+		return HeaderUpdate{}, fmt.Errorf("fetch current fork version: %w", err)
 	}
 
 	forkVersion, err := hexStringToForkVersion(currentForkVersion)
 	if err != nil {
-		logrus.WithError(err).Error("unable convert fork version to scale format")
-
-		return HeaderUpdate{}, err
+		return HeaderUpdate{}, fmt.Errorf("convert fork version: %w", err)
 	}
 
 	headerUpdate := HeaderUpdate{
-		Block:       blockScale,
-		ForkVersion: forkVersion,
+		Block:         blockScale,
+		BlockBodyRoot: types.NewH256(header.BodyRoot.Bytes()),
+		ForkVersion:   forkVersion,
 	}
 
 	return headerUpdate, nil
 }
 
+func (s *Syncer) GetBlockRange(lastBlockHash, secondLastBlockHash common.Hash) (uint64, uint64, error) {
+	lastBlock, err := s.Client.GetBeaconBlock(lastBlockHash)
+	if err != nil {
+		return 0, 0, fmt.Errorf("fetch block for last hash: %w", err)
+	}
+
+	lastBlockNumberString := lastBlock.Data.Message.Body.ExecutionPayload.BlockNumber
+
+	lastBlockNumber, err := strconv.ParseUint(lastBlockNumberString, 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("parse last block slot as int: %w", err)
+	}
+
+	secondLastBlock, err := s.Client.GetBeaconBlock(secondLastBlockHash)
+	if err != nil {
+		return 0, 0, fmt.Errorf("fetch block for second last hash: %w", err)
+	}
+
+	secondLastBlockNumberString := secondLastBlock.Data.Message.Body.ExecutionPayload.BlockNumber
+
+	secondLastBlockNumber, err := strconv.ParseUint(secondLastBlockNumberString, 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("parse second last block slot as int: %w", err)
+	}
+
+	return lastBlockNumber, secondLastBlockNumber, nil
+}
+
 func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, error) {
 	block, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch block")
-
-		return scale.SyncAggregate{}, err
+		return scale.SyncAggregate{}, fmt.Errorf("fetch block: %w", err)
 	}
 
 	blockScale, err := block.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable convert block to scale format")
-
-		return scale.SyncAggregate{}, err
+		return scale.SyncAggregate{}, fmt.Errorf("convert block to scale: %w", err)
 	}
 
 	return blockScale.Body.SyncAggregate, nil
@@ -374,16 +340,12 @@ func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, e
 func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, error) {
 	block, err := s.Client.GetBeaconBlockBySlot(slot)
 	if err != nil {
-		logrus.WithError(err).Error("unable to fetch block")
-
-		return scale.SyncAggregate{}, err
+		return scale.SyncAggregate{}, fmt.Errorf("fetch block: %w", err)
 	}
 
 	blockScale, err := block.ToScale()
 	if err != nil {
-		logrus.WithError(err).Error("unable convert block to scale format")
-
-		return scale.SyncAggregate{}, err
+		return scale.SyncAggregate{}, fmt.Errorf("convert block to scale: %w", err)
 	}
 
 	return blockScale.Body.SyncAggregate, nil
@@ -402,6 +364,15 @@ func ComputeSyncPeriodAtSlot(slot uint64) uint64 {
 }
 
 func IsInArray(values []uint64, toCheck uint64) bool {
+	for _, value := range values {
+		if value == toCheck {
+			return true
+		}
+	}
+	return false
+}
+
+func IsInHashArray(values []common.Hash, toCheck common.Hash) bool {
 	for _, value := range values {
 		if value == toCheck {
 			return true
@@ -457,12 +428,12 @@ func hexStringToPublicKey(hexString string) ([48]byte, error) {
 }
 
 func hexStringToByteArray(hexString string) ([]byte, error) {
-	result, ok := new(big.Int).SetString(hexString[2:], 16)
-	if !ok {
-		return []byte{}, nil
+	bytes, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
+	if err != nil {
+		return []byte{}, err
 	}
 
-	return result.Bytes(), nil
+	return bytes, nil
 }
 
 func hexStringToForkVersion(hexString string) ([4]byte, error) {
@@ -481,16 +452,12 @@ func hexStringToForkVersion(hexString string) ([4]byte, error) {
 func (h HeaderResponse) ToScale() (scale.BeaconHeader, error) {
 	slot, err := strconv.ParseUint(h.Slot, 10, 64)
 	if err != nil {
-		logrus.WithError(err).Error("unable parse slot as int")
-
-		return scale.BeaconHeader{}, err
+		return scale.BeaconHeader{}, fmt.Errorf("parse slot as int: %w", err)
 	}
 
 	proposerIndex, err := strconv.ParseUint(h.ProposerIndex, 10, 64)
 	if err != nil {
-		logrus.WithError(err).Error("unable parse slot as int")
-
-		return scale.BeaconHeader{}, err
+		return scale.BeaconHeader{}, fmt.Errorf("parse proposerIndex as int: %w", err)
 	}
 
 	return scale.BeaconHeader{
@@ -508,9 +475,7 @@ func (s SyncCommitteeResponse) ToScale() (scale.CurrentSyncCommittee, error) {
 	for _, pubkey := range s.Pubkeys {
 		publicKey, err := hexStringToPublicKey(pubkey)
 		if err != nil {
-			logrus.WithError(err).Error("unable convert sync committee pubkey to byte array")
-
-			return scale.CurrentSyncCommittee{}, err
+			return scale.CurrentSyncCommittee{}, fmt.Errorf("convert sync committee pubkey to byte array: %w", err)
 		}
 
 		syncCommitteePubkeys = append(syncCommitteePubkeys, publicKey)
@@ -518,9 +483,7 @@ func (s SyncCommitteeResponse) ToScale() (scale.CurrentSyncCommittee, error) {
 
 	syncCommitteeAggPubkey, err := hexStringToPublicKey(s.AggregatePubkey)
 	if err != nil {
-		logrus.WithError(err).Error("unable convert sync committee pubkey to byte array")
-
-		return scale.CurrentSyncCommittee{}, err
+		return scale.CurrentSyncCommittee{}, fmt.Errorf("convert sync committee aggregate bukey to byte array: %w", err)
 	}
 
 	return scale.CurrentSyncCommittee{
@@ -551,14 +514,12 @@ func (b BeaconBlockResponse) ToScale() (scale.BeaconBlock, error) {
 
 	slot, err := toUint64(dataMessage.Slot)
 	if err != nil {
-		logrus.WithError(err).Error("unable parse slot as int")
-		return scale.BeaconBlock{}, err
+		return scale.BeaconBlock{}, fmt.Errorf("parse slot as int: %w", err)
 	}
 
 	proposerIndex, err := toUint64(dataMessage.ProposerIndex)
 	if err != nil {
-		logrus.WithError(err).Error("unable parse slot as int")
-		return scale.BeaconBlock{}, err
+		return scale.BeaconBlock{}, fmt.Errorf("parse proposerIndex as int: %w", err)
 	}
 
 	body := dataMessage.Body

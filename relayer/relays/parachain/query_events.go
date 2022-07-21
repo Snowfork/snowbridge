@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 )
 
@@ -50,15 +51,24 @@ func NewQueryClient() QueryClient {
 func (q *QueryClient) QueryEvents(ctx context.Context, api string, blockHash types.Hash) (*Events, error) {
 	name, args := q.NameArgs(api, blockHash.Hex())
 	cmd := exec.CommandContext(ctx, name, args...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
+
+	var outBuf, errBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+
 	err := cmd.Run()
 	if err != nil {
+		log.WithFields(log.Fields{
+			"name":   name,
+			"args":   fmt.Sprintf("%v", args),
+			"stdErr": errBuf.String(),
+			"stdOut": outBuf.String(),
+		}).Error("Failed to query events.")
 		return nil, err
 	}
 
 	var items inputItems
-	err = json.Unmarshal(out.Bytes(), &items)
+	err = json.Unmarshal(outBuf.Bytes(), &items)
 	if err != nil {
 		return nil, err
 	}

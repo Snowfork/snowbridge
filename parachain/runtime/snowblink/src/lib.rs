@@ -609,7 +609,7 @@ impl incentivized_channel_outbound::Config for Runtime {
 parameter_types! {
 	pub const DescendantsUntilFinalized: u8 = 16;
 	pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::ropsten();
-	pub const VerifyPoW: bool = true;
+	pub const VerifyPoW: bool = false;
 	pub const MaxHeadersForNumber: u32 = 100;
 }
 
@@ -620,6 +620,10 @@ impl ethereum_light_client::Config for Runtime {
 	type VerifyPoW = VerifyPoW;
 	type MaxHeadersForNumber = MaxHeadersForNumber;
 	type WeightInfo = ethereum_light_client::weights::SnowbridgeWeight<Self>;
+}
+
+impl ethereum_beacon_client::Config for Runtime {
+	type Event = Event;
 }
 
 parameter_types! {
@@ -751,8 +755,9 @@ construct_runtime!(
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 16,
 		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 17,
-		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 18,
-		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 19,
+		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config, Storage, Event<T>} = 18,
+		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
+		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 20,
 
 		// XCM
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 21,

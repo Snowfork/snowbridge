@@ -186,6 +186,24 @@ func NewHeaderCache(
 	return &state, nil
 }
 
+// Instantiates a Header Cache with just a block loader and block cache.
+// Used by beacon relayer.
+func NewHeaderBlockCache(
+	bl BlockLoader,
+) (*HeaderCache, error) {
+	blockCache := NewBlockCache(5)
+	blockLoader := bl
+	if blockLoader == nil {
+		return nil, fmt.Errorf("BlockLoader param is nil")
+	}
+
+	state := HeaderCache{
+		blockCache:  blockCache,
+		blockLoader: blockLoader,
+	}
+	return &state, nil
+}
+
 // GetReceiptTrie returns a Merkle Patricia trie constructed from the receipts
 // of the block specified by `hash`. If the trie isn't cached, it will block for
 // multiple seconds to fetch receipts and construct the trie.

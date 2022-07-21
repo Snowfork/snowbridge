@@ -42,6 +42,7 @@ pub fn get_chain_spec() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 					get_account_id_from_seed::<sr25519::Public>("Relay"),
+					get_account_id_from_seed::<sr25519::Public>("BeaconRelay"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
@@ -101,7 +102,7 @@ fn testnet_genesis(
 			reward_fraction: Perbill::from_percent(80),
 		},
 		incentivized_outbound_channel: snowbase_runtime::IncentivizedOutboundChannelConfig {
-			fee: u128::from_str_radix("10000000000000000", 10).unwrap(), // 0.01 SnowEther
+			fee: u128::from_str_radix("10000000000000", 10).unwrap(), // 0.00001 SnowEther
 			interval: 1,
 		},
 		assets: snowbase_runtime::AssetsConfig {

@@ -1,6 +1,7 @@
 const Web3 = require('web3');
 const BigNumber = require('bignumber.js');
 const fs = require('fs');
+const { env } = require('process');
 
 const contracts = JSON.parse(fs.readFileSync('/tmp/snowbridge/contracts.json', 'utf8'));
 
@@ -60,7 +61,19 @@ class EthClient {
   }
 
   async initialize() {
-    this.accounts = await this.web3.eth.getAccounts();
+    if (env.E2E_TEST_ETH_KEY) {
+      let keys = [
+        env.ROPSTEN_PRIVATE_KEY,
+        env.E2E_TEST_ETH_KEY,
+        env.BEEFY_RELAY_ETH_KEY,
+        env.PARACHAIN_RELAY_ETH_KEY,
+      ]
+      this.accounts = keys
+        .map(k => this.web3.eth.accounts.wallet.add(k))
+        .map(account => this.web3.utils.toChecksumAddress(account.address));
+    } else {
+      this.accounts = await this.web3.eth.getAccounts();
+    }
     this.web3.eth.defaultAccount = this.accounts[1];
 
     const snowDotAddr = await this.appDOT.methods.token().call();
@@ -109,7 +122,8 @@ class EthClient {
     const erc20Instance = this.loadERC20Contract();
     return erc20Instance.methods.mint(to, amount)
       .send({
-        from: owner
+        from: owner,
+        gasLimit: 300000
       });
   }
 
@@ -117,7 +131,8 @@ class EthClient {
     const erc20Instance = this.loadERC20Contract();
     return erc20Instance.methods.approve(this.appERC20._address, this.web3.utils.toBN(amount))
       .send({
-        from
+        from,
+        gasLimit: 300000
       });
   }
 

@@ -22,6 +22,7 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 * Development environment for the relay services. See setup [instructions](../relayer/README.md#development).
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
+* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `0.38.0`.
 * sponge - Is available in the `moreutils` package.
 
   ```bash
@@ -49,14 +50,14 @@ yarn install
 ### Polkadot
 
 * Clone the polkadot repository somewhere on your machine
-* Checkout tag `v0.9.22-rc4`.
+* Checkout tag `v0.9.23`.
 
 Example:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
 git fetch --tags
-git checkout v0.9.22
+git checkout v0.9.23
 cargo build --release
 ```
 
@@ -128,3 +129,9 @@ You should see the test pass, checking that message delivery works correctly and
 ## Generating/Updating new test fixtures
 
 Test fixtures are taken by running the service in full e2e test. The relayer should log the fixture data you need (code is in [the relayer here](../relayer/workers/beefyrelayer/fixture-data-logger.go), though may require a bit of manual copy/pasting to get perfectly it in the right format.
+
+## Running E2E tests on Ropsten
+
+To run the E2E tests on Ropsten you need to have separate accounts for the relayers, an account for deployment and one for running the E2E test stack. You will also require an [Infura](https://infura.io/) account and project.
+
+Look at `.envrc-example` for the required variables. Add these variables to your `.envrc` and run `start-services.sh`.

@@ -8,7 +8,7 @@ use sp_runtime::{
 };
 use frame_system as system;
 use hex_literal::hex;
-use snowbridge_beacon::{Attestation, AttestationData, AttesterSlashing, BeaconBlock, Body, Checkpoint, Eth1Data, ExecutionPayload, IndexedAttestation};
+use snowbridge_beacon_primitives::{Attestation, AttestationData, AttesterSlashing, BeaconBlock, Body, Checkpoint, Eth1Data, ExecutionPayload, IndexedAttestation};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -1686,7 +1686,7 @@ pub fn get_current_sync_committee_for_current_committee_update() -> SyncCommitte
 	}
 }
 
-pub fn get_finalized_header_update() -> ethereum_beacon_client::FinalizedHeaderUpdate  {
+pub fn get_finalized_header_update() -> ethereum_beacon_client::FinalizedHeaderUpdate {
 	FinalizedHeaderUpdate{
 		attested_header: BeaconHeader{
 			slot: 29122,
@@ -3397,7 +3397,7 @@ pub fn get_attester_slashing() -> AttesterSlashing {
 	}
 }
 
-pub fn get_header_update() -> ethereum_beacon_client::BlockUpdate  {
+pub fn get_header_update() -> ethereum_beacon_client::BlockUpdate {
 	BlockUpdate{
 		block: BeaconBlock {
 			slot: 590080,
@@ -5242,6 +5242,7 @@ pub fn get_header_update() -> ethereum_beacon_client::BlockUpdate  {
 				}
 			}
 		},
+		block_body_root: hex!("164cf1b94b00365bdf8d784d62e146e55c2a587c4f22bbbc8f379121c05e10a3").into(),
 		sync_aggregate: SyncAggregate{
 			sync_committee_bits: hex!("fbb9f7deffff7efdcefeffffff37f77ffbdfbaf7fffff79fe77fbfffffcdfbfdfffffdfffbff7ffbfffdbf9ffffffffe7fffddefefff7fbdff7fbff37ffbdffd").to_vec(),
 			sync_committee_signature: hex!("aba663e1d0295178d76d78bb41e749b92a8bff85ff7c6a325fb34388e0bee3b95f78867598a0089924144aadca855f860516d7afff701aa315b24a83cb38fa5478a0dccc8081dd769a23f8e883521544556dde6f2c0dff9c5b7b00b55d4da100").to_vec(),

@@ -75,6 +75,7 @@ basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-ba
 incentivized-channel = { path = "../../pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }
 dispatch = { path = "../../pallets/dispatch", package = "snowbridge-dispatch", default-features = false }
 ethereum-light-client = { path = "../../pallets/ethereum-light-client", package = "snowbridge-ethereum-light-client", default-features = false }
+ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client", package = "snowbridge-ethereum-beacon-client", default-features = false }
 dot-app = { path = "../../pallets/dot-app", package = "snowbridge-dot-app", default-features = false }
 eth-app = { path = "../../pallets/eth-app", package = "snowbridge-eth-app", default-features = false }
 erc20-app = { path = "../../pallets/erc20-app", package = "snowbridge-erc20-app", default-features = false }
@@ -139,6 +140,7 @@ std = [
     "basic-channel/std",
     "incentivized-channel/std",
     "ethereum-light-client/std",
+    "ethereum-beacon-client/std",
     "dispatch/std",
     "dot-app/std",
     "eth-app/std",

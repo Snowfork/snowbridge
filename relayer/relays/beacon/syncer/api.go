@@ -2,13 +2,21 @@ package syncer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/sirupsen/logrus"
+)
+
+const (
+	ConstructRequestErrorMessage = "construct header request"
+	DoHTTPRequestErrorMessage    = "do http request"
+	HTTPStatusNotOKErrorMessage  = "http status not ok"
+	ReadResponseBodyErrorMessage = "read response body"
+	UnmarshalBodyErrorMessage    = "unmarshal body"
 )
 
 type BeaconClientTracker interface {
@@ -25,6 +33,10 @@ type BeaconClientTracker interface {
 	GetCurrentForkVersion(slot uint64) (string, error)
 	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
 }
+
+var (
+	ErrNotFound = errors.New("not found")
+)
 
 type BeaconClient struct {
 	httpClient http.Client
@@ -88,57 +100,39 @@ func (b *BeaconClient) GetHeadHeader() (BeaconHeader, error) {
 func (b *BeaconClient) GetHeader(id string) (BeaconHeader, error) {
 	req, err := http.NewRequest(http.MethodGet, b.endpoint+"/eth/v1/beacon/headers/"+id, nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct beacon header request")
-
-		return BeaconHeader{}, err
+		return BeaconHeader{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return BeaconHeader{}, err
+		return BeaconHeader{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(res.Body)
-
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
-
-		return BeaconHeader{}, err
+		return BeaconHeader{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return BeaconHeader{}, err
+		return BeaconHeader{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response BeaconHeaderResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal beacon header json response")
-
-		return BeaconHeader{}, err
+		return BeaconHeader{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	slot, err := strconv.ParseUint(response.Data.Header.Message.Slot, 10, 64)
 	if err != nil {
-		logrus.WithError(err).Error("unable parse slot as int")
-
-		return BeaconHeader{}, err
+		return BeaconHeader{}, fmt.Errorf("parse slot as int: %w", err)
 	}
 
 	proposerIndex, err := strconv.ParseUint(response.Data.Header.Message.ProposerIndex, 10, 64)
 	if err != nil {
-		logrus.WithError(err).Error("unable parse slot as int")
-
-		return BeaconHeader{}, err
+		return BeaconHeader{}, fmt.Errorf("parse proposerIndex as int: %w", err)
 	}
 
 	return BeaconHeader{
@@ -260,41 +254,29 @@ type BeaconBlock struct {
 func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct beacon block request")
-
-		return BeaconBlockResponse{}, err
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return BeaconBlockResponse{}, err
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		logrus.Error("request to beacon node failed")
-
-		return BeaconBlockResponse{}, err
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return BeaconBlockResponse{}, err
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response BeaconBlockResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal beacon block json response")
-
-		return BeaconBlockResponse{}, err
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	return response, nil
@@ -303,41 +285,33 @@ func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse,
 func (b *BeaconClient) GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%d", b.endpoint, slot), nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct beacon block request")
-
-		return BeaconBlockResponse{}, err
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return BeaconBlockResponse{}, err
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		logrus.Error("request to beacon node failed")
+		if res.StatusCode == 404 {
+			return BeaconBlockResponse{}, ErrNotFound
+		}
 
-		return BeaconBlockResponse{}, err
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return BeaconBlockResponse{}, err
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response BeaconBlockResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal beacon block json response")
-
-		return BeaconBlockResponse{}, err
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	return response, nil
@@ -346,31 +320,22 @@ func (b *BeaconClient) GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, e
 func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/blocks/%d/root", b.endpoint, slot), nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct beacon block request")
-
-		return common.Hash{}, err
+		return common.Hash{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return common.Hash{}, err
+		return common.Hash{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		logrus.Error("request to beacon node failed")
-
-		return common.Hash{}, err
+		return common.Hash{}, fmt.Errorf("%s: %w", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return common.Hash{}, err
+		return common.Hash{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response struct {
@@ -378,11 +343,8 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	}
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal beacon block root json response")
-
-		return common.Hash{}, err
+		return common.Hash{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	return common.HexToHash(response.Data), nil
@@ -403,45 +365,29 @@ type SyncCommitteePeriodUpdateResponse struct {
 func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePeriodUpdateResponse, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/committee_updates?from=%d&to=%d", b.endpoint, from, to), nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct beacon block request")
-
-		return SyncCommitteePeriodUpdateResponse{}, err
+		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return SyncCommitteePeriodUpdateResponse{}, err
+		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(res.Body)
-
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
-
-		return SyncCommitteePeriodUpdateResponse{}, err
+		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s :%d", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
-	//logrus.WithFields(logrus.Fields{"body": string(bodyBytes), "period": from}).Info("snapshot")
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return SyncCommitteePeriodUpdateResponse{}, err
+		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response SyncCommitteePeriodUpdateResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal sync committee update json response")
-
-		return SyncCommitteePeriodUpdateResponse{}, err
+		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	return response, nil
@@ -460,41 +406,29 @@ type SyncCommitteeIndexes struct {
 func (b *BeaconClient) GetSyncCommittee(epoch uint64) (SyncCommitteeIndexes, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/finalized/sync_committees?epoch=%v", b.endpoint, epoch), nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct sync committee request")
-
-		return SyncCommitteeIndexes{}, err
+		return SyncCommitteeIndexes{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return SyncCommitteeIndexes{}, err
+		return SyncCommitteeIndexes{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		logrus.Error("request to beacon node failed")
-
-		return SyncCommitteeIndexes{}, err
+		return SyncCommitteeIndexes{}, fmt.Errorf("%s: %w", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return SyncCommitteeIndexes{}, err
+		return SyncCommitteeIndexes{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response SyncCommitteeIndexesResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal sync committee json response")
-
-		return SyncCommitteeIndexes{}, err
+		return SyncCommitteeIndexes{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	syncCommittee := SyncCommitteeIndexes{
@@ -504,11 +438,8 @@ func (b *BeaconClient) GetSyncCommittee(epoch uint64) (SyncCommitteeIndexes, err
 	for _, validatorIndex := range response.Data.Validators {
 		index, err := strconv.ParseUint(validatorIndex, 10, 64)
 		if err != nil {
-			logrus.WithError(err).Error("unable parse slot as int")
-
-			return SyncCommitteeIndexes{}, err
+			return SyncCommitteeIndexes{}, fmt.Errorf("parse index as int: %w", err)
 		}
-
 		syncCommittee.Indexes = append(syncCommittee.Indexes, index)
 	}
 
@@ -524,46 +455,31 @@ type ForkResponse struct {
 }
 
 func (b *BeaconClient) GetCurrentForkVersion(slot uint64) (string, error) {
-	//req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/%d/fork", s.endpoint, slot), nil)
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/head/fork", b.endpoint), nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct fork version request")
-
-		return "", err
+		return "", fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return "", err
+		return "", fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(res.Body)
-
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
-
-		return "", err
+		return "", fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return "", err
+		return "", fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response ForkResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal fork json response")
-
-		return "", err
+		return "", fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	return response.Data.CurrentVersion, nil
@@ -597,43 +513,29 @@ func (b *BeaconClient) GetHeadCheckpoint() (FinalizedCheckpointResponse, error) 
 func (b *BeaconClient) GetCheckpoint(state string) (FinalizedCheckpointResponse, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/%s/finality_checkpoints", b.endpoint, state), nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct finalized checkpoint request")
-
-		return FinalizedCheckpointResponse{}, err
+		return FinalizedCheckpointResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return FinalizedCheckpointResponse{}, err
+		return FinalizedCheckpointResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(res.Body)
-
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
-
-		return FinalizedCheckpointResponse{}, err
+		return FinalizedCheckpointResponse{}, fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return FinalizedCheckpointResponse{}, err
+		return FinalizedCheckpointResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response FinalizedCheckpointResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal fork json response")
-
-		return FinalizedCheckpointResponse{}, err
+		return FinalizedCheckpointResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	return response, nil
@@ -652,46 +554,30 @@ type LightClientSnapshotResponse struct {
 func (b *BeaconClient) GetLightClientSnapshot(blockRoot string) (LightClientSnapshotResponse, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/snapshot/%s", b.endpoint, blockRoot), nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct light client snapshot request")
-
-		return LightClientSnapshotResponse{}, err
+		return LightClientSnapshotResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return LightClientSnapshotResponse{}, err
+		return LightClientSnapshotResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(res.Body)
-
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
-
-		return LightClientSnapshotResponse{}, err
+		return LightClientSnapshotResponse{}, fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return LightClientSnapshotResponse{}, err
+		return LightClientSnapshotResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response LightClientSnapshotResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal light client snapshot json response")
-
-		return LightClientSnapshotResponse{}, err
+		return LightClientSnapshotResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
-
-	//logrus.WithFields(logrus.Fields{"body": response}).Info("snapshot")
 
 	return response, nil
 }
@@ -707,43 +593,29 @@ type GenesisResponse struct {
 func (b *BeaconClient) GetGenesis() (GenesisResponse, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/genesis", b.endpoint), nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct genesis request")
-
-		return GenesisResponse{}, err
+		return GenesisResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return GenesisResponse{}, err
+		return GenesisResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(res.Body)
-
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
-
-		return GenesisResponse{}, err
+		return GenesisResponse{}, fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return GenesisResponse{}, err
+		return GenesisResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response GenesisResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal genesis json response")
-
-		return GenesisResponse{}, err
+		return GenesisResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	return response, nil
@@ -762,43 +634,29 @@ type LatestFinalisedUpdateResponse struct {
 func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/latest_finalized_head_update/", b.endpoint), nil)
 	if err != nil {
-		logrus.WithError(err).Error("unable to construct latest finalized header update request")
-
-		return LatestFinalisedUpdateResponse{}, err
+		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
 	res, err := b.httpClient.Do(req)
 	if err != nil {
-		logrus.WithError(err).Error("failed to do http request")
-
-		return LatestFinalisedUpdateResponse{}, err
+		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(res.Body)
-
-		logrus.WithFields(logrus.Fields{"error": string(bodyBytes)}).Error("request to beacon node failed")
-
-		return LatestFinalisedUpdateResponse{}, err
+		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(res.Body)
-
 	if err != nil {
-		logrus.Error("unable to get response body")
-
-		return LatestFinalisedUpdateResponse{}, err
+		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
 	}
 
 	var response LatestFinalisedUpdateResponse
 
 	err = json.Unmarshal(bodyBytes, &response)
-
 	if err != nil {
-		logrus.WithError(err).Error("unable to unmarshal genesis json response")
-
-		return LatestFinalisedUpdateResponse{}, err
+		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
 	return response, nil
