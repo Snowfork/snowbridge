@@ -119,21 +119,25 @@ start_polkadot_launch()
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
         | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
 
-    initial_beacon_block=$(curl "$lodestar_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
-            | jq -r '.data.finalized.root')
+    if [ "$start_beacon_sync" == "true" ]; then
+        initial_beacon_block=$(curl "$lodestar_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
+                | jq -r '.data.finalized.root')
 
-    curl "$lodestar_endpoint_http/eth/v1/lightclient/snapshot/$initial_beacon_block" \
-        | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
+        curl "$lodestar_endpoint_http/eth/v1/lightclient/snapshot/$initial_beacon_block" \
+            | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
 
-    validatorsRoot=$(curl "$lodestar_endpoint_http/eth/v1/beacon/genesis" \
-            | jq -r '.data.genesis_validators_root')
+        validatorsRoot=$(curl "$lodestar_endpoint_http/eth/v1/beacon/genesis" \
+                | jq -r '.data.genesis_validators_root')
 
-    jq \
-        --arg validatorsRoot "$validatorsRoot" \
-        ' .validators_root = $validatorsRoot
-        ' \
-        "$output_dir/initialBeaconSync_tmp.json" \
-        > "$output_dir/initialBeaconSync.json"
+        jq \
+            --arg validatorsRoot "$validatorsRoot" \
+            ' .validators_root = $validatorsRoot
+            ' \
+            "$output_dir/initialBeaconSync_tmp.json" \
+            > "$output_dir/initialBeaconSync.json"
+    else
+        cp config/initial-beacon-sync-fake.json "$output_dir/initialBeaconSync.json"
+    fi
 
     cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
 
