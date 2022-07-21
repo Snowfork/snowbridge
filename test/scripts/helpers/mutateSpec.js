@@ -18,7 +18,9 @@ function run() {
 
     let header = JSON.parse(fs.readFileSync(process.argv[2]));
     let contracts = JSON.parse(fs.readFileSync(process.argv[3]));
+    let initialSync = JSON.parse(fs.readFileSync(process.argv[4]));
 
+    data['genesis']['runtime']['ethereumBeaconClient']['initialSync'] = initialSync;
     data['genesis']['runtime']['ethereumLightClient']['initialHeader'] = header;
     data['genesis']['runtime']['ethereumLightClient']['initialDifficulty'] = "0x0";
     data['genesis']['runtime']['parachainInfo']['parachainId'] = 1000;

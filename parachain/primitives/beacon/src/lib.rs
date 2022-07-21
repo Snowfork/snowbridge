@@ -8,6 +8,13 @@ use sp_core::{H160, H256, U256};
 use sp_io::hashing::keccak_256;
 use snowbridge_ethereum::mpt;
 
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize, Serializer, Deserializer, de::Visitor, de::Error};
+#[cfg(feature = "std")]
+use sp_std::fmt::Result as StdResult;
+#[cfg(feature = "std")]
+use core::fmt::Formatter;
+
 pub type Root = H256;
 pub type Domain = H256;
 pub type ValidatorIndex = u64;
@@ -18,6 +25,50 @@ pub struct PublicKey(pub [u8; 48]);
 impl Default for PublicKey {
 	fn default() -> Self {
 		PublicKey([0u8; 48])
+	}
+}
+
+#[cfg(feature = "std")]
+impl Serialize for PublicKey {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+		serializer.serialize_bytes(&self.0)
+	}
+}
+
+struct PublicKeyVisitor;
+
+#[cfg(feature = "std")]
+impl<'de> Visitor<'de> for PublicKeyVisitor {
+	type Value = PublicKey;
+
+	fn expecting(&self, formatter: &mut Formatter) -> StdResult {
+		formatter.write_str("a hex string")
+	}
+
+	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: Error,  {	
+        let str_without_0x = match v.strip_prefix("0x") {
+			Some(val) => val,
+			None => v,
+		};
+
+		let hex_bytes = match hex::decode(str_without_0x) {
+			Ok(bytes)=> bytes,
+			Err(e)=> return Err(Error::custom(e.to_string()))
+		};
+		if hex_bytes.len() != 48 {
+			return Err(Error::custom("publickey expected to be 48 characters"))
+		}
+
+		let mut data = [0u8; 48];
+		data[0..48].copy_from_slice(&hex_bytes);
+		Ok(PublicKey(data))
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'de> Deserialize<'de> for PublicKey {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+		deserializer.deserialize_str(PublicKeyVisitor)
 	}
 }
 
@@ -54,6 +105,7 @@ pub struct ExecutionHeader {
 
 /// Sync committee as it is stored in the runtime storage.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SyncCommittee {
 	pub pubkeys: Vec<PublicKey>,
 	pub aggregate_pubkey: PublicKey,
@@ -62,6 +114,7 @@ pub struct SyncCommittee {
 /// Beacon block header as it is stored in the runtime storage. The block root is the
 /// Merklization of a BeaconHeader.
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct BeaconHeader {
 	// The slot for which this block is created. Must be greater than the slot of the block defined by parentRoot.
 	pub slot: u64,

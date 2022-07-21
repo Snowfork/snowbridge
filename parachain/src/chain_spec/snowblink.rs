@@ -116,7 +116,9 @@ fn testnet_genesis(
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
 		},
-		ethereum_beacon_client: snowblink_runtime::EthereumBeaconClientConfig {},
+		ethereum_beacon_client: snowblink_runtime::EthereumBeaconClientConfig {
+			initial_sync: Default::default(),
+		},
 		dot_app: snowblink_runtime::DotAppConfig {
 			address: Default::default(),
 		},
