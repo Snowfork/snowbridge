@@ -60,6 +60,14 @@ where
 			},
 		};
 
+		if (leaf_index as usize) >= Vec::len(&leaves.0) {
+			return Err(Error {
+				code: ErrorCode::InvalidParams,
+				message: "leaf_index out of range".into(),
+				data: None,
+			})
+		}
+
 		let proof = merkle_proof::<Keccak256, Vec<Vec<u8>>, Vec<u8>>(leaves.0, leaf_index);
 		Ok(proof.encode().into())
 	}
