@@ -42,6 +42,7 @@ type ProofBranch = Vec<H256>;
 type ForkVersion = [u8; 4];
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct InitialSync {
 	pub header: BeaconHeader,
 	pub current_sync_committee: SyncCommittee,
@@ -81,16 +82,10 @@ pub struct BlockUpdate {
 	pub fork_version: ForkVersion,
 }
 
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Genesis {
-	pub validators_root: Root,
-}
-
 pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-
 	use super::*;
 
 	use frame_support::pallet_prelude::*;
@@ -156,58 +151,37 @@ pub mod pallet {
 		StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
 
 	#[pallet::storage]
+	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {}
+	pub struct GenesisConfig {
+		pub initial_sync: InitialSync,
+	}
 
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
-		fn default() -> Self {
-			Self {}
-		}
+		fn default() -> Self { GenesisConfig {
+			initial_sync: Default::default(),
+		}}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {}
+		fn build(&self) {
+			Pallet::<T>::initial_sync(
+				self.initial_sync.clone(),
+			).unwrap();
+		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(1_000_000)]
-		#[transactional]
-		pub fn initial_sync(
-			origin: OriginFor<T>,
-			initial_sync: InitialSync,
-		) -> DispatchResult {
-			let _sender = ensure_signed(origin)?;
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Received initial sync, starting processing.",
-			);
-
-			if let Err(err) = Self::process_initial_sync(initial_sync) {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"Initial sync failed with error {:?}",
-					err
-				);
-				return Err(err);
-			}
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Initial sync processing succeeded.",
-			);
-
-			Ok(())
-		}
-
 		#[pallet::weight(1_000_000)]
 		#[transactional]
 		pub fn sync_committee_period_update(
@@ -323,12 +297,12 @@ pub mod pallet {
 			)?;
 
 			let period = Self::compute_current_sync_period(initial_sync.header.slot);
-			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
-			Self::store_finalized_header(block_root, initial_sync.header);
 
+			Self::store_sync_committee(period, initial_sync.current_sync_committee);
+			Self::store_finalized_header(block_root, initial_sync.header);
 			Self::store_validators_root(initial_sync.validators_root);
 
 			Ok(())
@@ -359,9 +333,7 @@ pub mod pallet {
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
-			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
-
-			let current_sync_committee = <SyncCommittees<T>>::get(current_period);
+			let current_sync_committee = Self::get_sync_committee_for_period(current_period)?;
 			let validators_root = <ValidatorsRoot<T>>::get();
 
 			Self::verify_signed_header(
@@ -373,8 +345,9 @@ pub mod pallet {
 				validators_root,
 			)?;
 
+			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
 			Self::store_finalized_header(block_root, update.finalized_header);
-
+			
 			Ok(())
 		}
 
@@ -623,9 +596,20 @@ pub mod pallet {
 
 		fn store_sync_committee(period: u64, sync_committee: SyncCommittee) {
 			<SyncCommittees<T>>::insert(period, sync_committee);
+
+			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
+
+			if period > latest_committee_period {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"💫 Updated latest sync committee period stored to {}.",
+					period
+				);
+				<LatestSyncCommitteePeriod<T>>::set(period);
+			}
 		}
 
-		fn store_finalized_header(block_root: H256, header: BeaconHeader) {
+		fn store_finalized_header(block_root: Root, header: BeaconHeader) {
 			let slot = header.slot;
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
@@ -791,6 +775,31 @@ pub mod pallet {
 					Err(Error::<T>::InvalidProof.into())
 				},
 			}
+		}
+
+		pub(super) fn initial_sync(
+			initial_sync: InitialSync,
+		) -> Result<(), &'static str> {
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Received initial sync, starting processing.",
+			);
+
+			if let Err(err) = Self::process_initial_sync(initial_sync) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"Initial sync failed with error {:?}",
+					err
+				);
+				return Err(<&str>::from(err));
+			}
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Initial sync processing succeeded.",
+			);
+
+			Ok(())
 		}
 	}
 

@@ -9,7 +9,6 @@ fn it_syncs_from_an_initial_checkpoint() {
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::initial_sync(
-			Origin::signed(1),
 			initial_sync.clone(),
 		));
 
