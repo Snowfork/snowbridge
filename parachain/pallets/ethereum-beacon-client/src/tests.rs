@@ -4,7 +4,7 @@ use hex_literal::hex;
 use sp_core::H256;
 use crate::get_sync_committee_bits;
 
-const SYNC_COMMITTEE_SIZE: usize = 512;
+const SYNC_COMMITTEE_SIZE: u64 = 512;
 
 #[test]
 fn it_syncs_from_an_initial_checkpoint() {

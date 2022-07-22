@@ -15,8 +15,8 @@ serde = { version = "1.0.136", optional = true }
 codec = { version = "3.0.0", package = "parity-scale-codec", default-features = false, features = ["derive"] }
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 milagro_bls = { git = "https://github.com/Snowfork/milagro_bls", default-features = false }
-ssz-rs = { git = "https://github.com/Snowfork/ssz_rs", default-features = false, rev="8d497a949c320577aa1f741eb9f2958191df905b" }
-ssz-rs-derive = { git = "https://github.com/Snowfork/ssz_rs", default-features = false, rev="8d497a949c320577aa1f741eb9f2958191df905b" }
+ssz-rs = { git = "https://github.com/Snowfork/ssz_rs", default-features = false, branch = "usize-to-u64" }
+ssz-rs-derive = { git = "https://github.com/Snowfork/ssz_rs", default-features = false, branch = "usize-to-u64" }
 byte-slice-cast = { version = "1.2.1", default-features = false }
 rlp = { version = "0.5", default-features = false }
 

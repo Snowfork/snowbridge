@@ -78,7 +78,7 @@ pub struct SSZAttestation {
 }
 
 #[derive(Default, SimpleSerialize)]
-pub struct SSZBeaconBlock<const SYNC_COMMITTEE_SIZE: usize> {
+pub struct SSZBeaconBlock<const SYNC_COMMITTEE_SIZE: u64> {
     pub slot: u64,
     pub proposer_index: u64,
     pub parent_root: [u8; 32],
@@ -102,7 +102,7 @@ pub struct SSZSyncCommittee {
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
-pub struct SSZSyncAggregate<const SYNC_COMMITTEE_SIZE: usize> {
+pub struct SSZSyncAggregate<const SYNC_COMMITTEE_SIZE: u64> {
     pub sync_committee_bits: Bitvector<SYNC_COMMITTEE_SIZE>,
     pub sync_committee_signature: Vector<u8, 96>,
 }
@@ -138,7 +138,7 @@ pub struct SSZExecutionPayload {
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
-pub struct SSZBeaconBlockBody<const SYNC_COMMITTEE_SIZE: usize> {
+pub struct SSZBeaconBlockBody<const SYNC_COMMITTEE_SIZE: u64> {
     pub randao_reveal: Vector<u8, 96>,
     pub eth1_data: SSZEth1Data,
     pub graffiti: [u8; 32],

@@ -15,7 +15,7 @@ pub enum MerkleizationError {
     InvalidLength
 }
 
-pub fn get_ssz_beacon_block_body<const SYNC_COMMITTEE_SIZE: usize>(body: Body) -> Result<SSZBeaconBlockBody<SYNC_COMMITTEE_SIZE>, MerkleizationError> {
+pub fn get_ssz_beacon_block_body<const SYNC_COMMITTEE_SIZE: u64>(body: Body) -> Result<SSZBeaconBlockBody<SYNC_COMMITTEE_SIZE>, MerkleizationError> {
     Ok(SSZBeaconBlockBody{
         randao_reveal: Vector::<u8, 96>::from_iter(body.randao_reveal),
         eth1_data: get_ssz_eth1_data(body.eth1_data)?,
@@ -194,7 +194,7 @@ pub fn get_ssz_beacon_header(beacon_header: BeaconHeader) -> Result<SSZBeaconBlo
     })
 }
 
-pub fn get_ssz_sync_aggregate<const SYNC_COMMITTEE_SIZE: usize>(sync_aggregate: SyncAggregate) -> Result<SSZSyncAggregate<SYNC_COMMITTEE_SIZE>, MerkleizationError> {
+pub fn get_ssz_sync_aggregate<const SYNC_COMMITTEE_SIZE: u64>(sync_aggregate: SyncAggregate) -> Result<SSZSyncAggregate<SYNC_COMMITTEE_SIZE>, MerkleizationError> {
     Ok(SSZSyncAggregate{
         sync_committee_bits: Bitvector::<SYNC_COMMITTEE_SIZE>::deserialize(&sync_aggregate.sync_committee_bits).map_err(|_| MerkleizationError::InvalidLength)?,
         sync_committee_signature: Vector::<u8, 96>::from_iter(sync_aggregate.sync_committee_signature),
@@ -213,7 +213,7 @@ pub fn hash_tree_root_beacon_header(beacon_header: BeaconHeader) -> Result<[u8; 
     hash_tree_root(get_ssz_beacon_header(beacon_header)?)
 }
 
-pub fn hash_tree_root_beacon_body<const SYNC_COMMITTEE_SIZE: usize>(body: Body) -> Result<[u8; 32], MerkleizationError> {
+pub fn hash_tree_root_beacon_body<const SYNC_COMMITTEE_SIZE: u64>(body: Body) -> Result<[u8; 32], MerkleizationError> {
     hash_tree_root(get_ssz_beacon_block_body::<SYNC_COMMITTEE_SIZE>(body)?)
 }
 
@@ -257,7 +257,7 @@ pub fn hash_tree_root<T: SimpleSerializeTrait>(mut object: T) -> Result<[u8; 32]
     }
 }
 
-pub fn get_sync_committee_bits<const SYNC_COMMITTEE_SIZE: usize>(bits_hex: Vec<u8>) -> Result<Vec<u8>, MerkleizationError> {
+pub fn get_sync_committee_bits<const SYNC_COMMITTEE_SIZE: u64>(bits_hex: Vec<u8>) -> Result<Vec<u8>, MerkleizationError> {
     let bitv = Bitvector::<SYNC_COMMITTEE_SIZE>::deserialize(&bits_hex).map_err(|_| MerkleizationError::InvalidLength)?;
 
     let result = bitv.iter().map(|bit| {
@@ -282,7 +282,7 @@ mod tests {
     use sp_core::U256;
     use crate::mock::{get_attester_slashing, get_block_body, get_sync_committee};
 
-    const SYNC_COMMITTEE_SIZE: usize = 512;
+    const SYNC_COMMITTEE_SIZE: u64 = 512;
 
     #[test]
     pub fn test_hash_tree_root_beacon_header() {

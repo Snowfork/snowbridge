@@ -117,8 +117,9 @@ pub mod pallet {
 
 		const SLOTS_PER_EPOCH: u64;
 		const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64;
-		const SYNC_COMMITTEE_SIZE: usize;
-		//type SyncCommitteeSize: Get<u32>;
+
+		#[pallet::constant]
+		type SyncCommitteeSize: Get<u64>;
 	}
 
 	#[pallet::event]
@@ -194,7 +195,8 @@ pub mod pallet {
 	}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+	impl<T: Config> Pallet<T> where T::SyncCommitteeSize : Get<u64>
+	{
 		#[pallet::weight(1_000_000)]
 		#[transactional]
 		pub fn sync_committee_period_update(
@@ -210,7 +212,7 @@ pub mod pallet {
 				sync_committee_period
 			);
 
-			if let Err(err) = Self::process_sync_committee_period_update::<{T::SYNC_COMMITTEE_SIZE}>(sync_committee_period_update) {
+			if let Err(err) = Self::process_sync_committee_period_update::<{T::SyncCommitteeSize::get()}>(sync_committee_period_update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"Sync committee period update failed with error {:?}",
@@ -279,7 +281,7 @@ pub mod pallet {
 				slot
 			);
 
-			if let Err(err) = Self::process_header::<{T::SYNC_COMMITTEE_SIZE}>(update) {
+			if let Err(err) = Self::process_header::<{T::SyncCommitteeSize::get()}>(update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"Header update failed with error {:?}",
@@ -321,7 +323,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_sync_committee_period_update<const SYNC_COMMITTEE_SIZE: usize>(
+		fn process_sync_committee_period_update<const SYNC_COMMITTEE_SIZE: u64>(
 			update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
 			let sync_committee_bits = get_sync_committee_bits::<SYNC_COMMITTEE_SIZE>(update.sync_aggregate.sync_committee_bits.clone())
@@ -364,7 +366,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_finalized_header<const SYNC_COMMITTEE_SIZE: usize>(update: FinalizedHeaderUpdate) -> DispatchResult {
+		fn process_finalized_header<const SYNC_COMMITTEE_SIZE: u64>(update: FinalizedHeaderUpdate) -> DispatchResult {
 			let sync_committee_bits = get_sync_committee_bits::<SYNC_COMMITTEE_SIZE>(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
@@ -397,7 +399,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_header<const SYNC_COMMITTEE_SIZE: usize>(update: BlockUpdate) -> DispatchResult {
+		fn process_header<const SYNC_COMMITTEE_SIZE: u64>(update: BlockUpdate) -> DispatchResult {
 			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
 			let block_slot = update.block.slot;
 			if block_slot > latest_finalized_header_slot {
