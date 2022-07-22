@@ -8,9 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist"
   },
-  "files": [
-    "./scripts/make-xcm-transfer.ts"
-  ],
+  "files": ["./scripts/make-xcm-transfer.ts"],
   "ts-node": {
     "esm": true
   }

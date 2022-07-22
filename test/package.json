@@ -3,12 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
-  "type": "module",
   "scripts": {
     "test": "mocha --timeout 400000 --exit"
   },
   "devDependencies": {
-    "@chainsafe/lodestar-cli": "next",
     "@polkadot/api": "^8.3.1",
     "@polkadot/util": "^9.1.1",
     "@polkadot/util-crypto": "^9.1.1",
