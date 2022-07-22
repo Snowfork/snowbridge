@@ -21,6 +21,7 @@ use sp_std::prelude::*;
 use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
+use frame_support::traits::ConstU64;
 
 const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;
