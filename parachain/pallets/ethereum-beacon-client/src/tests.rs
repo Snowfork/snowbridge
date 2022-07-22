@@ -4,8 +4,6 @@ use hex_literal::hex;
 use sp_core::H256;
 use crate::get_sync_committee_bits;
 
-const SYNC_COMMITTEE_SIZE: u64 = 512;
-
 #[test]
 fn it_syncs_from_an_initial_checkpoint() {
 	let initial_sync = get_initial_sync();
@@ -356,7 +354,7 @@ pub fn test_bls_fast_aggregate_verify_invalid_signature() {
 #[test]
 pub fn test_bls_fast_aggregate_verify_kiln_head_update() {
 	new_tester().execute_with(|| {
-		let sync_committee_bits =  get_sync_committee_bits::<SYNC_COMMITTEE_SIZE>((hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b")).to_vec());
+		let sync_committee_bits =  get_sync_committee_bits((hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b")).to_vec());
 
 		assert_ok!(&sync_committee_bits);
 
@@ -893,7 +891,7 @@ pub fn test_bls_fast_aggregate_verify_kiln_head_update() {
 #[test]
 pub fn test_sync_committee_participation_is_supermajority() {
 	new_tester().execute_with(|| {
-		let sync_committee_bits =  get_sync_committee_bits::<SYNC_COMMITTEE_SIZE>(hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b").to_vec());
+		let sync_committee_bits =  get_sync_committee_bits(hex!("bffffffff7f1ffdfcfeffeffbfdffffbfffffdffffefefffdffff7f7ffff77fffdf7bff77ffdf7fffafffffff77fefffeff7effffffff5f7fedfffdfb6ddff7b").to_vec());
 
 		assert_ok!(&sync_committee_bits);
 

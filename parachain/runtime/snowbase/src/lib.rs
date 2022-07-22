@@ -624,9 +624,6 @@ impl ethereum_light_client::Config for Runtime {
 
 impl ethereum_beacon_client::Config for Runtime {
 	type Event = Event;
-	const SLOTS_PER_EPOCH: u64 = 6;
-	const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 8;
-	const SYNC_COMMITTEE_SIZE: usize = 32;
 }
 
 parameter_types! {

@@ -57,15 +57,8 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-parameter_types! {
-	pub const SyncCommitteeSize: u64 = 12;
-}
-
 impl ethereum_beacon_client::Config for Test {
 	type Event = Event;
-	const SLOTS_PER_EPOCH: u64 = 6;
-	const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 8;
-	type SyncCommitteeSize = SyncCommitteeSize;
 }
 
 // Build genesis storage according to the mock runtime.

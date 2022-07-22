@@ -1,9 +1,8 @@
 //! # Ethereum Beacon Client
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#![feature(generic_const_exprs)]
-
 mod merkleization;
+pub mod config;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -21,7 +20,6 @@ use sp_std::prelude::*;
 use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
-use frame_support::traits::ConstU64;
 
 const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;
@@ -115,12 +113,6 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
-		const SLOTS_PER_EPOCH: u64;
-		const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64;
-
-		#[pallet::constant]
-		type SyncCommitteeSize: Get<u64>;
 	}
 
 	#[pallet::event]
@@ -189,6 +181,12 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 SYNC_COMMITTEE_SIZE is {}",
+				config::SYNC_COMMITTEE_SIZE
+			);
+
 			Pallet::<T>::initial_sync(
 				self.initial_sync.clone(),
 			).unwrap();
@@ -196,7 +194,7 @@ pub mod pallet {
 	}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> where T::SyncCommitteeSize : Get<u64>
+	impl<T: Config> Pallet<T>
 	{
 		#[pallet::weight(1_000_000)]
 		#[transactional]
@@ -213,7 +211,7 @@ pub mod pallet {
 				sync_committee_period
 			);
 
-			if let Err(err) = Self::process_sync_committee_period_update::<{T::SyncCommitteeSize::get()}>(sync_committee_period_update) {
+			if let Err(err) = Self::process_sync_committee_period_update(sync_committee_period_update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"Sync committee period update failed with error {:?}",
@@ -282,7 +280,7 @@ pub mod pallet {
 				slot
 			);
 
-			if let Err(err) = Self::process_header::<{T::SyncCommitteeSize::get()}>(update) {
+			if let Err(err) = Self::process_header(update) {
 				log::error!(
 					target: "ethereum-beacon-client",
 					"Header update failed with error {:?}",
@@ -324,10 +322,10 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_sync_committee_period_update<const SYNC_COMMITTEE_SIZE: u64>(
+		fn process_sync_committee_period_update(
 			update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
-			let sync_committee_bits = get_sync_committee_bits::<SYNC_COMMITTEE_SIZE>(update.sync_aggregate.sync_committee_bits.clone())
+			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 			Self::verify_sync_committee(
@@ -367,8 +365,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_finalized_header<const SYNC_COMMITTEE_SIZE: u64>(update: FinalizedHeaderUpdate) -> DispatchResult {
-			let sync_committee_bits = get_sync_committee_bits::<SYNC_COMMITTEE_SIZE>(update.sync_aggregate.sync_committee_bits.clone())
+		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
+			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
@@ -400,7 +398,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn process_header<const SYNC_COMMITTEE_SIZE: u64>(update: BlockUpdate) -> DispatchResult {
+		fn process_header(update: BlockUpdate) -> DispatchResult {
 			let latest_finalized_header_slot = <LatestFinalizedHeaderSlot<T>>::get();
 			let block_slot = update.block.slot;
 			if block_slot > latest_finalized_header_slot {
@@ -410,7 +408,7 @@ pub mod pallet {
 			let current_period = Self::compute_current_sync_period(update.block.slot);
 			let sync_committee = Self::get_sync_committee_for_period(current_period)?;
 
-			let body_root = merkleization::hash_tree_root_beacon_body::<SYNC_COMMITTEE_SIZE>(update.block.body.clone())
+			let body_root = merkleization::hash_tree_root_beacon_body(update.block.body.clone())
 				.map_err(|_| DispatchError::Other("Beacon body hash tree root failed"))?;
 			let body_root_hash: H256 = body_root.into();
 			if body_root_hash != update.block_body_root {
@@ -430,7 +428,7 @@ pub mod pallet {
 			};
 
 			let validators_root = <ValidatorsRoot<T>>::get();
-			let sync_committee_bits = get_sync_committee_bits::<SYNC_COMMITTEE_SIZE>(update.sync_aggregate.sync_committee_bits.clone())
+			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::verify_signed_header(
 				sync_committee_bits,
@@ -668,7 +666,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn compute_current_sync_period(slot: u64) -> u64 {
-			slot / T::SLOTS_PER_EPOCH / T::EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+			slot / config::SLOTS_PER_EPOCH / config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 		}
 
 		/// Return the domain for the domain_type and fork_version.

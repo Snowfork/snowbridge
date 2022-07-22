@@ -78,12 +78,12 @@ pub struct SSZAttestation {
 }
 
 #[derive(Default, SimpleSerialize)]
-pub struct SSZBeaconBlock<const SYNC_COMMITTEE_SIZE: u64> {
+pub struct SSZBeaconBlock {
     pub slot: u64,
     pub proposer_index: u64,
     pub parent_root: [u8; 32],
     pub state_root: [u8; 32],
-    pub body: SSZBeaconBlockBody<SYNC_COMMITTEE_SIZE>,
+    pub body: SSZBeaconBlockBody,
 }
 
 #[derive(Default, SimpleSerialize, Clone, Debug)]
@@ -102,8 +102,8 @@ pub struct SSZSyncCommittee {
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
-pub struct SSZSyncAggregate<const SYNC_COMMITTEE_SIZE: u64> {
-    pub sync_committee_bits: Bitvector<SYNC_COMMITTEE_SIZE>,
+pub struct SSZSyncAggregate {
+    pub sync_committee_bits: Bitvector<{ crate::config::SYNC_COMMITTEE_SIZE }>,
     pub sync_committee_signature: Vector<u8, 96>,
 }
 
@@ -138,7 +138,7 @@ pub struct SSZExecutionPayload {
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
-pub struct SSZBeaconBlockBody<const SYNC_COMMITTEE_SIZE: u64> {
+pub struct SSZBeaconBlockBody {
     pub randao_reveal: Vector<u8, 96>,
     pub eth1_data: SSZEth1Data,
     pub graffiti: [u8; 32],
@@ -147,6 +147,6 @@ pub struct SSZBeaconBlockBody<const SYNC_COMMITTEE_SIZE: u64> {
     pub attestations: List<SSZAttestation, { crate::MAX_ATTESTATIONS }>,
     pub deposits: List<SSZDeposit, { crate::MAX_DEPOSITS }>,
     pub voluntary_exits: List<SSZVoluntaryExit, { crate::MAX_VOLUNTARY_EXITS }>,
-    pub sync_aggregate: SSZSyncAggregate<SYNC_COMMITTEE_SIZE>,
+    pub sync_aggregate: SSZSyncAggregate,
     pub execution_payload: SSZExecutionPayload,
 }
