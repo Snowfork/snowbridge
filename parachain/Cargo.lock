@@ -11766,7 +11766,7 @@ dependencies = [
 [[package]]
 name = "ssz-rs"
 version = "0.8.0"
-source = "git+https://github.com/Snowfork/ssz_rs?branch=usize-to-u64#90abea159a4392e545cb7bcd7d1c6e468f81c1a8"
+source = "git+https://github.com/Snowfork/ssz_rs?rev=8d497a949c320577aa1f741eb9f2958191df905b#8d497a949c320577aa1f741eb9f2958191df905b"
 dependencies = [
  "bitvec",
  "hex",
@@ -11780,7 +11780,7 @@ dependencies = [
 [[package]]
 name = "ssz-rs-derive"
 version = "0.8.0"
-source = "git+https://github.com/Snowfork/ssz_rs?branch=usize-to-u64#90abea159a4392e545cb7bcd7d1c6e468f81c1a8"
+source = "git+https://github.com/Snowfork/ssz_rs?rev=8d497a949c320577aa1f741eb9f2958191df905b#8d497a949c320577aa1f741eb9f2958191df905b"
 dependencies = [
  "proc-macro2",
  "quote",
