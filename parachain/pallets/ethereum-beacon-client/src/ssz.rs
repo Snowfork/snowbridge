@@ -2,6 +2,7 @@ use ssz_rs_derive::SimpleSerialize;
 use ssz_rs::{Deserialize, Sized, Bitlist, Bitvector, U256};
 use ssz_rs::prelude::{Vector, List};
 use sp_std::{vec::Vec, vec};
+use crate::config as config;
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZVoluntaryExit {
@@ -19,7 +20,7 @@ pub struct SSZDepositData {
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZDeposit {
-    pub proof: Vector<[u8; 32], { crate::DEPOSIT_CONTRACT_TREE_DEPTH + 1 }>,
+    pub proof: Vector<[u8; 32], { config::DEPOSIT_CONTRACT_TREE_DEPTH + 1 }>,
     pub data: SSZDepositData,
 }
 
@@ -46,7 +47,7 @@ pub struct SignedBeaconBlockHeader {
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZIndexedAttestation {
-    pub attesting_indices: List<u64, { crate::MAX_VALIDATORS_PER_COMMITTEE }>,
+    pub attesting_indices: List<u64, { config::MAX_VALIDATORS_PER_COMMITTEE }>,
     pub data: SSZAttestationData,
     pub signature: Vector<u8, 96>,
 }
@@ -72,7 +73,7 @@ pub struct SSZEth1Data {
 
 #[derive(Default, SimpleSerialize, Clone, Debug)]
 pub struct SSZAttestation {
-    pub aggregation_bits: Bitlist<{ crate::MAX_VALIDATORS_PER_COMMITTEE} >,
+    pub aggregation_bits: Bitlist<{ config::MAX_VALIDATORS_PER_COMMITTEE} >,
     pub data: SSZAttestationData,
     pub signature: Vector<u8, 96>,
 }
@@ -103,7 +104,7 @@ pub struct SSZSyncCommittee {
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZSyncAggregate {
-    pub sync_committee_bits: Bitvector<{ crate::config::SYNC_COMMITTEE_SIZE }>,
+    pub sync_committee_bits: Bitvector<{ config::SYNC_COMMITTEE_SIZE }>,
     pub sync_committee_signature: Vector<u8, 96>,
 }
 
@@ -131,7 +132,7 @@ pub struct SSZExecutionPayload {
     pub gas_limit: u64,
     pub gas_used: u64,
     pub timestamp: u64,
-    pub extra_data: List<u8, { crate::MAX_EXTRA_DATA_BYTES }>,
+    pub extra_data: List<u8, { config::MAX_EXTRA_DATA_BYTES }>,
     pub base_fee_per_gas: U256,
     pub block_hash: [u8; 32],
     pub transactions_root: [u8; 32],
@@ -142,11 +143,11 @@ pub struct SSZBeaconBlockBody {
     pub randao_reveal: Vector<u8, 96>,
     pub eth1_data: SSZEth1Data,
     pub graffiti: [u8; 32],
-    pub proposer_slashings: List<SSZProposerSlashing, { crate::MAX_PROPOSER_SLASHINGS }>,
-    pub attester_slashings: List<SSZAttesterSlashing, { crate::MAX_ATTESTER_SLASHINGS }>,
-    pub attestations: List<SSZAttestation, { crate::MAX_ATTESTATIONS }>,
-    pub deposits: List<SSZDeposit, { crate::MAX_DEPOSITS }>,
-    pub voluntary_exits: List<SSZVoluntaryExit, { crate::MAX_VOLUNTARY_EXITS }>,
+    pub proposer_slashings: List<SSZProposerSlashing, { config::MAX_PROPOSER_SLASHINGS }>,
+    pub attester_slashings: List<SSZAttesterSlashing, { config::MAX_ATTESTER_SLASHINGS }>,
+    pub attestations: List<SSZAttestation, { config::MAX_ATTESTATIONS }>,
+    pub deposits: List<SSZDeposit, { config::MAX_DEPOSITS }>,
+    pub voluntary_exits: List<SSZVoluntaryExit, { config::MAX_VOLUNTARY_EXITS }>,
     pub sync_aggregate: SSZSyncAggregate,
     pub execution_payload: SSZExecutionPayload,
 }

@@ -17,38 +17,9 @@ use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock, ProofBranch, ForkVersion};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
-
-const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
-const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;
-
-const NEXT_SYNC_COMMITTEE_DEPTH: u64 = 5;
-const NEXT_SYNC_COMMITTEE_INDEX: u64 = 23;
-
-const FINALIZED_ROOT_DEPTH: u64 = 6;
-const FINALIZED_ROOT_INDEX: u64 = 41;
-
-const MAX_PROPOSER_SLASHINGS: usize = 16;
-const MAX_ATTESTER_SLASHINGS: usize =  2;
-const MAX_ATTESTATIONS: usize =  128;
-const MAX_DEPOSITS: usize =  16;
-const MAX_VOLUNTARY_EXITS: usize =  16;
-const MAX_VALIDATORS_PER_COMMITTEE: usize = 2048;
-const MAX_EXTRA_DATA_BYTES: usize = 32;
-
-const DEPOSIT_CONTRACT_TREE_DEPTH: usize = 32;
-
-/// GENESIS_FORK_VERSION('0x00000000')
-const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
-
-/// DomainType('0x07000000')
-/// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
-const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [7, 0, 0, 0];
-
-type ProofBranch = Vec<H256>;
-type ForkVersion = [u8; 4];
 
 #[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
@@ -306,8 +277,8 @@ pub mod pallet {
 				initial_sync.current_sync_committee.clone(),
 				initial_sync.current_sync_committee_branch,
 				initial_sync.header.state_root,
-				CURRENT_SYNC_COMMITTEE_DEPTH,
-				CURRENT_SYNC_COMMITTEE_INDEX,
+				config::CURRENT_SYNC_COMMITTEE_DEPTH,
+				config::CURRENT_SYNC_COMMITTEE_INDEX,
 			)?;
 
 			let period = Self::compute_current_sync_period(initial_sync.header.slot);
@@ -332,8 +303,8 @@ pub mod pallet {
 				update.next_sync_committee.clone(),
 				update.next_sync_committee_branch,
 				update.finalized_header.state_root,
-				NEXT_SYNC_COMMITTEE_DEPTH,
-				NEXT_SYNC_COMMITTEE_INDEX,
+				config::NEXT_SYNC_COMMITTEE_DEPTH,
+				config::NEXT_SYNC_COMMITTEE_INDEX,
 			)?;
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
@@ -342,8 +313,8 @@ pub mod pallet {
 				block_root,
 				update.finality_branch,
 				update.attested_header.state_root,
-				FINALIZED_ROOT_DEPTH,
-				FINALIZED_ROOT_INDEX,
+				config::FINALIZED_ROOT_DEPTH,
+				config::FINALIZED_ROOT_INDEX,
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
@@ -376,8 +347,8 @@ pub mod pallet {
 				block_root,
 				update.finality_branch,
 				update.attested_header.state_root,
-				FINALIZED_ROOT_DEPTH,
-				FINALIZED_ROOT_INDEX,
+				config::FINALIZED_ROOT_DEPTH,
+				config::FINALIZED_ROOT_INDEX,
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
@@ -490,7 +461,7 @@ pub mod pallet {
 				}
 			}
 
-			let domain_type = DOMAIN_SYNC_COMMITTEE.to_vec();
+			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
 			// Domains are used for for seeds, for signatures, and for selecting aggregators.
 			let domain = Self::compute_domain(domain_type, Some(fork_version), validators_root)?;
 			// Hash tree root of SigningData - object root + domain
@@ -677,7 +648,7 @@ pub mod pallet {
 		) -> Result<Domain, DispatchError> {
 			let unwrapped_fork_version: ForkVersion;
 			if fork_version.is_none() {
-				unwrapped_fork_version = GENESIS_FORK_VERSION;
+				unwrapped_fork_version = config::GENESIS_FORK_VERSION;
 			} else {
 				unwrapped_fork_version = fork_version.unwrap();
 			}
