@@ -98,7 +98,7 @@ pub struct SSZBeaconBlockHeader {
 
 #[derive(Default, SimpleSerialize)]
 pub struct SSZSyncCommittee {
-    pub pubkeys: Vector<Vector<u8, 48>, 512>,
+    pub pubkeys: Vector<Vector<u8, 48>, { config::SYNC_COMMITTEE_SIZE }>,
     pub aggregate_pubkey: Vector<u8, 48>,
 }
 

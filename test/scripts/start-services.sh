@@ -36,6 +36,8 @@ start_geth() {
     local data_dir="$output_dir/geth"
 
     if [ "$eth_network" == "localhost" ]; then
+        echo "Starting geth local net"
+
         geth init --datadir "$data_dir" config/genesis.json
         geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key0.prv
         geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key1.prv
@@ -53,6 +55,7 @@ start_geth() {
             --miner.gasprice=0 \
             > "$output_dir/geth.log" 2>&1 &
     else
+        echo "Starting geth on $eth_network"
         geth --"$eth_network" \
         --datadir "/home/ubuntu/projects/go-ethereum/${eth_network}data" \
         --authrpc.addr localhost \
@@ -62,11 +65,15 @@ start_geth() {
         --authrpc.jwtsecret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
         --http.api eth,net \
         --override.terminaltotaldifficulty 50000000000000000 \
-        > "$output_dir/geth_beacon.log" 2>&1 &
+        > "$output_dir/geth.log" 2>&1 &
     fi
 }
 
 start_lodestar() {
+    if [ "$start_beacon_sync" == "false" ]; then
+        return
+    fi
+
     if [ "$eth_network" == "localhost" ]; then
         echo "Waiting for geth API to be ready"
         sleep 2
@@ -76,35 +83,34 @@ start_lodestar() {
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc": "2.0", "id": "1", "method": "eth_getBlockByNumber","params": ["0x0", false]}' | jq -r '.result.hash')
 
-        timestamp=$(date -d'+1minute' +%s%3N)
+        timestamp=$(date -d'+10second' +%s)
 
-        > lodestar-beacon.log
-
-        echo "Starting lodestar"
+        echo "Starting lodestar local net"
 
         lodestar dev \
             --genesisValidators 8 \
             --genesisTime $timestamp \
             --startValidators "0..7" \
             --enr.ip "127.0.0.1" \
-            --rootDir "$output_dir/beacon-node1-$timestamp" \
+            --rootDir "$output_dir/beacon-$timestamp" \
             --reset \
             --terminal-total-difficulty-override 0 \
             --genesisEth1Hash $genesisHash \
-            --logLevelFile debug \
             --params.ALTAIR_FORK_EPOCH 0 \
             --params.BELLATRIX_FORK_EPOCH 0 \
             --eth1.enabled=true \
             --api.rest.api="beacon,config,events,node,validator,lightclient" \
             --jwt-secret config/jwtsecret \
-            > lodestar-beacon.log 2>&1 &
+            > "$output_dir/lodestar.log" 2>&1 &
     else
+        echo "Starting lodestar on $eth_network"
+        
         lodestar beacon \
             --rootDir="/home/ubuntu/projects/lodestar-beacondata" \
             --network=$eth_network \
             --api.rest.api="beacon,config,events,node,validator,lightclient" \
             --jwt-secret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
-            > "$output_dir/lodestar_beacon.log" 2>&1 &
+            > "$output_dir/lodestar.log" 2>&1 &
     fi
 
     echo "Started up beacon node"
@@ -158,6 +164,8 @@ start_polkadot_launch()
     if [ "$start_beacon_sync" == "true" ]; then
         initial_beacon_block=$(curl "$lodestar_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
                 | jq -r '.data.finalized.root')
+
+        echo "Initial beacon block: $initial_beacon_block"
 
         curl "$lodestar_endpoint_http/eth/v1/lightclient/snapshot/$initial_beacon_block" \
             | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
@@ -327,21 +335,21 @@ start_relayer()
         done
     ) &
 
-    if [ "$start_beacon_sync" == "true" ]; then
+    #if [ "$start_beacon_sync" == "true" ]; then
         # Launch beacon relay
-        (
-            : > beacon-relay.log
-            while :
-            do
-            echo "Starting beacon relay at $(date)"
-                "${relay_bin}" run beacon \
-                    --config $output_dir/beacon-relay.json \
-                    --substrate.private-key "//BeaconRelay" \
-                    >>beacon-relay.log 2>&1 || true
-                sleep 20
-            done
-        ) &
-    fi
+        #(
+        #    : > beacon-relay.log
+        #    while :
+        #    do
+        #    echo "Starting beacon relay at $(date)"
+        #        "${relay_bin}" run beacon \
+        #            --config $output_dir/beacon-relay.json \
+        #            --substrate.private-key "//BeaconRelay" \
+        #            >>beacon-relay.log 2>&1 || true
+        #        sleep 20
+        #    done
+        #) &
+    #fi
 }
 
 cleanup() {
@@ -357,19 +365,8 @@ mkdir "$output_dir/bin"
 
 export PATH="$output_dir/bin:$PATH"
 
-if [ "$eth_network" == "localhost" ] && [ "$start_beacon_sync" == "true" ]; then
-    echo "Beacon sync not supported for localhost yet."
-    exit 1
-fi
-
-if [ "$eth_network" == "localhost" ]; then
-    start_geth
-fi
-
-if [ "$start_beacon_sync" == "true" ]; then
-    start_geth_for_beacon_node
-    start_lodestar
-fi
+start_geth
+start_lodestar
 
 deploy_contracts
 start_polkadot_launch

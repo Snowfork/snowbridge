@@ -227,7 +227,7 @@ pub fn hash_tree_root_sync_committee(sync_committee: SyncCommittee) -> Result<[u
         pubkeys_vec.push(conv_pubkey);
     }
 
-    let pubkeys = Vector::<Vector::<u8, 48>, 512>::from_iter(pubkeys_vec.clone());
+    let pubkeys = Vector::<Vector::<u8, 48>, { config::SYNC_COMMITTEE_SIZE }>::from_iter(pubkeys_vec.clone());
 
     let agg = Vector::<u8, 48>::from_iter(sync_committee.aggregate_pubkey.0);
 
