@@ -17,8 +17,10 @@ import (
 var ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("not found")
 
 const (
-	SlotsInEpoch                 uint64 = 32
-	EpochsPerSyncCommitteePeriod uint64 = 256
+	//SlotsInEpoch                 uint64 = 32
+	//EpochsPerSyncCommitteePeriod uint64 = 256
+	SlotsInEpoch                 uint64 = 6
+	EpochsPerSyncCommitteePeriod uint64 = 8
 )
 
 type Syncer struct {
