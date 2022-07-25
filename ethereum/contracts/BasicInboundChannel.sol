@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "./ParachainClient.sol";
+import "./utils/MerkleProof.sol";
 
 contract BasicInboundChannel {
     uint256 public constant MAX_GAS_PER_MESSAGE = 100000;
@@ -9,12 +10,13 @@ contract BasicInboundChannel {
 
     uint8 public immutable sourceChannelID;
 
-    uint64 public nonce;
+    mapping(bytes32 => uint64) public nonces;
 
     ParachainClient public parachainClient;
 
     struct MessageBundle {
         uint8 sourceChannelID;
+        bytes32 account;
         uint64 nonce;
         Message[] messages;
     }
@@ -28,22 +30,27 @@ contract BasicInboundChannel {
     event MessageDispatched(uint64 id, bool result);
 
     constructor(uint8 _sourceChannelID, ParachainClient _parachainClient) {
-        nonce = 0;
         sourceChannelID = _sourceChannelID;
         parachainClient = _parachainClient;
     }
 
-    function submit(MessageBundle calldata bundle,  bytes calldata proof) external {
-        bytes32 commitment = keccak256(abi.encode(bundle));
+    function submit(
+        MessageBundle calldata bundle,
+        bytes32[] calldata leafProof,
+        bool[] calldata hashSides,
+        bytes calldata proof
+    ) external {
+        bytes32 leafHash = keccak256(abi.encode(bundle));
+        bytes32 commitment = MerkleProof.computeRootFromProofAndSide(leafHash, leafProof, hashSides);
 
         require(parachainClient.verifyCommitment(commitment, proof), "Invalid proof");
         require(bundle.sourceChannelID == sourceChannelID, "Invalid source channel");
-        require(bundle.nonce == nonce + 1, "Invalid nonce");
+        require(bundle.nonce == nonces[bundle.account] + 1, "Invalid nonce");
         require(
             gasleft() >= (bundle.messages.length * MAX_GAS_PER_MESSAGE) + GAS_BUFFER,
             "insufficient gas for delivery of all messages"
         );
-        nonce++;
+        nonces[bundle.account]++;
         dispatch(bundle);
     }
 
