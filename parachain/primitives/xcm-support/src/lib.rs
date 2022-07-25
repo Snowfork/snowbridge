@@ -39,7 +39,7 @@ pub struct TransferInfo {
 	pub fee: u128,
 }
 
-/// Transfers an asset to the destination parachain. Transfers failures are emitted by events.
+/// Transfers an asset to the destination parachain. Transfer failures are emitted by events.
 pub trait XcmReserveTransfer<AccountId, Origin> {
 	fn reserve_transfer(
 		asset_id: u128,
