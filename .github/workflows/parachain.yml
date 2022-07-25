@@ -51,6 +51,7 @@ jobs:
   test:
     needs: check
     runs-on: ubuntu-20.04
+    if: ${{ false }}
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
