@@ -69,7 +69,7 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branc
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 runtime-primitives = { path = "../../primitives/runtime", default-features = false, package = "snowbridge-runtime-primitives" }
 
-snowbridge-xcm-support = { path = "../../primitives/xcm-support", default-features = false }
+snowbridge-xcm-support = { path = "../../pallets/xcm-support", default-features = false }
 snowbridge-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 basic-channel = { path = "../../pallets/basic-channel", package = "snowbridge-basic-channel", default-features = false }
 incentivized-channel = { path = "../../pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }

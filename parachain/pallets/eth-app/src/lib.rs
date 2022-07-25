@@ -29,7 +29,6 @@ mod tests;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
-	log,
 	traits::{fungible::Mutate, EnsureOrigin},
 	transactional, PalletId,
 };
@@ -38,10 +37,8 @@ use sp_core::H160;
 use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
-use snowbridge_core::{
-	assets::{RemoteParachain, XcmReserveTransfer},
-	ChannelId, OutboundRouter,
-};
+use snowbridge_core::{ChannelId, OutboundRouter};
+use snowbridge_xcm_support_primitives::{RemoteParachain, XcmReserveTransfer};
 
 pub use pallet::*;
 use payload::OutboundPayload;
@@ -152,7 +149,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin.clone())?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into());
+				return Err(DispatchError::BadOrigin.into())
 			}
 
 			let recipient = T::Lookup::lookup(recipient)?;
@@ -160,19 +157,7 @@ pub mod pallet {
 			Self::deposit_event(Event::Minted(sender, recipient.clone(), amount));
 
 			if let Some(destination) = destination {
-				let _ = with_transaction(|| {
-					let result =
-						T::XcmReserveTransfer::reserve_transfer(0, &recipient, amount, destination);
-					if let Err(err) = result {
-						log::error!(
-							"Failed to execute xcm transfer to parachain {} - {:?}.",
-							destination.para_id,
-							err
-						);
-						return TransactionOutcome::Rollback(DispatchError::Other("foo").into());
-					}
-					TransactionOutcome::Commit(Ok(()))
-				});
+				T::XcmReserveTransfer::reserve_transfer(0, sender, &recipient, amount, destination);
 			}
 			Ok(())
 		}

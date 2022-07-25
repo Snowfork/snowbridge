@@ -12,7 +12,6 @@ use snowbridge_ethereum::{Header, Log, U256};
 use sp_core::H160;
 use sp_std::prelude::*;
 
-pub mod assets;
 pub mod types;
 
 pub use types::{ChannelId, Message, MessageId, MessageNonce, Proof};

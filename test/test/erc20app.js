@@ -6,7 +6,7 @@ const { expect } = require("chai")
 
 const { TestTokenAddress, polkadotRecipientSS58, polkadotRecipient, bootstrap } = require('../src/fixtures');
 
-const { ChannelId, sleep } = require("../src/helpers");
+const { ChannelId } = require("../src/helpers");
 
 describe('Bridge', function () {
 
@@ -41,7 +41,8 @@ describe('Bridge', function () {
       await ethClient.approveERC20(ethAccount, amount);
       await ethClient.lockERC20(ethAccount, amount, polkadotRecipient, ChannelId.BASIC, 0, 0);
 
-      await sleep(90 * 1000)
+      await subClient.waitForNextEvent({ eventSection: 'erc20App', eventMethod: 'Minted' });
+      await subClient.waitForNextBlock();
 
       // Ensure there is now a registered asset for the token
       maybeAssetId = await subClient.api.query.erc20App.assetId(TestTokenAddress);
@@ -87,6 +88,8 @@ describe('Bridge', function () {
   describe('ERC20 App XCM', function () {
     it('should transfer ERC20 tokens from Ethereum to Parachain 1001', async function () {
       const amount = BigNumber('1000');
+      const xcmFee = 4_000_000;
+      const paraId = 1001;
       const ethAccount = ethClient.accounts[1];
 
       // Check if there is already a registered asset for the token
@@ -101,8 +104,9 @@ describe('Bridge', function () {
       const beforeSubBalance = await testSubBalances[0];
 
       await ethClient.approveERC20(ethAccount, amount);
-      await ethClient.lockERC20(ethAccount, amount, polkadotRecipient, ChannelId.BASIC, 1001, 4_000_000);
+      await ethClient.lockERC20(ethAccount, amount, polkadotRecipient, ChannelId.BASIC, paraId, xcmFee);
 
+      const stopRecording = await subClient.recordEvents('xcmSupport', 'TransferSent');
       const afterEthBalance = await ethClient.getErc20Balance(ethAccount);
       const afterSubBalance = await testSubBalances[1];
 
@@ -111,10 +115,22 @@ describe('Bridge', function () {
 
       // conservation of value
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance));
+
+      const events = await stopRecording();
+      expect(events.length).to.be.greaterThan(0);
+      const firstEvent = events[0];
+      expect(firstEvent.assetId.toString()).to.be.equal(assetId.toString());
+      expect(firstEvent.sender.toHex().toLowerCase()).to.be.equal(ethAccount.toString().toLowerCase());
+      expect(firstEvent.recipient.toHex().toLowerCase()).to.be.equal(polkadotRecipient.toString().toLowerCase());
+      expect(firstEvent.fee.toString()).to.be.equal(xcmFee.toString());
+      expect(firstEvent.paraId.toString()).to.be.equal(paraId.toString());
+      expect(firstEvent.amount.toString()).to.be.equal(amount.toString());
     });
 
     it('should not transfer ERC20 tokens from Ethereum to Parachain 1001 without fee', async function () {
       const amount = BigNumber('1000');
+      const xcmFee = 0;
+      const paraId = 1001;
       const ethAccount = ethClient.accounts[1];
 
       // Check if there is already a registered asset for the token
@@ -132,9 +148,11 @@ describe('Bridge', function () {
       let beforeEthBalance = await ethClient.getErc20Balance(ethAccount);
 
       await ethClient.approveERC20(ethAccount, amount);
-      await ethClient.lockERC20(ethAccount, amount, polkadotRecipient, ChannelId.BASIC, 1001, 0);
+      await ethClient.lockERC20(ethAccount, amount, polkadotRecipient, ChannelId.BASIC, paraId, xcmFee);
 
-      await sleep(90 * 1000)
+      const stopRecording = await subClient.recordEvents('xcmSupport', 'TransferFailed');
+      await subClient.waitForNextEvent({ eventSection: 'erc20App', eventMethod: 'Minted' });
+      await subClient.waitForNextBlock();
 
       // Ensure there is now a registered asset for the token
       maybeAssetId = await subClient.api.query.erc20App.assetId(TestTokenAddress);
@@ -148,10 +166,22 @@ describe('Bridge', function () {
 
       // conservation of value
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance));
+
+      const events = await stopRecording();
+      expect(events.length).to.be.greaterThan(0);
+      const firstEvent = events[0];
+      expect(firstEvent.assetId.toString()).to.be.equal(assetId.toString());
+      expect(firstEvent.sender.toHex().toLowerCase()).to.be.equal(ethAccount.toString().toLowerCase());
+      expect(firstEvent.recipient.toHex().toLowerCase()).to.be.equal(polkadotRecipient.toString().toLowerCase());
+      expect(firstEvent.fee.toString()).to.be.equal(xcmFee.toString());
+      expect(firstEvent.paraId.toString()).to.be.equal(paraId.toString());
+      expect(firstEvent.amount.toString()).to.be.equal(amount.toString());
     });
 
     it('should not transfer ERC20 tokens from Ethereum to non-existent Parachain 2001', async function () {
       const amount = BigNumber('1000');
+      const xcmFee = 4_000_0000;
+      const paraId = 2001;
       const ethAccount = ethClient.accounts[1];
 
       // Check if there is already a registered asset for the token
@@ -169,9 +199,11 @@ describe('Bridge', function () {
       let beforeEthBalance = await ethClient.getErc20Balance(ethAccount);
 
       await ethClient.approveERC20(ethAccount, amount);
-      await ethClient.lockERC20(ethAccount, amount, polkadotRecipient, ChannelId.BASIC, 2001, 4_000_000);
+      await ethClient.lockERC20(ethAccount, amount, polkadotRecipient, ChannelId.BASIC, paraId, xcmFee);
 
-      await sleep(90 * 1000)
+      const stopRecording = await subClient.recordEvents('xcmSupport', 'TransferFailed');
+      await subClient.waitForNextEvent({ eventSection: 'erc20App', eventMethod: 'Minted' });
+      await subClient.waitForNextBlock();
 
       // Ensure there is now a registered asset for the token
       maybeAssetId = await subClient.api.query.erc20App.assetId(TestTokenAddress);
@@ -185,6 +217,16 @@ describe('Bridge', function () {
 
       // conservation of value
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance));
+
+      const events = await stopRecording();
+      expect(events.length).to.be.greaterThan(0);
+      const firstEvent = events[0];
+      expect(firstEvent.assetId.toString()).to.be.equal(assetId.toString());
+      expect(firstEvent.sender.toHex().toLowerCase()).to.be.equal(ethAccount.toString().toLowerCase());
+      expect(firstEvent.recipient.toHex().toLowerCase()).to.be.equal(polkadotRecipient.toString().toLowerCase());
+      expect(firstEvent.fee.toString()).to.be.equal(xcmFee.toString());
+      expect(firstEvent.paraId.toString()).to.be.equal(paraId.toString());
+      expect(firstEvent.amount.toString()).to.be.equal(amount.toString());
     });
   })
 });
