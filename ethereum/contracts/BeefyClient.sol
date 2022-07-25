@@ -168,7 +168,6 @@ contract BeefyClient is Ownable {
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet = _initialValidatorSet;
         nextValidatorSet = _nextValidatorSet;
-        renounceOwnership();
     }
 
     /* Public Functions */
