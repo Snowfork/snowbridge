@@ -10337,6 +10337,7 @@ dependencies = [
 name = "snowbridge-basic-channel-rpc"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "jsonrpc-core 18.0.0",
  "jsonrpc-core-client",
  "jsonrpc-derive",
