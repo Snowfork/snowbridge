@@ -14,7 +14,7 @@ parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
 start_beacon_sync="${START_BEACON_SYNC:-false}"
-lodestar_endpoint_http="http://localhost:9596"
+beacon_endpoint_http="${BEACON_HTTP_ENDPOINT}"
 
 output_dir=/tmp/snowbridge
 
@@ -50,28 +50,6 @@ start_geth() {
         --gcmode archive \
         --miner.gasprice=0 \
         > "$output_dir/geth.log" 2>&1 &
-}
-
-start_geth_for_beacon_node() {
-    geth --"$eth_network" \
-        --datadir "/home/ubuntu/projects/go-ethereum/${eth_network}data" \
-        --authrpc.addr localhost \
-        --authrpc.port 8551 \
-        --http \
-        --authrpc.vhosts localhost \
-        --authrpc.jwtsecret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
-        --http.api eth,net \
-        --override.terminaltotaldifficulty 50000000000000000 \
-        > "$output_dir/geth_beacon.log" 2>&1 &
-}
-
-start_lodestar() {
-    lodestar beacon \
-        --rootDir="/home/ubuntu/projects/lodestar-beacondata" \
-        --network=$eth_network \
-        --api.rest.api="beacon,config,events,node,validator,lightclient" \
-        --jwt-secret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
-        > "$output_dir/lodestar_beacon.log" 2>&1 &
 }
 
 deploy_contracts()
@@ -120,13 +98,15 @@ start_polkadot_launch()
         | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
 
     if [ "$start_beacon_sync" == "true" ]; then
-        initial_beacon_block=$(curl "$lodestar_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
+        initial_beacon_block=$(curl "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
                 | jq -r '.data.finalized.root')
 
-        curl "$lodestar_endpoint_http/eth/v1/lightclient/snapshot/$initial_beacon_block" \
+        echo "$beacon_endpoint_http/eth/v1/light_client/bootstrap/$initial_beacon_block"
+
+        curl "$beacon_endpoint_http/eth/v1/light_client/bootstrap/$initial_beacon_block" \
             | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
 
-        validatorsRoot=$(curl "$lodestar_endpoint_http/eth/v1/beacon/genesis" \
+        validatorsRoot=$(curl "$beacon_endpoint_http/eth/v1/beacon/genesis" \
                 | jq -r '.data.genesis_validators_root')
 
         jq \
@@ -328,11 +308,6 @@ fi
 
 if [ "$eth_network" == "localhost" ]; then
     start_geth
-fi
-
-if [ "$start_beacon_sync" == "true" ]; then
-    start_geth_for_beacon_node
-    start_lodestar
 fi
 
 deploy_contracts
