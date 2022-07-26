@@ -101,8 +101,6 @@ start_polkadot_launch()
         initial_beacon_block=$(curl "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
                 | jq -r '.data.finalized.root')
 
-        echo "$beacon_endpoint_http/eth/v1/light_client/bootstrap/$initial_beacon_block"
-
         curl "$beacon_endpoint_http/eth/v1/light_client/bootstrap/$initial_beacon_block" \
             | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
 
