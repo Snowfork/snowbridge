@@ -51,6 +51,7 @@ jobs:
   test:
     needs: check
     runs-on: ubuntu-20.04
+    if: ${{ false }} # Disabled because there is not enough ram on workflow instance
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
