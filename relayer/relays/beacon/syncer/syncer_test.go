@@ -37,37 +37,6 @@ func TestComputeEpochAtSlot(t *testing.T) {
 	}
 }
 
-func TestComputeEpochForNextPeriod(t *testing.T) {
-	values := []struct {
-		name     string
-		epoch    uint64
-		expected uint64
-	}{
-		{
-			name:     "first epoch",
-			epoch:    0,
-			expected: 256,
-		},
-		{
-			name:     "another epoch",
-			epoch:    30,
-			expected: 256,
-		},
-		{
-			name:     "another epoch",
-			epoch:    513,
-			expected: 768,
-		},
-	}
-
-	for _, tt := range values {
-		total := computeEpochForNextPeriod(tt.epoch)
-		if total != tt.expected {
-			t.Errorf("TestComputeEpochForNextPeriod of epoch (%d) was incorrect, got: %d, want: %d.", tt.epoch, total, tt.expected)
-		}
-	}
-}
-
 func TestHexToBinaryString(t *testing.T) {
 	values := []struct {
 		name     string

@@ -37,8 +37,10 @@ func NewRelay(
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
+	specSettings := r.config.GetSpecSettings()
+
 	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
-	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint)
+	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod)
 	r.ethconn = ethereum.NewConnection(r.config.Source.Ethereum.Endpoint, nil)
 
 	err := r.paraconn.Connect(ctx)
@@ -194,7 +196,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 		"blockRoot": blockRoot,
 	}).Info("syncing finalized header at slot")
 
-	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
+	currentSyncPeriod := r.syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
 
 	if r.syncer.Cache.LastSyncedSyncCommitteePeriod < currentSyncPeriod {
 		logrus.WithField("period", currentSyncPeriod).Info("sync period rolled over, getting sync committee update")

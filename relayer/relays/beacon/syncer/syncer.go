@@ -10,29 +10,25 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
-	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
 )
 
 var ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("not found")
 
-const (
-	//SlotsInEpoch                 uint64 = 32
-	//EpochsPerSyncCommitteePeriod uint64 = 256
-	SlotsInEpoch                 uint64 = 8
-	EpochsPerSyncCommitteePeriod uint64 = 8
-)
-
 type Syncer struct {
-	Client BeaconClient
-	Cache  BeaconCache
+	Client                       BeaconClient
+	Cache                        BeaconCache
+	SlotsInEpoch                 uint64
+	EpochsPerSyncCommitteePeriod uint64
 }
 
-func New(endpoint string) *Syncer {
+func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64) *Syncer {
 	return &Syncer{
-		Client: *NewBeaconClient(endpoint),
-		Cache:  *NewBeaconCache(),
+		Client:                       *NewBeaconClient(endpoint),
+		Cache:                        *NewBeaconCache(),
+		SlotsInEpoch:                 slotsInEpoch,
+		EpochsPerSyncCommitteePeriod: epochsPerSyncCommitteePeriod,
 	}
 }
 
@@ -110,7 +106,7 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, e
 		return []uint64{}, fmt.Errorf("parse slot as int: %w", err)
 	}
 
-	currentSyncPeriod := ComputeSyncPeriodAtSlot(slot)
+	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(slot)
 
 	if checkpointSyncPeriod == currentSyncPeriod {
 		return []uint64{}, nil
@@ -171,16 +167,9 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 		ForkVersion:             forkVersion,
 	}
 
-	finalizedHeaderSlot := ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
+	finalizedHeaderSlot := s.ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
 
 	if finalizedHeaderSlot != from {
-		logrus.WithFields(logrus.Fields{
-			"period":                    from,
-			"headerPeriod":              finalizedHeaderSlot,
-			"slot":                      uint64(finalizedHeader.Slot),
-			"syncCommitteePeriodUpdate": committeeUpdate,
-		}).Info("committee and header in different periods")
-
 		return syncCommitteePeriodUpdate, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
 	}
 
@@ -325,16 +314,8 @@ func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, erro
 	return blockScale.Body.SyncAggregate, nil
 }
 
-func computeEpochAtSlot(slot uint64) uint64 {
-	return slot / SlotsInEpoch
-}
-
-func computeEpochForNextPeriod(epoch uint64) uint64 {
-	return epoch + (EpochsPerSyncCommitteePeriod - (epoch % EpochsPerSyncCommitteePeriod))
-}
-
-func ComputeSyncPeriodAtSlot(slot uint64) uint64 {
-	return slot / (SlotsInEpoch * EpochsPerSyncCommitteePeriod)
+func (s *Syncer) ComputeSyncPeriodAtSlot(slot uint64) uint64 {
+	return slot / (s.SlotsInEpoch * s.EpochsPerSyncCommitteePeriod)
 }
 
 func IsInArray(values []uint64, toCheck uint64) bool {
