@@ -123,8 +123,8 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, e
 	return syncPeriodsToFetch, nil
 }
 
-func (s *Syncer) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePeriodUpdate, error) {
-	committeeUpdates, err := s.Client.GetSyncCommitteePeriodUpdate(from, to)
+func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdate, error) {
+	committeeUpdates, err := s.Client.GetSyncCommitteePeriodUpdate(from)
 	if err != nil {
 		return SyncCommitteePeriodUpdate{}, fmt.Errorf("fetch sync committee period update: %w", err)
 	}

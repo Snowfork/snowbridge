@@ -113,6 +113,7 @@ fn testnet_genesis(
 			accounts: vec![],
 		},
 		asset_registry: snowbridge_runtime::AssetRegistryConfig { next_asset_id: 1 },
+		xcm_support: snowbridge_runtime::XcmSupportConfig {},
 		ethereum_light_client: snowbridge_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
@@ -120,15 +121,9 @@ fn testnet_genesis(
 		ethereum_beacon_client: snowbridge_runtime::EthereumBeaconClientConfig {
 			initial_sync: Default::default(),
 		},
-		dot_app: snowbridge_runtime::DotAppConfig {
-			address: Default::default(),
-		},
-		eth_app: snowbridge_runtime::EthAppConfig {
-			address: Default::default(),
-		},
-		erc_20_app: snowbridge_runtime::Erc20AppConfig {
-			address: Default::default(),
-		},
+		dot_app: snowbridge_runtime::DotAppConfig { address: Default::default() },
+		eth_app: snowbridge_runtime::EthAppConfig { address: Default::default() },
+		erc_20_app: snowbridge_runtime::Erc20AppConfig { address: Default::default() },
 		parachain_info: snowbridge_runtime::ParachainInfoConfig { parachain_id: para_id },
 		collator_selection: snowbridge_runtime::CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),

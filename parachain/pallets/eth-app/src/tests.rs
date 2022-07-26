@@ -6,7 +6,8 @@ use frame_support::{
 use sp_core::H160;
 use sp_keyring::AccountKeyring as Keyring;
 
-use snowbridge_core::{assets::RemoteParachain, ChannelId};
+use snowbridge_core::ChannelId;
+use snowbridge_xcm_support_primitives::RemoteParachain;
 
 fn last_event() -> Event {
 	System::events().pop().expect("Event expected").event

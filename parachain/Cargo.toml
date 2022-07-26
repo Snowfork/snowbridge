@@ -128,6 +128,7 @@ members = [
     "pallets/erc20-app",
     "pallets/dot-app",
     "pallets/asset-registry",
+    "pallets/xcm-support",
     "runtime/snowbridge",
     "runtime/snowblink",
     "runtime/snowbase",

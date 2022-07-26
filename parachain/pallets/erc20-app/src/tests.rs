@@ -1,6 +1,7 @@
 use crate::mock::{new_tester, AccountId, Assets, Erc20App, Event, Origin, System, Test};
 use frame_support::{assert_noop, assert_ok};
-use snowbridge_core::{assets::RemoteParachain, ChannelId};
+use snowbridge_core::ChannelId;
+use snowbridge_xcm_support_primitives::RemoteParachain;
 use sp_core::H160;
 use sp_keyring::AccountKeyring as Keyring;
 

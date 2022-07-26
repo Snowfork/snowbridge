@@ -1,98 +1,51 @@
 //! # XCMP Support
 //!
-//! Includes an implementation for the `TransactAsset` trait, thus enabling
-//! withdrawals and deposits to assets via XCMP message execution.
+//! Includes types and traits which enabling withdrawals and deposits to assets via XCMP message
+//! execution.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{ensure, log};
-use frame_system::pallet_prelude::OriginFor;
-use sp_runtime::DispatchError;
-use sp_std::{marker::PhantomData, prelude::*};
+use codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use sp_core::{RuntimeDebug, H160, H256};
 
-use xcm::latest::prelude::*;
-use xcm_executor::traits::WeightBounds;
+/// Represents a remote parachain by id with a fee that will be used by
+/// `XcmReserveTransfer::reserve_transfer` to send an asset to a remote
+/// parachain.
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, PartialOrd, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+pub struct RemoteParachain {
+	/// The parachain id.
+	pub para_id: u32,
+	/// The fee required for XCM execution.
+	pub fee: u128,
+}
 
-use snowbridge_core::assets::{RemoteParachain, XcmReserveTransfer};
+/// Represents information about an XCM transfer.
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, PartialOrd, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+pub struct TransferInfo {
+	/// The asset id on our parachain.
+	pub asset_id: u128,
+	// The senders Ethereum address.
+	pub sender: H160,
+	// The recipient Substrate address.
+	pub recipient: H256,
+	// The amount transfered.
+	pub amount: u128,
+	/// The destination parachain id.
+	pub para_id: u32,
+	/// The fee paid for the xcm request.
+	pub fee: u128,
+}
 
-pub struct XcmAssetTransferer<T>(PhantomData<T>);
-
-impl<T> XcmReserveTransfer<T::AccountId, OriginFor<T>> for XcmAssetTransferer<T>
-where
-	T: pallet_xcm::Config,
-	T::AccountId: AsRef<[u8; 32]>,
-{
+/// Transfers an asset to the destination parachain. Transfer failures are emitted by events.
+pub trait XcmReserveTransfer<AccountId, Origin> {
 	fn reserve_transfer(
 		asset_id: u128,
-		recipient: &T::AccountId,
+		sender: H160,
+		recipient: &AccountId,
 		amount: u128,
 		destination: RemoteParachain,
-	) -> frame_support::dispatch::DispatchResult {
-		ensure!(
-			destination.fee > 0u128,
-			DispatchError::Other("Fee must be greater than 0 when parachain id is specified.")
-		);
-
-		let origin_location: MultiLocation = MultiLocation {
-			parents: 0,
-			interior: Junctions::X1(Junction::AccountId32 {
-				network: NetworkId::Any,
-				id: recipient.as_ref().clone(),
-			}),
-		};
-
-		let mut message = Xcm(vec![
-			WithdrawAsset(
-				vec![
-					MultiAsset {
-						id: Concrete(MultiLocation { parents: 1, interior: Junctions::Here }),
-						fun: Fungible(destination.fee),
-					},
-					MultiAsset {
-						id: AssetId::Concrete(MultiLocation {
-							parents: 0,
-							interior: Junctions::X1(Junction::GeneralIndex(asset_id)),
-						}),
-						fun: Fungibility::Fungible(amount),
-					},
-				]
-				.into(),
-			),
-			DepositReserveAsset {
-				assets: MultiAssetFilter::Wild(All),
-				dest: MultiLocation {
-					parents: 1,
-					interior: Junctions::X1(Junction::Parachain(destination.para_id)),
-				},
-				xcm: Xcm(vec![
-					BuyExecution {
-						fees: MultiAsset {
-							id: Concrete(MultiLocation { parents: 1, interior: Junctions::Here }),
-							fun: Fungible(destination.fee),
-						},
-						weight_limit: Unlimited,
-					},
-					DepositAsset {
-						assets: Wild(All),
-						max_assets: 2,
-						beneficiary: origin_location.clone(),
-					},
-				]),
-				max_assets: 2,
-			},
-		]);
-
-		let weight = T::Weigher::weight(&mut message)
-			.map_err(|_| DispatchError::Other("Unweighable message."))?;
-
-		T::XcmExecutor::execute_xcm_in_credit(origin_location, message, weight, weight)
-			.ensure_complete()
-			.map_err(|err| {
-				let message = "Xcm execution failed.";
-				log::error!("{} Reason: {:?}", message, err);
-				DispatchError::Other(message)
-			})?;
-
-		Ok(())
-	}
+	);
 }

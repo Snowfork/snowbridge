@@ -14,7 +14,7 @@ parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
 start_beacon_sync="${START_BEACON_SYNC:-false}"
-lodestar_endpoint_http="http://localhost:9596"
+beacon_endpoint_http="${BEACON_HTTP_ENDPOINT}"
 
 output_dir=/tmp/snowbridge
 
@@ -104,7 +104,7 @@ start_lodestar() {
             > "$output_dir/lodestar.log" 2>&1 &
     else
         echo "Starting lodestar on $eth_network"
-        
+
         lodestar beacon \
             --rootDir="/home/ubuntu/projects/lodestar-beacondata" \
             --network=$eth_network \
@@ -162,15 +162,13 @@ start_polkadot_launch()
         | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
 
     if [ "$start_beacon_sync" == "true" ]; then
-        initial_beacon_block=$(curl "$lodestar_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
+        initial_beacon_block=$(curl "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
                 | jq -r '.data.finalized.root')
 
-        echo "Initial beacon block: $initial_beacon_block"
-
-        curl "$lodestar_endpoint_http/eth/v1/lightclient/snapshot/$initial_beacon_block" \
+        curl "$beacon_endpoint_http/eth/v1/light_client/bootstrap/$initial_beacon_block" \
             | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
 
-        validatorsRoot=$(curl "$lodestar_endpoint_http/eth/v1/beacon/genesis" \
+        validatorsRoot=$(curl "$beacon_endpoint_http/eth/v1/beacon/genesis" \
                 | jq -r '.data.genesis_validators_root')
 
         jq \
@@ -284,10 +282,12 @@ start_relayer()
         --arg k1 "$(address_for BasicOutboundChannel)" \
         --arg k2 "$(address_for IncentivizedOutboundChannel)" \
         --arg infura_endpoint_ws $infura_endpoint_ws \
+        --arg beacon_endpoint_http $beacon_endpoint_http \
     '
       .source.contracts.BasicOutboundChannel = $k1
     | .source.contracts.IncentivizedOutboundChannel = $k2
     | .source.ethereum.endpoint = $infura_endpoint_ws
+    | .source.beacon.endpoint = $beacon_endpoint_http
     ' \
     config/beacon-relay.json > $output_dir/beacon-relay.json
 

@@ -27,6 +27,7 @@ ethabi = { git = "https://github.com/Snowfork/ethabi-decode.git", package = "eth
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-asset-registry-primitives = { path = "../../primitives/asset-registry", default-features = false }
+snowbridge-xcm-support-primitives = { path = "../../primitives/xcm-support", default-features = false }
 
 snowbridge-dispatch = { path = "../dispatch", default-features = false, optional = true }
 snowbridge-basic-channel = { path = "../basic-channel", default-features = false, optional = true }
@@ -56,6 +57,7 @@ std = [
 
     "snowbridge-core/std",
     "snowbridge-asset-registry-primitives/std",
+    "snowbridge-xcm-support-primitives/std",
 
     "frame-benchmarking/std",
     "snowbridge-dispatch/std",

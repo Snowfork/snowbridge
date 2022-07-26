@@ -136,7 +136,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 }
 
 func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) error {
-	syncCommitteeUpdate, err := r.syncer.GetSyncCommitteePeriodUpdate(period, period)
+	syncCommitteeUpdate, err := r.syncer.GetSyncCommitteePeriodUpdate(period)
 
 	switch {
 	case errors.Is(err, syncer.ErrCommitteeUpdateHeaderInDifferentSyncPeriod):

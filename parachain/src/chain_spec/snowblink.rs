@@ -112,6 +112,7 @@ fn testnet_genesis(
 			accounts: vec![],
 		},
 		asset_registry: snowblink_runtime::AssetRegistryConfig { next_asset_id: 1 },
+		xcm_support: snowblink_runtime::XcmSupportConfig {},
 		ethereum_light_client: snowblink_runtime::EthereumLightClientConfig {
 			initial_header: Default::default(),
 			initial_difficulty: Default::default(),
@@ -119,15 +120,9 @@ fn testnet_genesis(
 		ethereum_beacon_client: snowblink_runtime::EthereumBeaconClientConfig {
 			initial_sync: Default::default(),
 		},
-		dot_app: snowblink_runtime::DotAppConfig {
-			address: Default::default(),
-		},
-		eth_app: snowblink_runtime::EthAppConfig {
-			address: Default::default(),
-		},
-		erc_20_app: snowblink_runtime::Erc20AppConfig {
-			address: Default::default(),
-		},
+		dot_app: snowblink_runtime::DotAppConfig { address: Default::default() },
+		eth_app: snowblink_runtime::EthAppConfig { address: Default::default() },
+		erc_20_app: snowblink_runtime::Erc20AppConfig { address: Default::default() },
 		parachain_info: snowblink_runtime::ParachainInfoConfig { parachain_id: para_id },
 		collator_selection: snowblink_runtime::CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),

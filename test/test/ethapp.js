@@ -54,6 +54,8 @@ describe('Bridge', function () {
   describe('ETH App XCM', function () {
     it('should transfer ETH from Ethereum to Parachain 1001 (incentivized channel)', async function () {
       const amount = BigNumber(Web3.utils.toWei('0.0001', "ether"));
+      const xcmFee = 4_000_000;
+      const paraId = 1001;
       const ethAccount = ethClient.accounts[1];
 
       const testSubBalances = await testSubClient.subscribeAssetsAccountBalances(
@@ -63,8 +65,9 @@ describe('Bridge', function () {
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
       const beforeSubBalance = await testSubBalances[0];
 
-      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 1001, 4_000_000);
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, paraId, xcmFee);
 
+      const stopRecording = await subClient.recordEvents('xcmSupport', 'TransferSent');
       const afterEthBalance = await ethClient.getEthBalance(ethAccount);
       const afterSubBalance = await testSubBalances[1];
 
@@ -72,10 +75,22 @@ describe('Bridge', function () {
       expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
       // conservation of value
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
+
+      const events = await stopRecording();
+      expect(events.length).to.be.greaterThan(0);
+      const firstEvent = events[0];
+      expect(firstEvent.assetId.toString()).to.be.equal('0');
+      expect(firstEvent.sender.toHex().toLowerCase()).to.be.equal(ethAccount.toString().toLowerCase());
+      expect(firstEvent.recipient.toHex().toLowerCase()).to.be.equal(polkadotRecipient.toString().toLowerCase());
+      expect(firstEvent.fee.toString()).to.be.equal(xcmFee.toString());
+      expect(firstEvent.paraId.toString()).to.be.equal(paraId.toString());
+      expect(firstEvent.amount.toString()).to.be.equal(amount.toString());
     });
 
     it('should not transfer ETH from Ethereum to Parachain 1001 without fee', async function () {
       const amount = BigNumber(Web3.utils.toWei('0.0001', "ether"));
+      const xcmFee = 0;
+      const paraId = 1001;
       const ethAccount = ethClient.accounts[1];
 
       const subBalances = await subClient.subscribeAssetsAccountBalances(
@@ -85,8 +100,9 @@ describe('Bridge', function () {
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
       const beforeSubBalance = await subBalances[0];
 
-      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 1001, 0);
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, paraId, xcmFee);
 
+      const stopRecording = await subClient.recordEvents('xcmSupport', 'TransferFailed');
       const afterEthBalance = await ethClient.getEthBalance(ethAccount);
       const afterSubBalance = await subBalances[1];
 
@@ -94,10 +110,22 @@ describe('Bridge', function () {
       expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
       // conservation of value
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
+
+      const events = await stopRecording();
+      expect(events.length).to.be.greaterThan(0);
+      const firstEvent = events[0];
+      expect(firstEvent.assetId.toString()).to.be.equal('0');
+      expect(firstEvent.sender.toHex().toLowerCase()).to.be.equal(ethAccount.toString().toLowerCase());
+      expect(firstEvent.recipient.toHex().toLowerCase()).to.be.equal(polkadotRecipient.toString().toLowerCase());
+      expect(firstEvent.fee.toString()).to.be.equal(xcmFee.toString());
+      expect(firstEvent.paraId.toString()).to.be.equal(paraId.toString());
+      expect(firstEvent.amount.toString()).to.be.equal(amount.toString());
     });
 
     it('should not transfer ETH from Ethereum to non-existent Parachain 2001', async function () {
       const amount = BigNumber(Web3.utils.toWei('0.0001', "ether"));
+      const xcmFee = 4_000_000;
+      const paraId = 2001;
       const ethAccount = ethClient.accounts[1];
 
       const subBalances = await subClient.subscribeAssetsAccountBalances(
@@ -107,8 +135,9 @@ describe('Bridge', function () {
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
       const beforeSubBalance = await subBalances[0];
 
-      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 2001, 4_000_000);
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, paraId, xcmFee);
 
+      const stopRecording = await subClient.recordEvents('xcmSupport', 'TransferFailed');
       const afterEthBalance = await ethClient.getEthBalance(ethAccount);
       const afterSubBalance = await subBalances[1];
 
@@ -116,6 +145,16 @@ describe('Bridge', function () {
       expect(afterSubBalance.minus(beforeSubBalance)).to.be.bignumber.equal(amount);
       // conservation of value
       expect(beforeEthBalance.plus(beforeSubBalance)).to.be.bignumber.equal(afterEthBalance.plus(afterSubBalance).plus(gasCost));
+
+      const events = await stopRecording();
+      expect(events.length).to.be.greaterThan(0);
+      const firstEvent = events[0];
+      expect(firstEvent.assetId.toString()).to.be.equal('0');
+      expect(firstEvent.sender.toHex().toLowerCase()).to.be.equal(ethAccount.toString().toLowerCase());
+      expect(firstEvent.recipient.toHex().toLowerCase()).to.be.equal(polkadotRecipient.toString().toLowerCase());
+      expect(firstEvent.fee.toString()).to.be.equal(xcmFee.toString());
+      expect(firstEvent.paraId.toString()).to.be.equal(paraId.toString());
+      expect(firstEvent.amount.toString()).to.be.equal(amount.toString());
     });
   });
 });
