@@ -88,7 +88,9 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	logrus.WithField("period", latestSyncedPeriod).Info("last beacon synced sync committee found")
 
-	r.syncer.Cache.SyncCommitteePeriodsSynced, err = r.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod)
+	r.syncer.Cache.SetLastSyncedSyncCommitteePeriod(latestSyncedPeriod)
+
+	periodsToSync, err := r.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod)
 	if err != nil {
 		logrus.WithError(err).Error("unable to check sync committee periods to be fetched")
 
@@ -96,10 +98,10 @@ func (r *Relay) Sync(ctx context.Context) error {
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"periods": r.syncer.Cache.SyncCommitteePeriodsSynced,
+		"periods": periodsToSync,
 	}).Info("sync committee periods that needs fetching")
 
-	for _, period := range r.syncer.Cache.SyncCommitteePeriodsSynced {
+	for _, period := range periodsToSync {
 		err := r.SyncCommitteePeriodUpdate(ctx, period)
 		if err != nil {
 			return err
@@ -141,14 +143,7 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 	switch {
 	case errors.Is(err, syncer.ErrCommitteeUpdateHeaderInDifferentSyncPeriod):
 		{
-			//logrus.WithField("period", period).Info("committee update and header in different sync periods, skipping")
-
-			//return err
-		}
-	case errors.Is(err, syncer.ErrSyncCommitteeUpdateNotAvailable):
-		{
-			r.SyncCommitteePeriodUpdatePeriodically(ctx, period)
-			logrus.WithField("period", period).Info("update not available yet")
+			logrus.WithField("period", period).Info("committee update and header in different sync periods, skipping")
 
 			return err
 		}
@@ -166,41 +161,12 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 		"period": period,
 	}).Info("syncing sync committee for period")
 
-	return r.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
-}
-
-func (r *Relay) SyncCommitteePeriodUpdatePeriodically(ctx context.Context, period uint64) error {
-	ticker := time.NewTicker(time.Second * 20)
-	done := make(chan bool)
-
-	for {
-		select {
-		case <-done:
-			ticker.Stop()
-			return nil
-		case <-ticker.C:
-			logrus.WithFields(logrus.Fields{
-				"period": period,
-			}).Info("periodically ticker...")
-			finalizedHeaderUpdate, _, err := r.syncer.GetFinalizedUpdate() /// can send from calling function
-			if err != nil {
-				logrus.WithError(err).Error("unable to sync finalized header")
-
-				return err
-			}
-
-			currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
-
-			if currentSyncPeriod > period {
-				done <- true
-			}
-
-			err = r.SyncCommitteePeriodUpdate(ctx, period)
-			if err != nil {
-				logrus.WithError(err).Error("sync committee periodically")
-			}
-		}
+	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
+	if err != nil {
+		return err
 	}
+
+	r.syncer.Cache.SetLastSyncedSyncCommitteePeriod(period)
 
 	return nil
 }
@@ -230,15 +196,13 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 
 	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
 
-	if !syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
+	if r.syncer.Cache.LastSyncedSyncCommitteePeriod < currentSyncPeriod {
 		logrus.WithField("period", currentSyncPeriod).Info("sync period rolled over, getting sync committee update")
 
-		err := r.SyncCommitteePeriodUpdatePeriodically(ctx, currentSyncPeriod)
+		err := r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
 		if err != nil {
 			return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
 		}
-
-		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
 	}
 
 	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_finalized_header", finalizedHeaderUpdate)
@@ -302,52 +266,45 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 
 	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
 
-	_, err = r.syncer.GetSyncAggregate(finalizedHeaderBlockRoot)
-	//prevSyncAggregate, err := r.syncer.GetSyncAggregate(finalizedHeaderBlockRoot)
+	prevSyncAggregate, err := r.syncer.GetSyncAggregate(finalizedHeaderBlockRoot)
 	if err != nil {
 		logrus.WithError(err).Error("Unable to get sync aggregate")
 
 		return err
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"blockroot": blockRoot,
-	}).Info("blockRoot")
+	for secondLastFinalizedHeader != blockRoot {
+		headerUpdate, err := r.SyncHeader(ctx, blockRoot, prevSyncAggregate)
+		if err != nil {
+			return err
+		}
 
-	//for secondLastFinalizedHeader != blockRoot {
-	//headerUpdate, err := r.SyncHeader(ctx, blockRoot, prevSyncAggregate)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
-	//prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
-	//}
+		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
+		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
+	}
 
 	// Import the execution header for the second last finalized header too.
-	//_, err = r.SyncHeader(ctx, blockRoot, prevSyncAggregate)
-	//if err != nil {
-	//	return err
-	//}
+	_, err = r.SyncHeader(ctx, blockRoot, prevSyncAggregate)
+	if err != nil {
+		return err
+	}
 
-	//lastBlockNumber, secondLastBlockNumber, err := r.syncer.GetBlockRange(lastFinalizedHeader, secondLastFinalizedHeader)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//logrus.WithFields(logrus.Fields{
-	//	"start": secondLastBlockNumber,
-	//	"end":   lastBlockNumber - 1,
-	//}).Info("processing events for block numbers")
-	//
-	//payload, err := r.listener.ProcessEvents(ctx, secondLastBlockNumber, lastBlockNumber-1)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//return r.writeMessages(ctx, payload)
+	lastBlockNumber, secondLastBlockNumber, err := r.syncer.GetBlockRange(lastFinalizedHeader, secondLastFinalizedHeader)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	logrus.WithFields(logrus.Fields{
+		"start": secondLastBlockNumber,
+		"end":   lastBlockNumber - 1,
+	}).Info("processing events for block numbers")
+
+	payload, err := r.listener.ProcessEvents(ctx, secondLastBlockNumber, lastBlockNumber-1)
+	if err != nil {
+		return err
+	}
+
+	return r.writeMessages(ctx, payload)
 }
 
 func (r *Relay) writeMessages(ctx context.Context, payload ParachainPayload) error {

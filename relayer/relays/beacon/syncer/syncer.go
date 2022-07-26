@@ -20,7 +20,7 @@ var ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("not found")
 const (
 	//SlotsInEpoch                 uint64 = 32
 	//EpochsPerSyncCommitteePeriod uint64 = 256
-	SlotsInEpoch                 uint64 = 6
+	SlotsInEpoch                 uint64 = 8
 	EpochsPerSyncCommitteePeriod uint64 = 8
 )
 
@@ -111,12 +111,13 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, e
 	}
 
 	currentSyncPeriod := ComputeSyncPeriodAtSlot(slot)
+
 	if checkpointSyncPeriod == currentSyncPeriod {
 		return []uint64{}, nil
 	}
 
 	syncPeriodsToFetch := []uint64{}
-	for i := checkpointSyncPeriod; i <= currentSyncPeriod-1; i++ {
+	for i := checkpointSyncPeriod; i <= currentSyncPeriod; i++ {
 		syncPeriodsToFetch = append(syncPeriodsToFetch, i)
 	}
 
@@ -180,7 +181,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodU
 			"syncCommitteePeriodUpdate": committeeUpdate,
 		}).Info("committee and header in different periods")
 
-		//return SyncCommitteePeriodUpdate{}, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
+		return syncCommitteePeriodUpdate, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
 	}
 
 	return syncCommitteePeriodUpdate, err

@@ -1,3 +1,3 @@
-pub const SLOTS_PER_EPOCH: u64 = 6;
+pub const SLOTS_PER_EPOCH: u64 = 8;
 pub const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 8;
 pub const SYNC_COMMITTEE_SIZE: usize = 32;

@@ -14,7 +14,7 @@ parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
 start_beacon_sync="${START_BEACON_SYNC:-false}"
-beacon_endpoint_http="${BEACON_HTTP_ENDPOINT}"
+beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://localhost:9596}"
 
 output_dir=/tmp/snowbridge
 
@@ -54,18 +54,6 @@ start_geth() {
             --gcmode archive \
             --miner.gasprice=0 \
             > "$output_dir/geth.log" 2>&1 &
-    else
-        echo "Starting geth on $eth_network"
-        geth --"$eth_network" \
-        --datadir "/home/ubuntu/projects/go-ethereum/${eth_network}data" \
-        --authrpc.addr localhost \
-        --authrpc.port 8551 \
-        --http \
-        --authrpc.vhosts localhost \
-        --authrpc.jwtsecret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
-        --http.api eth,net \
-        --override.terminaltotaldifficulty 50000000000000000 \
-        > "$output_dir/geth.log" 2>&1 &
     fi
 }
 
@@ -101,15 +89,6 @@ start_lodestar() {
             --eth1.enabled=true \
             --api.rest.api="beacon,config,events,node,validator,lightclient" \
             --jwt-secret config/jwtsecret \
-            > "$output_dir/lodestar.log" 2>&1 &
-    else
-        echo "Starting lodestar on $eth_network"
-
-        lodestar beacon \
-            --rootDir="/home/ubuntu/projects/lodestar-beacondata" \
-            --network=$eth_network \
-            --api.rest.api="beacon,config,events,node,validator,lightclient" \
-            --jwt-secret "/home/ubuntu/projects/go-ethereum/${eth_network}data/jwtsecret" \
             > "$output_dir/lodestar.log" 2>&1 &
     fi
 
@@ -335,21 +314,21 @@ start_relayer()
         done
     ) &
 
-    #if [ "$start_beacon_sync" == "true" ]; then
+    if [ "$start_beacon_sync" == "true" ]; then
         # Launch beacon relay
-        #(
-        #    : > beacon-relay.log
-        #    while :
-        #    do
-        #    echo "Starting beacon relay at $(date)"
-        #        "${relay_bin}" run beacon \
-        #            --config $output_dir/beacon-relay.json \
-        #            --substrate.private-key "//BeaconRelay" \
-        #            >>beacon-relay.log 2>&1 || true
-        #        sleep 20
-        #    done
-        #) &
-    #fi
+        (
+            : > beacon-relay.log
+            while :
+            do
+            echo "Starting beacon relay at $(date)"
+                "${relay_bin}" run beacon \
+                    --config $output_dir/beacon-relay.json \
+                    --substrate.private-key "//BeaconRelay" \
+                    >>beacon-relay.log 2>&1 || true
+                sleep 20
+            done
+        ) &
+    fi
 }
 
 cleanup() {
