@@ -218,10 +218,12 @@ start_relayer()
         --arg k1 "$(address_for BasicOutboundChannel)" \
         --arg k2 "$(address_for IncentivizedOutboundChannel)" \
         --arg infura_endpoint_ws $infura_endpoint_ws \
+        --arg beacon_endpoint_http $beacon_endpoint_http \
     '
       .source.contracts.BasicOutboundChannel = $k1
     | .source.contracts.IncentivizedOutboundChannel = $k2
     | .source.ethereum.endpoint = $infura_endpoint_ws
+    | .source.beacon.endpoint = $beacon_endpoint_http
     ' \
     config/beacon-relay.json > $output_dir/beacon-relay.json
 
