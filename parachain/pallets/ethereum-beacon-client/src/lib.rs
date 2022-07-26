@@ -584,6 +584,12 @@ pub mod pallet {
 
 			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
 
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Saved sync committee for period {}.",
+				period
+			);
+
 			if period > latest_committee_period {
 				log::trace!(
 					target: "ethereum-beacon-client",

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -32,7 +33,8 @@ type BeaconClientTracker interface {
 }
 
 var (
-	ErrNotFound = errors.New("not found")
+	ErrNotFound                        = errors.New("not found")
+	ErrSyncCommitteeUpdateNotAvailable = errors.New("not found")
 )
 
 type BeaconClient struct {
@@ -196,6 +198,12 @@ type AttestationResponse struct {
 type VoluntaryExitResponse struct {
 	Epoch          string `json:"epoch"`
 	ValidatorIndex string `json:"validator_index"`
+}
+
+type ErrorMessage struct {
+	StatusCode int    `json:"statusCode"`
+	Error      string `json:"error"`
+	Message    string `json:"message"`
 }
 
 type BeaconBlockResponse struct {
@@ -372,6 +380,22 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommit
 	}
 
 	if res.StatusCode != http.StatusOK {
+		bodyBytes, err := io.ReadAll(res.Body)
+		if err != nil {
+			return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", HTTPStatusNotOKErrorMessage, err)
+		}
+
+		var response ErrorMessage
+
+		err = json.Unmarshal(bodyBytes, &response)
+		if err != nil {
+			return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", HTTPStatusNotOKErrorMessage, err)
+		}
+
+		if strings.Contains(response.Message, "No partialUpdate available") {
+			return SyncCommitteePeriodUpdateResponse{}, ErrSyncCommitteeUpdateNotAvailable
+		}
+
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s :%d", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
@@ -537,6 +561,7 @@ func (b *BeaconClient) GetCheckpoint(state string) (FinalizedCheckpointResponse,
 
 	return response, nil
 }
+
 type LatestFinalisedUpdateResponse struct {
 	Data struct {
 		AttestedHeader  HeaderResponse        `json:"attested_header"`

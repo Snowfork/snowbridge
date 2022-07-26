@@ -128,9 +128,9 @@ func (wr *ParachainWriter) getLastSyncedSyncCommitteePeriod() (uint64, error) {
 	}
 
 	var period types.U64
-	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &period)
-	if err != nil || !ok {
-		return 0, fmt.Errorf("get storage for latest synced sync committee period: %w", err)
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &period)
+	if err != nil {
+		return 0, fmt.Errorf("get storage for latest synced sync committee period (err): %w", err)
 	}
 
 	return uint64(period), nil

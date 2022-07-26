@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
 )
@@ -115,7 +116,7 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, e
 	}
 
 	syncPeriodsToFetch := []uint64{}
-	for i := checkpointSyncPeriod; i <= currentSyncPeriod; i++ {
+	for i := checkpointSyncPeriod; i <= currentSyncPeriod-1; i++ {
 		syncPeriodsToFetch = append(syncPeriodsToFetch, i)
 	}
 
@@ -172,7 +173,14 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePer
 	finalizedHeaderSlot := ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
 
 	if finalizedHeaderSlot != from {
-		return SyncCommitteePeriodUpdate{}, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
+		logrus.WithFields(logrus.Fields{
+			"period":                    from,
+			"headerPeriod":              finalizedHeaderSlot,
+			"slot":                      uint64(finalizedHeader.Slot),
+			"syncCommitteePeriodUpdate": committeeUpdate,
+		}).Info("committee and header in different periods")
+
+		//return SyncCommitteePeriodUpdate{}, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
 	}
 
 	return syncCommitteePeriodUpdate, err
