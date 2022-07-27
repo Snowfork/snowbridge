@@ -2,7 +2,7 @@ use ssz_rs_derive::SimpleSerialize;
 use ssz_rs::{Deserialize, Sized, Bitlist, Bitvector, U256};
 use ssz_rs::prelude::{Vector, List};
 use sp_std::{vec::Vec, vec};
-use crate::config;
+use crate::config as config;
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZVoluntaryExit {
@@ -98,13 +98,13 @@ pub struct SSZBeaconBlockHeader {
 
 #[derive(Default, SimpleSerialize)]
 pub struct SSZSyncCommittee {
-    pub pubkeys: Vector<Vector<u8, 48>, 512>,
+    pub pubkeys: Vector<Vector<u8, 48>, { config::SYNC_COMMITTEE_SIZE }>,
     pub aggregate_pubkey: Vector<u8, 48>,
 }
 
 #[derive(Default, Debug, SimpleSerialize, Clone)]
 pub struct SSZSyncAggregate {
-    pub sync_committee_bits: Bitvector<{ config::SYNC_COMMITTEE_SIZE} >,
+    pub sync_committee_bits: Bitvector<{ config::SYNC_COMMITTEE_SIZE }>,
     pub sync_committee_signature: Vector<u8, 96>,
 }
 

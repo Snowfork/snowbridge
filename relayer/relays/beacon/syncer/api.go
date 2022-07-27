@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -23,7 +24,7 @@ type BeaconClientTracker interface {
 	GetFinalizedHeader() (BeaconHeader, error)
 	GetHeadHeader() (BeaconHeader, error)
 	GetHeader(id string) (BeaconHeader, error)
-	GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePeriodUpdateResponse, error)
+	GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error)
 	GetHeadCheckpoint() (FinalizedCheckpointResponse, error)
 	GetBeaconBlock(slot uint64) (BeaconBlockResponse, error)
 	GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error)
@@ -32,7 +33,8 @@ type BeaconClientTracker interface {
 }
 
 var (
-	ErrNotFound = errors.New("not found")
+	ErrNotFound                        = errors.New("not found")
+	ErrSyncCommitteeUpdateNotAvailable = errors.New("no sync committee update available")
 )
 
 type BeaconClient struct {
@@ -198,6 +200,12 @@ type VoluntaryExitResponse struct {
 	ValidatorIndex string `json:"validator_index"`
 }
 
+type ErrorMessage struct {
+	StatusCode int    `json:"statusCode"`
+	Error      string `json:"error"`
+	Message    string `json:"message"`
+}
+
 type BeaconBlockResponse struct {
 	Data struct {
 		Message struct {
@@ -359,8 +367,8 @@ type SyncCommitteePeriodUpdateResponse struct {
 	} `json:"data"`
 }
 
-func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePeriodUpdateResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/committee_updates?from=%d&to=%d", b.endpoint, from, to), nil)
+func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/light_client/updates?start_period=%d&count=1", b.endpoint, from), nil)
 	if err != nil {
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
@@ -372,6 +380,22 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommit
 	}
 
 	if res.StatusCode != http.StatusOK {
+		bodyBytes, err := io.ReadAll(res.Body)
+		if err != nil {
+			return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", HTTPStatusNotOKErrorMessage, err)
+		}
+
+		var response ErrorMessage
+
+		err = json.Unmarshal(bodyBytes, &response)
+		if err != nil {
+			return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", HTTPStatusNotOKErrorMessage, err)
+		}
+
+		if strings.Contains(response.Message, "No partialUpdate available") {
+			return SyncCommitteePeriodUpdateResponse{}, ErrSyncCommitteeUpdateNotAvailable
+		}
+
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s :%d", HTTPStatusNotOKErrorMessage, res.StatusCode)
 	}
 
@@ -537,6 +561,7 @@ func (b *BeaconClient) GetCheckpoint(state string) (FinalizedCheckpointResponse,
 
 	return response, nil
 }
+
 type LatestFinalisedUpdateResponse struct {
 	Data struct {
 		AttestedHeader  HeaderResponse        `json:"attested_header"`
@@ -548,7 +573,7 @@ type LatestFinalisedUpdateResponse struct {
 }
 
 func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/lightclient/latest_finalized_head_update/", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/light_client/finality_update/", b.endpoint), nil)
 	if err != nil {
 		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
