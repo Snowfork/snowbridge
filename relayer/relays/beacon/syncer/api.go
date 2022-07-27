@@ -34,7 +34,7 @@ type BeaconClientTracker interface {
 
 var (
 	ErrNotFound                        = errors.New("not found")
-	ErrSyncCommitteeUpdateNotAvailable = errors.New("not found")
+	ErrSyncCommitteeUpdateNotAvailable = errors.New("no sync committee update available")
 )
 
 type BeaconClient struct {
