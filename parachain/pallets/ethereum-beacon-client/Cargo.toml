@@ -39,7 +39,7 @@ snowbridge-testutils = { path = "../../primitives/testutils" }
 serde_json = "1.0.68"
 
 [features]
-default = ["std", "snowblink-native"]
+default = ["std"]
 std = [
     "serde",
     "codec/std",
@@ -62,6 +62,4 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
 ]
-snowbase-native = []
-snowblink-native = []
-snowbridge-native = []
+minimal = []

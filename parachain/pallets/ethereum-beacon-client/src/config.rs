@@ -1,18 +1,14 @@
-#[cfg(feature = "snowbase-native")]
-mod snowbase;
-#[cfg(feature = "snowblink-native")]
-mod snowblink;
-#[cfg(feature = "snowbridge-native")]
-mod snowbridge;
+#[cfg(feature = "minimal")]
+mod minimal;
 
-#[cfg(feature = "snowbase-native")]
-pub use snowbase::*;
+#[cfg(not(feature = "minimal"))]
+mod mainnet;
 
-#[cfg(feature = "snowblink-native")]
-pub use snowblink::*;
+#[cfg(feature = "minimal")]
+pub use minimal::*;
 
-#[cfg(feature = "snowbridge-native")]
-pub use snowbridge::*;
+#[cfg(not(feature = "minimal"))]
+pub use mainnet::*;
 
 use snowbridge_beacon_primitives::ForkVersion;
 

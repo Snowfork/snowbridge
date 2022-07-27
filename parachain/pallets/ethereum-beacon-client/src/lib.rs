@@ -152,6 +152,12 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Sync committee size is: {}",
+				config::SYNC_COMMITTEE_SIZE
+			);
+
 			Pallet::<T>::initial_sync(
 				self.initial_sync.clone(),
 			).unwrap();
