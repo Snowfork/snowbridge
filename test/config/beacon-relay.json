@@ -12,7 +12,7 @@
           "epochsPerSyncCommitteePeriod": 256
         }
       },
-      "active-spec": "mainnet"
+      "activeSpec": "mainnet"
     },
     "ethereum": {
       "endpoint": "ws://localhost:8546"

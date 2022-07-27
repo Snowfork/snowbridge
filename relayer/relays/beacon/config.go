@@ -32,7 +32,7 @@ type BeaconConfig struct {
 	Endpoint                string `mapstructure:"endpoint"`
 	FinalizedUpdateEndpoint string `mapstructure:"finalizedUpdateEndpoint"`
 	Spec                    Spec   `mapstructure:"spec"`
-	ActiveSpec              string `mapstructure:"active-spec"`
+	ActiveSpec              string `mapstructure:"activeSpec"`
 }
 
 type SinkConfig struct {
