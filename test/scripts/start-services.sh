@@ -365,14 +365,8 @@ start_relayer
 echo "Process Tree:"
 pstree -T $$
 
-sleep 3
-until grep "Syncing headers starting..." ethereum-relay.log > /dev/null; do
-    echo "Waiting for ethereum relay to generate the DAG cache. This can take up to 20 minutes."
-    sleep 20
-done
-
-until grep "Done retrieving finalized headers" ethereum-relay.log > /dev/null; do
-    echo "Waiting for ethereum relay to sync headers..."
+until grep "starting to sync finalized headers" beacon-relay.log > /dev/null; do
+    echo "Waiting for beacon relay to sync headers..."
     sleep 5
 done
 
