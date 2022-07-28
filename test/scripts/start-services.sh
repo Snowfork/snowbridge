@@ -35,10 +35,15 @@ start_geth() {
 
     local data_dir="$output_dir/geth"
 
+    # removes TTD bomb for when beacon chain is not used
+    if [ "$start_beacon_sync" == "false" ]; then
+        jq 'del(.config.terminalTotalDifficulty)' config/genesis.json > "$output_dir/genesis.json"
+    fi
+    
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local net"
 
-        geth init --datadir "$data_dir" config/genesis.json
+        geth init --datadir "$data_dir" "$output_dir/genesis.json"
         geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key0.prv
         geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key1.prv
         geth --vmdebug --datadir "$data_dir" --networkid 15 \
