@@ -623,7 +623,7 @@ func (li *BeefyListener) scanForCommitments(
 			}
 			if channelID.IsIncentivized && !scanIncentivizedChannelDone {
 				if events.Incentivized == nil {
-					return nil, fmt.Errorf("event basicOutboundChannel.Committed not found in block")
+					return nil, fmt.Errorf("event incentivizedOutboundChannel.Committed not found in block")
 				}
 
 				if events.Incentivized.Hash != digestItem.AsCommitment.Hash {
@@ -634,9 +634,9 @@ func (li *BeefyListener) scanForCommitments(
 				bundleNonceBigInt := big.Int(bundle.Nonce)
 				bundleNonce := bundleNonceBigInt.Uint64()
 
-				// This case will be hit if basicNonceToFind has not yet
+				// This case will be hit if incentivizedNonceToFind has not
 				// been committed yet. Channels emit commitments every N
-				// blocks
+				// blocks.
 				if bundleNonce < incentivizedNonceToFind {
 					scanIncentivizedChannelDone = true
 					continue
