@@ -37,7 +37,7 @@ start_geth() {
 
     # removes TTD bomb for when beacon chain is not used
     if [ "$start_beacon_sync" == "false" ]; then
-        jq 'del(.config.terminalTotalDifficulty)' config/genesis.json > "$output_dir/genesis.json"
+        jq 'del(.config.terminalTotalDifficulty)' "$output_dir/genesis.json" | sponge "$output_dir/genesis.json"
     fi
     
     if [ "$eth_network" == "localhost" ]; then
