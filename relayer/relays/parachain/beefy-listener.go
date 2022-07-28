@@ -2,6 +2,7 @@ package parachain
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -603,22 +604,36 @@ func (li *BeefyListener) scanForCommitments(
 				}
 
 				bundle := events.Basic.Bundle
-				bundleNonceBigInt := big.Int(bundle.Nonce)
-				bundleNonce := bundleNonceBigInt.Uint64()
 
-				// This case will be hit if basicNonceToFind has not yet
-				// been committed yet. Channels emit commitments every N
-				// blocks.
-				if bundleNonce < basicNonceToFind {
-					scanBasicChannelDone = true
-					log.Debug("Halting scan. Messages not committed yet on basic channel")
-					// Collect these commitments
-				} else if bundleNonce > basicNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
-					// collect this commitment and terminate scan
-				} else if bundleNonce == basicNonceToFind {
-					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
-					scanBasicChannelDone = true
+				// Only consider nonces for the account we're interested in
+				decodedAccount, err := hex.DecodeString(li.config.Account)
+				if err != nil {
+					return nil, fmt.Errorf("could not decode channel account id: %v", err)
+				} else if len(decodedAccount) != 32 {
+					// The conversion below will panic if decodedAccount has
+					// fewer than 32 bytes.
+					// We expect exactly 32 bytes.
+					return nil, fmt.Errorf("account id was not 32 bytes long: %v", decodedAccount)
+				}
+				accountAsArray := *(*[32]byte)(decodedAccount)
+				if accountAsArray == bundle.Account {
+					bundleNonceBigInt := big.Int(bundle.Nonce)
+					bundleNonce := bundleNonceBigInt.Uint64()
+
+					// This case will be hit if basicNonceToFind has not
+					// been committed yet. Channels emit commitments every N
+					// blocks.
+					if bundleNonce < basicNonceToFind {
+						scanBasicChannelDone = true
+						log.Debug("Halting scan. Messages not committed yet on basic channel")
+						// Collect these commitments
+					} else if bundleNonce > basicNonceToFind {
+						commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
+						// collect this commitment and terminate scan
+					} else if bundleNonce == basicNonceToFind {
+						commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
+						scanBasicChannelDone = true
+					}
 				}
 			}
 			if channelID.IsIncentivized && !scanIncentivizedChannelDone {

@@ -13,6 +13,8 @@ infura_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
+account_id="${ACCOUNT_ID:-0x0000000000000000000000000000000000000000000000000000000000000000}"
+
 start_beacon_sync="${START_BEACON_SYNC:-false}"
 
 output_dir=/tmp/snowbridge
@@ -191,6 +193,7 @@ start_relayer()
         --arg k2 "$(address_for IncentivizedInboundChannel)" \
         --arg k3 "$(address_for BeefyClient)" \
         --arg infura_endpoint_ws $infura_endpoint_ws \
+        --arg account_id $account_id \
     '
       .source.contracts.BasicInboundChannel = $k1
     | .source.contracts.IncentivizedInboundChannel = $k2
@@ -199,6 +202,7 @@ start_relayer()
     | .sink.contracts.IncentivizedInboundChannel = $k2
     | .source.ethereum.endpoint = $infura_endpoint_ws
     | .sink.ethereum.endpoint = $infura_endpoint_ws
+    | .source.account = $account_id
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
