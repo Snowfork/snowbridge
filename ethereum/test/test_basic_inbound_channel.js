@@ -34,6 +34,7 @@ describe("BasicInboundChannel", function () {
     const scaleCodec = await ScaleCodec.new();
     await ParachainClient.link(merkleProof);
     await ParachainClient.link(scaleCodec);
+    await BasicInboundChannel.link(merkleProof);
     this.parachainClient = await ParachainClient.new(this.beefyClient.address, 1000);
 
     await runBeefyClientFlow(fixture, this.beefyClient, validatorFixture, numberOfSignatures, numberOfValidators)
