@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"golang.org/x/sync/errgroup"
@@ -134,4 +135,19 @@ func (wr *ParachainWriter) getLastSyncedSyncCommitteePeriod() (uint64, error) {
 	}
 
 	return uint64(period), nil
+}
+
+func (wr *ParachainWriter) getLastStoredFinalizedHeader() (common.Hash, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestFinalizedHeaderHash", nil, nil)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("create storage key for last finalized header hash: %w", err)
+	}
+
+	var hash types.H256
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &hash)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("get storage for latest finalized header hash (err): %w", err)
+	}
+
+	return common.HexToHash(hash.Hex()), nil
 }

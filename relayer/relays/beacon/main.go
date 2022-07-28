@@ -114,9 +114,18 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	logrus.Info("starting to sync finalized headers")
 
-	_, _, err = r.SyncFinalizedHeader(ctx)
+	lastFinalizedHeader, err := r.writer.getLastStoredFinalizedHeader()
 	if err != nil {
+		logrus.WithError(err).Error("unable to get last synced sync committee")
+
 		return err
+	}
+
+	r.syncer.Cache.FinalizedHeaders = append(r.syncer.Cache.FinalizedHeaders, lastFinalizedHeader)
+
+	err = r.SyncHeaders(ctx)
+	if err != nil {
+		logrus.WithError(err).Error("error while syncing headers")
 	}
 
 	ticker := time.NewTicker(time.Second * 20)
