@@ -13,6 +13,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/sync/errgroup"
 
+	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/offchain"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
@@ -562,6 +563,17 @@ func (li *BeefyListener) scanForCommitments(
 			"blockNumber": currentBlockNumber,
 		}).Debug("Checking header")
 
+		decodedAccount, err := hex.DecodeString(li.config.Account)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode channel account id: %v", err)
+		} else if len(decodedAccount) != 32 {
+			// The conversion below will panic if decodedAccount has
+			// fewer than 32 bytes.
+			// We expect exactly 32 bytes.
+			return nil, fmt.Errorf("account id was not 32 bytes long: %v", decodedAccount)
+		}
+		accountAsArray := *(*[32]byte)(decodedAccount)
+
 		blockHash, err := li.parachainConnection.API().RPC.Chain.GetBlockHash(currentBlockNumber)
 		if err != nil {
 			return nil, fmt.Errorf("fetch blockhash for block %v: %w", currentBlockNumber, err)
@@ -589,6 +601,8 @@ func (li *BeefyListener) scanForCommitments(
 			return nil, fmt.Errorf("query events: %w", err)
 		}
 
+		var basicChannelBundleProof MerkleProof
+
 		for _, digestItem := range digestItems {
 			if !digestItem.IsCommitment {
 				continue
@@ -603,37 +617,58 @@ func (li *BeefyListener) scanForCommitments(
 					return nil, fmt.Errorf("basic channel commitment hash in digest item does not match the one in the Committed event")
 				}
 
-				bundle := events.Basic.Bundle
-
-				// Only consider nonces for the account we're interested in
-				decodedAccount, err := hex.DecodeString(li.config.Account)
-				if err != nil {
-					return nil, fmt.Errorf("could not decode channel account id: %v", err)
-				} else if len(decodedAccount) != 32 {
-					// The conversion below will panic if decodedAccount has
-					// fewer than 32 bytes.
-					// We expect exactly 32 bytes.
-					return nil, fmt.Errorf("account id was not 32 bytes long: %v", decodedAccount)
-				}
-				accountAsArray := *(*[32]byte)(decodedAccount)
-				if accountAsArray == bundle.Account {
-					bundleNonceBigInt := big.Int(bundle.Nonce)
-					bundleNonce := bundleNonceBigInt.Uint64()
-
-					// This case will be hit if basicNonceToFind has not
-					// been committed yet. Channels emit commitments every N
-					// blocks.
-					if bundleNonce < basicNonceToFind {
-						scanBasicChannelDone = true
-						log.Debug("Halting scan. Messages not committed yet on basic channel")
-						// Collect these commitments
-					} else if bundleNonce > basicNonceToFind {
-						commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
-						// collect this commitment and terminate scan
-					} else if bundleNonce == basicNonceToFind {
-						commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
-						scanBasicChannelDone = true
+				// Only consider message bundles for the account we're interested in
+				bundles := events.Basic.Bundles
+				var bundle BasicOutboundChannelMessageBundle
+				var bundleFound bool
+				var bundleIndex int
+				for i, b := range bundles {
+					if b.Account == accountAsArray {
+						bundleFound = true
+						bundleIndex = i
+						break
 					}
+				}
+				if bundleFound {
+					bundle = bundles[bundleIndex]
+				} else {
+					continue
+				}
+
+				// Fetch Merkle proof for this bundle
+				api, err := gsrpc.NewSubstrateAPI(li.config.Parachain.Endpoint)
+				if err != nil {
+					return nil, fmt.Errorf("create client: %w", err)
+				}
+
+				var proofHex string
+				err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItem.AsCommitment.Hash.Hex(), bundleIndex)
+				if err != nil {
+					return nil, fmt.Errorf("call rpc: %w", err)
+				}
+
+				err = types.DecodeFromHexString(proofHex, &basicChannelBundleProof)
+				if err != nil {
+					return nil, fmt.Errorf("decode: %w", err)
+				}
+
+				bundleNonceBigInt := big.Int(bundle.Nonce)
+				bundleNonce := bundleNonceBigInt.Uint64()
+
+				// This case will be hit if basicNonceToFind has not
+				// been committed yet. Channels emit commitments every N
+				// blocks.
+				if bundleNonce < basicNonceToFind {
+					scanBasicChannelDone = true
+					log.Debug("Halting scan. Messages not committed yet on basic channel")
+					// Collect these commitments
+				} else if bundleNonce > basicNonceToFind {
+					// TODO: should the commitment contain an array of bundles, a bundle or the Merkle proof
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
+					// collect this commitment and terminate scan
+				} else if bundleNonce == basicNonceToFind {
+					commitments[channelID] = NewCommitment(digestItem.AsCommitment.Hash, bundle)
+					scanBasicChannelDone = true
 				}
 			}
 			if channelID.IsIncentivized && !scanIncentivizedChannelDone {
@@ -668,12 +703,13 @@ func (li *BeefyListener) scanForCommitments(
 
 		if len(commitments) > 0 {
 			task := Task{
-				ParaID:      li.paraID,
-				BlockNumber: currentBlockNumber,
-				Header:      header,
-				Commitments: commitments,
-				ProofInput:  nil,
-				ProofOutput: nil,
+				ParaID:                  li.paraID,
+				BlockNumber:             currentBlockNumber,
+				Header:                  header,
+				Commitments:             commitments,
+				BasicChannelBundleProof: basicChannelBundleProof,
+				ProofInput:              nil,
+				ProofOutput:             nil,
 			}
 			tasks = append(tasks, &task)
 		}

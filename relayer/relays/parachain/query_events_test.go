@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO: update mock data
 var mock = `{
   "items": [
     {
@@ -49,6 +50,6 @@ func TestQueryEvents(t *testing.T) {
 	}
 
 	assert.NotNil(t, events.Basic)
-	assert.Equal(t, events.Basic.Bundle.Nonce.Int64(), int64(1))
-	assert.Equal(t, len(events.Basic.Bundle.Messages), 1)
+	assert.Equal(t, events.Basic.Bundles[0].Nonce.Int64(), int64(1))
+	assert.Equal(t, len(events.Basic.Bundles[0].Messages), 1)
 }

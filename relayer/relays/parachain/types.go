@@ -8,12 +8,13 @@ import (
 
 // A Task is a bundle of items needed to submit commitments to Ethereum
 type Task struct {
-	ParaID      uint32
-	BlockNumber uint64
-	Header      *types.Header
-	Commitments map[ChannelID]Commitment
-	ProofInput  *ProofInput
-	ProofOutput *ProofOutput
+	ParaID                  uint32
+	BlockNumber             uint64
+	Header                  *types.Header
+	Commitments             map[ChannelID]Commitment
+	BasicChannelBundleProof MerkleProof
+	ProofInput              *ProofInput
+	ProofOutput             *ProofOutput
 }
 
 // A Commitment is data provably attested to by polkadot. The commitment hash
@@ -29,6 +30,14 @@ func NewCommitment(hash types.H256, data interface{}) Commitment {
 		Hash: hash,
 		Data: data,
 	}
+}
+
+type MerkleProof struct {
+	Root           types.H256
+	Proof          []types.H256
+	NumberOfLeaves uint64
+	LeafIndex      uint64
+	Leaf           []byte
 }
 
 // A ProofInput is data needed to generate a proof of parachain header inclusion
