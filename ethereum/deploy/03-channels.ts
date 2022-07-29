@@ -19,12 +19,14 @@ module.exports = async ({
 
   let parachainClient = await deployments.get("ParachainClient")
   let scaleCodecLibrary = await deployments.get("ScaleCodec")
+  let merkleProof = await deployments.get("MerkleProof")
 
   await deployments.deploy("BasicInboundChannel", {
     from: deployer,
     args: [basicChannelSourceID, parachainClient.address],
     libraries: {
         ScaleCodec: scaleCodecLibrary.address,
+        MerkleProof: merkleProof.address,
     },
     log: true,
     autoMine: true,
