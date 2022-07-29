@@ -110,6 +110,15 @@ func (r *Relay) Sync(ctx context.Context) error {
 		}
 	}
 
+	lastVerifiedMessageBlock, err := r.writer.getLastVerifiedMessageBlock()
+	if err != nil {
+		logrus.WithError(err).Error("unable to get last synced sync committee")
+
+		return err
+	}
+
+	r.syncer.Cache.LastVerifiedMessageBlock = lastVerifiedMessageBlock
+
 	logrus.Info("done with sync committee updates ")
 
 	logrus.Info("starting to sync finalized headers")
@@ -303,6 +312,15 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 	lastBlockNumber, secondLastBlockNumber, err := r.syncer.GetBlockRange(lastFinalizedHeader, secondLastFinalizedHeader)
 	if err != nil {
 		return err
+	}
+
+	if lastBlockNumber > r.syncer.Cache.LastVerifiedMessageBlock {
+		logrus.WithFields(logrus.Fields{
+			"lastBlockNumber":         lastBlockNumber,
+			"lastVerifiedBlockNumber": r.syncer.Cache.LastVerifiedMessageBlock,
+		}).Info("found older events that haven't been synced")
+
+		lastBlockNumber = r.syncer.Cache.LastVerifiedMessageBlock
 	}
 
 	logrus.WithFields(logrus.Fields{
