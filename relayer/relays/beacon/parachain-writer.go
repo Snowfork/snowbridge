@@ -152,6 +152,21 @@ func (wr *ParachainWriter) getLastStoredFinalizedHeader() (common.Hash, error) {
 	return common.HexToHash(hash.Hex()), nil
 }
 
+func (wr *ParachainWriter) getLastStoredFinalizedHeaderSlot() (uint64, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestFinalizedHeaderSlot", nil, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create storage key for last finalized header slot: %w", err)
+	}
+
+	var slot types.U64
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &slot)
+	if err != nil {
+		return 0, fmt.Errorf("get storage for latest finalized header slot (err): %w", err)
+	}
+
+	return uint64(slot), nil
+}
+
 func (wr *ParachainWriter) getLastVerifiedMessageBlock() (uint64, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestVerifiedMessageBlock", nil, nil)
 	if err != nil {

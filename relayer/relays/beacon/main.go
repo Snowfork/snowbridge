@@ -88,9 +88,9 @@ func (r *Relay) Sync(ctx context.Context) error {
 		return err
 	}
 
-	logrus.WithField("period", latestSyncedPeriod).Info("last beacon synced sync committee found")
-
 	r.syncer.Cache.SetLastSyncedSyncCommitteePeriod(latestSyncedPeriod)
+
+	logrus.WithField("period", latestSyncedPeriod).Info("set cache: last beacon synced sync committee period")
 
 	periodsToSync, err := r.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod)
 	if err != nil {
@@ -101,7 +101,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	logrus.WithFields(logrus.Fields{
 		"periods": periodsToSync,
-	}).Info("sync committee periods that needs fetching")
+	}).Info("sync committee periods to be synced")
 
 	for _, period := range periodsToSync {
 		err := r.SyncCommitteePeriodUpdate(ctx, period)
@@ -119,18 +119,30 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	r.syncer.Cache.LastVerifiedMessageBlock = lastVerifiedMessageBlock
 
-	logrus.Info("done with sync committee updates ")
-
-	logrus.Info("starting to sync finalized headers")
+	logrus.WithField("blockNumber", lastVerifiedMessageBlock).Info("set cache: last verified message block found")
 
 	lastFinalizedHeader, err := r.writer.getLastStoredFinalizedHeader()
 	if err != nil {
-		logrus.WithError(err).Error("unable to get last synced sync committee")
+		logrus.WithError(err).Error("unable to get last finalized header")
+
+		return err
+	}
+
+	lastFinalizedSlot, err := r.writer.getLastStoredFinalizedHeaderSlot()
+	if err != nil {
+		logrus.WithError(err).Error("unable to get last finalized header slot")
 
 		return err
 	}
 
 	r.syncer.Cache.FinalizedHeaders = append(r.syncer.Cache.FinalizedHeaders, lastFinalizedHeader)
+
+	logrus.WithFields(logrus.Fields{
+		"hash": lastFinalizedHeader,
+		"slot": lastFinalizedSlot,
+	}).Info("set cache: last finalized header")
+
+	logrus.Info("starting to sync finalized headers")
 
 	err = r.SyncHeaders(ctx)
 	if err != nil {
@@ -315,12 +327,7 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 	}
 
 	if lastBlockNumber > r.syncer.Cache.LastVerifiedMessageBlock {
-		logrus.WithFields(logrus.Fields{
-			"lastBlockNumber":         lastBlockNumber,
-			"lastVerifiedBlockNumber": r.syncer.Cache.LastVerifiedMessageBlock,
-		}).Info("found older events that haven't been synced")
-
-		lastBlockNumber = r.syncer.Cache.LastVerifiedMessageBlock
+		secondLastBlockNumber = r.syncer.Cache.LastVerifiedMessageBlock
 	}
 
 	logrus.WithFields(logrus.Fields{
@@ -332,6 +339,8 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	r.syncer.Cache.LastVerifiedMessageBlock = lastBlockNumber - 1
 
 	return r.writeMessages(ctx, payload)
 }
