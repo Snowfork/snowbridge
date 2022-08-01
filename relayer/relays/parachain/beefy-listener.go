@@ -2,7 +2,6 @@ package parachain
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -324,7 +323,12 @@ func (li *BeefyListener) discoverCatchupTasks(
 		Context: ctx,
 	}
 
-	ethBasicNonce, err := basicContract.Nonce(&options)
+	accountID, err := li.config.getAccount()
+	if err != nil {
+		return nil, err
+	}
+
+	ethBasicNonce, err := basicContract.Nonces(&options, *accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -556,23 +560,17 @@ func (li *BeefyListener) scanForCommitments(
 	scanBasicChannelDone := !scanBasicChannel
 	scanIncentivizedChannelDone := !scanIncentivizedChannel
 
+	accountID, err := li.config.getAccount()
+	if err != nil {
+		return nil, err
+	}
+
 	var tasks []*Task
 
 	for (!scanBasicChannelDone || !scanIncentivizedChannelDone) && currentBlockNumber > 0 {
 		log.WithFields(log.Fields{
 			"blockNumber": currentBlockNumber,
 		}).Debug("Checking header")
-
-		decodedAccount, err := hex.DecodeString(li.config.Account)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode channel account id: %v", err)
-		} else if len(decodedAccount) != 32 {
-			// The conversion below will panic if decodedAccount has
-			// fewer than 32 bytes.
-			// We expect exactly 32 bytes.
-			return nil, fmt.Errorf("account id was not 32 bytes long: %v", decodedAccount)
-		}
-		accountAsArray := *(*[32]byte)(decodedAccount)
 
 		blockHash, err := li.parachainConnection.API().RPC.Chain.GetBlockHash(currentBlockNumber)
 		if err != nil {
@@ -623,7 +621,7 @@ func (li *BeefyListener) scanForCommitments(
 				var bundleFound bool
 				var bundleIndex int
 				for i, b := range bundles {
-					if b.Account == accountAsArray {
+					if b.Account == *accountID {
 						bundleFound = true
 						bundleIndex = i
 						break
