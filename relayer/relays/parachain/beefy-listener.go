@@ -560,7 +560,7 @@ func (li *BeefyListener) scanForCommitments(
 	scanBasicChannelDone := !scanBasicChannel
 	scanIncentivizedChannelDone := !scanIncentivizedChannel
 
-	accountID, err := li.config.getAccount()
+	account, err := li.config.getAccount()
 	if err != nil {
 		return nil, err
 	}
@@ -616,20 +616,16 @@ func (li *BeefyListener) scanForCommitments(
 				}
 
 				// Only consider message bundles for the account we're interested in
-				bundles := events.Basic.Bundles
 				var bundle BasicOutboundChannelMessageBundle
-				var bundleFound bool
-				var bundleIndex int
-				for i, b := range bundles {
-					if b.Account == *accountID {
-						bundleFound = true
+				bundleIndex := -1
+				for i, b := range events.Basic.Bundles {
+					if b.Account == *account {
+						bundle = b
 						bundleIndex = i
 						break
 					}
 				}
-				if bundleFound {
-					bundle = bundles[bundleIndex]
-				} else {
+				if bundleIndex == -1 {
 					continue
 				}
 
