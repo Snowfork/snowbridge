@@ -25,7 +25,7 @@ type SourceConfig struct {
 func (c *SourceConfig) getAccount() (*[32]byte, error) {
 	decodedAccount, err := hex.DecodeString(c.account)
 	if err != nil {
-		return nil, fmt.Errorf("could not decode channel account id: %w", err)
+		return nil, fmt.Errorf("decode account id: %w", err)
 	} else if len(decodedAccount) != 32 {
 		// The conversion below will panic if decodedAccount has
 		// fewer than 32 bytes.
