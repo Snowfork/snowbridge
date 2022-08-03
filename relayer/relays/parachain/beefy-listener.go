@@ -618,18 +618,11 @@ func (li *BeefyListener) scanForCommitments(
 				}
 
 				// Only consider message bundles for the account we're interested in
-				var bundle BasicOutboundChannelMessageBundle
-				bundleIndex := -1
-				for i, b := range events.Basic.Bundles {
-					if b.Account == *li.AccountID {
-						bundle = b
-						bundleIndex = i
-						break
-					}
-				}
+				bundleIndex := findIndexOfBundleWithAccountID(events.Basic.Bundles, li.AccountID)
 				if bundleIndex == -1 {
 					continue
 				}
+				bundle := events.Basic.Bundles[bundleIndex]
 
 				// Fetch Merkle proof for this bundle
 				api, err := gsrpc.NewSubstrateAPI(li.config.Parachain.Endpoint)
@@ -719,6 +712,17 @@ func (li *BeefyListener) scanForCommitments(
 	})
 
 	return tasks, nil
+}
+
+func findIndexOfBundleWithAccountID(bundles []BasicOutboundChannelMessageBundle, accountID *[32]byte) int {
+	bundleIndex := -1
+	for i, b := range bundles {
+		if b.Account == *accountID {
+			bundleIndex = i
+			break
+		}
+	}
+	return bundleIndex
 }
 
 type OffchainStorageValue struct {
