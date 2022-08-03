@@ -19,7 +19,7 @@ type SourceConfig struct {
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
 	// Block number when Beefy was activated
 	BeefyActivationBlock uint64 `mapstructure:"beefy-activation-block"`
-	account              string `mapstructure:"account`
+	account              string `mapstructure:"account"`
 }
 
 func (c *SourceConfig) getAccount() (*[32]byte, error) {
