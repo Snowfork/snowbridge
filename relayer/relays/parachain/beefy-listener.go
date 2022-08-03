@@ -625,7 +625,7 @@ func (li *BeefyListener) scanForCommitments(
 				bundle := events.Basic.Bundles[bundleIndex]
 
 				// Fetch Merkle proof for this bundle
-				err := fetchBundleProof(basicChannelBundleProof, li, digestItem, bundleIndex)
+				err := fetchBundleProof(basicChannelBundleProof, li.parachainConnection.API(), digestItem, bundleIndex)
 				if err != nil {
 					return nil, err
 				}
@@ -703,14 +703,14 @@ func (li *BeefyListener) scanForCommitments(
 	return tasks, nil
 }
 
-func fetchBundleProof(basicChannelBundleProof *MerkleProof, li *BeefyListener, digestItem AuxiliaryDigestItem, bundleIndex int) error {
-	api, err := gsrpc.NewSubstrateAPI(li.config.Parachain.Endpoint)
-	if err != nil {
-		return fmt.Errorf("create client: %w", err)
-	}
-
+func fetchBundleProof(
+	basicChannelBundleProof *MerkleProof,
+	api *gsrpc.SubstrateAPI,
+	digestItem AuxiliaryDigestItem,
+	bundleIndex int,
+) error {
 	var proofHex string
-	err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItem.AsCommitment.Hash.Hex(), bundleIndex)
+	err := api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItem.AsCommitment.Hash.Hex(), bundleIndex)
 	if err != nil {
 		return fmt.Errorf("call rpc: %w", err)
 	}
