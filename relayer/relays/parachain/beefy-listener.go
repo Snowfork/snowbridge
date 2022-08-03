@@ -35,6 +35,7 @@ type BeefyListener struct {
 	paraID              uint32
 	tasks               chan<- *Task
 	eventQueryClient    QueryClient
+	AccountID           *[32]byte
 }
 
 func NewBeefyListener(
@@ -56,6 +57,12 @@ func NewBeefyListener(
 func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	li.eventQueryClient = NewQueryClient()
+
+	account, err := li.config.getAccount()
+	if err != nil {
+		return err
+	}
+	li.AccountID = account
 
 	// Set up light client bridge contract
 	address := common.HexToAddress(li.config.Contracts.BeefyClient)
@@ -560,11 +567,6 @@ func (li *BeefyListener) scanForCommitments(
 	scanBasicChannelDone := !scanBasicChannel
 	scanIncentivizedChannelDone := !scanIncentivizedChannel
 
-	account, err := li.config.getAccount()
-	if err != nil {
-		return nil, err
-	}
-
 	var tasks []*Task
 
 	for (!scanBasicChannelDone || !scanIncentivizedChannelDone) && currentBlockNumber > 0 {
@@ -619,7 +621,7 @@ func (li *BeefyListener) scanForCommitments(
 				var bundle BasicOutboundChannelMessageBundle
 				bundleIndex := -1
 				for i, b := range events.Basic.Bundles {
-					if b.Account == *account {
+					if b.Account == *li.AccountID {
 						bundle = b
 						bundleIndex = i
 						break
