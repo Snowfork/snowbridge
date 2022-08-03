@@ -599,7 +599,7 @@ func (li *BeefyListener) scanForCommitments(
 			return nil, fmt.Errorf("query events: %w", err)
 		}
 
-		var basicChannelBundleProof MerkleProof
+		var basicChannelBundleProof *MerkleProof
 
 		for _, digestItem := range digestItems {
 			if !digestItem.IsCommitment {
@@ -641,7 +641,7 @@ func (li *BeefyListener) scanForCommitments(
 					return nil, fmt.Errorf("call rpc: %w", err)
 				}
 
-				err = types.DecodeFromHexString(proofHex, &basicChannelBundleProof)
+				err = types.DecodeFromHexString(proofHex, basicChannelBundleProof)
 				if err != nil {
 					return nil, fmt.Errorf("decode: %w", err)
 				}

@@ -12,7 +12,7 @@ type Task struct {
 	BlockNumber             uint64
 	Header                  *types.Header
 	Commitments             map[ChannelID]Commitment
-	BasicChannelBundleProof MerkleProof
+	BasicChannelBundleProof *MerkleProof
 	ProofInput              *ProofInput
 	ProofOutput             *ProofOutput
 }

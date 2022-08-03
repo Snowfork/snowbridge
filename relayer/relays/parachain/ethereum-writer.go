@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"strings"
 
@@ -157,12 +158,13 @@ func (wr *EthereumWriter) WriteChannel(
 		if channelID.IsBasic {
 			bundle, ok := commitment.Data.(BasicOutboundChannelMessageBundle)
 			if !ok {
-				return fmt.Errorf("invalid commitment data")
+				return fmt.Errorf("invalid commitment data for basic channel")
 			}
 			err := wr.WriteBasicChannel(
 				options,
 				commitment.Hash,
 				bundle,
+				task.BasicChannelBundleProof,
 				task.ParaID,
 				task.ProofOutput,
 			)
@@ -173,7 +175,7 @@ func (wr *EthereumWriter) WriteChannel(
 		if channelID.IsIncentivized {
 			bundle, ok := commitment.Data.(IncentivizedOutboundChannelMessageBundle)
 			if !ok {
-				return fmt.Errorf("invalid commitment data")
+				return fmt.Errorf("invalid commitment data for incentivized channel")
 			}
 			err := wr.WriteIncentivizedChannel(
 				options,
@@ -195,6 +197,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 	options *bind.TransactOpts,
 	commitmentHash gsrpcTypes.H256,
 	commitmentData BasicOutboundChannelMessageBundle,
+	commitmentProof *MerkleProof,
 	paraID uint32,
 	proof *ProofOutput,
 ) error {
@@ -255,8 +258,18 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("pack proof: %w", err)
 	}
 
+	innerHashes := make([][32]byte, len(commitmentProof.Proof))
+	for i := 0; i < len(commitmentProof.Proof); i++ {
+		innerHashes[i] = ([32]byte)(commitmentProof.Proof[i])
+	}
+
+	sides, err := generateHashSides(commitmentProof)
+	if err != nil {
+		return err
+	}
+
 	tx, err := wr.basicInboundChannel.Submit(
-		options, bundle, opaqueProof,
+		options, bundle, innerHashes, sides, opaqueProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction BasicInboundChannel.submit: %w", err)
@@ -281,6 +294,26 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		Info("Sent transaction BasicInboundChannel.submit")
 
 	return nil
+}
+
+func generateHashSides(commitmentProof *MerkleProof) ([]bool, error) {
+	pos := commitmentProof.LeafIndex
+	width := commitmentProof.NumberOfLeaves
+
+	if pos < width {
+		return nil, fmt.Errorf("Leaf position is too high in proof")
+	}
+
+	// TODO: this float casting is lossy, find a base 2 log function that operates on uint64 or assert that the width doesn't exceed 2**63-1
+	numSides := (int)(math.Ceil(math.Log2(float64(width))))
+	sides := make([]bool, numSides)
+	for i := 0; i < numSides; i++ {
+		sides[i] = pos%2 == 1
+		pos /= 2
+		width = ((width - 1) / 2) + 1
+	}
+
+	return sides, nil
 }
 
 func (wr *EthereumWriter) WriteIncentivizedChannel(
