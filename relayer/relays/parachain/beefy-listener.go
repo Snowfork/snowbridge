@@ -625,20 +625,9 @@ func (li *BeefyListener) scanForCommitments(
 				bundle := events.Basic.Bundles[bundleIndex]
 
 				// Fetch Merkle proof for this bundle
-				api, err := gsrpc.NewSubstrateAPI(li.config.Parachain.Endpoint)
+				err := fetchBundleProof(basicChannelBundleProof, li, digestItem, bundleIndex)
 				if err != nil {
-					return nil, fmt.Errorf("create client: %w", err)
-				}
-
-				var proofHex string
-				err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItem.AsCommitment.Hash.Hex(), bundleIndex)
-				if err != nil {
-					return nil, fmt.Errorf("call rpc: %w", err)
-				}
-
-				err = types.DecodeFromHexString(proofHex, basicChannelBundleProof)
-				if err != nil {
-					return nil, fmt.Errorf("decode: %w", err)
+					return nil, err
 				}
 
 				bundleNonceBigInt := big.Int(bundle.Nonce)
@@ -712,6 +701,26 @@ func (li *BeefyListener) scanForCommitments(
 	})
 
 	return tasks, nil
+}
+
+func fetchBundleProof(basicChannelBundleProof *MerkleProof, li *BeefyListener, digestItem AuxiliaryDigestItem, bundleIndex int) error {
+	api, err := gsrpc.NewSubstrateAPI(li.config.Parachain.Endpoint)
+	if err != nil {
+		return fmt.Errorf("create client: %w", err)
+	}
+
+	var proofHex string
+	err = api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItem.AsCommitment.Hash.Hex(), bundleIndex)
+	if err != nil {
+		return fmt.Errorf("call rpc: %w", err)
+	}
+
+	err = types.DecodeFromHexString(proofHex, basicChannelBundleProof)
+	if err != nil {
+		return fmt.Errorf("decode: %w", err)
+	}
+
+	return nil
 }
 
 func findIndexOfBundleWithAccountID(bundles []BasicOutboundChannelMessageBundle, accountID *[32]byte) int {
