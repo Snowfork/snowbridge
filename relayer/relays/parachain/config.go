@@ -3,6 +3,7 @@ package parachain
 import (
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/snowfork/snowbridge/relayer/config"
 )
@@ -19,11 +20,12 @@ type SourceConfig struct {
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
 	// Block number when Beefy was activated
 	BeefyActivationBlock uint64 `mapstructure:"beefy-activation-block"`
-	account              string `mapstructure:"account"`
+	Account              string `mapstructure:"account"`
 }
 
 func (c *SourceConfig) getAccount() (*[32]byte, error) {
-	decodedAccount, err := hex.DecodeString(c.account)
+	accountID := strings.TrimPrefix(c.Account, "0x")
+	decodedAccount, err := hex.DecodeString(accountID)
 	if err != nil {
 		return nil, fmt.Errorf("decode account id: %w", err)
 	} else if len(decodedAccount) != 32 {
