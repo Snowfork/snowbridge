@@ -7,6 +7,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, U256};
 use sp_runtime::{
@@ -252,6 +253,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type OutboundXcmpMessageSource = XcmpQueue;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
+	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -576,8 +578,8 @@ impl basic_channel_outbound::Config for Runtime {
 }
 
 parameter_types! {
-	pub SourceAccount: AccountId = DotPalletId::get().into_account();
-	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+	pub SourceAccount: AccountId = DotPalletId::get().try_into_account().expect("Cannot convert PalletId to AccountId.");
+	pub TreasuryAccount: AccountId = TreasuryPalletId::get().try_into_account().expect("Cannot convert PalletId to AccountId.");
 }
 
 pub struct FeeConverter;
