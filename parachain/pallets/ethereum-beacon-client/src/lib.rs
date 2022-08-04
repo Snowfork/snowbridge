@@ -9,7 +9,8 @@ mod mock;
 mod tests;
 mod ssz;
 
-use frame_support::{dispatch::DispatchResult, log, transactional};
+use codec::{Decode, Encode};
+use frame_support::{dispatch::DispatchResult, log};
 use frame_system::ensure_signed;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;

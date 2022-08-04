@@ -30,7 +30,7 @@ mod tests;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::{fungible::Mutate, EnsureOrigin},
-	transactional, PalletId,
+	PalletId,
 };
 use frame_system::ensure_signed;
 use sp_core::H160;
