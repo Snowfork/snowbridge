@@ -200,7 +200,11 @@ pub mod pallet {
 			}
 
 			let asset_id = T::NextAssetId::next()?;
-			T::Assets::create(asset_id, T::PalletId::get().into_account(), true, 1)?;
+			let account = T::PalletId::get()
+				.try_into_account()
+				.ok_or(DispatchError::Other("PalletId account conversion failed."))?;
+
+			T::Assets::create(asset_id, account, true, 1)?;
 
 			<AssetId<T>>::insert(token, asset_id);
 
