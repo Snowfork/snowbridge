@@ -125,7 +125,6 @@ pub mod pallet {
 	impl<T: Config> Pallet<T>
 	{
 		#[pallet::weight(1_000_000)]
-		#[transactional]
 		pub fn sync_committee_period_update(
 			origin: OriginFor<T>,
 			sync_committee_period_update: SyncCommitteePeriodUpdate,
@@ -158,7 +157,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1_000_000)]
-		#[transactional]
 		pub fn import_finalized_header(
 			origin: OriginFor<T>,
 			finalized_header_update: FinalizedHeaderUpdate,
@@ -192,7 +190,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1_000_000)]
-		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
 			update: BlockUpdate,
