@@ -28,7 +28,7 @@ pub use frame_support::{
 	dispatch::DispatchResult,
 	match_types, parameter_types,
 	traits::{
-		tokens::fungible::ItemOf, Contains, EnsureOneOf, EqualPrivilegeOnly, Everything, IsInVec,
+		tokens::fungible::ItemOf, Contains, EitherOfDiverse, EqualPrivilegeOnly, Everything, IsInVec,
 		KeyOwnerProofSystem, Nothing, Randomness,
 	},
 	weights::{
@@ -432,7 +432,7 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
-type EnsureRootOrHalfLocalCouncil = EnsureOneOf<
+type EnsureRootOrHalfLocalCouncil = EitherOfDiverse<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionMoreThan<AccountId, LocalCouncilInstance, 1, 2>,
 >;
@@ -519,7 +519,7 @@ parameter_types! {
 	pub const AssetAccountDeposit: Balance = 0;
 }
 
-pub type AssetsForceOrigin = EnsureOneOf<EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
+pub type AssetsForceOrigin = EitherOfDiverse<EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
 
 impl pallet_assets::Config for Runtime {
 	type Event = Event;
