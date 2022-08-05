@@ -598,7 +598,7 @@ func (li *BeefyListener) scanForCommitments(
 			return nil, fmt.Errorf("query events: %w", err)
 		}
 
-		var basicChannelBundleProof *MerkleProof
+		var basicChannelBundleProof MerkleProof = MerkleProof{}
 
 		for _, digestItem := range digestItems {
 			if !digestItem.IsCommitment {
@@ -622,7 +622,7 @@ func (li *BeefyListener) scanForCommitments(
 				bundle := events.Basic.Bundles[bundleIndex]
 
 				// Fetch Merkle proof for this bundle
-				err := fetchBundleProof(basicChannelBundleProof, li.parachainConnection.API(), digestItem, bundleIndex)
+				err := fetchBundleProof(&basicChannelBundleProof, li.parachainConnection.API(), digestItem, bundleIndex)
 				if err != nil {
 					return nil, err
 				}
@@ -682,7 +682,7 @@ func (li *BeefyListener) scanForCommitments(
 				BlockNumber:             currentBlockNumber,
 				Header:                  header,
 				Commitments:             commitments,
-				BasicChannelBundleProof: basicChannelBundleProof,
+				BasicChannelBundleProof: &basicChannelBundleProof,
 				ProofInput:              nil,
 				ProofOutput:             nil,
 			}

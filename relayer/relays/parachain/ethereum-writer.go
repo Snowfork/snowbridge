@@ -300,7 +300,7 @@ func generateHashSides(commitmentProof *MerkleProof) ([]bool, error) {
 	pos := commitmentProof.LeafIndex
 	width := commitmentProof.NumberOfLeaves
 
-	if pos < width {
+	if pos >= width {
 		return nil, fmt.Errorf("leaf position %v is too high in proof with %v leaves", pos, width)
 	}
 
