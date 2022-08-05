@@ -330,10 +330,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 		Context: ctx,
 	}
 
-	accountID, err := li.config.getAccount()
-	if err != nil {
-		return nil, err
-	}
+	accountID := li.AccountID
 
 	ethBasicNonce, err := basicContract.Nonces(&options, *accountID)
 	if err != nil {
