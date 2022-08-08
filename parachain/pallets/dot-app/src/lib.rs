@@ -118,6 +118,7 @@ pub mod pallet {
 				ChannelId::Incentivized => T::WeightInfo::lock_incentivized_channel(),
 			}
 		})]
+		#[transactional]
 		pub fn lock(
 			origin: OriginFor<T>,
 			channel_id: ChannelId,
@@ -143,6 +144,7 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::unlock())]
+		#[transactional]
 		pub fn unlock(
 			origin: OriginFor<T>,
 			sender: H160,

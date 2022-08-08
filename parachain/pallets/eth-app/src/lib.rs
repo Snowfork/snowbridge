@@ -118,6 +118,7 @@ pub mod pallet {
 				ChannelId::Incentivized => T::WeightInfo::burn_incentivized_channel(),
 			}
 		})]
+		#[transactional]
 		pub fn burn(
 			origin: OriginFor<T>,
 			channel_id: ChannelId,
@@ -138,6 +139,7 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::mint())]
+		#[transactional]
 		pub fn mint(
 			origin: OriginFor<T>,
 			sender: H160,

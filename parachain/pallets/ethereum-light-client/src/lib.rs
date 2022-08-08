@@ -219,6 +219,7 @@ pub mod pallet {
 		/// - Iterating over ancestors: min `DescendantsUntilFinalized` reads to find the newly
 		///   finalized ancestor of a header.
 		#[pallet::weight(T::WeightInfo::import_header())]
+		#[transactional]
 		pub fn import_header(
 			origin: OriginFor<T>,
 			header: EthereumHeader,
@@ -274,6 +275,7 @@ pub mod pallet {
 		///
 		/// Requires sudo user.
 		#[pallet::weight(1_000_000)]
+		#[transactional]
 		pub fn force_reset_to_fork(origin: OriginFor<T>, forked_at: H256) -> DispatchResult {
 			ensure_root(origin)?;
 
