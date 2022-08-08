@@ -107,7 +107,14 @@ fn testnet_genesis(
 		},
 		assets: snowbase_runtime::AssetsConfig {
 			// Initialize the wrapped Ether asset
-			assets: vec![(0, EtherAppPalletId::get().into_account_truncating(), true, 1)],
+			assets: vec![(
+				0,
+				EtherAppPalletId::get()
+					.try_into_account()
+					.expect("Cannot convert PalletId to AccountId."),
+				true,
+				1,
+			)],
 			metadata: vec![],
 			accounts: vec![],
 		},

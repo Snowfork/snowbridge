@@ -27,7 +27,7 @@ fn should_lock() {
 			amount
 		));
 
-		assert_eq!(Balances::total_balance(&DotApp::account_id()?), amount);
+		assert_eq!(Balances::total_balance(&DotApp::account_id().unwrap()), amount);
 
 		assert_eq!(
 			Event::DotApp(crate::Event::<Test>::Locked(sender, recipient, amount)),
@@ -47,7 +47,7 @@ fn should_unlock() {
 		let amount_wrapped =
 			crate::primitives::wrap::<Test>(amount, <Test as Config>::Decimals::get()).unwrap();
 
-		let _ = Balances::deposit_creating(&DotApp::account_id()?, balance);
+		let _ = Balances::deposit_creating(&DotApp::account_id().unwrap(), balance);
 
 		assert_ok!(DotApp::unlock(
 			snowbridge_dispatch::RawOrigin(peer_contract).into(),
@@ -56,7 +56,7 @@ fn should_unlock() {
 			amount_wrapped,
 		));
 		assert_eq!(Balances::total_balance(&recipient), amount);
-		assert_eq!(Balances::total_balance(&DotApp::account_id()?), balance - amount);
+		assert_eq!(Balances::total_balance(&DotApp::account_id().unwrap()), balance - amount);
 
 		assert_eq!(
 			Event::DotApp(crate::Event::<Test>::Unlocked(sender, recipient, amount)),
@@ -76,7 +76,7 @@ fn should_not_unlock_on_bad_origin_failure() {
 		let amount_wrapped =
 			crate::primitives::wrap::<Test>(amount, <Test as Config>::Decimals::get()).unwrap();
 
-		let _ = Balances::deposit_creating(&DotApp::account_id()?, balance);
+		let _ = Balances::deposit_creating(&DotApp::account_id().unwrap(), balance);
 
 		assert_noop!(
 			DotApp::unlock(
