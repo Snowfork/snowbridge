@@ -28,6 +28,7 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 		"bundle": log.Fields{
 			"sourceChannelID": bundle.SourceChannelID,
 			"nonce":           bundle.Nonce,
+			"account":         bundle.Account,
 			"messages":        messagesLog,
 		},
 		"proof": Hex(proof),
