@@ -304,7 +304,6 @@ func generateHashSides(commitmentProof *MerkleProof) ([]bool, error) {
 		return nil, fmt.Errorf("leaf position %v is too high in proof with %v leaves", pos, width)
 	}
 
-	// TODO: this float casting is lossy, find a base 2 log function that operates on uint64 or assert that the width doesn't exceed 2**63-1
 	numSides := (int)(math.Ceil(math.Log2(float64(width))))
 	sides := make([]bool, numSides)
 	for i := 0; i < numSides; i++ {
