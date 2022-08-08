@@ -8,7 +8,7 @@ edition = "2021"
 targets = [ "x86_64-unknown-linux-gnu" ]
 
 [dependencies]
-serde = { version = "1.0.136", optional = true }
+serde = { version = "1.0.137", optional = true }
 codec = { version = "3.0.0", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
 scale-info = { version = "2.0.1", default-features = false, features = [ "derive" ] }
 hex = { package = "rustc-hex", version = "2.1.0", default-features = false }

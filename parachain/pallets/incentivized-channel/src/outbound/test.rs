@@ -6,7 +6,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::fungible::{Inspect, ItemOf, Mutate},
-		Everything, GenesisBuild, OnInitialize
+		Everything, GenesisBuild, OnInitialize,
 	},
 	PalletId,
 };
@@ -145,7 +145,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	config.assimilate_storage(&mut storage).unwrap();
 
 	let assets_config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
-		assets: vec![(0, EtherAppPalletId::get().into_account(), true, 1)],
+		assets: vec![(0, EtherAppPalletId::get().into_account_truncating(), true, 1)],
 		metadata: vec![],
 		accounts: vec![],
 	};
@@ -159,8 +159,8 @@ pub fn new_tester() -> sp_io::TestExternalities {
 
 fn run_to_block(n: u64) {
 	while System::block_number() < n {
-			System::set_block_number(System::block_number() + 1);
-			IncentivizedOutboundChannel::on_initialize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		IncentivizedOutboundChannel::on_initialize(System::block_number());
 	}
 }
 

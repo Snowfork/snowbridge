@@ -5,7 +5,7 @@ authors = [ "Snowfork <contact@snowfork.com>" ]
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0.136", optional = true }
+serde = { version = "1.0.137", optional = true }
 serde-big-array = { version = "0.3.2", optional = true, features = [ "const-generics" ] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [ "derive" ] }
 scale-info = { version = "2.0.1", default-features = false, features = [ "derive" ] }

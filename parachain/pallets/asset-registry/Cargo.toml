@@ -20,7 +20,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 snowbridge-asset-registry-primitives = { path = "../../primitives/asset-registry", default-features = false }
 
 [dev-dependencies]
-serde = { version = "1.0.136" }
+serde = { version = "1.0.137" }
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
 sp-io = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }

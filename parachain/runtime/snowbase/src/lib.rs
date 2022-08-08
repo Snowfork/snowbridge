@@ -29,8 +29,8 @@ pub use frame_support::{
 	dispatch::DispatchResult,
 	match_types, parameter_types,
 	traits::{
-		tokens::fungible::ItemOf, Contains, EitherOfDiverse, EqualPrivilegeOnly, Everything, IsInVec,
-		KeyOwnerProofSystem, Nothing, Randomness,
+		tokens::fungible::ItemOf, Contains, EitherOfDiverse, EqualPrivilegeOnly, Everything,
+		IsInVec, KeyOwnerProofSystem, Nothing, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -248,9 +248,9 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnSystemEvent = ();
 	type SelfParaId = parachain_info::Pallet<Runtime>;
+	type OutboundXcmpMessageSource = XcmpQueue;
 	type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
-	type OutboundXcmpMessageSource = XcmpQueue;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
