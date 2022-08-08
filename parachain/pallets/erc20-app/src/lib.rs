@@ -33,7 +33,7 @@ use frame_support::{
 		tokens::fungibles::{Create, Mutate},
 		EnsureOrigin,
 	},
-	PalletId,
+	transactional, PalletId,
 };
 use frame_system::ensure_signed;
 use sp_core::H160;

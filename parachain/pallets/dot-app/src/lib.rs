@@ -20,7 +20,7 @@ use frame_support::{
 		ExistenceRequirement::{AllowDeath, KeepAlive},
 		Get,
 	},
-	PalletId,
+	transactional, PalletId,
 };
 
 #[cfg(feature = "std")]
@@ -153,7 +153,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into())
+				return Err(DispatchError::BadOrigin.into());
 			}
 
 			let amount_unwrapped =

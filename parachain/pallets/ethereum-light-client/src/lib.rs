@@ -34,6 +34,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	log,
 	traits::Get,
+	transactional,
 };
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
