@@ -709,12 +709,12 @@ func fetchBundleProof(
 	var proofHex string
 	err := api.Client.Call(&proofHex, "basicOutboundChannel_getMerkleProof", digestItem.AsCommitment.Hash.Hex(), bundleIndex)
 	if err != nil {
-		return fmt.Errorf("call rpc: %w", err)
+		return fmt.Errorf("call rpc basicOutboundChannel_getMerkleProof: %w", err)
 	}
 
 	err = types.DecodeFromHexString(proofHex, basicChannelBundleProof)
 	if err != nil {
-		return fmt.Errorf("decode: %w", err)
+		return fmt.Errorf("decode proof from rpc basicOutboundChannel_getMerkleProof: %w", err)
 	}
 
 	return nil
