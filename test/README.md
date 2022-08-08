@@ -22,7 +22,13 @@ The E2E tests run against local deployments of the parachain, relayer and ethere
 * Development environment for the relay services. See setup [instructions](../relayer/README.md#development).
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
-* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `0.38.0`.
+* g++ (required for lodestar) is available in the build-essential package:
+
+  ```bash
+  apt install build-essential
+  ```
+
+* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use tag `v0.38.0`.
 * sponge - Is available in the `moreutils` package.
 
   ```bash
