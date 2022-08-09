@@ -29,8 +29,8 @@ pub use frame_support::{
 	dispatch::DispatchResult,
 	match_types, parameter_types,
 	traits::{
-		tokens::fungible::ItemOf, Contains, EitherOfDiverse, EqualPrivilegeOnly, Everything, IsInVec,
-		KeyOwnerProofSystem, Nothing, Randomness,
+		tokens::fungible::ItemOf, Contains, EitherOfDiverse, EqualPrivilegeOnly, Everything,
+		IsInVec, KeyOwnerProofSystem, Nothing, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},

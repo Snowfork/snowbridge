@@ -455,8 +455,10 @@ parameter_types! {
 	pub const Local: MultiLocation = Here.into();
 }
 
-pub type AssetsForceOrigin =
-	EnsureOneOf<EitherOfDiverse<AccountId>, EnsureXcm<IsMajorityOfBody<DotLocation, ExecutiveBody>>>;
+pub type AssetsForceOrigin = EnsureOneOf<
+	EitherOfDiverse<AccountId>,
+	EnsureXcm<IsMajorityOfBody<DotLocation, ExecutiveBody>>,
+>;
 
 pub type AssetId = u128;
 
