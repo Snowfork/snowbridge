@@ -35,13 +35,13 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable-2022-01-20
+          toolchain: stable-2022-07-16
           target: wasm32-unknown-unknown
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
-          toolchain: stable-2022-01-20
+          toolchain: stable-2022-07-16
           args: >-
             --manifest-path parachain/Cargo.toml
             --workspace
@@ -51,7 +51,7 @@ jobs:
   test:
     needs: check
     runs-on: ubuntu-20.04
-    if: ${{ false }} # Disabled because there is not enough ram on workflow instance
+    #if: ${{ false }} # Disabled because there is not enough ram on workflow instance
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
@@ -72,7 +72,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable-2022-01-20
+          toolchain: stable-2022-07-16
           target: wasm32-unknown-unknown
       - uses: actions-rs/install@v0.1.2
         with:
@@ -94,4 +94,4 @@ jobs:
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
-          toolchain: stable-2022-01-20
+          toolchain: stable-2022-07-16
