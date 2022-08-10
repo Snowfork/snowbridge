@@ -22,7 +22,7 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 * Development environment for the relay services. See setup [instructions](../relayer/README.md#development).
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
-* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `0.38.0`.
+* lodestar - `yarn global add @chainsafe/lodestar-cli@0.40.0-dev.ccdf688e6e`
 * sponge - Is available in the `moreutils` package.
 
   ```bash
@@ -36,8 +36,6 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
   ```
 
 * direnv - https://direnv.net/
-
-* lodestar - https://chainsafe.github.io/lodestar/installation/
 
 ## Setup
 
