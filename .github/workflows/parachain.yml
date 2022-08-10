@@ -87,8 +87,8 @@ jobs:
             --verbose --workspace
             --exclude snowbridge
             --exclude snowbridge-runtime
-            --exclude snowbridge-rococo-runtime
-            --exclude local-runtime
+            --exclude snowblink-runtime
+            --exclude snowbase-runtime
             --exclude-files '*/mock.rs,*/tests.rs'
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
