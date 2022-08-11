@@ -1,4 +1,4 @@
-mod mainnet_tests {
+mod beacon {
 	use crate as ethereum_beacon_client;
 	use crate::{
 		config, merkleization,
