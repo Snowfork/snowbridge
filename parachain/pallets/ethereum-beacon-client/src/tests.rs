@@ -41,9 +41,7 @@ mod mainnet_tests {
 
 		new_tester().execute_with(|| {
 			SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-			ValidatorsRoot::<Test>::set(
-				hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-			);
+			ValidatorsRoot::<Test>::set(get_validators_root());
 
 			assert_ok!(EthereumBeaconClient::sync_committee_period_update(
 				Origin::signed(1),
@@ -70,9 +68,7 @@ mod mainnet_tests {
 
 		new_tester().execute_with(|| {
 			SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-			ValidatorsRoot::<Test>::set(
-				hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-			);
+			ValidatorsRoot::<Test>::set(get_validators_root());
 
 			assert_ok!(EthereumBeaconClient::import_finalized_header(
 				Origin::signed(1),
@@ -98,9 +94,7 @@ mod mainnet_tests {
 
 		new_tester().execute_with(|| {
 			SyncCommittees::<Test>::insert(current_period, current_sync_committee);
-			ValidatorsRoot::<Test>::set(
-				hex!("99b09fcd43e5905236c370f184056bec6e6638cfc31a323b304fc4aa789cb4ad").into(),
-			);
+			ValidatorsRoot::<Test>::set(get_validators_root());
 			LatestFinalizedHeaderSlot::<Test>::set(update.block.slot);
 
 			assert_ok!(EthereumBeaconClient::import_execution_header(
