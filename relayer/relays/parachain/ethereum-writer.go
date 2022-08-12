@@ -307,7 +307,7 @@ func generateHashSides(commitmentProof *MerkleProof) ([]bool, error) {
 	numSides := (int)(math.Ceil(math.Log2(float64(width))))
 	sides := make([]bool, numSides)
 	for i := 0; i < numSides; i++ {
-		sides[i] = pos%2 == 0
+		sides[i] = pos%2 == 1
 		pos /= 2
 		width = ((width - 1) / 2) + 1
 	}
