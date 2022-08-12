@@ -14,6 +14,8 @@ func Hex(b []byte) string {
 func (wr *EthereumWriter) logFieldsForBasicSubmission(
 	bundle basic.BasicInboundChannelMessageBundle,
 	proof []byte,
+	leafProof [][32]byte,
+	hashSides []bool,
 ) log.Fields {
 	var messagesLog []log.Fields
 	for _, item := range bundle.Messages {
@@ -28,10 +30,12 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 		"bundle": log.Fields{
 			"sourceChannelID": bundle.SourceChannelID,
 			"nonce":           bundle.Nonce,
-			"account":         bundle.Account,
+			"account":         Hex(bundle.Account[:]),
 			"messages":        messagesLog,
 		},
-		"proof": Hex(proof),
+		"proof":     Hex(proof),
+		"leafProof": leafProof,
+		"hashSides": hashSides,
 	}
 
 	return params
