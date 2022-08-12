@@ -26,6 +26,11 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 		})
 	}
 
+	leafProofHexes := make([]string, len(leafProof))
+	for i, leaf := range leafProof {
+		leafProofHexes[i] = Hex(leaf[:])
+	}
+
 	params := log.Fields{
 		"bundle": log.Fields{
 			"sourceChannelID": bundle.SourceChannelID,
@@ -34,7 +39,7 @@ func (wr *EthereumWriter) logFieldsForBasicSubmission(
 			"messages":        messagesLog,
 		},
 		"proof":     Hex(proof),
-		"leafProof": leafProof,
+		"leafProof": leafProofHexes,
 		"hashSides": hashSides,
 	}
 

@@ -33,7 +33,7 @@ class SubClient {
     const unsubscribe = await this.api.query.assets.account(assetId, accountId, (account) => {
       if(account.isNone) {
         resolvers[count](BigNumber(0));
-      } 
+      }
       else {
         resolvers[count](BigNumber(account.value.balance.toBigInt()));
       }

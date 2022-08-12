@@ -1,46 +1,51 @@
 {
-  "@timestamp": "2022-08-12T12:45:40.334279175Z",
-  "commitmentHash": "0xf5a8f0df45fb77614bd006b67960ce71de10578bb3557099c627cf318b49a350",
+  "@timestamp": "2022-08-15T14:33:32.464197692Z",
+  "commitmentHash": "0x243baf0066d021d42716081dad0b30499dad95a300daa269ed8f6f6334d95975",
   "level": "info",
   "message": "Sent SubmitFinal transaction",
   "params": {
     "commitment": {
-      "blockNumber": 71,
+      "blockNumber": 371,
       "payload": {
-        "mmrRootHash": "0xc79c9a7ec3a0c2d1e52ad7c7b01f312094378dce5c0645c8851647cd567b133e",
+        "mmrRootHash": "0x482fcbd18294c4b4f339f825537530cfcc678eeea469caa807438d35ace62f04",
         "prefix": "0x046d6880",
         "suffix": "0x"
       },
-      "validatorSetID": 7
+      "validatorSetID": 37
     },
-    "id": 4,
+    "id": 37,
     "leaf": {
-      "nextAuthoritySetID": 8,
+      "nextAuthoritySetID": 38,
       "nextAuthoritySetLen": 3,
       "nextAuthoritySetRoot": "0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365",
-      "parachainHeadsRoot": "0x2b05b142bfb5c7c7ebeda3b452ccd1cb5fef0086bbfe997eb7ca59fdd36e7b2b",
-      "parentHash": "0x10a6aa1c8b4a517d0764f70537df8d50fefa5c46d8e0ada0c08de69bcc3052b1",
-      "parentNumber": 70,
+      "parachainHeadsRoot": "0xc992465982e7733f5f91c60f6c7c5d4433298c10b348487081f2356d80a0133f",
+      "parentHash": "0x2a74fc1410a321daefc1ae17adc69048db56f4d37660e7af042289480de59897",
+      "parentNumber": 370,
       "version": 0
     },
     "leafProof": {
       "items": [
-        "0x7ca01f7ede7c6a915e8c23c6b20802883b734d6602b8c4fbbf3a5fadb281d81d",
-        "0x0951b22bda8b657a44525dfecd6ecf70007bed82b150a7b3991b4f5048851da9",
-        "0xd721cc786845e6ed9f5a82aef794a4c98f098827115cdc1e1e52e2cc606f6abd"
+        "0xe8ae8d4c8027764aa0fdae351c30c6085f7822ad6295ae1bd445ee8bef564901",
+        "0xe4d591609cb75673ef8992d1ae6c518ad95d8f924f75249ce43153d01380c79f",
+        "0xb2852e70b508acbda330c6f842d51f4eab82d34b991fe6679d37f2eeedae6ccd",
+        "0x6a83a49e6424b0de032f730064213f4783f2c9f59dab4480f88673a042102ab2",
+        "0xee4688d1831443e4c7f2d47265fd529dd50e41a4c49c5f31a04bf45320f59614"
       ],
       "order": 0
     },
     "proof": {
-      "addrs": ["0x5630a480727cd7799073b36472d9b1a6031f840b"],
-      "indices": [2],
+      "addrs": ["0x25451a4de12dccc2d166922fa938e900fcc4ed24"],
+      "indices": [1],
       "merkleProofs": [
-        ["0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402"]
+        [
+          "0xaeb47a269393297f4b0a3c9c9cfd00c7a4195255274cf39d83dabc2fcc9ff3d7",
+          "0x3eb799651607280e854bd2e42c1df1c8e4a6167772dfb3c64a813e40f6e87136"
+        ]
       ],
       "signatures": [
-        "0x438a88c3aea4e622f0e9af9b0df9594684ef666126364768a0aff33831f928ef2b62c3b2b76fafc4857652af80e4ee322e315041bf93422745909191f06a0fcc1c"
+        "0xcfb8535b624c6c1e779aa9e5d28eb0b10ebf4459e890b55c2d3533644bfc8f3e3729f1ea4402838df59696079e1a393ef1136908753ae0932ca3f7661b7e61091b"
       ]
     }
   },
-  "txHash": "0xe215ee3c095718b4e545d1c7a0b84eda5cacbdca7d0c3a039298c2d277a0b716"
+  "txHash": "0xbe72a9b6640b76ad5db4d47a138def511fc40c9b67ffae0bf303ebdb44e72bed"
 }
