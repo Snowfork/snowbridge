@@ -8,7 +8,6 @@ import (
 
 type BeaconCache struct {
 	LastSyncedSyncCommitteePeriod uint64
-	LastVerifiedMessageBlock      uint64
 	FinalizedHeaders              []common.Hash
 	HeadersMap                    map[common.Hash]uint64
 	mu                            sync.Mutex
@@ -17,7 +16,6 @@ type BeaconCache struct {
 func NewBeaconCache() *BeaconCache {
 	return &BeaconCache{
 		LastSyncedSyncCommitteePeriod: 0,
-		LastVerifiedMessageBlock:      0,
 		FinalizedHeaders:              []common.Hash{},
 		HeadersMap:                    map[common.Hash]uint64{},
 	}

@@ -140,9 +140,6 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
 
-	#[pallet::storage]
-	pub(super) type LatestVerifiedMessageBlock<T: Config> = StorageValue<_, u64, ValueQuery>;
-
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
 		pub initial_sync: InitialSync,
@@ -859,8 +856,6 @@ pub mod pallet {
 				"💫 Receipt verification successful for {}",
 				message.proof.block_hash,
 			);
-
-			<LatestVerifiedMessageBlock<T>>::set(block_number);
 
 			Ok(log)
 		}

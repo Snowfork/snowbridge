@@ -110,17 +110,6 @@ func (r *Relay) Sync(ctx context.Context) error {
 		}
 	}
 
-	lastVerifiedMessageBlock, err := r.writer.getLastVerifiedMessageBlock()
-	if err != nil {
-		logrus.WithError(err).Error("unable to get last synced sync committee")
-
-		return err
-	}
-
-	r.syncer.Cache.LastVerifiedMessageBlock = lastVerifiedMessageBlock
-
-	logrus.WithField("blockNumber", lastVerifiedMessageBlock).Info("set cache: last verified message block found")
-
 	lastFinalizedHeader, err := r.writer.getLastStoredFinalizedHeader()
 	if err != nil {
 		logrus.WithError(err).Error("unable to get last finalized header")
@@ -326,10 +315,6 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 		return err
 	}
 
-	if lastBlockNumber > r.syncer.Cache.LastVerifiedMessageBlock {
-		secondLastBlockNumber = r.syncer.Cache.LastVerifiedMessageBlock
-	}
-
 	logrus.WithFields(logrus.Fields{
 		"start": secondLastBlockNumber,
 		"end":   lastBlockNumber - 1,
@@ -339,8 +324,6 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	r.syncer.Cache.LastVerifiedMessageBlock = lastBlockNumber - 1
 
 	return r.writeMessages(ctx, payload)
 }

@@ -166,18 +166,3 @@ func (wr *ParachainWriter) getLastStoredFinalizedHeaderSlot() (uint64, error) {
 
 	return uint64(slot), nil
 }
-
-func (wr *ParachainWriter) getLastVerifiedMessageBlock() (uint64, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestVerifiedMessageBlock", nil, nil)
-	if err != nil {
-		return 0, fmt.Errorf("create storage key for latest verified message block number: %w", err)
-	}
-
-	var blockNumber types.U64
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &blockNumber)
-	if err != nil {
-		return 0, fmt.Errorf("get storage for latest verified message block number (err): %w", err)
-	}
-
-	return uint64(blockNumber), nil
-}
