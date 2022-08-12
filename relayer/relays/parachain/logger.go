@@ -13,9 +13,9 @@ func Hex(b []byte) string {
 
 func (wr *EthereumWriter) logFieldsForBasicSubmission(
 	bundle basic.BasicInboundChannelMessageBundle,
-	proof []byte,
 	leafProof [][32]byte,
 	hashSides []bool,
+	proof []byte,
 ) log.Fields {
 	var messagesLog []log.Fields
 	for _, item := range bundle.Messages {

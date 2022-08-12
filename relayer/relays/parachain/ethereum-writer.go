@@ -258,18 +258,18 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("pack proof: %w", err)
 	}
 
-	innerHashes := make([][32]byte, len(commitmentProof.Proof))
+	leafProof := make([][32]byte, len(commitmentProof.Proof))
 	for i := 0; i < len(commitmentProof.Proof); i++ {
-		innerHashes[i] = ([32]byte)(commitmentProof.Proof[i])
+		leafProof[i] = ([32]byte)(commitmentProof.Proof[i])
 	}
 
-	sides, err := generateHashSides(commitmentProof)
+	hashSides, err := generateHashSides(commitmentProof)
 	if err != nil {
 		return err
 	}
 
 	tx, err := wr.basicInboundChannel.Submit(
-		options, bundle, innerHashes, sides, opaqueProof,
+		options, bundle, leafProof, hashSides, opaqueProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction BasicInboundChannel.submit: %w", err)
@@ -282,7 +282,7 @@ func (wr *EthereumWriter) WriteBasicChannel(
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
 	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("params", wr.logFieldsForBasicSubmission(bundle, opaqueProof, innerHashes, sides)).
+		WithField("params", wr.logFieldsForBasicSubmission(bundle, leafProof, hashSides, opaqueProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentHashString,
 			"MMRRoot":              proof.MMRRootHash.Hex(),
