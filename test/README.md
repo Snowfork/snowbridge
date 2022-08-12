@@ -32,7 +32,7 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 * polkadot-launch
 
   ```bash
-  yarn global add polkadot-launch@2.1.0
+  yarn global add polkadot-launch@2.2.1
   ```
 
 * direnv - https://direnv.net/
