@@ -808,8 +808,6 @@ pub mod pallet {
 			let stored_header =
 				<ExecutionHeaders<T>>::get(message.proof.block_hash).ok_or(Error::<T>::MissingHeader)?;
 
-			let block_number = stored_header.block_number;
-
 			let receipt = match Self::verify_receipt_inclusion(&message.proof, stored_header) {
 				Ok(receipt) => receipt,
 				Err(err) => {
