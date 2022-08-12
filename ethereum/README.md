@@ -58,7 +58,8 @@ Steps for updating the fixture data for the basic channel:
 2. Copy that log line into `./test/fixtures/parachain-relay-basic.json`
 3. In that file, take the `beefyBlock` field (a block hash) and use polkadot.js explorer to find the corresponding block number. Make sure
    you're pointing the polkadot.js explorer at one of the relay chain nodes when you do, eg. port 9944 instead of 11144. See
-   [launch-config.json](../test/config/launch-config.json) for the ports used by relaychain & parachain nodes.
+   [launch-config.json](../test/config/launch-config.json) for the ports used by relaychain & parachain nodes. Also update port forwarding
+   as necessary.
 4. Run the following (substituting `$BLOCKNUMBER`) and paste the output into `./test/fixtures/beefy-relay-basic.json`:
 ```bash
 jq -s --argjson blocknumber $BLOCKNUMBER '.[] | select( .message | contains("Sent SubmitFinal transaction")) | select( .params.commitment.blockNumber | contains($blocknumber))' beefy-relay.log
