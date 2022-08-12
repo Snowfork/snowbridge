@@ -19,7 +19,6 @@ hex-literal = "0.3.4"
 jsonrpsee = { version = "0.14.0", features = ["server"] }
 log = "0.4.17"
 rand = "0.7.2"
-tracing = "^0.1.29"
 parking_lot = "0.10.0"
 
 # Substrate
