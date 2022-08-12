@@ -1,54 +1,46 @@
 {
-  "@timestamp": "2022-08-12T09:09:37.468280746Z",
-  "commitmentHash": "0x82415376bdd2960933f15dc99d3c68bd5542bee844a05bccff0bd3a3a76fa038",
+  "@timestamp": "2022-08-12T12:45:40.334279175Z",
+  "commitmentHash": "0xf5a8f0df45fb77614bd006b67960ce71de10578bb3557099c627cf318b49a350",
   "level": "info",
   "message": "Sent SubmitFinal transaction",
   "params": {
     "commitment": {
-      "blockNumber": 741,
+      "blockNumber": 71,
       "payload": {
-        "mmrRootHash": "0xcfe9132df0aabf2c769343e676514c1be775fe9ce870ff1cace50a02a5347cd9",
+        "mmrRootHash": "0xc79c9a7ec3a0c2d1e52ad7c7b01f312094378dce5c0645c8851647cd567b133e",
         "prefix": "0x046d6880",
         "suffix": "0x"
       },
-      "validatorSetID": 74
+      "validatorSetID": 7
     },
-    "id": 75,
+    "id": 4,
     "leaf": {
-      "nextAuthoritySetID": 75,
+      "nextAuthoritySetID": 8,
       "nextAuthoritySetLen": 3,
       "nextAuthoritySetRoot": "0x42b63941ec636f52303b3c33f53349830d8a466e9456d25d22b28f4bb0ad0365",
-      "parachainHeadsRoot": "0xe46c967c224f0ef7d5441ac506d6cee0f41516388c1afb629610253aa6708df1",
-      "parentHash": "0xedf98e232e6b90139664bc4a6c98a7397d1f107f9766ccac245edb272cfec2c5",
-      "parentNumber": 740,
+      "parachainHeadsRoot": "0x2b05b142bfb5c7c7ebeda3b452ccd1cb5fef0086bbfe997eb7ca59fdd36e7b2b",
+      "parentHash": "0x10a6aa1c8b4a517d0764f70537df8d50fefa5c46d8e0ada0c08de69bcc3052b1",
+      "parentNumber": 70,
       "version": 0
     },
     "leafProof": {
       "items": [
-        "0x82ec496a8ec330fac38048a754a27ff4e321f4fd0cddb61ce553a183cecf92ab",
-        "0x7ce1f837a7a70674e2ad082b284548f72280be23612affc763d59c4a5df62802",
-        "0x97ae352c2b066826290e8deffdbd3b92b6e3b08750e2daa80ca22982901b9a97",
-        "0xe186b59e03785954b4ac2fe9eca7cd49765b5764897102d1365b98481e0be128",
-        "0xbf651e18171f50afb420fb626ffb6c21ec45dabf0f582fc9b37388c878fdb00b"
+        "0x7ca01f7ede7c6a915e8c23c6b20802883b734d6602b8c4fbbf3a5fadb281d81d",
+        "0x0951b22bda8b657a44525dfecd6ecf70007bed82b150a7b3991b4f5048851da9",
+        "0xd721cc786845e6ed9f5a82aef794a4c98f098827115cdc1e1e52e2cc606f6abd"
       ],
       "order": 0
     },
     "proof": {
-      "addrs": [
-        "0x5630a480727cd7799073b36472d9b1a6031f840b"
-      ],
-      "indices": [
-        2
-      ],
+      "addrs": ["0x5630a480727cd7799073b36472d9b1a6031f840b"],
+      "indices": [2],
       "merkleProofs": [
-        [
-          "0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402"
-        ]
+        ["0x697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402"]
       ],
       "signatures": [
-        "0x83a684b8828ef8c270e24a21d6fbe60292ec802b2a572a904b2ef0fcfb9f7c081b829acc86bb1614f727e21e5c0312e8beb15258cc88adf281457af5451458231b"
+        "0x438a88c3aea4e622f0e9af9b0df9594684ef666126364768a0aff33831f928ef2b62c3b2b76fafc4857652af80e4ee322e315041bf93422745909191f06a0fcc1c"
       ]
     }
   },
-  "txHash": "0xa101d5da470e673ef7e17f88c1758bc20c8021574227ccf2a074c5672c31d6ab"
+  "txHash": "0xe215ee3c095718b4e545d1c7a0b84eda5cacbdca7d0c3a039298c2d277a0b716"
 }

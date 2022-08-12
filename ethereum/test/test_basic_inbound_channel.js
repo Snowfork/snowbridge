@@ -46,14 +46,16 @@ describe("BasicInboundChannel", function () {
     });
 
     it("should accept a valid commitment and dispatch messages", async function () {
-      const nonceBeforeSubmit = BigNumber(await this.channel.nonce());
+      const nonceBeforeSubmit = BigNumber(await this.channel.nonces(submitInput.params.bundle.account));
 
       const { receipt } = await this.channel.submit(
         submitInput.params.bundle,
+        submitInput.params.leafProof,
+        submitInput.params.hashSides,
         submitInput.params.proof,
       ).should.be.fulfilled
 
-      const nonceAfterSubmit = BigNumber(await this.channel.nonce());
+      const nonceAfterSubmit = BigNumber(await this.channel.nonces(submitInput.params.bundle.account));
       nonceAfterSubmit.minus(nonceBeforeSubmit).should.be.bignumber.equal(1);
 
       const event = interface.decodeEventLog(
@@ -68,12 +70,16 @@ describe("BasicInboundChannel", function () {
       // Submit messages
       await this.channel.submit(
         submitInput.params.bundle,
+        submitInput.params.leafProof,
+        submitInput.params.hashSides,
         submitInput.params.proof,
       ).should.be.fulfilled;
 
       // Submit messages again - should revert
       await this.channel.submit(
         submitInput.params.bundle,
+        submitInput.params.leafProof,
+        submitInput.params.hashSides,
         submitInput.params.proof,
       ).should.not.be.fulfilled;
     });
