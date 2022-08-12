@@ -9,58 +9,15 @@ mod mock;
 mod tests;
 mod ssz;
 
-use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
-use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
-use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock, ProofBranch, ForkVersion};
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, 
+	ProofBranch, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct InitialSync {
-	pub header: BeaconHeader,
-	pub current_sync_committee: SyncCommittee,
-	pub current_sync_committee_branch: ProofBranch,
-	pub validators_root: Root,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SyncCommitteePeriodUpdate {
-	pub attested_header: BeaconHeader,
-	pub next_sync_committee: SyncCommittee,
-	pub next_sync_committee_branch: ProofBranch,
-	pub finalized_header: BeaconHeader,
-	pub finality_branch: ProofBranch,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-	pub sync_committee_period: u64,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct FinalizedHeaderUpdate {
-	pub attested_header: BeaconHeader,
-	pub finalized_header: BeaconHeader,
-	pub finality_branch: ProofBranch,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct BlockUpdate {
-	pub block: BeaconBlock,
-	//  // Only used for debugging purposes, to compare the hash tree
-	// root of the block body to the body hash retrieved from the API.
-	// Can be removed later.
-	pub block_body_root: H256,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-}
 
 pub use pallet::*;
 

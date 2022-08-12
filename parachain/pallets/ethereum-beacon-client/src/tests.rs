@@ -514,13 +514,10 @@ mod beacon {
 	#[test]
 	pub fn test_hash_tree_root_sync_committee() {
 		let test_data = get_sync_committee_test_data();
-
 		let hash_root_result = merkleization::hash_tree_root_sync_committee(test_data.sync_committee);
-
 		assert_ok!(&hash_root_result);
 
 		let hash_root: H256 = hash_root_result.unwrap().into();
-
 		assert_eq!(
 			hash_root,
 			test_data.result
@@ -566,17 +563,13 @@ mod beacon {
 	#[test]
 	pub fn test_hash_block_body() {
 		let test_data = get_block_body_test_data();
-
 		let payload = merkleization::get_ssz_beacon_block_body(test_data.body);
-
 		assert_ok!(&payload);
 
 		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
-
 		assert_ok!(&hash_root_result);
 
 		let hash_root: H256 = hash_root_result.unwrap().into();
-
 		assert_eq!(
 			hash_root,
 			test_data.result
@@ -592,11 +585,9 @@ mod beacon {
 			block_hash: hex!("0000000000000000000000000000000000000000000000000000000000000000")
 				.into(),
 		});
-
 		assert_ok!(&payload);
 
 		let hash_root = merkleization::hash_tree_root(payload.unwrap());
-
 		assert_eq!(
 			hash_root.unwrap(),
 			hex!("aa247f2dfbb6e5d77b7e9f637f9bb70842cbec34cb4238d5bcb491f4e4b3fa5e")
@@ -621,13 +612,12 @@ mod beacon {
 		};
 
 		let payload = merkleization::get_ssz_sync_aggregate(sync_aggregate);
-
 		assert_ok!(&payload);
 
 		let hash_root_result = merkleization::hash_tree_root(payload.unwrap());
+		assert_ok!(&hash_root_result);
 
 		let hash_root: H256 = hash_root_result.unwrap().into();
-
 		assert_eq!(
 			hash_root,
 			expected_hash_root
@@ -666,11 +656,9 @@ mod beacon {
                 transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
             }
         );
-
 		assert_ok!(&payload);
 
 		let hash_root = merkleization::hash_tree_root(payload.unwrap());
-
 		assert_eq!(
 			hash_root.unwrap(),
 			hex!("4c74e6119faeee22c04ef02fb6d8db26799753e2a9efcde6ea60cbac1f38cfd2")
@@ -771,7 +759,7 @@ mod beacon {
 		assert_ok!(&hash_root);
 		assert_eq!(
 			hash_root.unwrap(),
-			hex!("4c647fb5557d5a443eda8eeded902901cf0e0d3bff9be7f8764d613918fcfe0d")
+			hex!("b1d13ea52fbb24639eee459fdd37e60c56710b51ef07eb32e525f3099dea9251")
 		);
 	}
 }
