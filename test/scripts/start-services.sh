@@ -118,7 +118,7 @@ start_polkadot_launch()
     fi
 
     local parachain_bin="$parachain_dir/target/release/snowbridge"
-    local test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-collator"
+    local test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-node"
 
     runtime="snowbase"
 

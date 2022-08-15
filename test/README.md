@@ -32,7 +32,7 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 * polkadot-launch
 
   ```bash
-  yarn global add polkadot-launch@2.1.0
+  yarn global add polkadot-launch@2.2.1
   ```
 
 * direnv - https://direnv.net/
@@ -48,14 +48,14 @@ yarn install
 ### Polkadot
 
 * Clone the polkadot repository somewhere on your machine
-* Checkout tag `v0.9.23`.
+* Checkout tag `v0.9.25`.
 
 Example:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
 git fetch --tags
-git checkout v0.9.23
+git checkout v0.9.25
 cargo build --release
 ```
 
