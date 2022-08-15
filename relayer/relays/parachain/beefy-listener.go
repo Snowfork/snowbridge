@@ -35,7 +35,7 @@ type BeefyListener struct {
 	paraID              uint32
 	tasks               chan<- *Task
 	eventQueryClient    QueryClient
-	AccountID           *[32]byte
+	AccountID           [32]byte
 }
 
 func NewBeefyListener(
@@ -62,7 +62,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
-	li.AccountID = account
+	li.AccountID = *account
 
 	// Set up light client bridge contract
 	address := common.HexToAddress(li.config.Contracts.BeefyClient)
@@ -332,7 +332,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 
 	accountID := li.AccountID
 
-	ethBasicNonce, err := basicContract.Nonces(&options, *accountID)
+	ethBasicNonce, err := basicContract.Nonces(&options, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -348,7 +348,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 		"nonce": ethIncentivizedNonce,
 	}).Info("Checked latest nonce delivered to ethereum incentivized channel")
 
-	paraBasicNonceKey, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "BasicOutboundChannel", "Nonces", (*accountID)[:], nil)
+	paraBasicNonceKey, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "BasicOutboundChannel", "Nonces", accountID[:], nil)
 	if err != nil {
 		return nil, fmt.Errorf("create storage key: %w", err)
 	}
@@ -615,7 +615,7 @@ func (li *BeefyListener) scanForCommitments(
 				}
 
 				// Only consider message bundles for the account we're interested in
-				bundleIndex := findIndexOfBundleWithAccountID(events.Basic.Bundles, li.AccountID)
+				bundleIndex := findIndexOfBundleWithAccountID(events.Basic.Bundles, &li.AccountID)
 				if bundleIndex == -1 {
 					continue
 				}
