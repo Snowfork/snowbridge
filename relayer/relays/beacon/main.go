@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -83,9 +84,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 func (r *Relay) Sync(ctx context.Context) error {
 	latestSyncedPeriod, err := r.writer.getLastSyncedSyncCommitteePeriod()
 	if err != nil {
-		logrus.WithError(err).Error("unable to get last synced sync committee")
-
-		return err
+		return fmt.Errorf("fetch last sync commitee: %w", err)
 	}
 
 	r.syncer.Cache.SetLastSyncedSyncCommitteePeriod(latestSyncedPeriod)
@@ -94,9 +93,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	periodsToSync, err := r.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod)
 	if err != nil {
-		logrus.WithError(err).Error("unable to check sync committee periods to be fetched")
-
-		return err
+		return fmt.Errorf("check sync committee periods to be fetched: %w", err)
 	}
 
 	logrus.WithFields(logrus.Fields{
@@ -112,16 +109,12 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	lastFinalizedHeader, err := r.writer.getLastStoredFinalizedHeader()
 	if err != nil {
-		logrus.WithError(err).Error("unable to get last finalized header")
-
-		return err
+		return fmt.Errorf("fetch last finalized header: %w", err)
 	}
 
 	lastFinalizedSlot, err := r.writer.getLastStoredFinalizedHeaderSlot()
 	if err != nil {
-		logrus.WithError(err).Error("unable to get last finalized header slot")
-
-		return err
+		return fmt.Errorf("fetch last finalized header slot: %w", err)
 	}
 
 	r.syncer.Cache.FinalizedHeaders = append(r.syncer.Cache.FinalizedHeaders, lastFinalizedHeader)
@@ -133,24 +126,23 @@ func (r *Relay) Sync(ctx context.Context) error {
 
 	logrus.Info("starting to sync finalized headers")
 
-	err = r.SyncHeaders(ctx)
-	if err != nil {
-		logrus.WithError(err).Error("error while syncing headers")
-	}
-
 	ticker := time.NewTicker(time.Second * 20)
 	done := make(chan bool)
 
 	go func() {
 		for {
+			err := r.SyncHeaders(ctx)
+			if err != nil {
+				logrus.WithError(err).Error("error while syncing headers")
+
+				return
+			}
+
 			select {
 			case <-done:
 				return
 			case <-ticker.C:
-				err := r.SyncHeaders(ctx)
-				if err != nil {
-					logrus.WithError(err).Error("error while syncing headers")
-				}
+				continue
 			}
 		}
 	}()
@@ -170,9 +162,7 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 		}
 	case err != nil:
 		{
-			logrus.WithError(err).Error("unable check sync committee periods to be fetched")
-
-			return err
+			return fmt.Errorf("fetch sync committee period update: %w", err)
 		}
 	}
 
@@ -196,9 +186,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
 	finalizedHeaderUpdate, blockRoot, err := r.syncer.GetFinalizedUpdate()
 	if err != nil {
-		logrus.WithError(err).Error("unable to sync finalized header")
-
-		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("fetch finalized header update: %w", err)
 	}
 
 	if syncer.IsInHashArray(r.syncer.Cache.FinalizedHeaders, blockRoot) {
@@ -207,7 +195,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 			"blockRoot": blockRoot,
 		}).Info("finalized header has been synced already, skipping.")
 
-		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, nil
 	}
 
 	logrus.WithFields(logrus.Fields{
@@ -228,9 +216,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 
 	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_finalized_header", finalizedHeaderUpdate)
 	if err != nil {
-		logrus.WithError(err).Error("unable to write to parachain")
-
-		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, fmt.Errorf("write to parachain: %w", err)
 	}
 
 	r.syncer.Cache.FinalizedHeaders = append(r.syncer.Cache.FinalizedHeaders, blockRoot)
@@ -241,9 +227,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 func (r *Relay) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggregate scale.SyncAggregate) (syncer.HeaderUpdate, error) {
 	headerUpdate, err := r.syncer.GetHeaderUpdate(blockRoot)
 	if err != nil {
-		logrus.WithError(err).Error("unable to sync finalized header")
-
-		return syncer.HeaderUpdate{}, err
+		return syncer.HeaderUpdate{}, fmt.Errorf("fetch header update: %w", err)
 	}
 
 	logrus.WithFields(logrus.Fields{
@@ -256,9 +240,7 @@ func (r *Relay) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggre
 
 	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_execution_header", headerUpdate)
 	if err != nil {
-		logrus.WithError(err).Error("unable to write to parachain")
-
-		return syncer.HeaderUpdate{}, err
+		return syncer.HeaderUpdate{}, fmt.Errorf("write to parachain: %w", err)
 	}
 
 	r.syncer.Cache.HeadersMap[blockRoot] = uint64(headerUpdate.Block.Slot)
@@ -289,9 +271,7 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 
 	prevSyncAggregate, err := r.syncer.GetSyncAggregate(finalizedHeaderBlockRoot)
 	if err != nil {
-		logrus.WithError(err).Error("Unable to get sync aggregate")
-
-		return err
+		return fmt.Errorf("fetch sync aggregate: %w", err)
 	}
 
 	for secondLastFinalizedHeader != blockRoot {
