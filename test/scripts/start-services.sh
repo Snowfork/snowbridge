@@ -118,14 +118,20 @@ start_polkadot_launch()
     fi
 
     local parachain_bin="$parachain_dir/target/release/snowbridge"
-    local test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-collator"
+    local test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-node"
+
+    runtime="snowbase"
+
+    if [ "$eth_network" != "localhost" ]; then
+        runtime="snowblink"
+    fi
 
     echo "Building snowbridge parachain"
     cargo build \
         --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
-        --features snowbase-native,rococo-native
+        --features "${runtime}-native,rococo-native"
 
     echo "Building query tool"
     cargo build --release --manifest-path "$parachain_dir/tools/query-events/Cargo.toml"
@@ -136,7 +142,7 @@ start_polkadot_launch()
     cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release
 
     echo "Generating chain specification"
-    "$parachain_bin" build-spec --chain snowbase --disable-default-bootnode > "$output_dir/spec.json"
+    "$parachain_bin" build-spec --chain "$runtime" --disable-default-bootnode > "$output_dir/spec.json"
 
     echo "Updating chain specification"
     curl $infura_endpoint_http \
