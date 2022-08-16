@@ -16,20 +16,19 @@ import (
 
 var ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("not found")
 
-const (
-	SlotsInEpoch                 uint64 = 32
-	EpochsPerSyncCommitteePeriod uint64 = 256
-)
-
 type Syncer struct {
-	Client BeaconClient
-	Cache  BeaconCache
+	Client                       BeaconClient
+	Cache                        BeaconCache
+	SlotsInEpoch                 uint64
+	EpochsPerSyncCommitteePeriod uint64
 }
 
-func New(endpoint string) *Syncer {
+func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64) *Syncer {
 	return &Syncer{
-		Client: *NewBeaconClient(endpoint),
-		Cache:  *NewBeaconCache(),
+		Client:                       *NewBeaconClient(endpoint),
+		Cache:                        *NewBeaconCache(),
+		SlotsInEpoch:                 slotsInEpoch,
+		EpochsPerSyncCommitteePeriod: epochsPerSyncCommitteePeriod,
 	}
 }
 
@@ -70,13 +69,6 @@ type FinalizedBlockUpdate struct {
 	SyncAggregate   SyncAggregate
 }
 
-type InitialSync struct {
-	Header                     scale.BeaconHeader
-	CurrentSyncCommittee       scale.CurrentSyncCommittee
-	CurrentSyncCommitteeBranch []types.H256
-	ValidatorsRoot             types.H256
-}
-
 type SyncCommitteePeriodUpdate struct {
 	AttestedHeader          scale.BeaconHeader
 	NextSyncCommittee       scale.CurrentSyncCommittee
@@ -103,38 +95,7 @@ type HeaderUpdate struct {
 	ForkVersion   [4]byte
 }
 
-func (s *Syncer) InitialSync(blockId string) (InitialSync, error) {
-	genesis, err := s.Client.GetGenesis()
-	if err != nil {
-		return InitialSync{}, fmt.Errorf("fetch genesis: %w", err)
-	}
-
-	snapshot, err := s.Client.GetLightClientSnapshot(blockId)
-	if err != nil {
-		return InitialSync{}, fmt.Errorf("fetch snapshot: %w", err)
-	}
-
-	header, err := snapshot.Data.Header.ToScale()
-	if err != nil {
-		return InitialSync{}, fmt.Errorf("convert header to scale: %w", err)
-	}
-
-	syncCommittee, err := snapshot.Data.CurrentSyncCommittee.ToScale()
-	if err != nil {
-		return InitialSync{}, fmt.Errorf("convert sync committee to scale: %w", err)
-	}
-
-	initialSync := InitialSync{
-		Header:                     header,
-		CurrentSyncCommittee:       syncCommittee,
-		CurrentSyncCommitteeBranch: proofBranchToScale(snapshot.Data.CurrentSyncCommitteeBranch),
-		ValidatorsRoot:             types.NewH256(common.HexToHash(genesis.Data.ValidatorsRoot).Bytes()),
-	}
-
-	return initialSync, nil
-}
-
-func (s *Syncer) GetSyncPeriodsToFetch(checkpointSlot uint64) ([]uint64, error) {
+func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, error) {
 	finalizedHeader, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
 		return []uint64{}, fmt.Errorf("fetch latest finalized update: %w", err)
@@ -145,11 +106,13 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSlot uint64) ([]uint64, error) 
 		return []uint64{}, fmt.Errorf("parse slot as int: %w", err)
 	}
 
-	currentSyncPeriod := ComputeSyncPeriodAtSlot(slot)
-	checkpointSyncPeriod := ComputeSyncPeriodAtSlot(checkpointSlot)
+	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(slot)
+
+	if checkpointSyncPeriod == currentSyncPeriod {
+		return []uint64{}, nil
+	}
 
 	syncPeriodsToFetch := []uint64{}
-
 	for i := checkpointSyncPeriod; i <= currentSyncPeriod; i++ {
 		syncPeriodsToFetch = append(syncPeriodsToFetch, i)
 	}
@@ -157,8 +120,8 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSlot uint64) ([]uint64, error) 
 	return syncPeriodsToFetch, nil
 }
 
-func (s *Syncer) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePeriodUpdate, error) {
-	committeeUpdates, err := s.Client.GetSyncCommitteePeriodUpdate(from, to)
+func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdate, error) {
+	committeeUpdates, err := s.Client.GetSyncCommitteePeriodUpdate(from)
 	if err != nil {
 		return SyncCommitteePeriodUpdate{}, fmt.Errorf("fetch sync committee period update: %w", err)
 	}
@@ -204,10 +167,10 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from, to uint64) (SyncCommitteePer
 		ForkVersion:             forkVersion,
 	}
 
-	finalizedHeaderSlot := ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
+	finalizedHeaderSlot := s.ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
 
 	if finalizedHeaderSlot != from {
-		return SyncCommitteePeriodUpdate{}, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
+		return syncCommitteePeriodUpdate, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
 	}
 
 	return syncCommitteePeriodUpdate, err
@@ -351,16 +314,8 @@ func (s *Syncer) GetSyncAggregateForSlot(slot uint64) (scale.SyncAggregate, erro
 	return blockScale.Body.SyncAggregate, nil
 }
 
-func computeEpochAtSlot(slot uint64) uint64 {
-	return slot / SlotsInEpoch
-}
-
-func computeEpochForNextPeriod(epoch uint64) uint64 {
-	return epoch + (EpochsPerSyncCommitteePeriod - (epoch % EpochsPerSyncCommitteePeriod))
-}
-
-func ComputeSyncPeriodAtSlot(slot uint64) uint64 {
-	return slot / (SlotsInEpoch * EpochsPerSyncCommitteePeriod)
+func (s *Syncer) ComputeSyncPeriodAtSlot(slot uint64) uint64 {
+	return slot / (s.SlotsInEpoch * s.EpochsPerSyncCommitteePeriod)
 }
 
 func IsInArray(values []uint64, toCheck uint64) bool {

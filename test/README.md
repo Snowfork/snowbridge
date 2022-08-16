@@ -1,6 +1,6 @@
 # Local Testnet
 
-The E2E tests run against local deployments of the parachain, relayer and ethereum (geth).
+The E2E tests run against local deployments of the parachain, relayer, the ethereum execution layer (geth) and the ethereum consensus layer (lodestar).
 
 ## Requirements
 
@@ -22,13 +22,8 @@ The E2E tests run against local deployments of the parachain, relayer and ethere
 * Development environment for the relay services. See setup [instructions](../relayer/README.md#development).
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
-* g++ (required for lodestar) is available in the build-essential package:
-
-  ```bash
-  apt install build-essential
-  ```
-
-* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use tag `v0.38.0`.
+* g++ (required for lodestar) is available in the `build-essential` package: `apt install build-essential`
+* lodestar - `yarn global add @chainsafe/lodestar-cli@0.40.0-dev.ccdf688e6e`
 * sponge - Is available in the `moreutils` package.
 
   ```bash
@@ -38,7 +33,7 @@ The E2E tests run against local deployments of the parachain, relayer and ethere
 * polkadot-launch
 
   ```bash
-  yarn global add polkadot-launch@2.1.0
+  yarn global add polkadot-launch@2.2.1
   ```
 
 * direnv - https://direnv.net/
@@ -54,14 +49,14 @@ yarn install
 ### Polkadot
 
 * Clone the polkadot repository somewhere on your machine
-* Checkout tag `v0.9.23`.
+* Checkout tag `v0.9.25`.
 
 Example:
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git
 cd /path/to/polkadot
 git fetch --tags
-git checkout v0.9.23
+git checkout v0.9.25
 cargo build --release
 ```
 

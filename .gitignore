@@ -6,3 +6,6 @@ workspace.code-workspace
 
 # Node modules
 node_modules/
+
+#Intellij project file
+.idea

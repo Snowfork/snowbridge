@@ -1,13 +1,25 @@
 {
   "source": {
     "beacon": {
-      "endpoint": "http://localhost:9596"
+      "endpoint": "http://localhost:9596",
+      "spec": {
+        "minimal": {
+          "slotsInEpoch": 8,
+          "epochsPerSyncCommitteePeriod": 8
+        },
+        "mainnet": {
+          "slotsInEpoch": 32,
+          "epochsPerSyncCommitteePeriod": 256
+        }
+      },
+      "activeSpec": "mainnet"
     },
     "ethereum": {
       "endpoint": "ws://localhost:8546"
     },
     "contracts": {
-      "BasicOutboundChannel": null
+      "BasicOutboundChannel": null,
+      "IncentivizedOutboundChannel": null
     }
   },
   "sink": {

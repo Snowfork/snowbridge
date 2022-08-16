@@ -1,10 +1,9 @@
 use crate::cli::{Cli, RelayChainCli, Subcommand};
 use codec::Encode;
-use cumulus_client_service::genesis::generate_genesis_block;
+use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
+use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
-use frame_benchmarking_cli::BenchmarkCmd;
-
 
 use crate::chain_spec::Extensions;
 
@@ -25,15 +24,14 @@ use crate::chain_spec::snowbase::{
 
 use snowbridge_runtime_primitives::Block;
 
-use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
 	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::traits::Block as BlockT;
-use std::{io::Write, net::SocketAddr};
+use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
+use std::net::SocketAddr;
 
 pub type DummyChainSpec = sc_service::GenericChainSpec<(), Extensions>;
 
@@ -108,9 +106,7 @@ macro_rules! construct_async_run {
 	}}
 }
 
-fn load_spec(
-	id: &str,
-) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
+fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 	match id {
 		#[cfg(feature = "snowbase-native")]
 		"snowbase" => Ok(Box::new(get_snowbase_chain_spec())),
@@ -253,15 +249,6 @@ impl SubstrateCli for RelayChainCli {
 	}
 }
 
-fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
-	let mut storage = chain_spec.build_storage()?;
-
-	storage
-		.top
-		.remove(sp_core::storage::well_known_keys::CODE)
-		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
-}
-
 /// Parse command line arguments into service configuration.
 pub fn run() -> Result<()> {
 	let cli = Cli::from_args();
@@ -291,6 +278,11 @@ pub fn run() -> Result<()> {
 				Ok(cmd.run(components.client, components.import_queue))
 			})
 		},
+		Some(Subcommand::Revert(cmd)) => {
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.backend, None))
+			})
+		},
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
@@ -310,54 +302,20 @@ pub fn run() -> Result<()> {
 				cmd.run(config, polkadot_config)
 			})
 		},
-		Some(Subcommand::Revert(cmd)) => {
-			construct_async_run!(|components, cli, cmd, config| {
-				Ok(cmd.run(components.client, components.backend, None))
+		Some(Subcommand::ExportGenesisState(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			runner.sync_run(|_config| {
+				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
+				let state_version = Cli::native_runtime_version(&spec).state_version();
+				cmd.run::<Block>(&*spec, state_version)
 			})
 		},
-		Some(Subcommand::ExportGenesisState(params)) => {
-			let mut builder = sc_cli::LoggerBuilder::new("");
-			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
-			let _ = builder.init();
-
-			let spec = load_spec(&params.chain.clone().unwrap_or_default())?;
-			let state_version = Cli::native_runtime_version(&spec).state_version();
-			let block: Block = generate_genesis_block(&spec, state_version)?;
-			let raw_header = block.header().encode();
-			let output_buf = if params.raw {
-				raw_header
-			} else {
-				format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
-			};
-
-			if let Some(output) = &params.output {
-				std::fs::write(output, output_buf)?;
-			} else {
-				std::io::stdout().write_all(&output_buf)?;
-			}
-
-			Ok(())
-		},
-		Some(Subcommand::ExportGenesisWasm(params)) => {
-			let mut builder = sc_cli::LoggerBuilder::new("");
-			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
-			let _ = builder.init();
-
-			let raw_wasm_blob =
-				extract_genesis_wasm(&cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
-			let output_buf = if params.raw {
-				raw_wasm_blob
-			} else {
-				format!("0x{:?}", HexDisplay::from(&raw_wasm_blob)).into_bytes()
-			};
-
-			if let Some(output) = &params.output {
-				std::fs::write(output, output_buf)?;
-			} else {
-				std::io::stdout().write_all(&output_buf)?;
-			}
-
-			Ok(())
+		Some(Subcommand::ExportGenesisWasm(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			runner.sync_run(|_config| {
+				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
+				cmd.run(&*spec)
+			})
 		},
 		Some(Subcommand::Benchmark(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
@@ -395,25 +353,28 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
 					#[cfg(feature = "snowbridge-native")]
 					if config.chain_spec.is_snowbridge() {
-						let partials = crate::service::new_partial::<snowbridge_runtime::RuntimeApi, crate::service::SnowbridgeRuntimeExecutor>(
-							&config,
-						)?;
+						let partials = crate::service::new_partial::<
+							snowbridge_runtime::RuntimeApi,
+							crate::service::SnowbridgeRuntimeExecutor,
+						>(&config)?;
 						return cmd.run(partials.client)
 					}
 
 					#[cfg(feature = "snowblink-native")]
 					if config.chain_spec.is_snowblink() {
-						let partials = crate::service::new_partial::<snowblink_runtime::RuntimeApi, crate::service::SnowblinkRuntimeExecutor>(
-							&config,
-						)?;
+						let partials = crate::service::new_partial::<
+							snowblink_runtime::RuntimeApi,
+							crate::service::SnowblinkRuntimeExecutor,
+						>(&config)?;
 						return cmd.run(partials.client)
 					}
 
 					#[cfg(feature = "snowbase-native")]
 					if config.chain_spec.is_snowbase() {
-						let partials = crate::service::new_partial::<snowbase_runtime::RuntimeApi, crate::service::SnowbaseRuntimeExecutor>(
-							&config,
-						)?;
+						let partials = crate::service::new_partial::<
+							snowbase_runtime::RuntimeApi,
+							crate::service::SnowbaseRuntimeExecutor,
+						>(&config)?;
 						return cmd.run(partials.client)
 					}
 
@@ -422,9 +383,10 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
 					#[cfg(feature = "snowbridge-native")]
 					if config.chain_spec.is_snowbridge() {
-						let partials = crate::service::new_partial::<snowbridge_runtime::RuntimeApi, crate::service::SnowbridgeRuntimeExecutor>(
-							&config,
-						)?;
+						let partials = crate::service::new_partial::<
+							snowbridge_runtime::RuntimeApi,
+							crate::service::SnowbridgeRuntimeExecutor,
+						>(&config)?;
 						let db = partials.backend.expose_db();
 						let storage = partials.backend.expose_storage();
 
@@ -433,9 +395,10 @@ pub fn run() -> Result<()> {
 
 					#[cfg(feature = "snowblink-native")]
 					if config.chain_spec.is_snowblink() {
-						let partials = crate::service::new_partial::<snowblink_runtime::RuntimeApi, crate::service::SnowblinkRuntimeExecutor>(
-							&config,
-						)?;
+						let partials = crate::service::new_partial::<
+							snowblink_runtime::RuntimeApi,
+							crate::service::SnowblinkRuntimeExecutor,
+						>(&config)?;
 						let db = partials.backend.expose_db();
 						let storage = partials.backend.expose_storage();
 
@@ -444,9 +407,10 @@ pub fn run() -> Result<()> {
 
 					#[cfg(feature = "snowbase-native")]
 					if config.chain_spec.is_snowbase() {
-						let partials = crate::service::new_partial::<snowbase_runtime::RuntimeApi, crate::service::SnowbaseRuntimeExecutor>(
-							&config,
-						)?;
+						let partials = crate::service::new_partial::<
+							snowbase_runtime::RuntimeApi,
+							crate::service::SnowbaseRuntimeExecutor,
+						>(&config)?;
 						let db = partials.backend.expose_db();
 						let storage = partials.backend.expose_storage();
 
@@ -456,6 +420,8 @@ pub fn run() -> Result<()> {
 					Err("Chain runtime doesn't support benchmarking".into())
 				}),
 				BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
+				BenchmarkCmd::Machine(cmd) =>
+					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
 			}
 		},
 		None => {
@@ -463,6 +429,15 @@ pub fn run() -> Result<()> {
 			let collator_options = cli.run.collator_options();
 
 			runner.run_node_until_exit(|config| async move {
+				let hwbench = if !cli.no_hardware_benchmarks {
+					config.database.path().map(|database_path| {
+						let _ = std::fs::create_dir_all(&database_path);
+						sc_sysinfo::gather_hwbench(Some(database_path))
+					})
+				} else {
+					None
+				};
+
 				let para_id = crate::chain_spec::Extensions::try_get(&*config.chain_spec)
 					.map(|e| e.para_id)
 					.ok_or_else(|| "Could not find parachain ID in chain-spec.")?;
@@ -477,11 +452,13 @@ pub fn run() -> Result<()> {
 				let id = ParaId::from(para_id);
 
 				let parachain_account =
-					AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account(&id);
+					AccountIdConversion::<polkadot_primitives::v2::AccountId>::try_into_account(
+						&id,
+					)
+					.expect("Cannot convert PalletId to AccountId.");
 
-				let state_version =
-					RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
-				let block: Block = generate_genesis_block(&config.chain_spec, state_version)
+				let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
+				let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
 					.map_err(|e| format!("{:?}", e))?;
 				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
@@ -500,7 +477,7 @@ pub fn run() -> Result<()> {
 					return crate::service::start_parachain_node::<
 						snowbridge_runtime::RuntimeApi,
 						crate::service::SnowbridgeRuntimeExecutor,
-					>(config, polkadot_config, collator_options, id)
+					>(config, polkadot_config, collator_options, id, hwbench)
 					.await
 					.map(|r| r.0)
 					.map_err(Into::into)
@@ -511,7 +488,7 @@ pub fn run() -> Result<()> {
 					return crate::service::start_parachain_node::<
 						snowblink_runtime::RuntimeApi,
 						crate::service::SnowblinkRuntimeExecutor,
-					>(config, polkadot_config, collator_options, id)
+					>(config, polkadot_config, collator_options, id, hwbench)
 					.await
 					.map(|r| r.0)
 					.map_err(Into::into)
@@ -522,7 +499,7 @@ pub fn run() -> Result<()> {
 					return crate::service::start_parachain_node::<
 						snowbase_runtime::RuntimeApi,
 						crate::service::SnowbaseRuntimeExecutor,
-					>(config, polkadot_config, collator_options, id)
+					>(config, polkadot_config, collator_options, id, hwbench)
 					.await
 					.map(|r| r.0)
 					.map_err(Into::into)

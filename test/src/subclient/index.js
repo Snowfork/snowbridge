@@ -76,6 +76,25 @@ class SubClient {
     return promises;
   }
 
+  async recordEvents(eventSection, eventMethod) {
+    await this.waitForNextBlock(); // Clear previous blocks events.
+    const recorded = [];
+    const unsubscribe = await this.api.query.system.events(async (events) => {
+      events.forEach((record) => {
+          const { event } = record;
+          if (event.section === eventSection && event.method === eventMethod) {
+            event.data.forEach((d) => recorded.push(d));
+          }
+      });
+    });
+    var subClient = this;
+    return async function () {
+      await subClient.waitForNextBlock(); // Wait till finalized then unsubscribe.
+      await unsubscribe();
+      return recorded;
+    };
+  }
+
   async waitForNextEvent({ eventSection, eventMethod, eventDataType }) {
     let foundData = new Promise(async (resolve, reject) => {
       const unsubscribe = await this.api.query.system.events((events) => {
@@ -84,6 +103,7 @@ class SubClient {
           const types = event.typeDef;
           if (event.section === eventSection && event.method === eventMethod) {
             if (eventDataType === undefined) {
+              unsubscribe();
               resolve(event.data);
             } else {
               event.data.forEach((data, index) => {

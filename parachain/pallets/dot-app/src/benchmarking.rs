@@ -30,7 +30,7 @@ benchmarks! {
 	lock_basic_channel {
 		let existential_deposit = <T as DotAppConfig>::Currency::minimum_balance();
 		let caller: T::AccountId = whitelisted_caller();
-		let lock_account = DotApp::<T>::account_id();
+		let lock_account = DotApp::<T>::account_id()?;
 		let recipient = H160::zero();
 
 		let balance = existential_deposit * 10u32.into();
@@ -54,7 +54,7 @@ benchmarks! {
 	lock_incentivized_channel {
 		let existential_deposit = <T as DotAppConfig>::Currency::minimum_balance();
 		let caller: T::AccountId = whitelisted_caller();
-		let lock_account = DotApp::<T>::account_id();
+		let lock_account = DotApp::<T>::account_id()?;
 		let recipient = H160::zero();
 
 		// deposit enough money to cover fees
@@ -90,7 +90,7 @@ benchmarks! {
 		}
 
 		let existential_deposit = <T as DotAppConfig>::Currency::minimum_balance();
-		let lock_account = DotApp::<T>::account_id();
+		let lock_account = DotApp::<T>::account_id()?;
 		let recipient: T::AccountId = account("recipient", 0, 0);
 		let recipient_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(recipient.clone());
 		let sender = H160::zero();

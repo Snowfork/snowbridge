@@ -1,0 +1,66 @@
+{
+    "block": {
+        "slot": 127,
+        "proposer_index": 7,
+        "parent_root": "0x104ea5a86a1542e3dcbadedaa9a786b13ab58a27fb8909655edf15058bac4905",
+        "state_root": "0xa192800809e8da73a5374d359dcead6816e1be2fa907a9e477470916cf34c3b7",
+        "body": {
+            "randao_reveal": "0x8a089951d5feb946e371425e082c2f8ed78e8ecc19ab0e42103ef52d2c419097b6d2ff7d01036cbafc95b6fd960c5b3d1560cd18fd8ca45d5026cd1db680b781b08c9ddb30560ead1b1ace546a8887726fe725259287e271a8902aba14535b82",
+            "eth1_data": {
+                "deposit_root": "0x6a0f9d6cb0868daa22c365563bb113b05f7568ef9ee65fdfeb49a319eaf708cf",
+                "deposit_count": 8,
+                "block_hash": "0x1342aab798d9b3f180b17fe35a8eb56a612bd4c24872b5849d5e653f8c314843"
+            },
+            "graffiti": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "proposer_slashings": [],
+            "attester_slashings": [],
+            "attestations": [
+                {
+                    "aggregation_bits": "0x03",
+                    "data": {
+                        "slot": 126,
+                        "index": 0,
+                        "beacon_block_root": "0x104ea5a86a1542e3dcbadedaa9a786b13ab58a27fb8909655edf15058bac4905",
+                        "source": {
+                            "epoch": 14,
+                            "root": "0xe54fcdb8e9380bd706f005968d3cee137b5dabd0d75fcfb827ab2e697e016e46"
+                        },
+                        "target": {
+                            "epoch": 15,
+                            "root": "0x88ad0268b529ed4f0845cecc5bce6d402714fecf77701388dd7480320f0dd6d2"
+                        }
+                    },
+                    "signature": "0xb218066d76a3eaa98ec69fc01c6d4fc0a37309f7ab39772bfbf8b02af5701a7b16b24cd4d9398ee727fdb18bb6accac80cfc2e7dc311122bf8d230c942e7d951cf742bfcf1e4c3e163cd15c536c61cb40327f16ae4923e2399cc9ab92b9882c0"
+                }
+            ],
+            "deposits": [],
+            "voluntary_exits": [],
+            "sync_aggregate": {
+                "sync_committee_bits": "0xffffffff",
+                "sync_committee_signature": "0x876ec8855b9f61da59af2c9b72b2667a28e86311beb6b99168424f62ccd2c7352772ed757444679ffb994d90b4d1350708b21df4f14ac05ad90281e7b7a9021b7e9fc821f77effe3794b99e319c57b2467071ce8b2316c14b2c8484a11133afb"
+            },
+            "execution_payload": {
+                "parent_hash": "0x0943eb26acc01c0893ee412819b42af0e216583b3fd664b1a7cb922f180135fb",
+                "fee_recipient": "0x0000000000000000000000000000000000000000",
+                "state_root": "0x2114bd9ae9e672c5004d9bfae784c3ac465019ed7c4cb1baa7fccceca56932da",
+                "receipts_root": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "prev_randao": "0x7a24bb51e22c7a51be92d2f6a670e2a39cf0fe8ae765789f5424dc84f5eee7c6",
+                "block_number": 127,
+                "gas_limit": 70664628,
+                "gas_used": 0,
+                "timestamp": 1660139994,
+                "extra_data": "0x",
+                "base_fee_per_gas": 52,
+                "block_hash": "0x896876b3784019dd6e535ed1af69790b9842abb6b158b5947fde7c0e29be0efa",
+                "transactions_root": "0x7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1"
+            }
+        }
+    },
+    "block_body_root": "0x32262564365f66697720bf6efaa8282ebd2eacf3b9dee5c5df021a6ad7bc4a25",
+    "sync_aggregate": {
+        "sync_committee_bits": "0xffffffff",
+        "sync_committee_signature": "0xb85908492ad78a5354822e5141a9a9ff32fdf0b9556dfd60d89cf599cfa1262475182c02d4cbdcb5b49e25196dffe5651042c884f41d014e7668b3c74d2abfaa0d81dd6e91090c665df30e0aa197114769424f6471acc726664c992fc25cfc92"
+    },
+    "fork_version": "0x02000001"
+}

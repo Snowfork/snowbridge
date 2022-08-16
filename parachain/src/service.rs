@@ -1,5 +1,8 @@
 use std::{sync::Arc, time::Duration};
 
+// rpc
+use jsonrpsee::RpcModule;
+
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::ParachainConsensus;
@@ -24,7 +27,7 @@ use substrate_prometheus_endpoint::Registry;
 
 use polkadot_service::CollatorPair;
 
-use snowbridge_runtime_primitives::{Block, Hash, AccountId, Balance, Index as Nonce};
+use snowbridge_runtime_primitives::{AccountId, Balance, Block, Hash, Index as Nonce};
 
 #[cfg(feature = "snowbridge-native")]
 pub struct SnowbridgeRuntimeExecutor;
@@ -183,28 +186,34 @@ where
 	let import_queue = {
 		let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
-		cumulus_client_consensus_aura::import_queue::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(
-			cumulus_client_consensus_aura::ImportQueueParams {
-				block_import: client.clone(),
-				client: client.clone(),
-				create_inherent_data_providers: move |_, _| async move {
-					let time = sp_timestamp::InherentDataProvider::from_system_time();
+		cumulus_client_consensus_aura::import_queue::<
+			sp_consensus_aura::sr25519::AuthorityPair,
+			_,
+			_,
+			_,
+			_,
+			_,
+			_,
+		>(cumulus_client_consensus_aura::ImportQueueParams {
+			block_import: client.clone(),
+			client: client.clone(),
+			create_inherent_data_providers: move |_, _| async move {
+				let time = sp_timestamp::InherentDataProvider::from_system_time();
 
-					let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+				let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
                         *time,
                         slot_duration,
                     );
 
-					Ok((time, slot))
-				},
-				registry: config.prometheus_registry(),
-				can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(
-					client.executor().clone(),
-				),
-				spawner: &task_manager.spawn_essential_handle(),
-				telemetry: telemetry.as_ref().map(|telemetry| telemetry.handle()),
+				Ok((time, slot))
 			},
-		)?
+			registry: config.prometheus_registry(),
+			can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(
+				client.executor().clone(),
+			),
+			spawner: &task_manager.spawn_essential_handle(),
+			telemetry: telemetry.as_ref().map(|telemetry| telemetry.handle()),
+		})?
 	};
 
 	let params = PartialComponents {
@@ -227,16 +236,17 @@ async fn build_relay_chain_interface(
 	telemetry_worker_handle: Option<TelemetryWorkerHandle>,
 	task_manager: &mut TaskManager,
 	collator_options: CollatorOptions,
+	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> RelayChainResult<(Arc<(dyn RelayChainInterface + 'static)>, Option<CollatorPair>)> {
 	match collator_options.relay_chain_rpc_url {
-		Some(relay_chain_url) => {
-			Ok((Arc::new(RelayChainRPCInterface::new(relay_chain_url).await?) as Arc<_>, None))
-		},
+		Some(relay_chain_url) =>
+			Ok((Arc::new(RelayChainRPCInterface::new(relay_chain_url).await?) as Arc<_>, None)),
 		None => build_inprocess_relay_chain(
 			polkadot_config,
 			parachain_config,
 			telemetry_worker_handle,
 			task_manager,
+			hwbench,
 		),
 	}
 }
@@ -252,6 +262,7 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIC>(
 	id: ParaId,
 	_rpc_ext_builder: RB,
 	build_consensus: BIC,
+	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(
 	TaskManager,
 	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
@@ -265,7 +276,7 @@ where
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	RB: Fn(
 			Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
-		) -> Result<jsonrpc_core::IoHandler<sc_rpc::Metadata>, sc_service::Error>
+		) -> Result<RpcModule<()>, sc_service::Error>
 		+ Send
 		+ 'static,
 	BIC: FnOnce(
@@ -286,7 +297,7 @@ where
 	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
 	if matches!(parachain_config.role, Role::Light) {
-		return Err("Light client not supported!".into());
+		return Err("Light client not supported!".into())
 	}
 
 	let parachain_config = prepare_node_config(parachain_config);
@@ -304,6 +315,7 @@ where
 		telemetry_worker_handle,
 		&mut task_manager,
 		collator_options.clone(),
+		hwbench.clone(),
 	)
 	.await
 	.map_err(|e| match e {
@@ -331,7 +343,7 @@ where
 			warp_sync: None,
 		})?;
 
-	let rpc_extensions_builder = {
+	let rpc_builder = {
 		let backend = backend.clone();
 		let client = client.clone();
 		let transaction_pool = transaction_pool.clone();
@@ -344,12 +356,12 @@ where
 				deny_unsafe,
 			};
 
-			Ok(crate::rpc::create_full(deps))
+			crate::rpc::create_full(deps).map_err(Into::into)
 		})
 	};
 
 	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
-		rpc_extensions_builder,
+		rpc_builder,
 		client: client.clone(),
 		transaction_pool: transaction_pool.clone(),
 		task_manager: &mut task_manager,
@@ -360,6 +372,18 @@ where
 		system_rpc_tx,
 		telemetry: telemetry.as_mut(),
 	})?;
+	if let Some(hwbench) = hwbench {
+		sc_sysinfo::print_hwbench(&hwbench);
+
+		if let Some(ref mut telemetry) = telemetry {
+			let telemetry_handle = telemetry.handle();
+			task_manager.spawn_handle().spawn(
+				"telemetry_hwbench",
+				None,
+				sc_sysinfo::initialize_hwbench_telemetry(telemetry_handle, hwbench),
+			);
+		}
+	}
 
 	let announce_block = {
 		let network = network.clone();
@@ -424,6 +448,7 @@ pub async fn start_parachain_node<RuntimeApi, Executor>(
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
 	id: ParaId,
+	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(
 	TaskManager,
 	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
@@ -441,7 +466,7 @@ where
 		polkadot_config,
 		collator_options,
 		id,
-		|_| Ok(Default::default()),
+		|_| Ok(RpcModule::new(())),
 		|client,
 		 prometheus_registry,
 		 telemetry,
@@ -505,6 +530,7 @@ where
 				},
 			))
 		},
+		hwbench,
 	)
 	.await
 }

@@ -35,13 +35,13 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable-2022-01-20
+          toolchain: stable-2022-07-19
           target: wasm32-unknown-unknown
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
-          toolchain: stable-2022-01-20
+          toolchain: stable-2022-07-19
           args: >-
             --manifest-path parachain/Cargo.toml
             --workspace
@@ -71,7 +71,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable-2022-01-20
+          toolchain: stable-2022-07-19
           target: wasm32-unknown-unknown
       - uses: actions-rs/install@v0.1.2
         with:
@@ -87,10 +87,10 @@ jobs:
             --verbose --workspace
             --exclude snowbridge
             --exclude snowbridge-runtime
-            --exclude snowbridge-rococo-runtime
-            --exclude local-runtime
+            --exclude snowblink-runtime
+            --exclude snowbase-runtime
             --exclude-files '*/mock.rs,*/tests.rs'
             --features runtime-benchmarks
             --avoid-cfg-tarpaulin
             --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
-          toolchain: stable-2022-01-20
+          toolchain: stable-2022-07-19

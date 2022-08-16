@@ -37,8 +37,10 @@ func NewRelay(
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
+	specSettings := r.config.GetSpecSettings()
+
 	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
-	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint)
+	r.syncer = syncer.New(r.config.Source.Beacon.Endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod)
 	r.ethconn = ethereum.NewConnection(r.config.Source.Ethereum.Endpoint, nil)
 
 	err := r.paraconn.Connect(ctx)
@@ -79,36 +81,38 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (r *Relay) Sync(ctx context.Context) error {
-	initialSync, err := r.InitialSync(ctx)
+	latestSyncedPeriod, err := r.writer.getLastSyncedSyncCommitteePeriod()
 	if err != nil {
+		logrus.WithError(err).Error("unable to get last synced sync committee")
+
 		return err
 	}
 
-	r.syncer.Cache.SyncCommitteePeriodsSynced, err = r.syncer.GetSyncPeriodsToFetch(uint64(initialSync.Header.Slot))
+	logrus.WithField("period", latestSyncedPeriod).Info("last beacon synced sync committee found")
+
+	r.syncer.Cache.SetLastSyncedSyncCommitteePeriod(latestSyncedPeriod)
+
+	periodsToSync, err := r.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod)
 	if err != nil {
-		logrus.WithError(err).Error("unable check sync committee periods to be fetched")
+		logrus.WithError(err).Error("unable to check sync committee periods to be fetched")
 
 		return err
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"periods": r.syncer.Cache.SyncCommitteePeriodsSynced,
-	}).Info("Sync committee periods that needs fetching")
+		"periods": periodsToSync,
+	}).Info("sync committee periods that needs fetching")
 
-	for _, period := range r.syncer.Cache.SyncCommitteePeriodsSynced {
-		logrus.WithFields(logrus.Fields{
-			"period": period,
-		}).Info("Fetch sync committee period update")
-
+	for _, period := range periodsToSync {
 		err := r.SyncCommitteePeriodUpdate(ctx, period)
 		if err != nil {
 			return err
 		}
 	}
 
-	logrus.Info("Done with sync committee updates")
+	logrus.Info("done with sync committee updates ")
 
-	logrus.Info("Starting to sync finalized headers")
+	logrus.Info("starting to sync finalized headers")
 
 	_, _, err = r.SyncFinalizedHeader(ctx)
 	if err != nil {
@@ -126,7 +130,7 @@ func (r *Relay) Sync(ctx context.Context) error {
 			case <-ticker.C:
 				err := r.SyncHeaders(ctx)
 				if err != nil {
-					logrus.WithError(err).Error("Error while syncing headers")
+					logrus.WithError(err).Error("error while syncing headers")
 				}
 			}
 		}
@@ -135,28 +139,8 @@ func (r *Relay) Sync(ctx context.Context) error {
 	return nil
 }
 
-func (r *Relay) InitialSync(ctx context.Context) (syncer.InitialSync, error) {
-	initialSync, err := r.syncer.InitialSync("0x088241fcf1cf63040b804498c945d3a6ae5484e65692483747fba5b8902c99c9")
-	if err != nil {
-		logrus.WithError(err).Error("unable to do initial beacon chain sync")
-
-		return syncer.InitialSync{}, err
-	}
-
-	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.initial_sync", initialSync)
-	if err != nil {
-		logrus.WithError(err).Error("unable to write to parachain")
-
-		return syncer.InitialSync{}, err
-	}
-
-	logrus.Info("intial sync written to parachain")
-
-	return initialSync, nil
-}
-
 func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) error {
-	syncCommitteeUpdate, err := r.syncer.GetSyncCommitteePeriodUpdate(period, period)
+	syncCommitteeUpdate, err := r.syncer.GetSyncCommitteePeriodUpdate(period)
 
 	switch {
 	case errors.Is(err, syncer.ErrCommitteeUpdateHeaderInDifferentSyncPeriod):
@@ -175,7 +159,18 @@ func (r *Relay) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) er
 
 	syncCommitteeUpdate.SyncCommitteePeriod = types.NewU64(period)
 
-	return r.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
+	logrus.WithFields(logrus.Fields{
+		"period": period,
+	}).Info("syncing sync committee for period")
+
+	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.sync_committee_period_update", syncCommitteeUpdate)
+	if err != nil {
+		return err
+	}
+
+	r.syncer.Cache.SetLastSyncedSyncCommitteePeriod(period)
+
+	return nil
 }
 
 func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeaderUpdate, common.Hash, error) {
@@ -191,7 +186,7 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 		logrus.WithFields(logrus.Fields{
 			"slot":      finalizedHeaderUpdate.FinalizedHeader.Slot,
 			"blockRoot": blockRoot,
-		}).Info("Finalized header has been synced already, skipping.")
+		}).Info("finalized header has been synced already, skipping.")
 
 		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
 	}
@@ -199,19 +194,17 @@ func (r *Relay) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeader
 	logrus.WithFields(logrus.Fields{
 		"slot":      finalizedHeaderUpdate.FinalizedHeader.Slot,
 		"blockRoot": blockRoot,
-	}).Info("Syncing finalized header at slot")
+	}).Info("syncing finalized header at slot")
 
-	currentSyncPeriod := syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
+	currentSyncPeriod := r.syncer.ComputeSyncPeriodAtSlot(uint64(finalizedHeaderUpdate.AttestedHeader.Slot))
 
-	if !syncer.IsInArray(r.syncer.Cache.SyncCommitteePeriodsSynced, currentSyncPeriod) {
-		logrus.WithField("period", currentSyncPeriod).Info("Sync period rolled over, getting sync committee update")
+	if r.syncer.Cache.LastSyncedSyncCommitteePeriod < currentSyncPeriod {
+		logrus.WithField("period", currentSyncPeriod).Info("sync period rolled over, getting sync committee update")
 
 		err := r.SyncCommitteePeriodUpdate(ctx, currentSyncPeriod)
 		if err != nil {
 			return syncer.FinalizedHeaderUpdate{}, common.Hash{}, err
 		}
-
-		r.syncer.Cache.AddSyncCommitteePeriod(currentSyncPeriod)
 	}
 
 	err = r.writer.WriteToParachain(ctx, "EthereumBeaconClient.import_finalized_header", finalizedHeaderUpdate)
@@ -271,7 +264,7 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 	logrus.WithFields(logrus.Fields{
 		"secondLastHash": secondLastFinalizedHeader,
 		"lastHash":       lastFinalizedHeader,
-	}).Info("Starting to back-fill headers")
+	}).Info("starting to back-fill headers")
 
 	blockRoot := common.HexToHash(finalizedHeader.FinalizedHeader.ParentRoot.Hex())
 
@@ -306,7 +299,7 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 	logrus.WithFields(logrus.Fields{
 		"start": secondLastBlockNumber,
 		"end":   lastBlockNumber - 1,
-	}).Info("Processing events for block numbers")
+	}).Info("processing events for block numbers")
 
 	payload, err := r.listener.ProcessEvents(ctx, secondLastBlockNumber, lastBlockNumber-1)
 	if err != nil {

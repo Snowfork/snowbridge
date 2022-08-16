@@ -2,97 +2,27 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod merkleization;
+pub mod config;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
 mod ssz;
-mod config;
 
-use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
-use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
-use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock};
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, 
+	ProofBranch, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
 use snowbridge_core::{Message, Verifier};
-
-const SLOTS_PER_EPOCH: u64 = 32;
-
-const EPOCHS_PER_SYNC_COMMITTEE_PERIOD: u64 = 256;
-
-const CURRENT_SYNC_COMMITTEE_INDEX: u64 = 22;
-const CURRENT_SYNC_COMMITTEE_DEPTH: u64 = 5;
-
-const NEXT_SYNC_COMMITTEE_DEPTH: u64 = 5;
-const NEXT_SYNC_COMMITTEE_INDEX: u64 = 23;
-
-const FINALIZED_ROOT_DEPTH: u64 = 6;
-const FINALIZED_ROOT_INDEX: u64 = 41;
-
-/// GENESIS_FORK_VERSION('0x00000000')
-const GENESIS_FORK_VERSION: ForkVersion = [30, 30, 30, 30];
-
-/// DomainType('0x07000000')
-/// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#domain-types
-const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [7, 0, 0, 0];
-
-type ProofBranch = Vec<H256>;
-type ForkVersion = [u8; 4];
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct InitialSync {
-	pub header: BeaconHeader,
-	pub current_sync_committee: SyncCommittee,
-	pub current_sync_committee_branch: ProofBranch,
-	pub validators_root: Root,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SyncCommitteePeriodUpdate {
-	pub attested_header: BeaconHeader,
-	pub next_sync_committee: SyncCommittee,
-	pub next_sync_committee_branch: ProofBranch,
-	pub finalized_header: BeaconHeader,
-	pub finality_branch: ProofBranch,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-	pub sync_committee_period: u64,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct FinalizedHeaderUpdate {
-	pub attested_header: BeaconHeader,
-	pub finalized_header: BeaconHeader,
-	pub finality_branch: ProofBranch,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct BlockUpdate {
-	pub block: BeaconBlock,
-	//  // Only used for debugging purposes, to compare the hash tree
-	// root of the block body to the body hash retrieved from the API.
-	// Can be removed later.
-	pub block_body_root: H256,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Genesis {
-	pub validators_root: Root,
-}
+use crate::merkleization::get_sync_committee_bits;
 
 pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-
 	use super::*;
 
 	use frame_support::pallet_prelude::*;
@@ -156,58 +86,44 @@ pub mod pallet {
 		StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
 
 	#[pallet::storage]
+	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {}
+	pub struct GenesisConfig {
+		pub initial_sync: InitialSync,
+	}
 
 	#[cfg(feature = "std")]
 	impl Default for GenesisConfig {
-		fn default() -> Self {
-			Self {}
-		}
+		fn default() -> Self { GenesisConfig {
+			initial_sync: Default::default(),
+		}}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {}
+		fn build(&self) {
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Sync committee size is: {}",
+				config::SYNC_COMMITTEE_SIZE
+			);
+
+			Pallet::<T>::initial_sync(
+				self.initial_sync.clone(),
+			).unwrap();
+		}
 	}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-		#[pallet::weight(1_000_000)]
-		#[transactional]
-		pub fn initial_sync(
-			origin: OriginFor<T>,
-			initial_sync: InitialSync,
-		) -> DispatchResult {
-			let _sender = ensure_signed(origin)?;
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Received initial sync, starting processing.",
-			);
-
-			if let Err(err) = Self::process_initial_sync(initial_sync) {
-				log::error!(
-					target: "ethereum-beacon-client",
-					"Initial sync failed with error {:?}",
-					err
-				);
-				return Err(err);
-			}
-
-			log::info!(
-				target: "ethereum-beacon-client",
-				"💫 Initial sync processing succeeded.",
-			);
-
-			Ok(())
-		}
-
+	impl<T: Config> Pallet<T>
+	{
 		#[pallet::weight(1_000_000)]
 		#[transactional]
 		pub fn sync_committee_period_update(
@@ -318,17 +234,17 @@ pub mod pallet {
 				initial_sync.current_sync_committee.clone(),
 				initial_sync.current_sync_committee_branch,
 				initial_sync.header.state_root,
-				CURRENT_SYNC_COMMITTEE_DEPTH,
-				CURRENT_SYNC_COMMITTEE_INDEX,
+				config::CURRENT_SYNC_COMMITTEE_DEPTH,
+				config::CURRENT_SYNC_COMMITTEE_INDEX,
 			)?;
 
 			let period = Self::compute_current_sync_period(initial_sync.header.slot);
-			Self::store_sync_committee(period, initial_sync.current_sync_committee);
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(initial_sync.header.clone())
 				.map_err(|_| DispatchError::Other("Header hash tree root failed"))?.into();
-			Self::store_finalized_header(block_root, initial_sync.header);
 
+			Self::store_sync_committee(period, initial_sync.current_sync_committee);
+			Self::store_finalized_header(block_root, initial_sync.header);
 			Self::store_validators_root(initial_sync.validators_root);
 
 			Ok(())
@@ -337,15 +253,15 @@ pub mod pallet {
 		fn process_sync_committee_period_update(
 			update: SyncCommitteePeriodUpdate,
 		) -> DispatchResult {
-			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 			Self::verify_sync_committee(
 				update.next_sync_committee.clone(),
 				update.next_sync_committee_branch,
 				update.finalized_header.state_root,
-				NEXT_SYNC_COMMITTEE_DEPTH,
-				NEXT_SYNC_COMMITTEE_INDEX,
+				config::NEXT_SYNC_COMMITTEE_DEPTH,
+				config::NEXT_SYNC_COMMITTEE_INDEX,
 			)?;
 
 			let block_root: H256 = merkleization::hash_tree_root_beacon_header(update.finalized_header.clone())
@@ -354,14 +270,12 @@ pub mod pallet {
 				block_root,
 				update.finality_branch,
 				update.attested_header.state_root,
-				FINALIZED_ROOT_DEPTH,
-				FINALIZED_ROOT_INDEX,
+				config::FINALIZED_ROOT_DEPTH,
+				config::FINALIZED_ROOT_INDEX,
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
-			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
-
-			let current_sync_committee = <SyncCommittees<T>>::get(current_period);
+			let current_sync_committee = Self::get_sync_committee_for_period(current_period)?;
 			let validators_root = <ValidatorsRoot<T>>::get();
 
 			Self::verify_signed_header(
@@ -373,13 +287,14 @@ pub mod pallet {
 				validators_root,
 			)?;
 
+			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
 			Self::store_finalized_header(block_root, update.finalized_header);
-
+			
 			Ok(())
 		}
 
 		fn process_finalized_header(update: FinalizedHeaderUpdate) -> DispatchResult {
-			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::sync_committee_participation_is_supermajority(sync_committee_bits.clone())?;
 
@@ -389,8 +304,8 @@ pub mod pallet {
 				block_root,
 				update.finality_branch,
 				update.attested_header.state_root,
-				FINALIZED_ROOT_DEPTH,
-				FINALIZED_ROOT_INDEX,
+				config::FINALIZED_ROOT_DEPTH,
+				config::FINALIZED_ROOT_INDEX,
 			)?;
 
 			let current_period = Self::compute_current_sync_period(update.attested_header.slot);
@@ -441,7 +356,7 @@ pub mod pallet {
 			};
 
 			let validators_root = <ValidatorsRoot<T>>::get();
-			let sync_committee_bits = merkleization::get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
+			let sync_committee_bits = get_sync_committee_bits(update.sync_aggregate.sync_committee_bits.clone())
 				.map_err(|_| DispatchError::Other("Couldn't process sync committee bits"))?;
 			Self::verify_signed_header(
 				sync_committee_bits,
@@ -503,7 +418,7 @@ pub mod pallet {
 				}
 			}
 
-			let domain_type = DOMAIN_SYNC_COMMITTEE.to_vec();
+			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
 			// Domains are used for for seeds, for signatures, and for selecting aggregators.
 			let domain = Self::compute_domain(domain_type, Some(fork_version), validators_root)?;
 			// Hash tree root of SigningData - object root + domain
@@ -623,9 +538,26 @@ pub mod pallet {
 
 		fn store_sync_committee(period: u64, sync_committee: SyncCommittee) {
 			<SyncCommittees<T>>::insert(period, sync_committee);
+
+			let latest_committee_period = <LatestSyncCommitteePeriod<T>>::get();
+
+			log::trace!(
+				target: "ethereum-beacon-client",
+				"💫 Saved sync committee for period {}.",
+				period
+			);
+
+			if period > latest_committee_period {
+				log::trace!(
+					target: "ethereum-beacon-client",
+					"💫 Updated latest sync committee period stored to {}.",
+					period
+				);
+				<LatestSyncCommitteePeriod<T>>::set(period);
+			}
 		}
 
-		fn store_finalized_header(block_root: H256, header: BeaconHeader) {
+		fn store_finalized_header(block_root: Root, header: BeaconHeader) {
 			let slot = header.slot;
 
 			<FinalizedBeaconHeaders<T>>::insert(block_root, header);
@@ -668,7 +600,7 @@ pub mod pallet {
 		}
 
 		pub(super) fn compute_current_sync_period(slot: u64) -> u64 {
-			slot / SLOTS_PER_EPOCH / EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+			slot / config::SLOTS_PER_EPOCH / config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 		}
 
 		/// Return the domain for the domain_type and fork_version.
@@ -679,7 +611,7 @@ pub mod pallet {
 		) -> Result<Domain, DispatchError> {
 			let unwrapped_fork_version: ForkVersion;
 			if fork_version.is_none() {
-				unwrapped_fork_version = GENESIS_FORK_VERSION;
+				unwrapped_fork_version = config::GENESIS_FORK_VERSION;
 			} else {
 				unwrapped_fork_version = fork_version.unwrap();
 			}
@@ -791,6 +723,31 @@ pub mod pallet {
 					Err(Error::<T>::InvalidProof.into())
 				},
 			}
+		}
+
+		pub(super) fn initial_sync(
+			initial_sync: InitialSync,
+		) -> Result<(), &'static str> {
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Received initial sync, starting processing.",
+			);
+
+			if let Err(err) = Self::process_initial_sync(initial_sync) {
+				log::error!(
+					target: "ethereum-beacon-client",
+					"Initial sync failed with error {:?}",
+					err
+				);
+				return Err(<&str>::from(err));
+			}
+
+			log::info!(
+				target: "ethereum-beacon-client",
+				"💫 Initial sync processing succeeded.",
+			);
+
+			Ok(())
 		}
 	}
 

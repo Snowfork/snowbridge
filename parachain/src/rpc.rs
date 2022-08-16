@@ -17,7 +17,7 @@ use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 
 /// A type representing all RPC extensions.
-pub type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
+pub type RpcExtension = jsonrpsee::RpcModule<()>;
 
 /// Full client dependencies
 pub struct FullDeps<C, P, B> {
@@ -32,7 +32,9 @@ pub struct FullDeps<C, P, B> {
 }
 
 /// Instantiate all RPC extensions.
-pub fn create_full<C, P, B>(deps: FullDeps<C, P, B>) -> RpcExtension
+pub fn create_full<C, P, B>(
+	deps: FullDeps<C, P, B>,
+) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
 	C: ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>
@@ -48,21 +50,21 @@ where
 	B: sc_client_api::Backend<Block> + Send + Sync + 'static,
 	B::State: sc_client_api::backend::StateBackend<sp_runtime::traits::HashFor<Block>>,
 {
-	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
+	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
+	use substrate_frame_rpc_system::{System, SystemApiServer};
 	use snowbridge_basic_channel_rpc::{BasicChannel, BasicChannelApi};
-	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 
-	let mut io = jsonrpc_core::IoHandler::default();
+	let mut module = RpcExtension::new(());
 	let FullDeps { backend, client, pool, deny_unsafe } = deps;
 
-	io.extend_with(SystemApi::to_delegate(FullSystem::new(client.clone(), pool, deny_unsafe)));
-	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
+	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
+	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 
 	if let Some(basic_channel_rpc) =
 		backend.offchain_storage().map(|storage| BasicChannel::<_>::new(storage))
 	{
-		io.extend_with(BasicChannelApi::to_delegate(basic_channel_rpc));
+		module.merge(basic_channel_rpc);
 	}
 
-	io
+	Ok(module)
 }

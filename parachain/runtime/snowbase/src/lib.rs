@@ -7,6 +7,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, U256};
 use sp_runtime::{
@@ -28,8 +29,8 @@ pub use frame_support::{
 	dispatch::DispatchResult,
 	match_types, parameter_types,
 	traits::{
-		tokens::fungible::ItemOf, Contains, EnsureOneOf, EqualPrivilegeOnly, Everything, IsInVec,
-		KeyOwnerProofSystem, Nothing, Randomness,
+		tokens::fungible::ItemOf, Contains, EitherOfDiverse, EqualPrivilegeOnly, Everything,
+		IsInVec, KeyOwnerProofSystem, Nothing, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -63,7 +64,6 @@ use xcm_builder::{
 	SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
 
-use snowbridge_xcm_support::XcmAssetTransferer;
 use xcm_executor::{traits::JustTry, Config, XcmExecutor};
 
 use runtime_common::{
@@ -248,11 +248,12 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnSystemEvent = ();
 	type SelfParaId = parachain_info::Pallet<Runtime>;
+	type OutboundXcmpMessageSource = XcmpQueue;
 	type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
-	type OutboundXcmpMessageSource = XcmpQueue;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
+	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -433,7 +434,7 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
-type EnsureRootOrHalfLocalCouncil = EnsureOneOf<
+type EnsureRootOrHalfLocalCouncil = EitherOfDiverse<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionMoreThan<AccountId, LocalCouncilInstance, 1, 2>,
 >;
@@ -520,7 +521,7 @@ parameter_types! {
 	pub const AssetAccountDeposit: Balance = 0;
 }
 
-pub type AssetsForceOrigin = EnsureOneOf<EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
+pub type AssetsForceOrigin = EitherOfDiverse<EnsureRoot<AccountId>, EnsureRootOrHalfLocalCouncil>;
 
 impl pallet_assets::Config for Runtime {
 	type Event = Event;
@@ -542,6 +543,10 @@ impl pallet_assets::Config for Runtime {
 // Our pallets
 
 impl snowbridge_asset_registry::Config for Runtime {}
+
+impl snowbridge_xcm_support::Config for Runtime {
+	type Event = Event;
+}
 
 impl dispatch::Config for Runtime {
 	type Origin = Origin;
@@ -574,8 +579,8 @@ impl basic_channel_outbound::Config for Runtime {
 }
 
 parameter_types! {
-	pub SourceAccount: AccountId = DotPalletId::get().into_account();
-	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+	pub SourceAccount: AccountId = DotPalletId::get().try_into_account().expect("Cannot convert PalletId to AccountId.");
+	pub TreasuryAccount: AccountId = TreasuryPalletId::get().try_into_account().expect("Cannot convert PalletId to AccountId.");
 }
 
 pub struct FeeConverter;
@@ -639,7 +644,7 @@ impl eth_app::Config for Runtime {
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
 	type WeightInfo = eth_app::weights::SnowbridgeWeight<Self>;
-	type XcmReserveTransfer = XcmAssetTransferer<Runtime>;
+	type XcmReserveTransfer = snowbridge_xcm_support::Pallet<Runtime>;
 }
 
 parameter_types! {
@@ -651,7 +656,7 @@ impl erc20_app::Config for Runtime {
 	type Assets = Assets;
 	type OutboundRouter = OutboundRouter<Runtime>;
 	type CallOrigin = EnsureEthereumAccount;
-	type XcmReserveTransfer = XcmAssetTransferer<Runtime>;
+	type XcmReserveTransfer = snowbridge_xcm_support::Pallet<Runtime>;
 	type PalletId = Erc20AppPalletId;
 	type NextAssetId = AssetRegistry;
 	type WeightInfo = erc20_app::weights::SnowbridgeWeight<Self>;
@@ -759,21 +764,22 @@ construct_runtime!(
 		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config, Storage, Event<T>} = 18,
 		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 20,
+		XcmSupport: snowbridge_xcm_support::{Pallet, Storage, Config, Event<T>} = 21,
 
 		// XCM
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 21,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 22,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 23,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 24,
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 22,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 23,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 24,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 25,
 
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 25,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 26,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 27,
-		Aura: pallet_aura::{Pallet, Config<T>} = 28,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 29,
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 26,
+		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 27,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 28,
+		Aura: pallet_aura::{Pallet, Config<T>} = 29,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 30,
 
 		// For dev only, will be removed in production
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 30,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 31,
 
 		// Bridge applications
 		// NOTE: Do not change the following pallet indices without updating

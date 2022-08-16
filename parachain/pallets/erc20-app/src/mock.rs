@@ -14,13 +14,11 @@ use sp_runtime::{
 	traits::{
 		AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify,
 	},
-	DispatchError, MultiSignature,
+	MultiSignature,
 };
 
-use snowbridge_core::{
-	assets::{RemoteParachain, XcmReserveTransfer},
-	ChannelId,
-};
+use snowbridge_core::ChannelId;
+use snowbridge_xcm_support_primitives::{RemoteParachain, XcmReserveTransfer};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -185,15 +183,11 @@ pub struct XcmAssetTransfererMock<T>(PhantomData<T>);
 impl XcmReserveTransfer<AccountId, Origin> for XcmAssetTransfererMock<Test> {
 	fn reserve_transfer(
 		_asset_id: u128,
+		_sender: H160,
 		_recipient: &AccountId,
 		_amount: u128,
-		destination: RemoteParachain,
-	) -> DispatchResult {
-		match destination.para_id {
-			1001 => Ok(()),
-			2001 => Err(DispatchError::Other("Parachain 2001 not found.")),
-			_ => todo!("We test reserve_transfer using e2e tests. Mock xcm using xcm-simulator."),
-		}
+		_destination: RemoteParachain,
+	) {
 	}
 }
 
@@ -218,7 +212,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let assets_config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
-		assets: vec![(0, EtherAppPalletId::get().into_account(), true, 1)],
+		assets: vec![(0, EtherAppPalletId::get().into_account_truncating(), true, 1)],
 		metadata: vec![],
 		accounts: vec![],
 	};

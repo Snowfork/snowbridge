@@ -17,12 +17,12 @@ Follow these steps to prepare your local environment for Substrate development.
 ### Requirements
 
 Refer to the instructions at the
-[Substrate Developer Hub](https://substrate.dev/docs/en/knowledgebase/getting-started/#manual-installation).
+[Substrate Developer Hub](https://docs.substrate.io/main-docs/install/).
 
 To add context to the above instructions, the parachain is known to compile with the following versions of Rust:
 
-- stable: 1.58
-- nightly: 1.60.0-nightly
+- stable: 1.61
+- nightly: 1.62.0-nightly
 
 ### Build
 
