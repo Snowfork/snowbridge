@@ -35,7 +35,7 @@ type BeefyListener struct {
 	paraID              uint32
 	tasks               chan<- *Task
 	eventQueryClient    QueryClient
-	AccountID           [32]byte
+	accountID           [32]byte
 }
 
 func NewBeefyListener(
@@ -62,7 +62,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
-	li.AccountID = *account
+	li.accountID = *account
 
 	// Set up light client bridge contract
 	address := common.HexToAddress(li.config.Contracts.BeefyClient)
@@ -330,7 +330,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 		Context: ctx,
 	}
 
-	accountID := li.AccountID
+	accountID := li.accountID
 
 	ethBasicNonce, err := basicContract.Nonces(&options, accountID)
 	if err != nil {
@@ -615,7 +615,7 @@ func (li *BeefyListener) scanForCommitments(
 				}
 
 				// Only consider message bundles for the account we're interested in
-				bundleIndex := findIndexOfBundleWithAccountID(events.Basic.Bundles, &li.AccountID)
+				bundleIndex := findIndexOfBundleWithAccountID(events.Basic.Bundles, &li.accountID)
 				if bundleIndex == -1 {
 					continue
 				}
