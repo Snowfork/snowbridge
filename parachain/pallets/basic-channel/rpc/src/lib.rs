@@ -78,13 +78,12 @@ where
 
 #[cfg(test)]
 mod tests {
-	use crate::{BasicChannel, BasicChannelApi};
+	use crate::{BasicChannel, BasicChannelApiServer};
 	use codec::Encode;
 	use jsonrpsee::{
 		core::Error,
 		types::error::{CallError, ErrorCode, ErrorObject}
 	};
-	use jsonrpc_core::{Error, ErrorCode};
 	use sp_core::offchain::OffchainStorage;
 
 	#[derive(Clone)]
@@ -148,14 +147,13 @@ mod tests {
 
 		let result = rpc_handler.get_merkle_proof(TEST_HASH.into(), 0);
 
-		assert_eq!(
-			result,
-			return Err(Error::Call(CallError::Custom(ErrorObject::owned(
-				ErrorCode::InvalidParams.code(),
-				"no leaves found for given commitment",
-				None::<()>,
-			))))
-		)
+		match result {
+			Err(Error::Call(CallError::Custom(errobj))) => {
+				assert_eq!(errobj.code(), ErrorCode::InvalidParams.code());
+				assert_eq!(errobj.message(), "no leaves found for given commitment");
+			},
+			_ => assert!(false),
+		}
 	}
 
 	#[test]
@@ -165,14 +163,13 @@ mod tests {
 
 		let result = rpc_handler.get_merkle_proof(TEST_HASH.into(), 0);
 
-		assert_eq!(
-			result,
-			return Err(Error::Call(CallError::Custom(ErrorObject::owned(
-				ErrorCode::InternalError.code(),
-				"could not decode leaves from storage",
-				None::<()>,
-			))))
-		)
+		match result {
+			Err(Error::Call(CallError::Custom(errobj))) => {
+				assert_eq!(errobj.code(), ErrorCode::InternalError.code());
+				assert_eq!(errobj.message(), "could not decode leaves from storage");
+			},
+			_ => assert!(false),
+		}
 	}
 
 	#[test]
@@ -183,13 +180,12 @@ mod tests {
 
 		let result = rpc_handler.get_merkle_proof(TEST_HASH.into(), 2);
 
-		assert_eq!(
-			result,
-			return Err(Error::Call(CallError::Custom(ErrorObject::owned(
-				ErrorCode::InvalidParams.code(),
-				"leaf_index out of range",
-				None::<()>,
-			))))
-		)
+		match result {
+			Err(Error::Call(CallError::Custom(errobj))) => {
+				assert_eq!(errobj.code(), ErrorCode::InvalidParams.code());
+				assert_eq!(errobj.message(), "leaf_index out of range");
+			},
+			_ => assert!(false),
+		}
 	}
 }
