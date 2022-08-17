@@ -705,27 +705,6 @@ pub mod pallet {
 			Ok(sync_committee)
 		}
 
-		// Verifies that the receipt encoded in proof.data is included
-		// in the block given by proof.block_hash. Inclusion is only
-		// recognized if the block has been finalized.
-		fn verify_receipt_inclusion(stored_header: ExecutionHeader, proof: &Proof) -> Result<Receipt, DispatchError> {
-			let result = stored_header
-				.check_receipt_proof(&proof.data.1)
-				.ok_or(Error::<T>::InvalidProof)?;
-
-			match result {
-				Ok(receipt) => Ok(receipt),
-				Err(err) => {
-					log::trace!(
-						target: "ethereum-beacon-client",
-						"Failed to decode transaction receipt: {}",
-						err
-					);
-					Err(Error::<T>::InvalidProof.into())
-				},
-			}
-		}
-
 		pub(super) fn initial_sync(
 			initial_sync: InitialSync,
 		) -> Result<(), &'static str> {
