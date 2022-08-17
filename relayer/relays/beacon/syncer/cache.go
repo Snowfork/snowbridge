@@ -7,10 +7,14 @@ import (
 )
 
 type BeaconCache struct {
-	LastSyncedSyncCommitteePeriod uint64
-	FinalizedHeaders              []common.Hash
-	HeadersMap                    map[common.Hash]uint64
-	mu                            sync.Mutex
+	LastSyncedSyncCommitteePeriod          uint64
+	FinalizedHeaders                       []common.Hash
+	HeadersMap                             map[common.Hash]uint64
+	BlockNumbersMap                        map[uint64]bool
+	LastSyncedHeaderBlockNumber            uint64
+	LastSyncBasicMessageBlockNumber        uint64
+	LastSyncIncentivizedMessageBlockNumber uint64
+	mu                                     sync.Mutex
 }
 
 func NewBeaconCache() *BeaconCache {

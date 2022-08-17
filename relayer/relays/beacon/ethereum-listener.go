@@ -78,27 +78,38 @@ func (li *EthereumListener) Start(
 	return nil
 }
 
-func (li *EthereumListener) ProcessEvents(
+func (li *EthereumListener) ProcessBasicEvents(
 	ctx context.Context,
 	start uint64,
 	end uint64,
 ) (ParachainPayload, error) {
-	var events []*etypes.Log
-
 	filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
 	basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
 	if err != nil {
 		return ParachainPayload{}, err
 	}
-	events = append(events, basicEvents...)
+
+	messages, err := li.makeOutgoingMessages(ctx, basicEvents)
+	if err != nil {
+		return ParachainPayload{}, err
+	}
+
+	return ParachainPayload{Messages: messages}, nil
+}
+
+func (li *EthereumListener) ProcessIncentivizedEvents(
+	ctx context.Context,
+	start uint64,
+	end uint64,
+) (ParachainPayload, error) {
+	filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
 
 	incentivizedEvents, err := li.queryIncentivizedEvents(li.incentivizedOutboundChannel, &filterOptions)
 	if err != nil {
 		return ParachainPayload{}, err
 	}
-	events = append(events, incentivizedEvents...)
 
-	messages, err := li.makeOutgoingMessages(ctx, events)
+	messages, err := li.makeOutgoingMessages(ctx, incentivizedEvents)
 	if err != nil {
 		return ParachainPayload{}, err
 	}
@@ -145,6 +156,9 @@ func (li *EthereumListener) queryIncentivizedEvents(contract *incentivized.Incen
 			}
 			break
 		}
+		log.WithFields(logrus.Fields{
+			"nonce is": &iter.Event.Nonce,
+		}).Info("Got incentivized channel nonce")
 		events = append(events, &iter.Event.Raw)
 	}
 	return events, nil

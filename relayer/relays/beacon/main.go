@@ -82,6 +82,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (r *Relay) Sync(ctx context.Context) error {
+	go func() {
+		err := r.SyncMessages(ctx)
+		if err != nil {
+			logrus.WithError(err).Error("error syncing messages")
+		}
+	}()
+
 	latestSyncedPeriod, err := r.writer.getLastSyncedSyncCommitteePeriod()
 	if err != nil {
 		return fmt.Errorf("fetch last sync commitee: %w", err)
@@ -230,11 +237,11 @@ func (r *Relay) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggre
 		return syncer.HeaderUpdate{}, fmt.Errorf("fetch header update: %w", err)
 	}
 
-	logrus.WithFields(logrus.Fields{
+	/*logrus.WithFields(logrus.Fields{
 		"beaconBlockRoot":    blockRoot,
 		"executionBlockRoot": headerUpdate.Block.Body.ExecutionPayload.BlockHash.Hex(),
 		"slot":               headerUpdate.Block.Slot,
-	}).Info("Syncing header between last two finalized headers")
+	}).Info("Syncing header between last two finalized headers")*/
 
 	headerUpdate.SyncAggregate = syncAggregate
 
@@ -290,22 +297,14 @@ func (r *Relay) SyncHeaders(ctx context.Context) error {
 		return err
 	}
 
-	lastBlockNumber, secondLastBlockNumber, err := r.syncer.GetBlockRange(lastFinalizedHeader, secondLastFinalizedHeader)
+	lastBlockNumber, _, err := r.syncer.GetBlockRange(lastFinalizedHeader, secondLastFinalizedHeader)
 	if err != nil {
 		return err
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"start": secondLastBlockNumber,
-		"end":   lastBlockNumber - 1,
-	}).Info("processing events for block numbers")
+	r.syncer.Cache.LastSyncedHeaderBlockNumber = lastBlockNumber - 1
 
-	payload, err := r.listener.ProcessEvents(ctx, secondLastBlockNumber, lastBlockNumber-1)
-	if err != nil {
-		return err
-	}
-
-	return r.writeMessages(ctx, payload)
+	return nil
 }
 
 func (r *Relay) writeMessages(ctx context.Context, payload ParachainPayload) error {
@@ -313,6 +312,80 @@ func (r *Relay) writeMessages(ctx context.Context, payload ParachainPayload) err
 		err := r.writer.WriteToParachain(ctx, msg.Call, msg.Args...)
 		if err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *Relay) SyncMessages(ctx context.Context) error {
+	var err error
+	r.syncer.Cache.LastSyncIncentivizedMessageBlockNumber, err = r.writer.getLastIncentivizedChannelMessage()
+	if err != nil {
+		return fmt.Errorf("fetch last incentivized channel message block number")
+	}
+
+	logrus.WithField("blockNumber", r.syncer.Cache.LastSyncIncentivizedMessageBlockNumber).Info("last incentivized channel message block number")
+
+	icNonce, err := r.writer.getLastIncentivizedChannelNonce()
+	if err != nil {
+		return fmt.Errorf("fetch last incentivized channel message nonce")
+	}
+
+	logrus.WithField("nonce", icNonce).Info("last incentivized channel message nonce")
+
+	r.syncer.Cache.LastSyncBasicMessageBlockNumber, err = r.writer.getLastBasicChannelMessage()
+	if err != nil {
+		return fmt.Errorf("fetch last basic channel message block number")
+	}
+
+	logrus.WithField("blockNumber", r.syncer.Cache.LastSyncBasicMessageBlockNumber).Info("last basic channel message block number")
+
+	bcNonce, err := r.writer.getLastIncentivizedChannelNonce()
+	if err != nil {
+		return fmt.Errorf("fetch last basic channel message nonce")
+	}
+
+	logrus.WithField("nonce", bcNonce).Info("last basic channel message nonce")
+
+	ticker := time.NewTicker(time.Second * 20)
+	done := make(chan bool)
+
+	for {
+		logrus.WithFields(logrus.Fields{
+			"start": r.syncer.Cache.LastSyncBasicMessageBlockNumber,
+			"end":   r.syncer.Cache.LastSyncedHeaderBlockNumber,
+		}).Info("fetching basic events")
+		basicPayload, err := r.listener.ProcessBasicEvents(ctx, r.syncer.Cache.LastSyncBasicMessageBlockNumber, r.syncer.Cache.LastSyncedHeaderBlockNumber)
+		if err != nil {
+			return err
+		}
+
+		if len(basicPayload.Messages) > 0 {
+			logrus.WithField("payload", basicPayload.Messages[0]).Info("found basic payload")
+		}
+
+		r.writeMessages(ctx, basicPayload)
+
+		incentivizedPayload, err := r.listener.ProcessIncentivizedEvents(ctx, r.syncer.Cache.LastSyncIncentivizedMessageBlockNumber, r.syncer.Cache.LastSyncedHeaderBlockNumber)
+		if err != nil {
+			return err
+		}
+
+		if len(incentivizedPayload.Messages) > 0 {
+			logrus.WithField("payload", incentivizedPayload.Messages[0]).Info("found incentivized payload")
+		}
+
+		r.writeMessages(ctx, incentivizedPayload)
+
+		r.syncer.Cache.LastSyncBasicMessageBlockNumber = r.syncer.Cache.LastSyncedHeaderBlockNumber
+		r.syncer.Cache.LastSyncIncentivizedMessageBlockNumber = r.syncer.Cache.LastSyncedHeaderBlockNumber
+
+		select {
+		case <-done:
+			return nil
+		case <-ticker.C:
+			continue
 		}
 	}
 
