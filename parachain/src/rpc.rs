@@ -52,7 +52,7 @@ where
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	use substrate_frame_rpc_system::{System, SystemApiServer};
-	use snowbridge_basic_channel_rpc::{BasicChannel, BasicChannelApi};
+	use snowbridge_basic_channel_rpc::{BasicChannel, BasicChannelApiServer};
 
 	let mut module = RpcExtension::new(());
 	let FullDeps { backend, client, pool, deny_unsafe } = deps;
@@ -61,9 +61,9 @@ where
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 
 	if let Some(basic_channel_rpc) =
-		backend.offchain_storage().map(|storage| BasicChannel::<_>::new(storage))
+		backend.offchain_storage().map(|storage| BasicChannel::<_>::new(storage).into_rpc())
 	{
-		module.merge(basic_channel_rpc);
+		module.merge(basic_channel_rpc)?;
 	}
 
 	Ok(module)

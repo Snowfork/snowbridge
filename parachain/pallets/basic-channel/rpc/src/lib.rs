@@ -1,5 +1,8 @@
-use jsonrpc_core::{Error, ErrorCode, Result};
-use jsonrpc_derive::rpc;
+use jsonrpsee::{
+	core::{Error, RpcResult as Result},
+	proc_macros::rpc,
+	types::error::{CallError, ErrorCode, ErrorObject}
+};
 
 use codec::{Decode, Encode};
 use parking_lot::RwLock;
@@ -23,13 +26,13 @@ impl<T: OffchainStorage> BasicChannel<T> {
 #[derive(Decode)]
 struct Leaves(pub Vec<Vec<u8>>);
 
-#[rpc]
+#[rpc(server)]
 pub trait BasicChannelApi {
-	#[rpc(name = "basicOutboundChannel_getMerkleProof")]
+	#[method(name = "basicOutboundChannel_getMerkleProof")]
 	fn get_merkle_proof(&self, commitment_hash: H256, leaf_index: u64) -> Result<Bytes>;
 }
 
-impl<T> BasicChannelApi for BasicChannel<T>
+impl<T> BasicChannelApiServer for BasicChannel<T>
 where
 	T: OffchainStorage + 'static,
 {
@@ -41,31 +44,31 @@ where
 		{
 			Some(encoded_leaves) => encoded_leaves,
 			None => {
-				return Err(Error {
-					code: ErrorCode::InvalidParams,
-					message: "no leaves found for given commitment".into(),
-					data: None,
-				})
+				return Err(Error::Call(CallError::Custom(ErrorObject::owned(
+					ErrorCode::InvalidParams.code(),
+					"no leaves found for given commitment",
+					None::<()>,
+				))))
 			},
 		};
 
 		let leaves = match Leaves::decode(&mut encoded_leaves.as_ref()) {
 			Ok(leaves) => leaves,
 			Err(_) => {
-				return Err(Error {
-					code: ErrorCode::InternalError,
-					message: "could not decode leaves from storage".into(),
-					data: None,
-				})
+				return Err(Error::Call(CallError::Custom(ErrorObject::owned(
+					ErrorCode::InternalError.code(),
+					"could not decode leaves from storage",
+					None::<()>,
+				))))
 			},
 		};
 
 		if (leaf_index as usize) >= Vec::len(&leaves.0) {
-			return Err(Error {
-				code: ErrorCode::InvalidParams,
-				message: "leaf_index out of range".into(),
-				data: None,
-			});
+			return Err(Error::Call(CallError::Custom(ErrorObject::owned(
+				ErrorCode::InvalidParams.code(),
+				"leaf_index out of range",
+				None::<()>,
+			))))
 		}
 
 		let proof = merkle_proof::<Keccak256, Vec<Vec<u8>>, Vec<u8>>(leaves.0, leaf_index);
@@ -77,6 +80,10 @@ where
 mod tests {
 	use crate::{BasicChannel, BasicChannelApi};
 	use codec::Encode;
+	use jsonrpsee::{
+		core::Error,
+		types::error::{CallError, ErrorCode, ErrorObject}
+	};
 	use jsonrpc_core::{Error, ErrorCode};
 	use sp_core::offchain::OffchainStorage;
 
@@ -143,11 +150,11 @@ mod tests {
 
 		assert_eq!(
 			result,
-			Err(Error {
-				code: ErrorCode::InvalidParams,
-				message: "no leaves found for given commitment".into(),
-				data: None,
-			})
+			return Err(Error::Call(CallError::Custom(ErrorObject::owned(
+				ErrorCode::InvalidParams.code(),
+				"no leaves found for given commitment",
+				None::<()>,
+			))))
 		)
 	}
 
@@ -160,11 +167,11 @@ mod tests {
 
 		assert_eq!(
 			result,
-			Err(Error {
-				code: ErrorCode::InternalError,
-				message: "could not decode leaves from storage".into(),
-				data: None,
-			})
+			return Err(Error::Call(CallError::Custom(ErrorObject::owned(
+				ErrorCode::InternalError.code(),
+				"could not decode leaves from storage",
+				None::<()>,
+			))))
 		)
 	}
 
@@ -178,11 +185,11 @@ mod tests {
 
 		assert_eq!(
 			result,
-			Err(Error {
-				code: ErrorCode::InvalidParams,
-				message: "leaf_index out of range".into(),
-				data: None,
-			})
+			return Err(Error::Call(CallError::Custom(ErrorObject::owned(
+				ErrorCode::InvalidParams.code(),
+				"leaf_index out of range",
+				None::<()>,
+			))))
 		)
 	}
 }
