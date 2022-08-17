@@ -21,7 +21,7 @@ pub use types::{ChannelId, Message, MessageId, MessageNonce, Proof};
 /// This trait should be implemented by runtime modules that wish to provide message verification
 /// functionality.
 pub trait Verifier {
-	fn verify(message: &Message) -> Result<Log, DispatchError>;
+	fn verify(message: &Message) -> Result<(Log, u64), DispatchError>;
 	fn initialize_storage(
 		headers: Vec<Header>,
 		initial_difficulty: U256,

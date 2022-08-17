@@ -704,10 +704,7 @@ pub mod pallet {
 		// Verifies that the receipt encoded in proof.data is included
 		// in the block given by proof.block_hash. Inclusion is only
 		// recognized if the block has been finalized.
-		fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
-			let stored_header =
-				<ExecutionHeaders<T>>::get(proof.block_hash).ok_or(Error::<T>::MissingHeader)?;
-
+		fn verify_receipt_inclusion(stored_header: ExecutionHeader, proof: &Proof) -> Result<Receipt, DispatchError> {
 			let result = stored_header
 				.check_receipt_proof(&proof.data.1)
 				.ok_or(Error::<T>::InvalidProof)?;
@@ -754,14 +751,19 @@ pub mod pallet {
 	impl<T: Config> Verifier for Pallet<T> {
 		/// Verify a message by verifying the existence of the corresponding
 		/// Ethereum log in a block. Returns the log if successful.
-		fn verify(message: &Message) -> Result<Log, DispatchError> {
+		fn verify(message: &Message) -> Result<(Log, u64), DispatchError> {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Verifying message with block hash {}",
 				message.proof.block_hash,
 			);
 
-			let receipt = match Self::verify_receipt_inclusion(&message.proof) {
+			let stored_header =
+				<ExecutionHeaders<T>>::get(message.proof.block_hash).ok_or(Error::<T>::MissingHeader)?;
+
+			let block_number = stored_header.block_number;
+
+			let receipt = match Self::verify_receipt_inclusion(stored_header, &message.proof) {
 				Ok(receipt) => receipt,
 				Err(err) => {
 					log::trace!(
@@ -808,7 +810,7 @@ pub mod pallet {
 				message.proof.block_hash,
 			);
 
-			Ok(log)
+			Ok((log, block_number))
 		}
 
 		// Empty implementation, not necessary for the beacon client,
