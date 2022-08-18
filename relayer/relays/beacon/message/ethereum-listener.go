@@ -1,4 +1,4 @@
-package beacon
+package message
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/ethereum/syncer"
 	"golang.org/x/sync/errgroup"
 )
@@ -21,7 +22,7 @@ type ParachainPayload struct {
 }
 
 type EthereumListener struct {
-	config                      *SourceConfig
+	config                      *config.SourceConfig
 	conn                        *ethereum.Connection
 	basicOutboundChannel        *basic.BasicOutboundChannel
 	incentivizedOutboundChannel *incentivized.IncentivizedOutboundChannel
@@ -31,7 +32,7 @@ type EthereumListener struct {
 }
 
 func NewEthereumListener(
-	config *SourceConfig,
+	config *config.SourceConfig,
 	conn *ethereum.Connection,
 ) *EthereumListener {
 	return &EthereumListener{

@@ -11,14 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 )
 
 var ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("not found")
 
 type Syncer struct {
 	Client                       BeaconClient
-	Cache                        BeaconCache
 	SlotsInEpoch                 uint64
 	EpochsPerSyncCommitteePeriod uint64
 }
@@ -26,7 +25,6 @@ type Syncer struct {
 func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64) *Syncer {
 	return &Syncer{
 		Client:                       *NewBeaconClient(endpoint),
-		Cache:                        *NewBeaconCache(),
 		SlotsInEpoch:                 slotsInEpoch,
 		EpochsPerSyncCommitteePeriod: epochsPerSyncCommitteePeriod,
 	}

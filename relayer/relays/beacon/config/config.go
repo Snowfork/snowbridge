@@ -1,4 +1,4 @@
-package beacon
+package config
 
 import "github.com/snowfork/snowbridge/relayer/config"
 

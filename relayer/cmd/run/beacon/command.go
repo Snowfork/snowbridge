@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -52,7 +53,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	var config beacon.Config
+	var config config.Config
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		return err
