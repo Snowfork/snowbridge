@@ -19,22 +19,30 @@ type SourceConfig struct {
 	Ethereum  config.EthereumConfig  `mapstructure:"ethereum"`
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
 	// Block number when Beefy was activated
-	BeefyActivationBlock uint64 `mapstructure:"beefy-activation-block"`
-	Account              string `mapstructure:"account"`
+	BeefyActivationBlock uint64   `mapstructure:"beefy-activation-block"`
+	AccountIDs           []string `mapstructure:"accountIDs"`
 }
 
-func (c *SourceConfig) getAccount() (*[32]byte, error) {
-	accountID := strings.TrimPrefix(c.Account, "0x")
-	decodedAccount, err := hex.DecodeString(accountID)
-	if err != nil {
-		return nil, fmt.Errorf("decode account id: %w", err)
-	} else if len(decodedAccount) != 32 {
-		// The conversion below will panic if decodedAccount has
-		// fewer than 32 bytes.
-		// We expect exactly 32 bytes.
-		return nil, fmt.Errorf("account id was not 32 bytes long: %v", decodedAccount)
+func (c *SourceConfig) getAccountIDs() ([][32]byte, error) {
+	var accountIDs [][32]byte
+
+	for _, accountID := range c.AccountIDs {
+		trimmedAccountID := strings.TrimPrefix(accountID, "0x")
+		accountIDBytes, err := hex.DecodeString(trimmedAccountID)
+
+		if err != nil {
+			return nil, fmt.Errorf("decode account id: %w", err)
+		} else if len(accountIDBytes) != 32 {
+			// The conversion below will panic if decodedAccount has
+			// fewer than 32 bytes: we expect exactly 32 bytes.
+			return nil, fmt.Errorf("account id was not 32 bytes long: %v", accountIDBytes)
+		}
+
+		decodedAccountID := *(*[32]byte)(accountIDBytes)
+		accountIDs = append(accountIDs, decodedAccountID)
 	}
-	return (*[32]byte)(decodedAccount), nil
+
+	return accountIDs, nil
 }
 
 type SourceContractsConfig struct {

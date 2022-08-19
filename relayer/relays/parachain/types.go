@@ -11,7 +11,7 @@ type Task struct {
 	ParaID                  uint32
 	BlockNumber             uint64
 	Header                  *types.Header
-	Commitments             map[ChannelID]Commitment
+	Commitments             map[ChannelID][]Commitment
 	BasicChannelBundleProof *MerkleProof
 	ProofInput              *ProofInput
 	ProofOutput             *ProofOutput

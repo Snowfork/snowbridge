@@ -154,39 +154,54 @@ func (wr *EthereumWriter) WriteChannel(
 	options *bind.TransactOpts,
 	task *Task,
 ) error {
-	for channelID, commitment := range task.Commitments {
-		if channelID.IsBasic {
-			bundle, ok := commitment.Data.(BasicOutboundChannelMessageBundle)
-			if !ok {
-				return fmt.Errorf("invalid commitment data for basic channel")
-			}
-			err := wr.WriteBasicChannel(
-				options,
-				commitment.Hash,
-				bundle,
-				task.BasicChannelBundleProof,
-				task.ParaID,
-				task.ProofOutput,
-			)
+	for channelID, commitments := range task.Commitments {
+		for _, commitment := range commitments {
+			err := wr.WriteCommitment(channelID, commitment, options, task)
 			if err != nil {
-				return fmt.Errorf("write basic channel: %w", err)
+				return err
 			}
 		}
-		if channelID.IsIncentivized {
-			bundle, ok := commitment.Data.(IncentivizedOutboundChannelMessageBundle)
-			if !ok {
-				return fmt.Errorf("invalid commitment data for incentivized channel")
-			}
-			err := wr.WriteIncentivizedChannel(
-				options,
-				commitment.Hash,
-				bundle,
-				task.ParaID,
-				task.ProofOutput,
-			)
-			if err != nil {
-				return fmt.Errorf("write incentivized channel: %w", err)
-			}
+	}
+	return nil
+}
+
+func (wr *EthereumWriter) WriteCommitment(
+	channelID ChannelID,
+	commitment Commitment,
+	options *bind.TransactOpts,
+	task *Task,
+) error {
+	if channelID.IsBasic {
+		bundle, ok := commitment.Data.(BasicOutboundChannelMessageBundle)
+		if !ok {
+			return fmt.Errorf("invalid commitment data for basic channel")
+		}
+		err := wr.WriteBasicChannel(
+			options,
+			commitment.Hash,
+			bundle,
+			task.BasicChannelBundleProof,
+			task.ParaID,
+			task.ProofOutput,
+		)
+		if err != nil {
+			return fmt.Errorf("write basic channel: %w", err)
+		}
+	}
+	if channelID.IsIncentivized {
+		bundle, ok := commitment.Data.(IncentivizedOutboundChannelMessageBundle)
+		if !ok {
+			return fmt.Errorf("invalid commitment data for incentivized channel")
+		}
+		err := wr.WriteIncentivizedChannel(
+			options,
+			commitment.Hash,
+			bundle,
+			task.ParaID,
+			task.ProofOutput,
+		)
+		if err != nil {
+			return fmt.Errorf("write incentivized channel: %w", err)
 		}
 	}
 	return nil
