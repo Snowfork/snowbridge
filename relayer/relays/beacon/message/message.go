@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/snowbridge/relayer/chain"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/writer"
@@ -41,7 +42,7 @@ func (m *Message) SyncBasic(ctx context.Context, blockNumber <-chan uint64) erro
 		return fmt.Errorf("fetch last basic channel message nonce")
 	}
 
-	logrus.WithFields(logrus.Fields{
+	log.WithFields(log.Fields{
 		"block_number": lastVerifiedBlockNumber,
 		"nonce":        nonce,
 	}).Info("last basic channel")
@@ -54,22 +55,35 @@ func (m *Message) SyncBasic(ctx context.Context, blockNumber <-chan uint64) erro
 			if !ok {
 				return nil
 			}
-			logrus.WithFields(logrus.Fields{
+			log.WithFields(log.Fields{
 				"block_number": blockNumber,
 			}).Info("last synced execution header received in basic channel")
 			if blockNumber == 0 {
 				continue
 			}
 
-			lastVerifiedBlockNumber = lastVerifiedBlockNumber + 1
+			// If the last nonce is set, there could be messages that have not been processed, in the same block
+			// So use the last synced block as the start value in the block range
+			// Messages that have already been verified will not be reprocessed because they will be filtered out
+			// in filterMessagesByLastNonce.
+			if nonce == 0 {
+				lastVerifiedBlockNumber = lastVerifiedBlockNumber + 1
+			}
 
-			logrus.WithFields(logrus.Fields{
+			log.WithFields(log.Fields{
 				"start": lastVerifiedBlockNumber,
 				"end":   blockNumber,
 			}).Info("fetching basic channel messages")
 			basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, blockNumber)
 			if err != nil {
 				return err
+			}
+
+			if nonce != 0 {
+				basicPayload.Messages = filterMessagesByLastNonce(basicPayload.Messages, nonce)
+				// Reset the nonce so that the next block processing range will exclude the block that was synced,
+				// and start syncing from the next block instead
+				nonce = 0
 			}
 
 			m.writeMessages(ctx, basicPayload)
@@ -92,7 +106,7 @@ func (m *Message) SyncIncentivized(ctx context.Context, blockNumber <-chan uint6
 		return fmt.Errorf("fetch last incentivized channel message nonce")
 	}
 
-	logrus.WithFields(logrus.Fields{
+	log.WithFields(log.Fields{
 		"block_number": lastVerifiedBlockNumber,
 		"nonce":        nonce,
 	}).Info("last incentivized channel")
@@ -105,13 +119,19 @@ func (m *Message) SyncIncentivized(ctx context.Context, blockNumber <-chan uint6
 			if !ok {
 				return nil
 			}
-			logrus.WithFields(logrus.Fields{
+			log.WithFields(log.Fields{
 				"block_number": blockNumber,
 			}).Info("last synced execution header received in incentivized channel")
 
-			lastVerifiedBlockNumber = lastVerifiedBlockNumber + 1
+			// If the last nonce is set, there could be messages that have not been processed, in the same block
+			// So use the last synced block as the start value in the block range
+			// Messages that have already been verified will not be reprocessed because they will be filtered out
+			// in filterMessagesByLastNonce.
+			if nonce == 0 {
+				lastVerifiedBlockNumber = lastVerifiedBlockNumber + 1
+			}
 
-			logrus.WithFields(logrus.Fields{
+			log.WithFields(log.Fields{
 				"start": lastVerifiedBlockNumber,
 				"end":   blockNumber,
 			}).Info("fetching incentivized events")
@@ -119,6 +139,13 @@ func (m *Message) SyncIncentivized(ctx context.Context, blockNumber <-chan uint6
 			incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, lastVerifiedBlockNumber, blockNumber)
 			if err != nil {
 				return err
+			}
+
+			if nonce != 0 {
+				incentivizedPayload.Messages = filterMessagesByLastNonce(incentivizedPayload.Messages, nonce)
+				// Reset the nonce so that the next block processing range will exclude the block that was synced,
+				// and start syncing from the next block instead
+				nonce = 0
 			}
 
 			m.writeMessages(ctx, incentivizedPayload)
@@ -139,4 +166,18 @@ func (m *Message) writeMessages(ctx context.Context, payload ParachainPayload) e
 	}
 
 	return nil
+}
+
+func filterMessagesByLastNonce(messages []*chain.EthereumOutboundMessage, nonce uint64) []*chain.EthereumOutboundMessage {
+	resultMessages := []*chain.EthereumOutboundMessage{}
+
+	for _, incentivizedMessage := range messages {
+		if incentivizedMessage.Nonce <= nonce {
+			continue
+		}
+
+		resultMessages = append(resultMessages, incentivizedMessage)
+	}
+
+	return resultMessages
 }

@@ -112,10 +112,10 @@ func (wr *ParachainWriter) WriteToParachain(ctx context.Context, extrinsicName s
 		return err
 	}
 
-	//_, err = wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(extI)
-	//if err != nil {
-	//	return err
-	//}
+	_, err = wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(extI)
+	if err != nil {
+		return err
+	}
 
 	wr.nonce = wr.nonce + 1
 

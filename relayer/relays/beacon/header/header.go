@@ -82,11 +82,6 @@ func (h *Header) Sync(ctx context.Context) (<-chan uint64, <-chan uint64, error)
 	basicChannel := make(chan uint64)
 	incentivizedChannel := make(chan uint64)
 
-	defer func() {
-		close(basicChannel)
-		close(incentivizedChannel)
-	}()
-
 	go func() {
 		for {
 			lastBlockNumber, err := h.SyncHeaders(ctx)
