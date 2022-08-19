@@ -670,7 +670,7 @@ func (li *BeefyListener) scanForCommitments(
 							types.HexEncodeToString(accountIDAndNonce.accountID[:]),
 						)
 						delete(basicAccountIDsToCheck, accountIDAndNonce.accountID)
-						scanBasicChannelDone = len(basicAccountIDsAndNoncesToFind) == 0
+						scanBasicChannelDone = len(basicAccountIDsToCheck) == 0
 						// Collect these commitments
 					} else if bundleNonce > accountIDAndNonce.nonceToFind {
 						commitments[channelID] = append(commitments[channelID], NewCommitment(digestItem.AsCommitment.Hash, bundle))
@@ -678,7 +678,7 @@ func (li *BeefyListener) scanForCommitments(
 					} else if bundleNonce == accountIDAndNonce.nonceToFind {
 						commitments[channelID] = append(commitments[channelID], NewCommitment(digestItem.AsCommitment.Hash, bundle))
 						delete(basicAccountIDsToCheck, accountIDAndNonce.accountID)
-						scanBasicChannelDone = len(basicAccountIDsAndNoncesToFind) == 0
+						scanBasicChannelDone = len(basicAccountIDsToCheck) == 0
 					}
 				}
 			}
