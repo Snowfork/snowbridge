@@ -17,6 +17,7 @@ class SubClient {
 
     this.keyring = new Keyring({ type: 'sr25519' });
     this.alice = this.keyring.addFromUri('//Alice', { name: 'Alice' });
+    this.bob = this.keyring.addFromUri('//Bob', { name: 'Bob' });
   }
 
   async queryAssetsAccountBalance(assetId, accountId) {
