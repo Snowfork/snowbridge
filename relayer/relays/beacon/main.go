@@ -6,7 +6,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/message"
@@ -15,11 +14,8 @@ import (
 )
 
 type Relay struct {
-	config   *config.Config
-	keypair  *sr25519.Keypair
-	paraconn *parachain.Connection
-	ethconn  *ethereum.Connection
-	cache    *cache.BeaconCache
+	config  *config.Config
+	keypair *sr25519.Keypair
 }
 
 func NewRelay(
@@ -35,21 +31,21 @@ func NewRelay(
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	specSettings := r.config.GetSpecSettings()
 
-	r.paraconn = parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
-	r.ethconn = ethereum.NewConnection(r.config.Source.Ethereum.Endpoint, nil)
+	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
+	ethconn := ethereum.NewConnection(r.config.Source.Ethereum.Endpoint, nil)
 
-	err := r.paraconn.Connect(ctx)
+	err := paraconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = r.ethconn.Connect(ctx)
+	err = ethconn.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
 	writer := writer.NewParachainWriter(
-		r.paraconn,
+		paraconn,
 	)
 
 	err = writer.Start(ctx, eg)
@@ -57,21 +53,31 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	cache := cache.New()
+	headers := header.New(
+		writer,
+		r.config.Source.Beacon.Endpoint,
+		specSettings.SlotsInEpoch,
+		specSettings.EpochsPerSyncCommitteePeriod,
+	)
 
-	h := header.New(cache, writer, r.config.Source.Beacon.Endpoint, specSettings.SlotsInEpoch, specSettings.EpochsPerSyncCommitteePeriod)
-
-	m, err := message.New(ctx, eg, cache, writer, &r.config.Source, r.ethconn)
+	messages, err := message.New(
+		ctx,
+		eg,
+		writer,
+		&r.config.Source,
+		ethconn,
+	)
 	if err != nil {
 		return err
 	}
 
-	finalizedBlock, err := h.Sync(ctx)
+	basicChannel, incentivizedChannel, err := headers.Sync(ctx)
 	if err != nil {
 		return err
 	}
 
-	go m.SyncMessages(ctx, finalizedBlock)
+	go messages.SyncBasic(ctx, basicChannel)
+	go messages.SyncIncentivized(ctx, incentivizedChannel)
 
 	return nil
 }

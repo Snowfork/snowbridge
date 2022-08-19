@@ -23,16 +23,18 @@ type Header struct {
 	syncer *syncer.Syncer
 }
 
-func New(cache *cache.BeaconCache, writer *writer.ParachainWriter, beaconEndpoint string, slotsInEpoch uint64, epochsPerSyncCommitteePeriod uint64) Header {
-	syncer := syncer.New(beaconEndpoint, slotsInEpoch, epochsPerSyncCommitteePeriod)
-
-	return Header{cache, writer, syncer}
+func New(writer *writer.ParachainWriter, beaconEndpoint string, slotsInEpoch uint64, epochsPerSyncCommitteePeriod uint64) Header {
+	return Header{
+		cache:  cache.New(),
+		writer: writer,
+		syncer: syncer.New(beaconEndpoint, slotsInEpoch, epochsPerSyncCommitteePeriod),
+	}
 }
 
-func (h *Header) Sync(ctx context.Context) (<-chan uint64, error) {
+func (h *Header) Sync(ctx context.Context) (<-chan uint64, <-chan uint64, error) {
 	latestSyncedPeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
 	if err != nil {
-		return nil, fmt.Errorf("fetch last sync commitee: %w", err)
+		return nil, nil, fmt.Errorf("fetch last sync commitee: %w", err)
 	}
 
 	h.cache.SetLastSyncedSyncCommitteePeriod(latestSyncedPeriod)
@@ -41,7 +43,7 @@ func (h *Header) Sync(ctx context.Context) (<-chan uint64, error) {
 
 	periodsToSync, err := h.syncer.GetSyncPeriodsToFetch(latestSyncedPeriod)
 	if err != nil {
-		return nil, fmt.Errorf("check sync committee periods to be fetched: %w", err)
+		return nil, nil, fmt.Errorf("check sync committee periods to be fetched: %w", err)
 	}
 
 	log.WithFields(log.Fields{
@@ -51,18 +53,18 @@ func (h *Header) Sync(ctx context.Context) (<-chan uint64, error) {
 	for _, period := range periodsToSync {
 		err := h.SyncCommitteePeriodUpdate(ctx, period)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	lastFinalizedHeader, err := h.writer.GetLastStoredFinalizedHeader()
 	if err != nil {
-		return nil, fmt.Errorf("fetch last finalized header: %w", err)
+		return nil, nil, fmt.Errorf("fetch last finalized header: %w", err)
 	}
 
 	lastFinalizedSlot, err := h.writer.GetLastStoredFinalizedHeaderSlot()
 	if err != nil {
-		return nil, fmt.Errorf("fetch last finalized header slot: %w", err)
+		return nil, nil, fmt.Errorf("fetch last finalized header slot: %w", err)
 	}
 
 	h.cache.FinalizedHeaders = append(h.cache.FinalizedHeaders, lastFinalizedHeader)
@@ -77,7 +79,13 @@ func (h *Header) Sync(ctx context.Context) (<-chan uint64, error) {
 	ticker := time.NewTicker(time.Second * 20)
 	done := make(chan bool)
 
-	finalizedHeader := make(chan uint64)
+	basicChannel := make(chan uint64)
+	incentivizedChannel := make(chan uint64)
+
+	defer func() {
+		close(basicChannel)
+		close(incentivizedChannel)
+	}()
 
 	go func() {
 		for {
@@ -90,7 +98,8 @@ func (h *Header) Sync(ctx context.Context) (<-chan uint64, error) {
 
 				return
 			default:
-				finalizedHeader <- lastBlockNumber
+				basicChannel <- lastBlockNumber
+				incentivizedChannel <- lastBlockNumber
 			}
 
 			select {
@@ -102,7 +111,7 @@ func (h *Header) Sync(ctx context.Context) (<-chan uint64, error) {
 		}
 	}()
 
-	return finalizedHeader, nil
+	return basicChannel, incentivizedChannel, nil
 }
 
 func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) error {
@@ -180,11 +189,11 @@ func (h *Header) SyncHeader(ctx context.Context, blockRoot common.Hash, syncAggr
 		return syncer.HeaderUpdate{}, fmt.Errorf("fetch header update: %w", err)
 	}
 
-	/*logrus.WithFields(logrus.Fields{
+	log.WithFields(log.Fields{
 		"beaconBlockRoot":    blockRoot,
 		"executionBlockRoot": headerUpdate.Block.Body.ExecutionPayload.BlockHash.Hex(),
 		"slot":               headerUpdate.Block.Slot,
-	}).Info("Syncing header between last two finalized headers")*/
+	}).Info("Syncing header between last two finalized headers")
 
 	headerUpdate.SyncAggregate = syncAggregate
 
