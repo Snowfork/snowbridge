@@ -417,7 +417,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 		incentivizedNonceToFind = ethIncentivizedNonce + 1
 	}
 
-	if len(basicAccountIDsAndNoncesToFind) == 0 || !scanIncentivizedChannel {
+	if len(basicAccountIDsAndNoncesToFind) == 0 && !scanIncentivizedChannel {
 		return nil, nil
 	}
 
