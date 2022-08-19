@@ -131,15 +131,16 @@ start_polkadot_launch()
         --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
-        --features "${runtime}-native,rococo-native"
+        --features "${runtime}-native,rococo-native" \
+        --bin snowbridge
 
     echo "Building query tool"
-    cargo build --release --manifest-path "$parachain_dir/tools/query-events/Cargo.toml"
+    cargo build --release --manifest-path "$parachain_dir/tools/query-events/Cargo.toml" --bin snowbridge-query-events
 
     cp "$parachain_dir/target/release/snowbridge-query-events" "$output_dir/bin"
 
     echo "Building test parachain"
-    cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release
+    cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release --bin snowbridge-test-node
 
     echo "Generating chain specification"
     "$parachain_bin" build-spec --chain "$runtime" --disable-default-bootnode > "$output_dir/spec.json"
