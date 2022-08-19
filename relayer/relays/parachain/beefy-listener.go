@@ -403,7 +403,7 @@ func (li *BeefyListener) discoverCatchupTasks(
 	var scanIncentivizedChannel bool
 	var incentivizedNonceToFind uint64
 
-	basicAccountIDsAndNoncesToFind := make([]AccountNonceToFind, len(li.accountIDs))
+	basicAccountIDsAndNoncesToFind := make([]AccountNonceToFind, 0, len(li.accountIDs))
 	for _, nonceForAccountID := range basicNoncesForAccountIDs {
 		if nonceForAccountID.paraBasicNonce > nonceForAccountID.ethBasicNonce {
 			basicAccountIDsAndNoncesToFind = append(basicAccountIDsAndNoncesToFind, AccountNonceToFind{
