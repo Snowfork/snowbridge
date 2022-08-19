@@ -15,6 +15,8 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/writer"
 )
 
+var ErrFinalizedHeaderUnchanged = errors.New("finalized header unchanged")
+
 type Header struct {
 	cache  *cache.BeaconCache
 	writer *writer.ParachainWriter
@@ -27,7 +29,7 @@ func New(cache *cache.BeaconCache, writer *writer.ParachainWriter, beaconEndpoin
 	return Header{cache, writer, syncer}
 }
 
-func (h *Header) Sync(ctx context.Context) (chan uint64, error) {
+func (h *Header) Sync(ctx context.Context) (<-chan uint64, error) {
 	latestSyncedPeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
 	if err != nil {
 		return nil, fmt.Errorf("fetch last sync commitee: %w", err)
@@ -80,12 +82,16 @@ func (h *Header) Sync(ctx context.Context) (chan uint64, error) {
 	go func() {
 		for {
 			lastBlockNumber, err := h.SyncHeaders(ctx)
-			if err != nil {
+			switch {
+			case errors.Is(err, ErrFinalizedHeaderUnchanged):
+				log.WithField("finalized_header", h.cache.LastFinalizedHeader()).Info("finalized header unchanged")
+			case err != nil:
 				log.WithError(err).Error("error while syncing headers")
 
 				return
+			default:
+				finalizedHeader <- lastBlockNumber
 			}
-			finalizedHeader <- lastBlockNumber
 
 			select {
 			case <-done:
@@ -139,12 +145,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) (syncer.FinalizedHeade
 	}
 
 	if syncer.IsInHashArray(h.cache.FinalizedHeaders, blockRoot) {
-		log.WithFields(log.Fields{
-			"slot":      finalizedHeaderUpdate.FinalizedHeader.Slot,
-			"blockRoot": blockRoot,
-		}).Info("finalized header has been synced already, skipping.")
-
-		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, nil
+		return syncer.FinalizedHeaderUpdate{}, common.Hash{}, ErrFinalizedHeaderUnchanged
 	}
 
 	log.WithFields(log.Fields{
@@ -208,7 +209,7 @@ func (h *Header) SyncHeaders(ctx context.Context) (uint64, error) {
 	lastFinalizedHeader := h.cache.LastFinalizedHeader()
 
 	if lastFinalizedHeader == secondLastFinalizedHeader {
-		return 0, nil
+		return 0, ErrFinalizedHeaderUnchanged
 	}
 
 	log.WithFields(log.Fields{
@@ -223,6 +224,9 @@ func (h *Header) SyncHeaders(ctx context.Context) (uint64, error) {
 		return 0, fmt.Errorf("fetch sync aggregate: %w", err)
 	}
 
+	foundFinalizedHeaderAncestor := false
+	ancestorFinalizedHeader := common.Hash{}
+
 	for secondLastFinalizedHeader != blockRoot {
 		headerUpdate, err := h.SyncHeader(ctx, blockRoot, prevSyncAggregate)
 		if err != nil {
@@ -230,6 +234,11 @@ func (h *Header) SyncHeaders(ctx context.Context) (uint64, error) {
 		}
 
 		blockRoot = common.HexToHash(headerUpdate.Block.ParentRoot.Hex())
+		if !foundFinalizedHeaderAncestor {
+			ancestorFinalizedHeader = blockRoot
+			foundFinalizedHeaderAncestor = true
+		}
+
 		prevSyncAggregate = headerUpdate.Block.Body.SyncAggregate
 	}
 
@@ -239,10 +248,11 @@ func (h *Header) SyncHeaders(ctx context.Context) (uint64, error) {
 		return 0, err
 	}
 
-	lastBlockNumber, _, err := h.syncer.GetBlockRange(lastFinalizedHeader, secondLastFinalizedHeader)
+	// Use the block just before the last finalized header, because the finalized header is not imported in this chunk
+	executionBlockNumber, err := h.syncer.GetExecutionBlockHash(ancestorFinalizedHeader)
 	if err != nil {
 		return 0, err
 	}
 
-	return lastBlockNumber - 1, nil
+	return executionBlockNumber, nil
 }

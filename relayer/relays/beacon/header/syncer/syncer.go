@@ -256,32 +256,20 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	return headerUpdate, nil
 }
 
-func (s *Syncer) GetBlockRange(lastBlockHash, secondLastBlockHash common.Hash) (uint64, uint64, error) {
-	lastBlock, err := s.Client.GetBeaconBlock(lastBlockHash)
+func (s *Syncer) GetExecutionBlockHash(consensusBlockHash common.Hash) (uint64, error) {
+	executionBlockHash, err := s.Client.GetBeaconBlock(consensusBlockHash)
 	if err != nil {
-		return 0, 0, fmt.Errorf("fetch block for last hash: %w", err)
+		return 0, fmt.Errorf("fetch block for last hash: %w", err)
 	}
 
-	lastBlockNumberString := lastBlock.Data.Message.Body.ExecutionPayload.BlockNumber
+	blockNumberString := executionBlockHash.Data.Message.Body.ExecutionPayload.BlockNumber
 
-	lastBlockNumber, err := strconv.ParseUint(lastBlockNumberString, 10, 64)
+	blockNumber, err := strconv.ParseUint(blockNumberString, 10, 64)
 	if err != nil {
-		return 0, 0, fmt.Errorf("parse last block slot as int: %w", err)
+		return 0, fmt.Errorf("parse last block slot as int: %w", err)
 	}
 
-	secondLastBlock, err := s.Client.GetBeaconBlock(secondLastBlockHash)
-	if err != nil {
-		return 0, 0, fmt.Errorf("fetch block for second last hash: %w", err)
-	}
-
-	secondLastBlockNumberString := secondLastBlock.Data.Message.Body.ExecutionPayload.BlockNumber
-
-	secondLastBlockNumber, err := strconv.ParseUint(secondLastBlockNumberString, 10, 64)
-	if err != nil {
-		return 0, 0, fmt.Errorf("parse second last block slot as int: %w", err)
-	}
-
-	return lastBlockNumber, secondLastBlockNumber, nil
+	return blockNumber, nil
 }
 
 func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, error) {

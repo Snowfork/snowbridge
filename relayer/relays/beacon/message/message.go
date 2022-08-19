@@ -43,7 +43,7 @@ func (m *Message) writeMessages(ctx context.Context, payload ParachainPayload) e
 	return nil
 }
 
-func (m *Message) SyncMessages(ctx context.Context, blockNumber chan uint64) error {
+func (m *Message) SyncMessages(ctx context.Context, blockNumber <-chan uint64) error {
 	var err error
 	m.cache.LastSyncIncentivizedMessageBlockNumber, err = m.writer.GetLastIncentivizedChannelMessage()
 	if err != nil {
@@ -79,11 +79,15 @@ func (m *Message) SyncMessages(ctx context.Context, blockNumber chan uint64) err
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-blockNumber:
+		case blockNumber, ok := <-blockNumber:
+			if !ok {
+				return nil
+			}
 			logrus.WithFields(logrus.Fields{
 				"block_number": blockNumber,
-			}).Info("GOT BLOCK NUMBER FROM CHANNEL")
-			if m.cache.LastSyncedHeaderBlockNumber == 0 || m.cache.LastSyncBasicMessageBlockNumber == m.cache.LastSyncedHeaderBlockNumber || m.cache.LastSyncBasicMessageBlockNumber == m.cache.LastSyncedHeaderBlockNumber {
+			}).Info("last synced execution header")
+			if blockNumber == 0 {
+				//if m.cache.LastSyncedHeaderBlockNumber == 0 || m.cache.LastSyncBasicMessageBlockNumber == blockNumber || m.cache.LastSyncBasicMessageBlockNumber == blockNumber {
 				continue
 			}
 
@@ -92,9 +96,9 @@ func (m *Message) SyncMessages(ctx context.Context, blockNumber chan uint64) err
 
 			logrus.WithFields(logrus.Fields{
 				"start": m.cache.LastSyncBasicMessageBlockNumber,
-				"end":   m.cache.LastSyncedHeaderBlockNumber,
+				"end":   blockNumber,
 			}).Info("fetching basic events")
-			basicPayload, err := m.listener.ProcessBasicEvents(ctx, m.cache.LastSyncBasicMessageBlockNumber, m.cache.LastSyncedHeaderBlockNumber)
+			basicPayload, err := m.listener.ProcessBasicEvents(ctx, m.cache.LastSyncBasicMessageBlockNumber, blockNumber)
 			if err != nil {
 				return err
 			}
@@ -103,17 +107,17 @@ func (m *Message) SyncMessages(ctx context.Context, blockNumber chan uint64) err
 
 			logrus.WithFields(logrus.Fields{
 				"start": m.cache.LastSyncIncentivizedMessageBlockNumber,
-				"end":   m.cache.LastSyncedHeaderBlockNumber,
+				"end":   blockNumber,
 			}).Info("fetching incentivized events")
-			incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, m.cache.LastSyncIncentivizedMessageBlockNumber, m.cache.LastSyncedHeaderBlockNumber)
+			incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, m.cache.LastSyncIncentivizedMessageBlockNumber, blockNumber)
 			if err != nil {
 				return err
 			}
 
 			m.writeMessages(ctx, incentivizedPayload)
 
-			m.cache.LastSyncBasicMessageBlockNumber = m.cache.LastSyncedHeaderBlockNumber
-			m.cache.LastSyncIncentivizedMessageBlockNumber = m.cache.LastSyncedHeaderBlockNumber
+			m.cache.LastSyncBasicMessageBlockNumber = blockNumber
+			m.cache.LastSyncIncentivizedMessageBlockNumber = blockNumber
 		}
 	}
 
