@@ -92,7 +92,6 @@ where
 	fn into(self) -> Token {
 		Token::Tuple(vec![
 			Token::Uint(self.source_channel_id.into()),
-			// TODO: check the AccountId encoding expectation in the Ethereum contract
 			Token::FixedBytes(self.account.as_ref().into()),
 			Token::Uint(self.nonce.into()),
 			Token::Array(self.messages.into_iter().map(|message| message.into()).collect()),
@@ -320,8 +319,6 @@ pub mod pallet {
 			let mut message_bundles: Vec<MessageBundleOf<T>> = Vec::new();
 			for (account, messages) in account_message_map {
 				let next_nonce = <Nonces<T>>::mutate(&account, |nonce| {
-					// TODO: is this the right addition to use? u64 is large, but this will make us
-					// reuse nonces when we hit u64::MAX
 					*nonce = nonce.saturating_add(1);
 					*nonce
 				});

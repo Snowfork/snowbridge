@@ -92,8 +92,6 @@ pub fn new_tester() -> sp_io::TestExternalities {
 fn run_to_block(n: u64) {
 	while System::block_number() < n {
 		System::set_block_number(System::block_number() + 1);
-		// TODO: is this necessary for the test? It's mentioned in the unit testing docs:
-		// https://docs.substrate.io/main-docs/test/unit-testing/
 		System::on_initialize(System::block_number());
 		BasicOutboundChannel::on_initialize(System::block_number());
 	}
