@@ -50,6 +50,7 @@ func (m *Message) SyncBasic(ctx context.Context, blockNumber <-chan uint64) erro
 	// If the last nonce is set, there could be messages that have not been processed in the same block.
 	// Messages that have already been verified will not be reprocessed because they will be filtered out
 	// in filterMessagesByLastNonce.
+	// Messages after the lastVerifiedBlockNumber will be processed normally in the go routine below.
 	if nonce != 0 {
 		log.Info("processing basic block events for last verified block")
 		basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber)
@@ -119,6 +120,7 @@ func (m *Message) SyncIncentivized(ctx context.Context, blockNumber <-chan uint6
 	// If the last nonce is set, there could be messages that have not been processed in the same block.
 	// Messages that have already been verified will not be reprocessed because they will be filtered out
 	// in filterMessagesByLastNonce.
+	// Messages after the lastVerifiedBlockNumber will be processed normally in the go routine below.
 	if nonce != 0 {
 		log.Info("processing incentivized block events for last verified block")
 		incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber)

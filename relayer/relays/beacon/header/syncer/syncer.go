@@ -106,6 +106,9 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, e
 
 	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(slot)
 
+	//The current sync period's next sync committee should be synced too. So even 
+	// if the syncing is up to date with the current period, we still need to sync the current
+	// period's next sync committee.
 	if checkpointSyncPeriod == currentSyncPeriod {
 		return []uint64{currentSyncPeriod}, nil
 	}
