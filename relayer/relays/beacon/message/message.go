@@ -47,6 +47,24 @@ func (m *Message) SyncBasic(ctx context.Context, blockNumber <-chan uint64) erro
 		"nonce":        nonce,
 	}).Info("last basic channel")
 
+	// If the last nonce is set, there could be messages that have not been processed in the same block.
+	// Messages that have already been verified will not be reprocessed because they will be filtered out
+	// in filterMessagesByLastNonce.
+	if nonce != 0 {
+		log.Info("processing basic block events for last verified block")
+		basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber)
+		if err != nil {
+			return err
+		}
+
+		basicPayload.Messages = filterMessagesByLastNonce(basicPayload.Messages, nonce)
+		// Reset the nonce so that the next block processing range will exclude the block that was synced,
+		// and start syncing from the next block instead
+		nonce = 0
+
+		m.writeMessages(ctx, basicPayload)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -62,13 +80,7 @@ func (m *Message) SyncBasic(ctx context.Context, blockNumber <-chan uint64) erro
 				continue
 			}
 
-			// If the last nonce is set, there could be messages that have not been processed, in the same block
-			// So use the last synced block as the start value in the block range
-			// Messages that have already been verified will not be reprocessed because they will be filtered out
-			// in filterMessagesByLastNonce.
-			if nonce == 0 {
-				lastVerifiedBlockNumber = lastVerifiedBlockNumber + 1
-			}
+			lastVerifiedBlockNumber = lastVerifiedBlockNumber + 1
 
 			log.WithFields(log.Fields{
 				"start": lastVerifiedBlockNumber,
@@ -77,13 +89,6 @@ func (m *Message) SyncBasic(ctx context.Context, blockNumber <-chan uint64) erro
 			basicPayload, err := m.listener.ProcessBasicEvents(ctx, lastVerifiedBlockNumber, blockNumber)
 			if err != nil {
 				return err
-			}
-
-			if nonce != 0 {
-				basicPayload.Messages = filterMessagesByLastNonce(basicPayload.Messages, nonce)
-				// Reset the nonce so that the next block processing range will exclude the block that was synced,
-				// and start syncing from the next block instead
-				nonce = 0
 			}
 
 			m.writeMessages(ctx, basicPayload)
@@ -111,6 +116,28 @@ func (m *Message) SyncIncentivized(ctx context.Context, blockNumber <-chan uint6
 		"nonce":        nonce,
 	}).Info("last incentivized channel")
 
+	// If the last nonce is set, there could be messages that have not been processed in the same block.
+	// Messages that have already been verified will not be reprocessed because they will be filtered out
+	// in filterMessagesByLastNonce.
+	if nonce != 0 {
+		log.Info("processing incentivized block events for last verified block")
+		incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, lastVerifiedBlockNumber, lastVerifiedBlockNumber)
+		if err != nil {
+			return err
+		}
+
+		incentivizedPayload.Messages = filterMessagesByLastNonce(incentivizedPayload.Messages, nonce)
+		// Reset the nonce so that the next block processing range will exclude the block that was synced,
+		// and start syncing from the next block instead
+		nonce = 0
+
+		log.WithFields(log.Fields{
+			"incentivizedPayload": incentivizedPayload,
+		}).Info("writing incentivized messages")
+
+		m.writeMessages(ctx, incentivizedPayload)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -123,13 +150,7 @@ func (m *Message) SyncIncentivized(ctx context.Context, blockNumber <-chan uint6
 				"block_number": blockNumber,
 			}).Info("last synced execution header received in incentivized channel")
 
-			// If the last nonce is set, there could be messages that have not been processed, in the same block
-			// So use the last synced block as the start value in the block range
-			// Messages that have already been verified will not be reprocessed because they will be filtered out
-			// in filterMessagesByLastNonce.
-			if nonce == 0 {
-				lastVerifiedBlockNumber = lastVerifiedBlockNumber + 1
-			}
+			lastVerifiedBlockNumber = lastVerifiedBlockNumber + 1
 
 			log.WithFields(log.Fields{
 				"start": lastVerifiedBlockNumber,
@@ -139,13 +160,6 @@ func (m *Message) SyncIncentivized(ctx context.Context, blockNumber <-chan uint6
 			incentivizedPayload, err := m.listener.ProcessIncentivizedEvents(ctx, lastVerifiedBlockNumber, blockNumber)
 			if err != nil {
 				return err
-			}
-
-			if nonce != 0 {
-				incentivizedPayload.Messages = filterMessagesByLastNonce(incentivizedPayload.Messages, nonce)
-				// Reset the nonce so that the next block processing range will exclude the block that was synced,
-				// and start syncing from the next block instead
-				nonce = 0
 			}
 
 			m.writeMessages(ctx, incentivizedPayload)
