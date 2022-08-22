@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
+	"math/bits"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -319,7 +319,13 @@ func generateHashSides(commitmentProof *MerkleProof) ([]bool, error) {
 		return nil, fmt.Errorf("leaf position %v is too high in proof with %v leaves", pos, width)
 	}
 
-	numSides := (int)(math.Ceil(math.Log2(float64(width))))
+	if width == 0 {
+		return nil, fmt.Errorf("no hash sides for an empty proof")
+	}
+
+	// The number of intermediate hashes is the height of the complete tree, which is the base 2 log of the number of leaves, rounded up.
+	// This is equivalent to the number of bits after the most significant bit, which is what we use here.
+	numSides := 64 - bits.LeadingZeros64(width-1)
 	sides := make([]bool, numSides)
 	for i := 0; i < numSides; i++ {
 		sides[i] = pos%2 == 1
