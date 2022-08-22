@@ -5,10 +5,11 @@ use codec::Encode;
 use serde::Serialize;
 use serde_hex::{SerHexSeq, StrictPfx};
 use serde_json;
-use std::io::{self, Write};
-use std::str::FromStr;
-use subxt::sp_core::H256;
-use subxt::{ClientBuilder, DefaultConfig, SubstrateExtrinsicParams};
+use std::{
+	io::{self, Write},
+	str::FromStr,
+};
+use subxt::{ext::sp_core::H256, OnlineClient, PolkadotConfig};
 
 #[derive(Debug, Serialize)]
 struct Items {
@@ -45,39 +46,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	let block_hash = H256::from_str(args.block.trim_start_matches("0x"))?;
 
-	let api = ClientBuilder::new()
-		.set_url(args.api)
-		.build()
-		.await?
-		.to_runtime_api::<runtime::RuntimeApi<DefaultConfig, SubstrateExtrinsicParams<DefaultConfig>>>(
-		);
+	let api = OnlineClient::<PolkadotConfig>::from_url(args.api).await?;
 
-	let events = api.storage().system().events(Some(block_hash.into())).await?;
+	let query = runtime::storage().system().events();
+	let events = api.storage().fetch(&query, Some(block_hash.into())).await?;
 
 	let mut items: Vec<Item> = Vec::new();
 
-	for event in events.into_iter() {
+	for event in events.expect("Failed to get events for block.").into_iter() {
 		if let runtime::runtime_types::snowbase_runtime::Event::BasicOutboundChannel(ev) =
 			&event.event
 		{
 			if let runtime::runtime_types::snowbridge_basic_channel::outbound::pallet::Event::Committed { hash, data } = ev {
-				items.push(Item {
-					id: 0,
-					hash: hash.encode(),
-					data: data.encode(),
-				});
-			}
+					items.push(Item {
+						id: 0,
+						hash: hash.encode(),
+						data: data.encode(),
+					});
+				}
 		}
 		if let runtime::runtime_types::snowbase_runtime::Event::IncentivizedOutboundChannel(ev) =
 			&event.event
 		{
 			if let runtime::runtime_types::snowbridge_incentivized_channel::outbound::pallet::Event::Committed { hash, data } = ev {
-				items.push(Item {
-					id: 1,
-					hash: hash.encode(),
-					data: data.encode(),
-				});
-			}
+					items.push(Item {
+						id: 1,
+						hash: hash.encode(),
+						data: data.encode(),
+					});
+				}
 		}
 	}
 
