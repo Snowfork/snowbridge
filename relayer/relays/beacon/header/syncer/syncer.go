@@ -107,7 +107,7 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, e
 	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(slot)
 
 	if checkpointSyncPeriod == currentSyncPeriod {
-		return []uint64{}, nil
+		return []uint64{currentSyncPeriod}, nil
 	}
 
 	syncPeriodsToFetch := []uint64{}
