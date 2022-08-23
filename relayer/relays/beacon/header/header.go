@@ -103,7 +103,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <
 
 			select {
 			case <-ctx.Done():
-				return ctx.Err()
+				return nil
 			case <-ticker.C:
 				continue
 			}
