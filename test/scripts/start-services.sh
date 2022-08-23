@@ -33,11 +33,6 @@ start_geth() {
     fi
 
     local data_dir="$output_dir/geth"
-
-    # removes TTD bomb for when beacon chain is not used
-    if [ "$start_beacon_sync" == "false" ]; then
-        jq 'del(.config.terminalTotalDifficulty)' "$output_dir/genesis.json" | sponge "$output_dir/genesis.json"
-    fi
     
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local net"
