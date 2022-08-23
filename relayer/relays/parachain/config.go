@@ -20,29 +20,29 @@ type SourceConfig struct {
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
 	// Block number when Beefy was activated
 	BeefyActivationBlock uint64   `mapstructure:"beefy-activation-block"`
-	AccountIDs           []string `mapstructure:"accountIDs"`
+	Accounts             []string `mapstructure:"accounts"`
 }
 
-func (c *SourceConfig) getAccountIDs() ([][32]byte, error) {
-	var accountIDs [][32]byte
+func (c *SourceConfig) getAccounts() ([][32]byte, error) {
+	var accounts [][32]byte
 
-	for _, accountID := range c.AccountIDs {
-		trimmedAccountID := strings.TrimPrefix(accountID, "0x")
-		accountIDBytes, err := hex.DecodeString(trimmedAccountID)
+	for _, account := range c.Accounts {
+		trimmedAccount := strings.TrimPrefix(account, "0x")
+		accountBytes, err := hex.DecodeString(trimmedAccount)
 
 		if err != nil {
 			return nil, fmt.Errorf("decode account id: %w", err)
-		} else if len(accountIDBytes) != 32 {
+		} else if len(accountBytes) != 32 {
 			// The conversion below will panic if decodedAccount has
 			// fewer than 32 bytes: we expect exactly 32 bytes.
-			return nil, fmt.Errorf("account id was not 32 bytes long: %v", accountIDBytes)
+			return nil, fmt.Errorf("account id was not 32 bytes long: %v", accountBytes)
 		}
 
-		decodedAccountID := *(*[32]byte)(accountIDBytes)
-		accountIDs = append(accountIDs, decodedAccountID)
+		decodedAccount := *(*[32]byte)(accountBytes)
+		accounts = append(accounts, decodedAccount)
 	}
 
-	return accountIDs, nil
+	return accounts, nil
 }
 
 type SourceContractsConfig struct {
