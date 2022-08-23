@@ -34,10 +34,15 @@ start_geth() {
 
     local data_dir="$output_dir/geth"
 
+    # removes TTD bomb for when beacon chain is not used
+    if [ "$start_beacon_sync" == "false" ]; then
+        jq 'del(.config.terminalTotalDifficulty)' "$output_dir/genesis.json" | sponge "$output_dir/genesis.json"
+    fi
+    
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local net"
 
-        geth init --datadir "$data_dir" config/genesis.json
+        geth init --datadir "$data_dir" "$output_dir/genesis.json"
         geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key0.prv
         geth account import --datadir "$data_dir" --password /dev/null config/dev-example-key1.prv
         geth --vmdebug --datadir "$data_dir" --networkid 15 \
@@ -108,25 +113,32 @@ start_polkadot_launch()
     fi
 
     local parachain_bin="$parachain_dir/target/release/snowbridge"
-    local test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-collator"
+    local test_collator_bin="$parachain_dir/utils/test-parachain/target/release/snowbridge-test-node"
+
+    runtime="snowbase"
+
+    if [ "$eth_network" != "localhost" ]; then
+        runtime="snowblink"
+    fi
 
     echo "Building snowbridge parachain"
     cargo build \
         --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
-        --features snowbase-native,rococo-native
+        --features "${runtime}-native,rococo-native" \
+        --bin snowbridge
 
     echo "Building query tool"
-    cargo build --release --manifest-path "$parachain_dir/tools/query-events/Cargo.toml"
+    cargo build --release --manifest-path "$parachain_dir/tools/query-events/Cargo.toml" --bin snowbridge-query-events
 
     cp "$parachain_dir/target/release/snowbridge-query-events" "$output_dir/bin"
 
     echo "Building test parachain"
-    cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release
+    cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release --bin snowbridge-test-node
 
     echo "Generating chain specification"
-    "$parachain_bin" build-spec --chain snowbase --disable-default-bootnode > "$output_dir/spec.json"
+    "$parachain_bin" build-spec --chain "$runtime" --disable-default-bootnode > "$output_dir/spec.json"
 
     echo "Updating chain specification"
     curl $infura_endpoint_http \

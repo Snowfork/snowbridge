@@ -11,29 +11,29 @@ license = "PENDING/TBC"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-serde = { version = "1.0.136", optional = true }
-codec = { version = "3.0.0", package = "parity-scale-codec", default-features = false, features = ["derive"] }
-scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
+serde = { version = "1.0.137", optional = true }
+codec = { version = "3.0.0", package = "parity-scale-codec", default-features = false, features = [ "derive" ] }
+scale-info = { version = "2.0.1", default-features = false, features = [ "derive" ] }
 milagro_bls = { git = "https://github.com/Snowfork/milagro_bls", default-features = false }
 ssz-rs = { git = "https://github.com/Snowfork/ssz_rs", default-features = false, rev="8d497a949c320577aa1f741eb9f2958191df905b" }
 ssz-rs-derive = { git = "https://github.com/Snowfork/ssz_rs", default-features = false, rev="8d497a949c320577aa1f741eb9f2958191df905b" }
 byte-slice-cast = { version = "1.2.1", default-features = false }
 rlp = { version = "0.5", default-features = false }
 
-frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25", default-features = false }
 
 snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
 
 [dev-dependencies]
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25" }
 hex-literal = { version = "0.3.1" }
 snowbridge-testutils = { path = "../../primitives/testutils" }
 serde_json = "1.0.68"

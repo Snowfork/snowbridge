@@ -212,7 +212,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	GenesisBuild::<Test>::assimilate_storage(&config, &mut storage).unwrap();
 
 	let assets_config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
-		assets: vec![(0, EtherAppPalletId::get().into_account(), true, 1)],
+		assets: vec![(0, EtherAppPalletId::get().into_account_truncating(), true, 1)],
 		metadata: vec![],
 		accounts: vec![],
 	};

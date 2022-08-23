@@ -9,58 +9,15 @@ mod mock;
 mod tests;
 mod ssz;
 
-use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, log, transactional};
 use frame_system::ensure_signed;
-use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
-use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, SyncAggregate, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, BeaconBlock, ProofBranch, ForkVersion};
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, 
+	ProofBranch, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct InitialSync {
-	pub header: BeaconHeader,
-	pub current_sync_committee: SyncCommittee,
-	pub current_sync_committee_branch: ProofBranch,
-	pub validators_root: Root,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct SyncCommitteePeriodUpdate {
-	pub attested_header: BeaconHeader,
-	pub next_sync_committee: SyncCommittee,
-	pub next_sync_committee_branch: ProofBranch,
-	pub finalized_header: BeaconHeader,
-	pub finality_branch: ProofBranch,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-	pub sync_committee_period: u64,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct FinalizedHeaderUpdate {
-	pub attested_header: BeaconHeader,
-	pub finalized_header: BeaconHeader,
-	pub finality_branch: ProofBranch,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-}
-
-#[derive(Clone, Default, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct BlockUpdate {
-	pub block: BeaconBlock,
-	//  // Only used for debugging purposes, to compare the hash tree
-	// root of the block body to the body hash retrieved from the API.
-	// Can be removed later.
-	pub block_body_root: H256,
-	pub sync_aggregate: SyncAggregate,
-	pub fork_version: ForkVersion,
-}
 
 pub use pallet::*;
 
@@ -129,13 +86,16 @@ pub mod pallet {
 		StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
-
-	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type LatestFinalizedHeaderHash<T: Config> = StorageValue<_, H256, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -621,6 +581,7 @@ pub mod pallet {
 					slot
 				);
 				<LatestFinalizedHeaderSlot<T>>::set(slot);
+				<LatestFinalizedHeaderHash<T>>::set(block_root);
 			}
 		}
 
@@ -744,30 +705,6 @@ pub mod pallet {
 			Ok(sync_committee)
 		}
 
-		// Verifies that the receipt encoded in proof.data is included
-		// in the block given by proof.block_hash. Inclusion is only
-		// recognized if the block has been finalized.
-		fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
-			let stored_header =
-				<ExecutionHeaders<T>>::get(proof.block_hash).ok_or(Error::<T>::MissingHeader)?;
-
-			let result = stored_header
-				.check_receipt_proof(&proof.data.1)
-				.ok_or(Error::<T>::InvalidProof)?;
-
-			match result {
-				Ok(receipt) => Ok(receipt),
-				Err(err) => {
-					log::trace!(
-						target: "ethereum-beacon-client",
-						"Failed to decode transaction receipt: {}",
-						err
-					);
-					Err(Error::<T>::InvalidProof.into())
-				},
-			}
-		}
-
 		pub(super) fn initial_sync(
 			initial_sync: InitialSync,
 		) -> Result<(), &'static str> {
@@ -792,6 +729,27 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		// Verifies that the receipt encoded in proof.data is included
+		// in the block given by proof.block_hash. Inclusion is only
+		// recognized if the block has been finalized.
+		fn verify_receipt_inclusion(proof: &Proof, stored_header: ExecutionHeader) -> Result<Receipt, DispatchError> {
+			let result = stored_header
+				.check_receipt_proof(&proof.data.1)
+				.ok_or(Error::<T>::InvalidProof)?;
+
+			match result {
+				Ok(receipt) => Ok(receipt),
+				Err(err) => {
+					log::trace!(
+						target: "ethereum-beacon-client",
+						"Failed to decode transaction receipt: {}",
+						err
+					);
+					Err(Error::<T>::InvalidProof.into())
+				},
+			}
+		}
 	}
 
 	impl<T: Config> Verifier for Pallet<T> {
@@ -804,7 +762,10 @@ pub mod pallet {
 				message.proof.block_hash,
 			);
 
-			let receipt = match Self::verify_receipt_inclusion(&message.proof) {
+			let stored_header =
+				<ExecutionHeaders<T>>::get(message.proof.block_hash).ok_or(Error::<T>::MissingHeader)?;
+
+			let receipt = match Self::verify_receipt_inclusion(&message.proof, stored_header) {
 				Ok(receipt) => receipt,
 				Err(err) => {
 					log::trace!(

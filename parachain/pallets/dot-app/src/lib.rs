@@ -127,7 +127,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			T::Currency::transfer(&who, &Self::account_id(), amount, AllowDeath)?;
+			T::Currency::transfer(&who, &Self::account_id()?, amount, AllowDeath)?;
 
 			let amount_wrapped =
 				wrap::<T>(amount, T::Decimals::get()).ok_or(Error::<T>::Overflow)?;
@@ -153,22 +153,24 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {
-				return Err(DispatchError::BadOrigin.into());
+				return Err(DispatchError::BadOrigin.into())
 			}
 
 			let amount_unwrapped =
 				unwrap::<T>(amount, T::Decimals::get()).ok_or(Error::<T>::Overflow)?;
 
 			let recipient = T::Lookup::lookup(recipient)?;
-			T::Currency::transfer(&Self::account_id(), &recipient, amount_unwrapped, KeepAlive)?;
+			T::Currency::transfer(&Self::account_id()?, &recipient, amount_unwrapped, KeepAlive)?;
 			Self::deposit_event(Event::Unlocked(sender, recipient, amount_unwrapped));
 			Ok(())
 		}
 	}
 
 	impl<T: Config> Pallet<T> {
-		pub fn account_id() -> T::AccountId {
-			T::PalletId::get().into_account()
+		pub fn account_id() -> Result<T::AccountId, DispatchError> {
+			T::PalletId::get()
+				.try_into_account()
+				.ok_or(DispatchError::Other("PalletId account conversion failed."))
 		}
 	}
 }

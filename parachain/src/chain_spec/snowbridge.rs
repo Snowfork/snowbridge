@@ -3,7 +3,7 @@ use hex_literal::hex;
 use sc_service::ChainType;
 use snowbridge_runtime::{AccountId, AuraId, EtherAppPalletId, GenesisConfig, WASM_BINARY};
 use sp_core::sr25519;
-use sp_runtime::{traits::AccountIdConversion, Perbill};
+use sp_runtime::{bounded_vec, traits::AccountIdConversion, Perbill};
 
 use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 
@@ -83,7 +83,7 @@ fn testnet_genesis(
 		},
 		local_council: Default::default(),
 		local_council_membership: snowbridge_runtime::LocalCouncilMembershipConfig {
-			members: vec![
+			members: bounded_vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_account_id_from_seed::<sr25519::Public>("Bob"),
 				get_account_id_from_seed::<sr25519::Public>("Charlie"),
@@ -108,7 +108,14 @@ fn testnet_genesis(
 		},
 		assets: snowbridge_runtime::AssetsConfig {
 			// Initialize the wrapped Ether asset
-			assets: vec![(0, EtherAppPalletId::get().into_account(), true, 1)],
+			assets: vec![(
+				0,
+				EtherAppPalletId::get()
+					.try_into_account()
+					.expect("Cannot convert PalletId to AccountId."),
+				true,
+				1,
+			)],
 			metadata: vec![],
 			accounts: vec![],
 		},
