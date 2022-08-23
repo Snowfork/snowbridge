@@ -128,9 +128,7 @@ pub mod pallet {
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			let relayer = ensure_signed(origin)?;
 			// submit message to verifier for verification
-			let result = T::Verifier::verify(&message)?;
-			let log = result.0;
-			let block_number = result.1;
+			let (log, block_number) = T::Verifier::verify(&message)?;
 
 			// Decode log into an Envelope
 			let envelope: Envelope<T> =
