@@ -646,7 +646,7 @@ func (li *BeefyListener) scanForCommitments(
 						continue
 					}
 
-					// Only consider message bundles for the account we're interested in
+					// Only consider message bundles for the accounts we're interested in
 					bundleIndex := bundleIndexForAccountID(events.Basic.Bundles, &accountIDAndNonce.accountID)
 					if bundleIndex == -1 {
 						continue
