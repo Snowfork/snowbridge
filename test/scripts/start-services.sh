@@ -13,7 +13,6 @@ infura_endpoint_ws="${ETH_WS_ENDPOINT:-ws://localhost:8546}/${INFURA_PROJECT_ID:
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
-start_beacon_sync="${START_BEACON_SYNC:-false}"
 beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://localhost:9596}"
 
 output_dir=/tmp/snowbridge
@@ -58,10 +57,6 @@ start_geth() {
 }
 
 start_lodestar() {
-    if [ "$start_beacon_sync" == "false" ]; then
-        return
-    fi
-
     if [ "$eth_network" == "localhost" ]; then
         echo "Waiting for geth API to be ready"
         sleep 2
@@ -140,25 +135,21 @@ start_polkadot_launch()
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
         | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
 
-    if [ "$start_beacon_sync" == "true" ]; then
-        initial_beacon_block=$(curl "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
-                | jq -r '.data.finalized.root')
+    initial_beacon_block=$(curl "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
+            | jq -r '.data.finalized.root')
 
-        curl "$beacon_endpoint_http/eth/v1/light_client/bootstrap/$initial_beacon_block" \
-            | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
+    curl "$beacon_endpoint_http/eth/v1/light_client/bootstrap/$initial_beacon_block" \
+        | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
 
-        validatorsRoot=$(curl "$beacon_endpoint_http/eth/v1/beacon/genesis" \
-                | jq -r '.data.genesis_validators_root')
+    validatorsRoot=$(curl "$beacon_endpoint_http/eth/v1/beacon/genesis" \
+            | jq -r '.data.genesis_validators_root')
 
-        jq \
-            --arg validatorsRoot "$validatorsRoot" \
-            ' .validators_root = $validatorsRoot
-            ' \
-            "$output_dir/initialBeaconSync_tmp.json" \
-            > "$output_dir/initialBeaconSync.json"
-    else
-        cp config/initial-beacon-sync-fake.json "$output_dir/initialBeaconSync.json"
-    fi
+    jq \
+        --arg validatorsRoot "$validatorsRoot" \
+        ' .validators_root = $validatorsRoot
+        ' \
+        "$output_dir/initialBeaconSync_tmp.json" \
+        > "$output_dir/initialBeaconSync.json"
 
     cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
 
@@ -307,35 +298,19 @@ start_relayer()
         done
     ) &
 
-    # Launch ethereum relay
+    # Launch beacon relay
     (
-        : > ethereum-relay.log
+        : > beacon-relay.log
         while :
         do
-          echo "Starting ethereum relay at $(date)"
-            "${relay_bin}" run ethereum \
-                --config $output_dir/ethereum-relay.json \
-                --substrate.private-key "//Relay" \
-                >>ethereum-relay.log 2>&1 || true
+        echo "Starting beacon relay at $(date)"
+            "${relay_bin}" run beacon \
+                --config $output_dir/beacon-relay.json \
+                --substrate.private-key "//BeaconRelay" \
+                >>beacon-relay.log 2>&1 || true
             sleep 20
         done
     ) &
-
-    if [ "$start_beacon_sync" == "true" ]; then
-        # Launch beacon relay
-        (
-            : > beacon-relay.log
-            while :
-            do
-            echo "Starting beacon relay at $(date)"
-                "${relay_bin}" run beacon \
-                    --config $output_dir/beacon-relay.json \
-                    --substrate.private-key "//BeaconRelay" \
-                    >>beacon-relay.log 2>&1 || true
-                sleep 20
-            done
-        ) &
-    fi
 }
 
 cleanup() {
