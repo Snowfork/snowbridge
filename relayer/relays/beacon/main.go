@@ -71,13 +71,20 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	basicChannel, incentivizedChannel, err := headers.Sync(ctx)
+	basicChannel, incentivizedChannel, err := headers.Sync(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	go messages.SyncBasic(ctx, basicChannel)
-	go messages.SyncIncentivized(ctx, incentivizedChannel)
+	err = messages.SyncBasic(ctx, eg, basicChannel)
+	if err != nil {
+		return err
+	}
+
+	err = messages.SyncIncentivized(ctx, eg, incentivizedChannel)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

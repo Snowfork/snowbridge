@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -31,7 +32,7 @@ func New(writer *writer.ParachainWriter, beaconEndpoint string, slotsInEpoch uin
 	}
 }
 
-func (h *Header) Sync(ctx context.Context) (<-chan uint64, <-chan uint64, error) {
+func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) (<-chan uint64, <-chan uint64, error) {
 	latestSyncedPeriod, err := h.writer.GetLastSyncedSyncCommitteePeriod()
 	if err != nil {
 		return nil, nil, fmt.Errorf("fetch last sync commitee: %w", err)
@@ -77,12 +78,15 @@ func (h *Header) Sync(ctx context.Context) (<-chan uint64, <-chan uint64, error)
 	log.Info("starting to sync finalized headers")
 
 	ticker := time.NewTicker(time.Second * 20)
-	done := make(chan bool)
 
 	basicChannel := make(chan uint64)
 	incentivizedChannel := make(chan uint64)
 
-	go func() {
+	eg.Go(func() error {
+		defer func() {
+			close(basicChannel)
+			close(incentivizedChannel)
+		}()
 		for {
 			lastBlockNumber, err := h.SyncHeaders(ctx)
 			switch {
@@ -91,20 +95,20 @@ func (h *Header) Sync(ctx context.Context) (<-chan uint64, <-chan uint64, error)
 			case err != nil:
 				log.WithError(err).Error("error while syncing headers")
 
-				return
+				return err
 			default:
 				basicChannel <- lastBlockNumber
 				incentivizedChannel <- lastBlockNumber
 			}
 
 			select {
-			case <-done:
-				return
+			case <-ctx.Done():
+				return ctx.Err()
 			case <-ticker.C:
 				continue
 			}
 		}
-	}()
+	})
 
 	return basicChannel, incentivizedChannel, nil
 }
