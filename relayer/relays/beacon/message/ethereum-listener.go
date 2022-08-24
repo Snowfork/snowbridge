@@ -1,4 +1,4 @@
-package beacon
+package message
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts/basic"
 	"github.com/snowfork/snowbridge/relayer/contracts/incentivized"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/ethereum/syncer"
 	"golang.org/x/sync/errgroup"
 )
@@ -20,8 +21,13 @@ type ParachainPayload struct {
 	Messages []*chain.EthereumOutboundMessage
 }
 
+type EventContainer struct {
+	Event *etypes.Log
+	Nonce uint64
+}
+
 type EthereumListener struct {
-	config                      *SourceConfig
+	config                      *config.SourceConfig
 	conn                        *ethereum.Connection
 	basicOutboundChannel        *basic.BasicOutboundChannel
 	incentivizedOutboundChannel *incentivized.IncentivizedOutboundChannel
@@ -31,7 +37,7 @@ type EthereumListener struct {
 }
 
 func NewEthereumListener(
-	config *SourceConfig,
+	config *config.SourceConfig,
 	conn *ethereum.Connection,
 ) *EthereumListener {
 	return &EthereumListener{
@@ -78,27 +84,18 @@ func (li *EthereumListener) Start(
 	return nil
 }
 
-func (li *EthereumListener) ProcessEvents(
+func (li *EthereumListener) ProcessBasicEvents(
 	ctx context.Context,
 	start uint64,
 	end uint64,
 ) (ParachainPayload, error) {
-	var events []*etypes.Log
-
 	filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
 	basicEvents, err := li.queryBasicEvents(li.basicOutboundChannel, &filterOptions)
 	if err != nil {
 		return ParachainPayload{}, err
 	}
-	events = append(events, basicEvents...)
 
-	incentivizedEvents, err := li.queryIncentivizedEvents(li.incentivizedOutboundChannel, &filterOptions)
-	if err != nil {
-		return ParachainPayload{}, err
-	}
-	events = append(events, incentivizedEvents...)
-
-	messages, err := li.makeOutgoingMessages(ctx, events)
+	messages, err := li.makeOutgoingMessages(ctx, basicEvents)
 	if err != nil {
 		return ParachainPayload{}, err
 	}
@@ -106,8 +103,28 @@ func (li *EthereumListener) ProcessEvents(
 	return ParachainPayload{Messages: messages}, nil
 }
 
-func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
-	var events []*etypes.Log
+func (li *EthereumListener) ProcessIncentivizedEvents(
+	ctx context.Context,
+	start uint64,
+	end uint64,
+) (ParachainPayload, error) {
+	filterOptions := bind.FilterOpts{Start: start, End: &end, Context: ctx}
+
+	incentivizedEvents, err := li.queryIncentivizedEvents(li.incentivizedOutboundChannel, &filterOptions)
+	if err != nil {
+		return ParachainPayload{}, err
+	}
+
+	messages, err := li.makeOutgoingMessages(ctx, incentivizedEvents)
+	if err != nil {
+		return ParachainPayload{}, err
+	}
+
+	return ParachainPayload{Messages: messages}, nil
+}
+
+func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChannel, options *bind.FilterOpts) ([]EventContainer, error) {
+	var events []EventContainer
 
 	iter, err := contract.FilterMessage(options)
 	if err != nil {
@@ -123,13 +140,16 @@ func (li *EthereumListener) queryBasicEvents(contract *basic.BasicOutboundChanne
 			}
 			break
 		}
-		events = append(events, &iter.Event.Raw)
+		events = append(events, EventContainer{
+			Event: &iter.Event.Raw,
+			Nonce: iter.Event.Nonce,
+		})
 	}
 	return events, nil
 }
 
-func (li *EthereumListener) queryIncentivizedEvents(contract *incentivized.IncentivizedOutboundChannel, options *bind.FilterOpts) ([]*etypes.Log, error) {
-	var events []*etypes.Log
+func (li *EthereumListener) queryIncentivizedEvents(contract *incentivized.IncentivizedOutboundChannel, options *bind.FilterOpts) ([]EventContainer, error) {
+	var events []EventContainer
 
 	iter, err := contract.FilterMessage(options)
 	if err != nil {
@@ -145,18 +165,22 @@ func (li *EthereumListener) queryIncentivizedEvents(contract *incentivized.Incen
 			}
 			break
 		}
-		events = append(events, &iter.Event.Raw)
+		events = append(events, EventContainer{
+			Event: &iter.Event.Raw,
+			Nonce: iter.Event.Nonce,
+		})
 	}
 	return events, nil
 }
 
 func (li *EthereumListener) makeOutgoingMessages(
 	ctx context.Context,
-	events []*etypes.Log,
+	events []EventContainer,
 ) ([]*chain.EthereumOutboundMessage, error) {
 	messages := make([]*chain.EthereumOutboundMessage, len(events))
 
-	for i, event := range events {
+	for i, eventContainer := range events {
+		event := eventContainer.Event
 		receiptTrie, err := li.headerCache.GetReceiptTrie(ctx, event.BlockHash)
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -177,6 +201,8 @@ func (li *EthereumListener) makeOutgoingMessages(
 			}).WithError(err).Error("Failed to generate message from ethereum event")
 			return nil, err
 		}
+
+		msg.Nonce = eventContainer.Nonce
 
 		messages[i] = msg
 	}

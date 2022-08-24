@@ -1,4 +1,4 @@
-package syncer
+package cache
 
 import (
 	"sync"
@@ -7,13 +7,13 @@ import (
 )
 
 type BeaconCache struct {
-	LastSyncedSyncCommitteePeriod uint64
-	FinalizedHeaders              []common.Hash
-	HeadersMap                    map[common.Hash]uint64
-	mu                            sync.Mutex
+	LastSyncedSyncCommitteePeriod          uint64
+	FinalizedHeaders                       []common.Hash
+	HeadersMap                             map[common.Hash]uint64
+	mu                                     sync.Mutex
 }
 
-func NewBeaconCache() *BeaconCache {
+func New() *BeaconCache {
 	return &BeaconCache{
 		LastSyncedSyncCommitteePeriod: 0,
 		FinalizedHeaders:              []common.Hash{},
