@@ -11,14 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/syncer/scale"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 )
 
 var ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("not found")
 
 type Syncer struct {
 	Client                       BeaconClient
-	Cache                        BeaconCache
 	SlotsInEpoch                 uint64
 	EpochsPerSyncCommitteePeriod uint64
 }
@@ -26,7 +25,6 @@ type Syncer struct {
 func New(endpoint string, slotsInEpoch, epochsPerSyncCommitteePeriod uint64) *Syncer {
 	return &Syncer{
 		Client:                       *NewBeaconClient(endpoint),
-		Cache:                        *NewBeaconCache(),
 		SlotsInEpoch:                 slotsInEpoch,
 		EpochsPerSyncCommitteePeriod: epochsPerSyncCommitteePeriod,
 	}
@@ -108,8 +106,11 @@ func (s *Syncer) GetSyncPeriodsToFetch(checkpointSyncPeriod uint64) ([]uint64, e
 
 	currentSyncPeriod := s.ComputeSyncPeriodAtSlot(slot)
 
+	//The current sync period's next sync committee should be synced too. So even 
+	// if the syncing is up to date with the current period, we still need to sync the current
+	// period's next sync committee.
 	if checkpointSyncPeriod == currentSyncPeriod {
-		return []uint64{}, nil
+		return []uint64{currentSyncPeriod}, nil
 	}
 
 	syncPeriodsToFetch := []uint64{}
@@ -258,32 +259,20 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash) (HeaderUpdate, error) {
 	return headerUpdate, nil
 }
 
-func (s *Syncer) GetBlockRange(lastBlockHash, secondLastBlockHash common.Hash) (uint64, uint64, error) {
-	lastBlock, err := s.Client.GetBeaconBlock(lastBlockHash)
+func (s *Syncer) GetExecutionBlockHash(consensusBlockHash common.Hash) (uint64, error) {
+	executionBlockHash, err := s.Client.GetBeaconBlock(consensusBlockHash)
 	if err != nil {
-		return 0, 0, fmt.Errorf("fetch block for last hash: %w", err)
+		return 0, fmt.Errorf("fetch block for last hash: %w", err)
 	}
 
-	lastBlockNumberString := lastBlock.Data.Message.Body.ExecutionPayload.BlockNumber
+	blockNumberString := executionBlockHash.Data.Message.Body.ExecutionPayload.BlockNumber
 
-	lastBlockNumber, err := strconv.ParseUint(lastBlockNumberString, 10, 64)
+	blockNumber, err := strconv.ParseUint(blockNumberString, 10, 64)
 	if err != nil {
-		return 0, 0, fmt.Errorf("parse last block slot as int: %w", err)
+		return 0, fmt.Errorf("parse last block slot as int: %w", err)
 	}
 
-	secondLastBlock, err := s.Client.GetBeaconBlock(secondLastBlockHash)
-	if err != nil {
-		return 0, 0, fmt.Errorf("fetch block for second last hash: %w", err)
-	}
-
-	secondLastBlockNumberString := secondLastBlock.Data.Message.Body.ExecutionPayload.BlockNumber
-
-	secondLastBlockNumber, err := strconv.ParseUint(secondLastBlockNumberString, 10, 64)
-	if err != nil {
-		return 0, 0, fmt.Errorf("parse second last block slot as int: %w", err)
-	}
-
-	return lastBlockNumber, secondLastBlockNumber, nil
+	return blockNumber, nil
 }
 
 func (s *Syncer) GetSyncAggregate(blockRoot common.Hash) (scale.SyncAggregate, error) {

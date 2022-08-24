@@ -7,8 +7,9 @@ type Message interface{}
 
 // Message from ethereum
 type EthereumOutboundMessage struct {
-	Call string
-	Args []interface{}
+	Call  string
+	Args  []interface{}
+	Nonce uint64
 }
 
 type Header struct {

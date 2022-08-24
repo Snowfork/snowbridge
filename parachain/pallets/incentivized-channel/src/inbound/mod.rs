@@ -93,6 +93,9 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery>;
 
+	#[pallet::storage]
+	pub type LatestVerifiedBlockNumber<T: Config> = StorageValue<_, u64, ValueQuery>;
+
 	/// Fraction of reward going to relayer
 	#[pallet::storage]
 	#[pallet::getter(fn reward_fraction)]
@@ -125,7 +128,7 @@ pub mod pallet {
 		pub fn submit(origin: OriginFor<T>, message: Message) -> DispatchResult {
 			let relayer = ensure_signed(origin)?;
 			// submit message to verifier for verification
-			let log = T::Verifier::verify(&message)?;
+			let (log, block_number) = T::Verifier::verify(&message)?;
 
 			// Decode log into an Envelope
 			let envelope: Envelope<T> =
@@ -151,6 +154,8 @@ pub mod pallet {
 
 			let message_id = MessageId::new(ChannelId::Incentivized, envelope.nonce);
 			T::MessageDispatch::dispatch(envelope.source, message_id, &envelope.payload);
+
+			<LatestVerifiedBlockNumber<T>>::set(block_number);
 
 			Ok(())
 		}

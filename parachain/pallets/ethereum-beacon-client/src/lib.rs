@@ -14,7 +14,7 @@ use frame_system::ensure_signed;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
 use sp_std::prelude::*;
-use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader, 
+use snowbridge_beacon_primitives::{SyncCommittee, BeaconHeader, ForkData, Root, Domain, PublicKey, SigningData, ExecutionHeader,
 	ProofBranch, ForkVersion, SyncCommitteePeriodUpdate, FinalizedHeaderUpdate, InitialSync, BlockUpdate};
 use snowbridge_core::{Message, Verifier};
 use crate::merkleization::get_sync_committee_bits;
@@ -86,13 +86,16 @@ pub mod pallet {
 		StorageMap<_, Identity, u64, SyncCommittee, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
-
-	#[pallet::storage]
 	pub(super) type ValidatorsRoot<T: Config> = StorageValue<_, H256, ValueQuery>;
 
 	#[pallet::storage]
 	pub(super) type LatestFinalizedHeaderSlot<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type LatestFinalizedHeaderHash<T: Config> = StorageValue<_, H256, ValueQuery>;
+
+	#[pallet::storage]
+	pub(super) type LatestSyncCommitteePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig {
@@ -289,7 +292,7 @@ pub mod pallet {
 
 			Self::store_sync_committee(current_period + 1, update.next_sync_committee);
 			Self::store_finalized_header(block_root, update.finalized_header);
-			
+
 			Ok(())
 		}
 
@@ -578,6 +581,7 @@ pub mod pallet {
 					slot
 				);
 				<LatestFinalizedHeaderSlot<T>>::set(slot);
+				<LatestFinalizedHeaderHash<T>>::set(block_root);
 			}
 		}
 
@@ -701,30 +705,6 @@ pub mod pallet {
 			Ok(sync_committee)
 		}
 
-		// Verifies that the receipt encoded in proof.data is included
-		// in the block given by proof.block_hash. Inclusion is only
-		// recognized if the block has been finalized.
-		fn verify_receipt_inclusion(proof: &Proof) -> Result<Receipt, DispatchError> {
-			let stored_header =
-				<ExecutionHeaders<T>>::get(proof.block_hash).ok_or(Error::<T>::MissingHeader)?;
-
-			let result = stored_header
-				.check_receipt_proof(&proof.data.1)
-				.ok_or(Error::<T>::InvalidProof)?;
-
-			match result {
-				Ok(receipt) => Ok(receipt),
-				Err(err) => {
-					log::trace!(
-						target: "ethereum-beacon-client",
-						"Failed to decode transaction receipt: {}",
-						err
-					);
-					Err(Error::<T>::InvalidProof.into())
-				},
-			}
-		}
-
 		pub(super) fn initial_sync(
 			initial_sync: InitialSync,
 		) -> Result<(), &'static str> {
@@ -749,19 +729,45 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		// Verifies that the receipt encoded in proof.data is included
+		// in the block given by proof.block_hash. Inclusion is only
+		// recognized if the block has been finalized.
+		fn verify_receipt_inclusion(stored_header: ExecutionHeader, proof: &Proof) -> Result<Receipt, DispatchError> {
+			let result = stored_header
+				.check_receipt_proof(&proof.data.1)
+				.ok_or(Error::<T>::InvalidProof)?;
+
+			match result {
+				Ok(receipt) => Ok(receipt),
+				Err(err) => {
+					log::trace!(
+						target: "ethereum-beacon-client",
+						"Failed to decode transaction receipt: {}",
+						err
+					);
+					Err(Error::<T>::InvalidProof.into())
+				},
+			}
+		}
 	}
 
 	impl<T: Config> Verifier for Pallet<T> {
 		/// Verify a message by verifying the existence of the corresponding
 		/// Ethereum log in a block. Returns the log if successful.
-		fn verify(message: &Message) -> Result<Log, DispatchError> {
+		fn verify(message: &Message) -> Result<(Log, u64), DispatchError> {
 			log::info!(
 				target: "ethereum-beacon-client",
 				"💫 Verifying message with block hash {}",
 				message.proof.block_hash,
 			);
 
-			let receipt = match Self::verify_receipt_inclusion(&message.proof) {
+			let stored_header =
+				<ExecutionHeaders<T>>::get(message.proof.block_hash).ok_or(Error::<T>::MissingHeader)?;
+
+			let block_number = stored_header.block_number;
+
+			let receipt = match Self::verify_receipt_inclusion(stored_header, &message.proof) {
 				Ok(receipt) => receipt,
 				Err(err) => {
 					log::trace!(
@@ -808,7 +814,7 @@ pub mod pallet {
 				message.proof.block_hash,
 			);
 
-			Ok(log)
+			Ok((log, block_number))
 		}
 
 		// Empty implementation, not necessary for the beacon client,

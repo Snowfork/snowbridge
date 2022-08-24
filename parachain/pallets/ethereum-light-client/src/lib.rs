@@ -586,7 +586,7 @@ pub mod pallet {
 	impl<T: Config> Verifier for Pallet<T> {
 		/// Verify a message by verifying the existence of the corresponding
 		/// Ethereum log in a block. Returns the log if successful.
-		fn verify(message: &Message) -> Result<Log, DispatchError> {
+		fn verify(message: &Message) -> Result<(Log, u64), DispatchError> {
 			let receipt = Self::verify_receipt_inclusion(&message.proof)?;
 
 			log::trace!(
@@ -606,7 +606,7 @@ pub mod pallet {
 				return Err(Error::<T>::InvalidProof.into())
 			}
 
-			Ok(log)
+			Ok((log, 0))
 		}
 
 		/// Import an ordered vec of Ethereum headers without performing

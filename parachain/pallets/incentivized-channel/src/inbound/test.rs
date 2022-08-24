@@ -98,9 +98,9 @@ impl pallet_balances::Config for Test {
 pub struct MockVerifier;
 
 impl Verifier for MockVerifier {
-	fn verify(message: &Message) -> Result<Log, DispatchError> {
+	fn verify(message: &Message) -> Result<(Log, u64), DispatchError> {
 		let log: Log = rlp::decode(&message.data).unwrap();
-		Ok(log)
+		Ok((log, 0))
 	}
 
 	fn initialize_storage(_: Vec<EthereumHeader>, _: U256, _: u8) -> Result<(), &'static str> {

@@ -17,7 +17,6 @@ beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d9
 # Currently only works for messages from Polkadot to Ethereum until SNO-305 is complete.
 account_ids="${ACCOUNT_IDS:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d,0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48}"
 
-start_beacon_sync="${START_BEACON_SYNC:-false}"
 beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://localhost:9596}"
 
 output_dir=/tmp/snowbridge
@@ -38,11 +37,6 @@ start_geth() {
     fi
 
     local data_dir="$output_dir/geth"
-
-    # removes TTD bomb for when beacon chain is not used
-    if [ "$start_beacon_sync" == "false" ]; then
-        jq 'del(.config.terminalTotalDifficulty)' "$output_dir/genesis.json" | sponge "$output_dir/genesis.json"
-    fi
 
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local net"
@@ -67,10 +61,6 @@ start_geth() {
 }
 
 start_lodestar() {
-    if [ "$start_beacon_sync" == "false" ]; then
-        return
-    fi
-
     if [ "$eth_network" == "localhost" ]; then
         echo "Waiting for geth API to be ready"
         sleep 2
@@ -135,15 +125,16 @@ start_polkadot_launch()
         --manifest-path "$parachain_dir/Cargo.toml" \
         --release \
         --no-default-features \
-        --features "${runtime}-native,rococo-native"
+        --features "${runtime}-native,rococo-native" \
+        --bin snowbridge
 
     echo "Building query tool"
-    cargo build --release --manifest-path "$parachain_dir/tools/query-events/Cargo.toml"
+    cargo build --release --manifest-path "$parachain_dir/tools/query-events/Cargo.toml" --bin snowbridge-query-events
 
     cp "$parachain_dir/target/release/snowbridge-query-events" "$output_dir/bin"
 
     echo "Building test parachain"
-    cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release
+    cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release --bin snowbridge-test-node
 
     echo "Generating chain specification"
     "$parachain_bin" build-spec --chain "$runtime" --disable-default-bootnode > "$output_dir/spec.json"
@@ -155,25 +146,21 @@ start_polkadot_launch()
         -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
         | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
 
-    if [ "$start_beacon_sync" == "true" ]; then
-        initial_beacon_block=$(curl "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
-                | jq -r '.data.finalized.root')
+    initial_beacon_block=$(curl "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
+            | jq -r '.data.finalized.root')
 
-        curl "$beacon_endpoint_http/eth/v1/light_client/bootstrap/$initial_beacon_block" \
-            | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
+    curl "$beacon_endpoint_http/eth/v1/light_client/bootstrap/$initial_beacon_block" \
+        | node scripts/helpers/transformInitialBeaconSync.js > "$output_dir/initialBeaconSync_tmp.json"
 
-        validatorsRoot=$(curl "$beacon_endpoint_http/eth/v1/beacon/genesis" \
-                | jq -r '.data.genesis_validators_root')
+    validatorsRoot=$(curl "$beacon_endpoint_http/eth/v1/beacon/genesis" \
+            | jq -r '.data.genesis_validators_root')
 
-        jq \
-            --arg validatorsRoot "$validatorsRoot" \
-            ' .validators_root = $validatorsRoot
-            ' \
-            "$output_dir/initialBeaconSync_tmp.json" \
-            > "$output_dir/initialBeaconSync.json"
-    else
-        cp config/initial-beacon-sync-fake.json "$output_dir/initialBeaconSync.json"
-    fi
+    jq \
+        --arg validatorsRoot "$validatorsRoot" \
+        ' .validators_root = $validatorsRoot
+        ' \
+        "$output_dir/initialBeaconSync_tmp.json" \
+        > "$output_dir/initialBeaconSync.json"
 
     cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
 
@@ -324,35 +311,19 @@ start_relayer()
         done
     ) &
 
-    # Launch ethereum relay
+    # Launch beacon relay
     (
-        : > ethereum-relay.log
+        : > beacon-relay.log
         while :
         do
-          echo "Starting ethereum relay at $(date)"
-            "${relay_bin}" run ethereum \
-                --config $output_dir/ethereum-relay.json \
-                --substrate.private-key "//Relay" \
-                >>ethereum-relay.log 2>&1 || true
+        echo "Starting beacon relay at $(date)"
+            "${relay_bin}" run beacon \
+                --config $output_dir/beacon-relay.json \
+                --substrate.private-key "//BeaconRelay" \
+                >>beacon-relay.log 2>&1 || true
             sleep 20
         done
     ) &
-
-    if [ "$start_beacon_sync" == "true" ]; then
-        # Launch beacon relay
-        (
-            : > beacon-relay.log
-            while :
-            do
-            echo "Starting beacon relay at $(date)"
-                "${relay_bin}" run beacon \
-                    --config $output_dir/beacon-relay.json \
-                    --substrate.private-key "//BeaconRelay" \
-                    >>beacon-relay.log 2>&1 || true
-                sleep 20
-            done
-        ) &
-    fi
 }
 
 cleanup() {
@@ -382,14 +353,8 @@ start_relayer
 echo "Process Tree:"
 pstree -T $$
 
-sleep 3
-until grep "Syncing headers starting..." ethereum-relay.log > /dev/null; do
-    echo "Waiting for ethereum relay to generate the DAG cache. This can take up to 20 minutes."
-    sleep 20
-done
-
-until grep "Done retrieving finalized headers" ethereum-relay.log > /dev/null; do
-    echo "Waiting for ethereum relay to sync headers..."
+until grep "starting to sync finalized headers" beacon-relay.log > /dev/null; do
+    echo "Waiting for beacon relay to sync headers..."
     sleep 5
 done
 
