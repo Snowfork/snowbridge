@@ -244,7 +244,7 @@ start_relayer()
     | .sink.contracts.IncentivizedInboundChannel = $k2
     | .source.ethereum.endpoint = $infura_endpoint_ws
     | .sink.ethereum.endpoint = $infura_endpoint_ws
-    | .source.accountIDs = ($account_ids | split(","))
+    | .source.accounts = ($account_ids | split(","))
     ' \
     config/parachain-relay.json > $output_dir/parachain-relay.json
 
