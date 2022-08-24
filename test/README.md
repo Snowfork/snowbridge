@@ -6,11 +6,11 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 
 * Ubuntu 20.04 or later. MacOs may work, but its not currently a supported configuration.
 * Development environment for Rust and Substrate. See parachain [requirements](../parachain/README.md#requirements).
-* Node 14 LTS. Can install using [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
+* Node 16. Can install using [nvm](https://github.com/nvm-sh/nvm#installing-and-updating):
 
   ```bash
-  nvm install 14.17.4
-  nvm use 14.17.4
+  nvm install 16.13.2
+  nvm use 16.13.2
   ```
 
 * Development environment for Ethereum smart contracts.
@@ -22,7 +22,12 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 * Development environment for the relay services. See setup [instructions](../relayer/README.md#development).
 * `jq` - https://stedolan.github.io/jq/download/
 * geth - https://geth.ethereum.org/docs/install-and-build/installing-geth
-* lodestar - `yarn global add @chainsafe/lodestar-cli@0.40.0-dev.ccdf688e6e`
+* lodestar - https://chainsafe.github.io/lodestar/install/source/ Use `v0.40.0-dev.ccdf688e6e`. Newer versions should work but hasn't been tested.
+
+  ```bash
+  yarn global add @chainsafe/lodestar-cli@0.40.0-dev.ccdf688e6e
+  ```
+
 * sponge - Is available in the `moreutils` package.
 
   ```bash
@@ -32,7 +37,7 @@ The E2E tests run against local deployments of the parachain, relayer, the ether
 * polkadot-launch
 
   ```bash
-  yarn global add polkadot-launch@2.2.1
+  yarn global add polkadot-launch@2.3.0
   ```
 
 * direnv - https://direnv.net/

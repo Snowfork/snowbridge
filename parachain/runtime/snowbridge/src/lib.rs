@@ -563,7 +563,7 @@ use incentivized_channel::{
 
 impl basic_channel_inbound::Config for Runtime {
 	type Event = Event;
-	type Verifier = ethereum_light_client::Pallet<Runtime>;
+	type Verifier = ethereum_beacon_client::Pallet<Runtime>;
 	type MessageDispatch = dispatch::Pallet<Runtime>;
 	type WeightInfo = ();
 }
@@ -591,7 +591,7 @@ impl Convert<U256, Option<Balance>> for FeeConverter {
 
 impl incentivized_channel_inbound::Config for Runtime {
 	type Event = Event;
-	type Verifier = ethereum_light_client::Pallet<Runtime>;
+	type Verifier = ethereum_beacon_client::Pallet<Runtime>;
 	type MessageDispatch = dispatch::Pallet<Runtime>;
 	type Currency = Balances;
 	type SourceAccount = SourceAccount;
