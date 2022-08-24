@@ -254,7 +254,7 @@ pub mod pallet {
 		/// relayer to read.
 		/// - Persist the ethabi-encoded message bundles to off-chain storage.
 		fn commit() -> Weight {
-			// TODO: consider using mutate_exists here. If some part of emitting message bundles
+			// TODO: SNO-310 consider using mutate here. If some part of emitting message bundles
 			// fails, we don't want the MessageQueue to be empty.
 			let message_queue = <MessageQueue<T>>::take();
 			if message_queue.is_empty() {
