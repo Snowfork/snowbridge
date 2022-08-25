@@ -33,7 +33,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage},
-		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
+		BasicOutboundChannel: snowbridge_basic_channel::outbound::{Pallet, Config<T>, Storage, Event<T>},
 		IncentivizedOutboundChannel: snowbridge_incentivized_channel::outbound::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Dispatch: snowbridge_dispatch::{Pallet, Call, Storage, Origin, Event<T>},
 		Erc20App: crate::{Pallet, Call, Config, Storage, Event<T>},
@@ -135,6 +135,7 @@ impl<T> snowbridge_core::OutboundRouter<T::AccountId> for OutboundRouter<T>
 where
 	T: snowbridge_basic_channel::outbound::Config
 		+ snowbridge_incentivized_channel::outbound::Config,
+	T::AccountId: AsRef<[u8]>,
 {
 	fn submit(
 		channel_id: ChannelId,
@@ -166,7 +167,6 @@ impl snowbridge_basic_channel::outbound::Config for Test {
 	type Hashing = Keccak256;
 	type MaxMessagePayloadSize = MaxMessagePayloadSize;
 	type MaxMessagesPerCommit = MaxMessagesPerCommit;
-	type SetPrincipalOrigin = frame_system::EnsureRoot<AccountId>;
 	type WeightInfo = ();
 }
 

@@ -10233,6 +10233,8 @@ dependencies = [
  "serde",
  "snowbase-runtime",
  "snowblink-runtime",
+ "snowbridge-basic-channel",
+ "snowbridge-basic-channel-rpc",
  "snowbridge-core",
  "snowbridge-runtime",
  "snowbridge-runtime-primitives",
@@ -10295,6 +10297,7 @@ dependencies = [
  "rlp",
  "scale-info",
  "serde",
+ "snowbridge-basic-channel-merkle-proof",
  "snowbridge-core",
  "snowbridge-ethereum",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.25)",
@@ -10302,6 +10305,33 @@ dependencies = [
  "sp-keyring",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.25)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.25)",
+]
+
+[[package]]
+name = "snowbridge-basic-channel-merkle-proof"
+version = "0.1.1"
+dependencies = [
+ "env_logger",
+ "hex",
+ "hex-literal",
+ "parity-scale-codec",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.25)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.25)",
+]
+
+[[package]]
+name = "snowbridge-basic-channel-rpc"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "jsonrpsee 0.14.0",
+ "parity-scale-codec",
+ "parking_lot 0.11.2",
+ "serde_json",
+ "snowbridge-basic-channel-merkle-proof",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.25)",
+ "sp-offchain",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.25)",
 ]
 
 [[package]]

@@ -6,7 +6,7 @@ const { expect } = require("chai")
   .use(require("chai-as-promised"))
   .use(require("chai-bignumber")(BigNumber))
 
-const { polkadotSenderSS58, bootstrap } = require('../src/fixtures');
+const { polkadotSenderSS58Alice, bootstrap } = require('../src/fixtures');
 
 const { ChannelId } = require("../src/helpers");
 
@@ -26,7 +26,7 @@ describe.skip('Bridge', function () {
       const ethAccount = ethClient.accounts[1];
 
       const beforeEthBalance = await ethClient.getDotBalance(ethAccount);
-      const beforeSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
+      const beforeSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58Alice);
 
       // lock DOT using basic channel
       await subClient.lockDOT(subClient.alice, ethAccount, amount.toFixed(), ChannelId.BASIC)
@@ -35,7 +35,7 @@ describe.skip('Bridge', function () {
       expect(event.result).to.be.false;
 
       const afterEthBalance = await ethClient.getDotBalance(ethAccount);
-      const afterSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58);
+      const afterSubBalance = await subClient.queryAccountBalance(polkadotSenderSS58Alice);
 
       expect(afterEthBalance.minus(beforeEthBalance)).to.be.bignumber.equal(0);
       expect(beforeSubBalance.minus(afterSubBalance)).to.be.bignumber.greaterThan(0);

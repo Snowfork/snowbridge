@@ -60,6 +60,9 @@ sp-trie = { git = "https://github.com/paritytech/substrate.git", branch = "polka
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25" }
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25" }
 
+snowbridge-basic-channel = { path = "pallets/basic-channel" }
+snowbridge-basic-channel-rpc = { path = "pallets/basic-channel/rpc" }
+
 # Polkadot
 polkadot-cli = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.25" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.25" }
@@ -115,6 +118,8 @@ members = [
     "primitives/asset-registry",
     "primitives/runtime",
     "pallets/basic-channel",
+    "pallets/basic-channel/rpc",
+    "pallets/basic-channel/merkle-proof",
     "pallets/incentivized-channel",
     "pallets/dispatch",
     "pallets/ethereum-light-client",

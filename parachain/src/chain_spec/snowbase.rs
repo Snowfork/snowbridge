@@ -94,7 +94,6 @@ fn testnet_genesis(
 			source_channel: Default::default(),
 		},
 		basic_outbound_channel: snowbase_runtime::BasicOutboundChannelConfig {
-			principal: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
 			interval: 1,
 		},
 		incentivized_inbound_channel: snowbase_runtime::IncentivizedInboundChannelConfig {

@@ -36,6 +36,7 @@ Several runtimes can be built:
 * snowbridge: Polkadot parachain
 
 To build with snowbase and snowblink runtimes (the default):
+
 ```bash
 cargo build --release --features rococo-native
 ```
@@ -47,6 +48,7 @@ Note: This section is not necessary for local development, as there are scripts 
 For a fully operational chain, further configuration of the initial chain spec is required. The specific configuration will depend heavily on your environment, so this guide will remain high-level.
 
 Build an initial spec for the snowbase runtime:
+
 ```bash
 target/release/snowbridge build-spec --chain snowbase --disable-default-bootnode > spec.json
 ```

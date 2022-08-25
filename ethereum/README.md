@@ -34,7 +34,7 @@ npx hardhat test
 
 ### Updating fixture data for unit tests
 
-We use logging artifacts from the relayer in E2E stack as a source of compliant fixture data.
+We use logging artifacts from the relayer in the E2E stack as a source of compliant fixture data.
 
 BEEFY commitment & proofs extracted from `../test/beefy-relay.log`.
 * test/fixtures/beefy-relay-basic.json
@@ -54,17 +54,20 @@ yarn test --grep 'should transfer DOT from Substrate to Ethereum \(incentivized 
 ```
 
 Steps for updating the fixture data for the basic channel:
-1. Grep for `Sent transaction BasicInboundChannel.submit` in `parachain-relay.json`
+1. Grep for `Sent transaction BasicInboundChannel.submit` in `parachain-relay.log`
 2. Copy that log line into `./test/fixtures/parachain-relay-basic.json`
-3. In that file, take the `beefyBlock` field (a block hash) and use polkadot.js explorer to find the corresponding block number.
+3. In that file, take the `beefyBlock` field (a block hash) and use polkadot.js explorer to find the corresponding block number. Make sure
+   you're pointing the polkadot.js explorer at one of the relay chain nodes when you do, eg. port 9944 instead of 11144. See
+   [launch-config.json](../test/config/launch-config.json) for the ports used by relaychain & parachain nodes. Also update port forwarding
+   as necessary.
 4. Run the following (substituting `$BLOCKNUMBER`) and paste the output into `./test/fixtures/beefy-relay-basic.json`:
 ```bash
 jq -s --argjson blocknumber $BLOCKNUMBER '.[] | select( .message | contains("Sent SubmitFinal transaction")) | select( .params.commitment.blockNumber | contains($blocknumber))' beefy-relay.log
 ```
 5: NOTE: if the produced `./test/fixtures/beefy-relay-basic.json` doesn't contain a `params.leaf` field, repeat all the steps again.
 
-Steps for updating the fixture data for the basic channel:
-1. Grep for `Sent transaction IncentivizedInboundChannel.submit` in `parachain-relay.json`
+Steps for updating the fixture data for the incentivized channel:
+1. Grep for `Sent transaction IncentivizedInboundChannel.submit` in `parachain-relay.log`
 2. Copy that log line into `./test/fixtures/parachain-relay-incentivized.json`
 3. In that file, take the `beefyBlock` field (a hash) and use polkadot.js explorer to find the corresponding block number.
 4. Run the following (substituting `$BLOCKNUMBER`) and paste the output into `./test/fixtures/beefy-relay-incentivized.json`:
@@ -113,7 +116,7 @@ yarn hardhat renounce \
   --network localhost
 ```
 
-### View the address of deployed contract's
+### View the address of deployed contracts
 
 ```sh
 yarn hardhat  contractAddressList \

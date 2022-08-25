@@ -1,6 +1,12 @@
 package parachain
 
-import "github.com/snowfork/snowbridge/relayer/config"
+import (
+	"encoding/hex"
+	"fmt"
+	"strings"
+
+	"github.com/snowfork/snowbridge/relayer/config"
+)
 
 type Config struct {
 	Source SourceConfig `mapstructure:"source"`
@@ -13,7 +19,30 @@ type SourceConfig struct {
 	Ethereum  config.EthereumConfig  `mapstructure:"ethereum"`
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
 	// Block number when Beefy was activated
-	BeefyActivationBlock uint64 `mapstructure:"beefy-activation-block"`
+	BeefyActivationBlock uint64   `mapstructure:"beefy-activation-block"`
+	Accounts             []string `mapstructure:"accounts"`
+}
+
+func (c *SourceConfig) getAccounts() ([][32]byte, error) {
+	var accounts [][32]byte
+
+	for _, account := range c.Accounts {
+		trimmedAccount := strings.TrimPrefix(account, "0x")
+		accountBytes, err := hex.DecodeString(trimmedAccount)
+
+		if err != nil {
+			return nil, fmt.Errorf("decode account id: %w", err)
+		} else if len(accountBytes) != 32 {
+			// The conversion below will panic if decodedAccount has
+			// fewer than 32 bytes: we expect exactly 32 bytes.
+			return nil, fmt.Errorf("account id was not 32 bytes long: %v", accountBytes)
+		}
+
+		decodedAccount := *(*[32]byte)(accountBytes)
+		accounts = append(accounts, decodedAccount)
+	}
+
+	return accounts, nil
 }
 
 type SourceContractsConfig struct {
