@@ -10324,7 +10324,7 @@ name = "snowbridge-basic-channel-rpc"
 version = "0.1.0"
 dependencies = [
  "hex",
- "jsonrpsee",
+ "jsonrpsee 0.14.0",
  "parity-scale-codec",
  "parking_lot 0.11.2",
  "serde_json",
