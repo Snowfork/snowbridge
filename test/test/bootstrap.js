@@ -52,7 +52,7 @@ describe('Bridge', function () {
       const ethAccount = ethClient.accounts[1];
 
       const subBalances = await subClient.subscribeAssetsAccountBalances(
-        this.testParaEthAssetId, polkadotRecipientSS58Alice, 2
+        this.testParaEthAssetId, polkadotRecipientSS58, 2
       );
 
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
