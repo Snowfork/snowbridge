@@ -47,7 +47,7 @@ describe('Bridge', function () {
       expect(beforeSubBalanceBob.minus(afterSubBalanceBob)).to.be.bignumber.greaterThan(amount);
     });
 
-    it('should transfer ETH from Ethereum to Substrate (incentivized channel)', async function () {
+    it('should transfer ETH from Ethereum to Substrate (basic channel)', async function () {
       const amount = BigNumber(Web3.utils.toWei('0.001', "ether"));
       const ethAccount = ethClient.accounts[1];
 
@@ -58,7 +58,7 @@ describe('Bridge', function () {
       const beforeEthBalance = await ethClient.getEthBalance(ethAccount);
       const beforeSubBalance = await subBalances[0];
 
-      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.INCENTIVIZED, 0, 0);
+      const { gasCost } = await ethClient.lockETH(ethAccount, amount, polkadotRecipient, ChannelId.BASIC, 0, 0);
 
       const afterEthBalance = await ethClient.getEthBalance(ethAccount);
       const afterSubBalance = await subBalances[1];
