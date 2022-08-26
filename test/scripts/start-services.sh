@@ -75,14 +75,14 @@ start_lodestar() {
             --genesisTime $timestamp \
             --startValidators "0..7" \
             --enr.ip "127.0.0.1" \
-            --rootDir "$output_dir/beacon-$timestamp" \
+            --dataDir "$output_dir/beacon-$timestamp" \
             --reset \
             --terminal-total-difficulty-override 0 \
             --genesisEth1Hash $genesisHash \
             --params.ALTAIR_FORK_EPOCH 0 \
             --params.BELLATRIX_FORK_EPOCH 0 \
-            --eth1.enabled=true \
-            --api.rest.api="beacon,config,events,node,validator,lightclient" \
+            --eth1=true \
+            --rest.namespace="beacon,config,events,node,validator,lightclient" \
             --jwt-secret config/jwtsecret \
             > "$output_dir/lodestar.log" 2>&1 &
     fi
