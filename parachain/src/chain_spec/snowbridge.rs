@@ -120,10 +120,6 @@ fn testnet_genesis(
 		},
 		asset_registry: snowbridge_runtime::AssetRegistryConfig { next_asset_id: 1 },
 		xcm_support: snowbridge_runtime::XcmSupportConfig {},
-		ethereum_light_client: snowbridge_runtime::EthereumLightClientConfig {
-			initial_header: Default::default(),
-			initial_difficulty: Default::default(),
-		},
 		ethereum_beacon_client: snowbridge_runtime::EthereumBeaconClientConfig {
 			initial_sync: Default::default(),
 		},

@@ -119,10 +119,6 @@ fn testnet_genesis(
 		},
 		asset_registry: snowblink_runtime::AssetRegistryConfig { next_asset_id: 1 },
 		xcm_support: snowblink_runtime::XcmSupportConfig {},
-		ethereum_light_client: snowblink_runtime::EthereumLightClientConfig {
-			initial_header: Default::default(),
-			initial_difficulty: Default::default(),
-		},
 		ethereum_beacon_client: snowblink_runtime::EthereumBeaconClientConfig {
 			initial_sync: Default::default(),
 		},
