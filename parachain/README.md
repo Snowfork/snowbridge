@@ -64,3 +64,28 @@ For an example configuration, consult the [setup script](https://github.com/Snow
 ## Tests
 
 To run the parachain tests locally, use `cargo test --release`. For the full suite of tests, use `cargo test --release --features runtime-benchmarks`.
+
+## Event query client
+
+There is an internal tool `snowbridge-query-events` which is used to read specific events from the parachain. It is a used by our offchain message relayers.
+
+This tool must be kept up to date with the latest chain metadata. This is the process for keeping that up to date:
+
+
+Install subxt client:
+
+```bash
+cargo install subxt-cli
+```
+
+Update metadata by fetching it from parachain node (in this case a node in the E2E stack):
+```
+subxt metadata --url http://localhost:8081 -f bytes > tools/query-events/metadata.scale
+```
+
+If you want to update the tool for an already running E2E stack:
+
+```
+cargo build --release --manifest-path tools/query-events/Cargo.toml
+cp target/release/snowbridge-query-events /tmp/snowbridge/bin/
+```
