@@ -12,13 +12,12 @@ const { treasuryAddressSS58, polkadotSenderSS58Alice,
 const { ChannelId } = require("../src/helpers");
 
 describe('Bridge', function () {
-  let ethClient, subClient, testSubClient;
+  let ethClient, subClient;
 
   before(async function () {
     const clients = await bootstrap();
     ethClient = clients.ethClient;
     subClient = clients.subClient;
-    // testSubClient = clients.testSubClient;
     this.testParaEthAssetId = 0;
   });
 
