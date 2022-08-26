@@ -29,7 +29,7 @@ describe('Bridge', function () {
   });
 
   describe('Basic Channel', function () {
-    it('should transfer DOT from Substrate to Ethereum (basic channel)', async function () {
+    it('should transfer DOT for 6 accounts from Substrate to Ethereum (basic channel)', async function () {
       const amount = BigNumber('10e+12'); // 10 DOT (12 decimal places in this environment)
       const amountWrapped = BigNumber(Web3.utils.toWei('10', "ether")); // 10 SnowDOT (18 decimal places)
       const ethAccount = ethClient.accounts[1];
