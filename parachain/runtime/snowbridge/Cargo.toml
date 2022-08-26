@@ -74,7 +74,6 @@ snowbridge-asset-registry = { path = "../../pallets/asset-registry", default-fea
 snowbridge-basic-channel = { path = "../../pallets/basic-channel", default-features = false }
 snowbridge-incentivized-channel = { path = "../../pallets/incentivized-channel", default-features = false }
 dispatch = { path = "../../pallets/dispatch", package = "snowbridge-dispatch", default-features = false }
-ethereum-light-client = { path = "../../pallets/ethereum-light-client", package = "snowbridge-ethereum-light-client", default-features = false }
 ethereum-beacon-client = { path = "../../pallets/ethereum-beacon-client", package = "snowbridge-ethereum-beacon-client", default-features = false}
 dot-app = { path = "../../pallets/dot-app", package = "snowbridge-dot-app", default-features = false }
 eth-app = { path = "../../pallets/eth-app", package = "snowbridge-eth-app", default-features = false }
@@ -139,7 +138,6 @@ std = [
     "polkadot-parachain/std",
     "snowbridge-basic-channel/std",
     "snowbridge-incentivized-channel/std",
-    "ethereum-light-client/std",
     "ethereum-beacon-client/std",
     "dispatch/std",
     "dot-app/std",
@@ -174,5 +172,4 @@ runtime-benchmarks = [
     "dispatch/runtime-benchmarks",
     "erc20-app/runtime-benchmarks",
     "eth-app/runtime-benchmarks",
-    "ethereum-light-client/runtime-benchmarks"
 ]

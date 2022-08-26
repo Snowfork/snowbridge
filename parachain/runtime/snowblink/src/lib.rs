@@ -49,8 +49,6 @@ pub use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
 use dispatch::EnsureEthereumAccount;
 pub use snowbridge_core::{ChannelId, MessageId};
 
-pub use ethereum_light_client::{EthereumDifficultyConfig, EthereumHeader};
-
 use polkadot_parachain::primitives::Sibling;
 
 use pallet_xcm::XcmPassthrough;
@@ -612,22 +610,6 @@ impl incentivized_channel_outbound::Config for Runtime {
 	type WeightInfo = incentivized_channel_outbound::weights::SnowbridgeWeight<Self>;
 }
 
-parameter_types! {
-	pub const DescendantsUntilFinalized: u8 = 16;
-	pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::ropsten();
-	pub const VerifyPoW: bool = false;
-	pub const MaxHeadersForNumber: u32 = 100;
-}
-
-impl ethereum_light_client::Config for Runtime {
-	type Event = Event;
-	type DescendantsUntilFinalized = DescendantsUntilFinalized;
-	type DifficultyConfig = DifficultyConfig;
-	type VerifyPoW = VerifyPoW;
-	type MaxHeadersForNumber = MaxHeadersForNumber;
-	type WeightInfo = ethereum_light_client::weights::SnowbridgeWeight<Self>;
-}
-
 impl ethereum_beacon_client::Config for Runtime {
 	type Event = Event;
 }
@@ -760,7 +742,6 @@ construct_runtime!(
 		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 14,
 		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 15,
 		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 16,
-		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 17,
 		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Config, Storage, Event<T>} = 18,
 		Assets: pallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 19,
 		AssetRegistry: snowbridge_asset_registry::{Pallet, Storage, Config} = 20,
@@ -945,7 +926,6 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
 			list_benchmark!(list, extra, pallet_utility, Utility);
 			list_benchmark!(list, extra, pallet_scheduler, Scheduler);
-			list_benchmark!(list, extra, ethereum_light_client, EthereumLightClient);
 			list_benchmark!(list, extra, assets, Assets);
 			list_benchmark!(list, extra, basic_channel_outbound, BasicOutboundChannel);
 			list_benchmark!(list, extra, incentivized_channel_inbound, IncentivizedInboundChannel);
@@ -998,7 +978,6 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
-			add_benchmark!(params, batches, ethereum_light_client, EthereumLightClient);
 			add_benchmark!(params, batches, assets, Assets);
 			add_benchmark!(params, batches, basic_channel_outbound, BasicOutboundChannel);
 			add_benchmark!(params, batches, incentivized_channel_inbound, IncentivizedInboundChannel);
