@@ -139,13 +139,6 @@ start_polkadot_launch()
     echo "Generating chain specification"
     "$parachain_bin" build-spec --chain "$runtime" --disable-default-bootnode > "$output_dir/spec.json"
 
-    echo "Updating chain specification"
-    curl $infura_endpoint_http \
-        -X POST \
-        -H "Content-Type: application/json" \
-        -d '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params": ["latest", false],"id":1}' \
-        | node scripts/helpers/transformEthHeader.js > "$output_dir/initialHeader.json"
-
     initial_beacon_block=$(curl "$beacon_endpoint_http/eth/v1/beacon/states/head/finality_checkpoints" \
             | jq -r '.data.finalized.root')
 
@@ -162,7 +155,7 @@ start_polkadot_launch()
         "$output_dir/initialBeaconSync_tmp.json" \
         > "$output_dir/initialBeaconSync.json"
 
-    cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/initialHeader.json" "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
+    cat "$output_dir/spec.json" | node scripts/helpers/mutateSpec.js "$output_dir/contracts.json" "$output_dir/initialBeaconSync.json" | sponge "$output_dir/spec.json"
 
     # TODO: add back
     # if [[ -n "${TEST_MALICIOUS_APP+x}" ]]; then

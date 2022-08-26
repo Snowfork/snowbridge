@@ -16,13 +16,10 @@ function run() {
   rl.on('close', function() {
     data = JSON.parse(buffer);
 
-    let header = JSON.parse(fs.readFileSync(process.argv[2]));
-    let contracts = JSON.parse(fs.readFileSync(process.argv[3]));
-    let initialSync = JSON.parse(fs.readFileSync(process.argv[4]));
+    let contracts = JSON.parse(fs.readFileSync(process.argv[2]));
+    let initialSync = JSON.parse(fs.readFileSync(process.argv[3]));
 
     data['genesis']['runtime']['ethereumBeaconClient']['initialSync'] = initialSync;
-    data['genesis']['runtime']['ethereumLightClient']['initialHeader'] = header;
-    data['genesis']['runtime']['ethereumLightClient']['initialDifficulty'] = "0x0";
     data['genesis']['runtime']['parachainInfo']['parachainId'] = 1000;
     data['para_id'] = 1000;
 
