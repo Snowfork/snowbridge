@@ -9,7 +9,7 @@ mod mock;
 mod tests;
 mod ssz;
 
-use frame_support::{dispatch::DispatchResult, log, transactional};
+use frame_support::{dispatch::DispatchResult, log};
 use frame_system::ensure_signed;
 use sp_core::H256;
 use sp_io::hashing::sha2_256;
@@ -132,7 +132,6 @@ pub mod pallet {
 	impl<T: Config> Pallet<T>
 	{
 		#[pallet::weight(1_000_000)]
-		#[transactional]
 		pub fn sync_committee_period_update(
 			origin: OriginFor<T>,
 			sync_committee_period_update: SyncCommitteePeriodUpdate,
@@ -165,7 +164,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1_000_000)]
-		#[transactional]
 		pub fn import_finalized_header(
 			origin: OriginFor<T>,
 			finalized_header_update: FinalizedHeaderUpdate,
@@ -199,7 +197,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1_000_000)]
-		#[transactional]
 		pub fn import_execution_header(
 			origin: OriginFor<T>,
 			update: BlockUpdate,

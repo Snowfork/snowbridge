@@ -30,7 +30,7 @@ mod tests;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	traits::{fungible::Mutate, EnsureOrigin},
-	transactional, PalletId,
+	PalletId,
 };
 use frame_system::ensure_signed;
 use sp_core::H160;
@@ -118,7 +118,6 @@ pub mod pallet {
 				ChannelId::Incentivized => T::WeightInfo::burn_incentivized_channel(),
 			}
 		})]
-		#[transactional]
 		pub fn burn(
 			origin: OriginFor<T>,
 			channel_id: ChannelId,
@@ -139,7 +138,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::mint())]
-		#[transactional]
 		pub fn mint(
 			origin: OriginFor<T>,
 			sender: H160,

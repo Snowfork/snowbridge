@@ -33,7 +33,7 @@ use frame_support::{
 		tokens::fungibles::{Create, Mutate},
 		EnsureOrigin,
 	},
-	transactional, PalletId,
+	PalletId,
 };
 use frame_system::ensure_signed;
 use sp_core::H160;
@@ -132,7 +132,6 @@ pub mod pallet {
 				ChannelId::Incentivized => T::WeightInfo::burn_incentivized_channel(),
 			}
 		})]
-		#[transactional]
 		pub fn burn(
 			origin: OriginFor<T>,
 			channel_id: ChannelId,
@@ -161,7 +160,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::mint())]
-		#[transactional]
 		pub fn mint(
 			origin: OriginFor<T>,
 			token: H160,
@@ -195,7 +193,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(100_000_000)]
-		#[transactional]
 		pub fn create(origin: OriginFor<T>, token: H160) -> DispatchResult {
 			let who = T::CallOrigin::ensure_origin(origin)?;
 			if who != <Address<T>>::get() {

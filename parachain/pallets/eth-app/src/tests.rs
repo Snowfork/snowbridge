@@ -80,6 +80,7 @@ fn burn_should_emit_bridge_event() {
 	});
 }
 
+#[ignore = "https://substrate.stackexchange.com/questions/4267/transactional-macro-deprecated-but-still-required"]
 #[test]
 fn should_not_burn_on_commitment_failure() {
 	new_tester().execute_with(|| {

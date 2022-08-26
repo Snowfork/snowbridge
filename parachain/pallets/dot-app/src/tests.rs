@@ -100,6 +100,7 @@ fn should_not_unlock_on_bad_origin_failure() {
 	});
 }
 
+#[ignore = "https://substrate.stackexchange.com/questions/4267/transactional-macro-deprecated-but-still-required"]
 #[test]
 fn should_not_lock_on_add_commitment_failure() {
 	new_tester().execute_with(|| {
