@@ -129,9 +129,9 @@ start_polkadot_launch()
         --bin snowbridge
 
     echo "Building query tool"
-    cargo build --manifest-path "$parachain_dir/tools/query-events/Cargo.toml" --bin snowbridge-query-events
+    cargo build --manifest-path "$parachain_dir/tools/query-events/Cargo.toml" --release --bin snowbridge-query-events
 
-    cp "$parachain_dir/target/debug/snowbridge-query-events" "$output_dir/bin"
+    cp "$parachain_dir/target/release/snowbridge-query-events" "$output_dir/bin"
 
     echo "Building test parachain"
     cargo build --manifest-path "$parachain_dir/utils/test-parachain/Cargo.toml" --release --bin snowbridge-test-node
