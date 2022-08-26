@@ -18,6 +18,10 @@ class SubClient {
     this.keyring = new Keyring({ type: 'sr25519' });
     this.alice = this.keyring.addFromUri('//Alice', { name: 'Alice' });
     this.bob = this.keyring.addFromUri('//Bob', { name: 'Bob' });
+    this.charlie = this.keyring.addFromUri('//Charlie', { name: 'Charlie' });
+    this.dave = this.keyring.addFromUri('//Dave', { name: 'Dave' });
+    this.eve = this.keyring.addFromUri('//Eve', { name: 'Eve' });
+    this.ferdie = this.keyring.addFromUri('//Ferdie', { name: 'Ferdie' });
   }
 
   async queryAssetsAccountBalance(assetId, accountId) {
