@@ -68,6 +68,23 @@ func (co *Connection) Close() {
 	// TODO: Fix design issue in GSRPC preventing on-demand closing of connections
 }
 
+func (conn *Connection) GetMMRRootHash(blockHash types.Hash) (types.Hash, error) {
+	mmrRootHashKey, err := types.CreateStorageKey(conn.Metadata(), "Mmr", "RootHash", nil, nil)
+	if err != nil {
+		return types.Hash{}, fmt.Errorf("create storage key: %w", err)
+	}
+	var mmrRootHash types.Hash
+	ok, err := conn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, blockHash)
+	if err != nil {
+		log.Error(err)
+		return types.Hash{}, err
+	}
+	if !ok {
+		return types.Hash{}, fmt.Errorf("could not get mmr root hash")
+	}
+	return mmrRootHash, nil
+}
+
 func (co *Connection) GenerateProofForBlock(
 	blockNumber uint64,
 	latestBeefyBlockHash types.Hash,
@@ -140,8 +157,9 @@ type ParaHead struct {
 
 // Offset of encoded para id in storage key.
 // The key is of this format:
-//   ParaId: u32
-//   Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
+//
+//	ParaId: u32
+//	Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
 const ParaIDOffset = 16 + 16 + 8
 
 func (co *Connection) FetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
@@ -252,7 +270,7 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 }
 
 func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types.StorageKey, error) {
-	const pageSize = 50
+	const pageSize = 100
 	var startKey *types.StorageKey
 
 	if pageSize < 1 {

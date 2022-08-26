@@ -527,18 +527,10 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput) (
 		return nil, fmt.Errorf("simplify MMR leaf proof: %w", err)
 	}
 
-	mmrRootHashKey, err := types.CreateStorageKey(li.relaychainConn.Metadata(), "Mmr", "RootHash", nil, nil)
+	mmrRootHash, err := li.relaychainConn.GetMMRRootHash(latestBeefyBlockHash)
 	if err != nil {
-		return nil, fmt.Errorf("create storage key: %w", err)
-	}
-	var mmrRootHash types.Hash
-	ok, err := li.relaychainConn.API().RPC.State.GetStorage(mmrRootHashKey, &mmrRootHash, latestBeefyBlockHash)
-	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Could not retrieve MMR roor hash")
 		return nil, err
-	}
-	if !ok {
-		return nil, fmt.Errorf("could not get mmr root hash")
 	}
 
 	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, li.paraID)
